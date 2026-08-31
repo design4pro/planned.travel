@@ -1194,7 +1194,8 @@ export const reservations = sqliteTable(
     /**
      * The ledger line this booking paid for, so editing a price rewrites one expense instead of
      * leaving a new one behind each time. The link lives on this side because a deleted cost line
-     * then unlinks the booking with no code of ours running — see `docs/plans/03-reservations-and-transport.md`, `03-S4`.
+     * then unlinks the booking with no code of ours running — see
+     * `docs/plans/03-reservations-and-transport.md`, `03-S4`.
      */
     expenseId: text('expense_id').references(() => expenses.id, {
       onDelete: 'set null',

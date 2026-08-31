@@ -1,11 +1,13 @@
 /**
  * The SQL in `drizzle/`, read the way wrangler applies it.
  *
- * Two suites replay the shipped migration files rather than building their DDL from `schema.ts`:
- * `src/server/billing/__tests__/migrations.test.ts` asks what the replay ends up with, and
+ * Several suites replay the shipped migration files rather than building their DDL from
+ * `schema.ts`: the schema suites in this directory and
+ * `src/server/billing/__tests__/migrations.test.ts` ask what the replay ends up with, and
  * `src/server/db/__tests__/migration-quoted-identifiers.test.ts` inspects the statements on the way
- * past. Both need the journal order — the filenames alone do not carry it — so the reading of
- * `meta/_journal.json` and the splitting on statement breakpoints live here once.
+ * past. All need the journal order — the filenames alone do not carry it — so the reading of
+ * `meta/_journal.json`, the splitting on statement breakpoints and the replay itself live here
+ * once. What the *declarations* say, as opposed to what the SQL did, is `table-config.ts`.
  */
 
 import { readFileSync } from 'node:fs'
@@ -73,4 +75,43 @@ export function openReplayDatabase(): DatabaseSync {
   return new DatabaseSync(':memory:', {
     enableDoubleQuotedStringLiterals: true,
   })
+}
+
+/**
+ * An empty database with every shipped migration applied, in journal order.
+ *
+ * The repository harness builds its DDL from `schema.ts` through `drizzle-kit/api`, so a column
+ * added to that file is green there whether or not `pnpm db:generate` was ever run. A suite that
+ * needs to know what D1 is actually running asks this connection instead. The caller closes it.
+ */
+export function replayMigrations(): DatabaseSync {
+  const sqlite = openReplayDatabase()
+  for (const migration of shippedMigrations()) {
+    for (const statement of statementsOf(migration.sql)) {
+      sqlite.exec(statement)
+    }
+  }
+  return sqlite
+}
+
+/** The columns `table` physically has on `sqlite`, in the order the engine stores them. */
+export function physicalColumns(
+  sqlite: DatabaseSync,
+  table: string,
+): Array<string> {
+  return sqlite
+    .prepare('SELECT name FROM pragma_table_info(?)')
+    .all(table)
+    .map((row) => String(row.name))
+}
+
+/** The indexes `table` physically has on `sqlite`. */
+export function physicalIndexNames(
+  sqlite: DatabaseSync,
+  table: string,
+): Array<string> {
+  return sqlite
+    .prepare('SELECT name FROM pragma_index_list(?)')
+    .all(table)
+    .map((row) => String(row.name))
 }

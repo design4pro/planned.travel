@@ -26,7 +26,6 @@
 
 import { beforeEach, afterEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import {
   airports,
   days,
@@ -41,47 +40,20 @@ import {
   createHarness,
 } from '#/server/repos/__tests__/harness'
 import {
-  openReplayDatabase,
+  physicalColumns,
+  physicalIndexNames,
+  replayMigrations,
   shippedMigrations,
   statementsOf,
 } from './migration-files'
-import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
-import type { DatabaseSync } from 'node:sqlite'
+import {
+  checkNames,
+  columnNames,
+  foreignKeys,
+  indexColumns,
+  indexNames,
+} from './table-config'
 import type { Harness } from '#/server/repos/__tests__/harness'
-
-function columnNames(table: SQLiteTable): Array<string> {
-  return getTableConfig(table).columns.map((column) => column.name)
-}
-
-function indexNames(table: SQLiteTable): Array<string> {
-  return getTableConfig(table).indexes.map((entry) => entry.config.name)
-}
-
-function indexColumns(table: SQLiteTable, name: string): Array<string> {
-  const entry = getTableConfig(table).indexes.find(
-    (candidate) => candidate.config.name === name,
-  )
-  return (entry?.config.columns ?? []).map((column) =>
-    'name' in column ? String(column.name) : String(column),
-  )
-}
-
-/** Every foreign key of `table` as `column -> target.column (onDelete)`, sorted for stability. */
-function foreignKeys(table: SQLiteTable): Array<string> {
-  return getTableConfig(table)
-    .foreignKeys.map((key) => {
-      const reference = key.reference()
-      const from = reference.columns.map((column) => column.name).join(',')
-      const to = reference.foreignColumns
-        .map(
-          (column) =>
-            `${getTableConfig(reference.foreignTable).name}.${column.name}`,
-        )
-        .join(',')
-      return `${from} -> ${to} (${key.onDelete ?? 'no action'})`
-    })
-    .sort()
-}
 
 describe('the transport chain and airport catalogue schema', () => {
   describe('transports', () => {
@@ -156,9 +128,7 @@ describe('the transport chain and airport catalogue schema', () => {
     })
 
     it('constrains the chain index and both coordinate pairs', () => {
-      expect(
-        getTableConfig(transportLegs).checks.map((entry) => entry.name),
-      ).toEqual([
+      expect(checkNames(transportLegs)).toEqual([
         'transport_legs_position_chk',
         'transport_legs_from_lat_chk',
         'transport_legs_from_lat_chk_lng',
@@ -326,50 +296,29 @@ describe('the transport chain and airport catalogue schema', () => {
   })
 
   describe('the shipped migrations', () => {
-    /**
-     * The one thing the harness above cannot see.
-     *
-     * It builds its DDL from `schema.ts` through `drizzle-kit/api`, so every table and column added
-     * to that file appears there whether or not `pnpm db:generate` was ever run — a whole green
-     * suite over a schema D1 has never been told about. So this replays `drizzle/*.sql` in journal
-     * order and asks the database what it ended up with, the way
-     * `src/server/billing/__tests__/migrations.test.ts` does for `subscriptions`.
-     */
-    function replayed(): DatabaseSync {
-      const sqlite = openReplayDatabase()
-      for (const migration of shippedMigrations()) {
-        for (const statement of statementsOf(migration.sql)) {
-          sqlite.exec(statement)
-        }
-      }
-      return sqlite
-    }
+    // The one thing the harness above cannot see: it builds its DDL from `schema.ts` through
+    // `drizzle-kit/api`, so every table and column added to that file appears there whether or not
+    // `pnpm db:generate` was ever run — a whole green suite over a schema D1 has never been told
+    // about. `replayMigrations()` applies `drizzle/*.sql` in journal order instead, and the cases
+    // below ask that database what it ended up with.
 
     it('put both new tables and the arrival-day index on disk', () => {
-      const sqlite = replayed()
+      const sqlite = replayMigrations()
       try {
         const objects = sqlite
           .prepare('SELECT name, type FROM sqlite_master WHERE name = ?')
           .all('transport_legs')
         expect(objects.map((row) => String(row.type))).toContain('table')
 
-        const legColumns = sqlite
-          .prepare("SELECT name FROM pragma_table_info('transport_legs')")
-          .all()
-          .map((row) => String(row.name))
-        expect(legColumns).toEqual(columnNames(transportLegs))
-
-        const airportColumns = sqlite
-          .prepare("SELECT name FROM pragma_table_info('airports')")
-          .all()
-          .map((row) => String(row.name))
-        expect(airportColumns).toEqual(columnNames(airports))
-
-        const transportIndexes = sqlite
-          .prepare("SELECT name FROM pragma_index_list('transports')")
-          .all()
-          .map((row) => String(row.name))
-        expect(transportIndexes).toContain('transports_org_arrival_day_idx')
+        expect(physicalColumns(sqlite, 'transport_legs')).toEqual(
+          columnNames(transportLegs),
+        )
+        expect(physicalColumns(sqlite, 'airports')).toEqual(
+          columnNames(airports),
+        )
+        expect(physicalIndexNames(sqlite, 'transports')).toContain(
+          'transports_org_arrival_day_idx',
+        )
       } finally {
         sqlite.close()
       }

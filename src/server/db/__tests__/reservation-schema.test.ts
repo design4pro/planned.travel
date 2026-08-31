@@ -33,7 +33,6 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import {
   expenses,
   newId,
@@ -43,55 +42,20 @@ import {
 } from '#/server/db/schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import {
-  openReplayDatabase,
+  physicalColumns,
+  physicalIndexNames,
+  replayMigrations,
   shippedMigrations,
   statementsOf,
 } from './migration-files'
-import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
-import type { DatabaseSync } from 'node:sqlite'
+import {
+  column,
+  columnNames,
+  foreignKeys,
+  indexColumns,
+  indexNames,
+} from './table-config'
 import type { Harness } from '#/server/repos/__tests__/harness'
-
-function columnNames(table: SQLiteTable): Array<string> {
-  return getTableConfig(table).columns.map((entry) => entry.name)
-}
-
-function column(table: SQLiteTable, name: string) {
-  const found = getTableConfig(table).columns.find(
-    (candidate) => candidate.name === name,
-  )
-  if (found === undefined) throw new Error(`no column ${name}`)
-  return found
-}
-
-function indexNames(table: SQLiteTable): Array<string> {
-  return getTableConfig(table).indexes.map((entry) => entry.config.name)
-}
-
-function indexColumns(table: SQLiteTable, name: string): Array<string> {
-  const entry = getTableConfig(table).indexes.find(
-    (candidate) => candidate.config.name === name,
-  )
-  return (entry?.config.columns ?? []).map((entryColumn) =>
-    'name' in entryColumn ? String(entryColumn.name) : String(entryColumn),
-  )
-}
-
-/** Every foreign key of `table` as `column -> target.column (onDelete)`, sorted for stability. */
-function foreignKeys(table: SQLiteTable): Array<string> {
-  return getTableConfig(table)
-    .foreignKeys.map((key) => {
-      const reference = key.reference()
-      const from = reference.columns.map((entry) => entry.name).join(',')
-      const to = reference.foreignColumns
-        .map(
-          (entry) =>
-            `${getTableConfig(reference.foreignTable).name}.${entry.name}`,
-        )
-        .join(',')
-      return `${from} -> ${to} (${key.onDelete ?? 'no action'})`
-    })
-    .sort()
-}
 
 describe('the reservation ledger link, import marker and masking switch', () => {
   describe('reservations', () => {
@@ -164,11 +128,10 @@ describe('the reservation ledger link, import marker and masking switch', () => 
       harness.close()
     })
 
-    it('unlinks the booking rather than deleting it when the expense goes', async () => {
-      const tenant = await harness.seedTenant('ledger')
+    /** One tenant with one trip on it — the least a booking needs to exist. */
+    async function seedTrip(label: string) {
+      const tenant = await harness.seedTenant(label)
       const tripId = newId()
-      const expenseId = newId()
-
       await harness.db.insert(trips).values({
         id: tripId,
         organizationId: tenant.organizationId,
@@ -176,6 +139,13 @@ describe('the reservation ledger link, import marker and masking switch', () => 
         title: 'Kyoto',
         slug: 'kyoto',
       })
+      return { tenant, tripId }
+    }
+
+    it('unlinks the booking rather than deleting it when the expense goes', async () => {
+      const { tenant, tripId } = await seedTrip('ledger')
+      const expenseId = newId()
+
       await harness.db.insert(expenses).values({
         id: expenseId,
         organizationId: tenant.organizationId,
@@ -200,15 +170,7 @@ describe('the reservation ledger link, import marker and masking switch', () => 
     })
 
     it('reads a booking nobody imported as typed by a person', async () => {
-      const tenant = await harness.seedTenant('marker')
-      const tripId = newId()
-      await harness.db.insert(trips).values({
-        id: tripId,
-        organizationId: tenant.organizationId,
-        createdBy: tenant.ownerUserId,
-        title: 'Osaka',
-        slug: 'osaka',
-      })
+      const { tenant, tripId } = await seedTrip('marker')
       await harness.db.insert(reservations).values({
         organizationId: tenant.organizationId,
         tripId,
@@ -233,40 +195,20 @@ describe('the reservation ledger link, import marker and masking switch', () => 
   })
 
   describe('the shipped migrations', () => {
-    function replayed(): DatabaseSync {
-      const sqlite = openReplayDatabase()
-      for (const migration of shippedMigrations()) {
-        for (const statement of statementsOf(migration.sql)) {
-          sqlite.exec(statement)
-        }
-      }
-      return sqlite
-    }
-
-    function tableColumns(sqlite: DatabaseSync, table: string): Array<string> {
-      return sqlite
-        .prepare(`SELECT name FROM pragma_table_info('${table}')`)
-        .all()
-        .map((row) => String(row.name))
-    }
-
     it('put all three columns and both indexes on disk', () => {
-      const sqlite = replayed()
+      const sqlite = replayMigrations()
       try {
         // Sorted on both sides: `ADD COLUMN` appends to the physical table while `schema.ts`
         // declares each column where it reads best, so the two orders cannot agree and only the
         // set is meaningful. What must hold is that D1 has every column the module declares.
-        expect(tableColumns(sqlite, 'reservations').sort()).toEqual(
+        expect(physicalColumns(sqlite, 'reservations').sort()).toEqual(
           columnNames(reservations).sort(),
         )
-        expect(tableColumns(sqlite, 'user_settings').sort()).toEqual(
+        expect(physicalColumns(sqlite, 'user_settings').sort()).toEqual(
           columnNames(userSettings).sort(),
         )
 
-        const indexes = sqlite
-          .prepare("SELECT name FROM pragma_index_list('reservations')")
-          .all()
-          .map((row) => String(row.name))
+        const indexes = physicalIndexNames(sqlite, 'reservations')
         expect(indexes).toContain('reservations_expense_idx')
         expect(indexes).toContain('reservations_org_imported_at_idx')
       } finally {
@@ -283,16 +225,16 @@ describe('the reservation ledger link, import marker and masking switch', () => 
       // same debt `transports.arrival_day_id` and `expenses.cost_category_id` already carry. Pinned
       // rather than fixed: closing it means either a hand-edited migration, which `drizzle/` forbids
       // as a generated directory, or a table rebuild, which this additive stage forbids.
-      const sqlite = replayed()
+      const sqlite = replayMigrations()
       try {
-        const [key] = sqlite
-          .prepare("SELECT * FROM pragma_foreign_key_list('reservations')")
-          .all()
-          .filter((row) => String(row.from) === 'expense_id')
+        const key = sqlite
+          .prepare('SELECT * FROM pragma_foreign_key_list(?)')
+          .all('reservations')
+          .find((row) => String(row.from) === 'expense_id')
 
         expect(key).toBeDefined()
-        expect(String(key.table)).toBe('expenses')
-        expect(String(key.on_delete)).toBe('NO ACTION')
+        expect(String(key?.table)).toBe('expenses')
+        expect(String(key?.on_delete)).toBe('NO ACTION')
       } finally {
         sqlite.close()
       }
