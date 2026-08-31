@@ -102,16 +102,29 @@ export function dayLabel(day: BookingDayOption): string {
 function stopOptions(
   days: ReadonlyArray<BookingDayOption>,
 ): ReadonlyArray<ComboboxOption> {
-  return days.flatMap((day) =>
-    day.stops.map((stop) => ({
+  return days.flatMap((day) => {
+    const label = dayLabel(day)
+    return day.stops.map((stop) => ({
       value: stop.assignmentId,
       label: stop.placeName,
       description:
-        stop.startTime === null
-          ? dayLabel(day)
-          : `${dayLabel(day)} · ${stop.startTime}`,
-      group: dayLabel(day),
-    })),
+        stop.startTime === null ? label : `${label} · ${stop.startTime}`,
+      group: label,
+    }))
+  })
+}
+
+/**
+ * The picker's own search, over the group heading as well as the label and the description: a
+ * reader typing "day 7" is naming the day, and the primitive's own filter cannot see a group.
+ */
+function matchesStop(option: ComboboxOption, query: string): boolean {
+  const needle = query.trim().toLowerCase()
+  if (needle === '') {
+    return true
+  }
+  return [option.label, option.description, option.group].some(
+    (part) => part?.toLowerCase().includes(needle) ?? false,
   )
 }
 
@@ -126,6 +139,22 @@ function stopChoice(
     }
   }
   return null
+}
+
+/**
+ * What the save button offers, which is a statement of what is left to do.
+ *
+ * After a ledger refusal the booking itself is already saved, so pressing it again is not another
+ * save — it is the half that did not go through.
+ */
+function saveLabel(state: {
+  readonly ledgerRefused: boolean
+  readonly editing: boolean
+}): string {
+  if (state.ledgerRefused) {
+    return 'Add it to the ledger'
+  }
+  return state.editing ? 'Save booking' : 'Add booking'
 }
 
 function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
@@ -253,6 +282,13 @@ export function BookingDialog({
   /** Only shows a field's error once the traveller has tried to submit. */
   function errorFor(key: keyof BookingDraft): string | undefined {
     return touched ? errors[key] : undefined
+  }
+
+  /** The picker hands back an id; `chooseStop` is what turns it into a day and a date. */
+  function pickStop(next: string | null): void {
+    setDraft((current) =>
+      chooseStop(current, next === null ? null : stopChoice(days, next)),
+    )
   }
 
   async function submit(): Promise<void> {
@@ -578,14 +614,7 @@ export function BookingDialog({
                     value={
                       draft.assignmentId === '' ? null : draft.assignmentId
                     }
-                    onChange={(next) =>
-                      setDraft((current) =>
-                        chooseStop(
-                          current,
-                          next === null ? null : stopChoice(days, next),
-                        ),
-                      )
-                    }
+                    onChange={pickStop}
                     disabled={stops.length === 0}
                     clearable
                     placeholder="Not tied to a stop"
@@ -593,23 +622,7 @@ export function BookingDialog({
                     emptyMessage="No stop matches that"
                     ariaLabel="Linked stop"
                     invalid={errorFor('assignmentId') !== undefined}
-                    /*
-                     * The group heading as well as the label and the description: a reader typing
-                     * "day 7" is naming the day, and the primitive's own filter cannot see a group.
-                     */
-                    filter={(option, query) => {
-                      const needle = query.trim().toLowerCase()
-                      if (needle === '') {
-                        return true
-                      }
-                      return [
-                        option.label,
-                        option.description,
-                        option.group,
-                      ].some(
-                        (part) => part?.toLowerCase().includes(needle) ?? false,
-                      )
-                    }}
+                    filter={matchesStop}
                   />
                 </div>
               </Field>
@@ -660,11 +673,7 @@ export function BookingDialog({
             loading={action.pending}
             loadingLabel="Saving the booking"
           >
-            {ledgerRefused
-              ? 'Add it to the ledger'
-              : editing
-                ? 'Save booking'
-                : 'Add booking'}
+            {saveLabel({ ledgerRefused, editing })}
           </Button>
         </DialogFooter>
       </DialogContent>

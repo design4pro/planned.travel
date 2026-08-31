@@ -251,7 +251,7 @@ async function spentOnFor(
   }
   if (reservation.dayId !== null) {
     const day = await getDay(scope, reservation.dayId)
-    if (day?.date != null) {
+    if (day !== null && day.date !== null) {
       return day.date
     }
   }

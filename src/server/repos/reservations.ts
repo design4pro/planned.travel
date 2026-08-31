@@ -251,6 +251,24 @@ async function assertBookingRole(
   }
 }
 
+/**
+ * The booking a writer is about to change, once the caller has been shown to be allowed to change
+ * it: `NotFoundError` when the row is not theirs, `FORBIDDEN` when it is theirs to read and not to
+ * edit. Every writer below that starts from a booking id starts here, so the two refusals cannot
+ * drift apart between them.
+ */
+async function requireWritableReservation(
+  scope: TenantScope,
+  reservationId: string,
+): Promise<Reservation> {
+  const existing = await reservationsRepository.requireById(
+    scope,
+    reservationId,
+  )
+  await assertBookingRole(scope, existing.tripId)
+  return existing
+}
+
 /** Verifies every optional reference points at a row of the same trip inside the same tenant. */
 async function assertReferences(
   scope: TenantScope,
@@ -316,11 +334,7 @@ export async function updateReservation(
   input: UpdateReservationInput,
 ): Promise<Reservation> {
   const values = definedOnly(updateReservationInput.parse(input))
-  const existing = await reservationsRepository.requireById(
-    scope,
-    reservationId,
-  )
-  await assertBookingRole(scope, existing.tripId)
+  const existing = await requireWritableReservation(scope, reservationId)
   await assertReferences(scope, existing.tripId, values)
   return reservationsRepository.requireUpdate(scope, reservationId, values)
 }
@@ -330,11 +344,7 @@ export async function setReservationStatus(
   reservationId: string,
   status: (typeof RESERVATION_STATUSES)[number],
 ): Promise<Reservation> {
-  const existing = await reservationsRepository.requireById(
-    scope,
-    reservationId,
-  )
-  await assertBookingRole(scope, existing.tripId)
+  await requireWritableReservation(scope, reservationId)
   return reservationsRepository.requireUpdate(scope, reservationId, {
     status: z.enum(RESERVATION_STATUSES).parse(status),
   })
@@ -344,11 +354,7 @@ export async function deleteReservation(
   scope: TenantScope,
   reservationId: string,
 ): Promise<void> {
-  const existing = await reservationsRepository.requireById(
-    scope,
-    reservationId,
-  )
-  await assertBookingRole(scope, existing.tripId)
+  await requireWritableReservation(scope, reservationId)
   await reservationsRepository.requireRemove(scope, reservationId)
 }
 
@@ -374,11 +380,7 @@ export async function linkReservationExpense(
   reservationId: string,
   expenseId: string | null,
 ): Promise<Reservation> {
-  const reservation = await reservationsRepository.requireById(
-    scope,
-    reservationId,
-  )
-  await assertBookingRole(scope, reservation.tripId)
+  const reservation = await requireWritableReservation(scope, reservationId)
 
   if (expenseId === null) {
     return reservationsRepository.requireUpdate(scope, reservationId, {
@@ -410,17 +412,18 @@ const importedIdsSchema = z.array(idSchema).min(1).max(IMPORT_BATCH_LIMIT)
  * reason this returns a number and not `void`: without it a silent no-op on a foreign id is
  * indistinguishable from success.
  *
- * `Date.now()` is read once, so every row of one import carries the same instant.
+ * The clock is read once, so every row of one import carries the same instant.
  */
 export async function markReservationsImported(
   scope: TenantScope,
   reservationIds: ReadonlyArray<string>,
 ): Promise<number> {
   const ids = importedIdsSchema.parse([...reservationIds])
+  const markedAt = new Date()
   const rows = await reservationsRepository.updateWhere(
     scope,
     inArray(reservations.id, ids),
-    { importedAt: new Date(Date.now()) },
+    { importedAt: markedAt },
   )
   return rows.length
 }

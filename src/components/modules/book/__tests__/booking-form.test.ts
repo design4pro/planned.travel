@@ -428,12 +428,13 @@ describe('the stop a booking is for', () => {
  * out about afterwards is one they never agreed to.
  */
 describe('ledgerNotice', () => {
+  /** No date anywhere but the draft's own, and no cost line yet. */
   const undated = { linked: false, dayDate: null, tripStartDate: null }
 
   it('says a line will be added when there is a price and no line yet', () => {
     const notice = ledgerNotice(
       draft({ price: '42', currency: 'GBP', startDate: '2026-04-16' }),
-      { linked: false, dayDate: null, tripStartDate: null },
+      undated,
     )
 
     expect(notice?.tone).toBe('info')
@@ -445,7 +446,7 @@ describe('ledgerNotice', () => {
   it('says the existing line will be updated when one is already linked', () => {
     const notice = ledgerNotice(
       draft({ price: '48', currency: 'GBP', startDate: '2026-04-16' }),
-      { linked: true, dayDate: null, tripStartDate: null },
+      { ...undated, linked: true },
     )
 
     expect(notice?.message).toBe(
@@ -455,9 +456,8 @@ describe('ledgerNotice', () => {
 
   it('says the line survives, unlinked, when the price is cleared', () => {
     const notice = ledgerNotice(draft({ price: '', startDate: '2026-04-16' }), {
+      ...undated,
       linked: true,
-      dayDate: null,
-      tripStartDate: null,
     })
 
     expect(notice?.message).toBe(
@@ -480,7 +480,7 @@ describe('ledgerNotice', () => {
   it('takes the date from the linked day when the booking has none', () => {
     const notice = ledgerNotice(
       draft({ price: '42', currency: 'GBP', startDate: '' }),
-      { linked: false, dayDate: '2026-04-18', tripStartDate: null },
+      { ...undated, dayDate: '2026-04-18' },
     )
 
     expect(notice?.tone).toBe('info')
@@ -489,7 +489,7 @@ describe('ledgerNotice', () => {
   it('takes the date from the trip when neither the booking nor the day has one', () => {
     const notice = ledgerNotice(
       draft({ price: '42', currency: 'GBP', startDate: '' }),
-      { linked: false, dayDate: null, tripStartDate: '2026-04-10' },
+      { ...undated, tripStartDate: '2026-04-10' },
     )
 
     expect(notice?.tone).toBe('info')
@@ -513,7 +513,7 @@ describe('ledgerNotice', () => {
   it('prices the notice in the booking’s own currency', () => {
     const notice = ledgerNotice(
       draft({ price: '7490', currency: 'JPY', startDate: '2026-04-16' }),
-      { linked: false, dayDate: null, tripStartDate: null },
+      undated,
     )
 
     expect(notice?.message).toContain('¥7,490')

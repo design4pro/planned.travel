@@ -538,12 +538,6 @@ const FIELD_NAMES: { readonly [K in BookingField]: string } = {
   assignmentId: 'stop',
 }
 
-/**
- * Every reason this draft cannot be saved, keyed by the field that owns it.
- *
- * The server checks the same things again — this exists so a traveller is told
- * before the round trip, not so the server can trust the client.
- */
 /** What the screen knows that the draft does not. */
 export interface BookingDraftContext {
   /**
@@ -556,6 +550,12 @@ export interface BookingDraftContext {
   readonly stopIds?: ReadonlyArray<string>
 }
 
+/**
+ * Every reason this draft cannot be saved, keyed by the field that owns it.
+ *
+ * The server checks the same things again — this exists so a traveller is told
+ * before the round trip, not so the server can trust the client.
+ */
 export function validateBookingDraft(
   draft: BookingDraft,
   context: BookingDraftContext = {},

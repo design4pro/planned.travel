@@ -98,39 +98,25 @@ async function pickDay(page: Page, name: string, nth: number): Promise<void> {
 /**
  * Delete every card carrying this title, so the seeded workspace the other specs
  * photograph is the one they started with.
+ *
+ * `action` is the label the row's menu item and the confirmation button both
+ * carry — `Remove transport` for one card, `Remove booking` for the other. The
+ * two rows are the same card with the same menu, so this is one walk rather than
+ * one per stage.
  */
-async function removeTransports(page: Page, title: string): Promise<void> {
+async function removeCards(
+  page: Page,
+  title: string,
+  action: string,
+): Promise<void> {
   const cards = page.locator('article').filter({ hasText: title })
   for (let left = await cards.count(); left > 0; left -= 1) {
     await cards
       .first()
       .getByRole('button', { name: `Actions for ${title}` })
       .click()
-    await page.getByRole('menuitem', { name: 'Remove transport' }).click()
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Remove transport' })
-      .click()
-    await expect(cards).toHaveCount(left - 1)
-  }
-}
-
-/**
- * Delete every booking card carrying this title, so the seeded workspace the other specs
- * photograph is the one they started with.
- */
-async function removeBookings(page: Page, title: string): Promise<void> {
-  const cards = page.locator('article').filter({ hasText: title })
-  for (let left = await cards.count(); left > 0; left -= 1) {
-    await cards
-      .first()
-      .getByRole('button', { name: `Actions for ${title}` })
-      .click()
-    await page.getByRole('menuitem', { name: 'Remove booking' }).click()
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Remove booking' })
-      .click()
+    await page.getByRole('menuitem', { name: action }).click()
+    await page.getByRole('dialog').getByRole('button', { name: action }).click()
     await expect(cards).toHaveCount(left - 1)
   }
 }
@@ -250,7 +236,7 @@ test.describe('03-S1 — A transport that knows which day it leaves and which da
 
     // A run that died between the write and the clean-up leaves its row behind,
     // and a second one would then measure the wrong card. Start from nothing.
-    await removeTransports(page, title)
+    await removeCards(page, title, 'Remove transport')
 
     await page.locator(NEW_TRANSPORT).click()
     const dialog = page.getByRole('dialog')
@@ -276,7 +262,7 @@ test.describe('03-S1 — A transport that knows which day it leaves and which da
     ])
 
     // Put the fixture back the way it was found.
-    await removeTransports(page, title)
+    await removeCards(page, title, 'Remove transport')
 
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
@@ -387,6 +373,10 @@ test.describe('03-S4 — A booking that knows which stop it is for, and what it 
    * Chromium keeps the strict reading, and both projects render the same components, so a
    * hydration mismatch introduced by *this* stage still fails.
    */
+  /** React writes the sentence with either apostrophe, depending on the build. */
+  const TEXT_MISMATCH =
+    /Hydration failed because the server rendered text didn['’]t match/
+
   function consoleFatal(
     fatal: ReadonlyArray<string>,
     browserName: string,
@@ -394,15 +384,7 @@ test.describe('03-S4 — A booking that knows which stop it is for, and what it 
     if (browserName === 'chromium') {
       return fatal
     }
-    return fatal.filter(
-      (line) =>
-        !line.includes(
-          'Hydration failed because the server rendered text didn’t match',
-        ) &&
-        !line.includes(
-          "Hydration failed because the server rendered text didn't match",
-        ),
-    )
+    return fatal.filter((line) => !TEXT_MISMATCH.test(line))
   }
 
   test.beforeEach(async ({ context, page, baseURL }) => {
@@ -524,7 +506,7 @@ test.describe('03-S4 — A booking that knows which stop it is for, and what it 
     const report = watchConsole(page, BOOK)
     await visit(page, BOOK, 'light')
 
-    await removeBookings(page, title)
+    await removeCards(page, title, 'Remove booking')
 
     await page.locator(NEW_BOOKING).click()
     const dialog = page.getByRole('dialog')
@@ -558,7 +540,7 @@ test.describe('03-S4 — A booking that knows which stop it is for, and what it 
     const card = page.locator('article').filter({ hasText: title })
     await expect(card).toHaveCount(1)
 
-    await removeBookings(page, title)
+    await removeCards(page, title, 'Remove booking')
 
     const fatal = consoleFatal(report().fatal, browserName)
     expect(fatal, fatal.join('\n')).toEqual([])
