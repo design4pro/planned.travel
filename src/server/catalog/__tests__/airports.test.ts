@@ -13,11 +13,16 @@
  * `src/server/repos/**` at any depth — is `./isolation.test.ts`, which walks this directory's
  * module graph and picks up `../airports.ts` without being edited.
  *
- * The DDL is generated from the Drizzle schema (`drizzle-kit/api`) rather than hand-written, for
- * the reason `./platform-tables.ts` gives: the real column types, the real unique indexes and the
- * real `latLngChecks` are what the read runs against, and a hand-copied `CREATE TABLE` drifts.
- * That fixture is not reused because it builds four tables this test wants absent, and because it
- * cannot record the SQL it runs.
+ * The DDL is the **shipped migration's**, not a hand-written `CREATE TABLE` and not one generated
+ * from `schema.ts`. A hand-copied one drifts, and a generated one carries every column `schema.ts`
+ * declares whether or not `pnpm db:generate` was ever run — so a read selecting a column D1 has
+ * never been told about would pass here and fail in the Worker. `drizzle/*.sql` is replayed in
+ * journal order through `src/server/db/__tests__/migration-files.ts`, filtered to the statements
+ * that name this one table, and the `the fixture` block below asserts what came out
+ * matches what `schema.ts` declares — which is what keeps that filter honest as well.
+ *
+ * `./platform-tables.ts` is not reused because it builds four tables this test wants absent, and
+ * because it cannot record the SQL it runs.
  *
  * The cases are chosen against the three ways a type-ahead over public data fails quietly:
  *
@@ -31,32 +36,46 @@
  *   catalogue instead of erroring.
  */
 
-import { DatabaseSync } from 'node:sqlite'
-import {
-  generateSQLiteDrizzleJson,
-  generateSQLiteMigration,
-} from 'drizzle-kit/api'
+import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { afterEach, describe, expect, it } from 'vitest'
 import { airports } from '#/server/db/schema'
+import {
+  openReplayDatabase,
+  shippedMigrations,
+  statementsOf,
+} from '#/server/db/__tests__/migration-files'
 import {
   AIRPORT_MATCH_LIMIT,
   AIRPORT_TERM_MAX_LENGTH,
   findAirportByCode,
   searchAirports,
 } from '../airports'
+import type { DatabaseSync } from 'node:sqlite'
 import type { Database, NewAirport } from '#/server/db/types'
 
-/** Generating the schema snapshot is the slow part, so it happens once per test process. */
-let ddl: Promise<Array<string>> | undefined
+/**
+ * The identifier as drizzle-kit writes it, including the copy-and-swap name it would use if a
+ * later migration ever rebuilt this table.
+ */
+const AIRPORTS_IDENTIFIER = /`(?:__new_)?airports`/
 
-function schemaStatements(): Promise<Array<string>> {
-  ddl ??= (async () => {
-    const empty = await generateSQLiteDrizzleJson({})
-    const current = await generateSQLiteDrizzleJson({ airports })
-    return generateSQLiteMigration(empty, current)
-  })()
+/** Every shipped statement that names this table, in journal order. Read once per test process. */
+let ddl: Array<string> | undefined
+
+function migrationStatements(): Array<string> {
+  ddl ??= shippedMigrations()
+    .flatMap((migration) => statementsOf(migration.sql))
+    .filter((statement) => AIRPORTS_IDENTIFIER.test(statement))
   return ddl
+}
+
+/** One bound parameter, in the shapes `node:sqlite` accepts. No nested ternary, per house rule. */
+function toBoundValue(param: unknown): null | number | string {
+  if (param === null || param === undefined) return null
+  if (param instanceof Date) return param.getTime()
+  if (typeof param === 'boolean') return Number(param)
+  return param as string | number
 }
 
 interface Catalogue {
@@ -66,9 +85,14 @@ interface Catalogue {
   close: () => void
 }
 
+function openCatalogueDatabase(): DatabaseSync {
+  const sqlite = openReplayDatabase()
+  for (const statement of migrationStatements()) sqlite.exec(statement)
+  return sqlite
+}
+
 async function createCatalogue(rows: Array<NewAirport>): Promise<Catalogue> {
-  const sqlite = new DatabaseSync(':memory:')
-  for (const statement of await schemaStatements()) sqlite.exec(statement)
+  const sqlite = openCatalogueDatabase()
 
   const queries: Array<string> = []
   const run = (
@@ -78,15 +102,7 @@ async function createCatalogue(rows: Array<NewAirport>): Promise<Catalogue> {
   ) => {
     queries.push(query)
     const statement = sqlite.prepare(query)
-    const bound = params.map((param) =>
-      param === null || param === undefined
-        ? null
-        : param instanceof Date
-          ? param.getTime()
-          : typeof param === 'boolean'
-            ? Number(param)
-            : (param as string | number),
-    )
+    const bound = params.map(toBoundValue)
     if (method === 'run') {
       statement.run(...bound)
       return { rows: [] }
@@ -187,6 +203,50 @@ async function catalogue(rows: Array<NewAirport> = CATALOGUE) {
   open.push(fixture)
   return fixture
 }
+
+describe('the fixture', () => {
+  it('builds the table the shipped migrations build, and only that table', () => {
+    // Two claims in one, and both are load-bearing for every case below. The statement filter has
+    // to have found the migration — an empty replay would leave the read failing on `no such
+    // table` rather than answering — and the replay has to have built *nothing else*, because a
+    // second table is what the queries below are asserted to be unable to reach.
+    const sqlite = openCatalogueDatabase()
+    try {
+      const tables = sqlite
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+        )
+        .all()
+        .map((row) => String(row.name))
+
+      expect(tables).toEqual(['airports'])
+    } finally {
+      sqlite.close()
+    }
+  })
+
+  it('carries every column `schema.ts` declares, which is what `db:generate` guarantees', () => {
+    // The failure this catches is a column added to `schema.ts` with `pnpm db:generate` never run:
+    // Drizzle would select it, this suite would pass against a generated DDL that has it, and the
+    // Worker would fail against a D1 that does not. Replaying the migration is what makes the two
+    // able to disagree; this is where the disagreement is reported.
+    const sqlite = openCatalogueDatabase()
+    try {
+      const onDisk = sqlite
+        .prepare('SELECT name FROM pragma_table_info(?)')
+        .all('airports')
+        .map((row) => String(row.name))
+        .sort()
+      const declared = getTableConfig(airports)
+        .columns.map((column) => column.name)
+        .sort()
+
+      expect(onDisk).toEqual(declared)
+    } finally {
+      sqlite.close()
+    }
+  })
+})
 
 describe('searchAirports', () => {
   it('matches a prefix of the IATA code and fills the four fields a code resolves to', async () => {
