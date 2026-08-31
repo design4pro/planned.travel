@@ -333,10 +333,10 @@ const messages = {
     'Zaten işaretlenmiş; bu yüzden oraya vardığınıza dair kayıt da silinir. Dünya haritanız ve gezileriniz olduğu gibi kalır.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': {
-    one: 'Çalışma alanı gezisi',
-    other: 'Çalışma alanı gezileri',
-  },
+  // Turkish does not pluralise the noun after a numeral, so the branch a count
+  // selects never changes the word — the same rule `card.visits` and
+  // `card.places` below already follow.
+  'card.trips': { one: 'Çalışma alanı gezisi', other: 'Çalışma alanı gezisi' },
   'card.visits': { one: 'Ziyaret', other: 'Ziyaret' },
   'card.places': { one: 'Yer', other: 'Yer' },
   'card.firstTrip': 'İlk gezi',

@@ -336,9 +336,12 @@ const messages = {
     'Már ki van pipálva, így az a bejegyzés is törlődik, hogy eljutott oda. Az atlaszát és az utazásait ez nem érinti.',
 
   /* ------------------------------------------------- the card over the map */
+  // Hungarian does not pluralise the noun after a numeral, so the branch a
+  // count selects never changes the word — the same rule `card.visits` and
+  // `card.places` below already follow.
   'card.trips': {
     one: 'A munkaterület utazása',
-    other: 'A munkaterület utazásai',
+    other: 'A munkaterület utazása',
   },
   'card.visits': { one: 'Látogatás', other: 'Látogatás' },
   'card.places': { one: 'Hely', other: 'Hely' },

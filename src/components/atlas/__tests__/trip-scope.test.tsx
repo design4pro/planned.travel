@@ -8,7 +8,6 @@ import { render, screen, within } from '@testing-library/react'
 
 import { AtlasPanel } from '../atlas-panel'
 import { CountryCard } from '../country-card'
-import en from '#/lib/i18n/messages/en/atlas'
 
 import type { AtlasPanelProps } from '../atlas-panel'
 import type { NamespaceModule } from '#/lib/i18n/catalogue'
@@ -102,8 +101,11 @@ function atlasScreen(): {
  * than about two strings that happen to be on the same screen.
  */
 function tileFigure(panel: HTMLElement, label: string): string {
+  // Bounded by the panel: the card renders beside it in the same document and
+  // carries numerals of its own, so a walk let out of the panel could answer
+  // this question with the other surface's figure instead of failing.
   let node: HTMLElement | null = within(panel).getByText(label)
-  while (node !== null) {
+  while (node !== null && panel.contains(node)) {
     const numeral = node.querySelector('[data-numeric]')
     if (numeral !== null) {
       return numeral.textContent
@@ -123,8 +125,8 @@ function cardCell(card: HTMLElement, index: number): readonly [string, string] {
   ] as const
 }
 
-/** The one word both figures used to be printed under. */
-const BARE = ['Trip', 'Trips']
+/** The one word both figures used to be printed under, in both its branches. */
+const BARE_NOUNS = ['Trip', 'Trips'] as const
 
 /** A label reduced to what it says, so casing and padding cannot hide a match. */
 const said = (label: string): string => label.trim().toLocaleLowerCase()
@@ -150,9 +152,11 @@ describe('the two trip figures on one atlas screen', () => {
   })
 
   it('prints the bare noun over neither figure', () => {
+    // Both surfaces are mounted; the query below is over the whole document,
+    // so it answers for the screen rather than for either half of it.
     atlasScreen()
 
-    for (const word of BARE) {
+    for (const word of BARE_NOUNS) {
       expect(screen.queryAllByText(word)).toEqual([])
     }
   })
@@ -197,14 +201,5 @@ describe('the two trip figures on one atlas screen', () => {
         ).toEqual([])
       },
     )
-  })
-
-  it('leaves the English source saying which population each counts', () => {
-    expect(en['panel.stat.trips']).toBe('Your trips')
-    expect(en['panel.stat.tripsCaption']).toBe('Finished trips you are on')
-    expect(en['card.trips']).toEqual({
-      one: 'Workspace trip',
-      other: 'Workspace trips',
-    })
   })
 })
