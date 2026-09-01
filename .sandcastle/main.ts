@@ -58,7 +58,9 @@ import { z } from 'zod'
 import { adoptWipBranches } from './adopt'
 import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
+import { agentFor, describeRoles, resolveRole } from './roles'
 import { resolveRun } from './run-id'
+import { openStageLog, recordStage } from './stage-log'
 import { withUsageLimit } from './usage-limit'
 import { docker } from './sandbox'
 
@@ -131,6 +133,18 @@ const deepReviewSchema = z.object({
     .array(
       z.object({
         severity: z.enum(['blocker', 'strong', 'minor']),
+        // The same five axes review-prompt.md walks, so the two review stages of one
+        // issue can be read together. Defaulted rather than required: the axis groups
+        // findings, it does not decide whether one is worth reporting.
+        axis: z
+          .enum([
+            'correctness',
+            'readability',
+            'architecture',
+            'security',
+            'performance',
+          ])
+          .optional(),
         title: z.string(),
         summary: z.string(),
         files: z.array(z.string()).default([]),
@@ -162,17 +176,32 @@ const MAX_ITERATIONS = 10
 // documents as false evidence.
 const MAX_PARALLEL = 2
 
+// The e2e matrix, split.
+//
+// Measured over the runs on disk, a UI attempt spends ~220 s in `e2e` against ~52 s in the whole
+// rest of the ladder, and mobile-safari is the larger half of that: 3646 s of test time against
+// chromium's 3153 s. Half of the recorded `e2e` steps were red, so the loop pays that twice or
+// three times for an issue it eventually fixes.
+//
+// So the fix loop re-validates on chromium alone and mobile-safari gates once, after chromium is
+// green and before the issue is called done. Nothing reaches the merge without the full matrix
+// having passed on the final tree, and CI still runs all twelve shards on the PR.
+const LOOP_E2E_PROJECTS = ['chromium'] as const
+const GATE_E2E_PROJECTS = ['mobile-safari'] as const
+
 // Fix-loop budget: resumes of the implementer session after a validator FAIL.
 // Exhausted → the issue is labelled agent-blocked and excluded from the merge.
 const FIX_BUDGET = 2
 
-// Models per role (validator has no model — it is a script).
-const PLANNER_MODEL = 'claude-opus-5'
-const IMPLEMENTER_MODEL = 'claude-opus-5'
-const REVIEWER_MODEL = 'claude-opus-5'
-const AUDITOR_MODEL = 'claude-opus-5'
-const CRITIC_MODEL = 'claude-opus-5'
-const DEEP_REVIEW_MODEL = 'claude-opus-5'
+// Model and effort per role live in ./roles (the validator has neither — it is a script).
+// `metaFor` puts the resolved pair on the stage's timeline row, so a report always says which
+// configuration produced the numbers it is showing.
+function metaFor(
+  role: Parameters<typeof agentFor>[0],
+  extra: { issue?: string; attempt?: number } = {},
+): { issue?: string; attempt?: number; model: string; effort?: string } {
+  return { ...extra, ...resolveRole(role) }
+}
 
 // The deep review is one extra agent run per issue on top of implementer,
 // reviewer and the fix budget. Set SANDCASTLE_DEEP_REVIEW=0 to skip it.
@@ -428,14 +457,26 @@ function openSubIssueIds(id: string): string[] {
  * it" — expanded here, deterministically, instead of leaving the planner to
  * walk the sub-issue tree on its own and pick up work no human has cleared.
  * The expansion is still gated: a slice without `ready-for-agent` is held.
+ *
+ * `strict` is what tells apart the two callers, which want opposite things from the same check.
+ * At startup an unlabelled `--issues 138` is operator error and must stop the run before it cuts
+ * a worktree. From the second iteration on it is routine: the loop itself takes the label off
+ * every issue whose fix budget runs out (`markBlocked`), so throwing there kills a healthy run for
+ * doing exactly what it was built to do — which is how run 20260831-2 ended.
  */
-function resolveOnlyIssues(eligible: Set<string>): string[] {
+function resolveOnlyIssues(eligible: Set<string>, strict: boolean): string[] {
   const resolved: string[] = []
   for (const id of ONLY_ISSUES) {
     const subs = openSubIssueIds(id)
     if (subs.length === 0) {
       // A leaf ticket: workable exactly when a human cleared it.
       if (!eligible.has(id)) {
+        if (!strict) {
+          console.log(
+            `  #${id} has left the loop (no \`ready-for-agent\`) — skipping.`,
+          )
+          continue
+        }
         throw new Error(
           `Issue #${id} does not carry \`ready-for-agent\`, so it is not cleared for the loop. ` +
             `Label it (see docs/agents/triage-labels.md) or drop it from --issues.`,
@@ -446,6 +487,12 @@ function resolveOnlyIssues(eligible: Set<string>): string[] {
     }
     const cleared = subs.filter((sub) => eligible.has(sub))
     if (cleared.length === 0) {
+      if (!strict) {
+        console.log(
+          `  #${id} is a PRD whose slices have all left the loop — skipping.`,
+        )
+        continue
+      }
       throw new Error(
         `#${id} is a PRD and none of its ${subs.length} open sub-issues carries \`ready-for-agent\`: ` +
           `${subs.map((sub) => `#${sub}`).join(', ')}. Label the slices you want worked — ` +
@@ -465,6 +512,16 @@ function resolveOnlyIssues(eligible: Set<string>): string[] {
 const ARTIFACT_ROOT = join('.sandcastle', 'logs', `run-${RUN_ID}`)
 await mkdir(ARTIFACT_ROOT, { recursive: true })
 await writeFile(lockPath, String(process.pid))
+
+// Opened as soon as there is a directory to write into, and before the first agent runs. Until this
+// call every `recordStage` is a no-op, which is what keeps the unit tests free of it.
+openStageLog(RUN_ID, ARTIFACT_ROOT)
+recordStage({
+  kind: 'run',
+  at: Date.now(),
+  maxParallel: MAX_PARALLEL,
+  roles: describeRoles(),
+})
 
 // Whether this run claims its issues from the shared registry. `--issues` partitions the backlog
 // only when the operator gets it right; the registry is the mechanical backstop that makes two
@@ -508,6 +565,8 @@ for (const stopping of ['SIGINT', 'SIGTERM'] as const) {
 type Issue = z.infer<typeof planSchema>['issues'][number]
 type Validation = {
   uiTouched: boolean
+  /** Which playwright projects the e2e step covered; empty means the whole matrix. */
+  e2eProjects?: string[]
   steps: Array<{ name: string; ok: boolean; durationMs: number }>
   e2e: {
     failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
@@ -608,22 +667,25 @@ function issueBranch(id: string): string {
 }
 
 async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
-  const plan = await withUsageLimit('planner', () =>
-    sandcastle.run({
-      // No install hook: the planner only reads issues via gh. And NEVER the
-      // default 'head' strategy — it bind-mounts the host working directory,
-      // where an install hook would grind through the darwin node_modules
-      // (measured: 10+ min vs 13 s fresh) and could corrupt them.
-      sandbox: docker(),
-      cwd: integrationCwd,
-      branchStrategy: { type: 'merge-to-head' },
-      name: 'planner',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(PLANNER_MODEL),
-      promptFile: './.sandcastle/plan-prompt.md',
-      promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
-      output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
-    }),
+  const plan = await withUsageLimit(
+    'planner',
+    () =>
+      sandcastle.run({
+        // No install hook: the planner only reads issues via gh. And NEVER the
+        // default 'head' strategy — it bind-mounts the host working directory,
+        // where an install hook would grind through the darwin node_modules
+        // (measured: 10+ min vs 13 s fresh) and could corrupt them.
+        sandbox: docker(),
+        cwd: integrationCwd,
+        branchStrategy: { type: 'merge-to-head' },
+        name: 'planner',
+        maxIterations: 1,
+        agent: agentFor('planner'),
+        promptFile: './.sandcastle/plan-prompt.md',
+        promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
+        output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
+      }),
+    { meta: metaFor('planner') },
   )
   // The prompt is an instruction; this is the enforcement. A planned id outside
   // the scope is dropped, loudly — it means the agent went looking, and what it
@@ -679,24 +741,104 @@ async function collectArtifacts(
 
 async function validate(
   sandbox: sandcastle.Sandbox,
-  opts: { updateSnapshots?: boolean } = {},
+  opts: {
+    updateSnapshots?: boolean
+    issue?: string
+    attempt?: number
+    /** playwright.config.ts project names; omitted means the whole matrix. */
+    e2eProjects?: readonly string[]
+  } = {},
 ): Promise<Validation> {
   const flags = ['--json-out .sandcastle-validation.json']
   if (opts.updateSnapshots) flags.push('--update-snapshots')
-  const result = await sandbox.exec(
-    `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
-  )
-  const read = await sandbox.exec('cat .sandcastle-validation.json')
-  try {
-    return JSON.parse(read.stdout) as Validation
-  } catch {
-    return {
-      uiTouched: true,
-      steps: [{ name: 'validate.sh', ok: false, durationMs: 0 }],
-      e2e: { failed: [] },
-      ok: result.exitCode === 0,
-    }
+  if (opts.e2eProjects !== undefined) {
+    flags.push(`--e2e-projects ${opts.e2eProjects.join(',')}`)
   }
+  // The ladder is the one stage `withUsageLimit` does not wrap — it runs no agent, so it can hit no
+  // usage limit — and it is also the only container-heavy one. It records itself so the timeline
+  // covers the whole pipeline rather than only its agents, and so `validate` rows in the report can
+  // be cross-checked against the `steps[]` the verdict already carries.
+  const startedAt = Date.now()
+  let verdict: Validation
+  try {
+    const result = await sandbox.exec(
+      `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
+    )
+    const read = await sandbox.exec('cat .sandcastle-validation.json')
+    try {
+      verdict = JSON.parse(read.stdout) as Validation
+    } catch {
+      // No verdict is NOT a red ladder, and must never be spent as a fix attempt. The script
+      // writes the file on every path it can reach, so a missing one means it never got that
+      // far: a flag it does not know (exit 2), a container that died, a `jq` that is not there.
+      //
+      // The flag case is the live hazard, because main.ts and validate.sh are versioned together
+      // but deployed apart — main.ts is the operator's checkout, validate.sh is the sandbox's, cut
+      // from the integration branch. Run 20260831-2 hit exactly that: `--e2e-projects` on a
+      // validate.sh from before it existed, nine 74 ms "failures", three exhausted fix budgets,
+      // and `ready-for-agent` stripped off three issues that were never actually validated.
+      // Rejecting this issue's pipeline says it once, loudly, and leaves the labels alone.
+      throw new Error(
+        `validate.sh wrote no verdict (exit ${result.exitCode}) — the ladder never ran, ` +
+          `so this is an operator problem rather than a red branch. ` +
+          `Flags: ${flags.join(' ')}. stderr: ${firstLine(result.stderr)}`,
+      )
+    }
+  } catch (error) {
+    recordValidateStage(startedAt, opts, 'error', error)
+    throw error
+  }
+  recordValidateStage(startedAt, opts, verdict.ok ? 'ok' : 'error')
+  return verdict
+}
+
+/** First non-empty line, capped — enough of a stderr to name the cause in an error message. */
+function firstLine(text: string): string {
+  const line = text.split('\n').find((candidate) => candidate.trim() !== '')
+  return line === undefined ? '(empty)' : line.trim().slice(0, 300)
+}
+
+function recordValidateStage(
+  startedAt: number,
+  opts: {
+    updateSnapshots?: boolean
+    issue?: string
+    attempt?: number
+    e2eProjects?: readonly string[]
+  },
+  outcome: 'ok' | 'error',
+  error?: unknown,
+): void {
+  const endedAt = Date.now()
+  recordStage({
+    kind: 'stage',
+    label: opts.updateSnapshots
+      ? 'validate (baselines)'
+      : opts.e2eProjects === undefined
+        ? 'validate'
+        : `validate:${opts.e2eProjects.join(',')}`,
+    issue: opts.issue,
+    attempt: opts.attempt,
+    startedAt,
+    endedAt,
+    wallMs: endedAt - startedAt,
+    // No agent, so no limit to wait out: every millisecond here is work.
+    waitMs: 0,
+    workMs: endedAt - startedAt,
+    waits: 0,
+    outcome,
+    error:
+      error === undefined
+        ? undefined
+        : (error instanceof Error ? error.message : String(error))
+            .split('\n')[0]
+            ?.slice(0, 300),
+  })
+}
+
+/** `e2e`, or the `e2e:<projects>` a narrowed run writes. Never `e2e-env`, which is setup. */
+function isE2eStep(name: string): boolean {
+  return name === 'e2e' || name.startsWith('e2e:')
 }
 
 function failureDigest(v: Validation, attempt: number): string {
@@ -746,6 +888,7 @@ async function declaresVisualChange(
 async function runDeepReview(
   sandbox: sandcastle.Sandbox,
   issue: Issue,
+  attempt: number,
   signal?: AbortSignal,
 ): Promise<void> {
   try {
@@ -756,11 +899,11 @@ async function runDeepReview(
           signal,
           name: 'deep-reviewer',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(DEEP_REVIEW_MODEL),
+          agent: agentFor('deepReview'),
           promptFile: './.sandcastle/deep-review-prompt.md',
           promptArgs: { BRANCH: issue.branch },
         }),
-      { signal },
+      { signal, meta: metaFor('deepReview', { issue: issue.id, attempt }) },
     )
     const raw = run.stdout.match(/<deep-review>([\s\S]*?)<\/deep-review>/)?.[1]
     if (raw === undefined) {
@@ -787,7 +930,7 @@ async function runDeepReview(
         ...(report.findings.length > 0
           ? report.findings.map((f) =>
               [
-                `- **[${f.severity}] ${f.title}**`,
+                `- **[${f.severity}${f.axis === undefined ? '' : ` · ${f.axis}`}] ${f.title}**`,
                 `  ${f.summary}`,
                 ...(f.files.length > 0
                   ? [`  Files: ${f.files.map((p) => `\`${p}\``).join(', ')}`]
@@ -865,6 +1008,7 @@ async function runDeepReview(
 async function runPixelCritic(
   sandbox: sandcastle.Sandbox,
   issue: Issue,
+  attempt: number,
   signal?: AbortSignal,
 ): Promise<void> {
   try {
@@ -881,7 +1025,7 @@ async function runPixelCritic(
           signal,
           name: 'pixel-capture',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(CRITIC_MODEL),
+          agent: agentFor('pixelCapture'),
           promptFile: './.sandcastle/pixel-capture-prompt.md',
           promptArgs: {
             TASK_ID: issue.id,
@@ -891,7 +1035,7 @@ async function runPixelCritic(
             REF_LABEL: refLabel,
           },
         }),
-      { signal },
+      { signal, meta: metaFor('pixelCapture', { issue: issue.id, attempt }) },
     )
     const capRaw = capture.stdout.match(/<capture>([\s\S]*?)<\/capture>/)?.[1]
     if (capRaw === undefined) {
@@ -913,7 +1057,7 @@ async function runPixelCritic(
           signal,
           name: 'pixel-critic',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(CRITIC_MODEL),
+          agent: agentFor('pixelCritic'),
           promptFile: './.sandcastle/pixel-critic-prompt.md',
           promptArgs: {
             TASK_ID: issue.id,
@@ -921,7 +1065,7 @@ async function runPixelCritic(
             SHOTS_DIR: shotsDir,
           },
         }),
-      { signal },
+      { signal, meta: metaFor('pixelCritic', { issue: issue.id, attempt }) },
     )
     const visRaw = critic.stdout.match(/<visual>([\s\S]*?)<\/visual>/)?.[1]
     if (visRaw === undefined) {
@@ -1041,7 +1185,7 @@ async function workIssue(
           signal,
           name: 'implementer',
           maxIterations: 100,
-          agent: sandcastle.claudeCode(IMPLEMENTER_MODEL),
+          agent: agentFor('implementer'),
           promptFile: './.sandcastle/implement-prompt.md',
           promptArgs: {
             TASK_ID: issue.id,
@@ -1049,7 +1193,7 @@ async function workIssue(
             BRANCH: issue.branch,
           },
         }),
-      { signal },
+      { signal, meta: metaFor('implementer', { issue: issue.id, attempt: 0 }) },
     )
     commits.push(...implement.commits)
     noteWip()
@@ -1063,42 +1207,76 @@ async function workIssue(
           signal,
           name: 'reviewer',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(REVIEWER_MODEL),
+          agent: agentFor('reviewer'),
           promptFile: './.sandcastle/review-prompt.md',
           promptArgs: { BRANCH: issue.branch },
         }),
-      { signal },
+      { signal, meta: metaFor('reviewer', { issue: issue.id, attempt: 0 }) },
     )
     commits.push(...review.commits)
 
     for (let attempt = 1; attempt <= FIX_BUDGET + 1; attempt++) {
-      let verdict = await validate(sandbox)
+      let verdict = await validate(sandbox, {
+        issue: issue.id,
+        attempt,
+        e2eProjects: LOOP_E2E_PROJECTS,
+      })
       lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
+      // Whether the tree standing behind `verdict` has been through every browser. The gate below
+      // is skipped when it has, so the re-record path does not pay for mobile-safari twice.
+      let fullMatrix = false
 
       if (
         !verdict.ok &&
         verdict.e2e.failed.length > 0 &&
         verdict.e2e.failed.every((f) => f.snapshotDiff) &&
-        verdict.steps.filter((s) => !s.ok).every((s) => s.name === 'e2e') &&
+        verdict.steps.filter((s) => !s.ok).every((s) => isE2eStep(s.name)) &&
         (await declaresVisualChange(sandbox, issue))
       ) {
         // Every failure is a snapshot diff and the issue declares the change:
         // re-record the -linux baselines instead of "fixing" intended pixels.
+        // The whole matrix, both here and on the confirming pass: a baseline
+        // exists per project, so re-recording chromium's alone would leave
+        // mobile-safari red against pixels the issue already declared.
         console.log(
           `  [${issue.id}] intended visual change — re-recording baselines`,
         )
-        await validate(sandbox, { updateSnapshots: true })
+        await validate(sandbox, {
+          updateSnapshots: true,
+          issue: issue.id,
+          attempt,
+        })
         await sandbox.exec(
           `git add e2e/__screenshots__ && git commit -m "RALPH: re-record linux baselines — intended per issue #${issue.id}"`,
         )
         commits.push({ sha: 'baselines' })
-        verdict = await validate(sandbox)
+        verdict = await validate(sandbox, { issue: issue.id, attempt })
         lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
+        fullMatrix = true
+      }
+
+      // The gate. chromium is green and the change is visible, so the browser the loop skipped
+      // gets its one run before this issue counts as done. A failure here is an ordinary FAIL: it
+      // feeds the fix loop like any other, and the next attempt is back on chromium.
+      if (verdict.ok && verdict.uiTouched && !fullMatrix) {
+        const gate = await validate(sandbox, {
+          issue: issue.id,
+          attempt,
+          e2eProjects: GATE_E2E_PROJECTS,
+        })
+        lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
+        if (!gate.ok) {
+          console.log(
+            `  [${issue.id}] chromium green, ${GATE_E2E_PROJECTS.join(', ')} red — back to the fix loop`,
+          )
+          verdict = gate
+        }
       }
 
       if (verdict.ok) {
-        if (DEEP_REVIEW) await runDeepReview(sandbox, issue, signal)
-        if (verdict.uiTouched) await runPixelCritic(sandbox, issue, signal)
+        if (DEEP_REVIEW) await runDeepReview(sandbox, issue, attempt, signal)
+        if (verdict.uiTouched)
+          await runPixelCritic(sandbox, issue, attempt, signal)
         if (DEEP_REVIEW || verdict.uiTouched) {
           // Re-collect: the advisory passes added .sandcastle-deep-review.json,
           // .sandcastle-shots and the visual verdict.
@@ -1147,7 +1325,7 @@ async function workIssue(
             // promptArgs is rejected (PromptError). Empty override passes.
             { promptArgs: {}, signal },
           ),
-        { signal },
+        { signal, meta: metaFor('implementer', { issue: issue.id, attempt }) },
       )
       commits.push(...implement.commits)
     }
@@ -1159,26 +1337,29 @@ async function workIssue(
 }
 
 async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
-  await withUsageLimit('merger', () =>
-    sandcastle.run({
-      hooks,
-      sandbox: docker(),
-      cwd: integrationCwd,
-      // Temp branch off HEAD; the agent merges issue branches into it, then
-      // sandcastle merges the temp branch back to HEAD. Same net effect as
-      // 'head', but the container never installs over the host node_modules.
-      branchStrategy: { type: 'merge-to-head' },
-      name: 'merger',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(REVIEWER_MODEL),
-      promptFile: './.sandcastle/merge-prompt.md',
-      promptArgs: {
-        BRANCHES: passing.map((p) => `- ${p.issue.branch}`).join('\n'),
-        ISSUES: passing
-          .map((p) => `- ${p.issue.id}: ${p.issue.title}`)
-          .join('\n'),
-      },
-    }),
+  await withUsageLimit(
+    'merger',
+    () =>
+      sandcastle.run({
+        hooks,
+        sandbox: docker(),
+        cwd: integrationCwd,
+        // Temp branch off HEAD; the agent merges issue branches into it, then
+        // sandcastle merges the temp branch back to HEAD. Same net effect as
+        // 'head', but the container never installs over the host node_modules.
+        branchStrategy: { type: 'merge-to-head' },
+        name: 'merger',
+        maxIterations: 1,
+        agent: agentFor('merger'),
+        promptFile: './.sandcastle/merge-prompt.md',
+        promptArgs: {
+          BRANCHES: passing.map((p) => `- ${p.issue.branch}`).join('\n'),
+          ISSUES: passing
+            .map((p) => `- ${p.issue.id}: ${p.issue.title}`)
+            .join('\n'),
+        },
+      }),
+    { meta: metaFor('merger') },
   )
 }
 
@@ -1203,16 +1384,19 @@ async function runAuditor(
     hooks,
   })
   try {
-    const audit = await withUsageLimit('auditor', () =>
-      sandbox.run({
-        name: 'auditor',
-        maxIterations: 1,
-        agent: sandcastle.claudeCode(AUDITOR_MODEL),
-        promptFile: './.sandcastle/audit-prompt.md',
-        promptArgs: {
-          ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
-        },
-      }),
+    const audit = await withUsageLimit(
+      'auditor',
+      () =>
+        sandbox.run({
+          name: 'auditor',
+          maxIterations: 1,
+          agent: agentFor('auditor'),
+          promptFile: './.sandcastle/audit-prompt.md',
+          promptArgs: {
+            ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
+          },
+        }),
+      { meta: metaFor('auditor') },
     )
     // sandbox.run() has no `output` option (only top-level run() does) —
     // extract and validate the <audit> block from stdout by hand.
@@ -1326,7 +1510,15 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // releases one. The planner never sees anything this does not hand it.
   const eligible = new Set(readyForAgentIds())
   const requested =
-    ONLY_ISSUES.length === 0 ? [...eligible] : resolveOnlyIssues(eligible)
+    ONLY_ISSUES.length === 0
+      ? [...eligible]
+      : resolveOnlyIssues(eligible, iteration === 1)
+  recordStage({
+    kind: 'iteration',
+    at: Date.now(),
+    iteration,
+    issues: requested,
+  })
 
   // Claim BEFORE planning, not after. The old order — read what looked free, plan, then claim —
   // left a window the width of a planner run, and two planners in that window is exactly what put
@@ -1340,8 +1532,10 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   const scopeIds = claimed.granted
   if (scopeIds.length === 0) {
     console.log(
-      eligible.size === 0
-        ? 'No issue carries `ready-for-agent`. Nothing is cleared for the loop — exiting.'
+      requested.length === 0
+        ? ONLY_ISSUES.length === 0
+          ? 'No issue carries `ready-for-agent`. Nothing is cleared for the loop — exiting.'
+          : 'Every issue named by `--issues` has left the loop (blocked, merged or unlabelled). Exiting.'
         : 'Every issue in scope is already held by another run. Exiting.',
     )
     break

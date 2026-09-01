@@ -51,6 +51,14 @@ is `<date>-<n>`, allocated by scanning local branches, so two operators starting
 genuinely can compute the same one - and treating that as a resume would hand the second machine
 every lease the first holds, reproducing "two fleets, one issue" through the coordinator itself.
 
+**The agent tree is one level deep, and stays that way.** `main.ts` is the only orchestrator: it
+calls agents, and no agent calls another. That is deliberate, not an accident of the current shape.
+A nested agent has no claim on the registry, so the run holding the lease is no longer the thing
+doing the work, and the coordination this ADR describes silently stops covering it - on top of the
+usual costs of deep agent trees (a context relayed through two summarizations, and a failure that
+surfaces as a shrug rather than as a stage). New capability is a new stage in the loop, with its own
+lease-bounded slot, never a call from inside an existing one.
+
 **Liveness is a server-computed lease, not a process id.** A pid means nothing to a run on another
 machine, and the expiry is stamped by the registry so clock skew between a laptop and an Actions
 runner is irrelevant. A run holds its leases by heartbeating every 60 seconds against a five-minute

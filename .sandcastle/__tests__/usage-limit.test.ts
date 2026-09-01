@@ -1,5 +1,10 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { STAGE_LOG_NAME, openStageLog, resetStageLog } from '../stage-log'
 import {
   BLIND_WAIT_MS,
   WAKE_MARGIN_MS,
@@ -330,5 +335,162 @@ describe('withUsageLimit', () => {
 
     release()
     await expect(leader).resolves.toBe('issue-a')
+  })
+})
+
+/**
+ * The wait/work split, which is the whole reason the timeline exists: a run is ~20 h of wall clock
+ * and until now nothing said how much of that was an agent working and how much was this module
+ * sitting out a limit. `withUsageLimit` is the only place that can tell the two apart.
+ */
+describe('withUsageLimit writes a stage record', () => {
+  const START = new Date('2026-08-30T23:00:00.000Z')
+
+  /** A clock that advances only when the code under test sleeps, so the schedule is stated, not lived. */
+  function advancingClock() {
+    let at = START.getTime()
+    return {
+      tick: (ms: number) => {
+        at += ms
+      },
+      clock: {
+        now: () => new Date(at),
+        sleep: async (ms: number) => {
+          at += ms
+        },
+      },
+    }
+  }
+
+  let dir: string
+
+  function stages(): Array<Record<string, unknown>> {
+    return readFileSync(join(dir, STAGE_LOG_NAME), 'utf8')
+      .split('\n')
+      .filter((line) => line !== '')
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+  }
+
+  beforeEach(() => {
+    resetUsageLimitGate()
+    resetStageLog()
+    dir = mkdtempSync(join(tmpdir(), 'usage-limit-log-'))
+    openStageLog('20260830-4', dir)
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    resetStageLog()
+    resetUsageLimitGate()
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('records a clean stage as all work and no wait', async () => {
+    const { clock, tick } = advancingClock()
+    await withUsageLimit(
+      'reviewer',
+      async () => {
+        tick(90_000)
+        return { iterations: [{ usage: { outputTokens: 7 } }] }
+      },
+      { clock, meta: { issue: '169', attempt: 1, model: 'claude-opus-5' } },
+    )
+
+    expect(stages()).toEqual([
+      expect.objectContaining({
+        kind: 'stage',
+        label: 'reviewer',
+        issue: '169',
+        attempt: 1,
+        model: 'claude-opus-5',
+        wallMs: 90_000,
+        waitMs: 0,
+        workMs: 90_000,
+        waits: 0,
+        outcome: 'ok',
+        tokens: {
+          input: 0,
+          cacheCreate: 0,
+          cacheRead: 0,
+          output: 7,
+          iterations: 1,
+        },
+      }),
+    ])
+  })
+
+  it('books the limit window as wait, not as work', async () => {
+    const { clock, tick } = advancingClock()
+    let calls = 0
+    await withUsageLimit(
+      'implementer',
+      async () => {
+        calls++
+        tick(10_000)
+        if (calls === 1) throw new Error(OBSERVED)
+        return 'done'
+      },
+      { clock, meta: { issue: '169' } },
+    )
+
+    const written = stages()
+    const wait = written.find((line) => line.kind === 'wait')!
+    const stage = written.find((line) => line.kind === 'stage')!
+
+    // The observed message resets at 00:20Z; the first attempt burned ten seconds before hitting
+    // the limit, so the window is what is left until the reset, plus the wake margin.
+    const window = 80 * 60_000 - 10_000 + WAKE_MARGIN_MS
+    expect(wait).toMatchObject({ ms: window, joined: false, precise: true })
+    expect(stage).toMatchObject({
+      label: 'implementer',
+      waits: 1,
+      waitMs: window,
+      workMs: 20_000,
+      wallMs: window + 20_000,
+      outcome: 'ok',
+    })
+  })
+
+  it('records a real failure and still rethrows it', async () => {
+    const { clock } = advancingClock()
+    await expect(
+      withUsageLimit(
+        'merger',
+        async () => {
+          throw new Error('merge conflict in src/routeTree.gen.ts\nmore detail')
+        },
+        { clock, meta: {} },
+      ),
+    ).rejects.toThrow('merge conflict')
+
+    expect(stages()).toEqual([
+      expect.objectContaining({
+        label: 'merger',
+        outcome: 'error',
+        error: 'merge conflict in src/routeTree.gen.ts',
+        waits: 0,
+      }),
+    ])
+  })
+
+  it('marks a revoked lease as aborted rather than as a failure', async () => {
+    const { clock } = advancingClock()
+    const revoked = new AbortController()
+    revoked.abort(new Error('lease revoked'))
+
+    await expect(
+      withUsageLimit(
+        'implementer',
+        async () => {
+          throw revoked.signal.reason as Error
+        },
+        { clock, signal: revoked.signal, meta: { issue: '170' } },
+      ),
+    ).rejects.toThrow('lease revoked')
+
+    expect(stages()).toEqual([
+      expect.objectContaining({ label: 'implementer', outcome: 'aborted' }),
+    ])
   })
 })

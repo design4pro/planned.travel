@@ -22,6 +22,8 @@
 
 import { setTimeout as delay } from 'node:timers/promises'
 
+import { recordStage, tokensOf } from './stage-log'
+
 /** What the agent said about the limit it hit. */
 export interface UsageLimit {
   /** When the limit lifts. */
@@ -189,24 +191,103 @@ export async function withUsageLimit<T>(
   /** The stage's name, for the log line the operator will read hours later. */
   label: string,
   thunk: () => Promise<T>,
-  options: { signal?: AbortSignal; clock?: Clock } = {},
+  options: {
+    signal?: AbortSignal
+    clock?: Clock
+    /** What the timeline should say about this stage beyond its label. */
+    meta?: StageMeta
+  } = {},
 ): Promise<T> {
   const clock = options.clock ?? REAL
+  const startedAt = clock.now().getTime()
+  // Accumulated across every window this stage sits through, so `workMs` below is the time the
+  // agent was actually running — the one number that tells a slow stage from a throttled one.
+  let waitMs = 0
+
+  const done = (
+    outcome: 'ok' | 'error' | 'aborted',
+    waits: number,
+    extra: { error?: string; result?: unknown },
+  ): void => {
+    const endedAt = clock.now().getTime()
+    const wallMs = endedAt - startedAt
+    recordStage({
+      kind: 'stage',
+      label,
+      issue: options.meta?.issue,
+      attempt: options.meta?.attempt,
+      model: options.meta?.model,
+      effort: options.meta?.effort,
+      startedAt,
+      endedAt,
+      wallMs,
+      waitMs,
+      workMs: wallMs - waitMs,
+      waits,
+      outcome,
+      error: extra.error,
+      tokens: tokensOf(extra.result),
+    })
+  }
+
   for (let waits = 0; ; waits++) {
     try {
-      return await thunk()
+      const result = await thunk()
+      done('ok', waits, { result })
+      return result
     } catch (error) {
       const limit = parseUsageLimit(error, clock.now())
-      if (limit === undefined) throw error
+      if (limit === undefined) {
+        done(options.signal?.aborted === true ? 'aborted' : 'error', waits, {
+          error: describe(error),
+        })
+        throw error
+      }
       if (waits >= MAX_WAITS_PER_STAGE) {
         console.error(
           `  ! ${label}: usage limit hit ${waits + 1} times in a row — giving up rather than looping.`,
         )
+        done('error', waits, { error: describe(error) })
         throw error
       }
-      await waitForReset(label, limit, clock, options.signal)
+      // Timed here rather than inside `waitForReset`, which can leave by throwing — a revoked
+      // lease, or a window past SANDCASTLE_LIMIT_WAIT_MAX_MS — and a `return` after its `finally`
+      // would never run in that case, losing the very minutes this is counting.
+      const windowStart = clock.now().getTime()
+      try {
+        await waitForReset(
+          label,
+          limit,
+          clock,
+          options.signal,
+          options.meta?.issue,
+        )
+      } catch (interrupted) {
+        waitMs += clock.now().getTime() - windowStart
+        // Either way this stage is over, and the timeline should still say how much of it was
+        // spent waiting before that happened.
+        done(options.signal?.aborted === true ? 'aborted' : 'error', waits, {
+          error: describe(interrupted),
+        })
+        throw interrupted
+      }
+      waitMs += clock.now().getTime() - windowStart
     }
   }
+}
+
+/** What the timeline knows about a stage that its label does not carry. */
+export interface StageMeta {
+  readonly issue?: string
+  readonly attempt?: number
+  readonly model?: string
+  readonly effort?: string
+}
+
+/** One line of the failure, short enough to keep the NDJSON readable. */
+function describe(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  return message.split('\n')[0]!.slice(0, 300)
 }
 
 async function waitForReset(
@@ -214,12 +295,15 @@ async function waitForReset(
   limit: UsageLimit,
   clock: Clock,
   signal?: AbortSignal,
+  issue?: string,
 ): Promise<void> {
+  const startedAt = clock.now().getTime()
   // Nothing to wait for if this stage has already lost its issue: the retry would run an agent on
   // work another machine may hold by the time we wake.
   signal?.throwIfAborted()
 
   let wait = pending
+  const joined = wait !== undefined
   if (wait === undefined) {
     const ms = limit.resetsAt.getTime() - clock.now().getTime() + WAKE_MARGIN_MS
     if (ms > MAX_WAIT_MS) {
@@ -264,6 +348,20 @@ async function waitForReset(
       // A no-op once the timer has fired; what it stops is the case where every waiter walked away.
       wait.cancel.abort()
     }
+    // In the `finally`, so an aborted lease still leaves the window it sat in on the record —
+    // otherwise the stage's own `waitMs` would be the only trace and `joined` would be lost.
+    const endedAt = clock.now().getTime()
+    recordStage({
+      kind: 'wait',
+      label,
+      issue,
+      startedAt,
+      endedAt,
+      ms: endedAt - startedAt,
+      joined,
+      precise: limit.precise,
+      resetsAt: limit.resetsAt.getTime(),
+    })
   }
   console.log(`  ▶ ${label}: limit window over — retrying.`)
 }
