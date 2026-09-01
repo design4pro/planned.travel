@@ -44,12 +44,12 @@ import {
   FactList,
   FactNote,
   FilterRow,
+  MaskedCode,
   RowMenu,
   StatusMenu,
   useAction,
   useOptimistic,
 } from '../shared'
-import { MaskedCode } from '../shared/masked-code'
 import {
   analyseConnections,
   sortLegsByDeparture,

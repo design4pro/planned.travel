@@ -15,7 +15,7 @@
  * "hidden" that a `Ctrl-F`, a screenshot pipeline or the accessibility tree can
  * still read is not hidden.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Eye } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
@@ -61,6 +61,12 @@ export interface MaskedCodeProps {
  * is what the reader decided about every screen, and one glance at one code is
  * not a decision to change it.
  *
+ * **The reveal hands the focus on.** Revealing unmounts this button and mounts
+ * {@link CopyValue}'s in its place, so a reader who tabbed onto the mask would
+ * otherwise be dropped back at the top of the document by the very act of
+ * opening it. The handover happens only when this button actually held the focus
+ * — a hover reveals without ever taking it, and must not take it now.
+ *
  * Motion: the swap is a colour and opacity change on one element whose width is
  * already the same in both states, because the mask has the code's own character
  * count. Nothing below the row moves when a code is revealed.
@@ -72,12 +78,33 @@ export function MaskedCode({
   className,
 }: MaskedCodeProps) {
   const [revealed, setRevealed] = useState(false)
+  const copyRef = useRef<HTMLButtonElement>(null)
+  const handOver = useRef(false)
   const mask = maskCode(value)
+
+  useEffect(() => {
+    if (revealed && handOver.current) {
+      handOver.current = false
+      copyRef.current?.focus()
+    }
+  }, [revealed])
+
+  function reveal(target: HTMLButtonElement): void {
+    handOver.current ||= document.activeElement === target
+    setRevealed(true)
+  }
 
   // An empty code has nothing to hide, so the preference has nothing to do here:
   // masking it would claim a confirmation number exists when none does.
   if (!masked || revealed || mask === '') {
-    return <CopyValue value={value} label={label} className={className} />
+    return (
+      <CopyValue
+        ref={copyRef}
+        value={value}
+        label={label}
+        className={className}
+      />
+    )
   }
 
   return (
@@ -85,9 +112,9 @@ export function MaskedCode({
       type="button"
       data-part="confirmation-code"
       aria-label={`Show ${label}`}
-      onClick={() => setRevealed(true)}
-      onFocus={() => setRevealed(true)}
-      onPointerEnter={() => setRevealed(true)}
+      onClick={(event) => reveal(event.currentTarget)}
+      onFocus={(event) => reveal(event.currentTarget)}
+      onPointerEnter={(event) => reveal(event.currentTarget)}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-sm bg-surface-inset px-1.5 font-mono text-caption tracking-wide text-ink-4 focus-ring',
         'transition-colors duration-fast ease-out-quint hover:text-ink-2',

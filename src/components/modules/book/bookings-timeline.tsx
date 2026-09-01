@@ -59,12 +59,12 @@ import {
   FactList,
   FactNote,
   FilterRow,
+  MaskedCode,
   RowMenu,
   StatusMenu,
   useAction,
   useOptimistic,
 } from '../shared'
-import { MaskedCode } from '../shared/masked-code'
 import { BOOKING_TYPE_ICON, BookingDialog, dayLabel } from './booking-dialog'
 import {
   countBookingTypes,
@@ -134,16 +134,29 @@ const LOCALE = 'en-GB'
  * formatter: a calendar date's year is the four digits it starts with in every
  * locale, and a formatter that can disagree about it is a formatter that can be
  * wrong about it.
+ *
+ * Split here rather than at the point of use, because the medallion sets the
+ * weekday over the day and month and the heading beside it sets the whole line:
+ * two readings of one string, which is one place for them to disagree. A date
+ * the table refuses keeps the old fallback — the raw ISO string on the weekday
+ * line, and nothing on the line above it.
  */
-function stampFor(date: string): {
+interface DateStamp {
+  /** `Fri 9 Oct`, for the heading beside the rail. */
   readonly label: string
+  /** `Fri` and `9 Oct`: the medallion's two lines, lower one first. */
+  readonly weekday: string
+  readonly dayMonth: string
   readonly year: string
-} {
+}
+
+function stampFor(date: string): DateStamp {
   const label = formatWeekday(date)
   if (label === null) {
-    return { label: date, year: '' }
+    return { label: date, weekday: date, dayMonth: '', year: '' }
   }
-  return { label, year: date.slice(0, 4) }
+  const [weekday = '', ...rest] = label.split(' ')
+  return { label, weekday, dayMonth: rest.join(' '), year: date.slice(0, 4) }
 }
 
 function formatMoney(minor: number, currency: string): string {
@@ -244,6 +257,26 @@ const BOOK_TYPES_PREFERENCE = defineKeyedPreference<ReadonlyArray<string>>({
 
 /* ------------------------------------------------------------------ screen */
 
+/**
+ * What every card on the desk needs and no card decides for itself: the trip it
+ * hangs off, how its money and its code are typeset, the day lookup, and the
+ * three things a row can be asked to do.
+ *
+ * One object rather than seven props, because the whole clump travels together
+ * from the screen through both panels and every date group before a single card
+ * reads any of it — and a card that is handed the desk cannot be handed six
+ * sevenths of it by a call site that forgot the seventh.
+ */
+interface Desk {
+  readonly tripId: string
+  readonly currency: string
+  readonly maskCodes: boolean
+  readonly dayById: ReadonlyMap<string, BookingDayOption>
+  readonly onEdit: (booking: BookingRow) => void
+  readonly onStatus: (booking: BookingRow, next: string) => void
+  readonly onDelete: (booking: BookingRow) => void
+}
+
 export interface BookingsTimelineProps {
   readonly tripId: string
   readonly bookings: ReadonlyArray<BookingRow>
@@ -341,6 +374,16 @@ export function BookingsTimeline({
     })
   }
 
+  const desk: Desk = {
+    tripId,
+    currency,
+    maskCodes,
+    dayById,
+    onEdit: setEditing,
+    onStatus: changeStatus,
+    onDelete: askToRemove,
+  }
+
   if (bookings.length === 0) {
     return (
       <>
@@ -427,13 +470,7 @@ export function BookingsTimeline({
             bookings={panels.outstanding}
             folded={folded.outstanding}
             onFoldChange={(next) => setFolded({ ...folded, outstanding: next })}
-            currency={currency}
-            maskCodes={maskCodes}
-            tripId={tripId}
-            dayById={dayById}
-            onEdit={setEditing}
-            onStatus={changeStatus}
-            onDelete={askToRemove}
+            desk={desk}
           />
           <SettlementPanel
             id="settled"
@@ -442,13 +479,7 @@ export function BookingsTimeline({
             bookings={panels.settled}
             folded={folded.settled}
             onFoldChange={(next) => setFolded({ ...folded, settled: next })}
-            currency={currency}
-            maskCodes={maskCodes}
-            tripId={tripId}
-            dayById={dayById}
-            onEdit={setEditing}
-            onStatus={changeStatus}
-            onDelete={askToRemove}
+            desk={desk}
           />
         </div>
       )}
@@ -547,13 +578,7 @@ function SettlementPanel({
   bookings,
   folded,
   onFoldChange,
-  currency,
-  maskCodes,
-  tripId,
-  dayById,
-  onEdit,
-  onStatus,
-  onDelete,
+  desk,
 }: {
   id: 'settled' | 'outstanding'
   title: string
@@ -561,13 +586,7 @@ function SettlementPanel({
   bookings: ReadonlyArray<BookingRow>
   folded: boolean
   onFoldChange: (next: boolean) => void
-  currency: string
-  maskCodes: boolean
-  tripId: string
-  dayById: ReadonlyMap<string, BookingDayOption>
-  onEdit: (booking: BookingRow) => void
-  onStatus: (booking: BookingRow, next: string) => void
-  onDelete: (booking: BookingRow) => void
+  desk: Desk
 }) {
   const groups = useMemo(() => groupBookingsByDate(bookings), [bookings])
 
@@ -635,13 +654,7 @@ function SettlementPanel({
                 first={index === 0}
                 last={index === groups.length - 1}
                 entranceFrom={entranceFrom[index] ?? 0}
-                currency={currency}
-                maskCodes={maskCodes}
-                tripId={tripId}
-                dayById={dayById}
-                onEdit={onEdit}
-                onStatus={onStatus}
-                onDelete={onDelete}
+                desk={desk}
               />
             </li>
           ))}
@@ -658,26 +671,14 @@ function TimelineGroup({
   first,
   last,
   entranceFrom,
-  currency,
-  maskCodes,
-  tripId,
-  dayById,
-  onEdit,
-  onStatus,
-  onDelete,
+  desk,
 }: {
   group: BookingDateGroup
   first: boolean
   last: boolean
   /** Where this date's rows sit in the panel's stagger, so it runs across dates. */
   entranceFrom: number
-  currency: string
-  maskCodes: boolean
-  tripId: string
-  dayById: ReadonlyMap<string, BookingDayOption>
-  onEdit: (booking: BookingRow) => void
-  onStatus: (booking: BookingRow, next: string) => void
-  onDelete: (booking: BookingRow) => void
+  desk: Desk
 }) {
   const stamp = group.date === null ? null : stampFor(group.date)
 
@@ -703,10 +704,10 @@ function TimelineGroup({
         ) : (
           <span className="grid size-14 place-items-center rounded-full border border-edge-faint bg-surface text-center shadow-card sm:size-20">
             <span className="font-display text-label leading-none font-bold tabular-nums text-ink sm:text-subtitle">
-              {stamp.label.split(' ').slice(1).join(' ')}
+              {stamp.dayMonth}
             </span>
             <span className="mt-0.5 text-micro font-semibold tracking-label text-ink-3 uppercase">
-              {stamp.label.split(' ')[0]}
+              {stamp.weekday}
             </span>
           </span>
         )}
@@ -740,20 +741,7 @@ function TimelineGroup({
                 animationDelay: `${Math.min(entranceFrom + index, 7) * 24}ms`,
               }}
             >
-              <BookingCard
-                booking={booking}
-                currency={currency}
-                maskCodes={maskCodes}
-                tripId={tripId}
-                day={
-                  booking.dayId === null
-                    ? undefined
-                    : dayById.get(booking.dayId)
-                }
-                onEdit={() => onEdit(booking)}
-                onStatus={(next) => onStatus(booking, next)}
-                onDelete={() => onDelete(booking)}
-              />
+              <BookingCard booking={booking} desk={desk} />
             </li>
           ))}
         </ul>
@@ -764,29 +752,14 @@ function TimelineGroup({
 
 /* ---------------------------------------------------------------- one card */
 
-function BookingCard({
-  booking,
-  currency,
-  maskCodes,
-  tripId,
-  day,
-  onEdit,
-  onStatus,
-  onDelete,
-}: {
-  booking: BookingRow
-  currency: string
-  maskCodes: boolean
-  tripId: string
-  day: BookingDayOption | undefined
-  onEdit: () => void
-  onStatus: (next: string) => void
-  onDelete: () => void
-}) {
+function BookingCard({ booking, desk }: { booking: BookingRow; desk: Desk }) {
   const type = isBookingType(booking.type) ? booking.type : 'other'
   const Icon = BOOKING_TYPE_ICON[type]
   const cancelled = booking.status === 'cancelled'
   const times = timeRange(booking.startTime, booking.endTime)
+  /** The itinerary day this booking is pinned to, when it names one that still exists. */
+  const day =
+    booking.dayId === null ? undefined : desk.dayById.get(booking.dayId)
 
   const facts: Array<FactItem> = [
     ...(times === null ? [] : [{ label: 'Time', value: times }]),
@@ -824,7 +797,7 @@ function BookingCard({
             label: 'Price',
             value: formatMoney(
               booking.priceMinor,
-              booking.currency ?? currency,
+              booking.currency ?? desk.currency,
             ),
           },
         ]),
@@ -838,7 +811,7 @@ function BookingCard({
               <MaskedCode
                 value={booking.confirmationNumber}
                 label={`the confirmation number for ${booking.title}`}
-                masked={maskCodes}
+                masked={desk.maskCodes}
               />
             ),
           },
@@ -885,7 +858,7 @@ function BookingCard({
         <StatusPill
           status={booking.status}
           title={booking.title}
-          onSelect={onStatus}
+          onSelect={(next) => desk.onStatus(booking, next)}
         />
         <RowMenu
           label={`Actions for ${booking.title}`}
@@ -893,7 +866,7 @@ function BookingCard({
             {
               label: 'Edit booking…',
               icon: <Pencil aria-hidden />,
-              onSelect: onEdit,
+              onSelect: () => desk.onEdit(booking),
             },
             ...(booking.url === null
               ? []
@@ -915,7 +888,7 @@ function BookingCard({
               icon: <Trash2 aria-hidden />,
               tone: 'danger' as const,
               separated: true,
-              onSelect: onDelete,
+              onSelect: () => desk.onDelete(booking),
             },
           ]}
         />
@@ -952,7 +925,7 @@ function BookingCard({
         {booking.transportId === null ? null : (
           <Link
             to="/trips/$tripId/transports"
-            params={{ tripId }}
+            params={{ tripId: desk.tripId }}
             data-part="journey-link"
             className="inline-flex w-fit items-center gap-1.5 rounded-sm text-caption text-ink-3 focus-ring transition-colors duration-fast ease-out-quint hover:text-brand"
           >

@@ -238,15 +238,20 @@ async function copyToClipboard(value: string): Promise<boolean> {
 /**
  * A confirmation number is only useful if it can be got out of the screen. The
  * button carries the value's name, so a screen reader hears what was copied.
+ *
+ * `ref` reaches the button itself, for the one caller that replaces a control of
+ * its own with this one and has to hand the focus over ({@link MaskedCode}).
  */
 export function CopyValue({
   value,
   label,
   className,
+  ref,
 }: {
   value: string
   label: string
   className?: string
+  ref?: React.Ref<HTMLButtonElement>
 }) {
   const [copied, setCopied] = React.useState(false)
 
@@ -260,6 +265,7 @@ export function CopyValue({
 
   return (
     <button
+      ref={ref}
       type="button"
       aria-label={copied ? `${label} copied` : `Copy ${label}`}
       onClick={() => {

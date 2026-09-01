@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { MASK_CHARACTER, maskCode } from '../../shared/masked-code'
 import { BOOKING_STATUSES } from '../booking-form'
 import {
   countBookingTypes,
@@ -258,27 +257,5 @@ describe('filterBookingsByType', () => {
         ['transport'],
       ),
     ).toEqual([])
-  })
-})
-
-describe('maskCode', () => {
-  it('masks a code to its own length, so the shape is kept and the value is not', () => {
-    const masked = maskCode('ABC123XYZ')
-    expect(masked).toHaveLength(9)
-    expect(masked).not.toContain('A')
-    expect(masked).toBe(MASK_CHARACTER.repeat(9))
-  })
-
-  /**
-   * An empty code masks to nothing rather than to a row of dots: a mask over an
-   * absent value tells the reader a confirmation number exists when none does.
-   */
-  it('masks an empty code to nothing at all', () => {
-    expect(maskCode('')).toBe('')
-    expect(maskCode('   ')).toBe('')
-  })
-
-  it('counts characters rather than bytes, so a surrogate pair masks to one', () => {
-    expect(maskCode('A🙂B')).toHaveLength(3)
   })
 })

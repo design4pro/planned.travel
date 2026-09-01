@@ -9,6 +9,9 @@ export type { FactItem, FactListProps } from './facts'
 export { ConfirmDialog, CopyValue, RowMenu, StatusMenu } from './controls'
 export type { ConfirmRequest, RowMenuItem, StatusOption } from './controls'
 
+export { MASK_CHARACTER, MaskedCode, maskCode } from './masked-code'
+export type { MaskedCodeProps } from './masked-code'
+
 export { ModulePanel, ModuleRow, FilterRow } from './panel'
 export type { ModulePanelProps } from './panel'
 
