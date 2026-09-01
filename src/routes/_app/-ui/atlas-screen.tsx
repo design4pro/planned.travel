@@ -190,7 +190,7 @@ const WELL = cn(
   // A pixel in from each edge of the overhanging box below, which puts it back
   // on the slice's own edges: the overhang belongs to the drawing, not to the
   // chrome floating over it. Symmetric, so it needs no logical form.
-  'right-px left-px',
+  'end-px start-px',
 )
 
 /**
@@ -206,7 +206,7 @@ const WELL = cn(
  * `canvasBox()` hands the camera the same two pixels, so the world still spans
  * the frame exactly.
  */
-const DRAWING = 'absolute top-0 bottom-0 -right-px -left-px'
+const DRAWING = 'absolute top-0 bottom-0 -end-px -start-px'
 
 /**
  * Where the map's own hover and click surfaces are drawn.
@@ -771,6 +771,12 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
 
   return (
     <div ref={containerRef} className={SLICE} style={shelfStyle}>
+      {/* The map is the content, so the screen has no title bar to name it and
+          the outline used to open at the panel's `h2` — a page with no `h1`. A
+          canvas cannot carry a heading without a title bar being added, so the
+          name is here for the readers who need it announced and absent for the
+          ones who can see the world. */}
+      <h1 className="sr-only">{t('shell.nav.atlas')}</h1>
       {/* The ground of last resort, and the first thing the reader sees. It is
           the same geometry, the same tokens and the same frame the live layer
           paints with, so the hand-off is a change of sharpness rather than a

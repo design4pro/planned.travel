@@ -269,7 +269,10 @@ export interface SeedMessage {
   readonly replyTo?: string
   /** Minutes before the seed runs, so a re-seed still reads as a recent conversation. */
   readonly minutesAgo: number
-  readonly reactions?: ReadonlyArray<{ readonly person: PersonKey; readonly emoji: string }>
+  readonly reactions?: ReadonlyArray<{
+    readonly person: PersonKey
+    readonly emoji: string
+  }>
 }
 
 export interface SeedNote {
@@ -287,10 +290,16 @@ export interface SeedPoll {
   readonly key: string
   readonly author: PersonKey
   readonly question: string
-  readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
+  readonly options: ReadonlyArray<{
+    readonly id: string
+    readonly label: string
+  }>
   readonly allowMultiple?: boolean
   /** One entry per voter; the option must exist in `options`. */
-  readonly votes: ReadonlyArray<{ readonly person: PersonKey; readonly optionId: string }>
+  readonly votes: ReadonlyArray<{
+    readonly person: PersonKey
+    readonly optionId: string
+  }>
 }
 
 export interface SeedFile {
@@ -452,7 +461,10 @@ export interface SeedCollection {
   readonly colour: string
   readonly icon: string
   readonly visibility: 'private' | 'organization' | 'public'
-  readonly labels: ReadonlyArray<{ readonly name: string; readonly colour: string }>
+  readonly labels: ReadonlyArray<{
+    readonly name: string
+    readonly colour: string
+  }>
   readonly places: ReadonlyArray<SeedCollectionPlace>
 }
 
@@ -480,7 +492,10 @@ export interface SeedVacay {
     readonly colour: string
     readonly sortOrder: number
   }>
-  readonly companyHolidays: ReadonlyArray<{ readonly date: string; readonly label: string }>
+  readonly companyHolidays: ReadonlyArray<{
+    readonly date: string
+    readonly label: string
+  }>
   readonly entries: ReadonlyArray<SeedVacayEntry>
 }
 

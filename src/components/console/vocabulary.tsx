@@ -17,7 +17,7 @@ import { CircleSlash, ShieldCheck, UserRound, Wrench } from 'lucide-react'
 import { Badge } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatDate } from '#/lib/format'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { ShellPlatformRole } from '#/components/layout/session'
 import type { BadgeProps, BadgeTone } from '#/components/ui'
@@ -169,6 +169,7 @@ export function AccountStatus({
   banExpiresAt,
   className,
 }: AccountStatusProps) {
+  const locale = useLocale()
   const t = useTranslate()
   if (!banned) {
     return (
@@ -182,7 +183,7 @@ export function AccountStatus({
     )
   }
 
-  const until = formatDate(banExpiresAt)
+  const until = formatDate(banExpiresAt, locale)
   return (
     <span className={cn('flex flex-col items-start gap-1', className)}>
       <Badge tone="danger" size="sm" dot>

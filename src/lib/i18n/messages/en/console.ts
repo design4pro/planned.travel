@@ -146,7 +146,6 @@ const messages = {
   'users.filter.role.curator': 'Curators',
   'users.filter.status.label': 'Filter by account status',
   'users.filter.status.any': 'Any status',
-  'users.filter.clear': 'Clear filters',
   'users.filter.hint': 'Narrow by role or by status — one at a time.',
   'users.column.account': 'Account',
   'users.column.role': 'Platform role',

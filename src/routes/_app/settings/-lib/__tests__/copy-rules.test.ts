@@ -41,6 +41,17 @@ const NAV_FILE = join(
   '-ui',
   'settings-nav.tsx',
 )
+/**
+ * The plan copy table, which lives in `src/lib/` rather than in `-lib/`.
+ *
+ * It moved there when the pricing page started reading it: a component importing
+ * from a route's private `-lib/` inverts the dependency, and plan copy now has
+ * two consumers rather than one. The orphan check below is what noticed — with
+ * the table outside the walk, twenty-one `settings.billing.*` keys read only by
+ * it looked like dead copy. It is still this module's copy, so the gate follows
+ * it, the same way it reaches out for the nav.
+ */
+const PLAN_COPY_FILE = join(process.cwd(), 'src', 'lib', 'plan-copy.ts')
 
 interface Source {
   readonly path: string
@@ -68,35 +79,29 @@ function shippedSources(): ReadonlyArray<Source> {
 
   walk(SETTINGS_DIR)
   files.push({ path: NAV_FILE, text: readFileSync(NAV_FILE, 'utf8') })
+  files.push({
+    path: PLAN_COPY_FILE,
+    text: readFileSync(PLAN_COPY_FILE, 'utf8'),
+  })
   return files
 }
 
 const SOURCES = shippedSources()
 
 /**
- * The one file this gate does not read for English yet, and why it is one file rather than a rule.
+ * Every source in the module is read for English. There is no exemption.
  *
- * `billing.tsx` was localised on `develop` against the billing model that existed there — Stripe's,
- * with `hostedUrl`, `pdfUrl` and period bounds on every invoice. Phase A had already replaced that
- * provider with Polar, whose `InvoiceSummary` carries none of those fields because Polar generates
- * the PDF on request. So the merge had two versions and neither was takeable: the localised one no
- * longer compiles against the types it reads, and the compiling one is English.
+ * `billing.tsx` used to be one. It was localised on `develop` against Stripe's invoice model, phase
+ * A replaced that provider with Polar, and the merge had two versions of the screen: the localised
+ * one no longer compiled against `InvoiceSummary`, and the one that compiled was English. The
+ * English one shipped, and this gate skipped it by name while 101 `billing.*` keys sat translated
+ * into twenty-three languages with no screen asking for them.
  *
- * The compiling one shipped. What is left to do is name-for-name: move this screen's strings onto
- * the `billing.*` keys that already exist in all twenty-three catalogues, adding the three Polar
- * order states Stripe had no equivalent for — `pending`, `refunded`, `partially_refunded` — in
- * every language, which `docs/SPEC.md` §8.2 requires and which is why it was not done inside a
- * merge rather than badly.
- *
- * **Only the two English-literal rules are relaxed.** Direction and icon mirroring still apply to
- * this file and were fixed rather than exempted, because a screen that lays out wrongly in Arabic
- * is broken whether or not its words have moved yet.
+ * That is done. The screen reads the catalogue, the Polar order states Stripe had no equivalent for
+ * — `pending`, `refunded`, `partially_refunded` — are `billing.order.*`, and the trial sentences
+ * were rewritten in every language because Stripe's "no card needed until then" is false of a
+ * provider that takes the card at checkout.
  */
-const AWAITING_LOCALISATION: ReadonlySet<string> = new Set(['billing.tsx'])
-
-const COPY_SOURCES = SOURCES.filter(
-  (source) => !AWAITING_LOCALISATION.has(source.path.split('/').at(-1) ?? ''),
-)
 
 /** Strips block and line comments, so prose in a doc comment is not copy. */
 function withoutComments(text: string): string {
@@ -118,6 +123,7 @@ describe('the settings module ships no English literal', () => {
         'organization.tsx',
         'billing.tsx',
         'settings-nav.tsx',
+        'plan-copy.ts',
       ]),
     )
   })
@@ -140,7 +146,7 @@ describe('the settings module ships no English literal', () => {
     'eyebrow',
   ]
 
-  it.each(COPY_SOURCES.map((source) => [source.path.split('/').at(-1), source]))(
+  it.each(SOURCES.map((source) => [source.path.split('/').at(-1), source]))(
     '%s writes no copy-bearing prop as a string literal',
     (_name, source) => {
       const pattern = new RegExp(`\\s(?:${COPY_PROPS.join('|')})="`, 'g')
@@ -159,7 +165,7 @@ describe('the settings module ships no English literal', () => {
    */
   const JSX_TEXT = />\s*([A-Z][A-Za-z'’]*(?:[ ,.'’-]+[A-Za-z'’]+)+)\s*</g
 
-  it.each(COPY_SOURCES.map((source) => [source.path.split('/').at(-1), source]))(
+  it.each(SOURCES.map((source) => [source.path.split('/').at(-1), source]))(
     '%s renders no English sentence as a JSX text node',
     (_name, source) => {
       const found = [...withoutComments(source.text).matchAll(JSX_TEXT)].map(
@@ -300,13 +306,7 @@ describe('the catalogue and the screens agree', () => {
   })
 
   it('has no key no screen reads', () => {
-    // The `billing.*` keys are the exception named at the top of this file, and they are unread
-    // rather than dead: `billing.tsx` still carries its own English while it waits to be moved onto
-    // them. Deleting them would mean writing them again in twenty-three languages later, so they
-    // stay, and this filter is what has to be removed when the screen is localised.
-    const unused = Object.keys(settings).filter(
-      (key) => !used.has(key) && !key.startsWith('billing.'),
-    )
+    const unused = Object.keys(settings).filter((key) => !used.has(key))
     expect(unused).toEqual([])
   })
 })

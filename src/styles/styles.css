@@ -183,7 +183,6 @@
   --ease-out-quint: var(--ease-out-quint);
   --ease-in-quint: var(--ease-in-quint);
   --ease-drawer: var(--ease-drawer);
-  --ease-spring: var(--ease-spring);
 
   --animate-shimmer: pt-shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   --animate-pulse-soft: pt-pulse-soft 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;

@@ -29,20 +29,28 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
-import { currencyCode, formatMoney, parseMoney, toAmountInput } from '#/lib/money'
+import { useLocale, useTranslate } from '#/lib/i18n'
+
+import type { MessageKey } from '#/lib/i18n'
+import {
+  currencyCode,
+  formatMoney,
+  parseMoney,
+  toAmountInput,
+} from '#/lib/money'
 import { parseDay, toDayString } from './data'
 
 import type { CostsPerson, SettlementMethod } from '#/server/fns/costs'
 
 const SETTLEMENT_METHOD_OPTIONS: ReadonlyArray<{
   readonly value: SettlementMethod
-  readonly label: string
+  readonly label: MessageKey
 }> = [
-  { value: 'bank_transfer', label: 'Bank transfer' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
-  { value: 'app', label: 'Payment app' },
-  { value: 'other', label: 'Something else' },
+  { value: 'bank_transfer', label: 'costs.payment.method.bankTransfer' },
+  { value: 'cash', label: 'costs.payment.method.cash' },
+  { value: 'card', label: 'costs.payment.method.card' },
+  { value: 'app', label: 'costs.payment.method.app' },
+  { value: 'other', label: 'costs.payment.method.other' },
 ]
 
 /** Exactly the shape `recordPaymentFn` validates. */
@@ -87,9 +95,13 @@ export function PaymentDialog({
   today,
   onSubmit,
 }: PaymentDialogProps) {
+  const t = useTranslate()
+  const locale = useLocale()
   const fallbackFrom = seed?.fromUserId ?? viewerUserId
   const fallbackTo =
-    seed?.toUserId ?? people.find((person) => person.userId !== fallbackFrom)?.userId ?? ''
+    seed?.toUserId ??
+    people.find((person) => person.userId !== fallbackFrom)?.userId ??
+    ''
 
   const [fromUserId, setFromUserId] = useState(fallbackFrom)
   const [toUserId, setToUserId] = useState(fallbackTo)
@@ -104,7 +116,8 @@ export function PaymentDialog({
   const formId = `payment-form-${useId()}`
 
   const amountMinor = parseMoney(amount, currency)
-  const distinct = fromUserId !== '' && toUserId !== '' && fromUserId !== toUserId
+  const distinct =
+    fromUserId !== '' && toUserId !== '' && fromUserId !== toUserId
   const canSave = distinct && amountMinor !== null && amountMinor > 0 && !saving
 
   const nameOf = (userId: string): string =>
@@ -128,7 +141,7 @@ export function PaymentDialog({
       })
       onOpenChange(false)
     } catch (cause) {
-      setError(messageOf(cause))
+      setError(messageOf(cause, t('costs.payment.failed')))
     } finally {
       setSaving(false)
     }
@@ -136,7 +149,10 @@ export function PaymentDialog({
 
   const options = people.map((person) => ({
     value: person.userId,
-    label: person.userId === viewerUserId ? `${person.name} (you)` : person.name,
+    label:
+      person.userId === viewerUserId
+        ? t('costs.payment.youSuffix', { name: person.name })
+        : person.name,
     description: person.email === '' ? undefined : person.email,
   }))
 
@@ -144,10 +160,9 @@ export function PaymentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>Record a payment</DialogTitle>
+          <DialogTitle>{t('costs.payment.title')}</DialogTitle>
           <DialogDescription>
-            Logging a transfer clears it from both balances. It does not move any
-            money — planned.travel keeps the ledger, your bank moves the cash.
+            {t('costs.payment.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -161,7 +176,7 @@ export function PaymentDialog({
             }}
           >
             {error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('costs.expense.saveFailed')}>
                 {error}
               </Alert>
             )}
@@ -172,44 +187,50 @@ export function PaymentDialog({
               <Avatar name={nameOf(toUserId)} size="sm" />
               <p className="min-w-0 flex-1 truncate text-caption text-ink-2">
                 {distinct
-                  ? `${nameOf(fromUserId)} pays ${nameOf(toUserId)}`
-                  : 'Pick two different travellers.'}
+                  ? t('costs.payment.pays', {
+                      from: nameOf(fromUserId),
+                      to: nameOf(toUserId),
+                    })
+                  : t('costs.payment.pickTwo')}
               </p>
               <span className="shrink-0 font-display text-subtitle font-bold tabular-nums text-ink">
-                {formatMoney(amountMinor ?? 0, currency)}
+                {formatMoney(amountMinor ?? 0, currency, locale)}
               </span>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Paid by" required>
+              <Field label={t('costs.field.paidBy')} required>
                 <SimpleSelect
                   options={options}
                   value={fromUserId}
                   onValueChange={setFromUserId}
-                  ariaLabel="Who is paying"
+                  ariaLabel={t('costs.payment.whoPaying')}
                 />
               </Field>
               <Field
-                label="Paid to"
+                label={t('costs.payment.paidTo')}
                 required
-                error={distinct ? undefined : 'A payment needs two different travellers.'}
+                error={distinct ? undefined : t('costs.payment.needsTwo')}
               >
                 <SimpleSelect
                   options={options}
                   value={toUserId === '' ? undefined : toUserId}
                   onValueChange={setToUserId}
-                  ariaLabel="Who is being paid"
+                  ariaLabel={t('costs.payment.whoPaid')}
                 />
               </Field>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
-                label={`Amount in ${currencyCode(currency)}`}
+                label={t('costs.payment.amountIn', {
+                  currency: currencyCode(currency),
+                })}
                 required
                 error={
-                  amount.trim() !== '' && (amountMinor === null || amountMinor === 0)
-                    ? 'Enter an amount greater than zero.'
+                  amount.trim() !== '' &&
+                  (amountMinor === null || amountMinor === 0)
+                    ? t('costs.payment.amountPositive')
                     : undefined
                 }
               >
@@ -224,25 +245,33 @@ export function PaymentDialog({
                   required
                 />
               </Field>
-              <Field label="How">
+              <Field label={t('costs.payment.how')}>
                 <SimpleSelect
-                  options={[...SETTLEMENT_METHOD_OPTIONS]}
+                  options={SETTLEMENT_METHOD_OPTIONS.map((entry) => ({
+                    value: entry.value,
+                    label: t(entry.label),
+                  }))}
                   value={method}
                   onValueChange={(next) => setMethod(asMethod(next))}
-                  ariaLabel="How the payment was made"
+                  ariaLabel={t('costs.payment.howMade')}
                 />
               </Field>
             </div>
 
-            <Field label="Date">
+            <Field label={t('costs.field.date')}>
               <DatePicker
                 value={parseDay(settledOn)}
-                onChange={(next) => setSettledOn(next === null ? today : toDayString(next))}
-                ariaLabel="Date of the payment"
+                onChange={(next) =>
+                  setSettledOn(next === null ? today : toDayString(next))
+                }
+                ariaLabel={t('costs.payment.dateLabel')}
               />
             </Field>
 
-            <Field label="Note" hint="Optional. A reference, or what it covered.">
+            <Field
+              label={t('costs.payment.note')}
+              hint={t('costs.payment.noteHint')}
+            >
               <Textarea
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
@@ -251,15 +280,20 @@ export function PaymentDialog({
                 maxRows={4}
                 maxLength={500}
                 size="sm"
-                placeholder="Covers the Kyoto hotel and the JR passes."
+                placeholder={t('costs.payment.notePlaceholder')}
               />
             </Field>
           </form>
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" shape="pill" onClick={() => onOpenChange(false)}>
-            Cancel
+          <Button
+            type="button"
+            variant="ghost"
+            shape="pill"
+            onClick={() => onOpenChange(false)}
+          >
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -268,9 +302,9 @@ export function PaymentDialog({
             shape="pill"
             disabled={!canSave}
             loading={saving}
-            loadingLabel="Recording the payment"
+            loadingLabel={t('costs.payment.recording')}
           >
-            Record payment
+            {t('costs.payment.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -280,12 +314,22 @@ export function PaymentDialog({
 
 /** The select's string, narrowed to the methods the schema allows. */
 function asMethod(value: string): SettlementMethod {
-  return SETTLEMENT_METHOD_OPTIONS.find((entry) => entry.value === value)?.value ?? 'other'
+  return (
+    SETTLEMENT_METHOD_OPTIONS.find((entry) => entry.value === value)?.value ??
+    'other'
+  )
 }
 
-function messageOf(error: unknown): string {
+/**
+ * A server message if there is one, otherwise the catalogue's fallback.
+ *
+ * The fallback arrives as an argument rather than being read here: this is a
+ * plain function outside the component, and the translator belongs to the
+ * component that has one.
+ */
+function messageOf(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.length > 0) {
     return error.message
   }
-  return 'The payment could not be recorded. Try again in a moment.'
+  return fallback
 }

@@ -133,7 +133,6 @@ const messages = {
   'users.filter.role.curator': 'キュレーター',
   'users.filter.status.label': 'アカウントの状態で絞り込む',
   'users.filter.status.any': 'すべての状態',
-  'users.filter.clear': '絞り込みを解除',
   'users.filter.hint':
     'ロールか状態で絞り込めます — 一度にどちらか一方だけです。',
   'users.column.account': 'アカウント',

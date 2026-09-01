@@ -233,7 +233,12 @@ export function MapControls({
                   size={15}
                   strokeWidth={2}
                   className="fill-current"
-                  style={{ transform: `rotate(${-bearing}deg)` }}
+                  /* `rotate`, not `transform`: a needle that points north is
+                     a value, and the reduced-motion block resets `transform` on
+                     anything carrying `data-motion-transform`. This element does
+                     not carry it today, so the spelling is what keeps that true
+                     if it ever does. */
+                  style={{ rotate: `${-bearing}deg` }}
                 />
               }
               className="shadow-none ring-0"

@@ -348,21 +348,16 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} cesty, jeden cestující',
   'billing.hero.perSeatLine': '{seats} × {price}',
   'billing.hero.singleTraveller': 'Jeden cestující',
-  'billing.hero.paymentMethod': 'Způsob platby',
-  'billing.hero.cancel': 'Zrušit tarif',
   'billing.price.free': 'Bez platby',
   'billing.provider.opening': 'Otevírám Polar',
-  'billing.provider.failed': 'Se Polar se nepodařilo spojit',
-  'billing.provider.failedBody':
-    'Nic jsme neúčtovali. Zkontrolujte připojení a zkuste to za chvíli.',
-
   'billing.renewal.trialEndsToday':
-    'Zkušební doba končí dnes. Přidejte kartu a moduly zůstanou odemčené.',
+    'Zkušební období končí dnes. První platba pak proběhne, pokud ji předtím nezrušíte.',
   'billing.renewal.trialEndsIn': {
-    one: 'Zkušební doba končí za {value} den. Do té doby karta není potřeba.',
-    few: 'Zkušební doba končí za {value} dny. Do té doby karta není potřeba.',
-    many: 'Zkušební doba končí za {value} dne. Do té doby karta není potřeba.',
-    other: 'Zkušební doba končí za {value} dní. Do té doby karta není potřeba.',
+    one: 'Zkušební období končí za {value} den a pak proběhne první platba, pokud ji předtím nezrušíte.',
+    few: 'Zkušební období končí za {value} dny a pak proběhne první platba, pokud ji předtím nezrušíte.',
+    many: 'Zkušební období končí za {value} dne a pak proběhne první platba, pokud ji předtím nezrušíte.',
+    other:
+      'Zkušební období končí za {value} dní a pak proběhne první platba, pokud ji předtím nezrušíte.',
   },
   'billing.renewal.trialEnded': 'Zkušební doba skončila.',
   'billing.renewal.endsNoDate': 'Tento tarif má skončit a už se neobnoví.',
@@ -416,7 +411,6 @@ const messages = {
   'billing.interval.label': 'Fakturační období',
   'billing.interval.monthly': 'Měsíčně',
   'billing.interval.yearly': 'Ročně',
-  'billing.interval.saving': 'Ušetříte {value}',
   'billing.plan.free.name': 'Zdarma',
   'billing.plan.free.tagline': 'Naplánujte si dvě nejbližší cesty',
   'billing.plan.free.feature.trips': 'Dvě cesty naráz',
@@ -444,7 +438,6 @@ const messages = {
   'billing.plan.current': 'Aktuální tarif',
   'billing.plan.currentBadge': 'Nynější',
   'billing.plan.popular': 'Oblíbený',
-  'billing.plan.moveTo': 'Přejít na {plan}',
   'billing.plan.switchYearly': 'Platit ročně',
   'billing.plan.switchMonthly': 'Platit měsíčně',
   'billing.plan.upgradeTo': 'Povýšit na {plan}',
@@ -463,31 +456,72 @@ const messages = {
     other: '{value} členů',
   },
 
-  'billing.invoices.title': 'Faktury',
-  'billing.invoices.description':
-    'Všechny doklady tohoto prostoru, nejnovější nahoře.',
-  'billing.invoices.portal': 'Platební portál',
-  'billing.invoices.unavailableTitle': 'Doklady se nenačítají',
-  'billing.invoices.unavailableBody':
-    'Polar nestihl odpovědět s historií. Všechno výše je aktuální; celý záznam najdete v platebním portálu, nebo se za chvíli vraťte.',
-  'billing.invoices.emptyTitle': 'Zatím žádné faktury',
-  'billing.invoices.emptyCustomer':
-    'První doklad se tu objeví, jak se uzavře fakturační období.',
-  'billing.invoices.emptyNoCustomer':
-    'Tomuto prostoru jsme nikdy nic neúčtovali. Vyberte placený tarif a doklady se tu začnou sbírat.',
-  'billing.invoices.tableLabel': 'Historie faktur',
   'billing.invoices.number': 'Faktura',
   'billing.invoices.date': 'Datum',
-  'billing.invoices.period': 'Období',
   'billing.invoices.amount': 'Částka',
   'billing.invoices.status': 'Stav',
-  'billing.invoices.receipt': 'Doklad',
-  'billing.invoices.view': 'Otevřít',
   'billing.invoice.paid': 'Zaplaceno',
-  'billing.invoice.open': 'K zaplacení',
   'billing.invoice.draft': 'Koncept',
   'billing.invoice.void': 'Neplatná',
-  'billing.invoice.uncollectible': 'Nevymahatelná',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Poskytovatel platby žádost odmítl. Zkuste to za chvíli znovu.',
+  'billing.planChanged.title': 'Tarif aktualizován',
+  'billing.planChanged.body':
+    'Změna už u Polaru platí a rozdíl vyfakturuje. Přehled níže se doplní do minuty.',
+  'billing.hero.manage': 'Správa fakturace',
+  'billing.hero.manageHint':
+    'Karty, fakturační adresa, DIČ, potvrzení a zrušení jsou u Polaru, který vystavuje fakturu.',
+  'billing.hero.manageHintNone':
+    'Fakturační profil zatím není. Volbou placeného tarifu níže vznikne a portál se od té doby otevře.',
+  'billing.portal.opening': 'Otevírá se fakturační portál',
+  'billing.plan.notApplied': 'Tato změna nebyla provedena',
+  'billing.plan.cancelInPortal': 'Zrušit v portálu',
+  'billing.plan.seatsOverMax': {
+    one: 'Tento prostor má {members} členů a {plan} účtuje nejvýše {max}. Před přechodem odeberte {value} člena.',
+    few: 'Tento prostor má {members} členů a {plan} účtuje nejvýše {max}. Před přechodem odeberte {value} členy.',
+    many: 'Tento prostor má {members} členů a {plan} účtuje nejvýše {max}. Před přechodem odeberte {value} člena.',
+    other:
+      'Tento prostor má {members} členů a {plan} účtuje nejvýše {max}. Před přechodem odeberte {value} členů.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Máte {members} členů. Zvolte alespoň tolik míst — Polar odmítne předplatné s méně místy než přiřazeními.',
+  'billing.orders.title': 'Objednávky',
+  'billing.orders.description':
+    'Každá objednávka tohoto prostoru, od nejnovější.',
+  'billing.orders.receipts': 'Všechna potvrzení',
+  'billing.orders.unavailableTitle': 'Objednávky se nenačítají',
+  'billing.orders.unavailableBody':
+    'Polar neodpověděl na historii včas. Vše výše je aktuální — zkuste to za chvíli nebo si přečtěte celý záznam ve fakturačním portálu.',
+  'billing.orders.emptyTitle': 'Zatím žádné objednávky',
+  'billing.orders.emptyCustomer':
+    'První faktura se tu objeví, jakmile se uzavře fakturační období.',
+  'billing.orders.emptyNoCustomer':
+    'Tomuto prostoru nebylo nikdy nic účtováno. Zvolte placený tarif a faktury se tu začnou sbírat.',
+  'billing.orders.tableLabel': 'Historie objednávek',
+  'billing.orders.document': 'Dokument',
+  'billing.orders.dateUnknown': 'Datum neznámé',
+  'billing.order.pending': 'Probíhá',
+  'billing.order.refunded': 'Vráceno',
+  'billing.order.partiallyRefunded': 'Částečně vráceno',
+  'billing.order.noInvoiceDraft': 'Dokud je objednávka koncept, faktura není',
+  'billing.order.preparing': 'Připravuje se',
+  'billing.order.renderingHint':
+    'Polar fakturu {number} stále vytváří. Stahování se za pár sekund vrátí.',
+  'billing.order.fetching': 'Načítá se faktura',
+  'billing.order.generating': 'Polar připravuje fakturu',
+  'billing.order.pdfLabel': 'Faktura {number} v PDF',
+  'billing.order.stillWritingTitle': 'Polar tu fakturu stále píše',
+  'billing.order.stillWritingBody':
+    'Faktura {number} se vytváří. Stahování se samo za pár sekund vrátí.',
+  'billing.order.openFailed': 'Tuto fakturu nešlo otevřít',
 } satisfies TranslationOf<typeof En>
 
 export default messages

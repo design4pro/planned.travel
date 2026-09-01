@@ -35,8 +35,8 @@ describe('kind and priority guards', () => {
   })
 
   it('labels an unknown kind rather than rendering the raw token', () => {
-    expect(listKindLabel('todo')).toBe('To-do')
-    expect(listKindLabel('nonsense')).toBe('List')
+    expect(listKindLabel('todo')).toBe('modules.lists.kind.todo')
+    expect(listKindLabel('nonsense')).toBe('modules.lists.kind.fallback')
   })
 
   it('accepts the priorities the schema stores', () => {

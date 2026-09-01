@@ -135,3 +135,17 @@ export const PLAN_ALLOWANCE_CLAIMS: ReadonlyArray<PlanAllowanceClaim> = [
     quota: 'trips',
   },
 ]
+
+/**
+ * What the usage meters call each quota, as catalogue keys.
+ *
+ * `QUOTA_LABELS` in `src/lib/plans.ts` names the same three quotas in English,
+ * for the same reason the plan names are English there: an operator's record and
+ * the Polar product description want it. A meter on a translated settings screen
+ * does not, so the screen reads these instead.
+ */
+export const QUOTA_LABEL_KEYS: { readonly [K in QuotaKey]: MessageKey } = {
+  seats: 'settings.billing.quota.seats',
+  trips: 'settings.billing.quota.trips',
+  storageBytes: 'settings.billing.quota.storageBytes',
+}

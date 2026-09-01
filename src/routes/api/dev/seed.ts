@@ -43,7 +43,10 @@ function notFound(): Response {
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body, null, 2), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+    },
   })
 }
 
@@ -66,7 +69,10 @@ async function ownerCredentialFrom(
     }
     const body = parsed as { password?: unknown; keepPassword?: unknown }
     return {
-      password: typeof body.password === 'string' && body.password.length > 0 ? body.password : null,
+      password:
+        typeof body.password === 'string' && body.password.length > 0
+          ? body.password
+          : null,
       keepPassword: body.keepPassword === true,
     }
   } catch {
@@ -101,7 +107,10 @@ async function post({ request }: { request: Request }): Promise<Response> {
       return json({ ok: false, error: error.message, code: error.code }, 422)
     }
     return json(
-      { ok: false, error: error instanceof Error ? error.message : 'The seed failed.' },
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : 'The seed failed.',
+      },
       500,
     )
   }

@@ -35,7 +35,10 @@ export interface CostsActions {
   /** The payload with any in-flight writes folded in. */
   readonly snapshot: CostsSnapshot
   readonly addExpense: (value: ExpenseFormValue) => Promise<void>
-  readonly editExpense: (expense: CostsExpense, value: ExpenseFormValue) => Promise<void>
+  readonly editExpense: (
+    expense: CostsExpense,
+    value: ExpenseFormValue,
+  ) => Promise<void>
   readonly removeExpense: (expense: CostsExpense) => Promise<void>
   readonly addPayment: (value: PaymentFormValue) => Promise<void>
 }
@@ -74,7 +77,9 @@ function optimisticExpense(
 }
 
 function reasonOf(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.length > 0 ? error.message : fallback
+  return error instanceof Error && error.message.length > 0
+    ? error.message
+    : fallback
 }
 
 export function useCostsActions(payload: CostsPayload): CostsActions {
@@ -95,13 +100,19 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
    * having failed.
    */
   const run = useCallback(
-    async (op: CostsOp, send: () => Promise<unknown>, failure: string): Promise<void> => {
+    async (
+      op: CostsOp,
+      send: () => Promise<unknown>,
+      failure: string,
+    ): Promise<void> => {
       setOps((current) => [...current, op])
       try {
         await send()
         await router.invalidate()
       } catch (cause) {
-        toast.error(failure, { description: reasonOf(cause, 'The change was rolled back.') })
+        toast.error(failure, {
+          description: reasonOf(cause, 'The change was rolled back.'),
+        })
         throw cause
       } finally {
         drop(op.key)
@@ -114,7 +125,11 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
     async (value: ExpenseFormValue): Promise<void> => {
       const key = optimisticId()
       await run(
-        { kind: 'create', key, row: optimisticExpense(key, value, payload.currency) },
+        {
+          kind: 'create',
+          key,
+          row: optimisticExpense(key, value, payload.currency),
+        },
         () =>
           createExpenseFn({
             data: { tripId: payload.tripId, expense: toServerExpense(value) },
@@ -199,7 +214,9 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           }),
         'The payment was not recorded',
       )
-      toast.success('Payment recorded', { description: 'Both balances are updated.' })
+      toast.success('Payment recorded', {
+        description: 'Both balances are updated.',
+      })
     },
     [payload.currency, payload.tripId, run],
   )

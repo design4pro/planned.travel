@@ -203,7 +203,14 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(
                 'shrink-0',
                 sortDirection
                   ? 'text-ink'
-                  : 'text-ink-4 opacity-0 group-hover:opacity-100',
+                  : // Revealed on hover, which is the whole affordance — and a
+                    // touch reader has no hover, so on a coarse pointer the
+                    // column had no visible sign it could be sorted at all
+                    // until someone tapped it and watched the rows move.
+                    // `pointer-coarse` shows it at rest there instead; the
+                    // pointer query is the honest test, because a laptop with a
+                    // touchscreen is both and a width is neither.
+                    'text-ink-4 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100',
               )}
             />
           </button>

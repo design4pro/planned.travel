@@ -285,16 +285,13 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} 趟行程，一个人',
   'billing.hero.perSeatLine': '{seats} 位成员 × {price}',
   'billing.hero.singleTraveller': '一位旅行者',
-  'billing.hero.paymentMethod': '支付方式',
-  'billing.hero.cancel': '取消方案',
   'billing.price.free': '免费',
   'billing.provider.opening': '正在打开 Polar',
-  'billing.provider.failed': '连不上 Polar',
-  'billing.provider.failedBody': '没有扣款。请检查网络，过一会儿再试。',
   'billing.renewal.trialEndsToday':
-    '试用今天结束。绑一张卡，所有模块就能继续用。',
+    '试用期今天结束。除非你在此之前取消，否则将进行首次扣款。',
   'billing.renewal.trialEndsIn': {
-    other: '试用还有 {value} 天结束。在那之前不用绑卡。',
+    other:
+      '试用期将在 {value} 天后结束。除非你在此之前取消，否则将进行首次扣款。',
   },
   'billing.renewal.trialEnded': '试用已经结束。',
   'billing.renewal.endsNoDate': '这个方案将会终止，不再续期。',
@@ -334,7 +331,6 @@ const messages = {
   'billing.interval.label': '计费周期',
   'billing.interval.monthly': '按月',
   'billing.interval.yearly': '按年',
-  'billing.interval.saving': '省 {value}',
   'billing.plan.free.name': '免费版',
   'billing.plan.free.tagline': '把接下来两趟行程计划好',
   'billing.plan.free.feature.trips': '同时两趟行程',
@@ -356,7 +352,6 @@ const messages = {
   'billing.plan.current': '当前方案',
   'billing.plan.currentBadge': '当前',
   'billing.plan.popular': '热门',
-  'billing.plan.moveTo': '换到{plan}',
   'billing.plan.switchYearly': '改成按年',
   'billing.plan.switchMonthly': '改成按月',
   'billing.plan.upgradeTo': '升级到{plan}',
@@ -369,30 +364,67 @@ const messages = {
   'billing.plan.members': '成员',
   'billing.plan.membersHint': '随时可以改，账单跟着变。',
   'billing.plan.seatOption': { other: '{value} 位成员' },
-  'billing.invoices.title': '发票',
-  'billing.invoices.description': '这个工作区的每一张收据，最新的在最前面。',
-  'billing.invoices.portal': '账单门户',
-  'billing.invoices.unavailableTitle': '收据加载不出来',
-  'billing.invoices.unavailableBody':
-    'Polar 没能及时给出历史记录。上面的内容都是实时的；完整记录可以打开账单门户查看，或者过一会儿再来。',
-  'billing.invoices.emptyTitle': '还没有发票',
-  'billing.invoices.emptyCustomer':
-    '第一张收据会在一个计费周期结束时出现在这里。',
-  'billing.invoices.emptyNoCustomer':
-    '这个工作区从来没有被收过费。挑一个付费方案，收据就会攒在这里。',
-  'billing.invoices.tableLabel': '开票记录',
   'billing.invoices.number': '发票',
   'billing.invoices.date': '日期',
-  'billing.invoices.period': '周期',
   'billing.invoices.amount': '金额',
   'billing.invoices.status': '状态',
-  'billing.invoices.receipt': '收据',
-  'billing.invoices.view': '查看',
   'billing.invoice.paid': '已付款',
-  'billing.invoice.open': '待付',
   'billing.invoice.draft': '草稿',
   'billing.invoice.void': '已作废',
-  'billing.invoice.uncollectible': '无法收回',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected': '支付服务商拒绝了该请求。请稍后再试。',
+  'billing.planChanged.title': '套餐已更新',
+  'billing.planChanged.body':
+    '变更已在 Polar 生效，差额由 Polar 开票。下面的摘要会在一分钟内跟上。',
+  'billing.hero.manage': '管理账单',
+  'billing.hero.manageHint':
+    '银行卡、账单地址、税号、收据和取消都在开具发票的 Polar 那边。',
+  'billing.hero.manageHintNone':
+    '还没有账单资料。在下面选择付费套餐即会创建，之后门户就能打开。',
+  'billing.portal.opening': '正在打开账单门户',
+  'billing.plan.notApplied': '该变更未生效',
+  'billing.plan.cancelInPortal': '在门户中取消',
+  'billing.plan.seatsOverMax': {
+    other:
+      '此工作区有 {members} 位成员，而 {plan} 最多只按 {max} 位计费。请在切换前移出 {value} 位成员。',
+  },
+  'billing.plan.seatsBelowMembers':
+    '你有 {members} 位成员。请至少选择同样多的席位，Polar 会拒绝席位少于分配数的订阅。',
+  'billing.orders.title': '订单',
+  'billing.orders.description': '此工作区的每一笔订单，最新的在前。',
+  'billing.orders.receipts': '所有收据',
+  'billing.orders.unavailableTitle': '订单加载不出来',
+  'billing.orders.unavailableBody':
+    'Polar 未能及时返回历史记录。上面的内容都是实时的，请稍后再试，或在账单门户查看完整记录。',
+  'billing.orders.emptyTitle': '还没有订单',
+  'billing.orders.emptyCustomer':
+    '一个账单周期结束后，第一张发票就会出现在这里。',
+  'billing.orders.emptyNoCustomer':
+    '此工作区从未被收费。选择付费套餐，发票就会汇集在这里。',
+  'billing.orders.tableLabel': '订单历史',
+  'billing.orders.document': '文件',
+  'billing.orders.dateUnknown': '日期不明',
+  'billing.order.pending': '处理中',
+  'billing.order.refunded': '已退款',
+  'billing.order.partiallyRefunded': '已部分退款',
+  'billing.order.noInvoiceDraft': '订单还是草稿时没有发票',
+  'billing.order.preparing': '正在准备',
+  'billing.order.renderingHint':
+    'Polar 仍在生成发票 {number}。下载会在几秒后恢复。',
+  'billing.order.fetching': '正在获取发票',
+  'billing.order.generating': 'Polar 正在准备发票',
+  'billing.order.pdfLabel': '发票 {number}，PDF 格式',
+  'billing.order.stillWritingTitle': 'Polar 仍在开具那张发票',
+  'billing.order.stillWritingBody':
+    '发票 {number} 正在生成。下载会在几秒后自动恢复。',
+  'billing.order.openFailed': '那张发票没有打开',
 } satisfies TranslationOf<typeof En>
 
 export default messages

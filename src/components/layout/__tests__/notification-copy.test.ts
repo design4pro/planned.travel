@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createStoredTranslator, createTranslator } from '#/lib/i18n'
 import en from '#/lib/i18n/messages/en/shell'
-import {
-  eventOf,
-  notificationCopy,
-  paramsFrom,
-} from '../notification-copy'
+import { eventOf, notificationCopy, paramsFrom } from '../notification-copy'
 
 import type { Catalogue, Locale } from '#/lib/i18n'
 import type { StoredNotification } from '../notification-copy'

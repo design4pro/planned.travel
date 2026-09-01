@@ -140,7 +140,6 @@ const messages = {
   'users.filter.role.curator': 'Curadors',
   'users.filter.status.label': 'Filtra per estat del compte',
   'users.filter.status.any': 'Qualsevol estat',
-  'users.filter.clear': 'Esborra els filtres',
   'users.filter.hint': 'Estreny per rol o per estat — un de cada vegada.',
   'users.column.account': 'Compte',
   'users.column.role': 'Rol de plataforma',

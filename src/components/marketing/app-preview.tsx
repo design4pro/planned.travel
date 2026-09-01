@@ -18,11 +18,18 @@ import {
   Sparkline,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { formatDateRange, formatWeekday } from '#/lib/format'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { MiniMap } from './visuals'
 
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 
 /* ------------------------------------------------------------ browser shell */
+
+/** What the miniature depicts: eighteen places across four days. */
+const PLACES = 18
+const DAYS = 4
 
 function BrowserChrome() {
   return (
@@ -48,9 +55,16 @@ function BrowserChrome() {
 
 /* --------------------------------------------------------------- app chrome */
 
-const MINI_TABS = ['My Trips', 'Vacay', 'Atlas', 'Journey'] as const
+/** The app's own navigation, so the picture and the product agree. */
+const MINI_TABS: readonly [MessageKey, MessageKey, MessageKey, MessageKey] = [
+  'shell.nav.trips',
+  'shell.nav.vacay',
+  'shell.nav.atlas',
+  'shell.nav.journey',
+]
 
 function MiniTopNav() {
+  const t = useTranslate()
   return (
     <div className="flex items-center gap-2 border-b border-edge-faint px-3 py-2.5 sm:px-4">
       <Wordmark size="sm" />
@@ -66,22 +80,22 @@ function MiniTopNav() {
                 : 'text-ink-3',
             )}
           >
-            {tab}
+            {t(tab)}
           </span>
         ))}
       </div>
 
-      <div className="ml-auto flex items-center gap-1.5 md:ml-0">
+      <div className="ms-auto flex items-center gap-1.5 md:ms-0">
         <span className="hidden items-center gap-1 rounded-full bg-accent px-2 py-1 text-micro font-semibold tracking-normal text-accent-on lg:inline-flex">
           <Plus className="size-2.5" strokeWidth={3} />
-          New trip
+          {t('shell.nav.newTrip')}
         </span>
         <span className="grid size-5.5 place-items-center rounded-full text-ink-4 [&_svg]:size-3">
           <Moon />
         </span>
         <span className="relative grid size-5.5 place-items-center rounded-full text-ink-4 [&_svg]:size-3">
           <Bell />
-          <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-brand" />
+          <span className="absolute top-0.5 end-0.5 size-1.5 rounded-full bg-brand" />
         </span>
         <Avatar name="Amelia Voss" size="sm" />
       </div>
@@ -91,18 +105,43 @@ function MiniTopNav() {
 
 /* ----------------------------------------------------------------- up next */
 
-const HERO_FACTS: ReadonlyArray<{
+/** The illustrated trip, as the dashboard's own hero tiles would state it. */
+const TRAVELLERS = 3
+const STARTS_IN_DAYS = 26
+const TRIP_FROM = '2026-04-12'
+const TRIP_TO = '2026-04-24'
+
+function heroFacts(
+  t: Translate,
+  locale: Locale,
+): ReadonlyArray<{
   label: string
   value: string
   unit?: string
-}> = [
-  { label: 'Travellers', value: '3' },
-  { label: 'Dates', value: '12–24', unit: 'Apr' },
-  { label: 'Starts in', value: '26', unit: 'days' },
-  { label: 'Places', value: '18' },
-]
+}> {
+  return [
+    {
+      label: t('shell.dashboard.hero.travellers'),
+      value: String(TRAVELLERS),
+    },
+    {
+      label: t('shell.dashboard.hero.dates'),
+      // The whole range in one slot: where the month sits relative to the days
+      // is the locale's business, and the frozen table is what settles it.
+      value: formatDateRange(TRIP_FROM, TRIP_TO, locale) ?? '',
+    },
+    {
+      label: t('shell.dashboard.hero.startsIn'),
+      value: String(STARTS_IN_DAYS),
+      unit: t('shell.dashboard.hero.startFuture', { count: STARTS_IN_DAYS }),
+    },
+    { label: t('shell.dashboard.hero.places'), value: String(PLACES) },
+  ]
+}
 
 function MiniTripHero() {
+  const t = useTranslate()
+  const locale = useLocale()
   return (
     <Card
       variant="inverse"
@@ -111,12 +150,12 @@ function MiniTripHero() {
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute -top-20 -right-16 size-56 rounded-full bg-brand/25 blur-3xl"
+        className="pointer-events-none absolute -top-20 -end-16 size-56 rounded-full bg-brand/25 blur-3xl"
       />
       <div className="relative flex flex-col gap-4 p-4 sm:p-5">
         <div className="flex items-center justify-between gap-2">
           <Badge tone="inverse" size="sm" dot>
-            Up next
+            {t('shell.dashboard.upNext')}
           </Badge>
           <span className="text-micro font-semibold uppercase tracking-label text-inverse-muted">
             Kyoto &amp; Osaka
@@ -128,7 +167,7 @@ function MiniTripHero() {
         </p>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg bg-inverse-surface p-3 ring-1 ring-inverse-edge ring-inset sm:grid-cols-4">
-          {HERO_FACTS.map((fact) => (
+          {heroFacts(t, locale).map((fact) => (
             <div key={fact.label} className="min-w-0">
               <p className="truncate text-micro font-semibold uppercase tracking-label text-inverse-muted">
                 {fact.label}
@@ -165,28 +204,43 @@ type MiniStat = {
   tone?: 'default' | 'inverse'
 }
 
-const MINI_STATS: ReadonlyArray<MiniStat> = [
-  {
-    label: 'Countries visited',
-    value: '11',
-    unit: 'of 195',
-    caption: '6% of the map filled in',
-    tone: 'inverse',
-  },
-  {
-    label: 'Trips total',
-    value: '9',
-    caption: '142 places mapped',
-    series: [3, 4, 4, 6, 5, 7, 8, 9],
-  },
-  {
-    label: 'Days travelled',
-    value: '87',
-    unit: 'days',
-    caption: 'across every trip',
-    series: [8, 14, 18, 26, 34, 52, 68, 87],
-  },
-]
+/** The figures the three tiles show, and the sentences built from them. */
+const COUNTRIES_VISITED = 11
+const COUNTRIES_TOTAL = 195
+const MAP_PERCENT = 6
+const TRIPS_TOTAL = 9
+const PLACES_MAPPED = 142
+const DAYS_TRAVELLED = 87
+
+function miniStats(t: Translate): ReadonlyArray<MiniStat> {
+  return [
+    {
+      label: t('shell.dashboard.stat.countries'),
+      value: String(COUNTRIES_VISITED),
+      unit: t('shell.dashboard.stat.countriesUnit', {
+        total: COUNTRIES_TOTAL,
+      }),
+      caption: t('marketing.visual.mapFilled', { percent: MAP_PERCENT }),
+      tone: 'inverse',
+    },
+    {
+      label: t('shell.dashboard.stat.trips'),
+      value: String(TRIPS_TOTAL),
+      caption: t('marketing.visual.placesMapped', {
+        count: PLACES_MAPPED,
+        value: PLACES_MAPPED,
+      }),
+      series: [3, 4, 4, 6, 5, 7, 8, 9],
+    },
+    {
+      label: t('marketing.visual.daysTravelled'),
+      value: String(DAYS_TRAVELLED),
+      unit: t('shell.dashboard.hero.startFuture', { count: DAYS_TRAVELLED }),
+      caption: t('marketing.visual.acrossEveryTrip'),
+      series: [8, 14, 18, 26, 34, 52, 68, 87],
+    },
+  ]
+}
 
 function MiniStatTile({ stat }: { stat: MiniStat }) {
   const inverse = stat.tone === 'inverse'
@@ -201,7 +255,7 @@ function MiniStatTile({ stat }: { stat: MiniStat }) {
         {stat.label}
       </SectionLabel>
       <div className="relative">
-        <p className="flex items-baseline gap-1.5 pr-14">
+        <p className="flex items-baseline gap-1.5 pe-14">
           <span
             className={cn(
               'font-display text-title font-extrabold tracking-tighter tabular-nums sm:text-display',
@@ -229,7 +283,7 @@ function MiniStatTile({ stat }: { stat: MiniStat }) {
             height={22}
             area
             showEndDot
-            className="absolute right-0 bottom-1 text-ink-4"
+            className="absolute end-0 bottom-1 text-ink-4"
           />
         )}
       </div>
@@ -248,6 +302,7 @@ function MiniStatTile({ stat }: { stat: MiniStat }) {
 /* ---------------------------------------------------------------- side rail */
 
 function MiniMapCard() {
+  const t = useTranslate()
   return (
     <Card padding="none" className="overflow-hidden">
       <div className="relative h-28">
@@ -256,11 +311,12 @@ function MiniMapCard() {
           radius="full"
           padding="none"
           floating={false}
-          className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1"
+          className="absolute bottom-2 start-2 flex items-center gap-1.5 px-2 py-1"
         >
           <MapPin aria-hidden className="size-2.5 text-brand" />
           <span className="text-micro font-semibold tabular-nums tracking-normal text-ink">
-            18 places · 4 days
+            {t('marketing.visual.places', { count: PLACES, value: PLACES })} ·{' '}
+            {t('marketing.visual.days', { count: DAYS, value: DAYS })}
           </span>
         </GlassPanel>
       </div>
@@ -271,25 +327,37 @@ function MiniMapCard() {
 const MINI_BOOKINGS: ReadonlyArray<{
   icon: typeof TrainFront
   title: string
-  meta: string
+  /** ISO plus the time the traveller typed, for the reason `visuals.tsx` gives. */
+  date: string
+  time: string
 }> = [
   {
     icon: TrainFront,
     title: 'Bullet train to Tokyo',
-    meta: 'Tue 15 Apr · 08:12',
+    date: '2026-04-15',
+    time: '08:12',
   },
   {
     icon: Ticket,
     title: 'Tea ceremony, two places',
-    meta: 'Wed 16 Apr · 14:00',
+    date: '2026-04-16',
+    time: '14:00',
   },
 ]
 
 function MiniBookings() {
+  const t = useTranslate()
+  const locale = useLocale()
   return (
     <Card padding="none" className="p-3 sm:p-4">
-      <SectionLabel action={<span className="text-micro text-brand">All</span>}>
-        Upcoming
+      <SectionLabel
+        action={
+          <span className="text-micro text-brand">
+            {t('shell.trips.filter.all')}
+          </span>
+        }
+      >
+        {t('marketing.visual.upcoming')}
       </SectionLabel>
       <ul className="mt-3 flex flex-col gap-2.5">
         {MINI_BOOKINGS.map((booking) => (
@@ -302,7 +370,7 @@ function MiniBookings() {
                 {booking.title}
               </span>
               <span className="block truncate text-micro tabular-nums tracking-normal text-ink-4">
-                {booking.meta}
+                {formatWeekday(booking.date, locale)} · {booking.time}
               </span>
             </span>
           </li>
@@ -313,9 +381,6 @@ function MiniBookings() {
 }
 
 /* ----------------------------------------------------------------- preview */
-
-const PREVIEW_SUMMARY =
-  'A preview of the planned.travel dashboard: the next trip with its dates, travellers and place count; totals for countries visited, trips and days travelled; a map of the trip route; and the next two bookings.'
 
 export type AppPreviewProps = {
   className?: string
@@ -336,6 +401,7 @@ export type AppPreviewProps = {
  * accessibility tree behind one honest description.
  */
 export function AppPreview({ className, children }: AppPreviewProps) {
+  const t = useTranslate()
   return (
     <figure className={cn('relative', className)}>
       <div
@@ -352,7 +418,7 @@ export function AppPreview({ className, children }: AppPreviewProps) {
             <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
               <MiniTripHero />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-                {MINI_STATS.map((stat, index) => (
+                {miniStats(t).map((stat, index) => (
                   <div
                     key={stat.label}
                     className={cn('min-w-0', index === 2 && 'hidden sm:block')}
@@ -370,7 +436,9 @@ export function AppPreview({ className, children }: AppPreviewProps) {
         </div>
       </div>
       {children}
-      <figcaption className="sr-only">{PREVIEW_SUMMARY}</figcaption>
+      <figcaption className="sr-only">
+        {t('marketing.visual.previewSummary')}
+      </figcaption>
     </figure>
   )
 }

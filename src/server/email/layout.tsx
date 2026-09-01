@@ -118,13 +118,19 @@ export interface EmailFact {
  * the column instead of dancing, which is the same rule the product's screens
  * follow for any number that can change.
  */
-export function EmailFacts({ facts }: { readonly facts: ReadonlyArray<EmailFact> }) {
+export function EmailFacts({
+  facts,
+}: {
+  readonly facts: ReadonlyArray<EmailFact>
+}) {
   return (
     <Section style={styles.panel}>
       {facts.map((fact, index) => (
         <Row
           key={fact.label}
-          style={index === facts.length - 1 ? styles.factRowLast : styles.factRow}
+          style={
+            index === facts.length - 1 ? styles.factRowLast : styles.factRow
+          }
         >
           <Column style={styles.factLabel}>{fact.label}</Column>
           <Column style={styles.factValue}>{fact.value}</Column>
@@ -149,7 +155,6 @@ export function EmailCallout({
         margin: '0 0 24px',
         backgroundColor: fill,
         borderRadius: '12px',
-        borderLeft: `3px solid ${ink}`,
         padding: '16px 20px',
       }}
     >

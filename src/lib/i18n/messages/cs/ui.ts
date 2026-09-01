@@ -23,15 +23,18 @@ import type En from '../en/ui'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Vymazat',
+  'action.clearFilters': 'Zrušit filtry',
   'action.close': 'Zavřít',
   'action.dismiss': 'Skrýt',
   'action.remove': 'Odebrat',
+  'action.keep': 'Nechat',
   'action.undo': 'Vrátit zpět',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Načítání',
   'status.working': 'Zpracování',
   'status.searching': 'Hledání',
+  'status.removing': 'Odebírání',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} je online',

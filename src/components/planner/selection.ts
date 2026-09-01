@@ -49,11 +49,23 @@ export const initialSelection: PlannerSelection = {
 
 export type SelectionAction =
   /** A pin was clicked. Selects, focuses its day, and does *not* move the camera. */
-  | { readonly type: 'pin-click'; readonly placeId: string; readonly dayId: string | null }
+  | {
+      readonly type: 'pin-click'
+      readonly placeId: string
+      readonly dayId: string | null
+    }
   /** A rail row was activated. Selects and eases the camera to it. */
-  | { readonly type: 'row-click'; readonly placeId: string; readonly dayId: string | null }
+  | {
+      readonly type: 'row-click'
+      readonly placeId: string
+      readonly dayId: string | null
+    }
   /** The pointer or keyboard focus entered a row or a pin. */
-  | { readonly type: 'hover-in'; readonly placeId: string; readonly dayId?: string | null }
+  | {
+      readonly type: 'hover-in'
+      readonly placeId: string
+      readonly dayId?: string | null
+    }
   /** …and left it. Ignored when the pointer has already moved on. */
   | { readonly type: 'hover-out'; readonly placeId: string }
   /** A day header was activated. Focuses the day without selecting a place. */
@@ -150,7 +162,10 @@ export function selectionReducer(
     }
 
     case 'forget': {
-      if (state.placeId !== action.placeId && state.hoverId !== action.placeId) {
+      if (
+        state.placeId !== action.placeId &&
+        state.hoverId !== action.placeId
+      ) {
         return state
       }
       return {

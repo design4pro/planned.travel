@@ -30,8 +30,10 @@ describe('type guards', () => {
   })
 
   it('labels an unrecognised type rather than crashing on it', () => {
-    expect(bookingTypeLabel('accommodation')).toBe('Stay')
-    expect(bookingTypeLabel('nonsense')).toBe('Booking')
+    expect(bookingTypeLabel('accommodation')).toBe(
+      'shell.bookingType.accommodation',
+    )
+    expect(bookingTypeLabel('nonsense')).toBe('shell.bookingType.other')
   })
 })
 
@@ -65,9 +67,15 @@ describe('per-type shapes', () => {
   })
 
   it('names the provider field after the thing being booked', () => {
-    expect(bookingShape('accommodation').providerLabel).toBe('Hotel or host')
-    expect(bookingShape('restaurant').providerLabel).toBe('Restaurant')
-    expect(bookingShape('transport').providerLabel).toBe('Carrier')
+    expect(bookingShape('accommodation').providerLabel).toBe(
+      'modules.book.field.host',
+    )
+    expect(bookingShape('restaurant').providerLabel).toBe(
+      'modules.book.field.restaurant',
+    )
+    expect(bookingShape('transport').providerLabel).toBe(
+      'modules.book.field.carrier',
+    )
   })
 })
 
@@ -201,7 +209,7 @@ describe('validateBookingDraft', () => {
     const errors = validateBookingDraft(
       draft({ startDate: '2026-04-19', endDate: '2026-04-16' }),
     )
-    expect(errors.endDate).toBe('This ends before it starts.')
+    expect(errors.endDate?.key).toBe('modules.book.error.endsBeforeStart')
   })
 
   it('refuses an end time before the start time on the same day', () => {
@@ -214,7 +222,7 @@ describe('validateBookingDraft', () => {
         endTime: '18:00',
       }),
     )
-    expect(errors.endTime).toBe('The end time is before the start time.')
+    expect(errors.endTime?.key).toBe('modules.book.error.endTimeBeforeStart')
   })
 
   it('accepts an end time earlier in the clock on a later day', () => {

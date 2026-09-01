@@ -151,7 +151,10 @@ export interface SeedReport {
   readonly members: number
   readonly categories: number
   readonly moods: number
-  readonly trips: ReadonlyArray<{ readonly slug: string; readonly counts: TripCounts }>
+  readonly trips: ReadonlyArray<{
+    readonly slug: string
+    readonly counts: TripCounts
+  }>
   readonly totals: {
     readonly trips: number
     readonly days: number
@@ -252,7 +255,10 @@ const DEFAULT_OWNER_EMAIL = 'rafal@planned.travel'
  * the rows this writes are the same rows every time and the covers drawn from their ids do not move.
  * See that module for why an id is as load-bearing as a date here.
  */
-export async function applySeed(db: Database, options: ApplySeedOptions = {}): Promise<SeedReport> {
+export async function applySeed(
+  db: Database,
+  options: ApplySeedOptions = {},
+): Promise<SeedReport> {
   const fixture = fixtureRows()
   return await fixture.run(() => writeSeed(db, options, fixture))
 }
@@ -286,7 +292,8 @@ async function writeSeed(
   const owner = resolved.ownerScope
 
   const marker = await appSettingsStore.get(db, MARKER_KEY)
-  const markerVersion = typeof marker?.value?.version === 'number' ? marker.value.version : null
+  const markerVersion =
+    typeof marker?.value?.version === 'number' ? marker.value.version : null
   if (markerVersion === DATASET_VERSION && options.force !== true) {
     return {
       ...emptyReport(
@@ -306,7 +313,10 @@ async function writeSeed(
   /* ------------------------------------------------------------------------- settings and billing */
 
   await ensureOrganizationSettings(owner)
-  await updateOrganizationSettings(owner, { ...organizationSettings, onboardedAt: now })
+  await updateOrganizationSettings(owner, {
+    ...organizationSettings,
+    onboardedAt: now,
+  })
   await markOrganizationOnboarded(owner)
 
   // The subscription comes first on purpose: the free plan seats one person, and the demo needs four.
@@ -353,7 +363,9 @@ async function writeSeed(
 
   fixture.section('taxonomy')
   await ensureDefaultCategories(owner)
-  const knownSlugs = new Set((await listCategories(owner)).map((row) => row.slug))
+  const knownSlugs = new Set(
+    (await listCategories(owner)).map((row) => row.slug),
+  )
   for (const category of extraCategories) {
     if (!knownSlugs.has(category.slug)) {
       await createCategory(owner, category)
@@ -373,7 +385,11 @@ async function writeSeed(
   // vocabulary is created here instead, once, in a section of its own, and the trip pass only ever
   // looks it up.
   const tagNames = [
-    ...new Set(trips.flatMap((trip) => (trip.places ?? []).flatMap((place) => place.tags ?? []))),
+    ...new Set(
+      trips.flatMap((trip) =>
+        (trip.places ?? []).flatMap((place) => place.tags ?? []),
+      ),
+    ),
   ]
   for (let start = 0; start < tagNames.length; start += TAG_BATCH) {
     await resolveTags(owner, tagNames.slice(start, start + TAG_BATCH))
@@ -385,7 +401,9 @@ async function writeSeed(
     owner,
     scopes: seedPeople.scopes,
     categoryIds,
-    colours: new Map<PersonKey, string>(people.map((person) => [person.key, person.colour])),
+    colours: new Map<PersonKey, string>(
+      people.map((person) => [person.key, person.colour]),
+    ),
   }
 
   const tripReports: Array<{ slug: string; counts: TripCounts }> = []
@@ -416,7 +434,10 @@ async function writeSeed(
     }
     fixture.section(`journey/${journey.slug}`)
     const created = await createJourney(owner, {
-      tripId: journey.tripSlug === undefined ? null : (tripIdBySlug.get(journey.tripSlug) ?? null),
+      tripId:
+        journey.tripSlug === undefined
+          ? null
+          : (tripIdBySlug.get(journey.tripSlug) ?? null),
       title: journey.title,
       slug: journey.slug,
       subtitle: journey.subtitle,
@@ -432,7 +453,9 @@ async function writeSeed(
         journeyId: created.id,
         moodId: moodIds.get(entry.moodKey) ?? null,
         sourceTripId:
-          journey.tripSlug === undefined ? null : (tripIdBySlug.get(journey.tripSlug) ?? null),
+          journey.tripSlug === undefined
+            ? null
+            : (tripIdBySlug.get(journey.tripSlug) ?? null),
         type: entry.type,
         title: entry.title,
         body: entry.body,
@@ -566,7 +589,9 @@ async function writeSeed(
     const first = sorted.at(0) ?? null
     const last = sorted.at(-1) ?? null
 
-    let row = seenCountries.find((entry) => entry.countryCode === country.countryCode)
+    let row = seenCountries.find(
+      (entry) => entry.countryCode === country.countryCode,
+    )
     if (row === undefined) {
       row = await markCountryVisited(owner, {
         userId: resolved.ownerUserId,
@@ -684,10 +709,17 @@ async function writeSeed(
   // run points at an id that no longer exists. Clear the rows this dataset owns — identified by their
   // message key — and write them fresh, rather than accumulating a stale copy per run.
   fixture.section('inbox')
-  const datasetTitleKeys = new Set(notifications.map((notification) => notification.titleKey))
-  const inbox = await notificationsRepository.findMany(owner, { limit: INBOX_SWEEP_LIMIT })
+  const datasetTitleKeys = new Set(
+    notifications.map((notification) => notification.titleKey),
+  )
+  const inbox = await notificationsRepository.findMany(owner, {
+    limit: INBOX_SWEEP_LIMIT,
+  })
   for (const row of inbox) {
-    if (row.recipientUserId === resolved.ownerUserId && datasetTitleKeys.has(row.titleKey)) {
+    if (
+      row.recipientUserId === resolved.ownerUserId &&
+      datasetTitleKeys.has(row.titleKey)
+    ) {
       await deleteNotification(owner, row.id)
     }
   }
@@ -709,7 +741,8 @@ async function writeSeed(
     const createdAt = minutesBeforeAnchor(notification.minutesAgo)
     await notificationsRepository.insert(owner, {
       recipientUserId: resolved.ownerUserId,
-      senderUserId: seedPeople.ids.get(notification.sender) ?? resolved.ownerUserId,
+      senderUserId:
+        seedPeople.ids.get(notification.sender) ?? resolved.ownerUserId,
       type: notification.type,
       scope: notification.scope,
       entityType: notification.entityType ?? null,
@@ -720,7 +753,9 @@ async function writeSeed(
       bodyParams: resolveParams(notification.bodyParams, replacements),
       actionUrl: tripId === null ? null : `/trips/${tripId}`,
       isRead: notification.isRead,
-      readAt: notification.isRead ? minutesBeforeAnchor(Math.max(notification.minutesAgo - 30, 0)) : null,
+      readAt: notification.isRead
+        ? minutesBeforeAnchor(Math.max(notification.minutesAgo - 30, 0))
+        : null,
       createdAt,
       updatedAt: createdAt,
     })
@@ -729,7 +764,9 @@ async function writeSeed(
 
   fixture.section('audit')
   const datasetActions = new Set(auditTrail.map((entry) => entry.action))
-  const trail = await auditLogRepository.findMany(owner, { limit: INBOX_SWEEP_LIMIT })
+  const trail = await auditLogRepository.findMany(owner, {
+    limit: INBOX_SWEEP_LIMIT,
+  })
   for (const row of trail) {
     if (datasetActions.has(row.action)) {
       await auditLogRepository.remove(owner, row.id)
@@ -744,7 +781,9 @@ async function writeSeed(
       action: entry.action,
       entityType: entry.entityType,
       entityId:
-        entry.entityTripSlug === undefined ? null : (tripIdBySlug.get(entry.entityTripSlug) ?? null),
+        entry.entityTripSlug === undefined
+          ? null
+          : (tripIdBySlug.get(entry.entityTripSlug) ?? null),
       metadata: entry.metadata,
       createdAt,
     })
@@ -765,7 +804,11 @@ async function writeSeed(
   await appSettingsStore.set(
     db,
     MARKER_KEY,
-    { version: DATASET_VERSION, anchor: SEED_ANCHOR_DAY, organizationId: resolved.organizationId },
+    {
+      version: DATASET_VERSION,
+      anchor: SEED_ANCHOR_DAY,
+      organizationId: resolved.organizationId,
+    },
     'Demo dataset marker written by /api/dev/seed. Delete it to allow a re-seed.',
   )
 

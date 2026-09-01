@@ -125,8 +125,18 @@ Specifically:
 | Tests             | Vitest (unit) + Playwright (e2e/visual)                                                                                                                                                                                                                                      |
 
 **Dependency freeze.** The dependency set is complete. Do **not** run `pnpm add`, and do not
-edit `package.json` or `pnpm-lock.yaml`. If you genuinely need a package that is absent, stop
-and report it in your result instead of installing it.
+edit the `dependencies` or `devDependencies` blocks of `package.json`, or `pnpm-lock.yaml`. If
+you genuinely need a package that is absent, stop and report it in your result instead of
+installing it.
+
+**What the freeze does not cover.** The `scripts` block. The freeze exists so the deployed
+bundle's contents stay a decision rather than an accident; a task runner that shells out to a
+committed script adds nothing to the bundle and installs nothing, so it was never the subject.
+This is a narrowing of an earlier reading, not a loosening of the rule: the sentence above used
+to say "do not edit `package.json`" without qualification, and was read as freezing the whole
+file — which is why `pnpm worktree:bootstrap` did not exist and the local setup lived only in
+prose. Adding a script that runs code already in the repository is ordinary work. Adding,
+removing, renaming or re-pinning a package is not, and no script entry may install one.
 
 **Named exception: two packages, once — spent.** Exactly two packages could ever be added, by
 name: `@react-email/components` and `react-email`. Phase A installed them and the exception is

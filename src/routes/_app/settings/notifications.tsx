@@ -17,8 +17,10 @@ import type { MessageKey, Translate } from '#/lib/i18n'
  * The notification matrix: one row per switchable event, one column per channel.
  *
  * Both axes are declared here as message *keys* rather than read from
- * `../-lib/notifications`, whose `NOTIFICATION_EVENTS` and `CHANNEL_LABELS`
- * carry English sentences for the inbox renderer. The stored `event_type` and
+ * a second table. There used to be one — `../-lib/notifications` carried
+ * `NOTIFICATION_EVENTS` and `CHANNEL_LABELS` in English for an inbox renderer
+ * that `components/layout/notification-copy.ts` had already replaced — and it is
+ * deleted now. The stored `event_type` and
  * `channel` values are the contract between this screen and the repository; the
  * words beside them belong to this module's catalogue, so a Polish traveller
  * reads Polish switches.
@@ -196,7 +198,13 @@ function PreferencesPage() {
                   className="w-24 pb-3 text-center text-micro font-semibold tracking-label uppercase text-ink-3"
                 >
                   <span className="block">{t(channel.label)}</span>
-                  <span className="mt-0.5 block text-[0.625rem] font-normal tracking-normal normal-case text-ink-4">
+                  {/* The hint is the only prose in this header, and it was set
+                      a step below Micro — under the ramp's floor — to sit
+                      quieter than the channel name above it. It does not need
+                      the size for that: weight, case, tracking and ink-4
+                      already separate the two, so the size can come back up
+                      onto the ramp and stay readable. */}
+                  <span className="mt-0.5 block text-micro font-normal tracking-normal normal-case text-ink-4">
                     {t(channel.hint)}
                   </span>
                 </th>

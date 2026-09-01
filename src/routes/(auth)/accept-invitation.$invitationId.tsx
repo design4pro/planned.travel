@@ -67,9 +67,7 @@ function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
             {t('auth.invitation.role')}
           </dt>
           <dd className="min-w-0">
-            <Badge tone="brand">
-              {role ? t(role.badge) : invitation.role}
-            </Badge>
+            <Badge tone="brand">{role ? t(role.badge) : invitation.role}</Badge>
           </dd>
         </div>
         <div className="flex items-start justify-between gap-3">

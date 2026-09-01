@@ -4,7 +4,12 @@
  * Grouping, filtering and progress are the three things the lists screen has to
  * get right and the three things a screenshot cannot prove, so they live here as
  * plain functions over plain data.
+ *
+ * What a kind is *called* is copy, so the table holds message keys and the
+ * screen resolves them. That keeps this file pure and free of English.
  */
+
+import type { MessageKey } from '#/lib/i18n'
 
 export interface ListItemLike {
   readonly id: string
@@ -24,15 +29,17 @@ export function isListKind(value: string): value is ListKind {
   return (LIST_KINDS as ReadonlyArray<string>).includes(value)
 }
 
-export const LIST_KIND_LABELS: { readonly [K in ListKind]: string } = {
-  packing: 'Packing',
-  todo: 'To-do',
-  shopping: 'Shopping',
-  documents: 'Documents',
+export const LIST_KIND_LABELS: { readonly [K in ListKind]: MessageKey } = {
+  packing: 'modules.lists.kind.packing',
+  todo: 'modules.lists.kind.todo',
+  shopping: 'modules.lists.kind.shopping',
+  documents: 'modules.lists.kind.documents',
 }
 
-export function listKindLabel(kind: string): string {
-  return isListKind(kind) ? LIST_KIND_LABELS[kind] : 'List'
+export function listKindLabel(kind: string): MessageKey {
+  return isListKind(kind)
+    ? LIST_KIND_LABELS[kind]
+    : 'modules.lists.kind.fallback'
 }
 
 export const ITEM_PRIORITIES = ['low', 'normal', 'high'] as const

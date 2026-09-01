@@ -94,10 +94,7 @@ function blankToNull(value: string): string | null {
  * archived trip, so this is a backstop for a stale tab rather than the primary
  * affordance — which is why it can afford to be a plain error.
  */
-async function writableTrip(
-  scope: TenantScope,
-  tripId: string,
-): Promise<Trip> {
+async function writableTrip(scope: TenantScope, tripId: string): Promise<Trip> {
   const trip = await requireTrip(scope, tripId)
   if (trip.isArchived) {
     throw new Error('This trip is archived. Restore it before making changes.')
@@ -499,7 +496,12 @@ export const createPlanPlaceFn = createServerFn({ method: 'POST' })
 export const updatePlanPlaceFn = createServerFn({ method: 'POST' })
   .validator(
     z
-      .object({ tripId: id, placeId: id, ...placeFields, isVisited: z.boolean() })
+      .object({
+        tripId: id,
+        placeId: id,
+        ...placeFields,
+        isVisited: z.boolean(),
+      })
       .superRefine(coordinatePair),
   )
   .handler(async ({ data }): Promise<{ readonly placeId: string }> => {

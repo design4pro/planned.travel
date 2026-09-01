@@ -41,6 +41,7 @@ import {
   Alert,
   Badge,
   Button,
+  Chip,
   EmptyState,
   IconButton,
   Progress,
@@ -53,6 +54,9 @@ import {
   toast,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { resolve } from '../shared/deferred-message'
+import { formatRelative } from '#/lib/format'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatStorage } from '#/lib/plans'
 import { ACCEPT_ATTRIBUTE, MAX_FILE_BYTES } from '#/server/fns/file-policy'
 import { deleteTripFileFn } from '#/server/fns/files'
@@ -81,7 +85,7 @@ import {
 } from './upload-queue'
 
 import type { LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { ConfirmRequest } from '../shared'
 import type { FileData, FilePerson } from './types'
 import type { UploadQueueAction } from './upload-queue'
@@ -99,51 +103,27 @@ function iconFor(kind: string): LucideIcon {
   return KIND_ICON[kind] ?? Paperclip
 }
 
-const KIND_LABEL: Record<string, string> = {
-  document: 'Document',
-  image: 'Photo',
-  ticket: 'Ticket',
-  receipt: 'Receipt',
-  map: 'Map',
-  other: 'Other',
+const KIND_LABEL: Record<string, MessageKey> = {
+  document: 'modules.files.kind.document',
+  image: 'modules.files.kind.photo',
+  ticket: 'modules.files.kind.ticket',
+  receipt: 'modules.files.kind.receipt',
+  map: 'modules.files.kind.map',
+  other: 'modules.files.kind.other',
 }
 
-function kindLabel(kind: string): string {
-  return KIND_LABEL[kind] ?? 'Other'
+function kindLabel(kind: string): MessageKey {
+  return KIND_LABEL[kind] ?? 'modules.files.kind.other'
 }
 
-const LOCALE = 'en-GB'
-const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-function formatWhen(iso: string, now: number): string {
-  const parsed = new Date(iso)
-  if (Number.isNaN(parsed.getTime())) {
-    return '—'
-  }
-  const minutes = Math.round((now - parsed.getTime()) / 60_000)
-  if (minutes < 1) {
-    return 'just now'
-  }
-  if (minutes < 60) {
-    return `${minutes}m ago`
-  }
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) {
-    return `${hours}h ago`
-  }
-  const days = Math.round(hours / 24)
-  return days < 7 ? `${days}d ago` : dateFormatter.format(parsed)
-}
-
-function nameFor(people: ReadonlyArray<FilePerson>, userId: string): string {
+function nameFor(
+  people: ReadonlyArray<FilePerson>,
+  userId: string,
+  t: Translate,
+): string {
   return (
     people.find((person) => person.userId === userId)?.name ??
-    'Removed traveller'
+    t('costs.person.removed')
   )
 }
 
@@ -175,6 +155,8 @@ export function FileLibrary({
   const [kindFilter, setKindFilter] = useState<string>('all')
   const [editing, setEditing] = useState<FileData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
+  const t = useTranslate()
+  const locale = useLocale()
   const [now, setNow] = useState(() => Date.now())
 
   const router = useRouter()
@@ -207,13 +189,14 @@ export function FileLibrary({
   )
 
   const remove = useAction(deleteTripFileFn, {
-    success: 'File removed',
-    failure: 'The file was not removed',
+    success: t('modules.files.toast.removed'),
+    failure: t('modules.files.toast.removeFailed'),
     onSuccess: () => setConfirm(null),
   })
   const download = useAction(downloadTripFile, {
-    success: (result) => `Downloading ${result.filename}`,
-    failure: 'The download did not start',
+    success: (result) =>
+      t('modules.files.status.downloadingOf', { name: result.filename }),
+    failure: t('modules.files.toast.downloadFailed'),
   })
 
   // Relative timestamps are only honest if they move. One minute is the coarsest
@@ -281,7 +264,7 @@ export function FileLibrary({
       dispatch({
         type: 'fail',
         id: task.id,
-        message: 'The file is no longer available in this tab.',
+        message: t('modules.files.toast.gone'),
       })
       return
     }
@@ -335,7 +318,7 @@ export function FileLibrary({
         settle({
           type: 'fail',
           id: task.id,
-          message: messageOf(cause, 'The upload failed. Try again.'),
+          message: messageOf(cause, t('modules.files.toast.uploadFailed')),
         })
       })
   }, [queue, tripId, scheduleRefresh])
@@ -361,7 +344,12 @@ export function FileLibrary({
 
     for (const line of announcementsFor(fresh)) {
       const say = line.kind === 'success' ? toast.success : toast.error
-      say(line.title, { description: line.description })
+      say(resolve(line.title, t), {
+        description:
+          typeof line.description === 'string'
+            ? line.description
+            : resolve(line.description, t),
+      })
     }
   }, [queue])
 
@@ -399,16 +387,19 @@ export function FileLibrary({
       />
 
       {full ? (
-        <Alert tone="danger" title="This workspace is out of storage">
-          {formatStorage(workspaceBytes)} of {formatStorage(limitBytes)} is
-          used. Remove a file below, or move the plan up a tier, before adding
-          anything else.
+        <Alert tone="danger" title={t('modules.files.storage.full')}>
+          {t('modules.files.storage.used', {
+            used: formatStorage(workspaceBytes),
+            limit: formatStorage(limitBytes),
+          })}
         </Alert>
       ) : null}
 
       <ModulePanel
-        label="Add files"
-        count={`up to ${formatStorage(MAX_FILE_BYTES)} each`}
+        label={t('modules.files.action.add')}
+        count={t('modules.files.storage.perFile', {
+          size: formatStorage(MAX_FILE_BYTES),
+        })}
         action={
           queue.tasks.length === 0 ? undefined : (
             <Button
@@ -417,7 +408,7 @@ export function FileLibrary({
               shape="pill"
               onClick={() => dispatch({ type: 'clearSettled' })}
             >
-              Clear finished
+              {t('modules.files.queue.clear')}
             </Button>
           )
         }
@@ -458,11 +449,12 @@ export function FileLibrary({
           </span>
           <div>
             <p className="text-label font-semibold text-ink">
-              {dragging ? 'Drop to upload' : 'Drag files here'}
+              {dragging
+                ? t('modules.files.drop.active')
+                : t('modules.files.drop.idle')}
             </p>
             <p className="mt-1 text-caption text-ink-3">
-              Boarding passes, hotel confirmations, tickets, insurance documents
-              and the receipts that back up your expenses.
+              {t('modules.files.empty.hint')}
             </p>
           </div>
           <Button
@@ -471,7 +463,7 @@ export function FileLibrary({
             shape="pill"
             onClick={() => inputRef.current?.click()}
           >
-            Choose files
+            {t('modules.files.action.choose')}
           </Button>
         </div>
 
@@ -483,7 +475,9 @@ export function FileLibrary({
                 max={1}
                 size="sm"
                 tone="brand"
-                label={`Uploading ${running.length} file${running.length === 1 ? '' : 's'}`}
+                label={t('modules.files.status.uploadingCount', {
+                  count: running.length,
+                })}
                 valueText={`${Math.round(overallProgress(queue) * 100)}%`}
               />
             )}
@@ -509,11 +503,15 @@ export function FileLibrary({
                         size="xs"
                         tone="brand"
                         className="mt-1.5"
-                        aria-label={`Uploading ${task.filename}`}
+                        aria-label={t('modules.files.status.uploadingOf', {
+                          name: task.filename,
+                        })}
                       />
                     ) : task.message === null ? null : (
                       <p className="mt-0.5 text-caption text-danger">
-                        {task.message}
+                        {typeof task.message === 'string'
+                          ? task.message
+                          : resolve(task.message, t)}
                       </p>
                     )}
                   </div>
@@ -521,8 +519,10 @@ export function FileLibrary({
                   {task.status === 'uploading' || task.status === 'queued' ? (
                     <IconButton
                       variant="ghost"
-                      size="xs"
-                      label={`Cancel uploading ${task.filename}`}
+                      size="sm"
+                      label={t('modules.files.action.cancelUploadOf', {
+                        name: task.filename,
+                      })}
                       icon={<X aria-hidden />}
                       onClick={() => {
                         controllers.current.get(task.id)?.abort()
@@ -532,8 +532,10 @@ export function FileLibrary({
                   ) : (
                     <IconButton
                       variant="ghost"
-                      size="xs"
-                      label={`Dismiss ${task.filename}`}
+                      size="sm"
+                      label={t('modules.files.action.dismissOf', {
+                        name: task.filename,
+                      })}
                       icon={<X aria-hidden />}
                       onClick={() => dispatch({ type: 'dismiss', id: task.id })}
                     />
@@ -543,9 +545,9 @@ export function FileLibrary({
             </ul>
             {failed.length === 0 ? null : (
               <p className="text-caption text-ink-3">
-                {failed.length} file{failed.length === 1 ? '' : 's'} did not
-                upload. The reason is on each row — nothing else in the batch
-                was affected.
+                {t('modules.files.queue.someFailed', {
+                  count: failed.length,
+                })}
               </p>
             )}
           </div>
@@ -558,35 +560,35 @@ export function FileLibrary({
           size="lg"
           tone="brand"
           icon={<Paperclip />}
-          title="No files on this trip"
-          description="Everything you would otherwise dig out of an inbox at a check-in desk belongs here, attached to the trip it is for."
+          title={t('modules.files.empty.title')}
+          description={t('modules.files.empty.body')}
         />
       ) : (
         <ModulePanel
-          label="Attachments"
+          label={t('modules.files.heading')}
           count={`${visible.length} of ${files.length}`}
           toolbar={
             kinds.length < 2 ? undefined : (
               <FilterRow>
-                <KindChip
+                <Chip
                   selected={kindFilter === 'all'}
                   count={files.length}
                   onClick={() => setKindFilter('all')}
                 >
-                  Everything
-                </KindChip>
+                  {t('modules.filter.all')}
+                </Chip>
                 {kinds.map(([kind, count]) => {
                   const Icon = iconFor(kind)
                   return (
-                    <KindChip
+                    <Chip
                       key={kind}
                       selected={kindFilter === kind}
                       count={count}
+                      icon={<Icon aria-hidden />}
                       onClick={() => setKindFilter(kind)}
                     >
-                      <Icon aria-hidden className="size-3.5" />
-                      {kindLabel(kind)}
-                    </KindChip>
+                      {t(kindLabel(kind))}
+                    </Chip>
                   )
                 })}
               </FilterRow>
@@ -595,22 +597,26 @@ export function FileLibrary({
           flush
           bodyClassName="p-0"
         >
-          <Table label="Files attached to this trip" fixed>
+          <Table label={t('modules.files.tableCaption')} fixed>
             <TableHeader>
               <TableRow>
-                <TableHead>File</TableHead>
-                <TableHead className="w-28">Kind</TableHead>
+                <TableHead>{t('modules.files.column.file')}</TableHead>
+                <TableHead className="w-28">
+                  {t('modules.lists.field.kind')}
+                </TableHead>
                 <TableHead className="w-24" numeric>
-                  Size
+                  {t('modules.files.column.size')}
                 </TableHead>
                 <TableHead className="hidden w-36 sm:table-cell">
-                  Added by
+                  {t('modules.files.column.addedBy')}
                 </TableHead>
                 <TableHead className="hidden w-24 sm:table-cell">
-                  When
+                  {t('modules.files.column.when')}
                 </TableHead>
                 <TableHead className="w-12">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">
+                    {t('console.users.column.actions')}
+                  </span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -639,25 +645,27 @@ export function FileLibrary({
                     </TableCell>
                     <TableCell>
                       <Badge tone="neutral" size="sm">
-                        {kindLabel(file.kind)}
+                        {t(kindLabel(file.kind))}
                       </Badge>
                     </TableCell>
                     <TableCell numeric>
                       {formatStorage(file.sizeBytes)}
                     </TableCell>
                     <TableCell truncate muted className="hidden sm:table-cell">
-                      {nameFor(people, file.uploadedBy)}
+                      {nameFor(people, file.uploadedBy, t)}
                     </TableCell>
                     <TableCell muted className="hidden sm:table-cell">
-                      {formatWhen(file.createdAt, now)}
+                      {formatRelative(file.createdAt, now, locale) ?? '—'}
                     </TableCell>
                     <TableCell>
                       <RowMenu
-                        label={`Actions for ${file.filename}`}
-                        size="xs"
+                        label={t('modules.actionsFor', {
+                          name: file.filename,
+                        })}
+                        size="sm"
                         items={[
                           {
-                            label: 'Download',
+                            label: t('modules.files.menu.download'),
                             icon: <Download aria-hidden />,
                             disabled: download.pending,
                             onSelect: () => {
@@ -669,20 +677,24 @@ export function FileLibrary({
                             },
                           },
                           {
-                            label: 'Rename and describe…',
+                            label: t('modules.files.menu.rename'),
                             icon: <Pencil aria-hidden />,
                             onSelect: () => setEditing(file),
                           },
                           {
-                            label: 'Remove file',
+                            label: t('modules.files.menu.remove'),
                             icon: <Trash2 aria-hidden />,
                             tone: 'danger',
                             separated: true,
                             onSelect: () =>
                               setConfirm({
-                                title: `Remove “${file.filename}”?`,
-                                description: `The file is deleted from storage as well as from this trip, and ${formatStorage(file.sizeBytes)} is freed. This cannot be undone.`,
-                                confirmLabel: 'Remove file',
+                                title: t('modules.remove.confirmTitle', {
+                                  name: file.filename,
+                                }),
+                                description: t('modules.files.remove.body', {
+                                  size: formatStorage(file.sizeBytes),
+                                }),
+                                confirmLabel: t('modules.files.menu.remove'),
                                 onConfirm: () =>
                                   remove.run({
                                     data: { tripId, fileId: file.id },
@@ -727,84 +739,56 @@ export function FileLibrary({
 }
 
 function TaskBadge({ status }: { status: string }) {
+  const t = useTranslate()
+
   if (status === 'done') {
     return (
       <Badge tone="success" size="sm">
-        Uploaded
+        {t('modules.files.status.uploaded')}
       </Badge>
     )
   }
   if (status === 'failed') {
     return (
       <Badge tone="danger" size="sm">
-        Failed
+        {t('modules.files.status.failed')}
       </Badge>
     )
   }
   if (status === 'cancelled') {
     return (
       <Badge tone="neutral" size="sm">
-        Cancelled
+        {t('modules.files.status.cancelled')}
       </Badge>
     )
   }
   if (status === 'uploading') {
     return (
       <Badge tone="brand" size="sm">
-        Uploading
+        {t('modules.files.status.uploading')}
       </Badge>
     )
   }
   return (
     <Badge tone="outline" size="sm">
-      Waiting
+      {t('modules.files.status.waiting')}
     </Badge>
-  )
-}
-
-function KindChip({
-  selected,
-  count,
-  onClick,
-  children,
-}: {
-  selected: boolean
-  count: number
-  onClick: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={cn(
-        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-caption font-semibold whitespace-nowrap focus-ring',
-        'transition-[background-color,border-color,color] duration-base ease-out-quint',
-        selected
-          ? 'border-transparent bg-accent text-accent-on'
-          : 'border-edge bg-surface text-ink-2 hover:border-edge-strong hover:text-ink',
-      )}
-    >
-      {children}
-      <span
-        className={cn(
-          'rounded-full px-1.5 text-[0.6875rem] leading-4 tabular-nums',
-          selected ? 'bg-current/15' : 'bg-surface-2 text-ink-4',
-        )}
-      >
-        {count}
-      </span>
-    </button>
   )
 }
 
 /** The screen's primary action, for the module header. */
 export function UploadFilesAction({ onClick }: { onClick: () => void }) {
+  const t = useTranslate()
+
   return (
-    <Button variant="primary" shape="pill" onClick={onClick}>
-      <CloudUpload aria-hidden strokeWidth={2.5} />
-      Upload files
+    <Button
+      variant="primary"
+      size="sm"
+      shape="pill"
+      icon={<CloudUpload aria-hidden strokeWidth={2.5} />}
+      onClick={onClick}
+    >
+      {t('modules.files.action.upload')}
     </Button>
   )
 }
@@ -826,7 +810,7 @@ export function StorageMeter({
       <span
         aria-hidden
         className={cn(
-          'ml-0.5 inline-block h-1.5 w-10 overflow-hidden rounded-full bg-surface-inset',
+          'ms-0.5 inline-block h-1.5 w-10 overflow-hidden rounded-full bg-surface-inset',
         )}
       >
         <span

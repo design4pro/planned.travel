@@ -1,10 +1,12 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { Bookmark, Globe, MapPin } from 'lucide-react'
 
+import { useLocale } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
 import { Badge, Card, EmptyState } from '#/components/ui'
+import { paintFor } from '#/lib/swatches'
 import { loadCollections } from '../-server/library'
 import {
   countryFlag,
@@ -28,6 +30,7 @@ export const Route = createFileRoute('/_app/collections/')({
 })
 
 function CollectionsPage() {
+  const locale = useLocale()
   const data = Route.useLoaderData()
   const saved = data.collections.reduce(
     (total, row) => total + row.placeCount,
@@ -75,10 +78,15 @@ function CollectionsPage() {
                       params={{ collectionId: collection.id }}
                       className="flex h-full flex-col focus-ring"
                     >
+                      {/* Through `paintFor`, not the stored hex: the colour is
+                          a choice from the palette, and the palette's whole
+                          point is that a chosen colour follows the theme the way
+                          every other surface does. Painting the record paints a
+                          light-theme value onto a dark card. */}
                       <span
                         aria-hidden
                         className="h-1.5 w-full shrink-0"
-                        style={{ backgroundColor: collection.colour }}
+                        style={{ backgroundColor: paintFor(collection.colour) }}
                       />
                       <div className="flex min-w-0 flex-1 flex-col gap-2 p-5">
                         <div className="flex items-start justify-between gap-3">
@@ -113,7 +121,7 @@ function CollectionsPage() {
                 count={
                   data.byCountry.length === 0
                     ? undefined
-                    : formatNumber(data.byCountry.length)
+                    : formatNumber(data.byCountry.length, locale)
                 }
                 flush
               >
@@ -143,7 +151,7 @@ function CollectionsPage() {
                           {countryName(row.countryCode)}
                         </span>
                         <span className="shrink-0 text-caption tabular-nums text-ink-4">
-                          {formatNumber(row.value)}
+                          {formatNumber(row.value, locale)}
                         </span>
                       </li>
                     ))}

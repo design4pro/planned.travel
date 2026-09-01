@@ -339,20 +339,14 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} gezi, tek yolcu',
   'billing.hero.perSeatLine': '{seats} üye × {price}',
   'billing.hero.singleTraveller': 'Tek yolcu',
-  'billing.hero.paymentMethod': 'Ödeme yöntemi',
-  'billing.hero.cancel': 'Paketi iptal et',
   'billing.price.free': 'Ücretsiz',
   'billing.provider.opening': 'Polar açılıyor',
-  'billing.provider.failed': 'Polar’a ulaşılamadı',
-  'billing.provider.failedBody':
-    'Hiçbir tahsilat yapılmadı. Bağlantınızı kontrol edip biraz sonra yeniden deneyin.',
-
   'billing.renewal.trialEndsToday':
-    'Denemeniz bugün bitiyor. Tüm modüllerin açık kalması için bir kart ekleyin.',
+    'Deneme süren bugün sona eriyor. İptal etmezsen ilk ödeme hemen ardından alınır.',
   'billing.renewal.trialEndsIn': {
-    one: 'Denemeniz {value} gün sonra bitiyor. O zamana kadar karta gerek yok.',
+    one: 'Deneme süren {value} gün sonra bitiyor, ardından iptal etmezsen ilk ödeme alınır.',
     other:
-      'Denemeniz {value} gün sonra bitiyor. O zamana kadar karta gerek yok.',
+      'Deneme süren {value} gün sonra bitiyor, ardından iptal etmezsen ilk ödeme alınır.',
   },
   'billing.renewal.trialEnded': 'Deneme süreniz bitti.',
   'billing.renewal.endsNoDate':
@@ -401,7 +395,6 @@ const messages = {
   'billing.interval.label': 'Ödeme aralığı',
   'billing.interval.monthly': 'Aylık',
   'billing.interval.yearly': 'Yıllık',
-  'billing.interval.saving': '{value} kazanın',
   'billing.plan.free.name': 'Ücretsiz',
   'billing.plan.free.tagline': 'Sıradaki iki gezinizi planlayın',
   'billing.plan.free.feature.trips': 'Aynı anda iki gezi',
@@ -430,7 +423,6 @@ const messages = {
   'billing.plan.current': 'Geçerli paket',
   'billing.plan.currentBadge': 'Geçerli',
   'billing.plan.popular': 'Popüler',
-  'billing.plan.moveTo': '{plan} paketine geç',
   'billing.plan.switchYearly': 'Yıllığa geç',
   'billing.plan.switchMonthly': 'Aylığa geç',
   'billing.plan.upgradeTo': '{plan} paketine yükselt',
@@ -447,31 +439,70 @@ const messages = {
     other: '{value} üye',
   },
 
-  'billing.invoices.title': 'Faturalar',
-  'billing.invoices.description':
-    'Bu çalışma alanının her faturası, en yenisi başta.',
-  'billing.invoices.portal': 'Ödeme portalı',
-  'billing.invoices.unavailableTitle': 'Faturalar yüklenmiyor',
-  'billing.invoices.unavailableBody':
-    'Polar geçmiş için zamanında yanıt vermedi. Yukarıdaki her şey canlı; tam kayıt için ödeme portalını açın ya da biraz sonra geri gelin.',
-  'billing.invoices.emptyTitle': 'Henüz fatura yok',
-  'billing.invoices.emptyCustomer':
-    'İlk fatura, bir ödeme dönemi kapanır kapanmaz burada görünür.',
-  'billing.invoices.emptyNoCustomer':
-    'Bu çalışma alanından hiç tahsilat yapılmadı. Ücretli bir paket seçin, faturalar burada toplanır.',
-  'billing.invoices.tableLabel': 'Fatura geçmişi',
   'billing.invoices.number': 'Fatura',
   'billing.invoices.date': 'Tarih',
-  'billing.invoices.period': 'Dönem',
   'billing.invoices.amount': 'Tutar',
   'billing.invoices.status': 'Durum',
-  'billing.invoices.receipt': 'Makbuz',
-  'billing.invoices.view': 'Görüntüle',
   'billing.invoice.paid': 'Ödendi',
-  'billing.invoice.open': 'Vadesi geldi',
   'billing.invoice.draft': 'Taslak',
   'billing.invoice.void': 'Geçersiz',
-  'billing.invoice.uncollectible': 'Tahsil edilemez',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Ödeme sağlayıcısı bu isteği reddetti. Birazdan yeniden dene.',
+  'billing.planChanged.title': 'Plan güncellendi',
+  'billing.planChanged.body':
+    'Değişiklik Polar tarafında zaten geçerli; farkı o faturalandıracak. Aşağıdaki özet bir dakika içinde yetişir.',
+  'billing.hero.manage': 'Faturalandırmayı yönet',
+  'billing.hero.manageHint':
+    'Kartlar, fatura adresi, vergi numarası, makbuzlar ve iptal, faturayı kesen Polar tarafında.',
+  'billing.hero.manageHintNone':
+    'Henüz fatura profili yok. Aşağıdan ücretli bir plan seçmek bir tane oluşturur ve portal o andan sonra açılır.',
+  'billing.portal.opening': 'Fatura portalı açılıyor',
+  'billing.plan.notApplied': 'Bu değişiklik uygulanmadı',
+  'billing.plan.cancelInPortal': 'Portalda iptal et',
+  'billing.plan.seatsOverMax': {
+    one: 'Bu çalışma alanında {members} üye var ve {plan} en fazla {max} üyeyi faturalandırıyor. Geçmeden önce {value} üyeyi çıkar.',
+    other:
+      'Bu çalışma alanında {members} üye var ve {plan} en fazla {max} üyeyi faturalandırıyor. Geçmeden önce {value} üyeyi çıkar.',
+  },
+  'billing.plan.seatsBelowMembers':
+    '{members} üyen var. En az o kadar koltuk seç — Polar, atamadan az koltuklu aboneliği reddeder.',
+  'billing.orders.title': 'Siparişler',
+  'billing.orders.description':
+    'Bu çalışma alanının her siparişi, en yeniden başlayarak.',
+  'billing.orders.receipts': 'Tüm makbuzlar',
+  'billing.orders.unavailableTitle': 'Siparişler yüklenmiyor',
+  'billing.orders.unavailableBody':
+    'Polar geçmiş için zamanında yanıt vermedi. Yukarıdakilerin hepsi güncel — birazdan yeniden dene ya da tam kaydı fatura portalında oku.',
+  'billing.orders.emptyTitle': 'Henüz sipariş yok',
+  'billing.orders.emptyCustomer':
+    'İlk fatura, bir fatura dönemi kapandığı anda burada görünür.',
+  'billing.orders.emptyNoCustomer':
+    'Bu çalışma alanından hiç ücret alınmadı. Ücretli bir plan seç, faturalar burada toplanmaya başlar.',
+  'billing.orders.tableLabel': 'Sipariş geçmişi',
+  'billing.orders.document': 'Belge',
+  'billing.orders.dateUnknown': 'Tarih bilinmiyor',
+  'billing.order.pending': 'Beklemede',
+  'billing.order.refunded': 'İade edildi',
+  'billing.order.partiallyRefunded': 'Kısmen iade edildi',
+  'billing.order.noInvoiceDraft': 'Sipariş taslak olduğu sürece fatura yok',
+  'billing.order.preparing': 'Hazırlanıyor',
+  'billing.order.renderingHint':
+    'Polar {number} numaralı faturayı hâlâ oluşturuyor. İndirme birkaç saniye içinde geri gelir.',
+  'billing.order.fetching': 'Fatura alınıyor',
+  'billing.order.generating': 'Polar faturayı hazırlıyor',
+  'billing.order.pdfLabel': '{number} numaralı fatura, PDF olarak',
+  'billing.order.stillWritingTitle': 'Polar o faturayı hâlâ yazıyor',
+  'billing.order.stillWritingBody':
+    '{number} numaralı fatura oluşturuluyor. İndirme birkaç saniye içinde kendiliğinden geri gelir.',
+  'billing.order.openFailed': 'O fatura açılmadı',
 } satisfies TranslationOf<typeof En>
 
 export default messages

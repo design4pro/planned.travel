@@ -348,22 +348,16 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} поездки, один путешественник',
   'billing.hero.perSeatLine': '{seats} × {price}',
   'billing.hero.singleTraveller': 'Один путешественник',
-  'billing.hero.paymentMethod': 'Способ оплаты',
-  'billing.hero.cancel': 'Отказаться от тарифа',
   'billing.price.free': 'Бесплатно',
   'billing.provider.opening': 'Открываем Polar',
-  'billing.provider.failed': 'Со Polar связаться не удалось',
-  'billing.provider.failedBody':
-    'Ничего не списано. Проверьте соединение и попробуйте через минуту.',
-
   'billing.renewal.trialEndsToday':
-    'Пробный период кончается сегодня. Добавьте карту, и модули останутся открытыми.',
+    'Пробный период заканчивается сегодня. Первое списание произойдёт после, если не отменить раньше.',
   'billing.renewal.trialEndsIn': {
-    one: 'Пробный период кончается через {value} день. До тех пор карта не нужна.',
-    few: 'Пробный период кончается через {value} дня. До тех пор карта не нужна.',
-    many: 'Пробный период кончается через {value} дней. До тех пор карта не нужна.',
+    one: 'Пробный период закончится через {value} день, затем произойдёт первое списание, если не отменить раньше.',
+    few: 'Пробный период закончится через {value} дня, затем произойдёт первое списание, если не отменить раньше.',
+    many: 'Пробный период закончится через {value} дней, затем произойдёт первое списание, если не отменить раньше.',
     other:
-      'Пробный период кончается через {value} дня. До тех пор карта не нужна.',
+      'Пробный период закончится через {value} дня, затем произойдёт первое списание, если не отменить раньше.',
   },
   'billing.renewal.trialEnded': 'Пробный период закончился.',
   'billing.renewal.endsNoDate':
@@ -431,7 +425,6 @@ const messages = {
    */
   'billing.interval.monthly': 'В месяц',
   'billing.interval.yearly': 'В год',
-  'billing.interval.saving': 'Экономия {value}',
   'billing.plan.free.name': 'Бесплатный',
   'billing.plan.free.tagline': 'Спланируйте две ближайшие поездки',
   'billing.plan.free.feature.trips': 'Две поездки одновременно',
@@ -459,7 +452,6 @@ const messages = {
   'billing.plan.current': 'Текущий тариф',
   'billing.plan.currentBadge': 'Нынешний',
   'billing.plan.popular': 'Популярный',
-  'billing.plan.moveTo': 'Перейти на {plan}',
   'billing.plan.switchYearly': 'Платить за год',
   'billing.plan.switchMonthly': 'Платить за месяц',
   'billing.plan.upgradeTo': 'Поднять до {plan}',
@@ -478,31 +470,72 @@ const messages = {
     other: '{value} участника',
   },
 
-  'billing.invoices.title': 'Счета',
-  'billing.invoices.description':
-    'Все квитанции этого пространства, новые сверху.',
-  'billing.invoices.portal': 'Портал оплаты',
-  'billing.invoices.unavailableTitle': 'Квитанции не загружаются',
-  'billing.invoices.unavailableBody':
-    'Polar не успел ответить по истории. Всё выше — актуально; полный список смотрите в портале оплаты или вернитесь через минуту.',
-  'billing.invoices.emptyTitle': 'Счетов пока нет',
-  'billing.invoices.emptyCustomer':
-    'Первая квитанция появится здесь, как только закроется период оплаты.',
-  'billing.invoices.emptyNoCustomer':
-    'Этому пространству ещё ничего не выставляли. Возьмите платный тариф, и квитанции начнут собираться здесь.',
-  'billing.invoices.tableLabel': 'История счетов',
   'billing.invoices.number': 'Счёт',
   'billing.invoices.date': 'Дата',
-  'billing.invoices.period': 'Период',
   'billing.invoices.amount': 'Сумма',
   'billing.invoices.status': 'Статус',
-  'billing.invoices.receipt': 'Квитанция',
-  'billing.invoices.view': 'Открыть',
   'billing.invoice.paid': 'Оплачен',
-  'billing.invoice.open': 'К оплате',
   'billing.invoice.draft': 'Черновик',
   'billing.invoice.void': 'Аннулирован',
-  'billing.invoice.uncollectible': 'Безнадёжный',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Платёжный провайдер отклонил этот запрос. Попробуйте через минуту.',
+  'billing.planChanged.title': 'Тариф обновлён',
+  'billing.planChanged.body':
+    'Изменение уже действует в Polar, который выставит счёт на разницу. Сводка ниже догонит в течение минуты.',
+  'billing.hero.manage': 'Управление оплатой',
+  'billing.hero.manageHint':
+    'Карты, адрес для счёта, номер НДС, квитанции и отмена — в Polar, который выставляет счёт.',
+  'billing.hero.manageHintNone':
+    'Платёжного профиля пока нет. Выбор платного тарифа ниже создаст его, и портал начнёт открываться.',
+  'billing.portal.opening': 'Открывается платёжный портал',
+  'billing.plan.notApplied': 'Это изменение не применено',
+  'billing.plan.cancelInPortal': 'Отменить в портале',
+  'billing.plan.seatsOverMax': {
+    one: 'В этом пространстве {members} участников, а {plan} рассчитывает не более {max}. Удалите {value} участника перед переходом.',
+    few: 'В этом пространстве {members} участников, а {plan} рассчитывает не более {max}. Удалите {value} участников перед переходом.',
+    many: 'В этом пространстве {members} участников, а {plan} рассчитывает не более {max}. Удалите {value} участников перед переходом.',
+    other:
+      'В этом пространстве {members} участников, а {plan} рассчитывает не более {max}. Удалите {value} участника перед переходом.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'У вас {members} участников. Выберите не меньше мест — Polar отклоняет подписку, где мест меньше, чем назначений.',
+  'billing.orders.title': 'Заказы',
+  'billing.orders.description':
+    'Каждый заказ этого пространства, начиная с последнего.',
+  'billing.orders.receipts': 'Все квитанции',
+  'billing.orders.unavailableTitle': 'Заказы не загружаются',
+  'billing.orders.unavailableBody':
+    'Polar не ответил вовремя по истории. Всё выше актуально — попробуйте через минуту или посмотрите полную запись в платёжном портале.',
+  'billing.orders.emptyTitle': 'Заказов пока нет',
+  'billing.orders.emptyCustomer':
+    'Первый счёт появится здесь, как только закроется расчётный период.',
+  'billing.orders.emptyNoCustomer':
+    'Этому пространству ещё ничего не выставляли. Выберите платный тариф, и счёта начнут собираться здесь.',
+  'billing.orders.tableLabel': 'История заказов',
+  'billing.orders.document': 'Документ',
+  'billing.orders.dateUnknown': 'Дата неизвестна',
+  'billing.order.pending': 'В обработке',
+  'billing.order.refunded': 'Возвращено',
+  'billing.order.partiallyRefunded': 'Частично возвращено',
+  'billing.order.noInvoiceDraft': 'Пока заказ — черновик, счёта нет',
+  'billing.order.preparing': 'Готовится',
+  'billing.order.renderingHint':
+    'Polar ещё формирует счёт {number}. Загрузка вернётся через несколько секунд.',
+  'billing.order.fetching': 'Загрузка счёта',
+  'billing.order.generating': 'Polar готовит счёт',
+  'billing.order.pdfLabel': 'Счёт {number} в PDF',
+  'billing.order.stillWritingTitle': 'Polar ещё выписывает этот счёт',
+  'billing.order.stillWritingBody':
+    'Счёт {number} формируется. Загрузка вернётся сама через несколько секунд.',
+  'billing.order.openFailed': 'Этот счёт не открылся',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -27,26 +27,28 @@ import {
 import { formatStorage } from '#/lib/plans'
 import { FILE_KIND_VALUES, isFileKind } from '#/server/fns/file-policy'
 import { updateTripFileFn } from '#/server/fns/files'
+import { useTranslate } from '#/lib/i18n'
 import { useAction } from '../shared'
 
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { FileData } from './types'
 
-const KIND_OPTIONS: ReadonlyArray<{ value: string; label: string }> =
-  FILE_KIND_VALUES.map((value) => ({
+const KIND_LABEL: Record<string, MessageKey> = {
+  document: 'modules.files.kind.document',
+  image: 'modules.files.kind.photo',
+  ticket: 'modules.files.kindChoice.ticket',
+  receipt: 'modules.files.kind.receipt',
+  map: 'modules.files.kindChoice.map',
+}
+
+function kindOptions(
+  t: Translate,
+): ReadonlyArray<{ value: string; label: string }> {
+  return FILE_KIND_VALUES.map((value) => ({
     value,
-    label:
-      value === 'document'
-        ? 'Document'
-        : value === 'image'
-          ? 'Photo'
-          : value === 'ticket'
-            ? 'Ticket or pass'
-            : value === 'receipt'
-              ? 'Receipt'
-              : value === 'map'
-                ? 'Map or route'
-                : 'Other',
+    label: t(KIND_LABEL[value] ?? 'modules.files.kind.other'),
   }))
+}
 
 export function FileDetailsDialog({
   tripId,
@@ -59,6 +61,7 @@ export function FileDetailsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslate()
   const formId = useId()
 
   const [filename, setFilename] = useState(file.filename)
@@ -75,16 +78,16 @@ export function FileDetailsDialog({
   }, [open, file])
 
   const save = useAction(updateTripFileFn, {
-    success: 'File updated',
-    failure: 'The file was not updated',
+    success: t('modules.files.toast.updated'),
+    failure: t('modules.files.toast.updateFailed'),
   })
 
   const trimmed = filename.trim()
   const nameError =
     trimmed.length === 0
-      ? 'A file needs a name you can find it by.'
+      ? t('modules.files.error.nameEmpty')
       : trimmed.length > 160
-        ? 'Keep the name under 160 characters.'
+        ? t('modules.error.titleLong')
         : undefined
   const canSave = nameError === undefined && !save.pending
 
@@ -107,7 +110,7 @@ export function FileDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>File details</DialogTitle>
+          <DialogTitle>{t('modules.files.dialog.title')}</DialogTitle>
           <DialogDescription>
             {formatStorage(file.sizeBytes)} · {file.contentType}
           </DialogDescription>
@@ -125,12 +128,12 @@ export function FileDetailsDialog({
             }}
           >
             {save.error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {save.error}
               </Alert>
             )}
 
-            <Field label="Name" required error={nameError}>
+            <Field label={t('modules.field.name')} required error={nameError}>
               <Input
                 value={filename}
                 onChange={(event) => setFilename(event.target.value)}
@@ -141,22 +144,22 @@ export function FileDetailsDialog({
             </Field>
 
             <Field
-              label="Kind"
-              hint="Decides which filter it sits under and which glyph it gets."
+              label={t('modules.lists.field.kind')}
+              hint={t('modules.files.field.kindHint')}
             >
               <SimpleSelect
-                options={[...KIND_OPTIONS]}
+                options={[...kindOptions(t)]}
                 value={kind}
                 onValueChange={setKind}
-                ariaLabel="Kind of file"
+                ariaLabel={t('modules.files.field.kindAria')}
               />
             </Field>
 
-            <Field label="Description">
+            <Field label={t('modules.files.field.description')}>
               <Textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Insurance policy — covers the whole party, claims line on page 2."
+                placeholder={t('modules.files.field.descriptionPlaceholder')}
                 maxLength={2000}
                 rows={3}
                 autoResize
@@ -173,7 +176,7 @@ export function FileDetailsDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -182,9 +185,9 @@ export function FileDetailsDialog({
             shape="pill"
             disabled={!canSave}
             loading={save.pending}
-            loadingLabel="Saving the file"
+            loadingLabel={t('modules.files.action.saving')}
           >
-            Save details
+            {t('modules.files.action.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

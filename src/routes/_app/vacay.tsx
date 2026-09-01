@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { z } from 'zod'
 
+import { useLocale } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
@@ -64,6 +65,7 @@ export const Route = createFileRoute('/_app/vacay')({
 })
 
 function VacayPage() {
+  const locale = useLocale()
   const data = Route.useLoaderData()
 
   const self = data.balances.find((row) => row.userId === data.viewerUserId)
@@ -140,7 +142,7 @@ function VacayPage() {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-baseline gap-2">
                     <span className="font-display text-display leading-none font-bold tracking-tighter tabular-nums text-ink">
-                      {formatNumber(self.remainingDays)}
+                      {formatNumber(self.remainingDays, locale)}
                     </span>
                     <span className="text-subtitle font-medium text-ink-3">
                       days left
@@ -158,12 +160,15 @@ function VacayPage() {
                   <dl className="grid grid-cols-3 gap-2">
                     <Figure
                       label="Days"
-                      value={formatNumber(self.entitlementDays)}
+                      value={formatNumber(self.entitlementDays, locale)}
                     />
-                    <Figure label="Used" value={formatNumber(self.usedDays)} />
+                    <Figure
+                      label="Used"
+                      value={formatNumber(self.usedDays, locale)}
+                    />
                     <Figure
                       label="Carried"
-                      value={formatNumber(self.carriedOverDays)}
+                      value={formatNumber(self.carriedOverDays, locale)}
                       muted={!data.plan.carryOverEnabled}
                     />
                   </dl>
@@ -173,7 +178,7 @@ function VacayPage() {
 
             <Panel
               label="Travellers"
-              count={formatNumber(data.people.length)}
+              count={formatNumber(data.people.length, locale)}
               flush
             >
               <ul>
@@ -206,7 +211,7 @@ function VacayPage() {
                           : person.name}
                       </span>
                       <span className="shrink-0 text-caption tabular-nums text-ink-4">
-                        {used === undefined ? '—' : formatNumber(used)}
+                        {used === undefined ? '—' : formatNumber(used, locale)}
                       </span>
                     </li>
                   )
@@ -338,7 +343,7 @@ function MonthGrid({
           <span
             key={initial}
             aria-hidden
-            className="pb-1 text-center text-[0.625rem] font-semibold tracking-wide uppercase text-ink-4"
+            className="pb-1 text-center text-micro font-semibold tracking-label uppercase text-ink-4"
           >
             {initial}
           </span>

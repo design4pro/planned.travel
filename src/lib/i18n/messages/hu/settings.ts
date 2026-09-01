@@ -343,19 +343,14 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} utazás, egy utazó',
   'billing.hero.perSeatLine': '{seats} tag × {price}',
   'billing.hero.singleTraveller': 'Egy utazó',
-  'billing.hero.paymentMethod': 'Fizetési mód',
-  'billing.hero.cancel': 'Csomag lemondása',
   'billing.price.free': 'Ingyenes',
   'billing.provider.opening': 'A Polar megnyitása',
-  'billing.provider.failed': 'A Polar nem elérhető',
-  'billing.provider.failedBody':
-    'Semmit nem vontunk le. Ellenőrizze a kapcsolatot, és próbálja újra egy pillanat múlva.',
-
   'billing.renewal.trialEndsToday':
-    'A próbaideje ma véget ér. Adjon meg kártyát, hogy minden modul nyitva maradjon.',
+    'A próbaidő ma véget ér. Az első terhelés ezután következik, ha előbb nem mondod le.',
   'billing.renewal.trialEndsIn': {
-    one: 'A próbaideje {value} nap múlva véget ér. Addig nem kell kártya.',
-    other: 'A próbaideje {value} nap múlva véget ér. Addig nem kell kártya.',
+    one: 'A próbaidő {value} nap múlva véget ér, utána jön az első terhelés, ha előbb nem mondod le.',
+    other:
+      'A próbaidő {value} nap múlva véget ér, utána jön az első terhelés, ha előbb nem mondod le.',
   },
   'billing.renewal.trialEnded': 'A próbaideje véget ért.',
   'billing.renewal.endsNoDate':
@@ -407,7 +402,6 @@ const messages = {
   'billing.interval.label': 'Számlázási időszak',
   'billing.interval.monthly': 'Havi',
   'billing.interval.yearly': 'Éves',
-  'billing.interval.saving': '{value} megtakarítás',
   'billing.plan.free.name': 'Ingyenes',
   'billing.plan.free.tagline': 'Tervezze meg a következő két utazását',
   'billing.plan.free.feature.trips': 'Két utazás egyszerre',
@@ -436,7 +430,6 @@ const messages = {
   'billing.plan.current': 'Jelenlegi csomag',
   'billing.plan.currentBadge': 'Jelenlegi',
   'billing.plan.popular': 'Népszerű',
-  'billing.plan.moveTo': 'Váltás erre: {plan}',
   'billing.plan.switchYearly': 'Váltás évesre',
   'billing.plan.switchMonthly': 'Váltás havira',
   'billing.plan.upgradeTo': 'Váltás feljebb: {plan}',
@@ -453,31 +446,70 @@ const messages = {
     other: '{value} tag',
   },
 
-  'billing.invoices.title': 'Számlák',
-  'billing.invoices.description':
-    'A munkaterület minden bizonylata, a legújabb elöl.',
-  'billing.invoices.portal': 'Számlázási portál',
-  'billing.invoices.unavailableTitle': 'A bizonylatok nem töltődnek be',
-  'billing.invoices.unavailableBody':
-    'A Polar nem válaszolt időben az előzményekhez. Minden, ami fentebb van, élő; a teljes nyilvántartáshoz nyissa meg a számlázási portált, vagy térjen vissza egy pillanat múlva.',
-  'billing.invoices.emptyTitle': 'Még nincs számla',
-  'billing.invoices.emptyCustomer':
-    'Az első bizonylat itt jelenik meg, amint egy számlázási periódus lezárul.',
-  'billing.invoices.emptyNoCustomer':
-    'Ezt a munkaterületet még sosem terheltük meg. Válasszon fizetős csomagot, és itt gyűlnek majd a bizonylatok.',
-  'billing.invoices.tableLabel': 'Számlatörténet',
   'billing.invoices.number': 'Számla',
   'billing.invoices.date': 'Dátum',
-  'billing.invoices.period': 'Periódus',
   'billing.invoices.amount': 'Összeg',
   'billing.invoices.status': 'Állapot',
-  'billing.invoices.receipt': 'Bizonylat',
-  'billing.invoices.view': 'Megnyitás',
   'billing.invoice.paid': 'Fizetve',
-  'billing.invoice.open': 'Esedékes',
   'billing.invoice.draft': 'Vázlat',
   'billing.invoice.void': 'Érvénytelen',
-  'billing.invoice.uncollectible': 'Behajthatatlan',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'A fizetési szolgáltató elutasította a kérést. Próbáld újra egy pillanat múlva.',
+  'billing.planChanged.title': 'Csomag frissítve',
+  'billing.planChanged.body':
+    'A változás a Polarnál már érvényes, a különbséget ő számlázza. Az alábbi összegzés egy percen belül utolér.',
+  'billing.hero.manage': 'Számlázás kezelése',
+  'billing.hero.manageHint':
+    'A kártyák, a számlázási cím, az adószám, a nyugták és a lemondás a Polarnál vannak, amely a számlát kiállítja.',
+  'billing.hero.manageHintNone':
+    'Még nincs számlázási profil. Ha lentebb fizetős csomagot választasz, létrejön, és onnantól megnyílik a portál.',
+  'billing.portal.opening': 'Számlázási portál megnyitása',
+  'billing.plan.notApplied': 'Ez a változás nem lépett érvénybe',
+  'billing.plan.cancelInPortal': 'Lemondás a portálon',
+  'billing.plan.seatsOverMax': {
+    one: 'Ennek a munkaterületnek {members} tagja van, a {plan} pedig legfeljebb {max} tagot számláz. Váltás előtt távolíts el {value} tagot.',
+    other:
+      'Ennek a munkaterületnek {members} tagja van, a {plan} pedig legfeljebb {max} tagot számláz. Váltás előtt távolíts el {value} tagot.',
+  },
+  'billing.plan.seatsBelowMembers':
+    '{members} tagod van. Válassz legalább ennyi helyet — a Polar elutasítja az előfizetést, ha kevesebb hely van, mint hozzárendelés.',
+  'billing.orders.title': 'Megrendelések',
+  'billing.orders.description':
+    'Ennek a munkaterületnek minden megrendelése, a legújabbtól.',
+  'billing.orders.receipts': 'Minden nyugta',
+  'billing.orders.unavailableTitle': 'A megrendelések nem töltődnek be',
+  'billing.orders.unavailableBody':
+    'A Polar nem válaszolt időben az előzményekre. Minden fentebbi élő — próbáld újra egy pillanat múlva, vagy nézd meg a teljes nyilvántartást a számlázási portálon.',
+  'billing.orders.emptyTitle': 'Még nincs megrendelés',
+  'billing.orders.emptyCustomer':
+    'Az első számla akkor jelenik meg itt, amint egy számlázási időszak lezárul.',
+  'billing.orders.emptyNoCustomer':
+    'Ezt a munkaterületet még soha nem terhelték meg. Válassz fizetős csomagot, és a számlák itt gyűlnek majd.',
+  'billing.orders.tableLabel': 'Megrendelési előzmények',
+  'billing.orders.document': 'Dokumentum',
+  'billing.orders.dateUnknown': 'Ismeretlen dátum',
+  'billing.order.pending': 'Folyamatban',
+  'billing.order.refunded': 'Visszatérítve',
+  'billing.order.partiallyRefunded': 'Részben visszatérítve',
+  'billing.order.noInvoiceDraft': 'Amíg a megrendelés piszkozat, nincs számla',
+  'billing.order.preparing': 'Készül',
+  'billing.order.renderingHint':
+    'A Polar még készíti a(z) {number} számlát. A letöltés néhány másodperc múlva visszatér.',
+  'billing.order.fetching': 'Számla betöltése',
+  'billing.order.generating': 'A Polar készíti a számlát',
+  'billing.order.pdfLabel': '{number} számla PDF-ben',
+  'billing.order.stillWritingTitle': 'A Polar még írja azt a számlát',
+  'billing.order.stillWritingBody':
+    'A(z) {number} számla készül. A letöltés magától visszatér néhány másodperc múlva.',
+  'billing.order.openFailed': 'Az a számla nem nyílt meg',
 } satisfies TranslationOf<typeof En>
 
 export default messages

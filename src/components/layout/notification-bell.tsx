@@ -28,7 +28,10 @@ const OVERFLOW_AT = 9
  * The figure is also spoken, because a coloured dot is not an accessible name:
  * the link's label carries the count in the reader's own language and grouping.
  */
-export function NotificationBell({ unreadCount = 0, className }: NotificationBellProps) {
+export function NotificationBell({
+  unreadCount = 0,
+  className,
+}: NotificationBellProps) {
   const { t, locale } = useI18n()
   const hasUnread = unreadCount > 0
   const unread = formatNumber(unreadCount, locale)
@@ -46,7 +49,11 @@ export function NotificationBell({ unreadCount = 0, className }: NotificationBel
           : t('shell.bell.none')
       }
       className={cn(
-        'relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-ink-3 focus-ring',
+        // 40px, the ladder's `md`, so it matches the ThemeToggle beside it.
+        // This stays a hand-written control rather than an `IconButton`: it is a
+        // navigation link that carries a badge and an `aria-current` state, and
+        // neither survives the primitive.
+        'relative inline-flex size-10 shrink-0 items-center justify-center rounded-full text-ink-3 focus-ring',
         transitionBase,
         'hover:bg-hover hover:text-ink active:bg-active aria-[current=page]:bg-surface-2 aria-[current=page]:text-ink',
         className,

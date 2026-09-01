@@ -31,7 +31,9 @@ export interface IdeasListProps {
   readonly rows: ReadonlyArray<PlannerRow>
   /** Rows before filtering, so the empty state can tell "none" from "none matching". */
   readonly total: number
-  readonly categoryFor: (categoryId: string | null) => PlannerCategory | undefined
+  readonly categoryFor: (
+    categoryId: string | null,
+  ) => PlannerCategory | undefined
   readonly query: string
   readonly onQueryChange: (next: string) => void
   readonly selectedPlaceId?: string | null
@@ -170,9 +172,7 @@ export function IdeasList({
                 <EmptyState
                   size="sm"
                   icon={<Lightbulb />}
-                  title={
-                    scope === 'all' ? 'No places yet' : 'No ideas waiting'
-                  }
+                  title={scope === 'all' ? 'No places yet' : 'No ideas waiting'}
                   description={
                     scope === 'all'
                       ? 'Add a place and it appears here and on the map at once.'

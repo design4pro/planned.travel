@@ -322,17 +322,13 @@ const messages = {
   'billing.hero.freeAllowance': '旅{trips}件、ひとり旅',
   'billing.hero.perSeatLine': 'メンバー{seats}人 × {price}',
   'billing.hero.singleTraveller': '旅行者ひとり',
-  'billing.hero.paymentMethod': '支払い方法',
-  'billing.hero.cancel': 'プランを解約',
   'billing.price.free': '無料',
   'billing.provider.opening': 'Polar を開いています',
-  'billing.provider.failed': 'Polar に接続できませんでした',
-  'billing.provider.failedBody':
-    '請求は発生していません。通信状況を確認して、少ししてからお試しください。',
   'billing.renewal.trialEndsToday':
-    '試用は今日で終わります。カードを登録すれば、すべてのモジュールを使い続けられます。',
+    '無料期間は今日で終わります。その前に解約しない限り、最初の請求が発生します。',
   'billing.renewal.trialEndsIn': {
-    other: '試用はあと{value}日で終わります。それまでカードは不要です。',
+    other:
+      '無料期間はあと{value}日で終わります。その前に解約しない限り、最初の請求が発生します。',
   },
   'billing.renewal.trialEnded': '試用期間は終わりました。',
   'billing.renewal.endsNoDate': 'このプランは終了予定で、更新されません。',
@@ -378,7 +374,6 @@ const messages = {
   'billing.interval.label': '請求の間隔',
   'billing.interval.monthly': '月ごと',
   'billing.interval.yearly': '年ごと',
-  'billing.interval.saving': '{value}お得',
   'billing.plan.free.name': 'フリー',
   'billing.plan.free.tagline': '次の2つの旅を計画する',
   'billing.plan.free.feature.trips': '同時に2件の旅',
@@ -402,7 +397,6 @@ const messages = {
   'billing.plan.current': '現在のプラン',
   'billing.plan.currentBadge': '現在',
   'billing.plan.popular': '人気',
-  'billing.plan.moveTo': '{plan}に移る',
   'billing.plan.switchYearly': '年ごとに切り替える',
   'billing.plan.switchMonthly': '月ごとに切り替える',
   'billing.plan.upgradeTo': '{plan}にアップグレード',
@@ -415,31 +409,69 @@ const messages = {
   'billing.plan.members': 'メンバー',
   'billing.plan.membersHint': 'いつでも変えられます。請求もそれに従います。',
   'billing.plan.seatOption': { other: 'メンバー{value}人' },
-  'billing.invoices.title': '請求書',
-  'billing.invoices.description':
-    'このワークスペースのすべての領収書を、新しい順に。',
-  'billing.invoices.portal': '請求ポータル',
-  'billing.invoices.unavailableTitle': '領収書を読み込めません',
-  'billing.invoices.unavailableBody':
-    '履歴の取得に Polar が間に合いませんでした。上の内容は最新です。全記録は請求ポータルで見るか、少ししてからお試しください。',
-  'billing.invoices.emptyTitle': 'まだ請求書はありません',
-  'billing.invoices.emptyCustomer':
-    '最初の領収書は、請求期間が終わるとここに出てきます。',
-  'billing.invoices.emptyNoCustomer':
-    'このワークスペースにはまだ請求がありません。有料プランを選ぶと、領収書がここにたまっていきます。',
-  'billing.invoices.tableLabel': '請求の履歴',
   'billing.invoices.number': '請求書',
   'billing.invoices.date': '日付',
-  'billing.invoices.period': '期間',
   'billing.invoices.amount': '金額',
   'billing.invoices.status': '状態',
-  'billing.invoices.receipt': '領収書',
-  'billing.invoices.view': '表示',
   'billing.invoice.paid': '支払済',
-  'billing.invoice.open': '未払い',
   'billing.invoice.draft': '下書き',
   'billing.invoice.void': '無効',
-  'billing.invoice.uncollectible': '回収不能',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    '決済プロバイダがそのリクエストを拒否しました。少し経ってからもう一度お試しください。',
+  'billing.planChanged.title': 'プランを更新しました',
+  'billing.planChanged.body':
+    '変更はすでに Polar 側で有効です。差額は Polar が請求します。下の概要は1分以内に追いつきます。',
+  'billing.hero.manage': '請求を管理',
+  'billing.hero.manageHint':
+    'カード、請求先住所、税番号、領収書、解約は、請求書を発行する Polar 側にあります。',
+  'billing.hero.manageHintNone':
+    'まだ請求プロフィールがありません。下の有料プランを選ぶと作成され、それ以降はポータルが開きます。',
+  'billing.portal.opening': '請求ポータルを開いています',
+  'billing.plan.notApplied': 'その変更は適用されませんでした',
+  'billing.plan.cancelInPortal': 'ポータルで解約',
+  'billing.plan.seatsOverMax': {
+    other:
+      'このワークスペースのメンバーは {members} 人で、{plan} の請求上限は {max} 人です。切り替える前に {value} 人を外してください。',
+  },
+  'billing.plan.seatsBelowMembers':
+    'メンバーは {members} 人です。少なくともその数の席を選んでください。Polar は割り当てより席が少ない購読を拒否します。',
+  'billing.orders.title': '注文',
+  'billing.orders.description':
+    'このワークスペースのすべての注文を、新しい順に。',
+  'billing.orders.receipts': 'すべての領収書',
+  'billing.orders.unavailableTitle': '注文を読み込めません',
+  'billing.orders.unavailableBody':
+    'Polar が履歴について時間内に応答しませんでした。上の内容はすべて最新です。少し経ってからお試しか、請求ポータルで全記録をご確認ください。',
+  'billing.orders.emptyTitle': 'まだ注文はありません',
+  'billing.orders.emptyCustomer':
+    '請求期間が締まると、最初の請求書がここに表示されます。',
+  'billing.orders.emptyNoCustomer':
+    'このワークスペースに請求されたことはありません。有料プランを選ぶと、請求書がここに集まります。',
+  'billing.orders.tableLabel': '注文履歴',
+  'billing.orders.document': '書類',
+  'billing.orders.dateUnknown': '日付不明',
+  'billing.order.pending': '保留中',
+  'billing.order.refunded': '返金済み',
+  'billing.order.partiallyRefunded': '一部返金',
+  'billing.order.noInvoiceDraft': '注文が下書きのあいだは請求書がありません',
+  'billing.order.preparing': '準備中',
+  'billing.order.renderingHint':
+    'Polar は請求書 {number} をまだ作成しています。ダウンロードは数秒で戻ります。',
+  'billing.order.fetching': '請求書を取得しています',
+  'billing.order.generating': 'Polar が請求書を準備しています',
+  'billing.order.pdfLabel': '請求書 {number} を PDF で',
+  'billing.order.stillWritingTitle': 'Polar はその請求書をまだ作成中です',
+  'billing.order.stillWritingBody':
+    '請求書 {number} を作成しています。ダウンロードは数秒で自動的に戻ります。',
+  'billing.order.openFailed': 'その請求書は開けませんでした',
 } satisfies TranslationOf<typeof En>
 
 export default messages

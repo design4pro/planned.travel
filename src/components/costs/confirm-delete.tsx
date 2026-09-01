@@ -23,6 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui'
+import { formatList } from '#/lib/format'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 
 export interface ConfirmDeleteDialogProps {
@@ -45,6 +47,8 @@ export function ConfirmDeleteDialog({
   affects,
   onConfirm,
 }: ConfirmDeleteDialogProps) {
+  const t = useTranslate()
+  const locale = useLocale()
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,7 +62,7 @@ export function ConfirmDeleteDialog({
       setError(
         cause instanceof Error && cause.message.length > 0
           ? cause.message
-          : 'The expense could not be deleted. Try again in a moment.',
+          : t('costs.delete.failedBody'),
       )
     } finally {
       setWorking(false)
@@ -69,27 +73,32 @@ export function ConfirmDeleteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>Delete this expense?</DialogTitle>
+          <DialogTitle>{t('costs.delete.title')}</DialogTitle>
           <DialogDescription>
-            {`“${title}” and its split come off the ledger. This cannot be undone.`}
+            {t('costs.delete.description', { title })}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
           {error === null ? null : (
-            <Alert tone="danger" title="That did not delete">
+            <Alert tone="danger" title={t('costs.delete.failed')}>
               {error}
             </Alert>
           )}
           <div className="flex items-center gap-3 rounded-lg border border-danger/20 bg-danger-soft px-3.5 py-3">
-            <TriangleAlert aria-hidden className="size-4 shrink-0 text-danger" />
+            <TriangleAlert
+              aria-hidden
+              className="size-4 shrink-0 text-danger"
+            />
             <p className="min-w-0 flex-1 text-caption text-ink-2">
               {affects.length === 0
-                ? 'No balances change — nothing was split on it.'
-                : `Balances change for ${affects.join(', ')}.`}
+                ? t('costs.delete.noBalances')
+                : t('costs.delete.balancesChange', {
+                    names: formatList(affects, locale),
+                  })}
             </p>
             <span className="shrink-0 font-display text-subtitle font-bold tabular-nums text-danger">
-              {formatMoney(amountMinor, currency)}
+              {formatMoney(amountMinor, currency, locale)}
             </span>
           </div>
         </DialogBody>
@@ -102,17 +111,17 @@ export function ConfirmDeleteDialog({
             autoFocus
             onClick={() => onOpenChange(false)}
           >
-            Keep it
+            {t('ui.action.keep')}
           </Button>
           <Button
             type="button"
             variant="danger"
             shape="pill"
             loading={working}
-            loadingLabel="Deleting the expense"
+            loadingLabel={t('costs.delete.working')}
             onClick={() => void confirm()}
           >
-            Delete expense
+            {t('costs.delete.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

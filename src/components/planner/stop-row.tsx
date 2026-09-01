@@ -107,7 +107,10 @@ export function StopRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: sortableId ?? row.itemId, disabled: !draggable || pending })
+  } = useSortable({
+    id: sortableId ?? row.itemId,
+    disabled: !draggable || pending,
+  })
 
   const vars: RowVars = {
     '--row-accent': category?.colour ?? 'var(--color-brand)',
@@ -123,9 +126,7 @@ export function StopRow({
   const description = [
     row.name,
     category?.name,
-    position === null || positionKind === 'day'
-      ? null
-      : `stop ${position}`,
+    position === null || positionKind === 'day' ? null : `stop ${position}`,
     row.dayNumber === null ? 'not scheduled' : `day ${row.dayNumber}`,
     row.time,
     row.duration,
@@ -150,11 +151,11 @@ export function StopRow({
       onFocus={() => onHoverChange?.(true)}
       onBlur={() => onHoverChange?.(false)}
       className={cn(
-        'group/row relative flex items-stretch gap-1 rounded-lg pr-1',
+        'group/row relative flex items-stretch gap-1 rounded-lg pe-1',
         transitionBase,
         // A left rule in the category colour is the cheapest way to make a list of
         // twelve stops legible as three kinds of stop.
-        'before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full',
+        'before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full',
         'before:bg-(--row-accent) before:transition-opacity before:duration-fast',
         selected ? 'before:opacity-100' : 'before:opacity-0',
         selected && 'bg-brand-subtle',
@@ -205,7 +206,7 @@ export function StopRow({
         aria-label={description}
         aria-current={selected ? 'true' : undefined}
         className={cn(
-          'flex min-w-0 flex-1 items-start gap-2.5 rounded-md py-2 text-left',
+          'flex min-w-0 flex-1 items-start gap-2.5 rounded-md py-2 text-start',
           focusRing,
         )}
       >
@@ -220,7 +221,7 @@ export function StopRow({
             <span
               aria-hidden="true"
               className={cn(
-                'absolute -top-1 -left-1 grid size-4 place-items-center rounded-full',
+                'absolute -top-1 -start-1 grid size-4 place-items-center rounded-full',
                 'font-display text-micro font-bold tabular-nums ring-2 ring-glass',
                 selected
                   ? 'bg-brand text-brand-on'
@@ -254,7 +255,8 @@ export function StopRow({
               />
             ) : null}
             <span className="min-w-0 truncate">
-              {row.location ?? (unmapped ? 'No map position yet' : 'Position set')}
+              {row.location ??
+                (unmapped ? 'No map position yet' : 'Position set')}
             </span>
           </span>
 

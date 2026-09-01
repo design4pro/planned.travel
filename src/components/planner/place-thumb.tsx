@@ -100,8 +100,7 @@ export function PlaceThumb({
   className,
 }: PlaceThumbProps) {
   const [failed, setFailed] = React.useState(false)
-  const showImage =
-    typeof imageUrl === 'string' && imageUrl !== '' && !failed
+  const showImage = typeof imageUrl === 'string' && imageUrl !== '' && !failed
   const vars: ThumbVars = {
     '--thumb-accent': colour ?? 'var(--color-brand)',
   }

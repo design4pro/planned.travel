@@ -313,6 +313,98 @@ const messages = {
   'role.admin': 'Quản trị viên',
   'role.member': 'Thành viên',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    other: '{value} chuyến đi',
+  },
+  'trips.count.favourites': {
+    other: '{value} yêu thích',
+  },
+  'trips.count.archived': {
+    other: '{value} đã lưu trữ',
+  },
+  'trips.atLimit.body':
+    'Gói của bạn bao gồm {trips}. Hãy lưu trữ một chuyến đã xong, hoặc lên gói cao hơn để mở nhiều hơn cùng lúc.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Nhật ký mới',
+  'newJourney.title': 'Bắt đầu một nhật ký',
+  'newJourney.description':
+    'Nhật ký là mặt viết của một chuyến đi — các mục theo thứ tự ngày, với ảnh và thời tiết bạn còn nhớ.',
+  'newJourney.titlePlaceholder': 'Hai tuần ở Kyoto',
+  'newJourney.subtitle': 'Phụ đề',
+  'newJourney.subtitleHint': 'Một dòng dưới tiêu đề, trên bìa.',
+  'newJourney.subtitlePlaceholder': 'Đền chùa, tàu và quá nhiều matcha',
+  'newJourney.trip': 'Dựa trên một chuyến đi',
+  'newJourney.tripHint':
+    'Không bắt buộc — gắn câu chuyện với lịch trình của nó.',
+  'newJourney.tripNone': 'Không gắn với chuyến đi nào',
+  'newJourney.datesError': 'Ngày kết thúc trước ngày bắt đầu.',
+  'newJourney.submit': 'Tạo nhật ký',
+  'newJourney.creating': 'Đang tạo nhật ký',
+  'newJourney.created': 'Đã bắt đầu nhật ký',
+  'newJourney.createdBody': 'Thêm mục đầu tiên để mở đầu câu chuyện.',
+  'newJourney.error': 'Không tạo được nhật ký. Thử lại sau một lát.',
+  'newCollection.trigger': 'Bộ sưu tập mới',
+  'newCollection.title': 'Bắt đầu một bộ sưu tập',
+  'newCollection.description':
+    'Một nơi cho những địa điểm bạn tìm thấy trước khi biết chúng thuộc chuyến đi nào.',
+  'newCollection.namePlaceholder': 'Cà phê đáng để đi hết thành phố',
+  'newCollection.descriptionHint': 'Cái gì thuộc về đây, cái gì không.',
+  'newCollection.submit': 'Tạo bộ sưu tập',
+  'newCollection.creating': 'Đang tạo bộ sưu tập',
+  'newCollection.created': 'Đã tạo bộ sưu tập',
+  'newCollection.createdBody': 'Bắt đầu lưu địa điểm vào đó.',
+  'newCollection.error': 'Không tạo được bộ sưu tập. Thử lại sau một lát.',
+
+  'newTrip.title': 'Bắt đầu chuyến đi mới',
+  'newTrip.description':
+    'Chỉ cần một tiêu đề. Các mốc ngày sẽ dựng lịch trình từng ngày, phần còn lại có thể chờ đến khi bạn biết.',
+  'newTrip.name': 'Tên chuyến đi',
+  'newTrip.namePlaceholder': 'Kyoto vào mùa hoa anh đào',
+  'newTrip.destination': 'Điểm đến',
+  'newTrip.destinationHint': 'Một thành phố, một vùng, hoặc cả hành trình.',
+  'newTrip.destinationPlaceholder': 'Kyoto, Nhật Bản',
+  'newTrip.departure': 'Khởi hành',
+  'newTrip.return': 'Trở về',
+  'newTrip.returnError': 'Ngày trở về sớm hơn ngày khởi hành.',
+  'newTrip.currency': 'Tiền tệ của ngân sách',
+  'newTrip.currencyHint': 'Mọi chi phí của chuyến đi được cộng theo đơn vị đó.',
+  'newTrip.submit': 'Tạo chuyến đi',
+  'newTrip.creating': 'Đang tạo chuyến đi',
+  'newTrip.error': 'Không tạo được chuyến đi. Thử lại sau một lát.',
+  'newTrip.created': 'Đã tạo chuyến đi',
+  'newTrip.createdBody': 'Bắt đầu đặt địa điểm lên bản đồ.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Ai có thể xem',
+  'visibility.private': 'Chỉ tôi',
+  'visibility.organization': 'Mọi người trong không gian',
+  'visibility.public': 'Bất kỳ ai có liên kết',
+
+  'trips.error': 'Không tải được các chuyến đi của bạn',
+  'trips.eyebrow': 'Không gian',
+  'trips.nothingPlanned': 'Chưa có kế hoạch nào',
+  'trips.search': 'Tìm chuyến đi',
+  'trips.atLimit.title': 'Bạn đã dùng hết số chuyến đi gói của bạn cho phép',
+  'trips.atLimit.action': 'So sánh các gói',
+  'trips.noMatch.title': 'Không có gì khớp với bộ lọc đó',
+  'trips.noMatch.body':
+    'Thử giai đoạn khác, xoá ô tìm kiếm, hoặc xem trong lưu trữ.',
+  'trips.noMatch.action': 'Đặt lại bộ lọc',
+  'trips.empty.body':
+    'Một chuyến đi giữ lịch trình, bản đồ, các đặt chỗ, danh sách hành lý và tiền. Bắt đầu một chuyến, phần còn lại theo sau.',
+  'trips.next.title': 'Đi đâu tiếp',
+  'trips.next.body':
+    'Bắt đầu một chuyến và planned.travel dựng một ngày cho mỗi mốc, sẵn cho những gì bạn đã lưu.',
+  'trips.savedPlaces': 'Địa điểm đã lưu',
+  'trips.filter.all': 'Tất cả',
+  'trips.filter.favourites': 'Yêu thích',
+  'trips.card.favourite': 'Được yêu thích',
+  'trips.card.noDestination': 'Chưa chọn điểm đến',
+  'trips.card.noDates': 'Chưa chọn ngày',
+  'trips.card.startsIn': 'sau {days} ngày',
+  'trips.card.days': '{days} ngày',
   'metric.trips': 'Chuyến đi',
   'metric.places': 'Địa điểm',
   'metric.members': 'Thành viên',

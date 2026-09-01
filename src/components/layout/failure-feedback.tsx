@@ -1,8 +1,7 @@
 import { useState } from 'react'
 
-import { Textarea } from '#/components/ui'
+import { Button, Textarea } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
-import { ActionButton } from './kit'
 
 /**
  * "Tell us what happened", on the error panel and nowhere else.
@@ -51,9 +50,9 @@ export function FailureFeedback({ reference }: { readonly reference: string }) {
 
   if (!open) {
     return (
-      <ActionButton variant="secondary" onClick={() => setOpen(true)}>
+      <Button variant="secondary" shape="pill" onClick={() => setOpen(true)}>
         {t('shell.error.feedback.open')}
-      </ActionButton>
+      </Button>
     )
   }
 
@@ -76,12 +75,13 @@ export function FailureFeedback({ reference }: { readonly reference: string }) {
           {t('shell.error.feedback.failed')}
         </p>
       ) : null}
-      <ActionButton
+      <Button
+        shape="pill"
         onClick={() => void send()}
         disabled={status === 'sending' || message.trim().length === 0}
       >
         {t('shell.error.feedback.send')}
-      </ActionButton>
+      </Button>
     </div>
   )
 }

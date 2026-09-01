@@ -45,7 +45,12 @@ export {
 } from './anchor'
 
 export { flagshipTrip } from './flagship'
-export { dolomitesTrip, lisbonTrip, marrakechTrip, patagoniaTrip } from './trips'
+export {
+  dolomitesTrip,
+  lisbonTrip,
+  marrakechTrip,
+  patagoniaTrip,
+} from './trips'
 
 /** Every trip the seed writes, flagship first — and in ascending id order. */
 export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]

@@ -115,8 +115,12 @@ export function AddPlaceDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="primary" shape="pill" size={size}>
-          <Plus aria-hidden strokeWidth={2.5} />
+        <Button
+          variant="primary"
+          shape="pill"
+          size={size}
+          icon={<Plus aria-hidden strokeWidth={2.5} />}
+        >
           Add place
         </Button>
       </DialogTrigger>
