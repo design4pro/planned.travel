@@ -95,12 +95,10 @@ function renderCard(props: CountryCardProps): HTMLElement {
   return render(<CountryCard {...props} />).container
 }
 
-/** The two surfaces the reader has in front of them at once. */
-function atlasScreen(): {
-  readonly panel: HTMLElement
-  readonly card: HTMLElement
-} {
-  return { panel: renderPanel(), card: renderCard(PORTUGAL) }
+/** Both surfaces at once, which is how the reader meets them. */
+function renderAtlasScreen(): void {
+  renderPanel()
+  renderCard(PORTUGAL)
 }
 
 /**
@@ -112,11 +110,12 @@ function atlasScreen(): {
  * than about strings that happen to be on the same screen.
  */
 function tile(panel: HTMLElement, label: string): HTMLElement {
-  // Bounded by the panel: the card renders beside it in the same document and
-  // carries numerals of its own, so a walk let out of the panel could answer
-  // this question with the other surface's figure instead of failing.
+  // The walk stops *below* the panel rather than at it. The panel holds every
+  // other tile's numerals too, so a run allowed to reach it would always find
+  // one and hand back the whole panel — the lookup could then never fail, and
+  // `tileFigure` would answer with whichever figure happens to come first.
   let node: HTMLElement | null = within(panel).getByText(label)
-  while (node !== null && panel.contains(node)) {
+  while (node !== null && node !== panel) {
     if (node.querySelector('[data-numeric]') !== null) {
       return node
     }
@@ -193,7 +192,7 @@ describe('the two trip figures on one atlas screen', () => {
   it('prints the bare noun over neither figure', () => {
     // Both surfaces are mounted; the query below is over the whole document,
     // so it answers for the screen rather than for either half of it.
-    atlasScreen()
+    renderAtlasScreen()
 
     for (const word of BARE_NOUNS) {
       expect(screen.queryAllByText(word)).toEqual([])
@@ -222,7 +221,7 @@ describe('the two trip figures on one atlas screen', () => {
     // twenty-fourth locale fails this for the honest reason — its catalogue is
     // unread — instead of for arithmetic.
     it('reads the catalogue of every locale the product ships', () => {
-      expect([...locales.map(([tag]) => tag)].sort()).toEqual(
+      expect(locales.map(([tag]) => tag).sort()).toEqual(
         [...LOCALE_TAGS].sort(),
       )
     })
