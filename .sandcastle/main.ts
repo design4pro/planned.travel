@@ -59,6 +59,7 @@ import { z } from 'zod'
 
 import { adoptWipBranches } from './adopt'
 import { narrowedGrep, shellQuote } from './narrow-e2e'
+import { planPayload } from './plan-payload'
 import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { agentFor, describeRoles, resolveRole } from './roles'
@@ -691,6 +692,49 @@ function issueBranch(id: string): string {
   return `sandcastle/issue-${id}-${RUN_ID}`
 }
 
+/**
+ * The issue list the planner reasons over, abridged and fetched here rather than by the prompt.
+ *
+ * The prompt used to run `gh` itself, inside the container, and paste every body whole - a third of
+ * the loop's single most expensive prompt spent on acceptance criteria and verification recipes
+ * that say nothing about which issue blocks which. Doing it here buys the trim a unit test, and the
+ * planner keeps `gh issue view` for the ticket it wants in full.
+ *
+ * `--limit 500` matches `readyForAgentIds` for the reason documented there: `gh` truncates at
+ * thirty and says nothing about it.
+ *
+ * Issue bodies are text anyone with an account can write, and they now arrive as a prompt argument
+ * rather than as the output of the prompt's own `!` block. That is the safer of the two: sandcastle
+ * marks the shell blocks belonging to the file before substituting, and strips that marker from
+ * every value, so a body containing one is text and not a command.
+ */
+function planIssuesJson(): string {
+  const listed = execSync(
+    'gh issue list --state open --label ready-for-agent --limit 500 --json number,title,body,labels',
+    { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 },
+  )
+  const raw = z
+    .array(
+      z.object({
+        number: z.number(),
+        title: z.string(),
+        body: z.string().nullable(),
+        labels: z.array(z.object({ name: z.string() })),
+      }),
+    )
+    .parse(JSON.parse(listed))
+  return JSON.stringify(
+    planPayload(
+      raw.map((issue) => ({
+        id: String(issue.number),
+        title: issue.title,
+        labels: issue.labels.map((label) => label.name),
+        body: issue.body,
+      })),
+    ),
+  )
+}
+
 async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
   const plan = await withUsageLimit(
     'planner',
@@ -707,7 +751,11 @@ async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
         maxIterations: 1,
         agent: agentFor('planner'),
         promptFile: './.sandcastle/plan-prompt.md',
-        promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
+        promptArgs: {
+          RUN_ID,
+          SCOPE: planScope(scopeIds),
+          ISSUES_JSON: planIssuesJson(),
+        },
         output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
       }),
     { meta: metaFor('planner') },
