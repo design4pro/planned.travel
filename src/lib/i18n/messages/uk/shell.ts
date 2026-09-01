@@ -410,6 +410,31 @@ const messages = {
   'error.root': 'Ми збилися з маршруту',
   'error.session': 'Ваш доступ до простору змінився',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Повідомити про проблему',
+  'feedback.formTitle': 'Повідомити про проблему',
+  'feedback.messageLabel': 'Що не так або що варто змінити?',
+  'feedback.messagePlaceholder': 'Чого ви очікували і що сталося натомість?',
+  'feedback.emailLabel': 'Електронна пошта',
+  'feedback.emailPlaceholder': 'olena@example.com',
+  'feedback.isRequiredLabel': '(обовʼязково)',
+  'feedback.submitButtonLabel': 'Надіслати повідомлення',
+  'feedback.cancelButtonLabel': 'Скасувати',
+  'feedback.confirmButtonLabel': 'Підтвердити',
+  'feedback.addScreenshotButtonLabel': 'Додати знімок екрана',
+  'feedback.removeScreenshotButtonLabel': 'Прибрати знімок екрана',
+  'feedback.highlightToolText': 'Виділити',
+  'feedback.hideToolText': 'Приховати',
+  'feedback.successMessageText': 'Дякуємо — повідомлення в нас.',
+  'feedback.errorEmptyMessageText':
+    'Спершу напишіть речення — порожнє повідомлення нічого нам не каже.',
+  'feedback.errorTimeoutText':
+    'Це триває надто довго, і ми не можемо підтвердити, що повідомлення надіслано.',
+  'feedback.errorForbiddenText':
+    'Цій сторінці не дозволено надсилати повідомлення.',
+  'feedback.errorGenericText':
+    'Не вдалося надіслати. Перевірте зʼєднання і чи не заважає блокувальник реклами.',
+
   'notFound.eyebrow': 'Помилка 404',
   'notFound.title': 'Цієї сторінки немає на карті',
   'notFound.body':

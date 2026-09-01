@@ -419,6 +419,32 @@ const messages = {
   'error.root': 'Zjechaliśmy z trasy',
   'error.session': 'Twój dostęp do przestrzeni się zmienił',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Zgłoś problem',
+  'feedback.formTitle': 'Zgłoś problem',
+  'feedback.messageLabel': 'Co jest nie tak albo co należy zmienić?',
+  'feedback.messagePlaceholder':
+    'Co miało się wydarzyć, a co się stało zamiast tego?',
+  'feedback.emailLabel': 'Adres e-mail',
+  'feedback.emailPlaceholder': 'anna@example.com',
+  'feedback.isRequiredLabel': '(wymagane)',
+  'feedback.submitButtonLabel': 'Wyślij zgłoszenie',
+  'feedback.cancelButtonLabel': 'Anuluj',
+  'feedback.confirmButtonLabel': 'Potwierdź',
+  'feedback.addScreenshotButtonLabel': 'Dodaj zrzut ekranu',
+  'feedback.removeScreenshotButtonLabel': 'Usuń zrzut ekranu',
+  'feedback.highlightToolText': 'Zaznacz',
+  'feedback.hideToolText': 'Ukryj',
+  'feedback.successMessageText': 'Dziękujemy — zgłoszenie do nas dotarło.',
+  'feedback.errorEmptyMessageText':
+    'Najpierw napisz zdanie — puste zgłoszenie nic nam nie mówi.',
+  'feedback.errorTimeoutText':
+    'To trwa zbyt długo i nie możemy potwierdzić, że zgłoszenie zostało wysłane.',
+  'feedback.errorForbiddenText':
+    'Ta strona nie ma uprawnień do wysyłania zgłoszeń.',
+  'feedback.errorGenericText':
+    'Nie udało się wysłać. Sprawdź połączenie i to, czy nie przeszkadza blokada reklam.',
+
   'notFound.eyebrow': 'Błąd 404',
   'notFound.title': 'Tej strony nie ma na mapie',
   'notFound.body':

@@ -394,6 +394,31 @@ const messages = {
   'error.root': 'Ens hem sortit de la ruta',
   'error.session': 'El teu accés a l’espai de treball ha canviat',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Informa d’un problema',
+  'feedback.formTitle': 'Informa d’un problema',
+  'feedback.messageLabel': 'Què falla, o què caldria canviar?',
+  'feedback.messagePlaceholder': 'Què esperaves i què ha passat en lloc seu?',
+  'feedback.emailLabel': 'Adreça electrònica',
+  'feedback.emailPlaceholder': 'tu@example.com',
+  'feedback.isRequiredLabel': '(obligatori)',
+  'feedback.submitButtonLabel': 'Envia l’informe',
+  'feedback.cancelButtonLabel': 'Cancel·la',
+  'feedback.confirmButtonLabel': 'Confirma',
+  'feedback.addScreenshotButtonLabel': 'Afegeix una captura',
+  'feedback.removeScreenshotButtonLabel': 'Suprimeix la captura',
+  'feedback.highlightToolText': 'Ressalta',
+  'feedback.hideToolText': 'Amaga',
+  'feedback.successMessageText': 'Gràcies — ja tenim el teu informe.',
+  'feedback.errorEmptyMessageText':
+    'Escriu una frase primer — un informe buit no ens diu res.',
+  'feedback.errorTimeoutText':
+    'Està trigant massa i no podem confirmar que l’informe s’hagi enviat.',
+  'feedback.errorForbiddenText':
+    'Aquesta pàgina no té permís per enviar informes.',
+  'feedback.errorGenericText':
+    'No s’ha pogut enviar. Comprova la connexió i si hi ha un bloquejador d’anuncis pel mig.',
+
   'notFound.eyebrow': 'Pàgina 404',
   'notFound.title': 'Aquesta pàgina no és al mapa',
   'notFound.body':

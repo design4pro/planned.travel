@@ -408,6 +408,31 @@ const messages = {
   'error.root': 'Sjeli jsme z cesty',
   'error.session': 'Váš přístup do prostoru se změnil',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Nahlásit problém',
+  'feedback.formTitle': 'Nahlásit problém',
+  'feedback.messageLabel': 'Co je špatně, nebo co by se mělo změnit?',
+  'feedback.messagePlaceholder': 'Co jste čekali a co se stalo místo toho?',
+  'feedback.emailLabel': 'E-mailová adresa',
+  'feedback.emailPlaceholder': 'jan@example.com',
+  'feedback.isRequiredLabel': '(povinné)',
+  'feedback.submitButtonLabel': 'Odeslat hlášení',
+  'feedback.cancelButtonLabel': 'Zrušit',
+  'feedback.confirmButtonLabel': 'Potvrdit',
+  'feedback.addScreenshotButtonLabel': 'Přidat snímek obrazovky',
+  'feedback.removeScreenshotButtonLabel': 'Odebrat snímek obrazovky',
+  'feedback.highlightToolText': 'Zvýraznit',
+  'feedback.hideToolText': 'Skrýt',
+  'feedback.successMessageText': 'Děkujeme — hlášení máme.',
+  'feedback.errorEmptyMessageText':
+    'Nejdřív napište větu — prázdné hlášení nám nic neřekne.',
+  'feedback.errorTimeoutText':
+    'Trvá to příliš dlouho a nemůžeme potvrdit, že hlášení odešlo.',
+  'feedback.errorForbiddenText':
+    'Tato stránka nemá oprávnění odesílat hlášení.',
+  'feedback.errorGenericText':
+    'Odeslání se nezdařilo. Zkontrolujte připojení a jestli do toho nemluví blokovač reklam.',
+
   'notFound.eyebrow': 'Chyba 404',
   'notFound.title': 'Tato stránka na mapě není',
   'notFound.body':

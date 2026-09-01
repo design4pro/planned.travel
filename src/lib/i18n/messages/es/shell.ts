@@ -394,6 +394,31 @@ const messages = {
   'error.root': 'Nos hemos salido de la ruta',
   'error.session': 'Tu acceso al espacio de trabajo ha cambiado',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Informar de un problema',
+  'feedback.formTitle': 'Informar de un problema',
+  'feedback.messageLabel': '¿Qué falla o qué habría que cambiar?',
+  'feedback.messagePlaceholder': '¿Qué esperabas y qué pasó en su lugar?',
+  'feedback.emailLabel': 'Correo electrónico',
+  'feedback.emailPlaceholder': 'tu@example.com',
+  'feedback.isRequiredLabel': '(obligatorio)',
+  'feedback.submitButtonLabel': 'Enviar el informe',
+  'feedback.cancelButtonLabel': 'Cancelar',
+  'feedback.confirmButtonLabel': 'Confirmar',
+  'feedback.addScreenshotButtonLabel': 'Añadir una captura',
+  'feedback.removeScreenshotButtonLabel': 'Quitar la captura',
+  'feedback.highlightToolText': 'Resaltar',
+  'feedback.hideToolText': 'Ocultar',
+  'feedback.successMessageText': 'Gracias — ya tenemos tu informe.',
+  'feedback.errorEmptyMessageText':
+    'Escribe una frase primero — un informe vacío no nos dice nada.',
+  'feedback.errorTimeoutText':
+    'Está tardando demasiado y no podemos confirmar que el informe se haya enviado.',
+  'feedback.errorForbiddenText':
+    'Esta página no tiene permiso para enviar informes.',
+  'feedback.errorGenericText':
+    'No se pudo enviar. Comprueba la conexión y si hay un bloqueador de anuncios de por medio.',
+
   'notFound.eyebrow': 'Página 404',
   'notFound.title': 'Esta página no está en el mapa',
   'notFound.body':

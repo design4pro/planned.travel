@@ -8,6 +8,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools'
 import { Direction } from 'radix-ui'
 import { AppToaster } from '#/components/layout/app-toaster'
+import { FeedbackWidget } from '#/components/layout/feedback-widget'
 import { TooltipProvider } from '#/components/ui'
 import { RootErrorBoundary } from '#/components/layout/error-state'
 import { RootNotFound } from '#/components/layout/not-found'
@@ -195,9 +196,20 @@ function RootDocument({ children }: { children: ReactNode }) {
               {children}
             </TooltipProvider>
             <AppToaster />
+            {/* Renders nothing of its own: it owns Sentry's floating "Report a
+                problem" button, which lives in its own shadow DOM off <body>.
+                Here rather than in the app shell so the marketing tree, the
+                auth tree and the error document offer it too. */}
+            <FeedbackWidget />
             {import.meta.env.DEV ? (
+              // Opposite corner from the feedback button, which mirrors with
+              // the text direction: two floating triggers on the same pixels
+              // means one of them cannot be clicked, and in `ar` the button
+              // covers exactly where this one used to sit.
               <TanStackDevtools
-                config={{ position: 'bottom-right' }}
+                config={{
+                  position: dir === 'rtl' ? 'bottom-right' : 'bottom-left',
+                }}
                 plugins={[
                   {
                     name: 'TanStack Router',

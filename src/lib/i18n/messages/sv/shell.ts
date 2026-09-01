@@ -365,6 +365,31 @@ const messages = {
   'error.root': 'Något kom bort från rutten',
   'error.session': 'Din åtkomst till arbetsytan har ändrats',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Rapportera ett problem',
+  'feedback.formTitle': 'Rapportera ett problem',
+  'feedback.messageLabel': 'Vad är fel, eller vad borde ändras?',
+  'feedback.messagePlaceholder':
+    'Vad förväntade du dig, och vad hände i stället?',
+  'feedback.emailLabel': 'Mejladress',
+  'feedback.emailPlaceholder': 'du@example.com',
+  'feedback.isRequiredLabel': '(obligatoriskt)',
+  'feedback.submitButtonLabel': 'Skicka rapporten',
+  'feedback.cancelButtonLabel': 'Avbryt',
+  'feedback.confirmButtonLabel': 'Bekräfta',
+  'feedback.addScreenshotButtonLabel': 'Lägg till en skärmbild',
+  'feedback.removeScreenshotButtonLabel': 'Ta bort skärmbilden',
+  'feedback.highlightToolText': 'Markera',
+  'feedback.hideToolText': 'Dölj',
+  'feedback.successMessageText': 'Tack — vi har din rapport.',
+  'feedback.errorEmptyMessageText':
+    'Skriv en mening först — en tom rapport säger oss ingenting.',
+  'feedback.errorTimeoutText':
+    'Det tar för lång tid, och vi kan inte bekräfta att rapporten skickades.',
+  'feedback.errorForbiddenText': 'Den här sidan får inte skicka rapporter.',
+  'feedback.errorGenericText':
+    'Det gick inte att skicka. Kontrollera anslutningen och om en annonsblockerare är i vägen.',
+
   'notFound.eyebrow': 'Fel 404',
   'notFound.title': 'Den här sidan finns inte på kartan',
   'notFound.body':

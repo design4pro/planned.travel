@@ -335,6 +335,33 @@ const messages = {
   'error.root': 'Ada yang keluar jalur',
   'error.session': 'Akses ruang kerja Anda berubah',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Laporkan masalah',
+  'feedback.formTitle': 'Laporkan masalah',
+  'feedback.messageLabel': 'Apa yang salah, atau apa yang perlu diubah?',
+  'feedback.messagePlaceholder':
+    'Apa yang Anda harapkan, dan apa yang terjadi?',
+  'feedback.emailLabel': 'Alamat email',
+  'feedback.emailPlaceholder': 'anda@contoh.com',
+  'feedback.isRequiredLabel': '(wajib)',
+  'feedback.submitButtonLabel': 'Kirim laporan',
+  'feedback.cancelButtonLabel': 'Batal',
+  'feedback.confirmButtonLabel': 'Konfirmasi',
+  'feedback.addScreenshotButtonLabel': 'Tambahkan tangkapan layar',
+  'feedback.removeScreenshotButtonLabel': 'Hapus tangkapan layar',
+  'feedback.highlightToolText': 'Sorot',
+  'feedback.hideToolText': 'Sembunyikan',
+  'feedback.successMessageText':
+    'Terima kasih — laporan Anda sudah kami terima.',
+  'feedback.errorEmptyMessageText':
+    'Tulis satu kalimat dulu — laporan kosong tidak memberi tahu kami apa pun.',
+  'feedback.errorTimeoutText':
+    'Ini terlalu lama, dan kami tidak bisa memastikan laporannya terkirim.',
+  'feedback.errorForbiddenText':
+    'Halaman ini tidak diizinkan mengirim laporan.',
+  'feedback.errorGenericText':
+    'Gagal terkirim. Periksa koneksi, dan apakah ada pemblokir iklan yang menghalangi.',
+
   'notFound.eyebrow': 'Galat 404',
   'notFound.title': 'Halaman ini tidak ada di peta',
   'notFound.body':
