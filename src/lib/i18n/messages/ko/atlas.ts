@@ -134,7 +134,7 @@ const messages = {
   'panel.stat.visits': '방문',
   'panel.stat.visitsCaption': '기록된 모든 도착',
   'panel.stat.trips': '내 여행',
-  'panel.stat.tripsCaption': '참여한 끝난 여행만 셉니다',
+  'panel.stat.tripsCaption': '참여한 모든 여행',
   'panel.stat.cities': '도시',
   'panel.stat.citiesCaption': '묵거나 들른 도시',
   'panel.stat.days': '여행 일수',

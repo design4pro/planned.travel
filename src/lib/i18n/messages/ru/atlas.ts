@@ -150,8 +150,7 @@ const messages = {
   'panel.stat.visits': 'Визиты',
   'panel.stat.visitsCaption': 'Каждое записанное прибытие',
   'panel.stat.trips': 'Ваши поездки',
-  'panel.stat.tripsCaption':
-    'Только завершённые поездки, в которых вы участвуете',
+  'panel.stat.tripsCaption': 'Все поездки, в которых вы участвуете',
   'panel.stat.cities': 'Города',
   'panel.stat.citiesCaption': 'Города, где вы ночевали или делали остановку',
   'panel.stat.days': 'Дни в пути',

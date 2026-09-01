@@ -154,7 +154,7 @@ const messages = {
   'panel.stat.visits': 'Návštěvy',
   'panel.stat.visitsCaption': 'Každý zaznamenaný příjezd',
   'panel.stat.trips': 'Vaše cesty',
-  'panel.stat.tripsCaption': 'Jen dokončené cesty, kterých se účastníte',
+  'panel.stat.tripsCaption': 'Všechny cesty, kterých se účastníte',
   'panel.stat.cities': 'Města',
   'panel.stat.citiesCaption': 'Města, kde jste přespali nebo zastavili',
   'panel.stat.days': 'Dny na cestách',

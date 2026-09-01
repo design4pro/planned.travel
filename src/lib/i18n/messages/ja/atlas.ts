@@ -134,7 +134,7 @@ const messages = {
   'panel.stat.visits': '訪問',
   'panel.stat.visitsCaption': '記録されたすべての到着',
   'panel.stat.trips': 'あなたの旅行',
-  'panel.stat.tripsCaption': '参加した完了済みの旅行のみ',
+  'panel.stat.tripsCaption': '参加しているすべての旅行',
   'panel.stat.cities': '都市',
   'panel.stat.citiesCaption': '泊まった・立ち寄った街',
   'panel.stat.days': '旅の日数',

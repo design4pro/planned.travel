@@ -154,7 +154,7 @@ const messages = {
   'panel.stat.visits': 'Visites',
   'panel.stat.visitsCaption': 'Cada arribada registrada',
   'panel.stat.trips': 'Els teus viatges',
-  'panel.stat.tripsCaption': 'Només viatges acabats en què participes',
+  'panel.stat.tripsCaption': 'Tots els viatges en què participes',
   'panel.stat.cities': 'Ciutats',
   'panel.stat.citiesCaption': 'Ciutats on has dormit o has fet parada',
   'panel.stat.days': 'Dies fora',

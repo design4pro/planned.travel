@@ -133,7 +133,7 @@ const messages = {
   'panel.stat.visits': 'Lượt thăm',
   'panel.stat.visitsCaption': 'Mọi lần đặt chân được ghi lại',
   'panel.stat.trips': 'Chuyến đi của bạn',
-  'panel.stat.tripsCaption': 'Chỉ các chuyến đã hoàn thành mà bạn tham gia',
+  'panel.stat.tripsCaption': 'Mọi chuyến đi bạn tham gia',
   'panel.stat.cities': 'Thành phố',
   'panel.stat.citiesCaption': 'Nơi bạn đã nghỉ đêm hoặc dừng chân',
   'panel.stat.days': 'Ngày xa nhà',

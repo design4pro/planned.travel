@@ -147,7 +147,7 @@ const messages = {
   'panel.stat.visits': 'Bezoeken',
   'panel.stat.visitsCaption': 'Elke vastgelegde aankomst',
   'panel.stat.trips': 'Jouw reizen',
-  'panel.stat.tripsCaption': 'Alleen afgeronde reizen waar je bij bent',
+  'panel.stat.tripsCaption': 'Alle reizen waar je bij bent',
   'panel.stat.cities': 'Steden',
   'panel.stat.citiesCaption': 'Plaatsen waar je sliep of stopte',
   'panel.stat.days': 'Dagen onderweg',

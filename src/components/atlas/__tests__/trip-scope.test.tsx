@@ -95,26 +95,30 @@ function atlasScreen(): {
 }
 
 /**
- * The figure a panel tile prints, found through the label over it.
+ * One panel tile, found through the label printed over it.
  *
  * Walks out from the label to the first ancestor that holds a numeral, which is
  * the tile itself — a tile is the only thing on this panel that pairs the two.
- * Reading it this way is what makes the assertion about the *pairing* rather
- * than about two strings that happen to be on the same screen.
+ * Reading it this way is what makes the assertions about the *pairing* rather
+ * than about strings that happen to be on the same screen.
  */
-function tileFigure(panel: HTMLElement, label: string): string {
+function tile(panel: HTMLElement, label: string): HTMLElement {
   // Bounded by the panel: the card renders beside it in the same document and
   // carries numerals of its own, so a walk let out of the panel could answer
   // this question with the other surface's figure instead of failing.
   let node: HTMLElement | null = within(panel).getByText(label)
   while (node !== null && panel.contains(node)) {
-    const numeral = node.querySelector('[data-numeric]')
-    if (numeral !== null) {
-      return numeral.textContent
+    if (node.querySelector('[data-numeric]') !== null) {
+      return node
     }
     node = node.parentElement
   }
   throw new Error(`no stat tile labelled ${label}`)
+}
+
+/** The figure that tile prints. */
+function tileFigure(panel: HTMLElement, label: string): string {
+  return tile(panel, label).querySelector('[data-numeric]')?.textContent ?? ''
 }
 
 /** One label-and-figure pair of the card's fact grid, by position. */
@@ -138,7 +142,31 @@ describe('the two trip figures on one atlas screen', () => {
     const { panel } = atlasScreen()
 
     expect(tileFigure(panel, 'Your trips')).toBe('0')
-    expect(within(panel).getByText('Finished trips you are on')).toBeTruthy()
+    expect(within(panel).getByText('Every trip you are on')).toBeTruthy()
+  })
+
+  /**
+   * Membership is the *whole* of what the tile filters by, so the copy may not
+   * narrow it further.
+   *
+   * The caption read "Finished trips only" before this ticket and kept the
+   * claim through the rename, as "Finished trips you are on". Measured against
+   * the query it labels, the claim is false: `recomputeTravelStats` filters
+   * `trips` by `memberOfTrip()` and — on a year row — by `start_date`, and
+   * by nothing else. Two trips dated 2099, one of them with no end date at all,
+   * come back in the all-time row as `tripCount: 2`.
+   *
+   * That is this file's own defect one word further in. A reader who sees the
+   * cards below sum higher than this tile and is told the tile counts finished
+   * trips has been handed a reason, and it is the wrong one — the gap is
+   * whose trips these are, not whether they are over.
+   */
+  it('claims no completion the figure does not require', () => {
+    const { panel } = atlasScreen()
+
+    expect(said(tile(panel, 'Your trips').textContent)).not.toMatch(
+      /finished|completed|only/,
+    )
   })
 
   it("names the country card's tally as the workspace's", () => {

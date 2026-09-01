@@ -194,9 +194,16 @@ const messages = {
    * drops the qualifier puts that locale back where it started. The caption is
    * not a second chance to say it: this tile prints the recorded distance there
    * instead as soon as there is one.
+   *
+   * What the caption may not do is narrow the population further than the query
+   * does. It read "Finished trips only", which is not what is counted:
+   * `recomputeTravelStats` filters by membership and, on a year row, by
+   * `start_date` — a trip that has not left yet is in this figure. Left as it
+   * was, the caption answered the reader's "why is this lower than the cards?"
+   * with the wrong reason.
    */
   'panel.stat.trips': 'Your trips',
-  'panel.stat.tripsCaption': 'Finished trips you are on',
+  'panel.stat.tripsCaption': 'Every trip you are on',
   'panel.stat.cities': 'Cities',
   'panel.stat.citiesCaption': 'Towns you slept or stopped in',
   'panel.stat.days': 'Days away',

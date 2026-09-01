@@ -145,7 +145,7 @@ const messages = {
   'panel.stat.visits': 'Látogatások',
   'panel.stat.visitsCaption': 'Minden rögzített megérkezés',
   'panel.stat.trips': 'Az utazásai',
-  'panel.stat.tripsCaption': 'Csak a befejezett utazásai',
+  'panel.stat.tripsCaption': 'Minden utazása, amelyen részt vesz',
   'panel.stat.cities': 'Városok',
   'panel.stat.citiesCaption': 'Települések, ahol megszállt vagy megállt',
   'panel.stat.days': 'Úton töltött napok',

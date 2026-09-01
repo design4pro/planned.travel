@@ -146,7 +146,7 @@ const messages = {
   'panel.stat.visits': 'Ziyaretler',
   'panel.stat.visitsCaption': 'Kayıtlı her varış',
   'panel.stat.trips': 'Gezileriniz',
-  'panel.stat.tripsCaption': 'Yalnızca katıldığınız tamamlanan geziler',
+  'panel.stat.tripsCaption': 'Katıldığınız tüm geziler',
   'panel.stat.cities': 'Şehirler',
   'panel.stat.citiesCaption': 'Konakladığınız veya durduğunuz şehirler',
   'panel.stat.days': 'Yolda geçen günler',

@@ -150,7 +150,7 @@ const messages = {
   'panel.stat.visits': 'Візити',
   'panel.stat.visitsCaption': 'Кожне записане прибуття',
   'panel.stat.trips': 'Ваші поїздки',
-  'panel.stat.tripsCaption': 'Лише завершені поїздки, у яких ви берете участь',
+  'panel.stat.tripsCaption': 'Усі поїздки, у яких ви берете участь',
   'panel.stat.cities': 'Міста',
   'panel.stat.citiesCaption': 'Міста, де ви ночували або зупинялися',
   'panel.stat.days': 'Дні в дорозі',

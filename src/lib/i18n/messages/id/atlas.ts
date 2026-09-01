@@ -134,7 +134,7 @@ const messages = {
   'panel.stat.visits': 'Kunjungan',
   'panel.stat.visitsCaption': 'Setiap kedatangan yang tercatat',
   'panel.stat.trips': 'Perjalanan Anda',
-  'panel.stat.tripsCaption': 'Hanya perjalanan selesai yang Anda ikuti',
+  'panel.stat.tripsCaption': 'Semua perjalanan yang Anda ikuti',
   'panel.stat.cities': 'Kota',
   'panel.stat.citiesCaption': 'Kota tempat Anda menginap atau singgah',
   'panel.stat.days': 'Hari bepergian',

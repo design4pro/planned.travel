@@ -163,7 +163,7 @@ const messages = {
   'panel.stat.visits': 'الزيارات',
   'panel.stat.visitsCaption': 'كل وصول مسجَّل',
   'panel.stat.trips': 'رحلاتك',
-  'panel.stat.tripsCaption': 'الرحلات المنتهية التي شاركت فيها',
+  'panel.stat.tripsCaption': 'كل رحلة تشارك فيها',
   'panel.stat.cities': 'المدن',
   'panel.stat.citiesCaption': 'مدن بتَّ أو توقفت فيها',
   'panel.stat.days': 'أيام السفر',

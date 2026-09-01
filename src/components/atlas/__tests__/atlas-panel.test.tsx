@@ -757,7 +757,7 @@ describe('the stats section', () => {
         distanceMetres: null,
       },
     })
-    expect(screen.getByText('Finished trips you are on')).toBeTruthy()
+    expect(screen.getByText('Every trip you are on')).toBeTruthy()
     expect(screen.getByText('Nothing pinned on a trip yet')).toBeTruthy()
   })
 

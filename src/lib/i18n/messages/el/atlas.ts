@@ -139,7 +139,7 @@ const messages = {
   'panel.stat.visits': 'Επισκέψεις',
   'panel.stat.visitsCaption': 'Κάθε καταγεγραμμένη άφιξη',
   'panel.stat.trips': 'Τα ταξίδια σας',
-  'panel.stat.tripsCaption': 'Μόνο ολοκληρωμένα ταξίδια στα οποία συμμετέχετε',
+  'panel.stat.tripsCaption': 'Κάθε ταξίδι στο οποίο συμμετέχετε',
   'panel.stat.cities': 'Πόλεις',
   'panel.stat.citiesCaption': 'Πόλεις όπου κοιμηθήκατε ή σταματήσατε',
   'panel.stat.days': 'Ημέρες μακριά',

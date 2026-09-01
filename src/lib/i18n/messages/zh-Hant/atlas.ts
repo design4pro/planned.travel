@@ -133,7 +133,7 @@ const messages = {
   'panel.stat.visits': '造訪',
   'panel.stat.visitsCaption': '每一次記錄在案的抵達',
   'panel.stat.trips': '你的行程',
-  'panel.stat.tripsCaption': '只統計你參與的已完成行程',
+  'panel.stat.tripsCaption': '你參與的每一個行程',
   'panel.stat.cities': '城市',
   'panel.stat.citiesCaption': '住過或停留過的城市',
   'panel.stat.days': '在外天數',

@@ -147,7 +147,7 @@ const messages = {
   'panel.stat.visits': 'Besök',
   'panel.stat.visitsCaption': 'Varje registrerad ankomst',
   'panel.stat.trips': 'Dina resor',
-  'panel.stat.tripsCaption': 'Bara avslutade resor du är med på',
+  'panel.stat.tripsCaption': 'Alla resor du är med på',
   'panel.stat.cities': 'Städer',
   'panel.stat.citiesCaption': 'Orter du sov eller stannade i',
   'panel.stat.days': 'Dagar på resa',
