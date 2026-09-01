@@ -448,9 +448,9 @@ function refKey(ref: TimelineItemInput): string {
  *   be able to reorder the rows that do exist, which is the rule
  *   `reorderPlanFn` has always stated. A foreign tenant's id is unknown here for the
  *   same reason it is unknown everywhere else: the two reads below are scoped.
- * - **Known ids the client omitted are appended at their current relative
- *   position**, so a partial list cannot silently unposition an item somebody else
- *   added between the client's read and its write.
+ * - **Known ids the client omitted go back behind the row they currently follow**,
+ *   so a partial list cannot silently unposition an item somebody else added
+ *   between the client's read and its write.
  * - **`clearTime` must be a subset of `items`.** An entry outside it is dropped with
  *   everything else that names a row this day does not hold.
  *
@@ -510,31 +510,29 @@ export async function reorderDayTimeline(
     seen.add(key)
     wanted.push(row)
   }
-  /** What the caller actually asked to move — the only rows `clearTime` may name. */
-  const requested = new Set(seen)
-
-  // Anything the client left out goes back in behind the neighbour it currently
-  // follows, so an omission moves nothing rather than sending a row to the end.
-  for (const [at, entry] of current.entries()) {
-    const key = refKey(entry.ref)
-    if (seen.has(key)) continue
-    let insertAt = 0
-    for (const earlier of current.slice(0, at).reverse()) {
-      const index = wanted.findIndex(
-        (ref) => refKey(ref) === refKey(earlier.ref),
-      )
-      if (index >= 0) {
-        insertAt = index + 1
-        break
-      }
-    }
-    seen.add(key)
-    wanted.splice(insertAt, 0, entry.ref)
-  }
-
+  // Resolved here, while `seen` still holds exactly what the caller asked to move:
+  // the loop below adds the rows the caller left out, and those may not lose a time.
   const cleared = new Set(
-    values.clearTime?.map(refKey).filter((key) => requested.has(key)) ?? [],
+    values.clearTime?.map(refKey).filter((key) => seen.has(key)) ?? [],
   )
+
+  // Anything the client left out goes back in behind the row it currently follows,
+  // so an omission moves nothing rather than sending a row to the end. Every earlier
+  // entry of `current` is already in `wanted` — it either came from the client's list
+  // or was spliced in by an earlier turn — so that row is always the anchor.
+  let previousKey: string | null = null
+  for (const entry of current) {
+    const key = refKey(entry.ref)
+    if (!seen.has(key)) {
+      const anchor =
+        previousKey === null
+          ? -1
+          : wanted.findIndex((ref) => refKey(ref) === previousKey)
+      seen.add(key)
+      wanted.splice(anchor + 1, 0, entry.ref)
+    }
+    previousKey = key
+  }
 
   const statements = wanted.map((ref, position) => {
     const dropTime = cleared.has(refKey(ref))

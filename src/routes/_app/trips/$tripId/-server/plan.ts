@@ -248,6 +248,11 @@ const timelineItem = z.strictObject(
   { error: 'A timeline item is a stop or a note, named by its id.' },
 )
 
+/** `kind/id` — the pair is the identity, because both tables mint ids the same way. */
+function timelineKey(item: z.infer<typeof timelineItem>): string {
+  return `${item.kind}/${item.id}`
+}
+
 /**
  * The board's new arrangement: for each day a drag touched, the whole sequence.
  *
@@ -267,11 +272,9 @@ export const reorderPlanInputSchema = z.strictObject({
           clearTime: z.array(timelineItem).max(200).optional(),
         })
         .superRefine((day, ctx) => {
-          const moving = new Set(
-            day.items.map((item) => `${item.kind}/${item.id}`),
-          )
+          const moving = new Set(day.items.map(timelineKey))
           for (const item of day.clearTime ?? []) {
-            if (moving.has(`${item.kind}/${item.id}`)) continue
+            if (moving.has(timelineKey(item))) continue
             ctx.addIssue({
               code: 'custom',
               message: 'A time can only be dropped by the move that drops it',

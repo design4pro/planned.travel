@@ -246,15 +246,19 @@ export interface TimelineItem {
 export function mergeDayTimeline<TItem extends TimelineItem>(
   items: ReadonlyArray<TItem>,
 ): Array<TItem> {
-  const byPosition = items
-    .map((item, index) => ({ item, index }))
-    .sort((a, b) => a.item.position - b.item.position || a.index - b.index)
+  // `sort` is stable, so items sharing a position keep the order they arrived in.
+  const byPosition = [...items].sort((a, b) => a.position - b.position)
 
+  const walked: Array<{
+    item: TItem
+    order: number
+    inherited: string | null
+  }> = []
   let carried: string | null = null
-  const walked = byPosition.map((entry, order) => {
-    if (entry.item.time !== null) carried = entry.item.time
-    return { item: entry.item, order, inherited: carried }
-  })
+  for (const [order, item] of byPosition.entries()) {
+    if (item.time !== null) carried = item.time
+    walked.push({ item, order, inherited: carried })
+  }
 
   return walked
     .sort((a, b) => {
