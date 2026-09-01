@@ -164,6 +164,12 @@ const messages = {
   'appearance.map.workspace': 'Segueix l’espai de treball',
   'appearance.map.light': 'Paper — clar',
   'appearance.map.dark': 'Carbó — fosc',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'En una pantalla compartida',
+  'appearance.privacy.codesLabel':
+    'Amaga els codis de confirmació fins que els demani',
+  'appearance.privacy.codesHint':
+    'Les referències de reserva i els números de confirmació es mantenen ocults a l’escriptori de reserves i als transports fins que hi passis per sobre, hi posis el focus o els toquis. Els preus no s’amaguen mai.',
   'appearance.saveFailed': 'Aquest canvi no s’ha desat',
   'appearance.saveFailedBody':
     'Aquí es veu, però el pròxim dispositiu des del qual entris no el tindrà.',

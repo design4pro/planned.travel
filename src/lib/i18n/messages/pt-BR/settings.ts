@@ -162,6 +162,12 @@ const messages = {
   'appearance.map.workspace': 'Seguir o espaço de trabalho',
   'appearance.map.light': 'Papel — claro',
   'appearance.map.dark': 'Carvão — escuro',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'Em uma tela compartilhada',
+  'appearance.privacy.codesLabel':
+    'Ocultar os códigos de confirmação até eu pedir',
+  'appearance.privacy.codesHint':
+    'As referências de reserva e os números de confirmação ficam mascarados na mesa de reservas e nos transportes até você passar o cursor, focar ou tocar neles. Os preços nunca são ocultados.',
   'appearance.saveFailed': 'Essa mudança não foi guardada',
   'appearance.saveFailedBody':
     'Aqui ela aparece, mas o próximo dispositivo de onde você entrar não vai ter.',

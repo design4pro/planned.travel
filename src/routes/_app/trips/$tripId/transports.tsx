@@ -13,6 +13,7 @@ import {
 } from '#/components/modules/transports'
 import { Card, StatCard } from '#/components/ui'
 import { loadTransportDeskFn } from '#/server/fns/transports'
+import { loadDisplayPreferences } from '../../-server/settings'
 import {
   formatDistance,
   formatMoneyMinor,
@@ -24,8 +25,20 @@ import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/transports')({
-  loader: ({ params }) =>
-    loadTransportDeskFn({ data: { tripId: params.tripId } }),
+  /*
+   * Two reads, one round trip. Without this the transport card's mask has no
+   * channel at all: `TransportsTimeline` is a `components/modules` component, so
+   * it never fetches, and neither `src/server/fns/transports.ts` nor
+   * `src/routes/_app/-server/trip.ts` is free to carry the preference — so the
+   * preference reaches this tab through the route or not at all.
+   */
+  loader: async ({ params }) => {
+    const [desk, display] = await Promise.all([
+      loadTransportDeskFn({ data: { tripId: params.tripId } }),
+      loadDisplayPreferences(),
+    ])
+    return { ...desk, maskCodes: display.maskConfirmationCodes }
+  },
   pendingComponent: TransportsPending,
   errorComponent: ({ error }) => (
     <AppFrame>
@@ -119,6 +132,7 @@ function TransportsPage() {
           transports={data.transports}
           days={data.days}
           currency={data.currency}
+          maskCodes={data.maskCodes}
           newLegOpen={newLegOpen}
           onNewLegOpenChange={setNewLegOpen}
         />

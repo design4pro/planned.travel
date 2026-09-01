@@ -159,6 +159,12 @@ const messages = {
   'appearance.map.workspace': 'Ακολούθησε τον χώρο εργασίας',
   'appearance.map.light': 'Χαρτί — φωτεινό',
   'appearance.map.dark': 'Ανθρακί — σκούρο',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'Σε κοινόχρηστη οθόνη',
+  'appearance.privacy.codesLabel':
+    'Απόκρυψη των κωδικών επιβεβαίωσης μέχρι να τους ζητήσω',
+  'appearance.privacy.codesHint':
+    'Οι κωδικοί κράτησης και οι αριθμοί επιβεβαίωσης παραμένουν καλυμμένοι στις κρατήσεις και στις μετακινήσεις, μέχρι να τους δείξετε, να τους εστιάσετε ή να τους πατήσετε. Οι τιμές δεν κρύβονται ποτέ.',
   'appearance.saveFailed': 'Η αλλαγή δεν αποθηκεύτηκε',
   'appearance.saveFailedBody':
     'Φαίνεται εδώ, αλλά η επόμενη συσκευή από την οποία θα συνδεθείτε δεν θα την έχει.',

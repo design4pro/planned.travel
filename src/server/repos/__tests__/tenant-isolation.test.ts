@@ -222,6 +222,7 @@ import type {
   TenantScope,
 } from '../base'
 import type { TaskBindings } from '#/server/queue/types'
+import type { UserSettings } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
 
 /* -------------------------------------------------------------------------------------------------
@@ -2971,6 +2972,73 @@ describe('tenant isolation', () => {
       ]) {
         expect(await refusalCode(attempt)).toBe('FORBIDDEN')
       }
+    })
+  })
+  /**
+   * `updateUserSettings`, specified against what it actually does rather than
+   * against what a guard would do.
+   *
+   * It takes no row id from the caller: it resolves its row through
+   * `ensureUserSettings`, which looks the user id up **inside the tenant scope**
+   * and inserts a fresh row stamped with the caller's own `organization_id` when
+   * none exists. So a user id belonging to B, handed to a write made from A, is
+   * never *rejected* — it is ensured into A's organization, and B's row stays
+   * structurally unreachable. Asserting a `NotFoundError` here would assert a
+   * refusal this function cannot make.
+   */
+  describe('a display preference written for a foreign user id', () => {
+    /** The whole row, so a single-field check cannot pass a partial clobber. */
+    async function betaRow(): Promise<UserSettings | null> {
+      return getUserSettings(beta.tenant.scope, beta.tenant.ownerUserId)
+    }
+
+    it('lands in the caller’s own organization and leaves B’s row byte-identical', async () => {
+      const before = await betaRow()
+      expect(before).not.toBeNull()
+
+      await updateUserSettings(
+        alpha.tenant.scope,
+        { maskConfirmationCodes: true },
+        beta.tenant.ownerUserId,
+      )
+
+      // A now has a row for that user id, carrying the flag, in its own organization.
+      const written = await getUserSettings(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+      )
+      expect(written?.organizationId).toBe(alpha.tenant.organizationId)
+      expect(written?.maskConfirmationCodes).toBe(true)
+
+      // And B's own row is exactly what it was — every column, not one.
+      expect(await betaRow()).toEqual(before)
+    })
+
+    /**
+     * Not an isolation case, and it is here because this is the only test file
+     * this stage owns.
+     *
+     * The assertion is made through the **merge** rather than through the stored
+     * row on purpose: `getEffectiveSettings` hand-builds its answer key by key,
+     * so a column that reaches `user_settings` and the write validator but never
+     * reaches that literal passes a row assertion and fails this one — a switch
+     * that writes a boolean nothing can ever read.
+     */
+    it('reaches the effective settings of its own tenant and of nobody else’s', async () => {
+      expect(
+        (await getEffectiveSettings(alpha.tenant.scope)).maskConfirmationCodes,
+      ).toBe(false)
+
+      await updateUserSettings(alpha.tenant.scope, {
+        maskConfirmationCodes: true,
+      })
+
+      expect(
+        (await getEffectiveSettings(alpha.tenant.scope)).maskConfirmationCodes,
+      ).toBe(true)
+      expect(
+        (await getEffectiveSettings(beta.tenant.scope)).maskConfirmationCodes,
+      ).toBe(false)
     })
   })
 })

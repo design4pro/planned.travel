@@ -13,6 +13,7 @@ import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { RESERVATION_STATUSES, RESERVATION_TYPES } from '#/server/db/schema'
 import { createLogger, serializeError } from '#/server/observability'
 import {
+  clearReservationImported,
   countTripReservationsByStatus,
   createExpense,
   createReservation,
@@ -350,10 +351,50 @@ export async function syncReservationExpense(
 
 /* ------------------------------------------------------------------ writes */
 
-/** What a booking write answers with: the row, and what the ledger did about it. */
+/**
+ * What became of a booking's import marker when the booking was saved.
+ *
+ * `cleared` on every successful save, whether or not there was a marker to
+ * clear: the writer is idempotent, and a second read to avoid a null-to-null
+ * write would cost more than the write while leaving a race in which a marker
+ * survives a save — the one failure the reader would notice.
+ *
+ * `failed` is the partial success. D1 has already committed the booking by the
+ * time this runs, so a refused clear is reported rather than thrown: turning it
+ * into an error would invite a retry that produces a second booking.
+ */
+export type MarkerOutcome = 'cleared' | 'failed'
+
+/** What a booking write answers with: the row, what the ledger did, and what the marker did. */
 export interface BookingWriteResult {
   readonly reservationId: string
   readonly ledger: LedgerOutcome
+  /** Only a save can clear a marker, so only the update path reports one. */
+  readonly marker?: MarkerOutcome
+}
+
+/**
+ * Reviewing an imported booking *is* saving it, and not a second chore after it.
+ *
+ * Called after the update has succeeded and inside the same handler, so the act
+ * a reader takes — open it, check it, save it — is the act that takes the
+ * "nobody has looked at this" marker off the card.
+ */
+async function clearImportMarker(
+  scope: TenantScope,
+  reservationId: string,
+): Promise<MarkerOutcome> {
+  try {
+    await clearReservationImported(scope, reservationId)
+    return 'cleared'
+  } catch (cause) {
+    log().warn('booking import marker not cleared', {
+      reservationId,
+      organizationId: scope.ctx.organizationId,
+      ...serializeError(cause),
+    })
+    return 'failed'
+  }
 }
 
 export const createBookingFn = createServerFn({ method: 'POST' })
@@ -399,6 +440,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
       payload(data),
     )
     const ledger = await syncReservationExpense(scope, { reservation, trip })
+    const marker = await clearImportMarker(scope, reservation.id)
 
     await mirrorToRoom(scope, data.tripId, [
       patch('reservation', data.reservationId, {
@@ -414,7 +456,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
       entityId: data.reservationId,
       metadata: auditMetadata(data),
     })
-    return { reservationId: data.reservationId, ledger }
+    return { reservationId: data.reservationId, ledger, marker }
   })
 
 /**
@@ -513,6 +555,23 @@ export interface BookingRow {
    * without being handed a handle it could send back.
    */
   readonly hasLedgerLine: boolean
+  /**
+   * When a machine wrote this booking and no person has looked at it since.
+   *
+   * An ISO instant rather than a `Date`, because this crosses the wire; `null`
+   * is both "typed by a person" and "already reviewed", which is the same thing
+   * as far as the desk is concerned — there is nothing left to check.
+   */
+  readonly importedAt: string | null
+  /**
+   * The journey this booking is for, when it is a booking *of* one.
+   *
+   * A booking of the transport kind is not duplicated into the transports tab:
+   * the desk lists `reservations` and that tab lists `transports`, and this is
+   * the quiet link between the two so a reader can walk from one to the other in
+   * a click without either list claiming to own the other's record.
+   */
+  readonly transportId: string | null
 }
 
 /** One planned stop, offered under the day it sits on. */
@@ -622,6 +681,8 @@ export async function bookingDeskPayload(
       dayId: row.dayId,
       assignmentId: row.assignmentId,
       hasLedgerLine: row.expenseId !== null,
+      importedAt: row.importedAt?.toISOString() ?? null,
+      transportId: row.transportId,
     })),
   }
 }

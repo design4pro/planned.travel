@@ -7,13 +7,26 @@ import { ErrorPanel } from '#/components/layout/error-state'
 import { BookingsTimeline, NewBookingAction } from '#/components/modules/book'
 import { Card, ProgressRing, StatCard } from '#/components/ui'
 import { loadBookingDeskFn } from '#/server/fns/reservations'
+import { loadDisplayPreferences } from '../../-server/settings'
 import { formatMoneyMinor, formatNumber, pluralise } from '../../-lib/format'
-import { HeaderSkeleton, StatsSkeleton } from '../../-ui/scaffold'
+import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/book')({
-  loader: ({ params }) =>
-    loadBookingDeskFn({ data: { tripId: params.tripId } }),
+  /*
+   * Two reads, one round trip. The reader's display preference is not part of
+   * the desk payload — the transports tab needs the same boolean and a flag on
+   * one desk payload would leave the other needing a second, differently shaped
+   * copy of it — so it is fetched beside the desk rather than after it, and the
+   * tab still settles in the time the slower of the two takes.
+   */
+  loader: async ({ params }) => {
+    const [desk, display] = await Promise.all([
+      loadBookingDeskFn({ data: { tripId: params.tripId } }),
+      loadDisplayPreferences(),
+    ])
+    return { ...desk, maskCodes: display.maskConfirmationCodes }
+  },
   pendingComponent: BookPending,
   errorComponent: ({ error }) => (
     <AppFrame>
@@ -107,6 +120,7 @@ function BookPage() {
           bookings={data.bookings}
           days={data.days}
           currency={data.currency}
+          maskCodes={data.maskCodes}
           newBookingOpen={newBookingOpen}
           onNewBookingOpenChange={setNewBookingOpen}
         />
@@ -115,12 +129,20 @@ function BookPage() {
   )
 }
 
+/**
+ * The header and the stat tiles settled while the desk was still arriving, so the
+ * desk gets its own rows: without them the two panels pop in under a header that
+ * has stopped moving, which reads as a layout shift rather than as a load.
+ */
 function BookPending() {
   return (
     <AppFrame>
       <AppSections>
         <HeaderSkeleton />
         <StatsSkeleton />
+        <Card padding="none">
+          <RowsSkeleton rows={5} />
+        </Card>
       </AppSections>
     </AppFrame>
   )

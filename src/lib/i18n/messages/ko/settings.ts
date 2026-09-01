@@ -139,6 +139,11 @@ const messages = {
   'appearance.map.workspace': '워크스페이스 따르기',
   'appearance.map.light': '종이 — 라이트',
   'appearance.map.dark': '숯 — 다크',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': '함께 보는 화면에서',
+  'appearance.privacy.codesLabel': '확인 코드는 요청할 때까지 가리기',
+  'appearance.privacy.codesHint':
+    '예약 번호와 확인 코드는 예약 데스크와 이동 화면에서 가려 두고, 마우스를 올리거나 초점을 맞추거나 탭할 때만 보여 줍니다. 금액은 절대 가리지 않습니다.',
   'appearance.saveFailed': '그 변경은 저장되지 않았어요',
   'appearance.saveFailedBody':
     '여기서는 보이지만, 다음에 다른 기기로 로그인하면 반영되지 않아요.',

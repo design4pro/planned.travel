@@ -166,6 +166,12 @@ const messages = {
   'appearance.map.workspace': 'Как в пространстве',
   'appearance.map.light': 'Бумага — светлая',
   'appearance.map.dark': 'Графит — тёмная',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'На общем экране',
+  'appearance.privacy.codesLabel':
+    'Скрывать коды подтверждения, пока я не попрошу',
+  'appearance.privacy.codesHint':
+    'Номера бронирований и коды подтверждения остаются скрытыми в разделе бронирований и в поездках, пока вы не наведёте на них курсор, не переведёте фокус или не коснётесь их. Цены не скрываются никогда.',
   'appearance.saveFailed': 'Это изменение не сохранилось',
   'appearance.saveFailedBody':
     'Здесь оно видно, но на следующем устройстве, откуда вы войдёте, его не будет.',
