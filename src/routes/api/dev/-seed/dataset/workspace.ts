@@ -36,16 +36,52 @@ import type {
  * as workspace members so splits, assignments, votes and chat have real names behind them.
  */
 export const people: ReadonlyArray<SeedPerson> = [
-  { key: 'rafal', name: 'Rafal Wolak', email: 'rafal@planned.travel', role: 'owner', colour: '#2F6F5E' },
-  { key: 'mika', name: 'Mika Tanaka', email: 'mika@planned.travel', role: 'admin', colour: '#C0392B' },
-  { key: 'jonas', name: 'Jonas Berg', email: 'jonas@planned.travel', role: 'member', colour: '#2563EB' },
-  { key: 'priya', name: 'Priya Raman', email: 'priya@planned.travel', role: 'member', colour: '#B26B08' },
+  {
+    key: 'rafal',
+    name: 'Rafal Wolak',
+    email: 'rafal@planned.travel',
+    role: 'owner',
+    colour: '#256256',
+  },
+  {
+    key: 'mika',
+    name: 'Mika Tanaka',
+    email: 'mika@planned.travel',
+    role: 'admin',
+    colour: '#b22f22',
+  },
+  {
+    key: 'jonas',
+    name: 'Jonas Berg',
+    email: 'jonas@planned.travel',
+    role: 'member',
+    colour: '#2563EB',
+  },
+  {
+    key: 'priya',
+    name: 'Priya Raman',
+    email: 'priya@planned.travel',
+    role: 'member',
+    colour: '#8a5305',
+  },
 ]
 
 /** Added on top of the eight `ensureDefaultCategories` slugs, which the places also use. */
 export const extraCategories: ReadonlyArray<SeedCategory> = [
-  { name: 'Temples & shrines', slug: 'temples-and-shrines', icon: 'church', colour: '#8A5A2B', sortOrder: 9 },
-  { name: 'Markets', slug: 'markets', icon: 'store', colour: '#0F766E', sortOrder: 10 },
+  {
+    name: 'Temples & shrines',
+    slug: 'temples-and-shrines',
+    icon: 'church',
+    colour: '#8A5A2B',
+    sortOrder: 9,
+  },
+  {
+    name: 'Markets',
+    slug: 'markets',
+    icon: 'store',
+    colour: '#0F766E',
+    sortOrder: 10,
+  },
 ]
 
 /* -------------------------------------------------------------------------------------------------
@@ -62,7 +98,11 @@ export const visitedCountries: ReadonlyArray<SeedVisitedCountry> = [
   {
     countryCode: 'FR',
     continent: 'Europe',
-    visits: [historic('2011-07-14'), historic('2018-05-20'), historic('2024-09-06')],
+    visits: [
+      historic('2011-07-14'),
+      historic('2018-05-20'),
+      historic('2024-09-06'),
+    ],
     note: 'Paris twice, then the Verdon gorge with the climbing club.',
   },
   {
@@ -113,15 +153,60 @@ export const visitedCountries: ReadonlyArray<SeedVisitedCountry> = [
 ]
 
 export const visitedRegions: ReadonlyArray<SeedVisitedRegion> = [
-  { countryCode: 'JP', regionCode: 'JP-13', regionName: 'Tokyo', visitedOn: historic('2019-04-02') },
-  { countryCode: 'IT', regionCode: 'IT-BZ', regionName: 'South Tyrol', visitedOn: day(-68) },
-  { countryCode: 'IT', regionCode: 'IT-RM', regionName: 'Lazio', visitedOn: historic('2013-06-01') },
-  { countryCode: 'PT', regionCode: 'PT-11', regionName: 'Lisbon', visitedOn: day(-3) },
-  { countryCode: 'PT', regionCode: 'PT-13', regionName: 'Porto', visitedOn: historic('2019-09-21') },
-  { countryCode: 'FR', regionCode: 'FR-75', regionName: 'Paris', visitedOn: historic('2011-07-14') },
-  { countryCode: 'US', regionCode: 'US-NY', regionName: 'New York', visitedOn: historic('2023-03-02') },
-  { countryCode: 'US', regionCode: 'US-UT', regionName: 'Utah', visitedOn: historic('2016-08-14') },
-  { countryCode: 'MA', regionCode: 'MA-07', regionName: 'Marrakech-Safi', visitedOn: day(-285) },
+  {
+    countryCode: 'JP',
+    regionCode: 'JP-13',
+    regionName: 'Tokyo',
+    visitedOn: historic('2019-04-02'),
+  },
+  {
+    countryCode: 'IT',
+    regionCode: 'IT-BZ',
+    regionName: 'South Tyrol',
+    visitedOn: day(-68),
+  },
+  {
+    countryCode: 'IT',
+    regionCode: 'IT-RM',
+    regionName: 'Lazio',
+    visitedOn: historic('2013-06-01'),
+  },
+  {
+    countryCode: 'PT',
+    regionCode: 'PT-11',
+    regionName: 'Lisbon',
+    visitedOn: day(-3),
+  },
+  {
+    countryCode: 'PT',
+    regionCode: 'PT-13',
+    regionName: 'Porto',
+    visitedOn: historic('2019-09-21'),
+  },
+  {
+    countryCode: 'FR',
+    regionCode: 'FR-75',
+    regionName: 'Paris',
+    visitedOn: historic('2011-07-14'),
+  },
+  {
+    countryCode: 'US',
+    regionCode: 'US-NY',
+    regionName: 'New York',
+    visitedOn: historic('2023-03-02'),
+  },
+  {
+    countryCode: 'US',
+    regionCode: 'US-UT',
+    regionName: 'Utah',
+    visitedOn: historic('2016-08-14'),
+  },
+  {
+    countryCode: 'MA',
+    regionCode: 'MA-07',
+    regionName: 'Marrakech-Safi',
+    visitedOn: day(-285),
+  },
 ]
 
 export const bucketList: ReadonlyArray<SeedBucketListItem> = [
@@ -230,7 +315,8 @@ export const journeys: ReadonlyArray<SeedJourney> = [
     description:
       'Written up from a notebook that got rained on twice. Two entries survived legibly, which is ' +
       'probably the right number.',
-    coverGradient: 'linear-gradient(135deg, #16794C 0%, #2F6F5E 55%, #131311 100%)',
+    coverGradient:
+      'linear-gradient(135deg, #136b45 0%, #256256 55%, #131311 100%)',
     tripSlug: 'dolomites-hut-to-hut',
     startedOn: day(-68),
     endedOn: day(-61),
@@ -294,8 +380,10 @@ export const journeys: ReadonlyArray<SeedJourney> = [
         photos: [
           {
             storageKey: 'demo/journeys/dolomites/tre-cime-north-faces.jpg',
-            thumbnailKey: 'demo/journeys/dolomites/tre-cime-north-faces-thumb.jpg',
-            caption: 'North faces from the path below Locatelli, about half five.',
+            thumbnailKey:
+              'demo/journeys/dolomites/tre-cime-north-faces-thumb.jpg',
+            caption:
+              'North faces from the path below Locatelli, about half five.',
             contentType: 'image/jpeg',
             sizeBytes: 4_112_880,
             width: 4_032,
@@ -310,7 +398,8 @@ export const journeys: ReadonlyArray<SeedJourney> = [
     title: 'A week on a roof in Marrakech',
     subtitle: 'Seven nights inside the medina walls, November 2025',
     description: 'One entry, written on the last morning, before the taxi.',
-    coverGradient: 'linear-gradient(135deg, #C0392B 0%, #B26B08 60%, #131311 100%)',
+    coverGradient:
+      'linear-gradient(135deg, #b22f22 0%, #8a5305 60%, #131311 100%)',
     tripSlug: 'marrakech-riad-week',
     startedOn: day(-285),
     endedOn: day(-278),
@@ -350,21 +439,24 @@ export const collections: ReadonlyArray<SeedCollection> = [
   {
     slug: 'kyoto-next-time',
     name: 'Kyoto, next time',
-    description: 'Everything that did not fit into twelve days. Ordered roughly north to south.',
-    colour: '#8A5A2B',
+    description:
+      'Everything that did not fit into twelve days. Ordered roughly north to south.',
+    colour: '#256256',
     icon: 'bookmark',
     visibility: 'organization',
     labels: [
       { name: 'Temple', colour: '#8A5A2B' },
-      { name: 'Walk', colour: '#16794C' },
-      { name: 'Food', colour: '#B26B08' },
+      { name: 'Walk', colour: '#136b45' },
+      { name: 'Food', colour: '#8a5305' },
     ],
     places: [
       {
         name: 'Ryoan-ji',
         categorySlug: 'temples-and-shrines',
-        description: 'The rock garden. Fifteen stones, arranged so you can never see all fifteen at once.',
-        notes: 'Opens 08:00 in October. Combine with Kinkaku-ji, they are one bus stop apart.',
+        description:
+          'The rock garden. Fifteen stones, arranged so you can never see all fifteen at once.',
+        notes:
+          'Opens 08:00 in October. Combine with Kinkaku-ji, they are one bus stop apart.',
         lat: 35.0345,
         lng: 135.7183,
         address: '13 Ryoanji Goryonoshitacho, Ukyo Ward, Kyoto 616-8001',
@@ -378,7 +470,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Kifune Shrine',
         categorySlug: 'temples-and-shrines',
-        description: 'Lantern staircase up through cedar, an hour north of the city on the Eizan line.',
+        description:
+          'Lantern staircase up through cedar, an hour north of the city on the Eizan line.',
         lat: 35.1216,
         lng: 135.7626,
         address: '180 Kuramakibunecho, Sakyo Ward, Kyoto 601-1112',
@@ -391,7 +484,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Kurama-dera to Kibune walk',
         categorySlug: 'outdoors',
-        description: 'Two hours over the ridge between two shrines. Steep, rooty, almost empty.',
+        description:
+          'Two hours over the ridge between two shrines. Steep, rooty, almost empty.',
         lat: 35.1174,
         lng: 135.7708,
         address: '1074 Kuramahonmachi, Sakyo Ward, Kyoto 601-1111',
@@ -404,8 +498,10 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Nanzen-ji aqueduct',
         categorySlug: 'temples-and-shrines',
-        description: 'Meiji-era brick aqueduct running straight through a Zen temple complex.',
-        notes: 'Southern end of the Philosopher’s Path, so it is genuinely five minutes off our route.',
+        description:
+          'Meiji-era brick aqueduct running straight through a Zen temple complex.',
+        notes:
+          'Southern end of the Philosopher’s Path, so it is genuinely five minutes off our route.',
         lat: 35.0114,
         lng: 135.7942,
         address: '86 Nanzenji Fukuchicho, Sakyo Ward, Kyoto 606-8435',
@@ -418,7 +514,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Tofuku-ji',
         categorySlug: 'temples-and-shrines',
-        description: 'The maple valley under the Tsutenkyo bridge. Peak colour is the last week of November.',
+        description:
+          'The maple valley under the Tsutenkyo bridge. Peak colour is the last week of November.',
         notes: 'Too early for us in October — this is a November trip.',
         lat: 34.9766,
         lng: 135.7742,
@@ -432,7 +529,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Sanjusangendo',
         categorySlug: 'temples-and-shrines',
-        description: 'One hundred and twenty metres of hall, and one thousand and one carved Kannon.',
+        description:
+          'One hundred and twenty metres of hall, and one thousand and one carved Kannon.',
         lat: 34.9879,
         lng: 135.7719,
         address: '657 Sanjusangendomawari, Higashiyama Ward, Kyoto 605-0941',
@@ -445,10 +543,12 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Nishiki Warai — the Gion branch',
         categorySlug: 'food-and-drink',
-        description: 'Same okonomiyaki, quieter room, and it takes bookings after 20:00.',
+        description:
+          'Same okonomiyaki, quieter room, and it takes bookings after 20:00.',
         lat: 35.0035,
         lng: 135.7746,
-        address: '570-127 Gionmachi Minamigawa, Higashiyama Ward, Kyoto 605-0074',
+        address:
+          '570-127 Gionmachi Minamigawa, Higashiyama Ward, Kyoto 605-0074',
         city: 'Kyoto',
         countryCode: 'JP',
         status: 'idea',
@@ -458,8 +558,10 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Kichi Kichi Omurice',
         categorySlug: 'food-and-drink',
-        description: 'Eight seats, one dish, a performance. Bookings open two months ahead and go in a day.',
-        notes: 'Set a calendar reminder for the first of the month, two months out.',
+        description:
+          'Eight seats, one dish, a performance. Bookings open two months ahead and go in a day.',
+        notes:
+          'Set a calendar reminder for the first of the month, two months out.',
         lat: 35.0087,
         lng: 135.7695,
         address: '185-4 Zaimokucho, Nakagyo Ward, Kyoto 604-8017',
@@ -474,21 +576,24 @@ export const collections: ReadonlyArray<SeedCollection> = [
   {
     slug: 'lisbon-eating',
     name: 'Lisbon — where to eat',
-    description: 'Built from three trips and two arguments. Anything marked visited we would go back to.',
-    colour: '#B26B08',
+    description:
+      'Built from three trips and two arguments. Anything marked visited we would go back to.',
+    colour: '#8a5305',
     icon: 'utensils',
     visibility: 'organization',
     labels: [
       { name: 'Booked ahead', colour: '#2563EB' },
-      { name: 'Walk in', colour: '#16794C' },
-      { name: 'Splurge', colour: '#C0392B' },
+      { name: 'Walk in', colour: '#136b45' },
+      { name: 'Splurge', colour: '#b22f22' },
     ],
     places: [
       {
         name: 'Cervejaria Ramiro',
         categorySlug: 'food-and-drink',
-        description: 'Shellfish, beer, paper tablecloths. The steak sandwich is dessert, not a joke.',
-        notes: 'Book, or queue from 18:30. They do not hold tables past fifteen minutes.',
+        description:
+          'Shellfish, beer, paper tablecloths. The steak sandwich is dessert, not a joke.',
+        notes:
+          'Book, or queue from 18:30. They do not hold tables past fifteen minutes.',
         lat: 38.7208,
         lng: -9.1358,
         address: 'Av. Almirante Reis 1, 1150-007 Lisbon',
@@ -501,7 +606,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Taberna da Rua das Flores',
         categorySlug: 'food-and-drink',
-        description: 'Twenty covers, blackboard menu, changes daily. No bookings, ever.',
+        description:
+          'Twenty covers, blackboard menu, changes daily. No bookings, ever.',
         lat: 38.7101,
         lng: -9.1425,
         address: 'R. das Flores 103, 1200-194 Lisbon',
@@ -514,7 +620,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'O Velho Eurico',
         categorySlug: 'food-and-drink',
-        description: 'Tasca cooking done seriously — offal, bread soups, and a very short wine list.',
+        description:
+          'Tasca cooking done seriously — offal, bread soups, and a very short wine list.',
         lat: 38.7126,
         lng: -9.1329,
         address: 'Largo de São Cristóvão 3, 1100-241 Lisbon',
@@ -527,7 +634,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'A Cevicheria',
         categorySlug: 'food-and-drink',
-        description: 'Peruvian, one giant octopus on the ceiling, and a queue that starts at the door.',
+        description:
+          'Peruvian, one giant octopus on the ceiling, and a queue that starts at the door.',
         lat: 38.7157,
         lng: -9.1509,
         address: 'R. Dom Pedro V 129, 1250-096 Lisbon',
@@ -540,7 +648,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Belcanto',
         categorySlug: 'food-and-drink',
-        description: 'Two Michelin stars, tasting menu only. Book eight weeks out and dress for it.',
+        description:
+          'Two Michelin stars, tasting menu only. Book eight weeks out and dress for it.',
         lat: 38.7104,
         lng: -9.1424,
         address: 'R. Serpa Pinto 10A, 1200-445 Lisbon',
@@ -553,7 +662,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Manteigaria',
         categorySlug: 'food-and-drink',
-        description: 'The other pastel de nata. Standing counter, cinnamon on top, still hot.',
+        description:
+          'The other pastel de nata. Standing counter, cinnamon on top, still hot.',
         lat: 38.7107,
         lng: -9.1449,
         address: 'R. do Loreto 2, 1200-108 Lisbon',
@@ -566,7 +676,8 @@ export const collections: ReadonlyArray<SeedCollection> = [
       {
         name: 'Time Out Market Lisboa',
         categorySlug: 'markets',
-        description: 'Twenty-six kitchens under one roof. Best before 12:30 or after 21:00.',
+        description:
+          'Twenty-six kitchens under one roof. Best before 12:30 or after 21:00.',
         lat: 38.7071,
         lng: -9.1459,
         address: 'Av. 24 de Julho 49, 1200-479 Lisbon',
@@ -596,9 +707,14 @@ export const vacay: SeedVacay = {
     { person: 'rafal', year: 2025, entitlementDays: 28, carriedOverDays: 0 },
   ],
   calendars: [
-    { region: 'GB-ENG', label: 'England & Wales', colour: '#C0392B', sortOrder: 1 },
-    { region: 'JP', label: 'Japan', colour: '#2F6F5E', sortOrder: 2 },
-    { region: 'PT', label: 'Portugal', colour: '#B26B08', sortOrder: 3 },
+    {
+      region: 'GB-ENG',
+      label: 'England & Wales',
+      colour: '#b22f22',
+      sortOrder: 1,
+    },
+    { region: 'JP', label: 'Japan', colour: '#256256', sortOrder: 2 },
+    { region: 'PT', label: 'Portugal', colour: '#8a5305', sortOrder: 3 },
   ],
   companyHolidays: [
     { date: anchorYearDay('01-02'), label: 'Office closed — New Year' },
@@ -608,31 +724,163 @@ export const vacay: SeedVacay = {
     { date: anchorYearDay('12-31'), label: 'New Year’s Eve — office closed' },
   ],
   entries: [
-    { person: 'rafal', from: day(-162), to: day(-162), kind: 'sick', note: 'Flu.' },
-    { person: 'rafal', from: day(-104), to: day(-104), kind: 'half_day', note: 'Afternoon off for the passport appointment.' },
-    { person: 'rafal', from: day(-66), to: day(-62), kind: 'vacation', note: 'Dolomites.' },
-    { person: 'rafal', from: day(-3), to: day(1), kind: 'vacation', note: 'Lisbon.' },
-    { person: 'rafal', from: day(13), to: day(15), kind: 'remote', note: 'Working from the cottage.' },
-    { person: 'rafal', from: day(50), to: day(50), kind: 'vacation', note: 'Japan — travel day.' },
-    { person: 'rafal', from: day(53), to: day(57), kind: 'vacation', note: 'Japan.' },
-    { person: 'rafal', from: day(60), to: day(61), kind: 'vacation', note: 'Japan — Osaka and home.' },
+    {
+      person: 'rafal',
+      from: day(-162),
+      to: day(-162),
+      kind: 'sick',
+      note: 'Flu.',
+    },
+    {
+      person: 'rafal',
+      from: day(-104),
+      to: day(-104),
+      kind: 'half_day',
+      note: 'Afternoon off for the passport appointment.',
+    },
+    {
+      person: 'rafal',
+      from: day(-66),
+      to: day(-62),
+      kind: 'vacation',
+      note: 'Dolomites.',
+    },
+    {
+      person: 'rafal',
+      from: day(-3),
+      to: day(1),
+      kind: 'vacation',
+      note: 'Lisbon.',
+    },
+    {
+      person: 'rafal',
+      from: day(13),
+      to: day(15),
+      kind: 'remote',
+      note: 'Working from the cottage.',
+    },
+    {
+      person: 'rafal',
+      from: day(50),
+      to: day(50),
+      kind: 'vacation',
+      note: 'Japan — travel day.',
+    },
+    {
+      person: 'rafal',
+      from: day(53),
+      to: day(57),
+      kind: 'vacation',
+      note: 'Japan.',
+    },
+    {
+      person: 'rafal',
+      from: day(60),
+      to: day(61),
+      kind: 'vacation',
+      note: 'Japan — Osaka and home.',
+    },
 
-    { person: 'mika', from: day(-136), to: day(-132), kind: 'vacation', note: 'Family, Osaka.' },
-    { person: 'mika', from: day(-66), to: day(-62), kind: 'vacation', note: 'Dolomites.' },
-    { person: 'mika', from: day(50), to: day(50), kind: 'vacation', note: 'Japan — travel day.' },
-    { person: 'mika', from: day(53), to: day(57), kind: 'vacation', note: 'Japan.' },
-    { person: 'mika', from: day(60), to: day(61), kind: 'vacation', note: 'Japan — Osaka and home.' },
+    {
+      person: 'mika',
+      from: day(-136),
+      to: day(-132),
+      kind: 'vacation',
+      note: 'Family, Osaka.',
+    },
+    {
+      person: 'mika',
+      from: day(-66),
+      to: day(-62),
+      kind: 'vacation',
+      note: 'Dolomites.',
+    },
+    {
+      person: 'mika',
+      from: day(50),
+      to: day(50),
+      kind: 'vacation',
+      note: 'Japan — travel day.',
+    },
+    {
+      person: 'mika',
+      from: day(53),
+      to: day(57),
+      kind: 'vacation',
+      note: 'Japan.',
+    },
+    {
+      person: 'mika',
+      from: day(60),
+      to: day(61),
+      kind: 'vacation',
+      note: 'Japan — Osaka and home.',
+    },
 
-    { person: 'jonas', from: day(-66), to: day(-62), kind: 'vacation', note: 'Dolomites.' },
-    { person: 'jonas', from: day(-31), to: day(-29), kind: 'remote', note: 'Client site, Copenhagen.' },
-    { person: 'jonas', from: day(50), to: day(50), kind: 'vacation', note: 'Japan — travel day.' },
-    { person: 'jonas', from: day(53), to: day(57), kind: 'vacation', note: 'Japan.' },
-    { person: 'jonas', from: day(60), to: day(61), kind: 'vacation', note: 'Japan — Osaka and home.' },
+    {
+      person: 'jonas',
+      from: day(-66),
+      to: day(-62),
+      kind: 'vacation',
+      note: 'Dolomites.',
+    },
+    {
+      person: 'jonas',
+      from: day(-31),
+      to: day(-29),
+      kind: 'remote',
+      note: 'Client site, Copenhagen.',
+    },
+    {
+      person: 'jonas',
+      from: day(50),
+      to: day(50),
+      kind: 'vacation',
+      note: 'Japan — travel day.',
+    },
+    {
+      person: 'jonas',
+      from: day(53),
+      to: day(57),
+      kind: 'vacation',
+      note: 'Japan.',
+    },
+    {
+      person: 'jonas',
+      from: day(60),
+      to: day(61),
+      kind: 'vacation',
+      note: 'Japan — Osaka and home.',
+    },
 
-    { person: 'priya', from: day(-3), to: day(1), kind: 'vacation', note: 'Lisbon.' },
-    { person: 'priya', from: day(50), to: day(50), kind: 'vacation', note: 'Japan — travel day.' },
-    { person: 'priya', from: day(53), to: day(57), kind: 'vacation', note: 'Japan.' },
-    { person: 'priya', from: day(60), to: day(61), kind: 'vacation', note: 'Japan — Osaka and home.' },
+    {
+      person: 'priya',
+      from: day(-3),
+      to: day(1),
+      kind: 'vacation',
+      note: 'Lisbon.',
+    },
+    {
+      person: 'priya',
+      from: day(50),
+      to: day(50),
+      kind: 'vacation',
+      note: 'Japan — travel day.',
+    },
+    {
+      person: 'priya',
+      from: day(53),
+      to: day(57),
+      kind: 'vacation',
+      note: 'Japan.',
+    },
+    {
+      person: 'priya',
+      from: day(60),
+      to: day(61),
+      kind: 'vacation',
+      note: 'Japan — Osaka and home.',
+    },
   ],
 }
 
@@ -681,7 +929,11 @@ export const notifications: ReadonlyArray<SeedNotification> = [
     titleKey: 'list.assigned',
     titleParams: { actorName: 'Priya Raman' },
     bodyKey: 'list.assigned',
-    bodyParams: { title: 'Insurance policy card', tripTitle: 'Tokyo & Kyoto', actorName: 'Priya Raman' },
+    bodyParams: {
+      title: 'Insurance policy card',
+      tripTitle: 'Tokyo & Kyoto',
+      actorName: 'Priya Raman',
+    },
     entityType: 'trip',
     entityTripSlug: 'tokyo-and-kyoto',
     minutesAgo: 700,
@@ -727,7 +979,10 @@ export const notifications: ReadonlyArray<SeedNotification> = [
     titleKey: 'reservation.reminder',
     titleParams: { title: 'Kyubey Ginza · omakase, counter' },
     bodyKey: 'reservation.reminder',
-    bodyParams: { title: 'Kyubey Ginza · omakase, counter', when: '19:00 on Monday 12 October' },
+    bodyParams: {
+      title: 'Kyubey Ginza · omakase, counter',
+      when: '19:00 on Monday 12 October',
+    },
     entityType: 'trip',
     entityTripSlug: 'tokyo-and-kyoto',
     minutesAgo: 4_200,
@@ -793,7 +1048,10 @@ export const auditTrail: ReadonlyArray<SeedAuditEntry> = [
     action: 'expense.created',
     entityType: 'expense',
     entityTripSlug: 'tokyo-and-kyoto',
-    metadata: { title: 'Currency exchange fee · 400,000 yen cash', amountMinor: 6_000 },
+    metadata: {
+      title: 'Currency exchange fee · 400,000 yen cash',
+      amountMinor: 6_000,
+    },
     minutesAgo: 1_400,
   },
 ]

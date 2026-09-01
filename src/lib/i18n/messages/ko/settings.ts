@@ -304,17 +304,13 @@ const messages = {
   'billing.hero.freeAllowance': '여행 {trips}개, 혼자 여행',
   'billing.hero.perSeatLine': '멤버 {seats}명 × {price}',
   'billing.hero.singleTraveller': '여행자 한 명',
-  'billing.hero.paymentMethod': '결제 수단',
-  'billing.hero.cancel': '플랜 해지',
   'billing.price.free': '무료',
   'billing.provider.opening': 'Polar를 여는 중',
-  'billing.provider.failed': 'Polar에 닿지 못했어요',
-  'billing.provider.failedBody':
-    '청구된 것은 없어요. 연결을 확인하고 잠시 뒤에 다시 시도해 주세요.',
   'billing.renewal.trialEndsToday':
-    '체험이 오늘 끝나요. 카드를 등록하면 모든 모듈을 계속 쓸 수 있어요.',
+    '무료 체험이 오늘 끝납니다. 그 전에 해지하지 않으면 첫 결제가 이루어집니다.',
   'billing.renewal.trialEndsIn': {
-    other: '체험이 {value}일 뒤에 끝나요. 그때까지 카드는 필요 없어요.',
+    other:
+      '무료 체험이 {value}일 뒤에 끝납니다. 그 전에 해지하지 않으면 첫 결제가 이루어집니다.',
   },
   'billing.renewal.trialEnded': '체험이 끝났어요.',
   'billing.renewal.endsNoDate': '이 플랜은 종료될 예정이고 갱신되지 않아요.',
@@ -358,7 +354,6 @@ const messages = {
   'billing.interval.label': '결제 주기',
   'billing.interval.monthly': '월간',
   'billing.interval.yearly': '연간',
-  'billing.interval.saving': '{value} 절약',
   'billing.plan.free.name': '프리',
   'billing.plan.free.tagline': '다음 두 여행을 계획해요',
   'billing.plan.free.feature.trips': '한 번에 두 개의 여행',
@@ -380,7 +375,6 @@ const messages = {
   'billing.plan.current': '현재 플랜',
   'billing.plan.currentBadge': '현재',
   'billing.plan.popular': '인기',
-  'billing.plan.moveTo': '{plan} 플랜으로 이동',
   'billing.plan.switchYearly': '연간으로 바꾸기',
   'billing.plan.switchMonthly': '월간으로 바꾸기',
   'billing.plan.upgradeTo': '{plan} 플랜으로 올리기',
@@ -393,31 +387,69 @@ const messages = {
   'billing.plan.members': '멤버',
   'billing.plan.membersHint': '언제든 바꿀 수 있어요. 결제도 따라가요.',
   'billing.plan.seatOption': { other: '멤버 {value}명' },
-  'billing.invoices.title': '청구서',
-  'billing.invoices.description':
-    '이 워크스페이스의 모든 영수증을 최신 순으로.',
-  'billing.invoices.portal': '결제 포털',
-  'billing.invoices.unavailableTitle': '영수증을 불러오지 못하고 있어요',
-  'billing.invoices.unavailableBody':
-    'Polar가 기록을 제때 주지 못했어요. 위의 내용은 최신이에요. 전체 기록은 결제 포털에서 보거나 잠시 뒤에 다시 와 주세요.',
-  'billing.invoices.emptyTitle': '아직 청구서가 없어요',
-  'billing.invoices.emptyCustomer':
-    '첫 영수증은 결제 주기가 끝나는 대로 여기에 나타나요.',
-  'billing.invoices.emptyNoCustomer':
-    '이 워크스페이스는 한 번도 청구된 적이 없어요. 유료 플랜을 고르면 영수증이 여기에 모여요.',
-  'billing.invoices.tableLabel': '청구 기록',
   'billing.invoices.number': '청구서',
   'billing.invoices.date': '날짜',
-  'billing.invoices.period': '기간',
   'billing.invoices.amount': '금액',
   'billing.invoices.status': '상태',
-  'billing.invoices.receipt': '영수증',
-  'billing.invoices.view': '보기',
   'billing.invoice.paid': '결제 완료',
-  'billing.invoice.open': '미납',
   'billing.invoice.draft': '임시',
   'billing.invoice.void': '무효',
-  'billing.invoice.uncollectible': '회수 불가',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    '결제 제공업체가 그 요청을 거부했습니다. 잠시 후 다시 시도해 주세요.',
+  'billing.planChanged.title': '플랜이 업데이트되었습니다',
+  'billing.planChanged.body':
+    '변경은 이미 Polar에서 적용되었고 차액은 Polar가 청구합니다. 아래 요약은 1분 안에 따라잡습니다.',
+  'billing.hero.manage': '결제 관리',
+  'billing.hero.manageHint':
+    '카드, 청구 주소, 사업자번호, 영수증, 해지는 청구서를 발행하는 Polar에 있습니다.',
+  'billing.hero.manageHintNone':
+    '아직 결제 프로필이 없습니다. 아래에서 유료 플랜을 고르면 만들어지고, 그 뒤부터 포털이 열립니다.',
+  'billing.portal.opening': '결제 포털을 여는 중',
+  'billing.plan.notApplied': '그 변경은 적용되지 않았습니다',
+  'billing.plan.cancelInPortal': '포털에서 해지',
+  'billing.plan.seatsOverMax': {
+    other:
+      '이 워크스페이스에는 멤버가 {members}명이고 {plan}은 최대 {max}명까지 청구합니다. 바꾸기 전에 {value}명을 내보내세요.',
+  },
+  'billing.plan.seatsBelowMembers':
+    '멤버가 {members}명입니다. 최소 그만큼의 좌석을 고르세요. Polar는 배정보다 좌석이 적은 구독을 거부합니다.',
+  'billing.orders.title': '주문',
+  'billing.orders.description': '이 워크스페이스의 모든 주문을 최신순으로.',
+  'billing.orders.receipts': '모든 영수증',
+  'billing.orders.unavailableTitle': '주문을 불러오지 못했습니다',
+  'billing.orders.unavailableBody':
+    'Polar가 이력에 대해 제때 응답하지 않았습니다. 위의 내용은 모두 최신입니다. 잠시 후 다시 시도하거나 결제 포털에서 전체 기록을 확인하세요.',
+  'billing.orders.emptyTitle': '아직 주문이 없습니다',
+  'billing.orders.emptyCustomer':
+    '청구 기간이 끝나는 대로 첫 청구서가 여기에 나타납니다.',
+  'billing.orders.emptyNoCustomer':
+    '이 워크스페이스에는 청구된 적이 없습니다. 유료 플랜을 고르면 청구서가 여기에 모입니다.',
+  'billing.orders.tableLabel': '주문 이력',
+  'billing.orders.document': '문서',
+  'billing.orders.dateUnknown': '날짜 미상',
+  'billing.order.pending': '대기 중',
+  'billing.order.refunded': '환불됨',
+  'billing.order.partiallyRefunded': '일부 환불됨',
+  'billing.order.noInvoiceDraft': '주문이 초안인 동안에는 청구서가 없습니다',
+  'billing.order.preparing': '준비 중',
+  'billing.order.renderingHint':
+    'Polar가 청구서 {number}을 아직 만들고 있습니다. 다운로드는 몇 초 뒤에 돌아옵니다.',
+  'billing.order.fetching': '청구서를 가져오는 중',
+  'billing.order.generating': 'Polar가 청구서를 준비하고 있습니다',
+  'billing.order.pdfLabel': '청구서 {number}을 PDF로',
+  'billing.order.stillWritingTitle':
+    'Polar가 그 청구서를 아직 작성하고 있습니다',
+  'billing.order.stillWritingBody':
+    '청구서 {number}을 만들고 있습니다. 다운로드는 몇 초 뒤에 저절로 돌아옵니다.',
+  'billing.order.openFailed': '그 청구서는 열리지 않았습니다',
 } satisfies TranslationOf<typeof En>
 
 export default messages

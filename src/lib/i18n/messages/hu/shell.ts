@@ -348,6 +348,105 @@ const messages = {
   'role.admin': 'Adminisztrátor',
   'role.member': 'Tag',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} utazás',
+    other: '{value} utazás',
+  },
+  'trips.count.favourites': {
+    one: '{value} kedvenc',
+    other: '{value} kedvenc',
+  },
+  'trips.count.archived': {
+    one: '{value} archivált',
+    other: '{value} archivált',
+  },
+  'trips.atLimit.body':
+    'A csomagod {trips} fed le. Archiválj egy befejezettet, vagy lépj feljebb csomagot, hogy egyszerre többet tarthass nyitva.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Új napló',
+  'newJourney.title': 'Kezdj naplót',
+  'newJourney.description':
+    'A napló az utazás megírt oldala — bejegyzések dátum szerint, a fényképekkel és az időjárással, amire emlékszel.',
+  'newJourney.titlePlaceholder': 'Két hét Kiotóban',
+  'newJourney.subtitle': 'Alcím',
+  'newJourney.subtitleHint': 'Egy sor a cím alatt, a borítón.',
+  'newJourney.subtitlePlaceholder':
+    'Templomok, vonatok és jóval túl sok matcha',
+  'newJourney.trip': 'Egy utazás alapján',
+  'newJourney.tripHint': 'Nem kötelező — a történetet a tervéhez köti.',
+  'newJourney.tripNone': 'Nincs utazáshoz kötve',
+  'newJourney.datesError': 'A záró dátum a kezdet előtt van.',
+  'newJourney.submit': 'Napló létrehozása',
+  'newJourney.creating': 'Napló létrehozása folyamatban',
+  'newJourney.created': 'A napló elindult',
+  'newJourney.createdBody':
+    'Add hozzá az első bejegyzést, hogy induljon a történet.',
+  'newJourney.error':
+    'A naplót nem sikerült létrehozni. Próbáld újra egy pillanat múlva.',
+  'newCollection.trigger': 'Új gyűjtemény',
+  'newCollection.title': 'Kezdj gyűjteményt',
+  'newCollection.description':
+    'Hely a helyeknek, amiket még azelőtt találsz, hogy tudnád, melyik utazáshoz tartoznak.',
+  'newCollection.namePlaceholder': 'Kávé, amiért érdemes átmenni a városon',
+  'newCollection.descriptionHint': 'Mi tartozik ide, és mi nem.',
+  'newCollection.submit': 'Gyűjtemény létrehozása',
+  'newCollection.creating': 'Gyűjtemény létrehozása folyamatban',
+  'newCollection.created': 'Gyűjtemény létrehozva',
+  'newCollection.createdBody': 'Kezdj helyeket menteni bele.',
+  'newCollection.error':
+    'A gyűjteményt nem sikerült létrehozni. Próbáld újra egy pillanat múlva.',
+
+  'newTrip.title': 'Kezdj új utazást',
+  'newTrip.description':
+    'Egy cím elég. A dátumok felépítik a napi tervet, a többi ráér, amikor már tudod.',
+  'newTrip.name': 'Az utazás neve',
+  'newTrip.namePlaceholder': 'Kiotó a cseresznyevirágzás idején',
+  'newTrip.destination': 'Úti cél',
+  'newTrip.destinationHint': 'Egy város, egy régió vagy a teljes útvonal.',
+  'newTrip.destinationPlaceholder': 'Kiotó, Japán',
+  'newTrip.departure': 'Indulás',
+  'newTrip.return': 'Visszaút',
+  'newTrip.returnError': 'A visszaút dátuma az indulás előtt van.',
+  'newTrip.currency': 'Költségvetés pénzneme',
+  'newTrip.currencyHint': 'Ebben összegzünk minden kiadást az utazáson.',
+  'newTrip.submit': 'Utazás létrehozása',
+  'newTrip.creating': 'Utazás létrehozása folyamatban',
+  'newTrip.error':
+    'Az utazást nem sikerült létrehozni. Próbáld újra egy pillanat múlva.',
+  'newTrip.created': 'Utazás létrehozva',
+  'newTrip.createdBody': 'Kezdj helyeket rakni a térképre.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Ki láthatja',
+  'visibility.private': 'Csak én',
+  'visibility.organization': 'Mindenki a munkaterületen',
+  'visibility.public': 'Bárki, akinek megvan a link',
+
+  'trips.error': 'Az utazásaid nem töltődtek be',
+  'trips.eyebrow': 'Munkaterület',
+  'trips.nothingPlanned': 'Még semmi sincs betervezve',
+  'trips.search': 'Utazások keresése',
+  'trips.atLimit.title': 'Elfogyott minden utazás, amit a csomagod engedélyez',
+  'trips.atLimit.action': 'Csomagok összevetése',
+  'trips.noMatch.title': 'Erre a szűrőre semmi nem illik',
+  'trips.noMatch.body':
+    'Próbálj más szakaszt, töröld a keresést, vagy nézd meg az archívumot.',
+  'trips.noMatch.action': 'Szűrők törlése',
+  'trips.empty.body':
+    'Egy utazás tartja a napi tervet, a térképet, a foglalásokat, a csomaglistákat és a pénzt. Kezdj egyet, a többi jön magától.',
+  'trips.next.title': 'Valahová azután',
+  'trips.next.body':
+    'Kezdj egy utazást, és a planned.travel minden dátumhoz napot készít, készen arra, amit elmentettél.',
+  'trips.savedPlaces': 'Mentett helyek',
+  'trips.filter.all': 'Mind',
+  'trips.filter.favourites': 'Kedvencek',
+  'trips.card.favourite': 'Kedvenc',
+  'trips.card.noDestination': 'Úti cél még nincs',
+  'trips.card.noDates': 'Dátumok még nincsenek',
+  'trips.card.startsIn': '{days} nap múlva',
+  'trips.card.days': '{days} n',
   'metric.trips': 'Utazások',
   'metric.places': 'Helyek',
   'metric.members': 'Tagok',

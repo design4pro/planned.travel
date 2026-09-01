@@ -17,7 +17,11 @@ export interface AppFrameProps {
  * mobile tab bar plus the device's safe area, so nothing is ever parked under
  * a home indicator.
  */
-export function AppFrame({ children, bleed = false, className }: AppFrameProps) {
+export function AppFrame({
+  children,
+  bleed = false,
+  className,
+}: AppFrameProps) {
   if (bleed) {
     return <main className={cn('relative flex-1', className)}>{children}</main>
   }
@@ -36,6 +40,16 @@ export function AppFrame({ children, bleed = false, className }: AppFrameProps) 
 }
 
 /** Vertical rhythm helper so every module stacks its sections identically. */
-export function AppSections({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('flex flex-col gap-6 lg:gap-8', className)}>{children}</div>
+export function AppSections({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn('flex flex-col gap-6 lg:gap-8', className)}>
+      {children}
+    </div>
+  )
 }

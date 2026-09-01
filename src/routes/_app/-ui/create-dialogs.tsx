@@ -25,7 +25,11 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
-import { cn } from '#/lib/cn'
+import { SwatchPicker } from '#/components/modules/shared'
+import { useTranslate } from '#/lib/i18n'
+
+import type { MessageKey } from '#/lib/i18n'
+import { REQUIRED_DEFAULT, REQUIRED_SWATCHES } from '#/lib/swatches'
 import { createCollectionFn, createJourneyFn } from '../-server/library'
 
 function messageOf(error: unknown, fallback: string): string {
@@ -41,7 +45,7 @@ export function NewJourneyDialog({
   trips,
   size = 'sm',
   trip,
-  label = 'New journey',
+  label,
   variant = 'primary',
 }: {
   trips: ReadonlyArray<{ id: string; title: string }>
@@ -52,9 +56,11 @@ export function NewJourneyDialog({
    * prompts, where the reader has already chosen the trip by pressing the button.
    */
   trip?: { readonly id: string; readonly title: string }
+  /** Defaults to the shell's own "New journey", translated. */
   label?: string
   variant?: 'primary' | 'secondary' | 'ghost'
 }) {
+  const t = useTranslate()
   const router = useRouter()
   const navigate = useNavigate()
 
@@ -108,17 +114,12 @@ export function NewJourneyDialog({
       await router.invalidate()
       setOpen(false)
       reset()
-      toast.success('Journey started', {
-        description: 'Add your first entry to begin the story.',
+      toast.success(t('shell.newJourney.created'), {
+        description: t('shell.newJourney.createdBody'),
       })
       await navigate({ to: '/journey/$journeyId', params: { journeyId } })
     } catch (cause) {
-      setError(
-        messageOf(
-          cause,
-          'The journey could not be created. Try again in a moment.',
-        ),
-      )
+      setError(messageOf(cause, t('shell.newJourney.error')))
     } finally {
       setSaving(false)
     }
@@ -135,18 +136,21 @@ export function NewJourneyDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant={variant} shape="pill" size={size}>
-          <Plus aria-hidden strokeWidth={2.5} />
-          {label}
+        <Button
+          variant={variant}
+          shape="pill"
+          size={size}
+          icon={<Plus aria-hidden strokeWidth={2.5} />}
+        >
+          {label ?? t('shell.newJourney.trigger')}
         </Button>
       </DialogTrigger>
 
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>Start a journey</DialogTitle>
+          <DialogTitle>{t('shell.newJourney.title')}</DialogTitle>
           <DialogDescription>
-            A journey is the written side of a trip — entries in date order,
-            with the photos and the weather you remember it by.
+            {t('shell.newJourney.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -162,16 +166,16 @@ export function NewJourneyDialog({
             }}
           >
             {error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {error}
               </Alert>
             )}
 
-            <Field label="Title" required>
+            <Field label={t('modules.collab.note.field.title')} required>
               <Input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Two weeks in Kyoto"
+                placeholder={t('shell.newJourney.titlePlaceholder')}
                 maxLength={120}
                 autoComplete="off"
                 required
@@ -179,13 +183,13 @@ export function NewJourneyDialog({
             </Field>
 
             <Field
-              label="Subtitle"
-              hint="One line under the title, on the cover."
+              label={t('shell.newJourney.subtitle')}
+              hint={t('shell.newJourney.subtitleHint')}
             >
               <Input
                 value={subtitle}
                 onChange={(event) => setSubtitle(event.target.value)}
-                placeholder="Temples, trains and far too much matcha"
+                placeholder={t('shell.newJourney.subtitlePlaceholder')}
                 maxLength={160}
                 autoComplete="off"
               />
@@ -193,12 +197,12 @@ export function NewJourneyDialog({
 
             {options.length === 0 ? null : (
               <Field
-                label="Based on a trip"
-                hint="Optional — links the story back to its plan."
+                label={t('shell.newJourney.trip')}
+                hint={t('shell.newJourney.tripHint')}
               >
                 <SimpleSelect
                   options={[
-                    { value: 'none', label: 'Not tied to a trip' },
+                    { value: 'none', label: t('shell.newJourney.tripNone') },
                     ...options.map((entry) => ({
                       value: entry.id,
                       label: entry.title,
@@ -206,13 +210,13 @@ export function NewJourneyDialog({
                   ]}
                   value={tripId}
                   onValueChange={setTripId}
-                  ariaLabel="Based on a trip"
+                  ariaLabel={t('shell.newJourney.trip')}
                 />
               </Field>
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Started">
+              <Field label={t('journal.side.started')}>
                 <Input
                   type="date"
                   value={startedOn}
@@ -220,9 +224,9 @@ export function NewJourneyDialog({
                 />
               </Field>
               <Field
-                label="Ended"
+                label={t('journal.side.ended')}
                 error={
-                  outOfOrder ? 'The end date is before the start.' : undefined
+                  outOfOrder ? t('shell.newJourney.datesError') : undefined
                 }
               >
                 <Input
@@ -245,7 +249,7 @@ export function NewJourneyDialog({
               setOpen(false)
             }}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -254,9 +258,9 @@ export function NewJourneyDialog({
             shape="pill"
             disabled={!canSave}
             loading={saving}
-            loadingLabel="Creating the journey"
+            loadingLabel={t('shell.newJourney.creating')}
           >
-            Create journey
+            {t('shell.newJourney.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -266,35 +270,17 @@ export function NewJourneyDialog({
 
 /* -------------------------------------------------------------- collections */
 
-/**
- * A collection's colour is *stored* on the row, so the palette has to travel as
- * a hex string the database can hold. Each option is paired with the token class
- * that actually paints the swatch, so nothing on screen is drawn from the hex —
- * the literal is data, never styling.
- */
-const SWATCHES: ReadonlyArray<{
-  value: string
-  className: string
-  label: string
-}> = [
-  { value: '#256256', className: 'bg-brand', label: 'Pine' },
-  { value: '#1d4fd8', className: 'bg-info', label: 'Ink blue' },
-  { value: '#8a5305', className: 'bg-warning', label: 'Amber' },
-  { value: '#136b45', className: 'bg-success', label: 'Green' },
-  { value: '#b22f22', className: 'bg-danger', label: 'Red' },
-  { value: '#5b5951', className: 'bg-ink-3', label: 'Slate' },
-]
-
 const VISIBILITIES: ReadonlyArray<{
   value: 'private' | 'organization' | 'public'
-  label: string
+  label: MessageKey
 }> = [
-  { value: 'private', label: 'Only me' },
-  { value: 'organization', label: 'Everyone in the workspace' },
-  { value: 'public', label: 'Anyone with the link' },
+  { value: 'private', label: 'shell.visibility.private' },
+  { value: 'organization', label: 'shell.visibility.organization' },
+  { value: 'public', label: 'shell.visibility.public' },
 ]
 
 export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
+  const t = useTranslate()
   const router = useRouter()
   const navigate = useNavigate()
 
@@ -303,7 +289,7 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [colour, setColour] = useState(SWATCHES[0]?.value ?? '#256256')
+  const [colour, setColour] = useState(REQUIRED_DEFAULT)
   const [visibility, setVisibility] = useState<
     'private' | 'organization' | 'public'
   >('organization')
@@ -313,7 +299,7 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   function reset(): void {
     setName('')
     setDescription('')
-    setColour(SWATCHES[0]?.value ?? '#256256')
+    setColour(REQUIRED_DEFAULT)
     setVisibility('organization')
     setError(null)
   }
@@ -333,20 +319,15 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
       await router.invalidate()
       setOpen(false)
       reset()
-      toast.success('Collection created', {
-        description: 'Start saving places into it.',
+      toast.success(t('shell.newCollection.created'), {
+        description: t('shell.newCollection.createdBody'),
       })
       await navigate({
         to: '/collections/$collectionId',
         params: { collectionId },
       })
     } catch (cause) {
-      setError(
-        messageOf(
-          cause,
-          'The collection could not be created. Try again in a moment.',
-        ),
-      )
+      setError(messageOf(cause, t('shell.newCollection.error')))
     } finally {
       setSaving(false)
     }
@@ -363,18 +344,21 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="primary" shape="pill" size={size}>
-          <Plus aria-hidden strokeWidth={2.5} />
-          New collection
+        <Button
+          variant="primary"
+          shape="pill"
+          size={size}
+          icon={<Plus aria-hidden strokeWidth={2.5} />}
+        >
+          {t('shell.newCollection.trigger')}
         </Button>
       </DialogTrigger>
 
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>Start a collection</DialogTitle>
+          <DialogTitle>{t('shell.newCollection.title')}</DialogTitle>
           <DialogDescription>
-            Somewhere to keep the places you find before you know which trip
-            they belong to.
+            {t('shell.newCollection.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -390,61 +374,46 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
             }}
           >
             {error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {error}
               </Alert>
             )}
 
-            <Field label="Name" required>
+            <Field label={t('modules.field.name')} required>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Coffee worth crossing town for"
+                placeholder={t('shell.newCollection.namePlaceholder')}
                 maxLength={120}
                 autoComplete="off"
                 required
               />
             </Field>
 
-            <Field label="Description">
+            <Field label={t('modules.files.field.description')}>
               <Textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="What belongs in here, and what does not."
+                placeholder={t('shell.newCollection.descriptionHint')}
                 maxLength={2000}
                 rows={3}
               />
             </Field>
 
-            <fieldset>
-              <legend className="mb-2 text-label font-medium text-ink">
-                Colour
-              </legend>
-              <div className="flex flex-wrap gap-2">
-                {SWATCHES.map((swatch) => (
-                  <button
-                    key={swatch.value}
-                    type="button"
-                    aria-pressed={colour === swatch.value}
-                    aria-label={swatch.label}
-                    onClick={() => setColour(swatch.value)}
-                    className={cn(
-                      'size-8 rounded-full transition-[box-shadow,transform] duration-base ease-out-quint focus-ring',
-                      swatch.className,
-                      colour === swatch.value
-                        ? 'ring-2 ring-ink ring-offset-2 ring-offset-surface'
-                        : 'hover:scale-105',
-                    )}
-                  />
-                ))}
-              </div>
-            </fieldset>
+            <SwatchPicker
+              value={colour}
+              onChange={setColour}
+              legend={t('modules.colour.legend')}
+              /* `collections.colour` is `notNull`, so there is no "no colour"
+                 to offer and the palette ends on the neutral instead. */
+              swatches={REQUIRED_SWATCHES}
+            />
 
-            <Field label="Who can see it">
+            <Field label={t('shell.visibility.label')}>
               <SimpleSelect
                 options={VISIBILITIES.map((option) => ({
                   value: option.value,
-                  label: option.label,
+                  label: t(option.label),
                 }))}
                 value={visibility}
                 onValueChange={(next) => {
@@ -456,7 +425,7 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
                     setVisibility(next)
                   }
                 }}
-                ariaLabel="Who can see it"
+                ariaLabel={t('shell.visibility.label')}
               />
             </Field>
           </form>
@@ -471,7 +440,7 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
               setOpen(false)
             }}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -480,9 +449,9 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
             shape="pill"
             disabled={!canSave}
             loading={saving}
-            loadingLabel="Creating the collection"
+            loadingLabel={t('shell.newCollection.creating')}
           >
-            Create collection
+            {t('shell.newCollection.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

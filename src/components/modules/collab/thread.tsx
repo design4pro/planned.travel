@@ -26,6 +26,9 @@ import {
   Tooltip,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
+
+import type { Translate } from '#/lib/i18n'
 import { dayKeyIn, todayKeyIn } from '#/lib/time'
 import {
   deleteMessageFn,
@@ -42,12 +45,12 @@ const MAX_LENGTH = 4000
 
 /** The reactions a travel thread actually uses. Six, not an emoji keyboard. */
 const REACTIONS: ReadonlyArray<{ emoji: string; label: string }> = [
-  { emoji: '👍', label: 'Agree' },
-  { emoji: '❤️', label: 'Love it' },
-  { emoji: '😂', label: 'Funny' },
-  { emoji: '🎉', label: 'Celebrate' },
-  { emoji: '🙏', label: 'Thank you' },
-  { emoji: '👀', label: 'Looking' },
+  { emoji: '👍', label: 'modules.collab.reaction.agree' },
+  { emoji: '❤️', label: 'modules.collab.reaction.love' },
+  { emoji: '😂', label: 'modules.collab.reaction.funny' },
+  { emoji: '🎉', label: 'modules.collab.reaction.celebrate' },
+  { emoji: '🙏', label: 'modules.collab.reaction.thanks' },
+  { emoji: '👀', label: 'modules.collab.reaction.looking' },
 ]
 
 const LOCALE = 'en-GB'
@@ -82,13 +85,16 @@ function formatDayHeading(
   iso: string,
   todayKey: string,
   timeZone: string,
+  t: Translate,
 ): string {
   const key = dayKeyIn(iso, timeZone)
   if (key === todayKey) {
-    return 'Today'
+    return t('modules.collab.thread.today')
   }
   const parsed = new Date(iso)
-  return Number.isNaN(parsed.getTime()) ? key : dayFormatter(timeZone).format(parsed)
+  return Number.isNaN(parsed.getTime())
+    ? key
+    : dayFormatter(timeZone).format(parsed)
 }
 
 function formatClock(iso: string, timeZone: string): string {
@@ -98,10 +104,14 @@ function formatClock(iso: string, timeZone: string): string {
     : clockFormatter(timeZone).format(parsed)
 }
 
-function nameFor(people: ReadonlyArray<CollabPerson>, userId: string): string {
+function nameFor(
+  people: ReadonlyArray<CollabPerson>,
+  userId: string,
+  t: Translate,
+): string {
   return (
     people.find((person) => person.userId === userId)?.name ??
-    'Removed traveller'
+    t('costs.person.removed')
   )
 }
 
@@ -134,6 +144,7 @@ export function Thread({
   timeZone,
 }: ThreadProps) {
   const [replyTo, setReplyTo] = useState<MessageData | null>(null)
+  const t = useTranslate()
   const [editing, setEditing] = useState<MessageData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
@@ -152,11 +163,11 @@ export function Thread({
   const reactionOverlay = useOptimistic<ReadonlyArray<string>>()
 
   const toggle = useAction(toggleReactionFn, {
-    failure: 'That reaction did not save',
+    failure: t('modules.collab.toast.reactionFailed'),
   })
   const remove = useAction(deleteMessageFn, {
-    success: 'Message deleted',
-    failure: 'The message was not deleted',
+    success: t('modules.collab.toast.messageDeleted'),
+    failure: t('modules.collab.toast.deleteFailed'),
     onSuccess: () => setConfirm(null),
   })
 
@@ -187,7 +198,7 @@ export function Thread({
           <EmptyState
             size="sm"
             icon={<SendHorizontal />}
-            title="No messages yet"
+            title={t('modules.collab.thread.empty')}
             description="Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats."
           />
         ) : (
@@ -215,6 +226,7 @@ export function Thread({
                           message.createdAt,
                           todayKey,
                           timeZone,
+                          t,
                         )}
                       </span>
                       <span aria-hidden className="h-px flex-1 bg-edge-faint" />
@@ -246,10 +258,9 @@ export function Thread({
                     onEdit={() => setEditing(message)}
                     onDelete={() =>
                       setConfirm({
-                        title: 'Delete this message?',
-                        description:
-                          'The text is removed from the thread. Replies to it keep their place.',
-                        confirmLabel: 'Delete message',
+                        title: t('modules.collab.message.deleteTitle'),
+                        description: t('modules.collab.message.deleteBody'),
+                        confirmLabel: t('modules.collab.message.delete'),
                         onConfirm: () =>
                           remove.run({
                             data: { tripId, messageId: message.id },
@@ -320,7 +331,8 @@ function MessageRow({
   onEdit: () => void
   onDelete: () => void
 }) {
-  const name = nameFor(people, message.userId)
+  const t = useTranslate()
+  const name = nameFor(people, message.userId, t)
 
   /**
    * The tallies, with the viewer's own claim folded in — so a tap changes the
@@ -379,14 +391,14 @@ function MessageRow({
         {replyTarget === undefined ? null : (
           <p
             className={cn(
-              'max-w-[18rem] truncate rounded-md border-l-2 px-2 py-1 text-caption text-ink-3',
+              'max-w-[18rem] truncate rounded-md border-s px-2 py-1 text-caption text-ink-3',
               mine
                 ? 'border-brand/40 bg-brand-subtle/60'
                 : 'border-edge-strong bg-surface-2/70',
             )}
           >
             <span className="font-semibold">
-              {nameFor(people, replyTarget.userId)}
+              {nameFor(people, replyTarget.userId, t)}
             </span>
             {': '}
             {replyTarget.body}
@@ -398,8 +410,8 @@ function MessageRow({
             className={cn(
               'max-w-[18rem] rounded-lg px-3 py-2 text-label leading-relaxed break-words sm:max-w-[22rem]',
               mine
-                ? 'rounded-br-sm bg-brand text-brand-on'
-                : 'rounded-bl-sm bg-surface-2 text-ink',
+                ? 'rounded-ee-sm bg-brand text-brand-on'
+                : 'rounded-es-sm bg-surface-2 text-ink',
             )}
           >
             {message.body}
@@ -416,8 +428,8 @@ function MessageRow({
           >
             <ReactionPicker onPick={onReact} mine={myReactions} />
             <RowMenu
-              label={`Actions for the message from ${name}`}
-              size="xs"
+              label={t('modules.collab.message.actionsFor', { name })}
+              size="sm"
               items={[
                 {
                   label: 'Reply',
@@ -427,7 +439,7 @@ function MessageRow({
                 ...(mine
                   ? [
                       {
-                        label: 'Edit message…',
+                        label: t('modules.collab.message.menuEdit'),
                         icon: <Pencil aria-hidden />,
                         onSelect: onEdit,
                       },
@@ -436,7 +448,7 @@ function MessageRow({
                 ...(canDelete
                   ? [
                       {
-                        label: 'Delete message',
+                        label: t('modules.collab.message.delete'),
                         icon: <Trash2 aria-hidden />,
                         tone: 'danger' as const,
                         separated: true,
@@ -459,14 +471,21 @@ function MessageRow({
             {formatClock(message.createdAt, timeZone)}
           </span>
           {message.editedAt === null ? null : (
-            <span className="text-caption text-ink-4">edited</span>
+            <span className="text-caption text-ink-4">
+              {t('modules.collab.message.edited')}
+            </span>
           )}
           {tallies.map((row) => (
             <button
               key={row.emoji}
               type="button"
               aria-pressed={row.mine}
-              aria-label={`${row.emoji} — ${row.count}${row.mine ? ', including you' : ''}`}
+              aria-label={t(
+                row.mine
+                  ? 'modules.collab.reaction.tallyMine'
+                  : 'modules.collab.reaction.tally',
+                { emoji: row.emoji, count: row.count },
+              )}
               onClick={() => onReact(row.emoji)}
               className={cn(
                 'inline-flex items-center gap-0.5 rounded-full border px-1.5 text-caption focus-ring',
@@ -494,6 +513,7 @@ function ReactionPicker({
   onPick: (emoji: string) => void
   mine: ReadonlyArray<string>
 }) {
+  const t = useTranslate()
   const [open, setOpen] = useState(false)
 
   return (
@@ -501,8 +521,8 @@ function ReactionPicker({
       <PopoverTrigger asChild>
         <IconButton
           variant="ghost"
-          size="xs"
-          label="React to this message"
+          size="sm"
+          label={t('modules.collab.message.react')}
           icon={<SmilePlus aria-hidden />}
         />
       </PopoverTrigger>
@@ -552,16 +572,17 @@ function Composer({
   onClearReply: () => void
   onClearEditing: () => void
 }) {
+  const t = useTranslate()
   const [body, setBody] = useState('')
   const fieldRef = useRef<HTMLTextAreaElement>(null)
 
   const post = useAction(postMessageFn, {
-    failure: 'Not sent',
-    fallback: 'The message could not be sent. Try again in a moment.',
+    failure: t('modules.collab.toast.notSent'),
+    fallback: t('modules.collab.toast.notSentBody'),
   })
   const edit = useAction(editMessageFn, {
-    success: 'Message updated',
-    failure: 'The edit did not save',
+    success: t('modules.collab.toast.messageUpdated'),
+    failure: t('modules.collab.toast.editFailed'),
   })
   const action = editing === null ? post : edit
 
@@ -615,20 +636,26 @@ function Composer({
   return (
     <div className="shrink-0 border-t border-edge-faint pt-3">
       {editing === null && replyTo === null ? null : (
-        <div className="mb-2 flex min-w-0 items-center gap-2 rounded-md border-l-2 border-brand bg-brand-subtle/60 px-2.5 py-1.5">
+        <div className="mb-2 flex min-w-0 items-center gap-2 rounded-md border-s border-brand bg-brand-subtle/60 px-2.5 py-1.5">
           <span className="min-w-0 flex-1 truncate text-caption text-ink-2">
             <span className="font-semibold">
               {editing === null
-                ? `Replying to ${nameFor(people, replyTo?.userId ?? '')}`
-                : 'Editing your message'}
+                ? t('modules.collab.compose.replyingTo', {
+                    name: nameFor(people, replyTo?.userId ?? '', t),
+                  })
+                : t('modules.collab.compose.editingYours')}
             </span>
             {' · '}
             {(editing ?? replyTo)?.body}
           </span>
           <IconButton
             variant="ghost"
-            size="xs"
-            label={editing === null ? 'Cancel reply' : 'Cancel edit'}
+            size="sm"
+            label={t(
+              editing === null
+                ? 'modules.collab.compose.cancelReply'
+                : 'modules.collab.compose.cancelEdit',
+            )}
             icon={<X aria-hidden />}
             onClick={cancel}
           />
@@ -668,12 +695,14 @@ function Composer({
             maxLength={MAX_LENGTH}
             size="sm"
             aria-label={
-              editing === null ? 'Message the trip' : 'Edit your message'
+              editing === null
+                ? t('modules.collab.compose.placeholder')
+                : t('modules.collab.compose.editPlaceholder')
             }
             placeholder={
               editing === null
                 ? 'Say something to the group…'
-                : 'Change what you said…'
+                : t('modules.collab.compose.editPlaceholderText')
             }
             className="min-w-0 flex-1"
           />
@@ -684,7 +713,7 @@ function Composer({
               size="md"
               shape="pill"
               icon={<SendHorizontal aria-hidden />}
-              label="Send message"
+              label={t('modules.collab.compose.send')}
               disabled={!canSend}
               loading={post.pending}
             />
@@ -696,19 +725,19 @@ function Composer({
               shape="pill"
               disabled={!canSend}
               loading={edit.pending}
-              loadingLabel="Saving the edit"
+              loadingLabel={t('modules.collab.compose.savingEdit')}
             >
-              Save
+              {t('modules.collab.compose.save')}
             </Button>
           )}
         </div>
         <p className="text-caption text-ink-4">
-          <Kbd>Enter</Kbd> sends · <Kbd>Shift</Kbd>
-          <Kbd>Enter</Kbd> adds a line
+          <Kbd>Enter</Kbd> {t('modules.collab.hint.sends')} · <Kbd>Shift</Kbd>
+          <Kbd>Enter</Kbd> {t('modules.collab.hint.addsLine')}
           {editing === null && replyTo === null ? null : (
             <>
               {' · '}
-              <Kbd>Esc</Kbd> cancels
+              <Kbd>Esc</Kbd> {t('modules.collab.hint.cancels')}
             </>
           )}
         </p>

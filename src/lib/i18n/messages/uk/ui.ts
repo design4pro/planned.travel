@@ -22,15 +22,18 @@ import type En from '../en/ui'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Очистити',
+  'action.clearFilters': 'Скинути фільтри',
   'action.close': 'Закрити',
   'action.dismiss': 'Сховати',
   'action.remove': 'Прибрати',
+  'action.keep': 'Залишити',
   'action.undo': 'Скасувати',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Завантаження',
   'status.working': 'Виконується',
   'status.searching': 'Шукаємо',
+  'status.removing': 'Вилучення',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} у мережі',

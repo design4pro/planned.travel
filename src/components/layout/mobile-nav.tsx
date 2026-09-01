@@ -24,7 +24,9 @@ import { PRIMARY_NAV, isPathActive } from './nav-model'
  * height after paint.
  */
 export function MobileNav() {
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
   const t = useTranslate()
 
   return (
@@ -43,7 +45,9 @@ export function MobileNav() {
                 className={cn(
                   'group relative flex h-16 flex-col items-center justify-center gap-1 rounded-lg px-1 focus-ring',
                   'transition-colors duration-base ease-out-quint',
-                  active ? 'text-ink' : 'text-ink-4 hover:text-ink-3 active:text-ink-2',
+                  active
+                    ? 'text-ink'
+                    : 'text-ink-4 hover:text-ink-3 active:text-ink-2',
                 )}
               >
                 <span

@@ -48,10 +48,25 @@ export const buttonVariants = cva(
         /** Reads as a link, behaves as a button. */
         link: 'text-brand underline decoration-brand/35 underline-offset-4 hover:decoration-brand active:translate-y-0 disabled:text-ink-4 disabled:no-underline',
       },
+      /**
+       * Three sizes, and each one owns its type step and its icon.
+       *
+       * The heights are the 32/40/48 ladder they always were; what moved is the
+       * type, one step up at every size (13/15/18 rather than 12/13/15). A 12px
+       * label inside a 32px control reads as a chip rather than as a button,
+       * and the old scale spent two of its three steps below the body size.
+       *
+       * The icon size is declared here rather than left to the call site, which
+       * is the fix for the real inconsistency: the component only ever set
+       * `shrink-0`, so every caller picked its own glyph size and the product
+       * ran 14, 16, 18 and 20px icons inside identically sized buttons. The
+       * descendant selector outranks a class on the `svg` itself, so a caller
+       * that still passes `size-4` is overridden rather than in conflict.
+       */
       size: {
-        sm: 'h-8 gap-1.5 rounded-sm px-3 text-caption',
-        md: 'h-10 gap-2 rounded-md px-4 text-label',
-        lg: 'h-12 gap-2.5 rounded-md px-5 text-body',
+        sm: 'h-8 gap-1.5 rounded-sm px-3.5 text-label [&_svg]:size-3.5',
+        md: 'h-10 gap-2 rounded-md px-4 text-body [&_svg]:size-4',
+        lg: 'h-12 gap-2.5 rounded-md px-5 text-subtitle [&_svg]:size-4.5',
       },
       shape: {
         default: '',

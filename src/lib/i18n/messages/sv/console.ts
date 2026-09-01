@@ -137,7 +137,6 @@ const messages = {
   'users.filter.role.curator': 'Redaktörer',
   'users.filter.status.label': 'Filtrera på kontots tillstånd',
   'users.filter.status.any': 'Vilket tillstånd som helst',
-  'users.filter.clear': 'Rensa filtren',
   'users.filter.hint': 'Smalna av på roll eller tillstånd — ett i taget.',
   'users.column.account': 'Konto',
   'users.column.role': 'Plattformsroll',

@@ -365,6 +365,107 @@ const messages = {
   'role.admin': 'Administrador',
   'role.member': 'Membro',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} viagem',
+    many: '{value} viagens',
+    other: '{value} viagens',
+  },
+  'trips.count.favourites': {
+    one: '{value} favorita',
+    many: '{value} favoritas',
+    other: '{value} favoritas',
+  },
+  'trips.count.archived': {
+    one: '{value} arquivada',
+    many: '{value} arquivadas',
+    other: '{value} arquivadas',
+  },
+  'trips.atLimit.body':
+    'Seu plano cobre {trips}. Arquive alguma que você terminou ou passe para um plano maior para manter mais abertas ao mesmo tempo.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Novo diário',
+  'newJourney.title': 'Comece um diário',
+  'newJourney.description':
+    'Um diário é o lado escrito de uma viagem: entradas em ordem de data, com as fotos e o clima de que você se lembra.',
+  'newJourney.titlePlaceholder': 'Duas semanas em Quioto',
+  'newJourney.subtitle': 'Subtítulo',
+  'newJourney.subtitleHint': 'Uma linha sob o título, na capa.',
+  'newJourney.subtitlePlaceholder': 'Templos, trens e matcha demais',
+  'newJourney.trip': 'Com base em uma viagem',
+  'newJourney.tripHint': 'Opcional: liga a história ao plano dela.',
+  'newJourney.tripNone': 'Sem viagem associada',
+  'newJourney.datesError': 'A data de fim é anterior ao início.',
+  'newJourney.submit': 'Criar diário',
+  'newJourney.creating': 'Criando o diário',
+  'newJourney.created': 'Diário começado',
+  'newJourney.createdBody':
+    'Adicione a primeira entrada para começar a história.',
+  'newJourney.error':
+    'Não foi possível criar o diário. Tente de novo em um instante.',
+  'newCollection.trigger': 'Nova coleção',
+  'newCollection.title': 'Comece uma coleção',
+  'newCollection.description':
+    'Um lugar para os lugares que você encontra antes de saber a que viagem pertencem.',
+  'newCollection.namePlaceholder': 'Um café que vale atravessar a cidade',
+  'newCollection.descriptionHint': 'O que entra aqui e o que não entra.',
+  'newCollection.submit': 'Criar coleção',
+  'newCollection.creating': 'Criando a coleção',
+  'newCollection.created': 'Coleção criada',
+  'newCollection.createdBody': 'Comece a salvar lugares nela.',
+  'newCollection.error':
+    'Não foi possível criar a coleção. Tente de novo em um instante.',
+
+  'newTrip.title': 'Comece uma viagem nova',
+  'newTrip.description':
+    'Um título já basta. As datas montam o plano dia a dia, e o resto pode esperar até você saber.',
+  'newTrip.name': 'Nome da viagem',
+  'newTrip.namePlaceholder': 'Quioto na temporada das cerejeiras',
+  'newTrip.destination': 'Destino',
+  'newTrip.destinationHint': 'Uma cidade, uma região ou a rota inteira.',
+  'newTrip.destinationPlaceholder': 'Quioto, Japão',
+  'newTrip.departure': 'Partida',
+  'newTrip.return': 'Retorno',
+  'newTrip.returnError': 'A data de retorno é anterior à partida.',
+  'newTrip.currency': 'Moeda do orçamento',
+  'newTrip.currencyHint': 'Nela somamos cada gasto desta viagem.',
+  'newTrip.submit': 'Criar viagem',
+  'newTrip.creating': 'Criando a viagem',
+  'newTrip.error':
+    'Não foi possível criar a viagem. Tente de novo em um instante.',
+  'newTrip.created': 'Viagem criada',
+  'newTrip.createdBody': 'Comece a marcar lugares no mapa.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Quem pode ver',
+  'visibility.private': 'Só eu',
+  'visibility.organization': 'Todos no espaço',
+  'visibility.public': 'Qualquer pessoa com o link',
+
+  'trips.error': 'Suas viagens não carregaram',
+  'trips.eyebrow': 'Espaço',
+  'trips.nothingPlanned': 'Nada planejado ainda',
+  'trips.search': 'Buscar viagens',
+  'trips.atLimit.title':
+    'Você preencheu todas as viagens que o seu plano permite',
+  'trips.atLimit.action': 'Comparar planos',
+  'trips.noMatch.title': 'Nada corresponde a esse filtro',
+  'trips.noMatch.body': 'Tente outra etapa, limpe a busca ou olhe no arquivo.',
+  'trips.noMatch.action': 'Redefinir filtros',
+  'trips.empty.body':
+    'Uma viagem reúne o roteiro, o mapa, as reservas, as listas de bagagem e o dinheiro. Comece uma e o resto vem depois.',
+  'trips.next.title': 'Para algum lugar depois',
+  'trips.next.body':
+    'Comece uma viagem e o planned.travel cria um dia por data, pronto para o que você salvou.',
+  'trips.savedPlaces': 'Lugares salvos',
+  'trips.filter.all': 'Todas',
+  'trips.filter.favourites': 'Favoritas',
+  'trips.card.favourite': 'Favorita',
+  'trips.card.noDestination': 'Destino ainda não definido',
+  'trips.card.noDates': 'Datas a definir',
+  'trips.card.startsIn': 'em {days} d',
+  'trips.card.days': '{days} d',
   'metric.trips': 'Viagens',
   'metric.places': 'Lugares',
   'metric.members': 'Membros',

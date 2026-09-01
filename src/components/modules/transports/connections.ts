@@ -15,6 +15,11 @@
  * this is the comparison that matches what a person sees on their ticket.
  */
 
+import { modeLabel } from './vocabulary'
+
+import type { DeferredMessage } from '../shared/deferred-message'
+import type { MessageKey } from '#/lib/i18n'
+
 export interface LegLike {
   readonly id: string
   readonly title: string
@@ -102,10 +107,16 @@ export interface Connection {
   /** Minutes between the previous arrival and the next departure. */
   readonly gapMinutes: number | null
   readonly severity: ConnectionSeverity
-  /** One short line, suitable for a rail between two cards. */
-  readonly headline: string
+  /**
+   * One short line, suitable for a rail between two cards.
+   *
+   * A message rather than a sentence: this file has no provider, and the
+   * verdicts used to be assembled from English fragments — a head, a gap and a
+   * tail — which fixed English word order into every locale.
+   */
+  readonly headline: DeferredMessage
   /** The reason, when there is something worth explaining. */
-  readonly detail: string | null
+  readonly detail: DeferredMessage | null
   /** True when the previous leg lands somewhere the next one does not leave from. */
   readonly placeMismatch: boolean
 }
@@ -203,9 +214,8 @@ export function analyseConnections(
         toId: to.id,
         gapMinutes: null,
         severity: 'unknown',
-        headline: 'No times to compare',
-        detail:
-          'Add a date and time to both legs and this hand-over will be checked for you.',
+        headline: { key: 'modules.transports.junction.unknown.headline' },
+        detail: { key: 'modules.transports.junction.unknown.detail' },
         placeMismatch: mismatch,
       })
       continue
@@ -220,8 +230,14 @@ export function analyseConnections(
         toId: to.id,
         gapMinutes,
         severity: 'impossible',
-        headline: `Leaves ${formatGap(gapMinutes)} before the previous leg lands`,
-        detail: `“${to.title}” departs before “${from.title}” arrives, so this pair cannot both be caught. Move one of them.`,
+        headline: {
+          key: 'modules.transports.junction.impossible.headline',
+          params: { gap: formatGap(gapMinutes) },
+        },
+        detail: {
+          key: 'modules.transports.junction.impossible.detail',
+          params: { to: to.title, from: from.title },
+        },
         placeMismatch: mismatch,
       })
       continue
@@ -233,10 +249,26 @@ export function analyseConnections(
         toId: to.id,
         gapMinutes,
         severity: 'tight',
-        headline: `${formatGap(gapMinutes)} to connect`,
-        detail: `A ${to.mode} usually needs about ${formatGap(required)}${
-          boarding === null ? '' : ` at ${boarding}`
-        }. This one is tight.`,
+        headline: {
+          key: 'modules.transports.junction.tight.headline',
+          params: { gap: formatGap(gapMinutes) },
+        },
+        // Two whole sentences rather than one with an inline ternary: the
+        // "at {place}" clause does not sit in the same position in every
+        // language. `mode` goes through `keyParams` because the row stores a
+        // token, and a token is not a word a reader recognises.
+        detail:
+          boarding === null
+            ? {
+                key: 'modules.transports.junction.tight.detail',
+                params: { required: formatGap(required) },
+                keyParams: { mode: modeLabel(to.mode) },
+              }
+            : {
+                key: 'modules.transports.junction.tight.detailAt',
+                params: { required: formatGap(required), place: boarding },
+                keyParams: { mode: modeLabel(to.mode) },
+              },
         placeMismatch: mismatch,
       })
       continue
@@ -247,10 +279,16 @@ export function analyseConnections(
       toId: to.id,
       gapMinutes,
       severity: 'ok',
-      headline: `${formatGap(gapMinutes)} in between`,
+      headline: {
+        key: 'modules.transports.junction.ok.headline',
+        params: { gap: formatGap(gapMinutes) },
+      },
       detail:
         mismatch && landing !== null && boarding !== null
-          ? `Lands at ${landing} but the next leg leaves from ${boarding} — you will need to get across.`
+          ? {
+              key: 'modules.transports.junction.ok.detail',
+              params: { landing, boarding },
+            }
           : null,
       placeMismatch: mismatch,
     })
@@ -290,7 +328,7 @@ export function legTimingError(leg: {
   readonly departureTime: string
   readonly arrivalDate: string
   readonly arrivalTime: string
-}): string | null {
+}): MessageKey | null {
   if (leg.departureDate === '' || leg.arrivalDate === '') {
     return null
   }
@@ -305,5 +343,5 @@ export function legTimingError(leg: {
   if (from === null || to === null) {
     return null
   }
-  return to < from ? 'This leg arrives before it departs.' : null
+  return to < from ? 'modules.transports.error.arrivesBeforeDeparts' : null
 }

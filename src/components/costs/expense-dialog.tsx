@@ -32,6 +32,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import {
   CURRENCY_OPTIONS,
   currencyCode,
@@ -51,7 +52,11 @@ import {
 
 import type { ReactNode } from 'react'
 import type { SplitMethod } from '#/lib/money'
-import type { CostsExpense, CostsPerson, ExpenseCategory } from '#/server/fns/costs'
+import type {
+  CostsExpense,
+  CostsPerson,
+  ExpenseCategory,
+} from '#/server/fns/costs'
 import type { SplitDraft } from './split-editor'
 
 /** A category, already carrying the glyph the module maps it to. */
@@ -161,16 +166,21 @@ function initialState(
       notes: '',
     }
   }
-  const foreign = expense.originalCurrency !== null && expense.originalAmountMinor !== null
+  const foreign =
+    expense.originalCurrency !== null && expense.originalAmountMinor !== null
   return {
     title: expense.title,
-    currency: foreign ? currencyCode(expense.originalCurrency) : currencyCode(expense.currency),
+    currency: foreign
+      ? currencyCode(expense.originalCurrency)
+      : currencyCode(expense.currency),
     // Seeded without grouping separators: a field the reader is about to edit is
     // easier to work in as `2384.00` than as `2,384.00`.
     amount: foreign
       ? toAmountInput(expense.originalAmountMinor, expense.originalCurrency)
       : toAmountInput(expense.amountMinor, expense.currency),
-    converted: foreign ? toAmountInput(expense.amountMinor, expense.currency) : '',
+    converted: foreign
+      ? toAmountInput(expense.amountMinor, expense.currency)
+      : '',
     category: asCategory(expense.category, categories),
     spentOn: expense.spentOn,
     paidBy: expense.paidBy ?? NO_PAYER,
@@ -190,6 +200,8 @@ export function ExpenseDialog({
   today,
   onSubmit,
 }: ExpenseDialogProps) {
+  const t = useTranslate()
+  const locale = useLocale()
   const editing = expense !== null
   const [form, setForm] = useState<FormState>(() =>
     initialState(expense, tripCurrency, today, categories, defaultCategory),
@@ -197,7 +209,13 @@ export function ExpenseDialog({
   const [draft, setDraft] = useState<SplitDraft>(() =>
     expense === null
       ? emptyDraft(people)
-      : draftFor(people, expense.amountMinor, expense.currency, expense.splitMethod, expense.shares),
+      : draftFor(
+          people,
+          expense.amountMinor,
+          expense.currency,
+          expense.splitMethod,
+          expense.shares,
+        ),
   )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -205,7 +223,9 @@ export function ExpenseDialog({
 
   const foreign = currencyCode(form.currency) !== currencyCode(tripCurrency)
   const typedMinor = parseMoney(form.amount, form.currency)
-  const convertedMinor = foreign ? parseMoney(form.converted, tripCurrency) : typedMinor
+  const convertedMinor = foreign
+    ? parseMoney(form.converted, tripCurrency)
+    : typedMinor
   const amountMinor = convertedMinor ?? 0
 
   const preview = useMemo(
@@ -214,12 +234,15 @@ export function ExpenseDialog({
   )
 
   const rate = foreign
-    ? formatExchangeRate({
-        originalAmountMinor: typedMinor,
-        originalCurrency: form.currency,
-        amountMinor,
-        currency: tripCurrency,
-      })
+    ? formatExchangeRate(
+        {
+          originalAmountMinor: typedMinor,
+          originalCurrency: form.currency,
+          amountMinor,
+          currency: tripCurrency,
+        },
+        locale,
+      )
     : null
 
   const titleOk = form.title.trim().length > 0
@@ -259,11 +282,15 @@ export function ExpenseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit this expense' : 'Add an expense'}</DialogTitle>
+          <DialogTitle>
+            {t(editing ? 'costs.expense.editTitle' : 'costs.expense.addTitle')}
+          </DialogTitle>
           <DialogDescription>
             {editing
-              ? 'Changing the amount re-splits it between everyone included below.'
-              : `Amounts are held in ${currencyCode(tripCurrency)} for this trip. Log a receipt in its own currency and record what it converted to.`}
+              ? t('costs.expense.editDescription')
+              : t('costs.expense.addDescription', {
+                  currency: currencyCode(tripCurrency),
+                })}
           </DialogDescription>
         </DialogHeader>
 
@@ -277,16 +304,18 @@ export function ExpenseDialog({
             }}
           >
             {error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('costs.expense.saveFailed')}>
                 {error}
               </Alert>
             )}
 
-            <Field label="What was it for" required>
+            <Field label={t('costs.expense.what')} required>
               <Input
                 value={form.title}
-                onChange={(event) => setForm({ ...form, title: event.target.value })}
-                placeholder="Dinner at Kyubey"
+                onChange={(event) =>
+                  setForm({ ...form, title: event.target.value })
+                }
+                placeholder={t('costs.expense.whatPlaceholder')}
                 leading={<Tag />}
                 maxLength={160}
                 autoComplete="off"
@@ -296,17 +325,19 @@ export function ExpenseDialog({
 
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9.5rem]">
               <Field
-                label="Amount"
+                label={t('costs.field.amount')}
                 required
                 error={
                   form.amount.trim() !== '' && typedMinor === null
-                    ? 'Enter the amount as a number.'
+                    ? t('costs.expense.amountNotANumber')
                     : undefined
                 }
               >
                 <Input
                   value={form.amount}
-                  onChange={(event) => setForm({ ...form, amount: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, amount: event.target.value })
+                  }
                   placeholder={toAmountInput(0, form.currency)}
                   inputMode="decimal"
                   autoComplete="off"
@@ -315,7 +346,7 @@ export function ExpenseDialog({
                   required
                 />
               </Field>
-              <Field label="Currency">
+              <Field label={t('costs.field.currency')}>
                 <SimpleSelect
                   options={CURRENCY_OPTIONS.map((entry) => ({
                     value: entry.code,
@@ -324,28 +355,35 @@ export function ExpenseDialog({
                   }))}
                   value={form.currency}
                   onValueChange={(next) => setForm({ ...form, currency: next })}
-                  ariaLabel="Currency this receipt was written in"
+                  ariaLabel={t('costs.expense.currencyLabel')}
                 />
               </Field>
             </div>
 
             {foreign ? (
               <Field
-                label={`Converted to ${currencyCode(tripCurrency)}`}
+                label={t('costs.expense.convertedTo', {
+                  currency: currencyCode(tripCurrency),
+                })}
                 required
                 hint={
                   rate ??
-                  `What ${currencyCode(form.currency)} came to in ${currencyCode(tripCurrency)} on your statement.`
+                  t('costs.expense.convertedHint', {
+                    from: currencyCode(form.currency),
+                    to: currencyCode(tripCurrency),
+                  })
                 }
                 error={
                   form.converted.trim() !== '' && convertedMinor === null
-                    ? 'Enter the converted amount as a number.'
+                    ? t('costs.expense.convertedNotANumber')
                     : undefined
                 }
               >
                 <Input
                   value={form.converted}
-                  onChange={(event) => setForm({ ...form, converted: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, converted: event.target.value })
+                  }
                   placeholder={toAmountInput(0, tripCurrency)}
                   inputMode="decimal"
                   autoComplete="off"
@@ -357,7 +395,7 @@ export function ExpenseDialog({
             ) : null}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Category">
+              <Field label={t('modules.field.category')}>
                 <SimpleSelect
                   options={categories.map((entry) => ({
                     value: entry.value,
@@ -365,37 +403,45 @@ export function ExpenseDialog({
                     icon: entry.icon,
                   }))}
                   value={form.category}
-                  onValueChange={(next) => setForm({ ...form, category: asCategory(next, categories) })}
-                  ariaLabel="Category"
+                  onValueChange={(next) =>
+                    setForm({ ...form, category: asCategory(next, categories) })
+                  }
+                  ariaLabel={t('modules.field.category')}
                 />
               </Field>
-              <Field label="Date">
+              <Field label={t('costs.field.date')}>
                 <DatePicker
                   value={parseDay(form.spentOn)}
                   onChange={(next) =>
-                    setForm({ ...form, spentOn: next === null ? today : toDayString(next) })
+                    setForm({
+                      ...form,
+                      spentOn: next === null ? today : toDayString(next),
+                    })
                   }
-                  ariaLabel="Date this was spent"
+                  ariaLabel={t('costs.expense.dateLabel')}
                 />
               </Field>
             </div>
 
             <Field
-              label="Paid by"
-              hint="Leave it unclaimed if you are logging a receipt nobody has covered yet."
+              label={t('costs.field.paidBy')}
+              hint={t('costs.expense.paidByHint')}
             >
               <SimpleSelect
                 options={[
-                  { value: NO_PAYER, label: 'Nobody yet' },
+                  { value: NO_PAYER, label: t('costs.expense.nobodyYet') },
                   ...people.map((person) => ({
                     value: person.userId,
-                    label: person.userId === viewerUserId ? `${person.name} (you)` : person.name,
+                    label:
+                      person.userId === viewerUserId
+                        ? `${person.name} (you)`
+                        : person.name,
                     description: person.email === '' ? undefined : person.email,
                   })),
                 ]}
                 value={form.paidBy}
                 onValueChange={(next) => setForm({ ...form, paidBy: next })}
-                ariaLabel="Who paid"
+                ariaLabel={t('costs.expense.whoPaid')}
               />
             </Field>
 
@@ -410,28 +456,40 @@ export function ExpenseDialog({
               disabled={saving}
             />
 
-            <Field label="Notes" hint="Optional. Anything the receipt does not say.">
+            <Field
+              label={t('modules.field.notes')}
+              hint={t('costs.expense.notesHint')}
+            >
               <Textarea
                 value={form.notes}
-                onChange={(event) => setForm({ ...form, notes: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, notes: event.target.value })
+                }
                 rows={2}
                 autoResize
                 maxRows={5}
                 maxLength={4000}
                 size="sm"
-                placeholder="Split the tasting menu, drinks were separate."
+                placeholder={t('costs.expense.notesPlaceholder')}
               />
             </Field>
           </form>
         </DialogBody>
 
         <DialogFooter>
-          <span className="mr-auto hidden items-baseline gap-2 text-caption text-ink-3 sm:flex">
+          <span className="me-auto hidden items-baseline gap-2 text-caption text-ink-3 sm:flex">
             <Wallet aria-hidden className="size-3.5 self-center" />
-            {amountOk ? formatMoney(amountMinor, tripCurrency) : 'No amount yet'}
+            {amountOk
+              ? formatMoney(amountMinor, tripCurrency, locale)
+              : t('costs.expense.noAmount')}
           </span>
-          <Button type="button" variant="ghost" shape="pill" onClick={() => onOpenChange(false)}>
-            Cancel
+          <Button
+            type="button"
+            variant="ghost"
+            shape="pill"
+            onClick={() => onOpenChange(false)}
+          >
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -440,9 +498,9 @@ export function ExpenseDialog({
             shape="pill"
             disabled={!canSave}
             loading={saving}
-            loadingLabel="Saving the expense"
+            loadingLabel={t('costs.expense.saving')}
           >
-            {editing ? 'Save changes' : 'Add expense'}
+            {t(editing ? 'costs.expense.saveChanges' : 'costs.expense.add')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -459,15 +517,24 @@ export function ExpenseDialog({
  */
 function sharesOf(
   draft: SplitDraft,
-  preview: { readonly rows: ReadonlyArray<{ readonly userId: string; readonly shareMinor: number }> },
-): Array<{ readonly userId: string; readonly shareMinor: number; readonly weight: number }> {
+  preview: {
+    readonly rows: ReadonlyArray<{
+      readonly userId: string
+      readonly shareMinor: number
+    }>
+  },
+): Array<{
+  readonly userId: string
+  readonly shareMinor: number
+  readonly weight: number
+}> {
   const weights = new Map(
     draft.rows.map((row) => [
       row.userId,
       draft.method === 'shares'
-        ? (Number.parseFloat(row.weight) || 0)
+        ? Number.parseFloat(row.weight) || 0
         : draft.method === 'percentage'
-          ? (Number.parseFloat(row.percentage) || 0)
+          ? Number.parseFloat(row.percentage) || 0
           : 1,
     ]),
   )

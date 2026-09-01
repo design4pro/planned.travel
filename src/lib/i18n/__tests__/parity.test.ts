@@ -47,12 +47,104 @@ const fixtures = import.meta.glob<NamespaceModule>(
 /**
  * Keys whose value is a proper noun, and so is legitimately word-for-word
  * identical in a locale to its English one — a product name, a brand, a
- * currency code. Nothing qualifies yet; the list is explicit so that adding to
- * it is a visible decision rather than a quiet weakening of the check.
+ * currency code. The list is explicit so that adding to it is a visible
+ * decision rather than a quiet weakening of the check.
  *
  * A value with no *words* in it needs no entry here: see `isUntranslatable`.
+ *
+ * Everything below is a placeholder example naming a real company or
+ * restaurant, with no translatable word in it — five in the booking dialog, two
+ * in the poll dialog. Everything built *around* them still has to be translated:
+ * "Dinner at Den" and "Ghibli Museum, 10:00 entry" are not on this list. An
+ * entry permits identity, it does not require it — cs names a different Tokyo
+ * restaurant, because "Den" happens to be the Czech word for "day".
  */
-const PROPER_NOUNS: ReadonlyArray<string> = []
+const PROPER_NOUNS: ReadonlyArray<string> = [
+  'modules.book.example.accommodationProvider',
+  'modules.book.example.restaurantProvider',
+  'modules.book.example.activityProvider',
+  'modules.book.example.tourProvider',
+  'modules.book.example.transportProvider',
+  'modules.collab.poll.example.first',
+  'modules.collab.poll.example.second',
+  'shell.newTrip.destinationPlaceholder',
+]
+
+/**
+ * Keys a *particular* locale writes exactly as English writes them, because the
+ * word was borrowed unchanged — "Taxi" in German is Taxi, "Metro" in Italian is
+ * Metro, "Ferry" in French is Ferry.
+ *
+ * This is not `PROPER_NOUNS`: these are ordinary common nouns, and the same key
+ * is properly translated in most other locales, so an exemption that applied to
+ * every language at once would be far too loose. Hence locale by locale, key by
+ * key — and, like the list above, an addition here is a visible decision. The
+ * alternative was to invent a second word a native speaker would not use, which
+ * makes the catalogue worse in order to make the check pass.
+ *
+ * A shared root counts too, not only a borrowing: French writes "Question" the
+ * way English does because both took it from Latin, and there is no second
+ * French word for it that a form label could use instead.
+ */
+const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
+  ca: [
+    'modules.files.kind.document',
+    'modules.transports.mode.metro',
+    'modules.transports.mode.taxi',
+    'modules.transports.status.idea',
+    'settings.billing.orders.document',
+  ],
+  cs: ['modules.transports.mode.metro', 'modules.transports.mode.taxi'],
+  de: [
+    'marketing.legal.badge.version',
+    'modules.files.kind.ticket',
+    'modules.transports.mode.bus',
+    'modules.transports.mode.taxi',
+  ],
+  es: [
+    'modules.transports.mode.metro',
+    'modules.transports.mode.taxi',
+    'modules.transports.status.idea',
+  ],
+  fr: [
+    'costs.field.date',
+    'costs.payment.note',
+    'costs.split.method.exact',
+    'marketing.legal.badge.version',
+    'modules.collab.poll.field.question',
+    'modules.files.field.description',
+    'modules.files.kind.document',
+    'modules.files.kind.photo',
+    'modules.transports.mode.bus',
+    'modules.transports.mode.ferry',
+    'modules.transports.mode.taxi',
+    'modules.transports.mode.train',
+    'settings.billing.orders.document',
+    'shell.newTrip.destination',
+  ],
+  hu: ['modules.transports.mode.taxi'],
+  id: ['modules.transports.mode.bus'],
+  it: [
+    'modules.files.column.file',
+    'modules.transports.mode.metro',
+    'modules.transports.mode.taxi',
+    'modules.transports.mode.tram',
+    'modules.transports.status.idea',
+  ],
+  nl: [
+    'costs.split.method.exact',
+    'modules.files.kind.document',
+    'modules.transports.mode.bus',
+    'modules.transports.mode.metro',
+    'modules.transports.mode.taxi',
+    'modules.transports.mode.tram',
+    'settings.billing.orders.document',
+  ],
+  pl: ['modules.transports.mode.metro'],
+  sv: ['marketing.legal.badge.version', 'modules.transports.mode.taxi'],
+  tr: ['modules.transports.mode.metro'],
+  vi: ['modules.transports.mode.taxi'],
+}
 
 const TOKEN = /\{([A-Za-z0-9_]+)\}/g
 
@@ -394,7 +486,10 @@ describe('the shipped catalogues', () => {
   for (const tag of LOCALE_TAGS) {
     describe(tag, () => {
       const catalogue = catalogues.get(tag) ?? {}
-      const report = compare(source, catalogue, tag)
+      const report = compare(source, catalogue, tag, [
+        ...PROPER_NOUNS,
+        ...(LOANWORDS[tag] ?? []),
+      ])
 
       it('carries every key English carries', () => {
         expect(report.missing).toEqual([])

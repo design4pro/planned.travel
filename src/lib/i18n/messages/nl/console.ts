@@ -137,7 +137,6 @@ const messages = {
   'users.filter.role.curator': 'Redacteuren',
   'users.filter.status.label': 'Filter op toestand van het account',
   'users.filter.status.any': 'Elke toestand',
-  'users.filter.clear': 'Filters wissen',
   'users.filter.hint': 'Verklein op rol of op toestand — één tegelijk.',
   'users.column.account': 'Gebruikersaccount',
   'users.column.role': 'Platformrol',

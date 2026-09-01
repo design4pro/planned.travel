@@ -350,6 +350,105 @@ const messages = {
   'role.admin': 'Beheerder',
   'role.member': 'Lid',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} reis',
+    other: '{value} reizen',
+  },
+  'trips.count.favourites': {
+    one: '{value} favoriet',
+    other: '{value} favorieten',
+  },
+  'trips.count.archived': {
+    one: '{value} gearchiveerd',
+    other: '{value} gearchiveerd',
+  },
+  'trips.atLimit.body':
+    'Je abonnement dekt {trips}. Archiveer een afgeronde reis of stap over naar een hoger abonnement om er meer tegelijk open te houden.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Nieuw dagboek',
+  'newJourney.title': 'Begin een dagboek',
+  'newJourney.description':
+    'Een dagboek is de geschreven kant van een reis — stukjes op datum, met de foto’s en het weer waaraan je je herinnert.',
+  'newJourney.titlePlaceholder': 'Twee weken in Kyoto',
+  'newJourney.subtitle': 'Ondertitel',
+  'newJourney.subtitleHint': 'Eén regel onder de titel, op het omslag.',
+  'newJourney.subtitlePlaceholder': 'Tempels, treinen en veel te veel matcha',
+  'newJourney.trip': 'Op basis van een reis',
+  'newJourney.tripHint': 'Optioneel — verbindt het verhaal met het plan.',
+  'newJourney.tripNone': 'Niet aan een reis gekoppeld',
+  'newJourney.datesError': 'De einddatum ligt voor de start.',
+  'newJourney.submit': 'Dagboek aanmaken',
+  'newJourney.creating': 'Dagboek wordt aangemaakt',
+  'newJourney.created': 'Dagboek begonnen',
+  'newJourney.createdBody':
+    'Voeg je eerste stukje toe om het verhaal te beginnen.',
+  'newJourney.error':
+    'Het dagboek kon niet worden aangemaakt. Probeer het straks opnieuw.',
+  'newCollection.trigger': 'Nieuwe collectie',
+  'newCollection.title': 'Begin een collectie',
+  'newCollection.description':
+    'Een plek voor de plekken die je vindt voordat je weet bij welke reis ze horen.',
+  'newCollection.namePlaceholder': 'Koffie waarvoor je de stad oversteekt',
+  'newCollection.descriptionHint': 'Wat hier thuishoort en wat niet.',
+  'newCollection.submit': 'Collectie aanmaken',
+  'newCollection.creating': 'Collectie wordt aangemaakt',
+  'newCollection.created': 'Collectie aangemaakt',
+  'newCollection.createdBody': 'Begin er plekken in op te slaan.',
+  'newCollection.error':
+    'De collectie kon niet worden aangemaakt. Probeer het straks opnieuw.',
+
+  'newTrip.title': 'Een nieuwe reis beginnen',
+  'newTrip.description':
+    'Een titel is genoeg. Data bouwen het dagplan, en de rest kan wachten tot je het weet.',
+  'newTrip.name': 'Naam van de reis',
+  'newTrip.namePlaceholder': 'Kyoto in de kersenbloesem',
+  'newTrip.destination': 'Bestemming',
+  'newTrip.destinationHint': 'Een stad, een regio of de hele route.',
+  'newTrip.destinationPlaceholder': 'Kyoto, Japan',
+  'newTrip.departure': 'Vertrek',
+  'newTrip.return': 'Terugreis',
+  'newTrip.returnError': 'De terugreisdatum ligt voor het vertrek.',
+  'newTrip.currency': 'Valuta van het budget',
+  'newTrip.currencyHint': 'Daarin wordt elke uitgave van deze reis opgeteld.',
+  'newTrip.submit': 'Reis aanmaken',
+  'newTrip.creating': 'Reis wordt aangemaakt',
+  'newTrip.error':
+    'De reis kon niet worden aangemaakt. Probeer het straks opnieuw.',
+  'newTrip.created': 'Reis aangemaakt',
+  'newTrip.createdBody': 'Begin plekken op de kaart te zetten.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Wie het kan zien',
+  'visibility.private': 'Alleen ik',
+  'visibility.organization': 'Iedereen in de werkruimte',
+  'visibility.public': 'Iedereen met de link',
+
+  'trips.error': 'Je reizen zijn niet geladen',
+  'trips.eyebrow': 'Werkruimte',
+  'trips.nothingPlanned': 'Nog niets gepland',
+  'trips.search': 'Reizen zoeken',
+  'trips.atLimit.title':
+    'Je hebt elke reis gebruikt die je abonnement toestaat',
+  'trips.atLimit.action': 'Abonnementen vergelijken',
+  'trips.noMatch.title': 'Niets past bij dit filter',
+  'trips.noMatch.body':
+    'Kies een andere fase, wis de zoekopdracht of kijk in het archief.',
+  'trips.noMatch.action': 'Filters wissen',
+  'trips.empty.body':
+    'Een reis houdt je dagindeling, je kaart, je boekingen, je paklijsten en het geld bij elkaar. Begin er een en de rest volgt.',
+  'trips.next.title': 'Ergens hierna',
+  'trips.next.body':
+    'Begin een reis en planned.travel maakt een dag per datum, klaar voor alles wat je hebt opgeslagen.',
+  'trips.savedPlaces': 'Opgeslagen plekken',
+  'trips.filter.all': 'Alle',
+  'trips.filter.favourites': 'Favorieten',
+  'trips.card.favourite': 'Favoriet',
+  'trips.card.noDestination': 'Bestemming nog niet gekozen',
+  'trips.card.noDates': 'Data nog niet gekozen',
+  'trips.card.startsIn': 'over {days} d',
+  'trips.card.days': '{days} d',
   'metric.trips': 'Reizen',
   'metric.places': 'Plekken',
   'metric.members': 'Leden',

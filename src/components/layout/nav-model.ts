@@ -73,8 +73,13 @@ export const PRIMARY_NAV: ReadonlyArray<NavItem> = [
   },
 ]
 
-export function isPathActive(matches: ReadonlyArray<string>, pathname: string): boolean {
-  return matches.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+export function isPathActive(
+  matches: ReadonlyArray<string>,
+  pathname: string,
+): boolean {
+  return matches.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  )
 }
 
 /** Every tab inside a single trip. Same param shape, so one union types them all. */
@@ -95,16 +100,46 @@ export interface TripTab {
 }
 
 export const TRIP_TABS: ReadonlyArray<TripTab> = [
-  { id: 'plan', label: 'shell.trip.tab.plan', to: '/trips/$tripId/plan', icon: Map },
+  {
+    id: 'plan',
+    label: 'shell.trip.tab.plan',
+    to: '/trips/$tripId/plan',
+    icon: Map,
+  },
   {
     id: 'transports',
     label: 'shell.trip.tab.transports',
     to: '/trips/$tripId/transports',
     icon: PlaneTakeoff,
   },
-  { id: 'book', label: 'shell.trip.tab.book', to: '/trips/$tripId/book', icon: Ticket },
-  { id: 'lists', label: 'shell.trip.tab.lists', to: '/trips/$tripId/lists', icon: ListChecks },
-  { id: 'costs', label: 'shell.trip.tab.costs', to: '/trips/$tripId/costs', icon: Coins },
-  { id: 'files', label: 'shell.trip.tab.files', to: '/trips/$tripId/files', icon: Paperclip },
-  { id: 'collab', label: 'shell.trip.tab.collab', to: '/trips/$tripId/collab', icon: Users },
+  {
+    id: 'book',
+    label: 'shell.trip.tab.book',
+    to: '/trips/$tripId/book',
+    icon: Ticket,
+  },
+  {
+    id: 'lists',
+    label: 'shell.trip.tab.lists',
+    to: '/trips/$tripId/lists',
+    icon: ListChecks,
+  },
+  {
+    id: 'costs',
+    label: 'shell.trip.tab.costs',
+    to: '/trips/$tripId/costs',
+    icon: Coins,
+  },
+  {
+    id: 'files',
+    label: 'shell.trip.tab.files',
+    to: '/trips/$tripId/files',
+    icon: Paperclip,
+  },
+  {
+    id: 'collab',
+    label: 'shell.trip.tab.collab',
+    to: '/trips/$tripId/collab',
+    icon: Users,
+  },
 ]

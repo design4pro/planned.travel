@@ -1,0 +1,738 @@
+/**
+ * The trip modules' own copy, in el.
+ *
+ * Authored from `../en/modules.ts`, never from another product's catalogue
+ * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
+ * and `__tests__/parity.test.ts` checks the placeholders and the plural
+ * branches.
+ *
+ * **Πληθυντικός.** `one` · `other`. Εισαγωγικά «…».
+ */
+
+import type { TranslationOf } from '../../types'
+import type En from '../en/modules'
+
+const messages = {
+  /* -------------------------------------------- shared by every module */
+  'value.notSet': 'Δεν έχει οριστεί',
+  /* ----------------------------------------- the realtime presence bar */
+  'presence.connecting.title': 'Σύνδεση',
+  'presence.connecting.body':
+    'Μπαίνουμε στη ζωντανή αίθουσα αυτού του ταξιδιού.',
+  'presence.live.title': 'Ζωντανά',
+  'presence.live.body':
+    'Μηνύματα, σημειώσεις και ψήφοι φτάνουν εδώ μόλις γίνονται.',
+  'presence.reconnecting.title': 'Επανασύνδεση',
+  'presence.reconnecting.body':
+    'Η σύνδεση κόπηκε. Ξαναπροσπαθούμε — ό,τι στέλνεις αποθηκεύεται και πάλι.',
+  'presence.offline.title': 'Χωρίς ζωντανή σύνδεση',
+  'presence.offline.body':
+    'Οι ζωντανές ενημερώσεις είναι κλειστές. Η αποθήκευση συνεχίζεται· ανανέωσε ή ξαναδοκίμασε για να προλάβεις.',
+  'presence.reconnect': 'Επανασύνδεση',
+  /* ------------------------------------------- the transports timeline */
+  'transports.filter.all': 'Όλα τα σκέλη',
+  'transports.empty.title': 'Κανένα σκέλος ακόμη',
+  'transports.empty.body':
+    'Πτήσεις, τρένα, πλοία και η διαδρομή από το αεροδρόμιο ζουν εδώ, με τους κωδικούς κράτησης και τους αριθμούς θέσεων πρόχειρους την ημέρα — και κάθε μετεπιβίβαση ελεγμένη ως προς την προηγούμενη.',
+  'transports.empty.action': 'Πρόσθεσε το πρώτο σκέλος',
+  'transports.filtered.title': 'Κανένα σκέλος αυτού του τύπου',
+  'transports.filtered.body':
+    'Κάθε σκέλος αυτού του ταξιδιού γίνεται αλλιώς. Γύρνα στο «{label}» για να τα δεις όλα.',
+  'transports.filtered.action': 'Δείξε όλα τα σκέλη',
+  'transports.alert.impossible.title': {
+    one: 'Μια μετεπιβίβαση δεν γίνεται',
+    other: '{legs} μετεπιβιβάσεις δεν γίνονται',
+  },
+  'transports.alert.impossible.body':
+    'Ένα σκέλος αναχωρεί πριν φτάσει το προηγούμενο. Οι κόμβοι παρακάτω λένε ποια και κατά πόσο.',
+  'transports.alert.tight.title': {
+    one: 'Μια μετεπιβίβαση είναι στο τσακ',
+    other: '{legs} μετεπιβιβάσεις είναι στο τσακ',
+  },
+  'transports.alert.tight.body':
+    'Υπάρχει χρόνος, αλλά λίγος για το μέσο που προλαβαίνεις. Οι κόμβοι παρακάτω δείχνουν πόσο αφήνει ο καθένας.',
+  'transports.badge.impossible': {
+    one: '{legs} σπασμένη μετεπιβίβαση',
+    other: '{legs} σπασμένες μετεπιβιβάσεις',
+  },
+  'transports.badge.tight': {
+    one: '{legs} οριακή μετεπιβίβαση',
+    other: '{legs} οριακές μετεπιβιβάσεις',
+  },
+  'transports.badge.ok': 'Κάθε μετεπιβίβαση βγαίνει',
+  'transports.remove.body':
+    'Το σκέλος φεύγει από το ταξίδι για πάντα, μαζί με τον κωδικό κράτησης και τη θέση του. Αν είναι μόνο ακυρωμένο, βάλε την κατάστασή του σε «Ακυρώθηκε» αντ’ αυτού.',
+  'transports.remove.confirm': 'Αφαίρεση σκέλους',
+  'transports.menu.edit': 'Επεξεργασία σκέλους…',
+  'transports.field.service': 'Δρομολόγιο',
+  'transports.field.bookingRef': 'Κωδικός κράτησης',
+  'transports.field.seat': 'Θέση',
+  'transports.field.distance': 'Απόσταση',
+  'transports.noTime': 'Χωρίς ώρα ακόμη',
+  'transports.toast.statusFailed.title': 'Η κατάσταση δεν άλλαξε',
+  'transports.toast.statusFailed.body':
+    'Το σκέλος έμεινε στην προηγούμενη κατάστασή του.',
+  'transports.toast.removed': 'Το σκέλος αφαιρέθηκε',
+  'transports.toast.removeFailed': 'Το σκέλος δεν αφαιρέθηκε',
+
+  /* --------------------------------------------- the leg dialog */
+  'transports.dialog.addTitle': 'Πρόσθεσε σκέλος',
+  'transports.dialog.editTitle': 'Επεξεργασία αυτού του σκέλους',
+  'transports.dialog.description':
+    'Πτήσεις, τρένα, πλοία και η διαδρομή από το αεροδρόμιο. Οι ώρες είναι οι τοπικές που γράφει το εισιτήριο.',
+  'transports.form.modeLegend': 'Με τι ταξιδεύεις',
+  'transports.form.timingError': 'Έλεγξε τις ώρες',
+  'transports.field.namePlaceholder': 'Aegean από ATH σε HND',
+  'transports.field.place': 'Τόπος',
+  'transports.field.code': 'Κωδικός',
+  'transports.field.date': 'Ημερομηνία',
+  'transports.field.departurePlaceholder': 'Αθήνα Ελ. Βενιζέλος',
+  'transports.field.arrivalPlaceholder': 'Τόκιο Χανέντα',
+  'transports.field.carrier': 'Μεταφορέας',
+  'transports.field.serviceNumber': 'Αριθμός δρομολογίου',
+  'transports.field.bookingRefHint': 'Ο κωδικός που θα πεις στο γκισέ.',
+  'transports.field.notesPlaceholder':
+    'Ζητήθηκε θέση στο διάδρομο. Οι αποσκευές πάνε μέχρι το Κιότο.',
+  'transports.action.add': 'Πρόσθεσε το σκέλος',
+  'transports.action.save': 'Αποθήκευση σκέλους',
+  'transports.action.saving': 'Αποθήκευση σκέλους σε εξέλιξη',
+  'transports.toast.added': 'Το σκέλος προστέθηκε',
+  'transports.toast.addedBody': 'Μπήκε στη σειρά του ταξιδιού.',
+  'transports.toast.addFailed': 'Το σκέλος δεν προστέθηκε',
+  'transports.toast.updated': 'Το σκέλος ενημερώθηκε',
+  'transports.toast.updateFailed': 'Το σκέλος δεν ενημερώθηκε',
+
+  /* ------------------------------- shared labels and the bookings timeline */
+  'field.name': 'Όνομα',
+  'field.time': 'Ώρα',
+  'field.price': 'Τιμή',
+  'field.notes': 'Σημειώσεις',
+  'field.status': 'Κατάσταση',
+  'form.saveError': 'Αυτό δεν αποθηκεύτηκε',
+  'action.cancel': 'Άκυρο',
+  'book.status.none': 'Χωρίς κατάσταση',
+  'book.status.pending': 'Σε εκκρεμότητα',
+  'book.status.confirmed': 'Επιβεβαιωμένη',
+  'book.status.completed': 'Ολοκληρωμένη',
+  'book.status.cancelled': 'Ακυρωμένη',
+  'book.toast.statusFailed': 'Η κατάσταση δεν άλλαξε',
+  'book.toast.statusFailedBody':
+    'Η κράτηση έμεινε στην προηγούμενη κατάστασή της.',
+  'book.toast.removed': 'Η κράτηση αφαιρέθηκε',
+  'book.toast.removeFailed': 'Η κράτηση δεν αφαιρέθηκε',
+  'book.empty.title': 'Δεν έχει κλειστεί τίποτα ακόμη',
+  'book.empty.body':
+    'Καταλύματα, τραπέζια, εκδρομές και εισιτήρια ανήκουν εδώ — με τον κωδικό επιβεβαίωσης εκεί που θα τον βρεις στην πόρτα, και την ημερομηνία που τα βάζει στο χρονολόγιο.',
+  'book.empty.action': 'Πρόσθεσε την πρώτη κράτηση',
+  'book.filtered.title': 'Τίποτα σε αυτήν την κατάσταση',
+  'book.filtered.body':
+    'Κάθε κράτηση αυτού του ταξιδιού είναι σε άλλο στάδιο. Γύρνα στο «{label}» για να τις δεις όλες.',
+  'book.filtered.action': 'Δείξε όλα',
+  'filter.all': 'Όλα',
+  'book.remove.body':
+    'Φεύγει από το χρονολόγιο για πάντα. Αν είναι μόνο ακυρωμένη, βάλε την κατάστασή της σε «Ακυρωμένη» για να κρατήσεις το αρχείο.',
+  'book.remove.confirm': 'Αφαίρεση κράτησης',
+  'book.menu.edit': 'Επεξεργασία κράτησης…',
+  'book.menu.open': 'Άνοιγμα κράτησης',
+  'book.noDate': 'Χωρίς ημερομηνία ακόμη',
+  'book.until': 'Έως',
+  'book.provider': 'Πάροχος',
+  'book.where': 'Πού',
+  'book.guests': 'Άτομα',
+  'book.confirmation': 'Επιβεβαίωση',
+  'book.undated': 'Δώσε τους ημερομηνία και μπαίνουν στο χρονολόγιο',
+  statusOf: 'Κατάσταση του {title}',
+
+  /* ------------------------------------------- the booking dialog */
+  'book.statusChoice.none': 'Χωρίς κατάσταση ακόμη',
+  'book.statusChoice.pending': 'Σε εκκρεμότητα — περιμένουμε αυτούς',
+  'book.dialog.addTitle': 'Πρόσθεσε κράτηση',
+  'book.dialog.editTitle': 'Επεξεργασία αυτής της κράτησης',
+  'book.dialog.typeLegend': 'Τι είδους κράτηση',
+  'book.field.namePlaceholder': 'Ερμού 15',
+  'book.field.priceHint': 'Άφησέ το κενό αν δεν έχει πληρωθεί ακόμη.',
+  'book.field.confirmation': 'Κωδικός επιβεβαίωσης',
+  'book.field.confirmationHint': 'Ο κωδικός που θα σου ζητήσουν στο γκισέ.',
+  'book.field.day': 'Σύνδεση με μια μέρα',
+  'book.field.dayHint':
+    'Την καρφιτσώνει στο πρόγραμμα, ώστε να φαίνεται στο πλάνο.',
+  'book.field.noDay': 'Εκτός προγράμματος',
+  'book.field.link': 'Σύνδεσμος',
+  'book.field.notesPlaceholder':
+    'Κανονίστηκε αργή άφιξη. Ζήτα δωμάτιο μακριά από το ασανσέρ.',
+  'book.action.add': 'Πρόσθεσε την κράτηση',
+  'book.action.save': 'Αποθήκευση κράτησης',
+  'book.action.saving': 'Αποθήκευση κράτησης σε εξέλιξη',
+  'book.toast.added': 'Η κράτηση προστέθηκε',
+  'book.toast.addedBody': 'Μπήκε στο χρονολόγιο.',
+  'book.toast.addFailed': 'Η κράτηση δεν προστέθηκε',
+  'book.toast.updated': 'Η κράτηση ενημερώθηκε',
+  'book.toast.updateFailed': 'Η κράτηση δεν ενημερώθηκε',
+
+  'book.emptyFacts':
+    'Πέρα από το όνομα δεν υπάρχει ακόμη τίποτα. Άνοιξέ το για να προσθέσεις ώρα, τιμή και κωδικό επιβεβαίωσης.',
+  'book.onItinerary': 'Στο πρόγραμμα: {day}',
+  'book.dayNumber': 'Ημέρα {n}',
+
+  /* ------------------------------ the booking type table, per type */
+  'book.shape.other.label': 'Άλλο',
+  'book.field.host': 'Ξενοδοχείο ή οικοδεσπότης',
+  'book.field.restaurant': 'Όνομα εστιατορίου',
+  'book.field.operator': 'Διοργανωτής',
+  'book.field.issuer': 'Εκδόθηκε από',
+  'book.field.carrier': 'Μεταφορέας',
+  'book.field.address': 'Διεύθυνση',
+  'book.field.meetingPoint': 'Σημείο συνάντησης',
+  'book.field.venue': 'Χώρος',
+  'book.field.fromTo': 'Από και προς',
+  'book.field.checkIn': 'Άφιξη',
+  'book.field.date': 'Ημερομηνία',
+  'book.field.validOn': 'Ισχύει',
+  'book.field.departs': 'Αναχώρηση',
+  'book.field.checkOut': 'Αποχώρηση',
+  'book.field.ends': 'Λήγει',
+  'book.field.arrives': 'Άφιξη',
+  'book.example.accommodationProvider': 'Booking.com',
+  'book.example.restaurantProvider': 'Den',
+  'book.example.activityProvider': 'teamLab',
+  'book.example.tourProvider': 'Kyoto Free Walking Tour',
+  'book.example.ticketProvider': 'Μουσείο Ghibli',
+  'book.example.transportProvider': 'JR Central',
+  'book.example.otherProvider': 'Ποιος το κρατά για σένα',
+  'book.example.accommodationTitle': 'Hotel Gracery Shinjuku · 2 δίκλινα',
+  'book.example.restaurantTitle': 'Δείπνο στο Den',
+  'book.example.activityTitle': 'teamLab Planets, 4 εισιτήρια',
+  'book.example.tourTitle': 'Περίπατος στο δάσος μπαμπού του Arashiyama',
+  'book.example.ticketTitle': 'Μουσείο Ghibli, είσοδος 10:00',
+  'book.example.transportTitle': 'Nozomi 21 για Κιότο',
+  'book.example.otherTitle': 'Τι έχεις κλείσει',
+  'book.hint.accommodation':
+    'Ένα ξενοδοχείο, ένα ryokan, ένα διαμέρισμα — όπου κι αν κοιμάσαι.',
+  'book.hint.restaurant':
+    'Ένα κλεισμένο τραπέζι. Η ώρα είναι αυτό που θα σου κρατήσουν.',
+  'book.hint.activity': 'Ένα μάθημα, ένα λουτρό, μια κλεισμένη εμπειρία.',
+  'book.hint.tour': 'Ένα μέρος, μια ώρα, κι ένας ξεναγός που περιμένει.',
+  'book.hint.ticket':
+    'Είσοδος με ώρα, πάσο μουσείου, ένας αγώνας. Κράτα τον κωδικό κοντά.',
+  'book.hint.transport':
+    'Μια κλεισμένη θέση. Ολόκληρα σκέλη με κωδικούς πάνε στο {module}.',
+  'book.hint.other': 'Ό,τι κρατείται στο όνομά σου και δεν ταιριάζει στα άλλα.',
+
+  /* -------------------------------------- lists: the dialogs */
+  'lists.kind.packing': 'Βαλίτσα',
+  'lists.kind.todo': 'Εκκρεμότητες',
+  'lists.kind.shopping': 'Ψώνια',
+  'lists.kind.documents': 'Έγγραφα',
+  'lists.kind.fallback': 'Λίστα',
+  'colour.none': 'Χωρίς χρώμα',
+  'colour.pine': 'Πεύκο',
+  'colour.inkBlue': 'Μπλε μελάνι',
+  'colour.amber': 'Κεχριμπάρι',
+  'colour.green': 'Πράσινο',
+  'colour.red': 'Κόκκινο',
+  'colour.slate': 'Σχιστόλιθος',
+  'lists.toast.created': 'Η λίστα δημιουργήθηκε',
+  'lists.toast.createdBody': 'Βάλε πρώτο αυτό που δεν πρέπει να ξεχάσεις.',
+  'lists.toast.createFailed': 'Η λίστα δεν δημιουργήθηκε',
+  'lists.toast.updated': 'Η λίστα ενημερώθηκε',
+  'lists.toast.updateFailed': 'Η λίστα δεν ενημερώθηκε',
+  'lists.error.weightLimit':
+    'Το όριο βάρους είναι ακέραιος αριθμός γραμμαρίων.',
+  'lists.dialog.editTitle': 'Επεξεργασία αυτής της λίστας',
+  'lists.dialog.editBody':
+    'Μετονόμασέ την, άλλαξε το είδος, ή δώσ’ την σε έναν ταξιδιώτη.',
+  'lists.dialog.addBody':
+    'Βαλίτσα, εκκρεμότητες, ψώνια και τα έγγραφα που δεν πρέπει να ξεχάσεις — καθένα με τη δική του λίστα.',
+  'lists.action.new': 'Νέα λίστα',
+  'lists.field.namePlaceholder': 'Χειραποσκευή',
+  'lists.field.kind': 'Είδος',
+  'lists.field.kindAria': 'Είδος λίστας',
+  'lists.field.owner': 'Ανήκει σε',
+  'lists.field.ownerHint': 'Τις κοινές λίστες τις τσεκάρει ο καθένας.',
+  'lists.field.everyone': 'Όλοι στο ταξίδι',
+  'lists.field.weightLimit': 'Όριο βάρους',
+  'lists.field.weightLimitHint':
+    'Γραμμάρια. Άφησέ το κενό αν δεν υπάρχει όριο να κρατήσεις.',
+  'colour.legend': 'Χρώμα',
+  'lists.action.saving': 'Αποθήκευση λίστας',
+  'lists.action.save': 'Αποθήκευση της λίστας',
+  'lists.action.create': 'Δημιουργία λίστας',
+  'lists.item.toast.added': 'Το στοιχείο προστέθηκε',
+  'lists.item.toast.addFailed': 'Το στοιχείο δεν προστέθηκε',
+  'lists.item.toast.updated': 'Το στοιχείο ενημερώθηκε',
+  'lists.item.toast.updateFailed': 'Το στοιχείο δεν ενημερώθηκε',
+  'lists.item.error.quantity': 'Η ποσότητα είναι ακέραιος από 1 έως 999.',
+  'lists.item.error.weight': 'Το βάρος είναι ακέραιος αριθμός γραμμαρίων.',
+  'lists.item.dialog.editTitle': 'Επεξεργασία αυτού του στοιχείου',
+  'lists.item.dialog.addTitle': 'Πρόσθεσε ένα στοιχείο',
+  'lists.item.field.label': 'Στοιχείο',
+  'lists.item.field.placeholder': 'Διαβατήριο',
+  'field.category': 'Κατηγορία',
+  'lists.item.field.categoryHint':
+    'Ομαδοποιεί τη λίστα κάτω από έναν τίτλο. Προαιρετικό.',
+  'lists.item.field.categoryPlaceholder': 'Έγγραφα',
+  'lists.item.field.priority': 'Προτεραιότητα',
+  'lists.priorityChoice.high': 'Υψηλή — μην το ξεχάσεις',
+  'lists.priorityChoice.low': 'Χαμηλή — αν υπάρχει χώρος',
+  'lists.priorityChoice.normal': 'Κανονική',
+  'lists.item.field.quantity': 'Ποσότητα',
+  'lists.item.field.weight': 'Βάρος',
+  'lists.item.field.weightHint': 'Γραμμάρια, ανά τεμάχιο.',
+  'lists.item.field.owner': 'Ποιανού δουλειά είναι',
+  'lists.item.owner.nobody': 'Κανένας συγκεκριμένα',
+  'lists.item.action.saving': 'Αποθήκευση στοιχείου',
+  'lists.item.action.save': 'Αποθήκευση του στοιχείου',
+  'lists.item.action.add': 'Πρόσθεσε στη λίστα',
+  'lists.template.loadError': 'Τα πρότυπα δεν φορτώθηκαν αυτή τη στιγμή.',
+  'lists.template.toast.added': 'Προστέθηκε λίστα από πρότυπο',
+  'lists.template.toast.addFailed': 'Το πρότυπο δεν εφαρμόστηκε',
+  'lists.template.error.apply': 'Αυτό δεν εφαρμόστηκε',
+  'lists.template.error.load': 'Τα πρότυπα δεν φόρτωσαν',
+  'lists.template.empty.title': 'Κανένα πρότυπο ακόμη',
+  'lists.template.empty.body':
+    'Αποθήκευσε μια λίστα ως πρότυπο μόλις έχεις μία που θα έφτιαχνες ξανά ίδια, και θα εμφανίζεται εδώ σε κάθε επόμενο ταξίδι.',
+  'lists.template.applying': 'Εφαρμογή προτύπου',
+  'lists.template.dialogTitle': 'Ξεκίνα από πρότυπο',
+  'lists.template.loading': 'Φόρτωση προτύπων',
+  'lists.template.apply': 'Εφαρμογή του προτύπου',
+  'lists.template.from': 'Από πρότυπο',
+
+  /* ---------------------------------------- lists: the board */
+  'lists.unassigned': 'Χωρίς ανάθεση',
+  'lists.toast.listRemoved': 'Η λίστα αφαιρέθηκε',
+  'lists.toast.listRemoveFailed': 'Η λίστα δεν αφαιρέθηκε',
+  'lists.toast.itemRemoved': 'Το στοιχείο αφαιρέθηκε',
+  'lists.toast.itemRemoveFailed': 'Το στοιχείο δεν αφαιρέθηκε',
+  'lists.toast.reset': 'Η λίστα μηδενίστηκε',
+  'lists.toast.resetBody':
+    'Όλα ξετσεκαρίστηκαν και είναι έτοιμα για το επόμενο ταξίδι.',
+  'lists.toast.resetFailed': 'Η λίστα δεν μηδενίστηκε',
+  'lists.toast.tickFailed': 'Το τσεκ δεν αποθηκεύτηκε',
+  'lists.toast.tickFailedBody': 'Το στοιχείο επέστρεψε όπως ήταν.',
+  'lists.toast.assignFailed': 'Η ανάθεση δεν αποθηκεύτηκε',
+  'lists.toast.orderFailed': 'Η νέα σειρά δεν αποθηκεύτηκε',
+  'lists.toast.orderFailedBody': 'Η λίστα επέστρεψε όπως ήταν.',
+  'lists.filter.todo': 'Μένουν ακόμη',
+  'lists.filter.done': 'Έτοιμο',
+  'lists.scope.all': 'Όλες οι λίστες',
+  'lists.scope.shared': 'Κοινές',
+  'lists.scope.mine': 'Δικές μου',
+  'lists.empty.mine.title': 'Καμία δική σου λίστα ακόμη',
+  'lists.empty.shared.title': 'Καμία κοινή λίστα ακόμη',
+  'lists.empty.mine.body':
+    'Τη δική σου λίστα την τσεκάρεις μόνο εσύ — βολικό για όσα δεν χρειάζεται να δει κανείς άλλος.',
+  'lists.empty.shared.body':
+    'Την κοινή λίστα την τσεκάρει ο καθένας, ώστε δύο άτομα να μην πάρουν τον ίδιο αντάπτορα.',
+  'lists.remove.list': 'Αφαίρεση λίστας',
+  'lists.remove.item': 'Αφαίρεση στοιχείου',
+  'lists.remove.itemBody': 'Φεύγει από αυτή τη λίστα. Τίποτα άλλο δεν αλλάζει.',
+  'lists.menu.editList': 'Επεξεργασία λίστας…',
+  'lists.menu.tickAll': 'Τσέκαρε όλα',
+  'lists.menu.untickAll': 'Ξετσέκαρε όλα',
+  'lists.menu.reset': 'Μηδενισμός για το επόμενο ταξίδι',
+  'lists.menu.dragOrderLong': 'Αλλαγή σε σειρά που μπορείς να σύρεις',
+  'lists.menu.groupAgain': 'Ομαδοποίηση κατά κατηγορία ξανά',
+  'lists.menu.dragOrder': 'Αλλαγή σε συρόμενη σειρά',
+  'lists.menu.groupByCategory': 'Ομαδοποίηση κατά κατηγορία',
+  'lists.weight.packed': 'Πακεταρίστηκαν {weight}',
+  'lists.weight.packedOver': 'Πακεταρίστηκαν {weight} — πάνω από το όριο',
+  'lists.weight.packedOf': 'Πακεταρίστηκαν {weight} από {limit} επιτρεπόμενα',
+  'lists.weight.packedOfOver':
+    'Πακεταρίστηκαν {weight} από {limit} επιτρεπόμενα — πάνω από το όριο',
+  'lists.progress.ticked': 'Τσεκαρίστηκαν {done} από {total}',
+  'lists.items.empty.title': 'Αυτή η λίστα είναι κενή',
+  'lists.items.empty.body':
+    'Βάλε πρώτο αυτό που δεν πρέπει να ξεχάσεις — το πεδίο πιο κάτω είναι ο γρηγορότερος δρόμος.',
+  'lists.items.doneEmpty.title': 'Τίποτα τσεκαρισμένο ακόμη',
+  'lists.items.doneEmpty.body': 'Τσέκαρε κάτι και θα εμφανιστεί εδώ.',
+  'lists.items.todoEmpty.title': 'Εδώ όλα είναι έτοιμα',
+  'lists.items.todoEmpty.body':
+    'Κάθε στοιχείο σε αυτή τη λίστα είναι τσεκαρισμένο. Άλλαξε σε «{label}» για να τα δεις.',
+  'lists.category.other': 'Όλα τα υπόλοιπα',
+  'lists.dnd.fallbackName': 'αυτό το στοιχείο',
+  'lists.dnd.picked': 'Σηκώθηκε το {name}.',
+  'lists.dnd.dropped': 'Αφέθηκε το {name}. Η νέα σειρά αποθηκεύεται.',
+  'lists.dnd.cancelled': 'Ακυρώθηκε. Η σειρά παραμένει ίδια.',
+  'lists.menu.editItem': 'Επεξεργασία στοιχείου…',
+  'lists.quickAdd.placeholder': 'Γράψε ένα στοιχείο και πάτα Enter',
+  'lists.quickAdd.aria': 'Πρόσθεσε ένα στοιχείο σε αυτή τη λίστα',
+  'lists.quickAdd.detailsHint': 'Πρόσθεσε με βάρος, κατηγορία ή άτομο',
+  'lists.quickAdd.detailsAria':
+    'Πρόσθεσε ένα στοιχείο με όλες τις λεπτομέρειες',
+  'lists.show': 'Εμφάνιση',
+  'lists.priority.high': 'Υψηλή',
+  'lists.action.add': 'Πρόσθεσε',
+
+  /* ------------------------------- lists: counted in items */
+  'lists.template.itemCount': {
+    one: '{count} στοιχείο',
+    other: '{count} στοιχεία',
+  },
+  'lists.template.copiedIn': {
+    one: 'Αντιγράφηκε {count} στοιχείο, έτοιμο για τσεκάρισμα.',
+    other: 'Αντιγράφηκαν {count} στοιχεία, έτοιμα για τσεκάρισμα.',
+  },
+  'lists.remove.listBody': {
+    one: 'Η λίστα και το {count} στοιχείο της φεύγουν από αυτό το ταξίδι. Τα πρότυπα που έχεις αποθηκεύσει δεν αγγίζονται.',
+    other:
+      'Η λίστα και τα {count} στοιχεία της φεύγουν από αυτό το ταξίδι. Τα πρότυπα που έχεις αποθηκεύσει δεν αγγίζονται.',
+  },
+
+  'lists.item.dialog.body':
+    'Όλα εκτός από το όνομα είναι προαιρετικά — ένα βάρος κάνει το σύνολο της βαλίτσας αληθινό, και μια κατηγορία ομαδοποιεί τη λίστα.',
+  'lists.template.dialogBody':
+    'Ένα πρότυπο είναι μια λίστα που έχεις αποθηκεύσει παλιότερα. Η εφαρμογή του την αντιγράφει ως νέα λίστα σε αυτό το ταξίδι — το αρχικό μένει ως έχει.',
+
+  /* ------------------------ lists: names built around a row */
+  'remove.confirmTitle': 'Αφαίρεση του «{name}»;',
+  actionsFor: 'Ενέργειες για {name}',
+  'lists.dnd.reorder': 'Αναδιάταξη του {name}',
+  'lists.action.untickItem': 'Ξετσέκαρε το {name}',
+  'lists.action.tickOffItem': 'Τσέκαρε το {name}',
+  'lists.item.assignAria': 'Ανάθεση του {name} σε κάποιον',
+  'lists.item.reassignAria':
+    'Το {item} είναι του/της {owner} — ανάθεσέ το αλλού',
+
+  /* ------------------------------ book: what the form refuses */
+  'book.error.titleEmpty':
+    'Δώσε σε αυτή την κράτηση ένα όνομα που θα αναγνωρίσεις σε μια λίστα.',
+  'error.titleLong': 'Κράτα το όνομα κάτω από 160 χαρακτήρες.',
+  'book.error.required': 'Σε αυτή την κράτηση λείπει: {field}.',
+  'book.error.timeNeedsDate': 'Μια ώρα χρειάζεται τη μέρα στην οποία πέφτει.',
+  'book.error.endTimeNeedsDate':
+    'Μια ώρα λήξης χρειάζεται τη μέρα στην οποία πέφτει.',
+  'book.error.endsBeforeStart': 'Αυτό τελειώνει πριν αρχίσει.',
+  'book.error.endTimeBeforeStart':
+    'Η ώρα λήξης είναι πριν από την ώρα έναρξης.',
+  'book.error.guests': 'Ο αριθμός ατόμων πρέπει να είναι ακέραιος έως 1000.',
+  'error.price': 'Αυτό το ποσό δεν μπορούμε να το διαβάσουμε.',
+  'book.error.url': 'Ένας σύνδεσμος πρέπει να ξεκινά με http:// ή https://.',
+  'book.error.confirmationLong':
+    'Αυτός ο κωδικός επιβεβαίωσης είναι πολύ μεγάλος για αποθήκευση.',
+  'book.fieldName.provider': 'μεταφορέας',
+  'book.fieldName.location': 'τόπος',
+  'book.fieldName.confirmationNumber': 'κωδικός επιβεβαίωσης',
+  'book.fieldName.link': 'σύνδεσμος',
+  'book.fieldName.date': 'ημερομηνία',
+  'book.fieldName.time': 'ώρα',
+  'book.fieldName.endDate': 'ημερομηνία λήξης',
+  'book.fieldName.endTime': 'ώρα λήξης',
+  'book.fieldName.guests': 'αριθμός ατόμων',
+  'book.fieldName.price': 'τιμή',
+  'book.copyConfirmation': 'ο κωδικός επιβεβαίωσης του {title}',
+
+  /* -------------------------- transports: modes, ends, refusals */
+  'transports.mode.flight': 'Πτήση',
+  'transports.mode.train': 'Τρένο',
+  'transports.mode.bus': 'Λεωφορείο',
+  'transports.mode.ferry': 'Πλοίο',
+  'transports.mode.car': 'Αυτοκίνητο',
+  'transports.mode.taxi': 'Ταξί',
+  'transports.mode.transit': 'Συγκοινωνία',
+  'transports.mode.metro': 'Μετρό',
+  'transports.mode.tram': 'Τραμ',
+  'transports.mode.bike': 'Ποδήλατο',
+  'transports.mode.walk': 'Με τα πόδια',
+  'transports.mode.other': 'Άλλο',
+  'transports.mode.fallback': 'Σκέλος',
+  'transports.status.idea': 'Ιδέα',
+  'transports.status.pending': 'Σε εκκρεμότητα',
+  'transports.status.confirmed': 'Επιβεβαιωμένο',
+  'transports.status.completed': 'Ολοκληρωμένο',
+  'transports.status.cancelled': 'Ακυρωμένο',
+  'transports.end.fromAirport': 'Από αεροδρόμιο',
+  'transports.end.toAirport': 'Προς αεροδρόμιο',
+  'transports.end.fromPort': 'Από λιμάνι',
+  'transports.end.toPort': 'Προς λιμάνι',
+  'transports.end.fromStation': 'Από σταθμό',
+  'transports.end.toStation': 'Προς σταθμό',
+  'transports.end.from': 'Από',
+  'transports.end.to': 'Προς',
+  'transports.error.titleEmpty':
+    'Δώσε σε αυτό το σκέλος ένα όνομα που θα αναγνωρίσεις σε μια λίστα.',
+  'transports.error.date': 'Η ημερομηνία γράφεται ΕΕΕΕ-ΜΜ-ΗΗ.',
+  'transports.error.time': 'Η ώρα γράφεται ΩΩ:ΛΛ σε 24ωρη μορφή.',
+  'transports.error.departureNeedsDate':
+    'Μια ώρα αναχώρησης χρειάζεται τη μέρα στην οποία πέφτει.',
+  'transports.error.arrivalNeedsDate':
+    'Μια ώρα άφιξης χρειάζεται τη μέρα στην οποία πέφτει.',
+  'transports.error.code': 'Ένας κωδικός έχει 2 έως 8 γράμματα ή ψηφία.',
+  'transports.error.distance':
+    'Μια απόσταση είναι ένας αριθμός χιλιομέτρων, έως 100.000.',
+  'transports.error.arrivesBeforeDeparts':
+    'Αυτό το σκέλος φτάνει πριν αναχωρήσει.',
+  'transports.error.timingHint':
+    'Μετακίνησε το ένα από τα δύο, ώστε το σκέλος να προλαβαίνεται πραγματικά.',
+  'transports.bookingRefFor': 'ο κωδικός κράτησης του {title}',
+  'transports.doorToDoor': 'Αυτό είναι {gap} από πόρτα σε πόρτα.',
+  'transports.title.fromTo': '{operator} από {from} προς {to}',
+  'transports.title.from': '{operator} από {from}',
+  'transports.title.to': '{operator} προς {to}',
+
+  /* ------------------ transports: whether a hand-over can be made */
+  'transports.junction.unknown.headline': 'Δεν υπάρχουν ώρες για σύγκριση',
+  'transports.junction.unknown.detail':
+    'Συμπλήρωσε ημερομηνία και ώρα στα δύο σκέλη, και αυτή η μετεπιβίβαση θα ελεγχθεί για σένα.',
+  'transports.junction.impossible.headline':
+    'Αναχωρεί {gap} πριν φτάσει το προηγούμενο σκέλος',
+  'transports.junction.impossible.detail':
+    'Το «{to}» αναχωρεί πριν φτάσει το «{from}», άρα δεν προλαβαίνονται και τα δύο. Μετακίνησε το ένα.',
+  'transports.junction.tight.headline': '{gap} για τη μετεπιβίβαση',
+  'transports.junction.tight.detail':
+    'Για {mode} χρειάζεται συνήθως περίπου {required}. Εδώ είναι στενά.',
+  'transports.junction.tight.detailAt':
+    'Για {mode} στο {place} χρειάζεται συνήθως περίπου {required}. Εδώ είναι στενά.',
+  'transports.junction.ok.headline': '{gap} ενδιάμεσα',
+  'transports.junction.ok.detail':
+    'Φτάνει στο {landing} αλλά το επόμενο σκέλος φεύγει από το {boarding} — θα πρέπει να μεταφερθείς.',
+
+  /* ------------------------------ collab: the note and poll dialogs */
+  'collab.note.toast.shared': 'Η σημείωση κοινοποιήθηκε',
+  'collab.note.toast.sharedBody': 'Όλοι στο ταξίδι τη βλέπουν τώρα.',
+  'collab.note.toast.shareFailed': 'Η σημείωση δεν κοινοποιήθηκε',
+  'collab.note.toast.updated': 'Η σημείωση ενημερώθηκε',
+  'collab.note.toast.updateFailed': 'Η σημείωση δεν ενημερώθηκε',
+  'collab.note.dialog.editTitle': 'Επεξεργασία αυτής της σημείωσης',
+  'collab.note.dialog.addTitle': 'Νέα κοινή σημείωση',
+  'collab.note.dialog.body':
+    'Προτάσεις για εστιατόρια, κανόνες βίζας, ο κωδικός της εξώπορτας — όλα όσα πρέπει να θυμάται το ταξίδι, σε ένα μέρος.',
+  'collab.note.field.title': 'Τίτλος',
+  'collab.note.field.titlePlaceholder': 'Κωδικός εξώπορτας',
+  'collab.note.field.body': 'Σημείωση',
+  'collab.note.field.bodyPlaceholder':
+    '4821 και μετά το δίεση. Το κουτί των κλειδιών είναι αριστερά από την πόρτα.',
+  'collab.note.field.categoryHint':
+    'Ομαδοποιεί τον πίνακα κάτω από ένα φίλτρο. Προαιρετικό.',
+  'collab.note.field.categoryPlaceholder': 'Οργάνωση',
+  'collab.note.field.pin': 'Καρφίτσωμα στην κορυφή του πίνακα',
+  'collab.note.field.pinHint':
+    'Οι καρφιτσωμένες σημειώσεις προηγούνται, ό,τι κι αν προστεθεί.',
+  'collab.note.action.saving': 'Αποθήκευση σημείωσης',
+  'collab.note.action.save': 'Αποθήκευση της σημείωσης',
+  'collab.note.action.share': 'Κοινοποίηση της σημείωσης',
+  'collab.poll.toast.opened': 'Η ψηφοφορία άνοιξε',
+  'collab.poll.toast.openedBody': 'Όλοι στο ταξίδι μπορούν να ψηφίσουν.',
+  'collab.poll.toast.openFailed': 'Η ψηφοφορία δεν άνοιξε',
+  'collab.poll.dialog.addTitle': 'Νέα ψηφοφορία',
+  'collab.poll.field.question': 'Ερώτηση',
+  'collab.poll.field.questionPlaceholder': 'Πού τρώμε το τελευταίο βράδυ;',
+  'collab.poll.field.optionsLegend': 'Επιλογές',
+  'collab.poll.field.option': 'Απάντηση {n}',
+  'collab.poll.example.first': 'Den',
+  'collab.poll.example.second': 'Narisawa',
+  'collab.poll.example.third': 'Ακόμη μία απάντηση',
+  'collab.poll.action.addOption': 'Πρόσθεσε μια απάντηση',
+  'collab.poll.action.removeOption': 'Αφαίρεση της απάντησης {n}',
+  'collab.poll.field.multi': 'Να επιτρέπονται πολλές επιλογές',
+  'collab.poll.field.multiHint':
+    'Κλειστό σημαίνει μία ψήφος ο καθένας, και η αλλαγή γνώμης τη μετακινεί.',
+  'collab.poll.action.opening': 'Άνοιγμα της ψηφοφορίας',
+  'collab.poll.action.open': 'Άνοιγμα ψηφοφορίας',
+  'collab.poll.error.tooFew':
+    'Μια ψηφοφορία χρειάζεται τουλάχιστον δύο πράγματα για να διαλέξεις.',
+  'collab.poll.error.duplicate':
+    'Δύο απαντήσεις λένε το ίδιο. Δώσε στην καθεμιά τη δική της διατύπωση.',
+  'collab.presence.viewingNow': 'βλέπουν τώρα',
+  'collab.presence.tabsOpen': {
+    one: '{name} — {count} ανοιχτή καρτέλα',
+    other: '{name} — {count} ανοιχτές καρτέλες',
+  },
+
+  /* ----------------------------------------- collab: the thread */
+  'collab.reaction.agree': 'Συμφωνώ',
+  'collab.reaction.love': 'Το λατρεύω',
+  'collab.reaction.funny': 'Αστείο',
+  'collab.reaction.celebrate': 'Γιορτάζουμε',
+  'collab.reaction.thanks': 'Ευχαριστώ',
+  'collab.reaction.looking': 'Κοιτάω',
+  'collab.reaction.tally': '{emoji} — {count}',
+  'collab.reaction.tallyMine': '{emoji} — {count}, μαζί κι εσύ',
+  'collab.thread.today': 'Σήμερα',
+  'collab.thread.empty': 'Κανένα μήνυμα ακόμη',
+  'collab.toast.reactionFailed': 'Η αντίδραση δεν αποθηκεύτηκε',
+  'collab.toast.messageDeleted': 'Το μήνυμα διαγράφηκε',
+  'collab.toast.deleteFailed': 'Το μήνυμα δεν διαγράφηκε',
+  'collab.toast.notSent': 'Δεν στάλθηκε',
+  'collab.toast.notSentBody': 'Το μήνυμα δεν στάλθηκε. Δοκίμασε ξανά σε λίγο.',
+  'collab.toast.messageUpdated': 'Το μήνυμα ενημερώθηκε',
+  'collab.toast.editFailed': 'Η αλλαγή δεν αποθηκεύτηκε',
+  'collab.message.deleteTitle': 'Διαγραφή αυτού του μηνύματος;',
+  'collab.message.deleteBody':
+    'Το κείμενο φεύγει από το νήμα. Οι απαντήσεις σε αυτό μένουν στη θέση τους.',
+  'collab.message.delete': 'Διαγραφή μηνύματος',
+  'collab.message.reply': 'Απάντηση',
+  'collab.message.menuEdit': 'Επεξεργασία μηνύματος…',
+  'collab.message.react': 'Αντίδραση σε αυτό το μήνυμα',
+  'collab.message.edited': 'επεξεργασμένο',
+  'collab.message.actionsFor': 'Ενέργειες για το μήνυμα του/της {name}',
+  'collab.compose.editingYours': 'Επεξεργάζεσαι το μήνυμά σου',
+  'collab.compose.replyingTo': 'Απάντηση σε {name}',
+  'collab.compose.cancelReply': 'Ακύρωση απάντησης',
+  'collab.compose.cancelEdit': 'Ακύρωση επεξεργασίας',
+  'collab.compose.placeholder': 'Γράψε στο ταξίδι',
+  'collab.compose.editPlaceholder': 'Επεξεργασία του μηνύματός σου',
+  'collab.compose.editPlaceholderText': 'Άλλαξε αυτό που είπες…',
+  'collab.compose.send': 'Αποστολή μηνύματος',
+  'collab.compose.savingEdit': 'Αποθήκευση της αλλαγής',
+  'collab.compose.save': 'Αποθήκευση',
+  'collab.hint.sends': 'στέλνει',
+  'collab.hint.addsLine': 'προσθέτει γραμμή',
+  'collab.hint.cancels': 'ακυρώνει',
+
+  /* ------------------------------------------ collab: the board */
+  'collab.toast.noteRemoved': 'Η σημείωση αφαιρέθηκε',
+  'collab.toast.noteRemoveFailed': 'Η σημείωση δεν αφαιρέθηκε',
+  'collab.notes.empty.title': 'Καμία κοινή σημείωση',
+  'collab.notes.empty.body':
+    'Προτάσεις για εστιατόρια, κανόνες βίζας, ο κωδικός της εξώπορτας — όλα όσα πρέπει να θυμάται το ταξίδι.',
+  'collab.notes.empty.action': 'Γράψε την πρώτη σημείωση',
+  'collab.note.menu.edit': 'Επεξεργασία σημείωσης…',
+  'collab.note.menu.unpin': 'Ξεκαρφίτσωμα',
+  'collab.note.menu.pin': 'Καρφίτσωμα στην κορυφή',
+  'collab.note.remove': 'Αφαίρεση σημείωσης',
+  'collab.note.removeBody':
+    'Η σημείωση φεύγει από τον πίνακα για όλους στο ταξίδι.',
+  'collab.note.new': 'Νέα σημείωση',
+  'collab.poll.toast.voteFailed': 'Η ψήφος σου δεν αποθηκεύτηκε',
+  'collab.poll.toast.voteFailedBody': 'Η καταμέτρηση παραμένει ίδια.',
+  'collab.poll.toast.closed': 'Η ψηφοφορία έκλεισε',
+  'collab.poll.toast.closeFailed': 'Η ψηφοφορία δεν έκλεισε',
+  'collab.poll.toast.removed': 'Η ψηφοφορία αφαιρέθηκε',
+  'collab.poll.toast.removeFailed': 'Η ψηφοφορία δεν αφαιρέθηκε',
+  'collab.polls.heading': 'Ψηφοφορίες',
+  'collab.polls.empty.title': 'Καμία ανοιχτή ψηφοφορία',
+  'collab.polls.empty.body':
+    'Όταν η ομάδα δεν συμφωνεί σε εστιατόριο, βάλτε το σε ψηφοφορία και αφήστε την απάντηση να βρεθεί μόνη της.',
+  'collab.polls.empty.action': 'Ρωτήστε την ομάδα',
+  'collab.poll.menu.close': 'Κλείσιμο ψηφοφορίας',
+  'collab.poll.remove': 'Αφαίρεση ψηφοφορίας',
+  'collab.poll.removeTitle': 'Αφαίρεση αυτής της ψηφοφορίας;',
+  'collab.poll.actionsFor': 'Ενέργειες για την ψηφοφορία «{question}»',
+  'collab.badge.pinned': 'Καρφιτσωμένη',
+  'collab.badge.closed': 'Κλειστή',
+  'collab.badge.open': 'Ανοιχτή',
+  'collab.badge.multi': 'Πολλαπλή επιλογή',
+  'collab.badge.leading': 'Προηγείται',
+  'collab.poll.removeBody': {
+    one: 'Η «{question}» και η {count} ψήφος της αφαιρούνται για όλους.',
+    other: 'Η «{question}» και οι {count} ψήφοι της αφαιρούνται για όλους.',
+  },
+  'collab.poll.result': {
+    one: '{label} — {votes} από {count} ψήφο',
+    other: '{label} — {votes} από {count} ψήφους',
+  },
+  'collab.poll.resultMine': {
+    one: '{label} — {votes} από {count} ψήφο, μαζί με τη δική σου',
+    other: '{label} — {votes} από {count} ψήφους, μαζί με τη δική σου',
+  },
+  'collab.poll.voteCount': {
+    one: '{count} ψήφος',
+    other: '{count} ψήφοι',
+  },
+
+  /* ------------------------------------------- files: the library */
+  'files.kind.document': 'Έγγραφο',
+  'files.kind.photo': 'Φωτογραφία',
+  'files.kind.ticket': 'Εισιτήριο',
+  'files.kind.receipt': 'Απόδειξη',
+  'files.kind.map': 'Χάρτης',
+  'files.kind.other': 'Άλλο',
+  'files.kindChoice.ticket': 'Εισιτήριο ή κάρτα',
+  'files.kindChoice.map': 'Χάρτης ή διαδρομή',
+  'files.toast.removed': 'Το αρχείο αφαιρέθηκε',
+  'files.toast.removeFailed': 'Το αρχείο δεν αφαιρέθηκε',
+  'files.toast.downloadFailed': 'Η λήψη δεν ξεκίνησε',
+  'files.toast.gone':
+    'Αυτό το αρχείο δεν είναι πια διαθέσιμο σε αυτή την καρτέλα.',
+  'files.toast.uploadFailed': 'Η μεταφόρτωση απέτυχε. Δοκίμασε ξανά.',
+  'files.toast.updated': 'Το αρχείο ενημερώθηκε',
+  'files.toast.updateFailed': 'Το αρχείο δεν ενημερώθηκε',
+  'files.storage.full': 'Αυτός ο χώρος εργασίας έμεινε από αποθηκευτικό χώρο',
+  'files.storage.used':
+    'Χρησιμοποιούνται {used} από {limit}. Αφαίρεσε ένα αρχείο πιο κάτω, ή πήγαινε σε ανώτερο πλάνο, πριν προσθέσεις οτιδήποτε άλλο.',
+  'files.storage.perFile': 'έως {size} το καθένα',
+  'files.action.add': 'Πρόσθεσε αρχεία',
+  'files.action.choose': 'Διάλεξε αρχεία',
+  'files.action.upload': 'Ανέβασε αρχεία',
+  'files.drop.active': 'Άφησέ το για μεταφόρτωση',
+  'files.drop.idle': 'Σύρε αρχεία εδώ',
+  'files.empty.title': 'Κανένα αρχείο σε αυτό το ταξίδι',
+  'files.empty.body':
+    'Ό,τι αλλιώς θα έψαχνες σε ένα γραμματοκιβώτιο στο γκισέ του check-in βρίσκεται εδώ, δεμένο με το ταξίδι που αφορά.',
+  'files.empty.hint':
+    'Κάρτες επιβίβασης, επιβεβαιώσεις ξενοδοχείων, εισιτήρια, ασφαλιστικά έγγραφα και οι αποδείξεις που στηρίζουν τα έξοδά σου.',
+  'files.heading': 'Συνημμένα',
+  'files.tableCaption': 'Αρχεία συνδεδεμένα με αυτό το ταξίδι',
+  'files.menu.download': 'Λήψη',
+  'files.menu.rename': 'Μετονομασία και περιγραφή…',
+  'files.menu.remove': 'Αφαίρεση αρχείου',
+  'files.remove.body':
+    'Το αρχείο διαγράφεται και από τον αποθηκευτικό χώρο και από το ταξίδι, και ελευθερώνονται {size}. Αυτό δεν αναιρείται.',
+  'files.queue.clear': 'Καθάρισε τα ολοκληρωμένα',
+  'files.column.file': 'Αρχείο',
+  'files.column.size': 'Μέγεθος',
+  'files.column.addedBy': 'Προστέθηκε από',
+  'files.column.when': 'Πότε',
+  'files.status.uploaded': 'Ανέβηκε',
+  'files.status.failed': 'Απέτυχε',
+  'files.status.cancelled': 'Ακυρώθηκε',
+  'files.status.uploading': 'Ανεβαίνει',
+  'files.status.waiting': 'Περιμένει',
+  'files.error.nameEmpty':
+    'Ένα αρχείο χρειάζεται ένα όνομα με το οποίο θα το βρεις.',
+  'files.field.kindHint':
+    'Καθορίζει κάτω από ποιο φίλτρο κάθεται και ποιο σύμβολο παίρνει.',
+  'files.field.kindAria': 'Είδος αρχείου',
+  'files.field.description': 'Περιγραφή',
+  'files.field.descriptionPlaceholder':
+    'Ασφαλιστήριο — καλύπτει όλη την παρέα, γραμμή αποζημιώσεων στη σελίδα 2.',
+  'files.dialog.title': 'Στοιχεία αρχείου',
+  'files.action.saving': 'Αποθήκευση αρχείου',
+  'files.action.save': 'Αποθήκευση στοιχείων',
+  'files.queue.someFailed': {
+    one: '{count} αρχείο δεν ανέβηκε. Ο λόγος είναι σε κάθε γραμμή — τίποτα άλλο στην παρτίδα δεν επηρεάστηκε.',
+    other:
+      '{count} αρχεία δεν ανέβηκαν. Ο λόγος είναι σε κάθε γραμμή — τίποτα άλλο στην παρτίδα δεν επηρεάστηκε.',
+  },
+
+  'files.action.cancelUploadOf': 'Ακύρωση μεταφόρτωσης του {name}',
+  'files.action.dismissOf': 'Απόρριψη του {name}',
+  'files.status.downloadingOf': 'Λήψη του {name}',
+  'files.status.uploadingOf': 'Μεταφόρτωση του {name}',
+  'files.status.uploadingCount': {
+    one: 'Μεταφόρτωση {count} αρχείου',
+    other: 'Μεταφόρτωση {count} αρχείων',
+  },
+
+  /* --------------------------- files: the upload and download chain */
+  'files.error.cancelled': 'Η μεταφόρτωση ακυρώθηκε.',
+  'files.error.badAnswer':
+    'Ο διακομιστής έστειλε απάντηση που αυτός ο περιηγητής δεν μπόρεσε να διαβάσει.',
+  'files.error.connection':
+    'Η σύνδεση κόπηκε κατά τη μεταφόρτωση. Έλεγξε το δίκτυό σου και δοκίμασε ξανά.',
+  'files.error.timeout': 'Η μεταφόρτωση έληξε. Δοκίμασε ξανά.',
+  'files.error.refused': 'Ο διακομιστής αρνήθηκε τη μεταφόρτωση ({status}).',
+  'files.error.downloadShape':
+    'Η λήψη γύρισε σε μορφή που δεν μπορούσαμε να αποθηκεύσουμε.',
+  'files.error.downloadFailed': 'Η λήψη απέτυχε ({status}).',
+  'files.toast.uploadedOne': 'Το αρχείο ανέβηκε',
+  'files.toast.uploadedManyBody': 'Προστέθηκαν {size} σε αυτό το ταξίδι.',
+  'files.toast.failedOne': 'Εκείνο το αρχείο δεν ανέβηκε',
+  'files.toast.failedManyBody': 'Η ουρά πιο κάτω λέει το γιατί για το καθένα.',
+  'files.error.tooMany': {
+    one: 'Μπορεί να προστεθεί μόνο {count} αρχείο τη φορά, οπότε το «{name}» έμεινε έξω. Ρίξ’ το ξανά μόνο του.',
+    other:
+      'Μπορούν να προστεθούν μόνο {count} αρχεία τη φορά, οπότε το «{name}» έμεινε έξω. Ρίξ’ το ξανά μόνο του.',
+  },
+  'files.toast.uploadedMany': {
+    one: '{count} αρχείο ανέβηκε',
+    other: '{count} αρχεία ανέβηκαν',
+  },
+  'files.toast.failedMany': {
+    one: '{count} αρχείο δεν ανέβηκε',
+    other: '{count} αρχεία δεν ανέβηκαν',
+  },
+} satisfies TranslationOf<typeof En>
+
+export default messages

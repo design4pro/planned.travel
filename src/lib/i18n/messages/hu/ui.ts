@@ -30,15 +30,18 @@ import type { TranslationOf } from '../../types'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Törlés',
+  'action.clearFilters': 'Szűrők törlése',
   'action.close': 'Bezárás',
   'action.dismiss': 'Elvetés',
   'action.remove': 'Eltávolítás',
+  'action.keep': 'Maradjon',
   'action.undo': 'Visszavonás',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Betöltés',
   'status.working': 'Feldolgozás',
   'status.searching': 'Keresés folyik',
+  'status.removing': 'Eltávolítás folyamatban',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} elérhető',

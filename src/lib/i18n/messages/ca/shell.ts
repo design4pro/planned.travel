@@ -369,6 +369,107 @@ const messages = {
   'role.admin': 'Administrador',
   'role.member': 'Membre',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} viatge',
+    many: '{value} viatges',
+    other: '{value} viatges',
+  },
+  'trips.count.favourites': {
+    one: '{value} preferit',
+    many: '{value} preferits',
+    other: '{value} preferits',
+  },
+  'trips.count.archived': {
+    one: '{value} arxivat',
+    many: '{value} arxivats',
+    other: '{value} arxivats',
+  },
+  'trips.atLimit.body':
+    'El teu pla cobreix {trips}. Arxiva’n un que hagis acabat, o puja de pla per tenir-ne més oberts a la vegada.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Nou diari',
+  'newJourney.title': 'Comença un diari',
+  'newJourney.description':
+    'Un diari és la cara escrita d’un viatge: entrades per data, amb les fotos i el temps que en recordes.',
+  'newJourney.titlePlaceholder': 'Dues setmanes a Kyoto',
+  'newJourney.subtitle': 'Subtítol',
+  'newJourney.subtitleHint': 'Una línia sota el títol, a la coberta.',
+  'newJourney.subtitlePlaceholder': 'Temples, trens i massa matcha',
+  'newJourney.trip': 'A partir d’un viatge',
+  'newJourney.tripHint': 'Opcional — lliga el relat amb el seu pla.',
+  'newJourney.tripNone': 'Sense viatge associat',
+  'newJourney.datesError': 'La data de fi és anterior a l’inici.',
+  'newJourney.submit': 'Crea el diari',
+  'newJourney.creating': 'S’està creant el diari',
+  'newJourney.created': 'Diari començat',
+  'newJourney.createdBody': 'Afegeix la primera entrada per començar el relat.',
+  'newJourney.error':
+    'No s’ha pogut crear el diari. Torna-ho a provar en un moment.',
+  'newCollection.trigger': 'Nova col·lecció',
+  'newCollection.title': 'Comença una col·lecció',
+  'newCollection.description':
+    'Un lloc per als llocs que trobes abans de saber a quin viatge pertanyen.',
+  'newCollection.namePlaceholder':
+    'Un cafè que val la pena travessar la ciutat',
+  'newCollection.descriptionHint': 'Què hi va a dins i què no.',
+  'newCollection.submit': 'Crea la col·lecció',
+  'newCollection.creating': 'S’està creant la col·lecció',
+  'newCollection.created': 'Col·lecció creada',
+  'newCollection.createdBody': 'Comença a guardar-hi llocs.',
+  'newCollection.error':
+    'No s’ha pogut crear la col·lecció. Torna-ho a provar en un moment.',
+
+  'newTrip.title': 'Comença un viatge nou',
+  'newTrip.description':
+    'Amb un títol n’hi ha prou. Les dates construeixen el pla dia a dia, i la resta pot esperar que ho sàpigues.',
+  'newTrip.name': 'Nom del viatge',
+  'newTrip.namePlaceholder': 'Kyoto en temporada de cirerers',
+  'newTrip.destination': 'Destinació',
+  'newTrip.destinationHint': 'Una ciutat, una regió o tot l’itinerari.',
+  'newTrip.destinationPlaceholder': 'Kyoto, Japó',
+  'newTrip.departure': 'Sortida',
+  'newTrip.return': 'Tornada',
+  'newTrip.returnError': 'La data de tornada és anterior a la sortida.',
+  'newTrip.currency': 'Moneda del pressupost',
+  'newTrip.currencyHint': 'Hi sumem cada despesa d’aquest viatge.',
+  'newTrip.submit': 'Crea el viatge',
+  'newTrip.creating': 'S’està creant el viatge',
+  'newTrip.error':
+    'No s’ha pogut crear el viatge. Torna-ho a provar en un moment.',
+  'newTrip.created': 'Viatge creat',
+  'newTrip.createdBody': 'Comença a posar llocs al mapa.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Qui ho pot veure',
+  'visibility.private': 'Només jo',
+  'visibility.organization': 'Tothom de l’espai',
+  'visibility.public': 'Qualsevol amb l’enllaç',
+
+  'trips.error': 'Els teus viatges no s’han carregat',
+  'trips.eyebrow': 'Espai',
+  'trips.nothingPlanned': 'Encara no hi ha res planificat',
+  'trips.search': 'Cerca viatges',
+  'trips.atLimit.title': 'Has omplert tots els viatges que permet el teu pla',
+  'trips.atLimit.action': 'Compara els plans',
+  'trips.noMatch.title': 'Res no coincideix amb aquest filtre',
+  'trips.noMatch.body':
+    'Prova una altra etapa, buida la cerca o mira a l’arxiu.',
+  'trips.noMatch.action': 'Reinicia els filtres',
+  'trips.empty.body':
+    'Un viatge aplega l’itinerari, el mapa, les reserves, les llistes d’equipatge i els diners. Comença’n un i la resta ve sola.',
+  'trips.next.title': 'A algun lloc després',
+  'trips.next.body':
+    'Comença un viatge i planned.travel crea un dia per data, a punt per al que has guardat.',
+  'trips.savedPlaces': 'Llocs guardats',
+  'trips.filter.all': 'Tots',
+  'trips.filter.favourites': 'Preferits',
+  'trips.card.favourite': 'Preferit',
+  'trips.card.noDestination': 'Destinació encara per decidir',
+  'trips.card.noDates': 'Dates per decidir',
+  'trips.card.startsIn': 'en {days} d',
+  'trips.card.days': '{days} d',
   'metric.trips': 'Viatges',
   'metric.places': 'Llocs',
   'metric.members': 'Membres',

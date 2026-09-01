@@ -7,11 +7,18 @@ import { cn } from '#/lib/cn'
 import {
   BILLING_INTERVALS,
   PLAN_LIST,
-  formatPlanAmount,
+  formatStorage,
   isUnlimited,
   monthlyEquivalent,
   yearlySavingPercent,
 } from '#/lib/plans'
+
+import { formatPrice } from '#/lib/format'
+import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
+import { useLocale, useTranslate } from '#/lib/i18n'
+import { PLAN_COPY } from '#/lib/plan-copy'
+
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 
 import type { BillingInterval, Plan } from '#/lib/plans'
 import type { ReactNode } from 'react'
@@ -20,6 +27,109 @@ import type { ReactNode } from 'react'
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const
 
 /* ------------------------------------------------------------------ helpers */
+
+/** One bullet on a pricing card: a line, and the quieter line under it. */
+interface CardFeature {
+  readonly label: string
+  readonly detail: string | null
+}
+
+/**
+ * The five bullets a pricing card shows, resolved from the catalogue.
+ *
+ * `plans.ts` ships the same five in English beside each plan's numbers, and
+ * `plan-copy.ts` records why they stay English there: that module is read by the
+ * server, where a plan's name is an operator's record. A marketing page is not
+ * that, so the card reads keys instead.
+ *
+ * Two things here are deliberate and neither is visible in the output.
+ *
+ * Five of the labels are the keys the comparison table further down this page
+ * already uses for the same modules. Naming one capability two ways on one page
+ * is the drift this page can least afford, and reusing the key makes the two
+ * impossible to separate.
+ *
+ * The two bullets that state a number do not restate it as prose: the count goes
+ * through the plural message `planScopeLine` already needs, and the storage
+ * figure through `formatStorage`. So raising a quota moves the card without
+ * touching one of the twenty-three catalogue files — which is the duplicated
+ * fact `PLAN_ALLOWANCE_CLAIMS` guards on the settings screen, avoided here
+ * rather than guarded.
+ */
+function cardFeatures(t: Translate, plan: Plan): ReadonlyArray<CardFeature> {
+  const line = (label: MessageKey, detail?: MessageKey): CardFeature => ({
+    label: t(label),
+    detail: detail === undefined ? null : t(detail),
+  })
+  const counted = (
+    label: MessageKey,
+    count: number,
+    detail: MessageKey,
+  ): CardFeature => ({
+    label: t(label, { count, value: count }),
+    detail: t(detail),
+  })
+  // Every plan in the catalogue publishes a storage figure. The `null` the type
+  // carries is the unlimited case a workspace override can hold, which no plan
+  // uses, so it never reaches the formatter.
+  const size = formatStorage(plan.limits.storageBytes ?? 0)
+  const storage = (shared: boolean): CardFeature => ({
+    label: t(
+      shared
+        ? 'marketing.pricing.feature.storageShared'
+        : 'marketing.pricing.feature.storage',
+      { size },
+    ),
+    detail: null,
+  })
+
+  switch (plan.id) {
+    case 'free':
+      return [
+        counted(
+          'marketing.pricing.card.trips',
+          plan.limits.trips ?? 0,
+          'marketing.pricing.feature.free.tripsDetail',
+        ),
+        line('settings.billing.plan.free.feature.itinerary'),
+        line('settings.billing.plan.free.feature.lists'),
+        line('marketing.pricing.module.atlas'),
+        storage(false),
+      ]
+    case 'solo':
+      return [
+        line('settings.billing.plan.solo.feature.trips'),
+        line(
+          'marketing.pricing.feature.solo.modules',
+          'marketing.pricing.feature.solo.modulesDetail',
+        ),
+        line(
+          'marketing.pricing.module.offlineMaps',
+          'marketing.pricing.feature.solo.offlineDetail',
+        ),
+        line('marketing.pricing.module.pdfExport'),
+        storage(false),
+      ]
+    case 'crew':
+      return [
+        counted(
+          'marketing.pricing.card.seatsUpTo',
+          plan.seatRange.max ?? 0,
+          'marketing.pricing.feature.crew.membersDetail',
+        ),
+        line(
+          'marketing.pricing.module.realtime',
+          'marketing.pricing.feature.crew.realtimeDetail',
+        ),
+        line('settings.billing.plan.crew.feature.everything'),
+        storage(true),
+        line(
+          'marketing.pricing.module.prioritySupport',
+          'marketing.pricing.feature.crew.supportDetail',
+        ),
+      ]
+  }
+}
 
 /** The largest yearly discount in the catalogue, for the toggle's saving chip. */
 export function bestYearlySaving(
@@ -33,22 +143,29 @@ export function bestYearlySaving(
 
 /** `"Free"`, or the monthly-equivalent headline for the chosen interval. */
 export function planPriceHeadline(
+  t: Translate,
   plan: Plan,
   interval: BillingInterval,
+  locale: Locale = DEFAULT_LOCALE,
 ): string {
   const price = plan.prices[interval]
-  if (price === null) return 'Free'
-  return formatPlanAmount(monthlyEquivalent(price), price.currency)
+  if (price === null) return t('settings.billing.price.free')
+  return formatPrice(monthlyEquivalent(price), price.currency, locale)
 }
 
 /** What sits on the headline's baseline: `/ month`, or `/ member / month`. */
 export function planPriceSuffix(
+  t: Translate,
   plan: Plan,
   interval: BillingInterval,
 ): string | null {
   const price = plan.prices[interval]
   if (price === null) return null
-  return price.perSeat ? '/ member / month' : '/ month'
+  return t(
+    price.perSeat
+      ? 'settings.billing.plan.perMemberMonth'
+      : 'settings.billing.plan.perMonth',
+  )
 }
 
 /**
@@ -61,38 +178,57 @@ export function planPriceSuffix(
  * surprise a pricing page must never spring — so this line says it too.
  */
 export function planPriceFootnote(
+  t: Translate,
   plan: Plan,
   interval: BillingInterval,
+  locale: Locale = DEFAULT_LOCALE,
 ): string {
   const price = plan.prices[interval]
-  if (price === null) return 'No card, no expiry, no countdown'
+  if (price === null) return t('marketing.pricing.card.noCard')
   if (interval === 'yearly') {
-    const billed = formatPlanAmount(price.amount, price.currency)
-    return price.perSeat
-      ? `${billed} a year per member, billed once`
-      : `${billed} billed once a year`
+    const amount = formatPrice(price.amount, price.currency, locale)
+    return t(
+      price.perSeat
+        ? 'marketing.pricing.card.yearlyPerSeat'
+        : 'marketing.pricing.card.yearly',
+      { amount },
+    )
   }
-  return `${plan.trialDays}-day free trial, card up front, charged when it ends`
+  return t('marketing.pricing.card.trial', {
+    count: plan.trialDays,
+    value: plan.trialDays,
+  })
 }
 
 /** Seats and trips, as one line for the card's footer band. */
-export function planScopeLine(plan: Plan): string {
+/**
+ * Two counted phrases joined by a separator, not one sentence.
+ *
+ * A list survives translation where a sentence with two inflected nouns does
+ * not: each half takes the plural branch its own language needs and neither
+ * depends on the other's grammar.
+ */
+export function planScopeLine(t: Translate, plan: Plan): string {
+  const max = plan.seatRange.max
   const seats =
-    plan.seatRange.max === null
-      ? 'Unlimited members'
-      : plan.seatRange.max === 1
-        ? 'One traveller'
-        : `Up to ${plan.seatRange.max} members`
-  const trips = isUnlimited(plan.limits.trips)
-    ? 'unlimited trips'
-    : `${plan.limits.trips} trips at a time`
+    max === null
+      ? t('marketing.pricing.card.seatsUnlimited')
+      : max === 1
+        ? t('settings.billing.hero.singleTraveller')
+        : t('marketing.pricing.card.seatsUpTo', { count: max, value: max })
+  const limit = plan.limits.trips
+  const trips = isUnlimited(limit)
+    ? t('marketing.pricing.card.tripsUnlimited')
+    : t('marketing.pricing.card.trips', { count: limit, value: limit })
   return `${seats} · ${trips}`
 }
 
-export function planCtaLabel(plan: Plan): string {
+export function planCtaLabel(t: Translate, plan: Plan): string {
   return plan.prices.monthly === null
-    ? 'Start for free'
-    : `Start the ${plan.name} trial`
+    ? t('marketing.pricing.card.startFree')
+    : t('marketing.pricing.card.startTrial', {
+        plan: t(PLAN_COPY[plan.id].name),
+      })
 }
 
 /* -------------------------------------------------------- interval selector */
@@ -105,9 +241,9 @@ export type BillingIntervalToggleProps = {
   note?: ReactNode
 }
 
-const INTERVAL_LABELS: { readonly [I in BillingInterval]: string } = {
-  monthly: 'Monthly',
-  yearly: 'Yearly',
+const INTERVAL_LABELS: { readonly [I in BillingInterval]: MessageKey } = {
+  monthly: 'settings.billing.interval.monthly',
+  yearly: 'settings.billing.interval.yearly',
 }
 
 /**
@@ -121,6 +257,7 @@ export function BillingIntervalToggle({
   className,
   note,
 }: BillingIntervalToggleProps) {
+  const t = useTranslate()
   const reduceMotion = useReducedMotion()
   const saving = bestYearlySaving()
   const transition = reduceMotion
@@ -131,7 +268,7 @@ export function BillingIntervalToggle({
     <div className={cn('flex flex-col items-center gap-3', className)}>
       <div
         role="group"
-        aria-label="Billing interval"
+        aria-label={t('settings.billing.interval.label')}
         className="inline-flex items-center gap-0.5 rounded-full bg-track p-1"
       >
         {BILLING_INTERVALS.map((option) => {
@@ -157,7 +294,7 @@ export function BillingIntervalToggle({
                   className="absolute inset-0 -z-10 rounded-full bg-track-thumb shadow-card"
                 />
               ) : null}
-              {INTERVAL_LABELS[option]}
+              {t(INTERVAL_LABELS[option])}
               {option === 'yearly' && saving > 0 ? (
                 <span className="rounded-full bg-success-soft px-1.5 py-0.5 text-micro font-bold tabular-nums tracking-normal text-success">
                   &minus;{saving}%
@@ -175,10 +312,12 @@ export function BillingIntervalToggle({
 }
 
 /** The standard note under the toggle, so both pages say the same thing. */
-export function intervalNote(interval: BillingInterval): string {
-  return interval === 'yearly'
-    ? 'Billed once a year. Two months on the house.'
-    : 'Billed monthly. Change or cancel whenever you like.'
+export function intervalNote(t: Translate, interval: BillingInterval): string {
+  return t(
+    interval === 'yearly'
+      ? 'marketing.pricing.card.noteYearly'
+      : 'marketing.pricing.card.noteMonthly',
+  )
 }
 
 /* -------------------------------------------------------------- plan cards */
@@ -208,8 +347,10 @@ export function PlanCard({
   density = 'full',
   className,
 }: PlanCardProps) {
+  const t = useTranslate()
+  const locale = useLocale()
   const featured = plan.recommended
-  const suffix = planPriceSuffix(plan, interval)
+  const suffix = planPriceSuffix(t, plan, interval)
   const compact = density === 'compact'
 
   return (
@@ -236,7 +377,7 @@ export function PlanCard({
                 featured ? 'text-inverse-on' : 'text-ink',
               )}
             >
-              {plan.name}
+              {t(PLAN_COPY[plan.id].name)}
             </h3>
             <p
               className={cn(
@@ -244,12 +385,12 @@ export function PlanCard({
                 featured ? 'text-inverse-muted' : 'text-ink-3',
               )}
             >
-              {plan.tagline}
+              {t(PLAN_COPY[plan.id].tagline)}
             </p>
           </div>
           {featured ? (
             <Badge tone="brand" size="sm" className="shrink-0">
-              Most popular
+              {t('marketing.pricing.card.popular')}
             </Badge>
           ) : null}
         </div>
@@ -263,7 +404,7 @@ export function PlanCard({
               )}
               data-numeric=""
             >
-              {planPriceHeadline(plan, interval)}
+              {planPriceHeadline(t, plan, interval, locale)}
             </span>
             {suffix === null ? null : (
               <span
@@ -282,7 +423,7 @@ export function PlanCard({
               featured ? 'text-inverse-muted' : 'text-ink-4',
             )}
           >
-            {planPriceFootnote(plan, interval)}
+            {planPriceFootnote(t, plan, interval, locale)}
           </p>
         </div>
 
@@ -294,7 +435,7 @@ export function PlanCard({
         />
 
         <ul className="flex flex-col gap-3">
-          {plan.features.map((feature) => (
+          {cardFeatures(t, plan).map((feature) => (
             <li key={feature.label} className="flex min-w-0 gap-2.5">
               <span
                 aria-hidden
@@ -316,7 +457,7 @@ export function PlanCard({
                 >
                   {feature.label}
                 </span>
-                {compact || feature.detail === undefined ? null : (
+                {compact || feature.detail === null ? null : (
                   <span
                     className={cn(
                       'block text-caption',
@@ -344,7 +485,7 @@ export function PlanCard({
             featured ? 'text-inverse-muted' : 'text-ink-3',
           )}
         >
-          {planScopeLine(plan)}
+          {planScopeLine(t, plan)}
         </p>
       </div>
     </Card>
@@ -367,6 +508,7 @@ export function PlanCardGrid({
   density = 'full',
   className,
 }: PlanCardGridProps) {
+  const t = useTranslate()
   return (
     <ul className={cn('grid gap-5 lg:grid-cols-3 lg:items-stretch', className)}>
       {PLAN_LIST.map((plan) => (
@@ -383,7 +525,7 @@ export function PlanCardGrid({
                 shape="pill"
                 block
               >
-                <Link to="/register">{planCtaLabel(plan)}</Link>
+                <Link to="/register">{planCtaLabel(t, plan)}</Link>
               </Button>
             }
           />

@@ -340,6 +340,103 @@ const messages = {
   'role.admin': 'Administratör',
   'role.member': 'Medlem',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} resa',
+    other: '{value} resor',
+  },
+  'trips.count.favourites': {
+    one: '{value} favorit',
+    other: '{value} favoriter',
+  },
+  'trips.count.archived': {
+    one: '{value} arkiverad',
+    other: '{value} arkiverade',
+  },
+  'trips.atLimit.body':
+    'Din plan täcker {trips}. Arkivera en du är klar med, eller byt upp dig för att hålla fler öppna samtidigt.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Ny dagbok',
+  'newJourney.title': 'Börja en dagbok',
+  'newJourney.description':
+    'En dagbok är resans skrivna sida — inlägg i datumordning, med bilderna och vädret du minns den för.',
+  'newJourney.titlePlaceholder': 'Två veckor i Kyoto',
+  'newJourney.subtitle': 'Underrubrik',
+  'newJourney.subtitleHint': 'En rad under rubriken, på omslaget.',
+  'newJourney.subtitlePlaceholder':
+    'Tempel, tåg och alldeles för mycket matcha',
+  'newJourney.trip': 'Utifrån en resa',
+  'newJourney.tripHint': 'Frivilligt — knyter berättelsen till dess plan.',
+  'newJourney.tripNone': 'Inte kopplad till en resa',
+  'newJourney.datesError': 'Slutdatumet ligger före starten.',
+  'newJourney.submit': 'Skapa dagbok',
+  'newJourney.creating': 'Skapar dagboken',
+  'newJourney.created': 'Dagbok påbörjad',
+  'newJourney.createdBody':
+    'Lägg till ditt första inlägg för att börja berättelsen.',
+  'newJourney.error': 'Dagboken kunde inte skapas. Försök igen om en stund.',
+  'newCollection.trigger': 'Ny samling',
+  'newCollection.title': 'Börja en samling',
+  'newCollection.description':
+    'En plats för platserna du hittar innan du vet vilken resa de hör till.',
+  'newCollection.namePlaceholder': 'Kaffe värt att gå tvärs över staden för',
+  'newCollection.descriptionHint': 'Vad som hör hit och vad som inte gör det.',
+  'newCollection.submit': 'Skapa samling',
+  'newCollection.creating': 'Skapar samlingen',
+  'newCollection.created': 'Samling skapad',
+  'newCollection.createdBody': 'Börja spara platser i den.',
+  'newCollection.error':
+    'Samlingen kunde inte skapas. Försök igen om en stund.',
+
+  'newTrip.title': 'Börja en ny resa',
+  'newTrip.description':
+    'En titel räcker. Datumen bygger dagsplanen, och resten kan vänta tills du vet.',
+  'newTrip.name': 'Resans namn',
+  'newTrip.namePlaceholder': 'Kyoto under körsbärsblomningen',
+  'newTrip.destination': 'Resmål',
+  'newTrip.destinationHint': 'En stad, en region eller hela rutten.',
+  'newTrip.destinationPlaceholder': 'Kyoto, Japan',
+  'newTrip.departure': 'Avresa',
+  'newTrip.return': 'Hemresa',
+  'newTrip.returnError': 'Hemresedatumet ligger före avresan.',
+  'newTrip.currency': 'Budgetvaluta',
+  'newTrip.currencyHint': 'I den summeras varje utgift på resan.',
+  'newTrip.submit': 'Skapa resa',
+  'newTrip.creating': 'Skapar resan',
+  'newTrip.error': 'Resan kunde inte skapas. Försök igen om en stund.',
+  'newTrip.created': 'Resa skapad',
+  'newTrip.createdBody': 'Börja lägga ut platser på kartan.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Vem som kan se det',
+  'visibility.private': 'Bara jag',
+  'visibility.organization': 'Alla i arbetsytan',
+  'visibility.public': 'Alla med länken',
+
+  'trips.error': 'Dina resor kunde inte laddas',
+  'trips.eyebrow': 'Arbetsyta',
+  'trips.nothingPlanned': 'Inget planerat än',
+  'trips.search': 'Sök resor',
+  'trips.atLimit.title': 'Du har fyllt varje resa din plan tillåter',
+  'trips.atLimit.action': 'Jämför planer',
+  'trips.noMatch.title': 'Inget matchar det filtret',
+  'trips.noMatch.body':
+    'Prova ett annat skede, töm sökningen eller titta i arkivet.',
+  'trips.noMatch.action': 'Återställ filter',
+  'trips.empty.body':
+    'En resa håller ihop dagsplanen, kartan, bokningarna, packlistorna och pengarna. Börja en och resten följer.',
+  'trips.next.title': 'Någonstans härnäst',
+  'trips.next.body':
+    'Börja en resa och planned.travel bygger en dag per datum, redo för allt du har sparat.',
+  'trips.savedPlaces': 'Sparade platser',
+  'trips.filter.all': 'Alla',
+  'trips.filter.favourites': 'Favoriter',
+  'trips.card.favourite': 'Favorit',
+  'trips.card.noDestination': 'Resmål inte satt än',
+  'trips.card.noDates': 'Datum inte satta än',
+  'trips.card.startsIn': 'om {days} d',
+  'trips.card.days': '{days} d',
   'metric.trips': 'Resor',
   'metric.places': 'Platser',
   'metric.members': 'Medlemmar',

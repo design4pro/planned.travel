@@ -340,24 +340,18 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} رحلات، مسافر واحد',
   'billing.hero.perSeatLine': '{seats} أعضاء × {price}',
   'billing.hero.singleTraveller': 'مسافر واحد',
-  'billing.hero.paymentMethod': 'طريقة الدفع',
-  'billing.hero.cancel': 'إلغاء الخطة',
   'billing.price.free': 'مجانًا',
   'billing.provider.opening': 'جارٍ فتح Polar',
-  'billing.provider.failed': 'تعذّر الوصول إلى Polar',
-  'billing.provider.failedBody':
-    'لم يُخصم شيء. تحقق من اتصالك وأعد المحاولة بعد لحظات.',
-
   'billing.renewal.trialEndsToday':
-    'تنتهي فترتك التجريبية اليوم. أضف بطاقة لتبقى كل الوحدات مفتوحة.',
+    'تنتهي فترتك التجريبية اليوم، وسيأتي أول خصم إلا إذا ألغيت قبل ذلك.',
   'billing.renewal.trialEndsIn': {
-    zero: 'تنتهي فترتك التجريبية بعد {value} يوم. لا حاجة إلى بطاقة حتى ذلك الحين.',
-    one: 'تنتهي فترتك التجريبية بعد يوم واحد. لا حاجة إلى بطاقة حتى ذلك الحين.',
-    two: 'تنتهي فترتك التجريبية بعد يومين. لا حاجة إلى بطاقة حتى ذلك الحين.',
-    few: 'تنتهي فترتك التجريبية بعد {value} أيام. لا حاجة إلى بطاقة حتى ذلك الحين.',
-    many: 'تنتهي فترتك التجريبية بعد {value} يومًا. لا حاجة إلى بطاقة حتى ذلك الحين.',
+    zero: 'تنتهي فترتك التجريبية بعد {value} يوم، وسيأتي أول خصم إلا إذا ألغيت قبل ذلك.',
+    one: 'تنتهي فترتك التجريبية غدًا، وسيأتي أول خصم إلا إذا ألغيت قبل ذلك.',
+    two: 'تنتهي فترتك التجريبية بعد يومين، وسيأتي أول خصم إلا إذا ألغيت قبل ذلك.',
+    few: 'تنتهي فترتك التجريبية بعد {value} أيام، وسيأتي أول خصم إلا إذا ألغيت قبل ذلك.',
+    many: 'تنتهي فترتك التجريبية بعد {value} يومًا، وسيأتي أول خصم إلا إذا ألغيت قبل ذلك.',
     other:
-      'تنتهي فترتك التجريبية بعد {value} يوم. لا حاجة إلى بطاقة حتى ذلك الحين.',
+      'تنتهي فترتك التجريبية بعد {value} يوم، وسيأتي أول خصم إلا إذا ألغيت قبل ذلك.',
   },
   'billing.renewal.trialEnded': 'انتهت فترتك التجريبية.',
   'billing.renewal.endsNoDate': 'هذه الخطة مضبوطة على الانتهاء ولن تُجدَّد.',
@@ -412,7 +406,6 @@ const messages = {
   'billing.interval.label': 'دورة الفاتورة',
   'billing.interval.monthly': 'شهريًا',
   'billing.interval.yearly': 'سنويًا',
-  'billing.interval.saving': 'وفّر {value}',
   'billing.plan.free.name': 'مجانية',
   'billing.plan.free.tagline': 'خطّط لرحلتيك القادمتين',
   'billing.plan.free.feature.trips': 'رحلتان في وقت واحد',
@@ -436,7 +429,6 @@ const messages = {
   'billing.plan.current': 'الخطة الحالية',
   'billing.plan.currentBadge': 'الحالية',
   'billing.plan.popular': 'الأكثر اختيارًا',
-  'billing.plan.moveTo': 'الانتقال إلى {plan}',
   'billing.plan.switchYearly': 'التحويل إلى السنوي',
   'billing.plan.switchMonthly': 'التحويل إلى الشهري',
   'billing.plan.upgradeTo': 'الترقية إلى {plan}',
@@ -457,30 +449,73 @@ const messages = {
     other: '{value} عضو',
   },
 
-  'billing.invoices.title': 'الفواتير',
-  'billing.invoices.description': 'كل إيصال لمساحة العمل هذه، الأحدث أولًا.',
-  'billing.invoices.portal': 'بوابة الفواتير',
-  'billing.invoices.unavailableTitle': 'الإيصالات لا تُحمّل',
-  'billing.invoices.unavailableBody':
-    'لم يجب Polar في الوقت المناسب للسجل. كل ما فوق مباشر؛ افتح بوابة الفواتير للسجل الكامل، أو عد بعد لحظات.',
-  'billing.invoices.emptyTitle': 'لا فواتير بعد',
-  'billing.invoices.emptyCustomer':
-    'يظهر أول إيصال هنا بمجرد انتهاء فترة فاتورة.',
-  'billing.invoices.emptyNoCustomer':
-    'لم تُحصَّل من مساحة العمل هذه أي مبالغ قط. اختر خطة مدفوعة وستتجمع الإيصالات هنا.',
-  'billing.invoices.tableLabel': 'سجل الفواتير',
   'billing.invoices.number': 'الفاتورة',
   'billing.invoices.date': 'التاريخ',
-  'billing.invoices.period': 'الفترة',
   'billing.invoices.amount': 'المبلغ',
   'billing.invoices.status': 'الحالة',
-  'billing.invoices.receipt': 'الإيصال',
-  'billing.invoices.view': 'عرض',
   'billing.invoice.paid': 'مدفوعة',
-  'billing.invoice.open': 'مستحقة',
   'billing.invoice.draft': 'مسودة',
   'billing.invoice.void': 'ملغاة',
-  'billing.invoice.uncollectible': 'غير قابلة للتحصيل',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'رفض مزوّد الدفع هذا الطلب. أعد المحاولة بعد لحظة.',
+  'billing.planChanged.title': 'تم تحديث الخطة',
+  'billing.planChanged.body':
+    'التغيير سارٍ بالفعل عند Polar، وهي من ستفوتر الفرق. الملخّص أدناه يلحق خلال دقيقة.',
+  'billing.hero.manage': 'إدارة الفواتير',
+  'billing.hero.manageHint':
+    'البطاقات وعنوان الفاتورة والرقم الضريبي والإيصالات والإلغاء كلها عند Polar، وهي من تُصدر الفاتورة.',
+  'billing.hero.manageHintNone':
+    'لا يوجد ملف فواتير بعد. اختيار خطة مدفوعة أدناه يُنشئ واحدًا، وبعدها تُفتح البوابة.',
+  'billing.portal.opening': 'يجري فتح بوابة الفواتير',
+  'billing.plan.notApplied': 'لم يُطبَّق هذا التغيير',
+  'billing.plan.cancelInPortal': 'ألغِ من البوابة',
+  'billing.plan.seatsOverMax': {
+    zero: 'تضم مساحة العمل هذه {members} أعضاء، و{plan} تفوتر {max} على الأكثر. أزل {value} عضو قبل التبديل.',
+    one: 'تضم مساحة العمل هذه {members} أعضاء، و{plan} تفوتر {max} على الأكثر. أزل عضوًا واحدًا قبل التبديل.',
+    two: 'تضم مساحة العمل هذه {members} أعضاء، و{plan} تفوتر {max} على الأكثر. أزل عضوين قبل التبديل.',
+    few: 'تضم مساحة العمل هذه {members} أعضاء، و{plan} تفوتر {max} على الأكثر. أزل {value} أعضاء قبل التبديل.',
+    many: 'تضم مساحة العمل هذه {members} أعضاء، و{plan} تفوتر {max} على الأكثر. أزل {value} عضوًا قبل التبديل.',
+    other:
+      'تضم مساحة العمل هذه {members} أعضاء، و{plan} تفوتر {max} على الأكثر. أزل {value} عضو قبل التبديل.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'لديك {members} أعضاء. اختر هذا العدد من المقاعد على الأقل، فـ Polar ترفض اشتراكًا بمقاعد أقل من التعيينات.',
+  'billing.orders.title': 'الطلبات',
+  'billing.orders.description': 'كل طلب في مساحة العمل هذه، من الأحدث.',
+  'billing.orders.receipts': 'كل الإيصالات',
+  'billing.orders.unavailableTitle': 'الطلبات لا تُحمَّل',
+  'billing.orders.unavailableBody':
+    'لم تُجب Polar في الوقت المناسب عن السجل. كل ما فوق حديث، فأعد المحاولة بعد لحظة أو اقرأ السجل الكامل في بوابة الفواتير.',
+  'billing.orders.emptyTitle': 'لا طلبات بعد',
+  'billing.orders.emptyCustomer':
+    'تظهر أول فاتورة هنا بمجرد انتهاء دورة فوترة.',
+  'billing.orders.emptyNoCustomer':
+    'لم تُحصَّل أي مبالغ من مساحة العمل هذه. اختر خطة مدفوعة وستتجمّع الفواتير هنا.',
+  'billing.orders.tableLabel': 'سجل الطلبات',
+  'billing.orders.document': 'مستند',
+  'billing.orders.dateUnknown': 'تاريخ غير معروف',
+  'billing.order.pending': 'قيد الانتظار',
+  'billing.order.refunded': 'مُسترَدّ',
+  'billing.order.partiallyRefunded': 'مُسترَدّ جزئيًا',
+  'billing.order.noInvoiceDraft': 'لا فاتورة ما دام الطلب مسوّدة',
+  'billing.order.preparing': 'قيد التحضير',
+  'billing.order.renderingHint':
+    'ما زالت Polar تُنشئ الفاتورة {number}. سيعود التنزيل بعد ثوانٍ.',
+  'billing.order.fetching': 'يجري جلب الفاتورة',
+  'billing.order.generating': 'تُحضّر Polar الفاتورة',
+  'billing.order.pdfLabel': 'الفاتورة {number} بصيغة PDF',
+  'billing.order.stillWritingTitle': 'ما زالت Polar تكتب تلك الفاتورة',
+  'billing.order.stillWritingBody':
+    'الفاتورة {number} قيد الإنشاء. سيعود التنزيل من تلقاء نفسه بعد ثوانٍ.',
+  'billing.order.openFailed': 'لم تُفتح تلك الفاتورة',
 } satisfies TranslationOf<typeof En>
 
 export default messages

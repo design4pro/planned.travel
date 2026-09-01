@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  emphasisFor,
-  initialSelection,
-  selectionReducer,
-} from '../selection'
+import { emphasisFor, initialSelection, selectionReducer } from '../selection'
 
 import type { PlannerSelection, SelectionAction } from '../selection'
 

@@ -13,6 +13,7 @@ import { ArrowRight, Plus } from 'lucide-react'
 import {
   Alert,
   Button,
+  Chip,
   Dialog,
   DialogBody,
   DialogContent,
@@ -25,7 +26,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
-import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { createLegFn, updateLegFn } from '#/server/fns/transports'
 import { useAction } from '../shared'
 import { formatGap, legTimingError } from './connections'
@@ -95,6 +96,7 @@ export function LegDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslate()
   const editing = leg !== undefined
   const formId = useId()
 
@@ -112,20 +114,29 @@ export function LegDialog({
   }, [open, leg, currency])
 
   const create = useAction(createLegFn, {
-    success: 'Leg added',
-    description: 'It is in the travel order now.',
-    failure: 'The leg was not added',
+    success: t('modules.transports.toast.added'),
+    description: t('modules.transports.toast.addedBody'),
+    failure: t('modules.transports.toast.addFailed'),
   })
   const update = useAction(updateLegFn, {
-    success: 'Leg updated',
-    failure: 'The leg was not updated',
+    success: t('modules.transports.toast.updated'),
+    failure: t('modules.transports.toast.updateFailed'),
   })
   const action = editing ? update : create
 
   const errors = useMemo(() => validateLegDraft(draft), [draft])
   const invalid = hasLegErrors(errors)
   const labels = endpointLabels(draft.mode)
-  const suggestion = suggestLegTitle(draft)
+  const proposal = suggestLegTitle(draft)
+  const suggestion =
+    proposal === null
+      ? ''
+      : t(proposal.key, {
+          ...proposal.params,
+          ...(proposal.operatorKey === null
+            ? {}
+            : { operator: t(proposal.operatorKey) }),
+        })
 
   /** Live, not on submit: the one rule that makes a leg impossible. */
   const timing = legTimingError({
@@ -191,10 +202,13 @@ export function LegDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit this leg' : 'Add a leg'}</DialogTitle>
+          <DialogTitle>
+            {editing
+              ? t('modules.transports.dialog.editTitle')
+              : t('modules.transports.dialog.addTitle')}
+          </DialogTitle>
           <DialogDescription>
-            Flights, trains, ferries and the drive from the airport. Times are
-            the local ones printed on the ticket.
+            {t('modules.transports.dialog.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -208,43 +222,35 @@ export function LegDialog({
             }}
           >
             {action.error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {action.error}
               </Alert>
             )}
 
             <fieldset className="min-w-0">
               <legend className="mb-2 text-label font-medium text-ink">
-                How are you travelling
+                {t('modules.transports.form.modeLegend')}
               </legend>
               <div className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                 {TRANSPORT_MODES.map((mode) => {
                   const Icon = MODE_ICON[mode]
                   const active = draft.mode === mode
                   return (
-                    <button
+                    <Chip
                       key={mode}
-                      type="button"
-                      aria-pressed={active}
+                      selected={active}
+                      icon={<Icon aria-hidden />}
                       onClick={() => set('mode', mode)}
-                      className={cn(
-                        'inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-caption font-semibold whitespace-nowrap focus-ring',
-                        'transition-[background-color,border-color,color] duration-base ease-out-quint',
-                        active
-                          ? 'border-transparent bg-accent text-accent-on'
-                          : 'border-edge bg-surface text-ink-2 hover:border-edge-strong hover:text-ink',
-                      )}
                     >
-                      <Icon aria-hidden className="size-3.5" />
-                      {modeLabel(mode)}
-                    </button>
+                      {t(modeLabel(mode))}
+                    </Chip>
                   )
                 })}
               </div>
             </fieldset>
 
             <Field
-              label="Name"
+              label={t('modules.field.name')}
               required
               error={errorFor('title')}
               action={
@@ -262,7 +268,7 @@ export function LegDialog({
               <Input
                 value={draft.title}
                 onChange={(event) => set('title', event.target.value)}
-                placeholder="SAS from LHR to HND"
+                placeholder={t('modules.transports.field.namePlaceholder')}
                 maxLength={160}
                 autoComplete="off"
                 required
@@ -273,21 +279,29 @@ export function LegDialog({
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start">
               <fieldset className="flex min-w-0 flex-col gap-3">
                 <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
-                  {labels.from}
+                  {t(labels.from)}
                 </legend>
-                <Field label="Place" error={errorFor('departureName')}>
+                <Field
+                  label={t('modules.transports.field.place')}
+                  error={errorFor('departureName')}
+                >
                   <Input
                     value={draft.departureName}
                     onChange={(event) =>
                       set('departureName', event.target.value)
                     }
-                    placeholder="London Heathrow"
+                    placeholder={t(
+                      'modules.transports.field.departurePlaceholder',
+                    )}
                     maxLength={200}
                     autoComplete="off"
                   />
                 </Field>
                 {usesCodes(draft.mode) ? (
-                  <Field label="Code" error={errorFor('departureCode')}>
+                  <Field
+                    label={t('modules.transports.field.code')}
+                    error={errorFor('departureCode')}
+                  >
                     <Input
                       value={draft.departureCode}
                       onChange={(event) =>
@@ -301,7 +315,10 @@ export function LegDialog({
                   </Field>
                 ) : null}
                 <div className="grid grid-cols-[1fr_auto] gap-3">
-                  <Field label="Date" error={errorFor('departureDate')}>
+                  <Field
+                    label={t('modules.transports.field.date')}
+                    error={errorFor('departureDate')}
+                  >
                     <Input
                       type="date"
                       value={draft.departureDate}
@@ -310,7 +327,10 @@ export function LegDialog({
                       }
                     />
                   </Field>
-                  <Field label="Time" error={errorFor('departureTime')}>
+                  <Field
+                    label={t('modules.field.time')}
+                    error={errorFor('departureTime')}
+                  >
                     <Input
                       type="time"
                       value={draft.departureTime}
@@ -329,19 +349,27 @@ export function LegDialog({
 
               <fieldset className="flex min-w-0 flex-col gap-3">
                 <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
-                  {labels.to}
+                  {t(labels.to)}
                 </legend>
-                <Field label="Place" error={errorFor('arrivalName')}>
+                <Field
+                  label={t('modules.transports.field.place')}
+                  error={errorFor('arrivalName')}
+                >
                   <Input
                     value={draft.arrivalName}
                     onChange={(event) => set('arrivalName', event.target.value)}
-                    placeholder="Tokyo Haneda"
+                    placeholder={t(
+                      'modules.transports.field.arrivalPlaceholder',
+                    )}
                     maxLength={200}
                     autoComplete="off"
                   />
                 </Field>
                 {usesCodes(draft.mode) ? (
-                  <Field label="Code" error={errorFor('arrivalCode')}>
+                  <Field
+                    label={t('modules.transports.field.code')}
+                    error={errorFor('arrivalCode')}
+                  >
                     <Input
                       value={draft.arrivalCode}
                       onChange={(event) =>
@@ -355,7 +383,10 @@ export function LegDialog({
                   </Field>
                 ) : null}
                 <div className="grid grid-cols-[1fr_auto] gap-3">
-                  <Field label="Date" error={errorFor('arrivalDate')}>
+                  <Field
+                    label={t('modules.transports.field.date')}
+                    error={errorFor('arrivalDate')}
+                  >
                     <Input
                       type="date"
                       value={draft.arrivalDate}
@@ -369,7 +400,10 @@ export function LegDialog({
                       }
                     />
                   </Field>
-                  <Field label="Time" error={errorFor('arrivalTime')}>
+                  <Field
+                    label={t('modules.field.time')}
+                    error={errorFor('arrivalTime')}
+                  >
                     <Input
                       type="time"
                       value={draft.arrivalTime}
@@ -384,23 +418,27 @@ export function LegDialog({
             </div>
 
             {timing !== null ? (
-              <Alert tone="danger" title="Check the times">
-                {timing} Move one of them so the leg can actually be caught.
+              <Alert
+                tone="danger"
+                title={t('modules.transports.form.timingError')}
+              >
+                {t(timing)} {t('modules.transports.error.timingHint')}
               </Alert>
             ) : duration === null ? null : (
-              <p className="text-caption text-ink-3">
-                That is{' '}
-                <span className="font-semibold tabular-nums text-ink">
-                  {formatGap(duration)}
-                </span>{' '}
-                door to door.
+              <p className="text-caption font-medium tabular-nums text-ink-3">
+                {t('modules.transports.doorToDoor', {
+                  gap: formatGap(duration),
+                })}
               </p>
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               {usesService(draft.mode) ? (
                 <>
-                  <Field label="Carrier" error={errorFor('carrier')}>
+                  <Field
+                    label={t('modules.transports.field.carrier')}
+                    error={errorFor('carrier')}
+                  >
                     <Input
                       value={draft.carrier}
                       onChange={(event) => set('carrier', event.target.value)}
@@ -410,7 +448,7 @@ export function LegDialog({
                     />
                   </Field>
                   <Field
-                    label="Service number"
+                    label={t('modules.transports.field.serviceNumber')}
                     error={errorFor('serviceNumber')}
                   >
                     <Input
@@ -427,9 +465,9 @@ export function LegDialog({
                 </>
               ) : null}
               <Field
-                label="Booking reference"
+                label={t('modules.transports.field.bookingRef')}
                 error={errorFor('bookingCode')}
-                hint="The code you will read back at the desk."
+                hint={t('modules.transports.field.bookingRefHint')}
               >
                 <Input
                   value={draft.bookingCode}
@@ -441,7 +479,10 @@ export function LegDialog({
                 />
               </Field>
               {usesSeat(draft.mode) ? (
-                <Field label="Seat" error={errorFor('seat')}>
+                <Field
+                  label={t('modules.transports.field.seat')}
+                  error={errorFor('seat')}
+                >
                   <Input
                     value={draft.seat}
                     onChange={(event) => set('seat', event.target.value)}
@@ -455,7 +496,10 @@ export function LegDialog({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Distance" error={errorFor('distanceKm')}>
+              <Field
+                label={t('modules.transports.field.distance')}
+                error={errorFor('distanceKm')}
+              >
                 <Input
                   value={draft.distanceKm}
                   onChange={(event) => set('distanceKm', event.target.value)}
@@ -464,7 +508,7 @@ export function LegDialog({
                   trailing={<span className="text-caption text-ink-4">km</span>}
                 />
               </Field>
-              <Field label="Price" error={errorFor('price')}>
+              <Field label={t('modules.field.price')} error={errorFor('price')}>
                 <Input
                   value={draft.price}
                   onChange={(event) => set('price', event.target.value)}
@@ -477,11 +521,11 @@ export function LegDialog({
                   }
                 />
               </Field>
-              <Field label="Status">
+              <Field label={t('modules.field.status')}>
                 <SimpleSelect
                   options={TRANSPORT_STATUSES.map((value) => ({
                     value,
-                    label: STATUS_LABELS[value],
+                    label: t(STATUS_LABELS[value]),
                   }))}
                   value={draft.status}
                   onValueChange={(next) => {
@@ -489,16 +533,16 @@ export function LegDialog({
                       set('status', next)
                     }
                   }}
-                  ariaLabel="Status"
+                  ariaLabel={t('modules.field.status')}
                 />
               </Field>
             </div>
 
-            <Field label="Notes">
+            <Field label={t('modules.field.notes')}>
               <Textarea
                 value={draft.notes}
                 onChange={(event) => set('notes', event.target.value)}
-                placeholder="Aisle seat requested. Bags checked through to Kyoto."
+                placeholder={t('modules.transports.field.notesPlaceholder')}
                 maxLength={4000}
                 rows={3}
                 autoResize
@@ -515,7 +559,7 @@ export function LegDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -524,9 +568,11 @@ export function LegDialog({
             shape="pill"
             disabled={touched && invalid}
             loading={action.pending}
-            loadingLabel="Saving the leg"
+            loadingLabel={t('modules.transports.action.saving')}
           >
-            {editing ? 'Save leg' : 'Add leg'}
+            {editing
+              ? t('modules.transports.action.save')
+              : t('modules.transports.action.add')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -534,12 +580,28 @@ export function LegDialog({
   )
 }
 
-/** The screen's primary action, for the module header. */
+/**
+ * The screen's primary action, for the module header.
+ *
+ * `sm` and `primary`, and the same in every tab that has one of these: Book,
+ * Files, Lists and Costs. What was wrong was only the size — these used to omit
+ * it and take the `md` default, so a header action was drawn 40px tall while
+ * Costs, the one tab that chose deliberately, ran its three at 32px. The
+ * emphasis was never the problem: this is the thing to do on the screen, and it
+ * is drawn as such.
+ */
 export function NewLegAction({ onClick }: { onClick: () => void }) {
+  const t = useTranslate()
+
   return (
-    <Button variant="primary" shape="pill" onClick={onClick}>
-      <Plus aria-hidden strokeWidth={2.5} />
-      Add leg
+    <Button
+      variant="primary"
+      size="sm"
+      shape="pill"
+      icon={<Plus aria-hidden strokeWidth={2.5} />}
+      onClick={onClick}
+    >
+      {t('modules.transports.action.add')}
     </Button>
   )
 }

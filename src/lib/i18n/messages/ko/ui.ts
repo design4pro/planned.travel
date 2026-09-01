@@ -17,13 +17,16 @@ import type { TranslationOf } from '../../types'
 
 const messages = {
   'action.clear': '지우기',
+  'action.clearFilters': '필터 해제',
   'action.close': '닫기',
   'action.dismiss': '숨기기',
   'action.remove': '삭제',
+  'action.keep': '그대로 두기',
   'action.undo': '되돌리기',
   'status.loading': '불러오는 중',
   'status.working': '처리 중',
   'status.searching': '검색 중',
+  'status.removing': '삭제 중',
   'avatar.status.online': '{name} 님은 온라인이에요',
   'avatar.status.away': '{name} 님은 자리에 없어요',
   'avatar.status.busy': '{name} 님은 바빠요',

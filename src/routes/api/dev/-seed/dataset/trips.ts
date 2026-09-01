@@ -27,7 +27,8 @@ export const lisbonTrip: SeedTrip = {
   id: 'demo-trip-02-lisbon-long-weekend',
   slug: 'lisbon-long-weekend',
   title: 'Lisbon, slowly',
-  summary: 'Six nights in Alfama with no itinerary beyond breakfast and a tram pass.',
+  summary:
+    'Six nights in Alfama with no itinerary beyond breakfast and a tram pass.',
   description:
     'Booked in a hurry after the Dolomites, deliberately under-planned. One miradouro a day, one long ' +
     'lunch, and the Belém run on whichever morning looks least cloudy.',
@@ -39,7 +40,7 @@ export const lisbonTrip: SeedTrip = {
   currency: 'EUR',
   status: 'active',
   visibility: 'organization',
-  accentColour: '#B26B08',
+  accentColour: '#8a5305',
   budgetTargetMinor: 220_000,
   reminderDays: 2,
   isFavourite: true,
@@ -52,22 +53,59 @@ export const lisbonTrip: SeedTrip = {
     {
       dayNumber: 1,
       title: 'Land and climb',
-      notes: 'Early flight, bags at the riad by noon, then straight up the hill for the first viewpoint.',
+      notes:
+        'Early flight, bags at the riad by noon, then straight up the hill for the first viewpoint.',
       pins: [
-        { body: 'Buy the 24-hour Carris pass at the metro machine, not on the tram.', time: '10:30', icon: 'ticket' },
+        {
+          body: 'Buy the 24-hour Carris pass at the metro machine, not on the tram.',
+          time: '10:30',
+          icon: 'ticket',
+        },
       ],
     },
-    { dayNumber: 2, title: 'Alfama on foot', notes: 'No plan. Follow the 28 tram route downhill and stop when something smells good.' },
+    {
+      dayNumber: 2,
+      title: 'Alfama on foot',
+      notes:
+        'No plan. Follow the 28 tram route downhill and stop when something smells good.',
+    },
     {
       dayNumber: 3,
       title: 'Seafood and the market',
-      notes: 'Time Out for lunch, Cervejaria Ramiro for the evening. Bring an appetite and cash for the tip.',
-      pins: [{ body: 'Ramiro at 20:30 — they do not hold tables past 20:45.', time: '20:00', icon: 'utensils' }],
+      notes:
+        'Time Out for lunch, Cervejaria Ramiro for the evening. Bring an appetite and cash for the tip.',
+      pins: [
+        {
+          body: 'Ramiro at 20:30 — they do not hold tables past 20:45.',
+          time: '20:00',
+          icon: 'utensils',
+        },
+      ],
     },
-    { dayNumber: 4, title: 'Belém', notes: 'Tram 15E west, monastery cloister first, pastéis after. The queue at the counter moves faster than the tables.' },
-    { dayNumber: 5, title: 'LX Factory and the bridge', notes: 'Sunday market under the viaduct, then the long walk back along the river.' },
-    { dayNumber: 6, title: 'Out to Cascais', notes: 'Forty minutes on the Cais do Sodré line. Swim, seafood, sleep on the train home.' },
-    { dayNumber: 7, title: 'Late flight home', notes: 'Checkout at noon, bags at the riad, one last coffee at the top of the hill.' },
+    {
+      dayNumber: 4,
+      title: 'Belém',
+      notes:
+        'Tram 15E west, monastery cloister first, pastéis after. The queue at the counter moves faster than the tables.',
+    },
+    {
+      dayNumber: 5,
+      title: 'LX Factory and the bridge',
+      notes:
+        'Sunday market under the viaduct, then the long walk back along the river.',
+    },
+    {
+      dayNumber: 6,
+      title: 'Out to Cascais',
+      notes:
+        'Forty minutes on the Cais do Sodré line. Swim, seafood, sleep on the train home.',
+    },
+    {
+      dayNumber: 7,
+      title: 'Late flight home',
+      notes:
+        'Checkout at noon, bags at the riad, one last coffee at the top of the hill.',
+    },
   ],
 
   places: [
@@ -89,7 +127,8 @@ export const lisbonTrip: SeedTrip = {
       key: 'miradouro-senhora-do-monte',
       name: 'Miradouro da Senhora do Monte',
       categorySlug: 'landmarks',
-      description: 'The highest viewpoint in the city, and the only one that is ever quiet.',
+      description:
+        'The highest viewpoint in the city, and the only one that is ever quiet.',
       lat: 38.7188,
       lng: -9.1318,
       address: 'Largo Monte, 1170-107 Lisbon',
@@ -105,7 +144,8 @@ export const lisbonTrip: SeedTrip = {
       key: 'alfama',
       name: 'Alfama',
       categorySlug: 'landmarks',
-      description: 'The oldest quarter, and the only part of Lisbon the 1755 earthquake left standing.',
+      description:
+        'The oldest quarter, and the only part of Lisbon the 1755 earthquake left standing.',
       lat: 38.7118,
       lng: -9.1305,
       address: 'Alfama, 1100 Lisbon',
@@ -121,7 +161,8 @@ export const lisbonTrip: SeedTrip = {
       key: 'time-out-market',
       name: 'Time Out Market Lisboa',
       categorySlug: 'markets',
-      description: 'Twenty-six kitchens under the old Mercado da Ribeira roof. Go before 12:30.',
+      description:
+        'Twenty-six kitchens under the old Mercado da Ribeira roof. Go before 12:30.',
       lat: 38.7071,
       lng: -9.1459,
       address: 'Av. 24 de Julho 49, 1200-479 Lisbon',
@@ -138,7 +179,8 @@ export const lisbonTrip: SeedTrip = {
       key: 'mosteiro-jeronimos',
       name: 'Mosteiro dos Jerónimos',
       categorySlug: 'landmarks',
-      description: 'Manueline cloister from 1501, built on the pepper trade. Book the timed slot.',
+      description:
+        'Manueline cloister from 1501, built on the pepper trade. Book the timed slot.',
       lat: 38.6979,
       lng: -9.2065,
       address: 'Praça do Império, 1400-206 Lisbon',
@@ -155,7 +197,8 @@ export const lisbonTrip: SeedTrip = {
       key: 'pasteis-de-belem',
       name: 'Pastéis de Belém',
       categorySlug: 'food-and-drink',
-      description: 'The original 1837 recipe, still made behind the blue tiles. Eat them standing.',
+      description:
+        'The original 1837 recipe, still made behind the blue tiles. Eat them standing.',
       lat: 38.6976,
       lng: -9.2032,
       address: 'R. de Belém 84-92, 1300-085 Lisbon',
@@ -172,7 +215,8 @@ export const lisbonTrip: SeedTrip = {
       key: 'lx-factory',
       name: 'LX Factory',
       categorySlug: 'shopping',
-      description: 'Nineteenth-century textile works turned bookshop, print studios and Sunday market.',
+      description:
+        'Nineteenth-century textile works turned bookshop, print studios and Sunday market.',
       lat: 38.7024,
       lng: -9.1786,
       address: 'R. Rodrigues de Faria 103, 1300-501 Lisbon',
@@ -187,7 +231,8 @@ export const lisbonTrip: SeedTrip = {
       key: 'cascais',
       name: 'Cascais',
       categorySlug: 'outdoors',
-      description: 'Fishing town turned resort, forty minutes down the coast on the Cais do Sodré line.',
+      description:
+        'Fishing town turned resort, forty minutes down the coast on the Cais do Sodré line.',
       lat: 38.6979,
       lng: -9.4215,
       address: 'Cascais, 2750 Lisbon District',
@@ -201,10 +246,34 @@ export const lisbonTrip: SeedTrip = {
   ],
 
   stops: [
-    { dayNumber: 1, placeKey: 'lisbon-airport', startTime: '09:40', endTime: '10:25', transportMode: 'flight' },
-    { dayNumber: 1, placeKey: 'miradouro-senhora-do-monte', startTime: '18:30', endTime: '19:15', transportMode: 'walk' },
-    { dayNumber: 2, placeKey: 'alfama', startTime: '10:00', endTime: '12:30', transportMode: 'walk' },
-    { dayNumber: 3, placeKey: 'time-out-market', startTime: '12:00', endTime: '13:30', transportMode: 'tram' },
+    {
+      dayNumber: 1,
+      placeKey: 'lisbon-airport',
+      startTime: '09:40',
+      endTime: '10:25',
+      transportMode: 'flight',
+    },
+    {
+      dayNumber: 1,
+      placeKey: 'miradouro-senhora-do-monte',
+      startTime: '18:30',
+      endTime: '19:15',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 2,
+      placeKey: 'alfama',
+      startTime: '10:00',
+      endTime: '12:30',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 3,
+      placeKey: 'time-out-market',
+      startTime: '12:00',
+      endTime: '13:30',
+      transportMode: 'tram',
+    },
     {
       dayNumber: 4,
       placeKey: 'mosteiro-jeronimos',
@@ -213,9 +282,27 @@ export const lisbonTrip: SeedTrip = {
       transportMode: 'tram',
       reservationStatus: 'confirmed',
     },
-    { dayNumber: 4, placeKey: 'pasteis-de-belem', startTime: '11:45', endTime: '12:15', transportMode: 'walk' },
-    { dayNumber: 5, placeKey: 'lx-factory', startTime: '11:00', endTime: '13:00', transportMode: 'tram' },
-    { dayNumber: 6, placeKey: 'cascais', startTime: '10:15', endTime: '15:15', transportMode: 'train' },
+    {
+      dayNumber: 4,
+      placeKey: 'pasteis-de-belem',
+      startTime: '11:45',
+      endTime: '12:15',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 5,
+      placeKey: 'lx-factory',
+      startTime: '11:00',
+      endTime: '13:00',
+      transportMode: 'tram',
+    },
+    {
+      dayNumber: 6,
+      placeKey: 'cascais',
+      startTime: '10:15',
+      endTime: '15:15',
+      transportMode: 'train',
+    },
   ],
 
   accommodations: [
@@ -231,7 +318,8 @@ export const lisbonTrip: SeedTrip = {
       confirmationNumber: 'MEM-330184',
       priceMinor: 118_200,
       currency: 'EUR',
-      notes: 'Double with a terrace over the rooftops. They will hold bags from 11:00 on arrival day.',
+      notes:
+        'Double with a terrace over the rooftops. They will hold bags from 11:00 on arrival day.',
     },
   ],
 
@@ -340,14 +428,38 @@ export const lisbonTrip: SeedTrip = {
       guests: 2,
       priceMinor: 9_500,
       currency: 'EUR',
-      notes: 'Tiger prawns, garlic clams, and the steak sandwich for dessert. Cash tip.',
+      notes:
+        'Tiger prawns, garlic clams, and the steak sandwich for dessert. Cash tip.',
     },
   ],
 
   budgetItems: [
-    { key: 'lis-bud-stay', category: 'accommodation', name: 'Riad · 6 nights', plannedAmountMinor: 120_000, currency: 'EUR', persons: 2, days: 6 },
-    { key: 'lis-bud-food', category: 'food', name: 'Food and drink', plannedAmountMinor: 60_000, currency: 'EUR', persons: 2, days: 7 },
-    { key: 'lis-bud-transport', category: 'transport', name: 'Flights and trams', plannedAmountMinor: 40_000, currency: 'EUR', persons: 2 },
+    {
+      key: 'lis-bud-stay',
+      category: 'accommodation',
+      name: 'Riad · 6 nights',
+      plannedAmountMinor: 120_000,
+      currency: 'EUR',
+      persons: 2,
+      days: 6,
+    },
+    {
+      key: 'lis-bud-food',
+      category: 'food',
+      name: 'Food and drink',
+      plannedAmountMinor: 60_000,
+      currency: 'EUR',
+      persons: 2,
+      days: 7,
+    },
+    {
+      key: 'lis-bud-transport',
+      category: 'transport',
+      name: 'Flights and trams',
+      plannedAmountMinor: 40_000,
+      currency: 'EUR',
+      persons: 2,
+    },
   ],
 
   expenses: [
@@ -437,18 +549,74 @@ export const lisbonTrip: SeedTrip = {
       key: 'lis-list',
       name: 'Six nights, one bag',
       kind: 'packing',
-      colour: '#B26B08',
+      colour: '#8a5305',
       icon: 'briefcase',
       weightLimitGrams: 10_000,
       items: [
-        { name: 'Linen shirts', category: 'Clothing', quantity: 3, weightGrams: 480, isDone: true, assignedTo: 'rafal' },
-        { name: 'Swimwear for Cascais', category: 'Clothing', quantity: 1, weightGrams: 120, isDone: true, assignedTo: 'priya' },
-        { name: 'Shoes with grip — the pavements are polished', category: 'Shoes', quantity: 1, weightGrams: 700, isDone: true, assignedTo: 'rafal', priority: 'high' },
-        { name: 'Sun hat', category: 'Clothing', quantity: 1, weightGrams: 90, isDone: false, assignedTo: 'priya' },
-        { name: 'Sunscreen SPF 50', category: 'Toiletries', quantity: 1, weightGrams: 200, isDone: true, assignedTo: 'priya' },
-        { name: 'Euros in small notes for the tram', category: 'Money', isDone: true, assignedTo: 'rafal' },
-        { name: 'Kindle', category: 'Extras', quantity: 1, weightGrams: 190, isDone: true, assignedTo: 'rafal' },
-        { name: 'Tote for the LX Factory bookshop', category: 'Extras', quantity: 1, weightGrams: 110, isDone: false, assignedTo: 'priya', priority: 'low' },
+        {
+          name: 'Linen shirts',
+          category: 'Clothing',
+          quantity: 3,
+          weightGrams: 480,
+          isDone: true,
+          assignedTo: 'rafal',
+        },
+        {
+          name: 'Swimwear for Cascais',
+          category: 'Clothing',
+          quantity: 1,
+          weightGrams: 120,
+          isDone: true,
+          assignedTo: 'priya',
+        },
+        {
+          name: 'Shoes with grip — the pavements are polished',
+          category: 'Shoes',
+          quantity: 1,
+          weightGrams: 700,
+          isDone: true,
+          assignedTo: 'rafal',
+          priority: 'high',
+        },
+        {
+          name: 'Sun hat',
+          category: 'Clothing',
+          quantity: 1,
+          weightGrams: 90,
+          isDone: false,
+          assignedTo: 'priya',
+        },
+        {
+          name: 'Sunscreen SPF 50',
+          category: 'Toiletries',
+          quantity: 1,
+          weightGrams: 200,
+          isDone: true,
+          assignedTo: 'priya',
+        },
+        {
+          name: 'Euros in small notes for the tram',
+          category: 'Money',
+          isDone: true,
+          assignedTo: 'rafal',
+        },
+        {
+          name: 'Kindle',
+          category: 'Extras',
+          quantity: 1,
+          weightGrams: 190,
+          isDone: true,
+          assignedTo: 'rafal',
+        },
+        {
+          name: 'Tote for the LX Factory bookshop',
+          category: 'Extras',
+          quantity: 1,
+          weightGrams: 110,
+          isDone: false,
+          assignedTo: 'priya',
+          priority: 'low',
+        },
       ],
     },
   ],
@@ -494,7 +662,7 @@ export const lisbonTrip: SeedTrip = {
         'a metro machine — bought on board it costs three times as much.\n\n' +
         'The 28 is a working tram, not a tour. Board at Martim Moniz before 09:00 or after 20:00 if you ' +
         'want a seat. Pickpockets work the middle section; keep bags in front.',
-      colour: '#2F6F5E',
+      colour: '#256256',
       isPinned: true,
       sortOrder: 1,
     },
@@ -534,7 +702,8 @@ export const dolomitesTrip: SeedTrip = {
   id: 'demo-trip-03-dolomites-hut-to-hut',
   slug: 'dolomites-hut-to-hut',
   title: 'Dolomites, hut to hut',
-  summary: 'Eight days walking the Alta Badia and Val Gardena, sleeping in rifugi.',
+  summary:
+    'Eight days walking the Alta Badia and Val Gardena, sleeping in rifugi.',
   description:
     'Three of us, one rope we never used, and 94 kilometres on foot. Ortisei as the base for the first ' +
     'half, then two nights higher up at Locatelli before dropping back down for the flight home.',
@@ -546,7 +715,7 @@ export const dolomitesTrip: SeedTrip = {
   currency: 'EUR',
   status: 'completed',
   visibility: 'organization',
-  accentColour: '#2F6F5E',
+  accentColour: '#256256',
   budgetTargetMinor: 280_000,
   travellers: [
     { person: 'rafal', role: 'owner' },
@@ -555,14 +724,53 @@ export const dolomitesTrip: SeedTrip = {
   ],
 
   days: [
-    { dayNumber: 1, title: 'Venice to Ortisei', notes: 'Flight in, hire car north through Bolzano, in the valley by six. Legs stay fresh.' },
-    { dayNumber: 2, title: 'Seceda ridge', notes: 'Cable car up, walk the ridge north, drop back into Ortisei on foot. Twelve kilometres.' },
-    { dayNumber: 3, title: 'Alpe di Siusi', notes: 'Europe’s largest high alpine meadow. Flat, endless, and full of cows with bells.' },
-    { dayNumber: 4, title: 'Lago di Braies at dawn', notes: 'On the water before the coach parties. Boat hire opens at 09:00, we were second in the queue.' },
-    { dayNumber: 5, title: 'Up to Locatelli', notes: 'Auronzo to the rifugio the long way round, packs on. Best hut dinner of the week.' },
-    { dayNumber: 6, title: 'Tre Cime circuit', notes: 'The full ten-kilometre loop anticlockwise, which puts the north faces in front of you all afternoon.' },
-    { dayNumber: 7, title: 'Down to the valley', notes: 'Knees complaining. Long lunch in Cortina, then back to Ortisei for the last night.' },
-    { dayNumber: 8, title: 'Home', notes: 'Car back at Marco Polo by eleven, wheels up at 13:40.' },
+    {
+      dayNumber: 1,
+      title: 'Venice to Ortisei',
+      notes:
+        'Flight in, hire car north through Bolzano, in the valley by six. Legs stay fresh.',
+    },
+    {
+      dayNumber: 2,
+      title: 'Seceda ridge',
+      notes:
+        'Cable car up, walk the ridge north, drop back into Ortisei on foot. Twelve kilometres.',
+    },
+    {
+      dayNumber: 3,
+      title: 'Alpe di Siusi',
+      notes:
+        'Europe’s largest high alpine meadow. Flat, endless, and full of cows with bells.',
+    },
+    {
+      dayNumber: 4,
+      title: 'Lago di Braies at dawn',
+      notes:
+        'On the water before the coach parties. Boat hire opens at 09:00, we were second in the queue.',
+    },
+    {
+      dayNumber: 5,
+      title: 'Up to Locatelli',
+      notes:
+        'Auronzo to the rifugio the long way round, packs on. Best hut dinner of the week.',
+    },
+    {
+      dayNumber: 6,
+      title: 'Tre Cime circuit',
+      notes:
+        'The full ten-kilometre loop anticlockwise, which puts the north faces in front of you all afternoon.',
+    },
+    {
+      dayNumber: 7,
+      title: 'Down to the valley',
+      notes:
+        'Knees complaining. Long lunch in Cortina, then back to Ortisei for the last night.',
+    },
+    {
+      dayNumber: 8,
+      title: 'Home',
+      notes: 'Car back at Marco Polo by eleven, wheels up at 13:40.',
+    },
   ],
 
   places: [
@@ -570,7 +778,8 @@ export const dolomitesTrip: SeedTrip = {
       key: 'venice-airport',
       name: 'Venice Marco Polo Airport',
       categorySlug: 'transport',
-      description: 'Car hire desks in the multi-storey opposite arrivals. Two hours to Ortisei.',
+      description:
+        'Car hire desks in the multi-storey opposite arrivals. Two hours to Ortisei.',
       lat: 45.5053,
       lng: 12.3519,
       address: 'Viale Galileo Galilei 30/1, 30173 Venice',
@@ -584,7 +793,8 @@ export const dolomitesTrip: SeedTrip = {
       key: 'ortisei',
       name: 'Ortisei',
       categorySlug: 'landmarks',
-      description: 'Val Gardena’s main town, 1,236m, and the base for both cable-car systems.',
+      description:
+        'Val Gardena’s main town, 1,236m, and the base for both cable-car systems.',
       lat: 46.5764,
       lng: 11.6714,
       address: '39046 Ortisei, South Tyrol',
@@ -599,7 +809,8 @@ export const dolomitesTrip: SeedTrip = {
       key: 'seceda',
       name: 'Seceda',
       categorySlug: 'outdoors',
-      description: 'The tilted slab at 2,519m with the Fermeda towers behind it. The photograph.',
+      description:
+        'The tilted slab at 2,519m with the Fermeda towers behind it. The photograph.',
       lat: 46.5878,
       lng: 11.7414,
       address: 'Seceda, 39046 Ortisei, South Tyrol',
@@ -617,7 +828,8 @@ export const dolomitesTrip: SeedTrip = {
       key: 'alpe-di-siusi',
       name: 'Alpe di Siusi',
       categorySlug: 'outdoors',
-      description: '57 square kilometres of meadow at 1,800m, closed to cars between 09:00 and 17:00.',
+      description:
+        '57 square kilometres of meadow at 1,800m, closed to cars between 09:00 and 17:00.',
       lat: 46.5391,
       lng: 11.6203,
       address: 'Alpe di Siusi, 39040 Castelrotto, South Tyrol',
@@ -633,7 +845,8 @@ export const dolomitesTrip: SeedTrip = {
       key: 'lago-di-braies',
       name: 'Lago di Braies',
       categorySlug: 'outdoors',
-      description: 'The turquoise one with the wooden boathouse. Access is ticketed 09:30–16:00 in summer.',
+      description:
+        'The turquoise one with the wooden boathouse. Access is ticketed 09:30–16:00 in summer.',
       lat: 46.6947,
       lng: 12.0855,
       address: 'Braies, 39030 South Tyrol',
@@ -651,7 +864,8 @@ export const dolomitesTrip: SeedTrip = {
       key: 'rifugio-locatelli',
       name: 'Rifugio Antonio Locatelli',
       categorySlug: 'stays',
-      description: 'Hut at 2,405m looking straight at the north faces of the Tre Cime. Book by March.',
+      description:
+        'Hut at 2,405m looking straight at the north faces of the Tre Cime. Book by March.',
       lat: 46.6244,
       lng: 12.3006,
       address: 'Rifugio Locatelli, 39030 Sesto, South Tyrol',
@@ -669,7 +883,8 @@ export const dolomitesTrip: SeedTrip = {
       key: 'tre-cime',
       name: 'Tre Cime di Lavaredo',
       categorySlug: 'outdoors',
-      description: 'Three limestone towers, one ten-kilometre loop, and no bad angle on any of it.',
+      description:
+        'Three limestone towers, one ten-kilometre loop, and no bad angle on any of it.',
       lat: 46.6183,
       lng: 12.3055,
       address: 'Auronzo di Cadore, 32041 Belluno',
@@ -684,13 +899,55 @@ export const dolomitesTrip: SeedTrip = {
   ],
 
   stops: [
-    { dayNumber: 1, placeKey: 'venice-airport', startTime: '10:25', endTime: '11:30', transportMode: 'flight' },
-    { dayNumber: 1, placeKey: 'ortisei', startTime: '17:45', endTime: '19:00', transportMode: 'car' },
-    { dayNumber: 2, placeKey: 'seceda', startTime: '08:30', endTime: '15:30', transportMode: 'other' },
-    { dayNumber: 3, placeKey: 'alpe-di-siusi', startTime: '08:00', endTime: '16:00', transportMode: 'other' },
-    { dayNumber: 4, placeKey: 'lago-di-braies', startTime: '06:15', endTime: '10:30', transportMode: 'car' },
-    { dayNumber: 5, placeKey: 'rifugio-locatelli', startTime: '14:00', endTime: '19:30', transportMode: 'walk' },
-    { dayNumber: 6, placeKey: 'tre-cime', startTime: '08:00', endTime: '14:00', transportMode: 'walk' },
+    {
+      dayNumber: 1,
+      placeKey: 'venice-airport',
+      startTime: '10:25',
+      endTime: '11:30',
+      transportMode: 'flight',
+    },
+    {
+      dayNumber: 1,
+      placeKey: 'ortisei',
+      startTime: '17:45',
+      endTime: '19:00',
+      transportMode: 'car',
+    },
+    {
+      dayNumber: 2,
+      placeKey: 'seceda',
+      startTime: '08:30',
+      endTime: '15:30',
+      transportMode: 'other',
+    },
+    {
+      dayNumber: 3,
+      placeKey: 'alpe-di-siusi',
+      startTime: '08:00',
+      endTime: '16:00',
+      transportMode: 'other',
+    },
+    {
+      dayNumber: 4,
+      placeKey: 'lago-di-braies',
+      startTime: '06:15',
+      endTime: '10:30',
+      transportMode: 'car',
+    },
+    {
+      dayNumber: 5,
+      placeKey: 'rifugio-locatelli',
+      startTime: '14:00',
+      endTime: '19:30',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 6,
+      placeKey: 'tre-cime',
+      startTime: '08:00',
+      endTime: '14:00',
+      transportMode: 'walk',
+    },
   ],
 
   accommodations: [
@@ -705,7 +962,8 @@ export const dolomitesTrip: SeedTrip = {
       confirmationNumber: 'ADL-2026-0613',
       priceMinor: 96_000,
       currency: 'EUR',
-      notes: 'Half board, spa included. They stored the hut packs while we were up at Locatelli.',
+      notes:
+        'Half board, spa included. They stored the hut packs while we were up at Locatelli.',
     },
     {
       key: 'locatelli-hut',
@@ -719,7 +977,8 @@ export const dolomitesTrip: SeedTrip = {
       confirmationNumber: 'LOC-88413',
       priceMinor: 23_400,
       currency: 'EUR',
-      notes: 'Dormitory, three places, half board. Bring a sleeping-bag liner and cash.',
+      notes:
+        'Dormitory, three places, half board. Bring a sleeping-bag liner and cash.',
     },
   ],
 
@@ -827,10 +1086,40 @@ export const dolomitesTrip: SeedTrip = {
   ],
 
   budgetItems: [
-    { key: 'dol-bud-stay', category: 'accommodation', name: 'Hotel and rifugio', plannedAmountMinor: 120_000, currency: 'EUR', persons: 3, days: 7 },
-    { key: 'dol-bud-transport', category: 'transport', name: 'Flights, car and cable cars', plannedAmountMinor: 100_000, currency: 'EUR', persons: 3 },
-    { key: 'dol-bud-food', category: 'food', name: 'Food not covered by half board', plannedAmountMinor: 45_000, currency: 'EUR', persons: 3, days: 8 },
-    { key: 'dol-bud-activities', category: 'activities', name: 'Lifts and lake access', plannedAmountMinor: 20_000, currency: 'EUR', persons: 3 },
+    {
+      key: 'dol-bud-stay',
+      category: 'accommodation',
+      name: 'Hotel and rifugio',
+      plannedAmountMinor: 120_000,
+      currency: 'EUR',
+      persons: 3,
+      days: 7,
+    },
+    {
+      key: 'dol-bud-transport',
+      category: 'transport',
+      name: 'Flights, car and cable cars',
+      plannedAmountMinor: 100_000,
+      currency: 'EUR',
+      persons: 3,
+    },
+    {
+      key: 'dol-bud-food',
+      category: 'food',
+      name: 'Food not covered by half board',
+      plannedAmountMinor: 45_000,
+      currency: 'EUR',
+      persons: 3,
+      days: 8,
+    },
+    {
+      key: 'dol-bud-activities',
+      category: 'activities',
+      name: 'Lifts and lake access',
+      plannedAmountMinor: 20_000,
+      currency: 'EUR',
+      persons: 3,
+    },
   ],
 
   expenses: [
@@ -844,7 +1133,11 @@ export const dolomitesTrip: SeedTrip = {
       budgetItemKey: 'dol-bud-transport',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'jonas' }, { person: 'mika' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'jonas' },
+        { person: 'mika' },
+      ],
     },
     {
       key: 'dol-exp-car',
@@ -857,7 +1150,11 @@ export const dolomitesTrip: SeedTrip = {
       budgetItemKey: 'dol-bud-transport',
       paidBy: 'jonas',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'jonas' }, { person: 'mika' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'jonas' },
+        { person: 'mika' },
+      ],
     },
     {
       key: 'dol-exp-adler',
@@ -870,7 +1167,11 @@ export const dolomitesTrip: SeedTrip = {
       budgetItemKey: 'dol-bud-stay',
       paidBy: 'mika',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'jonas' }, { person: 'mika' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'jonas' },
+        { person: 'mika' },
+      ],
     },
     {
       key: 'dol-exp-locatelli',
@@ -884,8 +1185,13 @@ export const dolomitesTrip: SeedTrip = {
       budgetItemKey: 'dol-bud-stay',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'jonas' }, { person: 'mika' }],
-      notes: 'Cash only at the hut. Rafal covered it and we squared up at the airport.',
+      participants: [
+        { person: 'rafal' },
+        { person: 'jonas' },
+        { person: 'mika' },
+      ],
+      notes:
+        'Cash only at the hut. Rafal covered it and we squared up at the airport.',
     },
     {
       key: 'dol-exp-seceda',
@@ -899,7 +1205,11 @@ export const dolomitesTrip: SeedTrip = {
       budgetItemKey: 'dol-bud-activities',
       paidBy: 'jonas',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'jonas' }, { person: 'mika' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'jonas' },
+        { person: 'mika' },
+      ],
     },
     {
       key: 'dol-exp-braies',
@@ -913,7 +1223,11 @@ export const dolomitesTrip: SeedTrip = {
       budgetItemKey: 'dol-bud-activities',
       paidBy: 'mika',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'jonas' }, { person: 'mika' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'jonas' },
+        { person: 'mika' },
+      ],
     },
     {
       key: 'dol-exp-cortina',
@@ -926,7 +1240,11 @@ export const dolomitesTrip: SeedTrip = {
       budgetItemKey: 'dol-bud-food',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'jonas' }, { person: 'mika' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'jonas' },
+        { person: 'mika' },
+      ],
     },
     {
       key: 'dol-exp-supplies',
@@ -939,7 +1257,11 @@ export const dolomitesTrip: SeedTrip = {
       budgetItemKey: 'dol-bud-food',
       paidBy: 'jonas',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'jonas' }, { person: 'mika' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'jonas' },
+        { person: 'mika' },
+      ],
     },
   ],
 
@@ -974,18 +1296,75 @@ export const dolomitesTrip: SeedTrip = {
       key: 'dol-list',
       name: 'Hut kit',
       kind: 'packing',
-      colour: '#16794C',
+      colour: '#136b45',
       icon: 'mountain',
       weightLimitGrams: 9_000,
       items: [
-        { name: 'Sleeping-bag liner', category: 'Hut', description: 'Mandatory at CAI rifugi.', quantity: 1, weightGrams: 260, isDone: true, assignedTo: 'rafal', priority: 'high' },
-        { name: 'Hut slippers', category: 'Hut', quantity: 1, weightGrams: 300, isDone: true, assignedTo: 'jonas' },
-        { name: 'Cash for the rifugio', category: 'Hut', isDone: true, assignedTo: 'rafal', priority: 'high' },
-        { name: '35L pack', category: 'Kit', quantity: 1, weightGrams: 1_100, isDone: true, assignedTo: 'mika' },
-        { name: 'Trekking poles', category: 'Kit', quantity: 2, weightGrams: 480, isDone: true, assignedTo: 'jonas' },
-        { name: 'Head torch and spare cell', category: 'Kit', quantity: 1, weightGrams: 90, isDone: true, assignedTo: 'mika' },
-        { name: 'Hard shell and warm layer', category: 'Clothing', quantity: 1, weightGrams: 780, isDone: true, assignedTo: 'rafal' },
-        { name: 'Blister kit and tape', category: 'Health', quantity: 1, weightGrams: 120, isDone: true, assignedTo: 'mika' },
+        {
+          name: 'Sleeping-bag liner',
+          category: 'Hut',
+          description: 'Mandatory at CAI rifugi.',
+          quantity: 1,
+          weightGrams: 260,
+          isDone: true,
+          assignedTo: 'rafal',
+          priority: 'high',
+        },
+        {
+          name: 'Hut slippers',
+          category: 'Hut',
+          quantity: 1,
+          weightGrams: 300,
+          isDone: true,
+          assignedTo: 'jonas',
+        },
+        {
+          name: 'Cash for the rifugio',
+          category: 'Hut',
+          isDone: true,
+          assignedTo: 'rafal',
+          priority: 'high',
+        },
+        {
+          name: '35L pack',
+          category: 'Kit',
+          quantity: 1,
+          weightGrams: 1_100,
+          isDone: true,
+          assignedTo: 'mika',
+        },
+        {
+          name: 'Trekking poles',
+          category: 'Kit',
+          quantity: 2,
+          weightGrams: 480,
+          isDone: true,
+          assignedTo: 'jonas',
+        },
+        {
+          name: 'Head torch and spare cell',
+          category: 'Kit',
+          quantity: 1,
+          weightGrams: 90,
+          isDone: true,
+          assignedTo: 'mika',
+        },
+        {
+          name: 'Hard shell and warm layer',
+          category: 'Clothing',
+          quantity: 1,
+          weightGrams: 780,
+          isDone: true,
+          assignedTo: 'rafal',
+        },
+        {
+          name: 'Blister kit and tape',
+          category: 'Health',
+          quantity: 1,
+          weightGrams: 120,
+          isDone: true,
+          assignedTo: 'mika',
+        },
       ],
     },
   ],
@@ -1028,7 +1407,7 @@ export const dolomitesTrip: SeedTrip = {
         'arrival — several huts still have no card terminal.\n\n' +
         'Half board is not optional at altitude and it is good value. Dinner is at a fixed time, usually ' +
         '19:00, and if you are not there they give your plate away.',
-      colour: '#16794C',
+      colour: '#136b45',
       isPinned: true,
       sortOrder: 1,
     },
@@ -1041,7 +1420,8 @@ export const dolomitesTrip: SeedTrip = {
       contentType: 'application/pdf',
       sizeBytes: 71_204,
       kind: 'document',
-      description: 'Three dormitory places, 17–20 June, half board, cash on arrival.',
+      description:
+        'Three dormitory places, 17–20 June, half board, cash on arrival.',
       uploadedBy: 'rafal',
       reservationKey: 'dol-res-locatelli',
     },
@@ -1069,7 +1449,8 @@ export const marrakechTrip: SeedTrip = {
   slug: 'marrakech-riad-week',
   title: 'Marrakech riad week',
   summary: 'A week inside the medina walls, mostly on a roof terrace.',
-  description: 'Archived after the write-up went into the journal. Kept for the receipts and the riad contact.',
+  description:
+    'Archived after the write-up went into the journal. Kept for the receipts and the riad contact.',
   destination: 'Marrakech, Morocco',
   countryCodes: ['MA'],
   startDate: day(-285),
@@ -1078,7 +1459,7 @@ export const marrakechTrip: SeedTrip = {
   currency: 'MAD',
   status: 'archived',
   visibility: 'private',
-  accentColour: '#C0392B',
+  accentColour: '#b22f22',
   budgetTargetMinor: 1_800_000,
   isArchived: true,
   travellers: [
@@ -1087,14 +1468,51 @@ export const marrakechTrip: SeedTrip = {
   ],
 
   days: [
-    { dayNumber: 1, title: 'Into the medina', notes: 'Taxi to Bab Doukkala, then the last four hundred metres on foot because no car fits.' },
-    { dayNumber: 2, title: 'Souks', notes: 'Semmarine first, then get deliberately lost. Agree a price before anything is unwrapped.' },
-    { dayNumber: 3, title: 'Majorelle and the Yves Saint Laurent museum', notes: 'Timed tickets, 09:00 slot, out before the heat.' },
-    { dayNumber: 4, title: 'Bahia Palace', notes: 'Ceilings worth the crowds. Go at opening or at four.' },
-    { dayNumber: 5, title: 'Hammam and nothing else', notes: 'Deliberate rest day. Two hours at the riad hammam, then the roof.' },
-    { dayNumber: 6, title: 'Jemaa el-Fnaa after dark', notes: 'Stall 14 for the harira and the aubergine. Sit at the counter, not the tables.' },
-    { dayNumber: 7, title: 'Atlas foothills', notes: 'Grand taxi to Imlil, three hours walking, back by dusk.' },
-    { dayNumber: 8, title: 'Fly home', notes: 'Menara is fifteen minutes from Bab Doukkala. Leave three hours anyway.' },
+    {
+      dayNumber: 1,
+      title: 'Into the medina',
+      notes:
+        'Taxi to Bab Doukkala, then the last four hundred metres on foot because no car fits.',
+    },
+    {
+      dayNumber: 2,
+      title: 'Souks',
+      notes:
+        'Semmarine first, then get deliberately lost. Agree a price before anything is unwrapped.',
+    },
+    {
+      dayNumber: 3,
+      title: 'Majorelle and the Yves Saint Laurent museum',
+      notes: 'Timed tickets, 09:00 slot, out before the heat.',
+    },
+    {
+      dayNumber: 4,
+      title: 'Bahia Palace',
+      notes: 'Ceilings worth the crowds. Go at opening or at four.',
+    },
+    {
+      dayNumber: 5,
+      title: 'Hammam and nothing else',
+      notes:
+        'Deliberate rest day. Two hours at the riad hammam, then the roof.',
+    },
+    {
+      dayNumber: 6,
+      title: 'Jemaa el-Fnaa after dark',
+      notes:
+        'Stall 14 for the harira and the aubergine. Sit at the counter, not the tables.',
+    },
+    {
+      dayNumber: 7,
+      title: 'Atlas foothills',
+      notes: 'Grand taxi to Imlil, three hours walking, back by dusk.',
+    },
+    {
+      dayNumber: 8,
+      title: 'Fly home',
+      notes:
+        'Menara is fifteen minutes from Bab Doukkala. Leave three hours anyway.',
+    },
   ],
 
   places: [
@@ -1102,7 +1520,8 @@ export const marrakechTrip: SeedTrip = {
       key: 'menara-airport',
       name: 'Marrakech Menara Airport',
       categorySlug: 'transport',
-      description: 'Six kilometres from the medina. Agree the taxi fare before getting in.',
+      description:
+        'Six kilometres from the medina. Agree the taxi fare before getting in.',
       lat: 31.6069,
       lng: -8.0363,
       address: 'Route de l’Aéroport, Marrakech 40000',
@@ -1116,7 +1535,8 @@ export const marrakechTrip: SeedTrip = {
       key: 'jemaa-el-fnaa',
       name: 'Jemaa el-Fnaa',
       categorySlug: 'markets',
-      description: 'Empty square by day, hundred-stall food market by night. UNESCO intangible heritage.',
+      description:
+        'Empty square by day, hundred-stall food market by night. UNESCO intangible heritage.',
       lat: 31.6258,
       lng: -7.9891,
       address: 'Jemaa el-Fnaa, Marrakech 40000',
@@ -1133,7 +1553,8 @@ export const marrakechTrip: SeedTrip = {
       key: 'souk-semmarine',
       name: 'Souk Semmarine',
       categorySlug: 'shopping',
-      description: 'The main covered artery north from the square. Textiles, then leather, then metal.',
+      description:
+        'The main covered artery north from the square. Textiles, then leather, then metal.',
       lat: 31.6291,
       lng: -7.9885,
       address: 'Souk Semmarine, Medina, Marrakech 40000',
@@ -1148,7 +1569,8 @@ export const marrakechTrip: SeedTrip = {
       key: 'jardin-majorelle',
       name: 'Jardin Majorelle',
       categorySlug: 'outdoors',
-      description: 'Cobalt-blue villa in a cactus garden, restored by Yves Saint Laurent in 1980.',
+      description:
+        'Cobalt-blue villa in a cactus garden, restored by Yves Saint Laurent in 1980.',
       lat: 31.6417,
       lng: -8.0031,
       address: 'Rue Yves St Laurent, Marrakech 40090',
@@ -1166,7 +1588,8 @@ export const marrakechTrip: SeedTrip = {
       key: 'bahia-palace',
       name: 'Bahia Palace',
       categorySlug: 'landmarks',
-      description: 'Nineteenth-century vizier’s palace: 150 rooms, cedar ceilings, zellij everywhere.',
+      description:
+        'Nineteenth-century vizier’s palace: 150 rooms, cedar ceilings, zellij everywhere.',
       lat: 31.6218,
       lng: -7.9832,
       address: 'Avenue Imam El Ghazali, Marrakech 40000',
@@ -1182,11 +1605,41 @@ export const marrakechTrip: SeedTrip = {
   ],
 
   stops: [
-    { dayNumber: 1, placeKey: 'menara-airport', startTime: '14:20', endTime: '15:05', transportMode: 'flight' },
-    { dayNumber: 2, placeKey: 'souk-semmarine', startTime: '10:00', endTime: '13:00', transportMode: 'walk' },
-    { dayNumber: 3, placeKey: 'jardin-majorelle', startTime: '09:00', endTime: '11:00', transportMode: 'taxi' },
-    { dayNumber: 4, placeKey: 'bahia-palace', startTime: '16:00', endTime: '17:30', transportMode: 'walk' },
-    { dayNumber: 6, placeKey: 'jemaa-el-fnaa', startTime: '19:30', endTime: '22:00', transportMode: 'walk' },
+    {
+      dayNumber: 1,
+      placeKey: 'menara-airport',
+      startTime: '14:20',
+      endTime: '15:05',
+      transportMode: 'flight',
+    },
+    {
+      dayNumber: 2,
+      placeKey: 'souk-semmarine',
+      startTime: '10:00',
+      endTime: '13:00',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 3,
+      placeKey: 'jardin-majorelle',
+      startTime: '09:00',
+      endTime: '11:00',
+      transportMode: 'taxi',
+    },
+    {
+      dayNumber: 4,
+      placeKey: 'bahia-palace',
+      startTime: '16:00',
+      endTime: '17:30',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 6,
+      placeKey: 'jemaa-el-fnaa',
+      startTime: '19:30',
+      endTime: '22:00',
+      transportMode: 'walk',
+    },
   ],
 
   accommodations: [
@@ -1201,7 +1654,8 @@ export const marrakechTrip: SeedTrip = {
       confirmationNumber: 'RY-2025-1108',
       priceMinor: 840_000,
       currency: 'MAD',
-      notes: 'Seven nights, breakfast on the terrace. They send a porter to meet you at Bab Doukkala.',
+      notes:
+        'Seven nights, breakfast on the terrace. They send a porter to meet you at Bab Doukkala.',
     },
   ],
 
@@ -1295,9 +1749,32 @@ export const marrakechTrip: SeedTrip = {
   ],
 
   budgetItems: [
-    { key: 'mar-bud-stay', category: 'accommodation', name: 'Riad · 7 nights', plannedAmountMinor: 850_000, currency: 'MAD', persons: 2, days: 7 },
-    { key: 'mar-bud-transport', category: 'transport', name: 'Flights and taxis', plannedAmountMinor: 700_000, currency: 'MAD', persons: 2 },
-    { key: 'mar-bud-food', category: 'food', name: 'Food and drink', plannedAmountMinor: 200_000, currency: 'MAD', persons: 2, days: 8 },
+    {
+      key: 'mar-bud-stay',
+      category: 'accommodation',
+      name: 'Riad · 7 nights',
+      plannedAmountMinor: 850_000,
+      currency: 'MAD',
+      persons: 2,
+      days: 7,
+    },
+    {
+      key: 'mar-bud-transport',
+      category: 'transport',
+      name: 'Flights and taxis',
+      plannedAmountMinor: 700_000,
+      currency: 'MAD',
+      persons: 2,
+    },
+    {
+      key: 'mar-bud-food',
+      category: 'food',
+      name: 'Food and drink',
+      plannedAmountMinor: 200_000,
+      currency: 'MAD',
+      persons: 2,
+      days: 8,
+    },
   ],
 
   expenses: [
@@ -1387,7 +1864,8 @@ export const patagoniaTrip: SeedTrip = {
   id: 'demo-trip-05-patagonia-traverse',
   slug: 'patagonia-traverse',
   title: 'Patagonia traverse',
-  summary: 'Torres del Paine to El Chaltén. No dates yet — waiting on the February ferry timetable.',
+  summary:
+    'Torres del Paine to El Chaltén. No dates yet — waiting on the February ferry timetable.',
   description:
     'Idea stage. The rough shape is the O circuit in Chile, cross at Río Turbio, then Fitz Roy from ' +
     'El Chaltén. Everything hinges on whether the Puerto Natales ferry runs in the first week of ' +

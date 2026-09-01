@@ -19,6 +19,7 @@ import {
   EmptyState,
   Skeleton,
 } from '#/components/ui'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadJourneyStory } from '../-server/library'
 import {
   formatDate,
@@ -26,7 +27,6 @@ import {
   formatNumber,
   formatTime,
   humaniseToken,
-  pluralise,
 } from '../-lib/format'
 import { JOURNEY_STATUS_TONE, toneFor } from '../-lib/tone'
 import { HeaderSkeleton, Panel } from '../-ui/scaffold'
@@ -42,18 +42,26 @@ export const Route = createFileRoute('/_app/journey/$journeyId')({
       <NotFoundPanel />
     </AppFrame>
   ),
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="This journey did not load" />
-    </AppFrame>
-  ),
+  errorComponent: StoryError,
   component: StoryPage,
 })
 
+function StoryError({ error }: { error: Error }) {
+  const t = useTranslate()
+
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('journal.story.error')} />
+    </AppFrame>
+  )
+}
+
 function StoryPage() {
+  const t = useTranslate()
+  const locale = useLocale()
   const data = Route.useLoaderData()
   const { journey } = data
-  const range = formatDateRange(journey.startedOn, journey.endedOn)
+  const range = formatDateRange(journey.startedOn, journey.endedOn, locale)
 
   return (
     <AppFrame>
@@ -66,13 +74,14 @@ function StoryPage() {
           {journey.coverImageUrl === null ? (
             <span
               aria-hidden
-              className="pointer-events-none absolute -top-32 -right-20 size-80 rounded-full bg-brand/30 blur-3xl"
+              className="pointer-events-none absolute -top-32 -end-20 size-80 rounded-full bg-brand/30 blur-3xl"
             />
           ) : (
             <>
               <img
                 src={journey.coverImageUrl}
                 alt=""
+                fetchPriority="high"
                 className="absolute inset-0 -z-10 size-full object-cover opacity-40"
               />
               <span
@@ -87,7 +96,7 @@ function StoryPage() {
               <Button asChild variant="inverse" size="sm" shape="pill">
                 <Link to="/journey">
                   <ChevronLeft aria-hidden />
-                  All journeys
+                  {t('journal.story.back')}
                 </Link>
               </Button>
               <Badge
@@ -111,16 +120,19 @@ function StoryPage() {
 
             <dl className="flex flex-wrap gap-x-8 gap-y-3">
               <CoverFigure
-                label="Entries"
-                value={formatNumber(journey.entryCount)}
+                label={t('journal.figure.entries')}
+                value={formatNumber(journey.entryCount, locale)}
               />
               <CoverFigure
-                label="Photos"
-                value={formatNumber(journey.photoCount)}
+                label={t('journal.figure.photos')}
+                value={formatNumber(journey.photoCount, locale)}
               />
-              <CoverFigure label="Dates" value={range ?? 'Not set'} />
               <CoverFigure
-                label="Visibility"
+                label={t('journal.figure.dates')}
+                value={range ?? t('journal.value.notSet')}
+              />
+              <CoverFigure
+                label={t('journal.figure.visibility')}
                 value={humaniseToken(journey.visibility)}
               />
             </dl>
@@ -135,8 +147,8 @@ function StoryPage() {
                   size="lg"
                   tone="brand"
                   icon={<NotebookPen />}
-                  title="This journey has no entries yet"
-                  description="Each entry is one moment: a date, a few lines, a place and the photographs you took there. Write the first one while you still remember the smell of it."
+                  title={t('journal.entries.empty.title')}
+                  description={t('journal.entries.empty.body')}
                 />
               </Card>
             ) : (
@@ -151,26 +163,38 @@ function StoryPage() {
           </div>
 
           <aside className="flex min-w-0 flex-col gap-6">
-            <Panel label="This journey">
+            <Panel label={t('journal.side.label')}>
               <dl className="flex flex-col gap-3">
-                <SideRow label="Status" value={humaniseToken(journey.status)} />
                 <SideRow
-                  label="Started"
-                  value={formatDate(journey.startedOn) ?? 'Not set'}
+                  label={t('journal.side.status')}
+                  value={humaniseToken(journey.status)}
                 />
                 <SideRow
-                  label="Ended"
-                  value={formatDate(journey.endedOn) ?? 'Not set'}
+                  label={t('journal.side.started')}
+                  value={
+                    formatDate(journey.startedOn, locale) ??
+                    t('journal.value.notSet')
+                  }
                 />
                 <SideRow
-                  label="Loose photos"
-                  value={formatNumber(data.unattachedPhotos)}
+                  label={t('journal.side.ended')}
+                  value={
+                    formatDate(journey.endedOn, locale) ??
+                    t('journal.value.notSet')
+                  }
+                />
+                <SideRow
+                  label={t('journal.side.loosePhotos')}
+                  value={formatNumber(data.unattachedPhotos, locale)}
                 />
               </dl>
             </Panel>
 
             {data.moods.length === 0 ? null : (
-              <Panel label="Moods" count={formatNumber(data.moods.length)}>
+              <Panel
+                label={t('journal.moods.label')}
+                count={formatNumber(data.moods.length, locale)}
+              >
                 <ul className="flex flex-wrap gap-2">
                   {data.moods.map((mood) => (
                     <li
@@ -187,8 +211,11 @@ function StoryPage() {
 
             {data.people.length === 0 ? null : (
               <Panel
-                label="Written by"
-                count={pluralise(data.people.length, 'author')}
+                label={t('journal.authors.label')}
+                count={t('journal.authors.count', {
+                  count: data.people.length,
+                  authors: formatNumber(data.people.length, locale),
+                })}
               >
                 <ul className="flex flex-col gap-2.5">
                   {data.people.map((person) => (
@@ -243,6 +270,8 @@ function EntryCard({
   entry: JourneyEntryCard
   data: JourneyStoryPayload
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
   const author = data.people.find(
     (person) => person.userId === entry.authorUserId,
   )
@@ -254,8 +283,8 @@ function EntryCard({
           <span className="font-display text-label leading-none font-bold tabular-nums">
             {entry.entryDate.slice(8, 10)}
           </span>
-          <span className="text-[0.5625rem] leading-tight font-semibold tracking-wide uppercase">
-            {formatDate(entry.entryDate)?.split(' ')[1] ?? ''}
+          <span className="text-micro font-semibold tracking-label uppercase">
+            {formatDate(entry.entryDate, locale)?.split(' ')[1] ?? ''}
           </span>
         </span>
         <div className="min-w-0 flex-1">
@@ -264,7 +293,7 @@ function EntryCard({
           </h2>
           <p className="truncate text-caption text-ink-3">
             {[
-              formatDate(entry.entryDate),
+              formatDate(entry.entryDate, locale),
               formatTime(entry.entryTime),
               entry.locationName,
               author?.name,
@@ -315,7 +344,10 @@ function EntryCard({
           {entry.photos.length === 0 ? null : (
             <span className="inline-flex items-center gap-1.5 text-caption tabular-nums text-ink-3">
               <Camera aria-hidden className="size-3.5 text-ink-4" />
-              {pluralise(entry.photos.length, 'photo')}
+              {t('journal.entry.photos.count', {
+                count: entry.photos.length,
+                photos: formatNumber(entry.photos.length, locale),
+              })}
             </span>
           )}
         </div>
@@ -344,7 +376,7 @@ function EntryCard({
                     aria-hidden
                     className="size-3.5 shrink-0 text-ink-4"
                   />
-                  {photo.caption ?? 'Untitled photograph'}
+                  {photo.caption ?? t('journal.photo.untitled')}
                 </span>
               </li>
             ))}
@@ -356,11 +388,13 @@ function EntryCard({
 }
 
 function StoryPending() {
+  const t = useTranslate()
+
   return (
     <AppFrame>
       <AppSections>
         <Card variant="inverse" className="space-y-5">
-          <span className="sr-only">Loading</span>
+          <span className="sr-only">{t('journal.story.loading')}</span>
           <Skeleton className="h-3 w-24 bg-inverse-surface" radius="sm" />
           <Skeleton className="h-12 w-3/5 bg-inverse-surface" radius="sm" />
           <Skeleton className="h-3 w-2/5 bg-inverse-surface" radius="sm" />

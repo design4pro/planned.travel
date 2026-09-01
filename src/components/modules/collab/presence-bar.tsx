@@ -16,29 +16,34 @@ import { RotateCw, Wifi, WifiOff } from 'lucide-react'
 
 import { Avatar, Button, Tooltip } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { useTripRoom } from './use-trip-room'
 
 import type { PresenceMember } from '#/server/do/protocol'
+import type { MessageKey } from '#/lib/i18n'
 import type { RoomStatus } from './use-trip-room'
 
 const STATUS_COPY: {
-  readonly [K in RoomStatus]: { readonly label: string; readonly hint: string }
+  readonly [K in RoomStatus]: {
+    readonly labelKey: MessageKey
+    readonly hintKey: MessageKey
+  }
 } = {
   connecting: {
-    label: 'Connecting',
-    hint: 'Joining the trip’s live room.',
+    labelKey: 'modules.presence.connecting.title',
+    hintKey: 'modules.presence.connecting.body',
   },
   live: {
-    label: 'Live',
-    hint: 'Messages, notes and votes arrive here as they are made.',
+    labelKey: 'modules.presence.live.title',
+    hintKey: 'modules.presence.live.body',
   },
   reconnecting: {
-    label: 'Reconnecting',
-    hint: 'The connection dropped. Retrying — anything you send is still saved.',
+    labelKey: 'modules.presence.reconnecting.title',
+    hintKey: 'modules.presence.reconnecting.body',
   },
   offline: {
-    label: 'Not live',
-    hint: 'Live updates are off. Everything still saves; reload or retry to catch up.',
+    labelKey: 'modules.presence.offline.title',
+    hintKey: 'modules.presence.offline.body',
   },
 }
 
@@ -73,6 +78,8 @@ export function PresenceBar({
   tripId: string
   className?: string
 }) {
+  const t = useTranslate()
+
   const router = useRouter()
 
   const onCommit = useCallback(() => {
@@ -85,7 +92,7 @@ export function PresenceBar({
 
   return (
     <div className={cn('flex min-w-0 flex-wrap items-center gap-3', className)}>
-      <Tooltip content={copy.hint}>
+      <Tooltip content={t(copy.hintKey)}>
         <span
           tabIndex={0}
           role="status"
@@ -107,11 +114,16 @@ export function PresenceBar({
                 <span
                   aria-hidden
                   className="absolute inset-0 animate-pulse-soft rounded-full bg-current/20"
+                  // This ring is the whole difference between "connecting" and
+                  // "connected": it is drawn only while the room is not live.
+                  // Frozen, it becomes a halo that means nothing, and the bar
+                  // claims a settled state it has not reached.
+                  data-motion-loop=""
                 />
               )}
             </span>
           )}
-          {copy.label}
+          {t(copy.labelKey)}
         </span>
       </Tooltip>
 
@@ -123,13 +135,16 @@ export function PresenceBar({
                 key={person.id}
                 content={
                   person.tabs > 1
-                    ? `${person.name} — ${person.tabs} tabs open`
+                    ? t('modules.collab.presence.tabsOpen', {
+                        name: person.name,
+                        count: person.tabs,
+                      })
                     : person.name
                 }
               >
                 <span
                   tabIndex={0}
-                  className="-ml-1.5 rounded-full first:ml-0 focus-ring"
+                  className="-ms-1.5 rounded-full first:ms-0 focus-ring"
                 >
                   <Avatar
                     name={person.name}
@@ -141,12 +156,14 @@ export function PresenceBar({
               </Tooltip>
             ))}
             {people.length > 5 ? (
-              <span className="-ml-1.5 inline-flex size-6 items-center justify-center rounded-full bg-surface-2 text-micro font-semibold tabular-nums text-ink-3 ring-2 ring-surface">
+              <span className="-ms-1.5 inline-flex size-6 items-center justify-center rounded-full bg-surface-2 text-micro font-semibold tabular-nums text-ink-3 ring-2 ring-surface">
                 +{people.length - 5}
               </span>
             ) : null}
           </span>
-          <span className="text-caption text-ink-3">viewing now</span>
+          <span className="text-caption text-ink-3">
+            {t('modules.collab.presence.viewingNow')}
+          </span>
         </span>
       )}
 
@@ -158,7 +175,7 @@ export function PresenceBar({
           onClick={room.reconnect}
         >
           <RotateCw aria-hidden />
-          Reconnect
+          {t('modules.presence.reconnect')}
         </Button>
       ) : null}
     </div>

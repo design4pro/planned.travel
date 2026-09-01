@@ -17,13 +17,16 @@ import type { TranslationOf } from '../../types'
 
 const messages = {
   'action.clear': '清除',
+  'action.clearFilters': '清除筛选',
   'action.close': '关闭',
   'action.dismiss': '不再显示',
   'action.remove': '移除',
+  'action.keep': '保留',
   'action.undo': '撤销',
   'status.loading': '加载中',
   'status.working': '处理中',
   'status.searching': '搜索中',
+  'status.removing': '正在删除',
   'avatar.status.online': '{name} 在线',
   'avatar.status.away': '{name} 暂时离开',
   'avatar.status.busy': '{name} 正忙',

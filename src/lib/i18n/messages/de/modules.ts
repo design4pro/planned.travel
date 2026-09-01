@@ -1,0 +1,746 @@
+/**
+ * The trip modules' own copy, in de.
+ *
+ * Authored from `../en/modules.ts`, never from another product's catalogue
+ * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
+ * and `__tests__/parity.test.ts` checks the placeholders and the plural
+ * branches.
+ *
+ * **Plural.** `one` · `other`. **Typografie.** Deutsch zitiert mit „…“.
+ */
+
+import type { TranslationOf } from '../../types'
+import type En from '../en/modules'
+
+const messages = {
+  /* -------------------------------------------- shared by every module */
+  'value.notSet': 'Nicht gesetzt',
+  /* ----------------------------------------- the realtime presence bar */
+  'presence.connecting.title': 'Verbindet',
+  'presence.connecting.body': 'Wir betreten den Live-Raum dieser Reise.',
+  'presence.live.title': 'Direkt',
+  'presence.live.body':
+    'Nachrichten, Notizen und Stimmen erscheinen hier, sobald sie entstehen.',
+  'presence.reconnecting.title': 'Verbindet neu',
+  'presence.reconnecting.body':
+    'Die Verbindung ist abgebrochen. Wir versuchen es erneut — alles, was du sendest, wird trotzdem gespeichert.',
+  'presence.offline.title': 'Nicht live',
+  'presence.offline.body':
+    'Live-Aktualisierungen sind aus. Gespeichert wird weiterhin; lade neu oder versuche es erneut, um aufzuholen.',
+  'presence.reconnect': 'Neu verbinden',
+  /* ------------------------------------------- the transports timeline */
+  'transports.filter.all': 'Alle Etappen',
+  'transports.empty.title': 'Noch keine Reiseetappen',
+  'transports.empty.body':
+    'Flüge, Züge, Fähren und die Fahrt vom Flughafen wohnen hier, mit Buchungscodes und Sitzplatznummern zur Hand am Reisetag — und jeder Übergang gegen den vorherigen geprüft.',
+  'transports.empty.action': 'Erste Etappe hinzufügen',
+  'transports.filtered.title': 'Keine Etappen dieser Art',
+  'transports.filtered.body':
+    'Jede Etappe dieser Reise fährt anders. Wechsle zurück zu „{label}“, um alle zu sehen.',
+  'transports.filtered.action': 'Alle Etappen zeigen',
+  'transports.alert.impossible.title': {
+    one: 'Ein Übergang ist nicht machbar',
+    other: '{legs} Übergänge sind nicht machbar',
+  },
+  'transports.alert.impossible.body':
+    'Eine Etappe fährt ab, bevor die vorherige ankommt. Die Knoten unten sagen, welche und um wie viel.',
+  'transports.alert.tight.title': {
+    one: 'Ein Übergang ist knapp',
+    other: '{legs} Übergänge sind knapp',
+  },
+  'transports.alert.tight.body':
+    'Zeit ist da, aber nicht viel für das Verkehrsmittel, das du erwischen willst. Die Knoten unten zeigen, wie viel jeder lässt.',
+  'transports.badge.impossible': {
+    one: '{legs} gebrochener Übergang',
+    other: '{legs} gebrochene Übergänge',
+  },
+  'transports.badge.tight': {
+    one: '{legs} knapper Übergang',
+    other: '{legs} knappe Übergänge',
+  },
+  'transports.badge.ok': 'Jeder Übergang passt',
+  'transports.remove.body':
+    'Die Etappe verlässt diese Reise endgültig, samt Buchungsnummer und Sitzplatz. Wenn sie nur abgesagt ist, setze ihren Status stattdessen auf Abgesagt.',
+  'transports.remove.confirm': 'Etappe entfernen',
+  'transports.menu.edit': 'Etappe bearbeiten…',
+  'transports.field.service': 'Verbindung',
+  'transports.field.bookingRef': 'Buchungsnummer',
+  'transports.field.seat': 'Sitzplatz',
+  'transports.field.distance': 'Entfernung',
+  'transports.noTime': 'Noch keine Uhrzeit',
+  'transports.toast.statusFailed.title': 'Der Status hat sich nicht geändert',
+  'transports.toast.statusFailed.body':
+    'Die Etappe steht noch auf ihrem vorherigen Stand.',
+  'transports.toast.removed': 'Etappe entfernt',
+  'transports.toast.removeFailed': 'Die Etappe wurde nicht entfernt',
+
+  /* --------------------------------------------- the leg dialog */
+  'transports.dialog.addTitle': 'Etappe hinzufügen',
+  'transports.dialog.editTitle': 'Diese Etappe bearbeiten',
+  'transports.dialog.description':
+    'Flüge, Züge, Fähren und die Fahrt vom Flughafen. Die Zeiten sind die lokalen, die auf dem Ticket stehen.',
+  'transports.form.modeLegend': 'Womit reist du',
+  'transports.form.timingError': 'Prüfe die Zeiten',
+  'transports.field.namePlaceholder': 'Lufthansa von FRA nach HND',
+  'transports.field.place': 'Ort',
+  'transports.field.code': 'Kürzel',
+  'transports.field.date': 'Datum',
+  'transports.field.departurePlaceholder': 'Frankfurt Flughafen',
+  'transports.field.arrivalPlaceholder': 'Tokio Haneda',
+  'transports.field.carrier': 'Anbieter',
+  'transports.field.serviceNumber': 'Verbindungsnummer',
+  'transports.field.bookingRefHint':
+    'Der Code, den du am Schalter vorlesen wirst.',
+  'transports.field.notesPlaceholder':
+    'Gangplatz gewünscht. Gepäck bis Kyoto durchgecheckt.',
+  'transports.action.add': 'Etappe hinzufügen',
+  'transports.action.save': 'Etappe speichern',
+  'transports.action.saving': 'Etappe wird gespeichert',
+  'transports.toast.added': 'Etappe hinzugefügt',
+  'transports.toast.addedBody': 'Sie steht jetzt in der Reisefolge.',
+  'transports.toast.addFailed': 'Die Etappe wurde nicht hinzugefügt',
+  'transports.toast.updated': 'Etappe aktualisiert',
+  'transports.toast.updateFailed': 'Die Etappe wurde nicht aktualisiert',
+
+  /* ------------------------------- shared labels and the bookings timeline */
+  'field.name': 'Bezeichnung',
+  'field.time': 'Uhrzeit',
+  'field.price': 'Preis',
+  'field.notes': 'Notizen',
+  'field.status': 'Zustand',
+  'form.saveError': 'Das wurde nicht gespeichert',
+  'action.cancel': 'Abbrechen',
+  'book.status.none': 'Ohne Zustand',
+  'book.status.pending': 'Offen',
+  'book.status.confirmed': 'Bestätigt',
+  'book.status.completed': 'Erledigt',
+  'book.status.cancelled': 'Abgesagt',
+  'book.toast.statusFailed': 'Der Zustand hat sich nicht geändert',
+  'book.toast.statusFailedBody':
+    'Die Buchung steht noch auf ihrem vorherigen Stand.',
+  'book.toast.removed': 'Buchung entfernt',
+  'book.toast.removeFailed': 'Die Buchung wurde nicht entfernt',
+  'book.empty.title': 'Noch nichts gebucht',
+  'book.empty.body':
+    'Unterkünfte, Tische, Touren und Tickets gehören hierher — mit der Bestätigungsnummer dort, wo du sie an der Tür findest, und dem Datum, das sie auf die Zeitachse setzt.',
+  'book.empty.action': 'Erste Buchung hinzufügen',
+  'book.filtered.title': 'Nichts in diesem Zustand',
+  'book.filtered.body':
+    'Jede Buchung dieser Reise steht anders da. Wechsle zurück zu „{label}“, um alle zu sehen.',
+  'book.filtered.action': 'Alles zeigen',
+  'filter.all': 'Alles',
+  'book.remove.body':
+    'Sie verschwindet endgültig von der Zeitachse. Wenn sie nur abgesagt ist, setze ihren Zustand stattdessen auf Abgesagt, damit der Eintrag bleibt.',
+  'book.remove.confirm': 'Buchung entfernen',
+  'book.menu.edit': 'Buchung bearbeiten…',
+  'book.menu.open': 'Buchung öffnen',
+  'book.noDate': 'Noch kein Datum',
+  'book.until': 'Bis',
+  'book.provider': 'Anbieter',
+  'book.where': 'Wo',
+  'book.guests': 'Personen',
+  'book.confirmation': 'Bestätigung',
+  'book.undated': 'Gib ihnen ein Datum und sie kommen auf die Zeitachse',
+  statusOf: 'Zustand von {title}',
+
+  /* ------------------------------------------- the booking dialog */
+  'book.statusChoice.none': 'Noch ohne Zustand',
+  'book.statusChoice.pending': 'Offen — wir warten auf sie',
+  'book.dialog.addTitle': 'Buchung hinzufügen',
+  'book.dialog.editTitle': 'Diese Buchung bearbeiten',
+  'book.dialog.typeLegend': 'Was für eine Buchung',
+  'book.field.namePlaceholder': 'Friedrichstraße 43',
+  'book.field.priceHint': 'Leer lassen, wenn noch nicht abgerechnet.',
+  'book.field.confirmation': 'Bestätigungsnummer',
+  'book.field.confirmationHint': 'Der Code, nach dem am Schalter gefragt wird.',
+  'book.field.day': 'Einem Tag zuordnen',
+  'book.field.dayHint':
+    'Heftet sie an den Reiseverlauf, damit sie im Plan auftaucht.',
+  'book.field.noDay': 'Nicht im Reiseverlauf',
+  'book.field.link': 'Verweis',
+  'book.field.notesPlaceholder':
+    'Späte Anreise vereinbart. Um ein Zimmer weg vom Aufzug bitten.',
+  'book.action.add': 'Buchung hinzufügen',
+  'book.action.save': 'Buchung speichern',
+  'book.action.saving': 'Buchung wird gespeichert',
+  'book.toast.added': 'Buchung hinzugefügt',
+  'book.toast.addedBody': 'Sie steht jetzt auf der Zeitachse.',
+  'book.toast.addFailed': 'Die Buchung wurde nicht hinzugefügt',
+  'book.toast.updated': 'Buchung aktualisiert',
+  'book.toast.updateFailed': 'Die Buchung wurde nicht aktualisiert',
+
+  'book.emptyFacts':
+    'Außer dem Namen ist noch nichts erfasst. Öffne es, um Uhrzeit, Preis und Bestätigungsnummer zu ergänzen.',
+  'book.onItinerary': 'Im Reiseverlauf: {day}',
+  'book.dayNumber': 'Tag {n}',
+
+  /* ------------------------------ the booking type table, per type */
+  'book.shape.other.label': 'Sonstiges',
+  'book.field.host': 'Hotel oder Gastgeber',
+  'book.field.restaurant': 'Lokal',
+  'book.field.operator': 'Veranstalter',
+  'book.field.issuer': 'Ausgestellt von',
+  'book.field.carrier': 'Verkehrsunternehmen',
+  'book.field.address': 'Adresse',
+  'book.field.meetingPoint': 'Treffpunkt',
+  'book.field.venue': 'Veranstaltungsort',
+  'book.field.fromTo': 'Von und nach',
+  'book.field.checkIn': 'Anreise',
+  'book.field.date': 'Datum',
+  'book.field.validOn': 'Gültig am',
+  'book.field.departs': 'Abfahrt',
+  'book.field.checkOut': 'Abreise',
+  'book.field.ends': 'Endet',
+  'book.field.arrives': 'Ankunft',
+  'book.example.accommodationProvider': 'Booking.com',
+  'book.example.restaurantProvider': 'Den',
+  'book.example.activityProvider': 'teamLab',
+  'book.example.tourProvider': 'Kyoto Free Walking Tour',
+  'book.example.ticketProvider': 'Ghibli-Museum',
+  'book.example.transportProvider': 'JR Central',
+  'book.example.otherProvider': 'Wer das für dich zurückhält',
+  'book.example.accommodationTitle':
+    'Hotel Gracery Shinjuku · 2 Zweibettzimmer',
+  'book.example.restaurantTitle': 'Abendessen im Den',
+  'book.example.activityTitle': 'teamLab Planets, 4 Tickets',
+  'book.example.tourTitle': 'Spaziergang durch den Bambuswald von Arashiyama',
+  'book.example.ticketTitle': 'Ghibli-Museum, Einlass 10:00',
+  'book.example.transportTitle': 'Nozomi 21 nach Kyoto',
+  'book.example.otherTitle': 'Was du gebucht hast',
+  'book.hint.accommodation':
+    'Ein Hotel, ein Ryokan, eine Wohnung — wo auch immer du schläfst.',
+  'book.hint.restaurant':
+    'Ein reservierter Tisch. Die Uhrzeit ist der Teil, an den du gebunden bist.',
+  'book.hint.activity': 'Ein Kurs, ein Badehaus, ein gebuchtes Erlebnis.',
+  'book.hint.tour': 'Ein Ort, eine Uhrzeit und eine Führung, die wartet.',
+  'book.hint.ticket':
+    'Ein Zeitfenster, ein Museumspass, ein Spiel. Halte den Code parat.',
+  'book.hint.transport':
+    'Ein gebuchter Platz. Ganze Etappen mit Codes gehören zu {module}.',
+  'book.hint.other':
+    'Alles, was auf deinen Namen läuft und nirgends sonst passt.',
+
+  /* -------------------------------------- lists: the dialogs */
+  'lists.kind.packing': 'Packen',
+  'lists.kind.todo': 'Zu tun',
+  'lists.kind.shopping': 'Einkäufe',
+  'lists.kind.documents': 'Dokumente',
+  'lists.kind.fallback': 'Liste',
+  'colour.none': 'Keine Farbe',
+  'colour.pine': 'Kiefer',
+  'colour.inkBlue': 'Tintenblau',
+  'colour.amber': 'Bernstein',
+  'colour.green': 'Grün',
+  'colour.red': 'Rot',
+  'colour.slate': 'Schiefer',
+  'lists.toast.created': 'Liste erstellt',
+  'lists.toast.createdBody':
+    'Trage das Erste ein, was du nicht vergessen darfst.',
+  'lists.toast.createFailed': 'Die Liste wurde nicht erstellt',
+  'lists.toast.updated': 'Liste aktualisiert',
+  'lists.toast.updateFailed': 'Die Liste wurde nicht aktualisiert',
+  'lists.error.weightLimit': 'Ein Gewichtslimit ist eine ganze Zahl in Gramm.',
+  'lists.dialog.editTitle': 'Diese Liste bearbeiten',
+  'lists.dialog.editBody':
+    'Umbenennen, die Art der Liste ändern oder sie einer Person übergeben.',
+  'lists.dialog.addBody':
+    'Packen, Aufgaben, Einkäufe und die Dokumente, die du nicht vergessen darfst — jedes bekommt seine eigene Liste.',
+  'lists.action.new': 'Neue Liste',
+  'lists.field.namePlaceholder': 'Handgepäck',
+  'lists.field.kind': 'Art',
+  'lists.field.kindAria': 'Art der Liste',
+  'lists.field.owner': 'Gehört zu',
+  'lists.field.ownerHint': 'Geteilte Listen hakt jeder ab.',
+  'lists.field.everyone': 'Alle auf der Reise',
+  'lists.field.weightLimit': 'Gewichtslimit',
+  'lists.field.weightLimitHint':
+    'Gramm. Leer lassen, wenn es keine Grenze einzuhalten gibt.',
+  'colour.legend': 'Farbe',
+  'lists.action.saving': 'Liste wird gespeichert',
+  'lists.action.save': 'Liste speichern',
+  'lists.action.create': 'Liste anlegen',
+  'lists.item.toast.added': 'Eintrag hinzugefügt',
+  'lists.item.toast.addFailed': 'Der Eintrag wurde nicht hinzugefügt',
+  'lists.item.toast.updated': 'Eintrag aktualisiert',
+  'lists.item.toast.updateFailed': 'Der Eintrag wurde nicht aktualisiert',
+  'lists.item.error.quantity': 'Eine Menge ist eine ganze Zahl von 1 bis 999.',
+  'lists.item.error.weight': 'Ein Gewicht ist eine ganze Zahl in Gramm.',
+  'lists.item.dialog.editTitle': 'Diesen Eintrag bearbeiten',
+  'lists.item.dialog.addTitle': 'Eintrag hinzufügen',
+  'lists.item.field.label': 'Eintrag',
+  'lists.item.field.placeholder': 'Reisepass',
+  'field.category': 'Kategorie',
+  'lists.item.field.categoryHint':
+    'Gruppiert die Liste unter einer Überschrift. Optional.',
+  'lists.item.field.categoryPlaceholder': 'Dokumente',
+  'lists.item.field.priority': 'Priorität',
+  'lists.priorityChoice.high': 'Hoch — nicht vergessen',
+  'lists.priorityChoice.low': 'Niedrig — wenn Platz ist',
+  'lists.priorityChoice.normal': 'Mittel',
+  'lists.item.field.quantity': 'Menge',
+  'lists.item.field.weight': 'Gewicht',
+  'lists.item.field.weightHint': 'Gramm, pro Stück.',
+  'lists.item.field.owner': 'Wessen Aufgabe ist das',
+  'lists.item.owner.nobody': 'Niemand Bestimmtes',
+  'lists.item.action.saving': 'Eintrag wird gespeichert',
+  'lists.item.action.save': 'Eintrag speichern',
+  'lists.item.action.add': 'Zur Liste hinzufügen',
+  'lists.template.loadError':
+    'Die Vorlagen konnten gerade nicht geladen werden.',
+  'lists.template.toast.added': 'Liste aus einer Vorlage hinzugefügt',
+  'lists.template.toast.addFailed': 'Die Vorlage wurde nicht angewendet',
+  'lists.template.error.apply': 'Das ließ sich nicht anwenden',
+  'lists.template.error.load': 'Die Vorlagen wurden nicht geladen',
+  'lists.template.empty.title': 'Noch keine Vorlagen',
+  'lists.template.empty.body':
+    'Speichere eine Liste als Vorlage, sobald du eine hast, die du wieder so bauen würdest — dann steht sie hier für jede künftige Reise.',
+  'lists.template.applying': 'Vorlage wird angewendet',
+  'lists.template.dialogTitle': 'Mit einer Vorlage beginnen',
+  'lists.template.loading': 'Vorlagen werden geladen',
+  'lists.template.apply': 'Vorlage anwenden',
+  'lists.template.from': 'Aus einer Vorlage',
+
+  /* ---------------------------------------- lists: the board */
+  'lists.unassigned': 'Nicht zugewiesen',
+  'lists.toast.listRemoved': 'Liste entfernt',
+  'lists.toast.listRemoveFailed': 'Die Liste wurde nicht entfernt',
+  'lists.toast.itemRemoved': 'Eintrag entfernt',
+  'lists.toast.itemRemoveFailed': 'Der Eintrag wurde nicht entfernt',
+  'lists.toast.reset': 'Liste zurückgesetzt',
+  'lists.toast.resetBody':
+    'Alles ist abgehakt zurückgesetzt und bereit für die nächste Reise.',
+  'lists.toast.resetFailed': 'Die Liste wurde nicht zurückgesetzt',
+  'lists.toast.tickFailed': 'Das Häkchen wurde nicht gespeichert',
+  'lists.toast.tickFailedBody': 'Der Eintrag steht wieder so da wie vorher.',
+  'lists.toast.assignFailed': 'Die Zuweisung wurde nicht gespeichert',
+  'lists.toast.orderFailed': 'Die neue Reihenfolge wurde nicht gespeichert',
+  'lists.toast.orderFailedBody': 'Die Liste steht wieder so da wie vorher.',
+  'lists.filter.todo': 'Noch zu tun',
+  'lists.filter.done': 'Fertig',
+  'lists.scope.all': 'Alle Listen',
+  'lists.scope.shared': 'Geteilt',
+  'lists.scope.mine': 'Meine',
+  'lists.empty.mine.title': 'Noch keine eigenen Listen',
+  'lists.empty.shared.title': 'Noch keine geteilten Listen',
+  'lists.empty.mine.body':
+    'Eine eigene Liste hakst nur du ab — praktisch für die Dinge, die sonst niemand sehen muss.',
+  'lists.empty.shared.body':
+    'Eine geteilte Liste hakt jeder ab, damit nicht zwei Leute denselben Adapter einpacken.',
+  'lists.remove.list': 'Liste entfernen',
+  'lists.remove.item': 'Eintrag entfernen',
+  'lists.remove.itemBody':
+    'Er verschwindet von dieser Liste. Sonst ändert sich nichts.',
+  'lists.menu.editList': 'Liste bearbeiten…',
+  'lists.menu.tickAll': 'Alles abhaken',
+  'lists.menu.untickAll': 'Alle Häkchen entfernen',
+  'lists.menu.reset': 'Für die nächste Reise zurücksetzen',
+  'lists.menu.dragOrderLong':
+    'Auf eine Reihenfolge umschalten, die du ziehen kannst',
+  'lists.menu.groupAgain': 'Wieder nach Kategorie gruppieren',
+  'lists.menu.dragOrder': 'Auf eine ziehbare Reihenfolge umschalten',
+  'lists.menu.groupByCategory': 'Nach Kategorie gruppieren',
+  'lists.weight.packed': '{weight} eingepackt',
+  'lists.weight.packedOver': '{weight} eingepackt — über dem Limit',
+  'lists.weight.packedOf': '{weight} eingepackt von {limit} erlaubt',
+  'lists.weight.packedOfOver':
+    '{weight} eingepackt von {limit} erlaubt — über dem Limit',
+  'lists.progress.ticked': '{done} von {total} abgehakt',
+  'lists.items.empty.title': 'Diese Liste ist leer',
+  'lists.items.empty.body':
+    'Trage das Erste ein, was du nicht vergessen darfst — am schnellsten über das Feld darunter.',
+  'lists.items.doneEmpty.title': 'Noch nichts abgehakt',
+  'lists.items.doneEmpty.body': 'Hake etwas ab, dann steht es hier.',
+  'lists.items.todoEmpty.title': 'Hier ist alles fertig',
+  'lists.items.todoEmpty.body':
+    'Jeder Eintrag auf dieser Liste ist abgehakt. Wechsle zu „{label}“, um sie zu sehen.',
+  'lists.category.other': 'Alles Übrige',
+  'lists.dnd.fallbackName': 'diesen Eintrag',
+  'lists.dnd.picked': '{name} aufgenommen.',
+  'lists.dnd.dropped':
+    '{name} abgelegt. Die neue Reihenfolge wird gespeichert.',
+  'lists.dnd.cancelled': 'Abgebrochen. Die Reihenfolge bleibt unverändert.',
+  'lists.menu.editItem': 'Eintrag bearbeiten…',
+  'lists.quickAdd.placeholder': 'Eintrag eingeben und Enter drücken',
+  'lists.quickAdd.aria': 'Einen Eintrag zu dieser Liste hinzufügen',
+  'lists.quickAdd.detailsHint': 'Mit Gewicht, Kategorie oder Person hinzufügen',
+  'lists.quickAdd.detailsAria': 'Einen Eintrag mit allen Angaben hinzufügen',
+  'lists.show': 'Anzeigen',
+  'lists.priority.high': 'Hoch',
+  'lists.action.add': 'Hinzufügen',
+
+  /* ------------------------------- lists: counted in items */
+  'lists.template.itemCount': {
+    one: '{count} Eintrag',
+    other: '{count} Einträge',
+  },
+  'lists.template.copiedIn': {
+    one: '{count} Eintrag übernommen, bereit zum Abhaken.',
+    other: '{count} Einträge übernommen, bereit zum Abhaken.',
+  },
+  'lists.remove.listBody': {
+    one: 'Die Liste und ihr {count} Eintrag verschwinden von dieser Reise. Gespeicherte Vorlagen bleiben unberührt.',
+    other:
+      'Die Liste und ihre {count} Einträge verschwinden von dieser Reise. Gespeicherte Vorlagen bleiben unberührt.',
+  },
+
+  'lists.item.dialog.body':
+    'Alles außer dem Namen ist optional — ein Gewicht macht die Packsumme echt, und eine Kategorie gruppiert die Liste.',
+  'lists.template.dialogBody':
+    'Eine Vorlage ist eine Liste, die du schon gespeichert hast. Sie anzuwenden kopiert sie als neue Liste auf diese Reise — das Original bleibt unberührt.',
+
+  /* ------------------------ lists: names built around a row */
+  'remove.confirmTitle': '„{name}“ entfernen?',
+  actionsFor: 'Aktionen für {name}',
+  'lists.dnd.reorder': '{name} umsortieren',
+  'lists.action.untickItem': 'Häkchen bei {name} entfernen',
+  'lists.action.tickOffItem': '{name} abhaken',
+  'lists.item.assignAria': '{name} jemandem zuweisen',
+  'lists.item.reassignAria': '{item} gehört {owner} — neu zuweisen',
+
+  /* ------------------------------ book: what the form refuses */
+  'book.error.titleEmpty':
+    'Gib dieser Buchung einen Namen, den du in einer Liste wiedererkennst.',
+  'error.titleLong': 'Halte den Namen unter 160 Zeichen.',
+  'book.error.required': 'Dieser Buchung fehlt: {field}.',
+  'book.error.timeNeedsDate':
+    'Eine Uhrzeit braucht den Tag, auf den sie fällt.',
+  'book.error.endTimeNeedsDate':
+    'Eine Endzeit braucht den Tag, auf den sie fällt.',
+  'book.error.endsBeforeStart': 'Das endet, bevor es anfängt.',
+  'book.error.endTimeBeforeStart': 'Die Endzeit liegt vor der Startzeit.',
+  'book.error.guests': 'Die Personenzahl muss eine ganze Zahl bis 1000 sein.',
+  'error.price': 'Diesen Betrag können wir nicht lesen.',
+  'book.error.url': 'Ein Verweis muss mit http:// oder https:// beginnen.',
+  'book.error.confirmationLong':
+    'Diese Bestätigungsnummer ist zu lang zum Speichern.',
+  'book.fieldName.provider': 'Anbieter',
+  'book.fieldName.location': 'Ort',
+  'book.fieldName.confirmationNumber': 'Bestätigungsnummer',
+  'book.fieldName.link': 'Verweis',
+  'book.fieldName.date': 'Datum',
+  'book.fieldName.time': 'Uhrzeit',
+  'book.fieldName.endDate': 'Enddatum',
+  'book.fieldName.endTime': 'Endzeit',
+  'book.fieldName.guests': 'Personenzahl',
+  'book.fieldName.price': 'Preis',
+  'book.copyConfirmation': 'die Bestätigungsnummer für {title}',
+
+  /* -------------------------- transports: modes, ends, refusals */
+  'transports.mode.flight': 'Flug',
+  'transports.mode.train': 'Zug',
+  'transports.mode.bus': 'Bus',
+  'transports.mode.ferry': 'Fähre',
+  'transports.mode.car': 'Auto',
+  'transports.mode.taxi': 'Taxi',
+  'transports.mode.transit': 'Nahverkehr',
+  'transports.mode.metro': 'U-Bahn',
+  'transports.mode.tram': 'Straßenbahn',
+  'transports.mode.bike': 'Fahrrad',
+  'transports.mode.walk': 'Zu Fuß',
+  'transports.mode.other': 'Sonstiges',
+  'transports.mode.fallback': 'Etappe',
+  'transports.status.idea': 'Idee',
+  'transports.status.pending': 'Offen',
+  'transports.status.confirmed': 'Bestätigt',
+  'transports.status.completed': 'Erledigt',
+  'transports.status.cancelled': 'Abgesagt',
+  'transports.end.fromAirport': 'Ab Flughafen',
+  'transports.end.toAirport': 'Bis Flughafen',
+  'transports.end.fromPort': 'Ab Hafen',
+  'transports.end.toPort': 'Bis Hafen',
+  'transports.end.fromStation': 'Ab Bahnhof',
+  'transports.end.toStation': 'Bis Bahnhof',
+  'transports.end.from': 'Von',
+  'transports.end.to': 'Nach',
+  'transports.error.titleEmpty':
+    'Gib dieser Etappe einen Namen, den du in einer Liste wiedererkennst.',
+  'transports.error.date': 'Ein Datum schreibt man JJJJ-MM-TT.',
+  'transports.error.time':
+    'Eine Uhrzeit schreibt man HH:MM im 24-Stunden-Format.',
+  'transports.error.departureNeedsDate':
+    'Eine Abfahrtszeit braucht den Tag, auf den sie fällt.',
+  'transports.error.arrivalNeedsDate':
+    'Eine Ankunftszeit braucht den Tag, auf den sie fällt.',
+  'transports.error.code': 'Ein Code hat 2 bis 8 Buchstaben oder Ziffern.',
+  'transports.error.distance':
+    'Eine Entfernung ist eine Zahl in Kilometern, bis 100.000.',
+  'transports.error.arrivesBeforeDeparts':
+    'Diese Etappe kommt an, bevor sie abfährt.',
+  'transports.error.timingHint':
+    'Verschiebe eine davon, damit die Etappe tatsächlich erreichbar ist.',
+  'transports.bookingRefFor': 'die Buchungsnummer für {title}',
+  'transports.doorToDoor': 'Das sind {gap} von Tür zu Tür.',
+  'transports.title.fromTo': '{operator} von {from} nach {to}',
+  'transports.title.from': '{operator} von {from}',
+  'transports.title.to': '{operator} nach {to}',
+
+  /* ------------------ transports: whether a hand-over can be made */
+  'transports.junction.unknown.headline': 'Keine Zeiten zum Vergleichen',
+  'transports.junction.unknown.detail':
+    'Trage bei beiden Etappen Datum und Uhrzeit ein, dann wird dieser Übergang für dich geprüft.',
+  'transports.junction.impossible.headline':
+    'Fährt {gap} vor der Ankunft der vorigen Etappe ab',
+  'transports.junction.impossible.detail':
+    '„{to}“ fährt ab, bevor „{from}“ ankommt — beide sind nicht zu erreichen. Verschiebe eine davon.',
+  'transports.junction.tight.headline': '{gap} zum Umsteigen',
+  'transports.junction.tight.detail':
+    'Für {mode} braucht man meist etwa {required}. Das hier ist knapp.',
+  'transports.junction.tight.detailAt':
+    'Für {mode} braucht man in {place} meist etwa {required}. Das hier ist knapp.',
+  'transports.junction.ok.headline': '{gap} dazwischen',
+  'transports.junction.ok.detail':
+    'Ankunft in {landing}, aber die nächste Etappe fährt von {boarding} — du musst hinüberkommen.',
+
+  /* ------------------------------ collab: the note and poll dialogs */
+  'collab.note.toast.shared': 'Notiz geteilt',
+  'collab.note.toast.sharedBody': 'Alle auf der Reise sehen sie jetzt.',
+  'collab.note.toast.shareFailed': 'Die Notiz wurde nicht geteilt',
+  'collab.note.toast.updated': 'Notiz aktualisiert',
+  'collab.note.toast.updateFailed': 'Die Notiz wurde nicht aktualisiert',
+  'collab.note.dialog.editTitle': 'Diese Notiz bearbeiten',
+  'collab.note.dialog.addTitle': 'Neue geteilte Notiz',
+  'collab.note.dialog.body':
+    'Restaurantempfehlungen, Visaregeln, der Code für die Haustür — alles, was die ganze Reise sich merken muss, an einem Ort.',
+  'collab.note.field.title': 'Titel',
+  'collab.note.field.titlePlaceholder': 'Haustürcode',
+  'collab.note.field.body': 'Notiz',
+  'collab.note.field.bodyPlaceholder':
+    '4821, dann die Raute. Der Schlüsselkasten ist links von der Tür.',
+  'collab.note.field.categoryHint':
+    'Gruppiert das Board unter einem Filter. Optional.',
+  'collab.note.field.categoryPlaceholder': 'Logistik',
+  'collab.note.field.pin': 'Oben am Board anpinnen',
+  'collab.note.field.pinHint':
+    'Angepinnte Notizen stehen vorn, was auch dazukommt.',
+  'collab.note.action.saving': 'Notiz wird gespeichert',
+  'collab.note.action.save': 'Notiz speichern',
+  'collab.note.action.share': 'Notiz teilen',
+  'collab.poll.toast.opened': 'Abstimmung eröffnet',
+  'collab.poll.toast.openedBody': 'Alle auf der Reise können jetzt abstimmen.',
+  'collab.poll.toast.openFailed': 'Die Abstimmung wurde nicht eröffnet',
+  'collab.poll.dialog.addTitle': 'Neue Abstimmung',
+  'collab.poll.field.question': 'Frage',
+  'collab.poll.field.questionPlaceholder': 'Wo essen wir am letzten Abend?',
+  'collab.poll.field.optionsLegend': 'Auswahl',
+  'collab.poll.field.option': 'Antwort {n}',
+  'collab.poll.example.first': 'Den',
+  'collab.poll.example.second': 'Narisawa',
+  'collab.poll.example.third': 'Noch eine Antwort',
+  'collab.poll.action.addOption': 'Antwort hinzufügen',
+  'collab.poll.action.removeOption': 'Antwort entfernen {n}',
+  'collab.poll.field.multi': 'Mehrfachauswahl erlauben',
+  'collab.poll.field.multiHint':
+    'Aus heißt eine Stimme pro Person, und ein Umdenken verschiebt sie.',
+  'collab.poll.action.opening': 'Abstimmung wird eröffnet',
+  'collab.poll.action.open': 'Abstimmung eröffnen',
+  'collab.poll.error.tooFew':
+    'Eine Abstimmung braucht mindestens zwei Dinge zur Auswahl.',
+  'collab.poll.error.duplicate':
+    'Zwei Antworten sagen dasselbe. Gib jeder ihre eigene Formulierung.',
+  'collab.presence.viewingNow': 'sehen gerade zu',
+  'collab.presence.tabsOpen': {
+    one: '{name} — {count} offener Tab',
+    other: '{name} — {count} offene Tabs',
+  },
+
+  /* ----------------------------------------- collab: the thread */
+  'collab.reaction.agree': 'Zustimmung',
+  'collab.reaction.love': 'Gefällt mir',
+  'collab.reaction.funny': 'Witzig',
+  'collab.reaction.celebrate': 'Feiern',
+  'collab.reaction.thanks': 'Danke',
+  'collab.reaction.looking': 'Schaue',
+  'collab.reaction.tally': '{emoji} — {count}',
+  'collab.reaction.tallyMine': '{emoji} — {count}, du dabei',
+  'collab.thread.today': 'Heute',
+  'collab.thread.empty': 'Noch keine Nachrichten',
+  'collab.toast.reactionFailed': 'Die Reaktion wurde nicht gespeichert',
+  'collab.toast.messageDeleted': 'Nachricht gelöscht',
+  'collab.toast.deleteFailed': 'Die Nachricht wurde nicht gelöscht',
+  'collab.toast.notSent': 'Nicht gesendet',
+  'collab.toast.notSentBody':
+    'Die Nachricht konnte nicht gesendet werden. Versuch es gleich noch einmal.',
+  'collab.toast.messageUpdated': 'Nachricht aktualisiert',
+  'collab.toast.editFailed': 'Die Änderung wurde nicht gespeichert',
+  'collab.message.deleteTitle': 'Diese Nachricht löschen?',
+  'collab.message.deleteBody':
+    'Der Text verschwindet aus dem Verlauf. Antworten darauf bleiben, wo sie sind.',
+  'collab.message.delete': 'Nachricht löschen',
+  'collab.message.reply': 'Antworten',
+  'collab.message.menuEdit': 'Nachricht bearbeiten…',
+  'collab.message.react': 'Auf diese Nachricht reagieren',
+  'collab.message.edited': 'bearbeitet',
+  'collab.message.actionsFor': 'Aktionen für die Nachricht von {name}',
+  'collab.compose.editingYours': 'Du bearbeitest deine Nachricht',
+  'collab.compose.replyingTo': 'Antwort an {name}',
+  'collab.compose.cancelReply': 'Antwort abbrechen',
+  'collab.compose.cancelEdit': 'Bearbeiten abbrechen',
+  'collab.compose.placeholder': 'Schreib an die Reise',
+  'collab.compose.editPlaceholder': 'Deine Nachricht bearbeiten',
+  'collab.compose.editPlaceholderText': 'Ändere, was du gesagt hast…',
+  'collab.compose.send': 'Nachricht senden',
+  'collab.compose.savingEdit': 'Änderung wird gespeichert',
+  'collab.compose.save': 'Speichern',
+  'collab.hint.sends': 'sendet',
+  'collab.hint.addsLine': 'fügt eine Zeile ein',
+  'collab.hint.cancels': 'bricht ab',
+
+  /* ------------------------------------------ collab: the board */
+  'collab.toast.noteRemoved': 'Notiz entfernt',
+  'collab.toast.noteRemoveFailed': 'Die Notiz wurde nicht entfernt',
+  'collab.notes.empty.title': 'Keine geteilten Notizen',
+  'collab.notes.empty.body':
+    'Restaurantempfehlungen, Visaregeln, der Code für die Haustür — alles, was die ganze Reise sich merken muss.',
+  'collab.notes.empty.action': 'Schreib die erste Notiz',
+  'collab.note.menu.edit': 'Notiz bearbeiten…',
+  'collab.note.menu.unpin': 'Losheften',
+  'collab.note.menu.pin': 'Oben anpinnen',
+  'collab.note.remove': 'Notiz entfernen',
+  'collab.note.removeBody':
+    'Die Notiz verschwindet für alle auf der Reise vom Board.',
+  'collab.note.new': 'Neue Notiz',
+  'collab.poll.toast.voteFailed': 'Deine Stimme wurde nicht gespeichert',
+  'collab.poll.toast.voteFailedBody': 'Das Ergebnis bleibt unverändert.',
+  'collab.poll.toast.closed': 'Abstimmung geschlossen',
+  'collab.poll.toast.closeFailed': 'Die Abstimmung wurde nicht geschlossen',
+  'collab.poll.toast.removed': 'Abstimmung entfernt',
+  'collab.poll.toast.removeFailed': 'Die Abstimmung wurde nicht entfernt',
+  'collab.polls.heading': 'Abstimmungen',
+  'collab.polls.empty.title': 'Keine offenen Abstimmungen',
+  'collab.polls.empty.body':
+    'Wenn sich die Gruppe nicht auf ein Restaurant einigen kann, stellt es zur Abstimmung und lasst die Antwort sich selbst klären.',
+  'collab.polls.empty.action': 'Die Gruppe fragen',
+  'collab.poll.menu.close': 'Abstimmung schließen',
+  'collab.poll.remove': 'Abstimmung entfernen',
+  'collab.poll.removeTitle': 'Diese Abstimmung entfernen?',
+  'collab.poll.actionsFor': 'Aktionen für die Abstimmung „{question}“',
+  'collab.badge.pinned': 'Angepinnt',
+  'collab.badge.closed': 'Geschlossen',
+  'collab.badge.open': 'Offen',
+  'collab.badge.multi': 'Mehrfachauswahl',
+  'collab.badge.leading': 'Führt',
+  'collab.poll.removeBody': {
+    one: '„{question}“ und ihre {count} Stimme verschwinden für alle.',
+    other: '„{question}“ und ihre {count} Stimmen verschwinden für alle.',
+  },
+  'collab.poll.result': {
+    one: '{label} — {votes} von {count} Stimme',
+    other: '{label} — {votes} von {count} Stimmen',
+  },
+  'collab.poll.resultMine': {
+    one: '{label} — {votes} von {count} Stimme, deine dabei',
+    other: '{label} — {votes} von {count} Stimmen, deine dabei',
+  },
+  'collab.poll.voteCount': {
+    one: '{count} Stimme',
+    other: '{count} Stimmen',
+  },
+
+  /* ------------------------------------------- files: the library */
+  'files.kind.document': 'Dokument',
+  'files.kind.photo': 'Foto',
+  'files.kind.ticket': 'Ticket',
+  'files.kind.receipt': 'Beleg',
+  'files.kind.map': 'Karte',
+  'files.kind.other': 'Sonstiges',
+  'files.kindChoice.ticket': 'Ticket oder Pass',
+  'files.kindChoice.map': 'Karte oder Route',
+  'files.toast.removed': 'Datei entfernt',
+  'files.toast.removeFailed': 'Die Datei wurde nicht entfernt',
+  'files.toast.downloadFailed': 'Der Download ist nicht gestartet',
+  'files.toast.gone': 'Die Datei ist in diesem Tab nicht mehr verfügbar.',
+  'files.toast.uploadFailed':
+    'Der Upload ist fehlgeschlagen. Versuch es noch einmal.',
+  'files.toast.updated': 'Datei aktualisiert',
+  'files.toast.updateFailed': 'Die Datei wurde nicht aktualisiert',
+  'files.storage.full': 'Dieser Arbeitsbereich hat keinen Speicher mehr',
+  'files.storage.used':
+    '{used} von {limit} sind belegt. Entferne unten eine Datei oder wechsle in einen höheren Tarif, bevor du noch etwas hinzufügst.',
+  'files.storage.perFile': 'bis zu {size} pro Datei',
+  'files.action.add': 'Dateien hinzufügen',
+  'files.action.choose': 'Dateien auswählen',
+  'files.action.upload': 'Dateien hochladen',
+  'files.drop.active': 'Zum Hochladen loslassen',
+  'files.drop.idle': 'Dateien hierher ziehen',
+  'files.empty.title': 'Keine Dateien auf dieser Reise',
+  'files.empty.body':
+    'Alles, was du sonst am Check-in-Schalter aus einem Postfach kramen müsstest, liegt hier, bei der Reise, zu der es gehört.',
+  'files.empty.hint':
+    'Bordkarten, Hotelbestätigungen, Tickets, Versicherungsunterlagen und die Belege, die deine Ausgaben stützen.',
+  'files.heading': 'Anhänge',
+  'files.tableCaption': 'Dateien zu dieser Reise',
+  'files.menu.download': 'Herunterladen',
+  'files.menu.rename': 'Umbenennen und beschreiben…',
+  'files.menu.remove': 'Datei entfernen',
+  'files.remove.body':
+    'Die Datei wird aus dem Speicher und von dieser Reise gelöscht, und {size} werden frei. Das lässt sich nicht rückgängig machen.',
+  'files.queue.clear': 'Fertige aufräumen',
+  'files.column.file': 'Datei',
+  'files.column.size': 'Größe',
+  'files.column.addedBy': 'Hinzugefügt von',
+  'files.column.when': 'Wann',
+  'files.status.uploaded': 'Hochgeladen',
+  'files.status.failed': 'Fehlgeschlagen',
+  'files.status.cancelled': 'Abgebrochen',
+  'files.status.uploading': 'Wird hochgeladen',
+  'files.status.waiting': 'Wartet',
+  'files.error.nameEmpty':
+    'Eine Datei braucht einen Namen, unter dem du sie wiederfindest.',
+  'files.field.kindHint':
+    'Entscheidet, unter welchem Filter sie steht und welches Zeichen sie bekommt.',
+  'files.field.kindAria': 'Art der Datei',
+  'files.field.description': 'Beschreibung',
+  'files.field.descriptionPlaceholder':
+    'Versicherungspolice — deckt die ganze Gruppe, Schadensnummer auf Seite 2.',
+  'files.dialog.title': 'Dateidetails',
+  'files.action.saving': 'Datei wird gespeichert',
+  'files.action.save': 'Details speichern',
+  'files.queue.someFailed': {
+    one: '{count} Datei wurde nicht hochgeladen. Der Grund steht in der jeweiligen Zeile — sonst ist im Stapel nichts betroffen.',
+    other:
+      '{count} Dateien wurden nicht hochgeladen. Der Grund steht in der jeweiligen Zeile — sonst ist im Stapel nichts betroffen.',
+  },
+
+  'files.action.cancelUploadOf': 'Hochladen von {name} abbrechen',
+  'files.action.dismissOf': '{name} ausblenden',
+  'files.status.downloadingOf': '{name} wird heruntergeladen',
+  'files.status.uploadingOf': '{name} wird hochgeladen',
+  'files.status.uploadingCount': {
+    one: '{count} Datei wird hochgeladen',
+    other: '{count} Dateien werden hochgeladen',
+  },
+
+  /* --------------------------- files: the upload and download chain */
+  'files.error.cancelled': 'Hochladen abgebrochen.',
+  'files.error.badAnswer':
+    'Der Server hat eine Antwort geschickt, die dieser Browser nicht lesen konnte.',
+  'files.error.connection':
+    'Die Verbindung ist beim Hochladen abgerissen. Prüfe dein Netz und versuch es noch einmal.',
+  'files.error.timeout':
+    'Das Hochladen hat zu lange gedauert. Versuch es noch einmal.',
+  'files.error.refused': 'Der Server hat den Upload abgelehnt ({status}).',
+  'files.error.downloadShape':
+    'Der Download kam in einer Form zurück, die wir nicht speichern konnten.',
+  'files.error.downloadFailed': 'Der Download ist fehlgeschlagen ({status}).',
+  'files.toast.uploadedOne': 'Datei hochgeladen',
+  'files.toast.uploadedManyBody': '{size} zu dieser Reise hinzugefügt.',
+  'files.toast.failedOne': 'Diese Datei wurde nicht hochgeladen',
+  'files.toast.failedManyBody':
+    'Die Warteschlange unten sagt bei jeder, warum.',
+  'files.error.tooMany': {
+    one: 'Es kann nur {count} Datei auf einmal hinzugefügt werden, deshalb blieb „{name}“ außen vor. Zieh sie einzeln noch einmal herein.',
+    other:
+      'Es können nur {count} Dateien auf einmal hinzugefügt werden, deshalb blieb „{name}“ außen vor. Zieh sie einzeln noch einmal herein.',
+  },
+  'files.toast.uploadedMany': {
+    one: '{count} Datei hochgeladen',
+    other: '{count} Dateien hochgeladen',
+  },
+  'files.toast.failedMany': {
+    one: '{count} Datei wurde nicht hochgeladen',
+    other: '{count} Dateien wurden nicht hochgeladen',
+  },
+} satisfies TranslationOf<typeof En>
+
+export default messages

@@ -311,6 +311,101 @@ const messages = {
   'role.admin': 'Administrator',
   'role.member': 'Anggota',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    other: '{value} perjalanan',
+  },
+  'trips.count.favourites': {
+    other: '{value} favorit',
+  },
+  'trips.count.archived': {
+    other: '{value} diarsipkan',
+  },
+  'trips.atLimit.body':
+    'Paketmu mencakup {trips}. Arsipkan satu yang sudah selesai, atau naik paket supaya bisa membuka lebih banyak sekaligus.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Jurnal baru',
+  'newJourney.title': 'Mulai jurnal',
+  'newJourney.description':
+    'Jurnal adalah sisi tertulis sebuah perjalanan — entri berurutan tanggal, dengan foto dan cuaca yang kamu ingat.',
+  'newJourney.titlePlaceholder': 'Dua minggu di Kyoto',
+  'newJourney.subtitle': 'Subjudul',
+  'newJourney.subtitleHint': 'Satu baris di bawah judul, di sampul.',
+  'newJourney.subtitlePlaceholder':
+    'Kuil, kereta, dan matcha yang terlalu banyak',
+  'newJourney.trip': 'Berdasarkan perjalanan',
+  'newJourney.tripHint': 'Opsional — mengaitkan cerita dengan rencananya.',
+  'newJourney.tripNone': 'Tidak terkait perjalanan',
+  'newJourney.datesError': 'Tanggal akhir sebelum tanggal mulai.',
+  'newJourney.submit': 'Buat jurnal',
+  'newJourney.creating': 'Membuat jurnal',
+  'newJourney.created': 'Jurnal dimulai',
+  'newJourney.createdBody': 'Tambahkan entri pertama untuk memulai cerita.',
+  'newJourney.error': 'Jurnal tidak bisa dibuat. Coba lagi sebentar.',
+  'newCollection.trigger': 'Koleksi baru',
+  'newCollection.title': 'Mulai koleksi',
+  'newCollection.description':
+    'Tempat untuk tempat-tempat yang kamu temukan sebelum tahu milik perjalanan yang mana.',
+  'newCollection.namePlaceholder': 'Kopi yang layak menyeberangi kota',
+  'newCollection.descriptionHint':
+    'Apa yang masuk ke sini, dan apa yang tidak.',
+  'newCollection.submit': 'Buat koleksi',
+  'newCollection.creating': 'Membuat koleksi',
+  'newCollection.created': 'Koleksi dibuat',
+  'newCollection.createdBody': 'Mulai menyimpan tempat ke dalamnya.',
+  'newCollection.error': 'Koleksi tidak bisa dibuat. Coba lagi sebentar.',
+
+  'newTrip.title': 'Mulai perjalanan baru',
+  'newTrip.description':
+    'Judul saja cukup. Tanggal membangun rencana harian, dan sisanya bisa menunggu sampai kamu tahu.',
+  'newTrip.name': 'Nama perjalanan',
+  'newTrip.namePlaceholder': 'Kyoto saat musim sakura',
+  'newTrip.destination': 'Tujuan',
+  'newTrip.destinationHint': 'Sebuah kota, sebuah wilayah, atau seluruh rute.',
+  'newTrip.destinationPlaceholder': 'Kyoto, Jepang',
+  'newTrip.departure': 'Keberangkatan',
+  'newTrip.return': 'Kepulangan',
+  'newTrip.returnError': 'Tanggal kepulangan sebelum keberangkatan.',
+  'newTrip.currency': 'Mata uang anggaran',
+  'newTrip.currencyHint':
+    'Setiap pengeluaran perjalanan ini dijumlahkan dalam mata uang itu.',
+  'newTrip.submit': 'Buat perjalanan',
+  'newTrip.creating': 'Membuat perjalanan',
+  'newTrip.error': 'Perjalanan tidak bisa dibuat. Coba lagi sebentar.',
+  'newTrip.created': 'Perjalanan dibuat',
+  'newTrip.createdBody': 'Mulai menaruh tempat di peta.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Siapa yang bisa melihat',
+  'visibility.private': 'Hanya saya',
+  'visibility.organization': 'Semua orang di ruang kerja',
+  'visibility.public': 'Siapa pun yang punya tautannya',
+
+  'trips.error': 'Perjalananmu gagal dimuat',
+  'trips.eyebrow': 'Ruang kerja',
+  'trips.nothingPlanned': 'Belum ada rencana',
+  'trips.search': 'Cari perjalanan',
+  'trips.atLimit.title':
+    'Kamu sudah memakai semua perjalanan yang paketmu izinkan',
+  'trips.atLimit.action': 'Bandingkan paket',
+  'trips.noMatch.title': 'Tidak ada yang cocok dengan filter itu',
+  'trips.noMatch.body':
+    'Coba tahap lain, kosongkan pencarian, atau lihat di arsip.',
+  'trips.noMatch.action': 'Setel ulang filter',
+  'trips.empty.body':
+    'Satu perjalanan memegang rencana harian, peta, pemesanan, daftar bawaan, dan uangnya. Mulai satu, sisanya menyusul.',
+  'trips.next.title': 'Ke suatu tempat berikutnya',
+  'trips.next.body':
+    'Mulai perjalanan dan planned.travel membuat satu hari per tanggal, siap untuk semua yang kamu simpan.',
+  'trips.savedPlaces': 'Tempat tersimpan',
+  'trips.filter.all': 'Semua',
+  'trips.filter.favourites': 'Favorit',
+  'trips.card.favourite': 'Difavoritkan',
+  'trips.card.noDestination': 'Tujuan belum ditentukan',
+  'trips.card.noDates': 'Tanggal belum ditentukan',
+  'trips.card.startsIn': '{days} hari lagi',
+  'trips.card.days': '{days} hr',
   'metric.trips': 'Perjalanan',
   'metric.places': 'Tempat',
   'metric.members': 'Anggota',

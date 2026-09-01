@@ -166,7 +166,7 @@ export function StopMenu({
         <IconButton
           icon={<MoreHorizontal />}
           label={`Actions for ${row.name}`}
-          size="xs"
+          size="sm"
           variant="ghost"
           disabled={disabled}
         />
@@ -349,7 +349,8 @@ export function PlaceDialog({
   const lat = parseCoordinate(draft.lat)
   const lng = parseCoordinate(draft.lng)
   const latValid = lat === null || (Number.isFinite(lat) && Math.abs(lat) <= 90)
-  const lngValid = lng === null || (Number.isFinite(lng) && Math.abs(lng) <= 180)
+  const lngValid =
+    lng === null || (Number.isFinite(lng) && Math.abs(lng) <= 180)
   const paired = (lat === null) === (lng === null)
   const named = draft.name.trim().length > 0
   const canSave = named && latValid && lngValid && paired && !saving
@@ -504,7 +505,9 @@ export function PlaceDialog({
               </Field>
               <Field
                 label="Longitude"
-                error={touched && !lngValid ? 'Between -180 and 180' : undefined}
+                error={
+                  touched && !lngValid ? 'Between -180 and 180' : undefined
+                }
               >
                 <Input
                   value={draft.lng}
@@ -535,7 +538,9 @@ export function PlaceDialog({
                     })),
                   ]}
                   value={draft.dayId}
-                  onValueChange={(value) => setDraft({ ...draft, dayId: value })}
+                  onValueChange={(value) =>
+                    setDraft({ ...draft, dayId: value })
+                  }
                   ariaLabel="Put it on a day"
                 />
               </Field>

@@ -139,7 +139,6 @@ const messages = {
   'users.filter.role.curator': 'Куратори',
   'users.filter.status.label': 'Добір за станом запису',
   'users.filter.status.any': 'Будь-який стан',
-  'users.filter.clear': 'Скинути добір',
   'users.filter.hint':
     'Звузьте за роллю або за станом — за чимось одним за раз.',
   'users.column.account': 'Обліковий запис',

@@ -26,15 +26,18 @@ import type En from '../en/ui'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Очистить',
+  'action.clearFilters': 'Сбросить фильтры',
   'action.close': 'Закрыть',
   'action.dismiss': 'Скрыть',
   'action.remove': 'Убрать',
+  'action.keep': 'Оставить',
   'action.undo': 'Отменить',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Загрузка',
   'status.working': 'Выполняется',
   'status.searching': 'Идёт поиск',
+  'status.removing': 'Удаление',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} в сети',

@@ -25,26 +25,45 @@ import {
   Input,
   SimpleSelect,
 } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
+import { currencyLabel } from '../settings/-lib/regional'
 import { createTripFn } from '../-server/overview'
 
-/** The currencies a trip is most often budgeted in, plus the workspace default. */
-const CURRENCIES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'EUR', label: 'EUR — Euro' },
-  { value: 'GBP', label: 'GBP — Pound sterling' },
-  { value: 'USD', label: 'USD — US dollar' },
-  { value: 'CHF', label: 'CHF — Swiss franc' },
-  { value: 'PLN', label: 'PLN — Polish złoty' },
-  { value: 'SEK', label: 'SEK — Swedish krona' },
-  { value: 'JPY', label: 'JPY — Japanese yen' },
-  { value: 'AUD', label: 'AUD — Australian dollar' },
-  { value: 'CAD', label: 'CAD — Canadian dollar' },
+import type { Translate } from '#/lib/i18n'
+
+/**
+ * The currencies a trip is most often budgeted in, plus the workspace default.
+ *
+ * The codes are the product's choice; the words beside them are not. Both used
+ * to be written out here, which put a second English copy of nine currency names
+ * beside the translated set `settings/-lib/regional.ts` already owns.
+ */
+const CURRENCY_CODES: ReadonlyArray<string> = [
+  'EUR',
+  'GBP',
+  'USD',
+  'CHF',
+  'PLN',
+  'SEK',
+  'JPY',
+  'AUD',
+  'CAD',
 ]
 
-function messageOf(error: unknown): string {
+function currencyOptions(
+  t: Translate,
+): ReadonlyArray<{ value: string; label: string }> {
+  return CURRENCY_CODES.map((code) => ({
+    value: code,
+    label: currencyLabel(t, code),
+  }))
+}
+
+function messageOf(t: Translate, error: unknown): string {
   if (error instanceof Error && error.message.length > 0) {
     return error.message
   }
-  return 'The trip could not be created. Try again in a moment.'
+  return t('shell.newTrip.error')
 }
 
 export interface NewTripDialogProps {
@@ -60,6 +79,7 @@ export function NewTripDialog({
   disabled = false,
   size = 'sm',
 }: NewTripDialogProps) {
+  const t = useTranslate()
   const router = useRouter()
   const navigate = useNavigate()
 
@@ -101,12 +121,12 @@ export function NewTripDialog({
       await router.invalidate()
       setOpen(false)
       reset()
-      toast.success('Trip created', {
-        description: 'Start dropping places on the map.',
+      toast.success(t('shell.newTrip.created'), {
+        description: t('shell.newTrip.createdBody'),
       })
       await navigate({ to: '/trips/$tripId/plan', params: { tripId } })
     } catch (cause) {
-      setError(messageOf(cause))
+      setError(messageOf(t, cause))
     } finally {
       setSaving(false)
     }
@@ -123,18 +143,22 @@ export function NewTripDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="primary" shape="pill" size={size} disabled={disabled}>
-          <Plus aria-hidden strokeWidth={2.5} />
-          New trip
+        <Button
+          variant="primary"
+          shape="pill"
+          size={size}
+          disabled={disabled}
+          icon={<Plus aria-hidden strokeWidth={2.5} />}
+        >
+          {t('shell.nav.newTrip')}
         </Button>
       </DialogTrigger>
 
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>Start a new trip</DialogTitle>
+          <DialogTitle>{t('shell.newTrip.title')}</DialogTitle>
           <DialogDescription>
-            A title is all you need. Dates build the day-by-day plan, and
-            everything else can wait until you know it.
+            {t('shell.newTrip.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -150,16 +174,16 @@ export function NewTripDialog({
             }}
           >
             {error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {error}
               </Alert>
             )}
 
-            <Field label="Trip name" required>
+            <Field label={t('shell.newTrip.name')} required>
               <Input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Kyoto in cherry-blossom season"
+                placeholder={t('shell.newTrip.namePlaceholder')}
                 maxLength={120}
                 autoComplete="off"
                 required
@@ -167,20 +191,20 @@ export function NewTripDialog({
             </Field>
 
             <Field
-              label="Destination"
-              hint="A city, a region, or the whole route."
+              label={t('shell.newTrip.destination')}
+              hint={t('shell.newTrip.destinationHint')}
             >
               <Input
                 value={destination}
                 onChange={(event) => setDestination(event.target.value)}
-                placeholder="Kyoto, Japan"
+                placeholder={t('shell.newTrip.destinationPlaceholder')}
                 maxLength={160}
                 autoComplete="off"
               />
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Departure">
+              <Field label={t('shell.newTrip.departure')}>
                 <Input
                   type="date"
                   value={startDate}
@@ -188,11 +212,9 @@ export function NewTripDialog({
                 />
               </Field>
               <Field
-                label="Return"
+                label={t('shell.newTrip.return')}
                 error={
-                  datesOutOfOrder
-                    ? 'The return date is before departure.'
-                    : undefined
+                  datesOutOfOrder ? t('shell.newTrip.returnError') : undefined
                 }
               >
                 <Input
@@ -205,14 +227,14 @@ export function NewTripDialog({
             </div>
 
             <Field
-              label="Budget currency"
-              hint="Every expense on this trip is totalled in it."
+              label={t('shell.newTrip.currency')}
+              hint={t('shell.newTrip.currencyHint')}
             >
               <SimpleSelect
-                options={[...CURRENCIES]}
+                options={[...currencyOptions(t)]}
                 value={currency}
                 onValueChange={setCurrency}
-                ariaLabel="Budget currency"
+                ariaLabel={t('shell.newTrip.currency')}
               />
             </Field>
           </form>
@@ -227,7 +249,7 @@ export function NewTripDialog({
               setOpen(false)
             }}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -236,9 +258,9 @@ export function NewTripDialog({
             shape="pill"
             disabled={!canSave}
             loading={saving}
-            loadingLabel="Creating the trip"
+            loadingLabel={t('shell.newTrip.creating')}
           >
-            Create trip
+            {t('shell.newTrip.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

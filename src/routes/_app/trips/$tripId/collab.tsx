@@ -13,23 +13,32 @@ import { ModulePanel } from '#/components/modules/shared'
 import { Card } from '#/components/ui'
 import { TRIP_RAIL_STICKY_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadTripCollab } from '../../-server/trip'
-import { formatNumber, pluralise } from '../../-lib/format'
+import { formatNumber } from '../../-lib/format'
 import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/collab')({
   loader: ({ params }) => loadTripCollab({ data: { tripId: params.tripId } }),
   pendingComponent: CollabPending,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="The conversation did not load" />
-    </AppFrame>
-  ),
+  errorComponent: CollabError,
   component: CollabPage,
 })
 
+function CollabError({ error }: { error: Error }) {
+  const t = useTranslate()
+
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('trips.error.collab')} />
+    </AppFrame>
+  )
+}
+
 function CollabPage() {
+  const locale = useLocale()
+  const t = useTranslate()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
   const { shell } = useRouteContext({ from: '/_app' })
@@ -56,11 +65,26 @@ function CollabPage() {
     <AppFrame>
       <AppSections>
         <TripModuleHeader
-          title="Collab"
+          title={t('trips.collab.title')}
           description={
             empty
-              ? 'Nothing shared yet'
-              : `${pluralise(data.messages.length, 'message')} · ${pluralise(data.notes.length, 'note')} · ${pluralise(data.polls.length, 'poll')}`
+              ? t('trips.collab.empty')
+              : // A list, not a sentence: each tally agrees on its own count and
+                // the middle dot does the joining.
+                [
+                  t('trips.collab.count.messages', {
+                    count: data.messages.length,
+                    messages: formatNumber(data.messages.length, locale),
+                  }),
+                  t('trips.collab.count.notes', {
+                    count: data.notes.length,
+                    notes: formatNumber(data.notes.length, locale),
+                  }),
+                  t('trips.collab.count.polls', {
+                    count: data.polls.length,
+                    polls: formatNumber(data.polls.length, locale),
+                  }),
+                ].join(' · ')
           }
         >
           {live ? <PresenceBar tripId={tripId} /> : null}
@@ -68,11 +92,11 @@ function CollabPage() {
 
         <div className="grid gap-6 xl:grid-cols-[24rem_minmax(0,1fr)] xl:gap-8">
           <ModulePanel
-            label="Conversation"
+            label={t('trips.collab.conversation')}
             count={
               data.messages.length === 0
                 ? undefined
-                : formatNumber(data.messages.length)
+                : formatNumber(data.messages.length, locale)
             }
             // 12rem of slack, not 6: the panel is sticky *below* the page header,
             // so at the top of the page its foot — and therefore the composer —

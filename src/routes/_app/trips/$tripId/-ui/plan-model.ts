@@ -16,6 +16,9 @@
 
 import { ideaItemId } from '#/components/planner'
 import { formatTimeRange, formatWeekday } from '../../../-lib/format'
+import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
+
+import type { Locale } from '#/lib/i18n/locales'
 
 import type { MapCategory, MapPlace } from '#/components/map'
 import type {
@@ -74,7 +77,18 @@ function rowIndexOf(payload: PlanBoardPayload): Map<string, PlannerRow> {
   const placeById = new Map(payload.places.map((place) => [place.id, place]))
   const rows = new Map<string, PlannerRow>()
 
-  const base = (place: PlanBoardPlace): Omit<PlannerRow, 'itemId' | 'assignmentId' | 'time' | 'duration' | 'note' | 'reservationStatus' | 'dayNumber'> => ({
+  const base = (
+    place: PlanBoardPlace,
+  ): Omit<
+    PlannerRow,
+    | 'itemId'
+    | 'assignmentId'
+    | 'time'
+    | 'duration'
+    | 'note'
+    | 'reservationStatus'
+    | 'dayNumber'
+  > => ({
     placeId: place.id,
     name: place.name,
     location: place.address ?? place.city,
@@ -143,6 +157,7 @@ export interface PlanModel {
 export function planModel(
   payload: PlanBoardPayload,
   order: PlanOrder,
+  locale: Locale = DEFAULT_LOCALE,
 ): PlanModel {
   const rowsByItem = rowIndexOf(payload)
   const dayMeta = new Map(payload.days.map((day) => [day.dayId, day]))
@@ -176,7 +191,7 @@ export function planModel(
       dayId: meta.dayId,
       dayNumber: meta.dayNumber,
       title: titleOf(meta),
-      dateLabel: formatWeekday(meta.date),
+      dateLabel: formatWeekday(meta.date, locale),
       rows,
       stays: meta.stays,
       notes: meta.notes,
@@ -297,9 +312,10 @@ export function filterRows(
 }
 
 /** One entry per day for the map's route lines, in visiting order. */
-export function routeDaysOf(
-  days: ReadonlyArray<PlannerDay>,
-): Array<{ readonly dayNumber: number; readonly points: Array<[number, number]> }> {
+export function routeDaysOf(days: ReadonlyArray<PlannerDay>): Array<{
+  readonly dayNumber: number
+  readonly points: Array<[number, number]>
+}> {
   return days.map((day) => ({
     dayNumber: day.dayNumber,
     points: day.rows

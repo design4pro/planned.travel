@@ -29,15 +29,18 @@ import type { TranslationOf } from '../../types'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Temizle',
+  'action.clearFilters': 'Süzgeçleri temizle',
   'action.close': 'Kapat',
   'action.dismiss': 'Yoksay',
   'action.remove': 'Kaldır',
+  'action.keep': 'Kalsın',
   'action.undo': 'Geri al',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Yükleniyor',
   'status.working': 'İşleniyor',
   'status.searching': 'Aranıyor',
+  'status.removing': 'Kaldırılıyor',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} çevrimiçi',

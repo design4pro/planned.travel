@@ -8,6 +8,7 @@ import {
   Quote,
 } from 'lucide-react'
 
+import { useLocale } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
@@ -117,6 +118,7 @@ export const Route = createFileRoute('/_app/journey/')({
  * with nothing written says so in that shape rather than being padded out.
  */
 function JourneysPage() {
+  const locale = useLocale()
   const data = Route.useLoaderData()
   const { overview } = data
 
@@ -161,7 +163,7 @@ function JourneysPage() {
           description={
             data.journeys.length === 0
               ? 'Turn your trips into stories you will actually re-read'
-              : `${pluralise(data.journeys.length, 'journey')} · ${pluralise(entries, 'entry', 'entries')} · ${formatNumber(published)} published`
+              : `${pluralise(data.journeys.length, 'journey')} · ${pluralise(entries, 'entry', 'entries')} · ${formatNumber(published, locale)} published`
           }
           actions={<NewJourneyDialog trips={tripOptions} />}
         />
@@ -175,7 +177,7 @@ function JourneysPage() {
             caption={
               lastWritten === null
                 ? 'Nothing written yet'
-                : `Last written ${formatDate(lastWritten) ?? lastWritten}`
+                : `Last written ${formatDate(lastWritten, locale) ?? lastWritten}`
             }
           />
           <StatCard
@@ -185,14 +187,14 @@ function JourneysPage() {
             caption={
               data.journeys.length === 0
                 ? 'Start one from any trip'
-                : `${formatNumber(published)} published · ${formatNumber(drafts)} in draft`
+                : `${formatNumber(published, locale)} published · ${formatNumber(drafts, locale)} in draft`
             }
           />
           <StatCard
             icon={<Compass />}
             label="Trips written up"
             value={overview.coverage.written}
-            unit={`of ${formatNumber(overview.coverage.trips)}`}
+            unit={`of ${formatNumber(overview.coverage.trips, locale)}`}
             caption={
               overview.coverage.trips === 0
                 ? 'No trips to write about yet'
@@ -267,10 +269,13 @@ function JourneysPage() {
  * ---------------------------------------------------------------------------------------------- */
 
 function LatestEntries({ recent }: { recent: JournalOverview['recent'] }) {
+  const locale = useLocale()
   return (
     <Panel
       label="Latest entries"
-      count={recent.length === 0 ? undefined : formatNumber(recent.length)}
+      count={
+        recent.length === 0 ? undefined : formatNumber(recent.length, locale)
+      }
       flush
     >
       {recent.length === 0 ? (
@@ -333,7 +338,7 @@ function LatestEntries({ recent }: { recent: JournalOverview['recent'] }) {
                         {heading}
                       </span>
                       <span className="shrink-0 text-caption tabular-nums text-ink-4">
-                        {formatDate(entry.entryDate)}
+                        {formatDate(entry.entryDate, locale)}
                       </span>
                     </span>
 
@@ -356,7 +361,7 @@ function LatestEntries({ recent }: { recent: JournalOverview['recent'] }) {
                       {entry.photoCount === 0 ? null : (
                         <span className="inline-flex items-center gap-1 tabular-nums">
                           <Camera aria-hidden className="size-3" />
-                          {formatNumber(entry.photoCount)}
+                          {formatNumber(entry.photoCount, locale)}
                         </span>
                       )}
                     </span>
@@ -382,6 +387,7 @@ function Moods({
   moods: JournalOverview['moods']
   entries: number
 }) {
+  const locale = useLocale()
   const busiest = Math.max(...moods.map((mood) => mood.count), 1)
   const recorded = moods.reduce((total, mood) => total + mood.count, 0)
 
@@ -391,7 +397,7 @@ function Moods({
       count={
         recorded === 0
           ? undefined
-          : `${formatNumber(recorded)} of ${formatNumber(entries)}`
+          : `${formatNumber(recorded, locale)} of ${formatNumber(entries, locale)}`
       }
     >
       {moods.length === 0 ? (
@@ -405,7 +411,7 @@ function Moods({
             <li key={mood.label}>
               <div className="mb-1 flex items-baseline justify-between gap-3">
                 <span className="min-w-0 truncate text-caption font-medium text-ink-2">
-                  <span aria-hidden className="mr-1.5">
+                  <span aria-hidden className="me-1.5">
                     {mood.emoji}
                   </span>
                   {mood.label}
@@ -468,6 +474,7 @@ function Unwritten({
   coverage: JournalOverview['coverage']
   today: string
 }) {
+  const locale = useLocale()
   return (
     <Panel
       label="Waiting for a story"
@@ -476,6 +483,7 @@ function Unwritten({
           ? undefined
           : formatNumber(
               Math.max(coverage.trips - coverage.written, trips.length),
+              locale,
             )
       }
       flush
@@ -509,7 +517,7 @@ function Unwritten({
                       {humaniseToken(trip.status)}
                     </Badge>
                     <span className="tabular-nums">
-                      {formatDateRange(trip.startDate, trip.endDate) ??
+                      {formatDateRange(trip.startDate, trip.endDate, locale) ??
                         'Dates not set'}
                     </span>
                   </span>
@@ -537,7 +545,8 @@ function Unwritten({
  * ---------------------------------------------------------------------------------------------- */
 
 function JourneyTile({ journey }: { journey: JourneyCard }) {
-  const range = formatDateRange(journey.startedOn, journey.endedOn)
+  const locale = useLocale()
+  const range = formatDateRange(journey.startedOn, journey.endedOn, locale)
   const cover = coverFor(journey.id)
 
   return (
@@ -554,6 +563,8 @@ function JourneyTile({ journey }: { journey: JourneyCard }) {
             <img
               src={journey.coverImageUrl}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="size-full object-cover"
             />
           )}
@@ -567,7 +578,7 @@ function JourneyTile({ journey }: { journey: JourneyCard }) {
             {journey.photoCount === 0 ? null : (
               <span className="inline-flex items-center gap-1 rounded-full bg-surface/85 px-2 py-0.5 text-caption font-semibold tabular-nums text-ink-2 backdrop-blur-sm">
                 <Camera aria-hidden className="size-3" />
-                {formatNumber(journey.photoCount)}
+                {formatNumber(journey.photoCount, locale)}
               </span>
             )}
           </div>

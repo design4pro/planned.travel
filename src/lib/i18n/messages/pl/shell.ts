@@ -394,6 +394,110 @@ const messages = {
   'role.admin': 'Administrator',
   'role.member': 'Członek',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} wyjazd',
+    few: '{value} wyjazdy',
+    many: '{value} wyjazdów',
+    other: '{value} wyjazdu',
+  },
+  'trips.count.favourites': {
+    one: '{value} ulubiony',
+    few: '{value} ulubione',
+    many: '{value} ulubionych',
+    other: '{value} ulubionego',
+  },
+  'trips.count.archived': {
+    one: '{value} zarchiwizowany',
+    few: '{value} zarchiwizowane',
+    many: '{value} zarchiwizowanych',
+    other: '{value} zarchiwizowanego',
+  },
+  'trips.atLimit.body':
+    'Twój plan obejmuje {trips}. Zarchiwizuj któryś zakończony albo przejdź na wyższy plan, żeby trzymać więcej otwartych naraz.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Nowy dziennik',
+  'newJourney.title': 'Zacznij dziennik',
+  'newJourney.description':
+    'Dziennik to zapisana strona wyjazdu — wpisy w porządku dat, ze zdjęciami i pogodą, którą pamiętasz.',
+  'newJourney.titlePlaceholder': 'Dwa tygodnie w Kioto',
+  'newJourney.subtitle': 'Podtytuł',
+  'newJourney.subtitleHint': 'Jedna linia pod tytułem, na okładce.',
+  'newJourney.subtitlePlaceholder':
+    'Świątynie, pociągi i zdecydowanie za dużo matchy',
+  'newJourney.trip': 'Na podstawie wyjazdu',
+  'newJourney.tripHint': 'Opcjonalnie — wiąże opowieść z jej planem.',
+  'newJourney.tripNone': 'Bez powiązania z wyjazdem',
+  'newJourney.datesError': 'Data końca jest przed początkiem.',
+  'newJourney.submit': 'Utwórz dziennik',
+  'newJourney.creating': 'Tworzenie dziennika',
+  'newJourney.created': 'Dziennik rozpoczęty',
+  'newJourney.createdBody': 'Dodaj pierwszy wpis, żeby zacząć opowieść.',
+  'newJourney.error':
+    'Nie udało się utworzyć dziennika. Spróbuj ponownie za chwilę.',
+  'newCollection.trigger': 'Nowa kolekcja',
+  'newCollection.title': 'Zacznij kolekcję',
+  'newCollection.description':
+    'Miejsce na miejsca, które znajdujesz, zanim wiesz, do którego wyjazdu należą.',
+  'newCollection.namePlaceholder': 'Kawa warta przejścia przez miasto',
+  'newCollection.descriptionHint': 'Co tu należy, a co nie.',
+  'newCollection.submit': 'Utwórz kolekcję',
+  'newCollection.creating': 'Tworzenie kolekcji',
+  'newCollection.created': 'Kolekcja utworzona',
+  'newCollection.createdBody': 'Zacznij zapisywać do niej miejsca.',
+  'newCollection.error':
+    'Nie udało się utworzyć kolekcji. Spróbuj ponownie za chwilę.',
+
+  'newTrip.title': 'Zacznij nowy wyjazd',
+  'newTrip.description':
+    'Wystarczy tytuł. Daty zbudują plan dzień po dniu, a resztę można dopisać, gdy będzie wiadoma.',
+  'newTrip.name': 'Nazwa wyjazdu',
+  'newTrip.namePlaceholder': 'Kioto w czasie kwitnienia wiśni',
+  'newTrip.destination': 'Cel',
+  'newTrip.destinationHint': 'Miasto, region albo cała trasa.',
+  'newTrip.destinationPlaceholder': 'Kioto, Japonia',
+  'newTrip.departure': 'Wyjazd',
+  'newTrip.return': 'Powrót',
+  'newTrip.returnError': 'Data powrotu jest przed wyjazdem.',
+  'newTrip.currency': 'Waluta budżetu',
+  'newTrip.currencyHint': 'W niej sumujemy każdy wydatek tego wyjazdu.',
+  'newTrip.submit': 'Utwórz wyjazd',
+  'newTrip.creating': 'Tworzenie wyjazdu',
+  'newTrip.error':
+    'Nie udało się utworzyć wyjazdu. Spróbuj ponownie za chwilę.',
+  'newTrip.created': 'Wyjazd utworzony',
+  'newTrip.createdBody': 'Zacznij nanosić miejsca na mapę.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Kto to zobaczy',
+  'visibility.private': 'Tylko ja',
+  'visibility.organization': 'Wszyscy w przestrzeni',
+  'visibility.public': 'Każdy, kto ma link',
+
+  'trips.error': 'Twoje wyjazdy się nie wczytały',
+  'trips.eyebrow': 'Przestrzeń',
+  'trips.nothingPlanned': 'Nic jeszcze nie zaplanowano',
+  'trips.search': 'Szukaj wyjazdów',
+  'trips.atLimit.title': 'Wykorzystałeś każdy wyjazd, na jaki pozwala plan',
+  'trips.atLimit.action': 'Porównaj plany',
+  'trips.noMatch.title': 'Nic nie pasuje do tego filtra',
+  'trips.noMatch.body':
+    'Zmień etap, wyczyść wyszukiwanie albo zajrzyj do archiwum.',
+  'trips.noMatch.action': 'Wyczyść filtry',
+  'trips.empty.body':
+    'Wyjazd trzyma plan dnia, mapę, rezerwacje, listy pakowania i pieniądze. Zacznij jeden, a reszta pójdzie za nim.',
+  'trips.next.title': 'Gdzieś dalej',
+  'trips.next.body':
+    'Zacznij wyjazd, a planned.travel zbuduje dzień na każdą datę, gotowy na to, co zapisałeś.',
+  'trips.savedPlaces': 'Zapisane miejsca',
+  'trips.filter.all': 'Wszystkie',
+  'trips.filter.favourites': 'Ulubione',
+  'trips.card.favourite': 'Ulubiony',
+  'trips.card.noDestination': 'Cel jeszcze nieustalony',
+  'trips.card.noDates': 'Daty do ustalenia',
+  'trips.card.startsIn': 'za {days} dni',
+  'trips.card.days': '{days} dni',
   'metric.trips': 'Wyjazdy',
   'metric.places': 'Miejsca',
   'metric.members': 'Członkowie',

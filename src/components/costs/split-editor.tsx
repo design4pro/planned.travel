@@ -25,6 +25,7 @@ import {
   TabsTrigger,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import {
   formatMoney,
   isSplitMethod,
@@ -35,6 +36,7 @@ import {
   toAmountInput,
 } from '#/lib/money'
 
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 import type { SplitMethod, SplitPreview } from '#/lib/money'
 import type { CostsPerson } from '#/server/fns/costs'
@@ -58,33 +60,33 @@ export interface SplitDraft {
 
 const METHODS: ReadonlyArray<{
   readonly value: SplitMethod
-  readonly label: string
+  readonly label: MessageKey
   readonly icon: ReactNode
-  readonly hint: string
+  readonly hint: MessageKey
 }> = [
   {
     value: 'equal',
-    label: 'Equally',
+    label: 'costs.split.method.equal',
     icon: <Equal />,
-    hint: 'Everyone included pays the same, and the odd minor unit goes to the first traveller in the list.',
+    hint: 'costs.split.method.equalHint',
   },
   {
     value: 'exact',
-    label: 'Exact',
+    label: 'costs.split.method.exact',
     icon: <Scale />,
-    hint: 'Type what each traveller actually owes. The amounts have to add up to the total.',
+    hint: 'costs.split.method.exactHint',
   },
   {
     value: 'shares',
-    label: 'Shares',
+    label: 'costs.split.method.shares',
     icon: <PieChart />,
-    hint: 'Weight the split — 2 shares for a couple, 1 for everyone else.',
+    hint: 'costs.split.method.sharesHint',
   },
   {
     value: 'percentage',
-    label: 'Percent',
+    label: 'costs.split.method.percentage',
     icon: <Percent />,
-    hint: 'Split by percentage. The percentages have to add up to 100.',
+    hint: 'costs.split.method.percentageHint',
   },
 ]
 
@@ -127,13 +129,19 @@ export function draftFor(
     rows: people.map((person) => {
       const share = byUser.get(person.userId)
       const proportion =
-        share === undefined || amountMinor === 0 ? 0 : (share.shareMinor / amountMinor) * 100
+        share === undefined || amountMinor === 0
+          ? 0
+          : (share.shareMinor / amountMinor) * 100
       return {
         userId: person.userId,
         included: share !== undefined,
-        exact: share === undefined ? '' : toAmountInput(share.shareMinor, currency),
+        exact:
+          share === undefined ? '' : toAmountInput(share.shareMinor, currency),
         weight: share === undefined ? '1' : String(share.weight),
-        percentage: share === undefined ? '' : (Math.round(proportion * 100) / 100).toString(),
+        percentage:
+          share === undefined
+            ? ''
+            : (Math.round(proportion * 100) / 100).toString(),
       }
     }),
   }
@@ -156,7 +164,10 @@ export function draftToInputs(
     .filter((row) => row.included)
     .map((row) => {
       if (draft.method === 'exact') {
-        return { userId: row.userId, shareMinor: exactField(row.exact, currency) }
+        return {
+          userId: row.userId,
+          shareMinor: exactField(row.exact, currency),
+        }
       }
       if (draft.method === 'percentage') {
         return { userId: row.userId, percentage: percentField(row.percentage) }
@@ -217,14 +228,21 @@ export function SplitEditor({
   preview,
   disabled = false,
 }: SplitEditorProps) {
+  const t = useTranslate()
+  const locale = useLocale()
   const included = draft.rows.filter((row) => row.included).length
-  const shareOf = new Map(preview.rows.map((row) => [row.userId, row.shareMinor]))
-  const method = METHODS.find((entry) => entry.value === draft.method) ?? METHODS[0]
+  const shareOf = new Map(
+    preview.rows.map((row) => [row.userId, row.shareMinor]),
+  )
+  const method =
+    METHODS.find((entry) => entry.value === draft.method) ?? METHODS[0]
 
   const setRow = (userId: string, patch: Partial<SplitDraftRow>): void => {
     onDraftChange({
       ...draft,
-      rows: draft.rows.map((row) => (row.userId === userId ? { ...row, ...patch } : row)),
+      rows: draft.rows.map((row) =>
+        row.userId === userId ? { ...row, ...patch } : row,
+      ),
     })
   }
 
@@ -275,11 +293,11 @@ export function SplitEditor({
   return (
     <section
       className="flex flex-col gap-3 rounded-lg border border-edge-faint bg-surface-2 p-4"
-      aria-label="Split between travellers"
+      aria-label={t('costs.split.section')}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SectionLabel icon={<Users />} as="h3">
-          Split between
+          {t('costs.split.label')}
         </SectionLabel>
         <div className="flex items-center gap-1.5">
           <Button
@@ -290,7 +308,7 @@ export function SplitEditor({
             disabled={disabled || included === draft.rows.length}
             onClick={() => setAll(true)}
           >
-            Everyone
+            {t('costs.split.everyone')}
           </Button>
           <Button
             type="button"
@@ -300,7 +318,7 @@ export function SplitEditor({
             disabled={disabled || included === 0}
             onClick={() => setAll(false)}
           >
-            Nobody
+            {t('costs.split.nobody')}
           </Button>
         </div>
       </div>
@@ -311,7 +329,7 @@ export function SplitEditor({
         variant="segmented"
         size="sm"
       >
-        <TabsList aria-label="How this expense divides">
+        <TabsList aria-label={t('costs.split.how')}>
           {METHODS.map((entry) => (
             <TabsTrigger
               key={entry.value}
@@ -319,13 +337,13 @@ export function SplitEditor({
               icon={entry.icon}
               disabled={disabled}
             >
-              {entry.label}
+              {t(entry.label)}
             </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
 
-      <p className="text-caption text-ink-3">{method.hint}</p>
+      <p className="text-caption text-ink-3">{t(method.hint)}</p>
 
       <ul className="flex flex-col divide-y divide-edge-faint">
         {people.map((person) => {
@@ -346,7 +364,9 @@ export function SplitEditor({
                 size="sm"
                 checked={row.included}
                 disabled={disabled}
-                onCheckedChange={(next) => setRow(person.userId, { included: next === true })}
+                onCheckedChange={(next) =>
+                  setRow(person.userId, { included: next === true })
+                }
                 aria-label={`Include ${person.name} in this split`}
               />
               <Avatar name={person.name} src={person.image} size="xs" />
@@ -354,30 +374,33 @@ export function SplitEditor({
                 {person.userId === viewerUserId ? 'You' : person.name}
               </span>
 
-              <span className="ml-auto flex shrink-0 items-center gap-3">
+              <span className="ms-auto flex shrink-0 items-center gap-3">
                 {row.included && draft.method !== 'equal' ? (
                   <Input
                     size="sm"
-                    className="w-24 text-right tabular-nums"
+                    className="w-24 text-end tabular-nums"
                     inputMode="decimal"
                     autoComplete="off"
                     disabled={disabled}
-                    aria-label={unitLabel(draft.method, person.name)}
+                    aria-label={unitLabel(t, draft.method, person.name)}
                     trailing={draft.method === 'percentage' ? '%' : undefined}
                     value={fieldValue(draft.method, row)}
                     onChange={(event) =>
-                      setRow(person.userId, fieldPatch(draft.method, event.target.value))
+                      setRow(
+                        person.userId,
+                        fieldPatch(draft.method, event.target.value),
+                      )
                     }
                   />
                 ) : null}
 
                 <span
                   className={cn(
-                    'w-24 shrink-0 text-right text-caption font-semibold tabular-nums',
+                    'w-24 shrink-0 text-end text-caption font-semibold tabular-nums',
                     row.included ? 'text-ink' : 'text-ink-4',
                   )}
                 >
-                  {row.included ? formatMoney(share, currency) : '—'}
+                  {row.included ? formatMoney(share, currency, locale) : '—'}
                 </span>
               </span>
             </li>
@@ -385,19 +408,24 @@ export function SplitEditor({
         })}
       </ul>
 
-      <RemainderBar preview={preview} amountMinor={amountMinor} currency={currency} />
+      <RemainderBar
+        preview={preview}
+        amountMinor={amountMinor}
+        currency={currency}
+      />
     </section>
   )
 }
 
-function unitLabel(method: SplitMethod, name: string): string {
+/** The accessible name on one traveller's number field. */
+function unitLabel(t: Translate, method: SplitMethod, name: string): string {
   if (method === 'exact') {
-    return `Exact amount for ${name}`
+    return t('costs.split.exactFor', { name })
   }
   if (method === 'percentage') {
-    return `Percentage for ${name}`
+    return t('costs.split.percentFor', { name })
   }
-  return `Shares for ${name}`
+  return t('costs.split.sharesFor', { name })
 }
 
 function fieldValue(method: SplitMethod, row: SplitDraftRow): string {
@@ -410,7 +438,10 @@ function fieldValue(method: SplitMethod, row: SplitDraftRow): string {
   return row.weight
 }
 
-function fieldPatch(method: SplitMethod, value: string): Partial<SplitDraftRow> {
+function fieldPatch(
+  method: SplitMethod,
+  value: string,
+): Partial<SplitDraftRow> {
   if (method === 'exact') {
     return { exact: value }
   }
@@ -437,8 +468,12 @@ function RemainderBar({
   amountMinor: number
   currency: string
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
   const ratio =
-    amountMinor === 0 ? 0 : Math.min(Math.abs(preview.allocatedMinor) / amountMinor, 1)
+    amountMinor === 0
+      ? 0
+      : Math.min(Math.abs(preview.allocatedMinor) / amountMinor, 1)
   const over = preview.remainderMinor < 0
   const tone = preview.balanced ? 'success' : over ? 'danger' : 'warning'
 
@@ -447,29 +482,57 @@ function RemainderBar({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-caption text-ink-3">
           <span className="font-semibold tabular-nums text-ink">
-            {formatMoney(preview.allocatedMinor, currency)}
-          </span>{' '}
-          of {formatMoney(amountMinor, currency)} allocated
+            {t('costs.split.allocated', {
+              allocated: formatMoney(preview.allocatedMinor, currency, locale),
+              total: formatMoney(amountMinor, currency, locale),
+            })}
+          </span>
         </p>
-        <Badge tone={tone} size="md" icon={preview.balanced ? <Check /> : undefined}>
+        <Badge
+          tone={tone}
+          size="md"
+          icon={preview.balanced ? <Check /> : undefined}
+        >
           {preview.balanced
-            ? 'Balanced'
+            ? t('costs.split.balanced')
             : over
-              ? `${formatMoney(-preview.remainderMinor, currency)} over`
-              : `${formatMoney(preview.remainderMinor, currency)} left`}
+              ? t('costs.split.over', {
+                  amount: formatMoney(
+                    -preview.remainderMinor,
+                    currency,
+                    locale,
+                  ),
+                })
+              : t('costs.split.left', {
+                  amount: formatMoney(preview.remainderMinor, currency, locale),
+                })}
         </Badge>
       </div>
+      {/* `origin-left` on the fill has no logical spelling — `transform-origin`
+          takes physical keywords only — so the track turns round instead and the
+          bar grows from wherever the reader starts. Same device as
+          `ui/progress.tsx`. */}
       <div
         aria-hidden
-        className="h-1.5 overflow-hidden rounded-full bg-surface-inset"
+        className="h-1.5 overflow-hidden rounded-full bg-surface-inset rtl:-scale-x-100"
       >
         <span
-          data-motion-transform=""
           className={cn(
-            'block h-full origin-left rounded-full transition-transform duration-base ease-out-quint',
+            'block h-full origin-left rounded-full transition-[scale] duration-base ease-out-quint',
             preview.balanced ? 'bg-success' : over ? 'bg-danger' : 'bg-warning',
           )}
-          style={{ transform: `scaleX(${ratio})` }}
+          /*
+            `scale`, not `transform`, and no `data-motion-transform`.
+            This bar's width *is* the number — how much of the expense is
+            claimed — so it is a value, not motion. It carried the attribute,
+            and the reduced-motion block resets `transform: none !important` on
+            anything that does, which drew every split as fully claimed for the
+            readers who asked for less movement. `scale` is a separate property
+            the reset does not touch, and the global `transition-duration`
+            collapse still removes the animation. `progress.tsx` reads the same
+            way for the same reason.
+          */
+          style={{ scale: `${ratio} 1` }}
         />
       </div>
       {preview.error === null ? null : (

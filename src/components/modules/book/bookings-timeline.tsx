@@ -23,8 +23,13 @@ import {
   Users,
 } from 'lucide-react'
 
-import { Button, EmptyState } from '#/components/ui'
+import { Button, Chip, EmptyState } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { formatWeekday } from '#/lib/format'
+import { formatMoney } from '#/lib/money'
+import { useLocale, useTranslate } from '#/lib/i18n'
+
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import { deleteBookingFn, setBookingStatusFn } from '#/server/fns/reservations'
 import {
   ConfirmDialog,
@@ -46,7 +51,6 @@ import {
   isBookingType,
 } from './booking-form'
 
-import type { ReactNode } from 'react'
 import type { BadgeTone } from '#/components/ui'
 import type { BookingDayOption, BookingRow } from '#/server/fns/reservations'
 import type { ConfirmRequest, FactItem, StatusOption } from '../shared'
@@ -63,64 +67,56 @@ const STATUS_TONE: { readonly [K in BookingStatus]: BadgeTone } = {
   cancelled: 'danger',
 }
 
-const STATUS_LABEL: { readonly [K in BookingStatus]: string } = {
-  none: 'No status',
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  completed: 'Done',
-  cancelled: 'Cancelled',
+const STATUS_LABEL: { readonly [K in BookingStatus]: MessageKey } = {
+  none: 'modules.book.status.none',
+  pending: 'modules.book.status.pending',
+  confirmed: 'modules.book.status.confirmed',
+  completed: 'modules.book.status.completed',
+  cancelled: 'modules.book.status.cancelled',
 }
 
-const STATUS_OPTIONS: ReadonlyArray<StatusOption> = BOOKING_STATUSES.map(
-  (value) => ({ value, label: STATUS_LABEL[value], tone: STATUS_TONE[value] }),
-)
+/**
+ * The options and the current one, both resolved at render.
+ *
+ * `STATUS_LABEL` holds keys rather than words, so neither of these can be a
+ * module constant any more: a constant cannot call a hook, and a label frozen
+ * at import time would be frozen in one language.
+ */
+function statusOptions(t: Translate): ReadonlyArray<StatusOption> {
+  return BOOKING_STATUSES.map((value) => ({
+    value,
+    label: t(STATUS_LABEL[value]),
+    tone: STATUS_TONE[value],
+  }))
+}
 
-function statusOption(status: string): StatusOption {
+function statusOption(status: string, t: Translate): StatusOption {
   const known = isBookingStatus(status) ? status : 'none'
   return {
     value: known,
-    label: STATUS_LABEL[known],
+    label: t(STATUS_LABEL[known]),
     tone: STATUS_TONE[known],
   }
 }
 
-const LOCALE = 'en-GB'
-
-const stampFormatter = new Intl.DateTimeFormat(LOCALE, {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
-
-const yearFormatter = new Intl.DateTimeFormat(LOCALE, {
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-function stampFor(date: string): {
+/**
+ * The date stamp beside a group, split into the weekday line and the year under
+ * it. Both come out of `format.ts`, which reads an ISO day in UTC for the reason
+ * the costs module records: a calendar date read in the browser's zone moves half
+ * a Tokyo trip to the previous day for a reader in London.
+ */
+function stampFor(
+  date: string,
+  locale: Locale,
+): {
   readonly label: string
   readonly year: string
 } {
-  const parsed = new Date(`${date}T00:00:00.000Z`)
-  if (Number.isNaN(parsed.getTime())) {
+  const label = formatWeekday(date, locale)
+  if (label === null) {
     return { label: date, year: '' }
   }
-  return {
-    label: stampFormatter.format(parsed),
-    year: yearFormatter.format(parsed),
-  }
-}
-
-function formatMoney(minor: number, currency: string): string {
-  const code = /^[A-Z]{3}$/.test(currency) ? currency : 'EUR'
-  const formatter = new Intl.NumberFormat(LOCALE, {
-    style: 'currency',
-    currency: code,
-    currencyDisplay: 'narrowSymbol',
-  })
-  const digits = formatter.resolvedOptions().minimumFractionDigits ?? 2
-  return formatter.format(minor / 10 ** digits)
+  return { label, year: date.slice(0, 4) }
 }
 
 function timeRange(start: string | null, end: string | null): string | null {
@@ -156,6 +152,8 @@ export function BookingsTimeline({
   newBookingOpen,
   onNewBookingOpenChange,
 }: BookingsTimelineProps) {
+  const t = useTranslate()
+
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [editing, setEditing] = useState<BookingRow | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
@@ -163,12 +161,12 @@ export function BookingsTimeline({
   const statuses = useOptimistic<BookingStatus>()
 
   const setStatus = useAction(setBookingStatusFn, {
-    failure: 'The status did not change',
-    fallback: 'The booking is still in its previous state.',
+    failure: t('modules.book.toast.statusFailed'),
+    fallback: t('modules.book.toast.statusFailedBody'),
   })
   const remove = useAction(deleteBookingFn, {
-    success: 'Booking removed',
-    failure: 'The booking was not removed',
+    success: t('modules.book.toast.removed'),
+    failure: t('modules.book.toast.removeFailed'),
     onSuccess: () => setConfirm(null),
   })
 
@@ -218,15 +216,15 @@ export function BookingsTimeline({
           size="lg"
           tone="brand"
           icon={<Ticket />}
-          title="Nothing booked yet"
-          description="Stays, tables, tours and tickets belong here — with the confirmation number where you can find it at the door, and the date it lands on the timeline."
+          title={t('modules.book.empty.title')}
+          description={t('modules.book.empty.body')}
           action={
             <Button
               variant="primary"
               shape="pill"
               onClick={() => onNewBookingOpenChange(true)}
             >
-              Add the first booking
+              {t('modules.book.empty.action')}
             </Button>
           }
         />
@@ -244,23 +242,23 @@ export function BookingsTimeline({
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <FilterRow>
-        <FilterChip
+        <Chip
           selected={filter === 'all'}
           count={rendered.length}
           onClick={() => setFilter('all')}
         >
-          Everything
-        </FilterChip>
+          {t('modules.filter.all')}
+        </Chip>
         {BOOKING_STATUSES.filter((status) => (counts.get(status) ?? 0) > 0).map(
           (status) => (
-            <FilterChip
+            <Chip
               key={status}
               selected={filter === status}
               count={counts.get(status) ?? 0}
               onClick={() => setFilter(status)}
             >
-              {STATUS_LABEL[status]}
-            </FilterChip>
+              {t(STATUS_LABEL[status])}
+            </Chip>
           ),
         )}
       </FilterRow>
@@ -270,15 +268,17 @@ export function BookingsTimeline({
           variant="filled"
           size="md"
           icon={<CalendarOff />}
-          title="Nothing with that status"
-          description="Every booking on this trip is at a different stage. Switch back to “Everything” to see them all."
+          title={t('modules.book.filtered.title')}
+          description={t('modules.book.filtered.body', {
+            label: t('modules.filter.all'),
+          })}
           action={
             <Button
               variant="secondary"
               shape="pill"
               onClick={() => setFilter('all')}
             >
-              Show everything
+              {t('modules.book.filtered.action')}
             </Button>
           }
         />
@@ -296,10 +296,11 @@ export function BookingsTimeline({
                 onStatus={changeStatus}
                 onDelete={(booking) =>
                   setConfirm({
-                    title: `Remove “${booking.title}”?`,
-                    description:
-                      'It comes off the timeline for good. If it is only cancelled, set its status to Cancelled instead so you keep the record.',
-                    confirmLabel: 'Remove booking',
+                    title: t('modules.remove.confirmTitle', {
+                      name: booking.title,
+                    }),
+                    description: t('modules.book.remove.body'),
+                    confirmLabel: t('modules.book.remove.confirm'),
                     onConfirm: () =>
                       remove.run({
                         data: { tripId, reservationId: booking.id },
@@ -339,43 +340,6 @@ export function BookingsTimeline({
   )
 }
 
-function FilterChip({
-  selected,
-  count,
-  onClick,
-  children,
-}: {
-  selected: boolean
-  count: number
-  onClick: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={cn(
-        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-caption font-semibold whitespace-nowrap focus-ring',
-        'transition-[background-color,border-color,color] duration-base ease-out-quint',
-        selected
-          ? 'border-transparent bg-accent text-accent-on'
-          : 'border-edge bg-surface text-ink-2 hover:border-edge-strong hover:text-ink',
-      )}
-    >
-      {children}
-      <span
-        className={cn(
-          'rounded-full px-1.5 text-[0.6875rem] leading-4 tabular-nums',
-          selected ? 'bg-current/15' : 'bg-surface-2 text-ink-4',
-        )}
-      >
-        {count}
-      </span>
-    </button>
-  )
-}
-
 /* --------------------------------------------------------------- one group */
 
 function TimelineGroup({
@@ -397,7 +361,10 @@ function TimelineGroup({
   onStatus: (booking: BookingRow, next: string) => void
   onDelete: (booking: BookingRow) => void
 }) {
-  const stamp = group.date === null ? null : stampFor(group.date)
+  const locale = useLocale()
+  const t = useTranslate()
+
+  const stamp = group.date === null ? null : stampFor(group.date, locale)
 
   return (
     <section className="relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] gap-x-4 sm:grid-cols-[5rem_minmax(0,1fr)] sm:gap-x-6">
@@ -407,7 +374,7 @@ function TimelineGroup({
       <span
         aria-hidden
         className={cn(
-          'absolute top-0 bottom-0 left-[1.6875rem] w-px bg-edge sm:left-[2.4375rem]',
+          'absolute top-0 bottom-0 start-[1.6875rem] w-px bg-edge sm:start-[2.4375rem]',
           first && 'top-3',
           last && 'bottom-6',
         )}
@@ -431,20 +398,20 @@ function TimelineGroup({
       </div>
 
       <div className="min-w-0 pt-1 pb-6">
-        <h3 className="mb-2.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <h2 className="mb-2.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
           <span className="text-label font-semibold text-ink">
-            {stamp === null ? 'No date yet' : stamp.label}
+            {stamp === null ? t('modules.book.noDate') : stamp.label}
           </span>
           {stamp === null ? (
             <span className="text-caption text-ink-4">
-              Give these a date and they join the timeline
+              {t('modules.book.undated')}
             </span>
           ) : (
             <span className="text-caption tabular-nums text-ink-4">
               {stamp.year}
             </span>
           )}
-        </h3>
+        </h2>
 
         <ul className="flex min-w-0 flex-col gap-3">
           {group.bookings.map((booking) => (
@@ -486,27 +453,37 @@ function BookingCard({
   onStatus: (next: string) => void
   onDelete: () => void
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
+
   const type = isBookingType(booking.type) ? booking.type : 'other'
   const Icon = BOOKING_TYPE_ICON[type]
   const cancelled = booking.status === 'cancelled'
   const times = timeRange(booking.startTime, booking.endTime)
 
   const facts: Array<FactItem> = [
-    ...(times === null ? [] : [{ label: 'Time', value: times }]),
+    ...(times === null
+      ? []
+      : [{ label: t('modules.field.time'), value: times }]),
     ...(booking.endDate === null || booking.endDate === booking.startDate
       ? []
-      : [{ label: 'Until', value: stampFor(booking.endDate).label }]),
+      : [
+          {
+            label: t('modules.book.until'),
+            value: stampFor(booking.endDate, locale).label,
+          },
+        ]),
     ...(booking.provider === null
       ? []
-      : [{ label: 'Provider', value: booking.provider }]),
+      : [{ label: t('modules.book.provider'), value: booking.provider }]),
     ...(booking.location === null
       ? []
-      : [{ label: 'Where', value: booking.location }]),
+      : [{ label: t('modules.book.where'), value: booking.location }]),
     ...(booking.guests === null || booking.guests === 0
       ? []
       : [
           {
-            label: 'Guests',
+            label: t('modules.book.guests'),
             value: (
               <span className="inline-flex items-center gap-1.5">
                 <Users aria-hidden className="size-3.5 text-ink-4" />
@@ -519,10 +496,11 @@ function BookingCard({
       ? []
       : [
           {
-            label: 'Price',
+            label: t('modules.field.price'),
             value: formatMoney(
               booking.priceMinor,
               booking.currency ?? currency,
+              locale,
             ),
           },
         ]),
@@ -530,12 +508,14 @@ function BookingCard({
       ? []
       : [
           {
-            label: 'Confirmation',
+            label: t('modules.book.confirmation'),
             mono: true,
             value: (
               <CopyValue
                 value={booking.confirmationNumber}
-                label={`the confirmation number for ${booking.title}`}
+                label={t('modules.book.copyConfirmation', {
+                  title: booking.title,
+                })}
               />
             ),
           },
@@ -553,26 +533,26 @@ function BookingCard({
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-edge-faint px-4 py-3 sm:px-5">
         <span className="inline-flex shrink-0 items-center gap-1.5 text-caption font-medium text-ink-3">
           <Icon aria-hidden className="size-3.5" />
-          {bookingTypeLabel(type)}
+          {t(bookingTypeLabel(type))}
         </span>
-        <h4
+        <h3
           className={cn(
             'min-w-0 flex-1 truncate text-label font-semibold text-ink',
             cancelled && 'line-through',
           )}
         >
           {booking.title}
-        </h4>
+        </h3>
         <StatusPill
           status={booking.status}
           title={booking.title}
           onSelect={onStatus}
         />
         <RowMenu
-          label={`Actions for ${booking.title}`}
+          label={t('modules.actionsFor', { name: booking.title })}
           items={[
             {
-              label: 'Edit booking…',
+              label: t('modules.book.menu.edit'),
               icon: <Pencil aria-hidden />,
               onSelect: onEdit,
             },
@@ -580,7 +560,7 @@ function BookingCard({
               ? []
               : [
                   {
-                    label: 'Open the booking',
+                    label: t('modules.book.menu.open'),
                     icon: <ExternalLink aria-hidden />,
                     onSelect: () => {
                       window.open(
@@ -592,7 +572,7 @@ function BookingCard({
                   },
                 ]),
             {
-              label: 'Remove booking',
+              label: t('modules.book.remove.confirm'),
               icon: <Trash2 aria-hidden />,
               tone: 'danger' as const,
               separated: true,
@@ -605,21 +585,20 @@ function BookingCard({
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-5">
         {facts.length === 0 ? (
           <p className="text-caption text-ink-4">
-            Nothing recorded yet beyond the name. Open it to add the time, the
-            price and the confirmation number.
+            {t('modules.book.emptyFacts')}
           </p>
         ) : (
           <FactList items={facts} columns={facts.length > 4 ? 4 : 3} />
         )}
 
         {booking.notes === null ? null : (
-          <FactNote label="Notes">{booking.notes}</FactNote>
+          <FactNote label={t('modules.field.notes')}>{booking.notes}</FactNote>
         )}
 
         {day === undefined ? null : (
           <p className="inline-flex items-center gap-1.5 text-caption text-ink-3">
             <Link2 aria-hidden className="size-3.5 text-ink-4" />
-            On the itinerary: {dayLabel(day)}
+            {t('modules.book.onItinerary', { day: dayLabel(day, t) })}
           </p>
         )}
 
@@ -627,7 +606,7 @@ function BookingCard({
           <div>
             <Button asChild variant="secondary" size="sm" shape="pill">
               <a href={booking.url} target="_blank" rel="noreferrer noopener">
-                Open the booking
+                {t('modules.book.menu.open')}
                 <ExternalLink aria-hidden />
               </a>
             </Button>
@@ -647,11 +626,13 @@ function StatusPill({
   title: string
   onSelect: (next: string) => void
 }) {
+  const t = useTranslate()
+
   return (
     <StatusMenu
-      current={statusOption(status)}
-      options={STATUS_OPTIONS}
-      label={`Status of ${title}`}
+      current={statusOption(status, t)}
+      options={statusOptions(t)}
+      label={t('modules.statusOf', { title })}
       onSelect={onSelect}
     />
   )

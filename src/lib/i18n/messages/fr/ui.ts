@@ -27,15 +27,18 @@ import type En from '../en/ui'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Vider',
+  'action.clearFilters': 'Effacer les filtres',
   'action.close': 'Fermer',
   'action.dismiss': 'Masquer',
   'action.remove': 'Retirer',
+  'action.keep': 'Conserver',
   'action.undo': 'Annuler',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Chargement',
   'status.working': 'Enregistrement',
   'status.searching': 'Recherche',
+  'status.removing': 'Suppression',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} est en ligne',

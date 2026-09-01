@@ -117,7 +117,8 @@ const DUE_AT = Date.UTC(2026, 2, 10, 8)
 
 /**
  * The `eventType` the settings screen writes when "Departure reminders" is switched off — the
- * `trip.starting_soon` row of `NOTIFICATION_EVENTS` in `src/routes/_app/-lib/notifications.ts`.
+ * `trip.starting_soon` switch the preferences screen draws from its own
+ * `settings.notifications.event.*` keys.
  *
  * Spelled out rather than imported from {@link REMINDER_EVENT_KIND}, because the property under
  * test is precisely that the two are the same string: a sweep dispatching under a kind no screen

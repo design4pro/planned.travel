@@ -138,7 +138,6 @@ const messages = {
   'users.filter.role.curator': 'Người phụ trách',
   'users.filter.status.label': 'Lọc theo trạng thái tài khoản',
   'users.filter.status.any': 'Trạng thái bất kỳ',
-  'users.filter.clear': 'Xoá bộ lọc',
   'users.filter.hint':
     'Thu hẹp theo vai trò hoặc theo trạng thái — mỗi lần một thứ.',
   'users.column.account': 'Tài khoản',

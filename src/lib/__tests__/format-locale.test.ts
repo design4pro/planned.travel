@@ -601,6 +601,49 @@ describe('the shipped source under src/lib', () => {
     ).toEqual([])
   })
 
+  /**
+   * The two literals in `src/lib` that no reader ever sees.
+   *
+   * `time.ts` hands `en-GB` to `Intl` to find out whether a time-zone name is
+   * one the runtime knows, and throws the formatter away without formatting
+   * anything. It picks `en-CA` for the cache key because that locale's numeric
+   * date format is already `YYYY-MM-DD`, so the key needs no reassembly from
+   * parts. Neither choice reaches a screen; both would be wrong as a reader's
+   * locale, and that is the point.
+   */
+  const PINNED_BY_DESIGN: ReadonlyArray<string> = [
+    'time.ts: en-GB',
+    'time.ts: en-CA',
+  ]
+
+  it('never pins a locale tag as a literal', () => {
+    // The defect this pins: `money.ts` held `const LOCALE = 'en-GB'` and every
+    // amount in the costs module went through it, so a Polish reader's balance
+    // said `£2,384.00` where their own conventions say `2384,00 £`. The rule
+    // above checks the *shape* of the argument handed to `Intl`; this one checks
+    // that a locale is never decided here at all. The frozen tags in
+    // `format-tables.ts` are the one exception, and they are the table itself.
+    const offenders: Array<string> = []
+    for (const path of files) {
+      if (path.endsWith('format-tables.ts')) {
+        continue
+      }
+      const source = readFileSync(path, 'utf8')
+        .split('\n')
+        .filter((line) => !COMMENT.test(line))
+        .join(' ')
+      for (const call of source.matchAll(/new Intl\.\w+\(\s*'([\w-]+)'/g)) {
+        offenders.push(`${path.split('/').at(-1)}: ${call[1]}`)
+      }
+    }
+    // A list rather than a set: a second pin with a tag already on it makes the
+    // list longer and fails, which a set would absorb.
+    expect(
+      offenders.sort(),
+      'a locale belongs to the reader; pass it in rather than choosing one here',
+    ).toEqual([...PINNED_BY_DESIGN].sort())
+  })
+
   it('never calls Intl.DisplayNames', () => {
     const offenders = files.filter((path) =>
       readFileSync(path, 'utf8')
@@ -620,4 +663,134 @@ afterEach(() => {
   // that swaps `Intl.DateTimeFormat` out must not leave a stubbed instance
   // behind it. Constructing one here proves the real constructor is back.
   expect(typeof Intl.DateTimeFormat).toBe('function')
+})
+
+/**
+ * Every money and day figure on a screen carries the reader's locale.
+ *
+ * The five formatters in `src/lib/money.ts` and the two day helpers in
+ * `src/components/costs/data.ts` all default their locale to `en`, so that the
+ * signature could change without thirty-seven call sites changing in the same
+ * commit. The cost of that default is that a call which forgets the argument
+ * compiles, runs, and prints English at a Polish reader — invisible to the type
+ * checker, and invisible on an English screen, which is the only screen a
+ * developer usually looks at.
+ *
+ * So the argument is required by a rule instead. The default stays for the
+ * places that genuinely have no reader: a CSV export, a test, a server function.
+ */
+describe('every rendered figure takes a locale', () => {
+  const ROOTS = [
+    join(process.cwd(), 'src', 'components'),
+    join(process.cwd(), 'src', 'routes'),
+  ]
+  const COMMENT_LINE = /^\s*(\/\/|\/\*|\*)/
+  /**
+   * Every export of `format.ts` and `money.ts` whose output a reader sees and
+   * whose locale defaults. `formatTime` and `formatTimeRange` are absent because
+   * they slice `HH:MM` off a stored string and take no locale at all.
+   */
+  const FORMATTERS = [
+    'formatMoney',
+    'formatMoneyPlain',
+    'formatSignedMoney',
+    'formatConversion',
+    'formatExchangeRate',
+    'formatDayLabel',
+    'formatDayShort',
+    'groupByDay',
+    'formatDate',
+    'formatDayMonth',
+    'formatWeekday',
+    'formatMonthYear',
+    'formatDateRange',
+    'formatNumber',
+    'formatAbsolute',
+    'formatRate',
+    'formatMoneyMinor',
+    'formatMoneyMinorPlain',
+    'formatPrice',
+    'formatPercent',
+    'formatRelative',
+    'formatList',
+  ]
+
+  /**
+   * A CSV is read by a spreadsheet, not by a person: a grouped amount with a
+   * comma decimal inside a comma-separated field is a data contract, and
+   * changing it is not a copy fix. `expensesCsv` keeps the default on purpose.
+   */
+  const EXEMPT: ReadonlyArray<string> = ['costs/data.ts']
+
+  function walk(directory: string): Array<string> {
+    const found: Array<string> = []
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name)
+      if (entry.isDirectory()) {
+        if (entry.name !== '__tests__') {
+          found.push(...walk(path))
+        }
+        continue
+      }
+      if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+        found.push(path)
+      }
+    }
+    return found
+  }
+
+  const files = ROOTS.flatMap(walk)
+
+  /** The balanced argument text of a call starting just past its open paren. */
+  function argumentsOf(source: string, from: number): string {
+    let depth = 1
+    let index = from
+    while (index < source.length && depth > 0) {
+      const char = source[index]
+      if (char === '(' || char === '[' || char === '{') depth += 1
+      else if (char === ')' || char === ']' || char === '}') depth -= 1
+      index += 1
+    }
+    return source.slice(from, index - 1)
+  }
+
+  it('reads the files the rule is about, so the scan means something', () => {
+    const names = files.map((path) => path.split('/').at(-1))
+    expect(names).toContain('split-editor.tsx')
+    expect(names).toContain('stat-tiles.tsx')
+    expect(files.length).toBeGreaterThan(100)
+  })
+
+  it.each(FORMATTERS)('never calls %s without one', (name) => {
+    const offenders: Array<string> = []
+    for (const path of files) {
+      if (EXEMPT.some((tail) => path.endsWith(tail))) {
+        continue
+      }
+      const source = readFileSync(path, 'utf8')
+        .split('\n')
+        .filter((line) => !COMMENT_LINE.test(line))
+        .join(' ')
+      const needle = `${name}(`
+      let at = source.indexOf(needle)
+      while (at >= 0) {
+        const before = at === 0 ? ' ' : source[at - 1]
+        // A property access or a longer identifier ending in this name is a
+        // different function; `formatMoneyPlain` must not match `formatMoney`.
+        if (!/[\w.$]/.test(before)) {
+          const args = argumentsOf(source, at + needle.length)
+          if (!/\blocale\b/.test(args)) {
+            offenders.push(
+              `${path.split('/').slice(-2).join('/')}: ${name}(${args.slice(0, 40)})`,
+            )
+          }
+        }
+        at = source.indexOf(needle, at + 1)
+      }
+    }
+    expect(
+      offenders,
+      `${name} decides how a number reads; the reader decides the locale`,
+    ).toEqual([])
+  })
 })

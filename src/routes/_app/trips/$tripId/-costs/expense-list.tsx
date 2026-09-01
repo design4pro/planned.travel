@@ -23,6 +23,7 @@ import {
   Tooltip,
   TooltipProvider,
 } from '#/components/ui'
+import { useLocale } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import { formatConversion, formatMoney } from '#/lib/money'
 import { groupByDay, isOptimisticId, shareOf } from '#/components/costs'
@@ -50,7 +51,8 @@ export function ExpenseList({
   onEdit,
   onDelete,
 }: ExpenseListProps) {
-  const groups = groupByDay(rows)
+  const locale = useLocale()
+  const groups = groupByDay(rows, locale)
 
   return (
     <TooltipProvider delayDuration={350} skipDelayDuration={200}>
@@ -59,7 +61,7 @@ export function ExpenseList({
           <Panel
             key={group.day}
             label={group.label}
-            count={`${formatMoney(group.totalMinor, currency)} spent`}
+            count={`${formatMoney(group.totalMinor, currency, locale)} spent`}
             flush
           >
             <ul>
@@ -101,8 +103,9 @@ function ExpenseRow({
   onEdit: (row: CostsExpense) => void
   onDelete: (row: CostsExpense) => void
 }) {
+  const locale = useLocale()
   const payer = people.find((person) => person.userId === row.paidBy)
-  const conversion = formatConversion(row)
+  const conversion = formatConversion(row, locale)
   const mine = shareOf(row, viewerUserId)
   // A row the server has never seen has no id to edit or delete against, so its
   // actions stay closed until the write comes back with a real one.
@@ -124,9 +127,11 @@ function ExpenseRow({
 
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-baseline justify-between gap-3">
-          <p className="truncate text-label font-semibold text-ink">{row.title}</p>
+          <p className="truncate text-label font-semibold text-ink">
+            {row.title}
+          </p>
           <span className="shrink-0 font-display text-subtitle font-bold tabular-nums text-ink">
-            {formatMoney(row.amountMinor, currency)}
+            {formatMoney(row.amountMinor, currency, locale)}
           </span>
         </div>
 
@@ -138,9 +143,15 @@ function ExpenseRow({
               </Badge>
             ) : (
               <span className="flex min-w-0 items-center gap-1.5">
-                <Avatar name={payer?.name ?? 'Removed traveller'} src={payer?.image} size="xs" />
+                <Avatar
+                  name={payer?.name ?? 'Removed traveller'}
+                  src={payer?.image}
+                  size="xs"
+                />
                 <span className="truncate font-medium text-ink-2">
-                  {row.paidBy === viewerUserId ? 'You paid' : `${payer?.name ?? 'Someone'} paid`}
+                  {row.paidBy === viewerUserId
+                    ? 'You paid'
+                    : `${payer?.name ?? 'Someone'} paid`}
                 </span>
               </span>
             )}
@@ -149,7 +160,9 @@ function ExpenseRow({
             {conversion === null ? null : (
               <>
                 <Dot />
-                <span className="truncate tabular-nums text-ink-4">{conversion}</span>
+                <span className="truncate tabular-nums text-ink-4">
+                  {conversion}
+                </span>
               </>
             )}
             {row.notes === null ? null : (
@@ -166,7 +179,9 @@ function ExpenseRow({
           </div>
 
           <span className="shrink-0 text-caption tabular-nums text-ink-4">
-            {mine === 0 ? 'not your share' : `${formatMoney(mine, currency)} yours`}
+            {mine === 0
+              ? 'not your share'
+              : `${formatMoney(mine, currency, locale)} yours`}
           </span>
         </div>
       </div>

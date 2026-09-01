@@ -40,7 +40,9 @@ describe('CoverageNotice', () => {
 
   it('counts the stops that fall outside a partly-covered trip', () => {
     render(
-      <CoverageNotice coverage={coverageFor(REGION, [TOKYO, LISBON, LISBON])} />,
+      <CoverageNotice
+        coverage={coverageFor(REGION, [TOKYO, LISBON, LISBON])}
+      />,
     )
     const notice = screen.getByRole('status')
     expect(notice.textContent).toContain('Partial street detail')

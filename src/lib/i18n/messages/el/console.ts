@@ -136,7 +136,6 @@ const messages = {
   'users.filter.role.curator': 'Επιμελητές',
   'users.filter.status.label': 'Φιλτράρισμα κατά κατάσταση λογαριασμού',
   'users.filter.status.any': 'Οποιαδήποτε κατάσταση',
-  'users.filter.clear': 'Καθαρισμός φίλτρων',
   'users.filter.hint': 'Στενέψτε κατά ρόλο ή κατά κατάσταση — ένα κάθε φορά.',
   'users.column.account': 'Λογαριασμός',
   'users.column.role': 'Ρόλος πλατφόρμας',

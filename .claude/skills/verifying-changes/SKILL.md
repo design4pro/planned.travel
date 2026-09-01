@@ -3,6 +3,23 @@ name: verifying-changes
 description: The canonical verification ladder for this repo and how to read its feedback loops (vitest, Playwright visual diffs, dev-server pitfalls). Use before claiming any change works, and when a test failure looks confusing.
 ---
 
+## Before the ladder: provision the checkout
+
+**In a fresh checkout or a `git worktree`, run `pnpm worktree:bootstrap` before anything else.**
+Four fixtures are gitignored and per-checkout — `node_modules`, `.dev.vars`, a migrated local D1,
+and the basemap in the local R2 simulator — so `git worktree add` carries none of them. Missing
+`.dev.vars` is the one that hurts: Better Auth throws on the first request that touches a session,
+`/login` answers 500, every authenticated spec skips rather than fails, and the whole application
+behind the gate is unreachable. Diagnosing that from a red suite costs an hour; the command costs a
+minute and is idempotent, so running it when it was not needed is free.
+
+It picks a free port in 3001-3009 (3000 belongs to the main checkout, 3010-3020 to automated
+rounds), copies `.dev.vars` and the basemap from the main checkout when it has them, migrates,
+seeds the demo workspace, and prints the sign-in. `bash scripts/worktree/bootstrap.sh --check`
+reports what is missing without writing anything. The SessionStart hook runs it with `--if-needed`,
+so a checkout that is already provisioned costs milliseconds. Flags and profiles:
+`scripts/worktree/README.md`.
+
 ## The ladder
 
 1. Fast loop while working: `pnpm typecheck`, `pnpm lint`, single vitest files.
@@ -19,9 +36,9 @@ description: The canonical verification ladder for this repo and how to read its
 - **In dev, the browser console also carries the server's log.** `@tanstack/devtools-vite` relays it, prefixed `%c[Server]%c` and linked through `/__tsd/open-source`, so a console-watching spec can go red on something that happened in the Worker rather than on its own page — and on something another spec, or the seed, caused. The sandbox case, seen once per run: `setup-e2e.sh` writes a `.dev.vars` with no `EMAIL_API_KEY`, so the auth emails the seed's sign-ups enqueue throw `TaskConfigurationError`, and the consumer's `task completed`/`task dead-lettered` pair lands in whichever page is open when the queue drains. It is environmental, it moves between specs run to run, and it is not the diff. Rerun; the discriminator is a console entry whose stack is the Worker's, not the app's.
 - **Anything that deletes or moves source must restart the dev server before the gate runs.** A server that already loaded a module answers HTTP 500 on unrelated routes after the file goes away — measured as five failures across `/pricing`, `/login`, `/legal/terms` and `/trips` while typecheck, lint, vitest and build were all clean.
 - **Nineteen red frames can be one root cause.** `pinDemoLanguage()` (setup project, `e2e/helpers/shoot.ts`) puts the demo traveller back on the workspace default, because `user_settings.locale` is a real column any probe that clicks a chip on `/settings/language` writes to. When it cannot, it prints `[shoot] could not pin the demo traveller's language` once, far above the failure list — grep for it before blaming the layout of every authenticated route.
-- A **fresh checkout or `git worktree` has no `.wrangler/state`**, so the local R2 basemap is missing, every atlas page renders the BASEMAP UNAVAILABLE fallback, and four atlas baselines fail with coastline-shaped diffs. Provision it with `bash .sandcastle/setup-e2e.sh` (which loads the archive into the local R2 simulator) or copy `.wrangler/state/v3/r2/` from a checkout that has it, server stopped.
+- A **fresh checkout or `git worktree` has no `.wrangler/state`**, so the local R2 basemap is missing, every atlas page renders the BASEMAP UNAVAILABLE fallback, and four atlas baselines fail with coastline-shaped diffs. This is the pre-flight above going unrun: `pnpm worktree:bootstrap` provisions it. Failing that, `bash .sandcastle/setup-e2e.sh` loads the archive into the local R2 simulator, or copy `.wrangler/state/v3/r2/` from a checkout that has it, server stopped.
 - Authenticated specs hold the demo session in `e2e/.auth/demo.json`. A stale session does not fail — it **redirects to /login and specs skip**. Refresh with `pnpm exec playwright test --project=setup`.
-- `.dev.vars` is gitignored, so a fresh `git worktree add` lacks it; without it Better Auth returns 500 on /login and every authenticated spec skips. Copy it from the main checkout first.
+- `.dev.vars` is gitignored, so a fresh `git worktree add` lacks it; without it Better Auth returns 500 on /login and every authenticated spec skips. Same root cause as the line above, same fix: `pnpm worktree:bootstrap`, which copies it from the main checkout and points `APP_URL` at the port this worktree actually serves.
 - `playwright.config.ts` refuses to run non-CI against ports outside 3010–3020 — that guard exists because runs have photographed the wrong worktree. Don't fight it.
 - **Console noise that is not the application**: a message whose own stack frame is a Vite dev-server namespace (`/@vite/`, `/@react-refresh`, `/@id/`, `/@fs/`), and `504 (Outdated Optimize Dep)` from `/node_modules/.vite/deps/`. Neither can occur in a build and neither is a defect. `classifyConsoleMessage()` in `e2e/helpers/shoot.ts` is the gate's own version of this judgement and is deliberately narrow — a warning the app writes itself stays fatal even when it quotes one of these.
 - `pnpm check` (prettier) fails repo-wide on a few hundred pre-existing files and is deliberately **not** part of any gate. Keep the files you touch prettier-clean and never reformat the repo as a side effect. The `Edit`/`Write` hook formats what those tools touch; a file written through a shell heredoc is not covered, and hand-written markdown is never clean (prettier rewrites table padding and `*emphasis*` to `_emphasis_`) — run `pnpm exec prettier --write` on it yourself.

@@ -8,29 +8,25 @@ describe('pollOptionsError', () => {
   })
 
   it('refuses fewer than two things to choose between', () => {
-    expect(pollOptionsError(['Den'])).toBe(
-      'A poll needs at least two things to choose between.',
-    )
-    expect(pollOptionsError([])).toBe(
-      'A poll needs at least two things to choose between.',
-    )
+    expect(pollOptionsError(['Den'])).toBe('modules.collab.poll.error.tooFew')
+    expect(pollOptionsError([])).toBe('modules.collab.poll.error.tooFew')
   })
 
   it('does not count a blank row towards the minimum', () => {
     expect(pollOptionsError(['Den', '  '])).toBe(
-      'A poll needs at least two things to choose between.',
+      'modules.collab.poll.error.tooFew',
     )
   })
 
   it('refuses two options that say the same thing', () => {
     expect(pollOptionsError(['Den', 'Den'])).toBe(
-      'Two options say the same thing. Give each one its own wording.',
+      'modules.collab.poll.error.duplicate',
     )
   })
 
   it('treats case and surrounding space as the same wording', () => {
     expect(pollOptionsError(['Den', ' den '])).toBe(
-      'Two options say the same thing. Give each one its own wording.',
+      'modules.collab.poll.error.duplicate',
     )
   })
 

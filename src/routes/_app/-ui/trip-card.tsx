@@ -10,6 +10,7 @@ import { CalendarDays, MapPin, Star } from 'lucide-react'
 
 import { Badge, Card } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { CoverArt, seedFrom } from './cover-art'
 import {
   countryFlag,
@@ -17,9 +18,8 @@ import {
   daysUntil,
   formatDateRange,
   formatNumber,
-  humaniseToken,
 } from '../-lib/format'
-import { TRIP_STATUS_TONE, toneFor } from '../-lib/tone'
+import { TRIP_STATUS_LABEL, TRIP_STATUS_TONE, toneFor } from '../-lib/tone'
 
 import type { TripCard } from '../-server/overview'
 
@@ -93,6 +93,7 @@ export function TripTile({
   trip,
   today,
   cover = washFor(trip.id),
+  titleAs: Title = 'h3',
 }: {
   trip: TripCard
   today: string
@@ -101,8 +102,19 @@ export function TripTile({
    * cannot show the same cover twice; a lone tile is happy with the default.
    */
   cover?: CoverWash
+  /**
+   * Where this card's title sits in the page's outline.
+   *
+   * `h3` by default, which is what a card is on the dashboard: the grid lives
+   * under a section already headed "Your trips". On `/trips` the same grid *is*
+   * the page under its own `h1`, so there the cards are the second level and a
+   * fixed `h3` would skip one.
+   */
+  titleAs?: 'h2' | 'h3'
 }) {
-  const range = formatDateRange(trip.startDate, trip.endDate)
+  const locale = useLocale()
+  const t = useTranslate()
+  const range = formatDateRange(trip.startDate, trip.endDate, locale)
   const length = daysBetween(trip.startDate, trip.endDate)
   const startsIn = daysUntil(trip.startDate, today)
 
@@ -120,17 +132,19 @@ export function TripTile({
             <img
               src={trip.coverImageUrl}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="size-full object-cover"
             />
           )}
 
           <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
             <Badge tone={toneFor(TRIP_STATUS_TONE, trip.status)} size="sm">
-              {humaniseToken(trip.status)}
+              {t(TRIP_STATUS_LABEL[trip.status] ?? 'shell.tripStatus.draft')}
             </Badge>
             {trip.isFavourite ? (
               <span
-                aria-label="Favourite"
+                aria-label={t('shell.trips.card.favourite')}
                 className="flex size-6 items-center justify-center rounded-full bg-surface/85 text-warning backdrop-blur-sm"
               >
                 <Star aria-hidden className="size-3.5 fill-current" />
@@ -139,37 +153,52 @@ export function TripTile({
           </div>
 
           {trip.countryCodes.length === 0 ? null : (
-            <span aria-hidden className="absolute bottom-2.5 left-3 text-label">
+            <span
+              aria-hidden
+              className="absolute bottom-2.5 start-3 text-label"
+            >
               {trip.countryCodes.slice(0, 5).map(countryFlag).join(' ')}
             </span>
           )}
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
-          <h3 className="truncate font-display text-subtitle font-bold tracking-tight text-ink">
+          <Title className="truncate font-display text-subtitle font-bold tracking-tight text-ink">
             {trip.title}
-          </h3>
+          </Title>
           <p className="truncate text-caption text-ink-3">
-            {trip.destination ?? trip.summary ?? 'Destination not set yet'}
+            {trip.destination ??
+              trip.summary ??
+              t('shell.trips.card.noDestination')}
           </p>
 
           <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 text-caption text-ink-3">
             <span className="flex items-center gap-1.5">
               <CalendarDays aria-hidden className="size-3.5 text-ink-4" />
-              <span className="tabular-nums">{range ?? 'Dates to be set'}</span>
+              <span className="tabular-nums">
+                {range ?? t('shell.trips.card.noDates')}
+              </span>
             </span>
             <span className="flex items-center gap-1.5">
               <MapPin aria-hidden className="size-3.5 text-ink-4" />
               <span className="tabular-nums">
-                {formatNumber(trip.placeCount)}
+                {formatNumber(trip.placeCount, locale)}
               </span>
             </span>
             {length === null ? null : (
-              <span className="tabular-nums">{formatNumber(length)}d</span>
+              <span className="tabular-nums">
+                {t('shell.trips.card.days', {
+                  days: formatNumber(length, locale),
+                })}
+              </span>
             )}
             {startsIn === null || startsIn < 0 || startsIn > 60 ? null : (
-              <span className="ml-auto rounded-full bg-brand-subtle px-2 py-0.5 font-semibold text-brand tabular-nums">
-                {startsIn === 0 ? 'Today' : `in ${formatNumber(startsIn)}d`}
+              <span className="ms-auto rounded-full bg-brand-subtle px-2 py-0.5 font-semibold text-brand tabular-nums">
+                {startsIn === 0
+                  ? t('shell.dashboard.hero.today')
+                  : t('shell.trips.card.startsIn', {
+                      days: formatNumber(startsIn, locale),
+                    })}
               </span>
             )}
           </div>
@@ -184,12 +213,15 @@ export function TripGrid({
   today,
   columns = 3,
   className,
+  titleAs,
   trailing,
 }: {
   trips: ReadonlyArray<TripCard>
   today: string
   columns?: 2 | 3
   className?: string
+  /** Passed to every tile — see `TripTile`. */
+  titleAs?: 'h2' | 'h3'
   /**
    * Rendered as the final cell.
    *
@@ -216,6 +248,7 @@ export function TripGrid({
             trip={trip}
             today={today}
             cover={washes.at(index) ?? FALLBACK_WASH}
+            titleAs={titleAs}
           />
         </li>
       ))}

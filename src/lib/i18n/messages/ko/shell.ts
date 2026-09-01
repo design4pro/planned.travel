@@ -263,6 +263,99 @@ const messages = {
   'role.owner': '소유자',
   'role.admin': '관리자',
   'role.member': '멤버',
+
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    other: '여행 {value}개',
+  },
+  'trips.count.favourites': {
+    other: '즐겨찾기 {value}개',
+  },
+  'trips.count.archived': {
+    other: '보관 {value}개',
+  },
+  'trips.atLimit.body':
+    '현재 플랜은 {trips}까지입니다. 끝난 여행을 보관하거나, 상위 플랜으로 올리면 한 번에 더 많이 열어 둘 수 있습니다.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': '새 여행 기록',
+  'newJourney.title': '여행 기록 시작',
+  'newJourney.description':
+    '여행 기록은 여행의 쓰인 쪽입니다. 날짜순 항목에, 기억하는 사진과 날씨가 함께 담깁니다.',
+  'newJourney.titlePlaceholder': '교토에서 두 주',
+  'newJourney.subtitle': '부제',
+  'newJourney.subtitleHint': '표지에서 제목 아래 한 줄.',
+  'newJourney.subtitlePlaceholder': '절과 기차, 그리고 너무 많은 말차',
+  'newJourney.trip': '여행을 바탕으로',
+  'newJourney.tripHint': '선택 사항 — 이야기를 그 일정에 연결합니다.',
+  'newJourney.tripNone': '여행에 연결하지 않음',
+  'newJourney.datesError': '종료일이 시작일보다 앞섭니다.',
+  'newJourney.submit': '기록 만들기',
+  'newJourney.creating': '기록을 만들고 있습니다',
+  'newJourney.created': '여행 기록을 시작했습니다',
+  'newJourney.createdBody': '첫 항목을 추가해 이야기를 시작하세요.',
+  'newJourney.error': '기록을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'newCollection.trigger': '새 컬렉션',
+  'newCollection.title': '컬렉션 시작',
+  'newCollection.description':
+    '어느 여행에 속하는지 알기 전에 발견한 장소를 담아 두는 곳입니다.',
+  'newCollection.namePlaceholder': '도시를 건널 만한 커피',
+  'newCollection.descriptionHint': '여기에 들어갈 것과 들어가지 않을 것.',
+  'newCollection.submit': '컬렉션 만들기',
+  'newCollection.creating': '컬렉션을 만들고 있습니다',
+  'newCollection.created': '컬렉션을 만들었습니다',
+  'newCollection.createdBody': '장소를 저장해 보세요.',
+  'newCollection.error':
+    '컬렉션을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.',
+
+  'newTrip.title': '새 여행 시작',
+  'newTrip.description':
+    '제목만 있으면 됩니다. 날짜가 하루하루 계획을 세우고, 나머지는 알게 될 때까지 기다려도 됩니다.',
+  'newTrip.name': '여행 이름',
+  'newTrip.namePlaceholder': '벚꽃 철의 교토',
+  'newTrip.destination': '목적지',
+  'newTrip.destinationHint': '도시, 지역, 또는 전체 경로.',
+  'newTrip.destinationPlaceholder': '교토, 일본',
+  'newTrip.departure': '출발',
+  'newTrip.return': '귀국',
+  'newTrip.returnError': '귀국 날짜가 출발보다 앞섭니다.',
+  'newTrip.currency': '예산 통화',
+  'newTrip.currencyHint': '이 여행의 모든 지출을 이 통화로 합산합니다.',
+  'newTrip.submit': '여행 만들기',
+  'newTrip.creating': '여행을 만들고 있습니다',
+  'newTrip.error': '여행을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'newTrip.created': '여행을 만들었습니다',
+  'newTrip.createdBody': '지도에 장소를 놓아 보세요.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': '볼 수 있는 사람',
+  'visibility.private': '나만',
+  'visibility.organization': '워크스페이스 전체',
+  'visibility.public': '링크를 가진 누구나',
+
+  'trips.error': '여행을 불러오지 못했습니다',
+  'trips.eyebrow': '워크스페이스',
+  'trips.nothingPlanned': '아직 계획이 없습니다',
+  'trips.search': '여행 검색',
+  'trips.atLimit.title': '플랜이 허용하는 여행을 모두 채웠습니다',
+  'trips.atLimit.action': '플랜 비교',
+  'trips.noMatch.title': '이 필터에 맞는 것이 없습니다',
+  'trips.noMatch.body':
+    '다른 단계를 골라 보거나, 검색을 지우거나, 보관함을 확인하세요.',
+  'trips.noMatch.action': '필터 초기화',
+  'trips.empty.body':
+    '여행 하나가 일정, 지도, 예약, 짐 목록, 돈을 함께 담습니다. 하나를 시작하면 나머지는 따라옵니다.',
+  'trips.next.title': '다음은 어딘가로',
+  'trips.next.body':
+    '여행을 시작하면 planned.travel이 날짜마다 하루를 만들어, 저장한 것들을 받아 둡니다.',
+  'trips.savedPlaces': '저장한 장소',
+  'trips.filter.all': '전체',
+  'trips.filter.favourites': '즐겨찾기',
+  'trips.card.favourite': '즐겨찾기 항목',
+  'trips.card.noDestination': '목적지 미정',
+  'trips.card.noDates': '날짜 미정',
+  'trips.card.startsIn': '{days}일 후',
+  'trips.card.days': '{days}일',
   'metric.trips': '여행',
   'metric.places': '장소',
   'metric.members': '멤버',

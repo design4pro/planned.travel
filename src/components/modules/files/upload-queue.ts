@@ -11,6 +11,8 @@
 
 import { formatStorage } from '#/lib/plans'
 
+import type { DeferredMessage } from '../shared/deferred-message'
+
 export type UploadStatus =
   'queued' | 'uploading' | 'done' | 'failed' | 'cancelled'
 
@@ -22,7 +24,7 @@ export interface UploadTask {
   /** `0`–`1`. Only meaningful while `uploading`. */
   readonly progress: number
   /** Why it failed, or why it was refused before it was sent. */
-  readonly message: string | null
+  readonly message: DeferredMessage | string | null
 }
 
 export interface UploadQueueState {
@@ -43,7 +45,7 @@ export type UploadQueueAction =
       readonly id: string
       readonly filename: string
       readonly sizeBytes: number
-      readonly message: string
+      readonly message: DeferredMessage | string
     }
   | { readonly type: 'start'; readonly id: string }
   | { readonly type: 'progress'; readonly id: string; readonly value: number }
@@ -233,8 +235,9 @@ export function overallProgress(state: UploadQueueState): number {
 /** One thing the screen should tell the reader about a finished batch. */
 export interface UploadAnnouncement {
   readonly kind: 'success' | 'error'
-  readonly title: string
-  readonly description: string
+  readonly title: DeferredMessage
+  /** A message, or a filename — which is data and needs no translating. */
+  readonly description: DeferredMessage | string
 }
 
 /**
@@ -258,29 +261,38 @@ export function announcementsFor(
   if (uploaded.length === 1) {
     said.push({
       kind: 'success',
-      title: 'File uploaded',
+      title: { key: 'modules.files.toast.uploadedOne' },
       description: uploaded[0].filename,
     })
   } else if (uploaded.length > 1) {
     const bytes = uploaded.reduce((sum, task) => sum + task.sizeBytes, 0)
     said.push({
       kind: 'success',
-      title: `${uploaded.length} files uploaded`,
-      description: `${formatStorage(bytes)} added to this trip.`,
+      title: {
+        key: 'modules.files.toast.uploadedMany',
+        params: { count: uploaded.length },
+      },
+      description: {
+        key: 'modules.files.toast.uploadedManyBody',
+        params: { size: formatStorage(bytes) },
+      },
     })
   }
 
   if (failed.length === 1) {
     said.push({
       kind: 'error',
-      title: 'That file did not upload',
+      title: { key: 'modules.files.toast.failedOne' },
       description: failed[0].message ?? failed[0].filename,
     })
   } else if (failed.length > 1) {
     said.push({
       kind: 'error',
-      title: `${failed.length} files did not upload`,
-      description: 'The queue below says why for each one.',
+      title: {
+        key: 'modules.files.toast.failedMany',
+        params: { count: failed.length },
+      },
+      description: { key: 'modules.files.toast.failedManyBody' },
     })
   }
 

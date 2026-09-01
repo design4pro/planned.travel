@@ -349,20 +349,14 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} Reisen, eine Person',
   'billing.hero.perSeatLine': '{seats} Mitglieder × {price}',
   'billing.hero.singleTraveller': 'Eine reisende Person',
-  'billing.hero.paymentMethod': 'Zahlungsmittel',
-  'billing.hero.cancel': 'Tarif kündigen',
   'billing.price.free': 'Kostenlos',
   'billing.provider.opening': 'Polar wird geöffnet',
-  'billing.provider.failed': 'Polar war nicht erreichbar',
-  'billing.provider.failedBody':
-    'Es wurde nichts abgebucht. Prüfe deine Verbindung und versuche es gleich noch einmal.',
-
   'billing.renewal.trialEndsToday':
-    'Deine Testphase endet heute. Hinterlege eine Karte, damit alle Module offen bleiben.',
+    'Deine Testphase endet heute. Die erste Abbuchung folgt, sofern du vorher nicht kündigst.',
   'billing.renewal.trialEndsIn': {
-    one: 'Deine Testphase endet in {value} Tag. Bis dahin brauchst du keine Karte.',
+    one: 'Deine Testphase endet in {value} Tag, danach folgt die erste Abbuchung, sofern du vorher nicht kündigst.',
     other:
-      'Deine Testphase endet in {value} Tagen. Bis dahin brauchst du keine Karte.',
+      'Deine Testphase endet in {value} Tagen, danach folgt die erste Abbuchung, sofern du vorher nicht kündigst.',
   },
   'billing.renewal.trialEnded': 'Deine Testphase ist vorbei.',
   'billing.renewal.endsNoDate':
@@ -413,7 +407,6 @@ const messages = {
   'billing.interval.label': 'Abrechnungsintervall',
   'billing.interval.monthly': 'Monatlich',
   'billing.interval.yearly': 'Jährlich',
-  'billing.interval.saving': '{value} sparen',
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Plane deine nächsten zwei Reisen',
   'billing.plan.free.feature.trips': 'Zwei Reisen gleichzeitig',
@@ -443,7 +436,6 @@ const messages = {
   'billing.plan.current': 'Aktueller Tarif',
   'billing.plan.currentBadge': 'Aktuell',
   'billing.plan.popular': 'Beliebt',
-  'billing.plan.moveTo': 'Zu {plan} wechseln',
   'billing.plan.switchYearly': 'Auf jährlich wechseln',
   'billing.plan.switchMonthly': 'Auf monatlich wechseln',
   'billing.plan.upgradeTo': 'Auf {plan} hochstufen',
@@ -460,31 +452,71 @@ const messages = {
     other: '{value} Mitglieder',
   },
 
-  'billing.invoices.title': 'Rechnungen',
-  'billing.invoices.description':
-    'Jeder Beleg dieses Arbeitsbereichs, der neueste zuerst.',
-  'billing.invoices.portal': 'Abrechnungsportal',
-  'billing.invoices.unavailableTitle': 'Die Belege laden nicht',
-  'billing.invoices.unavailableBody':
-    'Polar hat für die Historie nicht rechtzeitig geantwortet. Alles darüber ist aktuell; öffne für den vollständigen Verlauf das Abrechnungsportal, oder schau gleich noch einmal vorbei.',
-  'billing.invoices.emptyTitle': 'Noch keine Rechnungen',
-  'billing.invoices.emptyCustomer':
-    'Der erste Beleg erscheint hier, sobald eine Abrechnungsperiode endet.',
-  'billing.invoices.emptyNoCustomer':
-    'Diesem Arbeitsbereich wurde noch nie etwas berechnet. Wähle einen bezahlten Tarif, dann sammeln sich die Belege hier.',
-  'billing.invoices.tableLabel': 'Rechnungsverlauf',
   'billing.invoices.number': 'Rechnung',
   'billing.invoices.date': 'Datum',
-  'billing.invoices.period': 'Zeitraum',
   'billing.invoices.amount': 'Betrag',
   'billing.invoices.status': 'Zahlungsstatus',
-  'billing.invoices.receipt': 'Beleg',
-  'billing.invoices.view': 'Ansehen',
   'billing.invoice.paid': 'Bezahlt',
-  'billing.invoice.open': 'Offen',
   'billing.invoice.draft': 'Entwurf',
   'billing.invoice.void': 'Storniert',
-  'billing.invoice.uncollectible': 'Uneinbringlich',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Der Zahlungsanbieter hat die Anfrage abgelehnt. Versuche es in einem Moment erneut.',
+  'billing.planChanged.title': 'Tarif aktualisiert',
+  'billing.planChanged.body':
+    'Die Änderung gilt bereits bei Polar, das die Differenz abrechnet. Die Übersicht unten zieht innerhalb einer Minute nach.',
+  'billing.hero.manage': 'Abrechnung verwalten',
+  'billing.hero.manageHint':
+    'Karten, Rechnungsadresse, USt-IdNr., Belege und Kündigung liegen bei Polar, das die Rechnung ausstellt.',
+  'billing.hero.manageHintNone':
+    'Es gibt noch kein Abrechnungsprofil. Mit einem bezahlten Tarif unten entsteht eines, und ab dann öffnet sich das Portal.',
+  'billing.portal.opening': 'Abrechnungsportal wird geöffnet',
+  'billing.plan.notApplied': 'Diese Änderung wurde nicht übernommen',
+  'billing.plan.cancelInPortal': 'Im Portal kündigen',
+  'billing.plan.seatsOverMax': {
+    one: 'Dieser Workspace hat {members} Mitglieder, und {plan} rechnet höchstens {max} ab. Entferne {value} Mitglied, bevor du wechselst.',
+    other:
+      'Dieser Workspace hat {members} Mitglieder, und {plan} rechnet höchstens {max} ab. Entferne {value} Mitglieder, bevor du wechselst.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Du hast {members} Mitglieder. Wähle mindestens so viele Plätze — Polar lehnt ein Abo mit weniger Plätzen als Zuweisungen ab.',
+  'billing.orders.title': 'Bestellungen',
+  'billing.orders.description':
+    'Jede Bestellung dieses Workspace, neueste zuerst.',
+  'billing.orders.receipts': 'Alle Belege',
+  'billing.orders.unavailableTitle': 'Bestellungen laden nicht',
+  'billing.orders.unavailableBody':
+    'Polar hat für die Historie nicht rechtzeitig geantwortet. Alles darüber ist aktuell — versuche es in einem Moment erneut oder lies den vollen Verlauf im Abrechnungsportal.',
+  'billing.orders.emptyTitle': 'Noch keine Bestellungen',
+  'billing.orders.emptyCustomer':
+    'Die erste Rechnung erscheint hier, sobald ein Abrechnungszeitraum endet.',
+  'billing.orders.emptyNoCustomer':
+    'Diesem Workspace wurde noch nie etwas berechnet. Wähle einen bezahlten Tarif, dann sammeln sich die Rechnungen hier.',
+  'billing.orders.tableLabel': 'Bestellverlauf',
+  'billing.orders.document': 'Dokument',
+  'billing.orders.dateUnknown': 'Datum unbekannt',
+  'billing.order.pending': 'Ausstehend',
+  'billing.order.refunded': 'Erstattet',
+  'billing.order.partiallyRefunded': 'Teils erstattet',
+  'billing.order.noInvoiceDraft':
+    'Keine Rechnung, solange die Bestellung ein Entwurf ist',
+  'billing.order.preparing': 'Wird vorbereitet',
+  'billing.order.renderingHint':
+    'Polar erstellt Rechnung {number} noch. Der Download kommt in wenigen Sekunden zurück.',
+  'billing.order.fetching': 'Rechnung wird geholt',
+  'billing.order.generating': 'Polar bereitet die Rechnung vor',
+  'billing.order.pdfLabel': 'Rechnung {number} als PDF',
+  'billing.order.stillWritingTitle': 'Polar schreibt diese Rechnung noch',
+  'billing.order.stillWritingBody':
+    'Rechnung {number} wird erstellt. Der Download kommt von selbst in wenigen Sekunden zurück.',
+  'billing.order.openFailed': 'Diese Rechnung ließ sich nicht öffnen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

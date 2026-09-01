@@ -35,13 +35,25 @@ import ui from '#/lib/i18n/messages/en/ui'
 const LAYOUT_DIR = join(process.cwd(), 'src', 'components', 'layout')
 const APP_DIR = join(process.cwd(), 'src', 'routes', '_app')
 
-/** The shell's own screens and helpers, which live under `src/routes/_app`. */
+/**
+ * The shell's own screens and helpers, which live under `src/routes/_app`.
+ *
+ * The trips index belongs here for the same reason the dashboard does: it is a
+ * destination in the primary nav, its copy is `shell.trips.*`, and the tile and
+ * the new-trip dialog are its furniture. Leaving them off the list did not make
+ * the rule pass — it made it fail, because the keys looked unread.
+ */
 const APP_FILES = [
   'route.tsx',
   'dashboard.tsx',
   'notifications.tsx',
   'admin.tsx',
+  join('trips', 'index.tsx'),
+  join('-lib', 'tone.ts'),
   join('-ui', 'scaffold.tsx'),
+  join('-ui', 'trip-card.tsx'),
+  join('-ui', 'new-trip-dialog.tsx'),
+  join('-ui', 'create-dialogs.tsx'),
   join('-server', 'shell.ts'),
   join('-server', 'context.ts'),
   join('-server', 'overview.ts'),
@@ -197,9 +209,17 @@ describe('the app shell ships no English literal', () => {
 })
 
 describe('the shell reads correctly in Arabic', () => {
-  /** Physical direction utilities, each with the logical one that replaces it. */
+  /**
+   * Physical direction utilities, each with the logical one that replaces it.
+   *
+   * `inset-x-*` used to be on this list and is not physical: measured against
+   * the installed Tailwind 4.1, it compiles to `inset-inline`, so it already
+   * mirrors and there is nothing to replace it with. Listing it failed
+   * `-ui/trip-card.tsx` for a class that was correct, which is how a gate earns
+   * the reputation that gets it deleted.
+   */
   const PHYSICAL =
-    /\b(?:m[lr]-|p[lr]-|text-(?:left|right)\b|border-[lr]\b|rounded-[lr]-|inset-x-|left-\d|right-\d|float-(?:left|right)|origin-(?:left|right))/g
+    /\b(?:m[lr]-|p[lr]-|text-(?:left|right)\b|border-[lr]\b|rounded-[lr]-|left-\d|right-\d|float-(?:left|right)|origin-(?:left|right))/g
 
   it.each(CASES)(
     '%s uses logical direction utilities only',
