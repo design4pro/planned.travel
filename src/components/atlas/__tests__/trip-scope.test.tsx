@@ -12,6 +12,7 @@ import { AtlasPanel } from '../atlas-panel'
 import { CountryCard } from '../country-card'
 
 import type { AtlasPanelProps } from '../atlas-panel'
+import type { CountryCardProps } from '../country-card'
 import type { NamespaceModule } from '#/lib/i18n/catalogue'
 
 /**
@@ -71,12 +72,9 @@ const PORTUGAL = {
   lastVisitedOn: null,
 } as const
 
-/** The two surfaces the reader has in front of them at once. */
-function atlasScreen(): {
-  readonly panel: HTMLElement
-  readonly card: HTMLElement
-} {
-  const panel = render(
+/** The panel above the map, opened on the tab that carries the trip tile. */
+function renderPanel(): HTMLElement {
+  return render(
     <AtlasPanel
       countries={[]}
       selectedCode={null}
@@ -90,8 +88,19 @@ function atlasScreen(): {
       bucketList={[]}
     />,
   ).container
-  const card = render(<CountryCard {...PORTUGAL} />).container
-  return { panel, card }
+}
+
+/** One country card, the surface that carries the other trip figure. */
+function renderCard(props: CountryCardProps): HTMLElement {
+  return render(<CountryCard {...props} />).container
+}
+
+/** The two surfaces the reader has in front of them at once. */
+function atlasScreen(): {
+  readonly panel: HTMLElement
+  readonly card: HTMLElement
+} {
+  return { panel: renderPanel(), card: renderCard(PORTUGAL) }
 }
 
 /**
@@ -139,7 +148,7 @@ const said = (label: string): string => label.trim().toLocaleLowerCase()
 
 describe('the two trip figures on one atlas screen', () => {
   it('names the panel tile as the trips the reader is on', () => {
-    const { panel } = atlasScreen()
+    const panel = renderPanel()
 
     expect(tileFigure(panel, 'Your trips')).toBe('0')
     expect(within(panel).getByText('Every trip you are on')).toBeTruthy()
@@ -162,7 +171,7 @@ describe('the two trip figures on one atlas screen', () => {
    * whose trips these are, not whether they are over.
    */
   it('claims no completion the figure does not require', () => {
-    const { panel } = atlasScreen()
+    const panel = renderPanel()
 
     expect(said(tile(panel, 'Your trips').textContent)).not.toMatch(
       /finished|completed|only/,
@@ -170,15 +179,15 @@ describe('the two trip figures on one atlas screen', () => {
   })
 
   it("names the country card's tally as the workspace's", () => {
-    const { card } = atlasScreen()
+    const card = renderCard(PORTUGAL)
 
     expect(cardCell(card, 0)).toEqual(['Workspace trips', '2'])
   })
 
   it('keeps the qualifier when the tally agrees in the singular', () => {
-    const { container } = render(<CountryCard {...PORTUGAL} tripCount={1} />)
+    const card = renderCard({ ...PORTUGAL, tripCount: 1 })
 
-    expect(cardCell(container, 0)).toEqual(['Workspace trip', '1'])
+    expect(cardCell(card, 0)).toEqual(['Workspace trip', '1'])
   })
 
   it('prints the bare noun over neither figure', () => {
@@ -221,20 +230,20 @@ describe('the two trip figures on one atlas screen', () => {
     it.each(locales)(
       '%s says something different over each',
       (_locale, messages) => {
-        const panel = messages['panel.stat.trips']
-        const card = messages['card.trips']
-        if (typeof panel !== 'string' || typeof card !== 'object') {
+        const tileLabel = messages['panel.stat.trips']
+        const cardLabel = messages['card.trips']
+        if (typeof tileLabel !== 'string' || typeof cardLabel !== 'object') {
           throw new Error('the two trip keys have swapped shapes')
         }
 
         // Every branch, not the one English happens to need: a locale with six
         // of them can carry the qualifier on five and lose it on the sixth.
-        const branches = Object.values(card).filter(
+        const branches = Object.values(cardLabel).filter(
           (branch) => branch !== undefined,
         )
         expect(branches.length).toBeGreaterThan(0)
         expect(
-          branches.filter((branch) => said(branch) === said(panel)),
+          branches.filter((branch) => said(branch) === said(tileLabel)),
         ).toEqual([])
       },
     )
