@@ -32,7 +32,8 @@
     "sandcastle:triage": "tsx .sandcastle/triage.ts",
     "sandcastle:architecture": "tsx .sandcastle/architecture-review/architecture-review.ts",
     "sandcastle:sentry": "tsx .sandcastle/sentry-triage/sentry-triage.ts",
-    "sandcastle:e2e-smoke": "tsx .sandcastle/e2e-smoke/e2e-smoke.ts"
+    "sandcastle:e2e-smoke": "tsx .sandcastle/e2e-smoke/e2e-smoke.ts",
+    "sandcastle:report": "tsx .sandcastle/report.ts"
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write"

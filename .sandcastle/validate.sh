@@ -4,26 +4,34 @@
 # after every fix-loop resume.
 #
 #   TARGET_BRANCH=<integration branch> bash .sandcastle/validate.sh --json-out <path> \
-#     [--force-e2e] [--skip-e2e] [--update-snapshots]
+#     [--force-e2e] [--skip-e2e] [--update-snapshots] [--e2e-projects <csv>]
 #
 # Always: route-tree freshness gate, typecheck, lint, vitest.
 # When the diff since TARGET_BRANCH touches UI paths (glob heuristic below):
 # setup-e2e.sh --if-needed, then the Playwright suite against the -linux
 # baselines (this container is CI's exact Playwright image).
 #
-# Verdict JSON: {uiTouched, steps: [{name, ok, durationMs}], e2e: {failed: []}, ok}
+# --e2e-projects narrows that suite to named playwright.config.ts projects
+# ("chromium", "mobile-safari"). Both declare `dependencies: ['setup']`, so the
+# sign-in project comes along either way. With the flag the step is named
+# `e2e:<csv>` rather than `e2e`, so a verdict says which browsers it covers and
+# the report can keep the rows apart.
+#
+# Verdict JSON: {uiTouched, e2eProjects, steps: [{name, ok, durationMs}], e2e: {failed: []}, ok}
 set -uo pipefail
 
 JSON_OUT=""
 FORCE_E2E=0
 SKIP_E2E=0
 UPDATE_SNAPSHOTS=0
+E2E_PROJECTS=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --json-out) JSON_OUT="$2"; shift 2 ;;
     --force-e2e) FORCE_E2E=1; shift ;;
     --skip-e2e) SKIP_E2E=1; shift ;;
     --update-snapshots) UPDATE_SNAPSHOTS=1; shift ;;
+    --e2e-projects) E2E_PROJECTS="$2"; shift 2 ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
@@ -124,8 +132,34 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # repeated flag is not a list — the last occurrence wins and the rest are
     # dropped. Written as three flags this run kept only `html`, never wrote
     # results.json, and reported `failed: []` for every red suite. See issue #97.
-    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --reporter=line,json,html)
+    #
+    # One retry, and on the command line rather than by exporting CI=1. The config keys
+    # `retries: isCI ? 2 : 0` off CI, but three other things hang from that same flag and two of
+    # them are load-bearing here: the port guard is `if (!isCI && …)`, which its own comment calls
+    # "a hard stop rather than a warning" after four automated rounds photographed the wrong
+    # server — and this rung is exactly such a round — while `globalTimeout: isCI ? 10 * 60_000 :
+    # undefined` is sized, per its comment, for one of ci.yml's twelve shards, where this runs the
+    # whole unsharded suite. (CI would also flip `workers` and `reporter`, which the flags on the
+    # line below happen to override today and would stop overriding the day either one moves.) A
+    # retry flag buys the tolerance and nothing else.
+    #
+    # 1 rather than 2 keeps this gate no more tolerant than CI. Override with E2E_RETRIES; 0 for a
+    # deliberately intolerant run. See issue #143: a dev server that dropped four connections
+    # reddened a whole iteration and pointed the auditor at unrelated issues.
+    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --retries="${E2E_RETRIES:-1}" --reporter=line,json,html)
     [ "$UPDATE_SNAPSHOTS" -eq 1 ] && PW_ARGS+=(--update-snapshots)
+    # Repeated `--project` IS a list, unlike `--reporter` above: playwright declares it as
+    # `--project <project-name...>`. Narrowing to chromium is what lets the fix loop re-validate
+    # for roughly half the time — mobile-safari is the larger half of the suite — while the caller
+    # still gates on the full matrix once, before the issue is called green.
+    E2E_STEP="e2e"
+    if [ -n "$E2E_PROJECTS" ]; then
+      E2E_STEP="e2e:${E2E_PROJECTS}"
+      IFS=',' read -ra REQUESTED_PROJECTS <<<"$E2E_PROJECTS"
+      for project in "${REQUESTED_PROJECTS[@]}"; do
+        PW_ARGS+=(--project="$project")
+      done
+    fi
     # Named once, because the whole of issue #97 was the writer and the reader
     # of this file disagreeing without saying so: the reporter is pointed at it,
     # the jq walk below reads it, and the warning names it.
@@ -138,14 +172,20 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # record_step, same failure header. Only the tail is deeper: the line reporter's failure
     # summary runs longer than a compiler's. `env` carries the two variables Playwright reads,
     # since run_step forwards "$@" as a command rather than evaluating a prefix.
-    STEP_TAIL_LINES=60 run_step "e2e" \
+    STEP_TAIL_LINES=60 run_step "$E2E_STEP" \
       env PLAYWRIGHT_BASE_URL=http://localhost:3010 PLAYWRIGHT_JSON_OUTPUT_NAME="$E2E_RESULTS_FILE" \
       pnpm exec playwright test "${PW_ARGS[@]}"
     E2E_OK=$? # read before the `-f` test below overwrites $?
     if [ -f "$E2E_RESULTS_FILE" ]; then
       # Failed test titles + first error line + snapshot-diff flag, capped at
       # 40. Playwright nests suites recursively — walk the whole tree.
-      E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | {title: .title, error: ((.tests[0].results[0].error.message // "") | split("\n")[0] | .[0:300]), snapshotDiff: ((.tests[0].results[0].error.message // "") | test("toHaveScreenshot|screenshot comparison"))}] | .[0:40]' "$E2E_RESULTS_FILE" 2>/dev/null || echo '[]')
+      #
+      # `results[-1]`, not `results[0]`: with the retry above, `results` holds one entry per
+      # attempt, oldest first, and it is the *last* attempt that decided `ok == false`. Reading the
+      # first would describe a spec that blipped on `Connection refused` and then failed for real
+      # on a pixel diff as a connection error with `snapshotDiff: false` — handing the fix agent
+      # the flake this rung was taught to tolerate instead of the regression it caught.
+      E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | (.tests[0].results[-1].error.message // "") as $msg | {title: .title, error: ($msg | split("\n")[0] | .[0:300]), snapshotDiff: ($msg | test("toHaveScreenshot|screenshot comparison"))}] | .[0:40]' "$E2E_RESULTS_FILE" 2>/dev/null || echo '[]')
     elif [ "$E2E_OK" -ne 0 ]; then
       # Not a step of its own: the ladder is already red and run_step has just
       # printed the tail, which still carries the line reporter. What this says
@@ -158,10 +198,13 @@ fi
 
 VERDICT=$(jq -n -c \
   --argjson uiTouched "$UI_TOUCHED" \
+  --arg projects "$E2E_PROJECTS" \
   --argjson steps "$STEPS_JSON" \
   --argjson failed "$E2E_FAILED_JSON" \
   --argjson ok "$OVERALL_OK" \
-  '{uiTouched: ($uiTouched == 1), steps: $steps, e2e: {failed: $failed}, ok: ($ok == 1)}')
+  '{uiTouched: ($uiTouched == 1),
+    e2eProjects: (if $projects == "" then [] else ($projects | split(",")) end),
+    steps: $steps, e2e: {failed: $failed}, ok: ($ok == 1)}')
 
 echo "$VERDICT"
 [ -n "$JSON_OUT" ] && printf '%s\n' "$VERDICT" > "$JSON_OUT"

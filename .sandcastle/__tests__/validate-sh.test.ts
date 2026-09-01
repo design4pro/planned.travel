@@ -36,6 +36,7 @@ const SCRIPT = readFileSync(VALIDATE_SH, 'utf8')
 /** The shape `main.ts` parses out of `.sandcastle-validation.json`. Do not widen. */
 type Validation = {
   uiTouched: boolean
+  e2eProjects: string[]
   steps: Array<{ name: string; ok: boolean; durationMs: number }>
   e2e: {
     failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
@@ -60,74 +61,105 @@ afterEach(() => {
 })
 
 /** A results.json in the shape the Playwright JSON reporter writes: suites nested inside suites. */
-const RESULTS_FIXTURE = JSON.stringify({
-  config: { version: '1.62.1' },
-  suites: [
-    {
-      title: 'e2e/visual.spec.ts',
-      file: 'e2e/visual.spec.ts',
-      specs: [],
-      suites: [
-        {
-          title: 'planner',
-          specs: [
-            {
-              title: 'passes',
-              ok: true,
-              tests: [{ results: [{ status: 'passed' }] }],
-            },
-            {
-              title:
-                'the hover card never lands on the panel it would hide behind',
-              ok: false,
-              tests: [
-                {
-                  results: [
-                    {
-                      status: 'failed',
-                      error: {
-                        message:
-                          'Error: expect(page).toHaveScreenshot(planner.png)\n\n  12345 pixels differ',
-                      },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              title: 'the trip tab is remembered',
-              ok: false,
-              tests: [
-                {
-                  results: [
-                    {
-                      status: 'failed',
-                      error: {
-                        message:
-                          'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.visual.spec.ts:41',
-                      },
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-  ],
-})
+function resultsJson(specs: Array<Record<string, unknown>>): string {
+  return JSON.stringify({
+    config: { version: '1.62.1' },
+    suites: [
+      {
+        title: 'e2e/visual.spec.ts',
+        file: 'e2e/visual.spec.ts',
+        specs: [],
+        suites: [{ title: 'planner', specs }],
+      },
+    ],
+  })
+}
+
+/**
+ * One spec as the reporter records it. `attempts` becomes its `results` array — one entry per
+ * attempt, oldest first, each either `'passed'` or the message the attempt failed with — while
+ * `ok` stays an explicit argument because it is the reporter's own verdict over all of them and
+ * the one field the jq walk selects on.
+ */
+function spec(
+  title: string,
+  ok: boolean,
+  attempts: Array<'passed' | { failedWith: string }>,
+): Record<string, unknown> {
+  return {
+    title,
+    ok,
+    tests: [
+      {
+        results: attempts.map((attempt) =>
+          attempt === 'passed'
+            ? { status: 'passed' }
+            : { status: 'failed', error: { message: attempt.failedWith } },
+        ),
+      },
+    ],
+  }
+}
+
+/** The failures the fixtures below are built from; the verdict quotes the first line of each. */
+const PLANNER_PIXEL_DIFF =
+  'Error: expect(page).toHaveScreenshot(planner.png)\n\n  12345 pixels differ'
+const ITINERARY_PIXEL_DIFF =
+  'Error: expect(page).toHaveScreenshot(itinerary.png)\n\n  99 pixels differ'
+const ASSERTION_DIFF =
+  'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.visual.spec.ts:41'
+const CONNECTION_REFUSED =
+  'Error: page.goto: Connection refused\n  at e2e/trips-core.visual.spec.ts:41'
+const SOCKET_HANG_UP =
+  'Error: page.goto: socket hang up\n  at e2e/trips-core.visual.spec.ts:41'
+
+const RESULTS_FIXTURE = resultsJson([
+  spec('passes', true, ['passed']),
+  spec('the hover card never lands on the panel it would hide behind', false, [
+    { failedWith: PLANNER_PIXEL_DIFF },
+  ]),
+  spec('the trip tab is remembered', false, [{ failedWith: ASSERTION_DIFF }]),
+])
+
+/**
+ * A retried run, as the reporter records it: `results` grows one entry per attempt, oldest first,
+ * and the spec's own `ok` is the verdict over all of them. The dev-server blip passes on its
+ * second attempt; the pixel diff below does not.
+ */
+const RETRIED_BLIP = spec('the trip tab is remembered', true, [
+  { failedWith: CONNECTION_REFUSED },
+  'passed',
+])
+
+const RETRIED_REGRESSION = spec(
+  'the hover card never lands on the panel it would hide behind',
+  false,
+  [{ failedWith: PLANNER_PIXEL_DIFF }, { failedWith: PLANNER_PIXEL_DIFF }],
+)
+
+/**
+ * The mixed case the retry makes possible: a spec whose first attempt died on the transport and
+ * whose second failed for real. Only the last attempt describes why the spec is red.
+ */
+const BLIPPED_THEN_REGRESSED = spec(
+  'the itinerary day list keeps its order',
+  false,
+  [{ failedWith: SOCKET_HANG_UP }, { failedWith: ITINERARY_PIXEL_DIFF }],
+)
 
 const PNPM_STUB = `#!/usr/bin/env bash
 # Every ladder step is \`pnpm <script>\` and succeeds silently; only the Playwright invocation is
-# interesting, so it records its own argv and the two variables the script exports for it.
+# interesting, so it records its own argv and the variables the script's environment carries into
+# it. CI is among them because playwright.config.ts keys retries, workers, globalTimeout, the
+# reporter list and the port guard off it: the script must set it for nothing, and an empty value
+# here is how that reads back (runValidate strips CI from the ambient environment).
 # Every PW_* variable is set unconditionally by runValidate below, so this stub needs no shell
 # defaults — which also keeps \`\${…}\` out of the JS template literal that carries it.
 if [ "$1" = "exec" ]; then
   shift
   printf '%s\\n' "$@" > "$PW_ARGV_FILE"
   printf '%s\\n' "PLAYWRIGHT_JSON_OUTPUT_NAME=$PLAYWRIGHT_JSON_OUTPUT_NAME" \\
-    "PLAYWRIGHT_BASE_URL=$PLAYWRIGHT_BASE_URL" > "$PW_ENV_FILE"
+    "PLAYWRIGHT_BASE_URL=$PLAYWRIGHT_BASE_URL" "CI=$CI" > "$PW_ENV_FILE"
   if [ -n "$PW_RESULTS" ]; then mkdir -p test-results; cp "$PW_RESULTS" test-results/results.json; fi
   echo "Running 169 tests using 4 workers"
   exit "$PW_EXIT"
@@ -142,14 +174,22 @@ exit 0
  * written into a repo that has a working tree. The two `GIT_CONFIG_*` overrides keep `git init`
  * and the commit off the user's global config as well, and the identity below is supplied here
  * rather than by `git config` so that the scratch commit writes nothing anywhere.
+ *
+ * `CI` and `E2E_*` go for a different reason: they are the inputs under test. This suite runs on a
+ * runner that sets `CI=true`, and inheriting it would make "the script sets CI for nothing"
+ * unfalsifiable — every run would see one whether or not the script set it. Stripped here, anything
+ * the stub reports came from the script.
  */
+const isNeutralised = (key: string) =>
+  key.startsWith('GIT_') || key.startsWith('E2E_') || key === 'CI'
+
 const BASE_ENV: NodeJS.ProcessEnv = {
   // `Object.fromEntries` types its result as a bare string map, which drops the
   // worker keys `worker-configuration.d.ts` declares on `ProcessEnv`. Nothing
-  // is actually lost — the filter only removes `GIT_*` — so the assertion
+  // is actually lost — the filter only removes the keys above — so the assertion
   // restores what the signature erased rather than claiming anything new.
   ...(Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+    Object.entries(process.env).filter(([key]) => !isNeutralised(key)),
   ) as NodeJS.ProcessEnv),
   GIT_CONFIG_GLOBAL: '/dev/null',
   GIT_CONFIG_SYSTEM: '/dev/null',
@@ -186,7 +226,7 @@ function readEnvFile(path: string): Record<string, string> {
  * left behind by an earlier run before this one starts. `touch` commits those paths on a branch
  * off `main` so the UI-touched heuristic has a real diff to read; `forceE2e` defaults to true so
  * that every other test reaches the Playwright step whatever it touched, and the heuristic's own
- * tests set it false to let it decide.
+ * tests set it false to let it decide. `env` is what an operator would put in front of the script.
  */
 function runValidate(
   opts: {
@@ -195,6 +235,9 @@ function runValidate(
     staleResults?: string
     touch?: string[]
     forceE2e?: boolean
+    e2eProjects?: string
+    updateSnapshots?: boolean
+    env?: Record<string, string>
   } = {},
 ): Run {
   const { forceE2e = true } = opts
@@ -258,6 +301,10 @@ function runValidate(
       '--json-out',
       '.sandcastle-validation.json',
       ...(forceE2e ? ['--force-e2e'] : []),
+      ...(opts.e2eProjects === undefined
+        ? []
+        : ['--e2e-projects', opts.e2eProjects]),
+      ...(opts.updateSnapshots === true ? ['--update-snapshots'] : []),
     ],
     {
       cwd: dir,
@@ -270,6 +317,7 @@ function runValidate(
         PW_ENV_FILE: envFile,
         PW_EXIT: String(opts.pwExit ?? 0),
         PW_RESULTS: resultsFile,
+        ...opts.env,
       },
     },
   )
@@ -299,7 +347,83 @@ describe('the Playwright reporter declaration', () => {
     expect(run.pwEnv).toEqual({
       PLAYWRIGHT_JSON_OUTPUT_NAME: 'test-results/results.json',
       PLAYWRIGHT_BASE_URL: 'http://localhost:3010',
+      CI: '',
     })
+  })
+})
+
+describe('the e2e rung against a dev server that drops a connection', () => {
+  // Four of the six failures on the run that filed issue #143 were transport, not product:
+  // `page.goto: Connection refused`, `socket hang up`, `Connection reset by peer` — all of them
+  // green on a re-run against the same server. The rung ran at four workers and zero retries,
+  // strictly less tolerant than CI, which runs one worker with two.
+  it('asks for a retry on the argv, and sets CI for no step', () => {
+    const run = runValidate()
+
+    expect(run.pwArgs).toContain('--retries=1')
+    // Not `CI=1`: playwright.config.ts sells the retry bundled with the port guard its own comment
+    // calls "a hard stop rather than a warning" and with a globalTimeout sized for one of ci.yml's
+    // twelve shards. Empty because the harness strips CI, so a value here could only be the
+    // script's.
+    expect(run.pwEnv.CI).toBe('')
+  })
+
+  it('takes the count from E2E_RETRIES, including a deliberate zero', () => {
+    // Same override convention as E2E_WORKERS. Zero has to be expressible: a run measuring flake
+    // wants the intolerant gate back.
+    expect(runValidate({ env: { E2E_RETRIES: '0' } }).pwArgs).toContain(
+      '--retries=0',
+    )
+    expect(runValidate({ env: { E2E_RETRIES: '2' } }).pwArgs).toContain(
+      '--retries=2',
+    )
+  })
+
+  it('leaves the rung green when the retry passed, and names nothing', () => {
+    // The blip is in results.json either way — the reporter keeps the failed first attempt — so
+    // what decides is the spec's own `ok`, which the jq walk selects on.
+    const run = runValidate({ pwExit: 0, results: resultsJson([RETRIED_BLIP]) })
+
+    expect(run.verdict.e2e.failed).toEqual([])
+    expect(run.verdict.ok).toBe(true)
+    expect(run.status).toBe(0)
+    expect(run.stderr).not.toMatch(/WARN/)
+  })
+
+  it('still fails, and still names, a spec that failed every attempt', () => {
+    const run = runValidate({
+      pwExit: 1,
+      results: resultsJson([RETRIED_BLIP, RETRIED_REGRESSION]),
+    })
+
+    expect(run.verdict.e2e.failed).toEqual([
+      {
+        title: 'the hover card never lands on the panel it would hide behind',
+        error: 'Error: expect(page).toHaveScreenshot(planner.png)',
+        snapshotDiff: true,
+      },
+    ])
+    expect(run.verdict.ok).toBe(false)
+    expect(run.status).toBe(1)
+    expect(run.stderr).toContain('==> STEP FAILED: e2e')
+  })
+
+  it('describes a failing spec by its last attempt, not its first', () => {
+    // The attempt that decided `ok == false` is the last one. Naming the first would hand the fix
+    // agent the transport blip this rung now tolerates and clear `snapshotDiff`, sending it to
+    // look at the dev server for what is a snapshot regression.
+    const run = runValidate({
+      pwExit: 1,
+      results: resultsJson([BLIPPED_THEN_REGRESSED]),
+    })
+
+    expect(run.verdict.e2e.failed).toEqual([
+      {
+        title: 'the itinerary day list keeps its order',
+        error: 'Error: expect(page).toHaveScreenshot(itinerary.png)',
+        snapshotDiff: true,
+      },
+    ])
   })
 })
 
@@ -422,5 +546,51 @@ describe('the UI-touched heuristic', () => {
     ])
     expect(run.pwArgs).toEqual([])
     expect(run.status).toBe(0)
+  })
+})
+
+/**
+ * The fix loop re-validates on chromium alone and gates on mobile-safari once, so the flag that
+ * narrows the matrix has to reach Playwright as a real project list — and the step has to say
+ * which browsers it covered, or a verdict read hours later cannot be told from a full run.
+ */
+describe('--e2e-projects', () => {
+  it('is absent by default, and the step is named `e2e`', () => {
+    const run = runValidate()
+    expect(run.pwArgs.filter((a) => a.startsWith('--project'))).toEqual([])
+    expect(run.verdict.e2eProjects).toEqual([])
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e')
+  })
+
+  it('passes one --project per name and names the step after them', () => {
+    // Repeated `--project` IS a list here, unlike `--reporter` above: Playwright declares it as
+    // `--project <project-name...>`.
+    const run = runValidate({ e2eProjects: 'chromium' })
+    expect(run.pwArgs.filter((a) => a.startsWith('--project'))).toEqual([
+      '--project=chromium',
+    ])
+    expect(run.verdict.e2eProjects).toEqual(['chromium'])
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e:chromium')
+    expect(run.verdict.steps.map((s) => s.name)).not.toContain('e2e')
+  })
+
+  it('splits a comma-separated list', () => {
+    const run = runValidate({ e2eProjects: 'chromium,mobile-safari' })
+    expect(run.pwArgs.filter((a) => a.startsWith('--project'))).toEqual([
+      '--project=chromium',
+      '--project=mobile-safari',
+    ])
+    expect(run.verdict.e2eProjects).toEqual(['chromium', 'mobile-safari'])
+  })
+
+  it('still coexists with --update-snapshots', () => {
+    // The re-record path runs the whole matrix, but nothing in the script should stop the two
+    // flags being combined — and a future caller narrowing a re-record must not silently lose one.
+    const run = runValidate({
+      e2eProjects: 'mobile-safari',
+      updateSnapshots: true,
+    })
+    expect(run.pwArgs).toContain('--update-snapshots')
+    expect(run.pwArgs).toContain('--project=mobile-safari')
   })
 })

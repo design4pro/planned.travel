@@ -29,6 +29,14 @@ Layering contract: docs/SPEC.md §6. Domain vocabulary: CONTEXT.md.
 
 !`git log {{TARGET_BRANCH}}..{{BRANCH}} --oneline`
 
+# AXES
+
+Every finding names one `axis`, the same five the reviewer before you used, so a run's findings can
+be read together: `correctness`, `readability`, `architecture`, `security`, `performance`. The
+criteria below are structural, so most of what you find is `architecture` or `readability` — say so
+explicitly rather than leaving it implied, and if a structural shape is actually hiding a
+correctness or security problem, that is the axis to name and it outranks everything else.
+
 # CRITERIA
 
 1. **Code judo.** Is there a reframing that deletes whole categories of complexity rather
@@ -91,8 +99,8 @@ Order findings by severity, structural regressions first, legibility last. At mo
 Emit exactly one block, valid JSON, double quotes, no trailing commas:
 
 <deep-review>
-{"verdict": "concerns", "findings": [{"severity": "blocker", "title": "<imperative, searchable>", "summary": "<the problem, one or two sentences>", "files": ["src/..."], "remedy": "<the specific restructuring>"}]}
+{"verdict": "concerns", "findings": [{"severity": "blocker", "axis": "architecture", "title": "<imperative, searchable>", "summary": "<the problem, one or two sentences>", "files": ["src/..."], "remedy": "<the specific restructuring>"}]}
 </deep-review>
 
-`verdict` is `"clean"` when there are no findings at all (`findings` then `[]`), otherwise
+`axis` is one of the five above. `verdict` is `"clean"` when there are no findings at all (`findings` then `[]`), otherwise
 `"concerns"`. This gate is advisory: it never blocks the merge.
