@@ -75,46 +75,50 @@ function resultsJson(specs: Array<Record<string, unknown>>): string {
   })
 }
 
+/**
+ * One spec as the reporter records it. `attempts` becomes its `results` array — one entry per
+ * attempt, oldest first, each either `'passed'` or the message the attempt failed with — while
+ * `ok` stays an explicit argument because it is the reporter's own verdict over all of them and
+ * the one field the jq walk selects on.
+ */
+function spec(
+  title: string,
+  ok: boolean,
+  attempts: Array<'passed' | { failedWith: string }>,
+): Record<string, unknown> {
+  return {
+    title,
+    ok,
+    tests: [
+      {
+        results: attempts.map((attempt) =>
+          attempt === 'passed'
+            ? { status: 'passed' }
+            : { status: 'failed', error: { message: attempt.failedWith } },
+        ),
+      },
+    ],
+  }
+}
+
+/** The failures the fixtures below are built from; the verdict quotes the first line of each. */
+const PLANNER_PIXEL_DIFF =
+  'Error: expect(page).toHaveScreenshot(planner.png)\n\n  12345 pixels differ'
+const ITINERARY_PIXEL_DIFF =
+  'Error: expect(page).toHaveScreenshot(itinerary.png)\n\n  99 pixels differ'
+const ASSERTION_DIFF =
+  'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.visual.spec.ts:41'
+const CONNECTION_REFUSED =
+  'Error: page.goto: Connection refused\n  at e2e/trips-core.visual.spec.ts:41'
+const SOCKET_HANG_UP =
+  'Error: page.goto: socket hang up\n  at e2e/trips-core.visual.spec.ts:41'
+
 const RESULTS_FIXTURE = resultsJson([
-  {
-    title: 'passes',
-    ok: true,
-    tests: [{ results: [{ status: 'passed' }] }],
-  },
-  {
-    title: 'the hover card never lands on the panel it would hide behind',
-    ok: false,
-    tests: [
-      {
-        results: [
-          {
-            status: 'failed',
-            error: {
-              message:
-                'Error: expect(page).toHaveScreenshot(planner.png)\n\n  12345 pixels differ',
-            },
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'the trip tab is remembered',
-    ok: false,
-    tests: [
-      {
-        results: [
-          {
-            status: 'failed',
-            error: {
-              message:
-                'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.visual.spec.ts:41',
-            },
-          },
-        ],
-      },
-    ],
-  },
+  spec('passes', true, ['passed']),
+  spec('the hover card never lands on the panel it would hide behind', false, [
+    { failedWith: PLANNER_PIXEL_DIFF },
+  ]),
+  spec('the trip tab is remembered', false, [{ failedWith: ASSERTION_DIFF }]),
 ])
 
 /**
@@ -122,78 +126,26 @@ const RESULTS_FIXTURE = resultsJson([
  * and the spec's own `ok` is the verdict over all of them. The dev-server blip passes on its
  * second attempt; the pixel diff below does not.
  */
-const RETRIED_BLIP = {
-  title: 'the trip tab is remembered',
-  ok: true,
-  tests: [
-    {
-      results: [
-        {
-          status: 'failed',
-          error: {
-            message:
-              'Error: page.goto: Connection refused\n  at e2e/trips-core.visual.spec.ts:41',
-          },
-        },
-        { status: 'passed' },
-      ],
-    },
-  ],
-}
+const RETRIED_BLIP = spec('the trip tab is remembered', true, [
+  { failedWith: CONNECTION_REFUSED },
+  'passed',
+])
 
-const RETRIED_REGRESSION = {
-  title: 'the hover card never lands on the panel it would hide behind',
-  ok: false,
-  tests: [
-    {
-      results: [
-        {
-          status: 'failed',
-          error: {
-            message:
-              'Error: expect(page).toHaveScreenshot(planner.png)\n\n  12345 pixels differ',
-          },
-        },
-        {
-          status: 'failed',
-          error: {
-            message:
-              'Error: expect(page).toHaveScreenshot(planner.png)\n\n  12345 pixels differ',
-          },
-        },
-      ],
-    },
-  ],
-}
+const RETRIED_REGRESSION = spec(
+  'the hover card never lands on the panel it would hide behind',
+  false,
+  [{ failedWith: PLANNER_PIXEL_DIFF }, { failedWith: PLANNER_PIXEL_DIFF }],
+)
 
 /**
  * The mixed case the retry makes possible: a spec whose first attempt died on the transport and
  * whose second failed for real. Only the last attempt describes why the spec is red.
  */
-const BLIPPED_THEN_REGRESSED = {
-  title: 'the itinerary day list keeps its order',
-  ok: false,
-  tests: [
-    {
-      results: [
-        {
-          status: 'failed',
-          error: {
-            message:
-              'Error: page.goto: socket hang up\n  at e2e/trips-core.visual.spec.ts:41',
-          },
-        },
-        {
-          status: 'failed',
-          error: {
-            message:
-              'Error: expect(page).toHaveScreenshot(itinerary.png)\n\n  99 pixels differ',
-          },
-        },
-      ],
-    },
-  ],
-}
+const BLIPPED_THEN_REGRESSED = spec(
+  'the itinerary day list keeps its order',
+  false,
+  [{ failedWith: SOCKET_HANG_UP }, { failedWith: ITINERARY_PIXEL_DIFF }],
+)
 
 const PNPM_STUB = `#!/usr/bin/env bash
 # Every ladder step is \`pnpm <script>\` and succeeds silently; only the Playwright invocation is
