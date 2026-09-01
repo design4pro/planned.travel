@@ -79,6 +79,7 @@ import {
   createDayNote,
   dayNotesRepository,
   daysRepository,
+  listDayNotes,
   listTripDays,
 } from '../days'
 import {
@@ -103,6 +104,8 @@ import {
   dayAccommodationsRepository,
   dayAssignmentsRepository,
   getTripItinerary,
+  listDayAssignments,
+  reorderDayTimeline,
   setAssignmentParticipants,
 } from '../itinerary'
 import {
@@ -2549,6 +2552,156 @@ describe('tenant isolation', () => {
 
       expect(bucket.calls).toEqual([[mine]])
       expect([...bucket.remaining]).toEqual([theirs])
+    })
+  })
+
+  /**
+   * `01-S4a`: one number line per day, written across two tables in one batch.
+   *
+   * The batch is the reason this block exists rather than riding on the generic
+   * per-repository cases above. `reorderDayTimeline` is the only write in the
+   * product that touches two tables at once, and a tenant filter that held on one of
+   * them and not the other would renumber a stranger's day at the moment a reader
+   * dragged their own.
+   */
+  describe('day timeline ordering', () => {
+    /** Positions of a day's stops and notes, keyed by row id, for a byte-for-byte diff. */
+    async function positionsOf(
+      scope: TenantScope,
+      dayId: string,
+    ): Promise<Record<string, number>> {
+      const [stops, notes] = await Promise.all([
+        listDayAssignments(scope, dayId),
+        listDayNotes(scope, dayId),
+      ])
+      return Object.fromEntries([
+        ...stops.map((row) => [row.id, row.orderIndex] as const),
+        ...notes.map((row) => [row.id, row.sortOrder] as const),
+      ])
+    }
+
+    it('refuses B’s day, named with B’s trip or with A’s own', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          reorderDayTimeline(scope, {
+            tripId: beta.tripId,
+            dayId: beta.dayId,
+            items: [{ kind: 'stop', id: beta.assignmentId }],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // A's own trip with B's day: `requireTripDay`'s job, and the one a caller who
+      // has already proved they own a trip could otherwise reach through.
+      expect(
+        await captureError(() =>
+          reorderDayTimeline(scope, {
+            tripId: alpha.tripId,
+            dayId: beta.dayId,
+            items: [],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('drops B’s ids and renumbers A over its own items only', async () => {
+      const scope = alpha.tenant.scope
+      const before = await positionsOf(beta.tenant.scope, beta.dayId)
+
+      const second = await createPlace(scope, {
+        tripId: alpha.tripId,
+        name: 'Time Out Market',
+      })
+      const extraStop = await createAssignment(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        placeId: second.id,
+      })
+      const extraNote = await createDayNote(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        body: 'Book the tram tickets.',
+      })
+
+      const written = await reorderDayTimeline(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        items: [
+          { kind: 'stop', id: beta.assignmentId },
+          { kind: 'note', id: alpha.dayNoteId },
+          { kind: 'note', id: beta.dayNoteId },
+          { kind: 'stop', id: extraStop.id },
+          { kind: 'note', id: extraNote.id },
+          { kind: 'stop', id: alpha.assignmentId },
+        ],
+      })
+
+      // B's two ids are gone from the write, and A's four are numbered 0..3.
+      expect(written).toEqual([
+        { kind: 'note', id: alpha.dayNoteId },
+        { kind: 'stop', id: extraStop.id },
+        { kind: 'note', id: extraNote.id },
+        { kind: 'stop', id: alpha.assignmentId },
+      ])
+      expect(await positionsOf(scope, alpha.dayId)).toEqual({
+        [alpha.dayNoteId]: 0,
+        [extraStop.id]: 1,
+        [extraNote.id]: 2,
+        [alpha.assignmentId]: 3,
+      })
+
+      // And B's own day is byte-identical.
+      expect(await positionsOf(beta.tenant.scope, beta.dayId)).toEqual(before)
+    })
+
+    it('leaves A a complete renumber when every id it was sent is a stranger’s', async () => {
+      const scope = alpha.tenant.scope
+      const before = await positionsOf(beta.tenant.scope, beta.dayId)
+
+      // Nothing addressable is left after the drop, so the day is rewritten from its
+      // own current order: a whole 0..n-1, never half a batch.
+      await reorderDayTimeline(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        items: [
+          { kind: 'stop', id: beta.assignmentId },
+          { kind: 'note', id: beta.dayNoteId },
+        ],
+      })
+
+      // The seed's note and stop are both at 0 — two tables, one number line not yet
+      // written — so which of the two leads is the id tiebreak's business and not
+      // this test's. What is asserted is that the day came out a whole `0..n-1`.
+      const after = await positionsOf(scope, alpha.dayId)
+      expect(Object.keys(after).sort()).toEqual(
+        [alpha.dayNoteId, alpha.assignmentId].sort(),
+      )
+      expect(Object.values(after).sort()).toEqual([0, 1])
+      expect(await positionsOf(beta.tenant.scope, beta.dayId)).toEqual(before)
+    })
+
+    it('refuses to clear a foreign row’s time through `clearTime`', async () => {
+      const scope = alpha.tenant.scope
+      const before = await dayAssignmentsRepository.findById(
+        beta.tenant.scope,
+        beta.assignmentId,
+      )
+
+      await reorderDayTimeline(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        items: [{ kind: 'stop', id: beta.assignmentId }],
+        clearTime: [{ kind: 'stop', id: beta.assignmentId }],
+      })
+
+      expect(
+        await dayAssignmentsRepository.findById(
+          beta.tenant.scope,
+          beta.assignmentId,
+        ),
+      ).toEqual(before)
     })
   })
 })

@@ -36,9 +36,13 @@ export {
   ideaItemId,
   indexOf,
   isIdeaItemId,
+  isNoteItemId,
   itemsIn,
+  mergeDayTimeline,
   movePlanItem,
   movePlanItemToDay,
+  noteIdOfNoteItem,
+  noteItemId,
   placeIdOfIdeaItem,
   removePlanItem,
   scheduledCount,
@@ -52,13 +56,11 @@ export type {
   PlanMoveResult,
   PlanOrder,
   PlanTarget,
+  TimeOfItem,
+  TimelineItem,
 } from './ordering'
 
-export {
-  emphasisFor,
-  initialSelection,
-  selectionReducer,
-} from './selection'
+export { emphasisFor, initialSelection, selectionReducer } from './selection'
 export type {
   PlannerEmphasis,
   PlannerSelection,

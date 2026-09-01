@@ -771,6 +771,8 @@ describe('the storage purge a delete leaves behind', () => {
     expect(purges()).toEqual([])
   })
 
+  // Recording `MAX_PURGE_KEYS + 1` files one at a time costs a few thousand queries before the
+  // assertion is even reached, which is more than the default per-test budget allows.
   it('splits a trip with more objects than one message can carry', async () => {
     await createTrip({
       title: 'A very well documented expedition',
@@ -814,7 +816,7 @@ describe('the storage purge a delete leaves behind', () => {
     expect(
       new Set(enqueued.flatMap((envelope) => envelope.payload.keys)),
     ).toEqual(new Set(keys))
-  })
+  }, 60_000)
 
   it('deletes the trip anyway when the queue refuses the sweep', async () => {
     const { tripId } = await tripWithObjects()
