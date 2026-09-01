@@ -13,7 +13,6 @@
  * `connections.ts`).
  */
 import { createServerFn } from '@tanstack/react-start'
-import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 
 import { TRANSPORT_MODES, TRANSPORT_STATUSES } from '#/server/db/schema'
@@ -39,7 +38,7 @@ import {
 } from '#/server/billing/entitlements'
 import { billingRuntime } from '#/server/billing/runtime.cloudflare'
 import { billingContext } from '#/server/billing/types'
-import { createHereClient } from '#/server/transit/here'
+import { transitRuntime } from '#/server/transit/bindings'
 import { RateCeilingError } from '#/server/transit/meter'
 import {
   TransitProviderError,
@@ -92,10 +91,28 @@ const optionalTime = z
  */
 const optionalDayId = z.string().trim().max(64)
 
+/**
+ * The name a record is filed under. Required: a row nobody can name is a row
+ * nobody finds again.
+ */
+const titleText = z.string().trim().min(1).max(160)
+
+/** Minor units, never a float. `0` means "not recorded" and is written `null`. */
+const optionalMinorAmount = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
+
+/** An ISO-4217 alphabetic code, or `''` for a price with no currency stated. */
+const optionalCurrency = z
+  .string()
+  .trim()
+  .refine(
+    (value) => value === '' || /^[A-Z]{3}$/.test(value),
+    'must be an ISO-4217 alphabetic code',
+  )
+
 const legFields = {
   mode: z.enum(TRANSPORT_MODES),
   status: z.enum(TRANSPORT_STATUSES),
-  title: z.string().trim().min(1).max(160),
+  title: titleText,
   departureDayId: optionalDayId,
   arrivalDayId: optionalDayId,
   carrier: optionalText,
@@ -112,14 +129,8 @@ const legFields = {
   arrivalTime: optionalTime,
   /** `0` means "not recorded" for both of these. */
   distanceMetres: z.number().int().min(0).max(100_000_000),
-  priceMinor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
-  currency: z
-    .string()
-    .trim()
-    .refine(
-      (value) => value === '' || /^[A-Z]{3}$/.test(value),
-      'must be an ISO-4217 alphabetic code',
-    ),
+  priceMinor: optionalMinorAmount,
+  currency: optionalCurrency,
   notes: z.string().trim().max(4000),
 }
 
@@ -210,6 +221,39 @@ const chainLegSchema = z.object({
   arrivalDate: optionalDate,
   arrivalTime: optionalTime,
 })
+
+/**
+ * The chain, from the wire shapes to the repository's.
+ *
+ * Both writers send the same two arrays and both mean the same thing by `''` — "not stated" — so
+ * the translation is written once. It is a mapping and nothing else: what a chain has to satisfy
+ * is stated by {@link legChainSchema} on the way in and by `replaceTransportChain` at the write.
+ */
+function chainInput(data: {
+  readonly stations: ReadonlyArray<z.infer<typeof stationSchema>>
+  readonly legs: ReadonlyArray<z.infer<typeof chainLegSchema>>
+}) {
+  return {
+    stations: data.stations.map((station) => ({
+      name: station.name,
+      code: orNull(station.code),
+      lat: station.lat,
+      lng: station.lng,
+      timezone: orNull(station.timezone),
+    })),
+    legs: data.legs.map((leg) => ({
+      serviceNumber: orNull(leg.serviceNumber),
+      platform: orNull(leg.platform),
+      seat: orNull(leg.seat),
+      departureDayId: orNull(leg.departureDayId),
+      arrivalDayId: orNull(leg.arrivalDayId),
+      departureDate: orNull(leg.departureDate),
+      departureTime: orNull(leg.departureTime),
+      arrivalDate: orNull(leg.arrivalDate),
+      arrivalTime: orNull(leg.arrivalTime),
+    })),
+  }
+}
 
 /**
  * The chain writer's validator.
@@ -560,26 +604,11 @@ export const saveLegChainFn = createServerFn({ method: 'POST' })
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
 
-    const legs = await replaceTransportChain(scope, data.transportId, {
-      stations: data.stations.map((station) => ({
-        name: station.name,
-        code: orNull(station.code),
-        lat: station.lat,
-        lng: station.lng,
-        timezone: orNull(station.timezone),
-      })),
-      legs: data.legs.map((leg) => ({
-        serviceNumber: orNull(leg.serviceNumber),
-        platform: orNull(leg.platform),
-        seat: orNull(leg.seat),
-        departureDayId: orNull(leg.departureDayId),
-        arrivalDayId: orNull(leg.arrivalDayId),
-        departureDate: orNull(leg.departureDate),
-        departureTime: orNull(leg.departureTime),
-        arrivalDate: orNull(leg.arrivalDate),
-        arrivalTime: orNull(leg.arrivalTime),
-      })),
-    })
+    const legs = await replaceTransportChain(
+      scope,
+      data.transportId,
+      chainInput(data),
+    )
 
     const first = legs.at(0)
     const last = legs.at(-1)
@@ -680,25 +709,7 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
 
     try {
       const result = await searchTransitConnections(
-        {
-          // One namespace, two roles, and they must not be confused: the answers are keyed on the
-          // query alone and shared by every tenant, while the tallies are keyed per organization.
-          cache: env.KV,
-          counters: env.KV,
-          // Built when a call is actually made, not when the runtime is assembled: a deployment
-          // with no credential must still be able to serve a cached answer, and an eager
-          // `createHereClient` would refuse the whole search before the cache was consulted.
-          client: {
-            search: (asked) =>
-              createHereClient({
-                apiKey: env.HERE_API_KEY ?? '',
-                fetch,
-              }).search(asked),
-          },
-          organizationId: scope.ctx.organizationId,
-          ceiling,
-          now: () => new Date(),
-        },
+        transitRuntime({ organizationId: scope.ctx.organizationId, ceiling }),
         query,
       )
       return {
@@ -743,15 +754,9 @@ export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
       /** `''` for a connection nobody has saved yet. */
       transportId: z.string().trim().max(64),
       mode: z.enum(TRANSPORT_MODES),
-      title: z.string().trim().min(1).max(160),
-      priceMinor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
-      currency: z
-        .string()
-        .trim()
-        .refine(
-          (value) => value === '' || /^[A-Z]{3}$/.test(value),
-          'must be an ISO-4217 alphabetic code',
-        ),
+      title: titleText,
+      priceMinor: optionalMinorAmount,
+      currency: optionalCurrency,
       stations: z
         .array(stationSchema)
         .min(2)
@@ -773,24 +778,7 @@ export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
         title: data.title,
         priceMinor: data.priceMinor === 0 ? null : data.priceMinor,
         currency: orNull(data.currency),
-        stations: data.stations.map((station) => ({
-          name: station.name,
-          code: orNull(station.code),
-          lat: station.lat,
-          lng: station.lng,
-          timezone: orNull(station.timezone),
-        })),
-        legs: data.legs.map((leg) => ({
-          serviceNumber: orNull(leg.serviceNumber),
-          platform: orNull(leg.platform),
-          seat: orNull(leg.seat),
-          departureDayId: orNull(leg.departureDayId),
-          arrivalDayId: orNull(leg.arrivalDayId),
-          departureDate: orNull(leg.departureDate),
-          departureTime: orNull(leg.departureTime),
-          arrivalDate: orNull(leg.arrivalDate),
-          arrivalTime: orNull(leg.arrivalTime),
-        })),
+        ...chainInput(data),
       })
 
       await mirrorToRoom(scope, data.tripId, [

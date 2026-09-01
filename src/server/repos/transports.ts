@@ -754,10 +754,11 @@ export async function saveSearchedConnection(
   const values = searchedConnectionInput.parse(input)
   await requireTrip(scope, values.tripId)
 
+  const requested = values.transportId ?? null
   const existing =
-    values.transportId === null || values.transportId === undefined
+    requested === null
       ? null
-      : await transportsRepository.requireById(scope, values.transportId)
+      : await transportsRepository.requireById(scope, requested)
   if (existing !== null && existing.tripId !== values.tripId) {
     throw new NotFoundError('transport', existing.id)
   }

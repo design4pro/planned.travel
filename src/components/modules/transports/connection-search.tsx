@@ -56,6 +56,7 @@ import { CHAIN_MAX_LEGS } from './leg-form'
 import { modeIcon } from './mode-icon'
 
 import type { ComboboxOption } from '#/components/ui'
+import type { ChainPayload } from './leg-form'
 import type {
   ConnectionSearchOutcome,
   StationMatch,
@@ -179,25 +180,28 @@ export function connectionMode(
   return ridden.length === 1 ? ridden[0] : 'transit'
 }
 
-interface ChainPayload {
-  readonly stations: Array<{
-    name: string
-    code: string
-    lat: number | null
-    lng: number | null
-    timezone: string
-  }>
-  readonly legs: Array<{
-    serviceNumber: string
-    platform: string
-    seat: string
-    departureDayId: string
-    arrivalDayId: string
-    departureDate: string
-    departureTime: string
-    arrivalDate: string
-    arrivalTime: string
-  }>
+/**
+ * The zone one station on the chain is read in, from the stops the traveller picked.
+ *
+ * The two ends and nowhere else, and never from the answer: a provider states an offset
+ * (`+01:00`), and an offset is not a zone — it does not survive the Sunday the clocks change, so
+ * it cannot become the IANA name an endpoint needs. The catalogue rows behind the two pickers do
+ * carry that name. The stations in between carry none, which reads as "not stated" and is the
+ * truth.
+ */
+function zoneAt(
+  index: number,
+  total: number,
+  origin: StationMatch | null,
+  destination: StationMatch | null,
+): string {
+  if (index === 0) {
+    return origin?.timezone ?? ''
+  }
+  if (index === total - 1) {
+    return destination?.timezone ?? ''
+  }
+  return ''
 }
 
 /**
@@ -207,17 +211,16 @@ interface ChainPayload {
  * the two rows cannot disagree about which station they name — the join guarantee
  * `replaceTransportChain` is built around, kept on this side of the wire too.
  *
- * The **zone** is set on the two outer stations only, and from the stops the traveller picked
- * rather than from the answer. A provider states an offset (`+01:00`), and an offset is not a zone:
- * it does not survive the Sunday the clocks change, so it cannot become the IANA name an endpoint
- * needs. The catalogue rows behind the two pickers do carry that name. The stations in between
- * carry none, which reads as "not stated" and is the truth.
+ * The zone is set on the two outer stations only — see {@link zoneAt}.
  */
 export function chainFor(
   connection: TransitConnection,
   origin: StationMatch | null,
   destination: StationMatch | null,
 ): ChainPayload {
+  // There is always a first leg: a route the provider answered with no sections at all is dropped
+  // before it becomes a connection (`connectionOf` in `src/server/transit/here.ts`), and
+  // `journeyLegs` never returns fewer legs than it was given one of.
   const legs = journeyLegs(connection)
   const stops = [legs[0].origin, ...legs.map((leg) => leg.destination)]
   return {
@@ -226,12 +229,7 @@ export function chainFor(
       code: '',
       lat: stop.lat,
       lng: stop.lng,
-      timezone:
-        index === 0
-          ? (origin?.timezone ?? '')
-          : index === stops.length - 1
-            ? (destination?.timezone ?? '')
-            : '',
+      timezone: zoneAt(index, stops.length, origin, destination),
     })),
     legs: legs.map((leg) => ({
       serviceNumber: leg.name ?? '',
@@ -504,6 +502,111 @@ function ConnectionRow({
   )
 }
 
+/* ----------------------------------------------------------- what came back */
+
+/** The half of an outcome that is a refusal, so the panel below can be typed by it. */
+type ConnectionRefusal = Extract<ConnectionSearchOutcome, { ok: false }>
+
+/**
+ * What a refusal is called on screen.
+ *
+ * One title per reason rather than one for all of them: a spent allowance and a provider having a
+ * moment are different facts about the world, and only one of them is worth waiting out.
+ */
+function refusalTitle(reason: ConnectionRefusal['reason']): string {
+  switch (reason) {
+    case 'ceiling':
+      return 'No searches left this month'
+    case 'unconfigured':
+      return 'Connection search is off on this deployment'
+    default:
+      return 'The timetable service did not answer'
+  }
+}
+
+/**
+ * The one region the answer and everything standing in for it share.
+ *
+ * Five states, written as five returns rather than as one expression: the skeleton, the invitation
+ * before anything was asked, a refusal, an answer with nothing in it, and the list. The skeleton is
+ * the same three rows at the same height the results occupy, so an answer landing changes what is
+ * in the box and never how tall it is.
+ */
+function SearchOutcome({
+  pending,
+  outcome,
+  results,
+  expanded,
+  saving,
+  onToggle,
+  onSave,
+}: {
+  pending: boolean
+  outcome: ConnectionSearchOutcome | null
+  results: ReadonlyArray<TransitConnection>
+  expanded: string | null
+  saving: boolean
+  onToggle: (id: string) => void
+  onSave: (connection: TransitConnection) => void
+}) {
+  if (pending) {
+    return (
+      <ul className="flex flex-col gap-2">
+        {[0, 1, 2].map((row) => (
+          <li key={row}>
+            <Skeleton radius="lg" className="h-[3.25rem] w-full" />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  if (outcome === null) {
+    return (
+      <p className="text-caption text-ink-3">
+        Two stops and a date, and the timetable answers. Nothing is saved until
+        you choose one.
+      </p>
+    )
+  }
+
+  if (!outcome.ok) {
+    return (
+      <Alert
+        data-part="connection-refusal"
+        tone={outcome.reason === 'ceiling' ? 'warning' : 'danger'}
+        title={refusalTitle(outcome.reason)}
+      >
+        {outcome.message}
+      </Alert>
+    )
+  }
+
+  if (results.length === 0) {
+    return (
+      <p data-part="connection-empty" className="text-caption text-ink-3">
+        No connection was found between those two stops on that date. Try a
+        neighbouring station, or widen the mode filter.
+      </p>
+    )
+  }
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {results.map((connection) => (
+        <ConnectionRow
+          key={connection.id}
+          connection={connection}
+          expanded={expanded === connection.id}
+          saving={saving}
+          onToggle={() => onToggle(connection.id)}
+          onSave={() => onSave(connection)}
+        />
+      ))}
+    </ul>
+  )
+}
+
 /* -------------------------------------------------------------- the surface */
 
 export interface ConnectionSearchProps {
@@ -522,13 +625,15 @@ export function ConnectionSearch({
   days,
   onSaved,
 }: ConnectionSearchProps) {
+  // `flatMap` rather than a filter and a `?? ''`: the fallback would be a branch no day can reach,
+  // and an empty string here is the one value the date field must never be handed.
   const dated = useMemo(
-    () => days.filter((day) => day.date !== null).map((day) => day.date ?? ''),
+    () => days.flatMap((day) => (day.date === null ? [] : [day.date])),
     [days],
   )
   const [origin, setOrigin] = useState<StationMatch | null>(null)
   const [destination, setDestination] = useState<StationMatch | null>(null)
-  const [date, setDate] = useState(() => dated[0] ?? '')
+  const [date, setDate] = useState(() => dated.at(0) ?? '')
   const [modes, setModes] = useState<ReadonlyArray<TransitMode>>([])
   const [ranking, setRanking] = useState<Ranking>('earliest')
   const [outcome, setOutcome] = useState<ConnectionSearchOutcome | null>(null)
@@ -711,62 +816,18 @@ export function ConnectionSearch({
         )}
       </div>
 
-      {/*
-        The list and everything that stands in for it share one region, and the skeleton is the
-        same three rows at the same height the results occupy — so an answer landing changes what
-        is in the box and never how tall it is.
-      */}
       <div aria-busy={search.pending} className="min-w-0">
-        {search.pending ? (
-          <ul className="flex flex-col gap-2">
-            {[0, 1, 2].map((row) => (
-              <li key={row}>
-                <Skeleton radius="lg" className="h-[3.25rem] w-full" />
-              </li>
-            ))}
-          </ul>
-        ) : outcome === null ? (
-          <p className="text-caption text-ink-3">
-            Two stops and a date, and the timetable answers. Nothing is saved
-            until you choose one.
-          </p>
-        ) : !outcome.ok ? (
-          <Alert
-            data-part="connection-refusal"
-            tone={outcome.reason === 'ceiling' ? 'warning' : 'danger'}
-            title={
-              outcome.reason === 'ceiling'
-                ? 'No searches left this month'
-                : outcome.reason === 'unconfigured'
-                  ? 'Connection search is off on this deployment'
-                  : 'The timetable service did not answer'
-            }
-          >
-            {outcome.message}
-          </Alert>
-        ) : results.length === 0 ? (
-          <p data-part="connection-empty" className="text-caption text-ink-3">
-            No connection was found between those two stops on that date. Try a
-            neighbouring station, or widen the mode filter.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {results.map((connection) => (
-              <ConnectionRow
-                key={connection.id}
-                connection={connection}
-                expanded={expanded === connection.id}
-                saving={save.pending}
-                onToggle={() =>
-                  setExpanded((current) =>
-                    current === connection.id ? null : connection.id,
-                  )
-                }
-                onSave={() => void choose(connection)}
-              />
-            ))}
-          </ul>
-        )}
+        <SearchOutcome
+          pending={search.pending}
+          outcome={outcome}
+          results={results}
+          expanded={expanded}
+          saving={save.pending}
+          onToggle={(id) =>
+            setExpanded((current) => (current === id ? null : id))
+          }
+          onSave={(connection) => void choose(connection)}
+        />
       </div>
 
       {search.error === null ? null : (

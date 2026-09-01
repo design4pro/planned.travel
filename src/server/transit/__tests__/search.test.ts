@@ -18,6 +18,9 @@
  * by a stub at the seam — `searchTransitConnections` takes its client as a dependency — and the
  * two cases that do exercise the real client drive it with a `fetch` of their own.
  */
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createHereClient } from '../here'
@@ -574,5 +577,70 @@ describe('the HERE client', () => {
       })
     expect(built).toThrow(TransitProviderError)
     expect(built).toThrow(/HERE_API_KEY/)
+  })
+})
+
+/* ------------------------------------------------------------------ the seam */
+
+/**
+ * The binding seam, asserted by reading the directory rather than by importing it.
+ *
+ * `bindings.ts` cannot be imported here at all — `cloudflare:workers` does not resolve in the
+ * `server` Vitest project, which is the whole reason every binding in this repository is reached
+ * through one seam module rather than inline. So what is checked is the property that makes the
+ * rest of this file possible: the cache, the counters and the credential arrive as arguments, and
+ * the module with a vendor's name on it has exactly one importer.
+ *
+ * The second case is the one that rots. `./here` says nothing outside this directory imports it,
+ * and a server function reaching for `createHereClient` to wire a key would be a plausible-looking
+ * edit that quietly makes the proxy optional — the cache, the ceiling and the shared key with it.
+ */
+describe('the transit directory keeps its bindings in one file', () => {
+  const DIRECTORY = fileURLToPath(new URL('../', import.meta.url))
+  const SRC = fileURLToPath(new URL('../../../', import.meta.url))
+
+  /** Written as a value so this file can look for the specifier without containing an import. */
+  const WORKER_ENV = `from 'cloudflare:workers'`
+
+  const codeOf = (file: string): string => readFileSync(file, 'utf8')
+
+  /** Every `.ts`/`.tsx` file under `root`, tests included. */
+  function sourceFiles(root: string): Array<string> {
+    const found: Array<string> = []
+    const walk = (directory: string): void => {
+      for (const entry of readdirSync(directory)) {
+        const full = join(directory, entry)
+        if (statSync(full).isDirectory()) {
+          walk(full)
+          continue
+        }
+        if (/\.tsx?$/.test(entry)) found.push(full)
+      }
+    }
+    walk(root)
+    return found
+  }
+
+  it('reaches the Worker environment from `bindings.ts` and nowhere else', () => {
+    const offenders = sourceFiles(DIRECTORY)
+      // This file is not shipped, and it names the specifier in order to look for it.
+      .filter((file) => !file.includes(`${sep}__tests__${sep}`))
+      .filter((file) => codeOf(file).includes(WORKER_ENV))
+      .map((file) => file.slice(DIRECTORY.length))
+    expect(offenders).toEqual(['bindings.ts'])
+  })
+
+  it('is the vendor module’s only importer outside this directory', () => {
+    const importers = sourceFiles(SRC)
+      .filter((file) => !file.startsWith(DIRECTORY))
+      .filter((file) => /from '#\/server\/transit\/here'/.test(codeOf(file)))
+    expect(importers).toEqual([])
+
+    // The control, because an assertion that nothing was found passes just as well when the scan
+    // is broken: the sibling module every server function does reach is found by the same walk.
+    const proxyImporters = sourceFiles(SRC)
+      .filter((file) => !file.startsWith(DIRECTORY))
+      .filter((file) => /from '#\/server\/transit\/search'/.test(codeOf(file)))
+    expect(proxyImporters.length).toBeGreaterThan(0)
   })
 })
