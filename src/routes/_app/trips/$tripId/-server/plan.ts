@@ -40,11 +40,9 @@ import {
   updateAssignment,
   updatePlace,
 } from '#/server/repos'
-import { mirrorToRoom, patch } from '#/server/fns/context'
 import { appScope } from '../../../-server/context'
 
-import type { TripPatch } from '#/server/do'
-import type { TenantScope } from '#/server/repos'
+import type { TenantScope, TimelineItemInput } from '#/server/repos'
 import type { Trip } from '#/server/db/types'
 
 /**
@@ -242,6 +240,40 @@ export const loadPlanBoard = createServerFn({ method: 'GET' })
  * Reordering
  * ---------------------------------------------------------------------------------------------- */
 
+/**
+ * Tells the trip room that these days were rearranged: one `day` upsert each,
+ * carrying the merged order.
+ *
+ * The bridge is reached at call time rather than imported at the top of the file,
+ * and that is not stylistic. `#/server/fns/context` imports `cloudflare:workers` and
+ * the trip room's Durable Object module, and this file is imported by the planner
+ * route — so a static import puts both into that route's module graph. It is the
+ * posture `_app/-server/shell.ts` and `_app/-server/trip-lifecycle.ts` each record
+ * for the same reason, in the same words: reach the binding inside the function.
+ *
+ * Nothing here catches, because there is nothing to catch: D1 is the record and the
+ * room is a signal, so `mirrorToRoom` logs a refusal and returns.
+ */
+async function mirrorDayOrder(
+  scope: TenantScope,
+  tripId: string,
+  days: ReadonlyArray<{
+    readonly dayId: string
+    readonly items: ReadonlyArray<TimelineItemInput>
+  }>,
+): Promise<void> {
+  const { mirrorToRoom, patch } = await import('#/server/fns/context')
+  await mirrorToRoom(
+    scope,
+    tripId,
+    days.map((day) =>
+      patch('day', day.dayId, {
+        items: day.items.map((item) => ({ kind: item.kind, id: item.id })),
+      }),
+    ),
+  )
+}
+
 /** One row of a day's sequence, as the browser names it. */
 const timelineItem = z.strictObject(
   { kind: z.enum(['stop', 'note']), id },
@@ -319,8 +351,8 @@ export const reorderPlanInputSchema = z.strictObject({
  * happens before that write and `moveAssignment` guards the trip but not the role.
  *
  * The result is mirrored to the trip room as one `day` upsert per touched day, so
- * every other viewer's board catches up without polling. D1 is the record and the
- * room is a signal: {@link mirrorToRoom} logs a refusal rather than failing the save.
+ * every other viewer's board catches up without polling — see {@link mirrorDayOrder},
+ * which also holds why that module is reached at call time.
  */
 export const reorderPlanFn = createServerFn({ method: 'POST' })
   .validator(reorderPlanInputSchema)
@@ -347,8 +379,10 @@ export const reorderPlanFn = createServerFn({ method: 'POST' })
       }
     }
 
-    const patches: Array<TripPatch> = []
-    let moved = 0
+    const rearranged: Array<{
+      dayId: string
+      items: ReadonlyArray<TimelineItemInput>
+    }> = []
     for (const day of data.days) {
       const written = await reorderDayTimeline(scope, {
         tripId: trip.id,
@@ -356,17 +390,14 @@ export const reorderPlanFn = createServerFn({ method: 'POST' })
         items: day.items,
         clearTime: day.clearTime,
       })
-      moved += written.length
-      patches.push(
-        patch('day', day.dayId, {
-          items: written.map((item) => ({ kind: item.kind, id: item.id })),
-        }),
-      )
+      rearranged.push({ dayId: day.dayId, items: written })
     }
 
-    await mirrorToRoom(scope, trip.id, patches)
+    await mirrorDayOrder(scope, trip.id, rearranged)
 
-    return { moved }
+    return {
+      moved: rearranged.reduce((total, day) => total + day.items.length, 0),
+    }
   })
 
 /**
