@@ -36,6 +36,7 @@ const SCRIPT = readFileSync(VALIDATE_SH, 'utf8')
 /** The shape `main.ts` parses out of `.sandcastle-validation.json`. Do not widen. */
 type Validation = {
   uiTouched: boolean
+  e2eProjects: string[]
   steps: Array<{ name: string; ok: boolean; durationMs: number }>
   e2e: {
     failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
@@ -195,6 +196,8 @@ function runValidate(
     staleResults?: string
     touch?: string[]
     forceE2e?: boolean
+    e2eProjects?: string
+    updateSnapshots?: boolean
   } = {},
 ): Run {
   const { forceE2e = true } = opts
@@ -258,6 +261,10 @@ function runValidate(
       '--json-out',
       '.sandcastle-validation.json',
       ...(forceE2e ? ['--force-e2e'] : []),
+      ...(opts.e2eProjects === undefined
+        ? []
+        : ['--e2e-projects', opts.e2eProjects]),
+      ...(opts.updateSnapshots === true ? ['--update-snapshots'] : []),
     ],
     {
       cwd: dir,
@@ -422,5 +429,51 @@ describe('the UI-touched heuristic', () => {
     ])
     expect(run.pwArgs).toEqual([])
     expect(run.status).toBe(0)
+  })
+})
+
+/**
+ * The fix loop re-validates on chromium alone and gates on mobile-safari once, so the flag that
+ * narrows the matrix has to reach Playwright as a real project list — and the step has to say
+ * which browsers it covered, or a verdict read hours later cannot be told from a full run.
+ */
+describe('--e2e-projects', () => {
+  it('is absent by default, and the step is named `e2e`', () => {
+    const run = runValidate()
+    expect(run.pwArgs.filter((a) => a.startsWith('--project'))).toEqual([])
+    expect(run.verdict.e2eProjects).toEqual([])
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e')
+  })
+
+  it('passes one --project per name and names the step after them', () => {
+    // Repeated `--project` IS a list here, unlike `--reporter` above: Playwright declares it as
+    // `--project <project-name...>`.
+    const run = runValidate({ e2eProjects: 'chromium' })
+    expect(run.pwArgs.filter((a) => a.startsWith('--project'))).toEqual([
+      '--project=chromium',
+    ])
+    expect(run.verdict.e2eProjects).toEqual(['chromium'])
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e:chromium')
+    expect(run.verdict.steps.map((s) => s.name)).not.toContain('e2e')
+  })
+
+  it('splits a comma-separated list', () => {
+    const run = runValidate({ e2eProjects: 'chromium,mobile-safari' })
+    expect(run.pwArgs.filter((a) => a.startsWith('--project'))).toEqual([
+      '--project=chromium',
+      '--project=mobile-safari',
+    ])
+    expect(run.verdict.e2eProjects).toEqual(['chromium', 'mobile-safari'])
+  })
+
+  it('still coexists with --update-snapshots', () => {
+    // The re-record path runs the whole matrix, but nothing in the script should stop the two
+    // flags being combined — and a future caller narrowing a re-record must not silently lose one.
+    const run = runValidate({
+      e2eProjects: 'mobile-safari',
+      updateSnapshots: true,
+    })
+    expect(run.pwArgs).toContain('--update-snapshots')
+    expect(run.pwArgs).toContain('--project=mobile-safari')
   })
 })
