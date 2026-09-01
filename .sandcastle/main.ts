@@ -13,7 +13,9 @@
 // Two advisory passes run after a green validation and never block a merge: the
 // deep review (structural code quality — read-only, so it cannot break the
 // parallel-branch or Owned-paths model) and, on UI diffs, the blind A/B
-// pixel-critic. SANDCASTLE_DEEP_REVIEW=0 skips the former.
+// pixel-critic. SANDCASTLE_DEEP_REVIEW=0 skips the former. Never blocking a
+// merge is now literal: they run alongside it and the iteration settles them at
+// its end, so the machine spends that time on the merge and the audit instead.
 //
 // Run from anywhere: the integration branch `sandcastle/run-<date>-<n>` is cut
 // from `origin/develop` (or resumed, when the same run number is given again)
@@ -56,6 +58,8 @@ import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
 import { adoptWipBranches } from './adopt'
+import { narrowedGrep, shellQuote } from './narrow-e2e'
+import { planPayload } from './plan-payload'
 import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { agentFor, describeRoles, resolveRole } from './roles'
@@ -170,11 +174,20 @@ const visualSchema = z.object({
 // Maximum number of plan→execute→merge→audit cycles before stopping.
 const MAX_ITERATIONS = 10
 
-// Two concurrent issue pipelines: each UI validation runs vite dev + D1/R2
-// sims + chromium + webkit inside one container; two is comfortable for an
-// OrbStack VM, three risks the machine-load TIMEOUT flakes playwright.config
-// documents as false evidence.
-const MAX_PARALLEL = 2
+// Two limits, because the pipeline has two different bottlenecks and one number was serving both.
+//
+// A pipeline is mostly agent time - 89% of recorded wall clock across the runs on disk - and an
+// agent waiting on the API costs this machine nothing. The ladder is the opposite: vite dev + D1/R2
+// sims + chromium + webkit inside one container, and three of those at once is what produces the
+// machine-load TIMEOUT flakes playwright.config documents as false evidence. Capping pipelines at
+// two to protect the ladder left the machine idle for the 89%.
+//
+// So the container-heavy rung keeps the old limit and the pipelines get their own, larger one. What
+// the extra pipelines add is idle containers - each holds its dev server once a ladder has started
+// one - which costs memory rather than CPU. If the VM starts swapping, MAX_PARALLEL_ISSUES is the
+// number to bring back down; if e2e goes flaky again, MAX_PARALLEL_E2E is.
+const MAX_PARALLEL_ISSUES = 4
+const MAX_PARALLEL_E2E = 2
 
 // The e2e matrix, split.
 //
@@ -519,7 +532,8 @@ openStageLog(RUN_ID, ARTIFACT_ROOT)
 recordStage({
   kind: 'run',
   at: Date.now(),
-  maxParallel: MAX_PARALLEL,
+  maxParallel: MAX_PARALLEL_ISSUES,
+  maxParallelE2e: MAX_PARALLEL_E2E,
   roles: describeRoles(),
 })
 
@@ -571,10 +585,16 @@ type Validation = {
   e2e: {
     failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
   }
+  /**
+   * Set — to a sentence naming the cause — when the ladder found that the thing under test was not
+   * running, so the verdict describes the environment rather than the branch. `null` otherwise, and
+   * absent on a verdict written before `validate.sh` learned the field.
+   */
+  infra?: string | null
   ok: boolean
 }
 
-/** Tiny inline semaphore — bounds concurrent issue pipelines. */
+/** Tiny inline semaphore — bounds concurrent issue pipelines, and separately concurrent ladders. */
 function createLimiter(limit: number) {
   let active = 0
   const queue: Array<() => void> = []
@@ -589,6 +609,12 @@ function createLimiter(limit: number) {
     }
   }
 }
+
+/**
+ * The container-heavy rung's own slot. Held only for the `validate.sh` call, so the pipelines
+ * queueing behind it are free to be somewhere else in their agent phases meanwhile.
+ */
+const ladderLimit = createLimiter(MAX_PARALLEL_E2E)
 
 // The integration branch lives in its own git worktree (sandcastle's
 // createWorktree), so nothing here ever switches the operator's checkout —
@@ -666,6 +692,49 @@ function issueBranch(id: string): string {
   return `sandcastle/issue-${id}-${RUN_ID}`
 }
 
+/**
+ * The issue list the planner reasons over, abridged and fetched here rather than by the prompt.
+ *
+ * The prompt used to run `gh` itself, inside the container, and paste every body whole - a third of
+ * the loop's single most expensive prompt spent on acceptance criteria and verification recipes
+ * that say nothing about which issue blocks which. Doing it here buys the trim a unit test, and the
+ * planner keeps `gh issue view` for the ticket it wants in full.
+ *
+ * `--limit 500` matches `readyForAgentIds` for the reason documented there: `gh` truncates at
+ * thirty and says nothing about it.
+ *
+ * Issue bodies are text anyone with an account can write, and they now arrive as a prompt argument
+ * rather than as the output of the prompt's own `!` block. That is the safer of the two: sandcastle
+ * marks the shell blocks belonging to the file before substituting, and strips that marker from
+ * every value, so a body containing one is text and not a command.
+ */
+function planIssuesJson(): string {
+  const listed = execSync(
+    'gh issue list --state open --label ready-for-agent --limit 500 --json number,title,body,labels',
+    { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 },
+  )
+  const raw = z
+    .array(
+      z.object({
+        number: z.number(),
+        title: z.string(),
+        body: z.string().nullable(),
+        labels: z.array(z.object({ name: z.string() })),
+      }),
+    )
+    .parse(JSON.parse(listed))
+  return JSON.stringify(
+    planPayload(
+      raw.map((issue) => ({
+        id: String(issue.number),
+        title: issue.title,
+        labels: issue.labels.map((label) => label.name),
+        body: issue.body,
+      })),
+    ),
+  )
+}
+
 async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
   const plan = await withUsageLimit(
     'planner',
@@ -682,7 +751,11 @@ async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
         maxIterations: 1,
         agent: agentFor('planner'),
         promptFile: './.sandcastle/plan-prompt.md',
-        promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
+        promptArgs: {
+          RUN_ID,
+          SCOPE: planScope(scopeIds),
+          ISSUES_JSON: planIssuesJson(),
+        },
         output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
       }),
     { meta: metaFor('planner') },
@@ -739,31 +812,78 @@ async function collectArtifacts(
   return dest
 }
 
+type ValidateOptions = {
+  updateSnapshots?: boolean
+  issue?: string
+  attempt?: number
+  /** playwright.config.ts project names; omitted means the whole matrix. */
+  e2eProjects?: readonly string[]
+  /** Playwright `-g`; omitted means every spec the projects above carry. */
+  e2eGrep?: string
+}
+
+/**
+ * The ladder, with one retry reserved for the environment.
+ *
+ * A verdict carrying `infra` is not about the branch — the suite ran against a dev server that had
+ * already died, so its red steps describe the container. Spending a fix attempt on that is how run
+ * 20260830-3 talked an implementer into "fixing" 33 `ECONNREFUSED` failures and then blocked the
+ * ticket. Re-running instead costs one ladder: `setup-e2e.sh --if-needed` finds nothing answering
+ * on :3010 and rebuilds the environment, so the second pass tests the branch for real.
+ *
+ * Twice in a row is no longer a blip. That throws, joining the unknown-flag case below as an
+ * operator problem: said once, loudly, with the issue's labels left alone.
+ */
 async function validate(
   sandbox: sandcastle.Sandbox,
-  opts: {
-    updateSnapshots?: boolean
-    issue?: string
-    attempt?: number
-    /** playwright.config.ts project names; omitted means the whole matrix. */
-    e2eProjects?: readonly string[]
-  } = {},
+  opts: ValidateOptions = {},
+): Promise<Validation> {
+  const verdict = await runLadder(sandbox, opts)
+  if (verdict.infra == null) return verdict
+
+  console.log(
+    `  ! ${verdict.infra} — not a red branch, so this is not a fix attempt; rebuilding the e2e environment and re-running the ladder`,
+  )
+  const retry = await runLadder(sandbox, opts)
+  if (retry.infra != null) {
+    throw new Error(
+      `the e2e environment failed twice in a row (${retry.infra}) — the branch was never tested, ` +
+        `so this is an operator problem rather than a red branch.`,
+    )
+  }
+  return retry
+}
+
+async function runLadder(
+  sandbox: sandcastle.Sandbox,
+  opts: ValidateOptions = {},
 ): Promise<Validation> {
   const flags = ['--json-out .sandcastle-validation.json']
   if (opts.updateSnapshots) flags.push('--update-snapshots')
   if (opts.e2eProjects !== undefined) {
     flags.push(`--e2e-projects ${opts.e2eProjects.join(',')}`)
   }
+  // Quoted, because the pattern is built from test titles: spaces are certain and an apostrophe
+  // is one `it("the trip's tab is remembered")` away.
+  if (opts.e2eGrep !== undefined) {
+    flags.push(`--e2e-grep ${shellQuote(opts.e2eGrep)}`)
+  }
   // The ladder is the one stage `withUsageLimit` does not wrap — it runs no agent, so it can hit no
   // usage limit — and it is also the only container-heavy one. It records itself so the timeline
   // covers the whole pipeline rather than only its agents, and so `validate` rows in the report can
   // be cross-checked against the `steps[]` the verdict already carries.
-  const startedAt = Date.now()
+  // Started when the slot opens rather than when this pipeline asked for one: the wait is the
+  // loop's, and counting it here would inflate the very number - ladder duration - that says
+  // whether the split was worth making.
+  let startedAt = Date.now()
   let verdict: Validation
   try {
-    const result = await sandbox.exec(
-      `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
-    )
+    const result = await ladderLimit(() => {
+      startedAt = Date.now()
+      return sandbox.exec(
+        `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
+      )
+    })
     const read = await sandbox.exec('cat .sandcastle-validation.json')
     try {
       verdict = JSON.parse(read.stdout) as Validation
@@ -788,7 +908,14 @@ async function validate(
     recordValidateStage(startedAt, opts, 'error', error)
     throw error
   }
-  recordValidateStage(startedAt, opts, verdict.ok ? 'ok' : 'error')
+  // The infra reason travels into the timeline as this stage's error, so a report reader can tell
+  // a ladder that failed the branch from one that failed the container.
+  recordValidateStage(
+    startedAt,
+    opts,
+    verdict.ok ? 'ok' : 'error',
+    verdict.infra ?? undefined,
+  )
   return verdict
 }
 
@@ -800,12 +927,7 @@ function firstLine(text: string): string {
 
 function recordValidateStage(
   startedAt: number,
-  opts: {
-    updateSnapshots?: boolean
-    issue?: string
-    attempt?: number
-    e2eProjects?: readonly string[]
-  },
+  opts: ValidateOptions,
   outcome: 'ok' | 'error',
   error?: unknown,
 ): void {
@@ -814,9 +936,9 @@ function recordValidateStage(
     kind: 'stage',
     label: opts.updateSnapshots
       ? 'validate (baselines)'
-      : opts.e2eProjects === undefined
-        ? 'validate'
-        : `validate:${opts.e2eProjects.join(',')}`,
+      : `${opts.e2eProjects === undefined ? 'validate' : `validate:${opts.e2eProjects.join(',')}`}${
+          opts.e2eGrep === undefined ? '' : ' (narrowed)'
+        }`,
     issue: opts.issue,
     attempt: opts.attempt,
     startedAt,
@@ -1144,7 +1266,16 @@ async function workIssue(
   issue: Issue,
   signal?: AbortSignal,
   adopted: Array<{ sha: string }> = [],
-): Promise<{ issue: Issue; ok: boolean; commits: Array<{ sha: string }> }> {
+): Promise<{
+  issue: Issue
+  ok: boolean
+  commits: Array<{ sha: string }>
+  /**
+   * The advisory passes, still running, and the container they hold. Present only on a green
+   * issue that has any; the iteration settles it once the merge no longer needs the machine.
+   */
+  advisory?: Promise<void>
+}> {
   const sandbox = await sandcastle.createSandbox({
     branch: issue.branch,
     sandbox: docker(),
@@ -1154,6 +1285,9 @@ async function workIssue(
 
   const commits: Array<{ sha: string }> = [...adopted]
   let lastArtifactPath = ''
+  // Whether the advisory passes took the container over on their way out, in which case closing it
+  // in the `finally` below would kill them mid-pass.
+  let advisoryOwnsSandbox = false
 
   /**
    * Tells the registry where this issue's work is, so that if this run dies the next one to claim
@@ -1215,12 +1349,31 @@ async function workIssue(
     )
     commits.push(...review.commits)
 
+    // The `-g` for the next attempt's first ladder: the specs the previous attempt's fix was
+    // supposed to repair. Empty means the whole suite, which is what the first attempt always runs.
+    let narrowed = ''
+
     for (let attempt = 1; attempt <= FIX_BUDGET + 1; attempt++) {
       let verdict = await validate(sandbox, {
         issue: issue.id,
         attempt,
         e2eProjects: LOOP_E2E_PROJECTS,
+        e2eGrep: narrowed === '' ? undefined : narrowed,
       })
+      // A narrowed run may only shorten the path to red, never declare green: it ran a handful of
+      // specs, so its pass says nothing about the ones it skipped - including any this fix broke.
+      // The same goes for a red it cannot name specs for (a red rung above e2e, or a suite that
+      // died before the reporter): there is nothing to hand the fix agent, and nothing to trust.
+      // Either way the honest answer is the full ladder, which is exactly what an empty `narrowed`
+      // buys on the next line.
+      if (narrowed !== '' && (verdict.ok || verdict.e2e.failed.length === 0)) {
+        narrowed = ''
+        verdict = await validate(sandbox, {
+          issue: issue.id,
+          attempt,
+          e2eProjects: LOOP_E2E_PROJECTS,
+        })
+      }
       lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
       // Whether the tree standing behind `verdict` has been through every browser. The gate below
       // is skipped when it has, so the re-record path does not pay for mobile-safari twice.
@@ -1274,15 +1427,29 @@ async function workIssue(
       }
 
       if (verdict.ok) {
-        if (DEEP_REVIEW) await runDeepReview(sandbox, issue, attempt, signal)
-        if (verdict.uiTouched)
-          await runPixelCritic(sandbox, issue, attempt, signal)
-        if (DEEP_REVIEW || verdict.uiTouched) {
-          // Re-collect: the advisory passes added .sandcastle-deep-review.json,
-          // .sandcastle-shots and the visual verdict.
-          await collectArtifacts(sandbox, issue, attempt)
-        }
-        return { issue, ok: true, commits }
+        const uiTouched = verdict.uiTouched
+        if (!DEEP_REVIEW && !uiTouched) return { issue, ok: true, commits }
+        // Three agent passes whose verdict cannot change what happens next: both stages are
+        // advisory by construction, they comment on the issue and write artifacts, and neither the
+        // merge nor the auditor reads what they produce. Awaited here they kept the pipeline slot,
+        // and with it the merge, waiting minutes for an opinion. So they are handed back as a
+        // promise the iteration settles at its end - and since the capture agent needs the dev
+        // server this container is still holding, closing it becomes their last step rather than
+        // the `finally` below.
+        advisoryOwnsSandbox = true
+        const advisory = (async () => {
+          try {
+            if (DEEP_REVIEW)
+              await runDeepReview(sandbox, issue, attempt, signal)
+            if (uiTouched) await runPixelCritic(sandbox, issue, attempt, signal)
+            // Re-collect: the advisory passes added .sandcastle-deep-review.json,
+            // .sandcastle-shots and the visual verdict.
+            await collectArtifacts(sandbox, issue, attempt)
+          } finally {
+            await sandbox.close()
+          }
+        })()
+        return { issue, ok: true, commits, advisory }
       }
 
       if (attempt > FIX_BUDGET) {
@@ -1298,6 +1465,9 @@ async function workIssue(
       console.log(
         `  [${issue.id}] validation failed — resume fix ${attempt}/${FIX_BUDGET}`,
       )
+      // What the fix is about to be judged on first. `narrowedGrep` returns '' whenever the verdict
+      // names no specs or names too many, which reads as "run the whole ladder".
+      narrowed = narrowedGrep(verdict.e2e.failed)
       // Destructured, not read through `implement` at call time: `implement` is a `let` the line
       // below reassigns, so a closure over it loses this narrowing. `resume` is a closure the lib
       // builds per result and takes no `this`, so detaching it changes nothing about the call.
@@ -1332,7 +1502,24 @@ async function workIssue(
     return { issue, ok: false, commits }
   } finally {
     noteWip()
-    await sandbox.close()
+    if (!advisoryOwnsSandbox) await sandbox.close()
+  }
+}
+
+/**
+ * Waits out the advisory passes an iteration started, and with them the containers they hold.
+ *
+ * Deliberately the last thing an iteration does: nothing downstream reads what they produce, so a
+ * comment posted after the merge says exactly what it would have said before it. Each pass already
+ * swallows its own failures, so what reaches here is a container that would not close.
+ */
+async function settleAdvisory(pending: Array<Promise<void>>): Promise<void> {
+  if (pending.length === 0) return
+  console.log(`Settling ${pending.length} advisory pass(es)…`)
+  for (const outcome of await Promise.allSettled(pending)) {
+    if (outcome.status === 'rejected') {
+      console.error(`  ! advisory pass failed: ${outcome.reason}`)
+    }
   }
 }
 
@@ -1496,7 +1683,7 @@ async function openIntegrationPr(merged: Issue[]): Promise<void> {
 // Main loop
 // ---------------------------------------------------------------------------
 
-const limit = createLimiter(MAX_PARALLEL)
+const limit = createLimiter(MAX_PARALLEL_ISSUES)
 const mergedAll: Issue[] = []
 let lastAuditRefuted = 0
 
@@ -1619,21 +1806,31 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(
     `\nValidation passed on ${passing.length}/${issues.length} branch(es).`,
   )
+  // Every green issue's advisory passes, including any whose lease was revoked above: they were
+  // started before that was known, and their container still has to be closed.
+  const advisory = settled.flatMap((o) =>
+    o.status === 'fulfilled' && o.value.advisory !== undefined
+      ? [o.value.advisory]
+      : [],
+  )
+
   if (passing.length === 0) {
     console.log('Nothing to merge this iteration.')
-    continue
+  } else {
+    coordinator?.setStage('merging')
+    await mergeBranches(passing)
+    mergedAll.push(...passing.map((p) => p.issue))
+    console.log('Branches merged. Running auditor…')
+    coordinator?.setStage('auditing')
+    const audit = await runAuditor(
+      passing.map((p) => p.issue),
+      iteration,
+    )
+    lastAuditRefuted = audit.refuted
   }
 
-  coordinator?.setStage('merging')
-  await mergeBranches(passing)
-  mergedAll.push(...passing.map((p) => p.issue))
-  console.log('Branches merged. Running auditor…')
-  coordinator?.setStage('auditing')
-  const audit = await runAuditor(
-    passing.map((p) => p.issue),
-    iteration,
-  )
-  lastAuditRefuted = audit.refuted
+  // After the merge and the audit, which is the whole point: they ran while these did.
+  await settleAdvisory(advisory)
 }
 
 if (mergedAll.length > 0 && lastAuditRefuted === 0) {

@@ -1,10 +1,10 @@
 # ISSUES
 
-Here are the open issues in the repo:
+Here are the open issues in the repo. **Their bodies are abridged**: each one keeps the paragraph it opens with plus its `Owned paths`, `Blockers` and summary sections, and everything else — acceptance criteria, verification recipes, out-of-scope lists — has been cut, because none of it says which issue blocks which. So "this ticket declares no owned paths" is a conclusion you cannot draw from what is below; run `gh issue view <id>` when you need one in full.
 
 <issues-json>
 
-!`gh issue list --state open --label ready-for-agent --json number,title,body,labels --limit 100 --jq '[.[] | {id: (.number|tostring), title, labels: [.labels[].name], body}]'`
+{{ISSUES_JSON}}
 
 </issues-json>
 
