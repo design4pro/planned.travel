@@ -143,10 +143,11 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
   # unrelated specs on `[vite] Failed to reload`. See issue #82.
   run_step "route-tree-after-dev" git diff --exit-code -- src/routeTree.gen.ts
   if [ "$OVERALL_OK" -eq 1 ]; then
-    # Four workers per container by default: two containers run at once
-    # (MAX_PARALLEL in main.ts), and 8 browsers + 2 Vite servers is well inside
-    # what one VM sustains without the machine-load TIMEOUT flakes. Override
-    # with E2E_WORKERS to measure a different knee.
+    # Four workers per container by default: two containers run this rung at
+    # once (MAX_PARALLEL_E2E in main.ts, which is deliberately smaller than the
+    # number of pipelines it lets run), and 8 browsers + 2 Vite servers is well
+    # inside what one VM sustains without the machine-load TIMEOUT flakes.
+    # Override with E2E_WORKERS to measure a different knee.
     #
     # One `--reporter`, comma-separated: Playwright declares the option as
     # `--reporter <reporter>` ("Reporter to use, comma-separated"), so a

@@ -171,11 +171,20 @@ const visualSchema = z.object({
 // Maximum number of plan→execute→merge→audit cycles before stopping.
 const MAX_ITERATIONS = 10
 
-// Two concurrent issue pipelines: each UI validation runs vite dev + D1/R2
-// sims + chromium + webkit inside one container; two is comfortable for an
-// OrbStack VM, three risks the machine-load TIMEOUT flakes playwright.config
-// documents as false evidence.
-const MAX_PARALLEL = 2
+// Two limits, because the pipeline has two different bottlenecks and one number was serving both.
+//
+// A pipeline is mostly agent time - 89% of recorded wall clock across the runs on disk - and an
+// agent waiting on the API costs this machine nothing. The ladder is the opposite: vite dev + D1/R2
+// sims + chromium + webkit inside one container, and three of those at once is what produces the
+// machine-load TIMEOUT flakes playwright.config documents as false evidence. Capping pipelines at
+// two to protect the ladder left the machine idle for the 89%.
+//
+// So the container-heavy rung keeps the old limit and the pipelines get their own, larger one. What
+// the extra pipelines add is idle containers - each holds its dev server once a ladder has started
+// one - which costs memory rather than CPU. If the VM starts swapping, MAX_PARALLEL_ISSUES is the
+// number to bring back down; if e2e goes flaky again, MAX_PARALLEL_E2E is.
+const MAX_PARALLEL_ISSUES = 4
+const MAX_PARALLEL_E2E = 2
 
 // The e2e matrix, split.
 //
@@ -520,7 +529,8 @@ openStageLog(RUN_ID, ARTIFACT_ROOT)
 recordStage({
   kind: 'run',
   at: Date.now(),
-  maxParallel: MAX_PARALLEL,
+  maxParallel: MAX_PARALLEL_ISSUES,
+  maxParallelE2e: MAX_PARALLEL_E2E,
   roles: describeRoles(),
 })
 
@@ -581,7 +591,7 @@ type Validation = {
   ok: boolean
 }
 
-/** Tiny inline semaphore — bounds concurrent issue pipelines. */
+/** Tiny inline semaphore — bounds concurrent issue pipelines, and separately concurrent ladders. */
 function createLimiter(limit: number) {
   let active = 0
   const queue: Array<() => void> = []
@@ -596,6 +606,12 @@ function createLimiter(limit: number) {
     }
   }
 }
+
+/**
+ * The container-heavy rung's own slot. Held only for the `validate.sh` call, so the pipelines
+ * queueing behind it are free to be somewhere else in their agent phases meanwhile.
+ */
+const ladderLimit = createLimiter(MAX_PARALLEL_E2E)
 
 // The integration branch lives in its own git worktree (sandcastle's
 // createWorktree), so nothing here ever switches the operator's checkout —
@@ -806,12 +822,18 @@ async function runLadder(
   // usage limit — and it is also the only container-heavy one. It records itself so the timeline
   // covers the whole pipeline rather than only its agents, and so `validate` rows in the report can
   // be cross-checked against the `steps[]` the verdict already carries.
-  const startedAt = Date.now()
+  // Started when the slot opens rather than when this pipeline asked for one: the wait is the
+  // loop's, and counting it here would inflate the very number - ladder duration - that says
+  // whether the split was worth making.
+  let startedAt = Date.now()
   let verdict: Validation
   try {
-    const result = await sandbox.exec(
-      `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
-    )
+    const result = await ladderLimit(() => {
+      startedAt = Date.now()
+      return sandbox.exec(
+        `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
+      )
+    })
     const read = await sandbox.exec('cat .sandcastle-validation.json')
     try {
       verdict = JSON.parse(read.stdout) as Validation
@@ -1568,7 +1590,7 @@ async function openIntegrationPr(merged: Issue[]): Promise<void> {
 // Main loop
 // ---------------------------------------------------------------------------
 
-const limit = createLimiter(MAX_PARALLEL)
+const limit = createLimiter(MAX_PARALLEL_ISSUES)
 const mergedAll: Issue[] = []
 let lastAuditRefuted = 0
 

@@ -34,7 +34,10 @@ export type StageEvent =
       readonly kind: 'run'
       readonly runId: string
       readonly at: number
+      /** Concurrent issue pipelines. */
       readonly maxParallel: number
+      /** Concurrent ladders, which is the smaller of the two limits. */
+      readonly maxParallelE2e?: number
       /** The model/effort each role ran with, so a report can be attributed to a configuration. */
       readonly roles?: Record<string, { model: string; effort?: string }>
     }
