@@ -17,7 +17,12 @@
 # `e2e:<csv>` rather than `e2e`, so a verdict says which browsers it covers and
 # the report can keep the rows apart.
 #
-# Verdict JSON: {uiTouched, e2eProjects, steps: [{name, ok, durationMs}], e2e: {failed: []}, ok}
+# Verdict JSON: {uiTouched, e2eProjects, steps: [{name, ok, durationMs}], e2e: {failed: []},
+#                infra, ok}
+#
+# `infra` is null on every ordinary run. It carries a sentence when the ladder found that the
+# thing under test was not running — today that means a dev server that died mid-suite — and a
+# verdict carrying it says nothing about the branch, so main.ts must not spend a fix attempt on it.
 set -uo pipefail
 
 JSON_OUT=""
@@ -112,6 +117,13 @@ fi
 [ "$SKIP_E2E" -eq 1 ] && UI_TOUCHED=0
 
 E2E_FAILED_JSON="[]"
+# Set only when the ladder finds that the thing under test was not running. Empty means the
+# verdict is about the branch; anything else means the branch was never tested. See the probe
+# after the e2e rung.
+INFRA=""
+# The origin the suite is pointed at, and the one the probe below asks about — the same server,
+# named once so the two can never drift into disagreeing about what "up" means.
+E2E_BASE_URL=http://localhost:3010
 if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
   run_step "e2e-env" bash .sandcastle/setup-e2e.sh --if-needed
   # setup-e2e.sh returns only once the dev server answers, and starting it runs
@@ -159,9 +171,24 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # summary runs longer than a compiler's. `env` carries the two variables Playwright reads,
     # since run_step forwards "$@" as a command rather than evaluating a prefix.
     STEP_TAIL_LINES=60 run_step "$E2E_STEP" \
-      env PLAYWRIGHT_BASE_URL=http://localhost:3010 PLAYWRIGHT_JSON_OUTPUT_NAME="$E2E_RESULTS_FILE" \
+      env PLAYWRIGHT_BASE_URL="$E2E_BASE_URL" PLAYWRIGHT_JSON_OUTPUT_NAME="$E2E_RESULTS_FILE" \
       pnpm exec playwright test "${PW_ARGS[@]}"
     E2E_OK=$? # read before the `-f` test below overwrites $?
+    # A red rung is a verdict about the branch only if the thing under test was still running.
+    # `setup-e2e.sh --if-needed` checks that once, before the suite; nothing checked it after, and
+    # a dev server that ran out of heap mid-suite therefore reddened the ladder with specs that
+    # never reached it. Run 20260830-3 issue #117 attempt 3 is the shape of it: 33 of 40 failures
+    # were `ECONNREFUSED :3010`, `dev-server.log` ends in `JavaScript heap out of memory`, the fix
+    # budget went on a phantom and the ticket was labelled agent-blocked for a suite it passed.
+    #
+    # So ask. A server that no longer answers turns this into the same category as an unknown flag
+    # — an operator problem, reported rather than blamed on the branch — and `main.ts` decides what
+    # to do with it. Only asked when the rung is red: a green suite proves the server was there.
+    if [ "$E2E_OK" -ne 0 ] &&
+      ! curl --silent --fail --output /dev/null "${E2E_BASE_URL}/"; then
+      INFRA="the dev server on ${E2E_BASE_URL} stopped answering during ${E2E_STEP}"
+      echo "==> INFRA: ${INFRA} — the branch was not tested by this run" >&2
+    fi
     if [ -f "$E2E_RESULTS_FILE" ]; then
       # Failed test titles + first error line + snapshot-diff flag, capped at
       # 40. Playwright nests suites recursively — walk the whole tree.
@@ -181,10 +208,13 @@ VERDICT=$(jq -n -c \
   --arg projects "$E2E_PROJECTS" \
   --argjson steps "$STEPS_JSON" \
   --argjson failed "$E2E_FAILED_JSON" \
+  --arg infra "$INFRA" \
   --argjson ok "$OVERALL_OK" \
   '{uiTouched: ($uiTouched == 1),
     e2eProjects: (if $projects == "" then [] else ($projects | split(",")) end),
-    steps: $steps, e2e: {failed: $failed}, ok: ($ok == 1)}')
+    steps: $steps, e2e: {failed: $failed},
+    infra: (if $infra == "" then null else $infra end),
+    ok: ($ok == 1)}')
 
 echo "$VERDICT"
 [ -n "$JSON_OUT" ] && printf '%s\n' "$VERDICT" > "$JSON_OUT"

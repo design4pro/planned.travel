@@ -41,6 +41,7 @@ type Validation = {
   e2e: {
     failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
   }
+  infra: string | null
   ok: boolean
 }
 
@@ -52,6 +53,8 @@ type Run = {
   pwArgs: string[]
   /** The variables the script exported for Playwright, as the stub saw them. */
   pwEnv: Record<string, string>
+  /** One line per dev-server probe; empty when the ladder never asked. */
+  curlCalls: string[]
 }
 
 const scratchDirs: string[] = []
@@ -118,6 +121,16 @@ const RESULTS_FIXTURE = JSON.stringify({
     },
   ],
 })
+
+/**
+ * The dev-server probe the ladder runs after a red e2e rung. `CURL_EXIT` is what it reports:
+ * 0 for a server that answered, non-zero for one that did not. Nothing else in the script calls
+ * curl — `setup-e2e.sh` is stubbed out — so this stands in for exactly one question.
+ */
+const CURL_STUB = `#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$CURL_CALLS_FILE"
+exit "$CURL_EXIT"
+`
 
 const PNPM_STUB = `#!/usr/bin/env bash
 # Every ladder step is \`pnpm <script>\` and succeeds silently; only the Playwright invocation is
@@ -198,6 +211,8 @@ function runValidate(
     forceE2e?: boolean
     e2eProjects?: string
     updateSnapshots?: boolean
+    /** Whether the dev-server probe finds anything answering; defaults to yes. */
+    devServerUp?: boolean
   } = {},
 ): Run {
   const { forceE2e = true } = opts
@@ -241,9 +256,13 @@ function runValidate(
   const stub = join(bin, 'pnpm')
   writeFileSync(stub, PNPM_STUB)
   chmodSync(stub, 0o755)
+  const curlStub = join(bin, 'curl')
+  writeFileSync(curlStub, CURL_STUB)
+  chmodSync(curlStub, 0o755)
 
   const argvFile = join(dir, 'pw-argv.txt')
   const envFile = join(dir, 'pw-env.txt')
+  const curlCallsFile = join(dir, 'curl-calls.txt')
   let resultsFile = ''
   if (opts.results !== undefined) {
     resultsFile = join(dir, 'results-fixture.json')
@@ -277,6 +296,8 @@ function runValidate(
         PW_ENV_FILE: envFile,
         PW_EXIT: String(opts.pwExit ?? 0),
         PW_RESULTS: resultsFile,
+        CURL_CALLS_FILE: curlCallsFile,
+        CURL_EXIT: opts.devServerUp === false ? '7' : '0',
       },
     },
   )
@@ -289,8 +310,60 @@ function runValidate(
     ) as Validation,
     pwArgs: readLines(argvFile),
     pwEnv: readEnvFile(envFile),
+    curlCalls: readLines(curlCallsFile),
   }
 }
+
+describe('the dev-server probe', () => {
+  it('reports a server that stopped answering as infra rather than as a red branch', () => {
+    // The failure this exists for: a dev server that ran out of heap mid-suite reddens the rung
+    // with specs that never reached it, and `main.ts` spends a fix attempt on the phantom.
+    const run = runValidate({
+      pwExit: 1,
+      results: RESULTS_FIXTURE,
+      e2eProjects: 'chromium',
+      devServerUp: false,
+    })
+
+    expect(run.verdict.ok).toBe(false)
+    expect(run.verdict.infra).toMatch(/stopped answering during e2e:chromium/)
+    // Named so a reader of the verdict alone knows which server is meant.
+    expect(run.verdict.infra).toContain('http://localhost:3010')
+    expect(run.stderr).toContain('INFRA:')
+  })
+
+  it('leaves a red rung red when the server is still there', () => {
+    // The ordinary regression: the suite failed, the environment is fine, and the fix loop should
+    // do exactly what it did before this probe existed.
+    const run = runValidate({ pwExit: 1, results: RESULTS_FIXTURE })
+
+    expect(run.verdict.ok).toBe(false)
+    expect(run.verdict.infra).toBeNull()
+    expect(run.verdict.e2e.failed).toHaveLength(2)
+    expect(run.curlCalls).toHaveLength(1)
+  })
+
+  it('does not ask after a green rung', () => {
+    // A suite that passed proves the server was up; asking again would spend a round trip to
+    // learn nothing, and would let a server that died *after* the last spec redden a green run.
+    const run = runValidate({ pwExit: 0, results: RESULTS_FIXTURE })
+
+    expect(run.verdict.ok).toBe(true)
+    expect(run.verdict.infra).toBeNull()
+    expect(run.curlCalls).toEqual([])
+  })
+
+  it('reports no infra on a ladder that never ran e2e', () => {
+    const run = runValidate({
+      forceE2e: false,
+      touch: ['src/server/repos/x.ts'],
+    })
+
+    expect(run.verdict.uiTouched).toBe(false)
+    expect(run.verdict.infra).toBeNull()
+    expect(run.curlCalls).toEqual([])
+  })
+})
 
 describe('the Playwright reporter declaration', () => {
   it('reaches the runner as a single argument, alongside the JSON output path', () => {

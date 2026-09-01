@@ -571,6 +571,12 @@ type Validation = {
   e2e: {
     failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
   }
+  /**
+   * Set — to a sentence naming the cause — when the ladder found that the thing under test was not
+   * running, so the verdict describes the environment rather than the branch. `null` otherwise, and
+   * absent on a verdict written before `validate.sh` learned the field.
+   */
+  infra?: string | null
   ok: boolean
 }
 
@@ -739,15 +745,49 @@ async function collectArtifacts(
   return dest
 }
 
+type ValidateOptions = {
+  updateSnapshots?: boolean
+  issue?: string
+  attempt?: number
+  /** playwright.config.ts project names; omitted means the whole matrix. */
+  e2eProjects?: readonly string[]
+}
+
+/**
+ * The ladder, with one retry reserved for the environment.
+ *
+ * A verdict carrying `infra` is not about the branch — the suite ran against a dev server that had
+ * already died, so its red steps describe the container. Spending a fix attempt on that is how run
+ * 20260830-3 talked an implementer into "fixing" 33 `ECONNREFUSED` failures and then blocked the
+ * ticket. Re-running instead costs one ladder: `setup-e2e.sh --if-needed` finds nothing answering
+ * on :3010 and rebuilds the environment, so the second pass tests the branch for real.
+ *
+ * Twice in a row is no longer a blip. That throws, joining the unknown-flag case below as an
+ * operator problem: said once, loudly, with the issue's labels left alone.
+ */
 async function validate(
   sandbox: sandcastle.Sandbox,
-  opts: {
-    updateSnapshots?: boolean
-    issue?: string
-    attempt?: number
-    /** playwright.config.ts project names; omitted means the whole matrix. */
-    e2eProjects?: readonly string[]
-  } = {},
+  opts: ValidateOptions = {},
+): Promise<Validation> {
+  const verdict = await runLadder(sandbox, opts)
+  if (verdict.infra == null) return verdict
+
+  console.log(
+    `  ! ${verdict.infra} — not a red branch, so this is not a fix attempt; rebuilding the e2e environment and re-running the ladder`,
+  )
+  const retry = await runLadder(sandbox, opts)
+  if (retry.infra != null) {
+    throw new Error(
+      `the e2e environment failed twice in a row (${retry.infra}) — the branch was never tested, ` +
+        `so this is an operator problem rather than a red branch.`,
+    )
+  }
+  return retry
+}
+
+async function runLadder(
+  sandbox: sandcastle.Sandbox,
+  opts: ValidateOptions = {},
 ): Promise<Validation> {
   const flags = ['--json-out .sandcastle-validation.json']
   if (opts.updateSnapshots) flags.push('--update-snapshots')
@@ -788,7 +828,14 @@ async function validate(
     recordValidateStage(startedAt, opts, 'error', error)
     throw error
   }
-  recordValidateStage(startedAt, opts, verdict.ok ? 'ok' : 'error')
+  // The infra reason travels into the timeline as this stage's error, so a report reader can tell
+  // a ladder that failed the branch from one that failed the container.
+  recordValidateStage(
+    startedAt,
+    opts,
+    verdict.ok ? 'ok' : 'error',
+    verdict.infra ?? undefined,
+  )
   return verdict
 }
 
