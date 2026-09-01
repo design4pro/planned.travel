@@ -457,14 +457,26 @@ function openSubIssueIds(id: string): string[] {
  * it" — expanded here, deterministically, instead of leaving the planner to
  * walk the sub-issue tree on its own and pick up work no human has cleared.
  * The expansion is still gated: a slice without `ready-for-agent` is held.
+ *
+ * `strict` is what tells apart the two callers, which want opposite things from the same check.
+ * At startup an unlabelled `--issues 138` is operator error and must stop the run before it cuts
+ * a worktree. From the second iteration on it is routine: the loop itself takes the label off
+ * every issue whose fix budget runs out (`markBlocked`), so throwing there kills a healthy run for
+ * doing exactly what it was built to do — which is how run 20260831-2 ended.
  */
-function resolveOnlyIssues(eligible: Set<string>): string[] {
+function resolveOnlyIssues(eligible: Set<string>, strict: boolean): string[] {
   const resolved: string[] = []
   for (const id of ONLY_ISSUES) {
     const subs = openSubIssueIds(id)
     if (subs.length === 0) {
       // A leaf ticket: workable exactly when a human cleared it.
       if (!eligible.has(id)) {
+        if (!strict) {
+          console.log(
+            `  #${id} has left the loop (no \`ready-for-agent\`) — skipping.`,
+          )
+          continue
+        }
         throw new Error(
           `Issue #${id} does not carry \`ready-for-agent\`, so it is not cleared for the loop. ` +
             `Label it (see docs/agents/triage-labels.md) or drop it from --issues.`,
@@ -475,6 +487,12 @@ function resolveOnlyIssues(eligible: Set<string>): string[] {
     }
     const cleared = subs.filter((sub) => eligible.has(sub))
     if (cleared.length === 0) {
+      if (!strict) {
+        console.log(
+          `  #${id} is a PRD whose slices have all left the loop — skipping.`,
+        )
+        continue
+      }
       throw new Error(
         `#${id} is a PRD and none of its ${subs.length} open sub-issues carries \`ready-for-agent\`: ` +
           `${subs.map((sub) => `#${sub}`).join(', ')}. Label the slices you want worked — ` +
@@ -750,13 +768,21 @@ async function validate(
     try {
       verdict = JSON.parse(read.stdout) as Validation
     } catch {
-      verdict = {
-        uiTouched: true,
-        e2eProjects: [],
-        steps: [{ name: 'validate.sh', ok: false, durationMs: 0 }],
-        e2e: { failed: [] },
-        ok: result.exitCode === 0,
-      }
+      // No verdict is NOT a red ladder, and must never be spent as a fix attempt. The script
+      // writes the file on every path it can reach, so a missing one means it never got that
+      // far: a flag it does not know (exit 2), a container that died, a `jq` that is not there.
+      //
+      // The flag case is the live hazard, because main.ts and validate.sh are versioned together
+      // but deployed apart — main.ts is the operator's checkout, validate.sh is the sandbox's, cut
+      // from the integration branch. Run 20260831-2 hit exactly that: `--e2e-projects` on a
+      // validate.sh from before it existed, nine 74 ms "failures", three exhausted fix budgets,
+      // and `ready-for-agent` stripped off three issues that were never actually validated.
+      // Rejecting this issue's pipeline says it once, loudly, and leaves the labels alone.
+      throw new Error(
+        `validate.sh wrote no verdict (exit ${result.exitCode}) — the ladder never ran, ` +
+          `so this is an operator problem rather than a red branch. ` +
+          `Flags: ${flags.join(' ')}. stderr: ${firstLine(result.stderr)}`,
+      )
     }
   } catch (error) {
     recordValidateStage(startedAt, opts, 'error', error)
@@ -764,6 +790,12 @@ async function validate(
   }
   recordValidateStage(startedAt, opts, verdict.ok ? 'ok' : 'error')
   return verdict
+}
+
+/** First non-empty line, capped — enough of a stderr to name the cause in an error message. */
+function firstLine(text: string): string {
+  const line = text.split('\n').find((candidate) => candidate.trim() !== '')
+  return line === undefined ? '(empty)' : line.trim().slice(0, 300)
 }
 
 function recordValidateStage(
@@ -1478,7 +1510,9 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // releases one. The planner never sees anything this does not hand it.
   const eligible = new Set(readyForAgentIds())
   const requested =
-    ONLY_ISSUES.length === 0 ? [...eligible] : resolveOnlyIssues(eligible)
+    ONLY_ISSUES.length === 0
+      ? [...eligible]
+      : resolveOnlyIssues(eligible, iteration === 1)
   recordStage({
     kind: 'iteration',
     at: Date.now(),
@@ -1498,8 +1532,10 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   const scopeIds = claimed.granted
   if (scopeIds.length === 0) {
     console.log(
-      eligible.size === 0
-        ? 'No issue carries `ready-for-agent`. Nothing is cleared for the loop — exiting.'
+      requested.length === 0
+        ? ONLY_ISSUES.length === 0
+          ? 'No issue carries `ready-for-agent`. Nothing is cleared for the loop — exiting.'
+          : 'Every issue named by `--issues` has left the loop (blocked, merged or unlabelled). Exiting.'
         : 'Every issue in scope is already held by another run. Exiting.',
     )
     break
