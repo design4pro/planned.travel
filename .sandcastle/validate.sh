@@ -5,11 +5,18 @@
 #
 #   TARGET_BRANCH=<integration branch> bash .sandcastle/validate.sh --json-out <path> \
 #     [--force-e2e] [--skip-e2e] [--update-snapshots] [--e2e-projects <csv>]
+#     [--e2e-grep <regex>]
 #
 # Always: route-tree freshness gate, typecheck, lint, vitest.
 # When the diff since TARGET_BRANCH touches UI paths (glob heuristic below):
 # setup-e2e.sh --if-needed, then the Playwright suite against the -linux
 # baselines (this container is CI's exact Playwright image).
+#
+# --e2e-grep narrows it further, to the specs whose full title matches the regex
+# (Playwright's `-g`). The step is then named `<step> (narrowed)`, because a
+# verdict that ran three specs must not read like one that ran the suite. The
+# fix loop uses it to re-run what it just failed before re-running everything;
+# main.ts owns the rule that a narrowed run may never decide green.
 #
 # --e2e-projects narrows that suite to named playwright.config.ts projects
 # ("chromium", "mobile-safari"). Both declare `dependencies: ['setup']`, so the
@@ -30,6 +37,7 @@ FORCE_E2E=0
 SKIP_E2E=0
 UPDATE_SNAPSHOTS=0
 E2E_PROJECTS=""
+E2E_GREP=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --json-out) JSON_OUT="$2"; shift 2 ;;
@@ -37,6 +45,7 @@ while [ $# -gt 0 ]; do
     --skip-e2e) SKIP_E2E=1; shift ;;
     --update-snapshots) UPDATE_SNAPSHOTS=1; shift ;;
     --e2e-projects) E2E_PROJECTS="$2"; shift 2 ;;
+    --e2e-grep) E2E_GREP="$2"; shift 2 ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
 done
@@ -157,6 +166,13 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
       for project in "${REQUESTED_PROJECTS[@]}"; do
         PW_ARGS+=(--project="$project")
       done
+    fi
+    # `-g` after the projects, so a narrowed run is still one project's worth of specs. The step
+    # name says so too: the report table keeps narrowed rows apart from full ones, and nobody reads
+    # a three-spec verdict as a suite that passed.
+    if [ -n "$E2E_GREP" ]; then
+      PW_ARGS+=(-g "$E2E_GREP")
+      E2E_STEP="${E2E_STEP} (narrowed)"
     fi
     # Named once, because the whole of issue #97 was the writer and the reader
     # of this file disagreeing without saying so: the reporter is pointed at it,

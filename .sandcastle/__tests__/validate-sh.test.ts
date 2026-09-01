@@ -24,7 +24,14 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// Every test here runs the real script: bash, a scratch `git init`, a commit and a stub, several
+// processes per case. That is comfortably under a second on an idle machine and well past vitest's
+// 5 s default when the full suite runs it alongside everything else - a busy machine reading as a
+// broken ladder. The budget is generous on purpose: what is being guarded here is the verdict, and
+// nothing about how long bash took to produce it.
+vi.setConfig({ testTimeout: 60_000 })
 
 const VALIDATE_SH = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -210,6 +217,7 @@ function runValidate(
     touch?: string[]
     forceE2e?: boolean
     e2eProjects?: string
+    e2eGrep?: string
     updateSnapshots?: boolean
     /** Whether the dev-server probe finds anything answering; defaults to yes. */
     devServerUp?: boolean
@@ -283,6 +291,7 @@ function runValidate(
       ...(opts.e2eProjects === undefined
         ? []
         : ['--e2e-projects', opts.e2eProjects]),
+      ...(opts.e2eGrep === undefined ? [] : ['--e2e-grep', opts.e2eGrep]),
       ...(opts.updateSnapshots === true ? ['--update-snapshots'] : []),
     ],
     {
@@ -548,5 +557,39 @@ describe('--e2e-projects', () => {
     })
     expect(run.pwArgs).toContain('--update-snapshots')
     expect(run.pwArgs).toContain('--project=mobile-safari')
+  })
+})
+
+/**
+ * The fix loop's cheap first pass: re-run the specs the fix was supposed to repair, and only then
+ * the suite. The script's whole job here is to hand the regex to Playwright untouched and to say in
+ * the step name that the run was partial - `main.ts` owns the rule that such a run may not decide
+ * green, but it can only apply it if the verdict admits what happened.
+ */
+describe('--e2e-grep', () => {
+  it('is absent by default', () => {
+    const run = runValidate()
+    expect(run.pwArgs).not.toContain('-g')
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e')
+  })
+
+  it('passes the pattern through as one argument and marks the step narrowed', () => {
+    const run = runValidate({
+      e2eProjects: 'chromium',
+      e2eGrep: "the trip's tab|the hover card",
+    })
+    expect(run.pwArgs).toContain('-g')
+    expect(run.pwArgs[run.pwArgs.indexOf('-g') + 1]).toBe(
+      "the trip's tab|the hover card",
+    )
+    expect(run.verdict.steps.map((s) => s.name)).toContain(
+      'e2e:chromium (narrowed)',
+    )
+  })
+
+  it('narrows the full matrix too, so the step name stays the only difference', () => {
+    const run = runValidate({ e2eGrep: 'passes' })
+    expect(run.pwArgs).toContain('-g')
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e (narrowed)')
   })
 })

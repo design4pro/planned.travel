@@ -56,6 +56,7 @@ import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
 import { adoptWipBranches } from './adopt'
+import { narrowedGrep, shellQuote } from './narrow-e2e'
 import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { agentFor, describeRoles, resolveRole } from './roles'
@@ -751,6 +752,8 @@ type ValidateOptions = {
   attempt?: number
   /** playwright.config.ts project names; omitted means the whole matrix. */
   e2eProjects?: readonly string[]
+  /** Playwright `-g`; omitted means every spec the projects above carry. */
+  e2eGrep?: string
 }
 
 /**
@@ -793,6 +796,11 @@ async function runLadder(
   if (opts.updateSnapshots) flags.push('--update-snapshots')
   if (opts.e2eProjects !== undefined) {
     flags.push(`--e2e-projects ${opts.e2eProjects.join(',')}`)
+  }
+  // Quoted, because the pattern is built from test titles: spaces are certain and an apostrophe
+  // is one `it("the trip's tab is remembered")` away.
+  if (opts.e2eGrep !== undefined) {
+    flags.push(`--e2e-grep ${shellQuote(opts.e2eGrep)}`)
   }
   // The ladder is the one stage `withUsageLimit` does not wrap — it runs no agent, so it can hit no
   // usage limit — and it is also the only container-heavy one. It records itself so the timeline
@@ -847,12 +855,7 @@ function firstLine(text: string): string {
 
 function recordValidateStage(
   startedAt: number,
-  opts: {
-    updateSnapshots?: boolean
-    issue?: string
-    attempt?: number
-    e2eProjects?: readonly string[]
-  },
+  opts: ValidateOptions,
   outcome: 'ok' | 'error',
   error?: unknown,
 ): void {
@@ -861,9 +864,9 @@ function recordValidateStage(
     kind: 'stage',
     label: opts.updateSnapshots
       ? 'validate (baselines)'
-      : opts.e2eProjects === undefined
-        ? 'validate'
-        : `validate:${opts.e2eProjects.join(',')}`,
+      : `${opts.e2eProjects === undefined ? 'validate' : `validate:${opts.e2eProjects.join(',')}`}${
+          opts.e2eGrep === undefined ? '' : ' (narrowed)'
+        }`,
     issue: opts.issue,
     attempt: opts.attempt,
     startedAt,
@@ -1262,12 +1265,31 @@ async function workIssue(
     )
     commits.push(...review.commits)
 
+    // The `-g` for the next attempt's first ladder: the specs the previous attempt's fix was
+    // supposed to repair. Empty means the whole suite, which is what the first attempt always runs.
+    let narrowed = ''
+
     for (let attempt = 1; attempt <= FIX_BUDGET + 1; attempt++) {
       let verdict = await validate(sandbox, {
         issue: issue.id,
         attempt,
         e2eProjects: LOOP_E2E_PROJECTS,
+        e2eGrep: narrowed === '' ? undefined : narrowed,
       })
+      // A narrowed run may only shorten the path to red, never declare green: it ran a handful of
+      // specs, so its pass says nothing about the ones it skipped - including any this fix broke.
+      // The same goes for a red it cannot name specs for (a red rung above e2e, or a suite that
+      // died before the reporter): there is nothing to hand the fix agent, and nothing to trust.
+      // Either way the honest answer is the full ladder, which is exactly what an empty `narrowed`
+      // buys on the next line.
+      if (narrowed !== '' && (verdict.ok || verdict.e2e.failed.length === 0)) {
+        narrowed = ''
+        verdict = await validate(sandbox, {
+          issue: issue.id,
+          attempt,
+          e2eProjects: LOOP_E2E_PROJECTS,
+        })
+      }
       lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
       // Whether the tree standing behind `verdict` has been through every browser. The gate below
       // is skipped when it has, so the re-record path does not pay for mobile-safari twice.
@@ -1345,6 +1367,9 @@ async function workIssue(
       console.log(
         `  [${issue.id}] validation failed — resume fix ${attempt}/${FIX_BUDGET}`,
       )
+      // What the fix is about to be judged on first. `narrowedGrep` returns '' whenever the verdict
+      // names no specs or names too many, which reads as "run the whole ladder".
+      narrowed = narrowedGrep(verdict.e2e.failed)
       // Destructured, not read through `implement` at call time: `implement` is a `let` the line
       // below reassigns, so a closure over it loses this narrowing. `resume` is a closure the lib
       // builds per result and takes no `this`, so detaching it changes nothing about the call.
