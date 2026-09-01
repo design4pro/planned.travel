@@ -19,6 +19,14 @@
  * produces a two-station chain seeded from what was already recorded. Going back
  * is the same door in the other direction, and it says what it will cost.
  *
+ * **The dialog has a second mode**, and it appears only when the trip has real dates: a
+ * connection search against a public timetable, which is a search against *today's* timetable for
+ * a journey next spring if there is no date to search on. What it saves is the same journey this
+ * form writes by hand — an ordinary record with an ordinary chain — so the two modes are two ways
+ * to fill one thing in and never two kinds of transport. On an existing journey the second mode
+ * **replaces its route in place**: the record keeps its identity, its status and its booking
+ * fields, which is the whole point of re-searching rather than starting again.
+ *
  * The save is two writes, in this order: the record, then its chain. They are
  * separate because they are separate rules — a transport is a row and a chain is
  * a set of rows with an invariant — and the second failing leaves the dialog open
@@ -51,6 +59,7 @@ import {
 } from '#/server/fns/transports'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import { ChainEditor } from './chain-editor'
+import { ConnectionSearch } from './connection-search'
 import { formatGap, legTimingError } from './connections'
 import {
   STATUS_LABELS,
@@ -84,6 +93,9 @@ import { legDurationMinutes } from './leg-timing'
 
 import type { ChainDraft, ChainOwnedField, LegDraft } from './leg-form'
 import type { TransportData, TransportDayData } from './types'
+
+/** Which of the dialog's two ways of filling a journey in is on screen. */
+type DialogMode = 'form' | 'search'
 
 /**
  * The chain a dialog opens on: the record's own, or two blank stations for a
@@ -162,6 +174,7 @@ export function LegDialog({
   const [draft, setDraft] = useState<LegDraft>(() => emptyLegDraft(currency))
   const [chain, setChain] = useState<ChainDraft>(() => chainFor(transport))
   const [touched, setTouched] = useState(false)
+  const [fillMode, setFillMode] = useState<DialogMode>('form')
 
   useEffect(() => {
     if (!open) {
@@ -174,7 +187,18 @@ export function LegDialog({
     )
     setChain(chainFor(transport))
     setTouched(false)
+    setFillMode('form')
   }, [open, transport, currency])
+
+  /**
+   * The precondition on the second mode, and the reason it is a precondition.
+   *
+   * A connection search without a date is a search against today's timetable for a journey next
+   * spring. A trip whose days carry no dates has no date to search on, so the switch is not shown
+   * at all rather than shown and then explained — a disabled affordance for something unavailable
+   * is a promise the reader can see and cannot take up.
+   */
+  const searchable = days.some((day) => day.date !== null)
 
   const create = useAction(createLegFn, {
     success: 'Transport added',
@@ -340,393 +364,443 @@ export function LegDialog({
         </DialogHeader>
 
         <DialogBody>
-          <form
-            id={formId}
-            className="flex flex-col gap-5"
-            onSubmit={(event) => {
-              event.preventDefault()
-              void submit()
-            }}
-          >
-            {action.error === null ? null : (
-              <Alert tone="danger" title="That did not save">
-                {action.error}
-              </Alert>
-            )}
+          {searchable ? (
+            <div
+              role="group"
+              aria-label="How to fill this in"
+              className="mb-5 flex w-fit gap-1 rounded-full bg-surface-2 p-1"
+            >
+              {(
+                [
+                  { value: 'form', label: 'Enter it yourself' },
+                  {
+                    value: 'search',
+                    label: editing ? 'Search again' : 'Search connections',
+                  },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  data-part={`transport-mode-${option.value}`}
+                  aria-pressed={fillMode === option.value}
+                  onClick={() => setFillMode(option.value)}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-caption font-semibold focus-ring',
+                    'transition-[background-color,color] duration-base ease-out-quint',
+                    fillMode === option.value
+                      ? 'bg-surface text-ink shadow-e1'
+                      : 'text-ink-3 hover:text-ink',
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
-            <fieldset className="min-w-0">
-              <legend className="mb-2 text-label font-medium text-ink">
-                How are you travelling
-              </legend>
-              <div className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                {TRANSPORT_MODES.map((mode) => {
-                  const Icon = MODE_ICON[mode]
-                  const active = draft.mode === mode
-                  return (
+          {fillMode === 'search' ? (
+            <ConnectionSearch
+              tripId={tripId}
+              transportId={editing ? transport.id : undefined}
+              days={days}
+              onSaved={() => onOpenChange(false)}
+            />
+          ) : (
+            <form
+              id={formId}
+              className="flex flex-col gap-5"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void submit()
+              }}
+            >
+              {action.error === null ? null : (
+                <Alert tone="danger" title="That did not save">
+                  {action.error}
+                </Alert>
+              )}
+
+              <fieldset className="min-w-0">
+                <legend className="mb-2 text-label font-medium text-ink">
+                  How are you travelling
+                </legend>
+                <div className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {TRANSPORT_MODES.map((mode) => {
+                    const Icon = MODE_ICON[mode]
+                    const active = draft.mode === mode
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => set('mode', mode)}
+                        className={cn(
+                          'inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-caption font-semibold whitespace-nowrap focus-ring',
+                          'transition-[background-color,border-color,color] duration-base ease-out-quint',
+                          active
+                            ? 'border-transparent bg-accent text-accent-on'
+                            : 'border-edge bg-surface text-ink-2 hover:border-edge-strong hover:text-ink',
+                        )}
+                      >
+                        <Icon aria-hidden className="size-3.5" />
+                        {modeLabel(mode)}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+
+              <Field
+                label="Name"
+                required
+                error={errorFor('title')}
+                action={
+                  suggestion === '' ||
+                  draft.title === suggestion ? undefined : (
                     <button
-                      key={mode}
                       type="button"
-                      aria-pressed={active}
-                      onClick={() => set('mode', mode)}
-                      className={cn(
-                        'inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-caption font-semibold whitespace-nowrap focus-ring',
-                        'transition-[background-color,border-color,color] duration-base ease-out-quint',
-                        active
-                          ? 'border-transparent bg-accent text-accent-on'
-                          : 'border-edge bg-surface text-ink-2 hover:border-edge-strong hover:text-ink',
-                      )}
+                      className="rounded-sm text-caption font-semibold text-brand underline decoration-brand/35 underline-offset-2 focus-ring hover:decoration-brand"
+                      onClick={() => set('title', suggestion)}
                     >
-                      <Icon aria-hidden className="size-3.5" />
-                      {modeLabel(mode)}
+                      Use “{suggestion}”
                     </button>
                   )
-                })}
-              </div>
-            </fieldset>
+                }
+              >
+                <Input
+                  value={draft.title}
+                  onChange={(event) => set('title', event.target.value)}
+                  placeholder="SAS from LHR to HND"
+                  maxLength={160}
+                  autoComplete="off"
+                  required
+                />
+              </Field>
 
-            <Field
-              label="Name"
-              required
-              error={errorFor('title')}
-              action={
-                suggestion === '' || draft.title === suggestion ? undefined : (
+              {chain.broken ? (
+                <>
+                  <ChainEditor
+                    chain={chain}
+                    mode={draft.mode}
+                    days={days}
+                    errors={chainErrors}
+                    showErrors={touched}
+                    onChange={setChain}
+                  />
                   <button
                     type="button"
-                    className="rounded-sm text-caption font-semibold text-brand underline decoration-brand/35 underline-offset-2 focus-ring hover:decoration-brand"
-                    onClick={() => set('title', suggestion)}
+                    data-part="unsplit-leg"
+                    className="self-start rounded-sm text-caption font-semibold text-ink-3 underline decoration-edge-strong underline-offset-2 focus-ring hover:text-ink hover:decoration-ink-4"
+                    onClick={() => setChain(unbrokenChainFor(transport))}
                   >
-                    Use “{suggestion}”
+                    Put it back as one journey
                   </button>
-                )
-              }
-            >
-              <Input
-                value={draft.title}
-                onChange={(event) => set('title', event.target.value)}
-                placeholder="SAS from LHR to HND"
-                maxLength={160}
-                autoComplete="off"
-                required
-              />
-            </Field>
-
-            {chain.broken ? (
-              <>
-                <ChainEditor
-                  chain={chain}
-                  mode={draft.mode}
-                  days={days}
-                  errors={chainErrors}
-                  showErrors={touched}
-                  onChange={setChain}
-                />
-                <button
-                  type="button"
-                  data-part="unsplit-leg"
-                  className="self-start rounded-sm text-caption font-semibold text-ink-3 underline decoration-edge-strong underline-offset-2 focus-ring hover:text-ink hover:decoration-ink-4"
-                  onClick={() => setChain(unbrokenChainFor(transport))}
-                >
-                  Put it back as one journey
-                </button>
-              </>
-            ) : (
-              <>
-                {/* The two ends, side by side, in the order they happen. */}
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start">
-                  <fieldset className="flex min-w-0 flex-col gap-3">
-                    <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
-                      {labels.from}
-                    </legend>
-                    <Field label="Place" error={errorFor('departureName')}>
-                      <Input
-                        value={draft.departureName}
-                        onChange={(event) =>
-                          set('departureName', event.target.value)
-                        }
-                        placeholder="London Heathrow"
-                        maxLength={200}
-                        autoComplete="off"
-                      />
-                    </Field>
-                    {usesCodes(draft.mode) ? (
-                      <Field label="Code" error={errorFor('departureCode')}>
+                </>
+              ) : (
+                <>
+                  {/* The two ends, side by side, in the order they happen. */}
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start">
+                    <fieldset className="flex min-w-0 flex-col gap-3">
+                      <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
+                        {labels.from}
+                      </legend>
+                      <Field label="Place" error={errorFor('departureName')}>
                         <Input
-                          value={draft.departureCode}
+                          value={draft.departureName}
                           onChange={(event) =>
-                            set(
-                              'departureCode',
-                              event.target.value.toUpperCase(),
-                            )
+                            set('departureName', event.target.value)
                           }
-                          placeholder="LHR"
-                          maxLength={8}
+                          placeholder="London Heathrow"
+                          maxLength={200}
                           autoComplete="off"
-                          className="font-mono tracking-wide uppercase"
                         />
                       </Field>
-                    ) : null}
-                    <div className="grid grid-cols-[1fr_auto] gap-3">
-                      <Field label="Date" error={errorFor('departureDate')}>
-                        <Input
-                          type="date"
-                          value={draft.departureDate}
-                          onChange={(event) =>
-                            set('departureDate', event.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="Time" error={errorFor('departureTime')}>
-                        <Input
-                          type="time"
-                          value={draft.departureTime}
-                          onChange={(event) =>
-                            set('departureTime', event.target.value)
-                          }
-                          className="w-28"
-                        />
-                      </Field>
-                    </div>
-                    {days.length === 0 ? null : (
-                      <Field label={labels.fromDay}>
-                        <SimpleSelect
-                          options={dayOptions}
-                          value={toSelectValue(draft.departureDayId)}
-                          onValueChange={(next) =>
-                            set('departureDayId', fromSelectValue(next))
-                          }
-                          ariaLabel={labels.fromDay}
-                        />
-                      </Field>
-                    )}
-                  </fieldset>
+                      {usesCodes(draft.mode) ? (
+                        <Field label="Code" error={errorFor('departureCode')}>
+                          <Input
+                            value={draft.departureCode}
+                            onChange={(event) =>
+                              set(
+                                'departureCode',
+                                event.target.value.toUpperCase(),
+                              )
+                            }
+                            placeholder="LHR"
+                            maxLength={8}
+                            autoComplete="off"
+                            className="font-mono tracking-wide uppercase"
+                          />
+                        </Field>
+                      ) : null}
+                      <div className="grid grid-cols-[1fr_auto] gap-3">
+                        <Field label="Date" error={errorFor('departureDate')}>
+                          <Input
+                            type="date"
+                            value={draft.departureDate}
+                            onChange={(event) =>
+                              set('departureDate', event.target.value)
+                            }
+                          />
+                        </Field>
+                        <Field label="Time" error={errorFor('departureTime')}>
+                          <Input
+                            type="time"
+                            value={draft.departureTime}
+                            onChange={(event) =>
+                              set('departureTime', event.target.value)
+                            }
+                            className="w-28"
+                          />
+                        </Field>
+                      </div>
+                      {days.length === 0 ? null : (
+                        <Field label={labels.fromDay}>
+                          <SimpleSelect
+                            options={dayOptions}
+                            value={toSelectValue(draft.departureDayId)}
+                            onValueChange={(next) =>
+                              set('departureDayId', fromSelectValue(next))
+                            }
+                            ariaLabel={labels.fromDay}
+                          />
+                        </Field>
+                      )}
+                    </fieldset>
 
-                  <div className="hidden self-center pt-8 sm:block">
-                    <ArrowRight aria-hidden className="size-5 text-ink-4" />
+                    <div className="hidden self-center pt-8 sm:block">
+                      <ArrowRight aria-hidden className="size-5 text-ink-4" />
+                    </div>
+
+                    <fieldset className="flex min-w-0 flex-col gap-3">
+                      <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
+                        {labels.to}
+                      </legend>
+                      <Field label="Place" error={errorFor('arrivalName')}>
+                        <Input
+                          value={draft.arrivalName}
+                          onChange={(event) =>
+                            set('arrivalName', event.target.value)
+                          }
+                          placeholder="Tokyo Haneda"
+                          maxLength={200}
+                          autoComplete="off"
+                        />
+                      </Field>
+                      {usesCodes(draft.mode) ? (
+                        <Field label="Code" error={errorFor('arrivalCode')}>
+                          <Input
+                            value={draft.arrivalCode}
+                            onChange={(event) =>
+                              set(
+                                'arrivalCode',
+                                event.target.value.toUpperCase(),
+                              )
+                            }
+                            placeholder="HND"
+                            maxLength={8}
+                            autoComplete="off"
+                            className="font-mono tracking-wide uppercase"
+                          />
+                        </Field>
+                      ) : null}
+                      <div className="grid grid-cols-[1fr_auto] gap-3">
+                        <Field label="Date" error={errorFor('arrivalDate')}>
+                          <Input
+                            type="date"
+                            value={draft.arrivalDate}
+                            min={
+                              draft.departureDate === ''
+                                ? undefined
+                                : draft.departureDate
+                            }
+                            onChange={(event) =>
+                              set('arrivalDate', event.target.value)
+                            }
+                          />
+                        </Field>
+                        <Field label="Time" error={errorFor('arrivalTime')}>
+                          <Input
+                            type="time"
+                            value={draft.arrivalTime}
+                            onChange={(event) =>
+                              set('arrivalTime', event.target.value)
+                            }
+                            className="w-28"
+                          />
+                        </Field>
+                      </div>
+                      {days.length === 0 ? null : (
+                        <Field
+                          label={labels.toDay}
+                          error={errorFor('arrivalDayId')}
+                          hint="A journey that lands the next morning says so here."
+                        >
+                          <SimpleSelect
+                            options={dayOptions}
+                            value={toSelectValue(draft.arrivalDayId)}
+                            onValueChange={(next) =>
+                              set('arrivalDayId', fromSelectValue(next))
+                            }
+                            ariaLabel={labels.toDay}
+                          />
+                        </Field>
+                      )}
+                    </fieldset>
                   </div>
 
-                  <fieldset className="flex min-w-0 flex-col gap-3">
-                    <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
-                      {labels.to}
-                    </legend>
-                    <Field label="Place" error={errorFor('arrivalName')}>
-                      <Input
-                        value={draft.arrivalName}
-                        onChange={(event) =>
-                          set('arrivalName', event.target.value)
-                        }
-                        placeholder="Tokyo Haneda"
-                        maxLength={200}
-                        autoComplete="off"
-                      />
-                    </Field>
-                    {usesCodes(draft.mode) ? (
-                      <Field label="Code" error={errorFor('arrivalCode')}>
-                        <Input
-                          value={draft.arrivalCode}
-                          onChange={(event) =>
-                            set('arrivalCode', event.target.value.toUpperCase())
-                          }
-                          placeholder="HND"
-                          maxLength={8}
-                          autoComplete="off"
-                          className="font-mono tracking-wide uppercase"
-                        />
-                      </Field>
-                    ) : null}
-                    <div className="grid grid-cols-[1fr_auto] gap-3">
-                      <Field label="Date" error={errorFor('arrivalDate')}>
-                        <Input
-                          type="date"
-                          value={draft.arrivalDate}
-                          min={
-                            draft.departureDate === ''
-                              ? undefined
-                              : draft.departureDate
-                          }
-                          onChange={(event) =>
-                            set('arrivalDate', event.target.value)
-                          }
-                        />
-                      </Field>
-                      <Field label="Time" error={errorFor('arrivalTime')}>
-                        <Input
-                          type="time"
-                          value={draft.arrivalTime}
-                          onChange={(event) =>
-                            set('arrivalTime', event.target.value)
-                          }
-                          className="w-28"
-                        />
-                      </Field>
-                    </div>
-                    {days.length === 0 ? null : (
-                      <Field
-                        label={labels.toDay}
-                        error={errorFor('arrivalDayId')}
-                        hint="A journey that lands the next morning says so here."
-                      >
-                        <SimpleSelect
-                          options={dayOptions}
-                          value={toSelectValue(draft.arrivalDayId)}
-                          onValueChange={(next) =>
-                            set('arrivalDayId', fromSelectValue(next))
-                          }
-                          ariaLabel={labels.toDay}
-                        />
-                      </Field>
-                    )}
-                  </fieldset>
-                </div>
+                  {timing !== null ? (
+                    <Alert tone="danger" title="Check the times">
+                      {timing} Move one of them so the transport can actually be
+                      caught.
+                    </Alert>
+                  ) : duration === null ? null : (
+                    <p className="text-caption text-ink-3">
+                      That is{' '}
+                      <span className="font-semibold tabular-nums text-ink">
+                        {formatGap(duration)}
+                      </span>{' '}
+                      door to door.
+                    </p>
+                  )}
 
-                {timing !== null ? (
-                  <Alert tone="danger" title="Check the times">
-                    {timing} Move one of them so the transport can actually be
-                    caught.
-                  </Alert>
-                ) : duration === null ? null : (
-                  <p className="text-caption text-ink-3">
-                    That is{' '}
-                    <span className="font-semibold tabular-nums text-ink">
-                      {formatGap(duration)}
-                    </span>{' '}
-                    door to door.
-                  </p>
-                )}
-
-                {/*
+                  {/*
                   The empty state of a chain, which is a real state and not a
                   blank panel: the journey already has two endpoints, so the
                   first click produces a two-station chain seeded from them
                   rather than an empty editor asking to be filled.
                 */}
-                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-2 px-4 py-3">
-                  <p className="min-w-0 text-caption text-ink-3">
-                    Changing trains on the way? Record each part with its own
-                    service number, platform, seat and clock.
-                  </p>
-                  <Button
-                    type="button"
-                    data-part="split-leg"
-                    variant="secondary"
-                    size="sm"
-                    shape="pill"
-                    onClick={() => setChain(breakIntoLegs(chain))}
-                  >
-                    Break this into legs
-                  </Button>
-                </div>
-              </>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {usesService(draft.mode) ? (
-                <>
-                  <Field label="Carrier" error={errorFor('carrier')}>
-                    <Input
-                      value={draft.carrier}
-                      onChange={(event) => set('carrier', event.target.value)}
-                      placeholder="SAS"
-                      maxLength={200}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field
-                    label="Service number"
-                    error={errorFor('serviceNumber')}
-                  >
-                    <Input
-                      value={draft.serviceNumber}
-                      onChange={(event) =>
-                        set('serviceNumber', event.target.value)
-                      }
-                      placeholder="SK983"
-                      maxLength={200}
-                      autoComplete="off"
-                      className="font-mono tracking-wide uppercase"
-                    />
-                  </Field>
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-2 px-4 py-3">
+                    <p className="min-w-0 text-caption text-ink-3">
+                      Changing trains on the way? Record each part with its own
+                      service number, platform, seat and clock.
+                    </p>
+                    <Button
+                      type="button"
+                      data-part="split-leg"
+                      variant="secondary"
+                      size="sm"
+                      shape="pill"
+                      onClick={() => setChain(breakIntoLegs(chain))}
+                    >
+                      Break this into legs
+                    </Button>
+                  </div>
                 </>
-              ) : null}
-              <Field
-                label="Booking reference"
-                error={errorFor('bookingCode')}
-                hint="The code you will read back at the desk."
-              >
-                <Input
-                  value={draft.bookingCode}
-                  onChange={(event) => set('bookingCode', event.target.value)}
-                  placeholder="TXK9QP"
-                  maxLength={200}
-                  autoComplete="off"
-                  className="font-mono tracking-wide uppercase"
-                />
-              </Field>
-              {usesSeat(draft.mode) ? (
-                <Field label="Seat" error={errorFor('seat')}>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {usesService(draft.mode) ? (
+                  <>
+                    <Field label="Carrier" error={errorFor('carrier')}>
+                      <Input
+                        value={draft.carrier}
+                        onChange={(event) => set('carrier', event.target.value)}
+                        placeholder="SAS"
+                        maxLength={200}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <Field
+                      label="Service number"
+                      error={errorFor('serviceNumber')}
+                    >
+                      <Input
+                        value={draft.serviceNumber}
+                        onChange={(event) =>
+                          set('serviceNumber', event.target.value)
+                        }
+                        placeholder="SK983"
+                        maxLength={200}
+                        autoComplete="off"
+                        className="font-mono tracking-wide uppercase"
+                      />
+                    </Field>
+                  </>
+                ) : null}
+                <Field
+                  label="Booking reference"
+                  error={errorFor('bookingCode')}
+                  hint="The code you will read back at the desk."
+                >
                   <Input
-                    value={draft.seat}
-                    onChange={(event) => set('seat', event.target.value)}
-                    placeholder="21A"
+                    value={draft.bookingCode}
+                    onChange={(event) => set('bookingCode', event.target.value)}
+                    placeholder="TXK9QP"
                     maxLength={200}
                     autoComplete="off"
                     className="font-mono tracking-wide uppercase"
                   />
                 </Field>
-              ) : null}
-            </div>
+                {usesSeat(draft.mode) ? (
+                  <Field label="Seat" error={errorFor('seat')}>
+                    <Input
+                      value={draft.seat}
+                      onChange={(event) => set('seat', event.target.value)}
+                      placeholder="21A"
+                      maxLength={200}
+                      autoComplete="off"
+                      className="font-mono tracking-wide uppercase"
+                    />
+                  </Field>
+                ) : null}
+              </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Distance" error={errorFor('distanceKm')}>
-                <Input
-                  value={draft.distanceKm}
-                  onChange={(event) => set('distanceKm', event.target.value)}
-                  inputMode="decimal"
-                  placeholder="9560"
-                  trailing={<span className="text-caption text-ink-4">km</span>}
-                />
-              </Field>
-              <Field label="Price" error={errorFor('price')}>
-                <Input
-                  value={draft.price}
-                  onChange={(event) => set('price', event.target.value)}
-                  inputMode="decimal"
-                  placeholder="0.00"
-                  trailing={
-                    <span className="text-caption text-ink-4">
-                      {draft.currency}
-                    </span>
-                  }
-                />
-              </Field>
-              <Field label="Status">
-                <SimpleSelect
-                  options={TRANSPORT_STATUSES.map((value) => ({
-                    value,
-                    label: STATUS_LABELS[value],
-                  }))}
-                  value={draft.status}
-                  onValueChange={(next) => {
-                    if (isTransportStatus(next)) {
-                      set('status', next)
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Distance" error={errorFor('distanceKm')}>
+                  <Input
+                    value={draft.distanceKm}
+                    onChange={(event) => set('distanceKm', event.target.value)}
+                    inputMode="decimal"
+                    placeholder="9560"
+                    trailing={
+                      <span className="text-caption text-ink-4">km</span>
                     }
-                  }}
-                  ariaLabel="Status"
+                  />
+                </Field>
+                <Field label="Price" error={errorFor('price')}>
+                  <Input
+                    value={draft.price}
+                    onChange={(event) => set('price', event.target.value)}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    trailing={
+                      <span className="text-caption text-ink-4">
+                        {draft.currency}
+                      </span>
+                    }
+                  />
+                </Field>
+                <Field label="Status">
+                  <SimpleSelect
+                    options={TRANSPORT_STATUSES.map((value) => ({
+                      value,
+                      label: STATUS_LABELS[value],
+                    }))}
+                    value={draft.status}
+                    onValueChange={(next) => {
+                      if (isTransportStatus(next)) {
+                        set('status', next)
+                      }
+                    }}
+                    ariaLabel="Status"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Notes">
+                <Textarea
+                  value={draft.notes}
+                  onChange={(event) => set('notes', event.target.value)}
+                  placeholder="Aisle seat requested. Bags checked through to Kyoto."
+                  maxLength={4000}
+                  rows={3}
+                  autoResize
+                  maxRows={8}
                 />
               </Field>
-            </div>
-
-            <Field label="Notes">
-              <Textarea
-                value={draft.notes}
-                onChange={(event) => set('notes', event.target.value)}
-                placeholder="Aisle seat requested. Bags checked through to Kyoto."
-                maxLength={4000}
-                rows={3}
-                autoResize
-                maxRows={8}
-              />
-            </Field>
-          </form>
+            </form>
+          )}
         </DialogBody>
 
         <DialogFooter>
@@ -736,19 +810,26 @@ export function LegDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {fillMode === 'search' ? 'Close' : 'Cancel'}
           </Button>
-          <Button
-            type="submit"
-            form={formId}
-            variant="primary"
-            shape="pill"
-            disabled={touched && invalid}
-            loading={action.pending}
-            loadingLabel="Saving the transport"
-          >
-            {editing ? 'Save transport' : 'Add transport'}
-          </Button>
+          {/*
+            The search mode has no footer save, and that is the honest shape: what is saved there
+            is one chosen connection, so the button belongs on the row that names it rather than
+            at the bottom of a dialog with nothing selected.
+          */}
+          {fillMode === 'search' ? null : (
+            <Button
+              type="submit"
+              form={formId}
+              variant="primary"
+              shape="pill"
+              disabled={touched && invalid}
+              loading={action.pending}
+              loadingLabel="Saving the transport"
+            >
+              {editing ? 'Save transport' : 'Add transport'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -8,6 +8,16 @@ export { ChainEditor } from './chain-editor'
 export type { ChainEditorProps } from './chain-editor'
 
 export {
+  ConnectionSearch,
+  chainFor as chainForConnection,
+  connectionMode,
+  journeyLegs,
+  placeOf,
+  rankConnections,
+} from './connection-search'
+export type { ConnectionSearchProps } from './connection-search'
+
+export {
   analyseConnections,
   formatGap,
   legArrivalAt,

@@ -23,7 +23,7 @@ import {
 } from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
 import { runBatch } from './batch'
-import { RepositoryError } from './context'
+import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { requireTrip, tripRoleFor } from './trips'
 import { resolveTimeZone } from '#/lib/time'
@@ -640,4 +640,140 @@ export async function replaceTransportChain(
 
   await runBatch(scope, statements)
   return listTransportLegs(scope, parent.id)
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * A connection the traveller did not have to look up
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * A connection found by the transit proxy, as this repository accepts it.
+ *
+ * Everything about it is ordinary. A found connection is a `transports` row with a mode already in
+ * {@link TRANSPORT_MODES} and a chain of stations in `transport_legs` — the shapes `03-S2b`
+ * already built — so a saved connection is editable afterwards exactly like a journey somebody
+ * typed by hand, and nothing about it needs a second table, a second writer or a second screen.
+ *
+ * `transportId` is what separates the two acts this input describes: absent, the connection is
+ * saved as a new journey; present, it **replaces the route of a journey that already exists**
+ * while keeping its identity, its status and its booking fields.
+ */
+export const searchedConnectionInput = z
+  .object({
+    tripId: idSchema,
+    /** Absent for a new journey; the record being re-searched otherwise. */
+    transportId: idSchema.nullish(),
+    mode: z.enum(TRANSPORT_MODES),
+    title: titleSchema,
+    /** Minor units beside a three-letter code, or neither. A fare is never guessed. */
+    priceMinor: minorAmountSchema.nullish(),
+    currency: currencySchema.nullish(),
+    stations: z
+      .array(stationSchema)
+      .min(2)
+      .max(CHAIN_MAX_LEGS + 1),
+    legs: z.array(chainLegSchema).min(1).max(CHAIN_MAX_LEGS),
+  })
+  .refine(({ stations, legs }) => legs.length === stations.length - 1, {
+    message: 'A chain of N stations has exactly N−1 legs, and N is 2 or more.',
+  })
+export type SearchedConnectionInput = z.input<typeof searchedConnectionInput>
+
+/** What the save answers: the record, and the chain it now has. */
+export interface SavedConnection {
+  readonly transport: Transport
+  readonly legs: Array<TransportLeg>
+}
+
+/**
+ * The record a found connection is first written as.
+ *
+ * The endpoints are set here as well as by the chain writer, so a save whose second half never
+ * lands leaves a journey that says where it goes rather than an empty row. The status is left to
+ * the column's own default — a connection somebody chose is not a connection anybody booked.
+ */
+function newRecordFrom(
+  values: z.output<typeof searchedConnectionInput>,
+): CreateTransportInput {
+  // Both ends exist: the validator refuses fewer than two stations and fewer than one leg.
+  const first = values.stations[0]
+  const last = values.stations[values.stations.length - 1]
+  const firstLeg = values.legs[0]
+  const lastLeg = values.legs[values.legs.length - 1]
+  return {
+    tripId: values.tripId,
+    mode: values.mode,
+    title: values.title,
+    priceMinor: values.priceMinor ?? null,
+    currency: values.currency ?? null,
+    departureName: first.name,
+    departureCode: first.code ?? null,
+    departureLat: first.lat ?? null,
+    departureLng: first.lng ?? null,
+    departureTimezone: first.timezone ?? null,
+    departureDate: firstLeg.departureDate ?? null,
+    departureTime: firstLeg.departureTime ?? null,
+    arrivalName: last.name,
+    arrivalCode: last.code ?? null,
+    arrivalLat: last.lat ?? null,
+    arrivalLng: last.lng ?? null,
+    arrivalTimezone: last.timezone ?? null,
+    arrivalDate: lastLeg.arrivalDate ?? null,
+    arrivalTime: lastLeg.arrivalTime ?? null,
+  }
+}
+
+/**
+ * Save a found connection as a first-class journey, or replace the route of one already saved.
+ *
+ * **It writes through {@link replaceTransportChain} rather than beside it.** A found connection is
+ * N stations and N−1 legs, which is exactly what that writer already refuses to get wrong: one
+ * batch, the delete and the inserts and the parent's endpoint rewrite together, so a
+ * half-replaced chain is not a state this path can reach either. Everything this function adds is
+ * the record the chain hangs off.
+ *
+ * **A re-search keeps the record.** The plan's story is a timetable change that must not cost the
+ * traveller their booking code and their seat, so the title, the status, the price and every
+ * booking field are read from the row and left there; only the stations, the legs and the flat
+ * endpoints derived from them move. A journey re-searched is the same journey.
+ *
+ * **The trip is resolved first, then the transport, then their agreement.** Two ids arrive from
+ * the browser and a well-formed one is not an authorised one. The third check is not redundant:
+ * within one workspace, a transport of *another* trip would otherwise be re-routed by a caller who
+ * named a trip they can see and a transport they can also see.
+ *
+ * **No day reference is invented.** A timetable knows dates and clocks; it does not know which day
+ * of the trip they are. The legs carry the wall clocks the provider stated and the day selects in
+ * the dialog stay the traveller's to answer, which is the same posture `03-S1` took for the two
+ * ends of a journey typed by hand.
+ */
+export async function saveSearchedConnection(
+  scope: TenantScope,
+  input: SearchedConnectionInput,
+): Promise<SavedConnection> {
+  const values = searchedConnectionInput.parse(input)
+  await requireTrip(scope, values.tripId)
+
+  const existing =
+    values.transportId === null || values.transportId === undefined
+      ? null
+      : await transportsRepository.requireById(scope, values.transportId)
+  if (existing !== null && existing.tripId !== values.tripId) {
+    throw new NotFoundError('transport', existing.id)
+  }
+
+  const parent =
+    existing ?? (await createTransport(scope, newRecordFrom(values)))
+
+  const legs = await replaceTransportChain(scope, parent.id, {
+    stations: values.stations,
+    legs: values.legs,
+  })
+
+  // Re-read rather than return `parent`: the chain writer rewrote the flat endpoints in its own
+  // batch, so the row in hand is one write out of date for a re-search.
+  return {
+    transport: await transportsRepository.requireById(scope, parent.id),
+    legs,
+  }
 }

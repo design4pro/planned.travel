@@ -13,6 +13,7 @@
  * `connections.ts`).
  */
 import { createServerFn } from '@tanstack/react-start'
+import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 
 import { TRANSPORT_MODES, TRANSPORT_STATUSES } from '#/server/db/schema'
@@ -25,18 +26,36 @@ import {
   listTripTransports,
   replaceTransportChain,
   requireTrip,
+  saveSearchedConnection,
   setTransportStatus,
   summariseTripTransports,
   totalTripDistanceMetres,
   updateTransport,
 } from '#/server/repos'
 import { findAirportByCode, searchAirports } from '#/server/catalog/airports'
+import {
+  effectiveLimitsFor,
+  loadPlanState,
+} from '#/server/billing/entitlements'
+import { billingRuntime } from '#/server/billing/runtime.cloudflare'
+import { billingContext } from '#/server/billing/types'
+import { createHereClient } from '#/server/transit/here'
+import { RateCeilingError } from '#/server/transit/meter'
+import {
+  TransitProviderError,
+  searchTransitConnections,
+  transitQuerySchema,
+} from '#/server/transit/search'
 import { resolveTimeZone } from '#/lib/time'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
 
 import type { AirportMatch } from '#/server/catalog/airports'
 import type { TransportLeg } from '#/server/db/types'
-import type { TransportModeTotals } from '#/server/repos'
+import type { TenantScope, TransportModeTotals } from '#/server/repos'
+import type {
+  TransitConnection,
+  TransitFailureReason,
+} from '#/server/transit/search'
 
 /* ------------------------------------------------------------------ inputs */
 
@@ -586,3 +605,219 @@ export const deleteLegFn = createServerFn({ method: 'POST' })
     ])
     return { deleted: true }
   })
+
+/* ------------------------------------------------- a connection, searched for */
+
+/**
+ * The two halves of the search, as the dialog reads them.
+ *
+ * A refusal is a **value**, not a thrown error, and that is deliberate. Four of the six states
+ * this surface has to render are refusals — no allowance left, no credential on this deployment,
+ * the provider unreachable, the provider talking nonsense — and each of them is a designed panel
+ * with its own words. A thrown `Error` arrives at the browser as one string with no reason
+ * attached, so the screen would have to read the message to decide what to draw, which is the
+ * shape that quietly stops working the day somebody rewords a sentence.
+ *
+ * A failure that is *not* one of these is still thrown: an unauthenticated caller, a trip that is
+ * not theirs, a malformed payload. Those are faults, not outcomes.
+ */
+export type ConnectionSearchOutcome =
+  | {
+      readonly ok: true
+      readonly connections: ReadonlyArray<TransitConnection>
+      /** True when nobody's allowance was spent, because the answer was already held. */
+      readonly cached: boolean
+      /** Searches left this month, or `null` when this one cost nothing. */
+      readonly remaining: number | null
+      readonly ceiling: number
+    }
+  | {
+      readonly ok: false
+      readonly reason: 'ceiling' | TransitFailureReason
+      readonly message: string
+      readonly ceiling: number
+    }
+
+/**
+ * The workspace's own ceiling on searches, from the one resolver every other ceiling comes from.
+ *
+ * `loadPlanState` rather than a fresh subscription read: it is the cached plan state the billing
+ * screen and the quota guard already share, so a search costs no extra D1 round trip in the steady
+ * state, and the number enforced here is by construction the number `/settings/billing` publishes.
+ */
+async function transitCeiling(scope: TenantScope): Promise<number> {
+  const state = await loadPlanState(
+    billingContext(billingRuntime({ scope }), scope.ctx.organizationId),
+  )
+  return effectiveLimitsFor(state).rates.transit_searches_per_month
+}
+
+/**
+ * Search public-transport connections between two stops on a date.
+ *
+ * `POST`, although it reads: a miss spends real money on the workspace's allowance, and a `GET`
+ * is the shape a browser, a prefetch or an intermediary feels free to repeat. The proxy behind it
+ * decides everything else — the cache is consulted first and is shared across every workspace, the
+ * allowance is spent only on a miss, and the provider is reached only after that.
+ *
+ * `requireTrip` is what makes this a trip member's search rather than anybody's: the query itself
+ * carries no tenant data, but the *spending* is the workspace's, and only somebody who can see the
+ * trip may spend it.
+ */
+export const searchConnectionsFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ tripId, ...transitQuerySchema.shape }))
+  .handler(async ({ data }): Promise<ConnectionSearchOutcome> => {
+    const scope = await appScope()
+    await requireTrip(scope, data.tripId)
+
+    const ceiling = await transitCeiling(scope)
+    const query = {
+      origin: data.origin,
+      destination: data.destination,
+      date: data.date,
+      modes: data.modes,
+    }
+
+    try {
+      const result = await searchTransitConnections(
+        {
+          // One namespace, two roles, and they must not be confused: the answers are keyed on the
+          // query alone and shared by every tenant, while the tallies are keyed per organization.
+          cache: env.KV,
+          counters: env.KV,
+          // Built when a call is actually made, not when the runtime is assembled: a deployment
+          // with no credential must still be able to serve a cached answer, and an eager
+          // `createHereClient` would refuse the whole search before the cache was consulted.
+          client: {
+            search: (asked) =>
+              createHereClient({
+                apiKey: env.HERE_API_KEY ?? '',
+                fetch,
+              }).search(asked),
+          },
+          organizationId: scope.ctx.organizationId,
+          ceiling,
+          now: () => new Date(),
+        },
+        query,
+      )
+      return {
+        ok: true,
+        connections: result.connections,
+        cached: result.cached,
+        remaining:
+          result.spent === null ? null : Math.max(0, ceiling - result.spent),
+        ceiling,
+      }
+    } catch (cause) {
+      if (cause instanceof RateCeilingError) {
+        return { ok: false, reason: 'ceiling', message: cause.message, ceiling }
+      }
+      if (cause instanceof TransitProviderError) {
+        return {
+          ok: false,
+          reason: cause.reason,
+          message: cause.message,
+          ceiling,
+        }
+      }
+      throw cause
+    }
+  })
+
+/**
+ * Save a chosen connection as an ordinary journey, or replace the route of one already saved.
+ *
+ * The same wire shapes the hand-typed chain uses, because what is written is the same thing: a
+ * transport with a chain of stations. `transportId` is the whole difference between the two acts —
+ * without it a new journey is created, with it that journey's route is replaced and its identity,
+ * status and booking fields are left exactly where they were.
+ *
+ * The mirror carries the leg count and the two outer endpoints rather than the chain, for the
+ * reason `saveLegChainFn` gives: a patch is a notification and D1 is the record.
+ */
+export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
+  .validator(
+    z.object({
+      tripId,
+      /** `''` for a connection nobody has saved yet. */
+      transportId: z.string().trim().max(64),
+      mode: z.enum(TRANSPORT_MODES),
+      title: z.string().trim().min(1).max(160),
+      priceMinor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+      currency: z
+        .string()
+        .trim()
+        .refine(
+          (value) => value === '' || /^[A-Z]{3}$/.test(value),
+          'must be an ISO-4217 alphabetic code',
+        ),
+      stations: z
+        .array(stationSchema)
+        .min(2)
+        .max(CHAIN_MAX_LEGS + 1),
+      legs: z.array(chainLegSchema).min(1).max(CHAIN_MAX_LEGS),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<{ readonly transportId: string; readonly legs: number }> => {
+      const scope = await appScope()
+      await requireTrip(scope, data.tripId)
+
+      const saved = await saveSearchedConnection(scope, {
+        tripId: data.tripId,
+        transportId: orNull(data.transportId),
+        mode: data.mode,
+        title: data.title,
+        priceMinor: data.priceMinor === 0 ? null : data.priceMinor,
+        currency: orNull(data.currency),
+        stations: data.stations.map((station) => ({
+          name: station.name,
+          code: orNull(station.code),
+          lat: station.lat,
+          lng: station.lng,
+          timezone: orNull(station.timezone),
+        })),
+        legs: data.legs.map((leg) => ({
+          serviceNumber: orNull(leg.serviceNumber),
+          platform: orNull(leg.platform),
+          seat: orNull(leg.seat),
+          departureDayId: orNull(leg.departureDayId),
+          arrivalDayId: orNull(leg.arrivalDayId),
+          departureDate: orNull(leg.departureDate),
+          departureTime: orNull(leg.departureTime),
+          arrivalDate: orNull(leg.arrivalDate),
+          arrivalTime: orNull(leg.arrivalTime),
+        })),
+      })
+
+      await mirrorToRoom(scope, data.tripId, [
+        patch('route', saved.transport.id, {
+          title: saved.transport.title,
+          mode: saved.transport.mode,
+          status: saved.transport.status,
+          legs: saved.legs.length,
+          departureName: saved.transport.departureName,
+          arrivalName: saved.transport.arrivalName,
+        }),
+      ])
+      return { transportId: saved.transport.id, legs: saved.legs.length }
+    },
+  )
+
+/**
+ * The answer shapes, re-exported as **types only**.
+ *
+ * A component that renders a connection needs to know its shape and must not pull the proxy, its
+ * validators or the database schema behind it into the browser bundle. Types are erased, so this
+ * costs nothing at runtime — the same arrangement `StationMatch` already has, and the reason
+ * `leg-form.ts` restates the mode list instead of importing it.
+ */
+export type {
+  TransitConnection,
+  TransitLeg,
+  TransitMode,
+  TransitStop,
+} from '#/server/transit/search'

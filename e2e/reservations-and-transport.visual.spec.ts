@@ -819,3 +819,197 @@ test.describe('03-S2b — A journey with more than two stations, and times that 
     expect(after).toBe(0)
   })
 })
+
+test.describe('03-S3 — A connection the traveller did not have to look up', () => {
+  /**
+   * The same route table the two stages above measured, restated rather than
+   * shared for the reason `12-verification-protocol.md` §4 gives: one stage must
+   * be able to change its own evidence without touching another's.
+   */
+  const TRANSPORTS: RouteCase = {
+    name: 'trip-transports',
+    path: `/trips/${TRIP_ID}/transports`,
+    ready: 'main',
+    relativeTime: true,
+  }
+
+  /** The selectors this stage publishes, so a capture is driven by them and not by styling. */
+  const MODE_FORM = '[data-part="transport-mode-form"]'
+  const MODE_SEARCH = '[data-part="transport-mode-search"]'
+  const SEARCH = '[data-part="connection-search"]'
+  const RUN = '[data-part="connection-search-run"]'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * **Three of this stage's six declared states are not reachable from this
+   * container, and saying so is the point of this comment.**
+   *
+   * A ranked list, one result expanded and the meter's refusal all need an
+   * answer from the provider. There is no answer to be had here and no honest
+   * way to fake one at this level: `page.route` intercepts the *browser's*
+   * requests, and the call this surface makes is made by the Worker, three
+   * layers behind the server function. Stubbing it would mean a switch in
+   * production code that exists only for a test, which is exactly what the
+   * dependency seam in `src/server/transit/search.ts` was built to avoid — the
+   * ranked list, the cache hit, the ceiling refusal and the malformed answer are
+   * each asserted there, against a stubbed client, in
+   * `src/server/transit/__tests__/search.test.ts`.
+   *
+   * A second reason bites before that one: the airport and station catalogue
+   * ships empty until its artefact is loaded into D1 (#200), so the two stop
+   * pickers have nothing to offer and a search cannot be composed at all. What
+   * this block asserts is therefore everything the browser really can see — that
+   * the second mode exists, that it is the one the traveller has to ask for,
+   * that it refuses to run on an incomplete question, and that reaching it moves
+   * nothing that had already settled.
+   */
+  test('the second mode is offered, and is not the one the dialog opens on', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRANSPORTS)
+    await visit(page, TRANSPORTS, 'light')
+
+    await page.locator(NEW_TRANSPORT).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    // The trip has dates, so the switch is there; the form is what it opens on.
+    await expect(dialog.locator(MODE_FORM)).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(dialog.locator(MODE_SEARCH)).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    await expect(dialog.locator(SEARCH)).toHaveCount(0)
+
+    await dialog.locator(MODE_SEARCH).click()
+    await expect(dialog.locator(SEARCH)).toHaveCount(1)
+    /*
+     * The footer's save goes with the form: what is saved here is one chosen row, so the button
+     * belongs on the row that names it. The remaining ghost reads `Close` rather than `Cancel`,
+     * which is asserted through `Cancel` disappearing — the dialog's own dismiss control is also
+     * named `Close`, so counting that word would count the wrong button as well as the right one.
+     */
+    await expect(
+      dialog.getByRole('button', { name: 'Add transport' }),
+    ).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toHaveCount(0)
+
+    // And back again, with the form exactly as it was.
+    await dialog.locator(MODE_FORM).click()
+    await expect(dialog.locator(SEARCH)).toHaveCount(0)
+    await expect(
+      dialog.getByRole('button', { name: 'Add transport' }),
+    ).toHaveCount(1)
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toHaveCount(1)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The one refusal that needs no provider: a question with a stop missing.
+   *
+   * Asserted through the control's own disabled state rather than by clicking
+   * and watching nothing happen, because "nothing happened" is also what a
+   * broken handler looks like.
+   */
+  test('will not spend a search on an incomplete question', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRANSPORTS)
+    await visit(page, TRANSPORTS, 'light')
+
+    await page.locator(NEW_TRANSPORT).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.locator(MODE_SEARCH).click()
+
+    const run = dialog.locator(RUN)
+    await expect(run).toBeDisabled()
+
+    // The mode filter is part of the question and answers on its own.
+    const train = dialog.getByRole('button', { name: 'Train', exact: true })
+    await expect(train).toHaveAttribute('aria-pressed', 'false')
+    await train.click()
+    await expect(train).toHaveAttribute('aria-pressed', 'true')
+
+    // Still refused: a filter is not a stop.
+    await expect(run).toBeDisabled()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The layout-shift rule, over the switch that swaps one panel for another.
+   *
+   * The two modes are different heights, so what is asserted is the same thing
+   * `03-S2b` asserts about an inserted row: after the dialog has settled, no
+   * unshifted layout is scored — the panel is replaced, not interpolated into.
+   */
+  test('reaching the second mode moves nothing that had already settled', async ({
+    browserName,
+    page,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'layout-shift is a Chromium-only entry type; observe() records nothing here, so a score of 0 would prove nothing',
+    )
+    await page.addInitScript(() => {
+      const readings: Array<{ at: number; value: number }> = []
+      Object.defineProperty(window, '__layoutShift', { value: readings })
+      if (!PerformanceObserver.supportedEntryTypes.includes('layout-shift')) {
+        return
+      }
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const shift = entry as PerformanceEntry & {
+            value: number
+            hadRecentInput: boolean
+          }
+          if (!shift.hadRecentInput) {
+            readings.push({ at: shift.startTime, value: shift.value })
+          }
+        }
+      }).observe({ type: 'layout-shift', buffered: true })
+    })
+
+    await visit(page, TRANSPORTS, 'light')
+    await page.locator(NEW_TRANSPORT).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await settle(page, TRANSPORTS)
+
+    const mark = await page.evaluate(() => performance.now())
+
+    await dialog.locator(MODE_SEARCH).click()
+    await expect(dialog.locator(SEARCH)).toHaveCount(1)
+    await settle(page, TRANSPORTS)
+
+    const after = await page.evaluate((since: number) => {
+      const readings = (
+        window as unknown as {
+          __layoutShift: Array<{ at: number; value: number }>
+        }
+      ).__layoutShift
+      return readings
+        .filter((entry) => entry.at > since)
+        .reduce((total, entry) => total + entry.value, 0)
+    }, mark)
+
+    test.info().annotations.push({
+      type: 'layout shift after settle',
+      description: String(after),
+    })
+    expect(after).toBe(0)
+  })
+})

@@ -176,6 +176,7 @@ import {
   listTripTransports,
   nextDeparture,
   replaceTransportChain,
+  saveSearchedConnection,
   setTransportStatus,
   summariseTripTransports,
   totalTripDistanceMetres,
@@ -2971,6 +2972,174 @@ describe('tenant isolation', () => {
       ]) {
         expect(await refusalCode(attempt)).toBe('FORBIDDEN')
       }
+    })
+  })
+
+  /**
+   * 03-S3 — a connection found for the traveller, saved as an ordinary journey.
+   *
+   * Two ids arrive from the browser on this path and each is re-resolved in the
+   * caller's own scope. The **trip** id is the usual one. The **transport** id is
+   * the one worth a case of its own, because a re-search *replaces* rows: a
+   * missing scope check here would not fail loudly, it would quietly rewrite
+   * another workspace's journey with a route it never asked for.
+   *
+   * The cache key is asserted where it lives, in
+   * `src/server/transit/__tests__/search.test.ts`, and for the opposite reason:
+   * it must be the *same* string for both tenants.
+   */
+  describe('a connection saved as a journey, and re-searched in place', () => {
+    /** Two legs, so a refusal that dropped one would still be visible. */
+    const CONNECTION = {
+      mode: 'train' as const,
+      title: 'Lisboa to Porto',
+      stations: [
+        { name: 'Lisboa Santa Apolonia', code: 'LIS' },
+        { name: 'Coimbra-B' },
+        { name: 'Porto Campanha', code: 'OPO' },
+      ],
+      legs: [
+        { serviceNumber: 'IC 728', departureTime: '08:12' },
+        { serviceNumber: 'IC 728', arrivalTime: '11:03' },
+      ],
+    }
+
+    it('refuses to hang a found connection off B\u2019s trip, and writes nothing', async () => {
+      const before = await transportsRepository.count(beta.tenant.scope)
+
+      expect(
+        await captureError(() =>
+          saveSearchedConnection(alpha.tenant.scope, {
+            ...CONNECTION,
+            tripId: beta.tripId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await transportsRepository.count(beta.tenant.scope)).toBe(before)
+      expect(await transportLegsRepository.count(beta.tenant.scope)).toBe(0)
+      // Nor did it land in A's own workspace under B's trip id.
+      expect(await transportsRepository.count(alpha.tenant.scope)).toBe(1)
+    })
+
+    it('refuses to re-search B\u2019s journey, and leaves its chain byte-identical', async () => {
+      await saveSearchedConnection(beta.tenant.scope, {
+        ...CONNECTION,
+        tripId: beta.tripId,
+        transportId: beta.transportId,
+      })
+      const before = await listTransportLegs(
+        beta.tenant.scope,
+        beta.transportId,
+      )
+      expect(before).toHaveLength(2)
+
+      for (const tripId of [beta.tripId, alpha.tripId]) {
+        expect(
+          await captureError(() =>
+            saveSearchedConnection(alpha.tenant.scope, {
+              ...CONNECTION,
+              tripId,
+              transportId: beta.transportId,
+              stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+              legs: [{}],
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        await listTransportLegs(beta.tenant.scope, beta.transportId),
+      ).toEqual(before)
+    })
+
+    it('refuses a transport of another trip inside the same workspace', async () => {
+      const other = await createTrip(alpha.tenant.scope, {
+        title: 'A second trip of A',
+        startDate: '2027-01-01',
+        endDate: '2027-01-04',
+      })
+
+      expect(
+        await captureError(() =>
+          saveSearchedConnection(alpha.tenant.scope, {
+            ...CONNECTION,
+            tripId: other.id,
+            transportId: alpha.transportId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await listTransportLegs(alpha.tenant.scope, alpha.transportId),
+      ).toEqual([])
+    })
+
+    it('keeps the record\u2019s identity, status and booking fields on a re-search', async () => {
+      const scope = alpha.tenant.scope
+      const saved = await saveSearchedConnection(scope, {
+        ...CONNECTION,
+        tripId: alpha.tripId,
+        priceMinor: 2450,
+        currency: 'EUR',
+      })
+      await updateTransport(scope, saved.transport.id, {
+        status: 'confirmed',
+        bookingCode: 'TXK9QP',
+        seat: '21A',
+      })
+
+      const again = await saveSearchedConnection(scope, {
+        ...CONNECTION,
+        tripId: alpha.tripId,
+        transportId: saved.transport.id,
+        title: 'A different name the search proposed',
+        priceMinor: 9900,
+        currency: 'USD',
+        stations: [{ name: 'Lisboa Oriente' }, { name: 'Porto Campanha' }],
+        legs: [{ serviceNumber: 'AP 124' }],
+      })
+
+      expect(again.transport.id).toBe(saved.transport.id)
+      expect(again.transport.status).toBe('confirmed')
+      expect(again.transport.bookingCode).toBe('TXK9QP')
+      expect(again.transport.seat).toBe('21A')
+      expect(again.transport.title).toBe('Lisboa to Porto')
+      expect(again.transport.priceMinor).toBe(2450)
+      expect(again.transport.currency).toBe('EUR')
+      // The route, and only the route, is what a re-search replaces.
+      expect(again.legs).toHaveLength(1)
+      expect(again.transport.departureName).toBe('Lisboa Oriente')
+      expect(again.transport.arrivalName).toBe('Porto Campanha')
+    })
+
+    it('refuses a viewer and admits an editor on the same trip', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer of A')
+      const editorId = await alpha.tenant.addUser('Editor of A')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+
+      expect(
+        await captureError(() =>
+          saveSearchedConnection(alpha.tenant.scopeFor(viewerId), {
+            ...CONNECTION,
+            tripId: alpha.tripId,
+          }),
+        ),
+      ).toBeInstanceOf(TripRoleError)
+
+      const saved = await saveSearchedConnection(
+        alpha.tenant.scopeFor(editorId),
+        { ...CONNECTION, tripId: alpha.tripId },
+      )
+      expect(saved.legs).toHaveLength(2)
     })
   })
 })
