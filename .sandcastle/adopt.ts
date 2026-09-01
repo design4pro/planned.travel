@@ -106,16 +106,47 @@ export function adoptWipBranch(
   // tip (a fast-forward, no merge to go wrong), or a three-way merge of the two produces no
   // conflict. `merge-tree --write-tree` answers that against the object store alone - no checkout,
   // no index, nothing to clean up if the answer is no.
+  //
+  // And when it is a merge, it must actually BE merged, not merely checked. Branching at the
+  // orphan's tip leaves this run's slice sitting on the dead run's `origin/develop` snapshot,
+  // missing every infrastructure change develop has taken since - which is not a theory: run
+  // 20260901-1 adopted two branches cut before `--e2e-projects` existed, and every iteration then
+  // ran `main.ts`'s flag against a `validate.sh` that had never heard of it (exit 2, no verdict,
+  // no ladder). `createSandbox` reuses an existing branch at its own tip and adoption refuses a
+  // branch that already exists, so the staleness never healed on its own.
+  //
+  // The merge is made with plumbing because adoption has no worktree: `merge-tree` already wrote
+  // the tree, `commit-tree` turns it into an ordinary merge commit. First parent is the orphan, so
+  // the adopted work stays the branch's mainline.
   const fastForward = git(['merge-base', '--is-ancestor', baseTip, tip]).ok
-  if (!fastForward && !git(['merge-tree', '--write-tree', baseTip, tip]).ok) {
-    return refuse(
-      `${from} does not merge cleanly onto ${base} - it is cut from a different \`origin/develop\` snapshot`,
-    )
+  let head = tip
+  if (!fastForward) {
+    const merged = git(['merge-tree', '--write-tree', baseTip, tip])
+    if (!merged.ok) {
+      return refuse(
+        `${from} does not merge cleanly onto ${base} - it is cut from a different \`origin/develop\` snapshot`,
+      )
+    }
+    const tree = merged.stdout.split('\n')[0] ?? ''
+    const commit = git([
+      'commit-tree',
+      tree,
+      '-p',
+      tip,
+      '-p',
+      baseTip,
+      '-m',
+      `sandcastle: adopt ${from} onto ${base}`,
+    ])
+    if (!commit.ok || commit.stdout === '') {
+      return refuse(`could not merge ${from} onto ${base}`)
+    }
+    head = commit.stdout
   }
 
-  const created = git(['branch', branch, tip])
+  const created = git(['branch', branch, head])
   if (!created.ok)
-    return refuse(`could not create ${branch} at ${tip.slice(0, 8)}`)
+    return refuse(`could not create ${branch} at ${head.slice(0, 8)}`)
 
   return {
     issueId,
