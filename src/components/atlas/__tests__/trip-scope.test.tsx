@@ -6,6 +6,8 @@ import '#/components/ui/__tests__/test-env'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
+import { LOCALE_TAGS } from '#/lib/i18n/locales'
+
 import { AtlasPanel } from '../atlas-panel'
 import { CountryCard } from '../country-card'
 
@@ -177,8 +179,15 @@ describe('the two trip figures on one atlas screen', () => {
         [path.split('/').at(-2) ?? path, module.default] as const,
     )
 
-    it('reads all 23 catalogues', () => {
-      expect(locales).toHaveLength(23)
+    // The glob is the gate, exactly as it is in `lib/i18n/__tests__/parity.test`:
+    // a pattern that matches nothing leaves every assertion below vacuous. It is
+    // held against the shipped set rather than against a count, so a
+    // twenty-fourth locale fails this for the honest reason — its catalogue is
+    // unread — instead of for arithmetic.
+    it('reads the catalogue of every locale the product ships', () => {
+      expect([...locales.map(([tag]) => tag)].sort()).toEqual(
+        [...LOCALE_TAGS].sort(),
+      )
     })
 
     it.each(locales)(
