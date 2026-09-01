@@ -2041,9 +2041,11 @@ billed at 0.05 USD per million events above the 10 million a month included. Non
 implied by the config file, which is why it is written here.
 
 1. In Sentry: **Settings → Projects → \<project\> → Client Keys (DSN) → OpenTelemetry (OTLP)**. It
-   gives the traces endpoint, `https://o<orgId>.ingest.sentry.io/api/<projectId>/integration/otlp/v1/traces`,
-   and the public key already in the DSN.
-2. In Cloudflare: **Workers & Pages → Observability → Destinations → Create**. Type _Traces (OTLP)_,
+   gives the traces endpoint,
+   `https://o<orgId>.ingest.<region>.sentry.io/api/<projectId>/integration/otlp/v1/traces`, and the
+   public key already in the DSN. Copy it from that page rather than assembling it: the `<region>`
+   segment is part of the host our organisation is on (`us`) and the endpoint 404s without it.
+2. In Cloudflare: **Observability → Destinations → Add Destination**. Destination type _Traces_,
    name **`sentry-traces`** - the name is what `wrangler.jsonc` refers to, in both environments, so
    it has to match exactly. Endpoint as above, and one header:
    `x-sentry-auth: sentry sentry_key=<public key>`. Nothing is created on the Sentry side; that
