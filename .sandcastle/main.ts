@@ -13,7 +13,9 @@
 // Two advisory passes run after a green validation and never block a merge: the
 // deep review (structural code quality — read-only, so it cannot break the
 // parallel-branch or Owned-paths model) and, on UI diffs, the blind A/B
-// pixel-critic. SANDCASTLE_DEEP_REVIEW=0 skips the former.
+// pixel-critic. SANDCASTLE_DEEP_REVIEW=0 skips the former. Never blocking a
+// merge is now literal: they run alongside it and the iteration settles them at
+// its end, so the machine spends that time on the merge and the audit instead.
 //
 // Run from anywhere: the integration branch `sandcastle/run-<date>-<n>` is cut
 // from `origin/develop` (or resumed, when the same run number is given again)
@@ -1216,7 +1218,16 @@ async function workIssue(
   issue: Issue,
   signal?: AbortSignal,
   adopted: Array<{ sha: string }> = [],
-): Promise<{ issue: Issue; ok: boolean; commits: Array<{ sha: string }> }> {
+): Promise<{
+  issue: Issue
+  ok: boolean
+  commits: Array<{ sha: string }>
+  /**
+   * The advisory passes, still running, and the container they hold. Present only on a green
+   * issue that has any; the iteration settles it once the merge no longer needs the machine.
+   */
+  advisory?: Promise<void>
+}> {
   const sandbox = await sandcastle.createSandbox({
     branch: issue.branch,
     sandbox: docker(),
@@ -1226,6 +1237,9 @@ async function workIssue(
 
   const commits: Array<{ sha: string }> = [...adopted]
   let lastArtifactPath = ''
+  // Whether the advisory passes took the container over on their way out, in which case closing it
+  // in the `finally` below would kill them mid-pass.
+  let advisoryOwnsSandbox = false
 
   /**
    * Tells the registry where this issue's work is, so that if this run dies the next one to claim
@@ -1365,15 +1379,29 @@ async function workIssue(
       }
 
       if (verdict.ok) {
-        if (DEEP_REVIEW) await runDeepReview(sandbox, issue, attempt, signal)
-        if (verdict.uiTouched)
-          await runPixelCritic(sandbox, issue, attempt, signal)
-        if (DEEP_REVIEW || verdict.uiTouched) {
-          // Re-collect: the advisory passes added .sandcastle-deep-review.json,
-          // .sandcastle-shots and the visual verdict.
-          await collectArtifacts(sandbox, issue, attempt)
-        }
-        return { issue, ok: true, commits }
+        const uiTouched = verdict.uiTouched
+        if (!DEEP_REVIEW && !uiTouched) return { issue, ok: true, commits }
+        // Three agent passes whose verdict cannot change what happens next: both stages are
+        // advisory by construction, they comment on the issue and write artifacts, and neither the
+        // merge nor the auditor reads what they produce. Awaited here they kept the pipeline slot,
+        // and with it the merge, waiting minutes for an opinion. So they are handed back as a
+        // promise the iteration settles at its end - and since the capture agent needs the dev
+        // server this container is still holding, closing it becomes their last step rather than
+        // the `finally` below.
+        advisoryOwnsSandbox = true
+        const advisory = (async () => {
+          try {
+            if (DEEP_REVIEW)
+              await runDeepReview(sandbox, issue, attempt, signal)
+            if (uiTouched) await runPixelCritic(sandbox, issue, attempt, signal)
+            // Re-collect: the advisory passes added .sandcastle-deep-review.json,
+            // .sandcastle-shots and the visual verdict.
+            await collectArtifacts(sandbox, issue, attempt)
+          } finally {
+            await sandbox.close()
+          }
+        })()
+        return { issue, ok: true, commits, advisory }
       }
 
       if (attempt > FIX_BUDGET) {
@@ -1426,7 +1454,24 @@ async function workIssue(
     return { issue, ok: false, commits }
   } finally {
     noteWip()
-    await sandbox.close()
+    if (!advisoryOwnsSandbox) await sandbox.close()
+  }
+}
+
+/**
+ * Waits out the advisory passes an iteration started, and with them the containers they hold.
+ *
+ * Deliberately the last thing an iteration does: nothing downstream reads what they produce, so a
+ * comment posted after the merge says exactly what it would have said before it. Each pass already
+ * swallows its own failures, so what reaches here is a container that would not close.
+ */
+async function settleAdvisory(pending: Array<Promise<void>>): Promise<void> {
+  if (pending.length === 0) return
+  console.log(`Settling ${pending.length} advisory pass(es)…`)
+  for (const outcome of await Promise.allSettled(pending)) {
+    if (outcome.status === 'rejected') {
+      console.error(`  ! advisory pass failed: ${outcome.reason}`)
+    }
   }
 }
 
@@ -1713,21 +1758,31 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(
     `\nValidation passed on ${passing.length}/${issues.length} branch(es).`,
   )
+  // Every green issue's advisory passes, including any whose lease was revoked above: they were
+  // started before that was known, and their container still has to be closed.
+  const advisory = settled.flatMap((o) =>
+    o.status === 'fulfilled' && o.value.advisory !== undefined
+      ? [o.value.advisory]
+      : [],
+  )
+
   if (passing.length === 0) {
     console.log('Nothing to merge this iteration.')
-    continue
+  } else {
+    coordinator?.setStage('merging')
+    await mergeBranches(passing)
+    mergedAll.push(...passing.map((p) => p.issue))
+    console.log('Branches merged. Running auditor…')
+    coordinator?.setStage('auditing')
+    const audit = await runAuditor(
+      passing.map((p) => p.issue),
+      iteration,
+    )
+    lastAuditRefuted = audit.refuted
   }
 
-  coordinator?.setStage('merging')
-  await mergeBranches(passing)
-  mergedAll.push(...passing.map((p) => p.issue))
-  console.log('Branches merged. Running auditor…')
-  coordinator?.setStage('auditing')
-  const audit = await runAuditor(
-    passing.map((p) => p.issue),
-    iteration,
-  )
-  lastAuditRefuted = audit.refuted
+  // After the merge and the audit, which is the whole point: they ran while these did.
+  await settleAdvisory(advisory)
 }
 
 if (mergedAll.length > 0 && lastAuditRefuted === 0) {
