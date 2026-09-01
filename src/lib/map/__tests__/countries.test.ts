@@ -1270,12 +1270,23 @@ describe('the finer cut', () => {
         const ring = polygon[0]
         expect(ring.length, code).toBeGreaterThanOrEqual(4)
         expect(ring[0], code).toEqual(ring[ring.length - 1])
-        for (const [lng, lat] of ring) {
-          expect(lng, code).toBeGreaterThanOrEqual(-180)
-          expect(lng, code).toBeLessThanOrEqual(180)
-          expect(lat, code).toBeGreaterThanOrEqual(-MAX_MERCATOR_LATITUDE)
-          expect(lat, code).toBeLessThanOrEqual(MAX_MERCATOR_LATITUDE)
-        }
+        // Scanned with plain comparisons and asserted once: the shipped asset carries a couple of
+        // hundred thousand coordinates, and four `expect` calls apiece spent the test's whole
+        // budget building assertion objects for values that were fine — the first rung of the
+        // ladder to go red on a loaded machine, on nothing. The offending coordinate is what the
+        // failure prints, so a real violation still says which point in which country.
+        // `isFinite` first, because a NaN fails every comparison below and would otherwise read as
+        // a coordinate in range — which the four `expect` calls this replaces did catch.
+        const offender = ring.find(
+          ([lng, lat]) =>
+            !Number.isFinite(lng) ||
+            !Number.isFinite(lat) ||
+            lng < -180 ||
+            lng > 180 ||
+            lat < -MAX_MERCATOR_LATITUDE ||
+            lat > MAX_MERCATOR_LATITUDE,
+        )
+        expect(offender, code).toBeUndefined()
       }
     }
   })

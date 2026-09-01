@@ -29,6 +29,10 @@ function fakeGit(
   }
 }
 
+/** The merge commit adoption writes when the orphan is not a fast-forward. */
+const MERGE_MESSAGE =
+  'sandcastle: adopt sandcastle/issue-106-20260829-1 onto sandcastle/run-20260830-2'
+
 /** The happy path: no branch of ours, an orphan at `tip00`, two commits ahead of `base0`. */
 const CLEAN = {
   'rev-parse --verify --quiet refs/heads/sandcastle/issue-106-20260829-1':
@@ -36,11 +40,14 @@ const CLEAN = {
   'rev-parse --verify --quiet sandcastle/run-20260830-2': ok('base0'),
   'rev-list base0..tip00': ok('c2\nc1'),
   'merge-tree --write-tree base0 tip00': ok('tree0'),
+  [`commit-tree tree0 -p tip00 -p base0 -m ${MERGE_MESSAGE}`]: ok('merge0'),
+  'branch sandcastle/issue-106-20260830-2 merge0': ok(),
+  // The fast-forward path skips the merge and branches at the orphan itself.
   'branch sandcastle/issue-106-20260830-2 tip00': ok(),
 }
 
 describe('adopting an orphaned branch', () => {
-  it('creates this run’s branch at the orphan’s tip when the merge is clean', () => {
+  it('merges the orphan onto this run’s integration tip', () => {
     const asked: Array<string> = []
     const result = adoptWipBranch(fakeGit(CLEAN, asked), REQUEST)
 
@@ -49,7 +56,13 @@ describe('adopting an orphaned branch', () => {
     // finished before the old run died is not thrown away by the "implementer produced nothing"
     // check in `workIssue`.
     expect(result).toMatchObject({ commits: [{ sha: 'c2' }, { sha: 'c1' }] })
-    expect(asked).toContain('branch sandcastle/issue-106-20260830-2 tip00')
+    // Branching at the orphan's tip instead would leave the slice on the dead run's
+    // `origin/develop` snapshot - an old `validate.sh` against today's `main.ts` flags.
+    expect(asked).toContain(
+      `commit-tree tree0 -p tip00 -p base0 -m ${MERGE_MESSAGE}`,
+    )
+    expect(asked).toContain('branch sandcastle/issue-106-20260830-2 merge0')
+    expect(asked).not.toContain('branch sandcastle/issue-106-20260830-2 tip00')
   })
 
   it('takes a fast-forward without asking for a merge', () => {
@@ -64,6 +77,7 @@ describe('adopting an orphaned branch', () => {
 
     expect(result.adopted).toBe(true)
     expect(asked).not.toContain('merge-tree --write-tree base0 tip00')
+    expect(asked).toContain('branch sandcastle/issue-106-20260830-2 tip00')
   })
 
   it('falls back to the pushed copy when the orphan is not a local branch', () => {
@@ -103,6 +117,15 @@ describe('refusing to adopt', () => {
     expect(reason).toMatch(/does not merge cleanly/)
   })
 
+  it('refuses when the merge commit cannot be written', () => {
+    const { reason } = refusal({
+      ...CLEAN,
+      [`commit-tree tree0 -p tip00 -p base0 -m ${MERGE_MESSAGE}`]: fails,
+    })
+
+    expect(reason).toMatch(/could not merge/)
+  })
+
   it('refuses when this run already has a branch for the issue', () => {
     // A resumed run carries its own history on that branch. Adoption is for empty ground.
     const { reason } = refusal({
@@ -132,7 +155,7 @@ describe('refusing to adopt', () => {
     const asked: Array<string> = []
     const result = adoptWipBranch(
       fakeGit(
-        { ...CLEAN, 'branch sandcastle/issue-106-20260830-2 tip00': fails },
+        { ...CLEAN, 'branch sandcastle/issue-106-20260830-2 merge0': fails },
         asked,
       ),
       REQUEST,
