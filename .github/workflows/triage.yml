@@ -168,8 +168,12 @@ jobs:
             echo 'PROMPT_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      # `continue-on-error`, because the step that follows decides what the failure meant: a spent
+      # usage limit triaged nothing and is not a bug, anything else still fails the job.
       - name: Triage
+        id: triage
         if: steps.marker.outputs.skip != 'true' && steps.claim.outputs.claimed != 'false'
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -179,6 +183,12 @@ jobs:
           claude_args: |
             --max-turns 60
             --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
+
+      - name: Treat an exhausted Claude limit as a skipped triage
+        if: always() && steps.triage.outcome == 'failure'
+        env:
+          EXECUTION_FILE: ${{ steps.triage.outputs.execution_file }}
+        run: node scripts/ci/claude-usage-limit.mjs
 
       # `always()`, because a lease outlives the step that failed. A `409` here means the registry
       # reaped the run first, which is the outcome this step is asking for, and the CLI reports it
@@ -193,5 +203,5 @@ jobs:
         run: |
           pnpm exec tsx .sandcastle/coordinator-cli.ts finish \
             --run "$RUN_ID" --kind triage \
-            --status "${{ job.status == 'success' && 'finished' || 'failed' }}" \
+            --status "${{ job.status == 'success' && steps.triage.outcome != 'failure' && 'finished' || 'failed' }}" \
             --summary "triaged #$ISSUE"
