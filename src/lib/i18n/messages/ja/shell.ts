@@ -386,6 +386,32 @@ const messages = {
   'error.feedback.failed': '送信できませんでした。上の参照番号は届いています。',
   'error.root': '道を外れました',
   'error.session': 'ワークスペースへのアクセス権が変わりました',
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': '問題を報告',
+  'feedback.formTitle': '問題を報告',
+  'feedback.messageLabel': '何がおかしいですか、または何を変えるべきですか？',
+  'feedback.messagePlaceholder':
+    '何が起きると思っていて、実際には何が起きましたか？',
+  'feedback.emailLabel': 'メールアドレス',
+  'feedback.emailPlaceholder': 'name@example.com',
+  'feedback.isRequiredLabel': '（必須）',
+  'feedback.submitButtonLabel': '報告を送信',
+  'feedback.cancelButtonLabel': 'キャンセル',
+  'feedback.confirmButtonLabel': '確定',
+  'feedback.addScreenshotButtonLabel': 'スクリーンショットを追加',
+  'feedback.removeScreenshotButtonLabel': 'スクリーンショットを削除',
+  'feedback.highlightToolText': '強調',
+  'feedback.hideToolText': '隠す',
+  'feedback.successMessageText':
+    'ありがとうございます — 報告を受け取りました。',
+  'feedback.errorEmptyMessageText':
+    'まず一文書いてください — 空の報告では何もわかりません。',
+  'feedback.errorTimeoutText':
+    '時間がかかりすぎていて、報告が送信されたか確認できません。',
+  'feedback.errorForbiddenText': 'このページは報告を送信できません。',
+  'feedback.errorGenericText':
+    '送信できませんでした。接続と、広告ブロッカーが邪魔していないか確認してください。',
+
   'notFound.eyebrow': 'エラー 404',
   'notFound.title': 'このページは地図にありません',
   'notFound.body':

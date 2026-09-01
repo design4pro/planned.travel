@@ -378,6 +378,30 @@ const messages = {
     '보내지 못했습니다. 위 참조 번호는 그대로 전달됩니다.',
   'error.root': '길을 벗어났어요',
   'error.session': '워크스페이스 접근 권한이 바뀌었어요',
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': '문제 신고',
+  'feedback.formTitle': '문제 신고',
+  'feedback.messageLabel': '무엇이 잘못되었거나 무엇을 바꿔야 하나요?',
+  'feedback.messagePlaceholder': '무엇을 기대했고 대신 무슨 일이 있었나요?',
+  'feedback.emailLabel': '이메일 주소',
+  'feedback.emailPlaceholder': 'name@example.com',
+  'feedback.isRequiredLabel': '(필수)',
+  'feedback.submitButtonLabel': '신고 보내기',
+  'feedback.cancelButtonLabel': '취소',
+  'feedback.confirmButtonLabel': '확인',
+  'feedback.addScreenshotButtonLabel': '스크린샷 추가',
+  'feedback.removeScreenshotButtonLabel': '스크린샷 삭제',
+  'feedback.highlightToolText': '강조',
+  'feedback.hideToolText': '가리기',
+  'feedback.successMessageText': '감사합니다 — 신고를 받았습니다.',
+  'feedback.errorEmptyMessageText':
+    '먼저 한 문장을 써 주세요 — 빈 신고는 아무것도 알려주지 않습니다.',
+  'feedback.errorTimeoutText':
+    '너무 오래 걸려서 신고가 전송되었는지 확인할 수 없습니다.',
+  'feedback.errorForbiddenText': '이 페이지는 신고를 보낼 수 없습니다.',
+  'feedback.errorGenericText':
+    '보내지 못했습니다. 연결 상태와 광고 차단기가 막고 있는지 확인해 주세요.',
+
   'notFound.eyebrow': '오류 404',
   'notFound.title': '이 페이지는 지도에 없어요',
   'notFound.body':

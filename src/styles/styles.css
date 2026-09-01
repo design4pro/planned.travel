@@ -1134,6 +1134,68 @@
 }
 
 /* ==========================================================================
+   Sentry's User Feedback widget, repainted with our tokens
+   --------------------------------------------------------------------------
+   The floating "Report a problem" button and the form behind it are Sentry's
+   own markup, inside a shadow DOM the SDK styles from a `<style>` it writes
+   against `:host`. Every value it uses is a custom property, so the surface is
+   ours to repaint from out here without touching the library — the same deal
+   `AppToaster` strikes with Sonner, and for the same reason: one set of
+   `var()` references that follow the theme switch on their own, rather than a
+   second palette to keep in step.
+
+   UNLAYERED on purpose, beside `:lang(ar)` rather than in `@layer base` with
+   the MapLibre override. The SDK's `:host` block is unlayered too, and an
+   unlayered declaration outranks a layered one whatever its specificity — in a
+   layer these would lose and the widget would quietly wear Sentry's purple.
+   ========================================================================== */
+
+#sentry-feedback {
+  --font-family: var(--font-ui);
+  --font-size: var(--text-body);
+
+  /* Our stacking scale ends at `--z-impersonation`, and the SDK's default of
+     100000 sits above all of it — including the one bar that must never be
+     covered (`docs/ACCESS.md` §6.1). The dialog is a modal, so it takes the
+     modal tier and the impersonation bar keeps its band. */
+  --z-index: var(--z-modal);
+
+  --foreground: var(--color-ink);
+  --background: var(--color-surface);
+  --accent-foreground: var(--color-brand-on);
+  --accent-background: var(--color-brand);
+  --success-color: var(--color-success);
+  --error-color: var(--color-danger);
+  --border: 1px solid var(--color-edge);
+  --box-shadow: var(--shadow-elevated);
+  --outline: 2px solid var(--color-ring);
+
+  /* `--interactive-filter` is deliberately left alone: it is a hover
+     brightness that has to invert between light and dark, and `setTheme()` in
+     `feedback-widget.tsx` already keeps the SDK's pair correct. */
+
+  /* The three terms the tab bar occupies — hairline, row, home indicator — as
+     `MOBILE_TAB_BAR` in `src/lib/atlas/layout.ts` measures them and the
+     `scroll-padding-bottom` rule above writes them. Only the actor moves;
+     `--inset` would take the dialog with it, and that one is a centred modal
+     with nothing to clear. */
+  --pt-feedback-bottom: calc(1px + 4rem + var(--safe-bottom));
+  --actor-inset: auto 0 var(--pt-feedback-bottom) auto;
+}
+
+/* Arabic reads right to left, so the button belongs in the other corner. */
+html[dir='rtl'] #sentry-feedback {
+  --actor-inset: auto auto var(--pt-feedback-bottom) 0;
+}
+
+/* From `lg` the tab bar is gone and so is its clearance. */
+@media (width >= 64rem) {
+  #sentry-feedback {
+    --pt-feedback-bottom: 0px;
+  }
+}
+
+/* ==========================================================================
    Reduced motion — collapse to opacity, or to nothing
    ========================================================================== */
 

@@ -454,6 +454,31 @@ const messages = {
   'error.root': 'Βγήκαμε από τη διαδρομή',
   'error.session': 'Η πρόσβασή σας στον χώρο εργασίας άλλαξε',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Αναφορά προβλήματος',
+  'feedback.formTitle': 'Αναφορά προβλήματος',
+  'feedback.messageLabel': 'Τι δεν πάει καλά ή τι πρέπει να αλλάξει;',
+  'feedback.messagePlaceholder': 'Τι περιμένατε και τι έγινε αντ’ αυτού;',
+  'feedback.emailLabel': 'Διεύθυνση email',
+  'feedback.emailPlaceholder': 'giorgos@example.com',
+  'feedback.isRequiredLabel': '(υποχρεωτικό)',
+  'feedback.submitButtonLabel': 'Αποστολή αναφοράς',
+  'feedback.cancelButtonLabel': 'Άκυρο',
+  'feedback.confirmButtonLabel': 'Επιβεβαίωση',
+  'feedback.addScreenshotButtonLabel': 'Προσθήκη στιγμιότυπου',
+  'feedback.removeScreenshotButtonLabel': 'Αφαίρεση στιγμιότυπου',
+  'feedback.highlightToolText': 'Επισήμανση',
+  'feedback.hideToolText': 'Απόκρυψη',
+  'feedback.successMessageText': 'Ευχαριστούμε — λάβαμε την αναφορά σας.',
+  'feedback.errorEmptyMessageText':
+    'Γράψτε πρώτα μια πρόταση — μια κενή αναφορά δεν μας λέει τίποτα.',
+  'feedback.errorTimeoutText':
+    'Αργεί υπερβολικά και δεν μπορούμε να επιβεβαιώσουμε ότι η αναφορά στάλθηκε.',
+  'feedback.errorForbiddenText':
+    'Αυτή η σελίδα δεν επιτρέπεται να στέλνει αναφορές.',
+  'feedback.errorGenericText':
+    'Δεν στάλθηκε. Ελέγξτε τη σύνδεση και μήπως παρεμβαίνει κάποιο πρόγραμμα αποκλεισμού διαφημίσεων.',
+
   'notFound.eyebrow': 'Σφάλμα 404',
   'notFound.title': 'Αυτή η σελίδα δεν είναι στον χάρτη',
   'notFound.body':

@@ -491,6 +491,32 @@ const messages = {
   'error.root': 'Saímos da rota',
   'error.session': 'Seu acesso ao espaço de trabalho mudou',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Relatar um problema',
+  'feedback.formTitle': 'Relatar um problema',
+  'feedback.messageLabel': 'O que está errado, ou o que deveria mudar?',
+  'feedback.messagePlaceholder':
+    'O que você esperava e o que aconteceu no lugar?',
+  'feedback.emailLabel': 'Endereço de e-mail',
+  'feedback.emailPlaceholder': 'voce@example.com',
+  'feedback.isRequiredLabel': '(obrigatório)',
+  'feedback.submitButtonLabel': 'Enviar o relato',
+  'feedback.cancelButtonLabel': 'Cancelar',
+  'feedback.confirmButtonLabel': 'Confirmar',
+  'feedback.addScreenshotButtonLabel': 'Adicionar uma captura de tela',
+  'feedback.removeScreenshotButtonLabel': 'Remover a captura de tela',
+  'feedback.highlightToolText': 'Destacar',
+  'feedback.hideToolText': 'Ocultar',
+  'feedback.successMessageText': 'Obrigado — recebemos seu relato.',
+  'feedback.errorEmptyMessageText':
+    'Escreva uma frase primeiro — um relato vazio não nos diz nada.',
+  'feedback.errorTimeoutText':
+    'Está demorando demais, e não conseguimos confirmar que o relato foi enviado.',
+  'feedback.errorForbiddenText':
+    'Esta página não tem permissão para enviar relatos.',
+  'feedback.errorGenericText':
+    'Não foi enviado. Confira a conexão e se há um bloqueador de anúncios no caminho.',
+
   'notFound.eyebrow': 'Erro 404',
   'notFound.title': 'Esta página não está no mapa',
   'notFound.body':

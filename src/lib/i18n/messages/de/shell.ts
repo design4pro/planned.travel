@@ -482,6 +482,31 @@ const messages = {
   'error.root': 'Da ist etwas vom Weg abgekommen',
   'error.session': 'Dein Zugang zum Arbeitsbereich hat sich geändert',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Problem melden',
+  'feedback.formTitle': 'Problem melden',
+  'feedback.messageLabel': 'Was ist falsch, oder was sollte sich ändern?',
+  'feedback.messagePlaceholder':
+    'Was hast du erwartet, und was ist stattdessen passiert?',
+  'feedback.emailLabel': 'E-Mail-Adresse',
+  'feedback.emailPlaceholder': 'du@example.com',
+  'feedback.isRequiredLabel': '(erforderlich)',
+  'feedback.submitButtonLabel': 'Meldung senden',
+  'feedback.cancelButtonLabel': 'Abbrechen',
+  'feedback.confirmButtonLabel': 'Bestätigen',
+  'feedback.addScreenshotButtonLabel': 'Screenshot hinzufügen',
+  'feedback.removeScreenshotButtonLabel': 'Screenshot entfernen',
+  'feedback.highlightToolText': 'Hervorheben',
+  'feedback.hideToolText': 'Verbergen',
+  'feedback.successMessageText': 'Danke — deine Meldung ist bei uns.',
+  'feedback.errorEmptyMessageText':
+    'Schreib zuerst einen Satz — eine leere Meldung sagt uns nichts.',
+  'feedback.errorTimeoutText':
+    'Das dauert zu lange, und wir können nicht bestätigen, dass die Meldung angekommen ist.',
+  'feedback.errorForbiddenText': 'Diese Seite darf keine Meldungen senden.',
+  'feedback.errorGenericText':
+    'Das ging nicht raus. Prüfe die Verbindung und ob ein Werbeblocker dazwischenfunkt.',
+
   'notFound.eyebrow': 'Fehler 404',
   'notFound.title': 'Diese Seite steht auf keiner Karte',
   'notFound.body':

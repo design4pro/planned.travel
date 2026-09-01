@@ -429,6 +429,30 @@ const messages = {
   'error.root': 'Có gì đó lệch đường',
   'error.session': 'Quyền vào không gian của bạn đã đổi',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Báo cáo sự cố',
+  'feedback.formTitle': 'Báo cáo sự cố',
+  'feedback.messageLabel': 'Có gì sai, hoặc cần thay đổi điều gì?',
+  'feedback.messagePlaceholder': 'Bạn mong đợi điều gì, và điều gì đã xảy ra?',
+  'feedback.emailLabel': 'Địa chỉ email',
+  'feedback.emailPlaceholder': 'ban@vidu.com',
+  'feedback.isRequiredLabel': '(bắt buộc)',
+  'feedback.submitButtonLabel': 'Gửi báo cáo',
+  'feedback.cancelButtonLabel': 'Huỷ',
+  'feedback.confirmButtonLabel': 'Xác nhận',
+  'feedback.addScreenshotButtonLabel': 'Thêm ảnh chụp màn hình',
+  'feedback.removeScreenshotButtonLabel': 'Gỡ ảnh chụp màn hình',
+  'feedback.highlightToolText': 'Đánh dấu',
+  'feedback.hideToolText': 'Che',
+  'feedback.successMessageText': 'Cảm ơn bạn — chúng tôi đã nhận được báo cáo.',
+  'feedback.errorEmptyMessageText':
+    'Hãy viết một câu trước — báo cáo trống không cho chúng tôi biết gì cả.',
+  'feedback.errorTimeoutText':
+    'Việc này mất quá lâu, và chúng tôi không thể xác nhận báo cáo đã được gửi.',
+  'feedback.errorForbiddenText': 'Trang này không được phép gửi báo cáo.',
+  'feedback.errorGenericText':
+    'Không gửi được. Kiểm tra kết nối, và xem có trình chặn quảng cáo nào cản đường không.',
+
   'notFound.eyebrow': 'Lỗi 404',
   'notFound.title': 'Trang này không có trên bản đồ',
   'notFound.body':

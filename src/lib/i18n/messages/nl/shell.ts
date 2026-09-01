@@ -474,6 +474,31 @@ const messages = {
   'error.root': 'Hier zijn we van de route geraakt',
   'error.session': 'Je toegang tot de werkruimte is veranderd',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Een probleem melden',
+  'feedback.formTitle': 'Een probleem melden',
+  'feedback.messageLabel': 'Wat gaat er mis, of wat zou anders moeten?',
+  'feedback.messagePlaceholder':
+    'Wat verwachtte je, en wat gebeurde er in plaats daarvan?',
+  'feedback.emailLabel': 'E-mailadres',
+  'feedback.emailPlaceholder': 'jij@example.com',
+  'feedback.isRequiredLabel': '(verplicht)',
+  'feedback.submitButtonLabel': 'Melding versturen',
+  'feedback.cancelButtonLabel': 'Annuleren',
+  'feedback.confirmButtonLabel': 'Bevestigen',
+  'feedback.addScreenshotButtonLabel': 'Screenshot toevoegen',
+  'feedback.removeScreenshotButtonLabel': 'Screenshot verwijderen',
+  'feedback.highlightToolText': 'Markeren',
+  'feedback.hideToolText': 'Verbergen',
+  'feedback.successMessageText': 'Bedankt — we hebben je melding.',
+  'feedback.errorEmptyMessageText':
+    'Schrijf eerst een zin — een lege melding zegt ons niets.',
+  'feedback.errorTimeoutText':
+    'Dit duurt te lang, en we kunnen niet bevestigen dat de melding is verstuurd.',
+  'feedback.errorForbiddenText': 'Deze pagina mag geen meldingen versturen.',
+  'feedback.errorGenericText':
+    'Het versturen lukte niet. Controleer de verbinding, en of er een adblocker tussen zit.',
+
   'notFound.eyebrow': 'Fout 404',
   'notFound.title': 'Deze pagina staat op geen enkele kaart',
   'notFound.body':

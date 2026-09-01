@@ -539,6 +539,45 @@ const messages = {
    */
   'error.session': 'Your workspace access has changed',
 
+  /* ------------------------------------------------- reporting a problem */
+  /**
+   * The Sentry User Feedback widget, which is Sentry's own markup inside a
+   * shadow DOM and reads every one of these once, when the widget is built.
+   * `src/components/layout/feedback-widget.tsx` passes them and rebuilds the
+   * widget when the locale changes; the names match the SDK's options one for
+   * one so the two lists can be read side by side.
+   *
+   * Distinct from `error.feedback.*` above, which is the textarea on the error
+   * panel: that one is offered after something threw and is tied to the event
+   * it threw. This one is offered before anything throws, for everything that
+   * is wrong without being an error.
+   */
+  'feedback.triggerLabel': 'Report a problem',
+  'feedback.formTitle': 'Report a problem',
+  'feedback.messageLabel': 'What is wrong, or what should change?',
+  'feedback.messagePlaceholder':
+    'What did you expect, and what happened instead?',
+  'feedback.emailLabel': 'Email address',
+  'feedback.emailPlaceholder': 'you@example.com',
+  'feedback.isRequiredLabel': '(required)',
+  'feedback.submitButtonLabel': 'Send report',
+  'feedback.cancelButtonLabel': 'Cancel',
+  'feedback.confirmButtonLabel': 'Confirm',
+  /* The screenshot is a screen capture the browser asks about first, then an
+     editor with three rectangles: crop, Highlight, Hide. */
+  'feedback.addScreenshotButtonLabel': 'Add a screenshot',
+  'feedback.removeScreenshotButtonLabel': 'Remove screenshot',
+  'feedback.highlightToolText': 'Highlight',
+  'feedback.hideToolText': 'Hide',
+  'feedback.successMessageText': 'Thank you — we have your report.',
+  'feedback.errorEmptyMessageText':
+    'Write a sentence first — an empty report tells us nothing.',
+  'feedback.errorTimeoutText':
+    'That is taking too long, and we cannot confirm the report was sent.',
+  'feedback.errorForbiddenText': 'This page is not allowed to send reports.',
+  'feedback.errorGenericText':
+    'That did not send. Check the connection, and whether an ad blocker is in the way.',
+
   'notFound.eyebrow': 'Error 404',
   'notFound.title': 'This page is not on the map',
   'notFound.body':

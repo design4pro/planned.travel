@@ -516,6 +516,32 @@ const messages = {
   'error.root': 'Мы сбились с маршрута',
   'error.session': 'Ваш доступ к пространству изменился',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Сообщить о проблеме',
+  'feedback.formTitle': 'Сообщить о проблеме',
+  'feedback.messageLabel': 'Что не так или что нужно изменить?',
+  'feedback.messagePlaceholder':
+    'Чего вы ожидали и что произошло вместо этого?',
+  'feedback.emailLabel': 'Электронная почта',
+  'feedback.emailPlaceholder': 'ivan@example.com',
+  'feedback.isRequiredLabel': '(обязательно)',
+  'feedback.submitButtonLabel': 'Отправить сообщение',
+  'feedback.cancelButtonLabel': 'Отмена',
+  'feedback.confirmButtonLabel': 'Подтвердить',
+  'feedback.addScreenshotButtonLabel': 'Добавить снимок экрана',
+  'feedback.removeScreenshotButtonLabel': 'Убрать снимок экрана',
+  'feedback.highlightToolText': 'Выделить',
+  'feedback.hideToolText': 'Скрыть',
+  'feedback.successMessageText': 'Спасибо — сообщение получено.',
+  'feedback.errorEmptyMessageText':
+    'Сначала напишите хотя бы предложение — пустое сообщение ничего нам не говорит.',
+  'feedback.errorTimeoutText':
+    'Это занимает слишком много времени, и мы не можем подтвердить, что сообщение отправлено.',
+  'feedback.errorForbiddenText':
+    'Этой странице не разрешено отправлять сообщения.',
+  'feedback.errorGenericText':
+    'Отправить не удалось. Проверьте соединение и не мешает ли блокировщик рекламы.',
+
   'notFound.eyebrow': 'Ошибка 404',
   'notFound.title': 'Этой страницы нет на карте',
   'notFound.body':

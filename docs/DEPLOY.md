@@ -1935,6 +1935,7 @@ the SDK is tree-shaken out of the client bundle entirely.
 | Tracing             | both                            | 10% on production, 100% on staging. Routing spans come from the TanStack Router integration in `src/router.tsx` |
 | Application metrics | Worker                          | `server_fn.failure` counted by kind, and `operation.duration` from anything timed with `Logger.track()`         |
 | Session replay      | browser                         | 10% of sessions, 100% of sessions that hit an error                                                             |
+| User feedback       | browser                         | A floating "Report a problem" button on every page, with an optional screenshot                                 |
 
 **Session replay masks everything by default and that is deliberate.** A replay records the DOM,
 and this DOM holds trip contents, member lists and billing state. `maskAllText`, `maskAllInputs` and
@@ -1946,6 +1947,21 @@ reviewed as a privacy change rather than a debugging convenience.
 The recorder is ~124 kB and is loaded _after_ hydration, from its own chunk. Registering it inline
 in the client entry put it on the critical path, where every visitor paid for it before first paint
 to record a session that had not happened yet.
+
+**A feedback screenshot is the exact opposite, and that is the point.** It is an unmasked picture of
+the screen - trip contents, member list, billing state and all - which is what makes it worth having
+when somebody writes "this number is wrong". What makes that acceptable is that nothing is taken
+without a deliberate act: the capture goes through `getDisplayMedia`, so the browser asks first and
+the person choosing what to share is the person reporting; and before sending they can crop the
+image and cover anything else on it with a Hide box. The button does not appear on mobile - the API
+exists there but does not work, and the SDK hides it rather than fail.
+
+Screenshots are billed as **attachments**, not as events: 1 GB on the plan, roughly 2500 captures.
+Worth knowing before pointing a support flow at it; irrelevant at the volume a "report a problem"
+button actually produces.
+
+The widget is loaded from its own chunk, after hydration, for the same reason the recorder is - the
+form and the screenshot editor are ~20 kB that only matters to somebody who clicks the button.
 
 ### 17.3 The source-map token
 
@@ -1972,6 +1988,15 @@ Client maps are deleted after upload because `dist/client` is served as static a
 left there is the front end's source published to anyone who asks. Server maps are kept — that half
 is the Worker bundle, is not served, and wrangler uploads it to Cloudflare for its own traces.
 
+A map is only worth anything if it describes the bytes that are actually running, and between
+`vite build` and Cloudflare there is still a `wrangler deploy`. It does not re-bundle: the Cloudflare
+Vite plugin emits `dist/server/wrangler.json` with `no_bundle: true`, and
+`wrangler deploy --dry-run --outdir=<tmp>` produces a `index.js` and 488 chunks byte-identical to
+`dist/server/` (only the two CSS files are left out, since they are not modules). The debug id the
+Sentry plugin injects therefore survives into the deployed Worker, which is what ties a frame to the
+map that was uploaded for it. Re-run that diff if the build pipeline changes; it costs a minute and
+it is the only thing standing between "we upload maps" and "the maps resolve".
+
 ### 17.4 Verify
 
 Deploy staging, then reach a route that throws. Within a minute the issue should be in Sentry with:
@@ -1984,9 +2009,54 @@ Deploy staging, then reach a route that throws. Within a minute the issue should
 Then trigger a client-side error and confirm a second issue arrives from the browser. The two halves
 fail independently and only one of them is exercised by a server-side test.
 
+When a frame does come back minified, the guessing stops here:
+
+```bash
+pnpm exec sentry-cli sourcemaps explain <EVENT_ID>
+```
+
+It names the reason - no artifact for that debug id, no `release`, an upload that never ran - rather
+than leaving it to be inferred from a stack trace. Run it for one server event and one browser
+event; the two halves are uploaded by the same plugin run but resolve independently, and a release
+where only one of them works looks exactly like a release where both do until somebody opens the
+other kind of issue.
+
 ### 17.5 What the reports are for
 
 Sentry is not only a dashboard. Recurring, high-impact issues are turned into triaged GitHub tickets
 by `pnpm sandcastle:sentry` — see `docs/agents/triage-labels.md`. That routine needs a **separate**,
 read-only Sentry token from the one in §17.3: different scopes, different blast radius, rotated
 independently.
+
+### 17.6 Traces from the platform, through a Cloudflare drain
+
+The SDK already traces what runs inside the handler. What it cannot see is everything around it -
+the cold start, the platform's own view of the invocation, the hop into a bound service - and that
+is what Workers Observability exports. `observability.traces.destinations` in `wrangler.jsonc` names
+where those spans go; `sentry-traces` is a destination created by hand, once, in the Cloudflare
+dashboard.
+
+Before starting: the export needs **Workers Paid**, it is a **beta**, and from **2026-10-01** it is
+billed at 0.05 USD per million events above the 10 million a month included. None of that is
+implied by the config file, which is why it is written here.
+
+1. In Sentry: **Settings → Projects → \<project\> → Client Keys (DSN) → OpenTelemetry (OTLP)**. It
+   gives the traces endpoint, `https://o<orgId>.ingest.sentry.io/api/<projectId>/integration/otlp/v1/traces`,
+   and the public key already in the DSN.
+2. In Cloudflare: **Workers & Pages → Observability → Destinations → Create**. Type _Traces (OTLP)_,
+   name **`sentry-traces`** - the name is what `wrangler.jsonc` refers to, in both environments, so
+   it has to match exactly. Endpoint as above, and one header:
+   `x-sentry-auth: sentry sentry_key=<public key>`. Nothing is created on the Sentry side; that
+   header is the whole of the authorisation.
+3. Deploy. A missing destination is not ignored - `wrangler deploy` fails on a name it cannot
+   resolve, so step 2 goes before the first deploy that carries this config, and before it is
+   merged if the branch deploys itself.
+
+Both environments send to the same destination, and their spans are told apart by the script name
+Cloudflare stamps on them (`planned-travel` against `planned-travel-staging`).
+
+**Logs deliberately have no `destinations`.** They are already in Sentry: `enableLogs` plus the
+`sentrySink` in `src/server/observability` mirrors every `LogRecord` the Worker writes, at its own
+level, from inside the isolate. Adding a log drain next to it "for symmetry" delivers each line a
+second time and is billed for both - which is the decision most likely to be quietly undone, so it
+is written down twice, here and in `wrangler.jsonc`.

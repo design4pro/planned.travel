@@ -543,6 +543,30 @@ const messages = {
   'error.root': 'خرجنا عن المسار',
   'error.session': 'تغيّر وصولك إلى مساحة العمل',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'الإبلاغ عن مشكلة',
+  'feedback.formTitle': 'الإبلاغ عن مشكلة',
+  'feedback.messageLabel': 'ما الخطأ، أو ما الذي ينبغي تغييره؟',
+  'feedback.messagePlaceholder': 'ماذا كنت تتوقع، وماذا حدث بدلًا من ذلك؟',
+  'feedback.emailLabel': 'البريد الإلكتروني',
+  'feedback.emailPlaceholder': 'sara@example.com',
+  'feedback.isRequiredLabel': '(مطلوب)',
+  'feedback.submitButtonLabel': 'إرسال البلاغ',
+  'feedback.cancelButtonLabel': 'إلغاء',
+  'feedback.confirmButtonLabel': 'تأكيد',
+  'feedback.addScreenshotButtonLabel': 'إضافة لقطة شاشة',
+  'feedback.removeScreenshotButtonLabel': 'إزالة لقطة الشاشة',
+  'feedback.highlightToolText': 'تمييز',
+  'feedback.hideToolText': 'إخفاء',
+  'feedback.successMessageText': 'شكرًا لك — وصلنا بلاغك.',
+  'feedback.errorEmptyMessageText':
+    'اكتب جملة أولًا — البلاغ الفارغ لا يخبرنا بشيء.',
+  'feedback.errorTimeoutText':
+    'الأمر يستغرق وقتًا طويلًا، ولا يمكننا تأكيد إرسال البلاغ.',
+  'feedback.errorForbiddenText': 'هذه الصفحة غير مسموح لها بإرسال البلاغات.',
+  'feedback.errorGenericText':
+    'لم يُرسَل. تحقق من الاتصال، وممّا إذا كان مانع الإعلانات يعترض الطريق.',
+
   'notFound.eyebrow': 'خطأ 404',
   'notFound.title': 'هذه الصفحة ليست على الخريطة',
   'notFound.body':

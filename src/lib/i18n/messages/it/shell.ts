@@ -489,6 +489,31 @@ const messages = {
   'error.root': 'Siamo usciti di rotta',
   'error.session': 'Il tuo accesso allo spazio di lavoro è cambiato',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Segnala un problema',
+  'feedback.formTitle': 'Segnala un problema',
+  'feedback.messageLabel': 'Cosa non va, o cosa andrebbe cambiato?',
+  'feedback.messagePlaceholder': 'Cosa ti aspettavi e cosa è successo invece?',
+  'feedback.emailLabel': 'Indirizzo email',
+  'feedback.emailPlaceholder': 'tu@example.com',
+  'feedback.isRequiredLabel': '(obbligatorio)',
+  'feedback.submitButtonLabel': 'Invia la segnalazione',
+  'feedback.cancelButtonLabel': 'Annulla',
+  'feedback.confirmButtonLabel': 'Conferma',
+  'feedback.addScreenshotButtonLabel': 'Aggiungi uno screenshot',
+  'feedback.removeScreenshotButtonLabel': 'Rimuovi lo screenshot',
+  'feedback.highlightToolText': 'Evidenzia',
+  'feedback.hideToolText': 'Nascondi',
+  'feedback.successMessageText': 'Grazie — la tua segnalazione è arrivata.',
+  'feedback.errorEmptyMessageText':
+    'Scrivi prima una frase — una segnalazione vuota non ci dice nulla.',
+  'feedback.errorTimeoutText':
+    'Ci sta mettendo troppo e non possiamo confermare che la segnalazione sia partita.',
+  'feedback.errorForbiddenText':
+    'Questa pagina non è autorizzata a inviare segnalazioni.',
+  'feedback.errorGenericText':
+    'Non è partita. Controlla la connessione e se c’è un blocco pubblicità di mezzo.',
+
   'notFound.eyebrow': 'Errore 404',
   'notFound.title': 'Questa pagina non è sulla mappa',
   'notFound.body':

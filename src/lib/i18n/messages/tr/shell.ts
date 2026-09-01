@@ -458,6 +458,30 @@ const messages = {
   'error.root': 'Rotadan çıktık',
   'error.session': 'Çalışma alanı erişiminiz değişti',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Sorun bildir',
+  'feedback.formTitle': 'Sorun bildir',
+  'feedback.messageLabel': 'Ne yanlış ya da ne değişmeli?',
+  'feedback.messagePlaceholder': 'Ne bekliyordunuz, onun yerine ne oldu?',
+  'feedback.emailLabel': 'E-posta adresi',
+  'feedback.emailPlaceholder': 'ali@example.com',
+  'feedback.isRequiredLabel': '(zorunlu)',
+  'feedback.submitButtonLabel': 'Bildirimi gönder',
+  'feedback.cancelButtonLabel': 'Vazgeç',
+  'feedback.confirmButtonLabel': 'Onayla',
+  'feedback.addScreenshotButtonLabel': 'Ekran görüntüsü ekle',
+  'feedback.removeScreenshotButtonLabel': 'Ekran görüntüsünü kaldır',
+  'feedback.highlightToolText': 'Vurgula',
+  'feedback.hideToolText': 'Gizle',
+  'feedback.successMessageText': 'Teşekkürler — bildiriminiz bize ulaştı.',
+  'feedback.errorEmptyMessageText':
+    'Önce bir cümle yazın — boş bir bildirim bize hiçbir şey anlatmaz.',
+  'feedback.errorTimeoutText':
+    'Bu çok uzun sürüyor ve bildirimin gönderildiğini doğrulayamıyoruz.',
+  'feedback.errorForbiddenText': 'Bu sayfanın bildirim gönderme izni yok.',
+  'feedback.errorGenericText':
+    'Gönderilemedi. Bağlantıyı ve araya bir reklam engelleyici girip girmediğini kontrol edin.',
+
   'notFound.eyebrow': 'Hata 404',
   'notFound.title': 'Bu sayfa haritada yok',
   'notFound.body':

@@ -493,6 +493,33 @@ const messages = {
   'error.root': 'Nous voilà hors piste',
   'error.session': 'Votre accès à l’espace de travail a changé',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Signaler un problème',
+  'feedback.formTitle': 'Signaler un problème',
+  'feedback.messageLabel':
+    'Qu’est-ce qui ne va pas, ou que faudrait-il changer ?',
+  'feedback.messagePlaceholder':
+    'À quoi vous attendiez-vous, et que s’est-il passé à la place ?',
+  'feedback.emailLabel': 'Adresse e-mail',
+  'feedback.emailPlaceholder': 'vous@example.com',
+  'feedback.isRequiredLabel': '(obligatoire)',
+  'feedback.submitButtonLabel': 'Envoyer le signalement',
+  'feedback.cancelButtonLabel': 'Annuler',
+  'feedback.confirmButtonLabel': 'Confirmer',
+  'feedback.addScreenshotButtonLabel': 'Ajouter une capture d’écran',
+  'feedback.removeScreenshotButtonLabel': 'Retirer la capture d’écran',
+  'feedback.highlightToolText': 'Surligner',
+  'feedback.hideToolText': 'Masquer',
+  'feedback.successMessageText': 'Merci — nous avons bien votre signalement.',
+  'feedback.errorEmptyMessageText':
+    'Écrivez d’abord une phrase — un signalement vide ne nous apprend rien.',
+  'feedback.errorTimeoutText':
+    'Cela prend trop de temps, et nous ne pouvons pas confirmer l’envoi du signalement.',
+  'feedback.errorForbiddenText':
+    'Cette page n’est pas autorisée à envoyer des signalements.',
+  'feedback.errorGenericText':
+    'L’envoi a échoué. Vérifiez la connexion, et si un bloqueur de publicités s’interpose.',
+
   'notFound.eyebrow': 'Erreur 404',
   'notFound.title': 'Cette page n’est pas sur la carte',
   'notFound.body':

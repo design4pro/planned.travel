@@ -472,6 +472,30 @@ const messages = {
   'error.root': 'Letértünk az útról',
   'error.session': 'Megváltozott a munkaterülethez való hozzáférése',
 
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Probléma jelentése',
+  'feedback.formTitle': 'Probléma jelentése',
+  'feedback.messageLabel': 'Mi a hiba, vagy min kellene változtatni?',
+  'feedback.messagePlaceholder': 'Mire számítottál, és mi történt helyette?',
+  'feedback.emailLabel': 'E-mail-cím',
+  'feedback.emailPlaceholder': 'anna@example.com',
+  'feedback.isRequiredLabel': '(kötelező)',
+  'feedback.submitButtonLabel': 'Jelentés küldése',
+  'feedback.cancelButtonLabel': 'Mégse',
+  'feedback.confirmButtonLabel': 'Megerősítés',
+  'feedback.addScreenshotButtonLabel': 'Képernyőkép hozzáadása',
+  'feedback.removeScreenshotButtonLabel': 'Képernyőkép eltávolítása',
+  'feedback.highlightToolText': 'Kiemelés',
+  'feedback.hideToolText': 'Elrejtés',
+  'feedback.successMessageText': 'Köszönjük — megkaptuk a jelentésed.',
+  'feedback.errorEmptyMessageText':
+    'Először írj egy mondatot — az üres jelentés semmit nem mond nekünk.',
+  'feedback.errorTimeoutText':
+    'Ez túl sokáig tart, és nem tudjuk megerősíteni, hogy a jelentés elment.',
+  'feedback.errorForbiddenText': 'Ez az oldal nem küldhet jelentéseket.',
+  'feedback.errorGenericText':
+    'Nem sikerült elküldeni. Ellenőrizd a kapcsolatot, és hogy nem szól-e közbe egy reklámblokkoló.',
+
   'notFound.eyebrow': '404-es hiba',
   'notFound.title': 'Ez az oldal nincs a térképen',
   'notFound.body':
