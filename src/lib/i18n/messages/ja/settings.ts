@@ -151,6 +151,11 @@ const messages = {
   'appearance.map.workspace': 'ワークスペースに従う',
   'appearance.map.light': '紙 — ライト',
   'appearance.map.dark': '炭 — ダーク',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': '共有している画面では',
+  'appearance.privacy.codesLabel': '確認コードは求めるまで隠す',
+  'appearance.privacy.codesHint':
+    '予約番号と確認コードは、予約デスクと移動の画面では伏せたままにし、ポインタを重ねるか、フォーカスするか、タップしたときだけ表示します。金額が伏せられることはありません。',
   'appearance.saveFailed': 'その変更は保存されませんでした',
   'appearance.saveFailedBody':
     'ここには反映されていますが、次に別のデバイスでサインインすると元に戻ります。',

@@ -133,6 +133,11 @@ const messages = {
   'appearance.map.workspace': '跟随工作区',
   'appearance.map.light': '纸 — 浅色',
   'appearance.map.dark': '炭 — 深色',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': '在共用的屏幕上',
+  'appearance.privacy.codesLabel': '在我需要之前隐藏确认码',
+  'appearance.privacy.codesHint':
+    '预订编号和确认码在预订台与交通页面中始终以掩码显示，只有当你悬停、聚焦或点按时才会显示。价格永远不会被隐藏。',
   'appearance.saveFailed': '这项更改没有存下来',
   'appearance.saveFailedBody':
     '这里已经生效了，但你下次换设备登录时不会带着它。',

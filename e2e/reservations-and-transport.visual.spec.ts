@@ -1013,3 +1013,329 @@ test.describe('03-S3 — A connection the traveller did not have to look up', ()
     expect(after).toBe(0)
   })
 })
+
+test.describe('03-S6 — The desk: what is settled, what is not, and what is nobody else’s business', () => {
+  /**
+   * This block's three route tables. The two trip tabs carry `relativeTime`
+   * for the reason `03-S1`'s block measured — the trip *layout* loader puts the
+   * Worker's `today` in the document, not the tab's own — and the settings
+   * screen carries none, because it renders no fixture date at all.
+   */
+  const BOOK: RouteCase = {
+    name: 'trip-book',
+    path: `/trips/${TRIP_ID}/book`,
+    ready: 'main',
+    relativeTime: true,
+  }
+  const TRANSPORTS_TAB: RouteCase = {
+    name: 'trip-transports',
+    path: `/trips/${TRIP_ID}/transports`,
+    ready: 'main',
+    relativeTime: true,
+  }
+  const APPEARANCE: RouteCase = {
+    name: 'settings-appearance',
+    path: '/settings/appearance',
+    ready: 'main',
+  }
+
+  /**
+   * Every selector this stage publishes, and every one of them is asserted to
+   * resolve before it is used — a capture driven by a `data-part` that silently
+   * matches nothing photographs the resting screen and calls it a state.
+   */
+  const OUTSTANDING = '[data-part="group-toggle-outstanding"]'
+  const SETTLED = '[data-part="group-toggle-settled"]'
+  const STAY_CHIP = '[data-part="type-chip-accommodation"]'
+  const CODE = '[data-part="confirmation-code"]'
+  const MASK_SWITCH = '[data-part="mask-confirmation-codes"]'
+
+  /**
+   * The session record the type filter keeps, written before the page exists.
+   *
+   * This is how the third empty state — "a filter that matches nothing" — is
+   * reached at all: the chips only ever offer kinds the trip actually has, so no
+   * sequence of clicks can produce an empty result. A stored lens can, which is
+   * exactly the case the state exists for, and writing it here proves the
+   * preference is read as well as written.
+   */
+  async function filterToMissingType(page: Page): Promise<void> {
+    await page.addInitScript(
+      ({ tripId }: { tripId: string }) => {
+        window.sessionStorage.setItem(
+          'planned.book-types',
+          JSON.stringify({ v: 1, entries: [[tripId, ['transport']]] }),
+        )
+      },
+      { tripId: TRIP_ID },
+    )
+  }
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * The console verdict is **strict on every project**, and that is this block's
+   * own evidence rather than a formality.
+   *
+   * `03-S4` had to subtract a hydration mismatch on WebKit: `bookings-timeline`
+   * built its day heading with a module-local `Intl.DateTimeFormat`, workerd
+   * rendered `Fri, 9 Oct` and WebKit hydrated `Fri 9 Oct`, and React reported
+   * the difference — `12-verification-protocol.md` §7.2 exactly. This stage owns
+   * that file and replaced both formatters with `formatWeekday` and `formatDate`,
+   * which answer from a frozen CLDR table. Nothing is subtracted here, and if the
+   * repair regresses this test is what says so.
+   */
+  test('the desk reads as two panels, and says nothing to the console', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, BOOK)
+    await visit(page, BOOK, 'light')
+
+    await expect(page.locator(OUTSTANDING)).toHaveCount(1)
+    await expect(page.locator(SETTLED)).toHaveCount(1)
+
+    // Both open on a reader who has folded nothing, which is what makes a
+    // collapsed frame judgeable against the expanded one it came from.
+    await expect(page.locator(OUTSTANDING)).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    await expect(page.locator(SETTLED)).toHaveAttribute('aria-expanded', 'true')
+
+    // The seeded trip has both halves, so neither panel is proving itself empty.
+    await expect(page.locator('article')).not.toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the declaration matches what the Worker sends', async ({ page }) => {
+    await auditServerClock(page, [BOOK])
+  })
+
+  /**
+   * The fold, and the half of it a unit test cannot see: that it survives the
+   * reader leaving. Nobody should fold the same list twice.
+   */
+  test('a folded panel is still folded when the reader comes back', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, BOOK)
+    await visit(page, BOOK, 'light')
+
+    const settled = page.locator(SETTLED)
+    await settled.click()
+    await expect(settled).toHaveAttribute('aria-expanded', 'false')
+
+    await visit(page, BOOK, 'light')
+    await expect(page.locator(SETTLED)).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    // The other panel is untouched: the memory is per panel, not per desk.
+    await expect(page.locator(OUTSTANDING)).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+
+    // Put the browser back the way it was found, for the next spec in this file.
+    await page.locator(SETTLED).click()
+    await expect(page.locator(SETTLED)).toHaveAttribute('aria-expanded', 'true')
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /** The lens: multi-select chips that narrow the desk and let go of it again. */
+  test('a type chip narrows the desk and clears again', async ({ page }) => {
+    const report = watchConsole(page, BOOK)
+    await visit(page, BOOK, 'light')
+
+    const before = await page.locator('article').count()
+    expect(before).toBeGreaterThan(1)
+
+    const chip = page.locator(STAY_CHIP)
+    await expect(chip).toHaveCount(1)
+    await chip.click()
+    await expect(chip).toHaveAttribute('aria-pressed', 'true')
+
+    const filtered = await page.locator('article').count()
+    expect(filtered).toBeGreaterThan(0)
+    expect(filtered).toBeLessThan(before)
+
+    // Pressing it again is "no lens" rather than "nothing matches".
+    await chip.click()
+    await expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.locator('article')).toHaveCount(before)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /** The third empty state, and the one a product usually forgets. */
+  test('a filter that matches nothing says so, and offers the way out', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, BOOK)
+    await filterToMissingType(page)
+    await visit(page, BOOK, 'light')
+
+    await expect(page.locator('article')).toHaveCount(0)
+    await expect(page.getByText('No travel on this trip yet')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Clear filter' }).click()
+    await expect(page.locator('article')).not.toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The whole chain, end to end: the switch on the appearance screen, the
+   * writer behind it, the merge in the repository, and **both** reading
+   * surfaces.
+   *
+   * The preference is set the way a reader would set it rather than by writing
+   * the row from the spec, because a frame of the desk says nothing about
+   * whether the transport card obeys the same switch — and a preference that
+   * half the product ignores is the defect a critic files first.
+   *
+   * One project, and it restores what it changed: the setting belongs to the
+   * shared demo account, so leaving it on would hand the next spec a screen its
+   * fixture never asked for.
+   */
+  test('the switch masks a code on both surfaces, and reveals it per card', async ({
+    browserName,
+    page,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'the claim is about what the Worker stored and served, not about how a browser renders it',
+    )
+    const report = watchConsole(page, BOOK)
+
+    try {
+      await visit(page, APPEARANCE, 'light')
+      const control = page.locator(MASK_SWITCH)
+      await expect(control).toHaveCount(1)
+      await expect(control).toHaveAttribute('aria-checked', 'false')
+      await control.click()
+      await expect(control).toHaveAttribute('aria-checked', 'true')
+
+      // The desk, read back from the Worker with the preference on.
+      await visit(page, BOOK, 'light')
+      const stay = page
+        .locator('article')
+        .filter({ hasText: 'Hotel Gracery Shinjuku' })
+      await expect(stay.locator(CODE)).toHaveCount(1)
+
+      /*
+       * The value is not merely invisible — it is not in the document. A code
+       * hidden behind `opacity: 0` is still readable by a find-in-page, a
+       * screenshot pipeline and the accessibility tree, which is not hidden.
+       */
+      expect(await page.content()).not.toContain('HG-8842190')
+
+      const maskedBefore = await page.locator(CODE).count()
+      expect(maskedBefore).toBeGreaterThan(1)
+
+      // Hover, because that is one of the three ways the reveal is reachable and
+      // the one a mouse takes first.
+      await stay.locator(CODE).hover()
+      await expect(stay.getByText('HG-8842190')).toBeVisible()
+      // Revealing one card reveals exactly one card, and never the preference.
+      await expect(page.locator(CODE)).toHaveCount(maskedBefore - 1)
+
+      // And the second obeying surface, which takes the same boolean as a prop.
+      await visit(page, TRANSPORTS_TAB, 'light')
+      const flight = page
+        .locator('article')
+        .filter({ hasText: 'London Heathrow → Tokyo Haneda' })
+      await expect(flight.locator(CODE)).toHaveCount(1)
+      expect(await page.content()).not.toContain('K4TZ9M')
+
+      await flight.locator(CODE).hover()
+      await expect(flight.getByText('K4TZ9M')).toBeVisible()
+    } finally {
+      await visit(page, APPEARANCE, 'light')
+      const control = page.locator(MASK_SWITCH)
+      if ((await control.getAttribute('aria-checked')) === 'true') {
+        await control.click()
+        await expect(control).toHaveAttribute('aria-checked', 'false')
+      }
+    }
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * `12-verification-protocol.md` §6: zero layout shift *after the settle*.
+   *
+   * The disclosure and the reveal are both `hadRecentInput` and therefore
+   * excluded by the observer, so this is the assertion about the resting screen
+   * it is meant to be — and the resting screen is the one that matters here,
+   * because the fold is read from storage in the commit after hydration and a
+   * reader who has folded nothing sees the state the server rendered.
+   */
+  test('nothing moves after the desk has settled', async ({
+    browserName,
+    page,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'layout-shift is a Chromium-only entry type; observe() records nothing here, so a score of 0 would prove nothing',
+    )
+    await page.addInitScript(() => {
+      const readings: Array<{ at: number; value: number }> = []
+      Object.defineProperty(window, '__layoutShift', { value: readings })
+      if (!PerformanceObserver.supportedEntryTypes.includes('layout-shift')) {
+        return
+      }
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const shift = entry as PerformanceEntry & {
+            value: number
+            hadRecentInput: boolean
+          }
+          if (!shift.hadRecentInput) {
+            readings.push({ at: shift.startTime, value: shift.value })
+          }
+        }
+      }).observe({ type: 'layout-shift', buffered: true })
+    })
+
+    await visit(page, BOOK, 'light')
+    expect(
+      await page.evaluate(() =>
+        PerformanceObserver.supportedEntryTypes.includes('layout-shift'),
+      ),
+    ).toBe(true)
+
+    const mark = await page.evaluate(() => performance.now())
+    await settle(page, BOOK)
+
+    const after = await page.evaluate((since: number) => {
+      const readings = (
+        window as unknown as {
+          __layoutShift: Array<{ at: number; value: number }>
+        }
+      ).__layoutShift
+      return readings
+        .filter((entry) => entry.at > since)
+        .reduce((total, entry) => total + entry.value, 0)
+    }, mark)
+
+    test.info().annotations.push({
+      type: 'layout shift after settle',
+      description: String(after),
+    })
+    expect(after).toBe(0)
+  })
+})

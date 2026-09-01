@@ -268,6 +268,7 @@ function themeOf(value: string): (typeof THEME_PREFERENCES)[number] {
 export interface AppearancePayload {
   readonly theme: (typeof THEME_PREFERENCES)[number]
   readonly reduceMotion: boolean
+  readonly maskConfirmationCodes: boolean
   readonly accentColour: string | null
   readonly mapStyle: string
   readonly workspaceMapStyle: string
@@ -284,6 +285,7 @@ export const loadAppearance = createServerFn({ method: 'GET' }).handler(
     return {
       theme: themeOf(userRow.theme),
       reduceMotion: userRow.reduceMotion,
+      maskConfirmationCodes: userRow.maskConfirmationCodes,
       accentColour: userRow.accentColour,
       mapStyle: userRow.mapStyle ?? orgRow.mapStyle,
       workspaceMapStyle: orgRow.mapStyle,
@@ -296,6 +298,7 @@ export const saveAppearance = createServerFn({ method: 'POST' })
     z.object({
       theme: z.enum(THEME_PREFERENCES).optional(),
       reduceMotion: z.boolean().optional(),
+      maskConfirmationCodes: z.boolean().optional(),
       mapStyle: z.string().trim().max(64).optional(),
     }),
   )
@@ -304,6 +307,7 @@ export const saveAppearance = createServerFn({ method: 'POST' })
     await updateUserSettings(scope, {
       theme: data.theme,
       reduceMotion: data.reduceMotion,
+      maskConfirmationCodes: data.maskConfirmationCodes,
       mapStyle:
         data.mapStyle === undefined || data.mapStyle === ''
           ? undefined
@@ -311,6 +315,34 @@ export const saveAppearance = createServerFn({ method: 'POST' })
     })
     return { saved: true }
   })
+
+/**
+ * The display preferences a screen outside the settings section has to obey.
+ *
+ * One channel, so the precedence rule stays in the repository and no screen
+ * re-derives it: the booking desk and the transports tab both call this beside
+ * their own loader, in the same `Promise.all`, and hand the answer down as a
+ * prop — a `components/modules` component never fetches.
+ *
+ * It is deliberately **not** folded into either desk payload. A flag on one of
+ * them would leave the other needing a second, differently shaped copy of one
+ * boolean, and neither of those two server-function modules is free to be
+ * edited by the stage that needs the value.
+ *
+ * Its cost is two single-row reads under one `Promise.all` inside
+ * `getEffectiveSettings`, on indexes that already exist; the workspace-settings
+ * ensure it makes is idempotent and at most once per workspace ever.
+ */
+export interface DisplayPreferences {
+  readonly maskConfirmationCodes: boolean
+}
+
+export const loadDisplayPreferences = createServerFn({
+  method: 'GET',
+}).handler(async (): Promise<DisplayPreferences> => {
+  const settings = await getEffectiveSettings(await appScope())
+  return { maskConfirmationCodes: settings.maskConfirmationCodes }
+})
 
 /* ---------------------------------------------------------------- security */
 

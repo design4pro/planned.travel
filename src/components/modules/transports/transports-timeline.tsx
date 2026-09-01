@@ -41,10 +41,10 @@ import { timeZoneOffsetLabel } from '#/lib/timezones'
 import { deleteLegFn, setLegStatusFn } from '#/server/fns/transports'
 import {
   ConfirmDialog,
-  CopyValue,
   FactList,
   FactNote,
   FilterRow,
+  MaskedCode,
   RowMenu,
   StatusMenu,
   useAction,
@@ -119,6 +119,16 @@ export interface TransportsTimelineProps {
   /** The trip's days: what the two day selects offer, and what a day chip reads. */
   readonly days: ReadonlyArray<TransportDayData>
   readonly currency: string
+  /**
+   * The reader's own display preference, read by the route beside the transport
+   * desk and handed down: a `components/modules` component never fetches and
+   * never imports from `server/`, so the booking reference below obeys a switch
+   * it is told about rather than one it goes looking for.
+   *
+   * Required rather than defaulted — a masking flag that can be forgotten at a
+   * call site is a masking flag that leaks a code.
+   */
+  readonly maskCodes: boolean
   readonly newLegOpen: boolean
   readonly onNewLegOpenChange: (open: boolean) => void
 }
@@ -130,6 +140,7 @@ export function TransportsTimeline({
   transports,
   days,
   currency,
+  maskCodes,
   newLegOpen,
   onNewLegOpenChange,
 }: TransportsTimelineProps) {
@@ -324,6 +335,7 @@ export function TransportsTimeline({
                 <TransportCard
                   transport={transport}
                   currency={currency}
+                  maskCodes={maskCodes}
                   departureDay={dayNumberOf(transport.departureDayId)}
                   arrivalDay={dayNumberOf(transport.arrivalDayId)}
                   onEdit={() => setEditing(transport)}
@@ -486,6 +498,7 @@ function Junction({ connection }: { connection: Connection }) {
 function TransportCard({
   transport,
   currency,
+  maskCodes,
   departureDay,
   arrivalDay,
   onEdit,
@@ -494,6 +507,8 @@ function TransportCard({
 }: {
   transport: TransportData
   currency: string
+  /** Whether the booking reference below is kept off the screen until it is asked for. */
+  maskCodes: boolean
   /** The day numbers this journey is anchored to, or `null` where it names none. */
   departureDay: number | null
   arrivalDay: number | null
@@ -522,9 +537,10 @@ function TransportCard({
             label: 'Booking reference',
             mono: true,
             value: (
-              <CopyValue
+              <MaskedCode
                 value={transport.bookingCode}
                 label={`the booking reference for ${transport.title}`}
+                masked={maskCodes}
               />
             ),
           },

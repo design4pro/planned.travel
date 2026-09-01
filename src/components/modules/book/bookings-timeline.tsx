@@ -1,5 +1,6 @@
 /**
- * The bookings screen, laid out as the trip's timeline.
+ * The bookings desk: what is settled, what is not, and what is nobody else's
+ * business.
  *
  * Bookings are not a table of rows: they are things that happen on days, so the
  * screen is grouped by date with a rail down the left, a date stamp at each
@@ -7,38 +8,70 @@
  * end under their own heading rather than being scattered through the dates with
  * a blank where the date should be.
  *
+ * On top of that, **two panels rather than one list**. What still needs chasing
+ * is not buried under what is done: outstanding bookings come first, settled ones
+ * after, each with its own count and its own disclosure, and the date grouping
+ * runs again *inside* each. Which panel a reader folded away is remembered per
+ * trip, in `localStorage`, because unlike "which tab was I on" this is a working
+ * preference that should survive a lunch break.
+ *
+ * **A filter of type chips**, multi-select, offering only the kinds this trip
+ * actually has. It lasts for the session and no longer: a filter is a lens for
+ * the next ten minutes, not a setting.
+ *
+ * **An import marker** on any booking a machine wrote that nobody has looked at
+ * since — cleared by the first save of that booking, because reviewing it is the
+ * act of reviewing it and not a second chore afterwards.
+ *
+ * **A masked confirmation code**, when the reader's own display preference asks
+ * for it. `maskCodes` arrives as a prop: a `components/modules` component never
+ * fetches and never imports from `server/`.
+ *
  * Every card is live: the status pill is the control that changes the status, the
  * confirmation number copies itself, and the overflow menu edits, re-attaches or
  * removes the booking. Stored values are typeset as facts, never as filled boxes
  * that read like disabled inputs.
  */
 import { useMemo, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import {
   CalendarOff,
+  ChevronRight,
   ExternalLink,
   Link2,
   Pencil,
+  Route as RouteIcon,
   Ticket,
   Trash2,
   Users,
 } from 'lucide-react'
 
-import { Button, EmptyState } from '#/components/ui'
+import { Badge, Button, EmptyState } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { formatDate, formatWeekday } from '#/lib/format'
+import {
+  defineKeyedPreference,
+  useKeyedPreference,
+} from '#/lib/local-preference'
 import { deleteBookingFn, setBookingStatusFn } from '#/server/fns/reservations'
 import {
   ConfirmDialog,
-  CopyValue,
   FactList,
   FactNote,
   FilterRow,
+  MaskedCode,
   RowMenu,
   StatusMenu,
   useAction,
   useOptimistic,
 } from '../shared'
 import { BOOKING_TYPE_ICON, BookingDialog, dayLabel } from './booking-dialog'
-import { groupBookingsByDate } from './grouping'
+import {
+  countBookingTypes,
+  filterBookingsByType,
+  groupBookingsByDate,
+  partitionBookings,
+} from './grouping'
 import {
   BOOKING_STATUSES,
   bookingTypeLabel,
@@ -86,30 +119,44 @@ function statusOption(status: string): StatusOption {
 
 const LOCALE = 'en-GB'
 
-const stampFormatter = new Intl.DateTimeFormat(LOCALE, {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
-
-const yearFormatter = new Intl.DateTimeFormat(LOCALE, {
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-function stampFor(date: string): {
+/**
+ * `2026-10-09` → `Fri 9 Oct` and `2026`, from the shared CLDR table rather than
+ * from a module-local `Intl.DateTimeFormat`.
+ *
+ * This is the repair `12-verification-protocol.md` §7.2 lists against this file:
+ * asking the platform for `month: 'short'` gets `Fri, 9 Oct` out of workerd and
+ * `Fri 9 Oct` out of WebKit, because the two resolve it from different ICU
+ * builds — which React reports as a hydration mismatch on every trip that has a
+ * dated booking. `src/lib/format.ts` answers from a frozen table for exactly this
+ * reason, so this file asks it instead of asking the runtime.
+ *
+ * The year is the ISO string's own first four characters and not a second
+ * formatter: a calendar date's year is the four digits it starts with in every
+ * locale, and a formatter that can disagree about it is a formatter that can be
+ * wrong about it.
+ *
+ * Split here rather than at the point of use, because the medallion sets the
+ * weekday over the day and month and the heading beside it sets the whole line:
+ * two readings of one string, which is one place for them to disagree. A date
+ * the table refuses keeps the old fallback — the raw ISO string on the weekday
+ * line, and nothing on the line above it.
+ */
+interface DateStamp {
+  /** `Fri 9 Oct`, for the heading beside the rail. */
   readonly label: string
+  /** `Fri` and `9 Oct`: the medallion's two lines, lower one first. */
+  readonly weekday: string
+  readonly dayMonth: string
   readonly year: string
-} {
-  const parsed = new Date(`${date}T00:00:00.000Z`)
-  if (Number.isNaN(parsed.getTime())) {
-    return { label: date, year: '' }
+}
+
+function stampFor(date: string): DateStamp {
+  const label = formatWeekday(date)
+  if (label === null) {
+    return { label: date, weekday: date, dayMonth: '', year: '' }
   }
-  return {
-    label: stampFormatter.format(parsed),
-    year: yearFormatter.format(parsed),
-  }
+  const [weekday = '', ...rest] = label.split(' ')
+  return { label, weekday, dayMonth: rest.join(' '), year: date.slice(0, 4) }
 }
 
 function formatMoney(minor: number, currency: string): string {
@@ -135,28 +182,130 @@ function timeRange(start: string | null, end: string | null): string | null {
   return to === null ? from : `${from} – ${to}`
 }
 
+/* ---------------------------------------------------- remembered by the reader */
+
+/**
+ * Which of the two panels a reader folded away, remembered per trip.
+ *
+ * `local` rather than `session` because this is a working preference: a reader
+ * who folds the settled panel away on Monday is owed it folded on Thursday, not
+ * unfolded again. The trade — it does not follow them to a second device — is
+ * the one `01-S3` argued for the trip tab and is accepted here for the same
+ * reason.
+ *
+ * Layout-affecting first paint (`local-preference.ts`, rule 1): both hooks
+ * answer with the fallback on the server and in the hydrating render, so the
+ * markup agrees byte for byte and the stored fold arrives in the commit after.
+ * The fallback is **both panels open**, which is the state a reader who has
+ * never folded anything sees — so the only screen that moves at all is one whose
+ * owner asked for it to be folded, and it moves once, before anything else has
+ * settled.
+ */
+interface FoldState {
+  readonly settled: boolean
+  readonly outstanding: boolean
+}
+
+const BOTH_OPEN: FoldState = { settled: false, outstanding: false }
+
+function isFoldState(value: unknown): value is FoldState {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const record = value as Record<string, unknown>
+  return (
+    typeof record.settled === 'boolean' &&
+    typeof record.outstanding === 'boolean'
+  )
+}
+
+const BOOK_GROUPS_PREFERENCE = defineKeyedPreference<FoldState>({
+  key: 'planned.book-groups',
+  area: 'local',
+  limit: 24,
+  fallback: BOTH_OPEN,
+  parse: (raw) => {
+    const value: unknown = JSON.parse(raw)
+    return isFoldState(value) ? value : undefined
+  },
+})
+
+/**
+ * The kinds a reader narrowed the desk to, for this session only.
+ *
+ * `session` rather than `local`, and that is the whole argument for a second
+ * store beside the one above: a filter is a lens for the next ten minutes, and a
+ * reader who comes back tomorrow to a desk that is quietly hiding two thirds of
+ * their bookings has been lied to by their own tool.
+ *
+ * Unknown strings survive the guard on purpose — a type this build does not know
+ * cannot be selected from the chips it renders, and `filterBookingsByType` simply
+ * matches nothing for it.
+ */
+const BOOK_TYPES_PREFERENCE = defineKeyedPreference<ReadonlyArray<string>>({
+  key: 'planned.book-types',
+  area: 'session',
+  limit: 24,
+  fallback: [],
+  parse: (raw) => {
+    const value: unknown = JSON.parse(raw)
+    return Array.isArray(value) && value.every((it) => typeof it === 'string')
+      ? value
+      : undefined
+  },
+})
+
 /* ------------------------------------------------------------------ screen */
+
+/**
+ * What every card on the desk needs and no card decides for itself: the trip it
+ * hangs off, how its money and its code are typeset, the day lookup, and the
+ * three things a row can be asked to do.
+ *
+ * One object rather than seven props, because the whole clump travels together
+ * from the screen through both panels and every date group before a single card
+ * reads any of it — and a card that is handed the desk cannot be handed six
+ * sevenths of it by a call site that forgot the seventh.
+ */
+interface Desk {
+  readonly tripId: string
+  readonly currency: string
+  readonly maskCodes: boolean
+  readonly dayById: ReadonlyMap<string, BookingDayOption>
+  readonly onEdit: (booking: BookingRow) => void
+  readonly onStatus: (booking: BookingRow, next: string) => void
+  readonly onDelete: (booking: BookingRow) => void
+}
 
 export interface BookingsTimelineProps {
   readonly tripId: string
   readonly bookings: ReadonlyArray<BookingRow>
   readonly days: ReadonlyArray<BookingDayOption>
   readonly currency: string
+  /**
+   * The reader's own display preference, read by the route beside the desk
+   * payload. Required rather than defaulted: a masking flag that can be
+   * forgotten at a call site is a masking flag that leaks a code.
+   */
+  readonly maskCodes: boolean
   readonly newBookingOpen: boolean
   readonly onNewBookingOpenChange: (open: boolean) => void
 }
-
-type StatusFilter = 'all' | BookingStatus
 
 export function BookingsTimeline({
   tripId,
   bookings,
   days,
   currency,
+  maskCodes,
   newBookingOpen,
   onNewBookingOpenChange,
 }: BookingsTimelineProps) {
-  const [filter, setFilter] = useState<StatusFilter>('all')
+  const [selectedTypes, setSelectedTypes] = useKeyedPreference(
+    BOOK_TYPES_PREFERENCE,
+    tripId,
+  )
+  const [folded, setFolded] = useKeyedPreference(BOOK_GROUPS_PREFERENCE, tripId)
   const [editing, setEditing] = useState<BookingRow | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
@@ -182,22 +331,26 @@ export function BookingsTimeline({
     [bookings, statuses],
   )
 
-  const counts = useMemo(() => {
-    const tally = new Map<string, number>()
-    for (const booking of rendered) {
-      tally.set(booking.status, (tally.get(booking.status) ?? 0) + 1)
-    }
-    return tally
-  }, [rendered])
+  /** The chips: only the kinds this trip has, and how many of each. */
+  const typeCounts = useMemo(() => countBookingTypes(rendered), [rendered])
 
-  const visible = rendered.filter(
-    (booking) => filter === 'all' || booking.status === filter,
+  const visible = useMemo(
+    () => filterBookingsByType(rendered, selectedTypes),
+    [rendered, selectedTypes],
   )
-  const groups = useMemo(() => groupBookingsByDate(visible), [visible])
+  const panels = useMemo(() => partitionBookings(visible), [visible])
   const dayById = useMemo(
     () => new Map(days.map((day) => [day.id, day])),
     [days],
   )
+
+  function toggleType(type: string): void {
+    setSelectedTypes(
+      selectedTypes.includes(type)
+        ? selectedTypes.filter((it) => it !== type)
+        : [...selectedTypes, type],
+    )
+  }
 
   function changeStatus(booking: BookingRow, next: string): void {
     if (!isBookingStatus(next) || next === booking.status) {
@@ -208,6 +361,27 @@ export function BookingsTimeline({
         data: { tripId, reservationId: booking.id, status: next },
       }),
     )
+  }
+
+  function askToRemove(booking: BookingRow): void {
+    setConfirm({
+      title: `Remove “${booking.title}”?`,
+      description:
+        'It comes off the timeline for good. If it is only cancelled, set its status to Cancelled instead so you keep the record.',
+      confirmLabel: 'Remove booking',
+      onConfirm: () =>
+        remove.run({ data: { tripId, reservationId: booking.id } }),
+    })
+  }
+
+  const desk: Desk = {
+    tripId,
+    currency,
+    maskCodes,
+    dayById,
+    onEdit: setEditing,
+    onStatus: changeStatus,
+    onDelete: askToRemove,
   }
 
   if (bookings.length === 0) {
@@ -241,75 +415,73 @@ export function BookingsTimeline({
     )
   }
 
+  /** What the "nothing matched" line calls the lens the reader is looking through. */
+  const filterNames = selectedTypes
+    .map((type) => bookingTypeLabel(type).toLowerCase())
+    .join(', ')
+
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <FilterRow>
-        <FilterChip
-          selected={filter === 'all'}
-          count={rendered.length}
-          onClick={() => setFilter('all')}
-        >
-          Everything
-        </FilterChip>
-        {BOOKING_STATUSES.filter((status) => (counts.get(status) ?? 0) > 0).map(
-          (status) => (
-            <FilterChip
-              key={status}
-              selected={filter === status}
-              count={counts.get(status) ?? 0}
-              onClick={() => setFilter(status)}
-            >
-              {STATUS_LABEL[status]}
-            </FilterChip>
-          ),
-        )}
-      </FilterRow>
+      {typeCounts.length < 2 ? null : (
+        <FilterRow>
+          {typeCounts.map(({ type, count }) => {
+            const Icon = isBookingType(type)
+              ? BOOKING_TYPE_ICON[type]
+              : BOOKING_TYPE_ICON.other
+            return (
+              <FilterChip
+                key={type}
+                part={`type-chip-${type}`}
+                selected={selectedTypes.includes(type)}
+                count={count}
+                onClick={() => toggleType(type)}
+              >
+                <Icon aria-hidden className="size-3.5" />
+                {bookingTypeLabel(type)}
+              </FilterChip>
+            )
+          })}
+        </FilterRow>
+      )}
 
       {visible.length === 0 ? (
         <EmptyState
           variant="filled"
           size="md"
           icon={<CalendarOff />}
-          title="Nothing with that status"
-          description="Every booking on this trip is at a different stage. Switch back to “Everything” to see them all."
+          title={`No ${filterNames} on this trip yet`}
+          description="Nothing of the kinds you picked is booked here. Clear the filter to see the rest of the desk."
           action={
             <Button
               variant="secondary"
               shape="pill"
-              onClick={() => setFilter('all')}
+              onClick={() => setSelectedTypes([])}
             >
-              Show everything
+              Clear filter
             </Button>
           }
         />
       ) : (
-        <ol className="flex min-w-0 flex-col">
-          {groups.map((group, index) => (
-            <li key={group.date ?? '__undated'} className="min-w-0">
-              <TimelineGroup
-                group={group}
-                first={index === 0}
-                last={index === groups.length - 1}
-                currency={currency}
-                dayById={dayById}
-                onEdit={setEditing}
-                onStatus={changeStatus}
-                onDelete={(booking) =>
-                  setConfirm({
-                    title: `Remove “${booking.title}”?`,
-                    description:
-                      'It comes off the timeline for good. If it is only cancelled, set its status to Cancelled instead so you keep the record.',
-                    confirmLabel: 'Remove booking',
-                    onConfirm: () =>
-                      remove.run({
-                        data: { tripId, reservationId: booking.id },
-                      }),
-                  })
-                }
-              />
-            </li>
-          ))}
-        </ol>
+        <div className="flex min-w-0 flex-col gap-4">
+          <SettlementPanel
+            id="outstanding"
+            title="Still to settle"
+            emptyLine="Nothing outstanding — every booking here is settled."
+            bookings={panels.outstanding}
+            folded={folded.outstanding}
+            onFoldChange={(next) => setFolded({ ...folded, outstanding: next })}
+            desk={desk}
+          />
+          <SettlementPanel
+            id="settled"
+            title="Settled"
+            emptyLine="Nothing settled yet — it is all still to chase."
+            bookings={panels.settled}
+            folded={folded.settled}
+            onFoldChange={(next) => setFolded({ ...folded, settled: next })}
+            desk={desk}
+          />
+        </div>
       )}
 
       <BookingDialog
@@ -340,11 +512,14 @@ export function BookingsTimeline({
 }
 
 function FilterChip({
+  part,
   selected,
   count,
   onClick,
   children,
 }: {
+  /** The published `data-part` the visual gate drives this chip by. */
+  part: string
   selected: boolean
   count: number
   onClick: () => void
@@ -353,6 +528,7 @@ function FilterChip({
   return (
     <button
       type="button"
+      data-part={part}
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
@@ -376,26 +552,133 @@ function FilterChip({
   )
 }
 
+/* ------------------------------------------------------------- one panel */
+
+/**
+ * One of the desk's two halves, with its own count and its own disclosure.
+ *
+ * **The body is mounted and unmounted, never transitioned open.** A height
+ * transition is the reflex here and `DESIGN.md` forbids it — "Transform and
+ * opacity only. Never animate layout-affecting properties." So the panel's height
+ * changes in the single frame the body appears or disappears, and what animates
+ * is each row's own entrance: `animate-rise`, the design system's own opacity and
+ * `translateY`, staggered 24ms and **capped at eight rows** so a forty-booking
+ * panel does not take a second to finish. `data-motion-transform` is what drops
+ * the translate for a reader who asked for less motion; the global reduced-motion
+ * rule drops the stagger and the chevron's rotation with it.
+ *
+ * A panel with nothing in it says so on one quiet line rather than rendering an
+ * empty box: the count in the header is the answer, and the line beneath it is
+ * the reassurance.
+ */
+function SettlementPanel({
+  id,
+  title,
+  emptyLine,
+  bookings,
+  folded,
+  onFoldChange,
+  desk,
+}: {
+  id: 'settled' | 'outstanding'
+  title: string
+  emptyLine: string
+  bookings: ReadonlyArray<BookingRow>
+  folded: boolean
+  onFoldChange: (next: boolean) => void
+  desk: Desk
+}) {
+  const groups = useMemo(() => groupBookingsByDate(bookings), [bookings])
+
+  /*
+   * Where each date's rows start in the panel's stagger. It runs across the whole
+   * panel rather than restarting inside each date, so two rows next to each other
+   * on screen are 24ms apart whether or not a date heading sits between them.
+   */
+  const entranceFrom = useMemo(() => {
+    let running = 0
+    return groups.map((group) => {
+      const at = running
+      running += group.bookings.length
+      return at
+    })
+  }, [groups])
+
+  const bodyId = `book-panel-${id}`
+  const empty = bookings.length === 0
+  const open = !folded && !empty
+
+  return (
+    <section className="min-w-0">
+      <h3>
+        <button
+          type="button"
+          data-part={`group-toggle-${id}`}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          disabled={empty}
+          onClick={() => onFoldChange(!folded)}
+          className={cn(
+            'flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-start focus-ring',
+            'transition-colors duration-fast ease-out-quint',
+            empty ? 'cursor-default text-ink-3' : 'text-ink hover:bg-surface-2',
+          )}
+        >
+          <ChevronRight
+            aria-hidden
+            data-motion-transform=""
+            className={cn(
+              'size-4 shrink-0 text-ink-4',
+              'transition-transform duration-fast ease-out-quint',
+              open && 'rotate-90',
+              empty && 'opacity-0',
+            )}
+          />
+          <span className="text-label font-semibold">{title}</span>
+          <span className="text-caption tabular-nums text-ink-3">
+            {bookings.length}
+          </span>
+        </button>
+      </h3>
+
+      {empty ? (
+        <p className="px-2 pb-2 ps-8 text-caption text-ink-4">{emptyLine}</p>
+      ) : null}
+
+      {open ? (
+        <ol id={bodyId} className="flex min-w-0 flex-col pt-1">
+          {groups.map((group, index) => (
+            <li key={group.date ?? '__undated'} className="min-w-0">
+              <TimelineGroup
+                group={group}
+                first={index === 0}
+                last={index === groups.length - 1}
+                entranceFrom={entranceFrom[index] ?? 0}
+                desk={desk}
+              />
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </section>
+  )
+}
+
 /* --------------------------------------------------------------- one group */
 
 function TimelineGroup({
   group,
   first,
   last,
-  currency,
-  dayById,
-  onEdit,
-  onStatus,
-  onDelete,
+  entranceFrom,
+  desk,
 }: {
   group: BookingDateGroup
   first: boolean
   last: boolean
-  currency: string
-  dayById: ReadonlyMap<string, BookingDayOption>
-  onEdit: (booking: BookingRow) => void
-  onStatus: (booking: BookingRow, next: string) => void
-  onDelete: (booking: BookingRow) => void
+  /** Where this date's rows sit in the panel's stagger, so it runs across dates. */
+  entranceFrom: number
+  desk: Desk
 }) {
   const stamp = group.date === null ? null : stampFor(group.date)
 
@@ -421,10 +704,10 @@ function TimelineGroup({
         ) : (
           <span className="grid size-14 place-items-center rounded-full border border-edge-faint bg-surface text-center shadow-card sm:size-20">
             <span className="font-display text-label leading-none font-bold tabular-nums text-ink sm:text-subtitle">
-              {stamp.label.split(' ').slice(1).join(' ')}
+              {stamp.dayMonth}
             </span>
             <span className="mt-0.5 text-micro font-semibold tracking-label text-ink-3 uppercase">
-              {stamp.label.split(' ')[0]?.replace(',', '')}
+              {stamp.weekday}
             </span>
           </span>
         )}
@@ -447,20 +730,18 @@ function TimelineGroup({
         </h3>
 
         <ul className="flex min-w-0 flex-col gap-3">
-          {group.bookings.map((booking) => (
-            <li key={booking.id} className="min-w-0">
-              <BookingCard
-                booking={booking}
-                currency={currency}
-                day={
-                  booking.dayId === null
-                    ? undefined
-                    : dayById.get(booking.dayId)
-                }
-                onEdit={() => onEdit(booking)}
-                onStatus={(next) => onStatus(booking, next)}
-                onDelete={() => onDelete(booking)}
-              />
+          {group.bookings.map((booking, index) => (
+            <li
+              key={booking.id}
+              data-motion-transform=""
+              className="min-w-0 animate-rise"
+              // Capped at eight steps: past that the last row is waiting on the
+              // list rather than the list waiting on the reader.
+              style={{
+                animationDelay: `${Math.min(entranceFrom + index, 7) * 24}ms`,
+              }}
+            >
+              <BookingCard booking={booking} desk={desk} />
             </li>
           ))}
         </ul>
@@ -471,31 +752,25 @@ function TimelineGroup({
 
 /* ---------------------------------------------------------------- one card */
 
-function BookingCard({
-  booking,
-  currency,
-  day,
-  onEdit,
-  onStatus,
-  onDelete,
-}: {
-  booking: BookingRow
-  currency: string
-  day: BookingDayOption | undefined
-  onEdit: () => void
-  onStatus: (next: string) => void
-  onDelete: () => void
-}) {
+function BookingCard({ booking, desk }: { booking: BookingRow; desk: Desk }) {
   const type = isBookingType(booking.type) ? booking.type : 'other'
   const Icon = BOOKING_TYPE_ICON[type]
   const cancelled = booking.status === 'cancelled'
   const times = timeRange(booking.startTime, booking.endTime)
+  /** The itinerary day this booking is pinned to, when it names one that still exists. */
+  const day =
+    booking.dayId === null ? undefined : desk.dayById.get(booking.dayId)
 
   const facts: Array<FactItem> = [
     ...(times === null ? [] : [{ label: 'Time', value: times }]),
     ...(booking.endDate === null || booking.endDate === booking.startDate
       ? []
-      : [{ label: 'Until', value: stampFor(booking.endDate).label }]),
+      : [
+          {
+            label: 'Until',
+            value: formatDate(booking.endDate) ?? booking.endDate,
+          },
+        ]),
     ...(booking.provider === null
       ? []
       : [{ label: 'Provider', value: booking.provider }]),
@@ -522,7 +797,7 @@ function BookingCard({
             label: 'Price',
             value: formatMoney(
               booking.priceMinor,
-              booking.currency ?? currency,
+              booking.currency ?? desk.currency,
             ),
           },
         ]),
@@ -533,9 +808,10 @@ function BookingCard({
             label: 'Confirmation',
             mono: true,
             value: (
-              <CopyValue
+              <MaskedCode
                 value={booking.confirmationNumber}
                 label={`the confirmation number for ${booking.title}`}
+                masked={desk.maskCodes}
               />
             ),
           },
@@ -563,10 +839,26 @@ function BookingCard({
         >
           {booking.title}
         </h4>
+        {booking.importedAt === null ? null : (
+          /*
+           * "A machine wrote this and no person has looked at it yet." It comes
+           * off on the first save of the booking — the server clears the marker
+           * inside the same handler — so reviewing it is the review, and there is
+           * no second control here to tick.
+           */
+          <Badge
+            tone="warning"
+            size="sm"
+            data-part="import-marker"
+            title="Imported from a confirmation. Open and save it to mark it checked."
+          >
+            Unchecked import
+          </Badge>
+        )}
         <StatusPill
           status={booking.status}
           title={booking.title}
-          onSelect={onStatus}
+          onSelect={(next) => desk.onStatus(booking, next)}
         />
         <RowMenu
           label={`Actions for ${booking.title}`}
@@ -574,7 +866,7 @@ function BookingCard({
             {
               label: 'Edit booking…',
               icon: <Pencil aria-hidden />,
-              onSelect: onEdit,
+              onSelect: () => desk.onEdit(booking),
             },
             ...(booking.url === null
               ? []
@@ -596,7 +888,7 @@ function BookingCard({
               icon: <Trash2 aria-hidden />,
               tone: 'danger' as const,
               separated: true,
-              onSelect: onDelete,
+              onSelect: () => desk.onDelete(booking),
             },
           ]}
         />
@@ -621,6 +913,25 @@ function BookingCard({
             <Link2 aria-hidden className="size-3.5 text-ink-4" />
             On the itinerary: {dayLabel(day)}
           </p>
+        )}
+
+        {/*
+          One record, one home. A booking of the transport kind is not copied
+          into the transports tab and a journey is not copied into this desk —
+          this is the quiet link between the two, so a reader can walk from the
+          ticket to the journey in one click without either list pretending to
+          own the other's row.
+        */}
+        {booking.transportId === null ? null : (
+          <Link
+            to="/trips/$tripId/transports"
+            params={{ tripId: desk.tripId }}
+            data-part="journey-link"
+            className="inline-flex w-fit items-center gap-1.5 rounded-sm text-caption text-ink-3 focus-ring transition-colors duration-fast ease-out-quint hover:text-brand"
+          >
+            <RouteIcon aria-hidden className="size-3.5 text-ink-4" />
+            On the transports tab
+          </Link>
         )}
 
         {booking.url === null ? null : (

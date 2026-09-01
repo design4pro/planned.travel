@@ -209,6 +209,11 @@ const messages = {
   'appearance.map.workspace': 'Follow the workspace',
   'appearance.map.light': 'Paper — light',
   'appearance.map.dark': 'Charcoal — dark',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'On a shared screen',
+  'appearance.privacy.codesLabel': 'Hide confirmation codes until I ask',
+  'appearance.privacy.codesHint':
+    'Booking references and confirmation numbers stay masked on the bookings desk and on transports until you hover, focus or tap one. Prices are never hidden.',
   'appearance.saveFailed': 'That change was not stored',
   'appearance.saveFailedBody':
     'It is showing here, but the next device you sign in from will not have it.',
