@@ -102,31 +102,26 @@ function renderAtlasScreen(): void {
 }
 
 /**
- * One panel tile, found through the label printed over it.
+ * One panel tile, by the figure it carries.
  *
- * Walks out from the label to the first ancestor that holds a numeral, which is
- * the tile itself — a tile is the only thing on this panel that pairs the two.
- * Reading it this way is what makes the assertions about the *pairing* rather
- * than about strings that happen to be on the same screen.
+ * `data-stat` is the panel's own handle on its tiles — the idiom `CountryCard`
+ * already sets with `data-country` and `data-record`, so a host or a test can
+ * find one surface without parsing the labels back out of the DOM.
+ *
+ * It replaces a walk out from the label to the first ancestor holding a
+ * numeral. That walk's premise — that only a tile pairs a label with a numeral
+ * — is false inside a single `StatCard`: the trend badge carries `data-numeric`
+ * in the *same* header div as the label. Measured, giving this tile a trend:
+ * the walk stops at `flex items-start justify-between gap-3` and reads the
+ * delta, `+3`, as the tile's figure. The panel passes no trend today, which was
+ * the whole of why the walk was right, and none of it was stated.
  */
-function tile(panel: HTMLElement, label: string): HTMLElement {
-  // The walk stops *below* the panel rather than at it. The panel holds every
-  // other tile's numerals too, so a run allowed to reach it would always find
-  // one and hand back the whole panel — the lookup could then never fail, and
-  // `tileFigure` would answer with whichever figure happens to come first.
-  let node: HTMLElement | null = within(panel).getByText(label)
-  while (node !== null && node !== panel) {
-    if (node.querySelector('[data-numeric]') !== null) {
-      return node
-    }
-    node = node.parentElement
+function tile(panel: HTMLElement, stat: string): HTMLElement {
+  const found = panel.querySelector<HTMLElement>(`[data-stat="${stat}"]`)
+  if (found === null) {
+    throw new Error(`no stat tile for ${stat}`)
   }
-  throw new Error(`no stat tile labelled ${label}`)
-}
-
-/** The figure that tile prints. */
-function tileFigure(panel: HTMLElement, label: string): string {
-  return tile(panel, label).querySelector('[data-numeric]')?.textContent ?? ''
+  return found
 }
 
 /** One label-and-figure pair of the card's fact grid, by position. */
@@ -147,10 +142,14 @@ const said = (label: string): string => label.trim().toLocaleLowerCase()
 
 describe('the two trip figures on one atlas screen', () => {
   it('names the panel tile as the trips the reader is on', () => {
-    const panel = renderPanel()
+    const trips = tile(renderPanel(), 'trips')
 
-    expect(tileFigure(panel, 'Your trips')).toBe('0')
-    expect(within(panel).getByText('Every trip you are on')).toBeTruthy()
+    // The tile read as one run, in the order it prints: the figure stands under
+    // *this* label. That is the claim — not that a `0` and the words "Your
+    // trips" are each somewhere on the panel, which they would be however the
+    // six tiles were shuffled.
+    expect(said(trips.textContent)).toContain('your trips0')
+    expect(within(trips).getByText('Every trip you are on')).toBeTruthy()
   })
 
   /**
@@ -172,7 +171,7 @@ describe('the two trip figures on one atlas screen', () => {
   it('claims no completion the figure does not require', () => {
     const panel = renderPanel()
 
-    expect(said(tile(panel, 'Your trips').textContent)).not.toMatch(
+    expect(said(tile(panel, 'trips').textContent)).not.toMatch(
       /finished|completed|only/,
     )
   })
