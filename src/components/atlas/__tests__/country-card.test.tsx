@@ -702,7 +702,14 @@ describe('CountryCardError', () => {
     render(<CountryCardError countryCode="FR" />)
     const card = cardFor('FR')
     expect(card.textContent).toContain('These figures did not load')
-    expect(card.textContent).not.toContain('Trip')
+    // The claim is that no figure is shown, not that one particular word is
+    // absent: the zero-record card says `0` under every heading, and a reader
+    // who sees that believes the country is empty rather than unread. Asserted
+    // as the absence of the fact cells, because a word is copy — this one was
+    // `Trips` until the workspace qualifier landed, and matching on it left a
+    // guard that the zero-record card walked straight through.
+    expect(card.querySelectorAll('dt')).toHaveLength(0)
+    expect(card.querySelectorAll('dd')).toHaveLength(0)
   })
 
   it('occupies exactly the card the retry will land in', () => {
