@@ -186,7 +186,14 @@ const MAX_ITERATIONS = 10
 // the extra pipelines add is idle containers - each holds its dev server once a ladder has started
 // one - which costs memory rather than CPU. If the VM starts swapping, MAX_PARALLEL_ISSUES is the
 // number to bring back down; if e2e goes flaky again, MAX_PARALLEL_E2E is.
-const MAX_PARALLEL_ISSUES = 4
+//
+// Back down to two, on that exact rule: the OrbStack VM this runs in reports 16 GB of RAM and
+// 16 GB of swap (`docker info`, and /proc/meminfo inside a container), whatever `orb config` says.
+// A container holding a dev server is ~3.5 GB before its browsers, four of those plus the advisory
+// containers plus a leaked one is past 16 GB, and the audit ladder of run 20260901-1 (typecheck
+// 308 s, lint 797 s against medians of 13 s and 18 s) is what swapping looks like from here. Raise
+// it again once `docker info` shows the VM with the memory the config names.
+const MAX_PARALLEL_ISSUES = 2
 const MAX_PARALLEL_E2E = 2
 
 // The e2e matrix, split.
@@ -558,19 +565,79 @@ const coordinator = COORDINATED
     })
   : undefined
 
+/**
+ * Where the ladder lives inside a sandbox: the operator's copy, not the branch's.
+ *
+ * `validate.sh` is versioned with this file but was deployed apart from it - main.ts ran from the
+ * operator's checkout while the sandbox executed whatever `validate.sh` the integration branch had
+ * been cut with. Every flag added here therefore failed with "unknown flag" until the script
+ * reached `origin/develop`: `--e2e-projects` did so in runs 20260830-3, 20260830-4 and 20260901-1,
+ * where two issues were implemented and reviewed three times each, from scratch, before a ladder
+ * ran at all. So the two scripts travel into every sandbox from this checkout, outside the
+ * worktree so they never show up in `git status` for an agent to commit, and `runLadder` calls
+ * them there. The branch keeps its own copies for CI and for people.
+ */
+const LADDER_DIR = '/tmp/sandcastle-ladder'
+const LADDER_SCRIPTS = ['validate.sh', 'setup-e2e.sh'] as const
+
+async function installLadder(sandbox: sandcastle.Sandbox): Promise<void> {
+  await sandbox.exec(`mkdir -p ${LADDER_DIR}`)
+  for (const name of LADDER_SCRIPTS) {
+    await sandbox.exec(`cat > ${LADDER_DIR}/${name}`, {
+      stdin: await readFile(join('.sandcastle', name), 'utf8'),
+    })
+  }
+}
+
+/**
+ * Every container this process has open. Ctrl-C used to release the run's leases and exit,
+ * leaving each sandbox up with its dev server (2.7 GB of vite, workerd, the browsers) - three of
+ * them were found running from earlier runs, one for three days, one whose worktree no longer
+ * existed. `openSandbox`/`closeSandbox` are the only way in and out of the set, so the signal
+ * handler below can close what is left.
+ */
+const openSandboxes = new Set<sandcastle.Sandbox>()
+
+async function openSandbox(
+  options: Parameters<typeof sandcastle.createSandbox>[0],
+): Promise<sandcastle.Sandbox> {
+  const sandbox = await sandcastle.createSandbox(options)
+  openSandboxes.add(sandbox)
+  await installLadder(sandbox)
+  return sandbox
+}
+
+async function closeSandbox(sandbox: sandcastle.Sandbox): Promise<void> {
+  openSandboxes.delete(sandbox)
+  await sandbox.close()
+}
+
+/** Longest the signal handler waits for the containers before exiting anyway. */
+const CLOSE_ON_SIGNAL_MS = 30_000
+
 // Ctrl-C releases this run's issues now rather than leaving them parked for the lease's five
-// minutes. A crash or a `kill -9` skips this, and that is the whole reason the lease has a TTL —
-// but the common case is an operator changing their mind, and making them wait is needless.
+// minutes, and closes its containers rather than leaving them up. A crash or a `kill -9` skips
+// this, and that is the whole reason the lease has a TTL - but the common case is an operator
+// changing their mind, and making them wait is needless.
 let releasing = false
 for (const stopping of ['SIGINT', 'SIGTERM'] as const) {
   process.on(stopping, () => {
     if (releasing) process.exit(130)
     releasing = true
-    console.log(`\nReceived ${stopping} — releasing this run's issues…`)
-    void (
-      coordinator?.finish('failed', `interrupted by ${stopping}`) ??
-      Promise.resolve()
+    console.log(
+      `\nReceived ${stopping} - closing ${openSandboxes.size} container(s) and releasing this run's issues…`,
     )
+    const closing = Promise.allSettled(
+      [...openSandboxes].map((sandbox) => closeSandbox(sandbox)),
+    )
+    void Promise.race([
+      closing,
+      new Promise((resolve) => setTimeout(resolve, CLOSE_ON_SIGNAL_MS)),
+    ])
+      .then(
+        () => coordinator?.finish('failed', `interrupted by ${stopping}`),
+        () => undefined,
+      )
       .catch(() => {})
       .finally(() => process.exit(130))
   })
@@ -881,7 +948,7 @@ async function runLadder(
     const result = await ladderLimit(() => {
       startedAt = Date.now()
       return sandbox.exec(
-        `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
+        `TARGET_BRANCH=${integrationBranch} bash ${LADDER_DIR}/validate.sh ${flags.join(' ')}`,
       )
     })
     const read = await sandbox.exec('cat .sandcastle-validation.json')
@@ -892,12 +959,11 @@ async function runLadder(
       // writes the file on every path it can reach, so a missing one means it never got that
       // far: a flag it does not know (exit 2), a container that died, a `jq` that is not there.
       //
-      // The flag case is the live hazard, because main.ts and validate.sh are versioned together
-      // but deployed apart — main.ts is the operator's checkout, validate.sh is the sandbox's, cut
-      // from the integration branch. Run 20260831-2 hit exactly that: `--e2e-projects` on a
-      // validate.sh from before it existed, nine 74 ms "failures", three exhausted fix budgets,
-      // and `ready-for-agent` stripped off three issues that were never actually validated.
-      // Rejecting this issue's pipeline says it once, loudly, and leaves the labels alone.
+      // The flag case was the live hazard while the sandbox ran the branch's validate.sh rather
+      // than this checkout's (see LADDER_DIR): run 20260831-2 hit `--e2e-projects` on a script
+      // from before it existed - nine 74 ms "failures", three exhausted fix budgets, and
+      // `ready-for-agent` stripped off three issues that were never actually validated. Rejecting
+      // this issue's pipeline says it once, loudly, and leaves the labels alone.
       throw new Error(
         `validate.sh wrote no verdict (exit ${result.exitCode}) — the ladder never ran, ` +
           `so this is an operator problem rather than a red branch. ` +
@@ -1276,7 +1342,7 @@ async function workIssue(
    */
   advisory?: Promise<void>
 }> {
-  const sandbox = await sandcastle.createSandbox({
+  const sandbox = await openSandbox({
     branch: issue.branch,
     sandbox: docker(),
     cwd: integrationCwd,
@@ -1446,7 +1512,7 @@ async function workIssue(
             // .sandcastle-shots and the visual verdict.
             await collectArtifacts(sandbox, issue, attempt)
           } finally {
-            await sandbox.close()
+            await closeSandbox(sandbox)
           }
         })()
         return { issue, ok: true, commits, advisory }
@@ -1502,7 +1568,7 @@ async function workIssue(
     return { issue, ok: false, commits }
   } finally {
     noteWip()
-    if (!advisoryOwnsSandbox) await sandbox.close()
+    if (!advisoryOwnsSandbox) await closeSandbox(sandbox)
   }
 }
 
@@ -1564,7 +1630,7 @@ async function runAuditor(
   // the tree the previous invocation left rather than this HEAD — silently
   // gutting the one adversarial gate. Uniqueness per INVOCATION is what this
   // name needs.
-  const sandbox = await sandcastle.createSandbox({
+  const sandbox = await openSandbox({
     branch: `sandcastle/audit-${process.pid}-i${iteration}`,
     sandbox: docker(),
     cwd: integrationCwd,
@@ -1637,7 +1703,7 @@ async function runAuditor(
       refuted: verdicts.issues.filter((f) => f.verdict === 'refuted').length,
     }
   } finally {
-    await sandbox.close()
+    await closeSandbox(sandbox)
   }
 }
 

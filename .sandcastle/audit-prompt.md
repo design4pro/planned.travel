@@ -16,10 +16,10 @@ Adversarially re-check each one: your job is to try to **refute** its COMPLETE c
 
 # FULL LADDER — ONCE
 
-After the per-issue checks, run the complete ladder including the full e2e suite:
+After the per-issue checks, run the complete ladder including the full e2e suite (the orchestrator put the ladder scripts in `/tmp/sandcastle-ladder/`; use that copy, not `.sandcastle/validate.sh` from the branch):
 
 ```
-TARGET_BRANCH={{TARGET_BRANCH}} bash .sandcastle/validate.sh --force-e2e --json-out .sandcastle-validation.json
+TARGET_BRANCH={{TARGET_BRANCH}} bash /tmp/sandcastle-ladder/validate.sh --force-e2e --json-out .sandcastle-validation.json
 ```
 
 A red ladder refutes every issue whose change plausibly caused the failure.
