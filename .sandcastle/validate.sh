@@ -134,7 +134,9 @@ INFRA=""
 # named once so the two can never drift into disagreeing about what "up" means.
 E2E_BASE_URL=http://localhost:3010
 if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
-  run_step "e2e-env" bash .sandcastle/setup-e2e.sh --if-needed
+  # Beside this script, wherever it runs from: main.ts ships the operator's copy of both into the
+  # sandbox rather than trusting the branch's, so the pair must travel together.
+  run_step "e2e-env" bash "$(dirname "$0")/setup-e2e.sh" --if-needed
   # setup-e2e.sh returns only once the dev server answers, and starting it runs
   # the vite plugin's route generator over the same file `tsr generate` wrote in
   # the gate above. The two agree because tsr.config.json carries the plugin's
@@ -154,7 +156,16 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # repeated flag is not a list — the last occurrence wins and the rest are
     # dropped. Written as three flags this run kept only `html`, never wrote
     # results.json, and reported `failed: []` for every red suite. See issue #97.
-    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --reporter=line,json,html)
+    #
+    # One retry, because the sandbox is not CI: `playwright.config.ts` sets `retries` from `CI`,
+    # which is unset here, so the suite ran with none and every machine-load TIMEOUT reached
+    # main.ts as a red branch. Measured over the recorded runs, 101 of 108 failing specs were
+    # infrastructure (ECONNREFUSED, timeouts, `Target crashed`) and 7 were pixel diffs, and each
+    # red rung costs a fix session plus a re-run - for a spec that passes when asked again. The JSON
+    # reporter marks a spec `ok` when its last attempt passed, so a retried-green spec never reaches
+    # `e2e.failed` below, and a spec red twice in a row still does. Real regressions pay one extra
+    # attempt; flakes stop spending the fix budget.
+    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --retries=1 --reporter=line,json,html)
     [ "$UPDATE_SNAPSHOTS" -eq 1 ] && PW_ARGS+=(--update-snapshots)
     # Repeated `--project` IS a list, unlike `--reporter` above: playwright declares it as
     # `--project <project-name...>`. Narrowing to chromium is what lets the fix loop re-validate
