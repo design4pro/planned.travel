@@ -181,3 +181,20 @@ plan_body_with_original() { # draft-file current-body
   printf '\n%s\n\n' "$details"
   tail -n +2 "$file"
 }
+
+# The tree id of the working tree as it would be committed (tracked + untracked, minus
+# ignored). The ladder records it and the handback compares, so a verdict never vouches for
+# a tree it did not see; a commit that changes nothing keeps the same id.
+worktree_tree_id() {
+  local index
+  index=$(mktemp "${TMPDIR:-/tmp}/tree-index.XXXXXX")
+  GIT_INDEX_FILE="$index" git read-tree HEAD 2>/dev/null || true
+  GIT_INDEX_FILE="$index" git add -A
+  GIT_INDEX_FILE="$index" git write-tree
+  rm -f "$index"
+}
+
+# The `agent-pr`/`needs-e2e` and protected-path rules read the run's diff against the base.
+diff_base() { git merge-base HEAD "origin/${CEZ_BASE_BRANCH:-develop}"; }
+# shellcheck disable=SC2034  # read by cez-claim.sh and cez-handback.sh
+PROTECTED_PATH_RE='^(\.github/|\.claude/|\.husky/|\.ai/cezar/|scripts/agent/|\.npmrc$|pnpm-workspace\.yaml$)'

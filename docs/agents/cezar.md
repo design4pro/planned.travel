@@ -12,7 +12,7 @@ comes from a script in `scripts/agent/`, and the sweeper below is the only write
   (`baseBranch: develop`, `worktreeRetention: 10`, `maxParallel: 2`, `reviewGate: false`, `skillsRepos: []`).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and automations out of git; only
   `config.json` is tracked, so a checkout that already has an untracked `config.json` must remove it first.
-- Service environment: `CEZ_AUTOMATIONS=1` from phase 4 on, `CEZ_AUTONOMOUS_DEFAULT=0`, and never
+- Service environment: `CEZ_AUTOMATIONS=1` (the `implement` automation needs it), `CEZ_AUTONOMOUS_DEFAULT=0`, and never
   `GH_TOKEN`, `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar copies its own env into the agent's, so a
   token in the service env is a token in every run.
 - Host identity: a dedicated `HOME` whose `gh` holds a fine-grained PAT (Contents, Issues and Pull requests
@@ -42,28 +42,30 @@ variable list (`cez-lib.sh: clean_env`). Every string that reaches GitHub passes
 
 ## Scripts (`scripts/agent/`)
 
-| script                                          | who runs it             | what it does                                                                                                                                                                                                                                    |
-| ----------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cez-lib.sh`                                    | sourced                 | repo/worktree/run identity, `mkdir` locks (macOS has no flock), marker-comment upsert, heartbeat, `clean_env`                                                                                                                                   |
-| `cez-port.sh acquire\|release\|current`         | setup, handback         | one port per worktree from 3010-3020, pinned in `.agent/port`                                                                                                                                                                                   |
-| `cez-setup.sh [--no-e2e]`                       | workflow `setup` step   | hooks off, agent identity, `pnpm install --frozen-lockfile --prefer-offline`, routes, then `setup-e2e.sh` on the pinned port (dev server on `127.0.0.1`, pid in `.agent/dev-server.pid`)                                                        |
-| `cez-ladder.sh [--skip-e2e] [--no-build]`       | agent (allowlist)       | up to 3 passes: floor guard, `validate.sh --build --e2e-projects chromium`, narrowed rerun from pass 2 that can only stay red, heartbeat, digest `.agent/ladder-digest.md` (≤ 20 kB)                                                            |
-| `cez-test.sh <files>`                           | agent (allowlist)       | vitest on named files under `env -i`; paths only, no flags                                                                                                                                                                                      |
-| `cez-reseed.sh`                                 | agent (allowlist)       | `seed.mjs --force` + `verify.mjs` on the pinned port                                                                                                                                                                                            |
-| `gh-ro.sh <path> [--paginate] [--jq]`           | agent (allowlist)       | GET-only window onto `repos/design4pro/planned.travel/{issues,pulls,labels,commits,compare,contents,git/ref,search}`                                                                                                                            |
-| `cez-plan-claim.sh`                             | workflow `plan` (claim) | refresh onto `origin/develop`, `status: * → in-progress`, claim comment with heartbeat, `.agent/issue`                                                                                                                                          |
-| `cez-plan-handback.sh --blocked --reason`       | agent (allowlist)       | `status: needs-human` plus `<!-- agent-result: needs-human -->` when a plan run cannot finish (autonomy nudge, unmet precondition, human gone)                                                                                                  |
-| `publish-spec.sh`, `publish-prd.sh` `[--check]` | agent (allowlist)       | validate `.agent/plan/{spec,prd}.md` against `spec/v1` / `prd/v1`, write the body (original request kept in `<details>`), grilling log as `<!-- agent-grilling -->`, `status: review`                                                           |
-| `publish-tickets.sh [--check\|--dry-run]`       | agent (allowlist)       | `plan.mjs`: DAG, disjoint owned paths for parallel tickets, sizes, protected paths, no `Closes`; create as `queued` → `sub_issues` → `blocked_by` → verify → first wave `ready` → PRD `in-progress`; resumable through `<!-- agent-tickets -->` |
-| `cez-docs-pr.sh`                                | agent (allowlist)       | cherry-picks the run's `CONTEXT.md` / `docs/adr/` commits onto `claude/docs-<n>-<run8>` off `origin/develop` and opens a draft PR labelled `agent-docs`                                                                                         |
-| `floor-guard.mjs [--base]`                      | ladder                  | refuses added `@ts-*` / eslint suppressions, skipped or focused tests, deleted test files                                                                                                                                                       |
-| `state.mjs`                                     | sweeper, tests          | the invariants I-1…I-10 and the PR-driven transitions as a pure function of a snapshot and `now`                                                                                                                                                |
-| `sweep.mjs [--fix] [--json] [--strict]`         | launchd on the host     | gathers GitHub + `GET /api/v1/p/planned-travel/runs`, reports, applies the mechanical fixes with `--fix`                                                                                                                                        |
-| `validate.sh`, `setup-e2e.sh`, `narrow-e2e.ts`  | ladder                  | the deterministic ladder inherited from sandcastle; `--build` is the cezar addition                                                                                                                                                             |
-| `labels-migrate.sh`, `fetch-basemap.sh`         | operator                | one-off label migration (ADR 0015); basemap cache                                                                                                                                                                                               |
+| script                                          | who runs it                         | what it does                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cez-lib.sh`                                    | sourced                             | repo/worktree/run identity, `mkdir` locks (macOS has no flock), marker-comment upsert, heartbeat, `clean_env`                                                                                                                                                                            |
+| `cez-port.sh acquire\|release\|current`         | setup, handback                     | one port per worktree from 3010-3020, pinned in `.agent/port`                                                                                                                                                                                                                            |
+| `cez-setup.sh [--no-e2e]`                       | workflow `setup` step               | hooks off, agent identity, `pnpm install --frozen-lockfile --prefer-offline`, routes, then `setup-e2e.sh` on the pinned port (dev server on `127.0.0.1`, pid in `.agent/dev-server.pid`)                                                                                                 |
+| `cez-ladder.sh [--skip-e2e] [--no-build]`       | agent (allowlist)                   | up to 3 passes: floor guard, `validate.sh --build --e2e-projects chromium`, narrowed rerun from pass 2 that can only stay red, heartbeat, digest `.agent/ladder-digest.md` (≤ 20 kB)                                                                                                     |
+| `cez-test.sh <files>`                           | agent (allowlist)                   | vitest on named files under `env -i`; paths only, no flags                                                                                                                                                                                                                               |
+| `cez-reseed.sh`                                 | agent (allowlist)                   | `seed.mjs --force` + `verify.mjs` on the pinned port                                                                                                                                                                                                                                     |
+| `gh-ro.sh <path> [--paginate] [--jq]`           | agent (allowlist)                   | GET-only window onto `repos/design4pro/planned.travel/{issues,pulls,labels,commits,compare,contents,git/ref,search}`                                                                                                                                                                     |
+| `cez-claim.sh`                                  | workflow `implement-ticket` (claim) | per-issue lock, refresh onto `origin/develop`, one-call preflight (open, `run: implement`, `ready`/`needs-human`, leaf, no open blocker, no open agent PR); a refusal drops `run:` and comments `refused`; a claim swaps to `in-progress` and adopts a clean `claude/issue-<n>-*` branch |
+| `cez-handback.sh [--blocked --reason]`          | agent (allowlist)                   | green: push `claude/issue-<n>-<run8>`, draft PR `agent-pr` (+ `needs-e2e`), `status: review`, `CEZ:PR=<n>`; blocked: WIP pushed, digest, `status: needs-human`; protected paths or `package.json` scripts never push; frees the port                                                     |
+| `cez-automations.sh [--dry-run]`                | operator                            | registers `docs/agents/cezar-automations.json` with the running cezar over its API (create enabled or update in place)                                                                                                                                                                   |
+| `cez-plan-claim.sh`                             | workflow `plan` (claim)             | refresh onto `origin/develop`, `status: * → in-progress`, claim comment with heartbeat, `.agent/issue`                                                                                                                                                                                   |
+| `cez-plan-handback.sh --blocked --reason`       | agent (allowlist)                   | `status: needs-human` plus `<!-- agent-result: needs-human -->` when a plan run cannot finish (autonomy nudge, unmet precondition, human gone)                                                                                                                                           |
+| `publish-spec.sh`, `publish-prd.sh` `[--check]` | agent (allowlist)                   | validate `.agent/plan/{spec,prd}.md` against `spec/v1` / `prd/v1`, write the body (original request kept in `<details>`), grilling log as `<!-- agent-grilling -->`, `status: review`                                                                                                    |
+| `publish-tickets.sh [--check\|--dry-run]`       | agent (allowlist)                   | `plan.mjs`: DAG, disjoint owned paths for parallel tickets, sizes, protected paths, no `Closes`; create as `queued` → `sub_issues` → `blocked_by` → verify → first wave `ready` → PRD `in-progress`; resumable through `<!-- agent-tickets -->`                                          |
+| `cez-docs-pr.sh`                                | agent (allowlist)                   | cherry-picks the run's `CONTEXT.md` / `docs/adr/` commits onto `claude/docs-<n>-<run8>` off `origin/develop` and opens a draft PR labelled `agent-docs`                                                                                                                                  |
+| `floor-guard.mjs [--base]`                      | ladder                              | refuses added `@ts-*` / eslint suppressions, skipped or focused tests, deleted test files                                                                                                                                                                                                |
+| `state.mjs`                                     | sweeper, tests                      | the invariants I-1…I-10 and the PR-driven transitions as a pure function of a snapshot and `now`                                                                                                                                                                                         |
+| `sweep.mjs [--fix] [--json] [--strict]`         | launchd on the host                 | gathers GitHub + `GET /api/v1/p/planned-travel/runs`, reports, applies the mechanical fixes with `--fix`                                                                                                                                                                                 |
+| `validate.sh`, `setup-e2e.sh`, `narrow-e2e.ts`  | ladder                              | the deterministic ladder inherited from sandcastle; `--build` is the cezar addition                                                                                                                                                                                                      |
+| `labels-migrate.sh`, `fetch-basemap.sh`         | operator                            | one-off label migration (ADR 0015); basemap cache                                                                                                                                                                                                                                        |
 
-The implement claim and handback, triage-\* and `cez-automations.sh` land with their workflows (phases 4-5 of
-the migration plan).
+The triage claim, apply and batch scripts land with the `triage` workflow (phase 5 of the migration plan).
 
 ## Workflow `plan`
 
@@ -82,6 +84,30 @@ The steps are `claim` (command), `setup --no-e2e` (command) and the interactive 
 - Tickets are created as `status: queued` and become `ready` only after `sub_issues` and `blocked_by` are
   verified on GitHub, so no implement run can start ahead of its blockers. `.ai/skills/plan-feature/` is a
   thin wrapper so the cockpit lists the skill.
+
+## Workflow `implement-ticket`
+
+`.ai/cezar/workflows/implement-ticket.yml` turns one ready ticket into one draft PR without a human in the
+loop: `claim` (command), `setup` (command, full e2e environment on a pooled port), then the autonomous
+`/implement-ticket {{task}}` (opus). It starts when a human adds `run: implement` to a ticket: the
+`implement` automation (`docs/agents/cezar-automations.json`, registered with `scripts/agent/cez-automations.sh`
+once the service runs with `CEZ_AUTOMATIONS=1`) polls GitHub every 60 s for that label change and skips
+anything `in-progress`, `review` or `prd`. `auto-advance` on a PRD lets the sweeper add the label to children
+as they unblock.
+
+- The claim is the only gate and it costs no tokens: a refusal (blocked, queued, a PR already open, not a
+  leaf) removes `run: implement`, comments `<!-- agent-result: refused -->` and exits 1, so the sweeper
+  never has to escalate a stuck label.
+- The skill (`.claude/skills/implement-ticket/`) works inside the ticket's Owned paths, TDD-first, climbs
+  `cez-ladder.sh` at most three times, self-reviews, and always leaves through `cez-handback.sh`: green
+  means a draft PR with the DoD, the ladder table and the review in its body; a stop condition
+  (`ladder-exhausted`, `outside-owned-paths`, `spec-conflict`, `floor`, `dependency`, `security`, `infra`)
+  means a pushed WIP branch and `status: needs-human` with the digest.
+- The handback refuses a tree the ladder did not see (`.agent/ladder-tree`) and never pushes a diff that
+  touches the agent's own configuration or `package.json` scripts. A ticket with a "Visual change expected"
+  section gets a baseline note in the PR; the human re-records from `update-snapshots.yml`.
+- Locally the same skill runs as `/implement-ticket <issue>` on a branch off `origin/develop` with
+  `.agent/issue` written by hand; the handback then uses the developer's `gh`.
 
 ## Sweeper
 

@@ -118,6 +118,7 @@ fi
 say "==> full ladder"
 if run_validate "$VERDICT"; then RC=0; else RC=1; fi
 write_digest "$VERDICT" "full"
+worktree_tree_id > "$AGENT_DIR/ladder-tree"
 heartbeat
 say "==> pass $PASS $([ "$RC" -eq 0 ] && echo green || echo red); digest at $DIGEST"
 exit "$RC"
