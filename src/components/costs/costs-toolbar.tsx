@@ -20,9 +20,12 @@ import {
   TabsList,
   TabsTrigger,
 } from '#/components/ui'
+import { formatNumber } from '#/lib/format'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 import { EXPENSE_VIEWS, isExpenseView, isFiltered } from './data'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { ExpenseCategory } from '#/server/fns/costs'
 import type { CostsFilters, ExpenseView } from './data'
 
@@ -35,10 +38,10 @@ export interface ToolbarOption<TValue extends string = string> {
   readonly count: number
 }
 
-const VIEW_LABELS: { readonly [K in ExpenseView]: string } = {
-  all: 'All',
-  paid: 'Paid by me',
-  owed: "I'm owed",
+const VIEW_LABELS: { readonly [K in ExpenseView]: MessageKey } = {
+  all: 'shell.trips.filter.all',
+  paid: 'costs.toolbar.paidByMe',
+  owed: 'costs.toolbar.owedToMe',
 }
 
 export interface CostsToolbarProps {
@@ -66,17 +69,28 @@ export function CostsToolbar({
   shownMinor,
   currency,
 }: CostsToolbarProps) {
+  const t = useTranslate()
+  const locale = useLocale()
   const filtered = isFiltered(filters)
 
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <div className="flex min-w-0 items-baseline gap-3">
-          <h2 className="font-display text-subtitle font-bold text-ink">Expenses</h2>
+          <h2 className="font-display text-subtitle font-bold text-ink">
+            {t('costs.toolbar.title')}
+          </h2>
           <p className="text-caption tabular-nums text-ink-3">
-            {filtered ? `${shown} of ${total}` : `${total}`}
+            {filtered
+              ? t('costs.toolbar.shownOf', {
+                  shown: formatNumber(shown, locale),
+                  total: formatNumber(total, locale),
+                })
+              : formatNumber(total, locale)}
             <span aria-hidden> · </span>
-            <span className="font-semibold text-ink-2">{formatMoney(shownMinor, currency)}</span>
+            <span className="font-semibold text-ink-2">
+              {formatMoney(shownMinor, currency, locale)}
+            </span>
           </p>
         </div>
         {filtered ? (
@@ -87,10 +101,15 @@ export function CostsToolbar({
             shape="pill"
             icon={<X aria-hidden />}
             onClick={() =>
-              onFiltersChange({ q: undefined, category: undefined, day: undefined, view: 'all' })
+              onFiltersChange({
+                q: undefined,
+                category: undefined,
+                day: undefined,
+                view: 'all',
+              })
             }
           >
-            Clear filters
+            {t('ui.action.clearFilters')}
           </Button>
         ) : null}
       </div>
@@ -105,25 +124,30 @@ export function CostsToolbar({
           type="search"
           value={filters.q ?? ''}
           onChange={(event) =>
-            onFiltersChange({ q: event.target.value === '' ? undefined : event.target.value })
+            onFiltersChange({
+              q: event.target.value === '' ? undefined : event.target.value,
+            })
           }
           onClear={() => onFiltersChange({ q: undefined })}
           leading={<Search />}
-          placeholder="Search expenses, notes or payer…"
-          aria-label="Search expenses"
+          placeholder={t('costs.toolbar.searchPlaceholder')}
+          aria-label={t('costs.toolbar.searchLabel')}
           wrapperClassName="sm:w-64 lg:w-72"
         />
 
-        <div className="scrollbar-none -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 sm:mx-0 sm:ml-auto sm:overflow-visible sm:px-0">
+        <div className="scrollbar-none -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 sm:mx-0 sm:ms-auto sm:overflow-visible sm:px-0">
           <SimpleSelect
             size="sm"
             className="w-40 shrink-0"
             options={[
-              { value: ALL, label: 'All categories' },
+              { value: ALL, label: t('costs.toolbar.allCategories') },
               ...categories.map((option) => ({
                 value: option.value,
                 label: option.label,
-                description: `${option.count} logged`,
+                description: t('costs.toolbar.logged', {
+                  count: option.count,
+                  value: formatNumber(option.count, locale),
+                }),
               })),
             ]}
             value={filters.category ?? ALL}
@@ -135,22 +159,27 @@ export function CostsToolbar({
                     : categories.find((option) => option.value === next)?.value,
               })
             }
-            ariaLabel="Filter by category"
+            ariaLabel={t('costs.toolbar.filterCategory')}
           />
           <SimpleSelect
             size="sm"
             className="w-36 shrink-0"
             options={[
-              { value: ALL, label: 'All days' },
+              { value: ALL, label: t('costs.toolbar.allDays') },
               ...days.map((option) => ({
                 value: option.value,
                 label: option.label,
-                description: `${option.count} logged`,
+                description: t('costs.toolbar.logged', {
+                  count: option.count,
+                  value: formatNumber(option.count, locale),
+                }),
               })),
             ]}
             value={filters.day ?? ALL}
-            onValueChange={(next) => onFiltersChange({ day: next === ALL ? undefined : next })}
-            ariaLabel="Filter by day"
+            onValueChange={(next) =>
+              onFiltersChange({ day: next === ALL ? undefined : next })
+            }
+            ariaLabel={t('costs.toolbar.filterDay')}
           />
           <Tabs
             value={filters.view}
@@ -163,7 +192,7 @@ export function CostsToolbar({
             size="sm"
             className="shrink-0"
           >
-            <TabsList aria-label="Whose expenses">
+            <TabsList aria-label={t('costs.toolbar.whose')}>
               {EXPENSE_VIEWS.map((view) => (
                 <TabsTrigger
                   key={view}
@@ -181,7 +210,7 @@ export function CostsToolbar({
                     </Badge>
                   }
                 >
-                  {VIEW_LABELS[view]}
+                  {t(VIEW_LABELS[view])}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -214,15 +243,20 @@ function describe(
   }
   if (filters.category !== undefined) {
     parts.push(
-      categories.find((option) => option.value === filters.category)?.label ?? filters.category,
+      categories.find((option) => option.value === filters.category)?.label ??
+        filters.category,
     )
   }
   if (filters.day !== undefined) {
-    parts.push(days.find((option) => option.value === filters.day)?.label ?? filters.day)
+    parts.push(
+      days.find((option) => option.value === filters.day)?.label ?? filters.day,
+    )
   }
   const needle = (filters.q ?? '').trim()
   if (needle !== '') {
     parts.push(`matching “${needle}”`)
   }
-  return parts.length === 0 ? 'Showing everything' : `Filtered: ${parts.join(' · ')}`
+  return parts.length === 0
+    ? 'Showing everything'
+    : `Filtered: ${parts.join(' · ')}`
 }

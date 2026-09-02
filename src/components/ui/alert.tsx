@@ -130,7 +130,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
           <IconButton
             icon={<X />}
             label={dismissLabel ?? t('ui.action.dismiss')}
-            size="xs"
+            size="sm"
             variant="ghost"
             onClick={onDismiss}
             className="absolute top-2.5 end-2.5"

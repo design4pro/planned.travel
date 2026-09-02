@@ -2,16 +2,25 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight, MapPin } from 'lucide-react'
 
 import { Button } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 import { AppPreview } from './app-preview'
 import { Eyebrow } from './section'
 import { DottedRoute } from './visuals'
 
-/** The four honesty notes under the buttons. Each one is a fact, not a claim. */
-const TRUST_NOTES: ReadonlyArray<string> = [
-  'Two trips free, forever',
-  'No card to start',
-  'No adverts, no affiliate links',
-  'Export everything, any time',
+import type { MessageKey } from '#/lib/i18n'
+
+/**
+ * The four honesty notes under the buttons. Each one is a fact, not a claim.
+ *
+ * The first is the pricing page's own eyebrow rather than a second copy of it:
+ * the two pages make the same promise, and one sentence cannot drift from
+ * itself.
+ */
+const TRUST_NOTES: readonly [MessageKey, MessageKey, MessageKey, MessageKey] = [
+  'marketing.pricing.hero.eyebrow',
+  'marketing.landing.trust.noCard',
+  'marketing.landing.trust.noAds',
+  'marketing.landing.trust.export',
 ]
 
 function HeroBackdrop() {
@@ -34,6 +43,7 @@ function HeroBackdrop() {
  * screenshots, so it is crisp on a 2x display and never shifts the layout.
  */
 export function MarketingHero() {
+  const t = useTranslate()
   return (
     <section
       aria-labelledby="hero-heading"
@@ -45,20 +55,23 @@ export function MarketingHero() {
         {/* Transform-and-opacity only, and collapsed to nothing by the
             reduced-motion rules in `styles.css`. */}
         <div className="mx-auto flex max-w-3xl animate-rise flex-col items-center text-center">
-          <Eyebrow icon={<MapPin />}>Collaborative trip planning</Eyebrow>
+          <Eyebrow icon={<MapPin />}>
+            {t('marketing.landing.hero.eyebrow')}
+          </Eyebrow>
 
           <h1
             id="hero-heading"
             className="mt-6 font-display text-hero text-balance text-ink"
           >
-            Plan the trip.
+            {t('marketing.landing.hero.title')}
             <br />
-            <span className="text-ink-3">Not the spreadsheet.</span>
+            <span className="text-ink-3">
+              {t('marketing.landing.hero.titleQuiet')}
+            </span>
           </h1>
 
           <p className="mt-6 max-w-xl text-subtitle font-normal leading-relaxed text-pretty text-ink-2">
-            One itinerary on a real map, shared live with everyone travelling —
-            with the bookings, the money and the packing list attached to it.
+            {t('marketing.landing.hero.lede')}
           </p>
 
           <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
@@ -70,7 +83,7 @@ export function MarketingHero() {
               iconAfter={<ArrowRight aria-hidden className="size-4" />}
               className="w-full sm:w-auto"
             >
-              <Link to="/register">Start planning free</Link>
+              <Link to="/register">{t('marketing.action.startPlanning')}</Link>
             </Button>
             <Button
               asChild
@@ -79,7 +92,7 @@ export function MarketingHero() {
               shape="pill"
               className="w-full sm:w-auto"
             >
-              <Link to="/pricing">See what it costs</Link>
+              <Link to="/pricing">{t('marketing.landing.hero.secondary')}</Link>
             </Button>
           </div>
 
@@ -93,7 +106,7 @@ export function MarketingHero() {
                   aria-hidden
                   className="size-1.5 shrink-0 rounded-full bg-brand"
                 />
-                {note}
+                {t(note)}
               </li>
             ))}
           </ul>

@@ -346,21 +346,15 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} viaggi, un viaggiatore',
   'billing.hero.perSeatLine': '{seats} membri × {price}',
   'billing.hero.singleTraveller': 'Un viaggiatore',
-  'billing.hero.paymentMethod': 'Metodo di pagamento',
-  'billing.hero.cancel': 'Disdici il piano',
   'billing.price.free': 'Gratis',
   'billing.provider.opening': 'Apertura di Polar',
-  'billing.provider.failed': 'Polar non è raggiungibile',
-  'billing.provider.failedBody':
-    'Non è stato addebitato niente. Controlla la connessione e riprova tra un momento.',
-
   'billing.renewal.trialEndsToday':
-    'La prova finisce oggi. Aggiungi una carta per tenere aperti tutti i moduli.',
+    'La prova finisce oggi. Il primo addebito segue, a meno che non disdica prima.',
   'billing.renewal.trialEndsIn': {
-    one: 'La prova finisce tra {value} giorno. Fino ad allora non serve una carta.',
-    many: 'La prova finisce tra {value} giorni. Fino ad allora non serve una carta.',
+    one: 'La prova finisce fra {value} giorno e poi arriva il primo addebito, a meno che non disdica prima.',
+    many: 'La prova finisce fra {value} giorni e poi arriva il primo addebito, a meno che non disdica prima.',
     other:
-      'La prova finisce tra {value} giorni. Fino ad allora non serve una carta.',
+      'La prova finisce fra {value} giorni e poi arriva il primo addebito, a meno che non disdica prima.',
   },
   'billing.renewal.trialEnded': 'La prova è finita.',
   'billing.renewal.endsNoDate':
@@ -415,7 +409,6 @@ const messages = {
   'billing.interval.label': 'Periodo di fatturazione',
   'billing.interval.monthly': 'Mensile',
   'billing.interval.yearly': 'Annuale',
-  'billing.interval.saving': 'Risparmi {value}',
   'billing.plan.free.name': 'Gratuito',
   'billing.plan.free.tagline': 'Organizza i tuoi prossimi due viaggi',
   'billing.plan.free.feature.trips': 'Due viaggi alla volta',
@@ -443,7 +436,6 @@ const messages = {
   'billing.plan.current': 'Piano attuale',
   'billing.plan.currentBadge': 'Attuale',
   'billing.plan.popular': 'Il più scelto',
-  'billing.plan.moveTo': 'Passa a {plan}',
   'billing.plan.switchYearly': 'Passa all’annuale',
   'billing.plan.switchMonthly': 'Passa al mensile',
   'billing.plan.upgradeTo': 'Sali a {plan}',
@@ -461,31 +453,72 @@ const messages = {
     other: '{value} membri',
   },
 
-  'billing.invoices.title': 'Fatture',
-  'billing.invoices.description':
-    'Tutte le ricevute di questo spazio, dalla più recente.',
-  'billing.invoices.portal': 'Portale di fatturazione',
-  'billing.invoices.unavailableTitle': 'Le ricevute non si caricano',
-  'billing.invoices.unavailableBody':
-    'Polar non ha risposto in tempo per lo storico. Tutto quello sopra è aggiornato; apri il portale di fatturazione per il registro completo, oppure torna tra un momento.',
-  'billing.invoices.emptyTitle': 'Ancora nessuna fattura',
-  'billing.invoices.emptyCustomer':
-    'La prima ricevuta compare qui appena si chiude un periodo di fatturazione.',
-  'billing.invoices.emptyNoCustomer':
-    'A questo spazio di lavoro non è mai stato addebitato niente. Scegli un piano a pagamento e le ricevute si raccoglieranno qui.',
-  'billing.invoices.tableLabel': 'Storico delle fatture',
   'billing.invoices.number': 'Fattura',
   'billing.invoices.date': 'Data',
-  'billing.invoices.period': 'Periodo',
   'billing.invoices.amount': 'Importo',
   'billing.invoices.status': 'Stato',
-  'billing.invoices.receipt': 'Ricevuta',
-  'billing.invoices.view': 'Apri',
   'billing.invoice.paid': 'Pagata',
-  'billing.invoice.open': 'Da pagare',
   'billing.invoice.draft': 'Bozza',
   'billing.invoice.void': 'Annullata',
-  'billing.invoice.uncollectible': 'Inesigibile',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Il fornitore di pagamento ha rifiutato la richiesta. Riprova tra un momento.',
+  'billing.planChanged.title': 'Piano aggiornato',
+  'billing.planChanged.body':
+    'La modifica è già in vigore su Polar, che fatturerà la differenza. Il riepilogo qui sotto si aggiorna entro un minuto.',
+  'billing.hero.manage': 'Gestisci la fatturazione',
+  'billing.hero.manageHint':
+    'Carte, indirizzo di fatturazione, partita IVA, ricevute e disdetta stanno su Polar, che emette la fattura.',
+  'billing.hero.manageHintNone':
+    'Non esiste ancora un profilo di fatturazione. Scegliendo un piano a pagamento qui sotto se ne crea uno, e da allora il portale si apre.',
+  'billing.portal.opening': 'Apertura del portale di fatturazione',
+  'billing.plan.notApplied': 'Questa modifica non è stata applicata',
+  'billing.plan.cancelInPortal': 'Disdici nel portale',
+  'billing.plan.seatsOverMax': {
+    one: 'Questo spazio ha {members} membri e {plan} ne fattura al massimo {max}. Rimuovi {value} membro prima di cambiare.',
+    many: 'Questo spazio ha {members} membri e {plan} ne fattura al massimo {max}. Rimuovi {value} membri prima di cambiare.',
+    other:
+      'Questo spazio ha {members} membri e {plan} ne fattura al massimo {max}. Rimuovi {value} membri prima di cambiare.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Hai {members} membri. Scegli almeno altrettanti posti: Polar rifiuta un abbonamento con meno posti che assegnazioni.',
+  'billing.orders.title': 'Ordini',
+  'billing.orders.description':
+    'Ogni ordine di questo spazio, dal più recente.',
+  'billing.orders.receipts': 'Tutte le ricevute',
+  'billing.orders.unavailableTitle': 'Gli ordini non si caricano',
+  'billing.orders.unavailableBody':
+    'Polar non ha risposto in tempo per lo storico. Tutto quanto sopra è aggiornato: riprova tra un momento o leggi il registro completo nel portale di fatturazione.',
+  'billing.orders.emptyTitle': 'Nessun ordine',
+  'billing.orders.emptyCustomer':
+    'La prima fattura compare qui appena si chiude un periodo di fatturazione.',
+  'billing.orders.emptyNoCustomer':
+    'A questo spazio non è mai stato addebitato nulla. Scegli un piano a pagamento e le fatture si raccoglieranno qui.',
+  'billing.orders.tableLabel': 'Storico degli ordini',
+  'billing.orders.document': 'Documento',
+  'billing.orders.dateUnknown': 'Data ignota',
+  'billing.order.pending': 'In sospeso',
+  'billing.order.refunded': 'Rimborsato',
+  'billing.order.partiallyRefunded': 'Rimborsato in parte',
+  'billing.order.noInvoiceDraft': 'Nessuna fattura finché l’ordine è una bozza',
+  'billing.order.preparing': 'In preparazione',
+  'billing.order.renderingHint':
+    'Polar sta ancora generando la fattura {number}. Il download torna tra pochi secondi.',
+  'billing.order.fetching': 'Recupero della fattura',
+  'billing.order.generating': 'Polar sta preparando la fattura',
+  'billing.order.pdfLabel': 'Fattura {number} in PDF',
+  'billing.order.stillWritingTitle':
+    'Polar sta ancora scrivendo quella fattura',
+  'billing.order.stillWritingBody':
+    'La fattura {number} è in generazione. Il download torna da sé tra pochi secondi.',
+  'billing.order.openFailed': 'Quella fattura non si è aperta',
 } satisfies TranslationOf<typeof En>
 
 export default messages

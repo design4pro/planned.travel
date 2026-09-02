@@ -54,11 +54,7 @@ export type {
   PlanTarget,
 } from './ordering'
 
-export {
-  emphasisFor,
-  initialSelection,
-  selectionReducer,
-} from './selection'
+export { emphasisFor, initialSelection, selectionReducer } from './selection'
 export type {
   PlannerEmphasis,
   PlannerSelection,

@@ -55,6 +55,12 @@ reason a session starts slowly or starts broken:
   D1 migrations, the basemap. It runs on every start and resume, and each step
   skips itself when its result is already there.
 
+  `session-start.sh` only picks a profile off `CLAUDE_CODE_REMOTE`; the steps
+  themselves live in `scripts/worktree/bootstrap.sh`, which the same hook uses to
+  provision a local `git worktree`. That is deliberate: one owner means the cloud
+  path cannot quietly drift from the local one. The `cloud` profile is what this
+  section describes, including not seeding - see `scripts/worktree/README.md`.
+
 ### 2.1 The setup script
 
 Paste this into the environment's **Setup script** field:

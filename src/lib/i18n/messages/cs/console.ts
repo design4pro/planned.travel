@@ -135,7 +135,6 @@ const messages = {
   'users.filter.role.curator': 'Kurátoři',
   'users.filter.status.label': 'Filtrovat podle stavu účtu',
   'users.filter.status.any': 'Jakýkoli stav',
-  'users.filter.clear': 'Vymazat filtry',
   'users.filter.hint': 'Zužuj podle role nebo podle stavu — vždy po jednom.',
   'users.column.account': 'Účet',
   'users.column.role': 'Role na platformě',

@@ -289,16 +289,13 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} 趟行程，一個人',
   'billing.hero.perSeatLine': '{seats} 位成員 × {price}',
   'billing.hero.singleTraveller': '一位旅人',
-  'billing.hero.paymentMethod': '付款方式',
-  'billing.hero.cancel': '取消方案',
   'billing.price.free': '免費',
   'billing.provider.opening': '正在開啟 Polar',
-  'billing.provider.failed': '連不上 Polar',
-  'billing.provider.failedBody': '沒有扣款。請檢查網路，過一會兒再試。',
   'billing.renewal.trialEndsToday':
-    '試用今天結束。綁一張卡，所有模組就能繼續用。',
+    '試用期今天結束。除非你在此之前取消，否則將進行首次扣款。',
   'billing.renewal.trialEndsIn': {
-    other: '試用還有 {value} 天結束。在那之前不用綁卡。',
+    other:
+      '試用期將在 {value} 天後結束。除非你在此之前取消，否則將進行首次扣款。',
   },
   'billing.renewal.trialEnded': '試用已經結束。',
   'billing.renewal.endsNoDate': '這個方案將會終止，不再續訂。',
@@ -338,7 +335,6 @@ const messages = {
   'billing.interval.label': '計費週期',
   'billing.interval.monthly': '按月',
   'billing.interval.yearly': '按年',
-  'billing.interval.saving': '省 {value}',
   'billing.plan.free.name': '免費版',
   'billing.plan.free.tagline': '把接下來兩趟行程規劃好',
   'billing.plan.free.feature.trips': '同時兩趟行程',
@@ -360,7 +356,6 @@ const messages = {
   'billing.plan.current': '目前方案',
   'billing.plan.currentBadge': '目前',
   'billing.plan.popular': '熱門',
-  'billing.plan.moveTo': '換到{plan}',
   'billing.plan.switchYearly': '改成按年',
   'billing.plan.switchMonthly': '改成按月',
   'billing.plan.upgradeTo': '升級到{plan}',
@@ -373,30 +368,67 @@ const messages = {
   'billing.plan.members': '成員',
   'billing.plan.membersHint': '隨時可以改，帳單跟著變。',
   'billing.plan.seatOption': { other: '{value} 位成員' },
-  'billing.invoices.title': '帳單',
-  'billing.invoices.description': '這個工作區的每一張收據，最新的排在最前面。',
-  'billing.invoices.portal': '帳務入口',
-  'billing.invoices.unavailableTitle': '收據載不出來',
-  'billing.invoices.unavailableBody':
-    'Polar 沒能及時給出紀錄。上面的內容都是即時的；完整紀錄可以開啟帳務入口查看，或者過一會兒再來。',
-  'billing.invoices.emptyTitle': '還沒有帳單',
-  'billing.invoices.emptyCustomer':
-    '第一張收據會在一個計費週期結束時出現在這裡。',
-  'billing.invoices.emptyNoCustomer':
-    '這個工作區從來沒有被收過費。挑一個付費方案，收據就會累積在這裡。',
-  'billing.invoices.tableLabel': '帳單紀錄',
   'billing.invoices.number': '帳單',
   'billing.invoices.date': '日期',
-  'billing.invoices.period': '期間',
   'billing.invoices.amount': '金額',
   'billing.invoices.status': '狀態',
-  'billing.invoices.receipt': '收據',
-  'billing.invoices.view': '檢視',
   'billing.invoice.paid': '已付款',
-  'billing.invoice.open': '待付',
   'billing.invoice.draft': '草稿',
   'billing.invoice.void': '已作廢',
-  'billing.invoice.uncollectible': '無法收回',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected': '支付服務商拒絕了該請求。請稍後再試。',
+  'billing.planChanged.title': '方案已更新',
+  'billing.planChanged.body':
+    '變更已在 Polar 生效，差額由 Polar 開立。下方摘要會在一分鐘內跟上。',
+  'billing.hero.manage': '管理帳單',
+  'billing.hero.manageHint':
+    '信用卡、帳單地址、稅籍編號、收據和取消都在開立發票的 Polar 那邊。',
+  'billing.hero.manageHintNone':
+    '還沒有帳單資料。在下面選擇付費方案即會建立，之後入口就能開啟。',
+  'billing.portal.opening': '正在開啟帳單入口',
+  'billing.plan.notApplied': '該變更未生效',
+  'billing.plan.cancelInPortal': '在入口中取消',
+  'billing.plan.seatsOverMax': {
+    other:
+      '此工作區有 {members} 位成員，而 {plan} 最多只按 {max} 位計費。請在切換前移出 {value} 位成員。',
+  },
+  'billing.plan.seatsBelowMembers':
+    '你有 {members} 位成員。請至少選擇同樣多的席次，Polar 會拒絕席次少於指派數的訂閱。',
+  'billing.orders.title': '訂單',
+  'billing.orders.description': '此工作區的每一筆訂單，最新的在前。',
+  'billing.orders.receipts': '所有收據',
+  'billing.orders.unavailableTitle': '訂單載入不了',
+  'billing.orders.unavailableBody':
+    'Polar 未能及時回覆歷史紀錄。上面的內容都是即時的，請稍後再試，或在帳單入口查看完整紀錄。',
+  'billing.orders.emptyTitle': '還沒有訂單',
+  'billing.orders.emptyCustomer':
+    '一個帳單週期結束後，第一張發票就會出現在這裡。',
+  'billing.orders.emptyNoCustomer':
+    '此工作區從未被收費。選擇付費方案，發票就會匯集在這裡。',
+  'billing.orders.tableLabel': '訂單紀錄',
+  'billing.orders.document': '文件',
+  'billing.orders.dateUnknown': '日期不明',
+  'billing.order.pending': '處理中',
+  'billing.order.refunded': '已退款',
+  'billing.order.partiallyRefunded': '已部分退款',
+  'billing.order.noInvoiceDraft': '訂單還是草稿時沒有發票',
+  'billing.order.preparing': '正在準備',
+  'billing.order.renderingHint':
+    'Polar 仍在產生發票 {number}。下載會在幾秒後恢復。',
+  'billing.order.fetching': '正在取得發票',
+  'billing.order.generating': 'Polar 正在準備發票',
+  'billing.order.pdfLabel': '發票 {number}，PDF 格式',
+  'billing.order.stillWritingTitle': 'Polar 仍在開立那張發票',
+  'billing.order.stillWritingBody':
+    '發票 {number} 正在產生。下載會在幾秒後自動恢復。',
+  'billing.order.openFailed': '那張發票沒有開啟',
 } satisfies TranslationOf<typeof En>
 
 export default messages

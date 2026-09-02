@@ -28,6 +28,7 @@ import {
   IconButton,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useUiCopy } from '#/components/ui/copy'
 
 import type { BadgeTone } from '#/components/ui'
 
@@ -52,7 +53,7 @@ export function RowMenu({
   /** The accessible name — "Actions for Toothpaste", never just "Actions". */
   label: string
   items: ReadonlyArray<RowMenuItem>
-  size?: 'xs' | 'sm' | 'md'
+  size?: 'sm' | 'md'
   className?: string
 }) {
   const enabled = items.filter((item) => item.disabled !== true)
@@ -183,6 +184,12 @@ export function ConfirmDialog({
   onOpenChange: (open: boolean) => void
   pending?: boolean
 }) {
+  // `useUiCopy` rather than `useTranslate`: the atlas and map suites render
+  // this dialog with no provider above it, and `src/components/ui/copy.ts`
+  // owns that contract. Its three words live in the `ui` namespace for the
+  // same reason.
+  const t = useUiCopy()
+
   return (
     <Dialog open={request !== null} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
@@ -197,19 +204,19 @@ export function ConfirmDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Keep it
+            {t('ui.action.keep')}
           </Button>
           <Button
             type="button"
             variant="danger"
             shape="pill"
             loading={pending}
-            loadingLabel="Removing"
+            loadingLabel={t('ui.status.removing')}
             onClick={() => {
               void request?.onConfirm()
             }}
           >
-            {request?.confirmLabel ?? 'Remove'}
+            {request?.confirmLabel ?? t('ui.action.remove')}
           </Button>
         </DialogFooter>
       </DialogContent>

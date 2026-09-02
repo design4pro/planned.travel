@@ -40,12 +40,14 @@ const messages = {
   /* ------------------------------------------------------------- actions */
   /** Empties a field that already has a value. */
   'action.clear': 'Clear',
+  'action.clearFilters': 'Clear filters',
   /** Dismisses a dialog or a sheet. */
   'action.close': 'Close',
   /** Dismisses an inline alert. */
   'action.dismiss': 'Dismiss',
   /** Takes one entry off a chip or a tag list. */
   'action.remove': 'Remove',
+  'action.keep': 'Keep it',
   /** Reverses the action a toast has just announced. */
   'action.undo': 'Undo',
 
@@ -56,6 +58,7 @@ const messages = {
   'status.working': 'Working',
   /** Announced while a combobox is waiting on results. */
   'status.searching': 'Searching',
+  'status.removing': 'Removing',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} is online',

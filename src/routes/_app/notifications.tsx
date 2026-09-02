@@ -173,9 +173,7 @@ function NotificationsPage() {
                   </Button>
                 ) : (
                   <Button asChild variant="primary" shape="pill">
-                    <Link to="/dashboard">
-                      {t('shell.inbox.empty.action')}
-                    </Link>
+                    <Link to="/dashboard">{t('shell.inbox.empty.action')}</Link>
                   </Button>
                 )
               }
@@ -202,7 +200,9 @@ function NotificationsPage() {
         )}
 
         <Card className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-label text-ink-3">{t('shell.inbox.preferences')}</p>
+          <p className="text-label text-ink-3">
+            {t('shell.inbox.preferences')}
+          </p>
           <Button asChild variant="secondary" size="sm" shape="pill">
             <Link to="/settings/notifications">
               <Bell aria-hidden />

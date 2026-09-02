@@ -168,14 +168,23 @@ function BrandPanel() {
           changes the *size* of those three things rather than their places. */}
       <div className="relative flex h-full flex-col justify-between gap-10 p-10 xl:p-14 2xl:p-16">
         {/* Our own mark, which is Latin in every locale: `dir` isolates it so
-            the trailing suffix cannot be reordered by an Arabic paragraph. */}
-        <p
+            the trailing suffix cannot be reordered by an Arabic paragraph.
+            From `lg` this is the page's only way back to the site, because the
+            header opposite drops its lockup at exactly that width rather than
+            print the same name twice — so the mark is a link, not a heading.
+            `self-start` keeps the hit area on the word instead of stretching it
+            the width of the panel. The focus outline is drawn on this dark
+            ground, where `--color-ring` reaches only 2.6:1, so it takes
+            `inverse-brand` and its 7.9:1 instead. */}
+        <Link
+          to="/"
           dir="ltr"
-          className="font-display text-2xl leading-none font-extrabold tracking-tighter 2xl:text-3xl"
+          aria-label={t('auth.shell.home')}
+          className="self-start rounded-md font-display text-2xl leading-none font-extrabold tracking-tighter focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-inverse-brand 2xl:text-3xl"
         >
           planned<span className="text-brand">.</span>
           <span className="text-inverse-muted">travel</span>
-        </p>
+        </Link>
 
         {/* At `2xl` the headline takes the hero step and the measure opens to
             five columns of it, so the line breaks three ways instead of five
@@ -310,15 +319,22 @@ export function AuthShell({
     <div className="min-h-svh bg-canvas text-ink lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div className="flex min-h-svh flex-col px-safe pt-safe pb-safe">
         <div className="flex flex-1 flex-col px-5 py-6 sm:px-8 sm:py-8 lg:px-12">
+          {/* The brand belongs to whichever half of the page is on screen.
+              From `lg` the panel opposite carries the wordmark, so repeating it
+              here made the same name twice in one viewport; the header drops to
+              the theme toggle alone and a hairline keeps the one-sided row from
+              reading as an accident. Below `lg` the panel is hidden, so this is
+              the only mark on the page and the lockup stays — and the home link
+              moves with it: at `lg` the panel's wordmark is the one that links. */}
           <header
             className={cn(
-              'mx-auto flex w-full items-center justify-between gap-4',
+              'mx-auto flex w-full items-center justify-between gap-4 lg:justify-end lg:border-b lg:border-edge-faint lg:pb-4',
               chrome,
             )}
           >
             <Link
               to="/"
-              className="rounded-md focus-ring"
+              className="rounded-md focus-ring lg:hidden"
               aria-label={t('auth.shell.home')}
             >
               <Wordmark size="md" showSuffix />

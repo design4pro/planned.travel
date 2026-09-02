@@ -346,20 +346,14 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} reizen, één reiziger',
   'billing.hero.perSeatLine': '{seats} leden × {price}',
   'billing.hero.singleTraveller': 'Eén reiziger',
-  'billing.hero.paymentMethod': 'Betaalmethode',
-  'billing.hero.cancel': 'Abonnement opzeggen',
   'billing.price.free': 'Gratis',
   'billing.provider.opening': 'Polar wordt geopend',
-  'billing.provider.failed': 'Polar was niet bereikbaar',
-  'billing.provider.failedBody':
-    'Er is niets afgeschreven. Controleer je verbinding en probeer het zo meteen opnieuw.',
-
   'billing.renewal.trialEndsToday':
-    'Je proefperiode stopt vandaag. Voeg een kaart toe om alle modules open te houden.',
+    'Je proefperiode eindigt vandaag. De eerste afschrijving volgt, tenzij je eerder opzegt.',
   'billing.renewal.trialEndsIn': {
-    one: 'Je proefperiode stopt over {value} dag. Tot dan is geen kaart nodig.',
+    one: 'Je proefperiode eindigt over {value} dag, daarna volgt de eerste afschrijving, tenzij je eerder opzegt.',
     other:
-      'Je proefperiode stopt over {value} dagen. Tot dan is geen kaart nodig.',
+      'Je proefperiode eindigt over {value} dagen, daarna volgt de eerste afschrijving, tenzij je eerder opzegt.',
   },
   'billing.renewal.trialEnded': 'Je proefperiode is voorbij.',
   'billing.renewal.endsNoDate':
@@ -411,7 +405,6 @@ const messages = {
   'billing.interval.label': 'Facturatieritme',
   'billing.interval.monthly': 'Maandelijks',
   'billing.interval.yearly': 'Jaarlijks',
-  'billing.interval.saving': '{value} besparen',
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Plan je volgende twee reizen',
   'billing.plan.free.feature.trips': 'Twee reizen tegelijk',
@@ -439,7 +432,6 @@ const messages = {
   'billing.plan.current': 'Huidig abonnement',
   'billing.plan.currentBadge': 'Huidig',
   'billing.plan.popular': 'Populair',
-  'billing.plan.moveTo': 'Naar {plan} gaan',
   'billing.plan.switchYearly': 'Overstappen op jaarlijks',
   'billing.plan.switchMonthly': 'Overstappen op maandelijks',
   'billing.plan.upgradeTo': 'Opwaarderen naar {plan}',
@@ -457,31 +449,71 @@ const messages = {
     other: '{value} leden',
   },
 
-  'billing.invoices.title': 'Facturen',
-  'billing.invoices.description':
-    'Elke bon van deze werkruimte, de nieuwste bovenaan.',
-  'billing.invoices.portal': 'Facturatieportaal',
-  'billing.invoices.unavailableTitle': 'De bonnen laden niet',
-  'billing.invoices.unavailableBody':
-    'Polar antwoordde niet op tijd voor de historie. Alles hierboven is actueel; open het facturatieportaal voor het volledige overzicht, of kom zo terug.',
-  'billing.invoices.emptyTitle': 'Nog geen facturen',
-  'billing.invoices.emptyCustomer':
-    'De eerste bon verschijnt hier zodra een factuurperiode wordt afgesloten.',
-  'billing.invoices.emptyNoCustomer':
-    'Deze werkruimte is nog nooit iets in rekening gebracht. Kies een betaald abonnement en de bonnen verzamelen zich hier.',
-  'billing.invoices.tableLabel': 'Factuurhistorie',
   'billing.invoices.number': 'Factuur',
   'billing.invoices.date': 'Datum',
-  'billing.invoices.period': 'Periode',
   'billing.invoices.amount': 'Bedrag',
   'billing.invoices.status': 'Betaalstatus',
-  'billing.invoices.receipt': 'Bewijs',
-  'billing.invoices.view': 'Bekijken',
   'billing.invoice.paid': 'Betaald',
-  'billing.invoice.open': 'Openstaand',
   'billing.invoice.draft': 'Concept',
   'billing.invoice.void': 'Vervallen',
-  'billing.invoice.uncollectible': 'Oninbaar',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'De betaalprovider heeft dat verzoek geweigerd. Probeer het straks opnieuw.',
+  'billing.planChanged.title': 'Abonnement bijgewerkt',
+  'billing.planChanged.body':
+    'De wijziging geldt al bij Polar, dat het verschil factureert. Het overzicht hieronder loopt binnen een minuut bij.',
+  'billing.hero.manage': 'Facturatie beheren',
+  'billing.hero.manageHint':
+    'Kaarten, factuuradres, btw-nummer, bonnen en opzegging staan bij Polar, dat de factuur uitgeeft.',
+  'billing.hero.manageHintNone':
+    'Er is nog geen facturatieprofiel. Een betaald abonnement hieronder maakt er een, en daarna opent het portaal.',
+  'billing.portal.opening': 'Facturatieportaal wordt geopend',
+  'billing.plan.notApplied': 'Die wijziging is niet doorgevoerd',
+  'billing.plan.cancelInPortal': 'Opzeggen in het portaal',
+  'billing.plan.seatsOverMax': {
+    one: 'Deze werkruimte heeft {members} leden en {plan} rekent maximaal {max} af. Verwijder {value} lid voordat je wisselt.',
+    other:
+      'Deze werkruimte heeft {members} leden en {plan} rekent maximaal {max} af. Verwijder {value} leden voordat je wisselt.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Je hebt {members} leden. Kies minstens zoveel plaatsen — Polar weigert een abonnement met minder plaatsen dan toewijzingen.',
+  'billing.orders.title': 'Bestellingen',
+  'billing.orders.description':
+    'Elke bestelling van deze werkruimte, nieuwste eerst.',
+  'billing.orders.receipts': 'Alle bonnen',
+  'billing.orders.unavailableTitle': 'Bestellingen laden niet',
+  'billing.orders.unavailableBody':
+    'Polar antwoordde niet op tijd voor de historie. Alles hierboven is actueel — probeer het straks opnieuw of lees het volledige overzicht in het facturatieportaal.',
+  'billing.orders.emptyTitle': 'Nog geen bestellingen',
+  'billing.orders.emptyCustomer':
+    'De eerste factuur verschijnt hier zodra een factuurperiode sluit.',
+  'billing.orders.emptyNoCustomer':
+    'Deze werkruimte is nooit belast. Kies een betaald abonnement en de facturen verzamelen zich hier.',
+  'billing.orders.tableLabel': 'Bestelgeschiedenis',
+  'billing.orders.document': 'Document',
+  'billing.orders.dateUnknown': 'Datum onbekend',
+  'billing.order.pending': 'In afwachting',
+  'billing.order.refunded': 'Terugbetaald',
+  'billing.order.partiallyRefunded': 'Deels terugbetaald',
+  'billing.order.noInvoiceDraft':
+    'Geen factuur zolang de bestelling een concept is',
+  'billing.order.preparing': 'Wordt voorbereid',
+  'billing.order.renderingHint':
+    'Polar maakt factuur {number} nog. De download komt over een paar seconden terug.',
+  'billing.order.fetching': 'Factuur ophalen',
+  'billing.order.generating': 'Polar bereidt de factuur voor',
+  'billing.order.pdfLabel': 'Factuur {number} als PDF',
+  'billing.order.stillWritingTitle': 'Polar schrijft die factuur nog',
+  'billing.order.stillWritingBody':
+    'Factuur {number} wordt gemaakt. De download komt over een paar seconden van zelf terug.',
+  'billing.order.openFailed': 'Die factuur ging niet open',
 } satisfies TranslationOf<typeof En>
 
 export default messages

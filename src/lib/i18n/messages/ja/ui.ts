@@ -18,13 +18,16 @@ import type { TranslationOf } from '../../types'
 
 const messages = {
   'action.clear': 'クリア',
+  'action.clearFilters': 'フィルターを解除',
   'action.close': '閉じる',
   'action.dismiss': '非表示にする',
   'action.remove': '削除',
+  'action.keep': 'そのままにする',
   'action.undo': '元に戻す',
   'status.loading': '読み込み中',
   'status.working': '処理中',
   'status.searching': '検索中',
+  'status.removing': '削除中',
   'avatar.status.online': '{name}はオンラインです',
   'avatar.status.away': '{name}は離席中です',
   'avatar.status.busy': '{name}は応答できません',

@@ -79,7 +79,7 @@ export function MapLegend({
         action={
           <IconButton
             variant="ghost"
-            size="xs"
+            size="sm"
             label={
               open
                 ? t('atlas.map.legend.collapse', { title: heading })

@@ -340,19 +340,13 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} perjalanan, satu pelancong',
   'billing.hero.perSeatLine': '{seats} anggota × {price}',
   'billing.hero.singleTraveller': 'Satu pelancong',
-  'billing.hero.paymentMethod': 'Metode pembayaran',
-  'billing.hero.cancel': 'Batalkan paket',
   'billing.price.free': 'Gratis',
   'billing.provider.opening': 'Membuka Polar',
-  'billing.provider.failed': 'Polar tidak bisa dijangkau',
-  'billing.provider.failedBody':
-    'Tidak ada yang ditagih. Periksa koneksi Anda lalu coba lagi sebentar lagi.',
-
   'billing.renewal.trialEndsToday':
-    'Masa coba Anda berakhir hari ini. Tambahkan kartu agar semua modul tetap terbuka.',
+    'Masa uji cobamu berakhir hari ini. Tagihan pertama menyusul kecuali kamu membatalkannya sebelum itu.',
   'billing.renewal.trialEndsIn': {
     other:
-      'Masa coba Anda berakhir dalam {value} hari. Belum perlu kartu sampai saat itu.',
+      'Masa uji cobamu berakhir dalam {value} hari, lalu tagihan pertama menyusul kecuali kamu membatalkannya sebelum itu.',
   },
   'billing.renewal.trialEnded': 'Masa coba Anda sudah berakhir.',
   'billing.renewal.endsNoDate':
@@ -402,8 +396,6 @@ const messages = {
   'billing.interval.label': 'Selang penagihan',
   'billing.interval.monthly': 'Bulanan',
   'billing.interval.yearly': 'Tahunan',
-  'billing.interval.saving': 'Hemat {value}',
-
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Rencanakan dua perjalanan berikutnya',
   'billing.plan.free.feature.trips': 'Dua perjalanan sekaligus',
@@ -434,7 +426,6 @@ const messages = {
   'billing.plan.current': 'Paket saat ini',
   'billing.plan.currentBadge': 'Sekarang',
   'billing.plan.popular': 'Populer',
-  'billing.plan.moveTo': 'Pindah ke {plan}',
   'billing.plan.switchYearly': 'Ganti ke tahunan',
   'billing.plan.switchMonthly': 'Ganti ke bulanan',
   'billing.plan.upgradeTo': 'Naik ke {plan}',
@@ -448,31 +439,68 @@ const messages = {
   'billing.plan.membersHint': 'Ubah kapan saja — tagihannya mengikuti.',
   'billing.plan.seatOption': { other: '{value} anggota' },
 
-  'billing.invoices.title': 'Faktur',
-  'billing.invoices.description':
-    'Setiap kuitansi ruang kerja ini, yang terbaru lebih dulu.',
-  'billing.invoices.portal': 'Portal tagihan',
-  'billing.invoices.unavailableTitle': 'Kuitansinya tidak termuat',
-  'billing.invoices.unavailableBody':
-    'Polar tidak menjawab tepat waktu untuk riwayatnya. Semua di atas tetap hidup; buka portal tagihan untuk catatan lengkapnya, atau kembali sebentar lagi.',
-  'billing.invoices.emptyTitle': 'Belum ada faktur',
-  'billing.invoices.emptyCustomer':
-    'Kuitansi pertama muncul di sini begitu satu periode penagihan ditutup.',
-  'billing.invoices.emptyNoCustomer':
-    'Ruang kerja ini belum pernah ditagih. Pilih paket berbayar dan kuitansinya akan terkumpul di sini.',
-  'billing.invoices.tableLabel': 'Riwayat faktur',
   'billing.invoices.number': 'Faktur',
   'billing.invoices.date': 'Tanggal',
-  'billing.invoices.period': 'Periode',
   'billing.invoices.amount': 'Jumlah',
   'billing.invoices.status': 'Keadaan',
-  'billing.invoices.receipt': 'Kuitansi',
-  'billing.invoices.view': 'Lihat',
   'billing.invoice.paid': 'Lunas',
-  'billing.invoice.open': 'Jatuh tempo',
   'billing.invoice.draft': 'Konsep',
   'billing.invoice.void': 'Batal',
-  'billing.invoice.uncollectible': 'Tak tertagih',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Penyedia pembayaran menolak permintaan itu. Coba lagi sebentar.',
+  'billing.planChanged.title': 'Paket diperbarui',
+  'billing.planChanged.body':
+    'Perubahannya sudah berlaku di Polar, yang akan menagih selisihnya. Ringkasan di bawah menyusul dalam satu menit.',
+  'billing.hero.manage': 'Kelola penagihan',
+  'billing.hero.manageHint':
+    'Kartu, alamat penagihan, NPWP, tanda terima, dan pembatalan ada di Polar, yang menerbitkan tagihannya.',
+  'billing.hero.manageHintNone':
+    'Belum ada profil penagihan. Memilih paket berbayar di bawah akan membuatnya, dan sejak itu portalnya terbuka.',
+  'billing.portal.opening': 'Membuka portal penagihan',
+  'billing.plan.notApplied': 'Perubahan itu tidak diterapkan',
+  'billing.plan.cancelInPortal': 'Batalkan di portal',
+  'billing.plan.seatsOverMax': {
+    other:
+      'Ruang kerja ini punya {members} anggota dan {plan} menagih paling banyak {max}. Keluarkan {value} anggota sebelum berpindah.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Kamu punya {members} anggota. Pilih setidaknya sebanyak itu kursi — Polar menolak langganan dengan kursi lebih sedikit daripada penugasan.',
+  'billing.orders.title': 'Pesanan',
+  'billing.orders.description': 'Setiap pesanan ruang kerja ini, terbaru dulu.',
+  'billing.orders.receipts': 'Semua tanda terima',
+  'billing.orders.unavailableTitle': 'Pesanan tidak termuat',
+  'billing.orders.unavailableBody':
+    'Polar tidak menjawab tepat waktu untuk riwayatnya. Semua di atas masih hidup — coba lagi sebentar, atau baca catatan lengkapnya di portal penagihan.',
+  'billing.orders.emptyTitle': 'Belum ada pesanan',
+  'billing.orders.emptyCustomer':
+    'Tagihan pertama muncul di sini begitu satu periode penagihan ditutup.',
+  'billing.orders.emptyNoCustomer':
+    'Ruang kerja ini belum pernah ditagih. Pilih paket berbayar dan tagihannya akan berkumpul di sini.',
+  'billing.orders.tableLabel': 'Riwayat pesanan',
+  'billing.orders.document': 'Dokumen',
+  'billing.orders.dateUnknown': 'Tanggal tidak diketahui',
+  'billing.order.pending': 'Menunggu',
+  'billing.order.refunded': 'Dikembalikan',
+  'billing.order.partiallyRefunded': 'Dikembalikan sebagian',
+  'billing.order.noInvoiceDraft': 'Tidak ada tagihan selama pesanan masih draf',
+  'billing.order.preparing': 'Menyiapkan',
+  'billing.order.renderingHint':
+    'Polar masih membuat tagihan {number}. Unduhannya kembali dalam beberapa detik.',
+  'billing.order.fetching': 'Mengambil tagihan',
+  'billing.order.generating': 'Polar sedang menyiapkan tagihan',
+  'billing.order.pdfLabel': 'Tagihan {number} sebagai PDF',
+  'billing.order.stillWritingTitle': 'Polar masih menulis tagihan itu',
+  'billing.order.stillWritingBody':
+    'Tagihan {number} sedang dibuat. Unduhannya kembali sendiri dalam beberapa detik.',
+  'billing.order.openFailed': 'Tagihan itu tidak terbuka',
 } satisfies TranslationOf<typeof En>
 
 export default messages

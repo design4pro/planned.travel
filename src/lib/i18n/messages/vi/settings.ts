@@ -341,19 +341,13 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} chuyến đi, một người',
   'billing.hero.perSeatLine': '{seats} thành viên × {price}',
   'billing.hero.singleTraveller': 'Một người đi',
-  'billing.hero.paymentMethod': 'Phương thức thanh toán',
-  'billing.hero.cancel': 'Hủy gói',
   'billing.price.free': 'Miễn phí',
   'billing.provider.opening': 'Đang mở Polar',
-  'billing.provider.failed': 'Không liên lạc được với Polar',
-  'billing.provider.failedBody':
-    'Không có khoản nào bị trừ. Kiểm tra kết nối rồi thử lại sau giây lát.',
-
   'billing.renewal.trialEndsToday':
-    'Bản dùng thử của bạn hết hôm nay. Thêm thẻ để giữ mọi phần luôn mở.',
+    'Bản dùng thử kết thúc hôm nay. Lần thu phí đầu tiên sẽ diễn ra trừ khi bạn hủy trước đó.',
   'billing.renewal.trialEndsIn': {
     other:
-      'Bản dùng thử của bạn còn {value} ngày. Chưa cần thẻ cho tới lúc đó.',
+      'Bản dùng thử kết thúc sau {value} ngày, sau đó lần thu phí đầu tiên sẽ diễn ra trừ khi bạn hủy trước đó.',
   },
   'billing.renewal.trialEnded': 'Bản dùng thử của bạn đã hết.',
   'billing.renewal.endsNoDate':
@@ -402,8 +396,6 @@ const messages = {
   'billing.interval.label': 'Chu kỳ thanh toán',
   'billing.interval.monthly': 'Hằng tháng',
   'billing.interval.yearly': 'Hằng năm',
-  'billing.interval.saving': 'Tiết kiệm {value}',
-
   'billing.plan.free.name': 'Miễn phí',
   'billing.plan.free.tagline': 'Lên kế hoạch cho hai chuyến sắp tới',
   'billing.plan.free.feature.trips': 'Hai chuyến cùng lúc',
@@ -433,7 +425,6 @@ const messages = {
   'billing.plan.current': 'Gói hiện tại',
   'billing.plan.currentBadge': 'Đang dùng',
   'billing.plan.popular': 'Được chuộng',
-  'billing.plan.moveTo': 'Chuyển sang {plan}',
   'billing.plan.switchYearly': 'Đổi sang trả theo năm',
   'billing.plan.switchMonthly': 'Đổi sang trả theo tháng',
   'billing.plan.upgradeTo': 'Nâng lên {plan}',
@@ -447,31 +438,70 @@ const messages = {
   'billing.plan.membersHint': 'Đổi bất cứ lúc nào — tiền tính theo đó.',
   'billing.plan.seatOption': { other: '{value} thành viên' },
 
-  'billing.invoices.title': 'Hóa đơn',
-  'billing.invoices.description':
-    'Mọi biên nhận của không gian này, mới nhất trước.',
-  'billing.invoices.portal': 'Cổng thanh toán',
-  'billing.invoices.unavailableTitle': 'Biên nhận không tải được',
-  'billing.invoices.unavailableBody':
-    'Polar không kịp trả lời phần lịch sử. Mọi thứ bên trên vẫn đúng; mở cổng thanh toán để xem đầy đủ, hoặc quay lại sau ít phút.',
-  'billing.invoices.emptyTitle': 'Chưa có hóa đơn nào',
-  'billing.invoices.emptyCustomer':
-    'Biên nhận đầu tiên hiện ở đây ngay khi một kỳ thanh toán khép lại.',
-  'billing.invoices.emptyNoCustomer':
-    'Không gian này chưa từng bị tính tiền. Chọn một gói trả phí và các biên nhận sẽ gom về đây.',
-  'billing.invoices.tableLabel': 'Lịch sử hóa đơn',
   'billing.invoices.number': 'Hóa đơn',
   'billing.invoices.date': 'Ngày',
-  'billing.invoices.period': 'Kỳ',
   'billing.invoices.amount': 'Số tiền',
   'billing.invoices.status': 'Tình trạng',
-  'billing.invoices.receipt': 'Biên nhận',
-  'billing.invoices.view': 'Xem',
   'billing.invoice.paid': 'Đã trả',
-  'billing.invoice.open': 'Đến hạn',
   'billing.invoice.draft': 'Nháp',
   'billing.invoice.void': 'Vô hiệu',
-  'billing.invoice.uncollectible': 'Không thu được',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Nhà cung cấp thanh toán đã từ chối yêu cầu đó. Thử lại sau một lát.',
+  'billing.planChanged.title': 'Đã cập nhật gói',
+  'billing.planChanged.body':
+    'Thay đổi đã có hiệu lực ở Polar, nơi sẽ xuất hoá đơn phần chênh lệch. Bản tóm tắt bên dưới theo kịp trong vòng một phút.',
+  'billing.hero.manage': 'Quản lý thanh toán',
+  'billing.hero.manageHint':
+    'Thẻ, địa chỉ thanh toán, mã số thuế, biên nhận và việc huỷ đều nằm ở Polar, nơi phát hành hoá đơn.',
+  'billing.hero.manageHintNone':
+    'Chưa có hồ sơ thanh toán. Chọn một gói trả phí bên dưới sẽ tạo ra một hồ sơ, và từ đó cổng sẽ mở được.',
+  'billing.portal.opening': 'Đang mở cổng thanh toán',
+  'billing.plan.notApplied': 'Thay đổi đó chưa được áp dụng',
+  'billing.plan.cancelInPortal': 'Huỷ trong cổng',
+  'billing.plan.seatsOverMax': {
+    other:
+      'Không gian này có {members} thành viên và {plan} chỉ tính phí tối đa {max}. Hãy bớt {value} thành viên trước khi chuyển.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Bạn có {members} thành viên. Hãy chọn ít nhất số chỗ đó — Polar từ chối gói đăng ký có ít chỗ hơn số phân công.',
+  'billing.orders.title': 'Đơn hàng',
+  'billing.orders.description':
+    'Mọi đơn hàng của không gian này, mới nhất trước.',
+  'billing.orders.receipts': 'Tất cả biên nhận',
+  'billing.orders.unavailableTitle': 'Đơn hàng không tải được',
+  'billing.orders.unavailableBody':
+    'Polar không trả lời kịp cho phần lịch sử. Mọi thứ phía trên vẫn đang cập nhật — thử lại sau một lát, hoặc đọc bản ghi đầy đủ trong cổng thanh toán.',
+  'billing.orders.emptyTitle': 'Chưa có đơn hàng',
+  'billing.orders.emptyCustomer':
+    'Hoá đơn đầu tiên xuất hiện ở đây ngay khi một kỳ thanh toán kết thúc.',
+  'billing.orders.emptyNoCustomer':
+    'Không gian này chưa từng bị thu phí. Chọn một gói trả phí và hoá đơn sẽ dồn về đây.',
+  'billing.orders.tableLabel': 'Lịch sử đơn hàng',
+  'billing.orders.document': 'Tài liệu',
+  'billing.orders.dateUnknown': 'Không rõ ngày',
+  'billing.order.pending': 'Đang chờ',
+  'billing.order.refunded': 'Đã hoàn tiền',
+  'billing.order.partiallyRefunded': 'Đã hoàn một phần',
+  'billing.order.noInvoiceDraft':
+    'Chưa có hoá đơn khi đơn hàng còn là bản nháp',
+  'billing.order.preparing': 'Đang chuẩn bị',
+  'billing.order.renderingHint':
+    'Polar vẫn đang tạo hoá đơn {number}. Bản tải về sẽ trở lại sau vài giây.',
+  'billing.order.fetching': 'Đang lấy hoá đơn',
+  'billing.order.generating': 'Polar đang chuẩn bị hoá đơn',
+  'billing.order.pdfLabel': 'Hoá đơn {number} dạng PDF',
+  'billing.order.stillWritingTitle': 'Polar vẫn đang viết hoá đơn đó',
+  'billing.order.stillWritingBody':
+    'Hoá đơn {number} đang được tạo. Bản tải về sẽ tự trở lại sau vài giây.',
+  'billing.order.openFailed': 'Hoá đơn đó không mở được',
 } satisfies TranslationOf<typeof En>
 
 export default messages

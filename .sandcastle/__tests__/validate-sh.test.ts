@@ -24,7 +24,14 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// Every test here runs the real script: bash, a scratch `git init`, a commit and a stub, several
+// processes per case. That is comfortably under a second on an idle machine and well past vitest's
+// 5 s default when the full suite runs it alongside everything else - a busy machine reading as a
+// broken ladder. The budget is generous on purpose: what is being guarded here is the verdict, and
+// nothing about how long bash took to produce it.
+vi.setConfig({ testTimeout: 60_000 })
 
 const VALIDATE_SH = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -41,6 +48,7 @@ type Validation = {
   e2e: {
     failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
   }
+  infra: string | null
   ok: boolean
 }
 
@@ -52,6 +60,8 @@ type Run = {
   pwArgs: string[]
   /** The variables the script exported for Playwright, as the stub saw them. */
   pwEnv: Record<string, string>
+  /** One line per dev-server probe; empty when the ladder never asked. */
+  curlCalls: string[]
 }
 
 const scratchDirs: string[] = []
@@ -147,6 +157,16 @@ const BLIPPED_THEN_REGRESSED = spec(
   [{ failedWith: SOCKET_HANG_UP }, { failedWith: ITINERARY_PIXEL_DIFF }],
 )
 
+/**
+ * The dev-server probe the ladder runs after a red e2e rung. `CURL_EXIT` is what it reports:
+ * 0 for a server that answered, non-zero for one that did not. Nothing else in the script calls
+ * curl — `setup-e2e.sh` is stubbed out — so this stands in for exactly one question.
+ */
+const CURL_STUB = `#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$CURL_CALLS_FILE"
+exit "$CURL_EXIT"
+`
+
 const PNPM_STUB = `#!/usr/bin/env bash
 # Every ladder step is \`pnpm <script>\` and succeeds silently; only the Playwright invocation is
 # interesting, so it records its own argv and the variables the script's environment carries into
@@ -236,11 +256,20 @@ function runValidate(
     touch?: string[]
     forceE2e?: boolean
     e2eProjects?: string
+    e2eGrep?: string
     updateSnapshots?: boolean
     env?: Record<string, string>
+    /** Whether the dev-server probe finds anything answering; defaults to yes. */
+    devServerUp?: boolean
+    /**
+     * Where both scripts are placed, relative to the scratch repo. The default is where the branch
+     * keeps them; main.ts ships them to a directory outside the worktree, and the ladder must find
+     * its sibling there too.
+     */
+    scriptDir?: string
   } = {},
 ): Run {
-  const { forceE2e = true } = opts
+  const { forceE2e = true, scriptDir = '.sandcastle' } = opts
   const dir = mkdtempSync(join(tmpdir(), 'validate-sh-'))
   scratchDirs.push(dir)
   // Loudly, because a git call that silently fails here leaves every later assertion reading a
@@ -269,10 +298,10 @@ function runValidate(
     git('commit', '-q', '-m', 'touch')
   }
 
-  mkdirSync(join(dir, '.sandcastle'))
-  writeFileSync(join(dir, '.sandcastle', 'validate.sh'), SCRIPT)
+  mkdirSync(join(dir, scriptDir), { recursive: true })
+  writeFileSync(join(dir, scriptDir, 'validate.sh'), SCRIPT)
   writeFileSync(
-    join(dir, '.sandcastle', 'setup-e2e.sh'),
+    join(dir, scriptDir, 'setup-e2e.sh'),
     '#!/usr/bin/env bash\nexit 0\n',
   )
 
@@ -281,9 +310,13 @@ function runValidate(
   const stub = join(bin, 'pnpm')
   writeFileSync(stub, PNPM_STUB)
   chmodSync(stub, 0o755)
+  const curlStub = join(bin, 'curl')
+  writeFileSync(curlStub, CURL_STUB)
+  chmodSync(curlStub, 0o755)
 
   const argvFile = join(dir, 'pw-argv.txt')
   const envFile = join(dir, 'pw-env.txt')
+  const curlCallsFile = join(dir, 'curl-calls.txt')
   let resultsFile = ''
   if (opts.results !== undefined) {
     resultsFile = join(dir, 'results-fixture.json')
@@ -297,13 +330,14 @@ function runValidate(
   const run = spawnSync(
     'bash',
     [
-      '.sandcastle/validate.sh',
+      `${scriptDir}/validate.sh`,
       '--json-out',
       '.sandcastle-validation.json',
       ...(forceE2e ? ['--force-e2e'] : []),
       ...(opts.e2eProjects === undefined
         ? []
         : ['--e2e-projects', opts.e2eProjects]),
+      ...(opts.e2eGrep === undefined ? [] : ['--e2e-grep', opts.e2eGrep]),
       ...(opts.updateSnapshots === true ? ['--update-snapshots'] : []),
     ],
     {
@@ -318,6 +352,8 @@ function runValidate(
         PW_EXIT: String(opts.pwExit ?? 0),
         PW_RESULTS: resultsFile,
         ...opts.env,
+        CURL_CALLS_FILE: curlCallsFile,
+        CURL_EXIT: opts.devServerUp === false ? '7' : '0',
       },
     },
   )
@@ -330,8 +366,60 @@ function runValidate(
     ) as Validation,
     pwArgs: readLines(argvFile),
     pwEnv: readEnvFile(envFile),
+    curlCalls: readLines(curlCallsFile),
   }
 }
+
+describe('the dev-server probe', () => {
+  it('reports a server that stopped answering as infra rather than as a red branch', () => {
+    // The failure this exists for: a dev server that ran out of heap mid-suite reddens the rung
+    // with specs that never reached it, and `main.ts` spends a fix attempt on the phantom.
+    const run = runValidate({
+      pwExit: 1,
+      results: RESULTS_FIXTURE,
+      e2eProjects: 'chromium',
+      devServerUp: false,
+    })
+
+    expect(run.verdict.ok).toBe(false)
+    expect(run.verdict.infra).toMatch(/stopped answering during e2e:chromium/)
+    // Named so a reader of the verdict alone knows which server is meant.
+    expect(run.verdict.infra).toContain('http://localhost:3010')
+    expect(run.stderr).toContain('INFRA:')
+  })
+
+  it('leaves a red rung red when the server is still there', () => {
+    // The ordinary regression: the suite failed, the environment is fine, and the fix loop should
+    // do exactly what it did before this probe existed.
+    const run = runValidate({ pwExit: 1, results: RESULTS_FIXTURE })
+
+    expect(run.verdict.ok).toBe(false)
+    expect(run.verdict.infra).toBeNull()
+    expect(run.verdict.e2e.failed).toHaveLength(2)
+    expect(run.curlCalls).toHaveLength(1)
+  })
+
+  it('does not ask after a green rung', () => {
+    // A suite that passed proves the server was up; asking again would spend a round trip to
+    // learn nothing, and would let a server that died *after* the last spec redden a green run.
+    const run = runValidate({ pwExit: 0, results: RESULTS_FIXTURE })
+
+    expect(run.verdict.ok).toBe(true)
+    expect(run.verdict.infra).toBeNull()
+    expect(run.curlCalls).toEqual([])
+  })
+
+  it('reports no infra on a ladder that never ran e2e', () => {
+    const run = runValidate({
+      forceE2e: false,
+      touch: ['src/server/repos/x.ts'],
+    })
+
+    expect(run.verdict.uiTouched).toBe(false)
+    expect(run.verdict.infra).toBeNull()
+    expect(run.curlCalls).toEqual([])
+  })
+})
 
 describe('the Playwright reporter declaration', () => {
   it('reaches the runner as a single argument, alongside the JSON output path', () => {
@@ -344,6 +432,9 @@ describe('the Playwright reporter declaration', () => {
       '--reporter=line,json,html',
     ])
     expect(run.pwArgs).toContain('--workers=4')
+    // The sandbox is not CI, so playwright.config.ts gives the suite no retries of its own; the
+    // one that keeps a machine-load timeout from spending a fix attempt has to come from here.
+    expect(run.pwArgs).toContain('--retries=1')
     expect(run.pwEnv).toEqual({
       PLAYWRIGHT_JSON_OUTPUT_NAME: 'test-results/results.json',
       PLAYWRIGHT_BASE_URL: 'http://localhost:3010',
@@ -424,6 +515,18 @@ describe('the e2e rung against a dev server that drops a connection', () => {
         snapshotDiff: true,
       },
     ])
+  })
+})
+
+describe('the ladder shipped outside the worktree', () => {
+  it('finds setup-e2e.sh beside itself, not under .sandcastle/', () => {
+    // main.ts writes both scripts to /tmp/sandcastle-ladder and runs validate.sh from there, so a
+    // `bash .sandcastle/setup-e2e.sh` in the script would run the branch's copy - or nothing at
+    // all, which is what this stands in for: no .sandcastle/ exists in this scratch repo.
+    const run = runValidate({ scriptDir: 'ladder' })
+
+    expect(run.verdict.steps.find((s) => s.name === 'e2e-env')?.ok).toBe(true)
+    expect(run.verdict.ok).toBe(true)
   })
 })
 
@@ -592,5 +695,39 @@ describe('--e2e-projects', () => {
     })
     expect(run.pwArgs).toContain('--update-snapshots')
     expect(run.pwArgs).toContain('--project=mobile-safari')
+  })
+})
+
+/**
+ * The fix loop's cheap first pass: re-run the specs the fix was supposed to repair, and only then
+ * the suite. The script's whole job here is to hand the regex to Playwright untouched and to say in
+ * the step name that the run was partial - `main.ts` owns the rule that such a run may not decide
+ * green, but it can only apply it if the verdict admits what happened.
+ */
+describe('--e2e-grep', () => {
+  it('is absent by default', () => {
+    const run = runValidate()
+    expect(run.pwArgs).not.toContain('-g')
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e')
+  })
+
+  it('passes the pattern through as one argument and marks the step narrowed', () => {
+    const run = runValidate({
+      e2eProjects: 'chromium',
+      e2eGrep: "the trip's tab|the hover card",
+    })
+    expect(run.pwArgs).toContain('-g')
+    expect(run.pwArgs[run.pwArgs.indexOf('-g') + 1]).toBe(
+      "the trip's tab|the hover card",
+    )
+    expect(run.verdict.steps.map((s) => s.name)).toContain(
+      'e2e:chromium (narrowed)',
+    )
+  })
+
+  it('narrows the full matrix too, so the step name stays the only difference', () => {
+    const run = runValidate({ e2eGrep: 'passes' })
+    expect(run.pwArgs).toContain('-g')
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e (narrowed)')
   })
 })

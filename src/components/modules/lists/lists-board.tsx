@@ -51,6 +51,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  Chip,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
@@ -64,6 +65,8 @@ import {
   Tooltip,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { paintFor } from '#/lib/swatches'
+import { useTranslate } from '#/lib/i18n'
 import { useKeyboardCodeFallback } from '#/lib/dnd-keyboard'
 import {
   createListItemFn,
@@ -101,6 +104,7 @@ import {
 
 import type { DragEndEvent } from '@dnd-kit/core'
 import type { LucideIcon } from 'lucide-react'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 import type { ConfirmRequest, RowMenuItem } from '../shared'
 import type { ListFilter, OwnerFilter } from './list-utils'
@@ -123,13 +127,14 @@ function iconFor(kind: string): LucideIcon {
 function nameFor(
   people: ReadonlyArray<PersonOption>,
   userId: string | null,
+  t: Translate,
 ): string {
   if (userId === null) {
-    return 'Unassigned'
+    return t('modules.lists.unassigned')
   }
   return (
     people.find((person) => person.userId === userId)?.name ??
-    'Removed traveller'
+    t('costs.person.removed')
   )
 }
 
@@ -166,6 +171,8 @@ export function ListsBoard({
   newListOpen,
   onNewListOpenChange,
 }: ListsBoardProps) {
+  const t = useTranslate()
+
   const [filter, setFilter] = useState<ListFilter>('all')
   const [owner, setOwner] = useState<OwnerFilter>('everyone')
   const [editingList, setEditingList] = useState<ListData | null>(null)
@@ -189,30 +196,30 @@ export function ListsBoard({
   )
 
   const removeList = useAction(deleteListFn, {
-    success: 'List removed',
-    failure: 'The list was not removed',
+    success: t('modules.lists.toast.listRemoved'),
+    failure: t('modules.lists.toast.listRemoveFailed'),
     onSuccess: () => setConfirm(null),
   })
   const removeItem = useAction(deleteListItemFn, {
-    success: 'Item removed',
-    failure: 'The item was not removed',
+    success: t('modules.lists.toast.itemRemoved'),
+    failure: t('modules.lists.toast.itemRemoveFailed'),
     onSuccess: () => setConfirm(null),
   })
   const reset = useAction(resetListFn, {
-    success: 'List reset',
-    description: 'Everything is unticked and ready for the next trip.',
-    failure: 'The list was not reset',
+    success: t('modules.lists.toast.reset'),
+    description: t('modules.lists.toast.resetBody'),
+    failure: t('modules.lists.toast.resetFailed'),
   })
   const setDone = useAction(setListItemsDoneFn, {
-    failure: 'That tick did not save',
-    fallback: 'The item has been put back the way it was.',
+    failure: t('modules.lists.toast.tickFailed'),
+    fallback: t('modules.lists.toast.tickFailedBody'),
   })
   const assign = useAction(updateListItemFn, {
-    failure: 'That assignment did not save',
+    failure: t('modules.lists.toast.assignFailed'),
   })
   const reorder = useAction(reorderListItemsFn, {
-    failure: 'The new order did not save',
-    fallback: 'The list has been put back the way it was.',
+    failure: t('modules.lists.toast.orderFailed'),
+    fallback: t('modules.lists.toast.orderFailedBody'),
   })
 
   /** Ticks one row or a whole list, painting the change before it lands. */
@@ -256,50 +263,50 @@ export function ListsBoard({
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <FilterRow>
-        <span className="mr-1 shrink-0 text-micro font-semibold tracking-label text-ink-4 uppercase">
-          Show
+        <span className="me-1 shrink-0 text-micro font-semibold tracking-label text-ink-4 uppercase">
+          {t('modules.lists.show')}
         </span>
         {(
           [
-            ['all', 'Everything'],
-            ['open', 'Still to do'],
-            ['done', 'Done'],
-          ] as ReadonlyArray<readonly [ListFilter, string]>
+            ['all', 'modules.filter.all'],
+            ['open', 'modules.lists.filter.todo'],
+            ['done', 'modules.lists.filter.done'],
+          ] as ReadonlyArray<readonly [ListFilter, MessageKey]>
         ).map(([value, label]) => (
-          <FilterChip
+          <Chip
             key={value}
             selected={filter === value}
             onClick={() => setFilter(value)}
           >
-            {label}
-          </FilterChip>
+            {t(label)}
+          </Chip>
         ))}
         <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-edge" />
         {(
           [
-            ['everyone', 'All lists', Users],
-            ['shared', 'Shared', Users],
-            ['mine', 'Mine', UserRound],
-          ] as ReadonlyArray<readonly [OwnerFilter, string, LucideIcon]>
+            ['everyone', 'modules.lists.scope.all', Users],
+            ['shared', 'modules.lists.scope.shared', Users],
+            ['mine', 'modules.lists.scope.mine', UserRound],
+          ] as ReadonlyArray<readonly [OwnerFilter, MessageKey, LucideIcon]>
         ).map(([value, label, Icon]) => (
-          <FilterChip
+          <Chip
             key={value}
             selected={owner === value}
+            icon={<Icon aria-hidden />}
             onClick={() => setOwner(value)}
           >
-            <Icon aria-hidden className="size-3.5" />
-            {label}
-          </FilterChip>
+            {t(label)}
+          </Chip>
         ))}
         <Button
           variant="secondary"
           size="sm"
           shape="pill"
-          className="ml-auto"
+          className="ms-auto"
           onClick={() => setTemplateOpen(true)}
         >
           <Plus aria-hidden />
-          From a template
+          {t('modules.lists.template.from')}
         </Button>
       </FilterRow>
 
@@ -311,13 +318,13 @@ export function ListsBoard({
           icon={<Backpack />}
           title={
             owner === 'mine'
-              ? 'No lists of your own yet'
-              : 'No shared lists yet'
+              ? t('modules.lists.empty.mine.title')
+              : t('modules.lists.empty.shared.title')
           }
           description={
             owner === 'mine'
-              ? 'A list of your own is only yours to tick off — useful for the things nobody else needs to see.'
-              : 'A shared list is everyone’s to tick off, so two people never pack the same adaptor.'
+              ? t('modules.lists.empty.mine.body')
+              : t('modules.lists.empty.shared.body')
           }
           action={
             <Button
@@ -326,7 +333,7 @@ export function ListsBoard({
               onClick={() => onNewListOpenChange(true)}
             >
               <Plus aria-hidden strokeWidth={2.5} />
-              New list
+              {t('modules.lists.action.new')}
             </Button>
           }
         />
@@ -355,19 +362,24 @@ export function ListsBoard({
                 }}
                 onDeleteList={() =>
                   setConfirm({
-                    title: `Remove “${list.name}”?`,
-                    description: `The list and its ${list.items.length} item${list.items.length === 1 ? '' : 's'} come off this trip. Templates you have saved are untouched.`,
-                    confirmLabel: 'Remove list',
+                    title: t('modules.remove.confirmTitle', {
+                      name: list.name,
+                    }),
+                    description: t('modules.lists.remove.listBody', {
+                      count: list.items.length,
+                    }),
+                    confirmLabel: t('modules.lists.remove.list'),
                     onConfirm: () =>
                       removeList.run({ data: { tripId, listId: list.id } }),
                   })
                 }
                 onDeleteItem={(item) =>
                   setConfirm({
-                    title: `Remove “${item.name}”?`,
-                    description:
-                      'It comes off this list. Nothing else changes.',
-                    confirmLabel: 'Remove item',
+                    title: t('modules.remove.confirmTitle', {
+                      name: item.name,
+                    }),
+                    description: t('modules.lists.remove.itemBody'),
+                    confirmLabel: t('modules.lists.remove.item'),
                     onConfirm: () =>
                       removeItem.run({ data: { tripId, itemId: item.id } }),
                   })
@@ -426,43 +438,22 @@ export function ListsBoard({
   )
 }
 
-/** The board's own filter control. A real button with `aria-pressed`. */
-function FilterChip({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean
-  onClick: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={cn(
-        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-caption font-semibold whitespace-nowrap focus-ring',
-        'transition-[background-color,border-color,color] duration-base ease-out-quint',
-        selected
-          ? 'border-transparent bg-accent text-accent-on'
-          : 'border-edge bg-surface text-ink-2 hover:border-edge-strong hover:text-ink',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
 /**
  * The button that opens the "new list" dialog, for the module header. Exported so
  * the route can put the screen's primary action where a primary action belongs.
  */
 export function NewListAction({ onClick }: { onClick: () => void }) {
+  const t = useTranslate()
+
   return (
-    <Button variant="primary" shape="pill" onClick={onClick}>
-      <Plus aria-hidden strokeWidth={2.5} />
-      New list
+    <Button
+      variant="primary"
+      size="sm"
+      shape="pill"
+      icon={<Plus aria-hidden strokeWidth={2.5} />}
+      onClick={onClick}
+    >
+      {t('modules.lists.action.new')}
     </Button>
   )
 }
@@ -516,6 +507,7 @@ function ListPanel(props: ListPanelProps) {
 
   const progress = progressOf(rendered)
   const groups = useMemo(() => groupByCategory(rendered), [rendered])
+  const t = useTranslate()
   const hasCategories = !isUngrouped(groups)
   const showGroups = hasCategories && mode === 'grouped'
 
@@ -527,12 +519,12 @@ function ListPanel(props: ListPanelProps) {
 
   const menuItems: ReadonlyArray<RowMenuItem> = [
     {
-      label: 'Edit list…',
+      label: t('modules.lists.menu.editList'),
       icon: <Pencil aria-hidden />,
       onSelect: props.onEditList,
     },
     {
-      label: 'Tick everything',
+      label: t('modules.lists.menu.tickAll'),
       icon: <SquareCheck aria-hidden />,
       disabled: rendered.length === 0 || allState === true,
       separated: true,
@@ -544,7 +536,7 @@ function ListPanel(props: ListPanelProps) {
       },
     },
     {
-      label: 'Untick everything',
+      label: t('modules.lists.menu.untickAll'),
       icon: <CircleSlash aria-hidden />,
       disabled: rendered.length === 0 || allState === false,
       onSelect: () => {
@@ -555,13 +547,13 @@ function ListPanel(props: ListPanelProps) {
       },
     },
     {
-      label: 'Reset for the next trip',
+      label: t('modules.lists.menu.reset'),
       icon: <RotateCcw aria-hidden />,
       disabled: progress.done === 0,
       onSelect: props.onResetList,
     },
     {
-      label: 'Remove list',
+      label: t('modules.lists.remove.list'),
       icon: <Trash2 aria-hidden />,
       tone: 'danger',
       separated: true,
@@ -578,7 +570,9 @@ function ListPanel(props: ListPanelProps) {
             <span
               aria-hidden
               className="size-2 shrink-0 rounded-full"
-              style={{ backgroundColor: list.colour }}
+              // Through the palette, so the dot is the swatch that was picked
+              // and not a hex frozen in the light theme.
+              style={{ backgroundColor: paintFor(list.colour) }}
             />
           )}
           <span className="truncate">{list.name}</span>
@@ -593,19 +587,19 @@ function ListPanel(props: ListPanelProps) {
             icon={<Icon aria-hidden className="size-3" />}
             className="hidden sm:inline-flex"
           >
-            {listKindLabel(list.kind)}
+            {t(listKindLabel(list.kind))}
           </Badge>
           {list.ownerUserId === null ? null : (
             <Badge tone="outline" size="sm">
-              {nameFor(people, list.ownerUserId).split(' ')[0]}
+              {nameFor(people, list.ownerUserId, t).split(' ')[0]}
             </Badge>
           )}
           {hasCategories ? (
             <Tooltip
               content={
                 showGroups
-                  ? 'Switch to one order you can drag'
-                  : 'Group by category again'
+                  ? t('modules.lists.menu.dragOrderLong')
+                  : t('modules.lists.menu.groupAgain')
               }
             >
               <IconButton
@@ -613,8 +607,8 @@ function ListPanel(props: ListPanelProps) {
                 size="sm"
                 label={
                   showGroups
-                    ? 'Switch to one draggable order'
-                    : 'Group by category'
+                    ? t('modules.lists.menu.dragOrder')
+                    : t('modules.lists.menu.groupByCategory')
                 }
                 icon={
                   showGroups ? (
@@ -627,7 +621,10 @@ function ListPanel(props: ListPanelProps) {
               />
             </Tooltip>
           ) : null}
-          <RowMenu label={`Actions for ${list.name}`} items={menuItems} />
+          <RowMenu
+            label={t('modules.actionsFor', { name: list.name })}
+            items={menuItems}
+          />
         </>
       }
       toolbar={
@@ -637,7 +634,10 @@ function ListPanel(props: ListPanelProps) {
             max={Math.max(progress.total, 1)}
             size="xs"
             tone={progress.complete ? 'success' : 'brand'}
-            aria-label={`${progress.done} of ${progress.total} ticked off`}
+            aria-label={t('modules.lists.progress.ticked', {
+              done: progress.done,
+              total: progress.total,
+            })}
           />
           {progress.weightGrams === 0 &&
           list.weightLimitGrams === null ? null : (
@@ -647,11 +647,22 @@ function ListPanel(props: ListPanelProps) {
                 overLimit ? 'text-danger' : 'text-ink-4',
               )}
             >
-              {formatWeight(progress.weightGrams)} packed
               {list.weightLimitGrams === null
-                ? ''
-                : ` of a ${formatWeight(list.weightLimitGrams)} allowance`}
-              {overLimit ? ' — over the limit' : ''}
+                ? t(
+                    overLimit
+                      ? 'modules.lists.weight.packedOver'
+                      : 'modules.lists.weight.packed',
+                    { weight: formatWeight(progress.weightGrams) },
+                  )
+                : t(
+                    overLimit
+                      ? 'modules.lists.weight.packedOfOver'
+                      : 'modules.lists.weight.packedOf',
+                    {
+                      weight: formatWeight(progress.weightGrams),
+                      limit: formatWeight(list.weightLimitGrams),
+                    },
+                  )}
             </p>
           )}
         </div>
@@ -670,8 +681,8 @@ function ListPanel(props: ListPanelProps) {
           <EmptyState
             size="sm"
             icon={<Icon />}
-            title="This list is empty"
-            description="Add the first thing you must not forget — the field below is the fastest way in."
+            title={t('modules.lists.items.empty.title')}
+            description={t('modules.lists.items.empty.body')}
           />
         </div>
       ) : visible.length === 0 ? (
@@ -681,13 +692,15 @@ function ListPanel(props: ListPanelProps) {
             icon={<Icon />}
             title={
               filter === 'done'
-                ? 'Nothing ticked off yet'
-                : 'Everything here is done'
+                ? t('modules.lists.items.doneEmpty.title')
+                : t('modules.lists.items.todoEmpty.title')
             }
             description={
               filter === 'done'
-                ? 'Tick something off and it will appear here.'
-                : 'Every item on this list is ticked. Switch to “Everything” to see them.'
+                ? t('modules.lists.items.doneEmpty.body')
+                : t('modules.lists.items.todoEmpty.body', {
+                    label: t('modules.filter.all'),
+                  })
             }
           />
         </div>
@@ -704,7 +717,7 @@ function ListPanel(props: ListPanelProps) {
               <section key={group.category ?? '__loose'} className="min-w-0">
                 <h3 className="flex items-baseline gap-2 border-b border-edge-faint bg-surface-2/50 px-5 py-1.5 text-micro font-semibold tracking-label text-ink-3 uppercase">
                   <span className="truncate">
-                    {group.category ?? 'Everything else'}
+                    {group.category ?? t('modules.lists.category.other')}
                   </span>
                   <span className="shrink-0 tabular-nums text-ink-4">
                     {group.items.filter((item) => item.isDone).length}/
@@ -782,9 +795,14 @@ function SortableItems({
     }),
   )
 
+  const t = useTranslate()
   const ids = items.map((item) => item.id)
   const filtering = ids.length !== allIds.length
   const byId = new Map(items.map((item) => [item.id, item]))
+
+  function nameOf(id: string | number): string {
+    return byId.get(String(id))?.name ?? t('modules.lists.dnd.fallbackName')
+  }
 
   function handleDragEnd(event: DragEndEvent): void {
     const { active, over } = event
@@ -809,11 +827,11 @@ function SortableItems({
       accessibility={{
         announcements: {
           onDragStart: ({ active }) =>
-            `Picked up ${byId.get(String(active.id))?.name ?? 'the item'}.`,
+            t('modules.lists.dnd.picked', { name: nameOf(active.id) }),
           onDragOver: () => undefined,
           onDragEnd: ({ active }) =>
-            `Dropped ${byId.get(String(active.id))?.name ?? 'the item'}. The new order is being saved.`,
-          onDragCancel: () => 'Cancelled. The order is unchanged.',
+            t('modules.lists.dnd.dropped', { name: nameOf(active.id) }),
+          onDragCancel: () => t('modules.lists.dnd.cancelled'),
         },
       }}
     >
@@ -856,6 +874,7 @@ function SortableItemRow({
   onDelete: () => void
   onAssign: (userId: string) => void
 }) {
+  const t = useTranslate()
   const {
     attributes,
     listeners,
@@ -885,7 +904,7 @@ function SortableItemRow({
             <button
               ref={setActivatorNodeRef}
               type="button"
-              aria-label={`Reorder ${item.name}`}
+              aria-label={t('modules.lists.dnd.reorder', { name: item.name })}
               // Always visible, quietly: a handle that only appears on hover
               // cannot be found on a touch screen, where there is no hover.
               className={cn(
@@ -931,6 +950,8 @@ function ItemRow({
   onDelete: () => void
   onAssign: (userId: string) => void
 }) {
+  const t = useTranslate()
+
   return (
     <div
       className={cn(
@@ -947,7 +968,12 @@ function ItemRow({
         size="sm"
         checked={item.isDone}
         onCheckedChange={(next) => onTick(next === true)}
-        aria-label={`${item.isDone ? 'Untick' : 'Tick off'} ${item.name}`}
+        aria-label={t(
+          item.isDone
+            ? 'modules.lists.action.untickItem'
+            : 'modules.lists.action.tickOffItem',
+          { name: item.name },
+        )}
         className="shrink-0"
       />
 
@@ -975,24 +1001,24 @@ function ItemRow({
 
       {item.priority === 'high' ? (
         <Badge tone="warning" size="sm" className="shrink-0">
-          High
+          {t('modules.lists.priority.high')}
         </Badge>
       ) : null}
 
       <AssigneeMenu item={item} people={people} onAssign={onAssign} />
 
       <RowMenu
-        label={`Actions for ${item.name}`}
-        size="xs"
+        label={t('modules.actionsFor', { name: item.name })}
+        size="sm"
         className="shrink-0"
         items={[
           {
-            label: 'Edit item…',
+            label: t('modules.lists.menu.editItem'),
             icon: <Pencil aria-hidden />,
             onSelect: onEdit,
           },
           {
-            label: 'Remove item',
+            label: t('modules.lists.remove.item'),
             icon: <Trash2 aria-hidden />,
             tone: 'danger',
             separated: true,
@@ -1014,6 +1040,8 @@ function AssigneeMenu({
   people: ReadonlyArray<PersonOption>
   onAssign: (userId: string) => void
 }) {
+  const t = useTranslate()
+
   if (people.length === 0) {
     return null
   }
@@ -1026,8 +1054,11 @@ function AssigneeMenu({
           type="button"
           aria-label={
             assignee === undefined
-              ? `Assign ${item.name} to someone`
-              : `${item.name} is ${assignee.name}’s — reassign it`
+              ? t('modules.lists.item.assignAria', { name: item.name })
+              : t('modules.lists.item.reassignAria', {
+                  item: item.name,
+                  owner: assignee.name,
+                })
           }
           className={cn(
             'inline-flex shrink-0 items-center rounded-full p-0.5 focus-ring',
@@ -1044,13 +1075,15 @@ function AssigneeMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
-        <DropdownMenuLabel>Whose job is this</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          {t('modules.lists.item.field.owner')}
+        </DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={toSelectValue(item.assignedTo)}
           onValueChange={(next) => onAssign(fromSelectValue(next))}
         >
           <DropdownMenuRadioItem value={NOT_SET}>
-            Nobody in particular
+            {t('modules.lists.item.owner.nobody')}
           </DropdownMenuRadioItem>
           {people.map((person) => (
             <DropdownMenuRadioItem key={person.userId} value={person.userId}>
@@ -1079,9 +1112,10 @@ function InlineItemComposer({
   listId: string
   onOpenFullForm: () => void
 }) {
+  const t = useTranslate()
   const [value, setValue] = useState('')
   const add = useAction(createListItemFn, {
-    failure: 'The item was not added',
+    failure: t('modules.lists.item.toast.addFailed'),
   })
 
   const trimmed = value.trim()
@@ -1120,8 +1154,8 @@ function InlineItemComposer({
         size="sm"
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder="Add an item and press Enter"
-        aria-label="Add an item to this list"
+        placeholder={t('modules.lists.quickAdd.placeholder')}
+        aria-label={t('modules.lists.quickAdd.aria')}
         maxLength={120}
         autoComplete="off"
         className="min-w-0 flex-1"
@@ -1134,14 +1168,14 @@ function InlineItemComposer({
         shape="pill"
         disabled={!canAdd}
       >
-        Add
+        {t('modules.lists.action.add')}
       </Button>
-      <Tooltip content="Add with a weight, a category or an owner">
+      <Tooltip content={t('modules.lists.quickAdd.detailsHint')}>
         <IconButton
           type="button"
           variant="ghost"
           size="sm"
-          label="Add an item with all its details"
+          label={t('modules.lists.quickAdd.detailsAria')}
           icon={<Plus aria-hidden />}
           onClick={onOpenFullForm}
         />

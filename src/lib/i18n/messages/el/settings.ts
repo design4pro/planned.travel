@@ -341,20 +341,14 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} ταξίδια, ένας ταξιδιώτης',
   'billing.hero.perSeatLine': '{seats} μέλη × {price}',
   'billing.hero.singleTraveller': 'Ένας ταξιδιώτης',
-  'billing.hero.paymentMethod': 'Τρόπος πληρωμής',
-  'billing.hero.cancel': 'Ακύρωση πλάνου',
   'billing.price.free': 'Δωρεάν',
   'billing.provider.opening': 'Ανοίγει το Polar',
-  'billing.provider.failed': 'Το Polar δεν απάντησε',
-  'billing.provider.failedBody':
-    'Δεν χρεώθηκε τίποτα. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά σε λίγο.',
-
   'billing.renewal.trialEndsToday':
-    'Η δοκιμή σας λήγει σήμερα. Προσθέστε κάρτα για να μείνουν ξεκλείδωτες όλες οι ενότητες.',
+    'Η δοκιμαστική περίοδος λήγει σήμερα. Η πρώτη χρέωση ακολουθεί, εκτός αν ακυρώσεις πριν από τότε.',
   'billing.renewal.trialEndsIn': {
-    one: 'Η δοκιμή σας λήγει σε {value} ημέρα. Δεν χρειάζεται κάρτα μέχρι τότε.',
+    one: 'Η δοκιμαστική περίοδος λήγει σε {value} ημέρα και μετά ακολουθεί η πρώτη χρέωση, εκτός αν ακυρώσεις πριν.',
     other:
-      'Η δοκιμή σας λήγει σε {value} ημέρες. Δεν χρειάζεται κάρτα μέχρι τότε.',
+      'Η δοκιμαστική περίοδος λήγει σε {value} ημέρες και μετά ακολουθεί η πρώτη χρέωση, εκτός αν ακυρώσεις πριν.',
   },
   'billing.renewal.trialEnded': 'Η δοκιμή σας έληξε.',
   'billing.renewal.endsNoDate':
@@ -408,7 +402,6 @@ const messages = {
   'billing.interval.label': 'Περίοδος χρέωσης',
   'billing.interval.monthly': 'Μηνιαία',
   'billing.interval.yearly': 'Ετήσια',
-  'billing.interval.saving': 'Κερδίστε {value}',
   'billing.plan.free.name': 'Δωρεάν',
   'billing.plan.free.tagline': 'Σχεδιάστε τα δύο επόμενα ταξίδια σας',
   'billing.plan.free.feature.trips': 'Δύο ταξίδια μαζί',
@@ -439,7 +432,6 @@ const messages = {
   'billing.plan.current': 'Τρέχον πλάνο',
   'billing.plan.currentBadge': 'Τρέχον',
   'billing.plan.popular': 'Δημοφιλές',
-  'billing.plan.moveTo': 'Μετάβαση σε {plan}',
   'billing.plan.switchYearly': 'Αλλαγή σε ετήσιο',
   'billing.plan.switchMonthly': 'Αλλαγή σε μηνιαίο',
   'billing.plan.upgradeTo': 'Αναβάθμιση σε {plan}',
@@ -456,31 +448,71 @@ const messages = {
     other: '{value} μέλη',
   },
 
-  'billing.invoices.title': 'Τιμολόγια',
-  'billing.invoices.description':
-    'Κάθε απόδειξη αυτού του χώρου εργασίας, με τη νεότερη πρώτη.',
-  'billing.invoices.portal': 'Πύλη χρεώσεων',
-  'billing.invoices.unavailableTitle': 'Οι αποδείξεις δεν φορτώνουν',
-  'billing.invoices.unavailableBody':
-    'Το Polar δεν απάντησε εγκαίρως για το ιστορικό. Όλα τα παραπάνω είναι ζωντανά· ανοίξτε την πύλη χρεώσεων για το πλήρες αρχείο, ή γυρίστε σε λίγο.',
-  'billing.invoices.emptyTitle': 'Κανένα τιμολόγιο ακόμη',
-  'billing.invoices.emptyCustomer':
-    'Η πρώτη απόδειξη εμφανίζεται εδώ μόλις κλείσει μια περίοδος χρέωσης.',
-  'billing.invoices.emptyNoCustomer':
-    'Αυτός ο χώρος εργασίας δεν έχει χρεωθεί ποτέ. Διαλέξτε πλάνο επί πληρωμή και οι αποδείξεις θα συγκεντρωθούν εδώ.',
-  'billing.invoices.tableLabel': 'Ιστορικό τιμολογίων',
   'billing.invoices.number': 'Τιμολόγιο',
   'billing.invoices.date': 'Ημερομηνία',
-  'billing.invoices.period': 'Περίοδος',
   'billing.invoices.amount': 'Ποσό',
   'billing.invoices.status': 'Κατάσταση',
-  'billing.invoices.receipt': 'Απόδειξη',
-  'billing.invoices.view': 'Προβολή',
   'billing.invoice.paid': 'Πληρωμένο',
-  'billing.invoice.open': 'Οφειλόμενο',
   'billing.invoice.draft': 'Πρόχειρο',
   'billing.invoice.void': 'Άκυρο',
-  'billing.invoice.uncollectible': 'Μη εισπράξιμο',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Ο πάροχος πληρωμών απέρριψε το αίτημα. Δοκίμασε ξανά σε λίγο.',
+  'billing.planChanged.title': 'Το πρόγραμμα ενημερώθηκε',
+  'billing.planChanged.body':
+    'Η αλλαγή ισχύει ήδη στην Polar, που θα χρεώσει τη διαφορά. Η σύνοψη παρακάτω προλαβαίνει μέσα σε ένα λεπτό.',
+  'billing.hero.manage': 'Διαχείριση χρεώσεων',
+  'billing.hero.manageHint':
+    'Κάρτες, διεύθυνση χρέωσης, ΑΦΜ, αποδείξεις και ακύρωση βρίσκονται στην Polar, που εκδίδει το παραστατικό.',
+  'billing.hero.manageHintNone':
+    'Δεν υπάρχει ακόμη προφίλ χρέωσης. Επιλέγοντας ένα πληρωμένο πρόγραμμα παρακάτω δημιουργείται ένα, και από τότε ανοίγει η πύλη.',
+  'billing.portal.opening': 'Ανοίγει η πύλη χρεώσεων',
+  'billing.plan.notApplied': 'Η αλλαγή δεν εφαρμόστηκε',
+  'billing.plan.cancelInPortal': 'Ακύρωση στην πύλη',
+  'billing.plan.seatsOverMax': {
+    one: 'Αυτός ο χώρος έχει {members} μέλη και το {plan} χρεώνει το πολύ {max}. Αφαίρεσε {value} μέλος πριν αλλάξεις.',
+    other:
+      'Αυτός ο χώρος έχει {members} μέλη και το {plan} χρεώνει το πολύ {max}. Αφαίρεσε {value} μέλη πριν αλλάξεις.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Έχεις {members} μέλη. Διάλεξε τουλάχιστον τόσες θέσεις — η Polar απορρίπτει συνδρομή με λιγότερες θέσεις από αναθέσεις.',
+  'billing.orders.title': 'Παραγγελίες',
+  'billing.orders.description':
+    'Κάθε παραγγελία αυτού του χώρου, από την πιο πρόσφατη.',
+  'billing.orders.receipts': 'Όλες οι αποδείξεις',
+  'billing.orders.unavailableTitle': 'Οι παραγγελίες δεν φορτώνουν',
+  'billing.orders.unavailableBody':
+    'Η Polar δεν απάντησε εγκαίρως για το ιστορικό. Όλα τα παραπάνω είναι ενημερωμένα — δοκίμασε σε λίγο ή δες το πλήρες αρχείο στην πύλη χρεώσεων.',
+  'billing.orders.emptyTitle': 'Καμία παραγγελία ακόμη',
+  'billing.orders.emptyCustomer':
+    'Το πρώτο παραστατικό εμφανίζεται εδώ μόλις κλείσει μια περίοδος χρέωσης.',
+  'billing.orders.emptyNoCustomer':
+    'Αυτός ο χώρος δεν χρεώθηκε ποτέ. Διάλεξε ένα πληρωμένο πρόγραμμα και τα παραστατικά θα συγκεντρώνονται εδώ.',
+  'billing.orders.tableLabel': 'Ιστορικό παραγγελιών',
+  'billing.orders.document': 'Έγγραφο',
+  'billing.orders.dateUnknown': 'Άγνωστη ημερομηνία',
+  'billing.order.pending': 'Σε εκκρεμότητα',
+  'billing.order.refunded': 'Επιστράφηκε',
+  'billing.order.partiallyRefunded': 'Επιστράφηκε εν μέρει',
+  'billing.order.noInvoiceDraft':
+    'Κανένα παραστατικό όσο η παραγγελία είναι πρόχειρη',
+  'billing.order.preparing': 'Ετοιμάζεται',
+  'billing.order.renderingHint':
+    'Η Polar δημιουργεί ακόμη το παραστατικό {number}. Η λήψη επιστρέφει σε λίγα δευτερόλεπτα.',
+  'billing.order.fetching': 'Λήψη του παραστατικού',
+  'billing.order.generating': 'Η Polar ετοιμάζει το παραστατικό',
+  'billing.order.pdfLabel': 'Παραστατικό {number} σε PDF',
+  'billing.order.stillWritingTitle': 'Η Polar γράφει ακόμη αυτό το παραστατικό',
+  'billing.order.stillWritingBody':
+    'Το παραστατικό {number} δημιουργείται. Η λήψη επιστρέφει από μόνη της σε λίγα δευτερόλεπτα.',
+  'billing.order.openFailed': 'Αυτό το παραστατικό δεν άνοιξε',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -4,12 +4,36 @@ import './test-env'
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 
+import { I18nProvider } from '#/lib/i18n'
+import marketing from '#/lib/i18n/messages/en/marketing'
 import { LegalDocument, LegalPlaceholder } from '../legal'
 
+import type { Catalogue } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 import type { LegalSection } from '../legal'
 
 afterEach(cleanup)
+
+/** The shipped source catalogue, namespaced the way the provider expects. */
+const EN: Catalogue = Object.fromEntries(
+  Object.entries(marketing).map(([key, message]) => [
+    `marketing.${key}`,
+    message,
+  ]),
+)
+
+/**
+ * The chrome reads `useTranslate()`, which throws with no provider — unlike the
+ * `ui` primitives, whose own hook tolerates its absence. The component sits
+ * inside the provider everywhere in the product; the suite says so too.
+ */
+function renderTranslated(ui: ReactNode) {
+  return render(
+    <I18nProvider locale="en" messages={EN}>
+      {ui}
+    </I18nProvider>,
+  )
+}
 
 const SECTIONS: ReadonlyArray<LegalSection> = [
   { id: 'account', heading: 'Your account', body: <p>Keep it to yourself.</p> },
@@ -25,7 +49,7 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
 ]
 
 function renderDocument(aside?: ReactNode) {
-  return render(
+  return renderTranslated(
     <LegalDocument
       eyebrow="Legal"
       title="Terms of service"

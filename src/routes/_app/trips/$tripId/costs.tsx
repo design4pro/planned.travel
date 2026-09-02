@@ -21,6 +21,7 @@ import { NotFoundPanel } from '#/components/layout/not-found'
 import { EXPENSE_VIEWS } from '#/components/costs'
 import { loadCosts } from '#/server/fns/costs'
 import { EXPENSE_CATEGORY_ORDER } from './-costs/categories'
+import { useTranslate } from '#/lib/i18n'
 import { CostsScreen } from './-costs/screen'
 import { CostsSkeleton } from './-costs/skeleton'
 
@@ -55,13 +56,19 @@ export const Route = createFileRoute('/_app/trips/$tripId/costs')({
       <NotFoundPanel />
     </AppFrame>
   ),
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="The costs did not load" />
-    </AppFrame>
-  ),
+  errorComponent: CostsError,
   component: CostsPage,
 })
+
+function CostsError({ error }: { error: Error }) {
+  const t = useTranslate()
+
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('trips.error.costs')} />
+    </AppFrame>
+  )
+}
 
 function CostsPage() {
   const data = Route.useLoaderData()
@@ -86,5 +93,11 @@ function CostsPage() {
     [navigate],
   )
 
-  return <CostsScreen data={data} filters={filters} onFiltersChange={onFiltersChange} />
+  return (
+    <CostsScreen
+      data={data}
+      filters={filters}
+      onFiltersChange={onFiltersChange}
+    />
+  )
 }

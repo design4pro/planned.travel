@@ -28,15 +28,18 @@ import type { TranslationOf } from '../../types'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Καθαρισμός',
+  'action.clearFilters': 'Καθαρισμός φίλτρων',
   'action.close': 'Κλείσιμο',
   'action.dismiss': 'Απόρριψη',
   'action.remove': 'Αφαίρεση',
+  'action.keep': 'Κράτησέ το',
   'action.undo': 'Αναίρεση',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Φορτώνει',
   'status.working': 'Σε εξέλιξη',
   'status.searching': 'Αναζητά',
+  'status.removing': 'Αφαιρείται',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} είναι σε σύνδεση',

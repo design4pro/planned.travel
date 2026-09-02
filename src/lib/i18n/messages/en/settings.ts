@@ -399,20 +399,15 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} trips, one traveller',
   'billing.hero.perSeatLine': '{seats} members × {price}',
   'billing.hero.singleTraveller': 'One traveller',
-  'billing.hero.paymentMethod': 'Payment method',
-  'billing.hero.cancel': 'Cancel plan',
   'billing.price.free': 'Free',
   'billing.provider.opening': 'Opening Polar',
-  'billing.provider.failed': 'Polar could not be reached',
-  'billing.provider.failedBody':
-    'Nothing was charged. Check your connection and try again in a moment.',
-
   /** The one line under the plan name that says what happens next, and when. */
   'billing.renewal.trialEndsToday':
-    'Your trial ends today. Add a card to keep every module unlocked.',
+    'Your trial ends today. The first charge follows unless you cancel before then.',
   'billing.renewal.trialEndsIn': {
-    one: 'Your trial ends in {value} day. No card needed until then.',
-    other: 'Your trial ends in {value} days. No card needed until then.',
+    one: 'Your trial ends in {value} day, and the first charge follows unless you cancel before then.',
+    other:
+      'Your trial ends in {value} days, and the first charge follows unless you cancel before then.',
   },
   'billing.renewal.trialEnded': 'Your trial has ended.',
   'billing.renewal.endsNoDate': 'This plan is set to end and will not renew.',
@@ -469,7 +464,6 @@ const messages = {
   'billing.interval.monthly': 'Monthly',
   'billing.interval.yearly': 'Yearly',
   /** The saving badge on the yearly pill. `{value}` is already formatted. */
-  'billing.interval.saving': 'Save {value}',
   /**
    * The three plans, named and described.
    *
@@ -478,7 +472,7 @@ const messages = {
    * one as a product description, where English is the operator's record. On a
    * settings screen it is an untranslated string in the middle of translated
    * copy, which §8.6 does not admit. The mapping from a plan id to these keys is
-   * `../../../routes/_app/settings/-lib/plan-copy.ts`.
+   * `../../../plan-copy.ts`.
    *
    * A plan *name* is translated like every other word here, and this file used
    * to say the opposite — that it was a proper noun a translation could keep as
@@ -518,7 +512,6 @@ const messages = {
   'billing.plan.current': 'Current plan',
   'billing.plan.currentBadge': 'Current',
   'billing.plan.popular': 'Popular',
-  'billing.plan.moveTo': 'Move to {plan}',
   'billing.plan.switchYearly': 'Switch to yearly',
   'billing.plan.switchMonthly': 'Switch to monthly',
   'billing.plan.upgradeTo': 'Upgrade to {plan}',
@@ -535,31 +528,69 @@ const messages = {
     other: '{value} members',
   },
 
-  'billing.invoices.title': 'Invoices',
-  'billing.invoices.description':
-    'Every receipt for this workspace, newest first.',
-  'billing.invoices.portal': 'Billing portal',
-  'billing.invoices.unavailableTitle': 'Receipts are not loading',
-  'billing.invoices.unavailableBody':
-    'Polar did not answer in time for the history. Everything above is live; open the billing portal for the full record, or come back in a moment.',
-  'billing.invoices.emptyTitle': 'No invoices yet',
-  'billing.invoices.emptyCustomer':
-    'The first receipt appears here as soon as a billing period closes.',
-  'billing.invoices.emptyNoCustomer':
-    'This workspace has never been charged. Choose a paid plan and the receipts will collect here.',
-  'billing.invoices.tableLabel': 'Invoice history',
   'billing.invoices.number': 'Invoice',
   'billing.invoices.date': 'Date',
-  'billing.invoices.period': 'Period',
   'billing.invoices.amount': 'Amount',
   'billing.invoices.status': 'Status',
-  'billing.invoices.receipt': 'Receipt',
-  'billing.invoices.view': 'View',
   'billing.invoice.paid': 'Paid',
-  'billing.invoice.open': 'Due',
   'billing.invoice.draft': 'Draft',
   'billing.invoice.void': 'Void',
-  'billing.invoice.uncollectible': 'Uncollectible',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'The billing provider rejected that request. Try again in a moment.',
+  'billing.planChanged.title': 'Plan updated',
+  'billing.planChanged.body':
+    'The change is already in force with Polar, who will invoice the difference. The summary below catches up within a minute.',
+  'billing.hero.manage': 'Manage billing',
+  'billing.hero.manageHint':
+    'Cards, billing address, VAT number, receipts and cancellation live with Polar, who issues the invoice.',
+  'billing.hero.manageHintNone':
+    'There is no billing profile yet. Choosing a paid plan below creates one, and the portal opens from then on.',
+  'billing.portal.opening': 'Opening the billing portal',
+  'billing.plan.notApplied': 'That change was not applied',
+  'billing.plan.cancelInPortal': 'Cancel in the portal',
+  'billing.plan.seatsOverMax': {
+    one: 'This workspace has {members} members and {plan} bills at most {max}. Remove {value} member before switching.',
+    other:
+      'This workspace has {members} members and {plan} bills at most {max}. Remove {value} members before switching.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'You have {members} members. Choose at least that many seats — Polar rejects a subscription with fewer seats than assignments.',
+  'billing.orders.title': 'Orders',
+  'billing.orders.description': 'Every order for this workspace, newest first.',
+  'billing.orders.receipts': 'All receipts',
+  'billing.orders.unavailableTitle': 'Orders are not loading',
+  'billing.orders.unavailableBody':
+    'Polar did not answer in time for the history. Everything above is live — try again in a moment, or read the full record in the billing portal.',
+  'billing.orders.emptyTitle': 'No orders yet',
+  'billing.orders.emptyCustomer':
+    'The first invoice appears here as soon as a billing period closes.',
+  'billing.orders.emptyNoCustomer':
+    'This workspace has never been charged. Choose a paid plan and the invoices collect here.',
+  'billing.orders.tableLabel': 'Order history',
+  'billing.orders.document': 'Document',
+  'billing.orders.dateUnknown': 'Date unknown',
+  'billing.order.pending': 'Pending',
+  'billing.order.refunded': 'Refunded',
+  'billing.order.partiallyRefunded': 'Part refunded',
+  'billing.order.noInvoiceDraft': 'No invoice while this order is a draft',
+  'billing.order.preparing': 'Preparing',
+  'billing.order.renderingHint':
+    'Polar is still rendering invoice {number}. The download returns in a few seconds.',
+  'billing.order.fetching': 'Fetching the invoice',
+  'billing.order.generating': 'Polar is preparing the invoice',
+  'billing.order.pdfLabel': 'Invoice {number} as PDF',
+  'billing.order.stillWritingTitle': 'Polar is still writing that invoice',
+  'billing.order.stillWritingBody':
+    'Invoice {number} is being rendered. The download comes back on its own in a few seconds.',
+  'billing.order.openFailed': 'That invoice did not open',
 } as const satisfies NamespaceMessages
 
 export default messages

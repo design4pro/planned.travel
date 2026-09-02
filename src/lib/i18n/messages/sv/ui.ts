@@ -24,15 +24,18 @@ import type En from '../en/ui'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Töm',
+  'action.clearFilters': 'Rensa filter',
   'action.close': 'Stäng',
   'action.dismiss': 'Dölj',
   'action.remove': 'Ta bort',
+  'action.keep': 'Behåll',
   'action.undo': 'Ångra',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Läser in',
   'status.working': 'Sparar',
   'status.searching': 'Söker',
+  'status.removing': 'Tar bort',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} är online',

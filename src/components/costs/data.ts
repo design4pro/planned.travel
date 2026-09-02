@@ -11,7 +11,11 @@
  * repository will apply when it answers, so the numbers never jump when the real
  * answer lands.
  */
+import { formatDayMonth, formatWeekday } from '#/lib/format'
+import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 import { currencyCode, formatMoneyPlain, suggestTransfers } from '#/lib/money'
+
+import type { Locale } from '#/lib/i18n/locales'
 
 import type {
   CostsBalance,
@@ -29,25 +33,11 @@ import type {
 /* -------------------------------------------------------------------------- */
 
 /**
- * The locale is pinned, and the time zone is UTC, for the same reason it is
- * everywhere else in the product: a `spent_on` column is a calendar date, not an
- * instant, and reading it in the browser's zone would move half the expenses in a
- * Tokyo trip to the previous day for a reader in London.
+ * A `spent_on` column is a calendar date, not an instant, so it is read in UTC:
+ * reading it in the browser's zone would move half the expenses in a Tokyo trip
+ * to the previous day for a reader in London. `src/lib/format.ts` parses an ISO
+ * day the same way, which is why the two helpers below can hand off to it.
  */
-const LOCALE = 'en-GB'
-
-const dayLabelFormat = new Intl.DateTimeFormat(LOCALE, {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
-
-const dayShortFormat = new Intl.DateTimeFormat(LOCALE, {
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
 
 /** `2026-06-23` → a UTC `Date`, or `null` when the column is unusable. */
 export function parseDay(value: string | null | undefined): Date | null {
@@ -63,16 +53,20 @@ export function toDayString(value: Date): string {
   return value.toISOString().slice(0, 10)
 }
 
-/** `2026-06-23` → `Tue 23 Jun`. Falls back to the raw column. */
-export function formatDayLabel(value: string): string {
-  const parsed = parseDay(value)
-  return parsed === null ? value : dayLabelFormat.format(parsed)
+/** `2026-06-23` → `Tue 23 Jun`, in the reader's own locale. Falls back to the raw column. */
+export function formatDayLabel(
+  value: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return formatWeekday(value, locale) ?? value
 }
 
 /** `2026-06-23` → `23 Jun`, for a filter option that must stay narrow. */
-export function formatDayShort(value: string): string {
-  const parsed = parseDay(value)
-  return parsed === null ? value : dayShortFormat.format(parsed)
+export function formatDayShort(
+  value: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return formatDayMonth(value, locale) ?? value
 }
 
 /* -------------------------------------------------------------------------- */
@@ -125,7 +119,9 @@ export function filterExpenses(
   viewerUserId: string,
 ): Array<CostsExpense> {
   const needle = (filters.q ?? '').trim().toLowerCase()
-  const nameOf = new Map(people.map((person) => [person.userId, person.name.toLowerCase()]))
+  const nameOf = new Map(
+    people.map((person) => [person.userId, person.name.toLowerCase()]),
+  )
 
   return rows.filter((row) => {
     if (filters.category !== undefined && row.category !== filters.category) {
@@ -148,7 +144,8 @@ export function filterExpenses(
       return true
     }
     const payer = row.paidBy === null ? '' : (nameOf.get(row.paidBy) ?? '')
-    const haystack = `${row.title} ${row.notes ?? ''} ${row.category} ${payer}`.toLowerCase()
+    const haystack =
+      `${row.title} ${row.notes ?? ''} ${row.category} ${payer}`.toLowerCase()
     return haystack.includes(needle)
   })
 }
@@ -165,7 +162,10 @@ export interface DayGroup {
 }
 
 /** Newest day first, matching the order the repository lists expenses in. */
-export function groupByDay(rows: ReadonlyArray<CostsExpense>): Array<DayGroup> {
+export function groupByDay(
+  rows: ReadonlyArray<CostsExpense>,
+  locale: Locale = DEFAULT_LOCALE,
+): Array<DayGroup> {
   const buckets = new Map<string, Array<CostsExpense>>()
   for (const row of rows) {
     const bucket = buckets.get(row.spentOn)
@@ -179,7 +179,7 @@ export function groupByDay(rows: ReadonlyArray<CostsExpense>): Array<DayGroup> {
     .sort((left, right) => right[0].localeCompare(left[0]))
     .map(([day, group]) => ({
       day,
-      label: formatDayLabel(day),
+      label: formatDayLabel(day, locale),
       rows: group,
       totalMinor: group.reduce((total, row) => total + row.amountMinor, 0),
     }))
@@ -213,15 +213,27 @@ export function dailySeries(rows: ReadonlyArray<CostsExpense>): Array<number> {
 /* -------------------------------------------------------------------------- */
 
 export type CostsOp =
-  | { readonly kind: 'create'; readonly key: string; readonly row: CostsExpense }
+  | {
+      readonly kind: 'create'
+      readonly key: string
+      readonly row: CostsExpense
+    }
   | {
       readonly kind: 'update'
       readonly key: string
       readonly previous: CostsExpense
       readonly row: CostsExpense
     }
-  | { readonly kind: 'delete'; readonly key: string; readonly previous: CostsExpense }
-  | { readonly kind: 'payment'; readonly key: string; readonly row: CostsSettlement }
+  | {
+      readonly kind: 'delete'
+      readonly key: string
+      readonly previous: CostsExpense
+    }
+  | {
+      readonly kind: 'payment'
+      readonly key: string
+      readonly row: CostsSettlement
+    }
 
 /** The screen's data after any in-flight writes are folded in. */
 export interface CostsSnapshot {
@@ -250,7 +262,11 @@ function ledgerOf(row: CostsExpense): Map<string, number> {
   return delta
 }
 
-function mergeInto(target: Map<string, number>, source: Map<string, number>, sign: 1 | -1): void {
+function mergeInto(
+  target: Map<string, number>,
+  source: Map<string, number>,
+  sign: 1 | -1,
+): void {
   for (const [userId, value] of source) {
     target.set(userId, (target.get(userId) ?? 0) + sign * value)
   }
@@ -291,7 +307,11 @@ export function applyOps(
   let spentDelta = 0
   let expenseCountDelta = 0
 
-  const addCategory = (category: string, amount: number, count: number): void => {
+  const addCategory = (
+    category: string,
+    amount: number,
+    count: number,
+  ): void => {
     categoryDelta.set(category, (categoryDelta.get(category) ?? 0) + amount)
     countDelta.set(category, (countDelta.get(category) ?? 0) + count)
   }
@@ -350,8 +370,14 @@ export function applyOps(
     byCategory: payload.byCategory.map((row) => ({
       category: row.category,
       plannedMinor: row.plannedMinor,
-      spentMinor: Math.max(row.spentMinor + (categoryDelta.get(row.category) ?? 0), 0),
-      expenseCount: Math.max(row.expenseCount + (countDelta.get(row.category) ?? 0), 0),
+      spentMinor: Math.max(
+        row.spentMinor + (categoryDelta.get(row.category) ?? 0),
+        0,
+      ),
+      expenseCount: Math.max(
+        row.expenseCount + (countDelta.get(row.category) ?? 0),
+        0,
+      ),
     })),
     suggestions: suggestTransfers(balances),
     spentMinor: Math.max(payload.spentMinor + spentDelta, 0),
@@ -408,21 +434,28 @@ export interface CostsTotals {
   readonly viewerPaidMinor: number
 }
 
-export function totalsFor(snapshot: CostsSnapshot, viewerUserId: string): CostsTotals {
+export function totalsFor(
+  snapshot: CostsSnapshot,
+  viewerUserId: string,
+): CostsTotals {
   const self = snapshot.balances.find((row) => row.userId === viewerUserId)
   const unclaimed = snapshot.expenses.filter((row) => row.paidBy === null)
 
   return {
     owesMinor: self === undefined ? 0 : Math.max(-self.balanceMinor, 0),
     owedMinor: self === undefined ? 0 : Math.max(self.balanceMinor, 0),
-    unclaimedMinor: unclaimed.reduce((total, row) => total + row.amountMinor, 0),
+    unclaimedMinor: unclaimed.reduce(
+      (total, row) => total + row.amountMinor,
+      0,
+    ),
     unclaimedCount: unclaimed.length,
     viewerShareMinor: snapshot.expenses.reduce(
       (total, row) => total + shareOf(row, viewerUserId),
       0,
     ),
     viewerPaidMinor: snapshot.expenses.reduce(
-      (total, row) => (row.paidBy === viewerUserId ? total + row.amountMinor : total),
+      (total, row) =>
+        row.paidBy === viewerUserId ? total + row.amountMinor : total,
       0,
     ),
   }
@@ -479,7 +512,9 @@ export function expensesCsv(input: {
   readonly people: ReadonlyArray<CostsPerson>
   readonly viewerUserId: string
 }): string {
-  const nameOf = new Map(input.people.map((person) => [person.userId, person.name]))
+  const nameOf = new Map(
+    input.people.map((person) => [person.userId, person.name]),
+  )
 
   const lines = [csvLine(CSV_HEADERS)]
   for (const row of input.rows) {
@@ -495,7 +530,9 @@ export function expensesCsv(input: {
           : formatMoneyPlain(row.originalAmountMinor, row.originalCurrency),
         row.originalCurrency === null ? '' : currencyCode(row.originalCurrency),
         row.exchangeRate === null ? '' : row.exchangeRate.toFixed(4),
-        row.paidBy === null ? '' : (nameOf.get(row.paidBy) ?? 'Removed traveller'),
+        row.paidBy === null
+          ? ''
+          : (nameOf.get(row.paidBy) ?? 'Removed traveller'),
         row.splitMethod,
         formatMoneyPlain(shareOf(row, input.viewerUserId), row.currency),
         row.notes ?? '',

@@ -35,8 +35,16 @@ const iconButtonVariants = cva(
         glass:
           'bg-glass text-ink shadow-glass ring-1 ring-glass-edge ring-inset backdrop-glass hover:text-ink',
       },
+      /**
+       * The boxes match `Button`'s ladder. The glyph inside is not set here:
+       * `glyphForSize` below owns it, and it sizes the wrapping box as well as
+       * the `svg`, which is the half that actually holds a Lucide icon in place.
+       *
+       * There is no fourth size. `xs` (28px) used to sit below `sm` with no
+       * counterpart in `Button`, so a dense screen could reach for a control
+       * size the rest of the product did not have; its callers are on `sm` now.
+       */
       size: {
-        xs: 'size-7 rounded-sm',
         sm: 'size-8 rounded-sm',
         md: 'size-10 rounded-md',
         lg: 'size-12 rounded-md',
@@ -55,7 +63,7 @@ const IconButtonSlot = Slot.createSlot<
   React.ButtonHTMLAttributes<HTMLButtonElement>
 >('IconButton')
 
-const spinnerForSize = { xs: 'xs', sm: 'xs', md: 'sm', lg: 'md' } as const
+const spinnerForSize = { sm: 'xs', md: 'sm', lg: 'md' } as const
 
 /**
  * The glyph box, and the glyph inside it.
@@ -70,7 +78,6 @@ const spinnerForSize = { xs: 'xs', sm: 'xs', md: 'sm', lg: 'md' } as const
  * has to travel with the box or the two disagree.
  */
 const glyphForSize = {
-  xs: 'size-3.5 [&_svg]:size-3.5',
   sm: 'size-4 [&_svg]:size-4',
   md: 'size-[1.125rem] [&_svg]:size-[1.125rem]',
   lg: 'size-5 [&_svg]:size-5',

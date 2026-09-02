@@ -341,20 +341,14 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} resor, en resenär',
   'billing.hero.perSeatLine': '{seats} medlemmar × {price}',
   'billing.hero.singleTraveller': 'En resenär',
-  'billing.hero.paymentMethod': 'Betalsätt',
-  'billing.hero.cancel': 'Säg upp abonnemanget',
   'billing.price.free': 'Gratis',
   'billing.provider.opening': 'Polar öppnas',
-  'billing.provider.failed': 'Polar gick inte att nå',
-  'billing.provider.failedBody':
-    'Ingenting drogs. Kontrollera din uppkoppling och försök igen om en stund.',
-
   'billing.renewal.trialEndsToday':
-    'Din provperiod tar slut i dag. Lägg till ett kort så förblir alla moduler öppna.',
+    'Din testperiod slutar i dag. Den första debiteringen följer om du inte avbryter innan.',
   'billing.renewal.trialEndsIn': {
-    one: 'Din provperiod tar slut om {value} dag. Inget kort behövs innan dess.',
+    one: 'Din testperiod slutar om {value} dag, sedan följer den första debiteringen om du inte avbryter innan.',
     other:
-      'Din provperiod tar slut om {value} dagar. Inget kort behövs innan dess.',
+      'Din testperiod slutar om {value} dagar, sedan följer den första debiteringen om du inte avbryter innan.',
   },
   'billing.renewal.trialEnded': 'Din provperiod är slut.',
   'billing.renewal.endsNoDate':
@@ -407,7 +401,6 @@ const messages = {
   'billing.interval.label': 'Betalningsintervall',
   'billing.interval.monthly': 'Månadsvis',
   'billing.interval.yearly': 'Årsvis',
-  'billing.interval.saving': 'Spara {value}',
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Planera dina två nästa resor',
   'billing.plan.free.feature.trips': 'Två resor åt gången',
@@ -437,7 +430,6 @@ const messages = {
   'billing.plan.current': 'Nuvarande abonnemang',
   'billing.plan.currentBadge': 'Nuvarande',
   'billing.plan.popular': 'Populärt',
-  'billing.plan.moveTo': 'Gå över till {plan}',
   'billing.plan.switchYearly': 'Byt till årsvis',
   'billing.plan.switchMonthly': 'Byt till månadsvis',
   'billing.plan.upgradeTo': 'Uppgradera till {plan}',
@@ -455,31 +447,70 @@ const messages = {
     other: '{value} medlemmar',
   },
 
-  'billing.invoices.title': 'Fakturor',
-  'billing.invoices.description':
-    'Varje kvitto för den här arbetsytan, det senaste överst.',
-  'billing.invoices.portal': 'Faktureringsportalen',
-  'billing.invoices.unavailableTitle': 'Kvittona läses inte in',
-  'billing.invoices.unavailableBody':
-    'Polar svarade inte i tid för historiken. Allt ovanför är aktuellt; öppna faktureringsportalen för hela redovisningen, eller titta förbi om en stund.',
-  'billing.invoices.emptyTitle': 'Inga fakturor än',
-  'billing.invoices.emptyCustomer':
-    'Det första kvittot dyker upp här så fort en faktureringsperiod avslutas.',
-  'billing.invoices.emptyNoCustomer':
-    'Den här arbetsytan har aldrig debiterats. Välj ett betalt abonnemang så samlas kvittona här.',
-  'billing.invoices.tableLabel': 'Fakturahistorik',
   'billing.invoices.number': 'Faktura',
   'billing.invoices.date': 'Datum',
-  'billing.invoices.period': 'Tidsperiod',
   'billing.invoices.amount': 'Belopp',
   'billing.invoices.status': 'Betalstatus',
-  'billing.invoices.receipt': 'Kvitto',
-  'billing.invoices.view': 'Visa',
   'billing.invoice.paid': 'Betald',
-  'billing.invoice.open': 'Förfaller',
   'billing.invoice.draft': 'Utkast',
   'billing.invoice.void': 'Annullerad',
-  'billing.invoice.uncollectible': 'Osäker fordran',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Betalleverantören avvisade begäran. Försök igen om en stund.',
+  'billing.planChanged.title': 'Planen uppdaterad',
+  'billing.planChanged.body':
+    'Ändringen gäller redan hos Polar, som fakturerar mellanskillnaden. Sammanställningen nedan hinner upp inom en minut.',
+  'billing.hero.manage': 'Hantera faktureringen',
+  'billing.hero.manageHint':
+    'Kort, faktureringsadress, momsnummer, kvitton och uppsägning finns hos Polar, som utfärdar fakturan.',
+  'billing.hero.manageHintNone':
+    'Det finns ännu ingen faktureringsprofil. Väljer du en betald plan nedan skapas en, och därefter öppnas portalen.',
+  'billing.portal.opening': 'Faktureringsportalen öppnas',
+  'billing.plan.notApplied': 'Den ändringen genomfördes inte',
+  'billing.plan.cancelInPortal': 'Säg upp i portalen',
+  'billing.plan.seatsOverMax': {
+    one: 'Den här arbetsytan har {members} medlemmar och {plan} debiterar högst {max}. Ta bort {value} medlem innan du byter.',
+    other:
+      'Den här arbetsytan har {members} medlemmar och {plan} debiterar högst {max}. Ta bort {value} medlemmar innan du byter.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Du har {members} medlemmar. Välj minst så många platser — Polar avvisar en prenumeration med färre platser än tilldelningar.',
+  'billing.orders.title': 'Ordrar',
+  'billing.orders.description':
+    'Varje order i den här arbetsytan, senaste först.',
+  'billing.orders.receipts': 'Alla kvitton',
+  'billing.orders.unavailableTitle': 'Ordrarna laddas inte',
+  'billing.orders.unavailableBody':
+    'Polar svarade inte i tid för historiken. Allt ovan är aktuellt — försök igen om en stund eller läs hela registret i faktureringsportalen.',
+  'billing.orders.emptyTitle': 'Inga ordrar än',
+  'billing.orders.emptyCustomer':
+    'Den första fakturan visas här så snart en faktureringsperiod avslutas.',
+  'billing.orders.emptyNoCustomer':
+    'Den här arbetsytan har aldrig debiterats. Välj en betald plan och fakturorna samlas här.',
+  'billing.orders.tableLabel': 'Orderhistorik',
+  'billing.orders.document': 'Dokument',
+  'billing.orders.dateUnknown': 'Okänt datum',
+  'billing.order.pending': 'Väntar',
+  'billing.order.refunded': 'Återbetald',
+  'billing.order.partiallyRefunded': 'Delvis återbetald',
+  'billing.order.noInvoiceDraft': 'Ingen faktura så länge ordern är ett utkast',
+  'billing.order.preparing': 'Förbereds',
+  'billing.order.renderingHint':
+    'Polar tar fortfarande fram faktura {number}. Nedladdningen kommer tillbaka om några sekunder.',
+  'billing.order.fetching': 'Hämtar fakturan',
+  'billing.order.generating': 'Polar förbereder fakturan',
+  'billing.order.pdfLabel': 'Faktura {number} som PDF',
+  'billing.order.stillWritingTitle': 'Polar skriver fortfarande den fakturan',
+  'billing.order.stillWritingBody':
+    'Faktura {number} tas fram. Nedladdningen kommer tillbaka av sig själv om några sekunder.',
+  'billing.order.openFailed': 'Den fakturan gick inte att öppna',
 } satisfies TranslationOf<typeof En>
 
 export default messages

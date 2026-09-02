@@ -672,9 +672,9 @@ describe('MapCanvas', () => {
     )
     await mapMounted()
 
-    const notice = (await screen.findByText('Basemap unavailable')).closest<
-      HTMLElement
-    >('[role="status"]')
+    const notice = (
+      await screen.findByText('Basemap unavailable')
+    ).closest<HTMLElement>('[role="status"]')
     expect(notice?.style.bottom).toBe('132px')
 
     // A screen that declares nothing gets the designed position, from the class

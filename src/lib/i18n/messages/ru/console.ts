@@ -138,7 +138,6 @@ const messages = {
   'users.filter.role.curator': 'Кураторы',
   'users.filter.status.label': 'Отбор по состоянию записи',
   'users.filter.status.any': 'Любое состояние',
-  'users.filter.clear': 'Сбросить отбор',
   'users.filter.hint':
     'Сузьте по роли или по состоянию — по чему-то одному за раз.',
   'users.column.account': 'Учётная запись',

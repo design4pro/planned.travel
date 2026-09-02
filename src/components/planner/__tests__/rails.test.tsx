@@ -64,7 +64,9 @@ const DAY: PlannerDay = {
   title: 'Asakusa and the river',
   dateLabel: 'Fri, 9 Oct',
   stays: ['Shinjuku Granbell Hotel'],
-  notes: [{ id: 'n1', body: 'Buy the metro pass at the airport', time: '08:00' }],
+  notes: [
+    { id: 'n1', body: 'Buy the metro pass at the airport', time: '08:00' },
+  ],
   rows: [
     row({
       placeId: 'p-sensoji',
@@ -155,9 +157,9 @@ describe('DaySection', () => {
     )
 
     const rows = [...container.querySelectorAll('[data-planner-item]')]
-    expect(rows.map((entry) => entry.getAttribute('data-planner-place'))).toEqual(
-      ['p-sensoji', 'p-skytree', 'p-unmapped'],
-    )
+    expect(
+      rows.map((entry) => entry.getAttribute('data-planner-place')),
+    ).toEqual(['p-sensoji', 'p-skytree', 'p-unmapped'])
     // The numeral is decorative, so it is read off each row's own subtree.
     expect(
       rows.map((entry) => entry.textContent.trimStart().slice(0, 1)),
@@ -208,9 +210,7 @@ describe('DaySection', () => {
     expect(
       screen.getByText('Book the fast track — the queue is an hour at noon.'),
     ).toBeDefined()
-    expect(
-      screen.getByText('Buy the metro pass at the airport'),
-    ).toBeDefined()
+    expect(screen.getByText('Buy the metro pass at the airport')).toBeDefined()
     expect(screen.getByText('08:00')).toBeDefined()
   })
 
@@ -220,7 +220,9 @@ describe('DaySection', () => {
         <DaySection day={DAY} categoryFor={categoryFor} />
       </Harness>,
     )
-    expect(screen.getByRole('button', { name: 'Reorder Sensō-ji' })).toBeDefined()
+    expect(
+      screen.getByRole('button', { name: 'Reorder Sensō-ji' }),
+    ).toBeDefined()
     expect(
       screen.getByRole('button', { name: 'Reorder Tokyo Skytree' }),
     ).toBeDefined()
@@ -232,7 +234,9 @@ describe('DaySection', () => {
         <DaySection day={DAY} categoryFor={categoryFor} draggable={false} />
       </Harness>,
     )
-    expect(screen.queryByRole('button', { name: 'Reorder Sensō-ji' })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Reorder Sensō-ji' }),
+    ).toBeNull()
   })
 
   it('invites a drop on an empty day rather than showing nothing', () => {
@@ -241,7 +245,9 @@ describe('DaySection', () => {
         <DaySection day={EMPTY_DAY} categoryFor={categoryFor} />
       </Harness>,
     )
-    expect(screen.getByText('Nothing planned — drop a place here')).toBeDefined()
+    expect(
+      screen.getByText('Nothing planned — drop a place here'),
+    ).toBeDefined()
     expect(screen.getByText('0 stops')).toBeDefined()
   })
 
@@ -250,7 +256,11 @@ describe('DaySection', () => {
     const onFocusDay = vi.fn()
     render(
       <Harness>
-        <DaySection day={DAY} categoryFor={categoryFor} onFocusDay={onFocusDay} />
+        <DaySection
+          day={DAY}
+          categoryFor={categoryFor}
+          onFocusDay={onFocusDay}
+        />
       </Harness>,
     )
 
@@ -561,7 +571,9 @@ describe('DragPreview', () => {
     )
     expect(screen.getByText('Ichiran Shibuya')).toBeDefined()
     expect(screen.getByText('Shibuya')).toBeDefined()
-    expect(container.firstElementChild?.getAttribute('aria-hidden')).toBe('true')
+    expect(container.firstElementChild?.getAttribute('aria-hidden')).toBe(
+      'true',
+    )
   })
 
   it('falls back to the category when a place has no address', () => {

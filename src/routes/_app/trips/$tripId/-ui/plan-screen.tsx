@@ -28,6 +28,7 @@ import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core'
 import { Crosshair, Layers, ListTree, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { useLocale } from '#/lib/i18n'
 import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 import {
@@ -331,6 +332,7 @@ export interface PlanScreenProps {
 }
 
 export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
+  const locale = useLocale()
   const router = useRouter()
   const wide = useIsWide()
   const editable = payload.editable
@@ -351,7 +353,9 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
     initialSelection,
   )
   const [query, setQuery] = React.useState('')
-  const [categoryIds, setCategoryIds] = React.useState<ReadonlyArray<string>>([])
+  const [categoryIds, setCategoryIds] = React.useState<ReadonlyArray<string>>(
+    [],
+  )
   const [leftCollapsed, setLeftCollapsed] = React.useState(false)
   const [rightCollapsed, setRightCollapsed] = React.useState(false)
   const [pending, setPending] = React.useState<ReadonlySet<string>>(new Set())
@@ -373,14 +377,20 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
 
   /* ------------------------------------------------------------------ model */
 
-  const model = React.useMemo(() => planModel(payload, order), [payload, order])
+  const model = React.useMemo(
+    () => planModel(payload, order, locale),
+    [payload, order, locale],
+  )
 
   const scheduledRows = React.useMemo(
     () => model.days.flatMap((day) => day.rows),
     [model.days],
   )
 
-  const filters = React.useMemo(() => ({ query, categoryIds }), [query, categoryIds])
+  const filters = React.useMemo(
+    () => ({ query, categoryIds }),
+    [query, categoryIds],
+  )
   const visibleIdeas = React.useMemo(
     () => filterRows(model.ideas, filters),
     [model.ideas, filters],
@@ -923,9 +933,7 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
           row={row}
           days={payload.days}
           disabled={pending.has(row.itemId)}
-          onEditPlace={() =>
-            setDialog({ kind: 'edit', placeId: row.placeId })
-          }
+          onEditPlace={() => setDialog({ kind: 'edit', placeId: row.placeId })}
           onEditTiming={() => {
             if (row.assignmentId !== null) {
               setDialog({ kind: 'timing', itemId: row.assignmentId })
@@ -966,8 +974,8 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
             No days yet
           </SectionLabel>
           <p className="mt-2 text-caption text-ink-3">
-            Give {tripTitle} a departure and a return date and one column per day
-            appears here, ready for the places you have collected.
+            Give {tripTitle} a departure and a return date and one column per
+            day appears here, ready for the places you have collected.
           </p>
         </div>
       ) : (
@@ -1078,6 +1086,12 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
           TRIP_SLICE_HEIGHT_CLASS.lg,
         )}
       >
+        {/* The planner is a full-bleed map with no title bar, and the one place
+            the trip was named — the bottom bar at line 1189 — is `lg:hidden`, so
+            on a desktop the outline opened at `h2` and never said which trip this
+            is. The name belongs to the page in every composition; only its
+            visible expression is a phone's. */}
+        <h1 className="sr-only">{tripTitle}</h1>
         <MapCanvas
           label={`Map of ${tripTitle}`}
           bounds={initialBounds}
@@ -1123,8 +1137,8 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
           <MapControls
             position="bottom-right"
             className={cn(
-              'top-20 right-(--plan-controls) bottom-auto',
-              'lg:top-auto lg:right-(--plan-controls) lg:bottom-10',
+              'top-20 end-(--plan-controls) bottom-auto',
+              'lg:top-auto lg:end-(--plan-controls) lg:bottom-10',
             )}
           />
 
@@ -1139,7 +1153,7 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
           {/* ODbL: OpenStreetMap and Protomaps are credited on the map itself, in
               the product's own type, at a size that can actually be read — and
               lifted clear of the mobile action bar rather than hidden under it. */}
-          <MapAttribution className="right-auto bottom-(--plan-bar) left-1/2 -translate-x-1/2 lg:bottom-2" />
+          <MapAttribution className="end-auto bottom-(--plan-bar) left-1/2 -translate-x-1/2 lg:bottom-2" />
         </MapCanvas>
 
         {/* -------------------------------------------------------- desktop */}
@@ -1154,7 +1168,7 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
               onCollapsedChange={setLeftCollapsed}
               footer={leftCollapsed ? undefined : railFooter}
               className={cn(
-                'absolute top-4 bottom-4 left-4 hidden animate-overlay-in lg:flex',
+                'absolute top-4 bottom-4 start-4 hidden animate-overlay-in lg:flex',
                 leftCollapsed ? 'w-11' : 'w-86',
               )}
             >
@@ -1171,7 +1185,7 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
               onCollapsedChange={setRightCollapsed}
               toolbar={rightCollapsed ? undefined : addButton}
               className={cn(
-                'absolute top-4 right-4 bottom-4 hidden animate-overlay-in lg:flex',
+                'absolute top-4 end-4 bottom-4 hidden animate-overlay-in lg:flex',
                 rightCollapsed ? 'w-11' : 'w-82',
               )}
             >
@@ -1186,7 +1200,10 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
             className="absolute inset-x-3 bottom-3 flex items-center gap-2 pb-safe lg:hidden"
           >
             <div className="min-w-0 flex-1">
-              <SectionLabel as="h2">{tripTitle}</SectionLabel>
+              {/* Not a heading: the page's `h1` above already carries this exact
+                  name, and on a phone — the only width this bar exists at — a
+                  second one would announce the trip twice. */}
+              <SectionLabel>{tripTitle}</SectionLabel>
               <p className="mt-0.5 truncate text-caption tabular-nums text-ink-2">
                 {pluralise(model.scheduledCount, 'stop')} ·{' '}
                 {pluralise(model.days.length, 'day')} ·{' '}
@@ -1222,7 +1239,7 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
             padding="xs"
             role="status"
             aria-live="polite"
-            className="absolute top-20 left-1/2 flex max-w-[calc(100%-7rem)] -translate-x-1/2 items-center gap-2 pr-1 pl-3"
+            className="absolute top-20 left-1/2 flex max-w-[calc(100%-7rem)] -translate-x-1/2 items-center gap-2 pe-1 ps-3"
           >
             <Crosshair
               size={14}
@@ -1237,7 +1254,7 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
             <IconButton
               icon={<X />}
               label="Stop placing this pin"
-              size="xs"
+              size="sm"
               variant="ghost"
               onClick={() => setPicking(null)}
             />
@@ -1255,7 +1272,7 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
         handleOnly
       >
         <SheetContent side="bottom" className="max-h-[86dvh]">
-          <SheetHeader className="pr-14">
+          <SheetHeader className="pe-14">
             <SheetTitle>Plan</SheetTitle>
           </SheetHeader>
           <SheetBody className="px-3 py-3">
@@ -1370,7 +1387,10 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
 }
 
 /** The stored timing of one stop, for the dialog to open on. */
-function timingFor(payload: PlanBoardPayload, assignmentId: string): TimingDraft {
+function timingFor(
+  payload: PlanBoardPayload,
+  assignmentId: string,
+): TimingDraft {
   for (const day of payload.days) {
     for (const stop of day.stops) {
       if (stop.assignmentId !== assignmentId) continue
@@ -1415,7 +1435,8 @@ function PlanCoverage({
   // city. Capping the fit is what keeps the frame honest — and it is what makes
   // the notice's promise ("the coastlines … are all real") true rather than a
   // claim about an empty rectangle.
-  const unmapped = coverage.status === 'outside' || coverage.status === 'partial'
+  const unmapped =
+    coverage.status === 'outside' || coverage.status === 'partial'
 
   return (
     <>

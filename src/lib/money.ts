@@ -6,18 +6,29 @@
  * reader could later see: parsing rounds once, on the way in, and formatting
  * divides once, on the way out.
  *
- * The locale is pinned rather than read from the browser. The server renders the
- * costs screen first, and a locale that differed between the two would produce a
- * hydration mismatch on every figure on the page.
+ * Formatting lives in `src/lib/format.ts` and is reached from here. This module
+ * pinned `en-GB` for every reader, on the grounds that a locale differing between
+ * the server render and the client one would mismatch every figure on the page —
+ * a real hazard, and the reason `format.ts` composes each amount from a frozen
+ * per-locale table instead of handing it to `Intl` whole. With that table in
+ * place the pin bought nothing and cost every non-English reader the wrong
+ * decimal mark, so the formatters below take a locale and delegate.
  *
- * `currencyDisplay: 'narrowSymbol'` is not a cosmetic preference. `en-GB`
- * disambiguates by default — `JP¥`, `US$`, `CA$` — and three glyphs of prefix in
- * front of a 48px display numeral is what pushed the costs summary out of its own
- * card in an earlier round. The trip names its own currency in the header, so the
- * narrow symbol is unambiguous here.
+ * `currencyDisplay: 'narrowSymbol'` was the other reason to pin: `JP¥`, `US$` and
+ * `CA$` in front of a 48px display numeral pushed the costs summary out of its
+ * own card in an earlier round. `formatMoneyMinor` uses the narrow symbol too, so
+ * that holds.
  */
 
-const LOCALE = 'en-GB'
+import {
+  formatMoneyMinor,
+  formatMoneyMinorPlain,
+  formatRate,
+  minorUnitDigits as frozenMinorUnitDigits,
+} from '#/lib/format'
+import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
+
+import type { Locale } from '#/lib/i18n/locales'
 
 /** The rounding remainder is handed out in whole minor units, never fractions. */
 const MINOR_STEP = 1
@@ -88,40 +99,15 @@ export function currencyCode(currency: string | null | undefined): string {
 /* -------------------------------------------------------------------------- */
 
 /**
- * `Intl.NumberFormat` construction is the expensive part, and the costs screen
- * formats every row three times. One cached instance per shape keeps a 200-row
- * export from building six hundred formatters.
- */
-const cache = new Map<string, Intl.NumberFormat>()
-
-function formatter(key: string, build: () => Intl.NumberFormat): Intl.NumberFormat {
-  const existing = cache.get(key)
-  if (existing !== undefined) {
-    return existing
-  }
-  const created = build()
-  cache.set(key, created)
-  return created
-}
-
-function currencyFormatter(code: string): Intl.NumberFormat {
-  return formatter(`c:${code}`, () =>
-    new Intl.NumberFormat(LOCALE, {
-      style: 'currency',
-      currency: code,
-      currencyDisplay: 'narrowSymbol',
-    }),
-  )
-}
-
-/**
  * How many minor units the currency actually has: 2 for EUR, 0 for JPY, 3 for
- * KWD. Resolved from `Intl` so a zero-decimal currency is never divided by a
- * hundred it does not use.
+ * KWD, so a zero-decimal currency is never divided by a hundred it does not use.
+ *
+ * Read from the frozen table rather than resolved from `Intl`, because the two
+ * runtimes disagree about `HUF` and `IDR` and this number is a divisor: a
+ * disagreement here changes the amount, not its punctuation.
  */
 export function minorUnitDigits(currency: string | null | undefined): number {
-  const code = currencyCode(currency)
-  return currencyFormatter(code).resolvedOptions().minimumFractionDigits ?? 2
+  return frozenMinorUnitDigits(currencyCode(currency))
 }
 
 /** 10 ** the currency's minor-unit digits — the divisor between minor and major. */
@@ -130,22 +116,21 @@ function minorUnitScale(currency: string | null | undefined): number {
 }
 
 /** `464880` JPY → `¥464,880`. `238400` GBP → `£2,384.00`. */
-export function formatMoney(minor: number, currency: string | null | undefined): string {
-  const code = currencyCode(currency)
-  const digits = minorUnitDigits(code)
-  return currencyFormatter(code).format(minor / 10 ** digits)
+export function formatMoney(
+  minor: number,
+  currency: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return formatMoneyMinor(minor, currencyCode(currency), locale)
 }
 
 /** The same figure with the symbol dropped, for a column that already names it. */
-export function formatMoneyPlain(minor: number, currency: string | null | undefined): string {
-  const digits = minorUnitDigits(currency)
-  return formatter(`p:${digits}`, () =>
-    new Intl.NumberFormat(LOCALE, {
-      style: 'decimal',
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    }),
-  ).format(minor / 10 ** digits)
+export function formatMoneyPlain(
+  minor: number,
+  currency: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return formatMoneyMinorPlain(minor, currencyCode(currency), locale)
 }
 
 /**
@@ -154,8 +139,12 @@ export function formatMoneyPlain(minor: number, currency: string | null | undefi
  * Zero is unsigned on purpose: a settled balance is a fact, not a direction, and
  * `+¥0` reads as a rounding artefact.
  */
-export function formatSignedMoney(minor: number, currency: string | null | undefined): string {
-  const magnitude = formatMoney(Math.abs(minor), currency)
+export function formatSignedMoney(
+  minor: number,
+  currency: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const magnitude = formatMoney(Math.abs(minor), currency, locale)
   if (minor === 0) {
     return magnitude
   }
@@ -170,12 +159,15 @@ export function formatSignedMoney(minor: number, currency: string | null | undef
  * currency, or a source currency that matches the trip's own, in which case the
  * arrow would point at the same number twice.
  */
-export function formatConversion(input: {
-  readonly originalAmountMinor: number | null
-  readonly originalCurrency: string | null
-  readonly amountMinor: number
-  readonly currency: string
-}): string | null {
+export function formatConversion(
+  input: {
+    readonly originalAmountMinor: number | null
+    readonly originalCurrency: string | null
+    readonly amountMinor: number
+    readonly currency: string
+  },
+  locale: Locale = DEFAULT_LOCALE,
+): string | null {
   const { originalAmountMinor, originalCurrency, amountMinor, currency } = input
   if (originalAmountMinor === null || originalCurrency === null) {
     return null
@@ -183,7 +175,7 @@ export function formatConversion(input: {
   if (currencyCode(originalCurrency) === currencyCode(currency)) {
     return null
   }
-  return `${formatMoney(originalAmountMinor, originalCurrency)} → ${formatMoney(amountMinor, currency)}`
+  return `${formatMoney(originalAmountMinor, originalCurrency, locale)} → ${formatMoney(amountMinor, currency, locale)}`
 }
 
 /**
@@ -192,23 +184,20 @@ export function formatConversion(input: {
  * Derived from the two amounts rather than from a stored rate, so it can never
  * disagree with the figures printed beside it.
  */
-export function formatExchangeRate(input: {
-  readonly originalAmountMinor: number | null
-  readonly originalCurrency: string | null
-  readonly amountMinor: number
-  readonly currency: string
-}): string | null {
+export function formatExchangeRate(
+  input: {
+    readonly originalAmountMinor: number | null
+    readonly originalCurrency: string | null
+    readonly amountMinor: number
+    readonly currency: string
+  },
+  locale: Locale = DEFAULT_LOCALE,
+): string | null {
   const rate = impliedRate(input)
   if (rate === null || input.originalCurrency === null) {
     return null
   }
-  const figure = formatter('rate', () =>
-    new Intl.NumberFormat(LOCALE, {
-      style: 'decimal',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    }),
-  ).format(rate)
+  const figure = formatRate(rate, locale)
   return `1 ${currencyCode(input.originalCurrency)} = ${figure} ${currencyCode(input.currency)}`
 }
 
@@ -225,7 +214,11 @@ export function impliedRate(input: {
   readonly currency: string
 }): number | null {
   const { originalAmountMinor, originalCurrency, amountMinor, currency } = input
-  if (originalAmountMinor === null || originalCurrency === null || originalAmountMinor === 0) {
+  if (
+    originalAmountMinor === null ||
+    originalCurrency === null ||
+    originalAmountMinor === 0
+  ) {
     return null
   }
   const source = originalAmountMinor / minorUnitScale(originalCurrency)
@@ -246,7 +239,10 @@ export function impliedRate(input: {
  * told off for it. Anything that is not a single non-negative decimal number
  * returns `null`, and the caller decides what to say about it.
  */
-export function parseMoney(text: string, currency: string | null | undefined): number | null {
+export function parseMoney(
+  text: string,
+  currency: string | null | undefined,
+): number | null {
   // A minus sign of any flavour is rejected rather than stripped: an expense is
   // never negative, and silently turning a negative figure positive is a lie.
   if (/[-\u2212]/.test(text)) {
@@ -284,7 +280,10 @@ export function parseMoney(text: string, currency: string | null | undefined): n
  * `2384.00`. No grouping separators — they are noise inside an input the reader
  * is about to edit.
  */
-export function toAmountInput(minor: number, currency: string | null | undefined): string {
+export function toAmountInput(
+  minor: number,
+  currency: string | null | undefined,
+): string {
   const digits = minorUnitDigits(currency)
   return (minor / 10 ** digits).toFixed(digits)
 }
@@ -363,7 +362,10 @@ export interface SplitPreview {
   readonly error: string | null
 }
 
-function weightsFor(method: SplitMethod, participants: ReadonlyArray<SplitInput>): Array<number> {
+function weightsFor(
+  method: SplitMethod,
+  participants: ReadonlyArray<SplitInput>,
+): Array<number> {
   return participants.map((part) => {
     if (method === 'equal') {
       return 1
@@ -393,7 +395,9 @@ function distribute(
   weights: ReadonlyArray<number>,
   denominator: number,
 ): Array<number> {
-  const raw = weights.map((weight) => Math.floor((amountMinor * weight) / denominator))
+  const raw = weights.map((weight) =>
+    Math.floor((amountMinor * weight) / denominator),
+  )
   let remainder = amountMinor - sum(raw)
   return raw.map((value) => {
     const extra = remainder >= MINOR_STEP ? MINOR_STEP : 0
@@ -488,7 +492,10 @@ export function splitPreview(
 
   if (weightTotal <= 0) {
     return {
-      rows: participants.map((part) => ({ userId: part.userId, shareMinor: 0 })),
+      rows: participants.map((part) => ({
+        userId: part.userId,
+        shareMinor: 0,
+      })),
       allocatedMinor: 0,
       remainderMinor: amountMinor,
       weightTotal,
@@ -545,8 +552,15 @@ export function splitPreview(
  * showing the right transfers while a just-recorded payment is still in flight.
  */
 export function suggestTransfers(
-  balances: ReadonlyArray<{ readonly userId: string; readonly balanceMinor: number }>,
-): Array<{ readonly fromUserId: string; readonly toUserId: string; readonly amountMinor: number }> {
+  balances: ReadonlyArray<{
+    readonly userId: string
+    readonly balanceMinor: number
+  }>,
+): Array<{
+  readonly fromUserId: string
+  readonly toUserId: string
+  readonly amountMinor: number
+}> {
   const creditors = balances
     .filter((row) => row.balanceMinor > 0)
     .map((row) => ({ userId: row.userId, amount: row.balanceMinor }))
@@ -574,7 +588,11 @@ export function suggestTransfers(
     }
     const amountMinor = Math.min(creditor.amount, debtor.amount)
     if (amountMinor > 0) {
-      transfers.push({ fromUserId: debtor.userId, toUserId: creditor.userId, amountMinor })
+      transfers.push({
+        fromUserId: debtor.userId,
+        toUserId: creditor.userId,
+        amountMinor,
+      })
     }
     creditor.amount -= amountMinor
     debtor.amount -= amountMinor

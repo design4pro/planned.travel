@@ -4,18 +4,24 @@ import { Wordmark } from '#/components/layout/brand'
 import { ThemeToggle } from '#/components/layout/theme-toggle'
 import { Button, Separator } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
+
+import type { MessageKey } from '#/lib/i18n'
 
 /** The year in the footer notice. A constant, so SSR and hydration agree. */
 const COPYRIGHT_YEAR = 2026
 
-export type MarketingAnchor = { readonly href: string; readonly label: string }
+export type MarketingAnchor = {
+  readonly href: string
+  readonly labelKey: MessageKey
+}
 
 /** In-page anchors the landing page hands to the header on wide screens. */
 export const LANDING_ANCHORS: ReadonlyArray<MarketingAnchor> = [
-  { href: '#planner', label: 'Planner' },
-  { href: '#modules', label: 'Modules' },
-  { href: '#plans', label: 'Plans' },
-  { href: '#questions', label: 'Questions' },
+  { href: '#planner', labelKey: 'marketing.anchor.planner' },
+  { href: '#modules', labelKey: 'marketing.anchor.modules' },
+  { href: '#plans', labelKey: 'marketing.anchor.plans' },
+  { href: '#questions', labelKey: 'marketing.anchor.questions' },
 ]
 
 /**
@@ -35,12 +41,14 @@ export function MarketingHeader({
 }: {
   anchors?: ReadonlyArray<MarketingAnchor>
 }) {
+  const t = useTranslate()
+
   return (
     <header className="sticky top-0 z-nav border-b border-edge-faint bg-canvas/85 pt-safe backdrop-blur-xl">
       <div className="mx-auto flex h-nav max-w-content items-center gap-2 px-4 sm:px-6 lg:px-8">
         <Link
           to="/"
-          aria-label="planned.travel home"
+          aria-label={t('marketing.nav.home')}
           className="shrink-0 rounded-md focus-ring"
         >
           <Wordmark showSuffix />
@@ -48,8 +56,8 @@ export function MarketingHeader({
 
         {anchors.length === 0 ? null : (
           <nav
-            aria-label="On this page"
-            className="ml-6 hidden items-center lg:flex"
+            aria-label={t('marketing.nav.onThisPage')}
+            className="ms-6 hidden items-center lg:flex"
           >
             {anchors.map((anchor) => (
               <a
@@ -60,13 +68,13 @@ export function MarketingHeader({
                   'transition-colors duration-fast ease-out-quint hover:bg-hover hover:text-ink',
                 )}
               >
-                {anchor.label}
+                {t(anchor.labelKey)}
               </a>
             ))}
           </nav>
         )}
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ms-auto flex items-center gap-1">
           <Button
             asChild
             variant="ghost"
@@ -75,7 +83,7 @@ export function MarketingHeader({
             className="hidden sm:inline-flex"
           >
             <Link to="/pricing" activeProps={{ 'aria-current': 'page' }}>
-              Pricing
+              {t('marketing.action.pricing')}
             </Link>
           </Button>
           <ThemeToggle />
@@ -86,10 +94,10 @@ export function MarketingHeader({
             shape="pill"
             className="hidden sm:inline-flex"
           >
-            <Link to="/login">Sign in</Link>
+            <Link to="/login">{t('marketing.action.signIn')}</Link>
           </Button>
           <Button asChild variant="primary" size="sm" shape="pill">
-            <Link to="/register">Start free</Link>
+            <Link to="/register">{t('marketing.action.startFree')}</Link>
           </Button>
         </div>
       </div>
@@ -102,25 +110,27 @@ export function MarketingHeader({
  * Invisible until focused, then a real, legible button.
  */
 export function SkipToContent({ targetId = 'main' }: { targetId?: string }) {
+  const t = useTranslate()
+
   return (
     <a
       href={`#${targetId}`}
       className={cn(
         'sr-only focus:not-sr-only',
-        'focus:fixed focus:top-3 focus:left-3 focus:z-toast',
+        'focus:fixed focus:top-3 focus:start-3 focus:z-toast',
         'focus:inline-flex focus:h-10 focus:items-center',
         'focus:rounded-md focus:bg-accent focus:px-4',
         'focus:text-label focus:font-semibold focus:text-accent-on',
         'focus:shadow-elevated focus-ring',
       )}
     >
-      Skip to content
+      {t('marketing.action.skipToContent')}
     </a>
   )
 }
 
 type FooterColumn = {
-  readonly heading: string
+  readonly headingKey: MessageKey
   readonly links: ReadonlyArray<
     | {
         readonly kind: 'route'
@@ -131,38 +141,78 @@ type FooterColumn = {
           | '/register'
           | '/legal/terms'
           | '/legal/privacy'
-        readonly label: string
+        readonly labelKey: MessageKey
       }
-    | { readonly kind: 'anchor'; readonly href: string; readonly label: string }
+    | {
+        readonly kind: 'anchor'
+        readonly href: string
+        readonly labelKey: MessageKey
+      }
   >
 }
 
 const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
   {
-    heading: 'Product',
+    headingKey: 'marketing.footer.column.product',
     links: [
-      { kind: 'route', to: '/', label: 'Overview' },
-      { kind: 'anchor', href: '/#modules', label: 'Every module' },
-      { kind: 'route', to: '/pricing', label: 'Pricing' },
-      { kind: 'anchor', href: '/#questions', label: 'Questions' },
+      { kind: 'route', to: '/', labelKey: 'marketing.footer.link.overview' },
+      {
+        kind: 'anchor',
+        href: '/#modules',
+        labelKey: 'marketing.footer.link.everyModule',
+      },
+      { kind: 'route', to: '/pricing', labelKey: 'marketing.action.pricing' },
+      {
+        kind: 'anchor',
+        href: '/#questions',
+        labelKey: 'marketing.anchor.questions',
+      },
     ],
   },
   {
-    heading: 'Modules',
+    headingKey: 'marketing.anchor.modules',
     links: [
-      { kind: 'anchor', href: '/#planner', label: 'Day planner' },
-      { kind: 'anchor', href: '/#costs', label: 'Shared costs' },
-      { kind: 'anchor', href: '/#reservations', label: 'Reservations' },
-      { kind: 'anchor', href: '/#modules', label: 'Atlas and journal' },
+      {
+        kind: 'anchor',
+        href: '/#planner',
+        labelKey: 'marketing.footer.link.dayPlanner',
+      },
+      {
+        kind: 'anchor',
+        href: '/#costs',
+        labelKey: 'marketing.footer.link.sharedCosts',
+      },
+      {
+        kind: 'anchor',
+        href: '/#reservations',
+        labelKey: 'marketing.footer.link.reservations',
+      },
+      {
+        kind: 'anchor',
+        href: '/#modules',
+        labelKey: 'marketing.footer.link.atlasJournal',
+      },
     ],
   },
   {
-    heading: 'Account',
+    headingKey: 'marketing.footer.column.account',
     links: [
-      { kind: 'route', to: '/register', label: 'Create an account' },
-      { kind: 'route', to: '/login', label: 'Sign in' },
-      { kind: 'route', to: '/legal/terms', label: 'Terms of service' },
-      { kind: 'route', to: '/legal/privacy', label: 'Privacy notice' },
+      {
+        kind: 'route',
+        to: '/register',
+        labelKey: 'marketing.footer.link.createAccount',
+      },
+      { kind: 'route', to: '/login', labelKey: 'marketing.action.signIn' },
+      {
+        kind: 'route',
+        to: '/legal/terms',
+        labelKey: 'marketing.footer.link.terms',
+      },
+      {
+        kind: 'route',
+        to: '/legal/privacy',
+        labelKey: 'marketing.footer.link.privacy',
+      },
     ],
   },
 ]
@@ -177,6 +227,8 @@ const footerLinkClasses = cn(
  * we are obliged to carry for the map data and the platform underneath.
  */
 export function MarketingFooter() {
+  const t = useTranslate()
+
   return (
     <footer className="border-t border-edge-faint bg-surface-2/40">
       <div className="mx-auto max-w-content px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
@@ -184,38 +236,37 @@ export function MarketingFooter() {
           <div className="min-w-0">
             <Wordmark size="md" showSuffix />
             <p className="mt-4 max-w-xs text-label leading-relaxed text-ink-3">
-              One place for the itinerary, the map, the bookings, the money and
-              the packing list — shared with everyone who is coming.
+              {t('marketing.footer.blurb')}
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Button asChild variant="primary" size="sm" shape="pill">
-                <Link to="/register">Start free</Link>
+                <Link to="/register">{t('marketing.action.startFree')}</Link>
               </Button>
               <Button asChild variant="secondary" size="sm" shape="pill">
-                <Link to="/pricing">See pricing</Link>
+                <Link to="/pricing">{t('marketing.action.seePricing')}</Link>
               </Button>
             </div>
           </div>
 
           {FOOTER_COLUMNS.map((column) => (
             <nav
-              key={column.heading}
-              aria-label={column.heading}
+              key={column.headingKey}
+              aria-label={t(column.headingKey)}
               className="min-w-0"
             >
               <h2 className="text-micro font-semibold uppercase tracking-label text-ink-4">
-                {column.heading}
+                {t(column.headingKey)}
               </h2>
               <ul className="mt-4 flex flex-col gap-2.5">
                 {column.links.map((link) => (
-                  <li key={link.label}>
+                  <li key={link.labelKey}>
                     {link.kind === 'route' ? (
                       <Link to={link.to} className={footerLinkClasses}>
-                        {link.label}
+                        {t(link.labelKey)}
                       </Link>
                     ) : (
                       <a href={link.href} className={footerLinkClasses}>
-                        {link.label}
+                        {t(link.labelKey)}
                       </a>
                     )}
                   </li>
@@ -229,10 +280,7 @@ export function MarketingFooter() {
 
         <div className="mt-6 flex flex-col gap-3 text-caption text-ink-4 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {COPYRIGHT_YEAR} planned.travel</p>
-          <p className="sm:text-right">
-            Runs on Cloudflare Workers. Map data &copy; OpenStreetMap
-            contributors. Sold and invoiced by Polar, our merchant of record.
-          </p>
+          <p className="sm:text-end">{t('marketing.footer.attribution')}</p>
         </div>
       </div>
     </footer>

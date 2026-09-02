@@ -32,9 +32,27 @@ import type {
 /* -------------------------------------------------------------------------- */
 
 const PEOPLE: Array<CostsPerson> = [
-  { userId: 'u-rafal', name: 'Rafal', email: 'rafal@example.test', image: null, role: 'owner' },
-  { userId: 'u-mika', name: 'Mika', email: 'mika@example.test', image: null, role: 'member' },
-  { userId: 'u-jonas', name: 'Jonas', email: 'jonas@example.test', image: null, role: 'member' },
+  {
+    userId: 'u-rafal',
+    name: 'Rafal',
+    email: 'rafal@example.test',
+    image: null,
+    role: 'owner',
+  },
+  {
+    userId: 'u-mika',
+    name: 'Mika',
+    email: 'mika@example.test',
+    image: null,
+    role: 'member',
+  },
+  {
+    userId: 'u-jonas',
+    name: 'Jonas',
+    email: 'jonas@example.test',
+    image: null,
+    role: 'member',
+  },
 ]
 
 function expense(overrides: Partial<CostsExpense> = {}): CostsExpense {
@@ -112,8 +130,18 @@ const PAYLOAD: CostsPayload = {
   budgetTargetMinor: 800_000,
   expenseCount: 3,
   byCategory: [
-    { category: 'transport', plannedMinor: 500_000, spentMinor: 494_880, expenseCount: 2 },
-    { category: 'food', plannedMinor: 100_000, spentMinor: 4_800, expenseCount: 1 },
+    {
+      category: 'transport',
+      plannedMinor: 500_000,
+      spentMinor: 494_880,
+      expenseCount: 2,
+    },
+    {
+      category: 'food',
+      plannedMinor: 100_000,
+      spentMinor: 4_800,
+      expenseCount: 1,
+    },
   ],
   expenses: ROWS,
   balances: [
@@ -143,18 +171,27 @@ const PAYLOAD: CostsPayload = {
     },
   ],
   settlements: [SETTLEMENT],
-  suggestions: [{ fromUserId: 'u-rafal', toUserId: 'u-mika', amountMinor: 174_960 }],
+  suggestions: [
+    { fromUserId: 'u-rafal', toUserId: 'u-mika', amountMinor: 174_960 },
+  ],
   people: PEOPLE,
   viewerUserId: 'u-rafal',
 }
 
-const ALL: CostsFilters = { q: undefined, category: undefined, day: undefined, view: 'all' }
+const ALL: CostsFilters = {
+  q: undefined,
+  category: undefined,
+  day: undefined,
+  view: 'all',
+}
 
 /* -------------------------------------------------------------------------- */
 
 describe('dates', () => {
   it('reads a spent-on column in UTC, not in the reader’s zone', () => {
-    expect(toDayString(parseDay('2026-07-04') ?? new Date(0))).toBe('2026-07-04')
+    expect(toDayString(parseDay('2026-07-04') ?? new Date(0))).toBe(
+      '2026-07-04',
+    )
   })
 
   it('returns null for a column it cannot use', () => {
@@ -189,48 +226,78 @@ describe('filterExpenses', () => {
   })
 
   it('matches the search across title, notes, category and payer', () => {
-    expect(filterExpenses(ROWS, { ...ALL, q: 'konbini' }, PEOPLE, 'u-rafal')).toHaveLength(1)
-    expect(filterExpenses(ROWS, { ...ALL, q: 'avios' }, PEOPLE, 'u-rafal')).toHaveLength(1)
-    expect(filterExpenses(ROWS, { ...ALL, q: 'transport' }, PEOPLE, 'u-rafal')).toHaveLength(2)
-    expect(filterExpenses(ROWS, { ...ALL, q: 'mika' }, PEOPLE, 'u-rafal')).toHaveLength(1)
+    expect(
+      filterExpenses(ROWS, { ...ALL, q: 'konbini' }, PEOPLE, 'u-rafal'),
+    ).toHaveLength(1)
+    expect(
+      filterExpenses(ROWS, { ...ALL, q: 'avios' }, PEOPLE, 'u-rafal'),
+    ).toHaveLength(1)
+    expect(
+      filterExpenses(ROWS, { ...ALL, q: 'transport' }, PEOPLE, 'u-rafal'),
+    ).toHaveLength(2)
+    expect(
+      filterExpenses(ROWS, { ...ALL, q: 'mika' }, PEOPLE, 'u-rafal'),
+    ).toHaveLength(1)
   })
 
   it('ignores case and surrounding space in the search', () => {
-    expect(filterExpenses(ROWS, { ...ALL, q: '  SHINKANSEN ' }, PEOPLE, 'u-rafal')).toHaveLength(1)
+    expect(
+      filterExpenses(ROWS, { ...ALL, q: '  SHINKANSEN ' }, PEOPLE, 'u-rafal'),
+    ).toHaveLength(1)
   })
 
   it('filters by category and by day', () => {
-    expect(filterExpenses(ROWS, { ...ALL, category: 'food' }, PEOPLE, 'u-rafal')).toHaveLength(1)
+    expect(
+      filterExpenses(ROWS, { ...ALL, category: 'food' }, PEOPLE, 'u-rafal'),
+    ).toHaveLength(1)
     expect(
       filterExpenses(ROWS, { ...ALL, day: '2026-07-04' }, PEOPLE, 'u-rafal'),
     ).toHaveLength(2)
   })
 
   it('shows only what the viewer paid for in the "paid by me" view', () => {
-    const rows = filterExpenses(ROWS, { ...ALL, view: 'paid' }, PEOPLE, 'u-rafal')
+    const rows = filterExpenses(
+      ROWS,
+      { ...ALL, view: 'paid' },
+      PEOPLE,
+      'u-rafal',
+    )
     expect(rows.map((row) => row.id)).toEqual(['e-1'])
   })
 
   it('shows only what the viewer paid and split with others in "I’m owed"', () => {
-    expect(filterExpenses(ROWS, { ...ALL, view: 'owed' }, PEOPLE, 'u-rafal')).toHaveLength(1)
+    expect(
+      filterExpenses(ROWS, { ...ALL, view: 'owed' }, PEOPLE, 'u-rafal'),
+    ).toHaveLength(1)
     // Mika paid the flights, so nothing is owed *to* Rafal on that row.
-    expect(filterExpenses(ROWS, { ...ALL, view: 'owed' }, PEOPLE, 'u-jonas')).toHaveLength(0)
+    expect(
+      filterExpenses(ROWS, { ...ALL, view: 'owed' }, PEOPLE, 'u-jonas'),
+    ).toHaveLength(0)
   })
 
   it('excludes an expense the viewer paid entirely for themselves from "I’m owed"', () => {
     const solo = expense({
       id: 'e-solo',
       paidBy: 'u-rafal',
-      shares: [{ userId: 'u-rafal', shareMinor: 30_000, weight: 1, isSettled: false }],
+      shares: [
+        { userId: 'u-rafal', shareMinor: 30_000, weight: 1, isSettled: false },
+      ],
     })
-    expect(filterExpenses([solo], { ...ALL, view: 'owed' }, PEOPLE, 'u-rafal')).toHaveLength(0)
+    expect(
+      filterExpenses([solo], { ...ALL, view: 'owed' }, PEOPLE, 'u-rafal'),
+    ).toHaveLength(0)
   })
 
   it('combines filters rather than replacing them', () => {
     expect(
       filterExpenses(
         ROWS,
-        { q: 'shinkansen', category: 'transport', day: '2026-07-04', view: 'paid' },
+        {
+          q: 'shinkansen',
+          category: 'transport',
+          day: '2026-07-04',
+          view: 'paid',
+        },
         PEOPLE,
         'u-rafal',
       ),
@@ -252,7 +319,10 @@ describe('isFiltered', () => {
 describe('groupByDay', () => {
   it('groups newest first and totals each day', () => {
     const groups = groupByDay(ROWS)
-    expect(groups.map((group) => group.day)).toEqual(['2026-07-04', '2026-06-28'])
+    expect(groups.map((group) => group.day)).toEqual([
+      '2026-07-04',
+      '2026-06-28',
+    ])
     expect(groups[0].totalMinor).toBe(34_800)
     expect(groups[1].totalMinor).toBe(464_880)
   })
@@ -310,8 +380,12 @@ describe('applyOps — create', () => {
     const snapshot = applyOps(PAYLOAD, ops)
     expect(snapshot.spentMinor).toBe(PAYLOAD.spentMinor + 9_000)
     expect(snapshot.expenseCount).toBe(4)
-    expect(snapshot.byCategory.find((row) => row.category === 'food')?.spentMinor).toBe(13_800)
-    expect(snapshot.byCategory.find((row) => row.category === 'food')?.expenseCount).toBe(2)
+    expect(
+      snapshot.byCategory.find((row) => row.category === 'food')?.spentMinor,
+    ).toBe(13_800)
+    expect(
+      snapshot.byCategory.find((row) => row.category === 'food')?.expenseCount,
+    ).toBe(2)
   })
 
   it('credits the payer and debits every share', () => {
@@ -340,23 +414,38 @@ describe('applyOps — create', () => {
           id: 'pending-new',
           paidBy: 'u-priya',
           amountMinor: 1_000,
-          shares: [{ userId: 'u-priya', shareMinor: 1_000, weight: 1, isSettled: false }],
+          shares: [
+            {
+              userId: 'u-priya',
+              shareMinor: 1_000,
+              weight: 1,
+              isSettled: false,
+            },
+          ],
         }),
       },
     ]
     const snapshot = applyOps(PAYLOAD, withNewcomer)
-    expect(snapshot.balances.find((row) => row.userId === 'u-priya')?.balanceMinor).toBe(0)
+    expect(
+      snapshot.balances.find((row) => row.userId === 'u-priya')?.balanceMinor,
+    ).toBe(0)
   })
 })
 
 describe('applyOps — update', () => {
   it('replaces the row and applies the difference, not the whole amount', () => {
     const previous = ROWS[0]
-    const next = expense({ ...previous, amountMinor: 60_000, title: 'Green car upgrade' })
+    const next = expense({
+      ...previous,
+      amountMinor: 60_000,
+      title: 'Green car upgrade',
+    })
     const snapshot = applyOps(PAYLOAD, [
       { kind: 'update', key: 'k1', previous, row: next },
     ])
-    expect(snapshot.expenses.find((row) => row.id === 'e-1')?.title).toBe('Green car upgrade')
+    expect(snapshot.expenses.find((row) => row.id === 'e-1')?.title).toBe(
+      'Green car upgrade',
+    )
     expect(snapshot.spentMinor).toBe(PAYLOAD.spentMinor + 30_000)
     expect(snapshot.expenseCount).toBe(PAYLOAD.expenseCount)
     expect(snapshot.busyExpenseIds.has('e-1')).toBe(true)
@@ -368,10 +457,13 @@ describe('applyOps — update', () => {
     const snapshot = applyOps(PAYLOAD, [
       { kind: 'update', key: 'k1', previous, row: next },
     ])
-    expect(snapshot.byCategory.find((row) => row.category === 'transport')?.spentMinor).toBe(
-      464_880,
-    )
-    expect(snapshot.byCategory.find((row) => row.category === 'food')?.spentMinor).toBe(34_800)
+    expect(
+      snapshot.byCategory.find((row) => row.category === 'transport')
+        ?.spentMinor,
+    ).toBe(464_880)
+    expect(
+      snapshot.byCategory.find((row) => row.category === 'food')?.spentMinor,
+    ).toBe(34_800)
   })
 
   it('re-points the ledger when the payer changes', () => {
@@ -395,9 +487,9 @@ describe('applyOps — delete', () => {
     expect(snapshot.expenses.map((row) => row.id)).not.toContain('e-1')
     expect(snapshot.spentMinor).toBe(PAYLOAD.spentMinor - 30_000)
     expect(snapshot.expenseCount).toBe(2)
-    expect(snapshot.balances.find((row) => row.userId === 'u-rafal')?.balanceMinor).toBe(
-      -174_960 - 30_000 + 10_000,
-    )
+    expect(
+      snapshot.balances.find((row) => row.userId === 'u-rafal')?.balanceMinor,
+    ).toBe(-174_960 - 30_000 + 10_000)
   })
 
   it('never drives an aggregate below zero, whatever order the queue is in', () => {
@@ -422,15 +514,23 @@ describe('applyOps — payment', () => {
   }
 
   it('leads the payments list and clears both sides of the balance', () => {
-    const snapshot = applyOps(PAYLOAD, [{ kind: 'payment', key: 'k1', row: payment }])
+    const snapshot = applyOps(PAYLOAD, [
+      { kind: 'payment', key: 'k1', row: payment },
+    ])
     expect(snapshot.settlements[0].id).toBe('pending-pay')
     expect(snapshot.settlements).toHaveLength(2)
-    expect(snapshot.balances.find((row) => row.userId === 'u-rafal')?.balanceMinor).toBe(0)
-    expect(snapshot.balances.find((row) => row.userId === 'u-mika')?.balanceMinor).toBe(124_960)
+    expect(
+      snapshot.balances.find((row) => row.userId === 'u-rafal')?.balanceMinor,
+    ).toBe(0)
+    expect(
+      snapshot.balances.find((row) => row.userId === 'u-mika')?.balanceMinor,
+    ).toBe(124_960)
   })
 
   it('drops the suggestion it satisfied', () => {
-    const snapshot = applyOps(PAYLOAD, [{ kind: 'payment', key: 'k1', row: payment }])
+    const snapshot = applyOps(PAYLOAD, [
+      { kind: 'payment', key: 'k1', row: payment },
+    ])
     expect(
       snapshot.suggestions.some(
         (row) => row.fromUserId === 'u-rafal' && row.toUserId === 'u-mika',
@@ -439,7 +539,9 @@ describe('applyOps — payment', () => {
   })
 
   it('leaves the expense list untouched', () => {
-    const snapshot = applyOps(PAYLOAD, [{ kind: 'payment', key: 'k1', row: payment }])
+    const snapshot = applyOps(PAYLOAD, [
+      { kind: 'payment', key: 'k1', row: payment },
+    ])
     expect(snapshot.expenses).toHaveLength(3)
     expect(snapshot.busyExpenseIds.size).toBe(0)
   })
@@ -477,7 +579,11 @@ describe('totalsFor', () => {
 
 describe('expensesCsv', () => {
   const BOM = '\ufeff'
-  const csv = expensesCsv({ rows: ROWS, people: PEOPLE, viewerUserId: 'u-rafal' })
+  const csv = expensesCsv({
+    rows: ROWS,
+    people: PEOPLE,
+    viewerUserId: 'u-rafal',
+  })
   const lines = csv.slice(BOM.length).trimEnd().split('\r\n')
 
   it('leads with a byte-order mark so Excel reads the symbols', () => {
@@ -530,7 +636,11 @@ describe('expensesCsv', () => {
   })
 
   it('writes only the header when there is nothing to export', () => {
-    const empty = expensesCsv({ rows: [], people: PEOPLE, viewerUserId: 'u-rafal' })
+    const empty = expensesCsv({
+      rows: [],
+      people: PEOPLE,
+      viewerUserId: 'u-rafal',
+    })
     expect(empty.slice(BOM.length).trimEnd().split('\r\n')).toHaveLength(1)
   })
 })
@@ -543,7 +653,9 @@ describe('csvFilename', () => {
   })
 
   it('still produces a usable name for a title with nothing to slug', () => {
-    expect(csvFilename('  ···  ', '2026-08-19')).toBe('trip-expenses-2026-08-19.csv')
+    expect(csvFilename('  ···  ', '2026-08-19')).toBe(
+      'trip-expenses-2026-08-19.csv',
+    )
   })
 })
 

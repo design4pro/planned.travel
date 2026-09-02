@@ -1,10 +1,11 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import { RotateCw, TriangleAlert } from 'lucide-react'
+import { Button } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { readPublicFailure } from '#/lib/errors'
 import { useTranslate } from '#/lib/i18n'
 import { Wordmark } from './brand'
-import { ActionButton, Panel, buttonClass } from './kit'
+import { Panel } from './kit'
 import { FailureFeedback } from './failure-feedback'
 import { shellStateOf } from './session'
 
@@ -117,13 +118,12 @@ export function ErrorPanel({
         </p>
       ) : null}
       <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-        <ActionButton onClick={retry}>
-          <RotateCw aria-hidden className="size-4" />
+        <Button shape="pill" onClick={retry} icon={<RotateCw aria-hidden />}>
           {t('shell.error.retry')}
-        </ActionButton>
-        <Link to="/dashboard" className={buttonClass({ variant: 'secondary' })}>
-          {t('shell.error.dashboard')}
-        </Link>
+        </Button>
+        <Button asChild variant="secondary" shape="pill">
+          <Link to="/dashboard">{t('shell.error.dashboard')}</Link>
+        </Button>
       </div>
       {/* Only where the reference points at a real Sentry event: without a DSN it is a request id,
           and feedback would attach to nothing. */}

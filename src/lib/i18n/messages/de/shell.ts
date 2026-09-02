@@ -357,6 +357,106 @@ const messages = {
   'role.admin': 'Administrator',
   'role.member': 'Mitglied',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} Reise',
+    other: '{value} Reisen',
+  },
+  'trips.count.favourites': {
+    one: '{value} Favorit',
+    other: '{value} Favoriten',
+  },
+  'trips.count.archived': {
+    one: '{value} archiviert',
+    other: '{value} archiviert',
+  },
+  'trips.atLimit.body':
+    'Dein Tarif deckt {trips} ab. Archiviere eine abgeschlossene oder wechsle in einen höheren Tarif, um mehr gleichzeitig offen zu halten.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Neues Tagebuch',
+  'newJourney.title': 'Tagebuch beginnen',
+  'newJourney.description':
+    'Ein Tagebuch ist die geschriebene Seite einer Reise — Einträge in Datumsfolge, mit den Fotos und dem Wetter, an die du dich erinnerst.',
+  'newJourney.titlePlaceholder': 'Zwei Wochen in Kyoto',
+  'newJourney.subtitle': 'Untertitel',
+  'newJourney.subtitleHint': 'Eine Zeile unter dem Titel, auf dem Umschlag.',
+  'newJourney.subtitlePlaceholder': 'Tempel, Züge und viel zu viel Matcha',
+  'newJourney.trip': 'Auf Basis einer Reise',
+  'newJourney.tripHint': 'Optional — verbindet die Geschichte mit ihrem Plan.',
+  'newJourney.tripNone': 'Keiner Reise zugeordnet',
+  'newJourney.datesError': 'Das Enddatum liegt vor dem Start.',
+  'newJourney.submit': 'Tagebuch anlegen',
+  'newJourney.creating': 'Tagebuch wird angelegt',
+  'newJourney.created': 'Tagebuch begonnen',
+  'newJourney.createdBody':
+    'Füge den ersten Eintrag hinzu, um die Geschichte zu beginnen.',
+  'newJourney.error':
+    'Das Tagebuch konnte nicht angelegt werden. Versuche es in einem Moment erneut.',
+  'newCollection.trigger': 'Neue Sammlung',
+  'newCollection.title': 'Sammlung beginnen',
+  'newCollection.description':
+    'Ein Ort für die Orte, die du findest, bevor du weißt, zu welcher Reise sie gehören.',
+  'newCollection.namePlaceholder':
+    'Kaffee, für den man quer durch die Stadt geht',
+  'newCollection.descriptionHint': 'Was hier hineingehört und was nicht.',
+  'newCollection.submit': 'Sammlung anlegen',
+  'newCollection.creating': 'Sammlung wird angelegt',
+  'newCollection.created': 'Sammlung angelegt',
+  'newCollection.createdBody': 'Fang an, Orte darin zu speichern.',
+  'newCollection.error':
+    'Die Sammlung konnte nicht angelegt werden. Versuche es in einem Moment erneut.',
+
+  'newTrip.title': 'Neue Reise beginnen',
+  'newTrip.description':
+    'Ein Titel reicht. Daten bauen den Tagesplan, und alles andere kann warten, bis du es weißt.',
+  'newTrip.name': 'Reisename',
+  'newTrip.namePlaceholder': 'Kyoto zur Kirschblüte',
+  'newTrip.destination': 'Ziel',
+  'newTrip.destinationHint': 'Eine Stadt, eine Region oder die ganze Route.',
+  'newTrip.destinationPlaceholder': 'Kyoto, Japan',
+  'newTrip.departure': 'Abreise',
+  'newTrip.return': 'Rückreise',
+  'newTrip.returnError': 'Das Rückreisedatum liegt vor der Abreise.',
+  'newTrip.currency': 'Budgetwährung',
+  'newTrip.currencyHint': 'In ihr wird jede Ausgabe dieser Reise summiert.',
+  'newTrip.submit': 'Reise anlegen',
+  'newTrip.creating': 'Reise wird angelegt',
+  'newTrip.error':
+    'Die Reise konnte nicht angelegt werden. Versuche es in einem Moment erneut.',
+  'newTrip.created': 'Reise angelegt',
+  'newTrip.createdBody': 'Fang an, Orte auf der Karte zu setzen.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Wer es sehen kann',
+  'visibility.private': 'Nur ich',
+  'visibility.organization': 'Alle im Workspace',
+  'visibility.public': 'Jeder mit dem Link',
+
+  'trips.error': 'Deine Reisen wurden nicht geladen',
+  'trips.eyebrow': 'Arbeitsbereich',
+  'trips.nothingPlanned': 'Noch nichts geplant',
+  'trips.search': 'Reisen suchen',
+  'trips.atLimit.title':
+    'Du hast jede Reise ausgeschöpft, die dein Tarif erlaubt',
+  'trips.atLimit.action': 'Tarife vergleichen',
+  'trips.noMatch.title': 'Zu diesem Filter passt nichts',
+  'trips.noMatch.body':
+    'Wähle eine andere Phase, leere die Suche oder schau im Archiv.',
+  'trips.noMatch.action': 'Filter zurücksetzen',
+  'trips.empty.body':
+    'Eine Reise hält den Tagesplan, die Karte, die Buchungen, die Packlisten und das Geld. Fang eine an, der Rest folgt.',
+  'trips.next.title': 'Irgendwohin als Nächstes',
+  'trips.next.body':
+    'Starte eine Reise, und planned.travel legt für jedes Datum einen Tag an, bereit für alles Gespeicherte.',
+  'trips.savedPlaces': 'Gespeicherte Orte',
+  'trips.filter.all': 'Alle',
+  'trips.filter.favourites': 'Favoriten',
+  'trips.card.favourite': 'Favorit',
+  'trips.card.noDestination': 'Ziel noch offen',
+  'trips.card.noDates': 'Daten noch offen',
+  'trips.card.startsIn': 'in {days} T',
+  'trips.card.days': '{days} T',
   'metric.trips': 'Reisen',
   'metric.places': 'Orte',
   'metric.members': 'Mitglieder',
@@ -381,6 +481,31 @@ const messages = {
     'Das ging nicht raus. Die Referenz oben erreicht uns trotzdem.',
   'error.root': 'Da ist etwas vom Weg abgekommen',
   'error.session': 'Dein Zugang zum Arbeitsbereich hat sich geändert',
+
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Problem melden',
+  'feedback.formTitle': 'Problem melden',
+  'feedback.messageLabel': 'Was ist falsch, oder was sollte sich ändern?',
+  'feedback.messagePlaceholder':
+    'Was hast du erwartet, und was ist stattdessen passiert?',
+  'feedback.emailLabel': 'E-Mail-Adresse',
+  'feedback.emailPlaceholder': 'du@example.com',
+  'feedback.isRequiredLabel': '(erforderlich)',
+  'feedback.submitButtonLabel': 'Meldung senden',
+  'feedback.cancelButtonLabel': 'Abbrechen',
+  'feedback.confirmButtonLabel': 'Bestätigen',
+  'feedback.addScreenshotButtonLabel': 'Screenshot hinzufügen',
+  'feedback.removeScreenshotButtonLabel': 'Screenshot entfernen',
+  'feedback.highlightToolText': 'Hervorheben',
+  'feedback.hideToolText': 'Verbergen',
+  'feedback.successMessageText': 'Danke — deine Meldung ist bei uns.',
+  'feedback.errorEmptyMessageText':
+    'Schreib zuerst einen Satz — eine leere Meldung sagt uns nichts.',
+  'feedback.errorTimeoutText':
+    'Das dauert zu lange, und wir können nicht bestätigen, dass die Meldung angekommen ist.',
+  'feedback.errorForbiddenText': 'Diese Seite darf keine Meldungen senden.',
+  'feedback.errorGenericText':
+    'Das ging nicht raus. Prüfe die Verbindung und ob ein Werbeblocker dazwischenfunkt.',
 
   'notFound.eyebrow': 'Fehler 404',
   'notFound.title': 'Diese Seite steht auf keiner Karte',

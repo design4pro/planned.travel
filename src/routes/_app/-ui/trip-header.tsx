@@ -6,6 +6,7 @@
  */
 import { useLoaderData } from '@tanstack/react-router'
 
+import { useLocale } from '#/lib/i18n'
 import { AvatarStack, Badge } from '#/components/ui'
 import { PageHeader } from '#/components/layout/page-header'
 import {
@@ -43,8 +44,9 @@ export function TripModuleHeader({
   actions,
   children,
 }: TripModuleHeaderProps) {
+  const locale = useLocale()
   const { trip, people, dayCount } = useTripHeader()
-  const range = formatDateRange(trip.startDate, trip.endDate)
+  const range = formatDateRange(trip.startDate, trip.endDate, locale)
   const length = daysBetween(trip.startDate, trip.endDate)
 
   return (
@@ -62,7 +64,7 @@ export function TripModuleHeader({
         </span>
         {people.length === 0 ? null : (
           <AvatarStack
-            className="ml-1"
+            className="ms-1"
             size="sm"
             people={people.map((person) => ({
               id: person.userId,

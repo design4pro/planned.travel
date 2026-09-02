@@ -209,7 +209,7 @@ export function StatStrip({
           <dt className="mb-1.5 truncate text-micro font-semibold uppercase tracking-label text-inverse-muted">
             {item.label}
           </dt>
-          <dd className="font-display text-[1.75rem] leading-none font-bold tracking-tighter tabular-nums text-inverse-on">
+          <dd className="font-display text-display leading-none font-bold tracking-tighter tabular-nums text-inverse-on">
             {item.value}
           </dd>
           {item.hint === undefined ? null : (
@@ -339,7 +339,10 @@ export function HeaderSkeleton({ className }: { className?: string }) {
  */
 export function filterLinkClass(active: boolean): string {
   return cn(
-    'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-caption font-semibold whitespace-nowrap focus-ring',
+    // Chip's `md` recipe, by hand: the two are drawn side by side on the same
+    // rows, so the type step has to move with it. `text-label` rather than
+    // `text-caption` is that step.
+    'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-label font-semibold whitespace-nowrap focus-ring',
     'transition-[background-color,border-color,color] duration-base ease-out-quint',
     active
       ? 'border-transparent bg-accent text-accent-on'
@@ -370,7 +373,7 @@ export function FilterBar({
 /** The small count that rides inside an active filter link. */
 export function FilterCount({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-full bg-current/15 px-1.5 text-[0.6875rem] leading-4 tabular-nums">
+    <span className="rounded-full bg-current/15 px-1.5 text-micro leading-4 tabular-nums">
       {children}
     </span>
   )

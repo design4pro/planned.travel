@@ -2,7 +2,7 @@ import { Moon, MonitorSmartphone, Sun } from 'lucide-react'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { useTheme } from '#/lib/theme'
-import { IconButton } from './kit'
+import { IconButton } from '#/components/ui'
 import {
   MenuContent,
   MenuLabel,
@@ -65,27 +65,32 @@ export function ThemeToggle({ className }: { className?: string }) {
       <MenuTrigger asChild>
         <IconButton
           className={className}
-          aria-label={t('shell.theme.trigger', { state: t(current.state) })}
-        >
-          <span className="relative grid size-[18px] place-items-center">
-            <Sun
-              aria-hidden
-              data-motion-transform
-              className={cn(
-                'absolute size-[18px] transition-[opacity,transform] duration-base ease-out-quint',
-                dark ? 'rotate-90 scale-50 opacity-0' : 'rotate-0 scale-100 opacity-100',
-              )}
-            />
-            <Moon
-              aria-hidden
-              data-motion-transform
-              className={cn(
-                'absolute size-[18px] transition-[opacity,transform] duration-base ease-out-quint',
-                dark ? 'rotate-0 scale-100 opacity-100' : '-rotate-90 scale-50 opacity-0',
-              )}
-            />
-          </span>
-        </IconButton>
+          label={t('shell.theme.trigger', { state: t(current.state) })}
+          icon={
+            <span className="relative grid size-[18px] place-items-center">
+              <Sun
+                aria-hidden
+                data-motion-transform
+                className={cn(
+                  'absolute size-[18px] transition-[opacity,transform] duration-base ease-out-quint',
+                  dark
+                    ? 'rotate-90 scale-50 opacity-0'
+                    : 'rotate-0 scale-100 opacity-100',
+                )}
+              />
+              <Moon
+                aria-hidden
+                data-motion-transform
+                className={cn(
+                  'absolute size-[18px] transition-[opacity,transform] duration-base ease-out-quint',
+                  dark
+                    ? 'rotate-0 scale-100 opacity-100'
+                    : '-rotate-90 scale-50 opacity-0',
+                )}
+              />
+            </span>
+          }
+        />
       </MenuTrigger>
 
       <MenuContent className="min-w-48">

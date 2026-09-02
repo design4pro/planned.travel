@@ -64,23 +64,33 @@ const ENTITLING_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
 ])
 
 export function isPlanId(value: unknown): value is PlanId {
-  return typeof value === 'string' && (PLAN_IDS as ReadonlyArray<string>).includes(value)
+  return (
+    typeof value === 'string' &&
+    (PLAN_IDS as ReadonlyArray<string>).includes(value)
+  )
 }
 
 export function isBillingInterval(value: unknown): value is BillingInterval {
   return (
-    typeof value === 'string' && (BILLING_INTERVALS as ReadonlyArray<string>).includes(value)
+    typeof value === 'string' &&
+    (BILLING_INTERVALS as ReadonlyArray<string>).includes(value)
   )
 }
 
-export function isSubscriptionStatus(value: unknown): value is SubscriptionStatus {
+export function isSubscriptionStatus(
+  value: unknown,
+): value is SubscriptionStatus {
   return (
-    typeof value === 'string' && (SUBSCRIPTION_STATUSES as ReadonlyArray<string>).includes(value)
+    typeof value === 'string' &&
+    (SUBSCRIPTION_STATUSES as ReadonlyArray<string>).includes(value)
   )
 }
 
 export function isBillingState(value: unknown): value is BillingState {
-  return typeof value === 'string' && (BILLING_STATES as ReadonlyArray<string>).includes(value)
+  return (
+    typeof value === 'string' &&
+    (BILLING_STATES as ReadonlyArray<string>).includes(value)
+  )
 }
 
 /** True when a subscription in this status should still receive its paid plan. */
@@ -124,9 +134,11 @@ export type QuotaKey = keyof PlanQuotas
 export type ModuleKey = keyof PlanModules
 export type LimitKey = keyof PlanLimits
 
-export const QUOTA_KEYS = ['seats', 'trips', 'storageBytes'] as const satisfies ReadonlyArray<
-  QuotaKey
->
+export const QUOTA_KEYS = [
+  'seats',
+  'trips',
+  'storageBytes',
+] as const satisfies ReadonlyArray<QuotaKey>
 
 export const MODULE_KEYS = [
   'itinerary',
@@ -285,7 +297,10 @@ const soloPlan: Plan = {
   },
   features: [
     { label: 'Unlimited trips' },
-    { label: 'Every planning module', detail: 'Reservations, journal, budgets, packing' },
+    {
+      label: 'Every planning module',
+      detail: 'Reservations, journal, budgets, packing',
+    },
     { label: 'Offline maps', detail: 'Download regions before you fly' },
     { label: 'PDF and calendar export' },
     { label: '5 GB for photos and documents' },
@@ -335,10 +350,16 @@ const crewPlan: Plan = {
   },
   features: [
     { label: 'Up to 10 members', detail: 'Billed per member, change any time' },
-    { label: 'Real-time collaboration', detail: 'Live cursors and instant sync' },
+    {
+      label: 'Real-time collaboration',
+      detail: 'Live cursors and instant sync',
+    },
     { label: 'Unlimited trips and every module' },
     { label: '50 GB shared for photos and documents' },
-    { label: 'Priority support', detail: 'Answers from a person within one working day' },
+    {
+      label: 'Priority support',
+      detail: 'Answers from a person within one working day',
+    },
   ],
   limits: {
     ...NO_MODULES,
@@ -397,7 +418,9 @@ export interface PlanSubscriptionLike {
  * Falls back to Free when there is no subscription, when the plan id is unknown, or
  * when the status no longer entitles the customer (cancelled, unpaid, paused…).
  */
-export function planFor(subscription: PlanSubscriptionLike | null | undefined): Plan {
+export function planFor(
+  subscription: PlanSubscriptionLike | null | undefined,
+): Plan {
   if (!subscription) return freePlan
   if (!isEntitlingStatus(subscription.status)) return freePlan
   return planFromUnknown(subscription.planId) ?? freePlan
@@ -419,7 +442,10 @@ export function planForProductId(
   return null
 }
 
-export function priceFor(plan: Plan, interval: BillingInterval): PlanPrice | null {
+export function priceFor(
+  plan: Plan,
+  interval: BillingInterval,
+): PlanPrice | null {
   return plan.prices[interval]
 }
 
@@ -430,7 +456,9 @@ export function priceFor(plan: Plan, interval: BillingInterval): PlanPrice | nul
 export function requirePrice(plan: Plan, interval: BillingInterval): PlanPrice {
   const price = plan.prices[interval]
   if (!price) {
-    throw new Error(`Plan "${plan.id}" cannot be purchased on a ${interval} interval.`)
+    throw new Error(
+      `Plan "${plan.id}" cannot be purchased on a ${interval} interval.`,
+    )
   }
   if (price.productId === '') {
     throw new Error(
@@ -442,7 +470,10 @@ export function requirePrice(plan: Plan, interval: BillingInterval): PlanPrice {
 }
 
 /** Every limit value for a plan, keyed. `limitFor(plan, 'trips')` → `number | null`. */
-export function limitFor<TKey extends LimitKey>(plan: Plan, key: TKey): PlanLimits[TKey] {
+export function limitFor<TKey extends LimitKey>(
+  plan: Plan,
+  key: TKey,
+): PlanLimits[TKey] {
   return plan.limits[key]
 }
 
@@ -450,7 +481,10 @@ export function limitFor<TKey extends LimitKey>(plan: Plan, key: TKey): PlanLimi
  * The seat ceiling that actually applies. On a seat-based plan the organization may
  * only fill the seats it pays for, never the plan's maximum.
  */
-export function effectiveSeatLimit(plan: Plan, purchasedSeats: number): number | null {
+export function effectiveSeatLimit(
+  plan: Plan,
+  purchasedSeats: number,
+): number | null {
   if (plan.limits.seats === null) return null
   return plan.seatBased ? clampSeats(plan, purchasedSeats) : plan.limits.seats
 }
@@ -464,7 +498,10 @@ export function effectiveSeatLimit(plan: Plan, purchasedSeats: number): number |
  * the sole caller of this function — read the limits from there, never from here, or
  * the screen starts contradicting what the repositories enforce.
  */
-export function catalogueLimits(plan: Plan, purchasedSeats: number): PlanLimits {
+export function catalogueLimits(
+  plan: Plan,
+  purchasedSeats: number,
+): PlanLimits {
   return { ...plan.limits, seats: effectiveSeatLimit(plan, purchasedSeats) }
 }
 
@@ -483,7 +520,10 @@ export function isUnlimited(limit: number | null): limit is null {
 }
 
 /** How much head-room is left, or `null` when the limit is unlimited. */
-export function quotaRemaining(limit: number | null, used: number): number | null {
+export function quotaRemaining(
+  limit: number | null,
+  used: number,
+): number | null {
   if (isUnlimited(limit)) return null
   return Math.max(limit - used, 0)
 }
@@ -496,27 +536,22 @@ export function quotaRatio(limit: number | null, used: number): number {
 }
 
 /** True when adding `requested` more would break the limit. */
-export function exceedsQuota(limit: number | null, used: number, requested: number): boolean {
+export function exceedsQuota(
+  limit: number | null,
+  used: number,
+  requested: number,
+): boolean {
   if (isUnlimited(limit)) return false
   return used + requested > limit
 }
 
 /* ------------------------------------------------------------------ formatting */
 
-/** `900` → `"$9"`, `9050` → `"$90.50"`. */
-export function formatPlanAmount(amount: number, currency: PlanPrice['currency']): string {
-  const major = amount / 100
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-    minimumFractionDigits: Number.isInteger(major) ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(major)
-}
-
 /** What a yearly price works out to per month, for the "billed yearly" sub-line. */
 export function monthlyEquivalent(price: PlanPrice): number {
-  return price.interval === 'yearly' ? Math.round(price.amount / 12) : price.amount
+  return price.interval === 'yearly'
+    ? Math.round(price.amount / 12)
+    : price.amount
 }
 
 /** Percentage saved by paying yearly instead of monthly, rounded down. `0` when none. */
@@ -538,7 +573,8 @@ export function formatStorage(bytes: number): string {
     value /= 1024
     unit += 1
   }
-  const rounded = value >= 100 || unit === 0 ? Math.round(value) : Math.round(value * 10) / 10
+  const rounded =
+    value >= 100 || unit === 0 ? Math.round(value) : Math.round(value * 10) / 10
   return `${rounded} ${units[unit]}`
 }
 

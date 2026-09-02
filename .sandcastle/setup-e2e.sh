@@ -146,7 +146,12 @@ echo "==> dev server on :${PORT}"
 # 127.0.0.1 while a default vite bind in this container is ::1-only, which
 # makes the seed unreachable. The container has its own network namespace,
 # so the wide bind exposes nothing.
-pnpm exec vite dev --port "${PORT}" --strictPort --host > dev-server.log 2>&1 &
+# 4 GB of heap: the default (~2 GB on this node) is what a dev server serving SSR + the optimizer
+# to four browsers for twenty minutes runs out of - dev-server.log ending in `JavaScript heap out
+# of memory` and a rung of ECONNREFUSED specs (run 20260830-3, issue #117, attempt 3). The ladder's
+# probe now reports that as infra rather than as a red branch; this makes it rare as well.
+NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" \
+  pnpm exec vite dev --port "${PORT}" --strictPort --host > dev-server.log 2>&1 &
 for _ in $(seq 1 60); do
   if curl --silent --fail --output /dev/null "${BASE_URL}/"; then
     echo "dev server up"

@@ -1,0 +1,717 @@
+/**
+ * The trip modules' own copy, in id.
+ *
+ * Authored from `../en/modules.ts`, never from another product's catalogue
+ * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
+ * and `__tests__/parity.test.ts` checks the placeholders and the plural
+ * branches.
+ *
+ * **Jamak.** Bahasa Indonesia hanya punya cabang `other`.
+ */
+
+import type { TranslationOf } from '../../types'
+import type En from '../en/modules'
+
+const messages = {
+  /* -------------------------------------------- shared by every module */
+  'value.notSet': 'Belum diatur',
+  /* ----------------------------------------- the realtime presence bar */
+  'presence.connecting.title': 'Menyambung',
+  'presence.connecting.body': 'Masuk ke ruang langsung perjalanan ini.',
+  'presence.live.title': 'Langsung',
+  'presence.live.body':
+    'Pesan, catatan, dan suara masuk ke sini begitu dibuat.',
+  'presence.reconnecting.title': 'Menyambung ulang',
+  'presence.reconnecting.body':
+    'Sambungan terputus. Mencoba lagi — apa pun yang kamu kirim tetap tersimpan.',
+  'presence.offline.title': 'Tidak langsung',
+  'presence.offline.body':
+    'Pembaruan langsung sedang mati. Penyimpanan tetap jalan; muat ulang atau coba lagi untuk menyusul.',
+  'presence.reconnect': 'Sambung ulang',
+  /* ------------------------------------------- the transports timeline */
+  'transports.filter.all': 'Semua ruas',
+  'transports.empty.title': 'Belum ada ruas perjalanan',
+  'transports.empty.body':
+    'Penerbangan, kereta, feri, dan perjalanan dari bandara semuanya tinggal di sini, dengan kode pemesanan dan nomor tempat duduk siap di hari-H — dan setiap perpindahan diperiksa terhadap yang sebelumnya.',
+  'transports.empty.action': 'Tambahkan ruas pertama',
+  'transports.filtered.title': 'Tidak ada ruas jenis itu',
+  'transports.filtered.body':
+    'Setiap ruas perjalanan ini ditempuh dengan cara berbeda. Kembali ke “{label}” untuk melihat semuanya.',
+  'transports.filtered.action': 'Tampilkan semua ruas',
+  'transports.alert.impossible.title': {
+    other: '{legs} perpindahan tidak mungkin',
+  },
+  'transports.alert.impossible.body':
+    'Sebuah ruas berangkat sebelum ruas sebelumnya tiba. Titik sambung di bawah menyebut yang mana dan selisihnya.',
+  'transports.alert.tight.title': {
+    other: '{legs} perpindahan terlalu mepet',
+  },
+  'transports.alert.tight.body':
+    'Waktunya ada, tapi tidak banyak untuk moda yang harus kamu kejar. Titik sambung di bawah menunjukkan sisa waktu masing-masing.',
+  'transports.badge.impossible': {
+    other: '{legs} perpindahan rusak',
+  },
+  'transports.badge.tight': {
+    other: '{legs} perpindahan mepet',
+  },
+  'transports.badge.ok': 'Semua perpindahan aman',
+  'transports.remove.body':
+    'Ruas ini keluar dari perjalanan untuk selamanya, bersama nomor pemesanan dan tempat duduknya. Kalau hanya dibatalkan, ubah statusnya menjadi “Dibatalkan” saja.',
+  'transports.remove.confirm': 'Hapus ruas',
+  'transports.menu.edit': 'Ubah ruas…',
+  'transports.field.service': 'Nomor layanan',
+  'transports.field.bookingRef': 'Nomor pemesanan',
+  'transports.field.seat': 'Tempat duduk',
+  'transports.field.distance': 'Jarak',
+  'transports.noTime': 'Belum ada waktu',
+  'transports.toast.statusFailed.title': 'Status tidak berubah',
+  'transports.toast.statusFailed.body': 'Ruas masih dalam keadaan sebelumnya.',
+  'transports.toast.removed': 'Ruas dihapus',
+  'transports.toast.removeFailed': 'Ruas tidak terhapus',
+
+  /* --------------------------------------------- the leg dialog */
+  'transports.dialog.addTitle': 'Tambah satu ruas',
+  'transports.dialog.editTitle': 'Ubah ruas ini',
+  'transports.dialog.description':
+    'Penerbangan, kereta, feri, dan perjalanan dari bandara. Waktunya waktu setempat yang tercetak di tiket.',
+  'transports.form.modeLegend': 'Kamu naik apa',
+  'transports.form.timingError': 'Periksa waktunya',
+  'transports.field.namePlaceholder': 'Garuda dari CGK ke HND',
+  'transports.field.place': 'Tempat',
+  'transports.field.code': 'Kode',
+  'transports.field.date': 'Tanggal',
+  'transports.field.departurePlaceholder': 'Jakarta Soekarno-Hatta',
+  'transports.field.arrivalPlaceholder': 'Bandara Tokyo Haneda',
+  'transports.field.carrier': 'Maskapai',
+  'transports.field.serviceNumber': 'Nomor layanan',
+  'transports.field.bookingRefHint': 'Kode yang akan kamu sebut di konter.',
+  'transports.field.notesPlaceholder':
+    'Minta kursi dekat lorong. Bagasi dikirim langsung sampai Kyoto.',
+  'transports.action.add': 'Tambah ruas',
+  'transports.action.save': 'Simpan ruas',
+  'transports.action.saving': 'Menyimpan ruas',
+  'transports.toast.added': 'Ruas ditambahkan',
+  'transports.toast.addedBody': 'Sekarang sudah masuk urutan perjalanan.',
+  'transports.toast.addFailed': 'Ruas tidak ditambahkan',
+  'transports.toast.updated': 'Ruas diperbarui',
+  'transports.toast.updateFailed': 'Ruas tidak diperbarui',
+
+  /* ------------------------------- shared labels and the bookings timeline */
+  'field.name': 'Nama',
+  'field.time': 'Waktu',
+  'field.price': 'Harga',
+  'field.notes': 'Catatan',
+  'field.status': 'Keadaan',
+  'form.saveError': 'Itu tidak tersimpan',
+  'action.cancel': 'Batal',
+  'book.status.none': 'Belum ada keadaan',
+  'book.status.pending': 'Menunggu',
+  'book.status.confirmed': 'Terkonfirmasi',
+  'book.status.completed': 'Selesai',
+  'book.status.cancelled': 'Dibatalkan',
+  'book.toast.statusFailed': 'Keadaan tidak berubah',
+  'book.toast.statusFailedBody': 'Pemesanan masih dalam keadaan sebelumnya.',
+  'book.toast.removed': 'Pemesanan dihapus',
+  'book.toast.removeFailed': 'Pemesanan tidak terhapus',
+  'book.empty.title': 'Belum ada yang dipesan',
+  'book.empty.body':
+    'Penginapan, meja, tur, dan tiket tempatnya di sini — dengan nomor konfirmasi di tempat kamu akan mencarinya di pintu, dan tanggal yang menaruhnya di garis waktu.',
+  'book.empty.action': 'Tambahkan pemesanan pertama',
+  'book.filtered.title': 'Tidak ada yang berkeadaan itu',
+  'book.filtered.body':
+    'Setiap pemesanan perjalanan ini berada di tahap berbeda. Kembali ke “{label}” untuk melihat semuanya.',
+  'book.filtered.action': 'Tampilkan semua',
+  'filter.all': 'Semua',
+  'book.remove.body':
+    'Ia keluar dari garis waktu untuk selamanya. Kalau hanya dibatalkan, ubah keadaannya menjadi “Dibatalkan” agar catatannya tetap ada.',
+  'book.remove.confirm': 'Hapus pemesanan',
+  'book.menu.edit': 'Ubah pemesanan…',
+  'book.menu.open': 'Buka pemesanan',
+  'book.noDate': 'Belum ada tanggal',
+  'book.until': 'Sampai',
+  'book.provider': 'Penyedia',
+  'book.where': 'Di mana',
+  'book.guests': 'Orang',
+  'book.confirmation': 'Konfirmasi',
+  'book.undated': 'Beri tanggal dan mereka masuk garis waktu',
+  statusOf: 'Keadaan {title}',
+
+  /* ------------------------------------------- the booking dialog */
+  'book.statusChoice.none': 'Belum ada keadaan sama sekali',
+  'book.statusChoice.pending': 'Menunggu — bola di tangan mereka',
+  'book.dialog.addTitle': 'Tambah satu pemesanan',
+  'book.dialog.editTitle': 'Ubah pemesanan ini',
+  'book.dialog.typeLegend': 'Pemesanan jenis apa',
+  'book.field.namePlaceholder': 'Jl. Thamrin 15',
+  'book.field.priceHint': 'Biarkan kosong kalau belum dibayar.',
+  'book.field.confirmation': 'Nomor konfirmasi',
+  'book.field.confirmationHint': 'Kode yang akan diminta di konter.',
+  'book.field.day': 'Kaitkan ke satu hari',
+  'book.field.dayHint': 'Menyematkannya ke rencana supaya muncul di jadwal.',
+  'book.field.noDay': 'Di luar rencana perjalanan',
+  'book.field.link': 'Tautan',
+  'book.field.notesPlaceholder':
+    'Sudah diatur check-in malam. Minta kamar jauh dari lift.',
+  'book.action.add': 'Tambah pemesanan',
+  'book.action.save': 'Simpan pemesanan',
+  'book.action.saving': 'Menyimpan pemesanan',
+  'book.toast.added': 'Pemesanan ditambahkan',
+  'book.toast.addedBody': 'Sekarang sudah ada di garis waktu.',
+  'book.toast.addFailed': 'Pemesanan tidak ditambahkan',
+  'book.toast.updated': 'Pemesanan diperbarui',
+  'book.toast.updateFailed': 'Pemesanan tidak diperbarui',
+
+  'book.emptyFacts':
+    'Selain namanya belum ada apa-apa. Buka untuk menambahkan waktu, harga, dan nomor konfirmasi.',
+  'book.onItinerary': 'Ada di rencana perjalanan: {day}',
+  'book.dayNumber': 'Hari {n}',
+
+  /* ------------------------------ the booking type table, per type */
+  'book.shape.other.label': 'Lainnya',
+  'book.field.host': 'Hotel atau tuan rumah',
+  'book.field.restaurant': 'Nama restoran',
+  'book.field.operator': 'Penyelenggara',
+  'book.field.issuer': 'Diterbitkan oleh',
+  'book.field.carrier': 'Pengangkut',
+  'book.field.address': 'Alamat',
+  'book.field.meetingPoint': 'Titik temu',
+  'book.field.venue': 'Lokasi acara',
+  'book.field.fromTo': 'Dari dan ke',
+  'book.field.checkIn': 'Check-in',
+  'book.field.date': 'Tanggal',
+  'book.field.validOn': 'Berlaku pada',
+  'book.field.departs': 'Berangkat',
+  'book.field.checkOut': 'Check-out',
+  'book.field.ends': 'Berakhir',
+  'book.field.arrives': 'Tiba',
+  'book.example.accommodationProvider': 'Booking.com',
+  'book.example.restaurantProvider': 'Den',
+  'book.example.activityProvider': 'teamLab',
+  'book.example.tourProvider': 'Kyoto Free Walking Tour',
+  'book.example.ticketProvider': 'Museum Ghibli',
+  'book.example.transportProvider': 'JR Central',
+  'book.example.otherProvider': 'Siapa yang menahannya untukmu',
+  'book.example.accommodationTitle': 'Hotel Gracery Shinjuku · 2 kamar twin',
+  'book.example.restaurantTitle': 'Makan malam di Den',
+  'book.example.activityTitle': 'teamLab Planets, 4 tiket',
+  'book.example.tourTitle': 'Jalan-jalan di hutan bambu Arashiyama',
+  'book.example.ticketTitle': 'Museum Ghibli, masuk 10:00',
+  'book.example.transportTitle': 'Nozomi 21 ke Kyoto',
+  'book.example.otherTitle': 'Apa yang kamu pesan',
+  'book.hint.accommodation':
+    'Hotel, ryokan, apartemen — di mana pun kamu tidur.',
+  'book.hint.restaurant': 'Meja yang sudah dipesan. Jamnya yang akan dipegang.',
+  'book.hint.activity':
+    'Sebuah kelas, pemandian, pengalaman yang sudah dipesan.',
+  'book.hint.tour': 'Satu tempat, satu jam, dan pemandu yang menunggu.',
+  'book.hint.ticket':
+    'Masuk berjadwal, pas museum, sebuah pertandingan. Simpan kodenya dekat.',
+  'book.hint.transport':
+    'Kursi yang sudah dipesan. Rute lengkap berkode masuk ke {module}.',
+  'book.hint.other':
+    'Apa pun yang ditahan atas namamu dan tidak cocok di yang lain.',
+
+  /* -------------------------------------- lists: the dialogs */
+  'lists.kind.packing': 'Berkemas',
+  'lists.kind.todo': 'Daftar tugas',
+  'lists.kind.shopping': 'Belanja',
+  'lists.kind.documents': 'Dokumen',
+  'lists.kind.fallback': 'Daftar',
+  'colour.none': 'Tanpa warna',
+  'colour.pine': 'Hijau pinus',
+  'colour.inkBlue': 'Biru tinta',
+  'colour.amber': 'Kuning ambar',
+  'colour.green': 'Hijau',
+  'colour.red': 'Merah',
+  'colour.slate': 'Kelabu batu',
+  'lists.toast.created': 'Daftar dibuat',
+  'lists.toast.createdBody':
+    'Masukkan hal pertama yang tidak boleh kamu lupakan.',
+  'lists.toast.createFailed': 'Daftar tidak dibuat',
+  'lists.toast.updated': 'Daftar diperbarui',
+  'lists.toast.updateFailed': 'Daftar tidak diperbarui',
+  'lists.error.weightLimit': 'Batas berat adalah bilangan bulat dalam gram.',
+  'lists.dialog.editTitle': 'Ubah daftar ini',
+  'lists.dialog.editBody':
+    'Ganti namanya, ganti jenisnya, atau serahkan ke satu orang.',
+  'lists.dialog.addBody':
+    'Berkemas, tugas, belanja, dan dokumen yang tidak boleh kamu lupakan — masing-masing dapat daftarnya sendiri.',
+  'lists.action.new': 'Daftar baru',
+  'lists.field.namePlaceholder': 'Bagasi kabin',
+  'lists.field.kind': 'Jenis',
+  'lists.field.kindAria': 'Jenis daftar',
+  'lists.field.owner': 'Milik',
+  'lists.field.ownerHint': 'Daftar bersama bisa dicentang siapa saja.',
+  'lists.field.everyone': 'Semua orang di perjalanan',
+  'lists.field.weightLimit': 'Batas berat',
+  'lists.field.weightLimitHint':
+    'Gram. Biarkan kosong kalau tidak ada batas yang harus dijaga.',
+  'colour.legend': 'Warna',
+  'lists.action.saving': 'Menyimpan daftar',
+  'lists.action.save': 'Simpan daftar',
+  'lists.action.create': 'Buat daftar',
+  'lists.item.toast.added': 'Butir ditambahkan',
+  'lists.item.toast.addFailed': 'Butir tidak ditambahkan',
+  'lists.item.toast.updated': 'Butir diperbarui',
+  'lists.item.toast.updateFailed': 'Butir tidak diperbarui',
+  'lists.item.error.quantity':
+    'Jumlah adalah bilangan bulat dari 1 sampai 999.',
+  'lists.item.error.weight': 'Berat adalah bilangan bulat dalam gram.',
+  'lists.item.dialog.editTitle': 'Ubah butir ini',
+  'lists.item.dialog.addTitle': 'Tambah satu butir',
+  'lists.item.field.label': 'Butir',
+  'lists.item.field.placeholder': 'Paspor',
+  'field.category': 'Kategori',
+  'lists.item.field.categoryHint':
+    'Mengelompokkan daftar di bawah satu judul. Opsional.',
+  'lists.item.field.categoryPlaceholder': 'Dokumen',
+  'lists.item.field.priority': 'Prioritas',
+  'lists.priorityChoice.high': 'Tinggi — jangan lupa',
+  'lists.priorityChoice.low': 'Rendah — kalau masih ada ruang',
+  'lists.priorityChoice.normal': 'Biasa',
+  'lists.item.field.quantity': 'Jumlah',
+  'lists.item.field.weight': 'Berat',
+  'lists.item.field.weightHint': 'Gram, per satuan.',
+  'lists.item.field.owner': 'Ini tugas siapa',
+  'lists.item.owner.nobody': 'Tidak ada orang tertentu',
+  'lists.item.action.saving': 'Menyimpan butir',
+  'lists.item.action.save': 'Simpan butir',
+  'lists.item.action.add': 'Tambahkan ke daftar',
+  'lists.template.loadError': 'Templat tidak bisa dimuat sekarang.',
+  'lists.template.toast.added': 'Daftar ditambahkan dari templat',
+  'lists.template.toast.addFailed': 'Templat tidak diterapkan',
+  'lists.template.error.apply': 'Itu tidak bisa diterapkan',
+  'lists.template.error.load': 'Templat tidak termuat',
+  'lists.template.empty.title': 'Belum ada templat',
+  'lists.template.empty.body':
+    'Simpan sebuah daftar sebagai templat begitu kamu punya satu yang akan kamu susun sama lagi, dan ia akan muncul di sini untuk setiap perjalanan berikutnya.',
+  'lists.template.applying': 'Menerapkan templat',
+  'lists.template.dialogTitle': 'Mulai dari templat',
+  'lists.template.loading': 'Memuat templat',
+  'lists.template.apply': 'Terapkan templat',
+  'lists.template.from': 'Dari templat',
+
+  /* ---------------------------------------- lists: the board */
+  'lists.unassigned': 'Belum ada penanggung jawab',
+  'lists.toast.listRemoved': 'Daftar dihapus',
+  'lists.toast.listRemoveFailed': 'Daftar tidak dihapus',
+  'lists.toast.itemRemoved': 'Butir dihapus',
+  'lists.toast.itemRemoveFailed': 'Butir tidak dihapus',
+  'lists.toast.reset': 'Daftar disetel ulang',
+  'lists.toast.resetBody':
+    'Semua centang sudah dilepas dan siap untuk perjalanan berikutnya.',
+  'lists.toast.resetFailed': 'Daftar tidak disetel ulang',
+  'lists.toast.tickFailed': 'Centang itu tidak tersimpan',
+  'lists.toast.tickFailedBody': 'Butir sudah kembali seperti semula.',
+  'lists.toast.assignFailed': 'Penugasan itu tidak tersimpan',
+  'lists.toast.orderFailed': 'Urutan baru tidak tersimpan',
+  'lists.toast.orderFailedBody': 'Daftar sudah kembali seperti semula.',
+  'lists.filter.todo': 'Masih harus dikerjakan',
+  'lists.filter.done': 'Selesai',
+  'lists.scope.all': 'Semua daftar',
+  'lists.scope.shared': 'Bersama',
+  'lists.scope.mine': 'Milikku',
+  'lists.empty.mine.title': 'Belum ada daftar milikmu sendiri',
+  'lists.empty.shared.title': 'Belum ada daftar bersama',
+  'lists.empty.mine.body':
+    'Daftar milikmu sendiri hanya kamu yang mencentang — enak untuk hal yang tak perlu dilihat orang lain.',
+  'lists.empty.shared.body':
+    'Daftar bersama bisa dicentang siapa saja, jadi dua orang tidak membawa adaptor yang sama.',
+  'lists.remove.list': 'Hapus daftar',
+  'lists.remove.item': 'Hapus butir',
+  'lists.remove.itemBody':
+    'Ia keluar dari daftar ini. Tidak ada yang lain berubah.',
+  'lists.menu.editList': 'Ubah daftar…',
+  'lists.menu.tickAll': 'Centang semua',
+  'lists.menu.untickAll': 'Lepas semua centang',
+  'lists.menu.reset': 'Setel ulang untuk perjalanan berikutnya',
+  'lists.menu.dragOrderLong': 'Beralih ke satu urutan yang bisa kamu geser',
+  'lists.menu.groupAgain': 'Kelompokkan menurut kategori lagi',
+  'lists.menu.dragOrder': 'Beralih ke urutan yang bisa digeser',
+  'lists.menu.groupByCategory': 'Kelompokkan menurut kategori',
+  'lists.weight.packed': 'Sudah dikemas {weight}',
+  'lists.weight.packedOver': 'Sudah dikemas {weight} — melewati batas',
+  'lists.weight.packedOf': 'Sudah dikemas {weight} dari {limit} yang boleh',
+  'lists.weight.packedOfOver':
+    'Sudah dikemas {weight} dari {limit} yang boleh — melewati batas',
+  'lists.progress.ticked': 'Dicentang {done} dari {total}',
+  'lists.items.empty.title': 'Daftar ini kosong',
+  'lists.items.empty.body':
+    'Masukkan hal pertama yang tidak boleh kamu lupakan — kolom di bawah paling cepat.',
+  'lists.items.doneEmpty.title': 'Belum ada yang dicentang',
+  'lists.items.doneEmpty.body': 'Centang sesuatu dan ia akan muncul di sini.',
+  'lists.items.todoEmpty.title': 'Di sini semuanya sudah selesai',
+  'lists.items.todoEmpty.body':
+    'Setiap butir di daftar ini sudah dicentang. Beralih ke “{label}” untuk melihatnya.',
+  'lists.category.other': 'Semua sisanya',
+  'lists.dnd.fallbackName': 'butir ini',
+  'lists.dnd.picked': '{name} diangkat.',
+  'lists.dnd.dropped': '{name} diletakkan. Urutan baru sedang disimpan.',
+  'lists.dnd.cancelled': 'Dibatalkan. Urutannya tidak berubah.',
+  'lists.menu.editItem': 'Ubah butir…',
+  'lists.quickAdd.placeholder': 'Tulis satu butir lalu tekan Enter',
+  'lists.quickAdd.aria': 'Tambahkan satu butir ke daftar ini',
+  'lists.quickAdd.detailsHint': 'Tambahkan dengan berat, kategori, atau orang',
+  'lists.quickAdd.detailsAria': 'Tambahkan satu butir dengan semua rinciannya',
+  'lists.show': 'Tampilkan',
+  'lists.priority.high': 'Tinggi',
+  'lists.action.add': 'Tambah',
+
+  /* ------------------------------- lists: counted in items */
+  'lists.template.itemCount': {
+    other: '{count} butir',
+  },
+  'lists.template.copiedIn': {
+    other: '{count} butir disalin, siap dicentang.',
+  },
+  'lists.remove.listBody': {
+    other:
+      'Daftar ini dan {count} butirnya keluar dari perjalanan ini. Templat yang kamu simpan tidak tersentuh.',
+  },
+
+  'lists.item.dialog.body':
+    'Selain namanya semuanya opsional — berat membuat total kemasan jadi nyata, dan kategori mengelompokkan daftarnya.',
+  'lists.template.dialogBody':
+    'Templat adalah daftar yang pernah kamu simpan. Menerapkannya menyalin daftar itu jadi daftar baru di perjalanan ini — aslinya dibiarkan.',
+
+  /* ------------------------ lists: names built around a row */
+  'remove.confirmTitle': 'Hapus “{name}”?',
+  actionsFor: 'Tindakan untuk {name}',
+  'lists.dnd.reorder': 'Susun ulang {name}',
+  'lists.action.untickItem': 'Lepas centang {name}',
+  'lists.action.tickOffItem': 'Centang {name}',
+  'lists.item.assignAria': 'Serahkan {name} ke seseorang',
+  'lists.item.reassignAria': '{item} punya {owner} — serahkan ulang',
+
+  /* ------------------------------ book: what the form refuses */
+  'book.error.titleEmpty':
+    'Beri pemesanan ini nama yang kamu kenali di daftar.',
+  'error.titleLong': 'Jaga namanya di bawah 160 karakter.',
+  'book.error.required': 'Pemesanan ini masih kurang {field}.',
+  'book.error.timeNeedsDate': 'Sebuah waktu perlu tanggal tempat ia jatuh.',
+  'book.error.endTimeNeedsDate': 'Waktu selesai perlu tanggal tempat ia jatuh.',
+  'book.error.endsBeforeStart': 'Ini berakhir sebelum dimulai.',
+  'book.error.endTimeBeforeStart': 'Waktu selesai lebih awal dari waktu mulai.',
+  'book.error.guests': 'Jumlah orang harus bilangan bulat sampai 1000.',
+  'error.price': 'Jumlah itu tidak bisa kami baca.',
+  'book.error.url': 'Tautan harus dimulai dengan http:// atau https://.',
+  'book.error.confirmationLong':
+    'Nomor konfirmasi itu terlalu panjang untuk disimpan.',
+  'book.fieldName.provider': 'pengangkut',
+  'book.fieldName.location': 'lokasi',
+  'book.fieldName.confirmationNumber': 'nomor konfirmasi',
+  'book.fieldName.link': 'tautan',
+  'book.fieldName.date': 'tanggal',
+  'book.fieldName.time': 'waktu',
+  'book.fieldName.endDate': 'tanggal selesai',
+  'book.fieldName.endTime': 'waktu selesai',
+  'book.fieldName.guests': 'jumlah orang',
+  'book.fieldName.price': 'harga',
+  'book.copyConfirmation': 'nomor konfirmasi untuk {title}',
+
+  /* -------------------------- transports: modes, ends, refusals */
+  'transports.mode.flight': 'Penerbangan',
+  'transports.mode.train': 'Kereta',
+  'transports.mode.bus': 'Bus',
+  'transports.mode.ferry': 'Feri',
+  'transports.mode.car': 'Mobil',
+  'transports.mode.taxi': 'Taksi',
+  'transports.mode.transit': 'Angkutan umum',
+  'transports.mode.metro': 'MRT',
+  'transports.mode.tram': 'Trem',
+  'transports.mode.bike': 'Sepeda',
+  'transports.mode.walk': 'Jalan kaki',
+  'transports.mode.other': 'Lainnya',
+  'transports.mode.fallback': 'Ruas',
+  'transports.status.idea': 'Gagasan',
+  'transports.status.pending': 'Menunggu',
+  'transports.status.confirmed': 'Terkonfirmasi',
+  'transports.status.completed': 'Selesai',
+  'transports.status.cancelled': 'Dibatalkan',
+  'transports.end.fromAirport': 'Dari bandara',
+  'transports.end.toAirport': 'Ke bandara',
+  'transports.end.fromPort': 'Dari pelabuhan',
+  'transports.end.toPort': 'Ke pelabuhan',
+  'transports.end.fromStation': 'Dari stasiun',
+  'transports.end.toStation': 'Ke stasiun',
+  'transports.end.from': 'Dari',
+  'transports.end.to': 'Ke',
+  'transports.error.titleEmpty':
+    'Beri ruas ini nama yang kamu kenali di daftar.',
+  'transports.error.date': 'Tanggal ditulis YYYY-MM-DD.',
+  'transports.error.time': 'Waktu ditulis HH:MM dengan jam 24.',
+  'transports.error.departureNeedsDate':
+    'Waktu keberangkatan perlu tanggal tempat ia jatuh.',
+  'transports.error.arrivalNeedsDate':
+    'Waktu kedatangan perlu tanggal tempat ia jatuh.',
+  'transports.error.code': 'Kode terdiri dari 2 sampai 8 huruf atau angka.',
+  'transports.error.distance':
+    'Jarak adalah angka dalam kilometer, sampai 100.000.',
+  'transports.error.arrivesBeforeDeparts': 'Ruas ini tiba sebelum berangkat.',
+  'transports.error.timingHint':
+    'Geser salah satunya supaya ruas ini benar-benar bisa dikejar.',
+  'transports.bookingRefFor': 'nomor pemesanan untuk {title}',
+  'transports.doorToDoor': 'Itu {gap} dari pintu ke pintu.',
+  'transports.title.fromTo': '{operator} dari {from} ke {to}',
+  'transports.title.from': '{operator} dari {from}',
+  'transports.title.to': '{operator} ke {to}',
+
+  /* ------------------ transports: whether a hand-over can be made */
+  'transports.junction.unknown.headline': 'Tidak ada waktu untuk dibandingkan',
+  'transports.junction.unknown.detail':
+    'Isi tanggal dan waktu di kedua ruas, maka perpindahan ini akan diperiksa untukmu.',
+  'transports.junction.impossible.headline':
+    'Berangkat {gap} sebelum ruas sebelumnya tiba',
+  'transports.junction.impossible.detail':
+    '“{to}” berangkat sebelum “{from}” tiba, jadi keduanya tidak bisa dikejar. Geser salah satu.',
+  'transports.junction.tight.headline': '{gap} untuk berpindah',
+  'transports.junction.tight.detail':
+    '{mode} biasanya perlu sekitar {required}. Yang ini mepet.',
+  'transports.junction.tight.detailAt':
+    '{mode} di {place} biasanya perlu sekitar {required}. Yang ini mepet.',
+  'transports.junction.ok.headline': 'Jeda {gap}',
+  'transports.junction.ok.detail':
+    'Tiba di {landing} tapi ruas berikutnya berangkat dari {boarding} — kamu perlu menyeberang.',
+
+  /* ------------------------------ collab: the note and poll dialogs */
+  'collab.note.toast.shared': 'Catatan dibagikan',
+  'collab.note.toast.sharedBody':
+    'Semua orang di perjalanan sudah bisa melihatnya.',
+  'collab.note.toast.shareFailed': 'Catatan tidak dibagikan',
+  'collab.note.toast.updated': 'Catatan diperbarui',
+  'collab.note.toast.updateFailed': 'Catatan tidak diperbarui',
+  'collab.note.dialog.editTitle': 'Ubah catatan ini',
+  'collab.note.dialog.addTitle': 'Catatan bersama baru',
+  'collab.note.dialog.body':
+    'Rekomendasi restoran, aturan visa, kode pintu depan — semua yang harus diingat seluruh perjalanan, di satu tempat.',
+  'collab.note.field.title': 'Judul',
+  'collab.note.field.titlePlaceholder': 'Kode pintu depan',
+  'collab.note.field.body': 'Catatan',
+  'collab.note.field.bodyPlaceholder':
+    '4821, lalu tombol pagar. Kotak kunci ada di kiri pintu.',
+  'collab.note.field.categoryHint':
+    'Mengelompokkan papan di bawah satu saringan. Opsional.',
+  'collab.note.field.categoryPlaceholder': 'Logistik',
+  'collab.note.field.pin': 'Sematkan di puncak papan',
+  'collab.note.field.pinHint':
+    'Catatan yang disematkan ada di depan, apa pun yang ditambahkan.',
+  'collab.note.action.saving': 'Menyimpan catatan',
+  'collab.note.action.save': 'Simpan catatan',
+  'collab.note.action.share': 'Bagikan catatan',
+  'collab.poll.toast.opened': 'Pemungutan dibuka',
+  'collab.poll.toast.openedBody':
+    'Semua orang di perjalanan sudah bisa memilih.',
+  'collab.poll.toast.openFailed': 'Pemungutan tidak dibuka',
+  'collab.poll.dialog.addTitle': 'Pemungutan baru',
+  'collab.poll.field.question': 'Pertanyaan',
+  'collab.poll.field.questionPlaceholder': 'Malam terakhir kita makan di mana?',
+  'collab.poll.field.optionsLegend': 'Pilihan',
+  'collab.poll.field.option': 'Butir pilihan {n}',
+  'collab.poll.example.first': 'Den',
+  'collab.poll.example.second': 'Narisawa',
+  'collab.poll.example.third': 'Satu butir lagi',
+  'collab.poll.action.addOption': 'Tambah satu butir',
+  'collab.poll.action.removeOption': 'Hapus butir {n}',
+  'collab.poll.field.multi': 'Izinkan memilih lebih dari satu',
+  'collab.poll.field.multiHint':
+    'Kalau mati, satu orang satu suara, dan berubah pikiran memindahkannya.',
+  'collab.poll.action.opening': 'Membuka pemungutan',
+  'collab.poll.action.open': 'Buka pemungutan',
+  'collab.poll.error.tooFew':
+    'Pemungutan butuh setidaknya dua hal untuk dipilih.',
+  'collab.poll.error.duplicate':
+    'Dua butir mengatakan hal yang sama. Beri masing-masing kata sendiri.',
+  'collab.presence.viewingNow': 'sedang melihat',
+  'collab.presence.tabsOpen': {
+    other: '{name} — {count} tab terbuka',
+  },
+
+  /* ----------------------------------------- collab: the thread */
+  'collab.reaction.agree': 'Setuju',
+  'collab.reaction.love': 'Suka banget',
+  'collab.reaction.funny': 'Lucu',
+  'collab.reaction.celebrate': 'Ayo rayakan',
+  'collab.reaction.thanks': 'Terima kasih',
+  'collab.reaction.looking': 'Lagi lihat',
+  'collab.reaction.tally': '{emoji} — {count}',
+  'collab.reaction.tallyMine': '{emoji} — {count}, termasuk kamu',
+  'collab.thread.today': 'Hari ini',
+  'collab.thread.empty': 'Belum ada pesan',
+  'collab.toast.reactionFailed': 'Reaksi tidak tersimpan',
+  'collab.toast.messageDeleted': 'Pesan dihapus',
+  'collab.toast.deleteFailed': 'Pesan tidak dihapus',
+  'collab.toast.notSent': 'Tidak terkirim',
+  'collab.toast.notSentBody': 'Pesan tidak bisa dikirim. Coba lagi sebentar.',
+  'collab.toast.messageUpdated': 'Pesan diperbarui',
+  'collab.toast.editFailed': 'Perubahan tidak tersimpan',
+  'collab.message.deleteTitle': 'Hapus pesan ini?',
+  'collab.message.deleteBody':
+    'Teksnya hilang dari utas. Balasan untuknya tetap di tempatnya.',
+  'collab.message.delete': 'Hapus pesan',
+  'collab.message.reply': 'Balas',
+  'collab.message.menuEdit': 'Ubah pesan…',
+  'collab.message.react': 'Beri reaksi ke pesan ini',
+  'collab.message.edited': 'diubah',
+  'collab.message.actionsFor': 'Tindakan untuk pesan dari {name}',
+  'collab.compose.editingYours': 'Kamu sedang mengubah pesanmu',
+  'collab.compose.replyingTo': 'Membalas {name}',
+  'collab.compose.cancelReply': 'Batalkan balasan',
+  'collab.compose.cancelEdit': 'Batalkan perubahan',
+  'collab.compose.placeholder': 'Tulis untuk perjalanan',
+  'collab.compose.editPlaceholder': 'Ubah pesanmu',
+  'collab.compose.editPlaceholderText': 'Ganti apa yang kamu bilang…',
+  'collab.compose.send': 'Kirim pesan',
+  'collab.compose.savingEdit': 'Menyimpan perubahan',
+  'collab.compose.save': 'Simpan',
+  'collab.hint.sends': 'mengirim',
+  'collab.hint.addsLine': 'menambah baris',
+  'collab.hint.cancels': 'membatalkan',
+
+  /* ------------------------------------------ collab: the board */
+  'collab.toast.noteRemoved': 'Catatan dihapus',
+  'collab.toast.noteRemoveFailed': 'Catatan tidak dihapus',
+  'collab.notes.empty.title': 'Belum ada catatan bersama',
+  'collab.notes.empty.body':
+    'Rekomendasi restoran, aturan visa, kode pintu depan — semua yang harus diingat seluruh perjalanan.',
+  'collab.notes.empty.action': 'Tulis catatan pertama',
+  'collab.note.menu.edit': 'Ubah catatan…',
+  'collab.note.menu.unpin': 'Lepas sematan',
+  'collab.note.menu.pin': 'Sematkan di puncak',
+  'collab.note.remove': 'Hapus catatan',
+  'collab.note.removeBody':
+    'Catatan hilang dari papan semua orang di perjalanan.',
+  'collab.note.new': 'Catatan baru',
+  'collab.poll.toast.voteFailed': 'Suaramu tidak tersimpan',
+  'collab.poll.toast.voteFailedBody': 'Hitungannya tidak berubah.',
+  'collab.poll.toast.closed': 'Pemungutan ditutup',
+  'collab.poll.toast.closeFailed': 'Pemungutan tidak ditutup',
+  'collab.poll.toast.removed': 'Pemungutan dihapus',
+  'collab.poll.toast.removeFailed': 'Pemungutan tidak dihapus',
+  'collab.polls.heading': 'Daftar pemungutan',
+  'collab.polls.empty.title': 'Tidak ada pemungutan yang terbuka',
+  'collab.polls.empty.body':
+    'Kalau rombongan tidak bisa sepakat soal restoran, jadikan pemungutan suara dan biarkan jawabannya menemukan dirinya.',
+  'collab.polls.empty.action': 'Tanya rombongan',
+  'collab.poll.menu.close': 'Tutup pemungutan',
+  'collab.poll.remove': 'Hapus pemungutan',
+  'collab.poll.removeTitle': 'Hapus pemungutan ini?',
+  'collab.poll.actionsFor': 'Tindakan untuk pemungutan “{question}”',
+  'collab.badge.pinned': 'Disematkan',
+  'collab.badge.closed': 'Ditutup',
+  'collab.badge.open': 'Terbuka',
+  'collab.badge.multi': 'Pilih beberapa',
+  'collab.badge.leading': 'Memimpin',
+  'collab.poll.removeBody': {
+    other: '“{question}” dan {count} suaranya hilang untuk semua orang.',
+  },
+  'collab.poll.result': {
+    other: '{label} — {votes} dari {count} suara',
+  },
+  'collab.poll.resultMine': {
+    other: '{label} — {votes} dari {count} suara, termasuk suaramu',
+  },
+  'collab.poll.voteCount': {
+    other: '{count} suara',
+  },
+
+  /* ------------------------------------------- files: the library */
+  'files.kind.document': 'Dokumen',
+  'files.kind.photo': 'Foto',
+  'files.kind.ticket': 'Tiket',
+  'files.kind.receipt': 'Struk',
+  'files.kind.map': 'Peta',
+  'files.kind.other': 'Lainnya',
+  'files.kindChoice.ticket': 'Tiket atau kartu masuk',
+  'files.kindChoice.map': 'Peta atau rute',
+  'files.toast.removed': 'Berkas dihapus',
+  'files.toast.removeFailed': 'Berkas tidak dihapus',
+  'files.toast.downloadFailed': 'Unduhan tidak mulai',
+  'files.toast.gone': 'Berkas ini sudah tidak tersedia di tab ini.',
+  'files.toast.uploadFailed': 'Unggahan gagal. Coba lagi.',
+  'files.toast.updated': 'Berkas diperbarui',
+  'files.toast.updateFailed': 'Berkas tidak diperbarui',
+  'files.storage.full': 'Ruang kerja ini kehabisan penyimpanan',
+  'files.storage.used':
+    'Terpakai {used} dari {limit}. Hapus satu berkas di bawah, atau naik ke paket lebih tinggi, sebelum menambah apa pun lagi.',
+  'files.storage.perFile': 'maksimal {size} per berkas',
+  'files.action.add': 'Tambah berkas',
+  'files.action.choose': 'Pilih berkas',
+  'files.action.upload': 'Unggah berkas',
+  'files.drop.active': 'Lepas untuk mengunggah',
+  'files.drop.idle': 'Seret berkas ke sini',
+  'files.empty.title': 'Belum ada berkas di perjalanan ini',
+  'files.empty.body':
+    'Semua yang biasanya harus kamu korek dari kotak masuk di meja check-in ada di sini, menempel pada perjalanannya.',
+  'files.empty.hint':
+    'Boarding pass, konfirmasi hotel, tiket, dokumen asuransi, dan struk yang mendukung pengeluaranmu.',
+  'files.heading': 'Lampiran',
+  'files.tableCaption': 'Berkas yang menempel pada perjalanan ini',
+  'files.menu.download': 'Unduh',
+  'files.menu.rename': 'Ganti nama dan deskripsi…',
+  'files.menu.remove': 'Hapus berkas',
+  'files.remove.body':
+    'Berkas dihapus dari penyimpanan sekaligus dari perjalanan, dan {size} dibebaskan. Ini tidak bisa dibatalkan.',
+  'files.queue.clear': 'Bersihkan yang selesai',
+  'files.column.file': 'Berkas',
+  'files.column.size': 'Ukuran',
+  'files.column.addedBy': 'Ditambahkan oleh',
+  'files.column.when': 'Kapan',
+  'files.status.uploaded': 'Terunggah',
+  'files.status.failed': 'Gagal',
+  'files.status.cancelled': 'Dibatalkan',
+  'files.status.uploading': 'Mengunggah',
+  'files.status.waiting': 'Menunggu',
+  'files.error.nameEmpty':
+    'Berkas perlu nama yang membuatmu bisa menemukannya.',
+  'files.field.kindHint':
+    'Menentukan ia masuk saringan mana dan dapat lambang apa.',
+  'files.field.kindAria': 'Jenis berkas',
+  'files.field.description': 'Deskripsi',
+  'files.field.descriptionPlaceholder':
+    'Polis asuransi — menanggung seluruh rombongan, nomor klaim di halaman 2.',
+  'files.dialog.title': 'Rincian berkas',
+  'files.action.saving': 'Menyimpan berkas',
+  'files.action.save': 'Simpan rincian',
+  'files.queue.someFailed': {
+    other:
+      '{count} berkas tidak terunggah. Alasannya ada di tiap baris — sisanya dalam satu kiriman tidak terpengaruh.',
+  },
+
+  'files.action.cancelUploadOf': 'Batalkan unggahan {name}',
+  'files.action.dismissOf': 'Tutup {name}',
+  'files.status.downloadingOf': 'Mengunduh {name}',
+  'files.status.uploadingOf': 'Mengunggah {name}',
+  'files.status.uploadingCount': {
+    other: 'Mengunggah {count} berkas',
+  },
+
+  /* --------------------------- files: the upload and download chain */
+  'files.error.cancelled': 'Unggahan dibatalkan.',
+  'files.error.badAnswer':
+    'Server mengirim jawaban yang tidak bisa dibaca peramban ini.',
+  'files.error.connection':
+    'Koneksi putus saat mengunggah. Cek jaringanmu lalu coba lagi.',
+  'files.error.timeout': 'Unggahan kehabisan waktu. Coba lagi.',
+  'files.error.refused': 'Server menolak unggahan ini ({status}).',
+  'files.error.downloadShape':
+    'Unduhan kembali dalam bentuk yang tidak bisa kami simpan.',
+  'files.error.downloadFailed': 'Unduhan gagal ({status}).',
+  'files.toast.uploadedOne': 'Berkas terunggah',
+  'files.toast.uploadedManyBody': '{size} ditambahkan ke perjalanan ini.',
+  'files.toast.failedOne': 'Berkas itu tidak terunggah',
+  'files.toast.failedManyBody':
+    'Antrean di bawah menyebut alasannya satu per satu.',
+  'files.error.tooMany': {
+    other:
+      'Sekali jalan hanya bisa {count} berkas, jadi “{name}” tertinggal. Jatuhkan lagi sendirian.',
+  },
+  'files.toast.uploadedMany': {
+    other: '{count} berkas terunggah',
+  },
+  'files.toast.failedMany': {
+    other: '{count} berkas tidak terunggah',
+  },
+} satisfies TranslationOf<typeof En>
+
+export default messages

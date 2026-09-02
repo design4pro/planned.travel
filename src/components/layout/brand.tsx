@@ -3,7 +3,7 @@ import { cn } from '#/lib/cn'
 const WORDMARK_SIZES = {
   sm: { mark: 'size-6', word: 'text-[1.0625rem]' },
   md: { mark: 'size-7', word: 'text-[1.25rem]' },
-  lg: { mark: 'size-9', word: 'text-[1.625rem]' },
+  lg: { mark: 'size-9', word: 'text-title' },
 } as const
 
 /**
@@ -13,7 +13,12 @@ const WORDMARK_SIZES = {
  */
 export function BrandMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 28 28" role="presentation" aria-hidden className={cn('shrink-0', className)}>
+    <svg
+      viewBox="0 0 28 28"
+      role="presentation"
+      aria-hidden
+      className={cn('shrink-0', className)}
+    >
       <rect width="28" height="28" rx="9" className="fill-accent" />
       <path
         d="M8.6 20.2c0-6 3.6-10.2 9.2-11.4"
@@ -41,7 +46,11 @@ export interface WordmarkProps {
   className?: string
 }
 
-export function Wordmark({ size = 'md', showSuffix = false, className }: WordmarkProps) {
+export function Wordmark({
+  size = 'md',
+  showSuffix = false,
+  className,
+}: WordmarkProps) {
   const scale = WORDMARK_SIZES[size]
   return (
     <span className={cn('inline-flex items-center gap-2.5', className)}>

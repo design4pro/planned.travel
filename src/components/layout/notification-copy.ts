@@ -16,15 +16,11 @@
  * half of a row may fall back, and to what. They are re-exported so this module
  * remains the single import any surface needs.
  *
- * It is not, however, the only such table *in the tree*.
- * `src/routes/_app/-lib/notifications.ts` still holds the English catalogue this
- * module replaced, plus the `NOTIFICATION_EVENTS` and `CHANNEL_LABELS` lists the
- * preferences screen used to draw. Nothing imports any of it — the preferences
- * screen now declares its own axes as message keys — so it is dead, and it is
- * dead in a file this item does not own. Deleting it is a one-line change for
- * whoever owns `src/routes/_app/-lib/**`; until then, this comment is the record
- * that a second English catalogue exists and is unreachable, rather than a claim
- * that it does not exist.
+ * It is now the only such table in the tree. `src/routes/_app/-lib/notifications.ts`
+ * held the English catalogue this module replaced, plus the `NOTIFICATION_EVENTS`
+ * and `CHANNEL_LABELS` lists the preferences screen used to draw before it
+ * declared its own axes as message keys. Nothing imported any of it, so it was
+ * 222 lines of unreachable second catalogue, and it is deleted.
  *
  * This module lives beside the chrome rather than in a route helper because two
  * surfaces read the same rows — the inbox screen and, when a row grows a
