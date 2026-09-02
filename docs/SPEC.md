@@ -819,8 +819,11 @@ pair" on that basis alone, having found nothing blocking in its actual work. Suc
 on its code, its tests and its stated contract, and the visual judgement of the screens that mount
 it belongs to those screens' items. An item never manufactures a route to become photographable.
 
-The reference half can also simply be unavailable: `demo.liketrek.com` puts its authenticated
-screens behind its own sign-in, which we hold no credentials for. When no pair exists, our side is
+The reference half can also simply be unavailable: `demo.liketrek.com` puts its screens behind a
+sign-in wall, but that wall carries a "Try the demo" button that needs no credentials — the
+capture enters through it (`capture.mjs --enter`) and presses away the welcome overlay that
+follows on every load (`--dismiss`). A missing reference frame therefore means the demo is down or
+its sign-in screen changed, never that a session was unobtainable. When no pair exists, our side is
 still captured and the item is judged on our frames plus code, tests and accessibility — never on a
 mismatched pair, because a pair of two different surfaces sends the critic after an artefact of the
 capture. A missing reference is never grounds to relax §2; it raises the bar, because our side then
