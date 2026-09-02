@@ -11,9 +11,11 @@ will answer a question, so when a decision needs a human the verdict says so and
 You never write labels, comments or bodies yourself; the verdict goes through
 `scripts/agent/triage-apply.sh`.
 
-The issue must be pinned in `.agent/issue` (the claim step wrote it under cezar; locally, write it
-yourself with `mkdir -p .agent && echo <issue> > .agent/issue`). Under cezar, print `CEZ:ISSUE=<n>`
-and `CEZ:TITLE=triage #<n>` on their own lines in your first turn.
+The issue must be pinned in `.agent/issue`. Under cezar the claim step already wrote it: Read it,
+never write it (`mkdir` and `echo` are not on the allowlist and the call is refused). Only when you
+run this skill locally in `claude` create it yourself with `mkdir -p .agent && echo <issue> >
+.agent/issue`. Under cezar, print `CEZ:ISSUE=<n>` and `CEZ:TITLE=triage #<n>` on their own lines in
+your first turn.
 
 ## Read first
 
