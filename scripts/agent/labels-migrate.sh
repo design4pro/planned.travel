@@ -59,7 +59,8 @@ status: review needed
 status: blocked'
 
 FAILFLAG=$(mktemp)
-trap 'rm -f "$FAILFLAG"' EXIT
+LABELS_JSON=$(mktemp)
+trap 'rm -f "$FAILFLAG" "$LABELS_JSON"' EXIT
 say()  { printf '%s\n' "$*"; }
 warn() { printf 'WARN %s\n' "$*" >&2; }
 fail() { printf 'FAIL %s\n' "$*" >&2; echo 1 > "$FAILFLAG"; }
@@ -73,18 +74,22 @@ in_list()    { printf '%s\n' "$2" | grep -Fxq -- "$1"; }
 SNAP_DIR=docs/agents/migration
 STAMP=$(date -u +%Y-%m-%d)
 mkdir -p "$SNAP_DIR"
-gh label list --repo "$REPO" --limit 200 --json name,color,description > "$SNAP_DIR/labels-$STAMP.json"
-gh issue list --repo "$REPO" --state all --limit 1000 --json number,title,state,labels,parent \
-  --jq 'map({number, title, state, parent: (.parent.number // null), labels: [.labels[].name]})' \
-  > "$SNAP_DIR/issues-$STAMP.json"
+# The first run of the day captures the pre-migration state; a rerun must not overwrite it.
+[ -s "$SNAP_DIR/labels-$STAMP.json" ] ||
+  gh label list --repo "$REPO" --limit 200 --json name,color,description > "$SNAP_DIR/labels-$STAMP.json"
+[ -s "$SNAP_DIR/issues-$STAMP.json" ] ||
+  gh issue list --repo "$REPO" --state all --limit 1000 --json number,title,state,labels,parent \
+    --jq 'map({number, title, state, parent: (.parent.number // null), labels: [.labels[].name]})' \
+    > "$SNAP_DIR/issues-$STAMP.json"
 say "snapshot: $SNAP_DIR/{labels,issues}-$STAMP.json"
 LABELS=$(labels_now)
+gh label list --repo "$REPO" --limit 200 --json name,color,description > "$LABELS_JSON"
 
 # ---- 1. rename, create, recolour -----------------------------------------------------
 label_is() {
   jq -e --arg n "$1" --arg c "$2" --arg d "$3" \
     'any(.[]; .name == $n and (.color | ascii_downcase) == $c and .description == $d)' \
-    "$SNAP_DIR/labels-$STAMP.json" > /dev/null
+    "$LABELS_JSON" > /dev/null
 }
 # ensure_label NAME COLOR DESCRIPTION [OLD]: OLD is renamed to NAME while it still exists. When
 # both exist (a partial earlier run) OLD's issues are moved onto NAME and OLD is deleted.
@@ -225,7 +230,7 @@ LABELS=$(labels_now)
 printf '%s\n' "$LABELS" | grep -q "$(printf '\xEF\xB8\x8F')" && fail 'a label still carries U+FE0F'
 printf '%s\n' "$LABELS" | grep -Fxq 'ready-for-agent' && fail 'ready-for-agent still exists'
 printf '%s\n' "$LABELS" | while read -r l; do
-  [ -n "$l" ] && ! in_list "$l" "$KEEP" && fail "label outside the protocol survived: $l"
+  [ -n "$l" ] && ! in_list "$l" "$KEEP" && fail "label outside the protocol survived: $l" || true
 done
 gh issue list --repo "$REPO" --state open --limit 1000 --json number,labels,parent \
   --jq '.[] | "\(.number)\t\(.parent.number // "-")\t\([.labels[].name] | join("|"))"' |
@@ -235,7 +240,7 @@ gh issue list --repo "$REPO" --state open --limit 1000 --json number,labels,pare
     if [ "$parent" = '-' ]; then
       printf '%s' "$labels" | tr '|' '\n' | grep -q '^type: ' || fail "#$n has no type: label"
     fi
-    printf '%s' "$labels" | tr '|' '\n' | grep -Fxq 'run: triage' && warn "#$n carries run: triage before automations exist"
+    printf '%s' "$labels" | tr '|' '\n' | grep -Fxq 'run: triage' && warn "#$n carries run: triage before automations exist" || true
   done
 if [ -s "$FAILFLAG" ]; then exit 1; fi
 say "ok"
