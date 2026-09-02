@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import shell from '#/lib/i18n/messages/en/shell'
-import { SHELL_STATE_KEYS, shellStateOf, platformCapabilities  } from '../session'
+import {
+  SHELL_STATE_KEYS,
+  shellStateOf,
+  platformCapabilities,
+} from '../session'
 import { resolvePlatformRole } from '#/server/auth/access'
 import { roleSatisfies } from '#/server/auth/tenant'
 

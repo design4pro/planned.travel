@@ -125,8 +125,18 @@ Specifically:
 | Tests             | Vitest (unit) + Playwright (e2e/visual)                                                                                                                                                                                                                                      |
 
 **Dependency freeze.** The dependency set is complete. Do **not** run `pnpm add`, and do not
-edit `package.json` or `pnpm-lock.yaml`. If you genuinely need a package that is absent, stop
-and report it in your result instead of installing it.
+edit the `dependencies` or `devDependencies` blocks of `package.json`, or `pnpm-lock.yaml`. If
+you genuinely need a package that is absent, stop and report it in your result instead of
+installing it.
+
+**What the freeze does not cover.** The `scripts` block. The freeze exists so the deployed
+bundle's contents stay a decision rather than an accident; a task runner that shells out to a
+committed script adds nothing to the bundle and installs nothing, so it was never the subject.
+This is a narrowing of an earlier reading, not a loosening of the rule: the sentence above used
+to say "do not edit `package.json`" without qualification, and was read as freezing the whole
+file — which is why `pnpm worktree:bootstrap` did not exist and the local setup lived only in
+prose. Adding a script that runs code already in the repository is ordinary work. Adding,
+removing, renaming or re-pinning a package is not, and no script entry may install one.
 
 **Named exception: two packages, once — spent.** Exactly two packages could ever be added, by
 name: `@react-email/components` and `react-email`. Phase A installed them and the exception is
@@ -809,8 +819,11 @@ pair" on that basis alone, having found nothing blocking in its actual work. Suc
 on its code, its tests and its stated contract, and the visual judgement of the screens that mount
 it belongs to those screens' items. An item never manufactures a route to become photographable.
 
-The reference half can also simply be unavailable: `demo.liketrek.com` puts its authenticated
-screens behind its own sign-in, which we hold no credentials for. When no pair exists, our side is
+The reference half can also simply be unavailable: `demo.liketrek.com` puts its screens behind a
+sign-in wall, but that wall carries a "Try the demo" button that needs no credentials — the
+capture enters through it (`capture.mjs --enter`) and presses away the welcome overlay that
+follows on every load (`--dismiss`). A missing reference frame therefore means the demo is down or
+its sign-in screen changed, never that a session was unobtainable. When no pair exists, our side is
 still captured and the item is judged on our frames plus code, tests and accessibility — never on a
 mismatched pair, because a pair of two different surfaces sends the critic after an artefact of the
 capture. A missing reference is never grounds to relax §2; it raises the bar, because our side then

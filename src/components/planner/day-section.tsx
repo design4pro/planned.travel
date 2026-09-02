@@ -11,7 +11,9 @@ import type { PlannerCategory, PlannerDay, PlannerRow } from './types'
 
 export interface DaySectionProps {
   readonly day: PlannerDay
-  readonly categoryFor: (categoryId: string | null) => PlannerCategory | undefined
+  readonly categoryFor: (
+    categoryId: string | null,
+  ) => PlannerCategory | undefined
   /** This is the day being read: its header lifts and its route line brightens. */
   readonly active?: boolean
   readonly selectedPlaceId?: string | null
@@ -77,7 +79,7 @@ export function DaySection({
         onClick={onFocusDay}
         aria-pressed={active}
         className={cn(
-          'flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left',
+          'flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-start',
           transitionBase,
           focusRing,
           'hover:bg-hover',
@@ -89,9 +91,7 @@ export function DaySection({
             'grid size-7 shrink-0 place-items-center rounded-md',
             'font-display text-caption font-bold tabular-nums',
             transitionBase,
-            active
-              ? 'bg-brand text-brand-on'
-              : 'bg-accent text-accent-on',
+            active ? 'bg-brand text-brand-on' : 'bg-accent text-accent-on',
           )}
         >
           {day.dayNumber}
@@ -184,7 +184,7 @@ export function DaySection({
               />
               <span className="min-w-0">
                 {note.time === null ? null : (
-                  <span className="mr-1.5 font-semibold tabular-nums text-ink-2">
+                  <span className="me-1.5 font-semibold tabular-nums text-ink-2">
                     {note.time}
                   </span>
                 )}

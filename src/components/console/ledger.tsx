@@ -20,10 +20,11 @@
 
 import { Badge } from '#/components/ui'
 import { cn } from '#/lib/cn'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
+import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 import { formatConsoleInstant } from './instant'
 
-import type { MessageKey, Translate } from '#/lib/i18n'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 
 /**
  * What each platform action is called.
@@ -186,7 +187,7 @@ const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/
  * date beside it in the same panel is already `25 Aug 2026, 13:44 UTC`; two spellings of the same
  * kind of thing on one screen is how a reader stops trusting either.
  */
-function renderValue(t: Translate, value: unknown): string {
+function renderValue(t: Translate, value: unknown, locale: Locale): string {
   if (value === null || value === undefined) return EMPTY
   if (typeof value === 'boolean') {
     return value ? t('console.audit.value.yes') : t('console.audit.value.no')
@@ -194,7 +195,7 @@ function renderValue(t: Translate, value: unknown): string {
   if (typeof value === 'number') return String(value)
   if (typeof value === 'string') {
     if (value.length === 0) return EMPTY
-    return ISO_INSTANT.test(value) ? formatConsoleInstant(value) : value
+    return ISO_INSTANT.test(value) ? formatConsoleInstant(value, locale) : value
   }
   return JSON.stringify(value)
 }
@@ -223,6 +224,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 export function auditChanges(
   t: Translate,
   payload: unknown,
+  locale: Locale = DEFAULT_LOCALE,
 ): ReadonlyArray<AuditChange> {
   if (typeof payload !== 'object' || payload === null) return []
   const { before, after } = payload as { before?: unknown; after?: unknown }
@@ -242,8 +244,8 @@ export function auditChanges(
 
   const changes: Array<AuditChange> = []
   for (const key of keys) {
-    const from = renderValue(t, left[key])
-    const to = renderValue(t, right[key])
+    const from = renderValue(t, left[key], locale)
+    const to = renderValue(t, right[key], locale)
     if (from === to) continue
     changes.push({ field: key, before: from, after: to })
   }
@@ -264,7 +266,8 @@ export interface AuditChangeListProps {
  */
 export function AuditChangeList({ payload, className }: AuditChangeListProps) {
   const t = useTranslate()
-  const changes = auditChanges(t, payload)
+  const locale = useLocale()
+  const changes = auditChanges(t, payload, locale)
   if (changes.length === 0) {
     return null
   }

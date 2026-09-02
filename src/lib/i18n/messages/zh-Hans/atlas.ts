@@ -131,8 +131,8 @@ const messages = {
   'panel.stat.regionsCaption': '州、省、都道府县',
   'panel.stat.visits': '到访',
   'panel.stat.visitsCaption': '每一次记录在案的抵达',
-  'panel.stat.trips': '行程',
-  'panel.stat.tripsCaption': '只统计已完成的行程',
+  'panel.stat.trips': '你的行程',
+  'panel.stat.tripsCaption': '你参与的每一个行程',
   'panel.stat.cities': '城市',
   'panel.stat.citiesCaption': '住过或停留过的城市',
   'panel.stat.days': '在外天数',
@@ -296,7 +296,7 @@ const messages = {
     '它已经被划掉了，所以这也会一并移除您到过那里的记录。您的世界地图和行程不受影响。',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { other: '行程' },
+  'card.trips': { other: '工作空间的行程' },
   'card.visits': { other: '到访' },
   'card.places': { other: '地点' },
   'card.firstTrip': '首次行程',

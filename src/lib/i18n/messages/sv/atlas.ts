@@ -146,8 +146,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Delstater, provinser, prefekturer',
   'panel.stat.visits': 'Besök',
   'panel.stat.visitsCaption': 'Varje registrerad ankomst',
-  'panel.stat.trips': 'Resor',
-  'panel.stat.tripsCaption': 'Bara avslutade resor',
+  'panel.stat.trips': 'Dina resor',
+  'panel.stat.tripsCaption': 'Alla resor du är med på',
   'panel.stat.cities': 'Städer',
   'panel.stat.citiesCaption': 'Orter du sov eller stannade i',
   'panel.stat.days': 'Dagar på resa',
@@ -330,7 +330,7 @@ const messages = {
     'Den är redan avbockad, så det här tar också bort beviset på att du kom fram. Din världskarta och dina resor rörs inte.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Resa', other: 'Resor' },
+  'card.trips': { one: 'Resa i arbetsytan', other: 'Resor i arbetsytan' },
   'card.visits': { one: 'Besök', other: 'Besök' },
   'card.places': { one: 'Plats', other: 'Platser' },
   'card.firstTrip': 'Första resan',

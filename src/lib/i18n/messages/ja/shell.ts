@@ -271,6 +271,100 @@ const messages = {
   'role.owner': 'オーナー',
   'role.admin': '管理者',
   'role.member': 'メンバー',
+
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    other: '{value}件の旅行',
+  },
+  'trips.count.favourites': {
+    other: 'お気に入り{value}件',
+  },
+  'trips.count.archived': {
+    other: 'アーカイブ{value}件',
+  },
+  'trips.atLimit.body':
+    'ご利用のプランは{trips}までです。終わったものをアーカイブするか、上位プランに変えると同時に開ける数が増えます。',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': '新しい旅の記録',
+  'newJourney.title': '旅の記録を始める',
+  'newJourney.description':
+    '旅の記録は旅行の書かれた側です。日付順の記事に、覚えている写真と天気が付きます。',
+  'newJourney.titlePlaceholder': '京都で二週間',
+  'newJourney.subtitle': 'サブタイトル',
+  'newJourney.subtitleHint': '表紙で、タイトルの下に一行。',
+  'newJourney.subtitlePlaceholder': '寺と電車と、多すぎる抹茶',
+  'newJourney.trip': '旅行をもとに',
+  'newJourney.tripHint': '任意 — 物語をその計画に結びつけます。',
+  'newJourney.tripNone': '旅行に紐づけない',
+  'newJourney.datesError': '終了日が開始日より前です。',
+  'newJourney.submit': '記録を作成',
+  'newJourney.creating': '記録を作成しています',
+  'newJourney.created': '旅の記録を始めました',
+  'newJourney.createdBody': '最初の記事を追加して物語を始めましょう。',
+  'newJourney.error':
+    '記録を作成できませんでした。少し経ってからお試しください。',
+  'newCollection.trigger': '新しいコレクション',
+  'newCollection.title': 'コレクションを始める',
+  'newCollection.description':
+    'どの旅行のものか分かる前に見つけた場所を置いておく場所です。',
+  'newCollection.namePlaceholder': '街を横切る価値のある珈琲',
+  'newCollection.descriptionHint': 'ここに入るもの、入らないもの。',
+  'newCollection.submit': 'コレクションを作成',
+  'newCollection.creating': 'コレクションを作成しています',
+  'newCollection.created': 'コレクションを作成しました',
+  'newCollection.createdBody': '場所を保存していきましょう。',
+  'newCollection.error':
+    'コレクションを作成できませんでした。少し経ってからお試しください。',
+
+  'newTrip.title': '新しい旅行を始める',
+  'newTrip.description':
+    'タイトルだけで十分です。日付があれば日ごとの計画が組まれ、あとのことは分かってからで構いません。',
+  'newTrip.name': '旅行の名前',
+  'newTrip.namePlaceholder': '桜の季節の京都',
+  'newTrip.destination': '行き先',
+  'newTrip.destinationHint': '都市でも、地方でも、行程全体でも。',
+  'newTrip.destinationPlaceholder': '京都、日本',
+  'newTrip.departure': '出発',
+  'newTrip.return': '帰着',
+  'newTrip.returnError': '帰着日が出発日より前です。',
+  'newTrip.currency': '予算の通貨',
+  'newTrip.currencyHint': 'この旅行の支出はすべてこの通貨で合計します。',
+  'newTrip.submit': '旅行を作成',
+  'newTrip.creating': '旅行を作成しています',
+  'newTrip.error': '旅行を作成できませんでした。少し経ってからお試しください。',
+  'newTrip.created': '旅行を作成しました',
+  'newTrip.createdBody': '地図に場所を置いていきましょう。',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': '見られる人',
+  'visibility.private': '自分だけ',
+  'visibility.organization': 'ワークスペースの全員',
+  'visibility.public': 'リンクを持つ人すべて',
+
+  'trips.error': '旅行を読み込めませんでした',
+  'trips.eyebrow': 'ワークスペース',
+  'trips.nothingPlanned': 'まだ何も計画されていません',
+  'trips.search': '旅行を検索',
+  'trips.atLimit.title': 'プランで使える旅行をすべて使い切りました',
+  'trips.atLimit.action': 'プランを比較',
+  'trips.noMatch.title': 'このフィルターに合うものはありません',
+  'trips.noMatch.body':
+    '別の段階を試すか、検索を消すか、アーカイブを見てください。',
+  'trips.noMatch.action': 'フィルターをリセット',
+  'trips.empty.body':
+    '旅行は日程、地図、予約、持ち物リスト、お金をまとめて持ちます。ひとつ始めれば、あとは付いてきます。',
+  'trips.next.title': '次はどこかへ',
+  'trips.next.body':
+    '旅行を始めると、planned.travel が日付ごとに一日を作り、保存したものを受け止めます。',
+  'trips.savedPlaces': '保存した場所',
+  'trips.filter.all': 'すべて',
+  'trips.filter.favourites': 'お気に入り',
+  'trips.card.favourite': 'お気に入り登録',
+  'trips.card.noDestination': '行き先は未定',
+  'trips.card.noDates': '日程は未定',
+  'trips.card.startsIn': 'あと{days}日',
+  'trips.card.days': '{days}日',
   'metric.trips': '旅',
   'metric.places': '場所',
   'metric.members': 'メンバー',
@@ -292,6 +386,32 @@ const messages = {
   'error.feedback.failed': '送信できませんでした。上の参照番号は届いています。',
   'error.root': '道を外れました',
   'error.session': 'ワークスペースへのアクセス権が変わりました',
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': '問題を報告',
+  'feedback.formTitle': '問題を報告',
+  'feedback.messageLabel': '何がおかしいですか、または何を変えるべきですか？',
+  'feedback.messagePlaceholder':
+    '何が起きると思っていて、実際には何が起きましたか？',
+  'feedback.emailLabel': 'メールアドレス',
+  'feedback.emailPlaceholder': 'name@example.com',
+  'feedback.isRequiredLabel': '（必須）',
+  'feedback.submitButtonLabel': '報告を送信',
+  'feedback.cancelButtonLabel': 'キャンセル',
+  'feedback.confirmButtonLabel': '確定',
+  'feedback.addScreenshotButtonLabel': 'スクリーンショットを追加',
+  'feedback.removeScreenshotButtonLabel': 'スクリーンショットを削除',
+  'feedback.highlightToolText': '強調',
+  'feedback.hideToolText': '隠す',
+  'feedback.successMessageText':
+    'ありがとうございます — 報告を受け取りました。',
+  'feedback.errorEmptyMessageText':
+    'まず一文書いてください — 空の報告では何もわかりません。',
+  'feedback.errorTimeoutText':
+    '時間がかかりすぎていて、報告が送信されたか確認できません。',
+  'feedback.errorForbiddenText': 'このページは報告を送信できません。',
+  'feedback.errorGenericText':
+    '送信できませんでした。接続と、広告ブロッカーが邪魔していないか確認してください。',
+
   'notFound.eyebrow': 'エラー 404',
   'notFound.title': 'このページは地図にありません',
   'notFound.body':

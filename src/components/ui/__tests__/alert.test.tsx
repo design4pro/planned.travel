@@ -86,4 +86,27 @@ describe('EmptyState', () => {
     render(<EmptyState size="lg" title="Nothing here" />)
     expect(screen.getByText('Nothing here').className).toContain('text-title')
   })
+
+  /**
+   * A paragraph is right nearly everywhere: the empty state sits inside a
+   * section whose own heading already names it, and a heading there would invent
+   * a level in the outline.
+   */
+  it('titles itself with a paragraph by default', () => {
+    render(<EmptyState title="Nothing here" />)
+    expect(screen.getByText('Nothing here').tagName).toBe('P')
+    expect(screen.queryByRole('heading')).toBeNull()
+  })
+
+  /**
+   * The exception is the dashboard with no trips yet, where the designed nothing
+   * *is* the page's leading element and the hero that would carry the `h1` has
+   * no trip to name. Without this the screen renders no `h1` at all.
+   */
+  it('can carry the page heading when it is the leading element', () => {
+    render(<EmptyState titleAs="h1" title="No trips yet" />)
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'No trips yet' }),
+    ).not.toBeNull()
+  })
 })

@@ -334,6 +334,101 @@ const messages = {
   'role.admin': 'Διαχειριστής',
   'role.member': 'Μέλος',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} ταξίδι',
+    other: '{value} ταξίδια',
+  },
+  'trips.count.favourites': {
+    one: '{value} αγαπημένο',
+    other: '{value} αγαπημένα',
+  },
+  'trips.count.archived': {
+    one: '{value} στο αρχείο',
+    other: '{value} στο αρχείο',
+  },
+  'trips.atLimit.body':
+    'Το πρόγραμμά σου καλύπτει {trips}. Αρχειοθέτησε ένα που τελείωσες ή ανέβα πρόγραμμα για να κρατάς περισσότερα ανοιχτά μαζί.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Νέο ημερολόγιο',
+  'newJourney.title': 'Ξεκίνα ένα ημερολόγιο',
+  'newJourney.description':
+    'Το ημερολόγιο είναι η γραμμένη πλευρά ενός ταξιδιού — καταχωρίσεις με σειρά ημερομηνίας, με τις φωτογραφίες και τον καιρό που θυμάσαι.',
+  'newJourney.titlePlaceholder': 'Δύο εβδομάδες στο Κιότο',
+  'newJourney.subtitle': 'Υπότιτλος',
+  'newJourney.subtitleHint': 'Μια γραμμή κάτω από τον τίτλο, στο εξώφυλλο.',
+  'newJourney.subtitlePlaceholder': 'Ναοί, τρένα και πολύ περισσότερο matcha',
+  'newJourney.trip': 'Με βάση ένα ταξίδι',
+  'newJourney.tripHint': 'Προαιρετικό — δένει την ιστορία με το πρόγραμμά της.',
+  'newJourney.tripNone': 'Χωρίς σύνδεση με ταξίδι',
+  'newJourney.datesError': 'Η ημερομηνία λήξης είναι πριν την έναρξη.',
+  'newJourney.submit': 'Δημιουργία ημερολογίου',
+  'newJourney.creating': 'Δημιουργείται το ημερολόγιο',
+  'newJourney.created': 'Το ημερολόγιο ξεκίνησε',
+  'newJourney.createdBody':
+    'Πρόσθεσε την πρώτη καταχώριση για να ξεκινήσει η ιστορία.',
+  'newJourney.error': 'Το ημερολόγιο δεν δημιουργήθηκε. Δοκίμασε ξανά σε λίγο.',
+  'newCollection.trigger': 'Νέα συλλογή',
+  'newCollection.title': 'Ξεκίνα μια συλλογή',
+  'newCollection.description':
+    'Ένας τόπος για τα μέρη που βρίσκεις πριν ξέρεις σε ποιο ταξίδι ανήκουν.',
+  'newCollection.namePlaceholder': 'Καφές που αξίζει να διασχίσεις την πόλη',
+  'newCollection.descriptionHint': 'Τι ανήκει εδώ και τι όχι.',
+  'newCollection.submit': 'Δημιουργία συλλογής',
+  'newCollection.creating': 'Δημιουργείται η συλλογή',
+  'newCollection.created': 'Η συλλογή δημιουργήθηκε',
+  'newCollection.createdBody': 'Ξεκίνα να αποθηκεύεις μέρη σε αυτήν.',
+  'newCollection.error': 'Η συλλογή δεν δημιουργήθηκε. Δοκίμασε ξανά σε λίγο.',
+
+  'newTrip.title': 'Ξεκίνα ένα νέο ταξίδι',
+  'newTrip.description':
+    'Ένας τίτλος αρκεί. Οι ημερομηνίες φτιάχνουν το πρόγραμμα μέρα με μέρα, και τα υπόλοιπα περιμένουν ώσπου να τα ξέρεις.',
+  'newTrip.name': 'Όνομα ταξιδιού',
+  'newTrip.namePlaceholder': 'Κιότο στην εποχή των κερασιών',
+  'newTrip.destination': 'Προορισμός',
+  'newTrip.destinationHint': 'Μια πόλη, μια περιοχή ή όλη η διαδρομή.',
+  'newTrip.destinationPlaceholder': 'Κιότο, Ιαπωνία',
+  'newTrip.departure': 'Αναχώρηση',
+  'newTrip.return': 'Επιστροφή',
+  'newTrip.returnError': 'Η ημερομηνία επιστροφής είναι πριν την αναχώρηση.',
+  'newTrip.currency': 'Νόμισμα προϋπολογισμού',
+  'newTrip.currencyHint': 'Σε αυτό αθροίζεται κάθε έξοδο του ταξιδιού.',
+  'newTrip.submit': 'Δημιουργία ταξιδιού',
+  'newTrip.creating': 'Δημιουργείται το ταξίδι',
+  'newTrip.error': 'Το ταξίδι δεν δημιουργήθηκε. Δοκίμασε ξανά σε λίγο.',
+  'newTrip.created': 'Το ταξίδι δημιουργήθηκε',
+  'newTrip.createdBody': 'Ξεκίνα να βάζεις μέρη στον χάρτη.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Ποιος μπορεί να το δει',
+  'visibility.private': 'Μόνο εγώ',
+  'visibility.organization': 'Όλοι στον χώρο',
+  'visibility.public': 'Όποιος έχει τον σύνδεσμο',
+
+  'trips.error': 'Τα ταξίδια σου δεν φορτώθηκαν',
+  'trips.eyebrow': 'Χώρος',
+  'trips.nothingPlanned': 'Τίποτα σχεδιασμένο ακόμη',
+  'trips.search': 'Αναζήτηση ταξιδιών',
+  'trips.atLimit.title': 'Γέμισες κάθε ταξίδι που επιτρέπει το πρόγραμμά σου',
+  'trips.atLimit.action': 'Σύγκριση προγραμμάτων',
+  'trips.noMatch.title': 'Τίποτα δεν ταιριάζει σε αυτό το φίλτρο',
+  'trips.noMatch.body':
+    'Δοκίμασε άλλο στάδιο, καθάρισε την αναζήτηση ή δες στο αρχείο.',
+  'trips.noMatch.action': 'Επαναφορά φίλτρων',
+  'trips.empty.body':
+    'Ένα ταξίδι κρατά το πρόγραμμα, τον χάρτη, τις κρατήσεις, τις λίστες και τα χρήματα. Ξεκίνα ένα και τα υπόλοιπα ακολουθούν.',
+  'trips.next.title': 'Κάπου μετά',
+  'trips.next.body':
+    'Ξεκίνα ένα ταξίδι και το planned.travel φτιάχνει μία μέρα ανά ημερομηνία, έτοιμη για ό,τι έχεις αποθηκεύσει.',
+  'trips.savedPlaces': 'Αποθηκευμένα μέρη',
+  'trips.filter.all': 'Όλα',
+  'trips.filter.favourites': 'Αγαπημένα',
+  'trips.card.favourite': 'Αγαπημένο',
+  'trips.card.noDestination': 'Προορισμός χωρίς ορισμό ακόμη',
+  'trips.card.noDates': 'Ημερομηνίες χωρίς ορισμό',
+  'trips.card.startsIn': 'σε {days} ημ',
+  'trips.card.days': '{days} ημ',
   'metric.trips': 'Ταξίδια',
   'metric.places': 'Μέρη',
   'metric.members': 'Μέλη',
@@ -358,6 +453,31 @@ const messages = {
     'Δεν στάλθηκε. Ο κωδικός παραπάνω φτάνει ούτως ή άλλως σε εμάς.',
   'error.root': 'Βγήκαμε από τη διαδρομή',
   'error.session': 'Η πρόσβασή σας στον χώρο εργασίας άλλαξε',
+
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Αναφορά προβλήματος',
+  'feedback.formTitle': 'Αναφορά προβλήματος',
+  'feedback.messageLabel': 'Τι δεν πάει καλά ή τι πρέπει να αλλάξει;',
+  'feedback.messagePlaceholder': 'Τι περιμένατε και τι έγινε αντ’ αυτού;',
+  'feedback.emailLabel': 'Διεύθυνση email',
+  'feedback.emailPlaceholder': 'giorgos@example.com',
+  'feedback.isRequiredLabel': '(υποχρεωτικό)',
+  'feedback.submitButtonLabel': 'Αποστολή αναφοράς',
+  'feedback.cancelButtonLabel': 'Άκυρο',
+  'feedback.confirmButtonLabel': 'Επιβεβαίωση',
+  'feedback.addScreenshotButtonLabel': 'Προσθήκη στιγμιότυπου',
+  'feedback.removeScreenshotButtonLabel': 'Αφαίρεση στιγμιότυπου',
+  'feedback.highlightToolText': 'Επισήμανση',
+  'feedback.hideToolText': 'Απόκρυψη',
+  'feedback.successMessageText': 'Ευχαριστούμε — λάβαμε την αναφορά σας.',
+  'feedback.errorEmptyMessageText':
+    'Γράψτε πρώτα μια πρόταση — μια κενή αναφορά δεν μας λέει τίποτα.',
+  'feedback.errorTimeoutText':
+    'Αργεί υπερβολικά και δεν μπορούμε να επιβεβαιώσουμε ότι η αναφορά στάλθηκε.',
+  'feedback.errorForbiddenText':
+    'Αυτή η σελίδα δεν επιτρέπεται να στέλνει αναφορές.',
+  'feedback.errorGenericText':
+    'Δεν στάλθηκε. Ελέγξτε τη σύνδεση και μήπως παρεμβαίνει κάποιο πρόγραμμα αποκλεισμού διαφημίσεων.',
 
   'notFound.eyebrow': 'Σφάλμα 404',
   'notFound.title': 'Αυτή η σελίδα δεν είναι στον χάρτη',

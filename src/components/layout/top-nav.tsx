@@ -1,9 +1,9 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
+import { Button } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { Wordmark } from './brand'
-import { buttonClass } from './kit'
 import { NotificationBell } from './notification-bell'
 import { PillNav } from './pill-nav'
 import { ThemeToggle } from './theme-toggle'
@@ -41,7 +41,9 @@ export function TopNav({
   unreadCount = 0,
   belowImpersonationBar = false,
 }: TopNavProps) {
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
   const t = useTranslate()
 
   return (
@@ -67,16 +69,14 @@ export function TopNav({
         </div>
 
         <div className="ms-auto flex items-center gap-1 lg:ms-0">
-          <Link
-            to="/trips"
-            className={cn(
-              buttonClass({ variant: 'primary', size: 'sm' }),
-              'me-1 hidden xl:inline-flex',
-            )}
+          <Button
+            asChild
+            shape="pill"
+            className="me-1 hidden xl:inline-flex"
+            icon={<Plus aria-hidden strokeWidth={2.5} />}
           >
-            <Plus aria-hidden className="size-4" strokeWidth={2.5} />
-            {t('shell.nav.newTrip')}
-          </Link>
+            <Link to="/trips">{t('shell.nav.newTrip')}</Link>
+          </Button>
           <ThemeToggle />
           <NotificationBell unreadCount={unreadCount} />
           <div className="ms-1">

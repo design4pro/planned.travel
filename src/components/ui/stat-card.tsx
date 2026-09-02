@@ -213,6 +213,10 @@ export const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
                   t.skeleton,
                 )}
                 aria-hidden="true"
+                // The figure is not in yet, and this block is the only thing
+                // saying so — reduced motion keeps it breathing instead of
+                // leaving a slab where a number belongs.
+                data-motion-loop=""
               />
             ) : (
               <span

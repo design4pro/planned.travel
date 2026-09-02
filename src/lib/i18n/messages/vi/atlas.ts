@@ -132,8 +132,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Bang, tỉnh, quận hạt',
   'panel.stat.visits': 'Lượt thăm',
   'panel.stat.visitsCaption': 'Mọi lần đặt chân được ghi lại',
-  'panel.stat.trips': 'Chuyến đi',
-  'panel.stat.tripsCaption': 'Chỉ tính các chuyến đã hoàn thành',
+  'panel.stat.trips': 'Chuyến đi của bạn',
+  'panel.stat.tripsCaption': 'Mọi chuyến đi bạn tham gia',
   'panel.stat.cities': 'Thành phố',
   'panel.stat.citiesCaption': 'Nơi bạn đã nghỉ đêm hoặc dừng chân',
   'panel.stat.days': 'Ngày xa nhà',
@@ -306,7 +306,7 @@ const messages = {
     'Mục này đã được gạch xong, nên xóa nó cũng xóa luôn dấu mốc rằng bạn đã đến nơi. Bản đồ và các chuyến đi của bạn không bị đụng tới.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { other: 'Chuyến đi' },
+  'card.trips': { other: 'Chuyến đi của không gian làm việc' },
   'card.visits': { other: 'Lần tới' },
   'card.places': { other: 'Địa điểm' },
   'card.firstTrip': 'Chuyến đi đầu tiên',

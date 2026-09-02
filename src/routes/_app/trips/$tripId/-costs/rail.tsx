@@ -11,10 +11,12 @@ import { ArrowRight, Plus, Scale, Wallet } from 'lucide-react'
 
 import { Avatar, Badge, Button, EmptyState, Progress } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { formatNumber } from '#/lib/format'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney, formatSignedMoney } from '#/lib/money'
 import { formatDayLabel } from '#/components/costs'
 import { Panel, PanelRow } from '../../../-ui/scaffold'
-import { humaniseToken, pluralise } from '../../../-lib/format'
+import { humaniseToken } from '../../../-lib/format'
 import { categoryLabel } from './categories'
 import { swatchFor } from '../../../-lib/tone'
 
@@ -46,8 +48,10 @@ export function CostsRail({
   onSettle,
   onAddPayment,
 }: CostsRailProps) {
+  const t = useTranslate()
   const nameOf = (userId: string): string =>
-    people.find((person) => person.userId === userId)?.name ?? 'Removed traveller'
+    people.find((person) => person.userId === userId)?.name ??
+    t('costs.person.removed')
   const imageOf = (userId: string): string | null =>
     people.find((person) => person.userId === userId)?.image ?? null
 
@@ -107,9 +111,12 @@ function SettleUp({
   onAddPayment: () => void
   busy: boolean
 }) {
+  const locale = useLocale()
+  const t = useTranslate()
+
   return (
     <Panel
-      label="Settle up"
+      label={t('costs.settle.label')}
       count={suggestions.length === 0 ? undefined : String(suggestions.length)}
       action={
         <Button
@@ -120,7 +127,7 @@ function SettleUp({
           icon={<Plus aria-hidden strokeWidth={2.5} />}
           onClick={onAddPayment}
         >
-          Add payment
+          {t('costs.settle.addPayment')}
         </Button>
       }
       flush
@@ -131,28 +138,44 @@ function SettleUp({
             size="sm"
             tone="brand"
             icon={<Scale />}
-            title="Everyone is square"
-            description="No transfers are needed. Log an expense and any imbalance shows up here."
+            title={t('costs.settle.empty.title')}
+            description={t('costs.settle.empty.body')}
           />
         </div>
       ) : (
         <ul>
           {suggestions.map((row) => {
-            const mine = row.fromUserId === viewerUserId || row.toUserId === viewerUserId
+            const mine =
+              row.fromUserId === viewerUserId || row.toUserId === viewerUserId
             return (
               <li key={`${row.fromUserId}:${row.toUserId}`}>
                 <PanelRow className="gap-2.5">
-                  <Avatar name={nameOf(row.fromUserId)} src={imageOf(row.fromUserId)} size="sm" />
-                  <ArrowRight aria-hidden className="size-3.5 shrink-0 text-ink-4" />
-                  <Avatar name={nameOf(row.toUserId)} src={imageOf(row.toUserId)} size="sm" />
+                  <Avatar
+                    name={nameOf(row.fromUserId)}
+                    src={imageOf(row.fromUserId)}
+                    size="sm"
+                  />
+                  <ArrowRight
+                    aria-hidden
+                    className="size-3.5 shrink-0 text-ink-4"
+                  />
+                  <Avatar
+                    name={nameOf(row.toUserId)}
+                    src={imageOf(row.toUserId)}
+                    size="sm"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-caption font-medium text-ink">
-                      {row.fromUserId === viewerUserId ? 'You' : nameOf(row.fromUserId)}
+                      {row.fromUserId === viewerUserId
+                        ? t('costs.person.you')
+                        : nameOf(row.fromUserId)}
                       {' → '}
-                      {row.toUserId === viewerUserId ? 'you' : nameOf(row.toUserId)}
+                      {row.toUserId === viewerUserId
+                        ? t('costs.person.youTarget')
+                        : nameOf(row.toUserId)}
                     </p>
                     <p className="truncate text-caption font-semibold tabular-nums text-ink-2">
-                      {formatMoney(row.amountMinor, currency)}
+                      {formatMoney(row.amountMinor, currency, locale)}
                     </p>
                   </div>
                   <Button
@@ -163,7 +186,7 @@ function SettleUp({
                     disabled={busy}
                     onClick={() => onSettle(row)}
                   >
-                    Settle
+                    {t('costs.settle.action')}
                   </Button>
                 </PanelRow>
               </li>
@@ -198,14 +221,23 @@ function Balances({
   nameOf: (userId: string) => string
   imageOf: (userId: string) => string | null
 }) {
-  const widest = Math.max(...balances.map((row) => Math.abs(row.balanceMinor)), 1)
+  const t = useTranslate()
+  const locale = useLocale()
+  const widest = Math.max(
+    ...balances.map((row) => Math.abs(row.balanceMinor)),
+    1,
+  )
 
   return (
-    <Panel label="Balances" count={pluralise(balances.length, 'traveller')}>
+    <Panel
+      label={t('costs.balances.label')}
+      count={t('costs.balances.count', {
+        count: balances.length,
+        travellers: formatNumber(balances.length, locale),
+      })}
+    >
       {balances.length === 0 ? (
-        <p className="text-caption text-ink-3">
-          Balances appear once an expense has a payer and a split.
-        </p>
+        <p className="text-caption text-ink-3">{t('costs.balances.empty')}</p>
       ) : (
         <ul className="flex flex-col gap-3.5">
           {balances.map((row) => {
@@ -213,10 +245,16 @@ function Balances({
             const width = `${(Math.abs(row.balanceMinor) / widest) * 50}%`
             return (
               <li key={row.userId} className="flex items-center gap-3">
-                <Avatar name={nameOf(row.userId)} src={imageOf(row.userId)} size="sm" />
+                <Avatar
+                  name={nameOf(row.userId)}
+                  src={imageOf(row.userId)}
+                  size="sm"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-caption font-medium text-ink">
-                    {row.userId === viewerUserId ? 'You' : nameOf(row.userId)}
+                    {row.userId === viewerUserId
+                      ? t('costs.person.you')
+                      : nameOf(row.userId)}
                   </p>
                   <div
                     aria-hidden
@@ -226,7 +264,9 @@ function Balances({
                     <span
                       className={cn(
                         'absolute inset-y-0 rounded-full',
-                        positive ? 'left-1/2 bg-success' : 'right-1/2 bg-danger',
+                        positive
+                          ? 'left-1/2 bg-success'
+                          : 'right-1/2 bg-danger',
                       )}
                       style={{ width }}
                     />
@@ -242,7 +282,7 @@ function Balances({
                         : 'text-danger',
                   )}
                 >
-                  {formatSignedMoney(row.balanceMinor, currency)}
+                  {formatSignedMoney(row.balanceMinor, currency, locale)}
                 </span>
               </li>
             )
@@ -266,22 +306,26 @@ function ByCategory({
   budgetTargetMinor: number | null
   currency: string
 }) {
+  const locale = useLocale()
   const visible = rows
     .filter((row) => row.spentMinor > 0 || row.plannedMinor > 0)
     .sort((left, right) => right.spentMinor - left.spentMinor)
   const total = Math.max(spentMinor, 1)
+  const t = useTranslate()
 
   return (
     <Panel
-      label="By category"
-      count={formatMoney(spentMinor, currency)}
+      label={t('costs.categories.label')}
+      count={formatMoney(spentMinor, currency, locale)}
       footer={
         budgetTargetMinor === null || budgetTargetMinor === 0 ? undefined : (
           <div className="flex flex-col gap-1.5">
             <div className="flex items-baseline justify-between gap-3 text-caption">
-              <span className="text-ink-3">Against the trip budget</span>
+              <span className="text-ink-3">
+                {t('costs.categories.againstBudget')}
+              </span>
               <span className="font-semibold tabular-nums text-ink">
-                {formatMoney(budgetTargetMinor, currency)}
+                {formatMoney(budgetTargetMinor, currency, locale)}
               </span>
             </div>
             <Progress
@@ -289,17 +333,14 @@ function ByCategory({
               max={budgetTargetMinor}
               size="xs"
               tone={spentMinor > budgetTargetMinor ? 'danger' : 'success'}
-              aria-label="Spent against the trip budget"
+              aria-label={t('costs.categories.progressLabel')}
             />
           </div>
         )
       }
     >
       {visible.length === 0 ? (
-        <p className="text-caption text-ink-3">
-          Budget lines and expenses both break down here once there is something to
-          break down.
-        </p>
+        <p className="text-caption text-ink-3">{t('costs.categories.empty')}</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {visible.map((row, index) => (
@@ -308,27 +349,40 @@ function ByCategory({
                 <span className="flex min-w-0 items-center gap-2 text-caption text-ink-2">
                   <span
                     aria-hidden
-                    className={cn('size-2 shrink-0 rounded-full', swatchFor(index))}
+                    className={cn(
+                      'size-2 shrink-0 rounded-full',
+                      swatchFor(index),
+                    )}
                   />
-                  <span className="truncate">{categoryLabel(row.category)}</span>
+                  <span className="truncate">
+                    {categoryLabel(row.category)}
+                  </span>
                 </span>
                 <span className="shrink-0 text-caption font-semibold tabular-nums text-ink">
-                  {formatMoney(row.spentMinor, currency)}
+                  {formatMoney(row.spentMinor, currency, locale)}
                 </span>
               </div>
-              <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-surface-inset">
+              {/* Turned round for Arabic so the fill grows from the reading
+                  start; `origin-left` on the child cannot be spelled logically. */}
+              <div
+                aria-hidden
+                className="h-1.5 overflow-hidden rounded-full bg-surface-inset rtl:-scale-x-100"
+              >
                 <span
-                  data-motion-transform=""
                   className={cn(
-                    'block h-full origin-left rounded-full transition-transform duration-base ease-out-quint',
+                    'block h-full origin-left rounded-full transition-[scale] duration-base ease-out-quint',
                     swatchFor(index),
                   )}
-                  style={{ transform: `scaleX(${Math.min(row.spentMinor / total, 1)})` }}
+                  /* A value, not motion — see `costs/split-editor.tsx`. With
+                     `data-motion-transform` and an inline `transform` this rail
+                     showed every category at its full budget under
+                     reduce-motion. */
+                  style={{ scale: `${Math.min(row.spentMinor / total, 1)} 1` }}
                 />
               </div>
               {row.plannedMinor === 0 ? null : (
                 <p className="mt-1 text-caption tabular-nums text-ink-4">
-                  {formatMoney(row.plannedMinor, currency)} planned
+                  {formatMoney(row.plannedMinor, currency, locale)} planned
                 </p>
               )}
             </li>
@@ -352,9 +406,12 @@ function Payments({
   nameOf: (userId: string) => string
   viewerUserId: string
 }) {
+  const locale = useLocale()
+  const t = useTranslate()
+
   return (
     <Panel
-      label="Payments recorded"
+      label={t('costs.payments.label')}
       count={settlements.length === 0 ? undefined : String(settlements.length)}
       flush
     >
@@ -363,8 +420,8 @@ function Payments({
           <EmptyState
             size="sm"
             icon={<Wallet />}
-            title="No payments yet"
-            description="Once someone pays a balance back, the transfer is logged here."
+            title={t('costs.payments.empty.title')}
+            description={t('costs.payments.empty.body')}
           />
         </div>
       ) : (
@@ -374,16 +431,25 @@ function Payments({
               <PanelRow>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-caption font-medium text-ink">
-                    {row.fromUserId === viewerUserId ? 'You' : nameOf(row.fromUserId)}
+                    {row.fromUserId === viewerUserId
+                      ? t('costs.person.you')
+                      : nameOf(row.fromUserId)}
                     {' → '}
-                    {row.toUserId === viewerUserId ? 'you' : nameOf(row.toUserId)}
+                    {row.toUserId === viewerUserId
+                      ? t('costs.person.youTarget')
+                      : nameOf(row.toUserId)}
                   </p>
                   <p className="truncate text-caption text-ink-3">
-                    {formatDayLabel(row.settledOn)} · {humaniseToken(row.method)}
+                    {formatDayLabel(row.settledOn, locale)} ·{' '}
+                    {humaniseToken(row.method)}
                   </p>
                 </div>
-                <Badge tone="success" size="sm" className="shrink-0 tabular-nums">
-                  {formatMoney(row.amountMinor, currency)}
+                <Badge
+                  tone="success"
+                  size="sm"
+                  className="shrink-0 tabular-nums"
+                >
+                  {formatMoney(row.amountMinor, currency, locale)}
                 </Badge>
               </PanelRow>
             </li>

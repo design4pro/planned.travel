@@ -411,6 +411,102 @@ const messages = {
   'role.admin': 'Admin',
   'role.member': 'Member',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} trip',
+    other: '{value} trips',
+  },
+  'trips.count.favourites': {
+    one: '{value} favourite',
+    other: '{value} favourites',
+  },
+  'trips.count.archived': {
+    one: '{value} archived',
+    other: '{value} archived',
+  },
+  'trips.atLimit.body':
+    'Your plan covers {trips}. Archive one you have finished, or move up a plan to keep more open at once.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'New journey',
+  'newJourney.title': 'Start a journey',
+  'newJourney.description':
+    'A journey is the written side of a trip — entries in date order, with the photos and the weather you remember it by.',
+  'newJourney.titlePlaceholder': 'Two weeks in Kyoto',
+  'newJourney.subtitle': 'Subtitle',
+  'newJourney.subtitleHint': 'One line under the title, on the cover.',
+  'newJourney.subtitlePlaceholder': 'Temples, trains and far too much matcha',
+  'newJourney.trip': 'Based on a trip',
+  'newJourney.tripHint': 'Optional — links the story back to its plan.',
+  'newJourney.tripNone': 'Not tied to a trip',
+  'newJourney.datesError': 'The end date is before the start.',
+  'newJourney.submit': 'Create journey',
+  'newJourney.creating': 'Creating the journey',
+  'newJourney.created': 'Journey started',
+  'newJourney.createdBody': 'Add your first entry to begin the story.',
+  'newJourney.error':
+    'The journey could not be created. Try again in a moment.',
+  'newCollection.trigger': 'New collection',
+  'newCollection.title': 'Start a collection',
+  'newCollection.description':
+    'Somewhere to keep the places you find before you know which trip they belong to.',
+  'newCollection.namePlaceholder': 'Coffee worth crossing town for',
+  'newCollection.descriptionHint': 'What belongs in here, and what does not.',
+  'newCollection.submit': 'Create collection',
+  'newCollection.creating': 'Creating the collection',
+  'newCollection.created': 'Collection created',
+  'newCollection.createdBody': 'Start saving places into it.',
+  'newCollection.error':
+    'The collection could not be created. Try again in a moment.',
+
+  'newTrip.title': 'Start a new trip',
+  'newTrip.description':
+    'A title is all you need. Dates build the day-by-day plan, and everything else can wait until you know it.',
+  'newTrip.name': 'Trip name',
+  'newTrip.namePlaceholder': 'Kyoto in cherry-blossom season',
+  'newTrip.destination': 'Destination',
+  'newTrip.destinationHint': 'A city, a region, or the whole route.',
+  'newTrip.destinationPlaceholder': 'Kyoto, Japan',
+  'newTrip.departure': 'Departure',
+  'newTrip.return': 'Return',
+  'newTrip.returnError': 'The return date is before departure.',
+  'newTrip.currency': 'Budget currency',
+  'newTrip.currencyHint': 'Every expense on this trip is totalled in it.',
+  'newTrip.submit': 'Create trip',
+  'newTrip.creating': 'Creating the trip',
+  'newTrip.error': 'The trip could not be created. Try again in a moment.',
+  'newTrip.created': 'Trip created',
+  'newTrip.createdBody': 'Start dropping places on the map.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Who can see it',
+  'visibility.private': 'Only me',
+  'visibility.organization': 'Everyone in the workspace',
+  'visibility.public': 'Anyone with the link',
+
+  'trips.error': 'Your trips did not load',
+  'trips.eyebrow': 'Workspace',
+  'trips.nothingPlanned': 'Nothing planned yet',
+  'trips.search': 'Search trips',
+  'trips.atLimit.title': 'You have filled every trip your plan allows',
+  'trips.atLimit.action': 'Compare plans',
+  'trips.noMatch.title': 'Nothing matches that filter',
+  'trips.noMatch.body':
+    'Try a different stage, clear the search, or look in the archive.',
+  'trips.noMatch.action': 'Reset filters',
+  'trips.empty.body':
+    'A trip holds your itinerary, your map, your bookings, your packing lists and the money. Start one and the rest follows.',
+  'trips.next.title': 'Somewhere next',
+  'trips.next.body':
+    'Start a trip and planned.travel builds a day per date, ready for what you have saved.',
+  'trips.savedPlaces': 'Saved places',
+  'trips.filter.all': 'All',
+  'trips.filter.favourites': 'Favourites',
+  'trips.card.favourite': 'Favourite',
+  'trips.card.noDestination': 'Destination not set yet',
+  'trips.card.noDates': 'Dates to be set',
+  'trips.card.startsIn': 'in {days}d',
+  'trips.card.days': '{days}d',
   'metric.trips': 'Trips',
   'metric.places': 'Places',
   'metric.members': 'Members',
@@ -442,6 +538,45 @@ const messages = {
    * route", reads as a stack frame the reader is being asked to forward.
    */
   'error.session': 'Your workspace access has changed',
+
+  /* ------------------------------------------------- reporting a problem */
+  /**
+   * The Sentry User Feedback widget, which is Sentry's own markup inside a
+   * shadow DOM and reads every one of these once, when the widget is built.
+   * `src/components/layout/feedback-widget.tsx` passes them and rebuilds the
+   * widget when the locale changes; the names match the SDK's options one for
+   * one so the two lists can be read side by side.
+   *
+   * Distinct from `error.feedback.*` above, which is the textarea on the error
+   * panel: that one is offered after something threw and is tied to the event
+   * it threw. This one is offered before anything throws, for everything that
+   * is wrong without being an error.
+   */
+  'feedback.triggerLabel': 'Report a problem',
+  'feedback.formTitle': 'Report a problem',
+  'feedback.messageLabel': 'What is wrong, or what should change?',
+  'feedback.messagePlaceholder':
+    'What did you expect, and what happened instead?',
+  'feedback.emailLabel': 'Email address',
+  'feedback.emailPlaceholder': 'you@example.com',
+  'feedback.isRequiredLabel': '(required)',
+  'feedback.submitButtonLabel': 'Send report',
+  'feedback.cancelButtonLabel': 'Cancel',
+  'feedback.confirmButtonLabel': 'Confirm',
+  /* The screenshot is a screen capture the browser asks about first, then an
+     editor with three rectangles: crop, Highlight, Hide. */
+  'feedback.addScreenshotButtonLabel': 'Add a screenshot',
+  'feedback.removeScreenshotButtonLabel': 'Remove screenshot',
+  'feedback.highlightToolText': 'Highlight',
+  'feedback.hideToolText': 'Hide',
+  'feedback.successMessageText': 'Thank you — we have your report.',
+  'feedback.errorEmptyMessageText':
+    'Write a sentence first — an empty report tells us nothing.',
+  'feedback.errorTimeoutText':
+    'That is taking too long, and we cannot confirm the report was sent.',
+  'feedback.errorForbiddenText': 'This page is not allowed to send reports.',
+  'feedback.errorGenericText':
+    'That did not send. Check the connection, and whether an ad blocker is in the way.',
 
   'notFound.eyebrow': 'Error 404',
   'notFound.title': 'This page is not on the map',

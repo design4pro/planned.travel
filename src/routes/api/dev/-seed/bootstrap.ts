@@ -31,9 +31,16 @@ import { PLATFORM_ACTIONS, appendPlatformAudit } from '#/server/catalog/audit'
 import { getDb } from '#/server/db/client'
 import { platformAuditLog } from '#/server/db/schema'
 import { createLogger } from '#/server/observability'
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, getAuth } from '#/server/auth'
+import {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  getAuth,
+} from '#/server/auth'
 import { authDb } from '#/server/auth/db'
-import { firstOrganizationIdFor, membershipRoleFor } from '#/server/auth/provisioning'
+import {
+  firstOrganizationIdFor,
+  membershipRoleFor,
+} from '#/server/auth/provisioning'
 import { addMember, createScope } from '#/server/repos'
 import { SEED_ANCHOR_INSTANT, instantOn, people } from './dataset'
 import { membershipInstants } from './fixture-rows'
@@ -116,7 +123,10 @@ const OWNER_NAME = 'Rafal Wolak'
  * the personal organization is provisioned. Writing `user` and `account` by hand would produce an
  * account that exists but cannot log in — the exact failure this function is here to prevent.
  */
-async function createOwnerAccount(email: string, password: string): Promise<void> {
+async function createOwnerAccount(
+  email: string,
+  password: string,
+): Promise<void> {
   try {
     await getAuth().api.signUpEmail({
       body: { name: OWNER_NAME, email, password },
@@ -166,7 +176,12 @@ async function ensureCredential(
       password: account.password,
     })
     .from(account)
-    .where(and(eq(account.userId, userId), eq(account.providerId, CREDENTIAL_PROVIDER)))
+    .where(
+      and(
+        eq(account.userId, userId),
+        eq(account.providerId, CREDENTIAL_PROVIDER),
+      ),
+    )
     .limit(1)
   const existing = rows.at(0)
   // The fixture's own instant, not the machine's: a demo workspace that says it was provisioned
@@ -294,7 +309,13 @@ async function resolveOwner(
 }> {
   const db = authDb()
   const find = async () =>
-    (await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1)).at(0)
+    (
+      await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, email))
+        .limit(1)
+    ).at(0)
 
   let owner = await find()
   let createdOwner = false
@@ -385,7 +406,9 @@ async function ensureCollaboratorUsers(
   for (const person of wanted) {
     const id = byEmail.get(person.email)
     if (id === undefined) {
-      throw new SeedBootstrapError(`Could not create or resolve the demo user ${person.email}.`)
+      throw new SeedBootstrapError(
+        `Could not create or resolve the demo user ${person.email}.`,
+      )
     }
     ids.set(person.key, id)
   }
@@ -406,7 +429,11 @@ export async function resolveWorkspace(
   ownerPassword?: string,
   keepExistingPassword = false,
 ): Promise<ResolvedWorkspace> {
-  const owner = await resolveOwner(ownerEmail, ownerPassword, keepExistingPassword)
+  const owner = await resolveOwner(
+    ownerEmail,
+    ownerPassword,
+    keepExistingPassword,
+  )
   const ownerRole = await membershipRoleFor(authDb(), {
     userId: owner.userId,
     organizationId: owner.organizationId,
@@ -466,7 +493,10 @@ async function anchorAuthRows(
     return id === undefined ? [] : [id]
   })
 
-  await db.update(user).set({ createdAt: now, updatedAt: now }).where(inArray(user.id, userIds))
+  await db
+    .update(user)
+    .set({ createdAt: now, updatedAt: now })
+    .where(inArray(user.id, userIds))
   await db
     .update(account)
     .set({ createdAt: now, updatedAt: now })
@@ -480,7 +510,12 @@ async function anchorAuthRows(
     await db
       .update(member)
       .set({ createdAt: joinedAt })
-      .where(and(eq(member.organizationId, workspace.organizationId), eq(member.userId, userId)))
+      .where(
+        and(
+          eq(member.organizationId, workspace.organizationId),
+          eq(member.userId, userId),
+        ),
+      )
   }
 }
 
@@ -526,12 +561,19 @@ const PLATFORM_STANDING: ReadonlyArray<{
     banReason: null,
     banExpires: null,
   },
-  { key: 'jonas', role: null, banned: false, banReason: null, banExpires: null },
+  {
+    key: 'jonas',
+    role: null,
+    banned: false,
+    banReason: null,
+    banExpires: null,
+  },
   {
     key: 'priya',
     role: null,
     banned: true,
-    banReason: 'Sharing a workspace login with a third party. Suspended pending review.',
+    banReason:
+      'Sharing a workspace login with a third party. Suspended pending review.',
     banExpires: instantOn(45),
   },
 ]

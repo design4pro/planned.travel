@@ -145,8 +145,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Bundesländer, Provinzen, Präfekturen',
   'panel.stat.visits': 'Besuche',
   'panel.stat.visitsCaption': 'Jede erfasste Ankunft',
-  'panel.stat.trips': 'Reisen',
-  'panel.stat.tripsCaption': 'Nur abgeschlossene Reisen',
+  'panel.stat.trips': 'Deine Reisen',
+  'panel.stat.tripsCaption': 'Alle Reisen, auf denen du dabei bist',
   'panel.stat.cities': 'Städte',
   'panel.stat.citiesCaption': 'Orte, in denen du geschlafen oder gehalten hast',
   'panel.stat.days': 'Tage unterwegs',
@@ -334,7 +334,10 @@ const messages = {
     'Der Eintrag ist schon abgehakt, also verschwindet auch der Vermerk, dass du dort warst. Deine Weltkarte und deine Reisen bleiben unberührt.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Reise', other: 'Reisen' },
+  'card.trips': {
+    one: 'Reise im Arbeitsbereich',
+    other: 'Reisen im Arbeitsbereich',
+  },
   'card.visits': { one: 'Besuch', other: 'Besuche' },
   'card.places': { one: 'Ort', other: 'Orte' },
   'card.firstTrip': 'Erste Reise',

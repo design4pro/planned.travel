@@ -21,11 +21,19 @@ import type { SeedTrip } from '../types'
 
 /** Same hours seven days a week — the common case for a shrine, market or observation deck. */
 function daily(opens: string, closes: string): OpeningHours {
-  return [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ day: weekday, opens, closes }))
+  return [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+    day: weekday,
+    opens,
+    closes,
+  }))
 }
 
 /** Closed on `closedDay`, identical hours otherwise. */
-function dailyExcept(closedDay: number, opens: string, closes: string): OpeningHours {
+function dailyExcept(
+  closedDay: number,
+  opens: string,
+  closes: string,
+): OpeningHours {
   return daily(opens, closes).filter((entry) => entry.day !== closedDay)
 }
 
@@ -37,7 +45,8 @@ export const flagshipTrip: SeedTrip = {
   id: 'demo-trip-01-tokyo-and-kyoto',
   slug: 'tokyo-and-kyoto',
   title: 'Tokyo & Kyoto',
-  summary: 'Twelve days from Shinjuku neon to Kyoto moss gardens, with a Hakone detour.',
+  summary:
+    'Twelve days from Shinjuku neon to Kyoto moss gardens, with a Hakone detour.',
   description:
     'Four of us, two weeks off work, and one rule: no more than two big sights a day. Tokyo first ' +
     'for the noise, Hakone for a night in the mountains, then Kyoto as the slow centre of the trip ' +
@@ -51,7 +60,7 @@ export const flagshipTrip: SeedTrip = {
   currency: 'JPY',
   status: 'booked',
   visibility: 'organization',
-  accentColour: '#C0392B',
+  accentColour: '#b22f22',
   budgetTargetMinor: 2_700_000,
   reminderDays: 5,
   isFavourite: true,
@@ -226,7 +235,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'haneda-t3',
       name: 'Haneda Airport Terminal 3',
       categorySlug: 'transport',
-      description: 'International terminal, and the fast way into the city if you land before noon.',
+      description:
+        'International terminal, and the fast way into the city if you land before noon.',
       lat: 35.5494,
       lng: 139.7798,
       address: '2-6-5 Hanedakuko, Ota City, Tokyo 144-0041',
@@ -241,8 +251,10 @@ export const flagshipTrip: SeedTrip = {
       key: 'shinjuku-gyoen',
       name: 'Shinjuku Gyoen National Garden',
       categorySlug: 'outdoors',
-      description: 'Fifty-eight hectares of Edo garden wedged behind the busiest station on earth.',
-      notes: 'Best jet-lag cure in Tokyo. Gates shut 30 minutes before the park does.',
+      description:
+        'Fifty-eight hectares of Edo garden wedged behind the busiest station on earth.',
+      notes:
+        'Best jet-lag cure in Tokyo. Gates shut 30 minutes before the park does.',
       lat: 35.6852,
       lng: 139.71,
       address: '11 Naitomachi, Shinjuku City, Tokyo 160-0014',
@@ -261,7 +273,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'omoide-yokocho',
       name: 'Omoide Yokocho',
       categorySlug: 'nightlife',
-      description: 'Six-seat yakitori counters in a lane of post-war shacks beside Shinjuku Station.',
+      description:
+        'Six-seat yakitori counters in a lane of post-war shacks beside Shinjuku Station.',
       lat: 35.6935,
       lng: 139.6996,
       address: '1-2 Nishishinjuku, Shinjuku City, Tokyo 160-0023',
@@ -279,7 +292,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'meiji-jingu',
       name: 'Meiji Jingu',
       categorySlug: 'temples-and-shrines',
-      description: 'Shinto shrine inside 70 hectares of donated forest, a minute from Harajuku Station.',
+      description:
+        'Shinto shrine inside 70 hectares of donated forest, a minute from Harajuku Station.',
       notes: 'Enter through the south torii and bow at the gate. Free.',
       lat: 35.6764,
       lng: 139.6993,
@@ -297,7 +311,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'takeshita-street',
       name: 'Takeshita Street',
       categorySlug: 'shopping',
-      description: 'Four hundred metres of teenage Harajuku: crepes, socks, and very loud shops.',
+      description:
+        'Four hundred metres of teenage Harajuku: crepes, socks, and very loud shops.',
       lat: 35.6716,
       lng: 139.7031,
       address: '1 Chome Jingumae, Shibuya City, Tokyo 150-0001',
@@ -313,7 +328,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'shibuya-crossing',
       name: 'Shibuya Scramble Crossing',
       categorySlug: 'landmarks',
-      description: 'Three thousand people a light change. Watch it from the Starbucks upstairs.',
+      description:
+        'Three thousand people a light change. Watch it from the Starbucks upstairs.',
       lat: 35.6595,
       lng: 139.7004,
       address: '21 Udagawacho, Shibuya City, Tokyo 150-0042',
@@ -328,7 +344,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'ichiran-shibuya',
       name: 'Ichiran Shibuya',
       categorySlug: 'food-and-drink',
-      description: 'Tonkotsu ramen in a solo booth. Order on the machine, tick the form, eat, leave.',
+      description:
+        'Tonkotsu ramen in a solo booth. Order on the machine, tick the form, eat, leave.',
       lat: 35.6614,
       lng: 139.7008,
       address: '1-22-7 Jinnan, Shibuya City, Tokyo 150-0041',
@@ -346,7 +363,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'gyukatsu-motomura',
       name: 'Gyukatsu Motomura Shibuya',
       categorySlug: 'food-and-drink',
-      description: 'Panko-crusted beef you finish yourself on a tabletop stone. Queue is 30 minutes.',
+      description:
+        'Panko-crusted beef you finish yourself on a tabletop stone. Queue is 30 minutes.',
       lat: 35.6588,
       lng: 139.7016,
       address: '3-18-10 Shibuya, Shibuya City, Tokyo 150-0002',
@@ -364,8 +382,10 @@ export const flagshipTrip: SeedTrip = {
       key: 'golden-gai',
       name: 'Golden Gai',
       categorySlug: 'nightlife',
-      description: 'Two hundred bars the size of a bathroom, stacked over six alleys in Kabukicho.',
-      notes: 'Most bars charge a 500–1,000 yen seat fee. Pick one with an English sign the first time.',
+      description:
+        'Two hundred bars the size of a bathroom, stacked over six alleys in Kabukicho.',
+      notes:
+        'Most bars charge a 500–1,000 yen seat fee. Pick one with an English sign the first time.',
       lat: 35.6939,
       lng: 139.7048,
       address: '1-1-6 Kabukicho, Shinjuku City, Tokyo 160-0021',
@@ -383,7 +403,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'senso-ji',
       name: 'Senso-ji',
       categorySlug: 'temples-and-shrines',
-      description: "Tokyo's oldest temple, founded 645. The main hall is free and never closes.",
+      description:
+        "Tokyo's oldest temple, founded 645. The main hall is free and never closes.",
       lat: 35.7148,
       lng: 139.7967,
       address: '2-3-1 Asakusa, Taito City, Tokyo 111-0032',
@@ -400,7 +421,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'nakamise-dori',
       name: 'Nakamise-dori',
       categorySlug: 'markets',
-      description: 'The 250-metre stall street running up to the temple gate. Ningyo-yaki, still warm.',
+      description:
+        'The 250-metre stall street running up to the temple gate. Ningyo-yaki, still warm.',
       lat: 35.7118,
       lng: 139.7966,
       address: '1-36-3 Asakusa, Taito City, Tokyo 111-0032',
@@ -418,7 +440,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'tokyo-skytree',
       name: 'Tokyo Skytree',
       categorySlug: 'landmarks',
-      description: '634 metres. On a clear October morning you can see Fuji from the Tembo Deck.',
+      description:
+        '634 metres. On a clear October morning you can see Fuji from the Tembo Deck.',
       lat: 35.7101,
       lng: 139.8107,
       address: '1-1-2 Oshiage, Sumida City, Tokyo 131-0045',
@@ -437,7 +460,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'ueno-park',
       name: 'Ueno Park',
       categorySlug: 'outdoors',
-      description: 'Museums, a pond full of lotus, and the shrine steps up to Kiyomizu Kannon-do.',
+      description:
+        'Museums, a pond full of lotus, and the shrine steps up to Kiyomizu Kannon-do.',
       lat: 35.7148,
       lng: 139.7737,
       address: 'Uenokoen, Taito City, Tokyo 110-0007',
@@ -453,7 +477,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'akihabara',
       name: 'Akihabara Electric Town',
       categorySlug: 'shopping',
-      description: 'Eight floors of second-hand cameras at Yodobashi, then the retro-game basements.',
+      description:
+        'Eight floors of second-hand cameras at Yodobashi, then the retro-game basements.',
       lat: 35.6984,
       lng: 139.7731,
       address: 'Sotokanda, Chiyoda City, Tokyo 101-0021',
@@ -469,7 +494,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'tsukiji-outer',
       name: 'Tsukiji Outer Market',
       categorySlug: 'markets',
-      description: 'The wholesale market moved to Toyosu; the four hundred outer stalls did not.',
+      description:
+        'The wholesale market moved to Toyosu; the four hundred outer stalls did not.',
       notes: 'Tamagoyaki at Yamacho, then uni at Kitsuneya. Cash.',
       lat: 35.6654,
       lng: 139.7707,
@@ -488,7 +514,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'teamlab-planets',
       name: 'teamLab Planets TOKYO',
       categorySlug: 'museums',
-      description: 'Four barefoot installations, two of them knee-deep in warm water. Timed entry only.',
+      description:
+        'Four barefoot installations, two of them knee-deep in warm water. Timed entry only.',
       lat: 35.6485,
       lng: 139.7862,
       address: '6-1-16 Toyosu, Koto City, Tokyo 135-0061',
@@ -507,7 +534,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'kyubey-ginza',
       name: 'Kyubey Ginza',
       categorySlug: 'food-and-drink',
-      description: 'Edomae sushi counter open since 1935. Omakase, twenty pieces, no menu.',
+      description:
+        'Edomae sushi counter open since 1935. Omakase, twenty pieces, no menu.',
       lat: 35.6706,
       lng: 139.7615,
       address: '8-7-6 Ginza, Chuo City, Tokyo 104-0061',
@@ -528,7 +556,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'hakone-open-air',
       name: 'Hakone Open-Air Museum',
       categorySlug: 'museums',
-      description: 'Seventy hectares of sculpture on a mountainside, plus a Picasso pavilion.',
+      description:
+        'Seventy hectares of sculpture on a mountainside, plus a Picasso pavilion.',
       lat: 35.2445,
       lng: 139.0269,
       address: '1121 Ninotaira, Hakone, Kanagawa 250-0493',
@@ -547,8 +576,10 @@ export const flagshipTrip: SeedTrip = {
       key: 'owakudani',
       name: 'Owakudani',
       categorySlug: 'outdoors',
-      description: 'Live sulphur vents at 1,044 metres, reached by ropeway. Black eggs at the top.',
-      notes: 'Closes without warning when the gas readings spike. Check before committing to the ropeway.',
+      description:
+        'Live sulphur vents at 1,044 metres, reached by ropeway. Black eggs at the top.',
+      notes:
+        'Closes without warning when the gas readings spike. Check before committing to the ropeway.',
       lat: 35.2437,
       lng: 139.0195,
       address: 'Sengokuhara, Hakone, Kanagawa 250-0631',
@@ -564,7 +595,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'lake-ashi',
       name: 'Lake Ashi',
       categorySlug: 'outdoors',
-      description: 'Caldera lake with Fuji behind it, crossed by a fleet of deeply silly pirate ships.',
+      description:
+        'Caldera lake with Fuji behind it, crossed by a fleet of deeply silly pirate ships.',
       lat: 35.2038,
       lng: 139.0243,
       address: 'Motohakone, Hakone, Kanagawa 250-0522',
@@ -580,7 +612,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'hakone-shrine',
       name: 'Hakone Shrine',
       categorySlug: 'temples-and-shrines',
-      description: 'Cedar avenue down to the Heiwa-no-Torii, the vermilion gate standing in the lake.',
+      description:
+        'Cedar avenue down to the Heiwa-no-Torii, the vermilion gate standing in the lake.',
       lat: 35.2046,
       lng: 139.0257,
       address: '80-1 Motohakone, Hakone, Kanagawa 250-0522',
@@ -598,7 +631,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'gion-hanamikoji',
       name: 'Gion Hanamikoji',
       categorySlug: 'landmarks',
-      description: 'The teahouse street: machiya frontages, willow, and no photography past the signs.',
+      description:
+        'The teahouse street: machiya frontages, willow, and no photography past the signs.',
       lat: 34.9996,
       lng: 135.7752,
       address: 'Hanamikoji Dori, Higashiyama Ward, Kyoto 605-0074',
@@ -613,8 +647,10 @@ export const flagshipTrip: SeedTrip = {
       key: 'fushimi-inari',
       name: 'Fushimi Inari Taisha',
       categorySlug: 'temples-and-shrines',
-      description: 'Ten thousand torii up Mount Inari. Free, open all night, empty before eight.',
-      notes: 'Turn back at Yotsutsuji if the legs go — the view over Kyoto is the payoff anyway.',
+      description:
+        'Ten thousand torii up Mount Inari. Free, open all night, empty before eight.',
+      notes:
+        'Turn back at Yotsutsuji if the legs go — the view over Kyoto is the payoff anyway.',
       lat: 34.9671,
       lng: 135.7727,
       address: '68 Fukakusa Yabunouchicho, Fushimi Ward, Kyoto 612-0882',
@@ -631,7 +667,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'kiyomizu-dera',
       name: 'Kiyomizu-dera',
       categorySlug: 'temples-and-shrines',
-      description: 'A wooden stage on 13-metre pillars, built without a single nail, over a maple valley.',
+      description:
+        'A wooden stage on 13-metre pillars, built without a single nail, over a maple valley.',
       lat: 34.9949,
       lng: 135.785,
       address: '1-294 Kiyomizu, Higashiyama Ward, Kyoto 605-0862',
@@ -650,7 +687,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'nishiki-market',
       name: 'Nishiki Market',
       categorySlug: 'markets',
-      description: "Four hundred years of Kyoto's kitchen, five blocks long and three metres wide.",
+      description:
+        "Four hundred years of Kyoto's kitchen, five blocks long and three metres wide.",
       lat: 35.005,
       lng: 135.7649,
       address: '609 Nishidaimonjicho, Nakagyo Ward, Kyoto 604-8055',
@@ -668,7 +706,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'nishiki-warai',
       name: 'Okonomiyaki Nishiki Warai',
       categorySlug: 'food-and-drink',
-      description: 'Teppan counter off Nishiki. Kyoto-style okonomiyaki, cooked in front of you.',
+      description:
+        'Teppan counter off Nishiki. Kyoto-style okonomiyaki, cooked in front of you.',
       lat: 35.0046,
       lng: 135.7632,
       address: '544-3 Higashiuoyacho, Nakagyo Ward, Kyoto 604-8042',
@@ -686,7 +725,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'arashiyama-bamboo',
       name: 'Arashiyama Bamboo Grove',
       categorySlug: 'outdoors',
-      description: 'Half a kilometre of sao bamboo. Genuinely worth the 07:00 alarm to have it alone.',
+      description:
+        'Half a kilometre of sao bamboo. Genuinely worth the 07:00 alarm to have it alone.',
       lat: 35.017,
       lng: 135.6719,
       address: 'Sagaogurayama Tabuchiyamacho, Ukyo Ward, Kyoto 616-8394',
@@ -702,7 +742,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'kinkaku-ji',
       name: 'Kinkaku-ji',
       categorySlug: 'temples-and-shrines',
-      description: 'The Golden Pavilion, two floors in gold leaf, reflected in the Mirror Pond.',
+      description:
+        'The Golden Pavilion, two floors in gold leaf, reflected in the Mirror Pond.',
       lat: 35.0394,
       lng: 135.7292,
       address: '1 Kinkakujicho, Kita Ward, Kyoto 603-8361',
@@ -721,7 +762,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'ginkaku-ji',
       name: 'Ginkaku-ji',
       categorySlug: 'temples-and-shrines',
-      description: 'The Silver Pavilion, never silvered. The moss and sand garden is the real reason.',
+      description:
+        'The Silver Pavilion, never silvered. The moss and sand garden is the real reason.',
       lat: 35.027,
       lng: 135.7982,
       address: '2 Ginkakujicho, Sakyo Ward, Kyoto 606-8402',
@@ -739,7 +781,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'philosophers-path',
       name: "Philosopher's Path",
       categorySlug: 'outdoors',
-      description: 'Two kilometres of canal-side stone under cherry and maple, Ginkaku-ji to Nanzen-ji.',
+      description:
+        'Two kilometres of canal-side stone under cherry and maple, Ginkaku-ji to Nanzen-ji.',
       lat: 35.0257,
       lng: 135.7955,
       address: 'Sakyo Ward, Kyoto 606-8406',
@@ -754,7 +797,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'nijo-castle',
       name: 'Nijo Castle',
       categorySlug: 'landmarks',
-      description: 'Shogunal palace with nightingale floors that squeak by design to betray intruders.',
+      description:
+        'Shogunal palace with nightingale floors that squeak by design to betray intruders.',
       lat: 35.0142,
       lng: 135.7481,
       address: '541 Nijojocho, Nakagyo Ward, Kyoto 604-8301',
@@ -772,7 +816,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'pontocho',
       name: 'Pontocho Alley',
       categorySlug: 'nightlife',
-      description: 'One lantern-lit lane between the Kamo river and Kawaramachi, five hundred metres long.',
+      description:
+        'One lantern-lit lane between the Kamo river and Kawaramachi, five hundred metres long.',
       lat: 35.0056,
       lng: 135.7708,
       address: 'Pontochodori, Nakagyo Ward, Kyoto 604-8014',
@@ -792,7 +837,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'nara-park',
       name: 'Nara Park',
       categorySlug: 'outdoors',
-      description: 'Twelve hundred sika deer with the run of five hundred hectares. They bow for food.',
+      description:
+        'Twelve hundred sika deer with the run of five hundred hectares. They bow for food.',
       lat: 34.6851,
       lng: 135.843,
       address: 'Zoshicho, Nara 630-8211',
@@ -808,7 +854,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'todai-ji',
       name: 'Todai-ji',
       categorySlug: 'temples-and-shrines',
-      description: 'The Great Buddha Hall: 15 metres of bronze Buddha under the largest wooden roof in Japan.',
+      description:
+        'The Great Buddha Hall: 15 metres of bronze Buddha under the largest wooden roof in Japan.',
       lat: 34.6889,
       lng: 135.8398,
       address: '406-1 Zoshicho, Nara 630-8587',
@@ -829,7 +876,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'osaka-castle',
       name: 'Osaka Castle',
       categorySlug: 'landmarks',
-      description: 'Reconstructed keep on the original 16th-century stonework, in a moated park.',
+      description:
+        'Reconstructed keep on the original 16th-century stonework, in a moated park.',
       lat: 34.6873,
       lng: 135.5262,
       address: '1-1 Osakajo, Chuo Ward, Osaka 540-0002',
@@ -848,7 +896,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'kuromon-market',
       name: 'Kuromon Ichiba Market',
       categorySlug: 'markets',
-      description: "Osaka's kitchen: scallops on the grill, tuna cut to order, fruit priced like jewellery.",
+      description:
+        "Osaka's kitchen: scallops on the grill, tuna cut to order, fruit priced like jewellery.",
       lat: 34.6653,
       lng: 135.5063,
       address: '2-4-1 Nipponbashi, Chuo Ward, Osaka 542-0073',
@@ -866,7 +915,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'dotonbori',
       name: 'Dotonbori',
       categorySlug: 'nightlife',
-      description: 'Canal-side neon, the Glico running man, and takoyaki until you regret it.',
+      description:
+        'Canal-side neon, the Glico running man, and takoyaki until you regret it.',
       lat: 34.6687,
       lng: 135.5013,
       address: '1 Chome Dotonbori, Chuo Ward, Osaka 542-0071',
@@ -884,7 +934,8 @@ export const flagshipTrip: SeedTrip = {
       key: 'kansai-airport',
       name: 'Kansai International Airport',
       categorySlug: 'transport',
-      description: 'Built on an artificial island in Osaka Bay. Haruka express runs to Terminal 1.',
+      description:
+        'Built on an artificial island in Osaka Bay. Haruka express runs to Terminal 1.',
       lat: 34.432,
       lng: 135.2304,
       address: '1 Senshukukokita, Tajiri, Sennan District, Osaka 549-0001',
@@ -898,14 +949,21 @@ export const flagshipTrip: SeedTrip = {
   ],
 
   stops: [
-    { dayNumber: 1, placeKey: 'haneda-t3', startTime: '09:35', endTime: '10:30', transportMode: 'flight' },
+    {
+      dayNumber: 1,
+      placeKey: 'haneda-t3',
+      startTime: '09:35',
+      endTime: '10:30',
+      transportMode: 'flight',
+    },
     {
       dayNumber: 1,
       placeKey: 'shinjuku-gyoen',
       startTime: '13:30',
       endTime: '15:30',
       transportMode: 'walk',
-      notes: 'Buy the tickets at the Shinjuku Gate machine, the Okido queue is always longer.',
+      notes:
+        'Buy the tickets at the Shinjuku Gate machine, the Okido queue is always longer.',
     },
     {
       dayNumber: 1,
@@ -916,23 +974,66 @@ export const flagshipTrip: SeedTrip = {
       notes: 'Third stall on the left has an English menu and space for four.',
     },
 
-    { dayNumber: 2, placeKey: 'meiji-jingu', startTime: '09:00', endTime: '10:30', transportMode: 'metro' },
-    { dayNumber: 2, placeKey: 'takeshita-street', startTime: '10:45', endTime: '11:45', transportMode: 'walk' },
-    { dayNumber: 2, placeKey: 'shibuya-crossing', startTime: '12:15', endTime: '13:00', transportMode: 'walk' },
-    { dayNumber: 2, placeKey: 'ichiran-shibuya', startTime: '13:00', endTime: '13:45', transportMode: 'walk' },
-    { dayNumber: 2, placeKey: 'gyukatsu-motomura', startTime: '19:00', endTime: '20:00', transportMode: 'walk' },
+    {
+      dayNumber: 2,
+      placeKey: 'meiji-jingu',
+      startTime: '09:00',
+      endTime: '10:30',
+      transportMode: 'metro',
+    },
+    {
+      dayNumber: 2,
+      placeKey: 'takeshita-street',
+      startTime: '10:45',
+      endTime: '11:45',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 2,
+      placeKey: 'shibuya-crossing',
+      startTime: '12:15',
+      endTime: '13:00',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 2,
+      placeKey: 'ichiran-shibuya',
+      startTime: '13:00',
+      endTime: '13:45',
+      transportMode: 'walk',
+    },
+    {
+      dayNumber: 2,
+      placeKey: 'gyukatsu-motomura',
+      startTime: '19:00',
+      endTime: '20:00',
+      transportMode: 'walk',
+    },
     {
       dayNumber: 2,
       placeKey: 'golden-gai',
       startTime: '21:00',
       endTime: '23:00',
       transportMode: 'metro',
-      notes: 'Mika and Priya heading back after dinner — this one is Rafal and Jonas.',
+      notes:
+        'Mika and Priya heading back after dinner — this one is Rafal and Jonas.',
       participants: ['rafal', 'jonas'],
     },
 
-    { dayNumber: 3, placeKey: 'senso-ji', startTime: '08:30', endTime: '09:45', transportMode: 'metro' },
-    { dayNumber: 3, placeKey: 'nakamise-dori', startTime: '09:45', endTime: '10:30', transportMode: 'walk' },
+    {
+      dayNumber: 3,
+      placeKey: 'senso-ji',
+      startTime: '08:30',
+      endTime: '09:45',
+      transportMode: 'metro',
+    },
+    {
+      dayNumber: 3,
+      placeKey: 'nakamise-dori',
+      startTime: '09:45',
+      endTime: '10:30',
+      transportMode: 'walk',
+    },
     {
       dayNumber: 3,
       placeKey: 'tokyo-skytree',
@@ -941,8 +1042,20 @@ export const flagshipTrip: SeedTrip = {
       transportMode: 'walk',
       reservationStatus: 'confirmed',
     },
-    { dayNumber: 3, placeKey: 'ueno-park', startTime: '14:00', endTime: '15:30', transportMode: 'metro' },
-    { dayNumber: 3, placeKey: 'akihabara', startTime: '16:00', endTime: '18:00', transportMode: 'walk' },
+    {
+      dayNumber: 3,
+      placeKey: 'ueno-park',
+      startTime: '14:00',
+      endTime: '15:30',
+      transportMode: 'metro',
+    },
+    {
+      dayNumber: 3,
+      placeKey: 'akihabara',
+      startTime: '16:00',
+      endTime: '18:00',
+      transportMode: 'walk',
+    },
 
     {
       dayNumber: 4,
@@ -987,8 +1100,20 @@ export const flagshipTrip: SeedTrip = {
       notes: 'Ropeway from Gora. Bail out to the bus if the gas alert is up.',
     },
 
-    { dayNumber: 6, placeKey: 'lake-ashi', startTime: '08:30', endTime: '10:00', transportMode: 'ferry' },
-    { dayNumber: 6, placeKey: 'hakone-shrine', startTime: '10:00', endTime: '11:00', transportMode: 'walk' },
+    {
+      dayNumber: 6,
+      placeKey: 'lake-ashi',
+      startTime: '08:30',
+      endTime: '10:00',
+      transportMode: 'ferry',
+    },
+    {
+      dayNumber: 6,
+      placeKey: 'hakone-shrine',
+      startTime: '10:00',
+      endTime: '11:00',
+      transportMode: 'walk',
+    },
     {
       dayNumber: 6,
       placeKey: 'gion-hanamikoji',
@@ -1006,8 +1131,20 @@ export const flagshipTrip: SeedTrip = {
       endTime: '10:00',
       transportMode: 'train',
     },
-    { dayNumber: 7, placeKey: 'kiyomizu-dera', startTime: '11:30', endTime: '13:30', transportMode: 'bus' },
-    { dayNumber: 7, placeKey: 'nishiki-market', startTime: '15:00', endTime: '16:30', transportMode: 'bus' },
+    {
+      dayNumber: 7,
+      placeKey: 'kiyomizu-dera',
+      startTime: '11:30',
+      endTime: '13:30',
+      transportMode: 'bus',
+    },
+    {
+      dayNumber: 7,
+      placeKey: 'nishiki-market',
+      startTime: '15:00',
+      endTime: '16:30',
+      transportMode: 'bus',
+    },
 
     {
       dayNumber: 8,
@@ -1016,7 +1153,13 @@ export const flagshipTrip: SeedTrip = {
       endTime: '09:15',
       transportMode: 'train',
     },
-    { dayNumber: 8, placeKey: 'kinkaku-ji', startTime: '11:00', endTime: '12:15', transportMode: 'bus' },
+    {
+      dayNumber: 8,
+      placeKey: 'kinkaku-ji',
+      startTime: '11:00',
+      endTime: '12:15',
+      transportMode: 'bus',
+    },
     {
       dayNumber: 8,
       placeKey: 'nishiki-warai',
@@ -1026,7 +1169,13 @@ export const flagshipTrip: SeedTrip = {
       participants: ['mika', 'priya'],
       notes: 'Rafal and Jonas taking the long way back via Ryoan-ji.',
     },
-    { dayNumber: 8, placeKey: 'nijo-castle', startTime: '15:00', endTime: '16:30', transportMode: 'metro' },
+    {
+      dayNumber: 8,
+      placeKey: 'nijo-castle',
+      startTime: '15:00',
+      endTime: '16:30',
+      transportMode: 'metro',
+    },
 
     {
       dayNumber: 9,
@@ -1037,9 +1186,21 @@ export const flagshipTrip: SeedTrip = {
       reservationStatus: 'cancelled',
       notes: 'Guided walk cancelled — doing it ourselves.',
     },
-    { dayNumber: 9, placeKey: 'todai-ji', startTime: '11:30', endTime: '13:00', transportMode: 'walk' },
+    {
+      dayNumber: 9,
+      placeKey: 'todai-ji',
+      startTime: '11:30',
+      endTime: '13:00',
+      transportMode: 'walk',
+    },
 
-    { dayNumber: 10, placeKey: 'ginkaku-ji', startTime: '09:30', endTime: '10:30', transportMode: 'bus' },
+    {
+      dayNumber: 10,
+      placeKey: 'ginkaku-ji',
+      startTime: '09:30',
+      endTime: '10:30',
+      transportMode: 'bus',
+    },
     {
       dayNumber: 10,
       placeKey: 'philosophers-path',
@@ -1048,7 +1209,13 @@ export const flagshipTrip: SeedTrip = {
       transportMode: 'walk',
       participants: ['rafal', 'mika'],
     },
-    { dayNumber: 10, placeKey: 'pontocho', startTime: '19:00', endTime: '21:00', transportMode: 'walk' },
+    {
+      dayNumber: 10,
+      placeKey: 'pontocho',
+      startTime: '19:00',
+      endTime: '21:00',
+      transportMode: 'walk',
+    },
 
     {
       dayNumber: 11,
@@ -1059,7 +1226,13 @@ export const flagshipTrip: SeedTrip = {
       participants: ['rafal', 'mika', 'jonas'],
       notes: 'Priya sitting this one out — meeting us at the market.',
     },
-    { dayNumber: 11, placeKey: 'kuromon-market', startTime: '16:00', endTime: '17:15', transportMode: 'metro' },
+    {
+      dayNumber: 11,
+      placeKey: 'kuromon-market',
+      startTime: '16:00',
+      endTime: '17:15',
+      transportMode: 'metro',
+    },
     {
       dayNumber: 11,
       placeKey: 'dotonbori',
@@ -1069,7 +1242,13 @@ export const flagshipTrip: SeedTrip = {
       reservationStatus: 'pending',
     },
 
-    { dayNumber: 12, placeKey: 'kansai-airport', startTime: '11:06', endTime: '14:25', transportMode: 'train' },
+    {
+      dayNumber: 12,
+      placeKey: 'kansai-airport',
+      startTime: '11:06',
+      endTime: '14:25',
+      transportMode: 'train',
+    },
   ],
 
   accommodations: [
@@ -1085,7 +1264,8 @@ export const flagshipTrip: SeedTrip = {
       confirmationNumber: 'HG-8842190',
       priceMinor: 218_400,
       currency: 'JPY',
-      notes: 'Two twin rooms, 26th floor, breakfast not included. Godzilla head is on the terrace below.',
+      notes:
+        'Two twin rooms, 26th floor, breakfast not included. Godzilla head is on the terrace below.',
     },
     {
       key: 'indigo-hakone',
@@ -1098,7 +1278,8 @@ export const flagshipTrip: SeedTrip = {
       confirmationNumber: 'IHG-55210734',
       priceMinor: 78_000,
       currency: 'JPY',
-      notes: 'Two rooms with private open-air baths. Kaiseki dinner included, served 18:30 or 20:00.',
+      notes:
+        'Two rooms with private open-air baths. Kaiseki dinner included, served 18:30 or 20:00.',
     },
     {
       key: 'thousand-kyoto',
@@ -1111,7 +1292,8 @@ export const flagshipTrip: SeedTrip = {
       confirmationNumber: 'TK-2026-10-1148',
       priceMinor: 342_500,
       currency: 'JPY',
-      notes: 'Two deluxe twins, four minutes from the Karasuma exit. Forwarded cases arrive day 6.',
+      notes:
+        'Two deluxe twins, four minutes from the Karasuma exit. Forwarded cases arrive day 6.',
     },
     {
       key: 'granvia-osaka',
@@ -1124,7 +1306,8 @@ export const flagshipTrip: SeedTrip = {
       confirmationNumber: 'GVO-77341',
       priceMinor: 46_200,
       currency: 'JPY',
-      notes: 'Directly over Osaka Station. Book the 09:40 Haruka connection at the JR desk on arrival.',
+      notes:
+        'Directly over Osaka Station. Book the 09:40 Haruka connection at the JR desk on arrival.',
     },
   ],
 
@@ -1156,7 +1339,8 @@ export const flagshipTrip: SeedTrip = {
       distanceMetres: 9_585_000,
       priceMinor: 464_880,
       currency: 'JPY',
-      notes: 'Two checked bags each. Online check-in opens 24 hours before at 13:20 London time.',
+      notes:
+        'Two checked bags each. Online check-in opens 24 hours before at 13:20 London time.',
     },
     {
       key: 'hnd-shinjuku',
@@ -1183,7 +1367,8 @@ export const flagshipTrip: SeedTrip = {
       distanceMetres: 22_400,
       priceMinor: 5_200,
       currency: 'JPY',
-      notes: 'Stops at the hotel door. Buy tickets at the arrivals counter, not on board.',
+      notes:
+        'Stops at the hotel door. Buy tickets at the arrivals counter, not on board.',
     },
     {
       key: 'shinjuku-hakone',
@@ -1210,7 +1395,8 @@ export const flagshipTrip: SeedTrip = {
       distanceMetres: 87_000,
       priceMinor: 9_160,
       currency: 'JPY',
-      notes: 'Not covered by the rail pass. Front observation seats, reserved in July.',
+      notes:
+        'Not covered by the rail pass. Front observation seats, reserved in July.',
     },
     {
       key: 'odawara-kyoto',
@@ -1237,7 +1423,8 @@ export const flagshipTrip: SeedTrip = {
       distanceMetres: 421_000,
       priceMinor: 22_960,
       currency: 'JPY',
-      notes: 'Rail pass covers the fare; these are the reserved-seat supplements. Car 11 has luggage space.',
+      notes:
+        'Rail pass covers the fare; these are the reserved-seat supplements. Car 11 has luggage space.',
     },
     {
       key: 'kyoto-nara',
@@ -1262,7 +1449,8 @@ export const flagshipTrip: SeedTrip = {
       distanceMetres: 41_700,
       priceMinor: 0,
       currency: 'JPY',
-      notes: 'Covered by the rail pass. Unreserved — get on at the front for the walk to the park.',
+      notes:
+        'Covered by the rail pass. Unreserved — get on at the front for the walk to the park.',
     },
     {
       key: 'kyoto-osaka',
@@ -1287,7 +1475,8 @@ export const flagshipTrip: SeedTrip = {
       distanceMetres: 42_800,
       priceMinor: 0,
       currency: 'JPY',
-      notes: 'Last day of the rail pass. Bags straight into the Granvia luggage room.',
+      notes:
+        'Last day of the rail pass. Bags straight into the Granvia luggage room.',
     },
     {
       key: 'osaka-kix',
@@ -1315,7 +1504,8 @@ export const flagshipTrip: SeedTrip = {
       distanceMetres: 66_200,
       priceMinor: 12_000,
       currency: 'JPY',
-      notes: 'Reserved, four seats together. Two hours fifty at the airport before the gate closes.',
+      notes:
+        'Reserved, four seats together. Two hours fifty at the airport before the gate closes.',
     },
     {
       key: 'kix-lhr',
@@ -1344,7 +1534,8 @@ export const flagshipTrip: SeedTrip = {
       distanceMetres: 9_490_000,
       priceMinor: 413_400,
       currency: 'JPY',
-      notes: 'Same booking reference as the outbound. Lounge access on the JAL Sakura pass.',
+      notes:
+        'Same booking reference as the outbound. Lounge access on the JAL Sakura pass.',
     },
   ],
 
@@ -1365,7 +1556,8 @@ export const flagshipTrip: SeedTrip = {
       guests: 4,
       priceMinor: 218_400,
       currency: 'JPY',
-      notes: 'Free cancellation until 2 October. City tax paid on arrival, 200 yen per person per night.',
+      notes:
+        'Free cancellation until 2 October. City tax paid on arrival, 200 yen per person per night.',
     },
     {
       key: 'res-indigo',
@@ -1382,7 +1574,8 @@ export const flagshipTrip: SeedTrip = {
       guests: 4,
       priceMinor: 78_000,
       currency: 'JPY',
-      notes: 'Half board. Choose the 18:30 dinner sitting so we can still see Owakudani.',
+      notes:
+        'Half board. Choose the 18:30 dinner sitting so we can still see Owakudani.',
     },
     {
       key: 'res-thousand',
@@ -1400,7 +1593,8 @@ export const flagshipTrip: SeedTrip = {
       guests: 4,
       priceMinor: 342_500,
       currency: 'JPY',
-      notes: 'Non-refundable rate. Luggage forwarding from Tokyo is booked to arrive on the 14th.',
+      notes:
+        'Non-refundable rate. Luggage forwarding from Tokyo is booked to arrive on the 14th.',
     },
     {
       key: 'res-granvia',
@@ -1434,7 +1628,8 @@ export const flagshipTrip: SeedTrip = {
       priceMinor: 88_000,
       currency: 'JPY',
       placeKey: 'kyubey-ginza',
-      notes: 'Deposit of 48,000 yen paid. Cancellation inside 48 hours forfeits it.',
+      notes:
+        'Deposit of 48,000 yen paid. Cancellation inside 48 hours forfeits it.',
     },
     {
       key: 'res-roan',
@@ -1468,7 +1663,8 @@ export const flagshipTrip: SeedTrip = {
       priceMinor: 15_200,
       currency: 'JPY',
       placeKey: 'teamlab-planets',
-      notes: 'QR codes in the shared drive. Entry window is 30 minutes wide, no later.',
+      notes:
+        'QR codes in the shared drive. Entry window is 30 minutes wide, no later.',
     },
     {
       key: 'res-skytree',
@@ -1499,7 +1695,8 @@ export const flagshipTrip: SeedTrip = {
       priceMinor: 6_400,
       currency: 'JPY',
       placeKey: 'hakone-open-air',
-      notes: 'Voucher not issued yet — chase Klook if nothing lands by 1 October.',
+      notes:
+        'Voucher not issued yet — chase Klook if nothing lands by 1 October.',
     },
     {
       key: 'res-kimono',
@@ -1516,7 +1713,8 @@ export const flagshipTrip: SeedTrip = {
       priceMinor: 39_200,
       currency: 'JPY',
       placeKey: 'gion-hanamikoji',
-      notes: 'Fitting first, then the walk. Bring socks, the sandals are unforgiving.',
+      notes:
+        'Fitting first, then the walk. Bring socks, the sandals are unforgiving.',
     },
     {
       key: 'res-nara-walk',
@@ -1532,7 +1730,8 @@ export const flagshipTrip: SeedTrip = {
       priceMinor: 0,
       currency: 'JPY',
       placeKey: 'nara-park',
-      notes: 'Guide double-booked. Refunded in full on 4 August — doing it unguided instead.',
+      notes:
+        'Guide double-booked. Refunded in full on 4 August — doing it unguided instead.',
     },
     {
       key: 'res-dotonbori',
@@ -1549,7 +1748,8 @@ export const flagshipTrip: SeedTrip = {
       priceMinor: 33_600,
       currency: 'JPY',
       placeKey: 'dotonbori',
-      notes: 'Awaiting a guide assignment. Seven stops, includes the fugu one nobody has agreed to yet.',
+      notes:
+        'Awaiting a guide assignment. Seven stops, includes the fugu one nobody has agreed to yet.',
     },
   ],
 
@@ -1642,7 +1842,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-transport',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'Booked on the Avios sale, £596 each including both bags.',
     },
     {
@@ -1658,7 +1863,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-transport',
       paidBy: 'mika',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-insurance',
@@ -1673,7 +1883,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-insurance',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'Includes the onsen and hiking cover Jonas asked about.',
     },
     {
@@ -1686,7 +1901,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-stay',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-thousand',
@@ -1698,7 +1918,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-stay',
       paidBy: 'priya',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'Non-refundable, so this one is locked in.',
     },
     {
@@ -1711,7 +1936,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-stay',
       paidBy: 'mika',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-granvia',
@@ -1723,7 +1953,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-stay',
       paidBy: 'jonas',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-railpass',
@@ -1735,7 +1970,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-transport',
       paidBy: 'jonas',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'Exchange vouchers collected at Odawara on the 14th, not before.',
     },
     {
@@ -1748,7 +1988,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-transport',
       paidBy: 'mika',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-shinkansen',
@@ -1760,7 +2005,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-transport',
       paidBy: 'mika',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-haruka',
@@ -1772,7 +2022,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-transport',
       paidBy: 'jonas',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-teamlab',
@@ -1784,7 +2039,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-activities',
       paidBy: 'priya',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-roan',
@@ -1796,7 +2056,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-food',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'Balance settled at the counter on the night.',
     },
     {
@@ -1809,7 +2074,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-food',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-kimono',
@@ -1821,7 +2091,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-activities',
       paidBy: 'priya',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-openair',
@@ -1833,7 +2108,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-activities',
       paidBy: 'jonas',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-crawl',
@@ -1845,7 +2125,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-activities',
       paidBy: 'mika',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-data',
@@ -1857,7 +2142,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-fees',
       paidBy: 'jonas',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'One 50GB router for the group plus a 10GB eSIM each as backup.',
     },
     {
@@ -1870,7 +2160,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-fees',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-forwarding',
@@ -1882,7 +2177,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-fees',
       paidBy: 'mika',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-tea',
@@ -1926,7 +2226,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-shopping',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
     },
     {
       key: 'exp-lounge',
@@ -1941,7 +2246,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-fees',
       paidBy: 'priya',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'Three-hour wait on the outbound, worth it.',
     },
     {
@@ -1961,7 +2271,8 @@ export const flagshipTrip: SeedTrip = {
         { person: 'rafal', shareMinor: 12_675 },
         { person: 'jonas', shareMinor: 12_675 },
       ],
-      notes: 'Only Rafal and Jonas are taking a second case, so only they pay for it.',
+      notes:
+        'Only Rafal and Jonas are taking a second case, so only they pay for it.',
     },
     {
       key: 'exp-rental',
@@ -1993,7 +2304,11 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-activities',
       paidBy: 'priya',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+      ],
       notes: 'Priya booked it but is skipping the castle itself.',
     },
     {
@@ -2006,7 +2321,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-fees',
       paidBy: 'rafal',
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'Tsukiji and Golden Gai are cash only, and so is half of Nishiki.',
     },
     {
@@ -2019,7 +2339,12 @@ export const flagshipTrip: SeedTrip = {
       budgetItemKey: 'bud-fees',
       paidBy: null,
       splitMethod: 'equal',
-      participants: [{ person: 'rafal' }, { person: 'mika' }, { person: 'jonas' }, { person: 'priya' }],
+      participants: [
+        { person: 'rafal' },
+        { person: 'mika' },
+        { person: 'jonas' },
+        { person: 'priya' },
+      ],
       notes: 'Nobody has claimed this yet — whoever paid, say so.',
     },
   ],
@@ -2041,7 +2366,7 @@ export const flagshipTrip: SeedTrip = {
       key: 'list-group',
       name: 'Group kit',
       kind: 'packing',
-      colour: '#2F6F5E',
+      colour: '#256256',
       icon: 'backpack',
       weightLimitGrams: 23_000,
       items: [
@@ -2132,7 +2457,8 @@ export const flagshipTrip: SeedTrip = {
         {
           name: 'Blister plasters — a lot of them',
           category: 'Health',
-          description: 'Fushimi Inari and the Philosopher’s Path in the same week.',
+          description:
+            'Fushimi Inari and the Philosopher’s Path in the same week.',
           quantity: 2,
           weightGrams: 90,
           isDone: true,
@@ -2187,7 +2513,7 @@ export const flagshipTrip: SeedTrip = {
       key: 'list-personal',
       name: 'Personal packing',
       kind: 'packing',
-      colour: '#B26B08',
+      colour: '#8a5305',
       icon: 'shirt',
       weightLimitGrams: 12_000,
       items: [
@@ -2445,7 +2771,7 @@ export const flagshipTrip: SeedTrip = {
         'the Indigo because the baths are private, but not at the public ones in Yumoto.\n\n' +
         'Yukata: left side over right, belt tied at the hip rather than the waist. Slippers off before ' +
         'the tatami, always.',
-      colour: '#2F6F5E',
+      colour: '#256256',
       isPinned: true,
       sortOrder: 1,
     },
@@ -2461,7 +2787,7 @@ export const flagshipTrip: SeedTrip = {
         'vending machines. Load it through Apple Wallet and top up at any station machine.\n\n' +
         'Cash-only, confirmed: Tsukiji outer stalls, Golden Gai seat charges, most of Nishiki, the ' +
         'Owakudani egg huts. Budget 15,000 yen each in small notes for those.',
-      colour: '#B26B08',
+      colour: '#8a5305',
       isPinned: true,
       sortOrder: 2,
     },
@@ -2513,7 +2839,8 @@ export const flagshipTrip: SeedTrip = {
       contentType: 'application/pdf',
       sizeBytes: 96_412,
       kind: 'document',
-      description: 'Two twin rooms, 9–13 October, free cancellation until 2 October.',
+      description:
+        'Two twin rooms, 9–13 October, free cancellation until 2 October.',
       uploadedBy: 'rafal',
       reservationKey: 'res-gracery',
     },
@@ -2523,7 +2850,8 @@ export const flagshipTrip: SeedTrip = {
       contentType: 'application/pdf',
       sizeBytes: 104_880,
       kind: 'document',
-      description: 'Non-refundable booking, 14–19 October, luggage forwarding noted.',
+      description:
+        'Non-refundable booking, 14–19 October, luggage forwarding noted.',
       uploadedBy: 'priya',
       reservationKey: 'res-thousand',
     },
@@ -2543,7 +2871,8 @@ export const flagshipTrip: SeedTrip = {
       contentType: 'application/pdf',
       sizeBytes: 173_558,
       kind: 'ticket',
-      description: 'Four seven-day green-car vouchers. Exchange at Odawara, not Haneda.',
+      description:
+        'Four seven-day green-car vouchers. Exchange at Odawara, not Haneda.',
       uploadedBy: 'jonas',
       expenseKey: 'exp-railpass',
     },
@@ -2553,7 +2882,8 @@ export const flagshipTrip: SeedTrip = {
       contentType: 'application/pdf',
       sizeBytes: 542_016,
       kind: 'document',
-      description: 'Annual multi-trip, includes hiking to 3,000m and onsen cover.',
+      description:
+        'Annual multi-trip, includes hiking to 3,000m and onsen cover.',
       uploadedBy: 'rafal',
       expenseKey: 'exp-insurance',
     },
@@ -2563,7 +2893,8 @@ export const flagshipTrip: SeedTrip = {
       contentType: 'image/png',
       sizeBytes: 1_284_960,
       kind: 'map',
-      description: 'Annotated route from Ginkaku-ji down the canal to Nanzen-ji.',
+      description:
+        'Annotated route from Ginkaku-ji down the canal to Nanzen-ji.',
       uploadedBy: 'rafal',
       width: 2_400,
       height: 1_600,
@@ -2575,7 +2906,8 @@ export const flagshipTrip: SeedTrip = {
       contentType: 'image/jpeg',
       sizeBytes: 734_112,
       kind: 'receipt',
-      description: '48,000 yen deposit against the 19:00 sitting on 12 October.',
+      description:
+        '48,000 yen deposit against the 19:00 sitting on 12 October.',
       uploadedBy: 'rafal',
       width: 1_536,
       height: 2_048,

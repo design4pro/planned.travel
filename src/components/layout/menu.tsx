@@ -83,7 +83,10 @@ export function MenuRadioItem({
   ...props
 }: ComponentPropsWithoutRef<typeof DropdownMenu.RadioItem>) {
   return (
-    <DropdownMenu.RadioItem className={cn(itemClass, 'pe-8', className)} {...props}>
+    <DropdownMenu.RadioItem
+      className={cn(itemClass, 'pe-8', className)}
+      {...props}
+    >
       {children}
       <DropdownMenu.ItemIndicator className="absolute end-2.5 flex items-center text-brand">
         <Check className="size-4" strokeWidth={2.5} />
@@ -98,7 +101,10 @@ export function MenuLabel({
 }: ComponentPropsWithoutRef<typeof DropdownMenu.Label>) {
   return (
     <DropdownMenu.Label
-      className={cn('px-2.5 pb-1.5 pt-2 text-micro uppercase text-ink-4', className)}
+      className={cn(
+        'px-2.5 pb-1.5 pt-2 text-micro uppercase text-ink-4',
+        className,
+      )}
       {...props}
     />
   )
@@ -109,6 +115,9 @@ export function MenuSeparator({
   ...props
 }: ComponentPropsWithoutRef<typeof DropdownMenu.Separator>) {
   return (
-    <DropdownMenu.Separator className={cn('-mx-1.5 my-1.5 h-px bg-edge', className)} {...props} />
+    <DropdownMenu.Separator
+      className={cn('-mx-1.5 my-1.5 h-px bg-edge', className)}
+      {...props}
+    />
   )
 }

@@ -1,9 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { Compass } from 'lucide-react'
+import { Button } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { Wordmark } from './brand'
-import { Panel, SectionLabel, buttonClass } from './kit'
+import { Panel, SectionLabel } from './kit'
 
 /**
  * In-app "nothing here" surface. Keeps the person inside the product with two
@@ -13,24 +14,31 @@ export function NotFoundPanel({ className }: { className?: string }) {
   const t = useTranslate()
 
   return (
-    <Panel className={cn('flex flex-col items-center gap-5 px-6 py-14 text-center', className)}>
+    <Panel
+      className={cn(
+        'flex flex-col items-center gap-5 px-6 py-14 text-center',
+        className,
+      )}
+    >
       <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-ink-3">
         <Compass aria-hidden className="size-5" />
       </span>
       <div className="space-y-2">
         <SectionLabel>{t('shell.notFound.eyebrow')}</SectionLabel>
-        <h2 className="font-display text-title text-ink">{t('shell.notFound.title')}</h2>
+        <h2 className="font-display text-title text-ink">
+          {t('shell.notFound.title')}
+        </h2>
         <p className="mx-auto max-w-md text-label leading-relaxed text-ink-3">
           {t('shell.notFound.body')}
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Link to="/dashboard" className={buttonClass({ variant: 'primary' })}>
-          {t('shell.error.dashboard')}
-        </Link>
-        <Link to="/trips" className={buttonClass({ variant: 'secondary' })}>
-          {t('shell.notFound.trips')}
-        </Link>
+        <Button asChild shape="pill">
+          <Link to="/dashboard">{t('shell.error.dashboard')}</Link>
+        </Button>
+        <Button asChild variant="secondary" shape="pill">
+          <Link to="/trips">{t('shell.notFound.trips')}</Link>
+        </Button>
       </div>
     </Panel>
   )
@@ -70,12 +78,12 @@ export function RootNotFound() {
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2.5">
-          <Link to="/" className={buttonClass({ variant: 'primary', size: 'lg' })}>
-            {t('shell.notFound.home')}
-          </Link>
-          <Link to="/pricing" className={buttonClass({ variant: 'secondary', size: 'lg' })}>
-            {t('shell.notFound.plans')}
-          </Link>
+          <Button asChild size="lg" shape="pill">
+            <Link to="/">{t('shell.notFound.home')}</Link>
+          </Button>
+          <Button asChild variant="secondary" size="lg" shape="pill">
+            <Link to="/pricing">{t('shell.notFound.plans')}</Link>
+          </Button>
         </div>
       </div>
     </div>

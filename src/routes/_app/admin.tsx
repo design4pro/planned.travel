@@ -84,7 +84,7 @@ const METRIC_LABEL: Record<string, MessageKey | undefined> = {
  * through to itself — a reportable value, not an English word posing as copy.
  *
  * The mapping is declared here rather than imported from
- * `./settings/-lib/plan-copy.ts`, which carries the same three keys plus the
+ * `#/lib/plan-copy.ts`, which carries the same three keys plus the
  * taglines and feature bullets the comparison cards need. That module belongs to
  * the settings item and is scoped by TanStack's `-` convention to the screens
  * beside it; the two should converge on one home once it has settled, and this

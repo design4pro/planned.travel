@@ -94,7 +94,10 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
                     params={{ tripId }}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'relative isolate inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-label font-medium focus-ring',
+                      // Same 40px as `pill-nav`: the two are the same control in
+                      // two bars, and a reader moving between them would read a
+                      // 4px difference as a rendering fault.
+                      'relative isolate inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-label font-medium focus-ring',
                       'transition-colors duration-base ease-out-quint',
                       active
                         ? 'text-brand-on'

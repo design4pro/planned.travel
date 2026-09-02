@@ -31,13 +31,16 @@ import type { TranslationOf } from '../../types'
 
 const messages = {
   'action.clear': 'Kosongkan',
+  'action.clearFilters': 'Hapus filter',
   'action.close': 'Tutup',
   'action.dismiss': 'Sembunyikan',
   'action.remove': 'Hapus',
+  'action.keep': 'Biarkan',
   'action.undo': 'Urungkan',
   'status.loading': 'Memuat',
   'status.working': 'Memproses',
   'status.searching': 'Mencari',
+  'status.removing': 'Menghapus',
   'avatar.status.online': '{name} sedang aktif',
   'avatar.status.away': '{name} sedang tidak di tempat',
   'avatar.status.busy': '{name} sedang sibuk',

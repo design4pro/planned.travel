@@ -7,6 +7,7 @@ import { TripSubNav } from '#/components/layout/trip-sub-nav'
 import { Card, Skeleton } from '#/components/ui'
 import { APP_HEADER_TOP_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { loadTripHeader } from '../../-server/trip'
 import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
 
@@ -25,13 +26,19 @@ export const Route = createFileRoute('/_app/trips/$tripId')({
       <NotFoundPanel />
     </AppFrame>
   ),
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="This trip did not load" />
-    </AppFrame>
-  ),
+  errorComponent: TripError,
   component: TripLayout,
 })
+
+function TripError({ error }: { error: Error }) {
+  const t = useTranslate()
+
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('trips.error.trip')} />
+    </AppFrame>
+  )
+}
 
 function TripLayout() {
   const { trip } = Route.useLoaderData()
@@ -65,7 +72,7 @@ function TripPending() {
             radius="full"
           />
           <Skeleton
-            className="ml-auto h-6 w-20 shrink-0 bg-inverse-surface"
+            className="ms-auto h-6 w-20 shrink-0 bg-inverse-surface"
             radius="full"
           />
         </div>

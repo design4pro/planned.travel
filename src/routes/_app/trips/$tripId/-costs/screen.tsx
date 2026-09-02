@@ -31,6 +31,7 @@ import {
   isFiltered,
   totalsFor,
 } from '#/components/costs'
+import { useLocale } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 import { TripModuleHeader, useTripHeader } from '../../../-ui/trip-header'
 import { pluralise } from '../../../-lib/format'
@@ -40,7 +41,11 @@ import { CostsRail } from './rail'
 import { StatTiles } from './stat-tiles'
 import { useCostsActions } from './actions'
 
-import type { CostsFilters, PaymentSeed, ToolbarOption } from '#/components/costs'
+import type {
+  CostsFilters,
+  PaymentSeed,
+  ToolbarOption,
+} from '#/components/costs'
 import type {
   CostsExpense,
   CostsPayload,
@@ -56,11 +61,24 @@ export interface CostsScreenProps {
 
 type Session =
   | { readonly kind: 'none' }
-  | { readonly kind: 'expense'; readonly id: number; readonly row: CostsExpense | null }
-  | { readonly kind: 'payment'; readonly id: number; readonly seed: PaymentSeed | null }
+  | {
+      readonly kind: 'expense'
+      readonly id: number
+      readonly row: CostsExpense | null
+    }
+  | {
+      readonly kind: 'payment'
+      readonly id: number
+      readonly seed: PaymentSeed | null
+    }
   | { readonly kind: 'delete'; readonly id: number; readonly row: CostsExpense }
 
-export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps) {
+export function CostsScreen({
+  data,
+  filters,
+  onFiltersChange,
+}: CostsScreenProps) {
+  const locale = useLocale()
   const { trip } = useTripHeader()
   const { snapshot, addExpense, editExpense, removeExpense, addPayment } =
     useCostsActions(data)
@@ -98,21 +116,34 @@ export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps
     [start],
   )
 
-  const totals = useMemo(() => totalsFor(snapshot, data.viewerUserId), [snapshot, data.viewerUserId])
+  const totals = useMemo(
+    () => totalsFor(snapshot, data.viewerUserId),
+    [snapshot, data.viewerUserId],
+  )
 
   const visible = useMemo(
-    () => filterExpenses(snapshot.expenses, filters, data.people, data.viewerUserId),
+    () =>
+      filterExpenses(
+        snapshot.expenses,
+        filters,
+        data.people,
+        data.viewerUserId,
+      ),
     [snapshot.expenses, filters, data.people, data.viewerUserId],
   )
 
-  const visibleMinor = visible.reduce((total, row) => total + row.amountMinor, 0)
+  const visibleMinor = visible.reduce(
+    (total, row) => total + row.amountMinor,
+    0,
+  )
 
   const categoryFilters = useMemo<Array<ToolbarOption<ExpenseCategory>>>(
     () =>
       CATEGORY_OPTIONS.map((option) => ({
         value: option.value,
         label: option.label,
-        count: snapshot.expenses.filter((row) => row.category === option.value).length,
+        count: snapshot.expenses.filter((row) => row.category === option.value)
+          .length,
       })).filter((option) => option.count > 0),
     [snapshot.expenses],
   )
@@ -121,7 +152,7 @@ export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps
     () =>
       dayOptions(snapshot.expenses).map((day) => ({
         value: day,
-        label: formatDayShort(day),
+        label: formatDayShort(day, locale),
         count: snapshot.expenses.filter((row) => row.spentOn === day).length,
       })),
     [snapshot.expenses],
@@ -132,13 +163,25 @@ export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps
       all: snapshot.expenses.length,
       paid: filterExpenses(
         snapshot.expenses,
-        { ...filters, view: 'paid', q: undefined, category: undefined, day: undefined },
+        {
+          ...filters,
+          view: 'paid',
+          q: undefined,
+          category: undefined,
+          day: undefined,
+        },
         data.people,
         data.viewerUserId,
       ).length,
       owed: filterExpenses(
         snapshot.expenses,
-        { ...filters, view: 'owed', q: undefined, category: undefined, day: undefined },
+        {
+          ...filters,
+          view: 'owed',
+          q: undefined,
+          category: undefined,
+          day: undefined,
+        },
         data.people,
         data.viewerUserId,
       ).length,
@@ -155,7 +198,9 @@ export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps
       .filter((row) => row.expenseCount > 0)
       .sort((left, right) => right.expenseCount - left.expenseCount)
       .at(0)
-    const known = CATEGORY_OPTIONS.find((option) => option.value === busiest?.category)
+    const known = CATEGORY_OPTIONS.find(
+      (option) => option.value === busiest?.category,
+    )
     return known?.value ?? 'other'
   }, [snapshot.byCategory])
 
@@ -168,7 +213,11 @@ export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps
     }
     downloadCsv(
       csvFilename(trip.title, data.today),
-      expensesCsv({ rows: visible, people: data.people, viewerUserId: data.viewerUserId }),
+      expensesCsv({
+        rows: visible,
+        people: data.people,
+        viewerUserId: data.viewerUserId,
+      }),
     )
     toast.success('Export ready', {
       description: `${pluralise(visible.length, 'expense')} written to CSV.`,
@@ -194,7 +243,7 @@ export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps
           description={
             snapshot.expenseCount === 0
               ? 'Nothing spent yet'
-              : `${pluralise(snapshot.expenseCount, 'expense')} · ${formatMoney(snapshot.spentMinor, data.currency)} spent`
+              : `${pluralise(snapshot.expenseCount, 'expense')} · ${formatMoney(snapshot.spentMinor, data.currency, locale)} spent`
           }
           actions={
             <>
@@ -347,7 +396,9 @@ export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps
           defaultCategory={defaultCategory}
           today={data.today}
           onSubmit={(value) =>
-            session.row === null ? addExpense(value) : editExpense(session.row, value)
+            session.row === null
+              ? addExpense(value)
+              : editExpense(session.row, value)
           }
         />
       ) : null}
@@ -376,8 +427,8 @@ export function CostsScreen({ data, filters, onFiltersChange }: CostsScreenProps
           currency={data.currency}
           affects={session.row.shares.map(
             (share) =>
-              data.people.find((person) => person.userId === share.userId)?.name ??
-              'a removed traveller',
+              data.people.find((person) => person.userId === share.userId)
+                ?.name ?? 'a removed traveller',
           )}
           onConfirm={() => removeExpense(session.row)}
         />

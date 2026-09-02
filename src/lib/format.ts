@@ -487,6 +487,25 @@ export function formatNumber(
   return numberFormatter(locale).format(value)
 }
 
+/**
+ * An exchange rate: two fraction digits at least, four at most.
+ *
+ * A rate is not money — it has no currency and so none of the currency layout
+ * the frozen table carries — but it does take the locale's decimal mark and
+ * grouping. The window is what a reader needs to see that `1.95` and `1.9512`
+ * are different rates without printing a tail of noise on a round one.
+ */
+export function formatRate(
+  value: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return makeNumberFormat(locale, {
+    style: 'decimal',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(value)
+}
+
 /** `-3` → `3`, keeping the sign out of a label that already says "ago". */
 export function formatAbsolute(
   value: number,
@@ -545,6 +564,37 @@ export function formatMoneyMinor(
   const template =
     minor < 0 ? formats.currency.negative : formats.currency.positive
   const amount = fixedFormatter(locale, digits).format(
+    Math.abs(minor) / 10 ** digits,
+  )
+  return template
+    .replace('{g}', currencyGap(template, symbol))
+    .replace('{s}', symbol)
+    .replace('{n}', amount)
+}
+
+/**
+ * A published price, with the cents dropped when they are zero.
+ *
+ * `$9` reads as a price where `$9.00` reads as a transaction, which is why the
+ * plan cards and the pricing table want this rather than `formatMoneyMinor`. It
+ * lives here rather than in `plans.ts` because the layout it slots into is the
+ * same frozen per-locale template: `plans.ts` had its own `Intl.NumberFormat`
+ * pinned to `en-US`, so every price in the product read American whatever the
+ * reader's language, and it bypassed the workerd/WebKit gap documented above.
+ */
+export function formatPrice(
+  minor: number,
+  currency: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const code = currencyCode(currency)
+  const digits = minorUnitDigits(code)
+  const whole = minor % 10 ** digits === 0
+  const formats = formatsFor(locale)
+  const symbol = narrowSymbol(locale, code)
+  const template =
+    minor < 0 ? formats.currency.negative : formats.currency.positive
+  const amount = fixedFormatter(locale, whole ? 0 : digits).format(
     Math.abs(minor) / 10 ** digits,
   )
   return template

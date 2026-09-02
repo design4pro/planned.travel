@@ -140,7 +140,6 @@ const messages = {
   'users.filter.role.curator': 'Gondozók',
   'users.filter.status.label': 'Szűrés a fiók állapota szerint',
   'users.filter.status.any': 'Bármelyik állapot',
-  'users.filter.clear': 'Szűrők törlése',
   'users.filter.hint':
     'Szűkítsen szerep vagy állapot szerint — egyszerre csak az egyikkel.',
   'users.column.account': 'Fiók',

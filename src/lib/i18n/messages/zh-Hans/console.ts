@@ -127,7 +127,6 @@ const messages = {
   'users.filter.role.curator': '策展人',
   'users.filter.status.label': '按账户状态筛选',
   'users.filter.status.any': '任意状态',
-  'users.filter.clear': '清除筛选',
   'users.filter.hint': '可按角色或状态收窄 —— 一次只用其中一项。',
   'users.column.account': '账户',
   'users.column.role': '平台角色',

@@ -139,7 +139,6 @@ const messages = {
   'users.filter.role.curator': 'Kurator',
   'users.filter.status.label': 'Saring menurut keadaan akun',
   'users.filter.status.any': 'Keadaan apa pun',
-  'users.filter.clear': 'Bersihkan saringan',
   'users.filter.hint':
     'Persempit menurut peran atau keadaan — satu saja setiap kali.',
   'users.column.account': 'Akun',

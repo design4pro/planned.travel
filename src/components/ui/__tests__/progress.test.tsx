@@ -122,4 +122,25 @@ describe('Skeleton', () => {
       'animate-pulse-soft',
     )
   })
+
+  /**
+   * The reduced-motion reset kills every animation it is not told to keep, so
+   * the marker is what separates "still loading" from a slab of dead grey. Both
+   * animated variants have to carry it — `pulse` is opacity-only and was being
+   * silenced for nothing — and `none` must not, having asked for stillness.
+   */
+  it('keeps signalling under reduced motion, unless it opted out', () => {
+    for (const animation of ['shimmer', 'pulse'] as const) {
+      const { container, unmount } = render(<Skeleton animation={animation} />)
+      expect(
+        container.firstElementChild?.hasAttribute('data-motion-loop'),
+      ).toBe(true)
+      unmount()
+    }
+
+    const { container } = render(<Skeleton animation="none" />)
+    expect(container.firstElementChild?.hasAttribute('data-motion-loop')).toBe(
+      false,
+    )
+  })
 })

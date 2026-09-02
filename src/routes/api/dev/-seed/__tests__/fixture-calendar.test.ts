@@ -50,7 +50,9 @@ function read(relative: string): string {
 
 /** Prose is allowed to name what the code may not do, so the checks below read code only. */
 function withoutComments(source: string): string {
-  return source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/(^|\s)\/\/[^\n]*/g, '$1')
+  return source
+    .replaceAll(/\/\*[\s\S]*?\*\//g, '')
+    .replaceAll(/(^|\s)\/\/[^\n]*/g, '$1')
 }
 
 /** Every TypeScript module under `-seed/`, tests excluded, as `[path, source]`. */
@@ -63,7 +65,9 @@ function seedSources(): ReadonlyArray<readonly [string, string]> {
       }
       return entry.name.endsWith('.ts') ? [path] : []
     })
-  return walk(SEED_ROOT).map((path) => [path, readFileSync(path, 'utf8')] as const)
+  return walk(SEED_ROOT).map(
+    (path) => [path, readFileSync(path, 'utf8')] as const,
+  )
 }
 
 describe('the fixture anchor', () => {
@@ -74,8 +78,14 @@ describe('the fixture anchor', () => {
       read('e2e/helpers/shoot.ts'),
     )
 
-    expect(inConfig?.[1], 'playwright.config.ts must declare BASELINE_DAY').toBeDefined()
-    expect(inHelper?.[1], 'e2e/helpers/shoot.ts must export BASELINE_DAY').toBeDefined()
+    expect(
+      inConfig?.[1],
+      'playwright.config.ts must declare BASELINE_DAY',
+    ).toBeDefined()
+    expect(
+      inHelper?.[1],
+      'e2e/helpers/shoot.ts must export BASELINE_DAY',
+    ).toBeDefined()
     expect(inConfig?.[1]).toBe(SEED_ANCHOR_DAY)
     expect(inHelper?.[1]).toBe(SEED_ANCHOR_DAY)
   })
@@ -103,10 +113,16 @@ describe('the fixture anchor', () => {
   })
 
   it('places instants inside the day they name', () => {
-    expect(SEED_ANCHOR_INSTANT.toISOString()).toBe(`${SEED_ANCHOR_DAY}T12:00:00.000Z`)
+    expect(SEED_ANCHOR_INSTANT.toISOString()).toBe(
+      `${SEED_ANCHOR_DAY}T12:00:00.000Z`,
+    )
     expect(instantOn(-12).toISOString()).toBe('2026-08-08T12:00:00.000Z')
-    expect(instantOn(0, '06:30').toISOString()).toBe(`${SEED_ANCHOR_DAY}T06:30:00.000Z`)
-    expect(minutesBeforeAnchor(95).toISOString()).toBe(`${SEED_ANCHOR_DAY}T10:25:00.000Z`)
+    expect(instantOn(0, '06:30').toISOString()).toBe(
+      `${SEED_ANCHOR_DAY}T06:30:00.000Z`,
+    )
+    expect(minutesBeforeAnchor(95).toISOString()).toBe(
+      `${SEED_ANCHOR_DAY}T10:25:00.000Z`,
+    )
   })
 
   it('builds a recurring calendar fact in the anchor year, and rejects a date that is not one', () => {
@@ -127,7 +143,9 @@ describe('the seed writes no clock and no randomness', () => {
       // `new Date(...)` with an argument is arithmetic on a fixture value and is fine; the
       // zero-argument form is the machine's clock and is not.
       const code = withoutComments(source)
-      expect(code, `${path} constructs a Date from the wall clock`).not.toMatch(/new Date\(\)/)
+      expect(code, `${path} constructs a Date from the wall clock`).not.toMatch(
+        /new Date\(\)/,
+      )
       // `apply.ts` keeps one: the stopwatch behind the report's `durationMs`, which is measured and
       // never written to a row.
       if (!path.endsWith('apply.ts')) {
@@ -140,7 +158,9 @@ describe('the seed writes no clock and no randomness', () => {
     for (const [path, source] of seedSources()) {
       const code = withoutComments(source)
       expect(code, `${path} calls Math.random()`).not.toMatch(/Math\.random\(/)
-      expect(code, `${path} calls getRandomValues()`).not.toMatch(/getRandomValues\(/)
+      expect(code, `${path} calls getRandomValues()`).not.toMatch(
+        /getRandomValues\(/,
+      )
       expect(code, `${path} mints a nanoid`).not.toMatch(/nanoid\(/)
     }
   })
@@ -148,12 +168,19 @@ describe('the seed writes no clock and no randomness', () => {
   it('leaves no bare calendar literal in the dataset', () => {
     // Anchored offsets, `anchorYearDay('MM-DD')` and `historic('YYYY-MM-DD')` are the three ways a
     // date may be written. A bare `'2026-10-09'` is the fourth, and it is what rots.
-    for (const file of ['flagship.ts', 'trips.ts', 'workspace.ts', 'index.ts']) {
+    for (const file of [
+      'flagship.ts',
+      'trips.ts',
+      'workspace.ts',
+      'index.ts',
+    ]) {
       const source = readFileSync(join(SEED_ROOT, 'dataset', file), 'utf8')
       const bare = source
         .replaceAll(/historic\('\d{4}-\d{2}-\d{2}'\)/g, '')
         .match(/'\d{4}-\d{2}-\d{2}'/g)
-      expect(bare ?? [], `dataset/${file} carries an unanchored date`).toEqual([])
+      expect(bare ?? [], `dataset/${file} carries an unanchored date`).toEqual(
+        [],
+      )
     }
   })
 })
@@ -166,7 +193,11 @@ describe('the fixture the authenticated baselines photograph', () => {
    * comparison, no timezone, no off-by-one at midnight. The assertions below read the same way.
    */
   const ordered = (...days: ReadonlyArray<string | undefined>): boolean =>
-    days.every((value, index) => value !== undefined && (index === 0 || value >= (days[index - 1] ?? '')))
+    days.every(
+      (value, index) =>
+        value !== undefined &&
+        (index === 0 || value >= (days[index - 1] ?? '')),
+    )
 
   it('keeps one trip under way on the anchor day', () => {
     expect(lisbonTrip.startDate).toBeDefined()
@@ -200,8 +231,15 @@ describe('the fixture the authenticated baselines photograph', () => {
     // carries reservations is what puts rows in the rail.
     const ahead = trips.filter((trip) => {
       const end = trip.endDate
-      return end !== undefined && end >= anchor && (trip.reservations ?? []).length > 0
+      return (
+        end !== undefined &&
+        end >= anchor &&
+        (trip.reservations ?? []).length > 0
+      )
     })
-    expect(ahead.map((trip) => trip.slug)).toEqual([flagshipTrip.slug, lisbonTrip.slug])
+    expect(ahead.map((trip) => trip.slug)).toEqual([
+      flagshipTrip.slug,
+      lisbonTrip.slug,
+    ])
   })
 })

@@ -4,6 +4,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 
 ## Commands
 
+- `pnpm worktree:bootstrap` — **run this first in a fresh checkout or worktree.** Secrets, local D1, basemap, demo workspace, dev server. Without it `/login` answers 500 and the whole app behind it is unreachable
 - `pnpm dev` — dev server on :3000
 - `pnpm typecheck` / `pnpm lint` / `pnpm test` — the fast feedback loop; run these before committing
 - `pnpm build` — production build

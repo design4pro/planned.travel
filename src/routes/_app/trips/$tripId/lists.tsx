@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, useRouteContext } from '@tanstack/react-router'
 import { CheckCheck, Scale } from 'lucide-react'
 
+import { useLocale } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
@@ -32,6 +33,7 @@ export const Route = createFileRoute('/_app/trips/$tripId/lists')({
 })
 
 function ListsPage() {
+  const locale = useLocale()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
   // The signed-in user comes off the shell's route context rather than a second
@@ -56,7 +58,7 @@ function ListsPage() {
           description={
             overall.total === 0
               ? 'No items yet'
-              : `${formatNumber(overall.done)} of ${formatNumber(overall.total)} packed · ${formatPercent(overall.ratio)}`
+              : `${formatNumber(overall.done, locale)} of ${formatNumber(overall.total, locale)} packed · ${formatPercent(overall.ratio, locale)}`
           }
           actions={<NewListAction onClick={() => setNewListOpen(true)} />}
         />
@@ -69,11 +71,11 @@ function ListsPage() {
                 icon={<CheckCheck />}
                 label="Packed"
                 value={overall.done}
-                unit={`of ${formatNumber(overall.total)}`}
+                unit={`of ${formatNumber(overall.total, locale)}`}
                 caption={
                   overall.total === 0
                     ? 'Nothing on the lists yet'
-                    : `${formatPercent(overall.ratio)} of everything`
+                    : `${formatPercent(overall.ratio, locale)} of everything`
                 }
               />
               <StatCard
@@ -112,7 +114,7 @@ function ListsPage() {
                 size="lg"
                 tone={overall.complete ? 'success' : 'brand'}
                 label="Everything, across every list"
-                valueText={`${formatNumber(overall.done)} / ${formatNumber(overall.total)}`}
+                valueText={`${formatNumber(overall.done, locale)} / ${formatNumber(overall.total, locale)}`}
               />
             </Card>
           </>

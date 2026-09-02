@@ -17,15 +17,18 @@ import {
 } from '#/components/marketing'
 import { Card } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import {
   MODULE_KEYS,
   PLAN_LIST,
   QUOTA_KEYS,
-  QUOTA_LABELS,
   formatQuota,
+  isUnlimited,
 } from '#/lib/plans'
+import { PLAN_COPY, QUOTA_LABEL_KEYS } from '#/lib/plan-copy'
 
 import type { FaqItem, MarketingAnchor } from '#/components/marketing'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { BillingInterval, ModuleKey } from '#/lib/plans'
 
 const TITLE = 'Pricing — planned.travel'
@@ -50,66 +53,81 @@ export const Route = createFileRoute('/pricing')({
 })
 
 const ANCHORS: ReadonlyArray<MarketingAnchor> = [
-  { href: '#plans', label: 'Plans' },
-  { href: '#compare', label: 'Compare' },
-  { href: '#questions', label: 'Questions' },
+  { href: '#plans', labelKey: 'marketing.anchor.plans' },
+  { href: '#compare', labelKey: 'marketing.anchor.compare' },
+  { href: '#questions', labelKey: 'marketing.anchor.questions' },
 ]
 
-/** Human labels for the feature switches, in the order they are compared. */
-const MODULE_LABELS: { readonly [K in ModuleKey]: string } = {
-  itinerary: 'Day-by-day itinerary',
-  map: 'Interactive map',
-  budget: 'Budgets and expense splitting',
-  packing: 'Packing and to-do lists',
-  reservations: 'Reservations and bookings',
-  journal: 'Travel journal',
-  atlas: 'World-map tracker',
-  collaboration: 'Invite other travellers',
-  realtime: 'Live collaboration',
-  offlineMaps: 'Offline maps',
-  pdfExport: 'PDF and calendar export',
-  prioritySupport: 'Priority support',
+/**
+ * What the comparison table calls each feature switch, in the order compared.
+ *
+ * `src/server/billing/entitlements.ts` names the same twelve modules in another
+ * register — sentence fragments for an error, "does not include the itinerary
+ * planner" — and that copy is still English. These are the reader's words, so
+ * they are keys.
+ */
+const MODULE_LABELS: { readonly [K in ModuleKey]: MessageKey } = {
+  itinerary: 'marketing.pricing.module.itinerary',
+  map: 'marketing.pricing.module.map',
+  budget: 'marketing.pricing.module.budget',
+  packing: 'marketing.pricing.module.packing',
+  reservations: 'marketing.pricing.module.reservations',
+  journal: 'marketing.pricing.module.journal',
+  atlas: 'marketing.pricing.module.atlas',
+  collaboration: 'marketing.pricing.module.collaboration',
+  realtime: 'marketing.pricing.module.realtime',
+  offlineMaps: 'marketing.pricing.module.offlineMaps',
+  pdfExport: 'marketing.pricing.module.pdfExport',
+  prioritySupport: 'marketing.pricing.module.prioritySupport',
 }
 
-const FAQ: ReadonlyArray<FaqItem> = [
+/** The seven questions, as literal key pairs so a typo is a compile error. */
+const FAQ_KEYS: ReadonlyArray<{
+  readonly question: MessageKey
+  readonly answer: MessageKey
+}> = [
   {
-    question: 'What happens when a trial ends?',
-    answer:
-      'The trial converts into the paid plan. Polar takes a payment method when the trial starts and charges it the day the trial ends, so cancel before then and you are never charged. Nothing is ever deleted either way: the paid modules lock, your trips stay exactly where they are, and everything unlocks again the moment you subscribe.',
+    question: 'marketing.pricing.faq.trial.q',
+    answer: 'marketing.pricing.faq.trial.a',
   },
   {
-    question: 'Who am I actually buying from?',
-    answer:
-      'Polar. They are our merchant of record, which means they sell the subscription to you as our reseller, take the payment, issue the invoice in their own name, and determine, collect and remit the sales tax or VAT your country charges. Refunds and card disputes are settled with them too. We are still the people who run the service and answer your email.',
+    question: 'marketing.pricing.faq.seller.q',
+    answer: 'marketing.pricing.faq.seller.a',
   },
   {
-    question: 'Can I change plan halfway through a trip?',
-    answer:
-      'Yes. Upgrades apply immediately and are prorated to the day; downgrades take effect at the end of the period you have already paid for, so you never lose access you paid for.',
+    question: 'marketing.pricing.faq.change.q',
+    answer: 'marketing.pricing.faq.change.a',
   },
   {
-    question: 'How does per-member billing work on Crew?',
-    answer:
-      'You pay for the seats you actually fill, and you can change the number at any time. Outstanding invitations count against your seats, so a workspace can never quietly oversubscribe the plan.',
+    question: 'marketing.pricing.faq.seats.q',
+    answer: 'marketing.pricing.faq.seats.a',
   },
   {
-    question: 'Do the people I travel with need their own subscription?',
-    answer:
-      'No. Everyone you invite into a Crew workspace is covered by its seats. They sign in with their own account and see the trips they have been added to.',
+    question: 'marketing.pricing.faq.guests.q',
+    answer: 'marketing.pricing.faq.guests.a',
   },
   {
-    question: 'What counts towards storage?',
-    answer:
-      'Photographs, tickets, confirmations and any file you attach to a trip. Map tiles and the app itself never count. You can see exactly what is using space in Settings.',
+    question: 'marketing.pricing.faq.storage.q',
+    answer: 'marketing.pricing.faq.storage.a',
   },
   {
-    question: 'Can I get my data out?',
-    answer:
-      'Always. Every trip exports as a PDF itinerary and as a calendar file, and your places export as GeoJSON. It is your travel, not ours.',
+    question: 'marketing.pricing.faq.export.q',
+    answer: 'marketing.pricing.faq.export.a',
   },
 ]
 
+/** Built per render, so the answers follow the reader rather than the bundle. */
+function faqItems(t: Translate): ReadonlyArray<FaqItem> {
+  return FAQ_KEYS.map((entry) => ({
+    // Two of these name the seat-based plan, and its name is translated, so
+    // `PLAN_COPY` supplies it rather than twenty-three catalogue files.
+    question: t(entry.question, { crew: t(PLAN_COPY.crew.name) }),
+    answer: t(entry.answer, { crew: t(PLAN_COPY.crew.name) }),
+  }))
+}
+
 function PricingPage() {
+  const t = useTranslate()
   const [interval, setBillingInterval] = useState<BillingInterval>('monthly')
 
   return (
@@ -122,9 +140,9 @@ function PricingPage() {
         <Comparison />
         <Questions />
         <ClosingCta
-          heading="Your next trip is already worth planning properly"
-          lede="Two trips, the whole map, the itinerary and the packing lists — free, with no card and no countdown."
-          secondary={{ label: 'See how it works', to: '/' }}
+          heading={t('marketing.cta.heading')}
+          lede={t('marketing.cta.lede')}
+          secondary={{ label: t('marketing.pricing.cta.secondary'), to: '/' }}
         />
       </main>
 
@@ -142,6 +160,7 @@ function PlansBand({
   interval: BillingInterval
   onIntervalChange: (next: BillingInterval) => void
 }) {
+  const t = useTranslate()
   return (
     <section
       id="plans"
@@ -155,34 +174,35 @@ function PlansBand({
 
       <div className="mx-auto w-full max-w-content px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-          <Eyebrow icon={<Sparkles />}>Two trips free, forever</Eyebrow>
+          <Eyebrow icon={<Sparkles />}>
+            {t('marketing.pricing.hero.eyebrow')}
+          </Eyebrow>
           <h1
             id="plans-heading"
             className="mt-6 font-display text-headline text-balance text-ink"
           >
-            Plan it properly.
+            {t('marketing.pricing.hero.title')}
             <br />
-            <span className="text-ink-3">Pay for what you use.</span>
+            <span className="text-ink-3">
+              {t('marketing.pricing.hero.titleQuiet')}
+            </span>
           </h1>
           <p className="mt-6 max-w-xl text-subtitle font-normal leading-relaxed text-pretty text-ink-2">
-            {DESCRIPTION}
+            {t('marketing.pricing.hero.lede')}
           </p>
         </div>
 
         <BillingIntervalToggle
           value={interval}
           onChange={onIntervalChange}
-          note={intervalNote(interval)}
+          note={intervalNote(t, interval)}
           className="mt-10"
         />
 
         <PlanCardGrid interval={interval} className="mt-12" />
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-caption text-ink-4">
-          Prices in US dollars, excluding sales tax or VAT. Polar is our
-          merchant of record: it is the seller on your invoice, and it works out
-          what your country charges, adds it at checkout and remits it. Cancel
-          whenever you like, from inside the product.
+          {t('marketing.pricing.hero.taxNote')}
         </p>
       </div>
     </section>
@@ -198,31 +218,35 @@ function IncludedCell({
   included: boolean
   planName: string
 }) {
+  const t = useTranslate()
   return included ? (
     <span
       className="inline-flex size-6 items-center justify-center rounded-full bg-brand-subtle text-brand"
-      title={`Included in ${planName}`}
+      title={t('marketing.pricing.compare.includedIn', { plan: planName })}
     >
       <Check aria-hidden className="size-3.5" strokeWidth={3} />
-      <span className="sr-only">Included</span>
+      <span className="sr-only">{t('marketing.pricing.compare.included')}</span>
     </span>
   ) : (
     <span
       className="inline-flex size-6 items-center justify-center rounded-full bg-surface-2 text-ink-4"
-      title={`Not in ${planName}`}
+      title={t('marketing.pricing.compare.notIn', { plan: planName })}
     >
       <Minus aria-hidden className="size-3.5" />
-      <span className="sr-only">Not included</span>
+      <span className="sr-only">
+        {t('marketing.pricing.compare.notIncluded')}
+      </span>
     </span>
   )
 }
 
 /** The sticky first column keeps the feature name visible while the table scrolls. */
 const rowHeadClasses = cn(
-  'sticky left-0 z-10 bg-surface px-5 py-3.5 text-left text-label font-medium text-ink',
+  'sticky start-0 z-10 bg-surface px-5 py-3.5 text-start text-label font-medium text-ink',
 )
 
 function Comparison() {
+  const t = useTranslate()
   return (
     <Section
       id="compare"
@@ -232,16 +256,16 @@ function Comparison() {
     >
       <SectionIntro
         headingId="compare-heading"
-        eyebrow="Side by side"
-        title="Every limit, compared"
-        lede="One table, generated from the same catalogue the billing system reads. If a row says a module is included, the entitlement check agrees with it."
+        eyebrow={t('marketing.pricing.compare.eyebrow')}
+        title={t('marketing.pricing.compare.title')}
+        lede={t('marketing.pricing.compare.lede')}
       />
 
       <Card padding="none" className="mt-12 overflow-hidden lg:mt-14">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-2xl border-collapse text-left">
+          <table className="w-full min-w-2xl border-collapse text-start">
             <caption className="sr-only">
-              Feature and limit comparison across all three plans
+              {t('marketing.pricing.compare.caption')}
             </caption>
             <thead>
               <tr className="border-b border-edge">
@@ -252,7 +276,7 @@ function Comparison() {
                     'text-micro font-semibold uppercase tracking-label text-ink-3',
                   )}
                 >
-                  Feature
+                  {t('marketing.pricing.compare.feature')}
                 </th>
                 {PLAN_LIST.map((plan) => (
                   <th
@@ -260,7 +284,7 @@ function Comparison() {
                     scope="col"
                     className="w-32 px-5 py-4 text-center font-display text-subtitle font-bold text-ink"
                   >
-                    {plan.name}
+                    {t(PLAN_COPY[plan.id].name)}
                   </th>
                 ))}
               </tr>
@@ -270,22 +294,24 @@ function Comparison() {
                 <th
                   scope="colgroup"
                   colSpan={PLAN_LIST.length + 1}
-                  className="px-5 py-2.5 text-left text-micro font-semibold uppercase tracking-label text-ink-3"
+                  className="px-5 py-2.5 text-start text-micro font-semibold uppercase tracking-label text-ink-3"
                 >
-                  Limits
+                  {t('marketing.pricing.compare.limits')}
                 </th>
               </tr>
               {QUOTA_KEYS.map((key) => (
                 <tr key={key} className="border-b border-edge-faint">
                   <th scope="row" className={rowHeadClasses}>
-                    {QUOTA_LABELS[key]}
+                    {t(QUOTA_LABEL_KEYS[key])}
                   </th>
                   {PLAN_LIST.map((plan) => (
                     <td
                       key={plan.id}
                       className="px-5 py-3.5 text-center text-label tabular-nums text-ink-2"
                     >
-                      {formatQuota(key, plan.limits[key])}
+                      {isUnlimited(plan.limits[key])
+                        ? t('settings.billing.quota.unlimited')
+                        : formatQuota(key, plan.limits[key])}
                     </td>
                   ))}
                 </tr>
@@ -295,9 +321,9 @@ function Comparison() {
                 <th
                   scope="colgroup"
                   colSpan={PLAN_LIST.length + 1}
-                  className="px-5 py-2.5 text-left text-micro font-semibold uppercase tracking-label text-ink-3"
+                  className="px-5 py-2.5 text-start text-micro font-semibold uppercase tracking-label text-ink-3"
                 >
-                  Modules
+                  {t('marketing.anchor.modules')}
                 </th>
               </tr>
               {MODULE_KEYS.map((key) => (
@@ -306,13 +332,13 @@ function Comparison() {
                   className="border-b border-edge-faint last:border-b-0"
                 >
                   <th scope="row" className={rowHeadClasses}>
-                    {MODULE_LABELS[key]}
+                    {t(MODULE_LABELS[key])}
                   </th>
                   {PLAN_LIST.map((plan) => (
                     <td key={plan.id} className="px-5 py-3.5 text-center">
                       <IncludedCell
                         included={plan.limits[key]}
-                        planName={plan.name}
+                        planName={t(PLAN_COPY[plan.id].name)}
                       />
                     </td>
                   ))}
@@ -329,6 +355,7 @@ function Comparison() {
 /* ------------------------------------------------------------------ questions */
 
 function Questions() {
+  const t = useTranslate()
   return (
     <Section
       id="questions"
@@ -337,11 +364,11 @@ function Questions() {
     >
       <SectionIntro
         headingId="questions-heading"
-        eyebrow="Before you ask"
-        title="Questions, answered"
-        lede="Billing, trials and getting your data back out again."
+        eyebrow={t('marketing.pricing.questions.eyebrow')}
+        title={t('marketing.pricing.questions.title')}
+        lede={t('marketing.pricing.questions.lede')}
       />
-      <FaqList items={FAQ} className="mt-12 lg:mt-14" />
+      <FaqList items={faqItems(t)} className="mt-12 lg:mt-14" />
     </Section>
   )
 }

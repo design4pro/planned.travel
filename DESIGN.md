@@ -90,6 +90,13 @@ typography:
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: '0.08em'
+  scale:
+    wordmark-sm: '1.0625rem'
+    wordmark-md: '1.25rem'
+    email-body: '14px'
+    email-heading: '24px'
+  fallback:
+    fontFamily: 'Planned Latin Fallback, Planned Display Fallback, Planned Cyrillic Fallback, Planned Greek Fallback, Planned Arabic Fallback, Planned Kana Fallback, Planned Han Fallback, Planned Hangul Fallback'
 rounded:
   sm: '8px'
   md: '12px'
@@ -320,6 +327,16 @@ what stops a re-rendering total from shifting the row it sits in.
 **The Two-Step Rule.** Scale contrast is extreme and deliberate: a Micro label sits directly above
 a Display numeral with nothing in between. Do not soften that jump with an intermediate size. The
 gap is the composition.
+
+**The Off-Ramp Register Rule.** Three registers sit beside the ramp rather than on it, and each is
+enumerated in `typography.scale` so it is a decision rather than drift. The **wordmark** takes two
+optical sizes of its own — 17px and 20px — because a logotype is lettering, not copy, and forcing it
+onto a text ramp sizes it against the wrong thing; its largest size is Title, which it shares. **Email**
+adds 14px and 24px and reuses Micro, Caption, Label, Body and the wordmark's 17px for the rest,
+because px is the only unit an email client renders reliably. The **metric compensators** are declared
+as a typography role because that is what they are in the system: eight `@font-face` aliases over
+locally installed faces, carrying `size-adjust` and ascent overrides so a cold load settles instead of
+jumping. Nobody chose them for character.
 
 **The Compensator Pairing Rule.** In a font stack, a web face is followed _immediately_ by its own
 metric-compensated local fallback, never by another web face first, and each compensator's

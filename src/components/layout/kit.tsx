@@ -1,8 +1,6 @@
-import { cva } from 'class-variance-authority'
 import { cn } from '#/lib/cn'
 
-import type { VariantProps } from 'class-variance-authority'
-import type { ComponentPropsWithRef, ComponentPropsWithoutRef } from 'react'
+import type { ComponentPropsWithoutRef } from 'react'
 
 /**
  * The application chrome's building blocks. Every value resolves to a token
@@ -26,6 +24,15 @@ import type { ComponentPropsWithRef, ComponentPropsWithoutRef } from 'react'
  * the localised `+n` tail and the `formatList` party summary are on a screen. A
  * removed rival and an unconsumed original are the same defect wearing different
  * clothes.
+ *
+ * The eighth rival was the loudest and outlived the other seven because it had
+ * consumers: a `buttonClass` cva, an `ActionButton` and an `IconButton`, used by
+ * `top-nav`, `error-state`, `not-found`, `failure-feedback` and `theme-toggle`.
+ * It was the same control as `components/ui/button.tsx` drawn differently —
+ * `font-medium` against `font-semibold`, a border always, a pill always,
+ * `opacity-50` where the real one uses disabled tokens — and its own size ladder
+ * that drifted out of step the moment the shipped one was retuned. All five
+ * files import the primitive now.
  *
  * `Panel`, `SectionLabel` and the two skeletons below are the same shape as
  * `Card`, `SectionLabel` and `Skeleton` in `src/components/ui` and should end up
@@ -60,84 +67,38 @@ export function Panel({
   )
 }
 
-export function SectionLabel({ className, ...props }: ComponentPropsWithoutRef<'p'>) {
-  return <p className={cn('text-micro uppercase text-ink-3', className)} {...props} />
-}
-
-/* ------------------------------------------------------------------- buttons */
-
-export const buttonClass = cva(
-  cn(
-    'relative inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-full border font-medium focus-ring',
-    transitionBase,
-    'active:translate-y-px disabled:pointer-events-none disabled:opacity-50',
-  ),
-  {
-    variants: {
-      variant: {
-        primary:
-          'border-transparent bg-accent text-accent-on shadow-card hover:bg-accent-hover hover:shadow-elevated',
-        secondary: 'border-edge-strong/60 bg-surface text-ink hover:bg-surface-2',
-        ghost: 'border-transparent bg-transparent text-ink-2 hover:bg-hover hover:text-ink',
-        subtle: 'border-transparent bg-surface-2 text-ink hover:bg-surface-inset',
-        brand:
-          'border-transparent bg-brand text-brand-on shadow-card hover:bg-brand-hover hover:shadow-elevated',
-        danger: 'border-transparent bg-danger-soft text-danger hover:brightness-[0.97]',
-        inverse: 'border-inverse-edge bg-inverse text-inverse-on hover:opacity-90',
-      },
-      size: {
-        sm: 'h-8 gap-1.5 px-3 text-caption',
-        md: 'h-10 px-4 text-label',
-        lg: 'h-12 px-6 text-body',
-      },
-    },
-    defaultVariants: { variant: 'primary', size: 'md' },
-  },
-)
-
-type ButtonVariants = VariantProps<typeof buttonClass>
-
-export function ActionButton({
+export function SectionLabel({
   className,
-  variant,
-  size,
-  type = 'button',
   ...props
-}: ComponentPropsWithRef<'button'> & ButtonVariants) {
-  return <button type={type} className={cn(buttonClass({ variant, size }), className)} {...props} />
-}
-
-export function IconButton({
-  className,
-  children,
-  type = 'button',
-  ...props
-}: ComponentPropsWithRef<'button'>) {
+}: ComponentPropsWithoutRef<'p'>) {
   return (
-    <button
-      type={type}
-      className={cn(
-        'inline-flex size-9 shrink-0 items-center justify-center rounded-full text-ink-3 focus-ring',
-        transitionBase,
-        'hover:bg-hover hover:text-ink active:bg-active disabled:pointer-events-none disabled:opacity-50',
-        className,
-      )}
+    <p
+      className={cn('text-micro uppercase text-ink-3', className)}
       {...props}
-    >
-      {children}
-    </button>
+    />
   )
 }
 
 /* ------------------------------------------------------------------ skeleton */
 
 /** A shimmer, not a blink — it reads as "loading", not as "broken". */
-export function Skeleton({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
+export function Skeleton({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'div'>) {
   return (
     <div
       aria-hidden
-      data-motion-safe="fade"
-      className={cn('relative overflow-hidden rounded-md bg-surface-inset', className)}
+      // `data-motion-safe` was never given a rule, so this block had no reduced
+      // motion path at all: the sweep froze at `-translate-x-full`, parked off
+      // the left edge, and the skeleton went perfectly still. The sweep is
+      // spatial and should stop; the block still has to say it is waiting, so
+      // it takes the same opacity pulse every other loop here falls back to.
+      data-motion-loop=""
+      className={cn(
+        'relative overflow-hidden rounded-md bg-surface-inset',
+        className,
+      )}
       {...props}
     >
       <span className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-surface/70 to-transparent" />
@@ -146,12 +107,21 @@ export function Skeleton({ className, ...props }: ComponentPropsWithoutRef<'div'
 }
 
 /** Text-shaped skeleton rows; widths taper so the block reads like a paragraph. */
-export function SkeletonLines({ lines = 3, className }: { lines?: number; className?: string }) {
+export function SkeletonLines({
+  lines = 3,
+  className,
+}: {
+  lines?: number
+  className?: string
+}) {
   const widths = ['w-11/12', 'w-full', 'w-9/12', 'w-10/12', 'w-7/12']
   return (
     <div className={cn('space-y-2.5', className)}>
       {Array.from({ length: lines }, (_, index) => (
-        <Skeleton key={index} className={cn('h-3', widths[index % widths.length])} />
+        <Skeleton
+          key={index}
+          className={cn('h-3', widths[index % widths.length])}
+        />
       ))}
     </div>
   )

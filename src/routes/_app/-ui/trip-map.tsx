@@ -109,7 +109,10 @@ interface Layout {
  * pin sits on its own island rather than a few pixels off it.
  */
 function inverseMercatorLat(y: number): number {
-  return (180 / Math.PI) * (2 * Math.atan(Math.exp((y * Math.PI) / 180)) - Math.PI / 2)
+  return (
+    (180 / Math.PI) *
+    (2 * Math.atan(Math.exp((y * Math.PI) / 180)) - Math.PI / 2)
+  )
 }
 
 function project(stops: ReadonlyArray<RouteStop>): Layout | null {
@@ -345,7 +348,7 @@ export function TripRouteSheet({
         )}
       </svg>
 
-      <p className="pointer-events-none absolute right-5 bottom-4 text-caption text-ink-4">
+      <p className="pointer-events-none absolute end-5 bottom-4 text-caption text-ink-4">
         Numbers are days
       </p>
     </section>

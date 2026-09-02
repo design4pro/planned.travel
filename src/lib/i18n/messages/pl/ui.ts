@@ -24,15 +24,18 @@ import type En from '../en/ui'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Wyczyść',
+  'action.clearFilters': 'Wyczyść filtry',
   'action.close': 'Zamknij',
   'action.dismiss': 'Ukryj',
   'action.remove': 'Usuń',
+  'action.keep': 'Zostaw',
   'action.undo': 'Cofnij',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Wczytywanie',
   'status.working': 'Przetwarzanie',
   'status.searching': 'Szukanie',
+  'status.removing': 'Usuwanie',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} jest w sieci',

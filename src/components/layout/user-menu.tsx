@@ -44,7 +44,8 @@ export function UserMenu({ session }: { session: ShellSession }) {
         headers: { 'content-type': 'application/json' },
         body: '{}',
       })
-      if (!response.ok) throw new Error(`Sign out failed with ${response.status}`)
+      if (!response.ok)
+        throw new Error(`Sign out failed with ${response.status}`)
       await router.invalidate()
       await router.navigate({ to: '/login', replace: true })
     } catch {
@@ -79,13 +80,17 @@ export function UserMenu({ session }: { session: ShellSession }) {
         <div className="flex items-center gap-3 px-2.5 py-2.5">
           <Avatar name={user.name} src={user.image} size="lg" />
           <div className="min-w-0">
-            <p className="truncate text-label font-semibold text-ink">{user.name}</p>
+            <p className="truncate text-label font-semibold text-ink">
+              {user.name}
+            </p>
             <p className="truncate text-caption text-ink-3">{user.email}</p>
           </div>
         </div>
 
         {organization ? (
-          <p className="px-2.5 pb-2 text-micro uppercase text-ink-4">{organization.name}</p>
+          <p className="px-2.5 pb-2 text-micro uppercase text-ink-4">
+            {organization.name}
+          </p>
         ) : null}
 
         <MenuSeparator />
@@ -153,7 +158,9 @@ export function UserMenu({ session }: { session: ShellSession }) {
           ) : (
             <LogOut aria-hidden data-mirror-rtl className="size-4" />
           )}
-          {signingOut ? t('shell.account.signingOut') : t('shell.account.signOut')}
+          {signingOut
+            ? t('shell.account.signingOut')
+            : t('shell.account.signOut')}
         </MenuDangerItem>
       </MenuContent>
     </MenuRoot>

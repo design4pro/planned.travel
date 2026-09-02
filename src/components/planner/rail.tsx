@@ -77,7 +77,9 @@ export function PlannerRail({
         className={cn('flex w-11 flex-col items-center py-2', className)}
       >
         <IconButton
-          icon={<CollapseIcon className={side === 'right' ? 'rotate-180' : ''} />}
+          icon={
+            <CollapseIcon className={side === 'right' ? 'rotate-180' : ''} />
+          }
           label={`Show the ${label.toLowerCase()} panel`}
           size="sm"
           variant="ghost"
@@ -118,9 +120,11 @@ export function PlannerRail({
           </span>
         )}
         <IconButton
-          icon={<CollapseIcon className={side === 'right' ? 'rotate-180' : ''} />}
+          icon={
+            <CollapseIcon className={side === 'right' ? 'rotate-180' : ''} />
+          }
           label={`Hide the ${label.toLowerCase()} panel`}
-          size="xs"
+          size="sm"
           variant="ghost"
           onClick={() => onCollapsedChange(true)}
         />

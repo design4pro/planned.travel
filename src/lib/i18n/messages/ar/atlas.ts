@@ -162,8 +162,8 @@ const messages = {
   'panel.stat.regionsCaption': 'ولايات ومقاطعات ومحافظات',
   'panel.stat.visits': 'الزيارات',
   'panel.stat.visitsCaption': 'كل وصول مسجَّل',
-  'panel.stat.trips': 'الرحلات',
-  'panel.stat.tripsCaption': 'الرحلات المنتهية فقط',
+  'panel.stat.trips': 'رحلاتك',
+  'panel.stat.tripsCaption': 'كل رحلة تشارك فيها',
   'panel.stat.cities': 'المدن',
   'panel.stat.citiesCaption': 'مدن بتَّ أو توقفت فيها',
   'panel.stat.days': 'أيام السفر',
@@ -385,12 +385,12 @@ const messages = {
 
   /* ------------------------------------------------- the card over the map */
   'card.trips': {
-    zero: 'رحلات',
-    one: 'رحلة',
-    two: 'رحلتان',
-    few: 'رحلات',
-    many: 'رحلة',
-    other: 'رحلة',
+    zero: 'رحلات مساحة العمل',
+    one: 'رحلة مساحة العمل',
+    two: 'رحلتا مساحة العمل',
+    few: 'رحلات مساحة العمل',
+    many: 'رحلة مساحة العمل',
+    other: 'رحلة مساحة العمل',
   },
   'card.visits': {
     zero: 'زيارات',

@@ -92,7 +92,9 @@ function isoDay(epochMs: number): string {
  */
 export function day(offset: number): string {
   if (!Number.isInteger(offset)) {
-    throw new TypeError(`seed anchor: day() takes whole days, received ${String(offset)}`)
+    throw new TypeError(
+      `seed anchor: day() takes whole days, received ${String(offset)}`,
+    )
   }
   return isoDay(ANCHOR_MIDNIGHT + offset * MS_PER_DAY)
 }
@@ -140,7 +142,9 @@ export const SEED_ANCHOR_YEAR = Number(SEED_ANCHOR_DAY.slice(0, 4))
 export function anchorYearDay(monthDay: string): string {
   const candidate = `${String(SEED_ANCHOR_YEAR)}-${monthDay}`
   if (isoDay(Date.parse(`${candidate}T00:00:00.000Z`)) !== candidate) {
-    throw new TypeError(`seed anchor: anchorYearDay() needs a real MM-DD, received ${monthDay}`)
+    throw new TypeError(
+      `seed anchor: anchorYearDay() needs a real MM-DD, received ${monthDay}`,
+    )
   }
   return candidate
 }
@@ -159,7 +163,9 @@ const FIXTURE_WINDOW_START = '2025-01-01'
  */
 export function historic(date: string): string {
   if (isoDay(Date.parse(`${date}T00:00:00.000Z`)) !== date) {
-    throw new TypeError(`seed anchor: historic() needs a real YYYY-MM-DD, received ${date}`)
+    throw new TypeError(
+      `seed anchor: historic() needs a real YYYY-MM-DD, received ${date}`,
+    )
   }
   if (date >= FIXTURE_WINDOW_START) {
     throw new RangeError(

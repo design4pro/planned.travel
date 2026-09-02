@@ -38,8 +38,10 @@ describe('mode and status vocabulary', () => {
   })
 
   it('labels an unknown token rather than rendering it raw', () => {
-    expect(modeLabel('hovercraft')).toBe('Leg')
-    expect(transportStatusLabel('maybe')).toBe('Leg')
+    expect(modeLabel('hovercraft')).toBe('modules.transports.mode.fallback')
+    expect(transportStatusLabel('maybe')).toBe(
+      'modules.transports.mode.fallback',
+    )
   })
 
   it('asks for codes only where a traveller would read one off a ticket', () => {
@@ -61,12 +63,17 @@ describe('mode and status vocabulary', () => {
 
   it('names each end of a leg the way the mode does', () => {
     expect(endpointLabels('flight')).toEqual({
-      from: 'From airport',
-      to: 'To airport',
+      from: 'modules.transports.end.fromAirport',
+      to: 'modules.transports.end.toAirport',
     })
     expect(endpointLabels('ferry').from).toContain('port')
-    expect(endpointLabels('train').from).toContain('station')
-    expect(endpointLabels('car')).toEqual({ from: 'From', to: 'To' })
+    expect(endpointLabels('train').from).toBe(
+      'modules.transports.end.fromStation',
+    )
+    expect(endpointLabels('car')).toEqual({
+      from: 'modules.transports.end.from',
+      to: 'modules.transports.end.to',
+    })
   })
 })
 
@@ -76,7 +83,11 @@ describe('suggestLegTitle', () => {
       suggestLegTitle(
         draft({ carrier: 'SAS', departureCode: 'lhr', arrivalCode: 'hnd' }),
       ),
-    ).toBe('SAS from LHR to HND')
+    ).toEqual({
+      key: 'modules.transports.title.fromTo',
+      params: { operator: 'SAS', from: 'LHR', to: 'HND' },
+      operatorKey: null,
+    })
   })
 
   it('falls back to the mode when there is no carrier', () => {
@@ -88,7 +99,11 @@ describe('suggestLegTitle', () => {
           arrivalName: 'Kyoto',
         }),
       ),
-    ).toBe('Train from Tokyo to Kyoto')
+    ).toEqual({
+      key: 'modules.transports.title.fromTo',
+      params: { from: 'Tokyo', to: 'Kyoto' },
+      operatorKey: 'modules.transports.mode.train',
+    })
   })
 
   it('prefers a code over a name', () => {
@@ -101,20 +116,32 @@ describe('suggestLegTitle', () => {
           arrivalName: 'Kyoto',
         }),
       ),
-    ).toBe('JR from TYO to Kyoto')
+    ).toEqual({
+      key: 'modules.transports.title.fromTo',
+      params: { operator: 'JR', from: 'TYO', to: 'Kyoto' },
+      operatorKey: null,
+    })
   })
 
   it('copes with only one end filled in', () => {
-    expect(suggestLegTitle(draft({ carrier: 'SAS', arrivalCode: 'HND' }))).toBe(
-      'SAS to HND',
-    )
+    expect(
+      suggestLegTitle(draft({ carrier: 'SAS', arrivalCode: 'HND' })),
+    ).toEqual({
+      key: 'modules.transports.title.to',
+      params: { operator: 'SAS', to: 'HND' },
+      operatorKey: null,
+    })
     expect(
       suggestLegTitle(draft({ carrier: 'SAS', departureCode: 'LHR' })),
-    ).toBe('SAS from LHR')
+    ).toEqual({
+      key: 'modules.transports.title.from',
+      params: { operator: 'SAS', from: 'LHR' },
+      operatorKey: null,
+    })
   })
 
   it('suggests nothing when neither end is known', () => {
-    expect(suggestLegTitle(draft({ carrier: 'SAS' }))).toBe('')
+    expect(suggestLegTitle(draft({ carrier: 'SAS' }))).toBeNull()
   })
 })
 
@@ -159,9 +186,9 @@ describe('validateLegDraft', () => {
   it('refuses a time with no date to sit on', () => {
     expect(
       validateLegDraft(draft({ departureTime: '08:00' })).departureDate,
-    ).toBe('A departure time needs the date it is on.')
+    ).toBe('modules.transports.error.departureNeedsDate')
     expect(validateLegDraft(draft({ arrivalTime: '08:00' })).arrivalDate).toBe(
-      'An arrival time needs the date it is on.',
+      'modules.transports.error.arrivalNeedsDate',
     )
   })
 
@@ -175,7 +202,7 @@ describe('validateLegDraft', () => {
           arrivalTime: '08:00',
         }),
       ).arrivalDate,
-    ).toBe('This leg arrives before it departs.')
+    ).toBe('modules.transports.error.arrivesBeforeDeparts')
   })
 
   it('does not let the ordering message hide a malformed date', () => {
@@ -185,7 +212,7 @@ describe('validateLegDraft', () => {
         arrivalDate: 'nonsense',
       }),
     )
-    expect(errors.arrivalDate).toBe('A date is written YYYY-MM-DD.')
+    expect(errors.arrivalDate).toBe('modules.transports.error.date')
   })
 
   it('rejects a station code that is not a code', () => {

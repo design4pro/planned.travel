@@ -339,6 +339,100 @@ const messages = {
   'role.admin': 'Yönetici',
   'role.member': 'Üye',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} gezi',
+    other: '{value} gezi',
+  },
+  'trips.count.favourites': {
+    one: '{value} favori',
+    other: '{value} favori',
+  },
+  'trips.count.archived': {
+    one: '{value} arşivde',
+    other: '{value} arşivde',
+  },
+  'trips.atLimit.body':
+    'Planın {trips} kapsıyor. Bitirdiğin birini arşivle ya da aynı anda daha fazlasını açık tutmak için üst plana geç.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Yeni günlük',
+  'newJourney.title': 'Bir günlük başlat',
+  'newJourney.description':
+    'Günlük, bir gezinin yazılı yüzüdür — tarih sırasıyla girdiler, hatırladığın fotoğraflar ve hava ile.',
+  'newJourney.titlePlaceholder': 'Kyoto’da iki hafta',
+  'newJourney.subtitle': 'Alt başlık',
+  'newJourney.subtitleHint': 'Başlığın altında tek satır, kapakta.',
+  'newJourney.subtitlePlaceholder': 'Tapınaklar, trenler ve fazlasıyla matcha',
+  'newJourney.trip': 'Bir geziye dayanarak',
+  'newJourney.tripHint': 'İsteğe bağlı — anlatıyı planına bağlar.',
+  'newJourney.tripNone': 'Bir geziye bağlı değil',
+  'newJourney.datesError': 'Bitiş tarihi başlangıçtan önce.',
+  'newJourney.submit': 'Günlük oluştur',
+  'newJourney.creating': 'Günlük oluşturuluyor',
+  'newJourney.created': 'Günlük başladı',
+  'newJourney.createdBody': 'Anlatıya başlamak için ilk girdiyi ekle.',
+  'newJourney.error': 'Günlük oluşturulamadı. Birazdan yeniden dene.',
+  'newCollection.trigger': 'Yeni derlem',
+  'newCollection.title': 'Bir derlem başlat',
+  'newCollection.description':
+    'Hangi geziye ait olduklarını bilmeden bulduğun yerler için bir yer.',
+  'newCollection.namePlaceholder': 'Şehri geçmeye değer bir kahve',
+  'newCollection.descriptionHint': 'Buraya ne girer, ne girmez.',
+  'newCollection.submit': 'Derlem oluştur',
+  'newCollection.creating': 'Derlem oluşturuluyor',
+  'newCollection.created': 'Derlem oluşturuldu',
+  'newCollection.createdBody': 'İçine yer kaydetmeye başla.',
+  'newCollection.error': 'Derlem oluşturulamadı. Birazdan yeniden dene.',
+
+  'newTrip.title': 'Yeni bir gezi başlat',
+  'newTrip.description':
+    'Bir başlık yeter. Tarihler gün gün planı kurar, gerisi sen bilene kadar bekleyebilir.',
+  'newTrip.name': 'Gezi adı',
+  'newTrip.namePlaceholder': 'Kiraz çiçeği mevsiminde Kyoto',
+  'newTrip.destination': 'Varış yeri',
+  'newTrip.destinationHint': 'Bir şehir, bir bölge ya da tüm güzergâh.',
+  'newTrip.destinationPlaceholder': 'Kyoto, Japonya',
+  'newTrip.departure': 'Gidiş',
+  'newTrip.return': 'Dönüş',
+  'newTrip.returnError': 'Dönüş tarihi gidişten önce.',
+  'newTrip.currency': 'Bütçe para birimi',
+  'newTrip.currencyHint': 'Bu gezinin her harcaması onunla toplanır.',
+  'newTrip.submit': 'Gezi oluştur',
+  'newTrip.creating': 'Gezi oluşturuluyor',
+  'newTrip.error': 'Gezi oluşturulamadı. Birazdan yeniden dene.',
+  'newTrip.created': 'Gezi oluşturuldu',
+  'newTrip.createdBody': 'Haritaya yer eklemeye başla.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Kim görebilir',
+  'visibility.private': 'Yalnızca ben',
+  'visibility.organization': 'Çalışma alanındaki herkes',
+  'visibility.public': 'Bağlantısı olan herkes',
+
+  'trips.error': 'Gezilerin yüklenemedi',
+  'trips.eyebrow': 'Çalışma alanı',
+  'trips.nothingPlanned': 'Henüz bir plan yok',
+  'trips.search': 'Gezi ara',
+  'trips.atLimit.title': 'Planının izin verdiği her geziyi doldurdun',
+  'trips.atLimit.action': 'Planları karşılaştır',
+  'trips.noMatch.title': 'Bu filtreye uyan bir şey yok',
+  'trips.noMatch.body':
+    'Başka bir aşama dene, aramayı temizle ya da arşive bak.',
+  'trips.noMatch.action': 'Filtreleri sıfırla',
+  'trips.empty.body':
+    'Bir gezi gün planını, haritayı, rezervasyonları, valiz listelerini ve parayı bir arada tutar. Birini başlat, gerisi gelir.',
+  'trips.next.title': 'Sıradaki bir yere',
+  'trips.next.body':
+    'Bir gezi başlat, planned.travel her tarih için bir gün kurar, kaydettiğin her şeye hazır.',
+  'trips.savedPlaces': 'Kayıtlı yerler',
+  'trips.filter.all': 'Tümü',
+  'trips.filter.favourites': 'Favoriler',
+  'trips.card.favourite': 'Favori',
+  'trips.card.noDestination': 'Varış yeri henüz belli değil',
+  'trips.card.noDates': 'Tarihler henüz belli değil',
+  'trips.card.startsIn': '{days} gün sonra',
+  'trips.card.days': '{days} g',
   'metric.trips': 'Geziler',
   'metric.places': 'Yerler',
   'metric.members': 'Üyeler',
@@ -363,6 +457,30 @@ const messages = {
     'Gönderilemedi. Yukarıdaki referans yine de bize ulaşıyor.',
   'error.root': 'Rotadan çıktık',
   'error.session': 'Çalışma alanı erişiminiz değişti',
+
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Sorun bildir',
+  'feedback.formTitle': 'Sorun bildir',
+  'feedback.messageLabel': 'Ne yanlış ya da ne değişmeli?',
+  'feedback.messagePlaceholder': 'Ne bekliyordunuz, onun yerine ne oldu?',
+  'feedback.emailLabel': 'E-posta adresi',
+  'feedback.emailPlaceholder': 'ali@example.com',
+  'feedback.isRequiredLabel': '(zorunlu)',
+  'feedback.submitButtonLabel': 'Bildirimi gönder',
+  'feedback.cancelButtonLabel': 'Vazgeç',
+  'feedback.confirmButtonLabel': 'Onayla',
+  'feedback.addScreenshotButtonLabel': 'Ekran görüntüsü ekle',
+  'feedback.removeScreenshotButtonLabel': 'Ekran görüntüsünü kaldır',
+  'feedback.highlightToolText': 'Vurgula',
+  'feedback.hideToolText': 'Gizle',
+  'feedback.successMessageText': 'Teşekkürler — bildiriminiz bize ulaştı.',
+  'feedback.errorEmptyMessageText':
+    'Önce bir cümle yazın — boş bir bildirim bize hiçbir şey anlatmaz.',
+  'feedback.errorTimeoutText':
+    'Bu çok uzun sürüyor ve bildirimin gönderildiğini doğrulayamıyoruz.',
+  'feedback.errorForbiddenText': 'Bu sayfanın bildirim gönderme izni yok.',
+  'feedback.errorGenericText':
+    'Gönderilemedi. Bağlantıyı ve araya bir reklam engelleyici girip girmediğini kontrol edin.',
 
   'notFound.eyebrow': 'Hata 404',
   'notFound.title': 'Bu sayfa haritada yok',

@@ -152,6 +152,9 @@ function UpNext({ data }: { data: DashboardPayload }) {
           size="lg"
           tone="brand"
           icon={<Compass />}
+          /* With no trips yet this invitation *is* the page, so it carries the
+             `h1` the hero carries once there is a trip to name. */
+          titleAs="h1"
           title={t('shell.dashboard.blank.title')}
           description={t('shell.dashboard.blank.body')}
           action={
@@ -192,6 +195,10 @@ function UpNext({ data }: { data: DashboardPayload }) {
           <img
             src={trip.coverImageUrl}
             alt=""
+            // The hero, so deliberately not lazy — and told so, because the
+            // trip cards below carry covers of their own and would otherwise
+            // be fetched at the same weight as the thing being waited for.
+            fetchPriority="high"
             className="absolute inset-0 -z-10 size-full object-cover opacity-40"
           />
           <span aria-hidden className="absolute inset-0 -z-10 bg-inverse/60" />
@@ -230,10 +237,15 @@ function UpNext({ data }: { data: DashboardPayload }) {
         <div className="min-w-0">
           {/* The one place on the product that is allowed to shout. A trip name
               is short, so the ceiling is set where a two-word title still fills
-              the slab rather than sitting politely inside it. */}
-          <h2 className="font-display text-[clamp(2.25rem,7.5vw,5.5rem)] leading-[0.9] font-extrabold tracking-tighter text-balance text-inverse-on">
+              the slab rather than sitting politely inside it.
+
+              It is the page's `h1` because it is the page's subject: this screen
+              has no title bar by design, so the outline would otherwise open at
+              `h2` and never name what the reader is looking at. `journey/$journeyId`
+              already reads this way. */}
+          <h1 className="font-display text-[clamp(2.25rem,7.5vw,5.5rem)] leading-[0.9] font-extrabold tracking-tighter text-balance text-inverse-on">
             {trip.title}
-          </h2>
+          </h1>
           {trip.destination === null ? null : (
             <p className="mt-4 text-subtitle text-inverse-muted">
               {trip.destination}
@@ -338,7 +350,7 @@ function HeroStat({
         className={
           compact
             ? 'font-display text-label leading-tight font-bold tabular-nums text-inverse-on'
-            : 'font-display text-[1.875rem] leading-none font-bold tracking-tighter tabular-nums text-inverse-on'
+            : 'font-display text-display leading-none font-bold tracking-tighter tabular-nums text-inverse-on'
         }
       >
         {value}
@@ -442,7 +454,9 @@ function YourTrips({ data }: { data: DashboardPayload }) {
   return (
     <Panel
       label={t('shell.dashboard.trips.label')}
-      count={trips.length === 0 ? undefined : formatNumber(trips.length, locale)}
+      count={
+        trips.length === 0 ? undefined : formatNumber(trips.length, locale)
+      }
       action={
         <Button asChild variant="ghost" size="sm" shape="pill">
           <Link to="/trips">
@@ -517,8 +531,7 @@ function NextBookings({
                     formatTimeRange(row.startTime, row.endTime, locale),
                   ]
                     .filter((part) => part !== null)
-                    .join(' · ') ||
-                    labelFor(BOOKING_TYPE_LABEL, row.type, t)}
+                    .join(' · ') || labelFor(BOOKING_TYPE_LABEL, row.type, t)}
                 </p>
               </div>
               <Badge

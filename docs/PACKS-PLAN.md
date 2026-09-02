@@ -267,8 +267,9 @@ się w 3010-3020; furtką jest `PLAYWRIGHT_ALLOW_ANY_PORT=1`, a `CI` jest zwolni
 podaje jedyne poprawne wywołanie ręczne: `pnpm exec vite dev --port 3010 --strictPort` - nigdy
 `pnpm dev`, który ma na sztywno `--port 3000`.
 
-Dwie konsekwencje warte zapisania. Po pierwsze: `package.json` jest zamrożony, więc `pnpm dev`
-zostaje z portem 3000 i reguła może żyć tylko w tym pliku konfiguracyjnym oraz w dokumentach.
+Dwie konsekwencje warte zapisania. Po pierwsze: `pnpm dev` zostaje z portem 3000, bo to port
+dewelopera, więc reguła o zakresie zarezerwowanym może żyć tylko w tym pliku konfiguracyjnym oraz
+w dokumentach.
 Po drugie: `scripts/seed/seed.mjs` **nie może** mieć takiego strażnika - to klient HTTP, więc
 każdy origin odpowiadający na `/api/dev/seed` wygląda dla niego tak samo. Skrypt sonduje listę
 portów i bierze pierwszy, który odpowie, a zarezerwowany zakres jest współdzielony między

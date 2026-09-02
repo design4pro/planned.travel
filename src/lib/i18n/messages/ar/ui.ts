@@ -32,15 +32,18 @@ import type { TranslationOf } from '../../types'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'مسح',
+  'action.clearFilters': 'أزل المرشِّحات',
   'action.close': 'إغلاق',
   'action.dismiss': 'تجاهل',
   'action.remove': 'إزالة',
+  'action.keep': 'أبقِه',
   'action.undo': 'تراجع',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'جارٍ التحميل',
   'status.working': 'جارٍ التنفيذ',
   'status.searching': 'جارٍ البحث',
+  'status.removing': 'جارٍ الإزالة',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} متصل الآن',

@@ -5,6 +5,7 @@ import { ErrorPanel } from '#/components/layout/error-state'
 import { GlassPanel, SectionLabel, Skeleton } from '#/components/ui'
 import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { loadPlanBoard } from './-server/plan'
 import { PlanScreen } from './-ui/plan-screen'
 import { useTripHeader } from '../../-ui/trip-header'
@@ -21,13 +22,19 @@ import { useTripHeader } from '../../-ui/trip-header'
 export const Route = createFileRoute('/_app/trips/$tripId/plan')({
   loader: ({ params }) => loadPlanBoard({ data: { tripId: params.tripId } }),
   pendingComponent: PlanPending,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="The plan did not load" />
-    </AppFrame>
-  ),
+  errorComponent: PlanError,
   component: PlanPage,
 })
+
+function PlanError({ error }: { error: Error }) {
+  const t = useTranslate()
+
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('trips.error.plan')} />
+    </AppFrame>
+  )
+}
 
 function PlanPage() {
   const payload = Route.useLoaderData()
@@ -49,6 +56,8 @@ function PlanPage() {
  * data lands.
  */
 function PlanPending() {
+  const t = useTranslate()
+
   return (
     <AppFrame bleed>
       <div
@@ -73,10 +82,10 @@ function PlanPending() {
         <GlassPanel
           radius="xl"
           padding="none"
-          className="absolute top-4 bottom-4 left-4 hidden w-86 flex-col overflow-hidden lg:flex"
+          className="absolute top-4 bottom-4 start-4 hidden w-86 flex-col overflow-hidden lg:flex"
         >
           <div className="border-b border-glass-edge px-3 py-2.5">
-            <SectionLabel as="h2">Itinerary</SectionLabel>
+            <SectionLabel as="h2">{t('trips.plan.title')}</SectionLabel>
           </div>
           <div className="flex flex-col gap-3 px-3 py-3">
             {[0, 1, 2, 3, 4, 5].map((index) => (
@@ -94,10 +103,10 @@ function PlanPending() {
         <GlassPanel
           radius="xl"
           padding="none"
-          className="absolute top-4 right-4 bottom-4 hidden w-82 flex-col overflow-hidden lg:flex"
+          className="absolute top-4 end-4 bottom-4 hidden w-82 flex-col overflow-hidden lg:flex"
         >
           <div className="border-b border-glass-edge px-3 py-2.5">
-            <SectionLabel as="h2">Places</SectionLabel>
+            <SectionLabel as="h2">{t('trips.plan.places')}</SectionLabel>
           </div>
           <div className="px-3 py-3">
             <Skeleton className="h-8 w-full" radius="md" />

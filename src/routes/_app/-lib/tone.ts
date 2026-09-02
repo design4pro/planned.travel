@@ -5,6 +5,8 @@
  * screen, in a trip card and in the itinerary rail — and that a new status can
  * never quietly fall back to grey in one screen and to red in another.
  */
+import type { MessageKey } from '#/lib/i18n'
+
 import {
   BedDouble,
   Bike,
@@ -37,6 +39,24 @@ export const TRIP_STATUS_TONE: Record<string, BadgeTone> = {
   active: 'success',
   completed: 'outline',
   archived: 'neutral',
+}
+
+/**
+ * The one place a trip status becomes a word.
+ *
+ * The sibling of `TRIP_STATUS_TONE`, and here for the same reason: the trips
+ * index, the tile and the dashboard all showed the status by running the stored
+ * column through `humaniseToken()`, which turns `booked` into `Booked` and is
+ * therefore English on all twenty-three screens. The six words already existed
+ * in `shell.tripStatus.*`; nothing was reading them.
+ */
+export const TRIP_STATUS_LABEL: Record<string, MessageKey> = {
+  draft: 'shell.tripStatus.draft',
+  planning: 'shell.tripStatus.planning',
+  booked: 'shell.tripStatus.booked',
+  active: 'shell.tripStatus.active',
+  completed: 'shell.tripStatus.completed',
+  archived: 'shell.tripStatus.archived',
 }
 
 export const RESERVATION_STATUS_TONE: Record<string, BadgeTone> = {

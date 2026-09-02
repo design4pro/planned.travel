@@ -8,57 +8,59 @@ import {
 } from 'lucide-react'
 
 import { Card, SectionLabel } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 import { Section, SectionIntro } from './section'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { LucideIcon } from 'lucide-react'
 
 type Panel = {
   readonly icon: LucideIcon
-  readonly label: string
-  readonly heading: string
-  readonly body: string
+  readonly label: MessageKey
+  readonly heading: MessageKey
+  readonly body: MessageKey
 }
 
 const PANELS: ReadonlyArray<Panel> = [
   {
     icon: Users,
-    label: 'Who it is for',
-    heading: 'The person who ends up making the spreadsheet',
-    body: 'Couples, families and groups of friends who want one plan everybody can see, instead of six screenshots, three group chats and a shared note nobody has opened since March.',
+    label: 'marketing.proof.who.label',
+    heading: 'marketing.proof.who.heading',
+    body: 'marketing.proof.who.body',
   },
   {
     icon: Ban,
-    label: 'What it is not',
-    heading: 'Not a booking site, and not for sale to one',
-    body: 'We take no commission, carry no adverts and place no affiliate links, so nothing on a page is quietly steering you towards a particular hotel. You pay us, which means we work for you.',
+    label: 'marketing.proof.not.label',
+    heading: 'marketing.proof.not.heading',
+    body: 'marketing.proof.not.body',
   },
   {
     icon: Cloud,
-    label: 'Where your things live',
-    heading: 'On Cloudflare, in your own workspace',
-    body: 'Trips sit in a database scoped to your workspace and files in our own object storage, both served from Cloudflare’s edge. Polar, our merchant of record, runs the checkout and issues the invoice, so your card number never reaches us.',
+    label: 'marketing.proof.where.label',
+    heading: 'marketing.proof.where.heading',
+    body: 'marketing.proof.where.body',
   },
 ]
 
 const PROMISES: ReadonlyArray<{
   readonly icon: LucideIcon
-  readonly title: string
-  readonly body: string
+  readonly title: MessageKey
+  readonly body: MessageKey
 }> = [
   {
     icon: ShieldOff,
-    title: 'No advertising, no third-party analytics',
-    body: 'Nothing on the page is measuring you for somebody else.',
+    title: 'marketing.proof.promise.ads.title',
+    body: 'marketing.proof.promise.ads.body',
   },
   {
     icon: HeartHandshake,
-    title: 'Your trips are never sold or rented',
-    body: 'Not to advertisers, not to travel companies, not to anyone.',
+    title: 'marketing.proof.promise.sold.title',
+    body: 'marketing.proof.promise.sold.body',
   },
   {
     icon: Download,
-    title: 'Leave whenever you like, with everything',
-    body: 'PDF itineraries, calendar files and your places as GeoJSON.',
+    title: 'marketing.proof.promise.leave.title',
+    body: 'marketing.proof.promise.leave.body',
   },
 ]
 
@@ -72,6 +74,7 @@ const PROMISES: ReadonlyArray<{
  * for anyway.
  */
 export function HonestProof() {
+  const t = useTranslate()
   return (
     <Section
       id="honest"
@@ -80,9 +83,9 @@ export function HonestProof() {
     >
       <SectionIntro
         headingId="honest-heading"
-        eyebrow="Straight answers"
-        title="No testimonials, because we have not earned any yet"
-        lede="planned.travel is new. Rather than invent a quote or borrow somebody’s logo, here is exactly what it does, who it is for, and what it will never do to you."
+        eyebrow={t('marketing.proof.eyebrow')}
+        title={t('marketing.proof.title')}
+        lede={t('marketing.proof.lede')}
       />
 
       <div className="mt-12 grid gap-4 lg:mt-14 lg:grid-cols-3">
@@ -95,13 +98,13 @@ export function HonestProof() {
               <panel.icon />
             </span>
             <div className="min-w-0">
-              <SectionLabel>{panel.label}</SectionLabel>
+              <SectionLabel>{t(panel.label)}</SectionLabel>
               <h3 className="mt-2 font-display text-subtitle font-bold tracking-tight text-balance text-ink">
-                {panel.heading}
+                {t(panel.heading)}
               </h3>
             </div>
             <p className="text-caption leading-relaxed text-ink-2">
-              {panel.body}
+              {t(panel.body)}
             </p>
           </Card>
         ))}
@@ -119,19 +122,17 @@ export function HonestProof() {
               </span>
               <span className="min-w-0">
                 <span className="block text-label font-semibold text-ink">
-                  {promise.title}
+                  {t(promise.title)}
                 </span>
                 <span className="mt-1 block text-caption leading-relaxed text-ink-3">
-                  {promise.body}
+                  {t(promise.body)}
                 </span>
               </span>
             </li>
           ))}
         </ul>
         <p className="mt-6 border-t border-edge-faint pt-5 text-caption leading-relaxed text-ink-3">
-          We hold no security certification today, and we will not imply one.
-          When planned.travel is audited against a standard, this is where we
-          will name the standard, the auditor and the date — and not before.
+          {t('marketing.proof.certification')}
         </p>
       </Card>
     </Section>

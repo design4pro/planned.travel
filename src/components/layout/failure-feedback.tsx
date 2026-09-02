@@ -1,8 +1,7 @@
 import { useState } from 'react'
 
-import { Textarea } from '#/components/ui'
+import { Button, Textarea } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
-import { ActionButton } from './kit'
 
 /**
  * "Tell us what happened", on the error panel and nowhere else.
@@ -12,9 +11,12 @@ import { ActionButton } from './kit'
  * attaches theirs to the exact Sentry event, so it arrives beside the error rather than in a
  * separate inbox nobody reads.
  *
- * Deliberately not the SDK's floating widget: this is offered at the moment something broke, to the
- * person it broke for, and a permanent tab on every screen is a different product decision that
- * nobody has taken.
+ * Not the SDK's floating widget, which is now mounted separately in
+ * `src/components/layout/feedback-widget.tsx`. The two answer different questions and neither
+ * replaces the other: the widget is offered on every screen, before anything has gone wrong, and
+ * carries a screenshot; this is offered at the moment something broke, to the person it broke for,
+ * and its whole value is `associatedEventId` - the sentence lands on the exact Sentry event rather
+ * than in a separate inbox somebody has to match up by hand.
  *
  * The SDK is loaded on submit rather than imported at the top. Importing it here would put the
  * feedback bundle in the graph of the error boundary, which the root route mounts on every page -
@@ -51,9 +53,9 @@ export function FailureFeedback({ reference }: { readonly reference: string }) {
 
   if (!open) {
     return (
-      <ActionButton variant="secondary" onClick={() => setOpen(true)}>
+      <Button variant="secondary" shape="pill" onClick={() => setOpen(true)}>
         {t('shell.error.feedback.open')}
-      </ActionButton>
+      </Button>
     )
   }
 
@@ -76,12 +78,13 @@ export function FailureFeedback({ reference }: { readonly reference: string }) {
           {t('shell.error.feedback.failed')}
         </p>
       ) : null}
-      <ActionButton
+      <Button
+        shape="pill"
         onClick={() => void send()}
         disabled={status === 'sending' || message.trim().length === 0}
       >
         {t('shell.error.feedback.send')}
-      </ActionButton>
+      </Button>
     </div>
   )
 }

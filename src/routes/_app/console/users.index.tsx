@@ -26,7 +26,7 @@ import {
   TableRow,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import {
   CONSOLE_USERS_DEFAULT_DIRECTION,
   CONSOLE_USERS_DEFAULT_SORT,
@@ -179,6 +179,7 @@ function useRowLayout(): RowLayout {
 }
 
 function ConsoleUsersPage() {
+  const locale = useLocale()
   const t = useTranslate()
   const data = Route.useLoaderData()
   const search = Route.useSearch()
@@ -241,7 +242,9 @@ function ConsoleUsersPage() {
     <div className="flex flex-col gap-6">
       <Panel
         label={t('console.nav.accounts')}
-        count={t('console.users.total', { total: formatNumber(data.total) })}
+        count={t('console.users.total', {
+          total: formatNumber(data.total, locale),
+        })}
         flush
         action={<CreateAccountButton onCreated={refresh} />}
         toolbar={
@@ -336,10 +339,10 @@ function ConsoleUsersPage() {
                     apply({ q: undefined, role: undefined, status: undefined })
                   }}
                 >
-                  {t('console.users.filter.clear')}
+                  {t('ui.action.clearFilters')}
                 </Button>
               ) : null}
-              <p className="w-full text-caption text-ink-3 sm:w-auto sm:pl-1">
+              <p className="w-full text-caption text-ink-3 sm:w-auto sm:ps-1">
                 {t('console.users.filter.hint')}
               </p>
             </div>
@@ -407,12 +410,12 @@ function ConsoleUsersPage() {
               title={t('console.users.pastEnd.title')}
               description={t('console.users.pastEnd.body', {
                 count: data.total,
-                total: formatNumber(data.total),
+                total: formatNumber(data.total, locale),
                 pages: t('console.users.pastEnd.pages', {
                   count: pageCount,
-                  pages: formatNumber(pageCount),
+                  pages: formatNumber(pageCount, locale),
                 }),
-                page: formatNumber(data.page),
+                page: formatNumber(data.page, locale),
               })}
               action={
                 <Button
@@ -457,7 +460,7 @@ function ConsoleUsersPage() {
                       })
                     }}
                   >
-                    {t('console.users.filter.clear')}
+                    {t('ui.action.clearFilters')}
                   </Button>
                 ) : undefined
               }
@@ -492,6 +495,7 @@ function UsersTable({
   onSort,
   onChanged,
 }: TableProps) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <div className="hidden md:block">
@@ -583,9 +587,9 @@ function UsersTable({
                 />
               </TableCell>
               <TableCell muted className="tabular-nums">
-                {formatDate(account.createdAt) ?? '—'}
+                {formatDate(account.createdAt, locale) ?? '—'}
               </TableCell>
-              <TableCell className="pr-1 text-right">
+              <TableCell className="pe-1 text-end">
                 <UserActions
                   user={account}
                   self={account.id === selfId}
@@ -616,6 +620,7 @@ function UsersCards({
   readonly selfId: string
   readonly onChanged: () => Promise<void>
 }) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <ul className="flex flex-col md:hidden">
@@ -657,9 +662,9 @@ function UsersCards({
               banned={account.banned}
               banExpiresAt={account.banExpiresAt}
             />
-            <span className="ml-auto text-caption tabular-nums text-ink-4">
+            <span className="ms-auto text-caption tabular-nums text-ink-4">
               {t('console.users.joined', {
-                date: formatDate(account.createdAt) ?? '—',
+                date: formatDate(account.createdAt, locale) ?? '—',
               })}
             </span>
           </div>

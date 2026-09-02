@@ -16,7 +16,7 @@ import {
   orderWip,
   summariseFleet,
 } from './-lib/sandcastle'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadSandcastleRegistry } from './-server/sandcastle'
 import { formatNumber } from '../-lib/format'
 import { Panel, PanelRow, RowsSkeleton, StatsSkeleton } from '../-ui/scaffold'
@@ -106,6 +106,7 @@ function SandcastlePage() {
 }
 
 function Fleet({ state }: { state: RegistryState }) {
+  const locale = useLocale()
   const t = useTranslate()
   const summary = summariseFleet(state)
 
@@ -116,7 +117,7 @@ function Fleet({ state }: { state: RegistryState }) {
           tone="inverse"
           icon={<Radio />}
           label={t('console.runs.stat.live')}
-          value={formatNumber(summary.liveRuns)}
+          value={formatNumber(summary.liveRuns, locale)}
           caption={
             summary.liveRuns === 0
               ? t('console.runs.stat.live.none')
@@ -126,13 +127,13 @@ function Fleet({ state }: { state: RegistryState }) {
         <StatCard
           icon={<ListChecks />}
           label={t('console.runs.stat.issues')}
-          value={formatNumber(summary.issuesHeld)}
+          value={formatNumber(summary.issuesHeld, locale)}
           caption={t('console.runs.stat.issues.caption')}
         />
         <StatCard
           icon={<GitBranch />}
           label={t('console.runs.stat.orphans')}
-          value={formatNumber(summary.orphanedBranches)}
+          value={formatNumber(summary.orphanedBranches, locale)}
           valueTone={summary.orphanedBranches === 0 ? 'default' : 'warning'}
           caption={
             summary.orphanedBranches === 0
@@ -159,11 +160,12 @@ function LiveRuns({
   runs: ReadonlyArray<RunView>
   now: number
 }) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <Panel
       label={t('console.runs.stat.live')}
-      count={formatNumber(runs.length)}
+      count={formatNumber(runs.length, locale)}
       flush
     >
       {runs.length === 0 ? (
@@ -216,7 +218,7 @@ function LiveRuns({
                       })}
                 </span>
 
-                <span className="ml-auto shrink-0 text-caption tabular-nums text-ink-4">
+                <span className="ms-auto shrink-0 text-caption tabular-nums text-ink-4">
                   {t('console.runs.uptime', {
                     elapsed: formatElapsed(now - run.startedAt),
                     lease: formatLease(t, run.expiresAt, now),
@@ -238,13 +240,14 @@ function WorkInProgress({
   wip: ReadonlyArray<WipView>
   now: number
 }) {
+  const locale = useLocale()
   const t = useTranslate()
   const ordered = orderWip(wip)
 
   return (
     <Panel
       label={t('console.runs.wip.label')}
-      count={formatNumber(ordered.length)}
+      count={formatNumber(ordered.length, locale)}
       flush
     >
       {ordered.length === 0 ? (
@@ -277,10 +280,10 @@ function WorkInProgress({
                     {entry.branch}
                   </span>
                 </span>
-                <span className="ml-auto shrink-0 text-caption tabular-nums text-ink-4">
+                <span className="ms-auto shrink-0 text-caption tabular-nums text-ink-4">
                   {t('console.runs.wip.meta', {
                     count: entry.commits,
-                    commits: formatNumber(entry.commits),
+                    commits: formatNumber(entry.commits, locale),
                     elapsed: formatElapsed(now - entry.updatedAt),
                   })}
                 </span>
@@ -300,11 +303,12 @@ function RecentRuns({
   runs: ReadonlyArray<RunView>
   now: number
 }) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <Panel
       label={t('console.runs.recent.label')}
-      count={formatNumber(runs.length)}
+      count={formatNumber(runs.length, locale)}
       flush
     >
       {runs.length === 0 ? (
@@ -337,7 +341,7 @@ function RecentRuns({
                     </span>
                   )}
                 </span>
-                <span className="ml-auto shrink-0 text-caption tabular-nums text-ink-4">
+                <span className="ms-auto shrink-0 text-caption tabular-nums text-ink-4">
                   {t('console.runs.ago', {
                     elapsed: formatElapsed(now - run.lastHeartbeatAt),
                   })}

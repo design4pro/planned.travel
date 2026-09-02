@@ -23,16 +23,22 @@
  */
 
 import { formatDate } from '#/lib/format'
+import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
+
+import type { Locale } from '#/lib/i18n/locales'
 
 /** `YYYY-MM-DDTHH:mm` is the shortest prefix this can read. */
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/
 
 /** `25 Aug 2026, 14:05 UTC`, or an em dash for anything that is not an instant. */
-export function formatConsoleInstant(value: string | null): string {
+export function formatConsoleInstant(
+  value: string | null,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
   if (value === null || !ISO_INSTANT.test(value)) {
     return '—'
   }
-  const day = formatDate(value)
+  const day = formatDate(value, locale)
   if (day === null) {
     return '—'
   }

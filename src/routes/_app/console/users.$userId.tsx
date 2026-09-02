@@ -50,7 +50,7 @@ import {
   TableRow,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadConsoleAccount } from './-server/users'
 import { RevokeSessionButton } from './-ui/session-actions'
 import { UserActions } from './-ui/user-actions'
@@ -131,6 +131,7 @@ function AccountError({ error }: ErrorComponentProps) {
 }
 
 function ConsoleAccountPage() {
+  const locale = useLocale()
   const t = useTranslate()
   const { account, sessions, truncated, context } = Route.useLoaderData()
   const { shell } = Route.useRouteContext()
@@ -162,7 +163,7 @@ function ConsoleAccountPage() {
         variant="ghost"
         size="sm"
         icon={<ArrowLeft />}
-        className="-ml-3 self-start"
+        className="-ms-3 self-start"
       >
         <Link to="/console/users">{t('console.shell.allAccounts')}</Link>
       </Button>
@@ -212,7 +213,7 @@ function ConsoleAccountPage() {
               label: t('console.users.column.joined'),
               value: (
                 <span className="tabular-nums">
-                  {formatDate(account.createdAt) ?? '—'}
+                  {formatDate(account.createdAt, locale) ?? '—'}
                 </span>
               ),
             },
@@ -220,7 +221,7 @@ function ConsoleAccountPage() {
               label: t('console.account.meta.lastChange'),
               value: (
                 <span className="tabular-nums">
-                  {formatDate(account.updatedAt) ?? '—'}
+                  {formatDate(account.updatedAt, locale) ?? '—'}
                 </span>
               ),
             },
@@ -249,7 +250,7 @@ function ConsoleAccountPage() {
             ? t('console.account.banned.permanent')
             : t('console.account.banned.until', {
                 date:
-                  formatDate(account.banExpiresAt) ??
+                  formatDate(account.banExpiresAt, locale) ??
                   t('console.account.banned.untilUnknown'),
               })}
         </Alert>
@@ -300,18 +301,21 @@ function WorkspacesPanel({
   readonly memberships: ReadonlyArray<ConsoleWorkspace>
   readonly truncated: boolean
 }) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <Panel
       label={t('console.account.workspaces.label')}
       count={
-        memberships.length === 0 ? undefined : formatNumber(memberships.length)
+        memberships.length === 0
+          ? undefined
+          : formatNumber(memberships.length, locale)
       }
       toolbar={
         truncated ? (
           <p className="rounded-md bg-surface-2 px-3 py-2 text-caption text-ink-3">
             {t('console.account.workspaces.truncated', {
-              listed: formatNumber(memberships.length),
+              listed: formatNumber(memberships.length, locale),
             })}
           </p>
         ) : undefined
@@ -375,7 +379,7 @@ function WorkspacesPanel({
                       {describePlan(t, membership.plan)}
                     </TableCell>
                     <TableCell muted className="tabular-nums">
-                      {formatDate(membership.joinedAt) ?? '—'}
+                      {formatDate(membership.joinedAt, locale) ?? '—'}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -407,9 +411,9 @@ function WorkspacesPanel({
                   <span className="text-caption text-ink-3">
                     {describePlan(t, membership.plan)}
                   </span>
-                  <span className="ml-auto text-caption tabular-nums text-ink-4">
+                  <span className="ms-auto text-caption tabular-nums text-ink-4">
                     {t('console.users.joined', {
-                      date: formatDate(membership.joinedAt) ?? '—',
+                      date: formatDate(membership.joinedAt, locale) ?? '—',
                     })}
                   </span>
                 </div>
@@ -438,6 +442,7 @@ function SubscriptionPanel({
   readonly subscriptions: ReadonlyArray<ConsoleSubscription>
   readonly owns: boolean
 }) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <Panel
@@ -485,8 +490,8 @@ function SubscriptionPanel({
                 {
                   label: t('console.account.subscription.seats'),
                   value: t('console.account.subscription.seatsValue', {
-                    used: formatNumber(subscription.seats),
-                    limit: formatNumber(subscription.seatLimit),
+                    used: formatNumber(subscription.seats, locale),
+                    limit: formatNumber(subscription.seatLimit, locale),
                   }),
                 },
                 {
@@ -497,6 +502,7 @@ function SubscriptionPanel({
                   value:
                     formatDate(
                       subscription.trialEndsAt ?? subscription.currentPeriodEnd,
+                      locale,
                     ) ?? '—',
                 },
               ]}
@@ -528,11 +534,14 @@ function AuditPanel({
   readonly entries: ReadonlyArray<ConsoleAuditEntry>
   readonly truncated: boolean
 }) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <Panel
       label={t('console.account.audit.label')}
-      count={entries.length === 0 ? undefined : formatNumber(entries.length)}
+      count={
+        entries.length === 0 ? undefined : formatNumber(entries.length, locale)
+      }
       toolbar={
         truncated ? (
           <p className="rounded-md bg-surface-2 px-3 py-2 text-caption text-ink-3">
@@ -555,7 +564,7 @@ function AuditPanel({
               the last dot so the thread ends at the oldest entry rather than trailing past it. */}
           <span
             aria-hidden
-            className="absolute top-2 bottom-2 left-1 w-px bg-edge-faint"
+            className="absolute top-2 bottom-2 start-1 w-px bg-edge-faint"
           />
           {entries.map((entry) => {
             const actor = describeAuditActor(
@@ -689,11 +698,16 @@ function SessionsPanel({
   readonly truncated: boolean
   readonly onChanged: () => Promise<void>
 }) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <Panel
       label={t('console.account.sessions.label')}
-      count={sessions.length === 0 ? undefined : formatNumber(sessions.length)}
+      count={
+        sessions.length === 0
+          ? undefined
+          : formatNumber(sessions.length, locale)
+      }
       flush
       toolbar={
         truncated ? (
@@ -767,7 +781,7 @@ function SessionsPanel({
                     <TableCell muted className="tabular-nums">
                       {formatConsoleInstant(session.expiresAt)}
                     </TableCell>
-                    <TableCell className="pr-1 text-right">
+                    <TableCell className="pe-1 text-end">
                       <RevokeSessionButton
                         userId={userId}
                         sessionId={session.id}

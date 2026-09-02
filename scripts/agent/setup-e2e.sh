@@ -24,9 +24,9 @@
 #   VITE_POLAR_PRODUCT_{SOLO,CREW}_{MONTHLY,YEARLY}
 # SANDBOX organization credentials only - see the note at the write step below.
 # The download is skipped when .e2e-tiles/basemap.pmtiles already exists.
-# .e2e-tiles is a bind-mount of .sandcastle/sandbox/data/e2e-tiles — shared by
-# every sandbox and outliving the worktree — so the first run to miss the cache
-# fills it for all the others (see .sandcastle/sandbox/index.ts).
+# .e2e-tiles is per checkout; under cezar the setup step seeds it from the
+# operator's cache (scripts/agent/fetch-basemap.sh), so a worktree rarely
+# downloads.
 #
 # The dev server runs on :3010 — the reserved automation range playwright.config.ts
 # insists on outside CI — and inside the container's own network namespace, so
@@ -159,8 +159,13 @@ echo "==> dev server on :${PORT}"
 # is exactly what the seed and Playwright need. nohup + the pid file let a
 # caller that is itself a short-lived step (cez-setup.sh) leave the server
 # running and let cez-handback.sh stop it later.
+# 4 GB of heap: the default (~2 GB on this node) is what a dev server serving SSR + the optimizer
+# to four browsers for twenty minutes runs out of - dev-server.log ending in `JavaScript heap out
+# of memory` and a rung of ECONNREFUSED specs (run 20260830-3, issue #117, attempt 3). The ladder's
+# probe now reports that as infra rather than as a red branch; this makes it rare as well.
 mkdir -p .agent
-nohup pnpm exec vite dev --port "${PORT}" --strictPort --host 127.0.0.1 > dev-server.log 2>&1 &
+NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" \
+  nohup pnpm exec vite dev --port "${PORT}" --strictPort --host 127.0.0.1 > dev-server.log 2>&1 &
 echo $! > .agent/dev-server.pid
 for _ in $(seq 1 60); do
   if curl --silent --fail --output /dev/null "${BASE_URL}/"; then

@@ -35,7 +35,10 @@ const ID_TIME_LENGTH = 9
 const ID_LENGTH = 25
 
 /** Mints `count` ids in a section, the way the seed does. */
-async function mint(section: string, count: number): Promise<ReadonlyArray<string>> {
+async function mint(
+  section: string,
+  count: number,
+): Promise<ReadonlyArray<string>> {
   const fixture = fixtureRows()
   return await fixture.run(async () => {
     fixture.section(section)
@@ -90,9 +93,9 @@ describe('the fixture identifier seam', () => {
   it('refuses to install a second source inside the first', async () => {
     const outer = fixtureRows()
     const inner = fixtureRows()
-    await expect(outer.run(() => inner.run(() => Promise.resolve(1)))).rejects.toThrow(
-      /do not nest/,
-    )
+    await expect(
+      outer.run(() => inner.run(() => Promise.resolve(1))),
+    ).rejects.toThrow(/do not nest/)
     expect(newId()).not.toBe(newId())
   })
 })
@@ -122,7 +125,11 @@ describe('the values the fixture writes', () => {
     const fixture = fixtureRows()
     const ids = await fixture.run(async () => {
       const written: Array<string> = []
-      for (const section of ['workspace', 'trip/lisbon-long-weekend', 'atlas']) {
+      for (const section of [
+        'workspace',
+        'trip/lisbon-long-weekend',
+        'atlas',
+      ]) {
         fixture.section(section)
         written.push(newId(), newId(), newId())
       }
@@ -137,9 +144,13 @@ describe('the values the fixture writes', () => {
     const ids = await mint('trip/tokyo-and-kyoto', 6)
     // The prefix is the instant, and the row's `created_at` reads the same counter — which is why
     // `desc(updatedAt)` has no ties to leave to SQLite.
-    const instants = ids.map((id) => Number.parseInt(id.slice(0, ID_TIME_LENGTH), 36))
+    const instants = ids.map((id) =>
+      Number.parseInt(id.slice(0, ID_TIME_LENGTH), 36),
+    )
     const anchor = SEED_ANCHOR_INSTANT.getTime()
-    expect(instants.map((at) => at - (instants[0] ?? 0))).toEqual([0, 1, 2, 3, 4, 5])
+    expect(instants.map((at) => at - (instants[0] ?? 0))).toEqual([
+      0, 1, 2, 3, 4, 5,
+    ])
     expect(instants[0]).toBeGreaterThan(anchor)
     // Inside the hour after the anchor, so every fixture id keeps the same nine-character prefix.
     expect(instants.at(-1)).toBeLessThan(anchor + 3_600_000)
@@ -151,18 +162,25 @@ describe('the values the fixture writes', () => {
 
     expect(joined.map((row) => row.userId)).toEqual(roster)
     // `/settings` prints the owner's as "Member since": on the anchor, every run, on every clone.
-    expect(joined.map((row) => row.joinedAt.getTime() - SEED_ANCHOR_INSTANT.getTime())).toEqual([
-      0, 1, 2, 3,
-    ])
+    expect(
+      joined.map(
+        (row) => row.joinedAt.getTime() - SEED_ANCHOR_INSTANT.getTime(),
+      ),
+    ).toEqual([0, 1, 2, 3])
     // `listMemberProfiles` orders the roster by this column alone, so a shared instant would hand
     // the order of the members table to SQLite.
-    expect(new Set(joined.map((row) => row.joinedAt.getTime())).size).toBe(roster.length)
+    expect(new Set(joined.map((row) => row.joinedAt.getTime())).size).toBe(
+      roster.length,
+    )
   })
 
   it('sorts every fixture row before anything created after the seed', async () => {
     const [fixtureRow] = await mint('usage', 1)
     // The anchor is a fixed day in the past, so a row a reader adds later always sorts after it.
     expect(SEED_ANCHOR_INSTANT.getTime()).toBeLessThan(Date.now())
-    expect(fixtureRow < newId(), 'a fixture id must sort before a freshly minted one').toBe(true)
+    expect(
+      fixtureRow < newId(),
+      'a fixture id must sort before a freshly minted one',
+    ).toBe(true)
   })
 })

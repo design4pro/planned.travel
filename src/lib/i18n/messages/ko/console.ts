@@ -130,7 +130,6 @@ const messages = {
   'users.filter.role.curator': '큐레이터',
   'users.filter.status.label': '계정 상태로 거르기',
   'users.filter.status.any': '모든 상태',
-  'users.filter.clear': '필터 지우기',
   'users.filter.hint': '역할이나 상태로 좁힐 수 있습니다 — 한 번에 하나씩.',
   'users.column.account': '계정',
   'users.column.role': '플랫폼 역할',

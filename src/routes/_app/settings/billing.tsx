@@ -35,15 +35,14 @@ import {
   TableRow,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import {
   BILLING_INTERVALS,
   FREE_PLAN,
   PLANS,
   PLAN_LIST,
   QUOTA_KEYS,
-  QUOTA_LABELS,
   clampSeats,
-  formatPlanAmount,
   formatQuota,
   formatQuotaUsage,
   isUnlimited,
@@ -51,7 +50,8 @@ import {
   planById,
   yearlySavingPercent,
 } from '#/lib/plans'
-import { formatDate, formatMoneyMinor } from '../-lib/format'
+import { formatDate, formatMoneyMinor, formatPrice } from '../-lib/format'
+import { PLAN_COPY, QUOTA_LABEL_KEYS } from '#/lib/plan-copy'
 import {
   downloadInvoice,
   loadBilling,
@@ -61,6 +61,7 @@ import {
 import { SettingsSection } from '../-ui/settings-nav'
 
 import type { BadgeTone } from '#/components/ui'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { BillingInterval, BillingState, Plan, QuotaKey } from '#/lib/plans'
 import type { InvoiceSummary } from '#/server/billing/checkout'
 import type { Entitlements, QuotaState } from '#/server/billing/types'
@@ -104,11 +105,14 @@ export const Route = createFileRoute('/_app/settings/billing')({
   }),
   loader: () => loadBilling(),
   pendingComponent: BillingPending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel error={error} title="Billing did not load" />
-  ),
+  errorComponent: BillingError,
   component: BillingPage,
 })
+
+function BillingError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return <ErrorPanel error={error} title={t('settings.billing.error')} />
+}
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -129,33 +133,34 @@ const MAX_FAILURE_MESSAGE = 200
  * is a diagnostic, not a sentence, so anything that opens like a structure or
  * runs past a readable length is replaced rather than pasted into the alert.
  */
-function messageOf(cause: unknown): string {
+function messageOf(t: Translate, cause: unknown): string {
   const message = cause instanceof Error ? cause.message.trim() : ''
   const readable =
     message !== '' &&
     message.length <= MAX_FAILURE_MESSAGE &&
     !message.startsWith('[') &&
     !message.startsWith('{')
-  return readable
-    ? message
-    : 'The billing provider rejected that request. Try again in a moment.'
+  return readable ? message : t('settings.billing.provider.rejected')
 }
 
 const STATUS_BADGES: {
   readonly [K in BillingState]: {
-    label: string
+    label: MessageKey
     tone: 'success' | 'warning' | 'danger' | 'neutral' | 'brand'
   }
 } = {
-  none: { label: 'No subscription', tone: 'neutral' },
-  trialing: { label: 'Trial', tone: 'brand' },
-  active: { label: 'Active', tone: 'success' },
-  past_due: { label: 'Payment failed', tone: 'warning' },
-  unpaid: { label: 'Unpaid', tone: 'danger' },
-  paused: { label: 'Paused', tone: 'neutral' },
-  canceled: { label: 'Cancelled', tone: 'neutral' },
-  incomplete: { label: 'Incomplete', tone: 'warning' },
-  incomplete_expired: { label: 'Expired', tone: 'neutral' },
+  none: { label: 'settings.billing.status.none', tone: 'neutral' },
+  trialing: { label: 'settings.billing.status.trialing', tone: 'brand' },
+  active: { label: 'settings.billing.status.active', tone: 'success' },
+  past_due: { label: 'settings.billing.status.past_due', tone: 'warning' },
+  unpaid: { label: 'settings.billing.status.unpaid', tone: 'danger' },
+  paused: { label: 'settings.billing.status.paused', tone: 'neutral' },
+  canceled: { label: 'settings.billing.status.canceled', tone: 'neutral' },
+  incomplete: { label: 'settings.billing.status.incomplete', tone: 'warning' },
+  incomplete_expired: {
+    label: 'settings.billing.status.incomplete_expired',
+    tone: 'neutral',
+  },
 }
 
 /** Days from now until an ISO instant, floored. Negative once it has passed. */
@@ -175,42 +180,51 @@ function daysFromNow(iso: string | null): number | null {
  * the charge lands — not an invitation to "add a card later" that the customer
  * has already been through.
  */
-function renewalLine(state: Entitlements): string {
-  const on = formatDate(state.currentPeriodEnd)
+function renewalLine(
+  t: Translate,
+  locale: Locale,
+  state: Entitlements,
+): string {
+  const on = formatDate(state.currentPeriodEnd, locale)
 
   if (state.trialing) {
     const left = daysFromNow(state.trialEndsAt)
     if (left !== null && left >= 0) {
       return left === 0
-        ? 'Your trial ends today. The first charge follows unless you cancel before then.'
-        : `Your trial ends in ${left} ${left === 1 ? 'day' : 'days'}, and the first charge follows unless you cancel before then.`
+        ? t('settings.billing.renewal.trialEndsToday')
+        : t('settings.billing.renewal.trialEndsIn', {
+            count: left,
+            value: left,
+          })
     }
-    return 'Your trial has ended.'
+    return t('settings.billing.renewal.trialEnded')
   }
 
   if (state.cancelAtPeriodEnd) {
     return on === null
-      ? 'This plan is set to end and will not renew.'
-      : `This plan ends on ${on}. Nothing is deleted — the paid modules simply lock.`
+      ? t('settings.billing.renewal.endsNoDate')
+      : t('settings.billing.renewal.endsOn', { date: on })
   }
 
   switch (state.status) {
     case 'past_due':
-      return 'The last payment did not go through. Update your card in the billing portal to avoid losing the paid modules.'
+      return t('settings.billing.renewal.pastDue')
     case 'unpaid':
-      return 'This subscription is unpaid and the paid modules are locked.'
+      return t('settings.billing.renewal.unpaid')
     case 'paused':
-      return 'This subscription is paused. Resume it whenever you are ready to travel again.'
+      return t('settings.billing.renewal.paused')
     case 'canceled':
     case 'incomplete_expired':
-      return 'Choose a plan below to unlock reservations, the journal and offline maps again.'
+      return t('settings.billing.renewal.lapsed')
     case 'incomplete':
-      return 'Polar has not confirmed this payment yet.'
+      return t('settings.billing.renewal.incomplete')
     case 'none':
-      return 'Two trips at a time, on the house. Upgrade whenever you outgrow it.'
+      return t('settings.billing.renewal.free')
     case 'active':
     case 'trialing':
-      return on === null ? 'Renews automatically.' : `Renews on ${on}.`
+      return on === null
+        ? t('settings.billing.renewal.auto')
+        : t('settings.billing.renewal.renewsOn', { date: on })
   }
 }
 
@@ -235,27 +249,43 @@ function meterTone(quota: QuotaState): 'brand' | 'warning' | 'danger' {
   return quota.ratio >= 0.8 ? 'warning' : 'brand'
 }
 
-const QUOTA_NOUN: Record<QuotaKey, string> = {
-  seats: 'seat',
-  trips: 'trip slot',
-  storageBytes: 'byte',
+/**
+ * Which key states each quota's overage and exhaustion.
+ *
+ * Storage is measured, so its sentences take a formatted size; seats and trips
+ * are counted, so theirs are plural messages and the count picks the branch. The
+ * two shapes cannot share one key, which is why the catalogue carries both.
+ */
+const QUOTA_OVER: Record<QuotaKey, MessageKey> = {
+  seats: 'settings.billing.quota.over.seats',
+  trips: 'settings.billing.quota.over.trips',
+  storageBytes: 'settings.billing.quota.over.storage',
 }
 
-function quotaHint(key: QuotaKey, quota: QuotaState): string {
-  if (isUnlimited(quota.limit)) return 'No limit on this plan'
+const QUOTA_EXHAUSTED: Record<QuotaKey, MessageKey> = {
+  seats: 'settings.billing.quota.exhausted.seats',
+  trips: 'settings.billing.quota.exhausted.trips',
+  storageBytes: 'settings.billing.quota.exhausted.storage',
+}
+
+function quotaHint(t: Translate, key: QuotaKey, quota: QuotaState): string {
+  if (isUnlimited(quota.limit)) return t('settings.billing.quota.noLimit')
   // Being *over* a limit and being exactly *at* one are different situations, and
   // a workspace that inherited members from a richer plan is genuinely over.
   // Telling it "you have used every seat" understated the problem by three seats.
   if (quota.used > quota.limit) {
     const over = quota.used - quota.limit
-    return key === 'storageBytes'
-      ? `${formatQuotaUsage(key, over)} over this plan's limit`
-      : `${over} ${QUOTA_NOUN[key]}${over === 1 ? '' : 's'} over this plan's limit`
+    return t(QUOTA_OVER[key], {
+      count: over,
+      value: formatQuotaUsage(key, over),
+    })
   }
   if (quota.remaining === null || quota.remaining === 0) {
-    return `You have used every ${QUOTA_NOUN[key]} on this plan`
+    return t(QUOTA_EXHAUSTED[key])
   }
-  return `${formatQuotaUsage(key, quota.remaining)} left`
+  return t('settings.billing.quota.left', {
+    value: formatQuotaUsage(key, quota.remaining),
+  })
 }
 
 /* --------------------------------------------------------------------- page */
@@ -272,6 +302,7 @@ interface Failure {
 const PORTAL_KEY = 'portal'
 
 function BillingPage() {
+  const t = useTranslate()
   const data = Route.useLoaderData()
   const search = Route.useSearch()
   const router = useRouter()
@@ -309,7 +340,7 @@ function BillingPage() {
       window.location.assign(url)
     } catch (cause) {
       setPending(null)
-      setFailure({ scope, message: messageOf(cause) })
+      setFailure({ scope, message: messageOf(t, cause) })
     }
   }
 
@@ -338,49 +369,49 @@ function BillingPage() {
       {search.checkout === 'complete' ? (
         <Alert
           tone="success"
-          title="Payment received"
+          title={t('settings.billing.checkout.completeTitle')}
           actions={<RefreshButton onClick={refresh} />}
         >
-          Your new plan is being applied. It appears here the moment Polar
-          confirms it — usually within a few seconds.
+          {t('settings.billing.checkout.completeBody')}
         </Alert>
       ) : null}
 
       {search.checkout === 'cancelled' ? (
-        <Alert tone="neutral" title="Checkout cancelled">
-          Nothing was charged and your plan has not changed.
+        <Alert
+          tone="neutral"
+          title={t('settings.billing.checkout.cancelledTitle')}
+        >
+          {t('settings.billing.checkout.cancelledBody')}
         </Alert>
       ) : null}
 
       {search.plan === 'changed' ? (
         <Alert
           tone="success"
-          title="Plan updated"
+          title={t('settings.billing.planChanged.title')}
           actions={<RefreshButton onClick={refresh} />}
         >
-          The change is already in force with Polar, who will invoice the
-          difference. The summary below catches up within a minute.
+          {t('settings.billing.planChanged.body')}
         </Alert>
       ) : null}
 
       {search.portal === 'complete' ? (
         <Alert
           tone="info"
-          title="Back from the billing portal"
+          title={t('settings.billing.portal.backTitle')}
           actions={<RefreshButton onClick={refresh} />}
         >
-          Anything you changed there lands here as soon as Polar confirms it.
+          {t('settings.billing.portal.backBody')}
         </Alert>
       ) : null}
 
       {data.canManage ? null : (
         <Alert
           tone="info"
-          title="You are a member of this workspace"
+          title={t('settings.billing.readOnly.title')}
           icon={<Lock />}
         >
-          Only an owner or an admin can change the subscription. Everything
-          below is read-only for you.
+          {t('settings.billing.readOnly.body')}
         </Alert>
       )}
 
@@ -396,13 +427,17 @@ function BillingPage() {
       <UsageMeters state={state} />
 
       <SettingsSection
-        title="Plans"
-        description="Change plan whenever you like. Upgrades are invoiced immediately and prorated to the day; a downgrade waits until the period you have paid for is over."
+        title={t('settings.billing.plans.title')}
+        description={t('settings.billing.plans.description')}
         actions={<IntervalToggle value={interval} onChange={setInterval} />}
       >
         <div className="flex flex-col gap-4">
           {failure?.scope === 'plan' ? (
-            <Alert tone="danger" title="That change was not applied" size="sm">
+            <Alert
+              tone="danger"
+              title={t('settings.billing.plan.notApplied')}
+              size="sm"
+            >
               {failure.message}
             </Alert>
           ) : null}
@@ -439,9 +474,10 @@ function BillingPage() {
 }
 
 function RefreshButton({ onClick }: { onClick: () => void }) {
+  const t = useTranslate()
   return (
     <Button variant="ghost" size="sm" shape="pill" onClick={onClick}>
-      Refresh
+      {t('settings.billing.refresh')}
     </Button>
   )
 }
@@ -463,6 +499,8 @@ function PlanHero({
   failure: string | null
   onManageBilling: () => void
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
   const hintId = useId()
   const badge = STATUS_BADGES[state.status]
   const interval = billedInterval(state)
@@ -475,25 +513,25 @@ function PlanHero({
       <div className="flex flex-col gap-6 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
         <div className="min-w-0">
           <SectionLabel className="text-inverse-muted" icon={<Sparkles />}>
-            Current plan
+            {t('settings.billing.hero.label')}
           </SectionLabel>
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
             <h2 className="font-display text-title font-bold tracking-tight text-inverse-on">
-              {plan.name}
+              {t(PLAN_COPY[plan.id].name)}
             </h2>
             <Badge tone={badge.tone} size="sm" dot>
-              {badge.label}
+              {t(badge.label)}
             </Badge>
             {state.cancelAtPeriodEnd ? (
               <Badge tone="inverse" size="sm">
-                Ends at period close
+                {t('settings.billing.hero.endsAtPeriod')}
               </Badge>
             ) : null}
           </div>
 
           <p className="mt-3 max-w-prose text-label leading-relaxed text-inverse-muted">
-            {renewalLine(state)}
+            {renewalLine(t, locale, state)}
           </p>
         </div>
 
@@ -502,12 +540,14 @@ function PlanHero({
             <p className="flex items-baseline gap-1.5 lg:justify-end">
               <span className="font-display text-display leading-none font-extrabold tracking-tighter tabular-nums text-inverse-on">
                 {price === null
-                  ? 'Free'
-                  : formatPlanAmount(total, price.currency)}
+                  ? t('settings.billing.price.free')
+                  : formatPrice(total, price.currency, locale)}
               </span>
               {price === null ? null : (
                 <span className="text-subtitle font-medium text-inverse-muted">
-                  {price.interval === 'yearly' ? '/ year' : '/ month'}
+                  {price.interval === 'yearly'
+                    ? t('settings.billing.hero.perYear')
+                    : t('settings.billing.hero.perMonth')}
                 </span>
               )}
             </p>
@@ -515,10 +555,15 @@ function PlanHero({
               {price === null
                 ? // The trip ceiling in force, not the catalogue's: a free workspace
                   // can legitimately have been given head-room by hand.
-                  `${formatQuota('trips', state.limits.trips)} trips, one traveller`
+                  t('settings.billing.hero.freeAllowance', {
+                    trips: formatQuota('trips', state.limits.trips),
+                  })
                 : price.perSeat
-                  ? `${state.seats} members × ${formatPlanAmount(price.amount, price.currency)}`
-                  : 'One traveller'}
+                  ? t('settings.billing.hero.perSeatLine', {
+                      seats: state.seats,
+                      price: formatPrice(price.amount, price.currency, locale),
+                    })
+                  : t('settings.billing.hero.singleTraveller')}
             </p>
           </div>
 
@@ -538,19 +583,19 @@ function PlanHero({
                 iconAfter={<ExternalLink data-mirror-rtl />}
                 disabled={!state.hasProviderCustomer}
                 loading={pending === PORTAL_KEY}
-                loadingLabel="Opening the billing portal"
+                loadingLabel={t('settings.billing.portal.opening')}
                 aria-describedby={hintId}
                 onClick={onManageBilling}
               >
-                Manage billing
+                {t('settings.billing.hero.manage')}
               </Button>
               <p
                 id={hintId}
                 className="max-w-[40ch] text-caption leading-relaxed text-inverse-muted lg:text-end"
               >
                 {state.hasProviderCustomer
-                  ? 'Cards, billing address, VAT number, receipts and cancellation live with Polar, who issues the invoice.'
-                  : 'There is no billing profile yet. Choosing a paid plan below creates one, and the portal opens from then on.'}
+                  ? t('settings.billing.hero.manageHint')
+                  : t('settings.billing.hero.manageHintNone')}
               </p>
               {failure === null ? null : (
                 <p
@@ -571,10 +616,11 @@ function PlanHero({
 /* --------------------------------------------------------------- usage meters */
 
 function UsageMeters({ state }: { state: Entitlements }) {
+  const t = useTranslate()
   return (
     <SettingsSection
-      title="Usage"
-      description="Counted live, so a meter is never stale. Limits follow the plan in force right now."
+      title={t('settings.billing.usage.title')}
+      description={t('settings.billing.usage.description')}
     >
       <div className="flex flex-col gap-5">
         {QUOTA_KEYS.map((key) => {
@@ -584,7 +630,7 @@ function UsageMeters({ state }: { state: Entitlements }) {
             <div key={key} className="min-w-0">
               <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p className="text-label font-medium text-ink">
-                  {QUOTA_LABELS[key]}
+                  {t(QUOTA_LABEL_KEYS[key])}
                 </p>
                 <p className="flex items-baseline gap-1.5 text-caption tabular-nums text-ink-3">
                   <span className="font-semibold text-ink">
@@ -594,7 +640,7 @@ function UsageMeters({ state }: { state: Entitlements }) {
                   {unlimited ? (
                     <span className="inline-flex items-center gap-1">
                       <InfinityIcon aria-hidden className="size-3.5" />
-                      Unlimited
+                      {t('settings.billing.quota.unlimited')}
                     </span>
                   ) : (
                     <span>{formatQuota(key, quota.limit)}</span>
@@ -613,7 +659,9 @@ function UsageMeters({ state }: { state: Entitlements }) {
                 <Progress
                   value={quota.ratio * 100}
                   tone={meterTone(quota)}
-                  aria-label={`${QUOTA_LABELS[key]} used`}
+                  aria-label={t('settings.billing.quota.used', {
+                    quota: t(QUOTA_LABEL_KEYS[key]),
+                  })}
                 />
               )}
 
@@ -623,7 +671,7 @@ function UsageMeters({ state }: { state: Entitlements }) {
                   quota.exceeded ? 'text-danger' : 'text-ink-4',
                 )}
               >
-                {quotaHint(key, quota)}
+                {quotaHint(t, key, quota)}
               </p>
             </div>
           )
@@ -642,12 +690,13 @@ function IntervalToggle({
   value: BillingInterval
   onChange: (next: BillingInterval) => void
 }) {
+  const t = useTranslate()
   const saving = Math.max(...PLAN_LIST.map(yearlySavingPercent))
 
   return (
     <div
       role="group"
-      aria-label="Billing interval"
+      aria-label={t('settings.billing.interval.label')}
       className="inline-flex items-center gap-0.5 rounded-full bg-track p-1"
     >
       {BILLING_INTERVALS.map((option) => {
@@ -666,7 +715,9 @@ function IntervalToggle({
                 : 'text-ink-3 hover:text-ink-2',
             )}
           >
-            {option === 'monthly' ? 'Monthly' : 'Yearly'}
+            {option === 'monthly'
+              ? t('settings.billing.interval.monthly')
+              : t('settings.billing.interval.yearly')}
             {option === 'yearly' && saving > 0 ? (
               <span className="rounded-full bg-success-soft px-1.5 text-micro font-bold tabular-nums text-success">
                 −{saving}%
@@ -679,8 +730,6 @@ function IntervalToggle({
   )
 }
 
-const SEAT_OPTION_LABEL = (count: number): string => `${count} members`
-
 /**
  * Why a seat count can be refused before it is sent.
  *
@@ -691,6 +740,7 @@ const SEAT_OPTION_LABEL = (count: number): string => `${count} members`
  * button, so nothing is quietly rounded on the customer's behalf.
  */
 function seatProblem(
+  t: Translate,
   plan: Plan,
   chosen: number,
   members: number,
@@ -699,10 +749,16 @@ function seatProblem(
   const max = plan.seatRange.max
   if (max !== null && members > max) {
     const over = members - max
-    return `This workspace has ${members} members and ${plan.name} bills at most ${max}. Remove ${over} ${over === 1 ? 'member' : 'members'} before switching.`
+    return t('settings.billing.plan.seatsOverMax', {
+      count: over,
+      value: over,
+      members,
+      max,
+      plan: t(PLAN_COPY[plan.id].name),
+    })
   }
   if (chosen < members) {
-    return `You have ${members} members. Choose at least ${members} seats — Polar rejects a subscription with fewer seats than assignments.`
+    return t('settings.billing.plan.seatsBelowMembers', { members })
   }
   return null
 }
@@ -729,6 +785,8 @@ function PlanOption({
   /** The Free card cancels, and cancelling is portal-only. */
   onOpenPortal: () => void
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
   const price = plan.prices[interval]
   const isCurrentPlan = plan.id === state.planId
   const isCurrent =
@@ -743,19 +801,23 @@ function PlanOption({
     price === null ? 0 : price.amount * (price.perSeat ? seatCount : 1)
   const seatError = isCurrent
     ? null
-    : seatProblem(plan, seatCount, state.usage.seats)
+    : seatProblem(t, plan, seatCount, state.usage.seats)
 
   const label = isCurrent
-    ? 'Current plan'
+    ? t('settings.billing.plan.current')
     : isFree
-      ? 'Cancel in the portal'
+      ? t('settings.billing.plan.cancelInPortal')
       : isCurrentPlan
         ? interval === 'yearly'
-          ? 'Switch to yearly'
-          : 'Switch to monthly'
+          ? t('settings.billing.plan.switchYearly')
+          : t('settings.billing.plan.switchMonthly')
         : delta > 0
-          ? `Upgrade to ${plan.name}`
-          : `Change to ${plan.name}`
+          ? t('settings.billing.plan.upgradeTo', {
+              plan: t(PLAN_COPY[plan.id].name),
+            })
+          : t('settings.billing.plan.changeTo', {
+              plan: t(PLAN_COPY[plan.id].name),
+            })
 
   const seatOptions = plan.seatBased
     ? Array.from(
@@ -765,7 +827,13 @@ function PlanOption({
         },
         (_, index) => {
           const count = plan.seatRange.min + index
-          return { value: String(count), label: SEAT_OPTION_LABEL(count) }
+          return {
+            value: String(count),
+            label: t('settings.billing.plan.seatOption', {
+              count,
+              value: count,
+            }),
+          }
         },
       )
     : []
@@ -783,17 +851,19 @@ function PlanOption({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="font-display text-subtitle font-bold tracking-tight text-ink">
-              {plan.name}
+              {t(PLAN_COPY[plan.id].name)}
             </h3>
-            <p className="mt-0.5 text-caption text-ink-3">{plan.tagline}</p>
+            <p className="mt-0.5 text-caption text-ink-3">
+              {t(PLAN_COPY[plan.id].tagline)}
+            </p>
           </div>
           {isCurrent ? (
             <Badge tone="brand" size="sm" className="shrink-0">
-              Current
+              {t('settings.billing.plan.currentBadge')}
             </Badge>
           ) : plan.recommended ? (
             <Badge tone="neutral" size="sm" className="shrink-0">
-              Popular
+              {t('settings.billing.plan.popular')}
             </Badge>
           ) : null}
         </div>
@@ -802,28 +872,33 @@ function PlanOption({
           <p className="flex items-baseline gap-1.5">
             <span className="font-display text-title leading-none font-extrabold tracking-tighter tabular-nums text-ink">
               {price === null
-                ? 'Free'
-                : formatPlanAmount(monthlyEquivalent(price), price.currency)}
+                ? t('settings.billing.price.free')
+                : formatPrice(monthlyEquivalent(price), price.currency, locale)}
             </span>
             {price === null ? null : (
               <span className="text-caption font-medium text-ink-3">
-                {price.perSeat ? '/ member / month' : '/ month'}
+                {price.perSeat
+                  ? t('settings.billing.plan.perMemberMonth')
+                  : t('settings.billing.plan.perMonth')}
               </span>
             )}
           </p>
           <p className="mt-1 text-caption tabular-nums text-ink-4">
             {price === null
-              ? 'Always free, no card'
-              : interval === 'yearly'
-                ? `${formatPlanAmount(total, price.currency)} billed yearly`
-                : `${formatPlanAmount(total, price.currency)} billed monthly`}
+              ? t('settings.billing.plan.alwaysFree')
+              : t(
+                  interval === 'yearly'
+                    ? 'settings.billing.plan.billedYearly'
+                    : 'settings.billing.plan.billedMonthly',
+                  { amount: formatPrice(total, price.currency, locale) },
+                )}
           </p>
         </div>
 
         {plan.seatBased && !isCurrent ? (
           <Field
-            label="Members"
-            hint="Change it any time — billing follows."
+            label={t('settings.billing.plan.members')}
+            hint={t('settings.billing.plan.membersHint')}
             error={seatError}
           >
             <SimpleSelect
@@ -839,13 +914,13 @@ function PlanOption({
         <Separator weight="faint" />
 
         <ul className="flex min-w-0 flex-col gap-2">
-          {plan.features.slice(0, 4).map((feature) => (
-            <li key={feature.label} className="flex min-w-0 gap-2">
+          {PLAN_COPY[plan.id].features.map((feature) => (
+            <li key={feature} className="flex min-w-0 gap-2">
               <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-brand-subtle text-brand">
                 <Check aria-hidden className="size-2.5" strokeWidth={3} />
               </span>
               <span className="min-w-0 text-caption leading-relaxed text-ink-2">
-                {feature.label}
+                {t(feature)}
               </span>
             </li>
           ))}
@@ -860,9 +935,17 @@ function PlanOption({
           block
           disabled={!canManage || isCurrent || seatError !== null}
           loading={busy}
-          loadingLabel={isFree ? 'Opening the billing portal' : 'Opening Polar'}
+          loadingLabel={t(
+            isFree
+              ? 'settings.billing.portal.opening'
+              : 'settings.billing.provider.opening',
+          )}
           iconAfter={
-            isCurrent ? undefined : isFree ? <ExternalLink data-mirror-rtl /> : <ArrowUpRight data-mirror-rtl />
+            isCurrent ? undefined : isFree ? (
+              <ExternalLink data-mirror-rtl />
+            ) : (
+              <ArrowUpRight data-mirror-rtl />
+            )
           }
           onClick={isFree ? onOpenPortal : onChoose}
         >
@@ -884,19 +967,20 @@ function PlanOption({
  */
 const INVOICE_TONES: {
   readonly [K in InvoiceSummary['status']]: {
-    readonly label: string
+    readonly label: MessageKey
     readonly tone: BadgeTone
   }
 } = {
-  draft: { label: 'Draft', tone: 'neutral' },
-  pending: { label: 'Pending', tone: 'warning' },
-  paid: { label: 'Paid', tone: 'success' },
-  refunded: { label: 'Refunded', tone: 'info' },
-  partially_refunded: { label: 'Part refunded', tone: 'info' },
-  void: { label: 'Void', tone: 'neutral' },
+  draft: { label: 'settings.billing.invoice.draft', tone: 'neutral' },
+  pending: { label: 'settings.billing.order.pending', tone: 'warning' },
+  paid: { label: 'settings.billing.invoice.paid', tone: 'success' },
+  refunded: { label: 'settings.billing.order.refunded', tone: 'info' },
+  partially_refunded: {
+    label: 'settings.billing.order.partiallyRefunded',
+    tone: 'info',
+  },
+  void: { label: 'settings.billing.invoice.void', tone: 'neutral' },
 }
-
-const INVOICE_DESCRIPTION = 'Every order for this workspace, newest first.'
 
 /**
  * The per-row document action, shared by the mobile stack and the table.
@@ -916,13 +1000,17 @@ function InvoiceDocument({
   generating: boolean
   onOpen: (invoice: InvoiceSummary) => Promise<void>
 }) {
+  const t = useTranslate()
+
   if (invoice.status === 'draft') {
     return (
       <>
         <span aria-hidden className="text-caption text-ink-4">
           &mdash;
         </span>
-        <span className="sr-only">No invoice while this order is a draft</span>
+        <span className="sr-only">
+          {t('settings.billing.order.noInvoiceDraft')}
+        </span>
       </>
     )
   }
@@ -934,10 +1022,11 @@ function InvoiceDocument({
         className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-1 text-caption font-medium whitespace-nowrap text-warning"
       >
         <Spinner size="xs" label={null} />
-        Preparing
+        {t('settings.billing.order.preparing')}
         <span className="sr-only">
-          Polar is still rendering invoice {invoice.number}. The download
-          returns in a few seconds.
+          {t('settings.billing.order.renderingHint', {
+            number: invoice.number,
+          })}
         </span>
       </span>
     )
@@ -950,16 +1039,18 @@ function InvoiceDocument({
       shape="pill"
       icon={<FileDown />}
       loading={fetching}
-      loadingLabel={
+      loadingLabel={t(
         invoice.invoiceGenerated
-          ? 'Fetching the invoice'
-          : 'Polar is preparing the invoice'
-      }
+          ? 'settings.billing.order.fetching'
+          : 'settings.billing.order.generating',
+      )}
+      aria-label={t('settings.billing.order.pdfLabel', {
+        number: invoice.number,
+      })}
       onClick={() => {
         void onOpen(invoice)
       }}
     >
-      <span className="sr-only">Invoice {invoice.number} as </span>
       PDF
     </Button>
   )
@@ -988,6 +1079,8 @@ function InvoiceHistory({
   portalPending: boolean
   onOpenPortal: () => void
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<InvoiceNotice | null>(null)
@@ -1026,8 +1119,10 @@ function InvoiceHistory({
       setGeneratingId(invoice.id)
       setNotice({
         tone: 'info',
-        title: 'Polar is still writing that invoice',
-        body: `Invoice ${invoice.number} is being rendered. The download comes back on its own in a few seconds.`,
+        title: t('settings.billing.order.stillWritingTitle'),
+        body: t('settings.billing.order.stillWritingBody', {
+          number: invoice.number,
+        }),
       })
       if (retryTimer.current !== null) clearTimeout(retryTimer.current)
       retryTimer.current = setTimeout(() => {
@@ -1038,8 +1133,8 @@ function InvoiceHistory({
       tab?.close()
       setNotice({
         tone: 'danger',
-        title: 'That invoice did not open',
-        body: messageOf(cause),
+        title: t('settings.billing.order.openFailed'),
+        body: messageOf(t, cause),
       })
     } finally {
       setPendingId(null)
@@ -1055,10 +1150,10 @@ function InvoiceHistory({
         icon={<Receipt />}
         iconAfter={<ExternalLink data-mirror-rtl />}
         loading={portalPending}
-        loadingLabel="Opening the billing portal"
+        loadingLabel={t('settings.billing.portal.opening')}
         onClick={onOpenPortal}
       >
-        All receipts
+        {t('settings.billing.orders.receipts')}
       </Button>
     ) : null
 
@@ -1067,13 +1162,16 @@ function InvoiceHistory({
   // plan, the usage meters and the plan picker above are all live either way.
   if (unavailable) {
     return (
-      <SettingsSection title="Orders" description={INVOICE_DESCRIPTION}>
+      <SettingsSection
+        title={t('settings.billing.orders.title')}
+        description={t('settings.billing.orders.description')}
+      >
         <EmptyState
           tone="warning"
           variant="filled"
           icon={<Receipt />}
-          title="Orders are not loading"
-          description="Polar did not answer in time for the history. Everything above is live — try again in a moment, or read the full record in the billing portal."
+          title={t('settings.billing.orders.unavailableTitle')}
+          description={t('settings.billing.orders.unavailableBody')}
           action={portalAction}
         />
       </SettingsSection>
@@ -1083,19 +1181,19 @@ function InvoiceHistory({
   if (invoices.length === 0) {
     return (
       <SettingsSection
-        title="Orders"
-        description={INVOICE_DESCRIPTION}
+        title={t('settings.billing.orders.title')}
+        description={t('settings.billing.orders.description')}
         actions={portalAction}
       >
         <EmptyState
           variant="dashed"
           icon={<FileText />}
-          title="No orders yet"
-          description={
+          title={t('settings.billing.orders.emptyTitle')}
+          description={t(
             hasCustomer
-              ? 'The first invoice appears here as soon as a billing period closes.'
-              : 'This workspace has never been charged. Choose a paid plan and the invoices collect here.'
-          }
+              ? 'settings.billing.orders.emptyCustomer'
+              : 'settings.billing.orders.emptyNoCustomer',
+          )}
         />
       </SettingsSection>
     )
@@ -1103,8 +1201,8 @@ function InvoiceHistory({
 
   return (
     <SettingsSection
-      title="Orders"
-      description={INVOICE_DESCRIPTION}
+      title={t('settings.billing.orders.title')}
+      description={t('settings.billing.orders.description')}
       actions={portalAction}
       className="overflow-hidden"
     >
@@ -1135,15 +1233,16 @@ function InvoiceHistory({
                     {invoice.number}
                   </p>
                   <p className="shrink-0 text-label font-semibold text-ink tabular-nums">
-                    {formatMoneyMinor(invoice.total, invoice.currency)}
+                    {formatMoneyMinor(invoice.total, invoice.currency, locale)}
                   </p>
                 </div>
                 <p className="mt-0.5 text-caption text-ink-3 tabular-nums">
-                  {formatDate(invoice.createdAt) ?? 'Date unknown'}
+                  {formatDate(invoice.createdAt, locale) ??
+                    t('settings.billing.orders.dateUnknown')}
                 </p>
                 <div className="mt-3 flex items-center justify-between gap-3">
                   <Badge tone={badge.tone} size="sm">
-                    {badge.label}
+                    {t(badge.label)}
                   </Badge>
                   <InvoiceDocument
                     invoice={invoice}
@@ -1158,14 +1257,21 @@ function InvoiceHistory({
         </ul>
 
         <div className="hidden sm:block">
-          <Table label="Order history" containerClassName="-mx-1">
+          <Table
+            label={t('settings.billing.orders.tableLabel')}
+            containerClassName="-mx-1"
+          >
             <TableHeader>
               <TableRow>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead numeric>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="sr-only">Document</TableHead>
+                <TableHead>{t('settings.billing.invoices.number')}</TableHead>
+                <TableHead>{t('settings.billing.invoices.date')}</TableHead>
+                <TableHead numeric>
+                  {t('settings.billing.invoices.amount')}
+                </TableHead>
+                <TableHead>{t('settings.billing.invoices.status')}</TableHead>
+                <TableHead className="sr-only">
+                  {t('settings.billing.orders.document')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1177,14 +1283,19 @@ function InvoiceHistory({
                       {invoice.number}
                     </TableCell>
                     <TableCell muted className="whitespace-nowrap">
-                      {formatDate(invoice.createdAt) ?? 'Date unknown'}
+                      {formatDate(invoice.createdAt, locale) ??
+                        t('settings.billing.orders.dateUnknown')}
                     </TableCell>
                     <TableCell numeric>
-                      {formatMoneyMinor(invoice.total, invoice.currency)}
+                      {formatMoneyMinor(
+                        invoice.total,
+                        invoice.currency,
+                        locale,
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge tone={badge.tone} size="sm">
-                        {badge.label}
+                        {t(badge.label)}
                       </Badge>
                     </TableCell>
                     <TableCell align="end">
@@ -1213,9 +1324,10 @@ function Bar({ className }: { className?: string }): ReactNode {
 }
 
 function BillingPending() {
+  const t = useTranslate()
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
-      <span className="sr-only">Loading billing</span>
+      <span className="sr-only">{t('settings.billing.loading')}</span>
 
       <Card
         variant="inverse"

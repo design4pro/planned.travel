@@ -6,7 +6,13 @@
  * declares which fields it shows, what they are called, and which of them it
  * refuses to submit without. Keeping that here — pure, no React — is what lets the
  * rules be tested rather than clicked through.
+ *
+ * What each field is *called* is copy, so the table holds message keys and the
+ * dialog resolves them. That keeps this file pure and keeps a booking type's
+ * name owned once, by `shell.bookingType.*`.
  */
+
+import type { MessageKey } from '#/lib/i18n'
 
 export const BOOKING_TYPES = [
   'accommodation',
@@ -94,38 +100,38 @@ export type BookingField =
   | 'price'
 
 export interface BookingTypeShape {
-  readonly label: string
+  readonly label: MessageKey
   /** What the "provider" field is called for this type. */
-  readonly providerLabel: string
-  readonly providerPlaceholder: string
+  readonly providerLabel: MessageKey
+  readonly providerPlaceholder: MessageKey
   /**
    * Example for the name field. Per type, and never the same string as
    * `providerPlaceholder`: the two fields sit next to each other, so one
    * example repeated across both reads as a bug and teaches nothing about
    * which half of the booking goes where.
    */
-  readonly titlePlaceholder: string
+  readonly titlePlaceholder: MessageKey
   /** What the "location" field is called for this type. */
-  readonly locationLabel: string
+  readonly locationLabel: MessageKey
   /** What the two date fields are called. */
-  readonly startLabel: string
-  readonly endLabel: string
+  readonly startLabel: MessageKey
+  readonly endLabel: MessageKey
   readonly fields: ReadonlyArray<BookingField>
   /** Fields this type will not submit without, beyond the title. */
   readonly required: ReadonlyArray<BookingField>
   /** One line under the type picker, so the dialog says what it is for. */
-  readonly hint: string
+  readonly hint: MessageKey
 }
 
 const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
   accommodation: {
-    label: 'Stay',
-    providerLabel: 'Hotel or host',
-    providerPlaceholder: 'Booking.com',
-    titlePlaceholder: 'Hotel Gracery Shinjuku · 2 twin rooms',
-    locationLabel: 'Address',
-    startLabel: 'Check in',
-    endLabel: 'Check out',
+    label: 'shell.bookingType.accommodation',
+    providerLabel: 'modules.book.field.host',
+    providerPlaceholder: 'modules.book.example.accommodationProvider',
+    titlePlaceholder: 'modules.book.example.accommodationTitle',
+    locationLabel: 'modules.book.field.address',
+    startLabel: 'modules.book.field.checkIn',
+    endLabel: 'modules.book.field.checkOut',
     fields: [
       'provider',
       'location',
@@ -139,16 +145,16 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'url',
     ],
     required: ['startDate'],
-    hint: 'A hotel, a ryokan, an apartment — anywhere you sleep.',
+    hint: 'modules.book.hint.accommodation',
   },
   restaurant: {
-    label: 'Table',
-    providerLabel: 'Restaurant',
-    providerPlaceholder: 'Den',
-    titlePlaceholder: 'Dinner at Den',
-    locationLabel: 'Where',
-    startLabel: 'Date',
-    endLabel: 'Until',
+    label: 'shell.bookingType.restaurant',
+    providerLabel: 'modules.book.field.restaurant',
+    providerPlaceholder: 'modules.book.example.restaurantProvider',
+    titlePlaceholder: 'modules.book.example.restaurantTitle',
+    locationLabel: 'modules.book.where',
+    startLabel: 'modules.book.field.date',
+    endLabel: 'modules.book.until',
     fields: [
       'provider',
       'location',
@@ -161,16 +167,16 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'url',
     ],
     required: ['startDate', 'startTime'],
-    hint: 'A booked table. The time is the part you will be held to.',
+    hint: 'modules.book.hint.restaurant',
   },
   activity: {
-    label: 'Activity',
-    providerLabel: 'Operator',
-    providerPlaceholder: 'teamLab',
-    titlePlaceholder: 'teamLab Planets, 4 tickets',
-    locationLabel: 'Where',
-    startLabel: 'Date',
-    endLabel: 'Ends',
+    label: 'shell.bookingType.activity',
+    providerLabel: 'modules.book.field.operator',
+    providerPlaceholder: 'modules.book.example.activityProvider',
+    titlePlaceholder: 'modules.book.example.activityTitle',
+    locationLabel: 'modules.book.where',
+    startLabel: 'modules.book.field.date',
+    endLabel: 'modules.book.field.ends',
     fields: [
       'provider',
       'location',
@@ -184,16 +190,16 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'url',
     ],
     required: ['startDate'],
-    hint: 'A class, a bath house, a booked experience.',
+    hint: 'modules.book.hint.activity',
   },
   tour: {
-    label: 'Tour',
-    providerLabel: 'Operator',
-    providerPlaceholder: 'Kyoto Free Walking Tour',
-    titlePlaceholder: 'Arashiyama bamboo grove walk',
-    locationLabel: 'Meeting point',
-    startLabel: 'Date',
-    endLabel: 'Ends',
+    label: 'shell.bookingType.tour',
+    providerLabel: 'modules.book.field.operator',
+    providerPlaceholder: 'modules.book.example.tourProvider',
+    titlePlaceholder: 'modules.book.example.tourTitle',
+    locationLabel: 'modules.book.field.meetingPoint',
+    startLabel: 'modules.book.field.date',
+    endLabel: 'modules.book.field.ends',
     fields: [
       'provider',
       'location',
@@ -207,16 +213,16 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'url',
     ],
     required: ['startDate', 'startTime'],
-    hint: 'Somewhere to be, at a time, with a guide waiting.',
+    hint: 'modules.book.hint.tour',
   },
   ticket: {
-    label: 'Ticket',
-    providerLabel: 'Issued by',
-    providerPlaceholder: 'Ghibli Museum',
-    titlePlaceholder: 'Ghibli Museum, 10:00 entry',
-    locationLabel: 'Venue',
-    startLabel: 'Valid on',
-    endLabel: 'Until',
+    label: 'shell.bookingType.ticket',
+    providerLabel: 'modules.book.field.issuer',
+    providerPlaceholder: 'modules.book.example.ticketProvider',
+    titlePlaceholder: 'modules.book.example.ticketTitle',
+    locationLabel: 'modules.book.field.venue',
+    startLabel: 'modules.book.field.validOn',
+    endLabel: 'modules.book.until',
     fields: [
       'provider',
       'location',
@@ -228,16 +234,16 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'url',
     ],
     required: ['startDate'],
-    hint: 'A timed entry, a museum pass, a match. Keep the code to hand.',
+    hint: 'modules.book.hint.ticket',
   },
   transport: {
-    label: 'Travel',
-    providerLabel: 'Carrier',
-    providerPlaceholder: 'JR Central',
-    titlePlaceholder: 'Nozomi 21 to Kyoto',
-    locationLabel: 'From and to',
-    startLabel: 'Departs',
-    endLabel: 'Arrives',
+    label: 'shell.bookingType.transport',
+    providerLabel: 'modules.book.field.carrier',
+    providerPlaceholder: 'modules.book.example.transportProvider',
+    titlePlaceholder: 'modules.book.example.transportTitle',
+    locationLabel: 'modules.book.field.fromTo',
+    startLabel: 'modules.book.field.departs',
+    endLabel: 'modules.book.field.arrives',
     fields: [
       'provider',
       'location',
@@ -250,16 +256,16 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'url',
     ],
     required: ['startDate'],
-    hint: 'A booked seat. Full legs with carriers and codes belong in Transports.',
+    hint: 'modules.book.hint.transport',
   },
   other: {
-    label: 'Other',
-    providerLabel: 'Provider',
-    providerPlaceholder: 'Who is holding this for you',
-    titlePlaceholder: 'What you have booked',
-    locationLabel: 'Where',
-    startLabel: 'Date',
-    endLabel: 'Until',
+    label: 'modules.book.shape.other.label',
+    providerLabel: 'modules.book.provider',
+    providerPlaceholder: 'modules.book.example.otherProvider',
+    titlePlaceholder: 'modules.book.example.otherTitle',
+    locationLabel: 'modules.book.where',
+    startLabel: 'modules.book.field.date',
+    endLabel: 'modules.book.until',
     fields: [
       'provider',
       'location',
@@ -272,7 +278,7 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'url',
     ],
     required: [],
-    hint: 'Anything held in your name that does not fit the others.',
+    hint: 'modules.book.hint.other',
   },
 }
 
@@ -280,8 +286,8 @@ export function bookingShape(type: BookingType): BookingTypeShape {
   return SHAPES[type]
 }
 
-export function bookingTypeLabel(type: string): string {
-  return isBookingType(type) ? SHAPES[type].label : 'Booking'
+export function bookingTypeLabel(type: string): MessageKey {
+  return isBookingType(type) ? SHAPES[type].label : 'shell.bookingType.other'
 }
 
 export function showsField(type: BookingType, field: BookingField): boolean {
@@ -394,19 +400,33 @@ export function formatMinorForInput(
 
 /* -------------------------------------------------------------- validation */
 
-export type BookingErrors = Partial<Record<keyof BookingDraft | 'form', string>>
+/**
+ * One reason a draft cannot be saved: the message, and whatever it needs to
+ * interpolate. Keeping it a key rather than a sentence is what lets this file
+ * stay free of React and of English, and lets the tests assert identity instead
+ * of prose.
+ */
+export interface BookingError {
+  readonly key: MessageKey
+  readonly params?: Readonly<Record<string, string | number>>
+}
 
-const FIELD_NAMES: { readonly [K in BookingField]: string } = {
-  provider: 'provider',
-  location: 'location',
-  confirmationNumber: 'confirmation number',
-  url: 'link',
-  startDate: 'date',
-  startTime: 'time',
-  endDate: 'end date',
-  endTime: 'end time',
-  guests: 'guests',
-  price: 'price',
+export type BookingErrors = Partial<
+  Record<keyof BookingDraft | 'form', BookingError>
+>
+
+/** A field's name as it reads inside a sentence, not as a label above an input. */
+const FIELD_NAMES: { readonly [K in BookingField]: MessageKey } = {
+  provider: 'modules.book.fieldName.provider',
+  location: 'modules.book.fieldName.location',
+  confirmationNumber: 'modules.book.fieldName.confirmationNumber',
+  url: 'modules.book.fieldName.link',
+  startDate: 'modules.book.fieldName.date',
+  startTime: 'modules.book.fieldName.time',
+  endDate: 'modules.book.fieldName.endDate',
+  endTime: 'modules.book.fieldName.endTime',
+  guests: 'modules.book.fieldName.guests',
+  price: 'modules.book.fieldName.price',
 }
 
 /**
@@ -420,23 +440,25 @@ export function validateBookingDraft(draft: BookingDraft): BookingErrors {
   const shape = SHAPES[draft.type]
 
   if (draft.title.trim().length === 0) {
-    errors.title = 'Give this booking a name you will recognise in a list.'
+    errors.title = { key: 'modules.book.error.titleEmpty' }
   } else if (draft.title.trim().length > 160) {
-    errors.title = 'Keep the name under 160 characters.'
+    errors.title = { key: 'modules.error.titleLong' }
   }
 
   for (const field of shape.required) {
     if (draft[field].trim().length === 0) {
-      errors[field] =
-        `A ${shape.label.toLowerCase()} needs a ${FIELD_NAMES[field]}.`
+      errors[field] = {
+        key: 'modules.book.error.required',
+        params: { field: FIELD_NAMES[field] },
+      }
     }
   }
 
   if (draft.startTime !== '' && draft.startDate === '') {
-    errors.startDate = 'A time needs the date it is on.'
+    errors.startDate = { key: 'modules.book.error.timeNeedsDate' }
   }
   if (draft.endTime !== '' && draft.endDate === '' && draft.startDate === '') {
-    errors.endDate = 'An end time needs the date it is on.'
+    errors.endDate = { key: 'modules.book.error.endTimeNeedsDate' }
   }
 
   if (
@@ -444,7 +466,7 @@ export function validateBookingDraft(draft: BookingDraft): BookingErrors {
     draft.endDate !== '' &&
     draft.endDate < draft.startDate
   ) {
-    errors.endDate = 'This ends before it starts.'
+    errors.endDate = { key: 'modules.book.error.endsBeforeStart' }
   } else if (
     draft.startDate !== '' &&
     draft.startDate === draft.endDate &&
@@ -452,7 +474,7 @@ export function validateBookingDraft(draft: BookingDraft): BookingErrors {
     draft.endTime !== '' &&
     draft.endTime < draft.startTime
   ) {
-    errors.endTime = 'The end time is before the start time.'
+    errors.endTime = { key: 'modules.book.error.endTimeBeforeStart' }
   }
 
   if (draft.guests.trim() !== '') {
@@ -460,7 +482,7 @@ export function validateBookingDraft(draft: BookingDraft): BookingErrors {
     // A digits-only test, not `parseInt`: `parseInt('2.5')` is 2, which would
     // silently book half a person's worth of table.
     if (!/^\d{1,4}$/u.test(guests) || Number.parseInt(guests, 10) > 1000) {
-      errors.guests = 'Guests must be a whole number up to 1000.'
+      errors.guests = { key: 'modules.book.error.guests' }
     }
   }
 
@@ -468,15 +490,15 @@ export function validateBookingDraft(draft: BookingDraft): BookingErrors {
     draft.price !== '' &&
     parseMoneyToMinor(draft.price, draft.currency) === null
   ) {
-    errors.price = 'That is not an amount we can read.'
+    errors.price = { key: 'modules.error.price' }
   }
 
   if (draft.url !== '' && !/^https?:\/\/\S+$/u.test(draft.url.trim())) {
-    errors.url = 'A link has to start with http:// or https://.'
+    errors.url = { key: 'modules.book.error.url' }
   }
 
   if (draft.confirmationNumber.trim().length > 200) {
-    errors.confirmationNumber = 'That confirmation number is too long to store.'
+    errors.confirmationNumber = { key: 'modules.book.error.confirmationLong' }
   }
 
   return errors

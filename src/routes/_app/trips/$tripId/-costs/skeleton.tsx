@@ -8,7 +8,11 @@
  */
 import { Card, Skeleton } from '#/components/ui'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
-import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../../-ui/scaffold'
+import {
+  HeaderSkeleton,
+  RowsSkeleton,
+  StatsSkeleton,
+} from '../../../-ui/scaffold'
 
 export function CostsSkeleton() {
   return (
@@ -26,7 +30,7 @@ export function CostsSkeleton() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Skeleton className="h-8 w-full max-w-72" radius="md" />
-                <Skeleton className="ml-auto h-8 w-40" radius="md" />
+                <Skeleton className="ms-auto h-8 w-40" radius="md" />
                 <Skeleton className="h-8 w-36" radius="md" />
                 <Skeleton className="h-8 w-52" radius="full" />
               </div>
