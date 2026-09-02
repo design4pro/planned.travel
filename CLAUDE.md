@@ -36,4 +36,4 @@ Configuration for the mattpocock-skills plugin and project skills:
 
 Sentry findings enter the backlog through `pnpm sandcastle:sentry` (report-only; `--file-issues` writes) as `type: bug` + `status: triage`, and are then pre-triaged like any other bug.
 
-New work flows: grilling → `/to-spec-project` (PRD issue) → `/to-tickets-project` (vertical-slice sub-issues) → `/implement-project` per ticket in a fresh context. Verification ladder: see the `verifying-changes` skill.
+New work flows: issue → `/plan-feature <issue> spec`, then `prd`, then `tickets` (from the cezar cockpit or locally; every artefact stops at `status: review`) → `/implement-project` per ticket in a fresh context. Verification ladder: see the `verifying-changes` skill.

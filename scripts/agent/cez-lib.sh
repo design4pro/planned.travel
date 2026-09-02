@@ -103,8 +103,10 @@ lock_release() { # name
 # run can never summon the claude-code-action from an issue or PR body.
 neutralise() { sed "s/@claude/@${ZWSP}claude/g"; }
 
-gh_issue_json() { # number fields
-  gh issue view "$1" --repo "$REPO" --json "$2"
+gh_issue_json() { # number fields [gh flags...]
+  local n="$1"
+  shift
+  gh issue view "$n" --repo "$REPO" --json "$@"
 }
 
 issue_status() { # number -> "status: x" or empty
@@ -164,4 +166,18 @@ clean_env() { # [KEY=VALUE ...] -- command...
   [ "${1:-}" = "--" ] && shift
   env -i PATH="$PATH" HOME="$HOME" TMPDIR="${TMPDIR:-/tmp}" LANG="${LANG:-C.UTF-8}" \
     ${CI:+CI="$CI"} ${pass[@]+"${pass[@]}"} "$@"
+}
+
+# The published body keeps the human's original request: the first publish wraps the body
+# as it was in <details>, later publishes carry that block forward. Prints the assembled body.
+plan_body_with_original() { # draft-file current-body
+  local file="$1" current="$2" details
+  if grep -q '<details>' "$file"; then cat "$file"; return; fi
+  case "$current" in
+    "<!-- schema: "*) details=$(printf '%s\n' "$current" | sed -n '/<details>/,/<\/details>/p') ;;
+    *) details=$(printf '<details><summary>Original request</summary>\n\n%s\n\n</details>' "$current") ;;
+  esac
+  head -1 "$file"
+  printf '\n%s\n\n' "$details"
+  tail -n +2 "$file"
 }

@@ -1,7 +1,7 @@
 # planned.travel — implementation plans
 
 > **This directory is being retired** (docs/adr/0004): the backlog is migrating, area by area, to
-> GitHub Issues via grilling → `/to-spec-project` → `/to-tickets-project`. Until an area migrates,
+> GitHub Issues via `/plan-feature` (spec → prd → tickets). Until an area migrates,
 > its plan file below remains the authority for that area.
 >
 > **Areas migrated so far:** `01-trips-core.md` → PRD #104 · `03-reservations-and-transport.md` →

@@ -31,7 +31,7 @@ surfaces below. This file only routes you there and says which surface answers w
 
 ## Rules of engagement
 
-- **Reference study belongs to the planning phase** — grilling and `/to-spec-project`, with a
+- **Reference study belongs to the planning phase** — the `/plan-feature` grilling, with a
   human in the loop. The AFK implementer and reviewer (sandcastle) never browse the reference;
   everything they need must already be in the ticket. This keeps the clean-room boundary out of
   the hands of agents optimising for "make the test pass". One carve-out: the loop's neutral
