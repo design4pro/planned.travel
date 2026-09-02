@@ -23,7 +23,7 @@ import {
   Skeleton,
   StatCard,
 } from '#/components/ui'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadConsoleOverview } from './-server/overview'
 import { formatDate, formatNumber } from '../-lib/format'
 import { Panel, PanelRow, RowsSkeleton, StatsSkeleton } from '../-ui/scaffold'
@@ -127,6 +127,7 @@ function CuratorStanding({ role }: { role: 'admin' | 'curator' | 'user' }) {
 }
 
 function AccountStats({ overview }: { overview: ConsoleOverview }) {
+  const locale = useLocale()
   const t = useTranslate()
   const { counts } = overview
   const staff = counts.admins + counts.curators
@@ -137,28 +138,28 @@ function AccountStats({ overview }: { overview: ConsoleOverview }) {
         tone="inverse"
         icon={<Users />}
         label={t('console.overview.stat.accounts')}
-        value={formatNumber(counts.total)}
+        value={formatNumber(counts.total, locale)}
         caption={t('console.overview.stat.accounts.caption', {
           count: staff,
-          staff: formatNumber(staff),
+          staff: formatNumber(staff, locale),
         })}
       />
       <StatCard
         icon={<ShieldCheck />}
         label={t('console.overview.stat.admins')}
-        value={formatNumber(counts.admins)}
+        value={formatNumber(counts.admins, locale)}
         caption={t('console.overview.stat.admins.caption')}
       />
       <StatCard
         icon={<Wrench />}
         label={t('console.overview.stat.curators')}
-        value={formatNumber(counts.curators)}
+        value={formatNumber(counts.curators, locale)}
         caption={t('console.overview.stat.curators.caption')}
       />
       <StatCard
         icon={<UserRoundX />}
         label={t('console.overview.stat.suspended')}
-        value={formatNumber(counts.suspended)}
+        value={formatNumber(counts.suspended, locale)}
         valueTone={counts.suspended === 0 ? 'default' : 'danger'}
         caption={
           counts.suspended === 0
@@ -172,7 +173,7 @@ function AccountStats({ overview }: { overview: ConsoleOverview }) {
               variant="ghost"
               size="sm"
               shape="pill"
-              className="-ml-3"
+              className="-ms-3"
             >
               <Link to="/console/users" search={{ status: 'suspended' }}>
                 {t('console.overview.stat.suspended.review')}
@@ -186,11 +187,12 @@ function AccountStats({ overview }: { overview: ConsoleOverview }) {
 }
 
 function NewestAccounts({ overview }: { overview: ConsoleOverview }) {
+  const locale = useLocale()
   const t = useTranslate()
   return (
     <Panel
       label={t('console.overview.newest.label')}
-      count={formatNumber(overview.newest.length)}
+      count={formatNumber(overview.newest.length, locale)}
       flush
       action={
         <Button asChild variant="secondary" size="sm" shape="pill">
@@ -242,8 +244,8 @@ function NewestAccounts({ overview }: { overview: ConsoleOverview }) {
                     {t('console.status.suspended')}
                   </Badge>
                 ) : null}
-                <span className="ml-auto shrink-0 text-caption tabular-nums text-ink-4">
-                  {formatDate(account.createdAt) ?? '—'}
+                <span className="ms-auto shrink-0 text-caption tabular-nums text-ink-4">
+                  {formatDate(account.createdAt, locale) ?? '—'}
                 </span>
               </PanelRow>
             </li>

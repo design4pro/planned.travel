@@ -43,7 +43,6 @@ import { SEED_ANCHOR_INSTANT, minutesBeforeAnchor } from './dataset'
 import type { TenantScope } from '#/server/repos'
 import type { PersonKey, SeedSplit, SeedTrip } from './types'
 
-
 /** Row counts produced by one trip, used for the seed report and the verification query. */
 export interface TripCounts {
   readonly tripId: string
@@ -93,7 +92,12 @@ function userIdFor(context: TripApplyContext, person: PersonKey): string {
 function participantsFor(
   context: TripApplyContext,
   splits: ReadonlyArray<SeedSplit>,
-): Array<{ userId: string; weight?: number; shareMinor?: number; percentage?: number }> {
+): Array<{
+  userId: string
+  weight?: number
+  shareMinor?: number
+  percentage?: number
+}> {
   return splits.map((split) => ({
     userId: userIdFor(context, split.person),
     ...(split.weight === undefined ? {} : { weight: split.weight }),
@@ -108,7 +112,10 @@ function participantsFor(
  * The caller guarantees the trip does not already exist — `applySeed` deletes a stale one first — so
  * this function never has to reconcile, only build.
  */
-export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Promise<TripCounts> {
+export async function applyTrip(
+  context: TripApplyContext,
+  trip: SeedTrip,
+): Promise<TripCounts> {
   const owner = context.owner
 
   const created = await createTrip(owner, {
@@ -129,7 +136,9 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
     visibility: trip.visibility,
     accentColour: trip.accentColour,
     budgetTargetMinor: trip.budgetTargetMinor ?? null,
-    ...(trip.reminderDays === undefined ? {} : { reminderDays: trip.reminderDays }),
+    ...(trip.reminderDays === undefined
+      ? {}
+      : { reminderDays: trip.reminderDays }),
     isFavourite: trip.isFavourite ?? false,
     isArchived: trip.isArchived ?? false,
   })
@@ -167,7 +176,9 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
 
   const dayRows = await listTripDays(owner, tripId)
   const dayIdByNumber = new Map(dayRows.map((row) => [row.dayNumber, row.id]))
-  const dayDateByNumber = new Map(dayRows.map((row) => [row.dayNumber, row.date]))
+  const dayDateByNumber = new Map(
+    dayRows.map((row) => [row.dayNumber, row.date]),
+  )
 
   let dayNotes = 0
   for (const day of trip.days ?? []) {
@@ -250,11 +261,14 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
       durationMinutes: stop.durationMinutes ?? null,
       transportMode: stop.transportMode ?? null,
       notes: stop.notes ?? null,
-      ...(stop.reservationStatus === undefined ? {} : { reservationStatus: stop.reservationStatus }),
+      ...(stop.reservationStatus === undefined
+        ? {}
+        : { reservationStatus: stop.reservationStatus }),
     })
     stops += 1
 
-    const participants = stop.participants ?? trip.travellers.map((traveller) => traveller.person)
+    const participants =
+      stop.participants ?? trip.travellers.map((traveller) => traveller.person)
     await setAssignmentParticipants(
       owner,
       assignment.id,
@@ -275,7 +289,10 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
       tripId,
       startDayId,
       endDayId,
-      placeId: stay.placeKey === undefined ? null : (placeIdByKey.get(stay.placeKey) ?? null),
+      placeId:
+        stay.placeKey === undefined
+          ? null
+          : (placeIdByKey.get(stay.placeKey) ?? null),
       name: stay.name,
       address: stay.address,
       checkInTime: stay.checkInTime ?? null,
@@ -295,7 +312,10 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
   for (const [index, leg] of (trip.transports ?? []).entries()) {
     const row = await createTransport(owner, {
       tripId,
-      dayId: leg.dayNumber === undefined ? null : (dayIdByNumber.get(leg.dayNumber) ?? null),
+      dayId:
+        leg.dayNumber === undefined
+          ? null
+          : (dayIdByNumber.get(leg.dayNumber) ?? null),
       mode: leg.mode,
       status: leg.status,
       title: leg.title,
@@ -330,13 +350,22 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
 
   const reservationIdByKey = new Map<string, string>()
   for (const [index, booking] of (trip.reservations ?? []).entries()) {
-    const dayId = booking.startDay === undefined ? null : (dayIdByNumber.get(booking.startDay) ?? null)
-    const endDayId = booking.endDay === undefined ? null : (dayIdByNumber.get(booking.endDay) ?? null)
+    const dayId =
+      booking.startDay === undefined
+        ? null
+        : (dayIdByNumber.get(booking.startDay) ?? null)
+    const endDayId =
+      booking.endDay === undefined
+        ? null
+        : (dayIdByNumber.get(booking.endDay) ?? null)
     const row = await createReservation(owner, {
       tripId,
       dayId,
       endDayId,
-      placeId: booking.placeKey === undefined ? null : (placeIdByKey.get(booking.placeKey) ?? null),
+      placeId:
+        booking.placeKey === undefined
+          ? null
+          : (placeIdByKey.get(booking.placeKey) ?? null),
       transportId:
         booking.transportKey === undefined
           ? null
@@ -348,9 +377,15 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
       location: booking.location ?? null,
       url: booking.url ?? null,
       confirmationNumber: booking.confirmationNumber ?? null,
-      startDate: booking.startDay === undefined ? null : (dayDateByNumber.get(booking.startDay) ?? null),
+      startDate:
+        booking.startDay === undefined
+          ? null
+          : (dayDateByNumber.get(booking.startDay) ?? null),
       startTime: booking.startTime ?? null,
-      endDate: booking.endDay === undefined ? null : (dayDateByNumber.get(booking.endDay) ?? null),
+      endDate:
+        booking.endDay === undefined
+          ? null
+          : (dayDateByNumber.get(booking.endDay) ?? null),
       endTime: booking.endTime ?? null,
       guests: booking.guests ?? null,
       priceMinor: booking.priceMinor ?? null,
@@ -384,10 +419,18 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
   for (const expense of trip.expenses ?? []) {
     const { expense: row, shares } = await createExpense(owner, {
       tripId,
-      dayId: expense.dayNumber === undefined ? null : (dayIdByNumber.get(expense.dayNumber) ?? null),
-      placeId: expense.placeKey === undefined ? null : (placeIdByKey.get(expense.placeKey) ?? null),
+      dayId:
+        expense.dayNumber === undefined
+          ? null
+          : (dayIdByNumber.get(expense.dayNumber) ?? null),
+      placeId:
+        expense.placeKey === undefined
+          ? null
+          : (placeIdByKey.get(expense.placeKey) ?? null),
       budgetItemId:
-        expense.budgetItemKey === undefined ? null : (budgetIdByKey.get(expense.budgetItemKey) ?? null),
+        expense.budgetItemKey === undefined
+          ? null
+          : (budgetIdByKey.get(expense.budgetItemKey) ?? null),
       category: expense.category,
       title: expense.title,
       amountMinor: expense.amountMinor,
@@ -396,7 +439,8 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
       originalCurrency: expense.originalCurrency ?? null,
       exchangeRate: expense.exchangeRate ?? null,
       spentOn: expense.spentOn,
-      paidBy: expense.paidBy === null ? null : userIdFor(context, expense.paidBy),
+      paidBy:
+        expense.paidBy === null ? null : userIdFor(context, expense.paidBy),
       splitMethod: expense.splitMethod,
       notes: expense.notes ?? null,
       participants: participantsFor(context, expense.participants),
@@ -431,7 +475,8 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
       kind: list.kind,
       colour: list.colour,
       icon: list.icon,
-      ownerUserId: list.owner === undefined ? null : userIdFor(context, list.owner),
+      ownerUserId:
+        list.owner === undefined ? null : userIdFor(context, list.owner),
       weightLimitGrams: list.weightLimitGrams ?? null,
       sortOrder: listIndex,
     })
@@ -445,7 +490,10 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
         description: item.description ?? null,
         ...(item.quantity === undefined ? {} : { quantity: item.quantity }),
         weightGrams: item.weightGrams ?? null,
-        assignedTo: item.assignedTo === undefined ? null : userIdFor(context, item.assignedTo),
+        assignedTo:
+          item.assignedTo === undefined
+            ? null
+            : userIdFor(context, item.assignedTo),
         dueDate: item.dueDate ?? null,
         ...(item.priority === undefined ? {} : { priority: item.priority }),
         sortOrder: itemIndex,
@@ -478,7 +526,9 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
       userId: authorScope.ctx.userId,
       body: message.body,
       replyToId:
-        message.replyTo === undefined ? null : (messageIdByKey.get(message.replyTo) ?? null),
+        message.replyTo === undefined
+          ? null
+          : (messageIdByKey.get(message.replyTo) ?? null),
       createdAt,
       updatedAt: createdAt,
     })
@@ -486,7 +536,11 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
     messages += 1
 
     for (const reaction of message.reactions ?? []) {
-      await toggleReaction(scopeFor(context, reaction.person), row.id, reaction.emoji)
+      await toggleReaction(
+        scopeFor(context, reaction.person),
+        row.id,
+        reaction.emoji,
+      )
       reactions += 1
     }
   }
@@ -511,7 +565,10 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
     const pollRow = await createPoll(scopeFor(context, poll.author), {
       tripId,
       question: poll.question,
-      options: poll.options.map((option) => ({ id: option.id, label: option.label })),
+      options: poll.options.map((option) => ({
+        id: option.id,
+        label: option.label,
+      })),
       allowMultiple: poll.allowMultiple ?? false,
     })
     polls += 1
@@ -527,12 +584,22 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
   for (const file of trip.files ?? []) {
     await recordFile(scopeFor(context, file.uploadedBy), {
       tripId,
-      placeId: file.placeKey === undefined ? null : (placeIdByKey.get(file.placeKey) ?? null),
+      placeId:
+        file.placeKey === undefined
+          ? null
+          : (placeIdByKey.get(file.placeKey) ?? null),
       reservationId:
-        file.reservationKey === undefined ? null : (reservationIdByKey.get(file.reservationKey) ?? null),
+        file.reservationKey === undefined
+          ? null
+          : (reservationIdByKey.get(file.reservationKey) ?? null),
       transportId:
-        file.transportKey === undefined ? null : (transportIdByKey.get(file.transportKey) ?? null),
-      expenseId: file.expenseKey === undefined ? null : (expenseIdByKey.get(file.expenseKey) ?? null),
+        file.transportKey === undefined
+          ? null
+          : (transportIdByKey.get(file.transportKey) ?? null),
+      expenseId:
+        file.expenseKey === undefined
+          ? null
+          : (expenseIdByKey.get(file.expenseKey) ?? null),
       storageKey: file.storageKey,
       filename: file.filename,
       contentType: file.contentType,
@@ -572,5 +639,5 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
 
 /** Colour a traveller is drawn in, taken from the workspace people list. */
 function colourFor(context: TripApplyContext, person: PersonKey): string {
-  return context.colours.get(person) ?? '#2F6F5E'
+  return context.colours.get(person) ?? '#256256'
 }

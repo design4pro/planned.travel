@@ -35,13 +35,16 @@ import type { TranslationOf } from '../../types'
 
 const messages = {
   'action.clear': 'Xóa trắng',
+  'action.clearFilters': 'Bỏ bộ lọc',
   'action.close': 'Đóng',
   'action.dismiss': 'Ẩn đi',
   'action.remove': 'Gỡ bỏ',
+  'action.keep': 'Giữ lại',
   'action.undo': 'Hoàn tác',
   'status.loading': 'Đang tải',
   'status.working': 'Đang xử lý',
   'status.searching': 'Đang tìm',
+  'status.removing': 'Đang xoá',
   'avatar.status.online': '{name} đang trực tuyến',
   'avatar.status.away': '{name} đang vắng mặt',
   'avatar.status.busy': '{name} đang bận',

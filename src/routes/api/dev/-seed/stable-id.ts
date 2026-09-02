@@ -37,9 +37,15 @@ function fnv1a(input: string): number {
  * The namespace keeps two unrelated uses of the same key — a person's email as a `user` id and as an
  * `account` id — from colliding on one value.
  */
-export function stableId(namespace: string, key: string, length: number): string {
+export function stableId(
+  namespace: string,
+  key: string,
+  length: number,
+): string {
   if (!Number.isInteger(length) || length < 1) {
-    throw new TypeError(`stableId: length must be a positive whole number, received ${String(length)}`)
+    throw new TypeError(
+      `stableId: length must be a positive whole number, received ${String(length)}`,
+    )
   }
   let out = ''
   for (let round = 0; out.length < length; round += 1) {

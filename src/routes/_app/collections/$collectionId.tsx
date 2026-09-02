@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { Bookmark, ChevronLeft, ExternalLink, MapPin, Tag } from 'lucide-react'
 import { z } from 'zod'
 
+import { useLocale } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { NotFoundPanel } from '#/components/layout/not-found'
@@ -55,6 +56,7 @@ export const Route = createFileRoute('/_app/collections/$collectionId')({
 })
 
 function CollectionPage() {
+  const locale = useLocale()
   const data = Route.useLoaderData()
   const search = Route.useSearch()
   const { collectionId } = Route.useParams()
@@ -104,7 +106,9 @@ function CollectionPage() {
               className={filterLinkClass(search.status === undefined)}
             >
               All
-              <FilterCount>{formatNumber(data.places.length)}</FilterCount>
+              <FilterCount>
+                {formatNumber(data.places.length, locale)}
+              </FilterCount>
             </Link>
             {STATUSES.map((status) => (
               <Link
@@ -115,7 +119,9 @@ function CollectionPage() {
                 className={filterLinkClass(search.status === status)}
               >
                 {humaniseToken(status)}
-                <FilterCount>{formatNumber(countFor(status))}</FilterCount>
+                <FilterCount>
+                  {formatNumber(countFor(status), locale)}
+                </FilterCount>
               </Link>
             ))}
             {data.labels.length === 0 ? null : (
@@ -188,6 +194,8 @@ function CollectionPage() {
                     <img
                       src={place.imageUrl}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="h-28 w-full shrink-0 object-cover"
                     />
                   )}
@@ -268,6 +276,7 @@ function CollectionPage() {
                           {formatMoneyMinor(
                             place.priceMinor,
                             place.currency ?? 'EUR',
+                            locale,
                           )}
                         </span>
                       )}
@@ -314,6 +323,7 @@ function CollectionPage() {
                       data.places.filter((place) =>
                         place.labelIds.includes(label.id),
                       ).length,
+                      locale,
                     )}
                   </span>
                 </li>

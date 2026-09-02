@@ -33,7 +33,10 @@ import { billingRuntime } from '#/server/billing/runtime.cloudflare'
  * client bundle and no billing credential goes near a browser.
  */
 async function post({ request }: { request: Request }): Promise<Response> {
-  return await handlePolarWebhook(billingRuntime({ component: 'worker' }), request)
+  return await handlePolarWebhook(
+    billingRuntime({ component: 'worker' }),
+    request,
+  )
 }
 
 /** Any other verb is a misconfigured endpoint, not a Polar delivery. */

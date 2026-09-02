@@ -134,7 +134,6 @@ const messages = {
   'users.filter.role.curator': 'Küratörler',
   'users.filter.status.label': 'Hesap durumuna göre süz',
   'users.filter.status.any': 'Herhangi bir durum',
-  'users.filter.clear': 'Süzgeçleri temizle',
   'users.filter.hint':
     'Role ya da duruma göre daraltın — her seferinde birine.',
   'users.column.account': 'Hesap',

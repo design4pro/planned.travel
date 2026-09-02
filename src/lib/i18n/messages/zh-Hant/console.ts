@@ -128,7 +128,6 @@ const messages = {
   'users.filter.role.curator': '策展人',
   'users.filter.status.label': '依帳戶狀態篩選',
   'users.filter.status.any': '任何狀態',
-  'users.filter.clear': '清除篩選',
   'users.filter.hint': '可依角色或狀態縮小範圍 —— 一次只用其中一項。',
   'users.column.account': '帳戶',
   'users.column.role': '平台角色',

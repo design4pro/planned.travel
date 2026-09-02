@@ -25,15 +25,18 @@ import type En from '../en/ui'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Wissen',
+  'action.clearFilters': 'Filters wissen',
   'action.close': 'Sluiten',
   'action.dismiss': 'Verbergen',
   'action.remove': 'Verwijderen',
+  'action.keep': 'Bewaren',
   'action.undo': 'Ongedaan maken',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'Bezig met laden',
   'status.working': 'Bezig met opslaan',
   'status.searching': 'Bezig met zoeken',
+  'status.removing': 'Wordt verwijderd',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} is nu online',

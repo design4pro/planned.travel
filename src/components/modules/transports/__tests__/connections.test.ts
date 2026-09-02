@@ -174,7 +174,10 @@ describe('analyseConnections', () => {
 
     expect(connection.severity).toBe('ok')
     expect(connection.gapMinutes).toBe(205)
-    expect(connection.headline).toBe('3h 25m in between')
+    expect(connection.headline).toEqual({
+      key: 'modules.transports.junction.ok.headline',
+      params: { gap: '3h 25m' },
+    })
     expect(connection.placeMismatch).toBe(false)
   })
 
@@ -193,9 +196,13 @@ describe('analyseConnections', () => {
 
     expect(connection.severity).toBe('impossible')
     expect(connection.gapMinutes).toBe(-60)
-    expect(connection.headline).toContain('before the previous leg lands')
-    expect(connection.detail).toContain('Train to Kyoto')
-    expect(connection.detail).toContain('Flight to Tokyo')
+    expect(connection.headline.key).toBe(
+      'modules.transports.junction.impossible.headline',
+    )
+    expect(connection.detail).toEqual({
+      key: 'modules.transports.junction.impossible.detail',
+      params: { to: 'Train to Kyoto', from: 'Flight to Tokyo' },
+    })
   })
 
   it('flags a gap shorter than the mode needs as tight', () => {
@@ -213,7 +220,10 @@ describe('analyseConnections', () => {
 
     expect(connection.severity).toBe('tight')
     expect(connection.gapMinutes).toBe(60)
-    expect(connection.headline).toBe('1h to connect')
+    expect(connection.headline).toEqual({
+      key: 'modules.transports.junction.tight.headline',
+      params: { gap: '1h' },
+    })
   })
 
   it('accepts the same gap when the onward mode needs less time', () => {
@@ -246,8 +256,10 @@ describe('analyseConnections', () => {
     ])
 
     expect(connection.placeMismatch).toBe(true)
-    expect(connection.detail).toContain('HND')
-    expect(connection.detail).toContain('NRT')
+    expect(connection.detail).toEqual({
+      key: 'modules.transports.junction.ok.detail',
+      params: { landing: 'HND', boarding: 'NRT' },
+    })
   })
 
   it('matches endpoints by name when neither carries a code', () => {
@@ -416,7 +428,7 @@ describe('legTimingError', () => {
         arrivalDate: '2026-04-16',
         arrivalTime: '08:00',
       }),
-    ).toBe('This leg arrives before it departs.')
+    ).toBe('modules.transports.error.arrivesBeforeDeparts')
   })
 
   it('stays quiet while a date is still blank', () => {
@@ -449,6 +461,6 @@ describe('legTimingError', () => {
         arrivalDate: '2026-04-16',
         arrivalTime: '',
       }),
-    ).toBe('This leg arrives before it departs.')
+    ).toBe('modules.transports.error.arrivesBeforeDeparts')
   })
 })

@@ -7,17 +7,23 @@ basemap.
 ## Quickstart
 
 ```bash
-pnpm install
-pnpm dev            # http://localhost:3000
-pnpm test           # unit tests (Vitest)
-pnpm e2e            # e2e + visual regression (Playwright)
+pnpm worktree:bootstrap   # fresh checkout or worktree: everything below, once
+pnpm dev                  # http://localhost:3000
+pnpm test                 # unit tests (Vitest)
+pnpm e2e                  # e2e + visual regression (Playwright)
 ```
 
-Local secrets go in `.dev.vars` (copy `.dev.vars.example`). The e2e suite needs
-a migrated local D1 (`pnpm db:migrate:local`), the basemap loaded into the
-local R2 bucket and a seeded demo workspace — `scripts/seed/README.md` and
-`docs/DEPLOY.md` §7 cover the details; in cloud sessions and CI this is
-automated (see below).
+Four fixtures are gitignored and per-checkout: `node_modules`, `.dev.vars`, a
+migrated local D1 and the basemap in the local R2 bucket. Without the second,
+Better Auth returns 500 on `/login` and the whole application behind it is
+unreachable. `pnpm worktree:bootstrap` provisions all four, seeds the demo
+workspace and prints the sign-in; it is idempotent, and `--check` reports what
+is missing without writing. Details in `scripts/worktree/README.md`, the
+dataset in `scripts/seed/README.md`, the basemap in `docs/DEPLOY.md` §7. In
+cloud sessions and CI the same steps are automated (see below).
+
+Doing it by hand instead: copy `.dev.vars.example` to `.dev.vars` and fill it
+in, then `pnpm db:migrate:local`, load the basemap, and seed.
 
 ## Branch model
 

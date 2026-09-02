@@ -1,0 +1,62 @@
+/**
+ * The trip tabs' own copy, in ko.
+ *
+ * Authored from `../en/trips.ts`, never from another product's catalogue
+ * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
+ * and `__tests__/parity.test.ts` checks the placeholders and the plural
+ * branches.
+ *
+ * **복수형.** 한국어는 `other` 한 분기만 사용한다.
+ */
+
+import type { TranslationOf } from '../../types'
+import type En from '../en/trips'
+
+const messages = {
+  /* ------------------------------------------ when a tab fails to load */
+  'error.trip': '이 여행을 불러오지 못했습니다',
+  'error.plan': '일정을 불러오지 못했습니다',
+  'error.costs': '비용을 불러오지 못했습니다',
+  'error.collab': '대화를 불러오지 못했습니다',
+  'error.book': '예약을 불러오지 못했습니다',
+  /* ------------------------------------------------- the itinerary tab */
+  'plan.title': '일정',
+  'plan.places': '장소',
+  /* ---------------------------------------------------- the collab tab */
+  'collab.title': '함께',
+  'collab.empty': '아직 공유된 것이 없습니다',
+  'collab.conversation': '대화',
+  'collab.count.messages': {
+    other: '메시지 {messages}개',
+  },
+  'collab.count.notes': {
+    other: '메모 {notes}개',
+  },
+  'collab.count.polls': {
+    other: '투표 {polls}개',
+  },
+  /* -------------------------------------------------- the bookings tab */
+  'book.title': '예약',
+  'book.empty': '아직 예약이 없습니다',
+  'book.count.bookings': {
+    other: '예약 {bookings}건',
+  },
+  'book.count.confirmed': {
+    other: '{confirmed}건 확정',
+  },
+  'book.progressLabel': {
+    other: '{total}건 중 {confirmed}건 예약 확정',
+  },
+  'book.ofTotal': '/ {total}',
+  'book.confirmed': '확정',
+  'book.awaiting': '확인 대기',
+  'book.nothingHanging': '대기 중인 것 없음',
+  'book.chase': '출발 전에 확인하세요',
+  'book.committed': '확정 금액',
+  'book.committedCaption': '이 여행의 모든 예약 기준',
+  'book.onItinerary': '일정에 등록',
+  'book.pinnedCaption': '일정의 특정 날짜에 고정됨',
+} satisfies TranslationOf<typeof En>
+
+export default messages

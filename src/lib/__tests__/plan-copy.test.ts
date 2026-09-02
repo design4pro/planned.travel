@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import settings from '#/lib/i18n/messages/en/settings'
 import { PLANS, PLAN_IDS, PLAN_LIST } from '#/lib/plans'
-import { PLAN_ALLOWANCE_CLAIMS, PLAN_COPY } from '../plan-copy'
+import { PLAN_ALLOWANCE_CLAIMS, PLAN_COPY } from '#/lib/plan-copy'
 
 /**
  * The billing screen's plan copy, and the rule that put it in the catalogue.
@@ -63,20 +63,17 @@ describe('every plan a customer can be shown has copy', () => {
 })
 
 /**
- * Suspended, with the reason, until `billing.tsx` is localised.
+ * The screen reads the catalogue, not the English on `plans.ts`.
  *
- * This suite asserts a property of the *screen* — that it reads `PLAN_COPY` keys rather than the
- * English `name`, `tagline` and `features` on `src/lib/plans.ts`. It held on `develop`, where the
- * screen had been localised. The merge could not keep that version: it was written against Stripe's
- * invoice model, which phase A replaced with Polar's, so it no longer compiles against the types it
- * reads. The compiling screen is the pre-localisation one, and it does read `plan.name`.
+ * This suite was suspended while `billing.tsx` was the pre-localisation screen: it held on
+ * `develop`, and the merge that replaced Stripe's invoice model with Polar's could not keep the
+ * localised version, because it no longer compiled against the types it read. The screen that
+ * survived rendered `plan.name`, `plan.tagline` and `plan.features` straight into the DOM, and 101
+ * catalogued `settings.billing.*` keys sat in 23 languages with nothing asking for them.
  *
- * The rest of this file still runs and still matters: `PLAN_COPY` must cover every plan, and the
- * allowance sentences must agree with the numbers in `plans.ts`. Only the four assertions about
- * what the screen reads are suspended, and they are the acceptance test for finishing the job.
- * Un-skip them and they say whether it is done.
+ * The screen is localised again, so these four assertions are live and they are what says so.
  */
-describe.skip('the screen no longer reads the English catalogue', () => {
+describe('the screen no longer reads the English catalogue', () => {
   it.each(['name', 'tagline', 'features'])('never renders plan.%s', (field) => {
     // A comment quoting the field would read as a use, so the source is
     // stripped of comments first — the same treatment `copy-rules.test.ts`

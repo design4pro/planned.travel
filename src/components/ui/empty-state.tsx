@@ -58,6 +58,16 @@ export type EmptyStateProps = Omit<
      * something upstream did not answer, not because the reader has nothing.
      */
     tone?: 'neutral' | 'brand' | 'warning'
+    /**
+     * What the title is, in the document outline.
+     *
+     * A paragraph by default, and that is right nearly everywhere: an empty
+     * state usually sits inside a section whose own heading already names it, so
+     * a second heading there would invent a level. It is wrong in the one place
+     * where the designed nothing *is* the page's leading element — the dashboard
+     * with no trips yet — because then the page has no heading at all.
+     */
+    titleAs?: 'p' | 'h1' | 'h2' | 'h3'
   }
 
 /**
@@ -77,6 +87,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       action,
       secondaryAction,
       tone = 'neutral',
+      titleAs: Title = 'p',
       ...props
     },
     ref,
@@ -101,9 +112,9 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         </span>
       ) : null}
 
-      <p className={cn('font-semibold text-ink', titleSizes[size ?? 'md'])}>
+      <Title className={cn('font-semibold text-ink', titleSizes[size ?? 'md'])}>
         {title}
-      </p>
+      </Title>
 
       {description ? (
         <p className="max-w-prose text-label text-ink-3">{description}</p>

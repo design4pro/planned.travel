@@ -240,7 +240,12 @@ describe('scheduling an idea', () => {
       ideaIds: [ideaItemId('pa')],
     }
     expect(
-      movePlanItem(withIdea, ideaItemId('pa'), { container: 'd2', index: 0 }, options),
+      movePlanItem(
+        withIdea,
+        ideaItemId('pa'),
+        { container: 'd2', index: 0 },
+        options,
+      ),
     ).toEqual({ ok: false, reason: 'duplicate' })
   })
 })

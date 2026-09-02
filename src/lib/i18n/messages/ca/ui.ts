@@ -30,15 +30,18 @@ import type En from '../en/ui'
 const messages = {
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Buida',
+  'action.clearFilters': 'Esborra els filtres',
   'action.close': 'Tanca',
   'action.dismiss': 'Amaga',
   'action.remove': 'Suprimeix',
+  'action.keep': 'Deixa-ho',
   'action.undo': 'Desfés',
 
   /* -------------------------------------------------------------- status */
   'status.loading': 'S’està carregant',
   'status.working': 'S’està desant',
   'status.searching': 'S’està cercant',
+  'status.removing': 'S’està eliminant',
 
   /* -------------------------------------------------------------- avatar */
   'avatar.status.online': '{name} està en línia',

@@ -28,6 +28,7 @@ import {
   Skeleton,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import {
   applyListTemplateFn,
   createListFn,
@@ -36,6 +37,7 @@ import {
   updateListFn,
   updateListItemFn,
 } from '#/server/fns/lists'
+import { SwatchPicker } from '../shared/swatch-picker'
 import {
   NOT_SET,
   fromSelectValue,
@@ -54,58 +56,6 @@ import {
 import type { ListTemplateOption } from '#/server/fns/lists'
 import type { ListData, ListItemData, PersonOption } from './types'
 
-/**
- * A list's colour is stored on the row, so the palette has to travel as a hex
- * string the database can hold. Each option is paired with the token class that
- * paints the swatch, so nothing on screen is drawn from the literal.
- */
-const SWATCHES: ReadonlyArray<{
-  value: string
-  className: string
-  label: string
-}> = [
-  { value: '', className: 'bg-surface-inset', label: 'No colour' },
-  { value: '#256256', className: 'bg-brand', label: 'Pine' },
-  { value: '#1d4fd8', className: 'bg-info', label: 'Ink blue' },
-  { value: '#8a5305', className: 'bg-warning', label: 'Amber' },
-  { value: '#136b45', className: 'bg-success', label: 'Green' },
-  { value: '#b22f22', className: 'bg-danger', label: 'Red' },
-]
-
-function SwatchPicker({
-  value,
-  onChange,
-  legend,
-}: {
-  value: string
-  onChange: (next: string) => void
-  legend: string
-}) {
-  return (
-    <fieldset>
-      <legend className="mb-2 text-label font-medium text-ink">{legend}</legend>
-      <div className="flex flex-wrap gap-2">
-        {SWATCHES.map((swatch) => (
-          <button
-            key={swatch.label}
-            type="button"
-            aria-pressed={value === swatch.value}
-            aria-label={swatch.label}
-            onClick={() => onChange(swatch.value)}
-            className={cn(
-              'size-8 rounded-full border border-edge-faint transition-[box-shadow,transform] duration-base ease-out-quint focus-ring',
-              swatch.className,
-              value === swatch.value
-                ? 'ring-2 ring-ink ring-offset-2 ring-offset-surface'
-                : 'hover:scale-105 motion-reduce:hover:scale-100',
-            )}
-          />
-        ))}
-      </div>
-    </fieldset>
-  )
-}
-
 /* --------------------------------------------------------------- list dialog */
 
 export function ListDialog({
@@ -122,6 +72,7 @@ export function ListDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslate()
   const editing = list !== undefined
   const formId = useId()
 
@@ -149,20 +100,20 @@ export function ListDialog({
   }, [open, list])
 
   const create = useAction(createListFn, {
-    success: 'List created',
-    description: 'Add the first thing you must not forget.',
-    failure: 'The list was not created',
+    success: t('modules.lists.toast.created'),
+    description: t('modules.lists.toast.createdBody'),
+    failure: t('modules.lists.toast.createFailed'),
   })
   const update = useAction(updateListFn, {
-    success: 'List updated',
-    failure: 'The list was not updated',
+    success: t('modules.lists.toast.updated'),
+    failure: t('modules.lists.toast.updateFailed'),
   })
   const action = editing ? update : create
 
   const trimmed = name.trim()
   const limitError =
     limit !== '' && !/^\d{1,6}$/.test(limit.trim())
-      ? 'A weight limit is a whole number of grams.'
+      ? t('modules.lists.error.weightLimit')
       : undefined
   const canSave =
     trimmed.length > 0 && limitError === undefined && !action.pending
@@ -188,11 +139,15 @@ export function ListDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit this list' : 'New list'}</DialogTitle>
+          <DialogTitle>
+            {editing
+              ? t('modules.lists.dialog.editTitle')
+              : t('modules.lists.action.new')}
+          </DialogTitle>
           <DialogDescription>
             {editing
-              ? 'Rename it, change what kind of list it is, or hand it to one traveller.'
-              : 'Packing, to-dos, shopping and the documents you must not forget — each one gets its own list.'}
+              ? t('modules.lists.dialog.editBody')
+              : t('modules.lists.dialog.addBody')}
           </DialogDescription>
         </DialogHeader>
 
@@ -208,16 +163,16 @@ export function ListDialog({
             }}
           >
             {action.error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {action.error}
               </Alert>
             )}
 
-            <Field label="Name" required>
+            <Field label={t('modules.field.name')} required>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Carry-on"
+                placeholder={t('modules.lists.field.namePlaceholder')}
                 maxLength={120}
                 autoComplete="off"
                 required
@@ -225,24 +180,27 @@ export function ListDialog({
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Kind">
+              <Field label={t('modules.lists.field.kind')}>
                 <SimpleSelect
                   options={LIST_KINDS.map((value) => ({
                     value,
-                    label: LIST_KIND_LABELS[value],
+                    label: t(LIST_KIND_LABELS[value]),
                   }))}
                   value={kind}
                   onValueChange={setKind}
-                  ariaLabel="Kind of list"
+                  ariaLabel={t('modules.lists.field.kindAria')}
                 />
               </Field>
               <Field
-                label="Belongs to"
-                hint="Shared lists are everyone's to tick off."
+                label={t('modules.lists.field.owner')}
+                hint={t('modules.lists.field.ownerHint')}
               >
                 <SimpleSelect
                   options={[
-                    { value: NOT_SET, label: 'Everyone on the trip' },
+                    {
+                      value: NOT_SET,
+                      label: t('modules.lists.field.everyone'),
+                    },
                     ...people.map((person) => ({
                       value: person.userId,
                       label: person.name,
@@ -250,14 +208,14 @@ export function ListDialog({
                   ]}
                   value={owner}
                   onValueChange={setOwner}
-                  ariaLabel="Belongs to"
+                  ariaLabel={t('modules.lists.field.owner')}
                 />
               </Field>
             </div>
 
             <Field
-              label="Weight limit"
-              hint="Grams. Leave it empty if there is no allowance to keep to."
+              label={t('modules.lists.field.weightLimit')}
+              hint={t('modules.lists.field.weightLimitHint')}
               error={limitError}
             >
               <Input
@@ -269,7 +227,11 @@ export function ListDialog({
               />
             </Field>
 
-            <SwatchPicker value={colour} onChange={setColour} legend="Colour" />
+            <SwatchPicker
+              value={colour}
+              onChange={setColour}
+              legend={t('modules.colour.legend')}
+            />
           </form>
         </DialogBody>
 
@@ -280,7 +242,7 @@ export function ListDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -289,9 +251,11 @@ export function ListDialog({
             shape="pill"
             disabled={!canSave}
             loading={action.pending}
-            loadingLabel="Saving the list"
+            loadingLabel={t('modules.lists.action.saving')}
           >
-            {editing ? 'Save list' : 'Create list'}
+            {editing
+              ? t('modules.lists.action.save')
+              : t('modules.lists.action.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -320,6 +284,7 @@ export function ItemDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslate()
   const editing = item !== undefined
   const formId = useId()
   const listName = useId()
@@ -348,24 +313,24 @@ export function ItemDialog({
   }, [open, item])
 
   const create = useAction(createListItemFn, {
-    success: 'Item added',
-    failure: 'The item was not added',
+    success: t('modules.lists.item.toast.added'),
+    failure: t('modules.lists.item.toast.addFailed'),
   })
   const update = useAction(updateListItemFn, {
-    success: 'Item updated',
-    failure: 'The item was not updated',
+    success: t('modules.lists.item.toast.updated'),
+    failure: t('modules.lists.item.toast.updateFailed'),
   })
   const action = editing ? update : create
 
   const trimmed = name.trim()
   const quantityError = !/^\d{1,3}$/.test(quantity.trim())
-    ? 'A quantity is a whole number from 1 to 999.'
+    ? t('modules.lists.item.error.quantity')
     : Number.parseInt(quantity, 10) < 1
-      ? 'A quantity is a whole number from 1 to 999.'
+      ? t('modules.lists.item.error.quantity')
       : undefined
   const weightError =
     weight !== '' && !/^\d{1,6}$/.test(weight.trim())
-      ? 'A weight is a whole number of grams.'
+      ? t('modules.lists.item.error.weight')
       : undefined
   const canSave =
     trimmed.length > 0 &&
@@ -396,11 +361,12 @@ export function ItemDialog({
       <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>
-            {editing ? 'Edit this item' : 'Add an item'}
+            {editing
+              ? t('modules.lists.item.dialog.editTitle')
+              : t('modules.lists.item.dialog.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            Everything except the name is optional — a weight makes the pack
-            total real, and a category groups the list.
+            {t('modules.lists.item.dialog.body')}
           </DialogDescription>
         </DialogHeader>
 
@@ -416,16 +382,16 @@ export function ItemDialog({
             }}
           >
             {action.error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {action.error}
               </Alert>
             )}
 
-            <Field label="Item" required>
+            <Field label={t('modules.lists.item.field.label')} required>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Passport"
+                placeholder={t('modules.lists.item.field.placeholder')}
                 maxLength={120}
                 autoComplete="off"
                 required
@@ -434,13 +400,15 @@ export function ItemDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
-                label="Category"
-                hint="Groups the list under a heading. Optional."
+                label={t('modules.field.category')}
+                hint={t('modules.lists.item.field.categoryHint')}
               >
                 <Input
                   value={category}
                   onChange={(event) => setCategory(event.target.value)}
-                  placeholder="Documents"
+                  placeholder={t(
+                    'modules.lists.item.field.categoryPlaceholder',
+                  )}
                   maxLength={60}
                   list={categories.length === 0 ? undefined : listName}
                   autoComplete="off"
@@ -453,26 +421,29 @@ export function ItemDialog({
                   </datalist>
                 )}
               </Field>
-              <Field label="Priority">
+              <Field label={t('modules.lists.item.field.priority')}>
                 <SimpleSelect
                   options={ITEM_PRIORITIES.map((value) => ({
                     value,
                     label:
                       value === 'high'
-                        ? 'High — do not forget'
+                        ? t('modules.lists.priorityChoice.high')
                         : value === 'low'
-                          ? 'Low — if there is room'
-                          : 'Normal',
+                          ? t('modules.lists.priorityChoice.low')
+                          : t('modules.lists.priorityChoice.normal'),
                   }))}
                   value={priority}
                   onValueChange={setPriority}
-                  ariaLabel="Priority"
+                  ariaLabel={t('modules.lists.item.field.priority')}
                 />
               </Field>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Quantity" error={quantityError}>
+              <Field
+                label={t('modules.lists.item.field.quantity')}
+                error={quantityError}
+              >
                 <Input
                   value={quantity}
                   onChange={(event) => setQuantity(event.target.value)}
@@ -480,7 +451,11 @@ export function ItemDialog({
                   leading={<span className="text-caption text-ink-4">×</span>}
                 />
               </Field>
-              <Field label="Weight" error={weightError} hint="Grams, per unit.">
+              <Field
+                label={t('modules.lists.item.field.weight')}
+                error={weightError}
+                hint={t('modules.lists.item.field.weightHint')}
+              >
                 <Input
                   value={weight}
                   onChange={(event) => setWeight(event.target.value)}
@@ -491,10 +466,13 @@ export function ItemDialog({
               </Field>
             </div>
 
-            <Field label="Whose job is this">
+            <Field label={t('modules.lists.item.field.owner')}>
               <SimpleSelect
                 options={[
-                  { value: NOT_SET, label: 'Nobody in particular' },
+                  {
+                    value: NOT_SET,
+                    label: t('modules.lists.item.owner.nobody'),
+                  },
                   ...people.map((person) => ({
                     value: person.userId,
                     label: person.name,
@@ -502,7 +480,7 @@ export function ItemDialog({
                 ]}
                 value={assignedTo}
                 onValueChange={setAssignedTo}
-                ariaLabel="Whose job is this"
+                ariaLabel={t('modules.lists.item.field.owner')}
               />
             </Field>
           </form>
@@ -515,7 +493,7 @@ export function ItemDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -524,9 +502,11 @@ export function ItemDialog({
             shape="pill"
             disabled={!canSave}
             loading={action.pending}
-            loadingLabel="Saving the item"
+            loadingLabel={t('modules.lists.item.action.saving')}
           >
-            {editing ? 'Save item' : 'Add item'}
+            {editing
+              ? t('modules.lists.item.action.save')
+              : t('modules.lists.item.action.add')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -545,6 +525,7 @@ export function TemplateDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslate()
   const [templates, setTemplates] =
     useState<ReadonlyArray<ListTemplateOption> | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -570,9 +551,7 @@ export function TemplateDialog({
       })
       .catch((cause: unknown) => {
         if (!cancelled) {
-          setLoadError(
-            messageOf(cause, 'The templates could not be loaded right now.'),
-          )
+          setLoadError(messageOf(cause, t('modules.lists.template.loadError')))
         }
       })
 
@@ -582,10 +561,10 @@ export function TemplateDialog({
   }, [open, tripId])
 
   const apply = useAction(applyListTemplateFn, {
-    success: 'List added from a template',
+    success: t('modules.lists.template.toast.added'),
     description: (result) =>
-      `${result.itemCount} item${result.itemCount === 1 ? '' : 's'} copied in, ready to tick off.`,
-    failure: 'The template was not applied',
+      t('modules.lists.template.copiedIn', { count: result.itemCount }),
+    failure: t('modules.lists.template.toast.addFailed'),
   })
 
   async function submit(): Promise<void> {
@@ -604,27 +583,32 @@ export function TemplateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>Start from a template</DialogTitle>
+          <DialogTitle>{t('modules.lists.template.dialogTitle')}</DialogTitle>
           <DialogDescription>
-            A template is a list you have saved before. Applying one copies it
-            in as a new list on this trip — the original is left alone.
+            {t('modules.lists.template.dialogBody')}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody>
           {apply.error === null ? null : (
-            <Alert tone="danger" title="That did not apply" className="mb-4">
+            <Alert
+              tone="danger"
+              title={t('modules.lists.template.error.apply')}
+              className="mb-4"
+            >
               {apply.error}
             </Alert>
           )}
 
           {loadError !== null ? (
-            <Alert tone="danger" title="The templates did not load">
+            <Alert tone="danger" title={t('modules.lists.template.error.load')}>
               {loadError}
             </Alert>
           ) : templates === null ? (
             <div aria-busy="true" className="flex flex-col gap-3">
-              <span className="sr-only">Loading templates</span>
+              <span className="sr-only">
+                {t('modules.lists.template.loading')}
+              </span>
               {[0, 1, 2].map((row) => (
                 <Skeleton key={row} className="h-20 w-full" radius="lg" />
               ))}
@@ -633,8 +617,8 @@ export function TemplateDialog({
             <EmptyState
               size="sm"
               icon={<Layers />}
-              title="No templates yet"
-              description="Save a list as a template once you have one you would build again, and it will show up here for every future trip."
+              title={t('modules.lists.template.empty.title')}
+              description={t('modules.lists.template.empty.body')}
             />
           ) : (
             <ul className="flex flex-col gap-2.5">
@@ -645,7 +629,7 @@ export function TemplateDialog({
                     aria-pressed={selected === template.id}
                     onClick={() => setSelected(template.id)}
                     className={cn(
-                      'flex w-full flex-col gap-1.5 rounded-lg border p-4 text-left focus-ring',
+                      'flex w-full flex-col gap-1.5 rounded-lg border p-4 text-start focus-ring',
                       'transition-[border-color,background-color] duration-base ease-out-quint',
                       selected === template.id
                         ? 'border-brand bg-brand-subtle'
@@ -657,8 +641,9 @@ export function TemplateDialog({
                         {template.name}
                       </span>
                       <Badge tone="neutral" size="sm">
-                        {template.itemCount} item
-                        {template.itemCount === 1 ? '' : 's'}
+                        {t('modules.lists.template.itemCount', {
+                          count: template.itemCount,
+                        })}
                       </Badge>
                     </span>
                     {template.description === null ? null : (
@@ -688,7 +673,7 @@ export function TemplateDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="button"
@@ -697,10 +682,10 @@ export function TemplateDialog({
             icon={<Sparkles aria-hidden />}
             disabled={selected === null || apply.pending}
             loading={apply.pending}
-            loadingLabel="Applying the template"
+            loadingLabel={t('modules.lists.template.applying')}
             onClick={() => void submit()}
           >
-            Apply template
+            {t('modules.lists.template.apply')}
           </Button>
         </DialogFooter>
       </DialogContent>

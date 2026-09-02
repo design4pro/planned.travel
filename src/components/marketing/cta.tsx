@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 
 import { Button, Card } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 import { Section } from './section'
 import { DottedRoute } from './visuals'
 
@@ -21,9 +22,16 @@ export type ClosingCtaProps = {
 export function ClosingCta({
   heading,
   lede,
-  secondary = { label: 'Compare the plans', to: '/pricing' },
+  secondary,
   className,
 }: ClosingCtaProps) {
+  const t = useTranslate()
+  // The default lives here rather than in the parameter list, because reading it
+  // from the catalogue needs the hook and a parameter default runs before one.
+  const second = secondary ?? {
+    label: t('marketing.cta.comparePlans'),
+    to: '/pricing' as const,
+  }
   return (
     <Section className={className} density="tight">
       <Card
@@ -33,7 +41,7 @@ export function ClosingCta({
       >
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-32 -right-24 size-96 rounded-full bg-brand/30 blur-3xl"
+          className="pointer-events-none absolute -top-32 -end-24 size-96 rounded-full bg-brand/30 blur-3xl"
         />
         <DottedRoute className="pointer-events-none absolute inset-x-0 -bottom-8 text-inverse-on/15" />
         <div className="relative flex flex-col items-center gap-6 px-6 py-14 text-center sm:px-10 sm:py-16">
@@ -52,7 +60,7 @@ export function ClosingCta({
               iconAfter={<ArrowRight aria-hidden className="size-4" />}
               className="w-full sm:w-auto"
             >
-              <Link to="/register">Start planning free</Link>
+              <Link to="/register">{t('marketing.action.startPlanning')}</Link>
             </Button>
             <Button
               asChild
@@ -61,7 +69,7 @@ export function ClosingCta({
               shape="pill"
               className="w-full sm:w-auto"
             >
-              <Link to={secondary.to}>{secondary.label}</Link>
+              <Link to={second.to}>{second.label}</Link>
             </Button>
           </div>
         </div>

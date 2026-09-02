@@ -21,6 +21,7 @@ import {
 import {
   Alert,
   Button,
+  Chip,
   Dialog,
   DialogBody,
   DialogContent,
@@ -33,7 +34,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
-import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { createBookingFn, updateBookingFn } from '#/server/fns/reservations'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import {
@@ -51,6 +52,7 @@ import {
 } from './booking-form'
 
 import type { LucideIcon } from 'lucide-react'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { BookingDraft, BookingType } from './booking-form'
 import type { BookingDayOption, BookingRow } from '#/server/fns/reservations'
 
@@ -64,17 +66,17 @@ const TYPE_ICON: { readonly [K in BookingType]: LucideIcon } = {
   other: Ticket,
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  none: 'No status yet',
-  pending: 'Pending — waiting on them',
-  confirmed: 'Confirmed',
-  completed: 'Done',
-  cancelled: 'Cancelled',
+const STATUS_LABELS: Record<string, MessageKey> = {
+  none: 'modules.book.statusChoice.none',
+  pending: 'modules.book.statusChoice.pending',
+  confirmed: 'modules.book.status.confirmed',
+  completed: 'modules.book.status.completed',
+  cancelled: 'modules.book.status.cancelled',
 }
 
 /** A day, named the way a person would refer to it. */
-export function dayLabel(day: BookingDayOption): string {
-  const parts = [`Day ${day.dayNumber}`]
+export function dayLabel(day: BookingDayOption, t: Translate): string {
+  const parts = [t('modules.book.dayNumber', { n: day.dayNumber })]
   if (day.title !== null && day.title.length > 0) {
     parts.push(day.title)
   } else if (day.date !== null) {
@@ -122,6 +124,7 @@ export function BookingDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslate()
   const editing = booking !== undefined
   const formId = useId()
 
@@ -143,13 +146,13 @@ export function BookingDialog({
   }, [open, booking, currency])
 
   const create = useAction(createBookingFn, {
-    success: 'Booking added',
-    description: 'It is on the timeline now.',
-    failure: 'The booking was not added',
+    success: t('modules.book.toast.added'),
+    description: t('modules.book.toast.addedBody'),
+    failure: t('modules.book.toast.addFailed'),
   })
   const update = useAction(updateBookingFn, {
-    success: 'Booking updated',
-    failure: 'The booking was not updated',
+    success: t('modules.book.toast.updated'),
+    failure: t('modules.book.toast.updateFailed'),
   })
   const action = editing ? update : create
 
@@ -164,9 +167,15 @@ export function BookingDialog({
     setDraft((current) => ({ ...current, [key]: value }))
   }
 
-  /** Only shows a field's error once the traveller has tried to submit. */
+  /**
+   * Only shows a field's error once the traveller has tried to submit.
+   *
+   * `validateBookingDraft` hands back a key and its parameters rather than a
+   * sentence, so the resolving happens here, where there is a provider.
+   */
   function errorFor(key: keyof BookingDraft): string | undefined {
-    return touched ? errors[key] : undefined
+    const error = touched ? errors[key] : undefined
+    return error === undefined ? undefined : t(error.key, error.params)
   }
 
   async function submit(): Promise<void> {
@@ -209,9 +218,13 @@ export function BookingDialog({
       <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>
-            {editing ? 'Edit this booking' : 'Add a booking'}
+            {editing
+              ? t('modules.book.dialog.editTitle')
+              : t('modules.book.dialog.addTitle')}
           </DialogTitle>
-          <DialogDescription>{shape.hint}</DialogDescription>
+          <DialogDescription>
+            {t(shape.hint, { module: t('shell.trip.tab.transports') })}
+          </DialogDescription>
         </DialogHeader>
 
         <DialogBody>
@@ -224,46 +237,42 @@ export function BookingDialog({
             }}
           >
             {action.error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {action.error}
               </Alert>
             )}
 
             <fieldset className="min-w-0">
               <legend className="mb-2 text-label font-medium text-ink">
-                What kind of booking
+                {t('modules.book.dialog.typeLegend')}
               </legend>
               <div className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                 {BOOKING_TYPES.map((type) => {
                   const Icon = TYPE_ICON[type]
                   const active = draft.type === type
                   return (
-                    <button
+                    <Chip
                       key={type}
-                      type="button"
-                      aria-pressed={active}
+                      selected={active}
+                      icon={<Icon aria-hidden />}
                       onClick={() => set('type', type)}
-                      className={cn(
-                        'inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-caption font-semibold whitespace-nowrap focus-ring',
-                        'transition-[background-color,border-color,color] duration-base ease-out-quint',
-                        active
-                          ? 'border-transparent bg-accent text-accent-on'
-                          : 'border-edge bg-surface text-ink-2 hover:border-edge-strong hover:text-ink',
-                      )}
                     >
-                      <Icon aria-hidden className="size-3.5" />
-                      {bookingShape(type).label}
-                    </button>
+                      {t(bookingShape(type).label)}
+                    </Chip>
                   )
                 })}
               </div>
             </fieldset>
 
-            <Field label="Name" required error={errorFor('title')}>
+            <Field
+              label={t('modules.field.name')}
+              required
+              error={errorFor('title')}
+            >
               <Input
                 value={draft.title}
                 onChange={(event) => set('title', event.target.value)}
-                placeholder={shape.titlePlaceholder}
+                placeholder={t(shape.titlePlaceholder)}
                 maxLength={160}
                 autoComplete="off"
                 required
@@ -272,22 +281,28 @@ export function BookingDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               {showsField(draft.type, 'provider') ? (
-                <Field label={shape.providerLabel} error={errorFor('provider')}>
+                <Field
+                  label={t(shape.providerLabel)}
+                  error={errorFor('provider')}
+                >
                   <Input
                     value={draft.provider}
                     onChange={(event) => set('provider', event.target.value)}
-                    placeholder={shape.providerPlaceholder}
+                    placeholder={t(shape.providerPlaceholder)}
                     maxLength={200}
                     autoComplete="off"
                   />
                 </Field>
               ) : null}
               {showsField(draft.type, 'location') ? (
-                <Field label={shape.locationLabel} error={errorFor('location')}>
+                <Field
+                  label={t(shape.locationLabel)}
+                  error={errorFor('location')}
+                >
                   <Input
                     value={draft.location}
                     onChange={(event) => set('location', event.target.value)}
-                    placeholder="Nishishinjuku 1-19-3"
+                    placeholder={t('modules.book.field.namePlaceholder')}
                     maxLength={200}
                     autoComplete="off"
                   />
@@ -297,7 +312,10 @@ export function BookingDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid grid-cols-[1fr_auto] items-start gap-3">
-                <Field label={shape.startLabel} error={errorFor('startDate')}>
+                <Field
+                  label={t(shape.startLabel)}
+                  error={errorFor('startDate')}
+                >
                   <Input
                     type="date"
                     value={draft.startDate}
@@ -305,7 +323,10 @@ export function BookingDialog({
                   />
                 </Field>
                 {showsField(draft.type, 'startTime') ? (
-                  <Field label="Time" error={errorFor('startTime')}>
+                  <Field
+                    label={t('modules.field.time')}
+                    error={errorFor('startTime')}
+                  >
                     <Input
                       type="time"
                       value={draft.startTime}
@@ -320,7 +341,10 @@ export function BookingDialog({
               showsField(draft.type, 'endTime') ? (
                 <div className="grid grid-cols-[1fr_auto] items-start gap-3">
                   {showsField(draft.type, 'endDate') ? (
-                    <Field label={shape.endLabel} error={errorFor('endDate')}>
+                    <Field
+                      label={t(shape.endLabel)}
+                      error={errorFor('endDate')}
+                    >
                       <Input
                         type="date"
                         value={draft.endDate}
@@ -332,7 +356,10 @@ export function BookingDialog({
                     </Field>
                   ) : null}
                   {showsField(draft.type, 'endTime') ? (
-                    <Field label="Time" error={errorFor('endTime')}>
+                    <Field
+                      label={t('modules.field.time')}
+                      error={errorFor('endTime')}
+                    >
                       <Input
                         type="time"
                         value={draft.endTime}
@@ -347,7 +374,10 @@ export function BookingDialog({
 
             <div className="grid gap-4 sm:grid-cols-3">
               {showsField(draft.type, 'guests') ? (
-                <Field label="Guests" error={errorFor('guests')}>
+                <Field
+                  label={t('modules.book.guests')}
+                  error={errorFor('guests')}
+                >
                   <Input
                     value={draft.guests}
                     onChange={(event) => set('guests', event.target.value)}
@@ -358,9 +388,9 @@ export function BookingDialog({
               ) : null}
               {showsField(draft.type, 'price') ? (
                 <Field
-                  label="Price"
+                  label={t('modules.field.price')}
                   error={errorFor('price')}
-                  hint="Leave it empty if it is not settled yet."
+                  hint={t('modules.book.field.priceHint')}
                 >
                   <Input
                     value={draft.price}
@@ -375,11 +405,11 @@ export function BookingDialog({
                   />
                 </Field>
               ) : null}
-              <Field label="Status">
+              <Field label={t('modules.field.status')}>
                 <SimpleSelect
                   options={BOOKING_STATUSES.map((value) => ({
                     value,
-                    label: STATUS_LABELS[value] ?? value,
+                    label: t(STATUS_LABELS[value] ?? 'modules.field.status'),
                   }))}
                   value={draft.status}
                   onValueChange={(next) => {
@@ -387,16 +417,16 @@ export function BookingDialog({
                       set('status', next)
                     }
                   }}
-                  ariaLabel="Status"
+                  ariaLabel={t('modules.field.status')}
                 />
               </Field>
             </div>
 
             {showsField(draft.type, 'confirmationNumber') ? (
               <Field
-                label="Confirmation number"
+                label={t('modules.book.field.confirmation')}
                 error={errorFor('confirmationNumber')}
-                hint="The code you will be asked for at the desk."
+                hint={t('modules.book.field.confirmationHint')}
               >
                 <Input
                   value={draft.confirmationNumber}
@@ -413,26 +443,32 @@ export function BookingDialog({
 
             {days.length === 0 ? null : (
               <Field
-                label="Attach to a day"
-                hint="Pins it to the itinerary so it shows up on the plan."
+                label={t('modules.book.field.day')}
+                hint={t('modules.book.field.dayHint')}
               >
                 <SimpleSelect
                   options={[
-                    { value: NOT_SET, label: 'Not on the itinerary' },
+                    {
+                      value: NOT_SET,
+                      label: t('modules.book.field.noDay'),
+                    },
                     ...days.map((day) => ({
                       value: day.id,
-                      label: dayLabel(day),
+                      label: dayLabel(day, t),
                     })),
                   ]}
                   value={toSelectValue(draft.dayId)}
                   onValueChange={(next) => set('dayId', fromSelectValue(next))}
-                  ariaLabel="Attach to a day"
+                  ariaLabel={t('modules.book.field.day')}
                 />
               </Field>
             )}
 
             {showsField(draft.type, 'url') ? (
-              <Field label="Link" error={errorFor('url')}>
+              <Field
+                label={t('modules.book.field.link')}
+                error={errorFor('url')}
+              >
                 <Input
                   type="url"
                   value={draft.url}
@@ -444,11 +480,11 @@ export function BookingDialog({
               </Field>
             ) : null}
 
-            <Field label="Notes">
+            <Field label={t('modules.field.notes')}>
               <Textarea
                 value={draft.notes}
                 onChange={(event) => set('notes', event.target.value)}
-                placeholder="Late check-in arranged. Ask for a room away from the lift."
+                placeholder={t('modules.book.field.notesPlaceholder')}
                 maxLength={4000}
                 rows={3}
                 autoResize
@@ -465,7 +501,7 @@ export function BookingDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -474,9 +510,11 @@ export function BookingDialog({
             shape="pill"
             disabled={touched && invalid}
             loading={action.pending}
-            loadingLabel="Saving the booking"
+            loadingLabel={t('modules.book.action.saving')}
           >
-            {editing ? 'Save booking' : 'Add booking'}
+            {editing
+              ? t('modules.book.action.save')
+              : t('modules.book.action.add')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -486,10 +524,17 @@ export function BookingDialog({
 
 /** The screen's primary action, for the module header. */
 export function NewBookingAction({ onClick }: { onClick: () => void }) {
+  const t = useTranslate()
+
   return (
-    <Button variant="primary" shape="pill" onClick={onClick}>
-      <Plus aria-hidden strokeWidth={2.5} />
-      Add booking
+    <Button
+      variant="primary"
+      size="sm"
+      shape="pill"
+      icon={<Plus aria-hidden strokeWidth={2.5} />}
+      onClick={onClick}
+    >
+      {t('modules.book.action.add')}
     </Button>
   )
 }

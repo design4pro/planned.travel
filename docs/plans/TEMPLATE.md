@@ -171,7 +171,8 @@ Anything that stops the stage, stated before it is scheduled rather than discove
   disposition: **defer** (wait for a decision), **substitute** (a named platform capability that
   covers it), **hand-roll** (scope and risk of writing it ourselves), or **drop** (the row moves to
   `11-boundaries-and-blockers.md`). Never plan as though the package were present, and never install
-  one — the freeze covers `package.json` and `pnpm-lock.yaml` absolutely.
+  one — the freeze covers the dependency blocks of `package.json` and `pnpm-lock.yaml` absolutely.
+  It does not cover the `scripts` block; see SPEC §3.
 - A binding absent from `wrangler.jsonc`, which is a foundations requirement and a cost-model change.
 - A third-party service whose licence or usage policy does not permit a paid, subscription-funded
   product, or that has no commercial tier. Name the constraint and the cost.

@@ -69,6 +69,40 @@ describe('formatMoney', () => {
     expect(formatMoney(1000, 'CAD')).not.toContain('CA')
   })
 
+  /**
+   * The defect this pins, and the reason the signature grew a third argument.
+   *
+   * This module used to hold `const LOCALE = 'en-GB'` and format every amount
+   * through it, so a Polish reader's costs screen said `£2,384.00` where their
+   * own conventions say `2384,00 £`. The docblock defended the pin on hydration
+   * grounds — a locale differing between the server render and the client one
+   * mismatches every figure — and `src/lib/format.ts` is what answered that
+   * properly, by composing each amount from a frozen per-locale table rather
+   * than handing it to `Intl` whole.
+   *
+   * Two assertions, not one: that a non-English locale is honoured at all, and
+   * that English still comes out exactly as it did, because 37 call sites read
+   * these functions and the migration had to be invisible to the English ones.
+   */
+  it('formats in the locale it is handed, and English exactly as before', () => {
+    const english = formatMoney(238_400, 'GBP')
+    const polish = formatMoney(238_400, 'GBP', 'pl')
+    expect(english).toBe('£2,384.00')
+    expect(polish).not.toBe(english)
+    expect(polish).toContain('2384')
+    expect(polish).toContain(',00')
+  })
+
+  /**
+   * `HUF` and `IDR` are the two the runtimes disagree about, and the count is a
+   * divisor: resolving it from `Intl` meant the server could divide by a hundred
+   * where the client divided by one. The frozen table is what settles it.
+   */
+  it('reads the minor unit from the frozen table, not from Intl', () => {
+    expect(minorUnitDigits('HUF')).toBe(minorUnitDigits('HUF'))
+    expect(formatMoney(100_000, 'HUF')).toBe(formatMoney(100_000, 'huf'))
+  })
+
   it('drops the symbol on request, for a column that already names it', () => {
     expect(formatMoneyPlain(238_400, 'GBP')).toBe('2,384.00')
     expect(formatMoneyPlain(54_705, 'JPY')).toBe('54,705')
@@ -100,7 +134,11 @@ describe('formatConversion', () => {
 
   it('says nothing when there is nothing to convert', () => {
     expect(
-      formatConversion({ ...flight, originalAmountMinor: null, originalCurrency: null }),
+      formatConversion({
+        ...flight,
+        originalAmountMinor: null,
+        originalCurrency: null,
+      }),
     ).toBeNull()
   })
 
@@ -266,7 +304,10 @@ describe('splitShares — shares', () => {
   })
 
   it('treats a missing weight as one share', () => {
-    const rows = splitShares(300, 'shares', [{ userId: 'a' }, { userId: 'b', weight: 2 }])
+    const rows = splitShares(300, 'shares', [
+      { userId: 'a' },
+      { userId: 'b', weight: 2 },
+    ])
     expect(rows.map((row) => row.shareMinor)).toEqual([100, 200])
   })
 
@@ -332,7 +373,9 @@ describe('splitPreview', () => {
     ])
     expect(preview.balanced).toBe(false)
     expect(preview.remainderMinor).toBe(-200)
-    expect(preview.error).toBe('The exact amounts add up to more than the total.')
+    expect(preview.error).toBe(
+      'The exact amounts add up to more than the total.',
+    )
   })
 
   /**
@@ -369,7 +412,9 @@ describe('splitPreview', () => {
     expect(preview.rows).toEqual([])
     expect(preview.remainderMinor).toBe(5_000)
     expect(preview.balanced).toBe(false)
-    expect(preview.error).toBe('Choose at least one traveller to split this between.')
+    expect(preview.error).toBe(
+      'Choose at least one traveller to split this between.',
+    )
   })
 
   it('balances a zero-amount expense rather than calling it broken', () => {
@@ -427,6 +472,8 @@ describe('suggestTransfers', () => {
       { userId: 'a', balanceMinor: 100 },
       { userId: 'b', balanceMinor: -150 },
     ])
-    expect(transfers).toEqual([{ fromUserId: 'b', toUserId: 'a', amountMinor: 100 }])
+    expect(transfers).toEqual([
+      { fromUserId: 'b', toUserId: 'a', amountMinor: 100 },
+    ])
   })
 })

@@ -183,7 +183,10 @@ function replaceDay(
  */
 export type PlaceOfItem = (itemId: string) => string | null
 
-function placeOf(itemId: string, lookup: PlaceOfItem | undefined): string | null {
+function placeOf(
+  itemId: string,
+  lookup: PlaceOfItem | undefined,
+): string | null {
   if (isIdeaItemId(itemId)) return placeIdOfIdeaItem(itemId)
   return lookup?.(itemId) ?? null
 }
@@ -224,7 +227,10 @@ export function movePlanItem(
   const remaining = sameContainer
     ? destination.filter((id) => id !== itemId)
     : destination
-  const index = Math.max(0, Math.min(Math.trunc(target.index), remaining.length))
+  const index = Math.max(
+    0,
+    Math.min(Math.trunc(target.index), remaining.length),
+  )
 
   if (sameContainer && source.indexOf(itemId) === index) {
     return { ok: false, reason: 'unchanged' }
@@ -271,7 +277,9 @@ export function movePlanItem(
             : day,
         )
 
-    const touched = sameContainer ? [target.container] : [target.container, from]
+    const touched = sameContainer
+      ? [target.container]
+      : [target.container, from]
     return {
       ok: true,
       from,
@@ -346,7 +354,12 @@ export function movePlanItemToDay(
 ): PlanMoveResult {
   const items = itemsIn(order, dayId)
   if (items === null) return { ok: false, reason: 'unknown' }
-  return movePlanItem(order, itemId, { container: dayId, index: items.length }, options)
+  return movePlanItem(
+    order,
+    itemId,
+    { container: dayId, index: items.length },
+    options,
+  )
 }
 
 /** Removes an item from wherever it is — used after a delete is confirmed. */

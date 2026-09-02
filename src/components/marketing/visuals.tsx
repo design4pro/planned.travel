@@ -13,7 +13,10 @@ import {
 
 import { Avatar, Badge, Card, GlassPanel, SectionLabel } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { formatDateRange, formatMoneyMinor, formatWeekday } from '#/lib/format'
+import { useLocale, useTranslate } from '#/lib/i18n'
 
+import type { Locale, MessageKey } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 
 /* ------------------------------------------------------------------ mini map */
@@ -185,14 +188,22 @@ function VisualPanel({
 
 /* ------------------------------------------------------------------ planner */
 
+/** What the illustrated trip is: four days, nine bookings, $1,064.40 spent. */
+const DAYS = 4
+const TRIP_BOOKINGS = 9
+const TRIP_TOTAL_MINOR = 106_440
+/** The day the dragged place is hovering over. */
+const DROP_DAY = 3
+
 const PLANNER_DAYS: ReadonlyArray<{
   day: number
+  /** ISO, so the row reads the way the viewer's locale writes a weekday. */
   date: string
   stops: ReadonlyArray<{ name: string; time: string; icon: typeof Landmark }>
 }> = [
   {
     day: 1,
-    date: 'Sat 12 Apr',
+    date: '2026-04-12',
     stops: [
       { name: 'Fushimi Inari', time: '07:00', icon: Landmark },
       { name: 'Nishiki market', time: '11:30', icon: Utensils },
@@ -200,7 +211,7 @@ const PLANNER_DAYS: ReadonlyArray<{
   },
   {
     day: 2,
-    date: 'Sun 13 Apr',
+    date: '2026-04-13',
     stops: [
       { name: 'Arashiyama grove', time: '09:00', icon: Camera },
       { name: 'Riverside ryokan', time: '18:00', icon: BedDouble },
@@ -213,6 +224,8 @@ const PLANNER_DAYS: ReadonlyArray<{
  * filter bar, and an unplanned place mid-drag onto a day.
  */
 export function PlannerVisual() {
+  const t = useTranslate()
+  const locale = useLocale()
   return (
     <VisualMedia>
       <MiniMap className="absolute inset-0" />
@@ -221,12 +234,12 @@ export function PlannerVisual() {
         radius="lg"
         padding="none"
         floating={false}
-        className="absolute inset-y-3 left-3 flex w-40 flex-col overflow-hidden sm:w-48"
+        className="absolute inset-y-3 start-3 flex w-40 flex-col overflow-hidden sm:w-48"
       >
         <div className="flex items-center justify-between gap-2 border-b border-glass-edge px-3 py-2">
-          <SectionLabel>Itinerary</SectionLabel>
+          <SectionLabel>{t('trips.plan.title')}</SectionLabel>
           <span className="text-micro font-semibold tabular-nums text-ink-4">
-            4 days
+            {t('marketing.visual.days', { count: DAYS, value: DAYS })}
           </span>
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-2 p-2">
@@ -237,7 +250,7 @@ export function PlannerVisual() {
                   {day.day}
                 </span>
                 <span className="truncate text-micro font-semibold tracking-normal text-ink">
-                  {day.date}
+                  {formatWeekday(day.date, locale)}
                 </span>
               </div>
               <ul className="mt-1.5 flex flex-col gap-1.5">
@@ -283,7 +296,7 @@ export function PlannerVisual() {
         radius="lg"
         padding="none"
         floating={false}
-        className="absolute right-3 bottom-3 hidden w-36 rotate-2 sm:block"
+        className="absolute end-3 bottom-3 hidden w-36 rotate-2 sm:block"
       >
         <div className="flex items-center gap-1.5 px-2 py-2">
           <GripVertical aria-hidden className="size-3 shrink-0 text-ink-4" />
@@ -293,7 +306,7 @@ export function PlannerVisual() {
         </div>
         <div className="border-t border-glass-edge px-2 py-1.5">
           <span className="text-micro tracking-normal text-ink-3">
-            Drop on day 3
+            {t('marketing.visual.dropOnDay', { day: DROP_DAY })}
           </span>
         </div>
       </GlassPanel>
@@ -306,57 +319,51 @@ export function PlannerVisual() {
 const EXPENSES: ReadonlyArray<{
   who: string
   what: string
-  amount: string
-  split: string
+  /** Minor units, so the formatter decides the mark, the position and the digits. */
+  minor: number
+  ways: number
 }> = [
-  {
-    who: 'Amelia',
-    what: 'Riverside ryokan, 3 nights',
-    amount: '$612.00',
-    split: 'split 3 ways',
-  },
-  {
-    who: 'Jonas',
-    what: 'Rail passes',
-    amount: '$284.40',
-    split: 'split 3 ways',
-  },
-  {
-    who: 'Priya',
-    what: 'Kaiseki dinner',
-    amount: '$168.00',
-    split: 'split 2 ways',
-  },
+  { who: 'Amelia', what: 'Riverside ryokan, 3 nights', minor: 61_200, ways: 3 },
+  { who: 'Jonas', what: 'Rail passes', minor: 28_440, ways: 3 },
+  { who: 'Priya', what: 'Kaiseki dinner', minor: 16_800, ways: 2 },
 ]
 
-const SETTLEMENTS: ReadonlyArray<{ from: string; to: string; amount: string }> =
-  [
-    { from: 'Priya', to: 'Amelia', amount: '$120.80' },
-    { from: 'Jonas', to: 'Amelia', amount: '$36.40' },
-  ]
+const SETTLEMENTS: ReadonlyArray<{
+  from: string
+  to: string
+  minor: number
+}> = [
+  { from: 'Priya', to: 'Amelia', minor: 12_080 },
+  { from: 'Jonas', to: 'Amelia', minor: 3_640 },
+]
 
 /** Shared costs: what was spent, how it split, and the two transfers that end it. */
 export function CostsVisual() {
+  const t = useTranslate()
+  const locale = useLocale()
   return (
     <VisualPanel>
       <Card padding="none" className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <SectionLabel>Trip total</SectionLabel>
-            <p className="mt-1.5 flex items-baseline gap-1.5">
+            <SectionLabel>{t('marketing.visual.tripTotal')}</SectionLabel>
+            <p className="mt-1.5">
+              {/* One formatted string rather than a major and a minor span:
+                  where the decimal mark falls is the locale's business, and
+                  Polish puts a comma there while Arabic reverses the order. */}
               <span
                 className="font-display text-title font-extrabold tracking-tighter tabular-nums text-ink sm:text-display"
                 data-numeric=""
               >
-                $1,064
-              </span>
-              <span className="text-caption font-medium tabular-nums text-ink-3">
-                .40
+                {formatMoneyMinor(TRIP_TOTAL_MINOR, 'usd', locale)}
               </span>
             </p>
           </div>
           <Badge tone="success" size="sm" icon={<CheckCheck />}>
-            2 transfers left
+            {t('marketing.visual.transfersLeft', {
+              count: SETTLEMENTS.length,
+              value: SETTLEMENTS.length,
+            })}
           </Badge>
         </div>
       </Card>
@@ -373,18 +380,24 @@ export function CostsVisual() {
                 {expense.what}
               </span>
               <span className="block truncate text-micro tracking-normal text-ink-4">
-                {expense.who} paid · {expense.split}
+                {t('marketing.visual.paidSplit', {
+                  who: expense.who,
+                  split: t('marketing.visual.splitWays', {
+                    count: expense.ways,
+                    value: expense.ways,
+                  }),
+                })}
               </span>
             </span>
             <span className="shrink-0 text-caption font-semibold tabular-nums text-ink">
-              {expense.amount}
+              {formatMoneyMinor(expense.minor, 'usd', locale)}
             </span>
           </li>
         ))}
       </ul>
 
       <Card variant="inset" padding="none" className="p-3">
-        <SectionLabel>Settle up</SectionLabel>
+        <SectionLabel>{t('costs.settle.label')}</SectionLabel>
         <ul className="mt-2 flex flex-col gap-1.5">
           {SETTLEMENTS.map((transfer) => (
             <li
@@ -396,8 +409,8 @@ export function CostsVisual() {
                 &rarr;
               </span>
               <span className="font-semibold text-ink">{transfer.to}</span>
-              <span className="ml-auto font-semibold tabular-nums text-brand">
-                {transfer.amount}
+              <span className="ms-auto font-semibold tabular-nums text-brand">
+                {formatMoneyMinor(transfer.minor, 'usd', locale)}
               </span>
             </li>
           ))}
@@ -412,60 +425,90 @@ export function CostsVisual() {
 const BOOKINGS: ReadonlyArray<{
   icon: typeof PlaneTakeoff
   title: string
-  meta: string
-  code: string
+  /** ISO, or a pair for a stay that spans nights. */
+  date: string
+  until?: string
+  /** What the traveller typed after the date: a seat, a platform, a room count. */
+  tail: string
+  /** `null` while the booking has no code yet, which the panel says in words. */
+  code: string | null
   tone: 'success' | 'warning'
-  status: string
+  /** The app's own state name, so the picture and the product agree. */
+  status: MessageKey
 }> = [
   {
     icon: PlaneTakeoff,
     title: 'Flight to Osaka',
-    meta: 'Fri 11 Apr · 21:40 · seat 32A',
+    date: '2026-04-11',
+    tail: '21:40 · seat 32A',
     code: 'QK4T9P',
     tone: 'success',
-    status: 'Confirmed',
+    status: 'shell.bookingStatus.confirmed',
   },
   {
     icon: BedDouble,
     title: 'Riverside ryokan',
-    meta: '12–15 Apr · 3 nights · 2 rooms',
+    date: '2026-04-12',
+    until: '2026-04-15',
+    tail: '3 nights · 2 rooms',
     code: 'RY-88410',
     tone: 'success',
-    status: 'Confirmed',
+    status: 'shell.bookingStatus.confirmed',
   },
   {
     icon: TrainFront,
     title: 'Bullet train to Tokyo',
-    meta: 'Tue 15 Apr · 08:12 · car 7',
+    date: '2026-04-15',
+    tail: '08:12 · car 7',
     code: 'JR-2201',
     tone: 'success',
-    status: 'Confirmed',
+    status: 'shell.bookingStatus.confirmed',
   },
   {
     icon: Ticket,
     title: 'Tea ceremony, two places',
-    meta: 'Wed 16 Apr · 14:00',
-    code: 'Awaiting reply',
+    date: '2026-04-16',
+    tail: '14:00',
+    code: null,
     tone: 'warning',
-    status: 'Requested',
+    status: 'shell.bookingStatus.pending',
   },
 ]
 
+/** `Fri 11 Apr · 21:40 · seat 32A`, with the date half written by the locale. */
+function bookingMeta(
+  booking: { date: string; until?: string; tail: string },
+  locale: Locale,
+): string {
+  const when =
+    booking.until === undefined
+      ? formatWeekday(booking.date, locale)
+      : formatDateRange(booking.date, booking.until, locale)
+  return when === null ? booking.tail : `${when} · ${booking.tail}`
+}
+
 /** Reservations: every confirmation code where you can reach it at the door. */
 export function ReservationsVisual() {
+  const t = useTranslate()
+  const locale = useLocale()
   return (
     <VisualPanel>
       <div className="flex items-center justify-between gap-3">
-        <SectionLabel icon={<Clock />}>Next up</SectionLabel>
+        <SectionLabel icon={<Clock />}>
+          {t('marketing.visual.nextUp')}
+        </SectionLabel>
         <span className="text-micro font-semibold tabular-nums tracking-normal text-ink-4">
-          4 of 9
+          {t('marketing.visual.ofTotal', {
+            done: BOOKINGS.length,
+            total: TRIP_BOOKINGS,
+          })}
         </span>
       </div>
 
       <ol className="relative flex flex-col gap-2">
         <span
           aria-hidden
-          className="absolute top-4 bottom-4 left-4 w-px bg-edge"
+          className="absolute top-4 bottom-4 start-4 w-px bg-edge"
         />
         {BOOKINGS.map((booking) => (
           <li key={booking.title} className="relative flex gap-3">
@@ -479,15 +522,17 @@ export function ReservationsVisual() {
                     {booking.title}
                   </span>
                   <span className="block truncate text-micro tabular-nums tracking-normal text-ink-4">
-                    {booking.meta}
+                    {bookingMeta(booking, locale)}
                   </span>
                 </span>
                 <Badge tone={booking.tone} size="sm" dot>
-                  {booking.status}
+                  {t(booking.status)}
                 </Badge>
               </div>
               <span className="mt-1.5 inline-flex rounded-sm bg-surface-inset px-1.5 py-0.5 font-mono text-micro tracking-normal text-ink-2">
-                {booking.code}
+                {booking.code === null
+                  ? t('marketing.visual.awaitingReply')
+                  : booking.code}
               </span>
             </Card>
           </li>

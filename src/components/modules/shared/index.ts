@@ -14,6 +14,9 @@ export type { ModulePanelProps } from './panel'
 
 export { NOT_SET, fromSelectValue, toSelectValue } from './optional-select'
 
+/** Exported here because a route needs it too — `collections` files by colour. */
+export { SwatchPicker } from './swatch-picker'
+
 export { messageOf, useAction } from './use-action'
 export type { Action, ActionOptions } from './use-action'
 

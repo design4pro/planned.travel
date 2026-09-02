@@ -212,9 +212,15 @@ describe('what a finished batch says', () => {
   })
 
   it('names the file when exactly one landed', () => {
-    expect(announcementsFor([task({ id: 'a', filename: 'visa.pdf' })])).toEqual([
-      { kind: 'success', title: 'File uploaded', description: 'visa.pdf' },
-    ])
+    expect(announcementsFor([task({ id: 'a', filename: 'visa.pdf' })])).toEqual(
+      [
+        {
+          kind: 'success',
+          title: { key: 'modules.files.toast.uploadedOne' },
+          description: 'visa.pdf',
+        },
+      ],
+    )
   })
 
   it('counts a batch and totals what it added', () => {
@@ -223,8 +229,14 @@ describe('what a finished batch says', () => {
       task({ id: 'b', sizeBytes: 500_000 }),
     ])
     expect(said).toHaveLength(1)
-    expect(said[0].title).toBe('2 files uploaded')
-    expect(said[0].description).toContain('added to this trip')
+    expect(said[0].title).toEqual({
+      key: 'modules.files.toast.uploadedMany',
+      params: { count: 2 },
+    })
+    expect(said[0].description).toEqual({
+      key: 'modules.files.toast.uploadedManyBody',
+      params: { size: '977 KB' },
+    })
   })
 
   it('carries the reason when a single file was refused', () => {
@@ -234,7 +246,7 @@ describe('what a finished batch says', () => {
     expect(said).toEqual([
       {
         kind: 'error',
-        title: 'That file did not upload',
+        title: { key: 'modules.files.toast.failedOne' },
         description: 'Bigger than 25 MB',
       },
     ])
@@ -248,7 +260,10 @@ describe('what a finished batch says', () => {
       task({ id: 'd', status: 'failed', message: 'Out of room' }),
     ])
     expect(said.map((line) => line.kind)).toEqual(['success', 'error'])
-    expect(said[1].title).toBe('2 files did not upload')
+    expect(said[1].title).toEqual({
+      key: 'modules.files.toast.failedMany',
+      params: { count: 2 },
+    })
   })
 
   it('says nothing about a file the reader cancelled', () => {

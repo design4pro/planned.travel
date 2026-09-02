@@ -133,7 +133,6 @@ const messages = {
   'users.filter.role.curator': 'أمناء المحتوى',
   'users.filter.status.label': 'تصفية بحالة الحساب',
   'users.filter.status.any': 'أي حالة',
-  'users.filter.clear': 'امسح التصفية',
   'users.filter.hint': 'ضيِّق بالدور أو بالحالة — بواحد منهما في كل مرّة.',
   'users.column.account': 'الحساب',
   'users.column.role': 'دور المنصّة',

@@ -13,9 +13,12 @@ import {
 
 import { Card, SectionLabel } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
+import { PLAN_COPY } from '#/lib/plan-copy'
 import { Section, SectionIntro } from './section'
 import { CostsVisual, PlannerVisual, ReservationsVisual } from './visuals'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -23,11 +26,16 @@ import type { ReactNode } from 'react'
 
 type Spotlight = {
   readonly id: string
-  readonly eyebrow: string
+  /**
+   * The module's own name, as the app's navigation says it. A landing page that
+   * calls a module something the product does not is a defect, so the key is the
+   * shell's rather than a second wording of the same word.
+   */
+  readonly eyebrow: MessageKey
   readonly icon: LucideIcon
-  readonly title: string
-  readonly lede: string
-  readonly points: ReadonlyArray<string>
+  readonly title: MessageKey
+  readonly lede: MessageKey
+  readonly points: readonly [MessageKey, MessageKey, MessageKey, MessageKey]
   readonly visual: () => ReactNode
   /** Puts the illustration on the left on wide screens. */
   readonly mirrored?: boolean
@@ -37,29 +45,29 @@ type Spotlight = {
 const SPOTLIGHTS: ReadonlyArray<Spotlight> = [
   {
     id: 'planner',
-    eyebrow: 'Plan',
+    eyebrow: 'shell.trip.tab.plan',
     icon: Map,
-    title: 'A day-by-day plan drawn on a real map',
-    lede: 'Collect the places you want to see, then drag them onto a day. The map redraws the route as you go, so you can see immediately when a morning has you crossing the city twice.',
+    title: 'marketing.feature.planner.title',
+    lede: 'marketing.feature.planner.lede',
     points: [
-      'One column per day, with its date, its weather and the place you are sleeping.',
-      'Places you have not scheduled wait in their own column until they have a day.',
-      'On Crew, everyone drags at once — live cursors, instant sync, no refresh.',
-      'Vector tiles served from our own storage, so no map vendor is watching you plan.',
+      'marketing.feature.planner.point.days',
+      'marketing.feature.planner.point.unscheduled',
+      'marketing.feature.planner.point.crew',
+      'marketing.feature.planner.point.tiles',
     ],
     visual: PlannerVisual,
   },
   {
     id: 'costs',
-    eyebrow: 'Costs',
+    eyebrow: 'shell.trip.tab.costs',
     icon: Coins,
-    title: 'Shared costs that actually settle',
-    lede: 'Log what you spend in the trip’s own currency, split each expense the way you actually agreed, and see the shortest set of transfers that clears the whole thing.',
+    title: 'marketing.feature.costs.title',
+    lede: 'marketing.feature.costs.lede',
     points: [
-      'Split evenly, by share, or by exact amount — per expense, not per trip.',
-      'Everything converted into one trip currency so the total means something.',
-      'The settle-up view names who pays whom, and logs the transfer once it happens.',
-      'Attach the receipt to the expense, so the number always has its evidence.',
+      'marketing.feature.costs.point.split',
+      'marketing.feature.costs.point.currency',
+      'marketing.feature.costs.point.settle',
+      'marketing.feature.costs.point.receipt',
     ],
     visual: CostsVisual,
     mirrored: true,
@@ -67,21 +75,22 @@ const SPOTLIGHTS: ReadonlyArray<Spotlight> = [
   },
   {
     id: 'reservations',
-    eyebrow: 'Book',
+    eyebrow: 'shell.trip.tab.book',
     icon: Ticket,
-    title: 'Every booking, with the code you need at the door',
-    lede: 'Stays, tables, tours and tickets in one list, next to the flights, trains and ferries that get you between them — each with its confirmation number and the day it belongs to.',
+    title: 'marketing.feature.book.title',
+    lede: 'marketing.feature.book.lede',
     points: [
-      'Transport legs carry the seat, the platform, the terminal and the booking code.',
-      'A booking is attached to a day, so it shows up in the plan without retyping.',
-      'Requested, confirmed and cancelled are separate states, not a note in a field.',
-      'Export the whole trip as a PDF itinerary or a calendar file before you fly.',
+      'marketing.feature.book.point.legs',
+      'marketing.feature.book.point.day',
+      'marketing.feature.book.point.states',
+      'marketing.feature.book.point.export',
     ],
     visual: ReservationsVisual,
   },
 ]
 
-function SpotlightPoints({ points }: { points: ReadonlyArray<string> }) {
+function SpotlightPoints({ points }: { points: ReadonlyArray<MessageKey> }) {
+  const t = useTranslate()
   return (
     <ul className="mt-7 flex flex-col gap-3.5">
       {points.map((point) => (
@@ -93,7 +102,7 @@ function SpotlightPoints({ points }: { points: ReadonlyArray<string> }) {
             <Check className="size-3" strokeWidth={3} />
           </span>
           <span className="min-w-0 text-label leading-relaxed text-ink-2">
-            {point}
+            {t(point, { crew: t(PLAN_COPY.crew.name) })}
           </span>
         </li>
       ))}
@@ -102,6 +111,7 @@ function SpotlightPoints({ points }: { points: ReadonlyArray<string> }) {
 }
 
 function SpotlightBand({ spotlight }: { spotlight: Spotlight }) {
+  const t = useTranslate()
   const Visual = spotlight.visual
   const headingId = `${spotlight.id}-heading`
 
@@ -120,16 +130,16 @@ function SpotlightBand({ spotlight }: { spotlight: Spotlight }) {
           )}
         >
           <SectionLabel icon={<spotlight.icon />}>
-            {spotlight.eyebrow}
+            {t(spotlight.eyebrow)}
           </SectionLabel>
           <h2
             id={headingId}
             className="mt-3 font-display text-title font-extrabold tracking-tighter text-balance text-ink sm:text-display"
           >
-            {spotlight.title}
+            {t(spotlight.title)}
           </h2>
           <p className="mt-4 text-body leading-relaxed text-pretty text-ink-2">
-            {spotlight.lede}
+            {t(spotlight.lede)}
           </p>
           <SpotlightPoints points={spotlight.points} />
         </div>
@@ -162,58 +172,55 @@ export function FeatureSpotlights() {
 
 type Module = {
   readonly icon: LucideIcon
-  readonly name: string
-  readonly benefit: string
-  readonly detail: string
+  /** The shell's own name for the module, for the reason `Spotlight` records. */
+  readonly name: MessageKey
+  readonly benefit: MessageKey
+  readonly detail: MessageKey
 }
 
 const MODULES: ReadonlyArray<Module> = [
   {
     icon: ListChecks,
-    name: 'Lists',
-    benefit: 'Nobody arrives without the adapter.',
-    detail:
-      'Packing, to-dos, shopping and documents — one list per job, shared with everyone travelling and ticked off as it happens.',
+    name: 'shell.trip.tab.lists',
+    benefit: 'marketing.feature.module.lists.benefit',
+    detail: 'marketing.feature.module.lists.detail',
   },
   {
     icon: Compass,
-    name: 'Journal',
-    benefit: 'The trip becomes a story, not a folder.',
-    detail:
-      'Entries in date order with the photographs you took, where you were, the weather, and how the day actually felt.',
+    // The one module the shell has no name for: it has no tab of its own.
+    name: 'marketing.feature.module.journal.name',
+    benefit: 'marketing.feature.module.journal.benefit',
+    detail: 'marketing.feature.module.journal.detail',
   },
   {
     icon: Globe,
-    name: 'Atlas',
-    benefit: 'One map of everywhere you have been.',
-    detail:
-      'Mark a country visited and it joins your world map, with the first visit, the most recent, and how many times you have been back.',
+    name: 'shell.nav.atlas',
+    benefit: 'marketing.feature.module.atlas.benefit',
+    detail: 'marketing.feature.module.atlas.detail',
   },
   {
     icon: CalendarDays,
-    name: 'Vacay',
-    benefit: 'Book the leave before you book the flight.',
-    detail:
-      'Mark the days you are away and the year fills in — weekends, public holidays and everyone else’s time off in the same grid.',
+    name: 'shell.nav.vacay',
+    benefit: 'marketing.feature.module.vacay.benefit',
+    detail: 'marketing.feature.module.vacay.detail',
   },
   {
     icon: Users,
-    name: 'Collab',
-    benefit: 'The decisions stay with the trip.',
-    detail:
-      'One thread per trip, shared notes for the things everyone must remember, and a poll for when the group cannot agree on dinner.',
+    name: 'shell.trip.tab.collab',
+    benefit: 'marketing.feature.module.collab.benefit',
+    detail: 'marketing.feature.module.collab.detail',
   },
   {
     icon: Paperclip,
-    name: 'Files',
-    benefit: 'Boarding passes where you can find them.',
-    detail:
-      'Confirmations, tickets, insurance documents and receipts attached to the trip they belong to, not buried in an inbox.',
+    name: 'shell.trip.tab.files',
+    benefit: 'marketing.feature.module.files.benefit',
+    detail: 'marketing.feature.module.files.detail',
   },
 ]
 
 /** The rest of the product, in a grid: name, the benefit, then the mechanism. */
 export function ModuleGrid() {
+  const t = useTranslate()
   return (
     <Section
       id="modules"
@@ -223,9 +230,9 @@ export function ModuleGrid() {
     >
       <SectionIntro
         headingId="modules-heading"
-        eyebrow="Every module"
-        title="The rest of the trip, handled"
-        lede="Each module does one job properly and hands its work to the others. Nothing here is a placeholder tab waiting for a future release."
+        eyebrow={t('marketing.footer.link.everyModule')}
+        title={t('marketing.feature.modules.title')}
+        lede={t('marketing.feature.modules.lede')}
       />
 
       <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:mt-14 lg:grid-cols-3">
@@ -240,14 +247,14 @@ export function ModuleGrid() {
               </span>
               <div className="min-w-0">
                 <h3 className="font-display text-subtitle font-bold tracking-tight text-ink">
-                  {module.name}
+                  {t(module.name)}
                 </h3>
                 <p className="mt-1 text-label font-semibold text-brand">
-                  {module.benefit}
+                  {t(module.benefit)}
                 </p>
               </div>
               <p className="text-caption leading-relaxed text-ink-2">
-                {module.detail}
+                {t(module.detail)}
               </p>
             </Card>
           </li>

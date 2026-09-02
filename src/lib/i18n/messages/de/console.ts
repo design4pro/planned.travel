@@ -140,7 +140,6 @@ const messages = {
   'users.filter.role.curator': 'Kuratoren',
   'users.filter.status.label': 'Nach Kontozustand filtern',
   'users.filter.status.any': 'Beliebiger Zustand',
-  'users.filter.clear': 'Filter zurücksetzen',
   'users.filter.hint':
     'Nach Rolle oder nach Zustand eingrenzen — immer nur eines davon.',
   'users.column.account': 'Konto',

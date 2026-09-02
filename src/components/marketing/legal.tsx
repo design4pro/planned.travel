@@ -3,6 +3,7 @@ import { ArrowUpRight, Scale } from 'lucide-react'
 
 import { Alert, Badge, Card, SectionLabel } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { MarketingFooter, MarketingHeader, SkipToContent } from './chrome'
 
 import type { ReactNode } from 'react'
@@ -35,8 +36,8 @@ export type LegalDocumentProps = {
 const proseClasses = cn(
   'text-body leading-relaxed text-ink-2',
   '[&_p]:mt-4 [&_p:first-child]:mt-0',
-  '[&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-5',
-  '[&_li]:mt-2 [&_li]:pl-1 [&_li]:marker:text-ink-4',
+  '[&_ul]:mt-4 [&_ul]:list-disc [&_ul]:ps-5',
+  '[&_li]:mt-2 [&_li]:ps-1 [&_li]:marker:text-ink-4',
   '[&_strong]:font-semibold [&_strong]:text-ink',
   '[&_dl]:mt-4 [&_dt]:mt-3 [&_dt]:font-semibold [&_dt]:text-ink [&_dd]:mt-1',
 )
@@ -68,6 +69,7 @@ export function LegalDocument({
   sections,
   aside,
 }: LegalDocumentProps) {
+  const t = useTranslate()
   return (
     <div className="mx-auto w-full max-w-content px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
       <header className="max-w-3xl">
@@ -77,33 +79,28 @@ export function LegalDocument({
         </h1>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Badge tone="neutral" size="md">
-            Version {version}
+            {t('marketing.legal.badge.version', { version })}
           </Badge>
           <Badge tone="neutral" size="md">
-            Effective {updated}
+            {t('marketing.legal.badge.effective', { updated })}
           </Badge>
         </div>
       </header>
 
       <Alert
         tone="warning"
-        title="This is a template, not legal advice"
+        title={t('marketing.legal.notice.title')}
         className="mt-8 max-w-3xl"
       >
         <p className="text-caption leading-relaxed">
-          It is written in plain English to be a genuinely useful starting point
-          for a small travel-planning service, and every gap a business must
-          fill is highlighted. Have a qualified lawyer in your jurisdiction
-          review and adapt it before you accept a single customer. Nothing here
-          asserts a certification, audit or compliance standard that
-          planned.travel holds.
+          {t('marketing.legal.notice.body')}
         </p>
       </Alert>
 
       <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:gap-14">
         <aside className="min-w-0 lg:sticky lg:top-[calc(var(--nav-h)+var(--impersonation-h)+2rem)] lg:self-start">
-          <nav aria-label="On this page">
-            <SectionLabel as="h2">Contents</SectionLabel>
+          <nav aria-label={t('marketing.nav.onThisPage')}>
+            <SectionLabel as="h2">{t('marketing.legal.contents')}</SectionLabel>
             <ol className="mt-3 flex flex-col gap-1">
               {sections.map((section, index) => (
                 <li key={section.id}>
@@ -129,7 +126,9 @@ export function LegalDocument({
 
         <div className="min-w-0">
           <Card padding="none" className="p-6 sm:p-7">
-            <SectionLabel as="h2">The short version</SectionLabel>
+            <SectionLabel as="h2">
+              {t('marketing.legal.shortVersion')}
+            </SectionLabel>
             <ul className="mt-3 flex flex-col gap-2.5">
               {summary.map((line) => (
                 <li key={line} className="flex min-w-0 gap-2.5">
@@ -144,8 +143,7 @@ export function LegalDocument({
               ))}
             </ul>
             <p className="mt-4 border-t border-edge-faint pt-4 text-caption text-ink-4">
-              The summary is here to be read. The sections below are what
-              actually applies.
+              {t('marketing.legal.summaryNote')}
             </p>
           </Card>
 
@@ -166,7 +164,7 @@ export function LegalDocument({
                   </span>
                   <span className="min-w-0">{section.heading}</span>
                 </h2>
-                <div className={cn('mt-3 pl-0 sm:pl-8', proseClasses)}>
+                <div className={cn('mt-3 ps-0 sm:ps-8', proseClasses)}>
                   {section.body}
                 </div>
               </section>
@@ -185,21 +183,22 @@ const legalCrossLinkClasses = cn(
 
 /** The sibling-document card, so each legal page can reach the other one. */
 function LegalCrossLinks() {
+  const t = useTranslate()
   return (
     <Card variant="inset" padding="none" className="p-4">
       <p className="text-caption leading-relaxed text-ink-3">
-        Both documents apply together.
+        {t('marketing.legal.both')}
       </p>
       <ul className="mt-2 flex flex-col gap-1.5">
         <li>
           <Link to="/legal/terms" className={legalCrossLinkClasses}>
-            Terms of service
+            {t('marketing.footer.link.terms')}
             <ArrowUpRight aria-hidden className="size-3.5" />
           </Link>
         </li>
         <li>
           <Link to="/legal/privacy" className={legalCrossLinkClasses}>
-            Privacy notice
+            {t('marketing.footer.link.privacy')}
             <ArrowUpRight aria-hidden className="size-3.5" />
           </Link>
         </li>

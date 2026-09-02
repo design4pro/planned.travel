@@ -347,21 +347,15 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} viatges, un viatger',
   'billing.hero.perSeatLine': '{seats} membres × {price}',
   'billing.hero.singleTraveller': 'Un viatger',
-  'billing.hero.paymentMethod': 'Forma de pagament',
-  'billing.hero.cancel': 'Cancel·la el pla',
   'billing.price.free': 'Gratuït',
   'billing.provider.opening': 'S’està obrint Polar',
-  'billing.provider.failed': 'No s’ha pogut arribar a Polar',
-  'billing.provider.failedBody':
-    'No s’ha cobrat res. Comprova la connexió i torna-ho a provar d’aquí a un moment.',
-
   'billing.renewal.trialEndsToday':
-    'La teva prova s’acaba avui. Afegeix una targeta perquè tots els mòduls segueixin oberts.',
+    'El teu període de prova acaba avui. El primer càrrec arriba tot seguit, tret que el cancel·lis abans.',
   'billing.renewal.trialEndsIn': {
-    one: 'La teva prova s’acaba d’aquí a {value} dia. Fins llavors no cal cap targeta.',
-    many: 'La teva prova s’acaba d’aquí a {value} dies. Fins llavors no cal cap targeta.',
+    one: 'El teu període de prova acaba en {value} dia, i després arriba el primer càrrec tret que el cancel·lis abans.',
+    many: 'El teu període de prova acaba en {value} dies, i després arriba el primer càrrec tret que el cancel·lis abans.',
     other:
-      'La teva prova s’acaba d’aquí a {value} dies. Fins llavors no cal cap targeta.',
+      'El teu període de prova acaba en {value} dies, i després arriba el primer càrrec tret que el cancel·lis abans.',
   },
   'billing.renewal.trialEnded': 'La teva prova s’ha acabat.',
   'billing.renewal.endsNoDate':
@@ -416,7 +410,6 @@ const messages = {
   'billing.interval.label': 'Període de facturació',
   'billing.interval.monthly': 'Mensual',
   'billing.interval.yearly': 'Anual',
-  'billing.interval.saving': 'Estalvia {value}',
   'billing.plan.free.name': 'Gratuït',
   'billing.plan.free.tagline': 'Prepara els teus dos pròxims viatges',
   'billing.plan.free.feature.trips': 'Dos viatges alhora',
@@ -446,7 +439,6 @@ const messages = {
   'billing.plan.current': 'Pla actual',
   'billing.plan.currentBadge': 'Actual',
   'billing.plan.popular': 'El més triat',
-  'billing.plan.moveTo': 'Passa a {plan}',
   'billing.plan.switchYearly': 'Passa a anual',
   'billing.plan.switchMonthly': 'Passa a mensual',
   'billing.plan.upgradeTo': 'Millora a {plan}',
@@ -464,31 +456,73 @@ const messages = {
     other: '{value} membres',
   },
 
-  'billing.invoices.title': 'Factures',
-  'billing.invoices.description':
-    'Tots els rebuts d’aquest espai, primer el més recent.',
-  'billing.invoices.portal': 'Portal de facturació',
-  'billing.invoices.unavailableTitle': 'Els rebuts no es carreguen',
-  'billing.invoices.unavailableBody':
-    'Polar no ha contestat a temps per a l’historial. Tot el que hi ha a dalt és en directe; obre el portal de facturació per veure el registre complet, o torna d’aquí a un moment.',
-  'billing.invoices.emptyTitle': 'Encara no hi ha factures',
-  'billing.invoices.emptyCustomer':
-    'El primer rebut apareix aquí així que es tanqui un període de facturació.',
-  'billing.invoices.emptyNoCustomer':
-    'A aquest espai de treball no se li ha cobrat mai res. Tria un pla de pagament i els rebuts s’aniran ajuntant aquí.',
-  'billing.invoices.tableLabel': 'Historial de factures',
   'billing.invoices.number': 'Factura',
   'billing.invoices.date': 'Data',
-  'billing.invoices.period': 'Període',
   'billing.invoices.amount': 'Import',
   'billing.invoices.status': 'Estat',
-  'billing.invoices.receipt': 'Rebut',
-  'billing.invoices.view': 'Obre',
   'billing.invoice.paid': 'Pagada',
-  'billing.invoice.open': 'Pendent',
   'billing.invoice.draft': 'Esborrany',
   'billing.invoice.void': 'Anul·lada',
-  'billing.invoice.uncollectible': 'Incobrable',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'El proveïdor de pagament ha rebutjat la sol·licitud. Torna-ho a provar en un moment.',
+  'billing.planChanged.title': 'Pla actualitzat',
+  'billing.planChanged.body':
+    'El canvi ja és vigent a Polar, que facturarà la diferència. El resum de sota s’hi posa al dia en un minut.',
+  'billing.hero.manage': 'Gestiona la facturació',
+  'billing.hero.manageHint':
+    'Les targetes, l’adreça de facturació, el NIF, els rebuts i la cancel·lació són a Polar, que emet la factura.',
+  'billing.hero.manageHintNone':
+    'Encara no hi ha perfil de facturació. Si tries un pla de pagament a sota se’n crea un, i des d’aleshores s’obre el portal.',
+  'billing.portal.opening': 'S’obre el portal de facturació',
+  'billing.plan.notApplied': 'Aquest canvi no s’ha aplicat',
+  'billing.plan.cancelInPortal': 'Cancel·la al portal',
+  'billing.plan.seatsOverMax': {
+    one: 'Aquest espai té {members} membres i {plan} en factura {max} com a màxim. Elimina {value} membre abans de canviar.',
+    many: 'Aquest espai té {members} membres i {plan} en factura {max} com a màxim. Elimina {value} membres abans de canviar.',
+    other:
+      'Aquest espai té {members} membres i {plan} en factura {max} com a màxim. Elimina {value} membres abans de canviar.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'Tens {members} membres. Tria com a mínim aquestes places: Polar rebutja una subscripció amb menys places que assignacions.',
+  'billing.orders.title': 'Comandes',
+  'billing.orders.description':
+    'Cada comanda d’aquest espai, de la més recent a la més antiga.',
+  'billing.orders.receipts': 'Tots els rebuts',
+  'billing.orders.unavailableTitle': 'Les comandes no es carreguen',
+  'billing.orders.unavailableBody':
+    'Polar no ha respost a temps per a l’historial. Tot el de sobre és al dia: torna-ho a provar en un moment o llegeix el registre complet al portal de facturació.',
+  'billing.orders.emptyTitle': 'Encara no hi ha comandes',
+  'billing.orders.emptyCustomer':
+    'La primera factura apareix aquí tan bon punt es tanca un període de facturació.',
+  'billing.orders.emptyNoCustomer':
+    'A aquest espai no se li ha cobrat mai res. Tria un pla de pagament i les factures s’aniran reunint aquí.',
+  'billing.orders.tableLabel': 'Historial de comandes',
+  'billing.orders.document': 'Document',
+  'billing.orders.dateUnknown': 'Data desconeguda',
+  'billing.order.pending': 'Pendent',
+  'billing.order.refunded': 'Retornada',
+  'billing.order.partiallyRefunded': 'Retornada en part',
+  'billing.order.noInvoiceDraft':
+    'Sense factura mentre la comanda sigui un esborrany',
+  'billing.order.preparing': 'S’està preparant',
+  'billing.order.renderingHint':
+    'Polar encara està generant la factura {number}. La descàrrega torna en uns segons.',
+  'billing.order.fetching': 'S’està obtenint la factura',
+  'billing.order.generating': 'Polar està preparant la factura',
+  'billing.order.pdfLabel': 'Factura {number} en PDF',
+  'billing.order.stillWritingTitle':
+    'Polar encara està redactant aquesta factura',
+  'billing.order.stillWritingBody':
+    'La factura {number} s’està generant. La descàrrega torna sola en uns segons.',
+  'billing.order.openFailed': 'Aquesta factura no s’ha obert',
 } satisfies TranslationOf<typeof En>
 
 export default messages

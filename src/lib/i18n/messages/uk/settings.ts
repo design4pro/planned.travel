@@ -346,22 +346,16 @@ const messages = {
   'billing.hero.freeAllowance': '{trips} поїздки, один мандрівник',
   'billing.hero.perSeatLine': '{seats} × {price}',
   'billing.hero.singleTraveller': 'Один мандрівник',
-  'billing.hero.paymentMethod': 'Спосіб оплати',
-  'billing.hero.cancel': 'Відмовитися від тарифу',
   'billing.price.free': 'Безкоштовно',
   'billing.provider.opening': 'Відкриваємо Polar',
-  'billing.provider.failed': 'Зі Polar зв’язатися не вдалося',
-  'billing.provider.failedBody':
-    'Нічого не списано. Перевірте з’єднання і спробуйте за хвилину.',
-
   'billing.renewal.trialEndsToday':
-    'Пробний період завершується сьогодні. Додайте картку, і модулі залишаться відкритими.',
+    'Пробний період завершується сьогодні. Перше списання відбудеться потім, якщо не скасуєш раніше.',
   'billing.renewal.trialEndsIn': {
-    one: 'Пробний період завершується за {value} день. До того часу картка не потрібна.',
-    few: 'Пробний період завершується за {value} дні. До того часу картка не потрібна.',
-    many: 'Пробний період завершується за {value} днів. До того часу картка не потрібна.',
+    one: 'Пробний період завершиться за {value} день, потім відбудеться перше списання, якщо не скасуєш раніше.',
+    few: 'Пробний період завершиться за {value} дні, потім відбудеться перше списання, якщо не скасуєш раніше.',
+    many: 'Пробний період завершиться за {value} днів, потім відбудеться перше списання, якщо не скасуєш раніше.',
     other:
-      'Пробний період завершується за {value} дня. До того часу картка не потрібна.',
+      'Пробний період завершиться за {value} дня, потім відбудеться перше списання, якщо не скасуєш раніше.',
   },
   'billing.renewal.trialEnded': 'Пробний період завершився.',
   'billing.renewal.endsNoDate':
@@ -422,7 +416,6 @@ const messages = {
   'billing.interval.label': 'Період оплати',
   'billing.interval.monthly': 'Щомісяця',
   'billing.interval.yearly': 'Щороку',
-  'billing.interval.saving': 'Економія {value}',
   'billing.plan.free.name': 'Безкоштовний',
   'billing.plan.free.tagline': 'Сплануйте дві найближчі поїздки',
   'billing.plan.free.feature.trips': 'Дві поїздки водночас',
@@ -450,7 +443,6 @@ const messages = {
   'billing.plan.current': 'Поточний тариф',
   'billing.plan.currentBadge': 'Нинішній',
   'billing.plan.popular': 'Популярний',
-  'billing.plan.moveTo': 'Перейти на {plan}',
   'billing.plan.switchYearly': 'Платити за рік',
   'billing.plan.switchMonthly': 'Платити за місяць',
   'billing.plan.upgradeTo': 'Підняти до {plan}',
@@ -469,31 +461,72 @@ const messages = {
     other: '{value} учасника',
   },
 
-  'billing.invoices.title': 'Рахунки',
-  'billing.invoices.description':
-    'Усі квитанції цього простору, найновіші вгорі.',
-  'billing.invoices.portal': 'Портал оплати',
-  'billing.invoices.unavailableTitle': 'Квитанції не завантажуються',
-  'billing.invoices.unavailableBody':
-    'Polar не встиг відповісти щодо історії. Усе вище — актуальне; повний перелік дивіться в порталі оплати або повернітеся за хвилину.',
-  'billing.invoices.emptyTitle': 'Рахунків ще немає',
-  'billing.invoices.emptyCustomer':
-    'Перша квитанція з’явиться тут, щойно закриється період оплати.',
-  'billing.invoices.emptyNoCustomer':
-    'Цьому простору ще нічого не виставляли. Візьміть платний тариф, і квитанції почнуть збиратися тут.',
-  'billing.invoices.tableLabel': 'Історія рахунків',
   'billing.invoices.number': 'Рахунок',
   'billing.invoices.date': 'Дата',
-  'billing.invoices.period': 'Період',
   'billing.invoices.amount': 'Сума',
   'billing.invoices.status': 'Статус',
-  'billing.invoices.receipt': 'Квитанція',
-  'billing.invoices.view': 'Відкрити',
   'billing.invoice.paid': 'Оплачений',
-  'billing.invoice.open': 'До оплати',
   'billing.invoice.draft': 'Чернетка',
   'billing.invoice.void': 'Анульований',
-  'billing.invoice.uncollectible': 'Безнадійний',
+  /**
+   * Polar's order vocabulary, and the actions around one order's document.
+   *
+   * An order is not an invoice: a draft order has no invoice at all, and an
+   * order can be refunded or partly refunded. `billing.invoices.*` above was
+   * written against the invoice model this replaced, so the words that describe
+   * an order live here rather than being bent into that group.
+   */
+  'billing.provider.rejected':
+    'Платіжний провайдер відхилив цей запит. Спробуй за хвилину.',
+  'billing.planChanged.title': 'Тариф оновлено',
+  'billing.planChanged.body':
+    'Зміна вже діє в Polar, який виставить рахунок на різницю. Зведення нижче наздожене за хвилину.',
+  'billing.hero.manage': 'Керування оплатою',
+  'billing.hero.manageHint':
+    'Картки, адреса для рахунка, номер ПДВ, квитанції та скасування — у Polar, який виставляє рахунок.',
+  'billing.hero.manageHintNone':
+    'Платіжного профілю ще немає. Вибір платного тарифу нижче створить його, і портал почне відкриватися.',
+  'billing.portal.opening': 'Відкривається платіжний портал',
+  'billing.plan.notApplied': 'Цю зміну не застосовано',
+  'billing.plan.cancelInPortal': 'Скасувати в порталі',
+  'billing.plan.seatsOverMax': {
+    one: 'У цьому просторі {members} учасників, а {plan} рахує не більше {max}. Вилучи {value} учасника перед переходом.',
+    few: 'У цьому просторі {members} учасників, а {plan} рахує не більше {max}. Вилучи {value} учасників перед переходом.',
+    many: 'У цьому просторі {members} учасників, а {plan} рахує не більше {max}. Вилучи {value} учасників перед переходом.',
+    other:
+      'У цьому просторі {members} учасників, а {plan} рахує не більше {max}. Вилучи {value} учасника перед переходом.',
+  },
+  'billing.plan.seatsBelowMembers':
+    'У тебе {members} учасників. Вибери щонайменше стільько ж місць — Polar відхиляє підписку, де місць менше, ніж призначень.',
+  'billing.orders.title': 'Замовлення',
+  'billing.orders.description':
+    'Кожне замовлення цього простору, від найновішого.',
+  'billing.orders.receipts': 'Усі квитанції',
+  'billing.orders.unavailableTitle': 'Замовлення не завантажуються',
+  'billing.orders.unavailableBody':
+    'Polar не відповів вчасно щодо історії. Усе вище актуальне — спробуй за хвилину або перечитай повний запис у платіжному порталі.',
+  'billing.orders.emptyTitle': 'Замовлень ще немає',
+  'billing.orders.emptyCustomer':
+    'Перший рахунок з’явиться тут, щойно закриється розрахунковий період.',
+  'billing.orders.emptyNoCustomer':
+    'Цьому простору ще нічого не виставляли. Вибери платний тариф, і рахунки почнуть тут збиратися.',
+  'billing.orders.tableLabel': 'Історія замовлень',
+  'billing.orders.document': 'Документ',
+  'billing.orders.dateUnknown': 'Дата невідома',
+  'billing.order.pending': 'В обробці',
+  'billing.order.refunded': 'Повернено',
+  'billing.order.partiallyRefunded': 'Частково повернено',
+  'billing.order.noInvoiceDraft': 'Поки замовлення — чернетка, рахунка немає',
+  'billing.order.preparing': 'Готується',
+  'billing.order.renderingHint':
+    'Polar ще формує рахунок {number}. Завантаження повернеться за кілька секунд.',
+  'billing.order.fetching': 'Завантаження рахунка',
+  'billing.order.generating': 'Polar готує рахунок',
+  'billing.order.pdfLabel': 'Рахунок {number} у PDF',
+  'billing.order.stillWritingTitle': 'Polar ще виписує цей рахунок',
+  'billing.order.stillWritingBody':
+    'Рахунок {number} формується. Завантаження повернеться саме за кілька секунд.',
+  'billing.order.openFailed': 'Цей рахунок не відкрився',
 } satisfies TranslationOf<typeof En>
 
 export default messages

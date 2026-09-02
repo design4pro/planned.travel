@@ -171,9 +171,11 @@ export function WorldCoverageMap({
         // the drawing is never letterboxed and never stretched.
         preserveAspectRatio="xMidYMid slice"
         className="absolute top-1/2 left-1/2 h-(--atlas-world-edge) w-(--atlas-world-edge)"
+        /* `translate`, not `transform`: this is the centring offset, not
+           motion, and it must survive the reduced-motion reset the way
+           `ui/progress.tsx`'s fill does. */
         style={{
-          transform:
-            'translate(-50%, calc(-50% - var(--atlas-world-lift, 0px)))',
+          translate: '-50% calc(-50% - var(--atlas-world-lift, 0px))',
         }}
         // `role="img"` with no name is worse than no role, so the two attributes
         // move together.

@@ -20,7 +20,11 @@ export interface PillNavProps {
  * element, so switching sections slides it rather than cross-fading two pills —
  * transform only, and instant for anyone who asked for reduced motion.
  */
-export function PillNav({ pathname, items = PRIMARY_NAV, className }: PillNavProps) {
+export function PillNav({
+  pathname,
+  items = PRIMARY_NAV,
+  className,
+}: PillNavProps) {
   const t = useTranslate()
   const reduceMotion = useReducedMotion()
   const transition = reduceMotion
@@ -30,7 +34,10 @@ export function PillNav({ pathname, items = PRIMARY_NAV, className }: PillNavPro
   return (
     <nav
       aria-label={t('shell.nav.primary')}
-      className={cn('flex items-center gap-0.5 rounded-full bg-track p-1', className)}
+      className={cn(
+        'flex items-center gap-0.5 rounded-full bg-track p-1',
+        className,
+      )}
     >
       {items.map((item) => {
         const active = isPathActive(item.matches, pathname)
@@ -40,7 +47,11 @@ export function PillNav({ pathname, items = PRIMARY_NAV, className }: PillNavPro
             to={item.to}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'relative isolate inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-label font-medium focus-ring',
+              // 40px, the ladder's `md`, because this bar also holds the theme
+              // toggle, the bell and the "New trip" button and they all sit on
+              // one line. `font-medium` stays: a nav pill is not a button, and
+              // the weight is what says so.
+              'relative isolate inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-label font-medium focus-ring',
               'transition-colors duration-base ease-out-quint lg:px-4',
               active ? 'text-ink' : 'text-ink-3 hover:text-ink-2',
             )}

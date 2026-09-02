@@ -140,7 +140,11 @@ export function fixtureRows(): FixtureRows {
   const defaults: SuppliedRowDefaults = {
     id: () => {
       const at = instant().toString(36).padStart(ID_TIME_LENGTH, '0')
-      const derived = stableId(SUFFIX_NAMESPACE, `${section}/${String(offset)}`, ID_SUFFIX_LENGTH)
+      const derived = stableId(
+        SUFFIX_NAMESPACE,
+        `${section}/${String(offset)}`,
+        ID_SUFFIX_LENGTH,
+      )
       offset += 1
       return `${at}${derived}`
     },

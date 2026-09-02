@@ -41,7 +41,10 @@ export function categoryLabel(category: string): string {
  * The presentation order, typed as a non-empty tuple of the schema's union so it
  * can seed a Zod enum for the URL's category filter without a cast.
  */
-export const EXPENSE_CATEGORY_ORDER: readonly [ExpenseCategory, ...Array<ExpenseCategory>] = [
+export const EXPENSE_CATEGORY_ORDER: readonly [
+  ExpenseCategory,
+  ...Array<ExpenseCategory>,
+] = [
   'accommodation',
   'transport',
   'food',
@@ -53,13 +56,12 @@ export const EXPENSE_CATEGORY_ORDER: readonly [ExpenseCategory, ...Array<Expense
 ]
 
 /** The category list the expense dialog's select is built from. */
-export const CATEGORY_OPTIONS: ReadonlyArray<CategoryOption> = EXPENSE_CATEGORY_ORDER.map(
-  (category) => ({
+export const CATEGORY_OPTIONS: ReadonlyArray<CategoryOption> =
+  EXPENSE_CATEGORY_ORDER.map((category) => ({
     value: category,
     label: CATEGORY_LABELS[category],
     icon: <CategoryGlyph category={category} bare />,
-  }),
-)
+  }))
 
 /**
  * The leading chip on an expense row.

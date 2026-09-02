@@ -106,7 +106,7 @@ export const CoverageNotice = React.forwardRef<
           <IconButton
             icon={<X />}
             label={t('atlas.map.coverage.dismiss')}
-            size="xs"
+            size="sm"
             variant="ghost"
             className="-mt-1 -me-1 shrink-0"
             onClick={onDismiss}

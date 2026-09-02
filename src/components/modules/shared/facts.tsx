@@ -76,7 +76,7 @@ export function FactList({
             <dt className="shrink-0 text-micro font-semibold tracking-label text-ink-4 uppercase">
               {item.label}
             </dt>
-            <dd className="min-w-0 truncate text-right">
+            <dd className="min-w-0 truncate text-end">
               <FactValue item={item} />
             </dd>
           </div>
@@ -125,7 +125,7 @@ export function FactNote({
   className?: string
 }) {
   return (
-    <div className={cn('min-w-0 border-l-2 border-brand/30 pl-3', className)}>
+    <div className={cn('min-w-0 border-s-2 border-brand/30 ps-3', className)}>
       <p className="mb-0.5 text-micro font-semibold tracking-label text-ink-4 uppercase">
         {label}
       </p>

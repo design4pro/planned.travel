@@ -140,7 +140,6 @@ const messages = {
   'users.filter.role.curator': 'Kuratorzy',
   'users.filter.status.label': 'Filtruj według stanu konta',
   'users.filter.status.any': 'Dowolny stan',
-  'users.filter.clear': 'Wyczyść filtry',
   'users.filter.hint': 'Zawężaj rolą albo stanem — po jednym naraz.',
   'users.column.account': 'Konto',
   'users.column.role': 'Rola platformy',

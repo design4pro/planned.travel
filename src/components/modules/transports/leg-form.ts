@@ -8,71 +8,24 @@
  */
 import { legTimingError } from './connections'
 
-export const TRANSPORT_MODES = [
-  'flight',
-  'train',
-  'bus',
-  'ferry',
-  'car',
-  'taxi',
-  'transit',
-  'metro',
-  'tram',
-  'bike',
-  'walk',
-  'other',
-] as const
+import { isTransportMode, modeLabel } from './vocabulary'
 
-export type TransportMode = (typeof TRANSPORT_MODES)[number]
+import type { MessageKey } from '#/lib/i18n'
+import type { TransportMode, TransportStatus } from './vocabulary'
 
-export const TRANSPORT_STATUSES = [
-  'idea',
-  'pending',
-  'confirmed',
-  'completed',
-  'cancelled',
-] as const
-
-export type TransportStatus = (typeof TRANSPORT_STATUSES)[number]
-
-export function isTransportMode(value: string): value is TransportMode {
-  return (TRANSPORT_MODES as ReadonlyArray<string>).includes(value)
-}
-
-export function isTransportStatus(value: string): value is TransportStatus {
-  return (TRANSPORT_STATUSES as ReadonlyArray<string>).includes(value)
-}
-
-export const MODE_LABELS: { readonly [K in TransportMode]: string } = {
-  flight: 'Flight',
-  train: 'Train',
-  bus: 'Bus',
-  ferry: 'Ferry',
-  car: 'Car',
-  taxi: 'Taxi',
-  transit: 'Transit',
-  metro: 'Metro',
-  tram: 'Tram',
-  bike: 'Bike',
-  walk: 'Walk',
-  other: 'Other',
-}
-
-export function modeLabel(mode: string): string {
-  return isTransportMode(mode) ? MODE_LABELS[mode] : 'Leg'
-}
-
-export const STATUS_LABELS: { readonly [K in TransportStatus]: string } = {
-  idea: 'Idea',
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  completed: 'Done',
-  cancelled: 'Cancelled',
-}
-
-export function transportStatusLabel(status: string): string {
-  return isTransportStatus(status) ? STATUS_LABELS[status] : 'Leg'
-}
+/* The vocabulary keeps its own file but stays reachable from here, so no caller
+ * had to change its import when it moved. */
+export {
+  MODE_LABELS,
+  STATUS_LABELS,
+  TRANSPORT_MODES,
+  TRANSPORT_STATUSES,
+  isTransportMode,
+  isTransportStatus,
+  modeLabel,
+  transportStatusLabel,
+} from './vocabulary'
+export type { TransportMode, TransportStatus } from './vocabulary'
 
 /**
  * Modes where a station code is a real thing a traveller reads off a ticket. A
@@ -113,19 +66,31 @@ export function usesSeat(mode: string): boolean {
 
 /** What each end of a leg is called, per mode. */
 export function endpointLabels(mode: string): {
-  readonly from: string
-  readonly to: string
+  readonly from: MessageKey
+  readonly to: MessageKey
 } {
   if (mode === 'flight') {
-    return { from: 'From airport', to: 'To airport' }
+    return {
+      from: 'modules.transports.end.fromAirport',
+      to: 'modules.transports.end.toAirport',
+    }
   }
   if (mode === 'ferry') {
-    return { from: 'From port', to: 'To port' }
+    return {
+      from: 'modules.transports.end.fromPort',
+      to: 'modules.transports.end.toPort',
+    }
   }
   if (mode === 'train' || mode === 'metro' || mode === 'tram') {
-    return { from: 'From station', to: 'To station' }
+    return {
+      from: 'modules.transports.end.fromStation',
+      to: 'modules.transports.end.toStation',
+    }
   }
-  return { from: 'From', to: 'To' }
+  return {
+    from: 'modules.transports.end.from',
+    to: 'modules.transports.end.to',
+  }
 }
 
 /* ------------------------------------------------------------------- draft */
@@ -182,7 +147,22 @@ export function emptyLegDraft(currency: string): LegDraft {
  * HND", "Train from Tokyo to Kyoto". Suggested, never forced — the field stays
  * editable and this only fills a blank.
  */
-export function suggestLegTitle(draft: LegDraft): string {
+/**
+ * A title the traveller can accept with one tap.
+ *
+ * The result is written to the row, so it is composed in the traveller's
+ * language rather than in English and translated afterwards: this returns the
+ * message and its parts, and the dialog resolves them. `operator` is either the
+ * carrier they typed — never translated — or the mode's own label, which is.
+ */
+export interface LegTitleSuggestion {
+  readonly key: MessageKey
+  readonly params: Readonly<Record<string, string>>
+  /** The mode label to resolve into `operator`, when no carrier was typed. */
+  readonly operatorKey: MessageKey | null
+}
+
+export function suggestLegTitle(draft: LegDraft): LegTitleSuggestion | null {
   const from =
     draft.departureCode.trim() !== ''
       ? draft.departureCode.trim().toUpperCase()
@@ -191,24 +171,40 @@ export function suggestLegTitle(draft: LegDraft): string {
     draft.arrivalCode.trim() !== ''
       ? draft.arrivalCode.trim().toUpperCase()
       : draft.arrivalName.trim()
-  const operator =
-    draft.carrier.trim() !== '' ? draft.carrier.trim() : modeLabel(draft.mode)
+  const carrier = draft.carrier.trim()
+  // A typed carrier is the operator as-is; otherwise the mode names itself and
+  // the caller resolves the key, because only the caller has a provider.
+  const operatorKey = carrier === '' ? modeLabel(draft.mode) : null
+  const operator: Record<string, string> =
+    carrier === '' ? {} : { operator: carrier }
 
   if (from === '' && to === '') {
-    return ''
+    return null
   }
   if (from === '') {
-    return `${operator} to ${to}`
+    return {
+      key: 'modules.transports.title.to',
+      params: { ...operator, to },
+      operatorKey,
+    }
   }
   if (to === '') {
-    return `${operator} from ${from}`
+    return {
+      key: 'modules.transports.title.from',
+      params: { ...operator, from },
+      operatorKey,
+    }
   }
-  return `${operator} from ${from} to ${to}`
+  return {
+    key: 'modules.transports.title.fromTo',
+    params: { ...operator, from, to },
+    operatorKey,
+  }
 }
 
 /* -------------------------------------------------------------- validation */
 
-export type LegErrors = Partial<Record<keyof LegDraft | 'form', string>>
+export type LegErrors = Partial<Record<keyof LegDraft | 'form', MessageKey>>
 
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/u
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u
@@ -217,29 +213,29 @@ export function validateLegDraft(draft: LegDraft): LegErrors {
   const errors: LegErrors = {}
 
   if (draft.title.trim().length === 0) {
-    errors.title = 'Give this leg a name you will recognise in a list.'
+    errors.title = 'modules.transports.error.titleEmpty'
   } else if (draft.title.trim().length > 160) {
-    errors.title = 'Keep the name under 160 characters.'
+    errors.title = 'modules.error.titleLong'
   }
 
   for (const field of ['departureDate', 'arrivalDate'] as const) {
     const value = draft[field].trim()
     if (value !== '' && !DATE_PATTERN.test(value)) {
-      errors[field] = 'A date is written YYYY-MM-DD.'
+      errors[field] = 'modules.transports.error.date'
     }
   }
   for (const field of ['departureTime', 'arrivalTime'] as const) {
     const value = draft[field].trim()
     if (value !== '' && !TIME_PATTERN.test(value)) {
-      errors[field] = 'A time is written HH:MM on a 24-hour clock.'
+      errors[field] = 'modules.transports.error.time'
     }
   }
 
   if (draft.departureTime.trim() !== '' && draft.departureDate.trim() === '') {
-    errors.departureDate = 'A departure time needs the date it is on.'
+    errors.departureDate = 'modules.transports.error.departureNeedsDate'
   }
   if (draft.arrivalTime.trim() !== '' && draft.arrivalDate.trim() === '') {
-    errors.arrivalDate = 'An arrival time needs the date it is on.'
+    errors.arrivalDate = 'modules.transports.error.arrivalNeedsDate'
   }
 
   const ordering = legTimingError({
@@ -255,19 +251,19 @@ export function validateLegDraft(draft: LegDraft): LegErrors {
   for (const field of ['departureCode', 'arrivalCode'] as const) {
     const value = draft[field].trim()
     if (value !== '' && !/^[A-Za-z0-9]{2,8}$/u.test(value)) {
-      errors[field] = 'A code is 2 to 8 letters or digits.'
+      errors[field] = 'modules.transports.error.code'
     }
   }
 
   if (draft.distanceKm.trim() !== '') {
     const value = Number.parseFloat(draft.distanceKm.trim().replace(',', '.'))
     if (!Number.isFinite(value) || value < 0 || value > 100_000) {
-      errors.distanceKm = 'A distance is a number of kilometres, up to 100,000.'
+      errors.distanceKm = 'modules.transports.error.distance'
     }
   }
 
   if (draft.price.trim() !== '' && !/^[\d.,\s]+$/u.test(draft.price.trim())) {
-    errors.price = 'That is not an amount we can read.'
+    errors.price = 'modules.error.price'
   }
 
   return errors

@@ -229,7 +229,10 @@ describe('totp', () => {
   })
 
   it('rejects six characters that are not all digits', () => {
-    const result = schemas.totp.safeParse({ code: '12a456', trustDevice: false })
+    const result = schemas.totp.safeParse({
+      code: '12a456',
+      trustDevice: false,
+    })
     expect(issueFor(result, 'code')).toBe(
       'Authenticator codes are digits only.',
     )

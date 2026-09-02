@@ -37,7 +37,11 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
     <div
       ref={ref}
       aria-hidden="true"
-      data-motion-loop={animation === 'shimmer' ? '' : undefined}
+      // Both animated variants say "still loading", so reduced motion swaps
+      // them for the opacity pulse rather than freezing a block that then reads
+      // as content which failed to arrive. `pulse` is already opacity-only, so
+      // it was being silenced for nothing. `none` asked for stillness.
+      data-motion-loop={animation === 'none' ? undefined : ''}
       className={cn(
         'relative overflow-hidden bg-surface-inset',
         radii[radius],

@@ -4,7 +4,9 @@ A rich, believable demo workspace for `rafal@planned.travel`: five trips in five
 of them fully furnished, plus the journal, atlas, vacation planner, collections and inbox that hang off
 them. Without it every screen renders an empty state and nothing can be judged against the design bar.
 
-`package.json` is frozen, so there is no `pnpm seed` script. The commands below are the interface.
+There is no `pnpm seed` script; the commands below are the interface. `pnpm worktree:bootstrap`
+runs the seed for you as its last step, and is the shorter road on a checkout that has none of the
+local fixtures yet.
 
 ## Run it
 
@@ -62,7 +64,8 @@ for those rounds:
 pnpm exec vite dev --port 3010 --strictPort
 ```
 
-`pnpm dev` hardcodes `--port 3000` and `package.json` is frozen, so it cannot be corrected there.
+`pnpm dev` hardcodes `--port 3000`, so it is never the way to start a server for a reserved-range
+round.
 
 The seeder has no equivalent guard, and it cannot have one: it is an HTTP client, so every origin
 that answers `/api/dev/seed` looks alike to it. `DEFAULT_PORTS` in `seed.mjs` probes the developer

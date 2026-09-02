@@ -2,6 +2,9 @@
   "name": "planned-travel",
   "private": true,
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "packageManager": "pnpm@10.15.0",
   "imports": {
     "#/*": "./src/*"
@@ -26,6 +29,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply planned-travel-db --remote",
     "db:migrate:remote:staging": "wrangler d1 migrations apply planned-travel-db-staging --remote --env staging",
     "cf-typegen": "wrangler types",
+    "worktree:bootstrap": "bash scripts/worktree/bootstrap.sh",
     "prepare": "husky",
     "sandcastle": "tsx .sandcastle/main.ts",
     "sandcastle:baselines": "tsx .sandcastle/record-baselines.ts",

@@ -93,8 +93,8 @@ const PRINT_CSS = `
   td { padding: 2.4mm 0; border-bottom: 1px solid #ece9e3; vertical-align: top; }
   td.label { width: 38%; font-weight: 500; }
   td.value { width: 47%; font-variant-numeric: tabular-nums; }
-  td.meta { width: 15%; color: #9b9a91; text-align: right; font-variant-numeric: tabular-nums; }
-  footer { margin-top: 10mm; padding-top: 4mm; border-top: 1px solid #e5e2db; color: #9b9a91; font-size: 8pt; }
+  td.meta { width: 15%; color: #89877f; text-align: right; font-variant-numeric: tabular-nums; }
+  footer { margin-top: 10mm; padding-top: 4mm; border-top: 1px solid #e5e2db; color: #89877f; font-size: 8pt; }
 `
 
 export function renderExportDocument(

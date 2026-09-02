@@ -390,6 +390,107 @@ const messages = {
   'role.admin': 'Администратор',
   'role.member': 'Участник',
 
+  /* ------------------------------------------- the trips index */
+  'trips.count.trips': {
+    one: '{value} поездка',
+    few: '{value} поездки',
+    many: '{value} поездок',
+    other: '{value} поездки',
+  },
+  'trips.count.favourites': {
+    one: '{value} избранная',
+    few: '{value} избранные',
+    many: '{value} избранных',
+    other: '{value} избранной',
+  },
+  'trips.count.archived': {
+    one: '{value} в архиве',
+    few: '{value} в архиве',
+    many: '{value} в архиве',
+    other: '{value} в архиве',
+  },
+  'trips.atLimit.body':
+    'Ваш тариф покрывает {trips}. Отправьте в архив завершённую или перейдите на тариф выше, чтобы держать больше открытыми одновременно.',
+  /* --------------------------------------- the new-trip dialog */
+  /* ------------------- the journey and collection dialogs */
+  'newJourney.trigger': 'Новый дневник',
+  'newJourney.title': 'Начните дневник',
+  'newJourney.description':
+    'Дневник — записанная сторона поездки: записи по датам, с фотографиями и погодой, которую вы помните.',
+  'newJourney.titlePlaceholder': 'Две недели в Киото',
+  'newJourney.subtitle': 'Подзаголовок',
+  'newJourney.subtitleHint': 'Одна строка под заголовком, на обложке.',
+  'newJourney.subtitlePlaceholder': 'Храмы, поезда и слишком много матчи',
+  'newJourney.trip': 'На основе поездки',
+  'newJourney.tripHint': 'Необязательно — связывает рассказ с его планом.',
+  'newJourney.tripNone': 'Без привязки к поездке',
+  'newJourney.datesError': 'Дата окончания раньше начала.',
+  'newJourney.submit': 'Создать дневник',
+  'newJourney.creating': 'Создаём дневник',
+  'newJourney.created': 'Дневник начат',
+  'newJourney.createdBody': 'Добавьте первую запись, чтобы начать рассказ.',
+  'newJourney.error': 'Дневник не удалось создать. Попробуйте через минуту.',
+  'newCollection.trigger': 'Новая подборка',
+  'newCollection.title': 'Начните подборку',
+  'newCollection.description':
+    'Место для мест, которые вы находите раньше, чем узнаёте, к какой поездке они относятся.',
+  'newCollection.namePlaceholder': 'Кофе, за которым стоит пройти через город',
+  'newCollection.descriptionHint': 'Что сюда входит, а что нет.',
+  'newCollection.submit': 'Создать подборку',
+  'newCollection.creating': 'Создаём подборку',
+  'newCollection.created': 'Подборка создана',
+  'newCollection.createdBody': 'Начните сохранять в неё места.',
+  'newCollection.error':
+    'Подборку не удалось создать. Попробуйте через минуту.',
+
+  'newTrip.title': 'Начните новую поездку',
+  'newTrip.description':
+    'Достаточно названия. Даты построят план по дням, а остальное может подождать, пока вы не будете знать.',
+  'newTrip.name': 'Название поездки',
+  'newTrip.namePlaceholder': 'Киото в сезон сакуры',
+  'newTrip.destination': 'Направление',
+  'newTrip.destinationHint': 'Город, регион или весь маршрут.',
+  'newTrip.destinationPlaceholder': 'Киото, Япония',
+  'newTrip.departure': 'Выезд',
+  'newTrip.return': 'Возвращение',
+  'newTrip.returnError': 'Дата возвращения раньше выезда.',
+  'newTrip.currency': 'Валюта бюджета',
+  'newTrip.currencyHint': 'В ней суммируется каждый расход этой поездки.',
+  'newTrip.submit': 'Создать поездку',
+  'newTrip.creating': 'Создаём поездку',
+  'newTrip.error': 'Поездку не удалось создать. Попробуйте через минуту.',
+  'newTrip.created': 'Поездка создана',
+  'newTrip.createdBody': 'Начните расставлять места на карте.',
+
+  /* ------------------------------------ who can see a thing */
+  'visibility.label': 'Кто это увидит',
+  'visibility.private': 'Только я',
+  'visibility.organization': 'Все в пространстве',
+  'visibility.public': 'Любой, у кого есть ссылка',
+
+  'trips.error': 'Ваши поездки не загрузились',
+  'trips.eyebrow': 'Пространство',
+  'trips.nothingPlanned': 'Пока ничего не запланировано',
+  'trips.search': 'Искать поездки',
+  'trips.atLimit.title': 'Вы заняли все поездки, которые допускает тариф',
+  'trips.atLimit.action': 'Сравнить тарифы',
+  'trips.noMatch.title': 'Под этот фильтр ничего не подходит',
+  'trips.noMatch.body':
+    'Попробуйте другой этап, очистите поиск или посмотрите в архиве.',
+  'trips.noMatch.action': 'Сбросить фильтры',
+  'trips.empty.body':
+    'Поездка держит план по дням, карту, брони, списки вещей и деньги. Начните одну — остальное подтянется.',
+  'trips.next.title': 'Куда-нибудь дальше',
+  'trips.next.body':
+    'Начните поездку, и planned.travel создаст день на каждую дату, готовый к тому, что вы сохранили.',
+  'trips.savedPlaces': 'Сохранённые места',
+  'trips.filter.all': 'Все',
+  'trips.filter.favourites': 'Избранные',
+  'trips.card.favourite': 'Избранная',
+  'trips.card.noDestination': 'Направление пока не выбрано',
+  'trips.card.noDates': 'Даты пока не выбраны',
+  'trips.card.startsIn': 'через {days} д',
+  'trips.card.days': '{days} д',
   'metric.trips': 'Поездки',
   'metric.places': 'Места',
   'metric.members': 'Участники',
@@ -414,6 +515,32 @@ const messages = {
     'Отправить не удалось. Номер обращения выше всё равно доходит до нас.',
   'error.root': 'Мы сбились с маршрута',
   'error.session': 'Ваш доступ к пространству изменился',
+
+  /* ------------------------------------------------- reporting a problem */
+  'feedback.triggerLabel': 'Сообщить о проблеме',
+  'feedback.formTitle': 'Сообщить о проблеме',
+  'feedback.messageLabel': 'Что не так или что нужно изменить?',
+  'feedback.messagePlaceholder':
+    'Чего вы ожидали и что произошло вместо этого?',
+  'feedback.emailLabel': 'Электронная почта',
+  'feedback.emailPlaceholder': 'ivan@example.com',
+  'feedback.isRequiredLabel': '(обязательно)',
+  'feedback.submitButtonLabel': 'Отправить сообщение',
+  'feedback.cancelButtonLabel': 'Отмена',
+  'feedback.confirmButtonLabel': 'Подтвердить',
+  'feedback.addScreenshotButtonLabel': 'Добавить снимок экрана',
+  'feedback.removeScreenshotButtonLabel': 'Убрать снимок экрана',
+  'feedback.highlightToolText': 'Выделить',
+  'feedback.hideToolText': 'Скрыть',
+  'feedback.successMessageText': 'Спасибо — сообщение получено.',
+  'feedback.errorEmptyMessageText':
+    'Сначала напишите хотя бы предложение — пустое сообщение ничего нам не говорит.',
+  'feedback.errorTimeoutText':
+    'Это занимает слишком много времени, и мы не можем подтвердить, что сообщение отправлено.',
+  'feedback.errorForbiddenText':
+    'Этой странице не разрешено отправлять сообщения.',
+  'feedback.errorGenericText':
+    'Отправить не удалось. Проверьте соединение и не мешает ли блокировщик рекламы.',
 
   'notFound.eyebrow': 'Ошибка 404',
   'notFound.title': 'Этой страницы нет на карте',

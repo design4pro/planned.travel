@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Route as RouteIcon } from 'lucide-react'
 
+import { useLocale } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
@@ -36,6 +37,7 @@ export const Route = createFileRoute('/_app/trips/$tripId/transports')({
 })
 
 function TransportsPage() {
+  const locale = useLocale()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
   const [newLegOpen, setNewLegOpen] = useState(false)
@@ -76,7 +78,10 @@ function TransportsPage() {
               tone="inverse"
               icon={<RouteIcon />}
               label="Distance travelled"
-              value={formatNumber(Math.round(data.totalDistanceMetres / 1000))}
+              value={formatNumber(
+                Math.round(data.totalDistanceMetres / 1000),
+                locale,
+              )}
               unit="km"
               caption={`≈ ${(data.totalDistanceMetres / 40_075_000).toFixed(2)}× around the equator`}
             />
@@ -94,11 +99,11 @@ function TransportsPage() {
               value={
                 data.legs.filter((leg) => leg.status === 'confirmed').length
               }
-              caption={`${formatNumber(data.legs.filter((leg) => leg.status === 'pending').length)} still pending`}
+              caption={`${formatNumber(data.legs.filter((leg) => leg.status === 'pending').length, locale)} still pending`}
             />
             <StatCard
               label="Spent on travel"
-              value={formatMoneyMinor(totalPriced, data.currency)}
+              value={formatMoneyMinor(totalPriced, data.currency, locale)}
               caption={
                 priced.length === 0
                   ? 'No prices recorded'

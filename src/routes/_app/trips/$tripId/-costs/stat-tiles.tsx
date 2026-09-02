@@ -13,6 +13,7 @@
 import { ArrowDownLeft, ArrowUpRight, CircleAlert, Coins } from 'lucide-react'
 
 import { Avatar, StatCard } from '#/components/ui'
+import { useLocale } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 import { dailySeries } from '#/components/costs'
 import { pluralise } from '../../../-lib/format'
@@ -39,11 +40,17 @@ export function StatTiles({
   budgetTargetMinor,
   plannedMinor,
 }: StatTilesProps) {
+  const locale = useLocale()
   const nameOf = (userId: string): string =>
-    people.find((person) => person.userId === userId)?.name ?? 'Removed traveller'
+    people.find((person) => person.userId === userId)?.name ??
+    'Removed traveller'
 
-  const creditors = snapshot.suggestions.filter((row) => row.fromUserId === viewerUserId)
-  const debtors = snapshot.suggestions.filter((row) => row.toUserId === viewerUserId)
+  const creditors = snapshot.suggestions.filter(
+    (row) => row.fromUserId === viewerUserId,
+  )
+  const debtors = snapshot.suggestions.filter(
+    (row) => row.toUserId === viewerUserId,
+  )
   const series = dailySeries(snapshot.expenses)
 
   return (
@@ -51,7 +58,7 @@ export function StatTiles({
       <StatCard
         icon={<ArrowDownLeft />}
         label="You owe"
-        value={formatMoney(totals.owesMinor, currency)}
+        value={formatMoney(totals.owesMinor, currency, locale)}
         valueTone={totals.owesMinor === 0 ? 'default' : 'danger'}
         caption={
           totals.owesMinor === 0
@@ -70,10 +77,12 @@ export function StatTiles({
       <StatCard
         icon={<ArrowUpRight />}
         label="You're owed"
-        value={formatMoney(totals.owedMinor, currency)}
+        value={formatMoney(totals.owedMinor, currency, locale)}
         valueTone={totals.owedMinor === 0 ? 'default' : 'success'}
         caption={
-          totals.owedMinor === 0 ? 'Nothing owed to you' : 'Still to come back to you'
+          totals.owedMinor === 0
+            ? 'Nothing owed to you'
+            : 'Still to come back to you'
         }
         footer={
           <PeopleLine
@@ -87,7 +96,7 @@ export function StatTiles({
       <StatCard
         icon={<CircleAlert />}
         label="Outstanding"
-        value={formatMoney(totals.unclaimedMinor, currency)}
+        value={formatMoney(totals.unclaimedMinor, currency, locale)}
         valueTone={totals.unclaimedMinor === 0 ? 'default' : 'warning'}
         caption={
           totals.unclaimedCount === 0
@@ -99,12 +108,12 @@ export function StatTiles({
         tone="inverse"
         icon={<Coins />}
         label="Total trip spend"
-        value={formatMoney(snapshot.spentMinor, currency)}
+        value={formatMoney(snapshot.spentMinor, currency, locale)}
         sparkline={series.length > 1 ? series : undefined}
         caption={
           budgetTargetMinor === null || budgetTargetMinor === 0
-            ? `Planned ${formatMoney(plannedMinor, currency)} across all travellers`
-            : `${formatMoney(budgetTargetMinor, currency)} budgeted for the trip`
+            ? `Planned ${formatMoney(plannedMinor, currency, locale)} across all travellers`
+            : `${formatMoney(budgetTargetMinor, currency, locale)} budgeted for the trip`
         }
         footer={
           <div className="w-full">
@@ -117,7 +126,7 @@ export function StatTiles({
                   Your share
                 </dt>
                 <dd className="truncate text-label font-semibold tabular-nums text-inverse-on">
-                  {formatMoney(totals.viewerShareMinor, currency)}
+                  {formatMoney(totals.viewerShareMinor, currency, locale)}
                 </dd>
               </div>
               <div className="min-w-0">
@@ -125,7 +134,7 @@ export function StatTiles({
                   You paid
                 </dt>
                 <dd className="truncate text-label font-semibold tabular-nums text-inverse-on">
-                  {formatMoney(totals.viewerPaidMinor, currency)}
+                  {formatMoney(totals.viewerPaidMinor, currency, locale)}
                 </dd>
               </div>
             </dl>
@@ -160,17 +169,21 @@ function PeopleLine({
       {shown.map((userId) => (
         <span
           key={userId}
-          className="flex min-w-0 items-center gap-1.5 rounded-full bg-surface-2 py-0.5 pr-2 pl-0.5"
+          className="flex min-w-0 items-center gap-1.5 rounded-full bg-surface-2 py-0.5 pe-2 ps-0.5"
         >
           <Avatar
             name={nameOf(userId)}
             src={people.find((person) => person.userId === userId)?.image}
             size="xs"
           />
-          <span className="truncate font-medium text-ink-2">{nameOf(userId)}</span>
+          <span className="truncate font-medium text-ink-2">
+            {nameOf(userId)}
+          </span>
         </span>
       ))}
-      {extra > 0 ? <span className="shrink-0 tabular-nums">+{extra}</span> : null}
+      {extra > 0 ? (
+        <span className="shrink-0 tabular-nums">+{extra}</span>
+      ) : null}
     </span>
   )
 }
