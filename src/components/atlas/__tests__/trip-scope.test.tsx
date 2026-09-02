@@ -105,16 +105,16 @@ function renderAtlasScreen(): void {
  * One panel tile, by the figure it carries.
  *
  * `data-stat` is the panel's own handle on its tiles — the idiom `CountryCard`
- * already sets with `data-country` and `data-record`, so a host or a test can
- * find one surface without parsing the labels back out of the DOM.
+ * already sets with `data-country` and `data-record`; `atlas-panel.tsx` holds
+ * why the panel offers one.
  *
  * It replaces a walk out from the label to the first ancestor holding a
- * numeral. That walk's premise — that only a tile pairs a label with a numeral
- * — is false inside a single `StatCard`: the trend badge carries `data-numeric`
- * in the *same* header div as the label. Measured, giving this tile a trend:
- * the walk stops at `flex items-start justify-between gap-3` and reads the
- * delta, `+3`, as the tile's figure. The panel passes no trend today, which was
- * the whole of why the walk was right, and none of it was stated.
+ * numeral, whose premise — that only a tile pairs a label with a numeral — is
+ * false inside a single `StatCard`: the trend badge carries `data-numeric` in
+ * the *same* header div as the label. Measured, giving this tile a trend, the
+ * walk stops on that header and reads the delta, `+3`, as the tile's figure.
+ * The panel passes no trend today, which was the whole of why the walk was
+ * right, and none of it was stated.
  */
 function tile(panel: HTMLElement, stat: string): HTMLElement {
   const found = panel.querySelector<HTMLElement>(`[data-stat="${stat}"]`)

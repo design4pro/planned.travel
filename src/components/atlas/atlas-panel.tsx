@@ -982,7 +982,8 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       panel's DOM or reading a label back out of it — labels are
                       translated and the tile's inner shape belongs to
                       `StatCard`, so neither is a handle this panel can offer.
-                      The names are the `stats` fields, not the copy. */}
+                      The name is the figure — `places`, `trips` — so it holds
+                      when the copy does not. */}
                   <div className={layout.statGrid}>
                     {/* Places, not countries.
 
