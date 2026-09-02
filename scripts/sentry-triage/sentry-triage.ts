@@ -1,29 +1,27 @@
 // Sentry → GitHub issues. Recurring, high-impact errors become `type: bug` + `status: triage`
-// tickets, which is exactly what .github/workflows/triage.yml fires on — so a finding is verified
-// at HEAD and promoted, or not, by the machinery that already exists (ADR 0006). This routine never
-// applies `ready-for-agent`: it has reproduced nothing, and promotion is earned by a reproduction.
+// tickets, which is exactly the pair the cezar `triage` automation picks up — so a finding is
+// verified at HEAD and promoted, or not, by the machinery that already exists (ADR 0006 as amended
+// by ADR 0015). This routine never applies `status: ready`: it has reproduced nothing, and
+// promotion is earned by a reproduction.
 //
-//   pnpm sandcastle:sentry                      # report only — files nothing
-//   pnpm sandcastle:sentry --file-issues        # also file, capped
-//   pnpm sandcastle:sentry --window 14d --max 2
-//   pnpm sandcastle:sentry --ci                 # noSandbox(); the CI runner is already disposable
+//   pnpm sentry-triage                      # report only — files nothing
+//   pnpm sentry-triage --file-issues        # also file, capped
+//   pnpm sentry-triage --window 14d --max 2
 //
-// Report-only by default for the reason architecture-review.ts gives: a manual run must never
-// surprise the operator by writing to the backlog. The scheduled workflow passes --file-issues.
+// Report-only by default: a manual run must never surprise the operator by writing to the
+// backlog. The scheduled workflow (.github/workflows/sentry-triage.yml) passes --file-issues.
 //
-// Requires: Docker running, `sandcastle docker build-image` executed once, and the Sentry keys in
-// .sandcastle/.env (see .env.example — a commented-out line there is *not* forwarded).
+// Requires the Claude Code CLI on PATH, `gh` signed in, and SENTRY_ACCESS_TOKEN + SENTRY_ORG in
+// the environment (see ./README.md). The agent runs on this checkout with the Sentry MCP server
+// from ./mcp.json and nothing else attached; it cannot edit files and never commits.
 //
 // Why the policy lives in ./policy.ts and not in the prompt: see ./README.md.
 
-import { execFileSync } from 'node:child_process'
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-import * as sandcastle from '@ai-hero/sandcastle'
-import { noSandbox } from '@ai-hero/sandcastle/sandboxes/no-sandbox'
-
-import { docker } from '../sandbox'
 import {
   buildTrackedIndex,
   dedupeVerdict,
@@ -36,7 +34,11 @@ import {
 
 import type { Candidate, TrackedIssue } from './policy'
 
+const HERE = dirname(fileURLToPath(import.meta.url))
 const MODEL = 'claude-opus-5'
+
+/** Reports land beside the other run artefacts; `.agent/` is gitignored. */
+const REPORT_DIR = '.agent'
 
 /** One run cannot flood the backlog. The auditor's cap is 3 for the same reason. */
 const DEFAULT_MAX_FILED = 3
@@ -61,7 +63,6 @@ const PROJECTS =
 
 const argv = process.argv.slice(2)
 const fileIssues = argv.includes('--file-issues')
-const ci = argv.includes('--ci')
 
 function flag(name: string, fallback: string): string {
   const at = argv.indexOf(`--${name}`)
@@ -163,69 +164,67 @@ function frameExists(candidate: Candidate): boolean {
   return readFileSync(frame.file, 'utf8').split('\n').length >= frame.line
 }
 
+type Report = ReturnType<typeof reportSchema.parse>
+
+function renderPrompt(tracked: string): string {
+  const fill: Record<string, string> = {
+    ORG,
+    PROJECTS,
+    WINDOW: windowArg,
+    TRACKED: tracked,
+  }
+  return readFileSync(join(HERE, 'prompt.md'), 'utf8').replace(
+    /\{\{(ORG|PROJECTS|WINDOW|TRACKED)\}\}/g,
+    (_, key: string) => fill[key] ?? '',
+  )
+}
+
+/**
+ * One non-interactive Claude Code session on this checkout, read-only by construction: Bash, Edit
+ * and Write are removed from the tool set, and `--strict-mcp-config` attaches ./mcp.json alone, so
+ * neither a developer's own MCP servers nor a root `.mcp.json` reach a scheduled run.
+ */
+function survey(prompt: string): Report {
+  const run = spawnSync(
+    'claude',
+    [
+      '-p',
+      '--model',
+      MODEL,
+      '--dangerously-skip-permissions',
+      '--mcp-config',
+      join(HERE, 'mcp.json'),
+      '--strict-mcp-config',
+      '--disallowedTools',
+      'Bash,Edit,Write,NotebookEdit',
+      '--output-format',
+      'text',
+    ],
+    {
+      input: prompt,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ['pipe', 'pipe', 'inherit'],
+    },
+  )
+  if (run.error) throw run.error
+  if (run.status !== 0)
+    throw new Error(`claude exited with code ${String(run.status)}`)
+  const block = /<sentry-triage>([\s\S]*?)<\/sentry-triage>/.exec(run.stdout)
+  if (block === null)
+    throw new Error(
+      'the agent emitted no <sentry-triage> block; nothing was looked at',
+    )
+  return reportSchema.parse(JSON.parse(block[1]))
+}
+
 const tracked = buildTrackedIndex(trackedIssues())
 const trackedSummary =
   tracked.size === 0
     ? '(none yet)'
     : [...tracked.keys()].map((shortId) => `- ${shortId}`).join('\n')
 
-const result = await sandcastle.run({
-  sandbox: ci ? noSandbox() : docker(),
-  // Never the default 'head' strategy off CI: it bind-mounts the host checkout and the install hook
-  // would grind through a darwin node_modules. On the runner the checkout is already disposable.
-  //
-  // `{ type: 'head' }`, not the bare `'head'` this used to pass: a string has no `.type`, so the
-  // library never recognised head mode and cut a worktree on a generated temp branch instead —
-  // the opposite of what the line above says. Harmless in practice, since this run files GitHub
-  // issues rather than committing, but it was a worktree per CI run for nothing.
-  branchStrategy: ci
-    ? { type: 'head' as const }
-    : {
-        type: 'branch',
-        branch: `sandcastle/sentry-${runLabel}`,
-        baseBranch: 'origin/develop',
-      },
-  name: 'sentry-triage',
-  maxIterations: 1,
-  agent: sandcastle.claudeCode(MODEL, {
-    // noSandbox() does not pass the AFK permission flag, so a CI run would otherwise stall waiting
-    // for a tool approval nobody is there to give.
-    ...(ci ? { permissionMode: 'bypassPermissions' as const } : {}),
-  }),
-  promptFile: './.sandcastle/sentry-triage/prompt.md',
-  promptArgs: {
-    ORG: ORG,
-    PROJECTS: PROJECTS,
-    WINDOW: windowArg,
-    TRACKED: trackedSummary,
-  },
-  hooks: {
-    // Places the Sentry MCP server in the agent's cwd. A hook rather than `copyToWorktree`, which
-    // preserves relative paths and so cannot rename a file into the worktree root. See ./README.md
-    // for why this is not a committed root-level .mcp.json.
-    host: {
-      onWorktreeReady: [
-        { command: 'cp .sandcastle/sentry-triage/mcp.json .mcp.json' },
-      ],
-    },
-    sandbox: {
-      onSandboxReady: [
-        { command: 'cp .sandcastle/sentry-triage/mcp.json .mcp.json' },
-        { command: 'pnpm install --frozen-lockfile', timeoutMs: 600_000 },
-      ],
-    },
-  },
-  copyToWorktree: ci ? undefined : ['.sandcastle/.env'],
-  output: sandcastle.Output.object({
-    tag: 'sentry-triage',
-    schema: reportSchema,
-  }),
-  // The MCP server is a long-lived child process that inherits the agent's stdout.
-  completionTimeoutSeconds: 90,
-  idleTimeoutSeconds: 900,
-})
-
-const report = result.output
+const report = survey(renderPrompt(trackedSummary))
 
 if (report.status === 'mcp-unavailable') {
   console.error(
@@ -234,9 +233,8 @@ if (report.status === 'mcp-unavailable') {
   process.exit(1)
 }
 
-const logDir = join('.sandcastle', 'logs')
-mkdirSync(logDir, { recursive: true })
-const reportPath = join(logDir, `sentry-triage-${runLabel}.md`)
+mkdirSync(REPORT_DIR, { recursive: true })
+const reportPath = join(REPORT_DIR, `sentry-triage-${runLabel}.json`)
 writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 
 console.log(
@@ -349,8 +347,8 @@ for (const candidate of filingOrder(report.candidates, forced)) {
       'create',
       '--title',
       title,
-      // Exactly these two labels and no others: the pair triage.yml fires on. `ready-for-agent` is
-      // ADR 0006's to apply, after a reproduction this routine has not performed.
+      // Exactly these two labels and no others: the pair the triage automation picks up.
+      // `status: ready` is triage's to apply, after a reproduction this routine has not performed.
       '--label',
       'type: bug',
       '--label',

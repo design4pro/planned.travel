@@ -122,10 +122,12 @@ swap_status() { # number "status: new"
   gh issue edit "$n" --repo "$REPO" --add-label "$new" ${args[@]+"${args[@]}"} > /dev/null
 }
 
-# Find the id of the comment carrying a marker (first match, oldest first).
+# Find the id of the comment carrying a marker (first match, oldest first). The marker is
+# inlined into the filter: `gh api --jq` takes one argument and has no `--arg`, and no marker
+# carries a quote.
 comment_id_by_marker() { # number marker
   gh api --paginate "repos/$REPO/issues/$1/comments" \
-    --jq --arg m "$2" '.[] | select(.body | contains($m)) | .id' | head -1
+    --jq ".[] | select(.body | contains(\"$2\")) | .id" | head -1
 }
 
 # Create or edit in place the comment identified by marker. Body from stdin.

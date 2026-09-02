@@ -27,7 +27,7 @@ Distilled from docs/SPEC.md §6–§7. The repo overrides this file where they d
 
 ## Commits
 
-- Conventional Commits, in English (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`). The `RALPH:` prefix is reserved for sandcastle in-loop commits.
+- Conventional Commits, in English (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`).
 
 ## Smell baseline (judgement calls)
 

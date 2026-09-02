@@ -95,9 +95,11 @@ export interface ParsedMarker {
 export function parseMarkers(body: string): ReadonlyArray<ParsedMarker> {
   const found: Array<ParsedMarker> = []
   for (const match of body.matchAll(MARKER_PATTERN)) {
+    // The sequence group is optional; indexing the match would not say so.
+    const sequence = match.at(2)
     found.push({
       shortId: match[1],
-      sequence: match[2] === undefined ? 1 : Number(match[2]),
+      sequence: sequence === undefined ? 1 : Number(sequence),
     })
   }
   return found
@@ -453,7 +455,7 @@ export function renderIssueBody(options: RenderBodyOptions): string {
     '',
     '---',
     forcedReason === undefined
-      ? `_Filed by \`pnpm sandcastle:sentry --file-issues\` (run ${runLabel}) from Sentry issue ${candidate.shortId}. Full report: ${reportPath}_`
-      : `_Filed by hand with \`pnpm sandcastle:sentry --force ${candidate.shortId} --file-issues\` (run ${runLabel}), against the policy - see the FORCED line above. Full report: ${reportPath}_`,
+      ? `_Filed by \`pnpm sentry-triage --file-issues\` (run ${runLabel}) from Sentry issue ${candidate.shortId}. Full report: ${reportPath}_`
+      : `_Filed by hand with \`pnpm sentry-triage --force ${candidate.shortId} --file-issues\` (run ${runLabel}), against the policy - see the FORCED line above. Full report: ${reportPath}_`,
   ].join('\n')
 }

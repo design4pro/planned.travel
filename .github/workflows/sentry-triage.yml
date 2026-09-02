@@ -1,24 +1,13 @@
 name: Sentry triage
 
 # Weekly sweep of Sentry for recurring, high-impact errors, filing the ones that clear the
-# threshold as `type: bug` + `status: triage`. Those two labels are the whole point: triage.yml
-# fires on `opened` for exactly that pair, reproduces the claim at HEAD and promotes it, or not,
-# per ADR 0006. This workflow never applies `ready-for-agent` itself.
+# threshold as `type: bug` + `status: triage`. Those two labels are the whole point: the cezar
+# `triage` automation picks up exactly that pair, reproduces the claim at HEAD and promotes it, or
+# not, per ADR 0006 as amended by ADR 0015. This workflow never applies `status: ready` itself.
 #
-# It runs the SAME orchestrator as `pnpm sandcastle:sentry`, on noSandbox() rather than docker() -
-# the runner is already disposable. The thresholds, the dedup index and the issue body live in
-# .sandcastle/sentry-triage/policy.ts, so the local run and this one cannot drift. That is also why
-# this is not `anthropics/claude-code-action@v1` like triage.yml: that workflow's prompt IS its
-# routine, and this one's is not.
-#
-# The first `schedule:` trigger in this repository. ADR 0004 deliberately deferred running
-# sandcastle in CI, so this stays narrow: one sweep a week, at most three issues, and a report
-# artifact either way.
-#
-# The sweep registers itself with the run registry (docs/adr/0009) but claims nothing, on purpose:
-# it files issues that do not exist yet, so there is no id another run could be holding and nothing
-# to contend over. The registration buys dashboard visibility alone - "a sentry sweep is running on
-# a runner right now" is the answer to why a fresh batch of `status: triage` bugs just appeared.
+# It runs the SAME script as `pnpm sentry-triage`, on the runner: the thresholds, the dedup index
+# and the issue body live in scripts/sentry-triage/policy.ts, so the local run and this one cannot
+# drift. One sweep a week, at most three issues, and a report artifact either way.
 on:
   schedule:
     # Tuesdays 06:00 UTC — after Monday's deploys have soaked for a day, and early enough that the
@@ -52,19 +41,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    # For the Cloudflare Access service token alone - staging fronts the registry, and that token is
-    # an environment secret. Nothing here deploys, and the environment carries no protection rules.
-    environment: staging
-
     permissions:
       contents: read
-      # Retained so a debugging run can fall back to github.token, though it must not file with it
-      # — see GH_TOKEN below.
       issues: write
-
-    env:
-      # Per attempt, so a re-run is its own row rather than a resume of a reaped one.
-      RUN_ID: sentry-triage-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Check the Sentry credentials are configured
@@ -99,81 +78,30 @@ jobs:
 
       - name: Install the Claude Code CLI
         if: steps.gate.outputs.configured == 'true'
-        # The installer drops the binary in ~/.local/bin, which is not on the runner's PATH.
-        # It goes on through $GITHUB_PATH, which APPENDS for every later step. The step below
-        # used to set `PATH:` in its own `env:` block instead, and that silently broke it: the
-        # `env` context holds only what a workflow/job/step `env:` declared, never the runner's
-        # environment, so `${{ env.PATH }}` expanded to nothing and the step ran with a PATH of
-        # `/home/runner/.local/bin:` alone - no /usr/bin, so no `uname`, `dirname` or `sed`, and
-        # pnpm's sh wrapper resolved itself to a `/pnpm/bin/pnpm.cjs` that does not exist.
+        # The installer drops the binary in ~/.local/bin, which is not on the runner's PATH; it goes
+        # on through $GITHUB_PATH, which appends for every later step.
         run: |
           curl -fsSL https://claude.ai/install.sh | bash
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      # Visibility is a nice-to-have here, so an unset secret is a notice and not a failure. There is
-      # no claim to lose: the sweep would run identically either way.
-      - name: Check the coordinator is configured
-        if: steps.gate.outputs.configured == 'true'
-        id: coordinator
-        env:
-          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
-          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
-        run: |
-          if [ -n "$SANDCASTLE_COORDINATOR_URL" ] && [ -n "$SANDCASTLE_COORDINATOR_TOKEN" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::No run coordinator configured - the sweep will not appear on the dashboard."
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      # `continue-on-error`, because a sweep must not be lost to a dashboard being down. The claim
-      # step in triage.yml is strict for the opposite reason: there, the coordinator's answer decides
-      # whether the job may touch the issue at all.
-      - name: Register the run
-        if: steps.coordinator.outputs.configured == 'true'
-        id: register
-        continue-on-error: true
-        env:
-          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
-          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: pnpm exec tsx .sandcastle/coordinator-cli.ts start --run "$RUN_ID" --kind sentry-triage
-
-      # sandcastle's env resolver forwards only the keys that APPEAR in .sandcastle/.env, taking
-      # `sandcastleEnv[key] || process.env[key]`. Empty values here name the keys; the real values
-      # arrive through the step env below and never touch the filesystem.
-      - name: Name the env keys for the sandcastle resolver
-        if: steps.gate.outputs.configured == 'true'
-        run: |
-          printf '%s\n' \
-            'CLAUDE_CODE_OAUTH_TOKEN=' \
-            'GH_TOKEN=' \
-            'SENTRY_ACCESS_TOKEN=' \
-            'SENTRY_ORG_SLUG=' \
-            'SENTRY_PROJECT_SLUGS=' > .sandcastle/.env
 
       - name: Sweep Sentry
         if: steps.gate.outputs.configured == 'true'
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # A PAT, not github.token, and this is load-bearing rather than fussy: GitHub does not
-          # emit workflow-triggering events for actions taken with GITHUB_TOKEN, so issues filed
-          # with it would never start triage.yml. They would land in the backlog and sit there,
-          # silently, which defeats the entire point of this workflow.
-          GH_TOKEN: ${{ secrets.SANDCASTLE_GH_TOKEN }}
+          # github.token is enough now: the consumer of a filed issue is cezar's poller, which reads
+          # the issue API, not a workflow trigger (GitHub emits no workflow-triggering events for
+          # actions taken with GITHUB_TOKEN, which is why this used to be a PAT).
+          GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           SENTRY_ACCESS_TOKEN: ${{ secrets.SENTRY_ACCESS_TOKEN }}
           # One organization and one project, so `SENTRY_ORG` / `SENTRY_PROJECT` - already set for
           # the source-map upload in deploy.yml - are the single source of truth. The `_SLUG` names
-          # survive on the right-hand side because they are what the environment must be called, not
-          # a second thing to configure: .sandcastle/sentry-triage/mcp.json interpolates
-          # `${SENTRY_ORG_SLUG}` by that exact name. The `_SLUGS` fallbacks stay for the day a second
-          # project has to be swept; until then nothing needs to be set twice.
+          # survive on the right-hand side because they are what the environment must be called:
+          # scripts/sentry-triage/mcp.json interpolates `${SENTRY_ORG_SLUG}` by that exact name.
           SENTRY_ORG_SLUG: ${{ vars.SENTRY_ORG_SLUG || vars.SENTRY_ORG }}
           SENTRY_PROJECT_SLUGS: ${{ vars.SENTRY_PROJECT_SLUGS || vars.SENTRY_PROJECT }}
         run: |
-          pnpm sandcastle:sentry --ci \
+          pnpm sentry-triage \
             --window "${{ inputs.window || '7d' }}" \
             --max "${{ inputs.max_issues || '3' }}" \
             ${{ (github.event_name == 'schedule' || inputs.file_issues) && '--file-issues' || '' }}
@@ -184,21 +112,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sentry-triage-report
-          path: .sandcastle/logs/sentry-triage-*.md
+          path: .agent/sentry-triage-*.json
           if-no-files-found: warn
-
-      # Only when the registration actually landed - finishing a run the registry never saw is a 409
-      # and a confusing log line. `always()`, so a failed sweep still closes its row.
-      - name: Finish the run
-        if: always() && steps.register.outcome == 'success'
-        continue-on-error: true
-        env:
-          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
-          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: |
-          pnpm exec tsx .sandcastle/coordinator-cli.ts finish \
-            --run "$RUN_ID" --kind sentry-triage \
-            --status "${{ job.status == 'success' && 'finished' || 'failed' }}" \
-            --summary "swept sentry"

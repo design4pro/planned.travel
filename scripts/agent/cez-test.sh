@@ -11,7 +11,7 @@ for f in "$@"; do
   case "$f" in
     -*) die "flags are not accepted: $f" ;;
     *..*) die "path not allowed: $f" ;;
-    src/*|server/*|scripts/*|.sandcastle/*) ;;
+    src/*|server/*|scripts/*) ;;
     *) die "path outside the test roots: $f" ;;
   esac
   [ -f "$f" ] || die "no such file: $f"

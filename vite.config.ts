@@ -35,15 +35,11 @@ const config = defineConfig({
    * runs write comes back to us as a page reload; the dev server then churns until it dies,
    * which it did repeatedly with exit code 144. None of it is application source, so none of
    * it should reach the watcher.
-   *
-   * `.sandcastle/worktrees/` is the same hazard by construction: the sandcastle loop creates
-   * its agent worktrees there and copies `node_modules` into each one.
    */
   server: {
     watch: {
       ignored: [
         '**/.claude/**',
-        '**/.sandcastle/**',
         '**/.ai/cezar/**',
         '**/.agent/**',
         '**/playwright-report/**',

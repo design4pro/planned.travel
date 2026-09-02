@@ -1987,6 +1987,6 @@ fail independently and only one of them is exercised by a server-side test.
 ### 17.5 What the reports are for
 
 Sentry is not only a dashboard. Recurring, high-impact issues are turned into triaged GitHub tickets
-by `pnpm sandcastle:sentry` — see `docs/agents/triage-labels.md`. That routine needs a **separate**,
+by `pnpm sentry-triage` — see `docs/agents/triage-labels.md`. That routine needs a **separate**,
 read-only Sentry token from the one in §17.3: different scopes, different blast radius, rotated
 independently.

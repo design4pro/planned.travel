@@ -1,4 +1,4 @@
-// The first tests any sandcastle routine has had, and they exist because this one is the first with
+// The first tests any agent routine here has had, and they exist because this one is the first with
 // enough policy to be wrong silently. A dedup check that stops matching files a duplicate every
 // week; a threshold that inverts floods the backlog. Neither announces itself.
 
@@ -362,7 +362,7 @@ describe('the ticket', () => {
     candidate: candidate(),
     sequence: 1,
     runLabel: '41207',
-    reportPath: '.sandcastle/logs/sentry-triage-x.md',
+    reportPath: '.agent/sentry-triage-x.json',
   })
 
   it('carries the marker that makes it findable again', () => {

@@ -3,6 +3,3 @@ pnpm-lock.yaml
 yarn.lock
 # Claude Code orchestration scripts and run state.
 .claude
-# Sandcastle loop state: agent worktrees (with copied node_modules) and logs.
-.sandcastle/worktrees
-.sandcastle/logs

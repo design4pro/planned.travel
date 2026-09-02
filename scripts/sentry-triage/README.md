@@ -4,14 +4,15 @@ Why the three files beside this one are shaped the way they are.
 
 ## `mcp.json`
 
-Copied to `<worktree>/.mcp.json` by a hook rather than committed at the repo root, because a root
-`.mcp.json` would attach this server to every Claude session in the project - including the
-implementer sandboxes and a developer's own terminal - and none of those has any business holding a
-Sentry token. The root path is gitignored (`.gitignore:46`), which is what lets the copy land in a
-throwaway worktree without leaving it dirty; an untracked file is what stops sandcastle removing a
-worktree afterwards.
+Attached to the sweep's Claude Code session with `--mcp-config scripts/sentry-triage/mcp.json
+--strict-mcp-config`, never committed as a root `.mcp.json`: a root file would attach this server to
+every Claude session in the project - the implement runs and a developer's own terminal included -
+and none of those has any business holding a Sentry token. `--strict-mcp-config` works the other
+way round too: a developer's own MCP servers never reach the sweep.
 
-`${VAR}` is expanded by Claude Code, so no secret is written to disk.
+`${VAR}` is expanded by Claude Code, so no secret is written to disk. Locally, export
+`SENTRY_ACCESS_TOKEN` and `SENTRY_ORG` in the shell that runs `pnpm sentry-triage`; in CI they come
+from the workflow's secrets and variables.
 
 Three details that are each load-bearing:
 
@@ -22,7 +23,7 @@ Three details that are each load-bearing:
 - **The version is pinned.** `@latest` in a scheduled job is an unpinned dependency in everything
   but name: the server's top-level tool surface has changed inside a minor before now, which would
   silently make `prompt.md` wrong on a Tuesday morning with nobody watching. Same discipline as the
-  Playwright tag pin in `.sandcastle/Dockerfile`.
+  Playwright image pin in `ci.yml`.
 
 The token needs four read scopes and no more: `org:read`, `project:read`, `team:read`, `event:read`.
 
@@ -56,8 +57,8 @@ Two consequences worth knowing:
   put it last and `--max` would spend itself before reaching it.
 
 The ticket records the override: a `Policy: FORCED - <reason>` line and a footer naming the flag.
-`triage.yml` reproduces the claim at HEAD and decides whether to promote it (ADR 0006), and it has
-to know the thresholds were bypassed - a single burst presented as a recurring defect puts that
+The `triage` workflow reproduces the claim at HEAD and decides whether to promote it (ADR 0006), and
+it has to know the thresholds were bypassed - a single burst presented as a recurring defect puts that
 decision on a false premise.
 
 Without `--file-issues`, `--force` prints the gate's verdict and the ticket it would file, and
@@ -65,6 +66,7 @@ writes nothing.
 
 ## Why the workflow runs this script rather than `claude-code-action`
 
-`.github/workflows/triage.yml` can use the action because its prompt _is_ the whole routine. Here it
-is not: the dedup, the caps and the body live in `policy.ts`. Driving a second copy of that policy
-through `claude_args` would give it two owners, which is what `docs/SPEC.md` §8 forbids.
+The prompt is not the whole routine: the dedup, the caps and the body live in `policy.ts`. Driving a
+second copy of that policy through `claude_args` would give it two owners, which is what
+`docs/SPEC.md` §8 forbids. The script runs one `claude -p` session with Bash, Edit and Write removed
+from its tools, parses the `<sentry-triage>` block against `reportSchema`, and files from the result.

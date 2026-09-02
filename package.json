@@ -27,13 +27,7 @@
     "db:migrate:remote:staging": "wrangler d1 migrations apply planned-travel-db-staging --remote --env staging",
     "cf-typegen": "wrangler types",
     "prepare": "husky",
-    "sandcastle": "tsx .sandcastle/main.ts",
-    "sandcastle:baselines": "tsx .sandcastle/record-baselines.ts",
-    "sandcastle:triage": "tsx .sandcastle/triage.ts",
-    "sandcastle:architecture": "tsx .sandcastle/architecture-review/architecture-review.ts",
-    "sandcastle:sentry": "tsx .sandcastle/sentry-triage/sentry-triage.ts",
-    "sandcastle:e2e-smoke": "tsx .sandcastle/e2e-smoke/e2e-smoke.ts",
-    "sandcastle:report": "tsx .sandcastle/report.ts"
+    "sentry-triage": "tsx scripts/sentry-triage/sentry-triage.ts"
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write"
@@ -75,7 +69,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@ai-hero/sandcastle": "^0.12.0",
     "@cloudflare/vite-plugin": "^1.26.0",
     "@cloudflare/workers-types": "^5.20260818.1",
     "@playwright/test": "^1.62.1",
