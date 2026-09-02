@@ -10,7 +10,8 @@ set -euo pipefail
 . "$(dirname "$0")/cez-lib.sh"
 
 API="${CEZ_API:-http://localhost:4321}/api/v1/p/${CEZ_PROJECT:-planned-travel}/automations"
-FILE="$MAIN_ROOT/docs/agents/cezar-automations.json"
+# The checkout this script lives in, not the main one: the worktree that carries the definitions.
+FILE="$(cd "$(dirname "$0")/../.." && pwd)/docs/agents/cezar-automations.json"
 DRY=0
 [ "${1:-}" = "--dry-run" ] && DRY=1
 
