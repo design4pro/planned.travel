@@ -221,9 +221,15 @@ function runValidate(
     updateSnapshots?: boolean
     /** Whether the dev-server probe finds anything answering; defaults to yes. */
     devServerUp?: boolean
+    /**
+     * Where both scripts are placed, relative to the scratch repo. The default is where the branch
+     * keeps them; main.ts ships them to a directory outside the worktree, and the ladder must find
+     * its sibling there too.
+     */
+    scriptDir?: string
   } = {},
 ): Run {
-  const { forceE2e = true } = opts
+  const { forceE2e = true, scriptDir = '.sandcastle' } = opts
   const dir = mkdtempSync(join(tmpdir(), 'validate-sh-'))
   scratchDirs.push(dir)
   // Loudly, because a git call that silently fails here leaves every later assertion reading a
@@ -252,10 +258,10 @@ function runValidate(
     git('commit', '-q', '-m', 'touch')
   }
 
-  mkdirSync(join(dir, '.sandcastle'))
-  writeFileSync(join(dir, '.sandcastle', 'validate.sh'), SCRIPT)
+  mkdirSync(join(dir, scriptDir), { recursive: true })
+  writeFileSync(join(dir, scriptDir, 'validate.sh'), SCRIPT)
   writeFileSync(
-    join(dir, '.sandcastle', 'setup-e2e.sh'),
+    join(dir, scriptDir, 'setup-e2e.sh'),
     '#!/usr/bin/env bash\nexit 0\n',
   )
 
@@ -284,7 +290,7 @@ function runValidate(
   const run = spawnSync(
     'bash',
     [
-      '.sandcastle/validate.sh',
+      `${scriptDir}/validate.sh`,
       '--json-out',
       '.sandcastle-validation.json',
       ...(forceE2e ? ['--force-e2e'] : []),
@@ -385,10 +391,25 @@ describe('the Playwright reporter declaration', () => {
       '--reporter=line,json,html',
     ])
     expect(run.pwArgs).toContain('--workers=4')
+    // The sandbox is not CI, so playwright.config.ts gives the suite no retries of its own; the
+    // one that keeps a machine-load timeout from spending a fix attempt has to come from here.
+    expect(run.pwArgs).toContain('--retries=1')
     expect(run.pwEnv).toEqual({
       PLAYWRIGHT_JSON_OUTPUT_NAME: 'test-results/results.json',
       PLAYWRIGHT_BASE_URL: 'http://localhost:3010',
     })
+  })
+})
+
+describe('the ladder shipped outside the worktree', () => {
+  it('finds setup-e2e.sh beside itself, not under .sandcastle/', () => {
+    // main.ts writes both scripts to /tmp/sandcastle-ladder and runs validate.sh from there, so a
+    // `bash .sandcastle/setup-e2e.sh` in the script would run the branch's copy - or nothing at
+    // all, which is what this stands in for: no .sandcastle/ exists in this scratch repo.
+    const run = runValidate({ scriptDir: 'ladder' })
+
+    expect(run.verdict.steps.find((s) => s.name === 'e2e-env')?.ok).toBe(true)
+    expect(run.verdict.ok).toBe(true)
   })
 })
 
