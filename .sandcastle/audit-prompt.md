@@ -40,4 +40,4 @@ Output your verdicts as JSON wrapped in <audit> tags. `refuted` requires a concr
 
 `followUps` may be an empty array. `kind` is `bug` (incorrect behavior reachable today) or `maintenance` (debt, coverage, tooling).
 
-Do NOT reopen issues and do NOT create issues yourself — the orchestrator acts on your verdicts (follow-ups become `status: pending` tickets for human triage). Do not commit anything.
+Do NOT reopen issues and do NOT create issues yourself — the orchestrator acts on your verdicts (follow-ups become `status: triage` tickets for human triage). Do not commit anything.

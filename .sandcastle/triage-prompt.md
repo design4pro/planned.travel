@@ -1,6 +1,6 @@
 # TASK
 
-Pre-triage issue {{TASK_ID}} in design4pro/planned.travel: verify its claim against HEAD, then either promote it to `ready-for-agent` with an agent brief, or leave a recommendation for the maintainer.
+Pre-triage issue {{TASK_ID}} in design4pro/planned.travel: verify its claim against HEAD, then either promote it to `status: ready` with an agent brief, or leave a recommendation for the maintainer.
 
 You are unattended. Nobody will answer a question — when a decision needs a human, say so in the triage notes and stop. Never guess.
 
@@ -15,7 +15,7 @@ Pull in the issue: `gh issue view {{TASK_ID}} --comments`, then `gh issue view {
 Stop at once with verdict `skipped` — no comment, no label change — when any of these holds:
 
 - the marker `<!-- sandcastle-triage -->` appears in the body or a comment, and no human has commented after the latest marker: it was triaged already
-- the issue carries `ready-for-agent`
+- the issue carries `status: ready`
 - `gh api repos/design4pro/planned.travel/issues/{{TASK_ID}}/sub_issues --jq length` is not `0`: a PRD is never a ticket
 
 # PROCEDURE
@@ -84,7 +84,7 @@ a. Append an agent brief to the issue body. Keep the existing body verbatim abov
 **Out of scope:** the adjacent things the implementer must not touch.
 ```
 
-b. `gh issue edit {{TASK_ID}} --add-label ready-for-agent --remove-label "status: pending"` — a triaged issue carries exactly one state label.
+b. `gh issue edit {{TASK_ID}} --add-label "status: ready" --remove-label "status: triage"` — a triaged issue carries exactly one state label.
 
 c. Post the triage notes as a comment (`gh issue comment {{TASK_ID}} --body-file <file>`):
 
@@ -95,12 +95,12 @@ c. Post the triage notes as a comment (`gh issue comment {{TASK_ID}} --body-file
 
 ## Triage Notes
 
-**Verdict:** confirmed — promoted to `ready-for-agent`.
+**Verdict:** confirmed — promoted to `status: ready`.
 **Reproduction:** the command and the relevant output excerpt.
 **Redundancy check:** where you looked, what you found.
 **Fix direction:** one line, and what settles it.
 
-Promoted automatically. Remove `ready-for-agent` to hold this for a human decision.
+Promoted automatically. Remove `status: ready` to hold this for a human decision.
 ```
 
 ## Anything else → RECOMMEND ONLY
@@ -115,7 +115,7 @@ Post the triage notes as a comment. Change no labels, do not close, do not edit 
 ## Triage Notes
 
 **Verdict:** refuted | insufficient | redundant | needs-human
-**Recommended state:** `status: abandoned` (wontfix) | `status: on hold` (needs-info) | `status: review needed` (ready-for-human) — named, not applied.
+**Recommended state:** close as not planned (wontfix) | `status: needs-info` | `status: needs-human` — named, not applied.
 
 **What we've established so far:**
 

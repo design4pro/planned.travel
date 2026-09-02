@@ -63,7 +63,7 @@ Do not call `analyze_issue_with_seer` even if it is offered. It is slow, it cost
 # PROHIBITIONS
 
 - Never run `gh issue create`, `gh issue edit`, `gh issue comment` or `gh issue close`. The orchestrator files the tickets.
-- Never apply `ready-for-agent` to anything. A Sentry finding enters the backlog as `type: bug` + `status: pending` and is promoted, if ever, by the pre-triage agent that reproduces it at HEAD (docs/adr/0006, docs/agents/triage-labels.md).
+- Never apply `status: ready` to anything. A Sentry finding enters the backlog as `type: bug` + `status: triage` and is promoted, if ever, by the pre-triage agent that reproduces it at HEAD (docs/adr/0006, docs/agents/triage-labels.md).
 - Never call `update_issue`, or otherwise resolve, ignore or assign anything in Sentry. That state is the on-call engineer's.
 - Never edit a file. Never commit.
 

@@ -32,7 +32,7 @@ Rules:
 gh issue create --title "PRD: <feature>" --label "type: feature" --body-file <tmpfile>
 ```
 
-No `ready-for-agent` on the PRD: the gate is per-slice and `/to-tickets-project` applies it to each
+No `status: ready` on the PRD: the gate is per-slice and `/to-tickets-project` applies it to each
 ticket. A PRD is never workable (`.sandcastle/plan-prompt.md`), so labelling the parent would only put
 it into `readyForAgentIds()` as work for the loop to claim.
 

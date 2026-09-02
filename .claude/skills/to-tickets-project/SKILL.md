@@ -36,7 +36,7 @@ Quiz the user briefly on the proposed split (order, sizes, anything that looks h
 Per ticket, in dependency order (sub-issue list order IS execution order):
 
 ```bash
-gh issue create --title "<slice>" --label "ready-for-agent" --body-file <tmpfile>
+gh issue create --title "<slice>" --label "status: ready" --body-file <tmpfile>
 ISSUE_ID=$(gh api "repos/design4pro/planned.travel/issues/<child>" --jq '.id')
 gh api -X POST "repos/design4pro/planned.travel/issues/<PRD>/sub_issues" -f sub_issue_id="$ISSUE_ID"
 ```
@@ -45,13 +45,13 @@ Add native blocking links between tickets where one requires another's code. Tra
 
 ## Verify the wave
 
-`ready-for-agent` is the loop's gate and it is per-slice: a ticket without it is invisible to
+`status: ready` is the loop's gate and it is per-slice: a ticket without it is invisible to
 `pnpm sandcastle`, and a PRD whose children all lack it makes `--issues <PRD>` fail outright.
 Publishing is not finished until this prints nothing:
 
 ```bash
 gh api "repos/design4pro/planned.travel/issues/<PRD>/sub_issues" \
-  --jq '.[] | select(.state=="open") | select([.labels[].name] | index("ready-for-agent") | not) | "missing ready-for-agent: #\(.number)"'
+  --jq '.[] | select(.state=="open") | select([.labels[].name] | index("status: ready") | not) | "missing status: ready: #\(.number)"'
 ```
 
-Fix what it names with `gh issue edit <n> <n> ... --add-label "ready-for-agent"`, then run it again.
+Fix what it names with `gh issue edit <n> <n> ... --add-label "status: ready"`, then run it again.

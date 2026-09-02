@@ -1,4 +1,4 @@
-// Sentry → GitHub issues. Recurring, high-impact errors become `type: bug` + `status: pending`
+// Sentry → GitHub issues. Recurring, high-impact errors become `type: bug` + `status: triage`
 // tickets, which is exactly what .github/workflows/triage.yml fires on — so a finding is verified
 // at HEAD and promoted, or not, by the machinery that already exists (ADR 0006). This routine never
 // applies `ready-for-agent`: it has reproduced nothing, and promotion is earned by a reproduction.
@@ -142,7 +142,7 @@ function openUntriagedBugs(): number {
     '--label',
     'type: bug',
     '--label',
-    'status: pending',
+    'status: triage',
     '--json',
     'number',
   ])
@@ -354,7 +354,7 @@ for (const candidate of filingOrder(report.candidates, forced)) {
       '--label',
       'type: bug',
       '--label',
-      'status: pending',
+      'status: triage',
       '--body-file',
       '-',
     ],

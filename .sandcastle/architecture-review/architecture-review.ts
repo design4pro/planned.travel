@@ -6,7 +6,7 @@
 // Runs a single agent over a fresh worktree, prints the <report> block and
 // writes it to .sandcastle/logs/. With --file-issues it also files the `Strong`
 // candidates — never the `Worth exploring` / `Speculative` ones — as
-// `type: enhancement` + `status: pending`.
+// `type: enhancement` + `status: triage`.
 //
 // The label matters. Pre-triage sweeps `type: bug` and `type: maintenance`
 // (TRIGGER_LABELS in triage.ts) and can promote a confirmed finding straight to
@@ -124,7 +124,7 @@ for (const candidate of strong.slice(0, MAX_FILED)) {
       '--label',
       'type: enhancement',
       '--label',
-      'status: pending',
+      'status: triage',
       '--body-file',
       '-',
     ],

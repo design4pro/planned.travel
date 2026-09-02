@@ -1,0 +1,3 @@
+# Blank issues are off: every issue enters with a `type:` and a `status:` label, which is what the
+# label protocol (docs/adr/0015-label-protocol.md) and the triage automation rely on.
+blank_issues_enabled: false

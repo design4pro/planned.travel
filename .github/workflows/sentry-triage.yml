@@ -1,7 +1,7 @@
 name: Sentry triage
 
 # Weekly sweep of Sentry for recurring, high-impact errors, filing the ones that clear the
-# threshold as `type: bug` + `status: pending`. Those two labels are the whole point: triage.yml
+# threshold as `type: bug` + `status: triage`. Those two labels are the whole point: triage.yml
 # fires on `opened` for exactly that pair, reproduces the claim at HEAD and promotes it, or not,
 # per ADR 0006. This workflow never applies `ready-for-agent` itself.
 #
@@ -18,7 +18,7 @@ name: Sentry triage
 # The sweep registers itself with the run registry (docs/adr/0009) but claims nothing, on purpose:
 # it files issues that do not exist yet, so there is no id another run could be holding and nothing
 # to contend over. The registration buys dashboard visibility alone - "a sentry sweep is running on
-# a runner right now" is the answer to why a fresh batch of `status: pending` bugs just appeared.
+# a runner right now" is the answer to why a fresh batch of `status: triage` bugs just appeared.
 on:
   schedule:
     # Tuesdays 06:00 UTC — after Monday's deploys have soaked for a day, and early enough that the

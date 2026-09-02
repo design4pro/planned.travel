@@ -108,7 +108,7 @@ const auditSchema = z.object({
     }),
   ),
   // Incidental findings OUTSIDE the audited DoDs — coverage gaps, adjacent
-  // debt. They become triage tickets (status: pending), never reopens.
+  // debt. They become triage tickets (status: triage), never reopens.
   followUps: z
     .array(
       z.object({
@@ -1004,7 +1004,7 @@ async function declaresVisualChange(
  * outside an issue's Owned paths as a violation, so this stage reports and
  * never edits. The findings land as an issue comment plus
  * `.sandcastle-deep-review.json` in the artifacts, and a single `blocker`
- * becomes a `status: pending` ticket so it does not evaporate. It NEVER blocks
+ * becomes a `status: triage` ticket so it does not evaporate. It NEVER blocks
  * the merge, so every failure path here only logs.
  */
 async function runDeepReview(
@@ -1092,7 +1092,7 @@ async function runDeepReview(
         `  [${issue.id}] deep-review blocker → issue: ${blocker.title}`,
       )
       await sandbox.exec(
-        `gh issue create --title ${JSON.stringify(blocker.title)} --label "type: enhancement" --label "status: pending" --body-file -`,
+        `gh issue create --title ${JSON.stringify(blocker.title)} --label "type: enhancement" --label "status: triage" --body-file -`,
         {
           stdin: [
             blocker.summary,
@@ -1607,7 +1607,7 @@ async function runAuditor(
         )
       }
     }
-    // Incidental findings become triage tickets — `status: pending`, never
+    // Incidental findings become triage tickets — `status: triage`, never
     // `ready-for-agent` from here. Pre-triage (.github/workflows/triage.yml on
     // the `opened` event, or `pnpm sandcastle:triage`) reproduces each one at
     // HEAD and promotes only a confirmed, unambiguous finding — ADR 0006; the
@@ -1622,7 +1622,7 @@ async function runAuditor(
       }
       console.log(`  AUDIT FOLLOW-UP → issue: ${followUp.title}`)
       await sandbox.exec(
-        `gh issue create --title ${JSON.stringify(followUp.title)} --label ${JSON.stringify(`type: ${followUp.kind}`)} --label "status: pending" --body-file -`,
+        `gh issue create --title ${JSON.stringify(followUp.title)} --label ${JSON.stringify(`type: ${followUp.kind}`)} --label "status: triage" --body-file -`,
         {
           stdin: `${followUp.body}\n\n---\n_Filed by the sandcastle auditor (run ${RUN_ID}, iteration ${iteration}) while auditing: ${closed.map((i) => `#${i.id}`).join(', ')}._`,
         },

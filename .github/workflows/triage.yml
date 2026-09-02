@@ -1,10 +1,10 @@
 name: Triage
 
 # Pre-triage for issues that enter the backlog untriaged: the sandcastle
-# auditor's follow-ups (`type: bug|maintenance` + `status: pending`, see
+# auditor's follow-ups (`type: bug|maintenance` + `status: triage`, see
 # runAuditor in .sandcastle/main.ts) and hand-filed reports of the same kinds.
 # Claude follows .sandcastle/triage-prompt.md: it verifies the claim against
-# HEAD, promotes a reproduced, unambiguous issue to `ready-for-agent` with an
+# HEAD, promotes a reproduced, unambiguous issue to `status: ready` with an
 # agent brief in the body, and leaves everything else as a recommendation for
 # the maintainer. The same prompt drives the local batch sweep,
 # `pnpm sandcastle:triage`; this workflow handles one issue as it appears.
@@ -21,7 +21,7 @@ name: Triage
 #
 # The issue is claimed from the run registry (docs/adr/0009) before it is
 # triaged, and given back afterwards. The window that matters is narrower than
-# it looks: triage works issues that do NOT carry `ready-for-agent` and the AFK
+# it looks: triage works issues that do NOT carry `status: ready` and the AFK
 # loop works only ones that do, so the two contend over exactly one moment - the
 # one where this workflow promotes an issue while a loop is planning.
 #
@@ -48,7 +48,7 @@ jobs:
     if: >
       github.event_name == 'workflow_dispatch' ||
       (
-        !contains(github.event.issue.labels.*.name, 'ready-for-agent') &&
+        !contains(github.event.issue.labels.*.name, 'status: ready') &&
         (
           (github.event.action == 'opened' &&
             (contains(github.event.issue.labels.*.name, 'type: bug') ||

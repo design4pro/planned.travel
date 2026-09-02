@@ -1,0 +1,1101 @@
+[
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 243,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Stop pinning country-card copy as regexes in e2e/visual.spec.ts"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 242,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Re-record the atlas visual baselines, which still picture the pre-ADD-06 'TRIPS' tile"
+  },
+  {
+    "labels": ["status: pending", "type: bug"],
+    "number": 241,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Label the atlas screen's second disagreeing pair: member-scoped placeCount against the workspace's place tally"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 240,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Cover the plan board's journey-restatement paths, which no test imports today"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 239,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Make a day's reorder one atomic write instead of two independent server calls"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 238,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Assert the tile figure from an element, not a concatenated text run"
+  },
+  {
+    "labels": ["status: pending", "type: bug"],
+    "number": 228,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Stop the country card's fact label truncating away the workspace qualifier it just gained"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 227,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Give validate.sh's step logs a run-scoped directory; its own vitest rung truncates them mid-ladder"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 226,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Delete the shadow English wording table in country-facts, which still says 'Trip'/'Trips'"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 225,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Decide whether the baseline re-record run wants the same retry the gate now has"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 224,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Document the e2e rung's retry and E2E_RETRIES in the verifying-changes skill, which still names only E2E_WORKERS"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 223,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Record the retried-flake count in the ladder verdict, which now hides every spec the retry rescued"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 222,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Select the failing project run, not .tests[0], and read Playwright's own status"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 221,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Write ADR 0011 for HERE, or move the two provider terms the code is guessing at out of source comments"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 220,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Make RateCeilingError carry facts, not search-specific prose, before 03-S7 becomes its second caller"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 219,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Add HERE_API_KEY to .dev.vars.example and the DEPLOY.md secret table, which both claim to be complete"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 214,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Route the HERE call through callProvider and adopt the provider slug"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 213,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Reveal the code in place instead of swapping controls and handing focus over"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 212,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Fold cross-day membership into reorderDayTimeline instead of pre-moving stops in the route"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 211,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Decide the CSRF question on src/start.ts, now that the framework's advisory is filtered out of the browser console gate"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 210,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Unify the two trip-role write guards, and route the import-marker writers through one of them"
+  },
+  {
+    "labels": ["status: pending", "type: bug"],
+    "number": 209,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Fix the bookings timeline's day heading, which hydrates differently in WebKit and reports a React mismatch on every load"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 208,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Push the Queues sendBatch bound into enqueueTasks instead of hand-rolling a third producer-side chunk loop"
+  },
+  {
+    "labels": ["status: pending", "type: bug"],
+    "number": 207,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Make the tile's star badge optimistic, or move the toggle to it"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 206,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Take the retired trips.is_favourite column off the repository row and patch types"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 205,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Delete the dialog's ledger-retry mode; the sync is already idempotent"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 204,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Collapse the two in-memory representations of one journey; delete the  flag"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 203,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Replace the AI-specific wrangler assertions with one binding-parity rule and move the JSONC reader to a shared test module"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 202,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Record the first visual baselines for e2e/reservations-and-transport.visual.spec.ts, which today gates zero pixels"
+  },
+  {
+    "labels": ["status: pending", "type: bug"],
+    "number": 201,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Raise the dropdown layer above the dialog scrim; a Select opened inside a Dialog renders under it"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 200,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Load the airport catalogue artefact into D1, so searchAirports answers something in a deployed Worker"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 199,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Scope the reader's star read to the tiles it decorates, and stop asking the same question twice"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 198,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Move the trips UI copy into the 23-locale catalogue, and add a gate that notices it is not there"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 197,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Cover the non-owner branch of TripActionsMenu, which no gate exercises"
+  },
+  {
+    "labels": ["status: pending", "type: bug"],
+    "number": 196,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Apply the trip read predicate to the two journey readers that still bypass it"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 195,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Extract the draft-to-wire mapping out of the dialog's submit closure"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 194,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Make the type-ahead prefix search index-usable; today every keystroke is a full table scan"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 193,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Fold the second travel-stats producer into the queue handler that already owns the recompute"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 192,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Do not document an ON DELETE guarantee that the deployed database does not enforce"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 187,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Make the trip read predicate unremovable instead of hand-ANDed at each call site"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 186,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Reconcile transports.arrival_day_id: schema.ts declares ON DELETE SET NULL, the deployed constraint is NO ACTION"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 185,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Amend docs/SPEC.md §5 for airports, the twelfth global table, and correct the four counts that now disagree"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 184,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Replace the per-table schema mirror with one migrations-match-schema test"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 182,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Key trip_favourites by (trip_id, user_id) instead of a surrogate id plus unique index"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 180,
+    "parent": 167,
+    "state": "OPEN",
+    "title": "03-S8b — The stay on the board, and the stay the import creates"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 179,
+    "parent": 167,
+    "state": "OPEN",
+    "title": "03-S8a — A stay that covers the nights it actually covers"
+  },
+  {
+    "labels": [],
+    "number": 178,
+    "parent": 167,
+    "state": "OPEN",
+    "title": "03-S7 — The confirmation file that fills the desk in"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 177,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "00-S9 — The AI binding, the extraction ceiling, and the stay's reservation link"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 176,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "03-S6 — The desk: what is settled, what is not, and what is nobody else's business"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 175,
+    "parent": 167,
+    "state": "OPEN",
+    "title": "03-S5 — The journey between two places, in the day it happens"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 174,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "03-S4 — A booking that knows which stop it is for, and what it cost"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 173,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "03-S3 — A connection the traveller did not have to look up"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 172,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "00-S8 — Schema B and the transit-search ceiling"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 171,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "03-S2b — A journey with more than two stations, and times that say which clock they are on"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 170,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "03-S2a — The airport and station catalogue: a pinned source, a deterministic build, a prefix read"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 169,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "03-S1 — A transport that knows which day it leaves and which day it lands"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 168,
+    "parent": 167,
+    "state": "CLOSED",
+    "title": "00-S7 — Schema A for reservations and transport: the arrival day, the leg table, the airport table"
+  },
+  {
+    "labels": ["type: feature", "ready-for-agent"],
+    "number": 167,
+    "parent": null,
+    "state": "OPEN",
+    "title": "PRD: Reservations and transport"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 151,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Pin the mobile-safari viewport explicitly instead of describing it in prose"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 147,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Emit an empty string, not null, when a failed spec's first result carries no error message"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 146,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Strip ANSI escapes from the e2e error line before it reaches the verdict"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 145,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Put \"no specs could be named\" in the verdict, not only on stderr"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 144,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Declare the JSON reporter in playwright.config.ts and delete the --reporter flag entirely"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 143,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Give the sandcastle e2e step a retry, so one dev-server blip stops reddening the whole ladder"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 142,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Bound the markdown parser's link scan, which is quadratic on repeated unclosed destinations"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 141,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Recognise a block opener without reading the block"
+  },
+  {
+    "labels": ["type: maintenance"],
+    "number": 140,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Make the 01-S3 e2e block fail rather than skip when the journal lists no trip address"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 139,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Year-scope regionCount, or stop writing a lifetime figure onto every travel_stats year row"
+  },
+  {
+    "labels": ["type: bug", "ready-for-agent"],
+    "number": 138,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Label the two disagreeing trip counts on the atlas screen after the 00-S4 membership amendment"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 137,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Delete the browser-preference framework; one caller uses two of its exports"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 136,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Materialize the membership population once instead of expressing it twice as a SQL predicate"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 135,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Write host-produced artifacts straight to ARTIFACT_ROOT instead of round-tripping them through the sandbox worktree"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 134,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Collapse BlockOpener and readOpener into one readBlockAt"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 133,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Delete memberOfTrip and derive both populations from one member-trip id read"
+  },
+  {
+    "labels": ["status: pending", "type: enhancement"],
+    "number": 132,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Report the landed URL instead of maintaining a list of anonymous-only routes"
+  },
+  {
+    "labels": ["status: blocked", "ready-for-agent"],
+    "number": 125,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S10 — A reminder that fires on the right day, and can be turned off"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 124,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S9b — The day detail over the map, and the undo ring"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 123,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S9a — The planner as a workspace: extracted chrome, resizable rails, narrow overlays, the first-open splash"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 122,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S8b — The cover image by drop, paste and picker, and initial members on creation"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 121,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S8a — One trip form for creating and editing: the field set, dates and duration, the currency list, the reminder control"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 120,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S7 — Reading the trip list two ways, the prominent card's strip, and the folded archive"
+  },
+  {
+    "labels": ["status: blocked", "ready-for-agent"],
+    "number": 119,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S6b — Guests: the record, refusal of duplicates, the bound, and merging a guest into a member"
+  },
+  {
+    "labels": ["status: blocked"],
+    "number": 118,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S6a — Who is on this trip: the people route, members, roles, invitations, the visibility switch"
+  },
+  {
+    "labels": ["visual-change-expected"],
+    "number": 117,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S5 — The dashboard's reference column, and the clock in it"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 116,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S4b — The day as one sequence on screen: `PlannerItem`, draggable notes, the \"drop its time?\" dialog"
+  },
+  {
+    "labels": ["status: blocked", "ready-for-agent"],
+    "number": 115,
+    "parent": 104,
+    "state": "CLOSED",
+    "title": "01-S4a — One number line per day: `mergeDayTimeline`, `reorderDayTimeline` with `clearTime`, the widened `reorderPlanFn`"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 114,
+    "parent": 104,
+    "state": "CLOSED",
+    "title": "01-S3 — A trip reopens on the tab you left it on, and the browser-preference module"
+  },
+  {
+    "labels": [],
+    "number": 113,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S2b — A day note you can write: guards, detail, icon, time, reorder, editor"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 112,
+    "parent": 104,
+    "state": "CLOSED",
+    "title": "01-S2a — Restricted markdown: a pure parser and a React renderer"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 111,
+    "parent": 104,
+    "state": "OPEN",
+    "title": "01-S1d — Copy a trip: the dialog, the two-phase write, the copier registry"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 110,
+    "parent": 104,
+    "state": "CLOSED",
+    "title": "01-S1c — Delete permanently, with a graduated confirmation and a storage purge"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 109,
+    "parent": 104,
+    "state": "CLOSED",
+    "title": "01-S1b — The favourite is one person's bookmark"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 108,
+    "parent": 104,
+    "state": "CLOSED",
+    "title": "01-S1a — Who may see a trip and who may change it: read predicate, trip roles, edit/archive/restore"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 107,
+    "parent": 104,
+    "state": "CLOSED",
+    "title": "00-S4 amendment — travel statistics count the trips a person is a member of"
+  },
+  {
+    "labels": ["status: blocked", "ready-for-agent"],
+    "number": 106,
+    "parent": 104,
+    "state": "CLOSED",
+    "title": "00-S6 — Wave-0 follow-up schema stage: the `trip_favourites` table"
+  },
+  {
+    "labels": ["type: feature"],
+    "number": 104,
+    "parent": null,
+    "state": "OPEN",
+    "title": "PRD: Trips core — lifecycle, people, day timeline, planner workspace and dashboard"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 102,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Correct the stale 393x852 viewport comment in playwright.config.ts"
+  },
+  {
+    "labels": ["type: bug", "ready-for-agent"],
+    "number": 101,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Warn in the skill that  cannot photograph /login"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 100,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Gitignore .sandcastle-validation.json so a finished run leaves a clean worktree"
+  },
+  {
+    "labels": ["status: pending", "type: maintenance"],
+    "number": 99,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Repoint or retire the 117 docs/plans citations of the deleted scripts/ultrabuild/ scripts"
+  },
+  {
+    "labels": ["status: pending", "type: bug"],
+    "number": 98,
+    "parent": null,
+    "state": "OPEN",
+    "title": "Give the e2e sandbox an EMAIL_API_KEY so seeded auth emails stop dead-lettering into console-watching specs"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 97,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Fix validate.sh so a red e2e step actually names the failing specs"
+  },
+  {
+    "labels": ["status: abandoned", "type: maintenance"],
+    "number": 96,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Migrate or retire docs/PACKS-PLAN.md — it still drives a /ultrabuild orchestrator that no longer exists"
+  },
+  {
+    "labels": ["status: abandoned", "type: maintenance"],
+    "number": 95,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Move scripts/ultrabuild/capture.mjs to scripts/visual/ and repoint .sandcastle/pixel-capture-prompt.md"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 91,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "pnpm db:generate is blocked: drizzle/meta snapshot chain has a forked parent and an orphan prevId"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 87,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Remove the retired ultrabuild orchestrator after distilling its knowledge store (ADR 0004)"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 82,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Make pnpm generate-routes and the TanStack Start vite plugin emit the same routeTree.gen.ts"
+  },
+  {
+    "labels": ["type: bug", "ready-for-agent"],
+    "number": 81,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Repair expenses.original_currency rows corrupted by migration 0001's double-quoted-string fallback"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 80,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Repair the drizzle snapshot prevId chain — pnpm db:generate fails at HEAD"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 79,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Amend SPEC §5/§6 and plan stage 00-S5 to the scan model recorded in ADR 0005"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 78,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Pin the marker-after-dispatch ordering with a test that a failing dispatch leaves no marker"
+  },
+  {
+    "labels": ["type: bug", "ready-for-agent"],
+    "number": 77,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Make the Departure reminders opt-out actually suppress the sweep's reminders"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 70,
+    "parent": 65,
+    "state": "CLOSED",
+    "title": "00-S1: Wave-0 schema stage — settlements currency + wave-1 columns, one migration"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 69,
+    "parent": 65,
+    "state": "CLOSED",
+    "title": "00-S5: Reminder scheduling — scan-model sweep (ADR 0005)"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 68,
+    "parent": 65,
+    "state": "CLOSED",
+    "title": "00-S4: Travel-statistics recomputation via the task queue"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 67,
+    "parent": 65,
+    "state": "CLOSED",
+    "title": "00-S3: Audit recording — trail() and its first three call sites"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 66,
+    "parent": 65,
+    "state": "CLOSED",
+    "title": "00-S2: In-app notification dispatch — first production write path"
+  },
+  {
+    "labels": [],
+    "number": 65,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "PRD: Wave 0 — Foundations"
+  },
+  {
+    "labels": ["type: maintenance", "ready-for-agent"],
+    "number": 59,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Guard the frozen Intl pins (ar nu-latn, min2 grouping) with vitest, not only the WebKit e2e gate"
+  },
+  {
+    "labels": ["type: bug", "ready-for-agent"],
+    "number": 58,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "i18n runtime parity: linux WebKit diverges from workerd (ar numbering system, it grouping)"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 38,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Parity, accessibility, performance, and production cutover"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 37,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Mobile travel-management parity"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 36,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Mobile trip, collaboration, and map parity"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 35,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Expo foundation and mobile authentication"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 34,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Billing and PDF export"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 33,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Parity, accessibility, performance, and production cutover"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 32,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Mobile travel-management parity"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 31,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Mobile trip, collaboration, and map parity"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 30,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Expo foundation and mobile authentication"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 29,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Billing and PDF export"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 28,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Notification center"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 27,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Costs and expense splitting"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 26,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Documents and reservation attachments"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 25,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Reservations"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 24,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Map-first trip workspace"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 23,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Realtime collaboration and presence"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 22,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Members and invitations"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 21,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Trip lifecycle and itinerary planning"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 20,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Authentication, routing, and application shell"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 19,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Shared contracts and tRPC transport"
+  },
+  {
+    "labels": ["ready-for-agent"],
+    "number": 18,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "TanStack Start Worker and monorepo foundation"
+  },
+  {
+    "labels": ["wayfinder:research"],
+    "number": 17,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: standard tabel, list i date pickers w webie"
+  },
+  {
+    "labels": ["wayfinder:grilling"],
+    "number": 16,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: model tokenów shadcn/ui i Tailwind 4 dla webu"
+  },
+  {
+    "labels": ["wayfinder:grilling"],
+    "number": 14,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: standard overlays i feedback w webie"
+  },
+  {
+    "labels": ["wayfinder:grilling"],
+    "number": 13,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: standard formularzy i walidacji w webie"
+  },
+  {
+    "labels": ["wayfinder:grilling"],
+    "number": 15,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: accessibility i kompozycja komponentów aplikacyjnych"
+  },
+  {
+    "labels": ["wayfinder:prototype"],
+    "number": 12,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: granica komponentów mapy i paneli podróży"
+  },
+  {
+    "labels": ["wayfinder:task"],
+    "number": 11,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: CI, testy i finalny cutover migracji"
+  },
+  {
+    "labels": ["wayfinder:task"],
+    "number": 10,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: inwentaryzacja tras i kryteria feature parity"
+  },
+  {
+    "labels": ["wayfinder:task"],
+    "number": 9,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Zadanie: reset D1, R2, auth i seed data"
+  },
+  {
+    "labels": ["wayfinder:prototype"],
+    "number": 8,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: migracja Expo na React Native Reusables i Uniwind"
+  },
+  {
+    "labels": ["wayfinder:prototype"],
+    "number": 7,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: migracja webowego UI na shadcn/ui i Tailwind 4"
+  },
+  {
+    "labels": ["wayfinder:grilling"],
+    "number": 6,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: kontrakt TanStack Query i realtime invalidation"
+  },
+  {
+    "labels": ["wayfinder:research"],
+    "number": 5,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: Better Auth w TanStack server"
+  },
+  {
+    "labels": ["wayfinder:grilling"],
+    "number": 4,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: tRPC router, context i pakiety monorepo"
+  },
+  {
+    "labels": ["wayfinder:research"],
+    "number": 3,
+    "parent": 2,
+    "state": "CLOSED",
+    "title": "Decyzja: TanStack Start Worker i Cloudflare bindings"
+  },
+  {
+    "labels": ["wayfinder:map", "ready-for-agent"],
+    "number": 2,
+    "parent": null,
+    "state": "CLOSED",
+    "title": "Mapa: pełna migracja na TanStack Start, tRPC, shadcn/ui i React Native Reusables"
+  }
+]

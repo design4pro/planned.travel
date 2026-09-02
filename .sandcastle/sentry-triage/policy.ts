@@ -288,7 +288,7 @@ export function selectionVerdict(
   // surface - src/server/observability/sentry.ts calls that half "often the more interesting
   // one" - and left only what leaked past the middleware. What remains below still has to be
   // unresolved, at error level, recurring, over threshold and owned by a frame under src/, and
-  // whatever clears all of that is filed `status: pending` for triage.yml to reproduce at HEAD
+  // whatever clears all of that is filed `status: triage` for triage.yml to reproduce at HEAD
   // and promote or reject (ADR 0006). A handled error that clears those bars is a defect.
 
   const haystack = `${candidate.errorType} ${candidate.errorValue}`

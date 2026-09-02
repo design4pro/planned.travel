@@ -72,7 +72,7 @@ const hooks = {
 
 const gh = (args: string) => execSync(`gh ${args}`, { encoding: 'utf8' }).trim()
 
-/** Open issues with a trigger label and without `ready-for-agent`, ascending. */
+/** Open issues with a trigger label and without `status: ready`, ascending. */
 function untriagedIssues(): string[] {
   const ids = new Set<string>()
   for (const label of TRIGGER_LABELS) {
@@ -82,7 +82,7 @@ function untriagedIssues(): string[] {
       ),
     ) as Array<{ number: number; labels: Array<{ name: string }> }>
     for (const row of rows) {
-      if (row.labels.some((l) => l.name === 'ready-for-agent')) continue
+      if (row.labels.some((l) => l.name === 'status: ready')) continue
       ids.add(String(row.number))
     }
   }

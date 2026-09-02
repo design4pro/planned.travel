@@ -1,0 +1,47 @@
+name: Bug
+description: Something the app does wrong today.
+labels: ['type: bug', 'status: triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A triage run reads this issue, tries to reproduce the claim at HEAD and answers with a verdict.
+        The more of the evidence below is concrete (a route, a command, a failing expectation), the
+        sooner it reaches `status: ready`.
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behaviour
+      description: What happens. Quote errors verbatim.
+    validations:
+      required: true
+  - type: textarea
+    id: desired
+    attributes:
+      label: Desired behaviour
+      description: What should happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How to see it
+      description: Steps, a route or URL, a Sentry link, a failing command or test.
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where
+      options:
+        - production
+        - staging
+        - local (pnpm dev)
+        - CI
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Adjacent things a fix must not touch. Optional.
