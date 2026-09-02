@@ -19,7 +19,7 @@
  * Detection reads only the `result` and `errors` fields of the last `type: "result"` message, and
  * deliberately not the whole file. `claude-execution-output.json` carries the transcript, which on
  * a pull request contains the diff and the review text — and this repository has the literal words
- * "usage limit reached" and "rate limit" in `.sandcastle/usage-limit.ts`. A grep over the file
+ * "usage limit reached" and "rate limit" in this very script. A grep over the file
  * would call its own source code a usage limit and pass a genuinely failed review.
  */
 
@@ -27,9 +27,8 @@ import { appendFileSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
- * What the CLI says when the subscription is spent. Copied from `LIMIT_REASONS` in
- * `.sandcastle/usage-limit.ts`, which is where the list is maintained — the sandcastle orchestrator
- * waits these out locally, and CI, which cannot wait, only has to recognise them.
+ * What the CLI says when the subscription is spent. Maintained here: CI cannot wait a limit
+ * out, it only has to recognise one.
  */
 const LIMIT_REASONS = [
   /hit your (?:session|usage) limit/i,

@@ -1,0 +1,30 @@
+name: Maintenance
+description: Internal work with no user-visible behaviour change (refactor, tooling, docs, tests).
+labels: ['type: maintenance', 'status: triage']
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: The change, named by the files or the concept it touches.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why now
+      description: What it costs to leave it. A failing command, a slow step, a rule it violates.
+    validations:
+      required: true
+  - type: textarea
+    id: direction
+    attributes:
+      label: Fix direction
+      description: The approach, if settled by SPEC, an ADR or the code. Leave empty when it is a choice.
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: The command or check that proves it is done.
+    validations:
+      required: true

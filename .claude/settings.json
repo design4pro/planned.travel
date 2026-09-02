@@ -31,6 +31,15 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/git-guardrails.sh"
           }
         ]
+      },
+      {
+        "matcher": "Read|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-read.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -44,5 +53,16 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "mattpocock-skills@mattpocock": true
+  },
+  "extraKnownMarketplaces": {
+    "mattpocock": {
+      "source": {
+        "source": "github",
+        "repo": "mattpocock/skills"
+      }
+    }
   }
 }

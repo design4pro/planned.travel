@@ -47,7 +47,7 @@ Anything else is a hard error rather than a silently ignored typo.
 `.claude/settings.json` runs it from the `SessionStart` hook on startup and on resume, with a
 generous timeout because the first run in a fresh worktree installs dependencies.
 
-## Its relationship to `.sandcastle/setup-e2e.sh`
+## Its relationship to `scripts/agent/setup-e2e.sh`
 
 That script is the third profile and deliberately stays separate. It mirrors
 `.github/actions/e2e-env/action.yml` step for step, gates the e2e suite in CI, pins port 3010

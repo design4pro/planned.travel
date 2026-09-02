@@ -24,7 +24,7 @@
 #             database that lives and dies with the VM, basemap pulled from R2.
 #             Does not seed; docs/CLOUD.md §2 describes this profile.
 #
-# `.sandcastle/setup-e2e.sh` is the third profile and deliberately stays its own
+# `scripts/agent/setup-e2e.sh` is the third profile and deliberately stays its own
 # script: it mirrors `.github/actions/e2e-env/action.yml` step for step and
 # gates the e2e suite in CI. See scripts/worktree/README.md.
 

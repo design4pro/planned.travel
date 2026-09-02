@@ -5,7 +5,7 @@
  *
  * The fixtures are the shapes `claude-execution-output.json` actually holds: a list of SDK
  * messages ending in one of `type: "result"`. The wording of the limit lines is the CLI's own, in
- * both the forms `.sandcastle/usage-limit.ts` documents.
+ * both the forms `scripts/ci/claude-usage-limit.mjs` documents.
  */
 
 import { spawnSync } from 'node:child_process'
@@ -91,7 +91,7 @@ describe('claude-usage-limit', () => {
 
   /**
    * The reason detection reads `result` and not the file: a review of this repository quotes
-   * `.sandcastle/usage-limit.ts`, whose own text says "usage limit reached".
+   * `scripts/ci/claude-usage-limit.mjs`, whose own text says "usage limit reached".
    */
   it('is not fooled by the words appearing in the transcript', () => {
     const messages = [

@@ -1,0 +1,29 @@
+name: Enhancement
+description: An existing feature should work better than it does.
+labels: ['type: enhancement', 'status: triage']
+body:
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: desired
+    attributes:
+      label: Desired behaviour
+      description: Concrete enough that a reviewer can tell done from not done.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Who benefits and how. One paragraph.
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Optional.

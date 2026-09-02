@@ -1,9 +1,8 @@
 /**
  * Take the frames a blind A/B pair is made of.
  *
- * The sandcastle loop's neutral capture step runs this — see .sandcastle/pixel-capture-prompt.md —
- * and so does anyone checking a change by hand, which the `verifying-changes` skill points here for.
- * The script exists because the capture procedure used to be two kilobytes of prose in that prompt
+ * Anyone checking a change by hand runs this, which the `verifying-changes` skill points here for.
+ * The script exists because the capture procedure used to be two kilobytes of prose in a prompt
  * and every capture agent re-derived it. The bill, measured across two runs: five findings about a
  * theme the capture had switched wrongly, frames photographed with the screen at rest when the item
  * under judgement was a hover state, flat-colour frames filed from a WebGL canvas shot before its

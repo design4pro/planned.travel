@@ -33,7 +33,8 @@ Configuration for the mattpocock-skills plugin and project skills:
 - **Triage labels**: see docs/agents/triage-labels.md
 - **Domain docs**: see docs/agents/domain.md
 - **Reference product** (feature and quality benchmark; clean-room rule applies): see docs/agents/reference.md
+- **Cezar orchestration** (scripts, hooks in agent mode, sweeper): see docs/agents/cezar.md
 
-Sentry findings enter the backlog through `pnpm sandcastle:sentry` (report-only; `--file-issues` writes) as `type: bug` + `status: pending`, and are then pre-triaged like any other bug.
+Sentry findings enter the backlog through `pnpm sentry-triage` (report-only; `--file-issues` writes) as `type: bug` + `status: triage`, and are then pre-triaged like any other bug.
 
-New work flows: grilling → `/to-spec-project` (PRD issue) → `/to-tickets-project` (vertical-slice sub-issues) → `/implement-project` per ticket in a fresh context. Verification ladder: see the `verifying-changes` skill.
+New work flows: issue form → `status: triage` → the cezar `triage` workflow verifies the claim at HEAD (`ready`, `needs-info`, `backlog` or `needs-human`; locally `/triage-ticket <issue>`) → for a feature `/plan-feature <issue> spec`, then `prd`, then `tickets` (from the cezar cockpit or locally; every artefact stops at `status: review`) → `run: implement` on a ready ticket (the cezar `implement-ticket` workflow; locally `/implement-ticket <issue>`) → draft PR → merge → the sweeper closes the issue. Verification ladder: see the `verifying-changes` skill.
