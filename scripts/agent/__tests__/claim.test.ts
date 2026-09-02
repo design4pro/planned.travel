@@ -62,9 +62,23 @@ describe('cez-claim.sh preflight', () => {
 
   it('refuses when an agent PR is already open for the ticket', () => {
     w.setIssue({})
-    const { status, calls } = claim({ FAKE_PRS: '#77' })
+    const { status, calls } = claim({
+      FAKE_PRS: JSON.stringify([
+        { number: 77, headRefName: `claude/issue-${N}-abcd1234` },
+      ]),
+    })
     expect(status).toBe(1)
     expect(postedComments(calls)[0]).toContain('open agent PR (#77)')
+  })
+
+  it('ignores an open PR whose branch names a longer issue number', () => {
+    w.setIssue({})
+    const { status } = claim({
+      FAKE_PRS: JSON.stringify([
+        { number: 78, headRefName: `claude/issue-${N}0-ffff0000` },
+      ]),
+    })
+    expect(status).toBe(0)
   })
 
   it('leaves the issue alone while another run holds its lock', () => {

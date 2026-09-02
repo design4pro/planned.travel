@@ -42,7 +42,13 @@ case "$1 $2" in
       shift
     done
     if [ -n "$filter" ]; then jq -r "$filter" "$FAKE_ISSUE"; else cat "$FAKE_ISSUE"; fi ;;
-  "pr list") printf '%s' "\${FAKE_PRS:-}" ;;
+  "pr list")
+    filter=""
+    while [ $# -gt 0 ]; do
+      case "$1" in --jq) filter="$2"; shift ;; esac
+      shift
+    done
+    printf '%s' "\${FAKE_PRS:-[]}" | jq -r "$filter" ;;
   "api "*)
     case "$args" in
       *--paginate*)
