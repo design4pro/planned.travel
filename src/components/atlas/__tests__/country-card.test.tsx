@@ -111,12 +111,12 @@ describe('CountryCard', () => {
 
   it('heads every figure with a unit label that agrees with it', () => {
     render(<CountryCard {...FRANCE} tripCount={1} placeCount={1} />)
-    expect(screen.getByText('Trip')).toBeTruthy()
+    expect(screen.getByText('Workspace trip')).toBeTruthy()
     expect(screen.getByText('Place')).toBeTruthy()
 
     render(<CountryCard {...FRANCE} countryCode="IT" />)
     const italy = cardFor('IT')
-    expect(within(italy).getByText('Trips')).toBeTruthy()
+    expect(within(italy).getByText('Workspace trips')).toBeTruthy()
     expect(within(italy).getByText('Places')).toBeTruthy()
   })
 
@@ -327,7 +327,7 @@ describe('CountryCard', () => {
         />,
       )
       expect(cellsOf('PT')).toEqual([
-        ['Trip', '1'],
+        ['Workspace trip', '1'],
         ['Places', '4'],
         ['First trip', 'August 2026'],
         ['Last trip', 'August 2026'],
@@ -385,7 +385,7 @@ describe('CountryCard', () => {
     it('reads a record with an itinerary as trips and trip months', () => {
       render(<CountryCard {...countryFactColumns(PORTUGAL_RECORD)} />)
       expect(cellsOf('PT')).toEqual([
-        ['Trip', '1'],
+        ['Workspace trip', '1'],
         ['Places', '4'],
         ['First trip', 'August 2026'],
         ['Last trip', 'August 2026'],
@@ -414,7 +414,7 @@ describe('CountryCard', () => {
       )
       expect(cardFor('DZ').dataset.record).toBe('none')
       expect(cellsOf('DZ')).toEqual([
-        ['Trips', '0'],
+        ['Workspace trips', '0'],
         ['Places', '0'],
         ['First trip', '—Not recorded'],
         ['Last trip', '—Not recorded'],
@@ -702,7 +702,14 @@ describe('CountryCardError', () => {
     render(<CountryCardError countryCode="FR" />)
     const card = cardFor('FR')
     expect(card.textContent).toContain('These figures did not load')
-    expect(card.textContent).not.toContain('Trips')
+    // The claim is that no figure is shown, not that one particular word is
+    // absent: the zero-record card says `0` under every heading, and a reader
+    // who sees that believes the country is empty rather than unread. Asserted
+    // as the absence of the fact cells, because a word is copy — this one was
+    // `Trips` until the workspace qualifier landed, and matching on it left a
+    // guard that the zero-record card walked straight through.
+    expect(card.querySelectorAll('dt')).toHaveLength(0)
+    expect(card.querySelectorAll('dd')).toHaveLength(0)
   })
 
   it('occupies exactly the card the retry will land in', () => {

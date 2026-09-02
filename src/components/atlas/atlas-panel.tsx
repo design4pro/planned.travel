@@ -976,6 +976,14 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
             <TabsContent value="stats" className={layout.content}>
               <ScrollArea axis="vertical" className="min-h-0 flex-1">
                 <div className="flex flex-col gap-4">
+                  {/* `data-stat` names which figure each tile carries, the way
+                      `CountryCard` names its country and its record: a host or
+                      a test can then take hold of one tile without walking the
+                      panel's DOM or reading a label back out of it — labels are
+                      translated and the tile's inner shape belongs to
+                      `StatCard`, so neither is a handle this panel can offer.
+                      The name is the figure — `places`, `trips` — so it holds
+                      when the copy does not. */}
                   <div className={layout.statGrid}>
                     {/* Places, not countries.
 
@@ -987,6 +995,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                         sixth of the row saying nothing new. The saved stops
                         behind those countries were on no surface at all. */}
                     <StatCard
+                      data-stat="places"
                       className={layout.statCard}
                       icon={<Landmark />}
                       label={t('atlas.panel.stat.places')}
@@ -998,6 +1007,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       }
                     />
                     <StatCard
+                      data-stat="regions"
                       className={layout.statCard}
                       icon={<MapPin />}
                       label={t('atlas.panel.stat.regions')}
@@ -1009,6 +1019,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       }
                     />
                     <StatCard
+                      data-stat="visits"
                       className={layout.statCard}
                       icon={<Flag />}
                       label={t('atlas.panel.stat.visits')}
@@ -1016,6 +1027,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       caption={t('atlas.panel.stat.visitsCaption')}
                     />
                     <StatCard
+                      data-stat="trips"
                       className={layout.statCard}
                       icon={<PlaneTakeoff />}
                       label={t('atlas.panel.stat.trips')}
@@ -1043,6 +1055,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       }
                     />
                     <StatCard
+                      data-stat="cities"
                       className={layout.statCard}
                       icon={<MapPinned />}
                       label={t('atlas.panel.stat.cities')}
@@ -1050,6 +1063,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       caption={t('atlas.panel.stat.citiesCaption')}
                     />
                     <StatCard
+                      data-stat="days"
                       className={layout.statCard}
                       icon={<Sun />}
                       label={t('atlas.panel.stat.days')}
