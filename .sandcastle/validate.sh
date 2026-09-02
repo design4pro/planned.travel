@@ -157,6 +157,20 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # dropped. Written as three flags this run kept only `html`, never wrote
     # results.json, and reported `failed: []` for every red suite. See issue #97.
     #
+    # One retry, and on the command line rather than by exporting CI=1. The config keys
+    # `retries: isCI ? 2 : 0` off CI, but three other things hang from that same flag and two of
+    # them are load-bearing here: the port guard is `if (!isCI && …)`, which its own comment calls
+    # "a hard stop rather than a warning" after four automated rounds photographed the wrong
+    # server — and this rung is exactly such a round — while `globalTimeout: isCI ? 10 * 60_000 :
+    # undefined` is sized, per its comment, for one of ci.yml's twelve shards, where this runs the
+    # whole unsharded suite. (CI would also flip `workers` and `reporter`, which the flags on the
+    # line below happen to override today and would stop overriding the day either one moves.) A
+    # retry flag buys the tolerance and nothing else.
+    #
+    # 1 rather than 2 keeps this gate no more tolerant than CI. Override with E2E_RETRIES; 0 for a
+    # deliberately intolerant run. See issue #143: a dev server that dropped four connections
+    # reddened a whole iteration and pointed the auditor at unrelated issues.
+    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --retries="${E2E_RETRIES:-1}" --reporter=line,json,html)
     # One retry, because the sandbox is not CI: `playwright.config.ts` sets `retries` from `CI`,
     # which is unset here, so the suite ran with none and every machine-load TIMEOUT reached
     # main.ts as a red branch. Measured over the recorded runs, 101 of 108 failing specs were
@@ -220,7 +234,13 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     if [ -f "$E2E_RESULTS_FILE" ]; then
       # Failed test titles + first error line + snapshot-diff flag, capped at
       # 40. Playwright nests suites recursively — walk the whole tree.
-      E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | {title: .title, error: ((.tests[0].results[0].error.message // "") | split("\n")[0] | .[0:300]), snapshotDiff: ((.tests[0].results[0].error.message // "") | test("toHaveScreenshot|screenshot comparison"))}] | .[0:40]' "$E2E_RESULTS_FILE" 2>/dev/null || echo '[]')
+      #
+      # `results[-1]`, not `results[0]`: with the retry above, `results` holds one entry per
+      # attempt, oldest first, and it is the *last* attempt that decided `ok == false`. Reading the
+      # first would describe a spec that blipped on `Connection refused` and then failed for real
+      # on a pixel diff as a connection error with `snapshotDiff: false` — handing the fix agent
+      # the flake this rung was taught to tolerate instead of the regression it caught.
+      E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | (.tests[0].results[-1].error.message // "") as $msg | {title: .title, error: ($msg | split("\n")[0] | .[0:300]), snapshotDiff: ($msg | test("toHaveScreenshot|screenshot comparison"))}] | .[0:40]' "$E2E_RESULTS_FILE" 2>/dev/null || echo '[]')
     elif [ "$E2E_OK" -ne 0 ]; then
       # Not a step of its own: the ladder is already red and run_step has just
       # printed the tail, which still carries the line reporter. What this says

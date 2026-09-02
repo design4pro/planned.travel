@@ -481,10 +481,16 @@ test.describe('authenticated routes', () => {
     // the visit reading is the common one and the trip reading is the exception
     // — pinning either alone would assert against the fixture rather than
     // against the card.
+    //
+    // The leading trip heading carries the workspace qualifier (`ADD-06`): the
+    // card counts the workspace's trips while the stat tile above the map counts
+    // the reader's, and the two figures disagree by design. A bare `Trips?` here
+    // would fail against the shipped card, so it is spelled as the card spells
+    // it.
     const headings = {
-      trips: [/^Trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
+      trips: [/^Workspace trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
       visits: [/^Visits?$/, /^Places?$/, /^First visit$/, /^Last visit$/],
-      none: [/^Trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
+      none: [/^Workspace trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
     } as const
     if (shown.labels.length === 0) {
       expect(

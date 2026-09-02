@@ -1205,7 +1205,7 @@ describe('CountryOverlay hover', () => {
     expect(card?.dataset.record).toBe('trips')
     expect(
       [...(card?.querySelectorAll('dt') ?? [])].map((node) => node.textContent),
-    ).toEqual(['Trips', 'Places', 'First trip', 'Last trip'])
+    ).toEqual(['Workspace trips', 'Places', 'First trip', 'Last trip'])
   })
 
   it('is decoration: nothing in it is announced or reachable', () => {

@@ -149,8 +149,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Области, штаты, префектуры',
   'panel.stat.visits': 'Визиты',
   'panel.stat.visitsCaption': 'Каждое записанное прибытие',
-  'panel.stat.trips': 'Поездки',
-  'panel.stat.tripsCaption': 'Только завершённые поездки',
+  'panel.stat.trips': 'Ваши поездки',
+  'panel.stat.tripsCaption': 'Все поездки, в которых вы участвуете',
   'panel.stat.cities': 'Города',
   'panel.stat.citiesCaption': 'Города, где вы ночевали или делали остановку',
   'panel.stat.days': 'Дни в пути',
@@ -360,10 +360,10 @@ const messages = {
 
   /* ------------------------------------------------- the card over the map */
   'card.trips': {
-    one: 'Поездка',
-    few: 'Поездки',
-    many: 'Поездок',
-    other: 'Поездки',
+    one: 'Поездка рабочего пространства',
+    few: 'Поездки рабочего пространства',
+    many: 'Поездок рабочего пространства',
+    other: 'Поездки рабочего пространства',
   },
   'card.visits': {
     one: 'Визит',
