@@ -24,6 +24,10 @@
  * `--auth` is refused outright for a screen only a signed-out visitor can see, because the frame
  * would be of the wrong screen under the right filename — which screens and why: ./anonymous-only.mjs.
  *
+ * The reference demo has no `--auth`: it is entered by pressing its own "Try the demo" control once
+ * (`--enter`), and its welcome overlay is pressed away on every frame (`--dismiss`). Why two flags
+ * and not one `--click`: ./click-through.mjs.
+ *
  * It deliberately does NOT record anything under e2e/__screenshots__. Those baselines are compared
  * pixel for pixel across machines and belong to Playwright's own projects; this script writes only
  * into the shot directory it is given, for a blind critic to look at.
@@ -36,7 +40,8 @@
  *     --viewports 1440x900,360x800 \
  *     --themes light,dark \
  *     [--auth] [--map] [--state hover-visited] \
- *     [--hover 'selector'] [--click 'selector'] [--settle 800]
+ *     [--hover 'selector'] [--click 'selector'] [--settle 800] \
+ *     [--enter 'selector'] [--dismiss 'selector']
  *
  * Prints one JSON object on stdout: { requestedUrl, files, console, warnings, captureValid }. Each
  * file records the URL the browser actually landed on, so a redirect the refusal list does not know
@@ -49,6 +54,7 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { chromium } from '@playwright/test'
 import { anonymousOnlyRefusal } from './anonymous-only.mjs'
+import { dismissIfPresent, enterThrough } from './click-through.mjs'
 
 const AUTH_STATE = 'e2e/.auth/demo.json'
 const DEV_TOOLBAR = '[data-testid="tanstack_devtools"]'
@@ -208,6 +214,18 @@ async function main() {
     process.exit(2)
   }
 
+  // `--auth` is our cached session and `--enter` is how the reference makes one for itself. Both
+  // on one URL means the caller has mixed the two sides up, and whichever won would file the
+  // wrong product under the right filename.
+  if (wantsAuth && typeof opt.enter === 'string') {
+    console.error(
+      'capture: --auth and --enter exclude each other. --auth is our side (the cached ' +
+        `${AUTH_STATE}); --enter is the reference side, which signs itself in through a control ` +
+        'on its own sign-in screen.',
+    )
+    process.exit(2)
+  }
+
   if (wantsAuth && !existsSync(AUTH_STATE)) {
     console.error(
       `capture: --auth was asked for but ${AUTH_STATE} does not exist. ` +
@@ -256,6 +274,13 @@ async function main() {
   const files = []
   const hasMap = flag('map')
 
+  // Once, not per frame: the session it creates lives in a cookie, so every `page.goto` below
+  // arrives signed in. Before the first viewport is set, because the sign-in screen's layout is
+  // not what is being photographed.
+  if (typeof opt.enter === 'string') {
+    await enterThrough(page, { url, selector: opt.enter, settleMs })
+  }
+
   for (const vp of viewports) {
     await page.setViewportSize({ width: vp.w, height: vp.h })
     for (const theme of themes) {
@@ -275,6 +300,13 @@ async function main() {
 
       await settle(page, { map: hasMap })
       await quiesce(page)
+
+      // Per frame, before any hover or click: an overlay that re-renders on every hard load would
+      // otherwise swallow the pointer, and the frame would be of the overlay.
+      const dismissed =
+        typeof opt.dismiss === 'string'
+          ? await dismissIfPresent(page, { selector: opt.dismiss, settleMs })
+          : undefined
 
       if (typeof opt.hover === 'string') {
         await page.locator(opt.hover).first().hover({ timeout: 15_000 })
@@ -324,6 +356,8 @@ async function main() {
         landedUrl: page.url(),
         path,
         bytes: size,
+        // Only when `--dismiss` was given: whether its control was on this frame and pressed.
+        ...(dismissed === undefined ? {} : { dismissed }),
       })
     }
   }

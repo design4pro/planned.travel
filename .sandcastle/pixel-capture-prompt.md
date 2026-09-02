@@ -51,7 +51,18 @@ Photograph the reference with the same script — it is generic Playwright under
       --out {{SHOTS_DIR}} \
       --label {{REF_LABEL}} \
       --viewports 1440x900,360x800 \
-      --themes light,dark
+      --themes light,dark \
+      --enter 'button:has-text("Try the demo")' \
+      --dismiss 'button:has-text("Got it")'
+
+The reference needs no credentials, but it must be ENTERED: without a session every route shows
+its sign-in screen, whose "Try the demo" button signs a throwaway demo user in. `--enter` presses
+it once, before the first frame; the session lives in a cookie, so every frame after that arrives
+signed in. Once inside, a "Welcome to TREK" overlay renders on every hard load; `--dismiss`
+presses its "Got it" on every frame where it appears, and each file reports `dismissed` so you can
+see it did. Do not spend `--click` on either control, and never touch `e2e/.auth/demo.json` for the
+reference — that file is OUR session. If `--enter` fails, the reference is down or its sign-in
+screen changed: set `captured` to `false` and quote the error in `skippedReason`.
 
 No `--auth` and no `--map` — those flags encode OUR app's seams. The script switches theme via
 `prefers-color-scheme`; if the reference does not react to it (its dark frames come out identical
