@@ -169,17 +169,17 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     #
     # 1 rather than 2 keeps this gate no more tolerant than CI. Override with E2E_RETRIES; 0 for a
     # deliberately intolerant run. See issue #143: a dev server that dropped four connections
-    # reddened a whole iteration and pointed the auditor at unrelated issues.
+    # reddened a whole iteration and pointed the auditor at unrelated issues. Measured over the
+    # recorded runs, 101 of 108 failing specs were infrastructure (ECONNREFUSED, timeouts, `Target
+    # crashed`) and 7 were pixel diffs, and each red rung costs a fix session plus a re-run - for a
+    # spec that passes when asked again. The JSON reporter marks a spec `ok` when its last attempt
+    # passed, so a retried-green spec never reaches `e2e.failed` below, and a spec red twice in a
+    # row still does. Real regressions pay one extra attempt; flakes stop spending the fix budget.
+    #
+    # One assignment. The merge that brought #143 and the flake work together kept both branches'
+    # lines, and the second - a hard-coded `--retries=1` - silently overrode the E2E_RETRIES
+    # override above. validate-sh.test.ts pins the override, so a second line here goes red.
     PW_ARGS=(--workers="${E2E_WORKERS:-4}" --retries="${E2E_RETRIES:-1}" --reporter=line,json,html)
-    # One retry, because the sandbox is not CI: `playwright.config.ts` sets `retries` from `CI`,
-    # which is unset here, so the suite ran with none and every machine-load TIMEOUT reached
-    # main.ts as a red branch. Measured over the recorded runs, 101 of 108 failing specs were
-    # infrastructure (ECONNREFUSED, timeouts, `Target crashed`) and 7 were pixel diffs, and each
-    # red rung costs a fix session plus a re-run - for a spec that passes when asked again. The JSON
-    # reporter marks a spec `ok` when its last attempt passed, so a retried-green spec never reaches
-    # `e2e.failed` below, and a spec red twice in a row still does. Real regressions pay one extra
-    # attempt; flakes stop spending the fix budget.
-    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --retries=1 --reporter=line,json,html)
     [ "$UPDATE_SNAPSHOTS" -eq 1 ] && PW_ARGS+=(--update-snapshots)
     # Repeated `--project` IS a list, unlike `--reporter` above: playwright declares it as
     # `--project <project-name...>`. Narrowing to chromium is what lets the fix loop re-validate
