@@ -32,6 +32,7 @@ Configuration for the mattpocock-skills plugin and project skills:
 - **Triage labels**: see docs/agents/triage-labels.md
 - **Domain docs**: see docs/agents/domain.md
 - **Reference product** (feature and quality benchmark; clean-room rule applies): see docs/agents/reference.md
+- **Cezar orchestration** (scripts, hooks in agent mode, sweeper): see docs/agents/cezar.md
 
 Sentry findings enter the backlog through `pnpm sandcastle:sentry` (report-only; `--file-issues` writes) as `type: bug` + `status: triage`, and are then pre-triaged like any other bug.
 

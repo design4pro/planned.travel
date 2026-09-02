@@ -3,11 +3,12 @@
 # green path. Run by main.ts via sandbox.exec() after the reviewer, and again
 # after every fix-loop resume.
 #
-#   TARGET_BRANCH=<integration branch> bash .sandcastle/validate.sh --json-out <path> \
-#     [--force-e2e] [--skip-e2e] [--update-snapshots] [--e2e-projects <csv>]
+#   TARGET_BRANCH=<integration branch> bash scripts/agent/validate.sh --json-out <path> \
+#     [--force-e2e] [--skip-e2e] [--build] [--update-snapshots] [--e2e-projects <csv>]
 #     [--e2e-grep <regex>]
 #
-# Always: route-tree freshness gate, typecheck, lint, vitest.
+# Always: route-tree freshness gate, typecheck, lint, vitest. --build adds `pnpm build`
+# after vitest (the cezar ladder turns it on; SPEC §7.1).
 # When the diff since TARGET_BRANCH touches UI paths (glob heuristic below):
 # setup-e2e.sh --if-needed, then the Playwright suite against the -linux
 # baselines (this container is CI's exact Playwright image).
@@ -37,12 +38,14 @@ FORCE_E2E=0
 SKIP_E2E=0
 UPDATE_SNAPSHOTS=0
 E2E_PROJECTS=""
+BUILD=0
 E2E_GREP=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --json-out) JSON_OUT="$2"; shift 2 ;;
     --force-e2e) FORCE_E2E=1; shift ;;
     --skip-e2e) SKIP_E2E=1; shift ;;
+    --build) BUILD=1; shift ;;
     --update-snapshots) UPDATE_SNAPSHOTS=1; shift ;;
     --e2e-projects) E2E_PROJECTS="$2"; shift 2 ;;
     --e2e-grep) E2E_GREP="$2"; shift 2 ;;
@@ -82,7 +85,7 @@ now_ms() {
 run_step() { # name command...
   local name="$1"; shift
   local start end ok log
-  log="/tmp/validate-${name//[^a-zA-Z0-9]/-}.log"
+  log="${TMPDIR:-/tmp}/validate-${name//[^a-zA-Z0-9]/-}.log"
   start=$(now_ms)
   if "$@" > >(tail -c 200000 >"$log") 2>&1; then ok=1; else ok=0; fi
   end=$(now_ms)
@@ -103,6 +106,9 @@ run_step "route-tree" route_tree_gate
 run_step "typecheck" pnpm typecheck
 run_step "lint" pnpm lint
 run_step "vitest" pnpm test
+# SPEC §7.1 asks for a production build before a PR; opt-in because it costs minutes and
+# the sandcastle ladder never ran it.
+[ "$BUILD" -eq 1 ] && run_step "build" pnpm build
 
 # ---------------------------------------------------------------------------
 # UI-touched heuristic. Deliberately excludes src/server/** — server-only
@@ -132,9 +138,9 @@ E2E_FAILED_JSON="[]"
 INFRA=""
 # The origin the suite is pointed at, and the one the probe below asks about — the same server,
 # named once so the two can never drift into disagreeing about what "up" means.
-E2E_BASE_URL=http://localhost:3010
+E2E_BASE_URL="http://localhost:${E2E_PORT:-3010}"
 if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
-  run_step "e2e-env" bash .sandcastle/setup-e2e.sh --if-needed
+  run_step "e2e-env" bash "$(dirname "$0")/setup-e2e.sh" --if-needed
   # setup-e2e.sh returns only once the dev server answers, and starting it runs
   # the vite plugin's route generator over the same file `tsr generate` wrote in
   # the gate above. The two agree because tsr.config.json carries the plugin's

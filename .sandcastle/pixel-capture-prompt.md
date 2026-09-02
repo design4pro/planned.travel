@@ -7,7 +7,7 @@ separate blind critic will look at the directory you produce and nothing else.
 
 Ours: the local dev server, `http://localhost:3010` (already running and seeded — the
 validation ladder started it; if it does not answer, run
-`bash .sandcastle/setup-e2e.sh --if-needed` first).
+`bash scripts/agent/setup-e2e.sh --if-needed` first).
 Reference: the public demo `https://demo.liketrek.com/dashboard` (sample data, reset hourly —
 read-only exhibit, do not try to mutate anything there).
 

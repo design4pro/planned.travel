@@ -131,3 +131,7 @@ src/impeccable/
 # never worth keeping afterwards. Not vitest's default `.vitest-reports`,
 # because `upload-artifact` skips a dot-prefixed path as hidden.
 unit-blob-reports/
+
+# Per-run scratch of the cezar workflows (scripts/agent/): port pin, ladder verdicts and
+# digests, handoff. Never committed; the agent's PR carries what matters.
+.agent/

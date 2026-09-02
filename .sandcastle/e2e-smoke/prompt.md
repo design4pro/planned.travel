@@ -4,7 +4,7 @@ Smoke-test the e2e environment of this sandbox. This is a VERIFICATION run: do n
 
 # STEPS
 
-1. `bash .sandcastle/setup-e2e.sh` — prepares .dev.vars, local D1, the basemap in the local R2 simulator, a dev server on :3010 and the seeded demo workspace. If it fails, capture the failing step's output and stop.
+1. `bash scripts/agent/setup-e2e.sh` — prepares .dev.vars, local D1, the basemap in the local R2 simulator, a dev server on :3010 and the seeded demo workspace. If it fails, capture the failing step's output and stop.
 2. `PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm exec playwright test --list --project=chromium 2>&1 | tail -5` — prove Playwright resolves the suite.
 3. Run ONE cheap public-route spec end to end:
    `PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm exec playwright test --project=chromium -g "landing" 2>&1 | tail -15`

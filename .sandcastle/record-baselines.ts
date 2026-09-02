@@ -50,7 +50,7 @@ try {
     return result
   }
 
-  await run('e2e environment', 'bash .sandcastle/setup-e2e.sh')
+  await run('e2e environment', 'bash scripts/agent/setup-e2e.sh')
   // Scoped to visual.spec.ts: that is the only file that owns baselines. The
   // i18n runtime-parity spec is a functional cross-runtime assertion — a red
   // there is a real finding, but it must not abort a baseline recording.

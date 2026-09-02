@@ -44,6 +44,8 @@ const config = defineConfig({
       ignored: [
         '**/.claude/**',
         '**/.sandcastle/**',
+        '**/.ai/cezar/**',
+        '**/.agent/**',
         '**/playwright-report/**',
         '**/test-results/**',
       ],

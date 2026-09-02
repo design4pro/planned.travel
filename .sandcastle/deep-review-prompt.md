@@ -17,8 +17,8 @@ finding needs its own ticket rather than a change on this branch.
 
 # CONTEXT
 
-Design language: @.sandcastle/DESIGN_VOCABULARY.md
-Project standards: @.sandcastle/CODING_STANDARDS.md
+Design language: @docs/agents/DESIGN_VOCABULARY.md
+Project standards: @docs/agents/CODING_STANDARDS.md
 Layering contract: docs/SPEC.md §6. Domain vocabulary: CONTEXT.md.
 
 ## Branch diff

@@ -79,7 +79,7 @@ export default defineConfig({
           globals: false,
           include: [
             '.sandcastle/**/__tests__/*.test.ts',
-            'scripts/**/__tests__/*.test.mjs',
+            'scripts/**/__tests__/*.test.{ts,mjs}',
           ],
           /**
            * The loop creates full git worktrees under `.sandcastle/worktrees/`, each a copy of this

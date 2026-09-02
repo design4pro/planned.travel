@@ -32,7 +32,7 @@ and gets you no closer.
 # VERIFICATION
 
 The bar has not changed because the ladder went red: **docs/SPEC.md §7** and
-@.sandcastle/CODING_STANDARDS.md still define done.
+@docs/agents/CODING_STANDARDS.md still define done.
 
 # PROCESS
 

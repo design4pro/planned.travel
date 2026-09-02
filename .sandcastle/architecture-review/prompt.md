@@ -8,7 +8,7 @@ This is an ANALYSIS run. Do NOT modify any file. Do NOT commit. Your only output
 
 Read CLAUDE.md first. The layering contract is docs/SPEC.md §6. Domain vocabulary: CONTEXT.md.
 
-Design language — use these terms exactly: @.sandcastle/DESIGN_VOCABULARY.md
+Design language — use these terms exactly: @docs/agents/DESIGN_VOCABULARY.md
 
 Decisions already taken live in `docs/adr/`. Read the ADRs covering any area you propose to change.
 

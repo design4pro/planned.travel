@@ -19,7 +19,7 @@ Adversarially re-check each one: your job is to try to **refute** its COMPLETE c
 After the per-issue checks, run the complete ladder including the full e2e suite:
 
 ```
-TARGET_BRANCH={{TARGET_BRANCH}} bash .sandcastle/validate.sh --force-e2e --json-out .sandcastle-validation.json
+TARGET_BRANCH={{TARGET_BRANCH}} bash scripts/agent/validate.sh --force-e2e --json-out .sandcastle-validation.json
 ```
 
 A red ladder refutes every issue whose change plausibly caused the failure.

@@ -62,7 +62,7 @@ If you find improvements to make:
 
 # VERIFICATION
 
-Done is **docs/SPEC.md §7**; the bar for the code itself is @.sandcastle/CODING_STANDARDS.md. Read
+Done is **docs/SPEC.md §7**; the bar for the code itself is @docs/agents/CODING_STANDARDS.md. Read
 them rather than working from memory — this prompt deliberately does not copy them.
 
 If the code is already clean, well-tested, and handles edge cases properly, do nothing.

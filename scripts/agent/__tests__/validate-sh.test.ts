@@ -252,10 +252,10 @@ function runValidate(
     git('commit', '-q', '-m', 'touch')
   }
 
-  mkdirSync(join(dir, '.sandcastle'))
-  writeFileSync(join(dir, '.sandcastle', 'validate.sh'), SCRIPT)
+  mkdirSync(join(dir, 'scripts', 'agent'), { recursive: true })
+  writeFileSync(join(dir, 'scripts', 'agent', 'validate.sh'), SCRIPT)
   writeFileSync(
-    join(dir, '.sandcastle', 'setup-e2e.sh'),
+    join(dir, 'scripts', 'agent', 'setup-e2e.sh'),
     '#!/usr/bin/env bash\nexit 0\n',
   )
 
@@ -284,7 +284,7 @@ function runValidate(
   const run = spawnSync(
     'bash',
     [
-      '.sandcastle/validate.sh',
+      'scripts/agent/validate.sh',
       '--json-out',
       '.sandcastle-validation.json',
       ...(forceE2e ? ['--force-e2e'] : []),

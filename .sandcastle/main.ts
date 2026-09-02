@@ -58,7 +58,7 @@ import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
 import { adoptWipBranches } from './adopt'
-import { narrowedGrep, shellQuote } from './narrow-e2e'
+import { narrowedGrep, shellQuote } from '../scripts/agent/narrow-e2e'
 import { planPayload } from './plan-payload'
 import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
@@ -881,7 +881,7 @@ async function runLadder(
     const result = await ladderLimit(() => {
       startedAt = Date.now()
       return sandbox.exec(
-        `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
+        `TARGET_BRANCH=${integrationBranch} bash scripts/agent/validate.sh ${flags.join(' ')}`,
       )
     })
     const read = await sandbox.exec('cat .sandcastle-validation.json')
