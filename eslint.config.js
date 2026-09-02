@@ -93,7 +93,6 @@ export default [
       // not application source, and it is not written against this project's tsconfig - so the
       // typed linter cannot parse it and reports every file as a project-membership error.
       '.github/**',
-      '.sandcastle/**',
       'dist/**',
       'playwright-report/**',
       'blob-report/**',

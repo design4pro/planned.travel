@@ -20,3 +20,11 @@ Anything else stays at `status: pending` with the recommended state named in the
 ## Consequences
 
 The human gate moves from "every follow-up" to "every ambiguous or unverified one". What still keeps the loop supervised: `pnpm sandcastle` is operator-started and prints its plan before working; a promotion is always announced in a comment and undone by removing one label; every AI comment carries the triage disclaimer and the `<!-- sandcastle-triage -->` marker, so a run is idempotent and auditable. If auto-promoted issues turn out to reach the planner with poor briefs, the first lever is the prompt's promotion criteria, not a return to manual triage.
+
+### Amendment, 2026-09-02 - promotion ends at `status: ready`
+
+ADR 0015 separates state from command. The three conditions above are unchanged and a reproduction
+is still the price of promotion, but the promoted state is now `status: ready`, which no run acts
+on by itself: a human's `run: implement`, or `auto-advance` on the PRD, starts the work. The
+pre-triage runs as the cezar `triage` workflow (ADR 0014) rather than through `triage.yml`, and
+follow-ups enter as `status: triage` instead of `status: pending`.

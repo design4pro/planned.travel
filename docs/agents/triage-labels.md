@@ -1,40 +1,87 @@
-# Triage labels
+# Labels
 
-Canonical triage roles mapped onto this repository's existing label set. Do not create new labels for these roles.
+Labels are the backlog's state machine (ADR 0015). Every open issue carries **exactly one
+`status:`**; `run:` labels are commands a human gives and a script consumes; nothing else is state.
+The vocabulary is closed: 19 labels, listed here, and no others.
 
-| Canonical role  | Label in this repo      |
-| --------------- | ----------------------- |
-| needs-triage    | `status: pending`       |
-| needs-info      | `status: on hold`       |
-| ready-for-agent | `ready-for-agent`       |
-| ready-for-human | `status: review needed` |
-| wontfix         | `status: abandoned`     |
+## Vocabulary
 
-Supporting vocabulary already present and in use: `priority: critical/high/medium/low`, `type: bug/feature/enhancement/maintenance/security/documentation`, `qa`, `qa-failed`, `status: blocked`, and the `wayfinder:*` family (`wayfinder:map`, `wayfinder:grilling`, `wayfinder:prototype`, `wayfinder:research`, `wayfinder:task`) for exploratory mapping efforts.
+| Label                                                   | Written by                                  | Meaning                                                                               |
+| ------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `status: triage`                                        | issue forms, audit and Sentry follow-ups    | new, not yet reproduced; the triage automation picks it up                            |
+| `status: needs-info`                                    | triage                                      | triage needs an answer from the reporter (questions in a comment)                     |
+| `status: backlog`                                       | idea form, triage (`needs-plan`)            | a feature or idea waiting for a plan run or a decision                                |
+| `status: queued`                                        | publish-tickets, sweeper                    | a ticket with an open native blocker                                                  |
+| `status: ready`                                         | triage, publish-tickets, sweeper            | specified and unblocked; `run: implement` may claim it                                |
+| `status: in-progress`                                   | **claim scripts only**                      | a run holds it (a PRD keeps it while any child is open)                               |
+| `status: review`                                        | handback, publish-spec/prd/tickets          | an artefact waits for a human: a draft PR, a spec, a PRD, tickets                     |
+| `status: needs-human`                                   | handback `--blocked`, triage, sweeper       | a workflow could not finish; the comment says why                                     |
+| `run: triage`                                           | a human                                     | command: (re)triage; bypasses the "already triaged" marker                            |
+| `run: implement`                                        | a human; the sweeper under `auto-advance`   | command: implement this ticket                                                        |
+| `type: bug` / `feature` / `enhancement` / `maintenance` | issue forms, triage                         | mandatory on every issue without a parent; absent on tickets (they inherit the PRD's) |
+| `prd`                                                   | publish-prd                                 | parent issue: title `PRD: …`, body `prd/v1`; its sub-issues are the tickets           |
+| `auto-advance`                                          | a human, on an open PRD only                | the sweeper adds `run: implement` to each child as it unblocks                        |
+| `agent-pr` (PR)                                         | handback                                    | a draft PR opened by an implement run                                                 |
+| `needs-e2e` (PR)                                        | handback when the ladder reports UI touched | run the full Playwright matrix in `ci.yml`                                            |
+| `agent-docs` (PR)                                       | cez-docs-pr                                 | a PR carrying `CONTEXT.md` or ADR changes from a plan run                             |
 
-QA findings from staging are filed as new issues with `qa-failed` (bugs) or `type: enhancement` (taste).
+A command is not a state: the claim script removes the `run:` label as its first action, and adding
+the next command is how a human accepts the previous artefact. There is no priority axis; "visual
+change expected" is a body section, not a label (`## Visual change expected`).
 
-Labels the automation itself reads and writes: `agent-blocked` (sandcastle swaps it in for `ready-for-agent` when an issue exhausts its fix budget - `markBlocked()` in `.sandcastle/main.ts`; a human re-queues it), `visual-change-expected` (declares an intended pixel change so the loop re-records baselines instead of failing the diff - equivalent to a `## Visual change expected` section in the body), and `needs-e2e` (a PR label: runs the CI e2e job on that PR, the escape hatch in `ci.yml`).
+## Transitions
 
-Two rules govern where `ready-for-agent` may sit:
+```
+issue form (bug/enhancement/maintenance) ─► status: triage ─(triage run)─► status: in-progress
+      ─► ready | needs-info | backlog | needs-human          human: run: triage repeats it
+issue form (idea) ─► status: backlog
+human: cockpit → issue → "Hand this to the agent" → workflow plan
+      prompt "spec"    ─► in-progress ─► review (spec/v1 in the body)
+      prompt "prd"     ─► in-progress ─► review (prd/v1, title PRD:, label prd)
+      prompt "tickets" ─► children created queued/ready with native sub_issues + blocked_by;
+                          the PRD stays in-progress until its last child closes
+human: run: implement on ready | needs-human ─(claim)─► in-progress
+      ─(handback)─► review (draft PR, agent-pr) | needs-human (WIP pushed, digest in a comment)
+sweeper: PR merged ─► issue closed (completed) ─► siblings with no open blocker: queued → ready
+         (+ run: implement when the PRD carries auto-advance); last child closed ─► PRD closed
+sweeper: PR closed without merge ─► needs-human;  run: unclaimed for 2 h ─► needs-human
+```
 
-- **It is a per-slice gate, never a PRD label.** A PRD is an issue with open sub-issues and is never
-  workable on its own; `resolveOnlyIssues` in `.sandcastle/main.ts` expands `--issues <PRD>` to its
-  open children and filters those by this label. On a parent the label is not merely inert: it puts
-  the PRD into `readyForAgentIds()`, so a bare `pnpm sandcastle` claims and plans the PRD itself.
-  `/to-tickets-project` applies it to every ticket it publishes and verifies the wave afterwards.
-- **It is orthogonal to `status: blocked`.** `ready-for-agent` says a human specified and cleared the
-  slice; `status: blocked` is a human's note that some other issue must land first. Execution order
-  comes from the dependency graph the planner builds, not from either label, and the loop never reads
-  `status: blocked`. A cleared slice with an open blocker keeps both.
+## Invariants (the sweeper reports them; `--fix` repairs the mechanical ones)
 
-## Automated pre-triage
+1. Exactly one `status:` per open issue.
+2. A `type:` on every issue without a parent.
+3. An issue with sub-issues carries `prd`; an issue with `prd` is titled `PRD:`.
+4. A `run:` label without a claim: after 30 min with no pending task in cezar, a comment; after 2 h,
+   removed and `status: needs-human`.
+5. `status: queued` if and only if a native blocker is open.
+6. `status: in-progress` on a ticket without a heartbeat for 3 h and no active run, or on a
+   spec/PRD run that is neither active nor parked, becomes `status: needs-human` (a PRD with open
+   children is exempt).
+7. `status: review` on a ticket if and only if an open `agent-pr` PR references it.
+8. A closed issue carries no `run:`.
+9. `auto-advance` only on an open `prd`.
+10. Owned paths are disjoint among siblings in `status: in-progress`.
 
-An open issue that carries `type: bug` or `type: maintenance` and not `ready-for-agent` is pre-triaged by Claude following `.sandcastle/triage-prompt.md` — once per issue, marked by `<!-- sandcastle-triage -->` in the comment (and in the body when promoted):
+## Markers
 
-- `.github/workflows/triage.yml` runs it when such an issue is opened or the label is added (this is how the sandcastle auditor's follow-ups get picked up); `workflow_dispatch` takes one issue number.
-- `pnpm sandcastle:triage [n ...]` sweeps the backlog locally in the Docker sandbox.
+Scripts leave HTML comments so a run is idempotent and auditable; each is edited in place rather
+than posted again: `<!-- agent-claim: <runId> -->`, `<!-- agent-heartbeat: <ISO> -->`,
+`<!-- agent-result: ok|needs-human|refused -->`, `<!-- agent-triage -->`, `<!-- agent-grilling -->`,
+`<!-- agent-noticed -->`, `<!-- sweeper: … -->`; on a PR, `<!-- agent-run: <runId> -->`. Every text a
+script sends to GitHub passes through a filter that neutralises `@claude`, so an agent's output can
+never summon `claude.yml`.
 
-A third source files into the same queue. `pnpm sandcastle:sentry` (and `.github/workflows/sentry-triage.yml`, weekly) reads Sentry for recurring, high-impact production and staging errors and files the ones that clear its thresholds as `type: bug` + `status: pending` — never `ready-for-agent`, because it has reproduced nothing and promotion is earned by a reproduction. Each carries a `<!-- sentry-issue: SHORT-ID -->` marker in the body, and dedup is keyed on that across **open and closed** issues: a closed ticket means the bug was fixed, and a re-file would be the routine's worst failure. A recurrence more than a day after the fix shipped is filed as a separate regression ticket rather than reopening the original, so the record of the first attempt survives. It is report-only by default locally; `--file-issues` writes. Thresholds live in `.sandcastle/sentry-triage/policy.ts` — one diffable file, which is the first lever if it gets noisy.
+## Sources of issues
 
-The claim is reproduced at HEAD. A confirmed, non-redundant finding with a fix direction settled by SPEC/ADRs is **promoted automatically**: an `## Agent Brief` (Owned paths, Definition of Done, Verification) is appended to the body, `ready-for-agent` replaces `status: pending`, and the notes say so — remove the label to hold it. Refuted, insufficient, redundant or judgment-heavy findings get triage notes with the recommended state named, never applied; decide those with `/triage` (ADR 0006).
+- **People**, through the issue forms (`.github/ISSUE_TEMPLATE/`). Blank issues are disabled so every
+  issue enters with a `type:` and a `status:`.
+- **Audit follow-ups** from PR audits and **Sentry** findings (`.github/workflows/sentry-triage.yml`,
+  ADR 0008) enter as `type: bug|enhancement` + `status: triage` with their own marker in the body
+  (`<!-- sentry-issue: SHORT-ID -->`, `<!-- agent-audit: … -->`); dedup is keyed on the marker across
+  open **and** closed issues.
+
+Triage (ADR 0006 as amended by ADR 0015) promotes to `status: ready` only a claim it has
+**reproduced** at HEAD, that is not redundant, and whose fix direction is settled by SPEC, an ADR or
+the code; it writes the `## Agent Brief` the implementer needs. Everything else gets a verdict and a
+recommended state in a comment, and a human decides.

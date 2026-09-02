@@ -60,41 +60,13 @@ e2e/.auth
 # Tracked on purpose: a product screenshot, not a capture artefact.
 !billing-light.png
 
-# Sandcastle loop state: agent worktrees and logs live inside the repo by design.
-.sandcastle/worktrees/
-.sandcastle/logs/
-
-# Data shared between sandboxes and kept across runs — the pnpm store and the
-# e2e basemap — bind-mounted into every container by .sandcastle/sandbox. The
-# worktrees above are deleted after each run, so anything cached inside one is
-# lost; this is where a cache has to live to survive. The root .e2e-tiles/
-# below is a separate cache, for CI and a local `pnpm e2e`.
-.sandcastle/sandbox/data/
-
-# pnpm's fallback store. In the sandbox pnpm's default store (~/.local/share/
-# pnpm) is on the container overlay while the project is a bind mount, so pnpm
-# puts the store on the project's filesystem instead: <mount-root>/.pnpm-store,
-# i.e. the worktree root. Ignoring it is what lets sandcastle see the worktree
-# as clean and remove it after a run (cleanupWorktree runs `git status
-# --porcelain`); six 823 MB stores survived one triage sweep before this line.
-# Kept as the backstop now that .sandcastle/sandbox mounts a real store.
+# pnpm's fallback store, when pnpm cannot reach its default store directory.
 .pnpm-store/
 
-# Sandcastle run artifacts, all written into the sandbox worktree root and
-# copied to .sandcastle/logs: the validation ladder's JSON verdict, which
-# main.ts asks for on every run with `validate.sh --json-out`, and the advisory
-# pass's scratch — the pixel-critic's blind A/B frames and verdict, and the
-# deep review's structural report. Untracked files left in the worktree are
-# what stops sandcastle from removing it, so every artifact a run leaves behind
-# has to be ignored somewhere in this file; the three that carry no
-# `.sandcastle-` prefix — playwright-report, test-results and dev-server.log —
-# already have entries of their own.
-.sandcastle-validation.json
+# Blind A/B frames from scripts/visual/capture.mjs (the `--out` its docs suggest).
 .sandcastle-shots/
-.sandcastle-visual.json
-.sandcastle-deep-review.json
 
-# Local basemap cache for e2e (pulled from R2; copied into sandcastle worktrees).
+# Local basemap cache for e2e (pulled from R2).
 .e2e-tiles/
 dev-server.log
 
@@ -131,3 +103,7 @@ src/impeccable/
 # never worth keeping afterwards. Not vitest's default `.vitest-reports`,
 # because `upload-artifact` skips a dot-prefixed path as hidden.
 unit-blob-reports/
+
+# Per-run scratch of the cezar workflows (scripts/agent/): port pin, ladder verdicts and
+# digests, handoff. Never committed; the agent's PR carries what matters.
+.agent/

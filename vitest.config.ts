@@ -12,7 +12,7 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  *   Node. Nothing there may import `cloudflare:workers`; bindings arrive as
  *   arguments, which is what makes them fake-able.
  * - `tooling` runs the agent tooling in plain Node as well, but over
- *   `.sandcastle/**` and `scripts/**` rather than `src/**`.
+ *   `scripts/**` rather than `src/**`.
  *
  * `server` collects `.tsx` as well as `.ts` because the transactional email
  * templates under `src/server/email` are React components: they render to a
@@ -21,15 +21,11 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  * `jsx: react-jsx` from `tsconfig.json`, which is all a server-rendered
  * component needs — the React plugin exists for Fast Refresh, which no test has.
  *
- * `tooling` is one project for two directories because it is one world. None of that code was
- * tested at all before the Sentry sweep, it carries real policy - selection thresholds, the dedup
- * index, the issue body, which screens `capture.mjs` refuses to photograph signed in - and its
- * failure mode is silence: a parsing bug files a duplicate every week, or stops filing anything,
- * and says nothing either way. `pnpm typecheck` reaches `.sandcastle` only because tsconfig.json
- * names it explicitly - TypeScript's wildcard globs skip dot-directories, and for a long time it
- * did not, so none of this was type-checked at all. It still does not reach `scripts`, whose files
- * are plain `.mjs` run by `node` and so in no tsconfig, while the claim they make about
- * `src/routes/` drifts. Tests are the only gate that reaches all of it.
+ * `tooling` carries real policy - the Sentry sweep's selection thresholds, dedup index and issue
+ * body, the label invariants the sweeper enforces, which screens `capture.mjs` refuses to
+ * photograph signed in - and its failure mode is silence: a parsing bug files a duplicate every
+ * week, or stops filing anything, and says nothing either way. Its `.mjs` files are run by `node`
+ * and sit in no tsconfig, so tests are the only gate that reaches all of it.
  */
 export default defineConfig({
   resolve: {
@@ -77,16 +73,7 @@ export default defineConfig({
           name: 'tooling',
           environment: 'node',
           globals: false,
-          include: [
-            '.sandcastle/**/__tests__/*.test.ts',
-            'scripts/**/__tests__/*.test.mjs',
-          ],
-          /**
-           * The loop creates full git worktrees under `.sandcastle/worktrees/`, each a copy of this
-           * checkout - the same hazard `vite.config.ts` describes for the dev server's watcher.
-           * Collecting them would run every one of these tests once per worktree.
-           */
-          exclude: ['.sandcastle/worktrees/**', '.sandcastle/logs/**'],
+          include: ['scripts/**/__tests__/*.test.{ts,mjs}'],
           restoreMocks: true,
         },
       },

@@ -130,7 +130,7 @@ runs:
         # ::1-only vite over IPv6 and reports the server up, but Node's fetch
         # in seed.mjs resolves localhost to 127.0.0.1 and then finds nothing —
         # the seed fails against a server curl just proved alive. Same trap,
-        # same fix as .sandcastle/setup-e2e.sh.
+        # same fix as scripts/agent/setup-e2e.sh.
         pnpm exec vite dev --port 3000 --host > dev-server.log 2>&1 &
         for _ in $(seq 1 60); do
           if curl --silent --fail --output /dev/null http://localhost:3000/; then

@@ -1,0 +1,209 @@
+[
+  {
+    "color": "e11d21",
+    "description": "Critical priority, needs immediate response",
+    "name": "priority: critical"
+  },
+  {
+    "color": "eb6420",
+    "description": "High priority, needs immediate response",
+    "name": "priority: high"
+  },
+  { "color": "009800", "description": "", "name": "priority: low" },
+  { "color": "fbca04", "description": "", "name": "priority: medium" },
+  { "color": "000000", "description": "", "name": "status: abandoned" },
+  { "color": "009800", "description": "", "name": "status: accepted" },
+  { "color": "bfe5bf", "description": "", "name": "status: available" },
+  { "color": "e11d21", "description": "", "name": "status: blocked" },
+  {
+    "color": "006b75",
+    "description": "This has been addressed in a branch and will be scheduled for release in the assigned milestone.",
+    "name": "status: completed"
+  },
+  {
+    "color": "cccccc",
+    "description": "Currently being developed for a future release.",
+    "name": "status: in progress️"
+  },
+  {
+    "color": "e11d21",
+    "description": "Work has stopped. There may be one or more blockers or needs more information.",
+    "name": "status: on hold"
+  },
+  { "color": "fef2c0", "description": "", "name": "status: pending" },
+  { "color": "fbca04", "description": "", "name": "status: review needed" },
+  {
+    "color": "fbca04",
+    "description": "App is not working correctly.",
+    "name": "type: bug"
+  },
+  {
+    "color": "e99695",
+    "description": "Discussing usage, best practices, questions, etc.",
+    "name": "type: discussion"
+  },
+  {
+    "color": "6addf7",
+    "description": "Related to improving documentation and the wiki.",
+    "name": "type: documentation"
+  },
+  {
+    "color": "84b6eb",
+    "description": "A new feature suggestion or improvement upon an existing feature.",
+    "name": "type: enhancement"
+  },
+  { "color": "1d76db", "description": "", "name": "type: feature" },
+  { "color": "fbca04", "description": "", "name": "type: maintenance" },
+  { "color": "cc317c", "description": "", "name": "type: question" },
+  { "color": "7037C4", "description": "", "name": "type: release" },
+  {
+    "color": "1d76db",
+    "description": "Questions, concerns, or suggestions for improving the security of the app.",
+    "name": "type: security"
+  },
+  {
+    "color": "5319e7",
+    "description": "Wayfinder map",
+    "name": "wayfinder:map"
+  },
+  {
+    "color": "fbca04",
+    "description": "Wayfinder prototype",
+    "name": "wayfinder:prototype"
+  },
+  {
+    "color": "1d76db",
+    "description": "Wayfinder research",
+    "name": "wayfinder:research"
+  },
+  {
+    "color": "e99695",
+    "description": "Wayfinder HITL grilling",
+    "name": "wayfinder:grilling"
+  },
+  {
+    "color": "6f42c1",
+    "description": "Wayfinder task",
+    "name": "wayfinder:task"
+  },
+  {
+    "color": "1D76DB",
+    "description": "Fully specified and ready for agent implementation",
+    "name": "ready-for-agent"
+  },
+  {
+    "color": "d93f0b",
+    "description": "Changes are required before approval",
+    "name": "changes-requested"
+  },
+  {
+    "color": "1d76db",
+    "description": "Pull request is ready for QA",
+    "name": "qa"
+  },
+  {
+    "color": "5319e7",
+    "description": "Pull request is under review",
+    "name": "review"
+  },
+  {
+    "color": "0e8a16",
+    "description": "Approved pull request queued for merge",
+    "name": "merge-queue"
+  },
+  {
+    "color": "e11d21",
+    "description": "QA found a blocking problem",
+    "name": "qa-failed"
+  },
+  { "color": "e11d21", "description": "Work is blocked", "name": "blocked" },
+  {
+    "color": "d73a4a",
+    "description": "A defect or incorrect behavior",
+    "name": "bug"
+  },
+  {
+    "color": "b60205",
+    "description": "Must not be merged",
+    "name": "do-not-merge"
+  },
+  {
+    "color": "84b6eb",
+    "description": "A new capability or improvement",
+    "name": "feature"
+  },
+  {
+    "color": "cfd3d7",
+    "description": "Internal restructuring without behavior change",
+    "name": "refactor"
+  },
+  {
+    "color": "b60205",
+    "description": "Security-related change",
+    "name": "security"
+  },
+  {
+    "color": "0366d6",
+    "description": "Dependency update or maintenance",
+    "name": "dependencies"
+  },
+  {
+    "color": "0075ca",
+    "description": "Documentation change",
+    "name": "documentation"
+  },
+  {
+    "color": "fbca04",
+    "description": "Manual QA is required",
+    "name": "needs-qa"
+  },
+  {
+    "color": "c5def5",
+    "description": "Manual QA is intentionally skipped",
+    "name": "skip-qa"
+  },
+  { "color": "0e8a16", "description": "QA has passed", "name": "qa-approved" },
+  {
+    "color": "5319e7",
+    "description": "Author completed the QA exception",
+    "name": "qa-self-verified"
+  },
+  {
+    "color": "c5def5",
+    "description": "Automation has claimed this work",
+    "name": "in-progress"
+  },
+  { "color": "0e5a16", "description": "Low urgency", "name": "priority-low" },
+  {
+    "color": "fbca04",
+    "description": "Medium urgency",
+    "name": "priority-medium"
+  },
+  {
+    "color": "e11d21",
+    "description": "Extreme urgency",
+    "name": "priority-extreme"
+  },
+  { "color": "eb6420", "description": "High urgency", "name": "priority-high" },
+  { "color": "0e8a16", "description": "Low blast radius", "name": "risk-low" },
+  {
+    "color": "fbca04",
+    "description": "Medium blast radius",
+    "name": "risk-medium"
+  },
+  {
+    "color": "e11d21",
+    "description": "High blast radius",
+    "name": "risk-high"
+  },
+  {
+    "color": "0E8A16",
+    "description": "Run the Playwright visual gate on this PR (ci.yml e2e escape hatch)",
+    "name": "needs-e2e"
+  },
+  {
+    "color": "5319E7",
+    "description": "Declares an intended pixel change so the loop re-records baselines instead of failing the diff",
+    "name": "visual-change-expected"
+  }
+]
