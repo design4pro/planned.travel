@@ -77,6 +77,18 @@ const clockPin = { [SERVER_TODAY_HEADER]: BASELINE_DAY }
  */
 export default defineConfig({
   testDir: './e2e',
+  /**
+   * `.spec.ts` and nothing else, because `e2e/` is no longer only Playwright's.
+   *
+   * The console policy is pure - it grades a string against a table and imports
+   * nothing - so it is tested by the `tooling` vitest project, from a file that
+   * lives beside the helper it covers. Playwright's default `testMatch` claims
+   * `*.test.ts` as well, so it collected that file, tried to run vitest's
+   * `describe` inside its own runner, and failed the whole suite before a single
+   * browser had started. The `setup` project carries its own `testMatch` for
+   * `auth.setup.ts` and is unaffected by this.
+   */
+  testMatch: '**/*.spec.ts',
   snapshotDir: './e2e/__screenshots__',
   /**
    * `{platform}` is in the path because font rasterisation is not portable.
