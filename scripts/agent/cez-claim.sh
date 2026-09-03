@@ -45,8 +45,9 @@ case "$STATUS" in
 esac
 OPEN_BLOCKERS=$(jq -r '[.blockedBy.nodes[]? | select(.state == "OPEN") | "#\(.number)"] | join(", ")' <<<"$ISSUE")
 [ -z "$OPEN_BLOCKERS" ] || refuse "#$N is blocked by open $OPEN_BLOCKERS"
+# The prefix is inlined: `gh pr list --jq` takes one argument and has no `--arg` (run 1276caf4).
 OPEN_PR=$(gh pr list --repo "$REPO" --state open --json number,headRefName \
-  --jq --arg p "claude/issue-$N-" '[.[] | select(.headRefName | startswith($p)) | "#\(.number)"] | join(", ")')
+  --jq "[.[] | select(.headRefName | startswith(\"claude/issue-$N-\")) | \"#\\(.number)\"] | join(\", \")")
 [ -z "$OPEN_PR" ] || refuse "#$N already has an open agent PR ($OPEN_PR); review or close it first"
 
 mkdir -p "$AGENT_DIR"
