@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Dev-server port for one worktree, from the pool Playwright reserves for automation
-# (3010-3020, playwright.config.ts). Two runs on the host never share a port because the
-# lock lives in the main checkout (cez-lib.sh: LOCK_ROOT) and a port that something else
-# already listens on is skipped even without a lock.
+# (3030-3040, playwright.config.ts; 3010-3020 belongs to money-tracker on this host). Two runs
+# on the host never share a port because the lock lives in the main checkout (cez-lib.sh:
+# LOCK_ROOT) and a port that something else already listens on is skipped even without a lock.
 #
 #   scripts/agent/cez-port.sh acquire   # prints the port, pins it in .agent/port
 #   scripts/agent/cez-port.sh release   # frees the pinned port
@@ -10,8 +10,8 @@
 set -euo pipefail
 . "$(dirname "$0")/cez-lib.sh"
 
-POOL_FROM=3010
-POOL_TO=3020
+POOL_FROM=3030
+POOL_TO=3040
 PIN="$AGENT_DIR/port"
 
 listening() { lsof -nP -iTCP:"$1" -sTCP:LISTEN > /dev/null 2>&1; }

@@ -110,10 +110,11 @@ fi
 # ── Port ─────────────────────────────────────────────────────────────────────
 #
 # 3000 is the developer's port and `pnpm dev` hardcodes it, so a second worktree
-# on the same machine cannot have it. 3010-3020 is off limits in the other
+# on the same machine cannot have it. 3030-3040 is off limits in the other
 # direction: playwright.config.ts refuses to run against anything outside that
-# range, precisely so an automated round cannot photograph another branch's app.
-# That leaves 3001-3009 for parallel worktrees.
+# range, precisely so an automated round cannot photograph another branch's app,
+# and 3010-3020 belongs to money-tracker on the same host. That leaves 3001-3009
+# for parallel worktrees.
 
 port_busy() { (exec 3<>"/dev/tcp/127.0.0.1/$1") >/dev/null 2>&1; }
 
@@ -391,7 +392,7 @@ fi
 
 # ── 7. Demo workspace ────────────────────────────────────────────────────────
 #
-# --url is not optional. Without it seed.mjs probes 3000-3005 then 3010-3015 and
+# --url is not optional. Without it seed.mjs probes 3000-3005 then 3030-3035 and
 # writes to the first origin that answers, which on a machine running several
 # worktrees is a write to somebody else's database.
 

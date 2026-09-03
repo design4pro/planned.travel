@@ -9,7 +9,7 @@
 # never needs it.
 #
 #   bash scripts/agent/setup-e2e.sh
-#   PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm e2e [--project=chromium] [-g <spec>]
+#   PLAYWRIGHT_BASE_URL=http://127.0.0.1:3030 pnpm e2e [--project=chromium] [-g <spec>]
 #
 # Basemap: taken from the operator cache (${PLANNED_TRAVEL_CACHE:-~/.cache/planned-travel},
 # filled once per host by scripts/agent/fetch-basemap.sh) when .e2e-tiles/ is empty. Only
@@ -28,13 +28,16 @@
 # operator's cache (scripts/agent/fetch-basemap.sh), so a worktree rarely
 # downloads.
 #
-# The dev server runs on :3010 — the reserved automation range playwright.config.ts
+# The dev server runs on :3030 — the reserved automation range playwright.config.ts
 # insists on outside CI — and inside the container's own network namespace, so
 # parallel sandboxes never collide on it.
 set -euo pipefail
 
-PORT="${E2E_PORT:-3010}"
-BASE_URL="http://localhost:${PORT}"
+PORT="${E2E_PORT:-3030}"
+# 127.0.0.1, never localhost: the server binds v4 only, and on this host another checkout's
+# `vite dev` sits on [::1]:3010, which "localhost" also resolves to. Run 2272b8e2 saw that server
+# answer the readiness probe before its own was up, and the seed then talked to the wrong app.
+BASE_URL="http://127.0.0.1:${PORT}"
 
 # --if-needed: fix-loop re-validation reuses the live dev server — HMR/SSR
 # reload picks up the fix commits, so a restart buys nothing.
@@ -171,6 +174,13 @@ for _ in $(seq 1 60); do
   if curl --silent --fail --output /dev/null "${BASE_URL}/"; then
     echo "dev server up"
     break
+  fi
+  # --strictPort makes vite exit when 127.0.0.1:PORT is already taken. With the process gone
+  # there is nothing to wait for, and whatever answers on that port next is not this checkout.
+  if ! kill -0 "$(cat .agent/dev-server.pid)" 2>/dev/null; then
+    echo "ERROR: dev server exited before answering on :${PORT}; is the port held by another checkout?" >&2
+    tail -50 dev-server.log >&2
+    exit 1
   fi
   sleep 2
 done

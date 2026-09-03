@@ -6,5 +6,5 @@ set -euo pipefail
 
 PORT=$(bash "$(dirname "$0")/cez-port.sh" current) || die "no dev server port pinned; run cez-setup.sh first"
 heartbeat
-clean_env -- node scripts/seed/seed.mjs --force --url "http://localhost:$PORT"
-clean_env -- node scripts/seed/verify.mjs --url "http://localhost:$PORT"
+clean_env -- node scripts/seed/seed.mjs --force --url "http://127.0.0.1:$PORT"
+clean_env -- node scripts/seed/verify.mjs --url "http://127.0.0.1:$PORT"
