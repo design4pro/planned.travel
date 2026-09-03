@@ -56,10 +56,10 @@ was 2590 lines and the five modules that replaced it are 1242.
 **2. The blind A/B critic is the whole of the visual judgement.** `scripts/visual/capture.mjs` was
 already the mechanism SPEC §8.814 names. It is now the only one.
 
-**3. Playwright keeps twenty declarations, and the bar for one is explicit:** a test earns its place
+**3. Playwright keeps nineteen declarations, and the bar for one is explicit:** a test earns its place
 in `e2e/` only if its failure mode cannot be produced in a lower layer. What survives is routing,
 sessions, hydration, WebGL, real hit-testing, sequential focus and the request pipeline. Fifty
-declarations became fourteen in `journeys.spec.ts`, plus three in `trips-core.spec.ts` and three
+declarations became fourteen in `journeys.spec.ts`, plus three in `trips-core.spec.ts` and two
 browser-free HTTP claims in `csrf.spec.ts`.
 
 **4. The console is the net the pixels used to be.** Every journey attaches `watchConsole()` before
@@ -103,11 +103,11 @@ server function.
 
 ### The cost, honestly
 
-|                   | Before                                             | After                                                                                                         |
-| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `e2e` runner time | 12 x ~5.0 min = **~60 min**                        | 2 shards, **~10 min** (estimated from 2.2 min wall at two local workers; not yet measured on a 2-vCPU runner) |
-| Trigger           | push to `develop`/`main`, or the `needs-e2e` label | **every PR**                                                                                                  |
-| R2 credentials    | required; the job skipped without them             | none; runs on a fork                                                                                          |
+|                   | Before                                             | After                                                                                                                                                                                 |
+| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e` runner time | 12 x ~5.0 min = **~60 min**                        | 2 shards, **~10 min** (the unsharded suite is 4.4 and 4.1 min wall over two consecutive local runs at one worker, which is what a CI shard runs; not yet measured on a 2-vCPU runner) |
+| Trigger           | push to `develop`/`main`, or the `needs-e2e` label | **every PR**                                                                                                                                                                          |
+| R2 credentials    | required; the job skipped without them             | none; runs on a fork                                                                                                                                                                  |
 
 Per event that is roughly an 85% cut. **The saving is spent on frequency.** At ~6 PR events per
 merge, 6 x ~11 min ≈ 66 min against today's 62. The aggregate is about flat. What changes is the
@@ -126,9 +126,12 @@ feedback loop, not the bill, and pretending otherwise would be dishonest.
   lands over the "Trips" destination at 0,595, 98x64, where it takes the press. Hiding it is no
   longer tidiness for a photograph; it is what keeps the tab bar pressable. The finding is now
   asserted from the product's side, inside `a finger reaches the same facts on a phone`.
-- **`workers: isCI ? 1` is not re-measured and stays.** The starvation it answers (PR #84, run
-  33155138232: hydration outrunning a 10 s action timeout on 17 tests, 12 flaky) was contention for
-  one software WebGL renderer. Fewer tests do not relieve contention between two browsers.
+- **`workers: isCI ? 1` is not re-measured and stays, and the local evidence now supports it
+  directly.** On a 16-core laptop, `a member reaches every screen behind the session` runs in 23 s
+  alone on mobile-safari and 186 s at `--workers=2` - past its own 180 s budget, from one extra
+  worker with fifteen cores idle. The contention is for the single dev server's SSR and the single
+  software WebGL renderer, which is what PR #84 (run 33155138232: hydration outrunning a 10 s action
+  timeout on 17 tests, 12 flaky) measured on the 2-vCPU runner. Fewer tests do not relieve it.
 
 ### What the thinner layer found on its first full run
 
@@ -138,6 +141,12 @@ baselines gone that warning landed in whichever journey ran first and failed it.
 nothing in the repository registered one - and it is fixed in the same branch (`src/start.ts`,
 `e2e/csrf.spec.ts`). A suite that grades what the engine says finds things a suite that compares
 pixels does not.
+
+The same relay then bit the fix's own test: a same-origin probe to an invented server-function id
+reaches dispatch, the Worker throws, and the throw lands in whichever journey was open. That half of
+the claim is asserted by `trips-core.spec.ts` instead, which writes through a server function on our
+own origin and reads it back from a second page - and the reasoning is written into
+`e2e/csrf.spec.ts` so nobody adds the probe back.
 
 ### Documentation
 

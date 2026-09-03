@@ -255,7 +255,7 @@ quietly.
 ### Measured, at HEAD
 
 `e2e/journeys.spec.ts` is 1,568 lines and 67 KB, and carries fourteen `test()` declarations.
-`e2e/trips-core.spec.ts` carries three and `e2e/csrf.spec.ts` three, so `pnpm e2e` is twenty
+`e2e/trips-core.spec.ts` carries three and `e2e/csrf.spec.ts` two, so `pnpm e2e` is nineteen
 declarations across two browser projects plus the `setup` test. Every module still to be built
 would otherwise append to the first of those files.
 

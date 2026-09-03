@@ -20,9 +20,23 @@ import { expect, test } from '@playwright/test'
  * `/_serverFn/probe` names no real server function on purpose. What is being asserted is *where the
  * middleware refuses*, not what any particular handler answers — so the path only has to be one the
  * middleware classifies as `serverFn`, and using a real one would tie this file to a function id
- * that means nothing to the claim. The same-origin half therefore asserts "not 403" rather than a
- * status: the difference between the two halves is the origin and nothing else, which is the whole
- * of what the middleware promises.
+ * that means nothing to the claim. A refusal happens before dispatch, so the invented id is never
+ * resolved and nothing is logged.
+ *
+ * **The other half of the promise — that our own origin still gets through — is not asserted here,
+ * and the omission is deliberate.** A same-origin POST to an invented id *does* reach dispatch, the
+ * Worker throws `Invalid server function ID`, and in dev `@tanstack/devtools-vite` relays that into
+ * whichever browser page happens to be open — reddening a parallel journey on a console error that
+ * this file caused. Measured: one run, `the click surface never takes the reader's input` failed on
+ * exactly that message. Tolerating it would mean listing an application error in
+ * `TOLERATED_CONSOLE_WARNINGS`, which is the one thing that table may never hold.
+ *
+ * What asserts it instead is the suite. `trips-core.spec.ts` writes through a server function on our
+ * own origin and reads the write back from a second page — a middleware that refused us would fail
+ * `a trip reopens on the tab it was left on` and `the memory outlives the tab that made it` before
+ * it failed anything here. A synthetic probe would be a third copy of a claim two journeys already
+ * make end to end, bought with noise. It moves back into this file, as a real assertion against a
+ * real handler, when the workerd layer gives it a `SELF.fetch()` with no dev server behind it.
  */
 test.describe('the CSRF boundary', () => {
   test.skip(
@@ -62,17 +76,6 @@ test.describe('the CSRF boundary', () => {
       bare.status(),
       'a request that proves no origin must not reach a server function',
     ).toBe(403)
-  })
-
-  test('lets a same-origin POST through', async ({ request, baseURL }) => {
-    const response = await request.post('/_serverFn/probe', {
-      headers: { origin: baseURL ?? 'http://localhost:3000' },
-      failOnStatusCode: false,
-    })
-    expect(
-      response.status(),
-      'the middleware must let our own page call its own server functions',
-    ).not.toBe(403)
   })
 
   test('leaves API routes and document navigation alone', async ({

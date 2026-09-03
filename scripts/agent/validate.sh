@@ -152,6 +152,16 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # inside what one VM sustains without the machine-load TIMEOUT flakes.
     # Override with E2E_WORKERS to measure a different knee.
     #
+    # That knee is lower than core count suggests, and it is not CPU. Measured on
+    # a 16-core laptop against the post-ADR-0016 suite: `a member reaches every
+    # screen behind the session` takes 23 s alone on mobile-safari and 186 s at
+    # --workers=2, blowing its own 180 s budget - an 8x slowdown from one extra
+    # worker on a machine with fifteen idle cores. The contention is for the one
+    # dev server's SSR and the one software WebGL renderer, which is the same
+    # thing PR #84 measured on the 2-vCPU runner. Two consecutive full runs at
+    # --workers=1 were green in 4.4 and 4.1 min. So a TIMEOUT here is about the
+    # worker count far more often than it is about the diff.
+    #
     # One `--reporter`, comma-separated: Playwright declares the option as
     # `--reporter <reporter>` ("Reporter to use, comma-separated"), so a
     # repeated flag is not a list — the last occurrence wins and the rest are
@@ -163,7 +173,7 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # them are load-bearing here: the port guard is `if (!isCI && …)`, which its own comment calls
     # "a hard stop rather than a warning" after four automated rounds photographed the wrong
     # server — and this rung is exactly such a round — while `globalTimeout: isCI ? 10 * 60_000 :
-    # undefined` is sized, per its comment, for one of ci.yml's twelve shards, where this runs the
+    # undefined` is sized, per its comment, for one of ci.yml's two shards, where this runs the
     # whole unsharded suite. (CI would also flip `workers` and `reporter`, which the flags on the
     # line below happen to override today and would stop overriding the day either one moves.) A
     # retry flag buys the tolerance and nothing else.
@@ -172,7 +182,8 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # deliberately intolerant run. See issue #143: a dev server that dropped four connections
     # reddened a whole iteration and pointed the auditor at unrelated issues. Measured over the
     # recorded runs, 101 of 108 failing specs were infrastructure (ECONNREFUSED, timeouts, `Target
-    # crashed`) and 7 were pixel diffs, and each red rung costs a fix session plus a re-run - for a
+    # crashed`) and 7 were pixel diffs - a category ADR 0016 has since abolished, which leaves the
+    # infrastructure share at 100%. Each red rung costs a fix session plus a re-run - for a
     # spec that passes when asked again. The JSON reporter marks a spec `ok` when its last attempt
     # passed, so a retried-green spec never reaches `e2e.failed` below, and a spec red twice in a
     # row still does. Real regressions pay one extra attempt; flakes stop spending the fix budget.

@@ -256,7 +256,7 @@ jobs:
           if-no-files-found: ignore
 
   # The end-to-end journeys: fourteen declarations in `journeys.spec.ts`, three
-  # in `trips-core.spec.ts` and three browser-free HTTP claims in `csrf.spec.ts`,
+  # in `trips-core.spec.ts` and two browser-free HTTP claims in `csrf.spec.ts`,
   # over two browser projects. Not a visual gate
   # any more - no screenshot is compared anywhere (ADR 0016). What a run asserts
   # is that every screen answers, renders, hydrates, says nothing in the console,
