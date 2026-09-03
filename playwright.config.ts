@@ -112,7 +112,17 @@ export default defineConfig({
   // until somebody times it. Parallelism in CI comes from the shards in
   // ci.yml; locally Playwright's default (half the cores) applies.
   workers: isCI ? 1 : undefined,
-  timeout: 30_000,
+  // Doubled under CI, because the runner is about three times slower than the
+  // machine this number was chosen on and the budget was sized on the wrong one.
+  // Measured: `the click surface never takes the reader's input` is 10.7 s in
+  // chromium locally and blew the 30 s budget on all three attempts on the
+  // 2-vCPU runner (run 33804783700) — three identical failures is a budget, not
+  // a flake. The penalty is the same everywhere: the whole suite is 4.1 min
+  // locally at one worker and ~7-8 min a shard there, on software WebGL. Raised
+  // uniformly rather than per test, so the next atlas journey to sit near the
+  // edge does not have to discover this again; `globalTimeout` still bounds the
+  // shard, and a genuinely hung test still fails, one minute later.
+  timeout: isCI ? 60_000 : 30_000,
   // Per CI shard (ci.yml splits the suite two ways). Measured on the 2-vCPU
   // runner: 6m41s of journeys on shard 1 and over 8 min on shard 2, against the
   // ~3 min a local run at two workers suggested. 15 min leaves a retry-heavy
