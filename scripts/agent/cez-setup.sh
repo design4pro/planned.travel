@@ -18,11 +18,22 @@ for arg in "$@"; do
   esac
 done
 
-on_error() {
-  warn "setup failed; releasing the port"
+# Nothing runs after a failed command step, so this step closes its own state: release the
+# port and hand the issue back (the claim put it at `status: in-progress`). An EXIT trap, not
+# ERR: most of the work runs inside clean_env, and bash fires ERR inside a function only under
+# errtrace - run 00e450a5 failed in setup-e2e.sh and left #98 in progress with the port held.
+on_exit() {
+  local rc=$? n
+  [ "$rc" -eq 0 ] && return 0
+  warn "setup failed (exit $rc); releasing the port and handing the issue back"
   bash "$(dirname "$0")/cez-port.sh" release || true
+  n=$(issue_number 2>/dev/null || true)
+  [ -n "$n" ] || return 0
+  swap_status "$n" "status: needs-human" || true
+  printf 'Setup failed in run `%s` before the agent started: the host or the dependencies, not the ticket. The run output in the cezar cockpit says which step.\n\nFix the cause and add the `run:` label again.\n' "$RUN8" \
+    | comment_upsert "$n" "<!-- agent-result: needs-human -->" || true
 }
-trap on_error ERR
+trap on_exit EXIT
 
 mkdir -p "$AGENT_DIR"
 

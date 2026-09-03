@@ -168,7 +168,7 @@ export function ghWorld(issue: number) {
     writeFileSync(join(clone, '.agent', rel), content)
   }
 
-  return { root, clone, git, setIssue, run, pushOrphan, agentFile }
+  return { root, clone, bin, git, setIssue, run, pushOrphan, agentFile }
 }
 
 export type World = ReturnType<typeof ghWorld>
