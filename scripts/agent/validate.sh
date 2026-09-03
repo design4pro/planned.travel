@@ -138,7 +138,7 @@ E2E_FAILED_JSON="[]"
 INFRA=""
 # The origin the suite is pointed at, and the one the probe below asks about — the same server,
 # named once so the two can never drift into disagreeing about what "up" means.
-E2E_BASE_URL="http://localhost:${E2E_PORT:-3010}"
+E2E_BASE_URL="http://127.0.0.1:${E2E_PORT:-3010}"
 if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
   run_step "e2e-env" bash "$(dirname "$0")/setup-e2e.sh" --if-needed
   # setup-e2e.sh returns only once the dev server answers, and starting it runs

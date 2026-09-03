@@ -384,7 +384,7 @@ describe('the dev-server probe', () => {
     expect(run.verdict.ok).toBe(false)
     expect(run.verdict.infra).toMatch(/stopped answering during e2e:chromium/)
     // Named so a reader of the verdict alone knows which server is meant.
-    expect(run.verdict.infra).toContain('http://localhost:3010')
+    expect(run.verdict.infra).toContain('http://127.0.0.1:3010')
     expect(run.stderr).toContain('INFRA:')
   })
 
@@ -437,7 +437,7 @@ describe('the Playwright reporter declaration', () => {
     expect(run.pwArgs).toContain('--retries=1')
     expect(run.pwEnv).toEqual({
       PLAYWRIGHT_JSON_OUTPUT_NAME: 'test-results/results.json',
-      PLAYWRIGHT_BASE_URL: 'http://localhost:3010',
+      PLAYWRIGHT_BASE_URL: 'http://127.0.0.1:3010',
       CI: '',
     })
   })
