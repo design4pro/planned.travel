@@ -1,0 +1,115 @@
+/**
+ * Which console output fails a run, and which the browser is merely muttering.
+ *
+ * Split out of `shoot.ts` so it can be exercised without a browser: nothing here
+ * imports Playwright, so the tolerance table and the classifier are reachable
+ * from the vitest `tooling` project. `shoot.ts` re-exports the whole surface, so
+ * every existing caller is unchanged.
+ */
+
+/** Which console output fails the run, and which was deliberately let through. */
+export type ConsoleReport = {
+  readonly fatal: ReadonlyArray<string>
+  readonly tolerated: ReadonlyArray<string>
+}
+
+export type ConsoleVerdict = 'fatal' | 'tolerated' | 'ignored'
+
+/** One narrowly-scoped exception to "a warning fails the run". */
+export type ToleratedConsoleWarning = {
+  /** Why this is the browser talking rather than the app. */
+  readonly why: string
+  readonly match: RegExp
+  /** Tolerated only on a route that declares a live map. */
+  readonly onlyWithLiveMap: boolean
+}
+
+/**
+ * The complete list of console warnings the gate does not fail on.
+ *
+ * docs/SPEC.md §2 asks for zero console errors *or warnings*, and that bar still
+ * bites. Everything below stays fatal, on every route, with no exception:
+ *
+ * - every `pageerror`, which is an uncaught exception;
+ * - every `console.error`, MapLibre's and React's included;
+ * - every `console.assert`;
+ * - every `console.warn` not matched by an entry in this list — which is every
+ *   React hydration and key warning, every deprecation notice, every
+ *   failed-resource warning, and anything the app writes itself.
+ *
+ * Message types the gate has never read — `log`, `info`, `debug`, `trace` and
+ * the rest — stay ignored, as before.
+ *
+ * Neither entry is an app warning, and neither can become one: both patterns are
+ * anchored at the start of the message, so a warning the app writes itself is
+ * fatal even when it quotes one of these word for word. A React hydration report
+ * cannot reach this list at all — React 19 surfaces a mismatch as an uncaught
+ * error through `window.reportError` and, in development, as a `console.error`,
+ * and `classifyConsoleMessage()` answers `fatal` for both before it is ever
+ * consulted. A warning-only tolerance is structurally incapable of swallowing one.
+ *
+ * **The graphics-driver advisory.** Headless Chromium paints WebGL through a
+ * software rasteriser, and its GL layer reports — by its own fields, source
+ * `OpenGL`, type `Performance`, severity `High` — that reading the drawing buffer
+ * back to composite it stalled the GPU. It is a driver advisory about a code path
+ * we do not own, it does not exist on hardware, and only a page with a WebGL
+ * canvas can produce it, which is why it is scoped to `map: true` routes and stays
+ * fatal everywhere else. The per-context pointer in the prefix changes every run,
+ * so the pattern is anchored on the shape and never on the handle.
+ *
+ * **The unused-preload advisory.** The engine's own resource loader, a few seconds
+ * after the load event, about a resource the *dev server* handed the parser. It
+ * failed `register renders in dark` on mobile WebKit in one full run of four, and
+ * what decided which run was how long the page happened to stay open — the
+ * emission window is fixed and the app on screen has no part in it. Reproduced
+ * verbatim in both engines against this origin: WebKit ends the message "Please
+ * make sure it wasn't preloaded for nothing." and Chromium "Please make sure it
+ * has an appropriate `as` value and it is preloaded intentionally.", so the
+ * pattern stops at the sentence they share.
+ *
+ * Its scope is the URL, and the URL is what makes the tolerance narrow rather
+ * than convenient. The resource has to be served by a development server —
+ * `localhost` or a loopback address with a port — under a path only `vite dev`
+ * publishes: `/src/…` is the source tree, anything under `/@` is one of the dev
+ * server's own namespaces (`/@vite/`, `/@id/`, `/@fs/`, `/@tanstack-start/`,
+ * `/@react-refresh`), and `/node_modules/…` is an unbundled dependency. The deployed Worker serves none of them; it serves hashed
+ * `/assets/*` instead, and the identical advisory about an `/assets/…` URL — or
+ * about any host that is not the loopback — stays fatal, because there it would be
+ * a real preload the built application asked for and did not use. Both halves are
+ * asserted in `the gate itself`.
+ */
+export const TOLERATED_CONSOLE_WARNINGS: ReadonlyArray<ToleratedConsoleWarning> =
+  [
+    {
+      why: "headless Chromium's software rasteriser reporting that compositing the WebGL canvas stalled on a pixel readback",
+      match:
+        /^\[\.WebGL-0x[0-9a-f]+\]GL Driver Message \(OpenGL, Performance, /,
+      onlyWithLiveMap: true,
+    },
+    {
+      why: "the browser's resource loader reporting that a Vite dev-server URL was speculatively preloaded and not used — a path that exists only under `vite dev`, and a warning whose arrival depends on how long the page stayed open rather than on what the page rendered",
+      match:
+        /^The resource https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):\d+\/(?:src\/|node_modules\/|@)\S* was preloaded using link preload but not used within a few seconds from the window's load event\./,
+      onlyWithLiveMap: false,
+    },
+  ]
+
+/** Where one console message lands: fails the run, is let through, or is noise. */
+export function classifyConsoleMessage(message: {
+  readonly type: string
+  readonly text: string
+  readonly liveMap: boolean
+}): ConsoleVerdict {
+  if (message.type === 'error' || message.type === 'assert') {
+    return 'fatal'
+  }
+  if (message.type !== 'warning') {
+    return 'ignored'
+  }
+  const tolerated = TOLERATED_CONSOLE_WARNINGS.some(
+    (rule) =>
+      (rule.onlyWithLiveMap ? message.liveMap : true) &&
+      rule.match.test(message.text),
+  )
+  return tolerated ? 'tolerated' : 'fatal'
+}

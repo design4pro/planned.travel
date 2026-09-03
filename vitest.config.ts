@@ -73,7 +73,15 @@ export default defineConfig({
           name: 'tooling',
           environment: 'node',
           globals: false,
-          include: ['scripts/**/__tests__/*.test.{ts,mjs}'],
+          include: [
+            'scripts/**/__tests__/*.test.{ts,mjs}',
+            // The e2e helpers that carry policy rather than plumbing. The console
+            // classifier decides which browser output fails a run, is pure, and
+            // used to be graded from inside a Playwright spec — a browser launch
+            // to assert a string against a regular expression. `console-policy.ts`
+            // imports nothing, so it runs here for free.
+            'e2e/helpers/__tests__/*.test.ts',
+          ],
           restoreMocks: true,
         },
       },
