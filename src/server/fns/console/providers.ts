@@ -144,8 +144,13 @@ function meteredPanel(
  * Every provider the console lists, integrated or not, with its counters and ceiling.
  *
  * `asOf` is returned rather than read from the browser's clock, and that is a hard requirement
- * rather than tidiness: `auditServerClock` in `e2e/visual.spec.ts` runs over every console route
- * and fails a screen whose output depends on when it was rendered.
+ * rather than tidiness: a screen whose output depends on when it was rendered is one nobody can
+ * screenshot for a bug report, and one whose numbers cannot be compared between two loads.
+ *
+ * `auditServerClock` used to enforce this from the e2e suite, over every console route. It went
+ * with the pixel baselines (ADR 0016) and nothing enforces it now - `-lib/providers.ts` takes its
+ * clock as an argument and its unit tests pin the arithmetic, but nothing stops a component
+ * reaching for `new Date()`. Keep the rule by reading it here.
  */
 export async function readProviders(): Promise<ProvidersView> {
   const call = await openConsoleCall({ provider: ['read'] })

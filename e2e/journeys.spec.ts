@@ -1,30 +1,31 @@
 import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
 import {
-  APP_ROUTES,
   CONSOLE_ACCOUNT_NAME,
   CONSOLE_ROUTES,
-  DEMO_EMAIL,
-  FROZEN_NOW,
   IMPERSONATION_BAR,
   IMPERSONATION_TARGET_NAME,
-  PUBLIC_ROUTES,
-  THEMES,
-  applyTheme,
   beginImpersonation,
   consoleAccountPath,
   endImpersonationFixture,
   hasPlatformConsole,
-  hasSession,
+} from './helpers/admin.ts'
+import { visit, watchConsole } from './helpers/console.ts'
+import {
+  APP_ROUTES,
+  PUBLIC_ROUTES,
+  THEMES,
+  applyTheme,
+} from './helpers/routes.ts'
+import type { RouteCase, Theme } from './helpers/routes.ts'
+import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
+import {
+  FROZEN_NOW,
   readCaptureState,
   readMapCensus,
   settle,
   settleMap,
-  useSession,
-  visit,
-  watchConsole,
-} from './helpers/shoot.ts'
-import type { RouteCase, Theme } from './helpers/shoot.ts'
+} from './helpers/settle.ts'
 
 /**
  * The critical journeys.
@@ -46,6 +47,14 @@ import type { RouteCase, Theme } from './helpers/shoot.ts'
  * console watcher, which turns a React hydration error or an uncaught exception
  * after paint into a red run, and `settle()`, which will not let a journey
  * assert against a document that has not finished arriving.
+ *
+ * The harness behind them is five modules under `./helpers`, one seam each:
+ * `session.ts` (the one sign-in a run gets, and the language pin), `routes.ts`
+ * (the screens, the `RouteCase` shape, the theme), `settle.ts` (paint timing,
+ * the browser's clock, the live WebGL map), `console.ts` (the visit, and the
+ * reading of what the engine said while it settled) and `admin.ts` (the platform
+ * console and the impersonated session - the two fixtures no product surface can
+ * mint for itself). `console-policy.ts` is pure and graded by vitest.
  */
 
 /**
@@ -1084,7 +1093,7 @@ test.describe('authenticated routes', () => {
 /**
  * The message a helper failed with, or null when it did not fail.
  *
- * Several of the gate's own mechanisms exist in order to *fail* — a map that
+ * Several of the harness's own mechanisms exist in order to *fail* — a map that
  * never finishes drawing, a route table that disagrees with the page — and a spec
  * proving one of them fails loudly has to catch that failure rather than throw
  * it. Returning the message keeps the assertion about the message, which is the
@@ -1209,13 +1218,12 @@ const LOOPBACK_HOSTS: ReadonlyArray<string> = [
 ]
 
 /**
- * The gate's own tables and its own mechanics.
+ * The harness's own mechanics.
  *
- * The table specs are pure — no browser, no server — and cover the lists that
- * decide what the gate excludes, tolerates and watches for. The rest drive the
- * capture path itself against a document built for the purpose. A mistake in any
- * of them is invisible in a green run, which is the only reason they are asserted
- * rather than reviewed.
+ * These drive the settle path against a document built for the purpose, rather
+ * than against the product. A mistake in any of them is invisible in a green run
+ * - a map wait that never waits, a console watch that grades nothing - which is
+ * the only reason they are asserted rather than reviewed.
  */
 /**
  * The platform console.
@@ -1365,7 +1373,7 @@ test.describe('the impersonation warning bar', () => {
   })
 })
 
-test.describe('the gate itself', () => {
+test.describe('the harness itself', () => {
   /**
    * The classifier is wired to the page, not just correct in isolation.
    *

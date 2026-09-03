@@ -1,13 +1,8 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import {
-  DEMO_EMAIL,
-  hasSession,
-  useSession,
-  visit,
-  watchConsole,
-} from './helpers/shoot.ts'
-import type { RouteCase } from './helpers/shoot.ts'
+import { visit, watchConsole } from './helpers/console.ts'
+import type { RouteCase } from './helpers/routes.ts'
+import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
 
 /**
  * The trips-core plan's own end-to-end gate (`docs/plans/01-trips-core.md`).

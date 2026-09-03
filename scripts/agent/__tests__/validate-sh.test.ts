@@ -76,8 +76,8 @@ function resultsJson(specs: Array<Record<string, unknown>>): string {
     config: { version: '1.62.1' },
     suites: [
       {
-        title: 'e2e/visual.spec.ts',
-        file: 'e2e/visual.spec.ts',
+        title: 'e2e/journeys.spec.ts',
+        file: 'e2e/journeys.spec.ts',
         specs: [],
         suites: [{ title: 'planner', specs }],
       },
@@ -117,11 +117,11 @@ const PLANNER_HOVER_CARD =
 const ITINERARY_ORDER =
   'Error: expect(received).toEqual(expected)\n\n  - Expected  - 1'
 const ASSERTION_DIFF =
-  'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.visual.spec.ts:41'
+  'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.spec.ts:41'
 const CONNECTION_REFUSED =
-  'Error: page.goto: Connection refused\n  at e2e/trips-core.visual.spec.ts:41'
+  'Error: page.goto: Connection refused\n  at e2e/trips-core.spec.ts:41'
 const SOCKET_HANG_UP =
-  'Error: page.goto: socket hang up\n  at e2e/trips-core.visual.spec.ts:41'
+  'Error: page.goto: socket hang up\n  at e2e/trips-core.spec.ts:41'
 
 const RESULTS_FIXTURE = resultsJson([
   spec('passes', true, ['passed']),

@@ -255,8 +255,8 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # The end-to-end journeys: fourteen declarations in `visual.spec.ts` plus three
-  # in `trips-core.visual.spec.ts`, over two browser projects. Not a visual gate
+  # The end-to-end journeys: fourteen declarations in `journeys.spec.ts` plus
+  # three in `trips-core.spec.ts`, over two browser projects. Not a visual gate
   # any more - no screenshot is compared anywhere (ADR 0016). What a run asserts
   # is that every screen answers, renders, hydrates, says nothing in the console,
   # and lets a reader act on it.

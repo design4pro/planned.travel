@@ -47,7 +47,7 @@ if (!isCI && process.env.PLAYWRIGHT_ALLOW_ANY_PORT !== '1') {
  * against its own `new Date()` — the dashboard's reservation rail reads forward
  * from today, the journal splits its backlog on it. Unpinned, the fixture drains:
  * on the seeded workspace the rail is empty for good after 2026-10-12, and
- * `trips-core.visual.spec.ts` starts skipping because the trip it navigates is no
+ * `trips-core.spec.ts` starts skipping because the trip it navigates is no
  * longer in the list it navigates from. That is a suite going green by covering
  * less, on a morning nobody touched it, which is exactly the silent loss ADR 0016
  * says the thinner e2e layer must not buy.

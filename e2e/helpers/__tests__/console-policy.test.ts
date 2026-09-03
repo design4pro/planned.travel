@@ -1,7 +1,7 @@
 /**
  * The console policy, graded without a browser.
  *
- * These cases used to live in `e2e/visual.spec.ts` under `describe('the gate
+ * These cases used to live in `e2e/journeys.spec.ts` under `describe('the gate
  * itself')`, where they cost a Playwright worker and a browser launch to assert
  * something pure. Nothing here touches a page: `classifyConsoleMessage` takes a
  * type, a string and a flag, so it belongs in the unit layer.

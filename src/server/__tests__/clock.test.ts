@@ -150,7 +150,7 @@ describe('serverToday', () => {
     // wire: this is what stops them drifting apart in silence, which they would
     // otherwise do as a green run reading the wrong day.
     //
-    // There used to be a third copy in `e2e/helpers/shoot.ts`, for a calendar
+    // There used to be a third copy in the e2e helpers, for a calendar
     // audit that measured the screenshot baselines against it. The baselines are
     // gone (ADR 0016) and so is the copy; the pin is not, because the fixture
     // drains without it.

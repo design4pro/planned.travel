@@ -1,9 +1,9 @@
 /**
  * Which console output fails a run, and which the browser is merely muttering.
  *
- * Split out of `shoot.ts` so it can be exercised without a browser: nothing here
+ * Split out of the browser helpers so it can be exercised without one: nothing here
  * imports Playwright, so the tolerance table and the classifier are reachable
- * from the vitest `tooling` project. `shoot.ts` re-exports the whole surface, so
+ * from the vitest `tooling` project. `./console.ts` re-exports the whole surface, so
  * every existing caller is unchanged.
  */
 
@@ -25,7 +25,7 @@ export type ToleratedConsoleWarning = {
 }
 
 /**
- * The complete list of console warnings the gate does not fail on.
+ * The complete list of console warnings a journey does not fail on.
  *
  * docs/SPEC.md §2 asks for zero console errors *or warnings*, and that bar still
  * bites. Everything below stays fatal, on every route, with no exception:
@@ -37,7 +37,7 @@ export type ToleratedConsoleWarning = {
  *   React hydration and key warning, every deprecation notice, every
  *   failed-resource warning, and anything the app writes itself.
  *
- * Message types the gate has never read — `log`, `info`, `debug`, `trace` and
+ * Message types the suite has never read — `log`, `info`, `debug`, `trace` and
  * the rest — stay ignored, as before.
  *
  * Neither entry is an app warning, and neither can become one: both patterns are
@@ -76,7 +76,7 @@ export type ToleratedConsoleWarning = {
  * `/assets/*` instead, and the identical advisory about an `/assets/…` URL — or
  * about any host that is not the loopback — stays fatal, because there it would be
  * a real preload the built application asked for and did not use. Both halves are
- * asserted in `the gate itself`.
+ * asserted in `the harness itself`.
  */
 export const TOLERATED_CONSOLE_WARNINGS: ReadonlyArray<ToleratedConsoleWarning> =
   [
