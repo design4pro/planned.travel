@@ -103,18 +103,21 @@ server function.
 
 ### The cost, honestly
 
-|                   | Before                                             | After                                                                                                                                                              |
-| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `e2e` runner time | 12 x ~5.0 min = **~60 min**                        | 2 shards x ~11 min = **~22 min**, measured on the 2-vCPU runner (run 33803434404): 2-3 min fixed cost, then 6m41s of journeys on shard 1 and over 8 min on shard 2 |
-| Trigger           | push to `develop`/`main`, or the `needs-e2e` label | **every PR**                                                                                                                                                       |
-| R2 credentials    | required; the job skipped without them             | none; runs on a fork                                                                                                                                               |
+|                   | Before                                             | After                                                                                                                                                      |
+| ----------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e` runner time | 12 x ~5.0 min = **~60 min**                        | **~22 min**, measured green on the 2-vCPU runner (run 33806080237): jobs of 9m44s and 11m58s, being 2-3 min of fixed cost plus 6m41s and 9m59s of journeys |
+| Trigger           | push to `develop`/`main`, or the `needs-e2e` label | **every PR**                                                                                                                                               |
+| R2 credentials    | required; the job skipped without them             | none; runs on a fork                                                                                                                                       |
 
 Per event that is a **~63% cut**, and the first CI run corrected the estimate this table used to
-carry. A local run at two workers suggested ~4.5 min a shard; the 2-vCPU runner took 6m41s of
-journeys on one shard and more than 8 on the other, plus 2-3 min of fixed cost that no worker count
-shortens. Both shards were killed by a `timeout-minutes: 10` sized from the wrong number - shard 1
-seconds after its last test passed, shard 2 mid-suite - which is now 20, with the config's
-`globalTimeout` at 15 so it stays the one that fires first.
+carry. A local run at two workers suggested ~4.5 min a shard; the runner took 6m41s and 9m59s, plus
+2-3 min of fixed cost that no worker count shortens. Both shards were then killed by a
+`timeout-minutes: 10` sized from the wrong number - shard 1 seconds after its last test passed,
+shard 2 mid-suite - which is now 20, with the config's `globalTimeout` at 15 so it stays the one
+that fires first. The same three-times-slower runner also blew the 30 s per-test budget on `the
+click surface never takes the reader's input`, three attempts out of three, so `timeout` is now
+`isCI ? 60_000 : 30_000`. Every number in this table was wrong in the same direction, and all of
+them were wrong because they were taken on a laptop.
 
 **The saving is not banked; it is spent on frequency, and then some.** At ~6 PR events per merge,
 6 x ~22 min ≈ **132 min against the ~60 the post-merge net cost**. The aggregate roughly doubles.

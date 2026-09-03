@@ -289,15 +289,21 @@ jobs:
     name: e2e · critical journeys (${{ matrix.shard }}/2)
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ubuntu-latest
-    # Measured on the 2-vCPU runner, first run of this job (33803434404): 2-3 min
-    # of fixed cost - image pull, checkout, install, migrations, seed - then 6m41s
-    # of journeys on shard 1 and more than 8 min on shard 2. At `timeout-minutes: 10`
-    # both shards were killed: shard 1 a few seconds after its last test passed,
-    # shard 2 mid-suite. A job timeout that fires before the config's own
-    # `globalTimeout` inverts the design - the point of the config firing first is
-    # that a slow shard still uploads a report instead of vanishing - so this is
-    # 20 and `globalTimeout` is 15. The estimate that produced 10 was taken at two
-    # local workers on a 16-core machine and did not survive contact.
+    # Measured on the 2-vCPU runner, first green run (33806080237): 2-3 min of
+    # fixed cost - image pull, checkout, install, migrations, seed - then 6m41s of
+    # journeys on shard 1 and 9m59s on shard 2, for jobs of 9m44s and 11m58s. At
+    # `timeout-minutes: 10` both shards were killed: shard 1 a few seconds after
+    # its last test passed, shard 2 mid-suite. A job timeout that fires before the
+    # config's own `globalTimeout` inverts the design - the point of the config
+    # firing first is that a slow shard still uploads a report instead of
+    # vanishing - so this is 20 and `globalTimeout` is 15. The estimate that
+    # produced 10 was taken at two local workers on a 16-core machine and did not
+    # survive contact.
+    #
+    # The two shards are uneven, 6m41s against 9m59s, because `--shard` splits by
+    # test count and these tests are not the same size. Worth rebalancing only if
+    # shard 2 starts approaching 15 min; the fix would be `--shard` by duration,
+    # which Playwright does not offer, or moving one journey by hand, which drifts.
     timeout-minutes: 20
     strategy:
       fail-fast: false
