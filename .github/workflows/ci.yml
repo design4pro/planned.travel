@@ -268,15 +268,20 @@ jobs:
   # fixed cost (image pull, install, migrations, seed) that no worker count
   # shortens, and a `needs: verify` in front of it (5-7 min of vitest coverage)
   # would double the wall clock. Twelve shards were sized for eighty-seven test
-  # instances a project; seventeen declarations do not divide usefully past two.
+  # instances a project; nineteen declarations do not divide usefully past two -
+  # four shards would halve the test time and pay the fixed cost twice more, for
+  # about the same total.
   # Each shard is its own container with its own D1, so shards never share
   # state; `e2e-report` below merges the blob reports into one HTML.
   # The price of not waiting on `verify` is a wasted run when a typecheck fails,
   # which is rare and cheap next to what this used to take.
   #
   # Back on every PR. It was demoted to a post-merge net when it cost ~60 min of
-  # runner per event; at ~9 min the feedback loop is worth more than the saving,
-  # and the `needs-e2e` escape hatch that demotion needed goes with it. No R2
+  # runner per event; measured, it now costs ~22 (two shards of ~11). That is a
+  # ~63% cut per event and, spread over ~6 PR events a merge, roughly twice the
+  # aggregate the post-merge net cost - the feedback loop is bought, not free.
+  # ADR 0016's cost table carries the arithmetic. The `needs-e2e` escape hatch
+  # that the demotion needed goes with it. No R2
   # credentials are read any more either (the journeys need no basemap - see the
   # `basemap` input of the composite action), so the job runs on a fork.
   # A develop→main PR still defers to the push run, as `verify` does.
@@ -284,9 +289,16 @@ jobs:
     name: e2e · critical journeys (${{ matrix.shard }}/2)
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ubuntu-latest
-    # ~2 min fixed cost + ~3 min of journeys; the config's 10 min globalTimeout
-    # fires first, so a slow shard still uploads a report instead of vanishing.
-    timeout-minutes: 10
+    # Measured on the 2-vCPU runner, first run of this job (33803434404): 2-3 min
+    # of fixed cost - image pull, checkout, install, migrations, seed - then 6m41s
+    # of journeys on shard 1 and more than 8 min on shard 2. At `timeout-minutes: 10`
+    # both shards were killed: shard 1 a few seconds after its last test passed,
+    # shard 2 mid-suite. A job timeout that fires before the config's own
+    # `globalTimeout` inverts the design - the point of the config firing first is
+    # that a slow shard still uploads a report instead of vanishing - so this is
+    # 20 and `globalTimeout` is 15. The estimate that produced 10 was taken at two
+    # local workers on a 16-core machine and did not survive contact.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:

@@ -113,10 +113,13 @@ export default defineConfig({
   // ci.yml; locally Playwright's default (half the cores) applies.
   workers: isCI ? 1 : undefined,
   timeout: 30_000,
-  // Per CI shard (ci.yml splits the suite two ways): ~3 min of journeys, sized
-  // generously so a retry-heavy shard still reports instead of being cut off —
-  // the report is what tells load from regression.
-  globalTimeout: isCI ? 10 * 60_000 : undefined,
+  // Per CI shard (ci.yml splits the suite two ways). Measured on the 2-vCPU
+  // runner: 6m41s of journeys on shard 1 and over 8 min on shard 2, against the
+  // ~3 min a local run at two workers suggested. 15 min leaves a retry-heavy
+  // shard room to finish and report instead of being cut off — the report is
+  // what tells load from regression — and stays under ci.yml's own
+  // `timeout-minutes: 20`, which must never be the one that fires first.
+  globalTimeout: isCI ? 15 * 60_000 : undefined,
   reporter: isCI
     ? [
         ['github'],

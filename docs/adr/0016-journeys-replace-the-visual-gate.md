@@ -103,15 +103,27 @@ server function.
 
 ### The cost, honestly
 
-|                   | Before                                             | After                                                                                                                                                                                 |
-| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `e2e` runner time | 12 x ~5.0 min = **~60 min**                        | 2 shards, **~10 min** (the unsharded suite is 4.4 and 4.1 min wall over two consecutive local runs at one worker, which is what a CI shard runs; not yet measured on a 2-vCPU runner) |
-| Trigger           | push to `develop`/`main`, or the `needs-e2e` label | **every PR**                                                                                                                                                                          |
-| R2 credentials    | required; the job skipped without them             | none; runs on a fork                                                                                                                                                                  |
+|                   | Before                                             | After                                                                                                                                                              |
+| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `e2e` runner time | 12 x ~5.0 min = **~60 min**                        | 2 shards x ~11 min = **~22 min**, measured on the 2-vCPU runner (run 33803434404): 2-3 min fixed cost, then 6m41s of journeys on shard 1 and over 8 min on shard 2 |
+| Trigger           | push to `develop`/`main`, or the `needs-e2e` label | **every PR**                                                                                                                                                       |
+| R2 credentials    | required; the job skipped without them             | none; runs on a fork                                                                                                                                               |
 
-Per event that is roughly an 85% cut. **The saving is spent on frequency.** At ~6 PR events per
-merge, 6 x ~11 min ≈ 66 min against today's 62. The aggregate is about flat. What changes is the
-feedback loop, not the bill, and pretending otherwise would be dishonest.
+Per event that is a **~63% cut**, and the first CI run corrected the estimate this table used to
+carry. A local run at two workers suggested ~4.5 min a shard; the 2-vCPU runner took 6m41s of
+journeys on one shard and more than 8 on the other, plus 2-3 min of fixed cost that no worker count
+shortens. Both shards were killed by a `timeout-minutes: 10` sized from the wrong number - shard 1
+seconds after its last test passed, shard 2 mid-suite - which is now 20, with the config's
+`globalTimeout` at 15 so it stays the one that fires first.
+
+**The saving is not banked; it is spent on frequency, and then some.** At ~6 PR events per merge,
+6 x ~22 min ≈ **132 min against the ~60 the post-merge net cost**. The aggregate roughly doubles.
+The earlier draft of this table said "about flat" on an estimate, and the measurement did not
+support it. What is bought is the feedback loop - a regression is found on the PR that causes it
+rather than after it lands on `develop` - and it is bought, not free. Whether that trade is worth
+~70 extra minutes of runner a merge is a judgement this ADR states rather than hides; the lever if
+the answer is no is the trigger, not the shard count (four shards halve the test time and pay the
+fixed cost twice more, for about the same total).
 
 ### Measurements taken for this decision
 
