@@ -17,7 +17,7 @@
  *
  * Two ranges, in this order and for two different readers. 3000-3005 is where `vite dev` lands for a
  * person working on the project, and it is tried first because that person did not pass a flag.
- * 3010-3020 is the range `playwright.config.ts` reserves for an automated round and refuses to run
+ * 3030-3040 is the range `playwright.config.ts` reserves for an automated round and refuses to run
  * outside of; a round that seeds without `--url` should still find its own server rather than
  * silently rebuild somebody else's workspace, which is the accident the port guard exists to stop.
  *
@@ -25,7 +25,9 @@
  * range in particular is shared between worktrees, and this script has no way to tell one from
  * another.
  */
-const DEFAULT_PORTS = [3000, 3001, 3002, 3003, 3004, 3005, 3010, 3011, 3012, 3013, 3014, 3015]
+const DEFAULT_PORTS = [
+  3000, 3001, 3002, 3003, 3004, 3005, 3030, 3031, 3032, 3033, 3034, 3035,
+]
 
 /**
  * Password for the demo owner's account, used only when that account does not exist yet.
@@ -39,7 +41,12 @@ const DEFAULT_PORTS = [3000, 3001, 3002, 3003, 3004, 3005, 3010, 3011, 3012, 301
 const DEFAULT_DEMO_PASSWORD = 'planned-demo-2026'
 
 function demoPassword(explicit) {
-  return explicit ?? process.env.DEMO_PASSWORD ?? process.env.E2E_PASSWORD ?? DEFAULT_DEMO_PASSWORD
+  return (
+    explicit ??
+    process.env.DEMO_PASSWORD ??
+    process.env.E2E_PASSWORD ??
+    DEFAULT_DEMO_PASSWORD
+  )
 }
 const ENDPOINT = '/api/dev/seed'
 
@@ -147,7 +154,7 @@ async function findOrigin(explicit) {
   }
   throw new Error(
     `No dev server answered ${ENDPOINT} on ports ${DEFAULT_PORTS.join(', ')}.\n` +
-      'Start one with `pnpm exec vite dev --port 3010 --strictPort`, or pass\n' +
+      'Start one with `pnpm exec vite dev --port 3030 --strictPort`, or pass\n' +
       '--url http://localhost:<port>. Note that `pnpm dev` hardcodes --port 3000, which\n' +
       'playwright.config.ts refuses to run the visual gate against.',
   )
@@ -160,7 +167,8 @@ function formatCounts(counts) {
 
 /** Plain English for what the seed did to the owner's password. */
 function describeCredential(report) {
-  if (report.createdOwner === true) return 'account created — sign in with the seed password'
+  if (report.createdOwner === true)
+    return 'account created — sign in with the seed password'
   switch (report.credential) {
     case 'created':
       return 'credential added to an existing account — sign in with the seed password'
@@ -187,7 +195,10 @@ const PLATFORM_FIXTURE = [
   ['rafal@planned.travel', 'admin — opens /console and every account action'],
   ['mika@planned.travel', 'curator — the catalogue only, no accounts tab'],
   ['jonas@planned.travel', 'user — /console redirects to /dashboard'],
-  ['priya@planned.travel', 'user, suspended — sign-in is refused with the repo copy'],
+  [
+    'priya@planned.travel',
+    'user, suspended — sign-in is refused with the repo copy',
+  ],
 ]
 
 function printPlatformFixture() {
@@ -219,7 +230,9 @@ function printReport(report) {
   out(`  workspace        ${report.organizationId}`)
   out(`  owner            ${report.ownerEmail} (${report.ownerUserId})`)
   out(`  password         ${describeCredential(report)}`)
-  out(`  members          ${report.members} (${report.usersCreated} user rows created)`)
+  out(
+    `  members          ${report.members} (${report.usersCreated} user rows created)`,
+  )
   out(`  categories       ${report.categories}`)
   out(`  moods            ${report.moods}`)
   printPlatformFixture()
@@ -266,20 +279,42 @@ async function main() {
     out(
       'Usage: node scripts/seed/seed.mjs [--force] [--email <address>] [--password <secret>]',
     )
-    out('                [--keep-password] [--url <origin>] [--today <YYYY-MM-DD>] [--status]')
+    out(
+      '                [--keep-password] [--url <origin>] [--today <YYYY-MM-DD>] [--status]',
+    )
     out('')
-    out('  --force     Rebuild the demo workspace even if it has already been seeded.')
-    out('  --email     Workspace owner to seed. Defaults to rafal@planned.travel.')
-    out('  --password  Password the owner account should have. Created when the account does not')
-    out('              exist, reconciled when it does, left alone when it already works. Defaults')
-    out('              to $DEMO_PASSWORD, then $E2E_PASSWORD, then the committed fixture.')
+    out(
+      '  --force     Rebuild the demo workspace even if it has already been seeded.',
+    )
+    out(
+      '  --email     Workspace owner to seed. Defaults to rafal@planned.travel.',
+    )
+    out(
+      '  --password  Password the owner account should have. Created when the account does not',
+    )
+    out(
+      '              exist, reconciled when it does, left alone when it already works. Defaults',
+    )
+    out(
+      '              to $DEMO_PASSWORD, then $E2E_PASSWORD, then the committed fixture.',
+    )
     out('  --keep-password  Never overwrite a password that is already set.')
-    out('  --url       Dev-server origin. Defaults to $SEED_URL, then localhost:3000-3005 and')
-    out('              the reserved automation range, localhost:3010-3015.')
-    out('  --today     Tell the Worker what day it is for the duration of the seed request, as')
-    out('              YYYY-MM-DD. The fixture is anchored, so the rows written must not change;')
-    out('              this exists so that claim can be tested rather than trusted.')
-    out('  --status    Report whether the workspace is seeded, and write nothing.')
+    out(
+      '  --url       Dev-server origin. Defaults to $SEED_URL, then localhost:3000-3005 and',
+    )
+    out('              the reserved automation range, localhost:3030-3035.')
+    out(
+      '  --today     Tell the Worker what day it is for the duration of the seed request, as',
+    )
+    out(
+      '              YYYY-MM-DD. The fixture is anchored, so the rows written must not change;',
+    )
+    out(
+      '              this exists so that claim can be tested rather than trusted.',
+    )
+    out(
+      '  --status    Report whether the workspace is seeded, and write nothing.',
+    )
     return
   }
 
@@ -288,10 +323,13 @@ async function main() {
   if (options.email !== null) url.searchParams.set('email', options.email)
   if (options.force) url.searchParams.set('force', '1')
 
-  const clockPin = options.today === null ? {} : { [SERVER_TODAY_HEADER]: options.today }
+  const clockPin =
+    options.today === null ? {} : { [SERVER_TODAY_HEADER]: options.today }
 
   if (options.status) {
-    const response = await fetch(url, { headers: { accept: 'application/json' } })
+    const response = await fetch(url, {
+      headers: { accept: 'application/json' },
+    })
     const body = await response.json()
     out(body.seeded ? 'Seeded.' : 'Not seeded.')
     if (body.marker !== null) out(JSON.stringify(body.marker, null, 2))
@@ -304,7 +342,11 @@ async function main() {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { accept: 'application/json', 'content-type': 'application/json', ...clockPin },
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        ...clockPin,
+      },
       // In the body, not the query string, so it stays out of request logs.
       body: JSON.stringify({
         password: demoPassword(options.password),
@@ -314,7 +356,9 @@ async function main() {
     })
     body = await response.json()
     if (!response.ok || body?.ok !== true) {
-      fail(`Seed failed (HTTP ${response.status}): ${body?.error ?? 'unknown error'}`)
+      fail(
+        `Seed failed (HTTP ${response.status}): ${body?.error ?? 'unknown error'}`,
+      )
       return
     }
   } finally {

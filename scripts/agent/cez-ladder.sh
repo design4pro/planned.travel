@@ -35,7 +35,7 @@ heartbeat
 
 BASE="${CEZ_BASE_BRANCH:-develop}"
 if git rev-parse --verify --quiet "origin/$BASE^{commit}" > /dev/null; then TARGET="origin/$BASE"; else TARGET="$BASE"; fi
-PORT=$(bash "$HERE/cez-port.sh" current || echo 3010)
+PORT=$(bash "$HERE/cez-port.sh" current || echo 3030)
 DIGEST="$AGENT_DIR/ladder-digest.md"
 VERDICT="$AGENT_DIR/ladder.json"
 PREVIOUS="$AGENT_DIR/ladder-previous.json"

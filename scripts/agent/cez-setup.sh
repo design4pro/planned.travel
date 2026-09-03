@@ -6,7 +6,7 @@
 #
 # Deterministic, idempotent, no LLM. Repo code runs under a scrubbed environment
 # (cez-lib.sh: clean_env). The dev server it starts binds 127.0.0.1 on a port from the
-# 3010-3020 pool and survives this step (nohup; pid in .agent/dev-server.pid).
+# 3030-3040 pool and survives this step (nohup; pid in .agent/dev-server.pid).
 set -euo pipefail
 . "$(dirname "$0")/cez-lib.sh"
 

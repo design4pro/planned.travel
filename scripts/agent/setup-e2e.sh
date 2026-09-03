@@ -9,7 +9,7 @@
 # never needs it.
 #
 #   bash scripts/agent/setup-e2e.sh
-#   PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 pnpm e2e [--project=chromium] [-g <spec>]
+#   PLAYWRIGHT_BASE_URL=http://127.0.0.1:3030 pnpm e2e [--project=chromium] [-g <spec>]
 #
 # Basemap: taken from the operator cache (${PLANNED_TRAVEL_CACHE:-~/.cache/planned-travel},
 # filled once per host by scripts/agent/fetch-basemap.sh) when .e2e-tiles/ is empty. Only
@@ -28,12 +28,12 @@
 # operator's cache (scripts/agent/fetch-basemap.sh), so a worktree rarely
 # downloads.
 #
-# The dev server runs on :3010 — the reserved automation range playwright.config.ts
+# The dev server runs on :3030 — the reserved automation range playwright.config.ts
 # insists on outside CI — and inside the container's own network namespace, so
 # parallel sandboxes never collide on it.
 set -euo pipefail
 
-PORT="${E2E_PORT:-3010}"
+PORT="${E2E_PORT:-3030}"
 # 127.0.0.1, never localhost: the server binds v4 only, and on this host another checkout's
 # `vite dev` sits on [::1]:3010, which "localhost" also resolves to. Run 2272b8e2 saw that server
 # answer the readiness probe before its own was up, and the seed then talked to the wrong app.

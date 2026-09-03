@@ -50,7 +50,7 @@ generous timeout because the first run in a fresh worktree installs dependencies
 ## Its relationship to `scripts/agent/setup-e2e.sh`
 
 That script is the third profile and deliberately stays separate. It mirrors
-`.github/actions/e2e-env/action.yml` step for step, gates the e2e suite in CI, pins port 3010
+`.github/actions/e2e-env/action.yml` step for step, gates the e2e suite in CI, pins port 3030
 because `playwright.config.ts` insists on the reserved range, and writes a `.dev.vars` marked as
 a sandcastle throwaway so an accidental run on a real checkout aborts before touching anything.
 Folding it in here would couple the e2e gate to a convenience script. Use it for automated rounds,
@@ -60,7 +60,7 @@ this one for working on the app.
 
 `pnpm dev` hardcodes `--port 3000`: that is the main checkout's port and a second worktree cannot
 have it. The other end is fenced too, and harder: `playwright.config.ts` refuses to run non-CI
-against anything outside 3010-3020, a guard added after a round photographed a different
+against anything outside 3030-3040, a guard added after a round photographed a different
 worktree's application. That leaves 3001-3009, which is what this script allocates from, and it
 starts the server through `pnpm exec vite dev --port N --strictPort` so a taken port is an error
 rather than a silent drift to the next one.
@@ -85,7 +85,7 @@ other port use the password form. `/sign-in/email` allows ten attempts a minute.
 - **The D1 guard is on the schema, not the directory.** `vite dev` creates
   `.wrangler/state/v3/d1` holding nothing but `metadata.sqlite` on its first boot, so a
   directory-existence test skips the migrations forever after one failed start.
-- **`--url` on the seeder is not optional.** Without it `seed.mjs` probes 3000-3005 then 3010-3015
+- **`--url` on the seeder is not optional.** Without it `seed.mjs` probes 3000-3005 then 3030-3035
   and writes to the first origin that answers, which on a machine running several worktrees is a
   write to somebody else's database. The script always passes its own port.
 - **The whole `r2/` tree has to be cloned, not just the blob.** The key-to-blob index lives apart
