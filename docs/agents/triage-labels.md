@@ -22,7 +22,6 @@ The vocabulary is closed: 19 labels, listed here, and no others.
 | `prd`                                                   | publish-prd                                 | parent issue: title `PRD: …`, body `prd/v1`; its sub-issues are the tickets           |
 | `auto-advance`                                          | a human, on an open PRD only                | the sweeper adds `run: implement` to each child as it unblocks                        |
 | `agent-pr` (PR)                                         | handback                                    | a draft PR opened by an implement run                                                 |
-| `needs-e2e` (PR)                                        | handback when the ladder reports UI touched | run the full Playwright matrix in `ci.yml`                                            |
 | `agent-docs` (PR)                                       | cez-docs-pr                                 | a PR carrying `CONTEXT.md` or ADR changes from a plan run                             |
 
 A command is not a state: the claim script removes the `run:` label as its first action, and adding

@@ -12,6 +12,16 @@
 > **A migrated plan file is frozen, not deleted** — ADR 0004 originally said deleted, and its
 > Consequences record why that was suspended and the condition under which deletion becomes safe
 > again.
+>
+> **Every plan's Verification block predates ADR 0016, and the gate it names no longer exists.**
+> These files were written over a visual gate that compared each screen against a committed PNG;
+> there are no baselines, no `e2e/__screenshots__/`, no `--update-snapshots` and no `.visual.spec.ts`
+> naming rule. Read any Verification block's pixel language as historical. What replaces it is in
+> `12-verification-protocol.md`, which has been brought to HEAD: the journeys assert that a screen
+> answers, renders, hydrates, says nothing in the console and can be acted on, and the visual
+> judgement is a blind A/B pair from `scripts/visual/capture.mjs` that a human reads at review. The
+> thirteen area plans are **not** rewritten for this - correcting ~230 dead references would be a
+> larger and less honest change than one banner.
 
 `docs/` is described in `docs/SPEC.md` §6 as "spec + architecture notes". This directory adds the
 third kind of document: **staged implementation plans**, one per product area, that carve the 89-row

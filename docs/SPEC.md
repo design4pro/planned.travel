@@ -122,7 +122,7 @@ Specifically:
 | Drag & drop       | `@dnd-kit`                                                                                                                                                                                                                                                                   |
 | Toasts            | `sonner`                                                                                                                                                                                                                                                                     |
 | Observability     | Structured logs to Workers Observability (`src/server/observability`) + Sentry (`@sentry/cloudflare` in the Worker, `@sentry/react` in the browser): errors, logs, tracing, metrics and masked session replay. One project, environments told apart by the `environment` tag |
-| Tests             | Vitest (unit) + Playwright (e2e/visual)                                                                                                                                                                                                                                      |
+| Tests             | Vitest (unit) + Playwright (critical journeys, no screenshots — ADR 0016)                                                                                                                                                                                                    |
 
 **Dependency freeze.** The dependency set is complete. Do **not** run `pnpm add`, and do not
 edit the `dependencies` or `devDependencies` blocks of `package.json`, or `pnpm-lock.yaml`. If
@@ -620,7 +620,9 @@ Rules:
 1. `pnpm build` succeeds.
 2. `pnpm lint` and `pnpm typecheck` are clean — no new errors, no suppressions.
 3. New logic has tests; `pnpm test` passes.
-4. The feature is visually verified in a real browser, light and dark, desktop and mobile.
+4. The feature is visually verified in a real browser, light and dark, desktop and mobile — by
+   the blind A/B pair (`scripts/visual/capture.mjs`, §8.814), which is the whole of the visual
+   judgement since ADR 0016. "Looked at it" is not a mechanism; the pair is.
 5. No TODOs, no placeholder copy, no `console.log`, no commented-out code left behind.
 6. You did not touch files outside your assigned ownership. Work you discover elsewhere is
    reported, never edited — and if that work is a _concept_ rather than a file, §8 governs how

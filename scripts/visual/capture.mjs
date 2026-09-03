@@ -27,9 +27,9 @@
  * (`--enter`), and its welcome overlay is pressed away on every frame (`--dismiss`). Why two flags
  * and not one `--click`: ./click-through.mjs.
  *
- * It deliberately does NOT record anything under e2e/__screenshots__. Those baselines are compared
- * pixel for pixel across machines and belong to Playwright's own projects; this script writes only
- * into the shot directory it is given, for a blind critic to look at.
+ * It writes only into the shot directory it is given, and that directory belongs outside the
+ * repository. Nothing here is a baseline: since ADR 0016 no pixel in this repo is compared to a
+ * stored one, and this script is the whole of the visual judgement - two frames, and a reader.
  *
  * Usage:
  *   node scripts/visual/capture.mjs \

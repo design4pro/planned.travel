@@ -53,7 +53,8 @@ defined point.
   (route tree, typecheck, lint, tests, build, chromium only when UI was touched; at most three
   passes), and always ends by calling the handback script, which pushes `claude/issue-<n>-<run>`,
   opens a draft PR to `develop` with `Refs #n` and `agent-pr`, and moves the issue to `review` or
-  `needs-human`. The full Playwright matrix stays in `ci.yml` behind `needs-e2e`.
+  `needs-human`. The full Playwright matrix stays in `ci.yml` behind `needs-e2e`. _Amended by ADR
+  0016: the journeys run on every PR and the label is retired._
 
 **Trust model.** Everything on a `claude/*` branch is untrusted until a human reviews the PR. The
 agent's shell is an allow-list of command prefixes; every GitHub write goes through a script; a
