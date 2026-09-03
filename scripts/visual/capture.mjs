@@ -33,7 +33,7 @@
  *
  * Usage:
  *   node scripts/visual/capture.mjs \
- *     --url http://localhost:3010/atlas \
+ *     --url http://localhost:3030/atlas \
  *     --out .sandcastle-shots/issue-<n> \
  *     --label A \
  *     --viewports 1440x900,360x800 \

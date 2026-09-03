@@ -12,10 +12,12 @@ const baseURL = externalBaseURL ?? 'http://localhost:3000'
 /**
  * Refuse to run against a server this workspace does not own.
  *
- * Ports 3010-3020 are reserved for an automated round; everything below is a
- * developer's own process or another checkout's. Four consecutive rounds ran
- * the suite against a port outside that range — twice against 3000, once
- * against a server answering HTTP 500 to everything, and once against 3002,
+ * Ports 3030-3040 are reserved for an automated round; everything below is a
+ * developer's own process or another checkout's. The pool used to be 3010-3020; it moved
+ * because money-tracker on the same host hardcodes 3010 and has no allocator (run 2272b8e2).
+ *
+ * Everything else here predates the move. Four consecutive rounds ran the suite against a
+ * port outside that range — twice against 3000, once against a server answering HTTP 500 to everything, and once against 3002,
  * which belonged to a different worktree's run. Every one of those produced a
  * page of failures that said nothing about the code under test, and the last
  * one photographed another branch's application.
@@ -26,13 +28,13 @@ const baseURL = externalBaseURL ?? 'http://localhost:3000'
  */
 if (!isCI && process.env.PLAYWRIGHT_ALLOW_ANY_PORT !== '1') {
   const port = Number(new URL(baseURL).port || '80')
-  if (port < 3010 || port > 3020) {
+  if (port < 3030 || port > 3040) {
     throw new Error(
       `playwright: refusing to run against ${baseURL}.\n` +
-        `Ports 3010-3020 are reserved for automated rounds; ${port} is not one of them and may ` +
+        `Ports 3030-3040 are reserved for automated rounds; ${port} is not one of them and may ` +
         `belong to another checkout or to the developer.\n` +
-        `Start the server with \`pnpm exec vite dev --port 3010 --strictPort\` (never \`pnpm dev\`, ` +
-        `whose script hardcodes --port 3000) and pass PLAYWRIGHT_BASE_URL=http://localhost:3010.\n` +
+        `Start the server with \`pnpm exec vite dev --port 3030 --strictPort\` (never \`pnpm dev\`, ` +
+        `whose script hardcodes --port 3000) and pass PLAYWRIGHT_BASE_URL=http://localhost:3030.\n` +
         `To target a preview deployment on purpose, set PLAYWRIGHT_ALLOW_ANY_PORT=1.`,
     )
   }

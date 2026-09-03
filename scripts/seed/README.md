@@ -13,7 +13,7 @@ local fixtures yet.
 The dev server must be running. Then:
 
 ```sh
-node scripts/seed/seed.mjs --url http://localhost:3010
+node scripts/seed/seed.mjs --url http://localhost:3030
 ```
 
 Every flag `seed.mjs` accepts; `--help` prints the same list and anything else is a hard error:
@@ -44,9 +44,9 @@ Seed the same dataset under three widely separated days and the rows written mus
 byte-identical:
 
 ```sh
-node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-08-20
-node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-09-01
-node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-11-15
+node scripts/seed/seed.mjs --url http://localhost:3030 --force --today 2026-08-20
+node scripts/seed/seed.mjs --url http://localhost:3030 --force --today 2026-09-01
+node scripts/seed/seed.mjs --url http://localhost:3030 --force --today 2026-11-15
 ```
 
 `--force` is not optional in that loop. The completion marker makes a second run a no-op, so a
@@ -54,14 +54,14 @@ three-clock proof run without it writes nothing twice and proves nothing three t
 
 ### Always pass `--url`, and the reason is not tidiness
 
-**Ports 3010–3020 are reserved for automated rounds.** The reservation is enforced in
+**Ports 3030–3040 are reserved for automated rounds.** The reservation is enforced in
 `playwright.config.ts`, which throws rather than run the visual suite against a port outside that
 range — a rule added after four consecutive rounds photographed the wrong server, one of them a
 different worktree's application. That file also names the only sanctioned way to start a server
 for those rounds:
 
 ```sh
-pnpm exec vite dev --port 3010 --strictPort
+pnpm exec vite dev --port 3030 --strictPort
 ```
 
 `pnpm dev` hardcodes `--port 3000`, so it is never the way to start a server for a reserved-range
@@ -73,7 +73,7 @@ range first and then part of the reserved one, and takes the first origin that a
 a machine running two checkouts is a **write** to whichever server replied, not necessarily yours.
 So:
 
-- **Pass `--url http://localhost:3010`** (or export `SEED_URL`) whenever a reserved server is what
+- **Pass `--url http://localhost:3030`** (or export `SEED_URL`) whenever a reserved server is what
   you mean to seed. `-u` is not optional in that situation, and the reserved range is exactly the
   one that is shared between worktrees.
 - `--status` is the cheap way to confirm you are talking to the right database before `--force`
