@@ -36,7 +36,6 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
     name: 'journal',
     path: '/journey',
     ready: 'main',
-    relativeTime: true,
   }
 
   const costsUrl = (tripId: string): RegExp =>

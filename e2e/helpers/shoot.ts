@@ -1,130 +1,69 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { expect } from '@playwright/test'
-import type { BrowserContext, Locator, Page } from '@playwright/test'
+import type { BrowserContext, Page } from '@playwright/test'
 import { classifyConsoleMessage } from './console-policy'
 import type { ConsoleReport } from './console-policy'
 
 /**
- * Screenshot helpers for the visual gate.
+ * The harness the end-to-end journeys are driven through.
  *
- * The gate needs frames that only change when the design changes. Seven things
- * otherwise make a baseline flap, and each one has its own seam so that a
- * regression in one can never be hidden by another. Six of those seams close
- * inside this file; the fourth is closed in the Worker and audited here, for
- * reasons written out under "What this file could not pin".
+ * It used to be the visual gate's, and most of it was determinism machinery for a
+ * pixel comparison that no longer happens (ADR 0016). What is left is what a
+ * journey needs to reach a screen and grade what it finds: a session, the route
+ * tables, a settle that ends on the frame a reader actually sees, the console
+ * policy, and the two fixtures - the platform console and an impersonated session
+ * - that no product surface can mint for itself.
  *
- * 1. **Paint timing** — fonts, hydration, entrance motion, in-flight images.
- *    `settle()`, which ends on the frame a reader actually sees. Read the note on
- *    `settleOnce()`: the step that waits for React to claim the tree is what
- *    stopped `/settings` failing three runs in six at five times its pixel
- *    budget.
- * 2. **The clock the browser reads** — `FROZEN_NOW`, installed before the first
- *    navigation. This is what the atlas map's recency ramp is computed from. It
- *    pins the wall clock and fakes the page's timer APIs alongside it, which is
- *    why nothing this file runs in the page measures elapsed time with a clock —
- *    read the note on `FROZEN_NOW` before writing anything that does.
- * 3. **The clock the server read, as text** — a countdown that says "in 51d" the
- *    evening a baseline is recorded and "in 50d" the next morning.
- *    `RELATIVE_TIME_SITES` excludes those regions from the comparison; the
- *    tolerance is untouched. Two steps, because a mask is only ever as stable as
- *    the box it is handed: `pinRelativeTime()` rewrites each site's string to a
- *    constant from its own corpus, so the excluded rectangle is the same
- *    rectangle on every run and every calendar day, and the mask then paints over
- *    it so no invented value reaches the picture. Each entry is scoped to the
- *    component that prints it, and the declaration behind it is audited off the
- *    payload (`auditServerClock()`) rather than off the screen, because *how
- *    many* of these strings a screen shows is seam 4's business and not this
- *    one's.
- * 4. **The calendar the server selected rows on** — the Worker also picks *which
- *    rows* a screen shows by comparing a date column against its own notion of
- *    today. That notion is pinned rather than merely observed: `serverToday()`
- *    (`src/server/clock.ts`) accepts a development-only request header, and
- *    `playwright.config.ts` sets it to `BASELINE_DAY` on both browser projects,
- *    so the SSR document and every server-function call that follows it agree on
- *    the day the baselines were recorded. `CALENDAR_SELECTIONS` and
- *    `reportServerCalendar()` remain as the audit of that pin: they read the day
- *    back out of the Worker's own payload, so a pin that stopped arriving is
- *    reported as a named crossing instead of surfacing as an unexplained red
- *    frame. Read "What this file could not pin" below before touching it.
- * 5. **A live WebGL map** — a canvas that has not finished drawing.
- *    `[data-map-ready]`, waited on inside `settle()`. `/atlas` is the one route
- *    that declares one; the failure modes a real canvas cannot be asked to
- *    perform — never latching at all, or latching on a route that declares
- *    nothing — are exercised by `the gate itself` against a document built for
- *    them.
- * 6. **Browser chatter that is not the app talking** — the performance advisory
+ * Five things still have to be held still, and each has its own seam so a failure
+ * in one can never be hidden by another.
+ *
+ * 1. **Paint timing** - fonts, hydration, entrance motion, in-flight images.
+ *    `settle()`, which is what turns "the response arrived" into "the route
+ *    rendered its own content". Its step that waits for React to claim the tree
+ *    is also what keeps the console reading honest: assertions run against a
+ *    hydration mismatch that has already happened, not one still in flight.
+ * 2. **The clock the browser reads** - `FROZEN_NOW`, installed before the first
+ *    navigation. The atlas paints each visited country by how long ago it was
+ *    last there, from a client-side `new Date()`, so without this the map
+ *    recolours itself the day the calendar crosses a threshold. It pins the wall
+ *    clock and fakes the page's timer APIs alongside it, which is why nothing this
+ *    file runs in the page measures elapsed time with a clock - read the note on
+ *    `FROZEN_NOW` before writing anything that does.
+ * 3. **The calendar the server selected rows on** - the Worker picks *which rows*
+ *    a screen shows by comparing a date column against its own notion of today.
+ *    `serverToday()` (`src/server/clock.ts`) takes that answer from the
+ *    `x-pt-server-today` header on a development request, and
+ *    `playwright.config.ts` sets it to `FIXTURE_DAY` on both browser projects, so
+ *    the SSR document and the server-function POSTs that follow it cannot
+ *    disagree. The guard is `import.meta.env.DEV`, which the production build
+ *    folds to `false` and drops along with the header name.
+ *
+ *    The pin outlived the baselines it was recorded for, deliberately. On the
+ *    seeded workspace the dashboard's reservation rail empties for good after
+ *    2026-10-12, and `trips-core.visual.spec.ts` starts skipping on a fixture it
+ *    can no longer find - a suite that goes green by covering less, on a morning
+ *    nobody touched it. The audit around the pin is gone; the pin is not.
+ * 4. **A live WebGL map** - a canvas that has not finished drawing.
+ *    `[data-map-ready]`, waited on inside `settle()`. `/atlas` is the one route in
+ *    these tables that declares one; the failure modes a real canvas cannot be
+ *    asked to perform - never latching at all, or latching on a route that
+ *    declares nothing - are exercised by `the gate itself` against a document
+ *    built for them.
+ * 5. **Browser chatter that is not the app talking** - the performance advisory
  *    the software rasteriser headless Chromium paints WebGL with, and the
  *    unused-preload advisory either engine writes about a Vite dev-server URL a
- *    few seconds after the load event. Neither is something the app did, and the
- *    second one arrives or does not according to how long the page stayed open.
- *    `classifyConsoleMessage()`, two anchored patterns, and nothing wider than
- *    that: a warning the app writes itself stays fatal even when it quotes one of
- *    them, and a React hydration report is not a warning at all.
- * 7. **The language the fixture speaks** — every authenticated frame is a picture
- *    of a sentence, and which language the Worker writes it in is a mutable D1
- *    column that `/settings/language` exists to change. `pinDemoLanguage()`, once
- *    per run in the setup project, puts the demo traveller back on the workspace
- *    default and reports the one part of that it cannot set itself.
+ *    few seconds after the load event. `classifyConsoleMessage()` in
+ *    `./console-policy`, two anchored patterns, and nothing wider: a warning the
+ *    app writes itself stays fatal even when it quotes one of them, and a React
+ *    hydration report is not a warning at all. The policy is a separate module
+ *    because it is pure, and it is graded by vitest rather than by a browser.
  *
- * ## What this file could not pin
- *
- * Seams 1, 2, 3, 5, 6 and 7 close completely from inside `e2e/`. Seam 4 never could,
- * and the reason is worth keeping written down so nobody spends another round
- * rediscovering it — or tries to solve it from here again.
- *
- * The Worker's `today` reaches the repositories, which filter with it:
- * `listUpcomingTrips` keeps a trip while `endDate >= today`, `listPastTrips`
- * takes it once `endDate <= today`,
- * `listUpcomingReservations` reads forward from `today`, and
- * `listTripsWithoutJourney` ranks by whether a trip has finished, started, or is
- * still ahead. When the calendar crosses one of the fixture's dates the Worker
- * therefore returns a *different set of rows*, and the screen renders one card
- * more, one card fewer, or the same cards in a different order. Measured on the
- * seeded workspace as it stands: on 2026-08-21 the reservation dated 2026-08-20
- * leaves the dashboard's rail, on 2026-08-24 the trip that ends on the 23rd stops
- * being "up next" and joins the journal's finished trips, and after 2026-10-12 the
- * rail is empty for good.
- *
- * No exclusion can absorb that, and the reason is geometry rather than taste. A
- * row entering or leaving a list moves everything below it and changes the height
- * of the document, and `toHaveScreenshot` only compares images of the same size —
- * so a page one row taller fails before any mask, any `threshold` or any
- * `maxDiffPixelRatio` is consulted. Measured on this fixture, by deleting the row
- * the calendar takes next — the reservation dated 2026-08-20, first in the
- * dashboard's rail: the document loses 65px on *both* projects, at 1440x900 on
- * Chromium and at 393x659 on mobile WebKit. 393x659 is the iPhone 15 descriptor's
- * viewport; its 393x852 is the device `screen`, which no capture in this suite is
- * ever taken at. `/atlas` loses nothing on either: it is a fixed-height map slice
- * and it paints no dated row at all, so a crossing reported against its payload
- * moves no atlas frame — which is exactly why the report is a diagnosis and not a
- * verdict. And an exclusion large enough to hold a list whose length the calendar
- * decides is an exclusion over the dashboard's hero and its whole right rail: it
- * would buy a green run by deleting the coverage the gate exists for, which is the
- * same trade as widening `maxDiffPixelRatio` and is refused for the same reason.
- *
- * A browser-side clock cannot reach it either. `page.clock.setFixedTime` patches
- * `Date` in the page; the rows were chosen in the Worker before the document
- * existed, and rewriting `today` in that document (see `shiftServerToday`) changes
- * the *strings* the client recomputes and not the *rows* the server sent.
- *
- * So the repair lives in the Worker, where the decision is made.
- * `serverToday()` in `src/server/clock.ts` is the single place the server answers
- * "what day is it", and on a development request it will take that answer from an
- * `x-pt-server-today` header; `playwright.config.ts` sets that header to
- * `BASELINE_DAY` for both browser projects, on the browser context, so the SSR
- * document and the server-function POSTs that follow it cannot disagree. The
- * guard is `import.meta.env.DEV`, which the production build folds to `false` and
- * drops along with the header name, so nothing deployed can be told what day it
- * is.
- *
- * What stays here is the audit, and it is not decoration.
- * `reportServerCalendar()` reads the day back out of the documents the Worker
- * actually streamed and compares the fixture's dates against `BASELINE_DAY` on
- * both days, so a pin that stopped arriving — a renamed header, a project without
- * it, a run against a production build — is named as "2026-08-23 has been crossed,
- * which moves the journal's finished trips" rather than discovered by cropping two
- * pictures.
+ * A sixth is not a determinism problem but a fixture one. **The language the
+ * demo traveller speaks** is a mutable D1 column that `/settings/language` exists
+ * to change, so `pinDemoLanguage()` puts it back to the workspace default once
+ * per run, in the setup project, and reports the part of that it cannot set
+ * itself.
  */
 
 export type Theme = 'light' | 'dark'
@@ -218,23 +157,20 @@ async function storeSession(
 /**
  * The demo traveller's language, put back to the workspace's before a run.
  *
- * Every authenticated baseline is a picture of a *sentence*, and which sentence
- * the Worker renders is a mutable D1 column: `user_settings.locale`. Nothing in
- * this file used to touch it, and `/settings/language` exists to change it — so
- * one exploratory click, one interrupted spec, or one agent driving the picker
- * by hand leaves the shared fixture speaking another language, and every
- * authenticated frame in the suite fails on words rather than on design. That
- * is not a hypothetical: it was found set to `ar`, which red-lined 29 tests,
- * and the diff a reader is handed for that is a page of mirrored Arabic with no
- * indication that the *fixture* moved rather than the product.
+ * Every authenticated screen is a *sentence*, and which sentence the Worker
+ * renders is a mutable D1 column: `user_settings.locale`. Nothing in this file
+ * used to touch it, and `/settings/language` exists to change it — so one
+ * exploratory click, one interrupted spec, or one agent driving the picker by hand
+ * leaves the shared fixture speaking another language, and every journey behind
+ * the session then asserts against words nobody wrote. That is not a
+ * hypothetical: it was found set to `ar`, which red-lined 29 tests, with no
+ * indication that the *fixture* had moved rather than the product.
  *
  * The reset is the product's own writer — the follow-the-workspace chip, which
  * clears the override to `NULL` — rather than a SQL statement or a guessed
- * server-function URL. Three consequences, all wanted: the state it lands in is
- * exactly the state the committed baselines were recorded in (that chip is the
- * selected one in every `settings-language-*` frame); it exercises the same
- * write the screen offers, so a pin that stops working is a defect worth
- * knowing about; and it needs no privilege the demo account does not have.
+ * server-function URL. Two consequences, both wanted: it exercises the same write
+ * the screen offers, so a pin that stops working is a defect worth knowing about;
+ * and it needs no privilege the demo account does not have.
  *
  * It runs once per run, in the setup project, because it is the only place a
  * write belongs — a per-test reset would be a write per frame against a
@@ -285,7 +221,7 @@ export async function pinDemoLanguage(page: Page): Promise<boolean> {
         console.warn(
           `[shoot] the demo traveller's language override did not clear — ` +
             `/settings/language still shows a language of their own after a ` +
-            `reload. Every authenticated baseline was recorded without one.`,
+            `reload. Every journey behind the session assumes there is none.`,
         )
         return false
       }
@@ -296,7 +232,7 @@ export async function pinDemoLanguage(page: Page): Promise<boolean> {
     if (lang !== 'en') {
       console.warn(
         `[shoot] the demo workspace supplies "${lang}", not "en" — every ` +
-          `authenticated baseline was recorded in English. Reset it under ` +
+          `journey behind the session reads English. Reset it under ` +
           `/settings/organization, or re-run: node scripts/seed/seed.mjs`,
       )
       return false
@@ -376,32 +312,21 @@ export const THEMES: ReadonlyArray<Theme> = ['light', 'dark']
 /**
  * TanStack's development toolbar, which is tooling rather than product.
  *
- * One selector, three uses — hidden before the shutter (`hideDevChrome()`),
- * asserted hidden (`readCaptureState()`) and skipped when the day-boundary probe
- * reads the page's words (`readRelativeTime()`). Three copies of a `data-testid`
- * is three places for it to rot. Exported so a spec can mount a stand-in for it
- * and prove the hiding survives a late arrival.
+ * One selector, two uses — hidden by `settle()` (`hideDevChrome()`) and asserted
+ * hidden by `readCaptureState()`. Two copies of a `data-testid` is two places for
+ * it to rot.
+ *
+ * Hiding it is not tidiness now that no frame is compared. Its trigger is a
+ * `position: fixed` badge, and on the phone viewport it lands over the "Trips"
+ * destination in the tab bar — measured at 0,595, 98x64 — where it takes the
+ * press meant for the product. `a finger reaches the same facts on a phone`
+ * asserts that from the other side, as a claim about the tab bar rather than
+ * about the toolbar.
  */
 export const DEV_TOOLBAR = '[data-testid="tanstack_devtools"]'
 
-/**
- * Elements whose text content is source, not copy.
- *
- * The day-boundary probe reads text nodes, and a `<script>` is full of them: the
- * loader payload is serialised into one, `today:"…"` and all, so a walk that
- * counted script text would report the probe's own rewritten input as a page that
- * had moved. `<style>` and `<template>` are the same category — bytes the browser
- * parses rather than words a reader sees.
- */
-const TEXT_IS_NOT_COPY: ReadonlyArray<string> = [
-  'SCRIPT',
-  'STYLE',
-  'NOSCRIPT',
-  'TEMPLATE',
-]
-
 export type RouteCase = {
-  /** Slug used in the snapshot filename. */
+  /** Slug used in failure messages, so a stale entry points at its own source. */
   readonly name: string
   readonly path: string
   /** A selector that proves the route actually rendered its own content. */
@@ -418,8 +343,7 @@ export type RouteCase = {
    *
    * `/atlas` is the only route in THIS table that carries one - the trip planner
    * at `/trips/$tripId/plan` mounts a map too, but it takes a route param and so is
-   * not screenshotted here. Both halves of
-   * the audit, the wait itself and the resize capture path are additionally
+   * not walked here. Both halves of the audit and the wait itself are additionally
    * exercised by `the gate itself` against a document built for them, because the
    * interesting states — a canvas that never latches, a marker on a route that
    * declares nothing — are states no real screen can be asked to enter, and
@@ -427,31 +351,6 @@ export type RouteCase = {
    * tested.
    */
   readonly map?: true
-  /**
-   * The route's loader payload carries the Worker's `today`, so at least one
-   * string on it is the wall clock's to decide.
-   *
-   * Declared as a fact about the *payload*, not about what is currently on
-   * screen, and that distinction is the whole fix for a class of overnight
-   * failure this file was written to end. Whether a countdown is *visible*
-   * depends on which rows the Worker selected: `TripTile` renders its badge only
-   * for a start date inside the next sixty days, so once the fixture's last
-   * upcoming trip has started, `/trips` prints no clock-derived string at all —
-   * for the seeded workspace, from 2026-10-10. An audit that demanded a declared
-   * route "must have something to exclude" would therefore fail four specs that
-   * morning, with a message blaming copy that nobody had touched. Payload
-   * presence cannot move like that: `today` is a required field on the DTO
-   * (`src/routes/_app/-server/overview.ts` and `.../library.ts` both declare
-   * `readonly today: string`), returned whether or not a row uses it.
-   *
-   * So the flag is audited in two places, each asserting only what it can
-   * actually see. `auditServerClock()` compares it against the streamed
-   * documents in both directions, which is calendar-proof. `auditRelativeTime()`
-   * keeps a *visible* clock-derived string fatal on a route that declares
-   * nothing — the direction that protects the comparison — and reports, rather
-   * than fails, when a declared route happens to show none this run.
-   */
-  readonly relativeTime?: true
 }
 
 /**
@@ -469,7 +368,7 @@ export const PUBLIC_ROUTES: ReadonlyArray<RouteCase> = [
 ]
 
 /**
- * The year `/vacay` is photographed in.
+ * The year `/vacay` is walked in.
  *
  * The route defaults its year to the server's `currentYear()`, which makes every
  * numeral, every month grid and the entitlement label on that screen change on 1
@@ -485,52 +384,26 @@ export const PINNED_YEAR = 2026
  * Routes behind auth. Covered only when the run supplies credentials, so a
  * missing fixture reports as skipped rather than as a design regression.
  *
- * The three `relativeTime` routes are exactly the three whose loader payload
- * carries the server's `today` — verified by reading the SSR document for all
- * seven: `/dashboard`, `/trips` and `/journey` each contain one `today:"…"`, and
- * `/atlas`, `/vacay`, `/settings` and `/settings/language` contain none.
- * `auditServerClock()` re-checks that on every run, in both directions.
- *
  * `/settings/language` is a route rather than a section of `/settings` because a
  * twenty-four-option grid of native names cannot live in a `SettingsRow`, and it
- * is photographed for the same reason it exists: it is the one screen whose whole
- * subject is a control, so a regression in the chip grid — its wrap at 360px, the
- * per-script line box, the selected treatment in either theme — shows up nowhere
- * else in this table. Its loader reads two rows and no date, which is why it
- * declares neither `relativeTime` nor `map`.
+ * is walked separately for the same reason: it is the one screen whose whole
+ * subject is a control, and a chip grid that throws on one theme's branch throws
+ * nowhere else in this table.
  *
  * `/atlas` is the one route with a live map, and the flag and the canvas have to
  * travel together: `settleMap()` fails a route that renders a `[data-map-ready]`
  * marker without declaring one *and* a route that declares one and renders none,
- * so neither half can be right on its own. The declaration also moves that route
- * to the viewport-after-resize capture path (see `fitViewportToDocument()`), which
- * is why the four `atlas-*` baselines are re-recorded by whoever owns that screen
- * rather than left to fail.
+ * so neither half can be right on its own.
  */
 export const APP_ROUTES: ReadonlyArray<RouteCase> = [
-  { name: 'dashboard', path: '/dashboard', ready: 'main', relativeTime: true },
-  { name: 'trips', path: '/trips', ready: 'main', relativeTime: true },
+  { name: 'dashboard', path: '/dashboard', ready: 'main' },
+  { name: 'trips', path: '/trips', ready: 'main' },
   { name: 'atlas', path: '/atlas', ready: 'main', map: true },
-  { name: 'journey', path: '/journey', ready: 'main', relativeTime: true },
+  { name: 'journey', path: '/journey', ready: 'main' },
   { name: 'vacay', path: `/vacay?year=${PINNED_YEAR}`, ready: 'main' },
   { name: 'settings', path: '/settings', ready: 'main' },
   { name: 'settings-language', path: '/settings/language', ready: 'main' },
 ]
-
-/**
- * Where the Worker's `today` is read from when the frame under diagnosis carries
- * none of its own.
- *
- * The server's clock is one fact per run, and only three of the six authenticated
- * routes put it in their document. A per-frame diagnosis is scoped to the frame
- * that failed, so `/atlas`, `/vacay` and `/settings` would have nothing to compare
- * their fixture dates against — and, before this existed, threw on the attempt
- * inside a `catch` that discarded the reason. Derived from the declaration rather
- * than listed again, so it cannot disagree with `auditServerClock()`.
- */
-export const SERVER_CLOCK_ROUTES: ReadonlyArray<RouteCase> = APP_ROUTES.filter(
-  (route) => route.relativeTime === true,
-)
 
 /**
  * Select the theme by emulating the media feature, and nothing else.
@@ -542,12 +415,11 @@ export const SERVER_CLOCK_ROUTES: ReadonlyArray<RouteCase> = APP_ROUTES.filter(
  * writing it before `goto` (as an earlier version did) applied it to
  * `about:blank` and was silently discarded.
  *
- * Reduced motion is deliberately NOT forced here: `toHaveScreenshot` already
- * runs with `animations: 'disabled'`, which settles animations at capture time,
- * and forcing the media feature globally makes `motion` log a warning. That
- * warning is a *real* one — the app's own motion layer talking — so it is not in
- * TOLERATED_CONSOLE_WARNINGS and must not be put there. A reduced-motion
- * baseline is separate work that has to deal with it honestly.
+ * Reduced motion is deliberately NOT forced here. Forcing the media feature makes
+ * the motion layer log a warning, and that warning is a *real* one — the app's own
+ * code talking — so it is not in TOLERATED_CONSOLE_WARNINGS and must not be put
+ * there. The one journey that needs the preference emulates it for itself, at the
+ * end of its walk, and stops reading the console before it does.
  */
 export async function applyTheme(page: Page, theme: Theme): Promise<void> {
   await page.emulateMedia({ colorScheme: theme })
@@ -587,913 +459,14 @@ export async function applyTheme(page: Page, theme: Theme): Promise<void> {
  * years) from a *client-side* `new Date()`, so without this the map recolours
  * itself the day the calendar crosses a threshold — for the seeded dates, on
  * 2026-09-06. 2026-06-15 sits 83 days from the nearest of those thresholds and
- * puts every seeded country in the band a reader sees today, so the baseline
- * looks like the live product rather than a different one.
+ * puts every seeded country in the band a reader sees today, so the map under
+ * test is the map the product draws rather than a different one.
  *
- * This fixes the clock *in the browser*. It cannot touch a countdown the Worker
- * rendered into the HTML before the browser existed — that is what
- * RELATIVE_TIME_SITES is for, and the two are deliberately separate seams.
+ * This fixes the clock *in the browser*, and only there. What the Worker rendered
+ * into the HTML before the browser existed is seam 3's, pinned by a request
+ * header from `playwright.config.ts`; the two are deliberately separate.
  */
 export const FROZEN_NOW = '2026-06-15T12:00:00.000Z'
-
-/* -------------------------------------------------------------------------------------------------
- * The clock the server read
- * ---------------------------------------------------------------------------------------------- */
-
-/** One place in the product where a Worker-side `new Date()` reaches pixels. */
-export type RelativeTimeSite = {
-  /** Named in every failure message, so a stale entry points at its own source. */
-  readonly source: string
-  /**
-   * The element that renders this string, as a selector — the site's scope.
-   *
-   * Required, and required to be more than one bare tag, because the pattern
-   * below keys on *text* and no component owns a word. `span` filtered on
-   * `/^(Today|in \d+d)$/` is a document-wide scan: the day any other span on
-   * `/dashboard`, `/trips` or `/journey` reads exactly "Today" it would leave the
-   * comparison silently, with nothing in the run to say a region had stopped
-   * being compared. Scoping each site to the thing that actually prints it keeps
-   * the exclusion the size of what it excuses, and `the gate itself` asserts the
-   * scope is a real one.
-   */
-  readonly within: string
-  /** The masked element, resolved inside `within`. */
-  readonly region: string
-  /**
-   * Match the pattern against this descendant of the region instead of against
-   * the region's own text.
-   *
-   * The shape of a stat cell whose *label* flips while its value stays a
-   * numeral: the label is what the clock decides, the cell is what gets masked.
-   */
-  readonly keyedOn?: string
-  /**
-   * Full-string pattern for every output the clock can produce here.
-   *
-   * Only clock-derived strings are listed. A state the clock has no hand in —
-   * "Dates not set", "No dates yet" — is deliberately absent, because excluding
-   * it would hide a real data regression behind a determinism fix.
-   */
-  readonly drifts: RegExp
-  /**
-   * Every string this site can print, as the pattern's own corpus.
-   *
-   * Enumerated rather than trusted: the gate asserts the pattern matches all of
-   * them, so a copy change that adds a variant is a failing test rather than a
-   * region that has quietly stopped being excluded.
-   */
-  readonly variants: ReadonlyArray<string>
-  /** Nearby strings the clock does not decide, which the pattern must not match. */
-  readonly fixed: ReadonlyArray<string>
-  /**
-   * The one string this site is rewritten to before the shutter, so its box is a
-   * constant.
-   *
-   * A mask is only as stable as the element it covers, and the countdown badge's
-   * element *is* its text: `ml-auto` pins its right edge and the content sets its
-   * width, so "Today" and "in 50d" mask two different rectangles and the
-   * difference between them is unmasked page. That sliver sat well inside
-   * `maxDiffPixelRatio`, which was the problem rather than the reprieve: it meant
-   * the exclusion held on tolerance instead of by construction, and the tolerance
-   * is the one budget this file is not allowed to spend.
-   *
-   * `pinRelativeTime()` therefore writes this value over whatever the clock
-   * produced, and the mask then covers it. Two consequences worth being explicit
-   * about: the rectangle is identical on every run and every calendar day, and the
-   * placeholder never reaches the picture, because the region it is written into
-   * is the region the mask paints over.
-   *
-   * Chosen as the *narrowest* string in `variants`, so the excluded rectangle is
-   * the smallest box that can hold this site's output. Over-excluding by a few
-   * pixels would cost nothing measurable and is refused anyway, for the same
-   * reason a wider tolerance is. The gate asserts it matches `drifts` and is one
-   * of `variants`, so it cannot drift out of the corpus it is drawn from.
-   */
-  readonly pinned: string
-}
-
-/**
- * Every string in the product a Worker-side `new Date()` reaches, and the region
- * of the frame excluded from the comparison because of it.
- *
- * The Worker's `today` travels to the client as `payload.today`, and the
- * countdown is therefore already in the SSR HTML: no browser-side clock,
- * `page.clock` included, can change it, and no amount of settling helps, because
- * it is simply a different string tomorrow. Seam 4's header pins which *rows*
- * the Worker selects, not what a locale prints, so these regions stay excluded
- * from the comparison on their own terms — which is what `toHaveScreenshot`'s
- * `mask` does. The tolerance is untouched: `maxDiffPixelRatio` stays at 0.002,
- * because a tolerance wide enough to swallow a day counter is wide enough to
- * swallow a real regression.
- *
- * Three properties are worth being exact about.
- *
- * **The region, not the glyphs — and the region held still.** A mask box is the
- * size of the element it covers, so an element the clock can resize is an
- * exclusion the clock can move. Two of the three sites are safe by their
- * containers: the dashboard hero is masked at its grid cell, whose geometry the
- * four-column track fixes, and the journey reason line is a block element, so its
- * box is the row width whatever it says. The trip-card badge is not — `ml-auto`
- * pins its right edge and its text sets its width, so "Today" and "in 50d" mask
- * two different rectangles. That is what `pinned` and `pinRelativeTime()` are
- * for: every site's string is rewritten to a constant before the shutter, so the
- * excluded rectangle is a constant too, and the mask then covers the placeholder
- * so it never reaches the picture. The 51 → 50 case that failed round 4 is
- * covered twice over by that: same glyphs masked, same box either way.
- *
- * **The scope, not the word.** Every entry names the element that renders it
- * (`within`), and the pattern is only consulted inside that scope. A bare
- * `span` filtered on `/^(Today|in \d+d)$/` reads as tidy and is a document-wide
- * scan: the first time any other span on those three routes says exactly
- * "Today" it leaves the comparison, and a green run is how you find out.
- *
- * **What this covers, and what it does not.** These are *strings* the clock
- * decides. The clock also decides *which rows* the Worker returns, and that is a
- * different frame rather than a different string — no exclusion reaches it. That
- * half of the problem is measured, not masked: see `CALENDAR_SELECTIONS` and the
- * "What this file cannot pin" note at the top of this file. It also decides *how
- * many* of these strings a screen shows at all, which is why a declared route
- * printing none is reported rather than failed — see `auditRelativeTime()`.
- *
- * Introducing these exclusions re-recorded twelve of the fifty-two baselines —
- * `dashboard`, `trips` and `journey`, both themes, both projects — because a
- * mask paints over the region it excludes, so a masked frame is a different
- * picture by construction and not by regression. Pinning re-recorded eight of
- * those twelve again — `dashboard` and `trips`, all four frames each — because the
- * badge's excluded rectangle is now the size of the pinned string rather than the
- * size of whatever the clock said on the day of recording. `journey` did not move
- * for pinning, which is the expected answer: its region is a block element, so its
- * box never depended on the string in the first place. The other baselines that
- * moved in the same commits moved for reasons recorded on `settleOnce()`.
- */
-export const RELATIVE_TIME_SITES: ReadonlyArray<RelativeTimeSite> = [
-  {
-    source: 'src/routes/_app/-ui/trip-card.tsx — the countdown badge',
-    // The badge is the last cell of the tile's meta row, and the whole tile is
-    // one link, so the tile is the scope. Every trip tile in the product is this
-    // component, on both the dashboard and the trip index.
-    within: 'a[href^="/trips/"][href$="/plan"]',
-    region: 'span',
-    drifts: /^(Today|in \d+d)$/,
-    variants: ['Today', 'in 1d', 'in 50d'],
-    fixed: ['Active', '7d', '17 – 23 Aug 2026'],
-    // The badge is the one site whose box really is its string, so this is the
-    // entry `pinned` exists for. "Today" is the narrowest of the three and, being
-    // the last cell of a `flex-wrap` row, a narrower badge is also the one change
-    // that cannot push the row onto a second line.
-    pinned: 'Today',
-  },
-  {
-    source: 'src/routes/_app/dashboard.tsx — the hero "starts in" stat',
-    // Keyed on the label, which is the part that flips, and masked at the cell,
-    // whose width the four-column grid fixes. The other three hero stats are
-    // numerals too, and none of them is allowed to lose coverage over this one.
-    within: 'main dl',
-    region: ':scope > div',
-    keyedOn: 'dt',
-    drifts: /^(Starts in|Started)$/,
-    variants: ['Starts in', 'Started'],
-    fixed: ['Travellers', 'Trip dates', 'Places'],
-    // The cell's width is the grid's, so pinning the label changes no geometry
-    // here. It is pinned anyway: every site being pinned is a property worth
-    // being able to state without exceptions, and a label inside a masked cell
-    // costs nothing to hold still.
-    pinned: 'Started',
-  },
-  {
-    source:
-      'src/routes/_app/journey/index.tsx — the unwritten-trip reason line',
-    // The reason line is the last block of a backlog row, and a backlog row is
-    // the list item that links to the trip waiting to be written up.
-    within: 'li:has(a[href^="/trips/"])',
-    region: 'span',
-    drifts:
-      /^(Happening now|Ended yesterday|Ended \d+ days ago|Starts tomorrow|Starts in \d+ days)$/,
-    variants: [
-      'Happening now',
-      'Ended yesterday',
-      'Ended 62 days ago',
-      'Starts tomorrow',
-      'Starts in 50 days',
-    ],
-    fixed: ['No dates yet', 'Dates not set'],
-    // A block element, so its width is the row's and only its *height* could
-    // move — on a narrow viewport, by wrapping. The narrowest variant is
-    // therefore the safe pin: it can only ever un-wrap a line, never add one.
-    pinned: 'Happening now',
-  },
-]
-
-/**
- * One site's excluded region, built from its scope rather than from a tag scan.
- *
- * Two shapes, and no more: the region's own text carries the drifting string, or
- * a named descendant does and the region is what gets masked around it. See
- * `keyedOn`.
- */
-export function relativeTimeRegionOf(
-  page: Page,
-  site: RelativeTimeSite,
-): Locator {
-  const region = page.locator(site.within).locator(site.region)
-  return site.keyedOn === undefined
-    ? region.filter({ hasText: site.drifts })
-    : region.filter({
-        has: page.locator(site.keyedOn).filter({ hasText: site.drifts }),
-      })
-}
-
-/**
- * The element that actually *says* the clock-derived string, which is not always
- * the element that gets masked.
- *
- * Same two shapes as `relativeTimeRegionOf()`, read the other way round: without
- * `keyedOn` the region carries the string itself, and with it the string is in a
- * named descendant and the region is the box around it. This is what
- * `pinRelativeTime()` writes to, and the pattern is anchored (`^…$`) so the match
- * is always a leaf whose whole text is the drifting string.
- */
-function relativeTimeStringOf(page: Page, site: RelativeTimeSite): Locator {
-  const region = page.locator(site.within).locator(site.region)
-  return site.keyedOn === undefined
-    ? region.filter({ hasText: site.drifts })
-    : region.locator(site.keyedOn).filter({ hasText: site.drifts })
-}
-
-/**
- * Rewrite every clock-derived string on this route to its site's pinned value,
- * and say how many it rewrote.
- *
- * The step that makes seam 3 hold by construction rather than on tolerance. A
- * mask covers an element's box, and an element sized by its own text has a box
- * the clock decides: "Today" and "in 50d" are two different rectangles, and the
- * difference between them is page that nothing excludes. Writing the pinned value
- * first makes the rectangle a constant, and the mask that follows means the
- * placeholder is never in the picture — it is written into exactly the region the
- * mask paints over.
- *
- * Called after `settle()` and before the shutter, in `shoot()`. That ordering is
- * load-bearing in both directions: React has committed by then, so nothing
- * re-renders the text back, and the write is a plain DOM mutation React never
- * sees. It is deliberately *not* part of `settle()`, because the day-boundary
- * probe settles the same routes in order to read what the clock produced, and a
- * settle that pinned would hand it two identical readings and prove nothing.
- *
- * Returns the count so a spec can assert the write happened rather than trust it;
- * zero is a legitimate answer on a route whose rows the calendar has moved past
- * (see `auditRelativeTime()`).
- */
-export async function pinRelativeTime(
-  page: Page,
-  route: RouteCase,
-): Promise<number> {
-  if (route.relativeTime !== true) {
-    return 0
-  }
-  let written = 0
-  for (const site of RELATIVE_TIME_SITES) {
-    written += await relativeTimeStringOf(page, site).evaluateAll(
-      (nodes: Array<Element>, pinned: string) => {
-        for (const node of nodes) {
-          node.textContent = pinned
-        }
-        return nodes.length
-      },
-      site.pinned,
-    )
-  }
-  return written
-}
-
-/** Every region of this page excluded from the comparison, in table order. */
-function relativeTimeRegions(page: Page): Array<Locator> {
-  return RELATIVE_TIME_SITES.map((site) => relativeTimeRegionOf(page, site))
-}
-
-/**
- * The same regions as one locator, or null when the table is empty.
- *
- * Playwright resolves the mask list before every capture attempt, and each
- * locator in it is a round trip — see `auditRelativeTime()` on how little slack
- * there is before the shutter. `Locator.or()` folds the whole table into a single
- * resolution, so the exclusion costs the frame one round trip rather than one per
- * site, however long the table grows.
- *
- * The null is not defensive noise. Folding an empty table with a destructured
- * first element produced `mask: [undefined]`, which Playwright accepts and which
- * excludes nothing — an emptied table would have silently turned every exclusion
- * off while the gate's own table specs stayed green. Now the mask list is empty
- * instead of malformed, and `the gate itself` asserts the table is not empty, so
- * this branch is reachable only on the way to a failing spec.
- */
-function relativeTimeRegion(page: Page): Locator | null {
-  const regions = relativeTimeRegions(page)
-  const first = regions.at(0)
-  if (first === undefined) {
-    return null
-  }
-  return regions.slice(1).reduce((all, one) => all.or(one), first)
-}
-
-/** How many clock-derived elements this page is actually showing. */
-async function countRelativeTime(page: Page): Promise<number> {
-  const counts = await Promise.all(
-    relativeTimeRegions(page).map((region) => region.count()),
-  )
-  return counts.reduce((total, one) => total + one, 0)
-}
-
-/**
- * Re-check what this page shows against what the route table declares, and fail
- * only in the direction that can actually cost the comparison something.
- *
- * **Fatal**: a visible clock-derived string on a route that declares none. That
- * string is inside the comparison, it is a different string tomorrow, and the
- * frame will fail on a morning when nothing was designed. It is the failure this
- * whole file exists to prevent, and there is no calendar in which it is
- * acceptable.
- *
- * **Reported**: a route that declares one and shows none. This looks like the
- * mirror image and is not, because the *number of clock-derived strings on a
- * screen is itself decided by the calendar*. `TripTile` prints its badge only
- * within sixty days of a start date, so on the seeded fixture `/trips` prints
- * none from 2026-10-10 — and an earlier version of this function asserted
- * `toBeGreaterThan(0)` here and would have failed four specs that morning, in
- * both themes on both projects, with a message accusing a copy change that had
- * not happened. A run cannot tell that apart from a real copy change by counting
- * elements, so it says what it saw and leaves the verdict to the frames. The
- * claim that the declaration is not stale is made instead by
- * `auditServerClock()`, off the payload, where the calendar cannot reach it.
- *
- * Called *after* the capture, because it is an audit of the route table rather
- * than a precondition of the frame: a finding here should be read next to a
- * frame that was taken, not instead of one.
- */
-export async function auditRelativeTime(
-  page: Page,
-  route: RouteCase,
-): Promise<ReadonlyArray<string>> {
-  const found = await countRelativeTime(page)
-  if (route.relativeTime !== true) {
-    expect(
-      found,
-      `${route.path} prints a clock-derived string but the route table does not declare \`relativeTime: true\` — add it, so the exclusion is audited rather than accidental`,
-    ).toBe(0)
-    return []
-  }
-  if (found > 0) {
-    return []
-  }
-  return [
-    `${route.path} declares \`relativeTime: true\` and printed no clock-derived string this run, so its exclusion covered nothing and the whole frame was compared`,
-    'that is what the fixture calendar does once it moves past the rows that carry a countdown — see CALENDAR_SELECTIONS — and it is reported rather than failed because counting elements cannot tell it apart from a copy change',
-    `the declaration itself is still checked against the payload by auditServerClock(), which the calendar cannot move`,
-  ]
-}
-
-/**
- * Audit the `relativeTime` declarations against the documents the Worker
- * streamed, in both directions, on a fact no calendar can move.
- *
- * The Worker's `today` reaches a screen exactly one way: the loader puts it on
- * the payload, TanStack Start serialises the payload into the document, and the
- * client recomputes every relative string from that field. So `today:"…"` being
- * in the bytes is equivalent to "the wall clock can decide a string here", and it
- * is a property of the loader rather than of the rows — `readonly today: string`
- * is a required field on both DTOs, present whether or not a row uses it.
- *
- * That makes this the half of the old both-directions audit worth keeping fatal.
- * Verified on the seeded workspace at the time of writing: `/dashboard`,
- * `/trips` and `/journey` each carry exactly one `today`, and `/atlas`, `/vacay`
- * and `/settings` carry none — which is precisely the set of declarations.
- *
- * Only the authenticated routes are audited, and deliberately: signed in, `/login`
- * and `/register` answer 302, so a fetch that follows redirects would read the
- * dashboard's document and report the dashboard's clock against the login page's
- * declaration. A public route that starts printing a clock-derived string is
- * still caught, by `auditRelativeTime()`, on the frame itself.
- */
-export async function auditServerClock(
-  page: Page,
-  routes: ReadonlyArray<RouteCase>,
-): Promise<void> {
-  for (const route of routes) {
-    const response = await page.request.get(route.path)
-    expect(
-      response.status(),
-      `${route.path} should not be an error response`,
-    ).toBeLessThan(400)
-    const carries = [...(await response.text()).matchAll(TODAY_IN_PAYLOAD)]
-      .length
-    if (route.relativeTime === true) {
-      expect(
-        carries,
-        `${route.path} declares \`relativeTime: true\` but its document no longer carries the Worker's \`today\` — the loader stopped sending it, so the declaration is stale and the exclusion is guarding nothing`,
-      ).toBeGreaterThan(0)
-      continue
-    }
-    expect(
-      carries,
-      `${route.path} carries the Worker's \`today\` in its payload but does not declare \`relativeTime: true\` — anything it prints from that field is inside the comparison and will move at midnight`,
-    ).toBe(0)
-  }
-}
-
-/** What a route renders, split by whether the gate excludes it or not. */
-export type RelativeTimeReading = {
-  /** Text inside the excluded regions — the part a new day is allowed to change. */
-  readonly excluded: string
-  /** Every other word on the route — the part a new day must not change. */
-  readonly rest: string
-}
-
-/**
- * Read the route's text on both sides of the exclusion.
- *
- * This is what the day-boundary probe compares, and it is a stronger claim than
- * two identical screenshots: `excluded` changing proves the clock really moved,
- * and `rest` not changing proves nothing outside an excluded region depends on
- * it. It is also engine-independent, which a pixel comparison here is not — the
- * probe's rewritten payload makes React re-render the tree, entrance animations
- * replay, and `animations: 'disabled'` cannot settle a transform driven from
- * `requestAnimationFrame`, so on WebKit the mobile dashboard alternates between
- * two equally valid frames. Comparing words measures the calendar; comparing
- * those pixels would measure the motion layer.
- *
- * Read over the whole `<body>`, not over `route.ready`. The screenshot is of the
- * document, so the app shell is in it: a clock-derived string in the top nav, the
- * mobile tab bar or a toast would be inside the comparison, unmasked, and a probe
- * scoped to `main` would never look at it. `route.ready` stays what `settle()`
- * waits on and what `auditRelativeTime()` is measured against; it is not a scope
- * for "what a new day is allowed to change", because nothing about being outside
- * `main` makes a string immune to the calendar.
- *
- * `SCRIPT` and its neighbours are skipped, and that exclusion is not tidiness. The
- * loader payload is serialised into a `<script>` in the body, and it literally
- * contains `today:"…"` — the field the probe rewrites — so a walk that read script
- * text would report the probe's own input as a page that moved, on every route,
- * every time. `<style>` and `<template>` go with it as source rather than copy, and
- * the dev toolbar goes because it is tooling: `hideDevChrome()` takes it out of the
- * frame, so it has no business in the words either.
- */
-export async function readRelativeTime(
-  page: Page,
-): Promise<RelativeTimeReading> {
-  const regions = relativeTimeRegions(page)
-  const handles = (
-    await Promise.all(regions.map((region) => region.elementHandles()))
-  ).flat()
-  try {
-    const excluded = (
-      await Promise.all(regions.map((region) => region.allInnerTexts()))
-    )
-      .flat()
-      .map((line) => line.trim())
-      .join('\n')
-
-    const rest = await page.evaluate(
-      ({ sourceTags, toolbar, skipped }) => {
-        const skip = new Set<Node>(skipped)
-        const source = new Set(sourceTags)
-        const words: Array<string> = []
-        const walk = (node: Node): void => {
-          if (skip.has(node)) {
-            return
-          }
-          if (node instanceof Text) {
-            const value = node.data.trim()
-            if (value.length > 0) {
-              words.push(value)
-            }
-            return
-          }
-          if (
-            node instanceof Element &&
-            (source.has(node.tagName) || node.matches(toolbar))
-          ) {
-            return
-          }
-          node.childNodes.forEach(walk)
-        }
-        walk(document.body)
-        return words.join('\n')
-      },
-      {
-        sourceTags: TEXT_IS_NOT_COPY,
-        toolbar: DEV_TOOLBAR,
-        skipped: handles,
-      },
-    )
-    return { excluded, rest }
-  } finally {
-    await Promise.all(handles.map((handle) => handle.dispose()))
-  }
-}
-
-/** A handle on the intercepted server clock, for the day-boundary probe. */
-export type ServerTodayShift = {
-  /** Move the `today` the next navigation renders from, in whole days. */
-  readonly by: (days: number) => void
-  /** How many `today` values the last navigation actually moved. */
-  readonly moved: () => number
-}
-
-/**
- * Move the server's `today` without waiting for midnight.
- *
- * The header in `playwright.config.ts` holds the Worker on one day; this moves the
- * day the *client* recomputes from, which is a different question and needs a
- * different lever. The value the Worker chose is serialised into the streamed
- * document exactly once per route that uses it (`today:"2026-08-20"`), and every
- * relative-time string on the client is recomputed from that field. Rewriting it
- * in flight therefore renders the same rows on a different calendar day —
- * precisely the change that failed round 4, reproduced on demand instead of
- * waited for, and without moving the rows the pin is there to hold still.
- *
- * The rewrite disagrees with the markup the server already streamed, so React
- * reports a hydration mismatch and re-renders the tree from the payload. That is
- * expected, and it is why the probe does not assert the console: what it is
- * asserting is the final frame, and the final frame is the one the moved clock
- * produces.
- */
-export async function shiftServerToday(page: Page): Promise<ServerTodayShift> {
-  let offset = 0
-  let moved = 0
-
-  await page.route('**/*', async (route) => {
-    if (route.request().resourceType() !== 'document') {
-      await route.fallback()
-      return
-    }
-    const response = await route.fetch()
-    const body = await response.text()
-    moved = 0
-    const shifted = body.replace(
-      /today:"(\d{4})-(\d{2})-(\d{2})"/g,
-      (_whole, year: string, month: string, day: string) => {
-        moved += 1
-        const at = new Date(
-          Date.UTC(Number(year), Number(month) - 1, Number(day)),
-        )
-        at.setUTCDate(at.getUTCDate() + offset)
-        return `today:"${at.toISOString().slice(0, 10)}"`
-      },
-    )
-    await route.fulfill({ response, body: shifted })
-  })
-
-  return {
-    by: (days: number) => {
-      offset = days
-    },
-    moved: () => moved,
-  }
-}
-
-/* -------------------------------------------------------------------------------------------------
- * The calendar the server selected rows on
- * ---------------------------------------------------------------------------------------------- */
-
-/**
- * The day the baselines in `e2e/__screenshots__` were recorded, as the *server*
- * saw it.
- *
- * Whoever re-records a frame whose rows the Worker chose by date moves this to
- * the day they recorded it, in the same commit — and moves `BASELINE_DAY` in
- * `playwright.config.ts` with it, because that is the value the suite pins the
- * Worker's clock to and the two have to name the same day. It is not decoration:
- * `reportServerCalendar()` compares the Worker's `today` against it to decide
- * whether the row sets in those frames are still the row sets the Worker returns,
- * so a stale value would either hide a real move or invent one, and a pin that
- * stopped arriving shows up here as a crossing rather than as a mystery.
- */
-export const BASELINE_DAY = '2026-08-20'
-
-/** How a date column is compared against the server's `today`. */
-export type CalendarCompare = 'onOrAfter' | 'onOrBefore' | 'before'
-
-/**
- * The comparison itself, kept as a pure function so the table below is data and
- * the arithmetic is testable without a browser. ISO `YYYY-MM-DD` sorts
- * lexicographically, which is why these are string comparisons and not `Date`
- * maths — no timezone, no DST, no off-by-one at midnight.
- */
-export function holdsOn(
-  compare: CalendarCompare,
-  date: string,
-  today: string,
-): boolean {
-  switch (compare) {
-    case 'onOrAfter':
-      return date >= today
-    case 'onOrBefore':
-      return date <= today
-    case 'before':
-      return date < today
-  }
-}
-
-/** One comparison the Worker makes between a fixture date and its own clock. */
-export type CalendarSelection = {
-  /** The repository function and the predicate, so a failure is traceable. */
-  readonly source: string
-  /** The payload field the predicate reads. */
-  readonly field: 'startDate' | 'endDate'
-  readonly compare: CalendarCompare
-  /** What the screen does differently once the comparison flips. */
-  readonly moves: string
-}
-
-/**
- * Every place the Worker decides *which rows a screen shows* by comparing a date
- * column against `serverToday()`.
- *
- * Read off the repositories rather than guessed:
- * `listUpcomingTrips` (src/server/repos/trips.ts) keeps a trip while
- * `endDate >= today` and falls back to `startDate >= today` for an undated one;
- * `listPastTrips` takes it once `endDate <= today`;
- * `listUpcomingReservations` (src/server/repos/reservations.ts) keeps a booking
- * while `startDate >= today`; and `listTripsWithoutJourney`
- * (src/server/repos/journey.ts) ranks the journal's backlog into finished
- * (`endDate < today`), under way (`startDate <= today`), still ahead and undated.
- *
- * Both `before` and `onOrBefore` are listed because they flip on different
- * mornings — `endDate < today` turns over the day after `endDate <= today` does —
- * and a table that collapsed them would miss a real move by one day.
- *
- * A date is matched by field name, not by the kind of row it came from. Two key
- * names is all this couples to, which is the point: a table that keyed on the
- * order of fields inside a DTO would quietly find nothing the day somebody
- * reordered one, and an audit that finds nothing passes. The cost is one class of
- * over-report — a reservation's `endDate` is not compared against `today` by any
- * query, but it is tested here — and it is a cost worth paying, because a
- * reservation's end can only be crossed *after* its start, and its start is a
- * genuine boundary that has already fired. The audit can therefore be late, never
- * silent, and late is the harmless direction.
- */
-export const CALENDAR_SELECTIONS: ReadonlyArray<CalendarSelection> = [
-  {
-    source: 'listUpcomingTrips — endDate >= today',
-    field: 'endDate',
-    compare: 'onOrAfter',
-    moves: "the dashboard's hero trip and the trips it lists under it",
-  },
-  {
-    source: 'listPastTrips — endDate <= today',
-    field: 'endDate',
-    compare: 'onOrBefore',
-    // `/atlas` runs this query too and paints nothing from it, so a crossing
-    // sighted in the atlas payload is reported and moves no atlas frame. Named
-    // for what it moves rather than for where the dates were seen, on purpose:
-    // a diagnosis that overstated what it had found would be read once and then
-    // ignored.
-    moves: "the journal's finished trips",
-  },
-  {
-    source:
-      'listTripsWithoutJourney — endDate < today ranks a trip as finished',
-    field: 'endDate',
-    compare: 'before',
-    moves: "the order of the journal's unwritten-trip list",
-  },
-  {
-    source:
-      'listUpcomingTrips (undated) and listUpcomingReservations — startDate >= today',
-    field: 'startDate',
-    compare: 'onOrAfter',
-    moves:
-      "the dashboard's 'Upcoming reservations' rail and the booking count above it",
-  },
-  {
-    source:
-      'listTripsWithoutJourney — startDate <= today ranks a trip as under way',
-    field: 'startDate',
-    compare: 'onOrBefore',
-    moves: "the order of the journal's unwritten-trip list",
-  },
-]
-
-/** One fixture date, and the route document it was read from. */
-export type CalendarSighting = {
-  readonly route: string
-  readonly field: 'startDate' | 'endDate'
-  readonly date: string
-}
-
-/** What the server's own documents say about its clock and its fixture. */
-export type ServerCalendar = {
-  /** Every distinct `today` the Worker stamped into a document this run. */
-  readonly todays: ReadonlyArray<string>
-  readonly dates: ReadonlyArray<CalendarSighting>
-}
-
-const TODAY_IN_PAYLOAD = /"?today"?:"(\d{4}-\d{2}-\d{2})"/g
-const FIXTURE_DATE_IN_PAYLOAD = /"?(startDate|endDate)"?:"(\d{4}-\d{2}-\d{2})"/g
-
-/**
- * Read the server's clock and the fixture's dates out of the documents it
- * streams.
- *
- * Over HTTP rather than through a page, because none of this needs a renderer:
- * `page.request` shares the browser context's cookies, so the authenticated
- * documents come back as the signed-in owner, and six fetches cost the run
- * milliseconds instead of six navigations.
- *
- * The loader payload is serialised into the document, so `today:"2026-08-20"` and
- * every `startDate` / `endDate` the screen was given are literally in the bytes.
- * The keys are matched with an optional pair of quotes because the streamed form
- * writes them bare and a plain JSON body would not.
- *
- * The clock and the dates come from two lists rather than one, and that split is
- * the whole reason a single-route diagnosis works at all. Only three of the six
- * authenticated routes stamp a `today`, and carrying a fixture date is a separate
- * question from carrying the clock: `/vacay` and `/settings` carry neither, and
- * `/atlas` has carried dated rows with no clock to compare them against. So
- * reading a crossing off one route means reading its dates from that route and the
- * day from wherever the Worker last stamped one. `clock` is consulted only when
- * `routes` produced no `today` of its own, so the whole-run report still costs
- * exactly one fetch per route.
- */
-async function readServerCalendar(
-  page: Page,
-  routes: ReadonlyArray<RouteCase>,
-  clock: ReadonlyArray<RouteCase>,
-): Promise<ServerCalendar> {
-  const todays = new Set<string>()
-  const dates: Array<CalendarSighting> = []
-
-  const documentOf = async (route: RouteCase): Promise<string> => {
-    const response = await page.request.get(route.path)
-    expect(
-      response.status(),
-      `${route.path} should not be an error response`,
-    ).toBeLessThan(400)
-    return response.text()
-  }
-
-  for (const route of routes) {
-    const body = await documentOf(route)
-    for (const found of body.matchAll(TODAY_IN_PAYLOAD)) {
-      todays.add(found[1])
-    }
-    for (const found of body.matchAll(FIXTURE_DATE_IN_PAYLOAD)) {
-      const field = found[1] === 'startDate' ? 'startDate' : 'endDate'
-      dates.push({ route: route.path, field, date: found[2] })
-    }
-  }
-
-  if (todays.size === 0) {
-    const read = new Set(routes.map((route) => route.path))
-    for (const route of clock) {
-      if (read.has(route.path)) {
-        continue
-      }
-      for (const found of (await documentOf(route)).matchAll(
-        TODAY_IN_PAYLOAD,
-      )) {
-        todays.add(found[1])
-      }
-    }
-  }
-
-  return { todays: [...todays].sort(), dates }
-}
-
-/** A fixture date whose comparison against `today` has flipped since a given day. */
-export type CalendarBoundary = {
-  readonly selection: CalendarSelection
-  readonly date: string
-  /** The routes whose payload carried this date. */
-  readonly routes: ReadonlyArray<string>
-}
-
-/**
- * Which of the Worker's date comparisons answer differently today than they did
- * on `baseline`.
- *
- * Pure, and exact: for every date the fixture actually contains, every rule in
- * `CALENDAR_SELECTIONS` is evaluated on both days and reported only when the two
- * answers disagree. So a run on a day when no fixture date sits between the
- * baseline and today reports nothing at all — the countdowns have moved, and that
- * is the mask's business, not this function's — while the morning a row changes
- * list is reported with the date that moved it.
- */
-export function crossedBoundaries(
-  calendar: ServerCalendar,
-  today: string,
-  baseline: string,
-): ReadonlyArray<CalendarBoundary> {
-  const crossed: Array<CalendarBoundary> = []
-
-  for (const selection of CALENDAR_SELECTIONS) {
-    const seen = calendar.dates.filter(
-      (sighting) => sighting.field === selection.field,
-    )
-    const distinct = [...new Set(seen.map((sighting) => sighting.date))].sort()
-    for (const date of distinct) {
-      if (
-        holdsOn(selection.compare, date, baseline) ===
-        holdsOn(selection.compare, date, today)
-      ) {
-        continue
-      }
-      crossed.push({
-        selection,
-        date,
-        routes: [
-          ...new Set(
-            seen
-              .filter((sighting) => sighting.date === date)
-              .map((sighting) => sighting.route),
-          ),
-        ].sort(),
-      })
-    }
-  }
-
-  return crossed
-}
-
-/** What one run of the calendar report found, and the diagnosis it wrote. */
-export type ServerCalendarReport = {
-  /** The single day every document in this run agreed it was. */
-  readonly today: string
-  /** Every fixture date the scope carried, so a caller can check it saw one. */
-  readonly dates: ReadonlyArray<CalendarSighting>
-  readonly crossed: ReadonlyArray<CalendarBoundary>
-  /**
-   * The diagnosis, ready to attach to a run, and empty when nothing crossed.
-   *
-   * Lines rather than a formatted block: a Playwright annotation is a string, and
-   * a caller that wants one joins them.
-   */
-  readonly lines: ReadonlyArray<string>
-}
-
-/** One crossing as a line a reader can act on without opening this file. */
-function describeBoundary(boundary: CalendarBoundary): string {
-  return `${boundary.date} has been crossed → ${boundary.selection.source}, which changes ${boundary.selection.moves}; the date is in the payload of ${boundary.routes.join(' and ')}`
-}
-
-/**
- * Say whether the fixture has aged past the day its baselines were recorded, and
- * what that moves.
- *
- * This reports; it does not fail. The distinction matters and is the whole shape
- * of this seam.
- *
- * A crossed fixture date does not *cause* a red run — it makes the Worker select
- * different rows, and the frames that photograph those rows then differ on their
- * own. Failing here as well would add a second red test that says the same thing
- * twice and would put the gate's verdict in the hands of the calendar even on the
- * days when nothing the gate photographs actually moved. So the crossing is
- * attached to the run as a diagnosis: when `/dashboard` fails tomorrow, the
- * offending date, the query that reads it and the region it moves are already in
- * the report, and nobody has to crop two pictures to find out why.
- *
- * The two assertions that remain are about this function being able to see a day
- * at all: no server `today` anywhere, or two different ones in one run. Those are
- * faults in the run rather than in the calendar, and a run that cannot read the
- * clock is a run whose diagnosis would be silence.
- *
- * What it deliberately does *not* assert is that the scope carried any fixture
- * date. That used to be here, and it was the bug that made this whole seam
- * unreachable for half the product: a per-frame diagnosis passes a single route,
- * `/settings` and `/vacay` carry no dated row at all, and the assertion fired on
- * a scope that was simply small rather than broken. Worse, the same assertion
- * threw for `/atlas`, `/vacay` and `/settings` before that — none of them stamps a
- * `today` — so the one caller that ran per frame could never report anything and
- * failed silently into a `catch`. "Is the workspace seeded" is a claim about the
- * run, so the run-wide spec makes it, off `dates` in the returned report.
- */
-export async function reportServerCalendar(
-  page: Page,
-  routes: ReadonlyArray<RouteCase>,
-  clock: ReadonlyArray<RouteCase> = SERVER_CLOCK_ROUTES,
-): Promise<ServerCalendarReport> {
-  const calendar = await readServerCalendar(page, routes, clock)
-
-  expect(
-    calendar.todays,
-    'no document in this run stamped a server `today`, neither the routes under diagnosis nor the ones that carry the clock — so either the payload shape moved or SERVER_CLOCK_ROUTES is wrong',
-  ).not.toEqual([])
-  expect(
-    calendar.todays,
-    'the documents in this run disagree about what day it is, so the run straddled midnight — start it again',
-  ).toHaveLength(1)
-
-  const [today] = calendar.todays
-  const crossed = crossedBoundaries(calendar, today, BASELINE_DAY)
-  const lines =
-    crossed.length === 0
-      ? []
-      : [
-          `the server's today is ${today}; the baselines in e2e/__screenshots__ were recorded on ${BASELINE_DAY}`,
-          ...crossed.map(describeBoundary),
-          'a frame that fails below and holds one of these regions is the calendar moving, not a design regression',
-        ]
-  return { today, dates: calendar.dates, crossed, lines }
-}
 
 /* -------------------------------------------------------------------------------------------------
  * The map
@@ -1508,7 +481,7 @@ export async function reportServerCalendar(
  * exactly the pixel-stability predicate a screenshot needs. A renderer that will
  * never draw at all latches the same marker off `MAP_ENGINE_TIMEOUT_MS` (6000 ms
  * in `src/components/map/map-context.tsx`), so the honestly-degraded "basemap
- * unavailable" panel gets photographed instead of waited out.
+ * unavailable" panel is reached instead of waited out.
  *
  * 15 s covers both: measured locally at ~1.0 s on Chromium/SwiftShader and
  * ~0.9 s on WebKit against a cold tile archive, with the 6 s stall clock as the
@@ -1545,20 +518,18 @@ export async function readMapCensus(page: Page): Promise<MapCensus> {
 }
 
 /**
- * Hold the shutter until no map on the page is still drawing, and audit the
+ * Hold until no map on the page is still drawing, and audit the
  * declaration in both directions.
  *
  * Taken from a census the settling sequence already collected, so the twelve
  * routes with no map pay nothing at all for the wait: the polling assertion is
- * entered only when a marker exists *and* reads `false`. That parsimony is not
- * premature — see the note on `auditRelativeTime()` about how little slack there
- * is before the shutter.
+ * entered only when a marker exists *and* reads `false`.
  *
  * `timeout` is a parameter for one reason: the only way to prove this fails
- * loudly rather than photographing an unfinished canvas is to hand it a marker
+ * loudly rather than settling on an unfinished canvas is to hand it a marker
  * that never latches, which no real screen can be asked to produce, and a spec
- * should not spend MAP_READY_TIMEOUT_MS proving it. Every caller in the capture
- * path uses the default.
+ * should not spend MAP_READY_TIMEOUT_MS proving it. Every caller in `settle()`
+ * uses the default.
  */
 export async function settleMap(
   page: Page,
@@ -1581,25 +552,24 @@ export async function settleMap(
   }
   expect(
     census.total,
-    `${route.path} mounts a live map but the route table does not declare \`map: true\` — add it, so the frame is captured after the canvas has finished drawing`,
+    `${route.path} mounts a live map but the route table does not declare \`map: true\` — add it, so the route settles after the canvas has finished drawing`,
   ).toBe(0)
 }
 
 /* -------------------------------------------------------------------------------------------------
- * Settling and capturing
+ * Settling
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Wait until the frame is worth photographing.
+ * Wait until the page is worth asserting against.
  *
  * Retried, because a route that hydrates into a redirect tears down the execution context underneath
  * an in-flight `page.evaluate` — which surfaced as "Execution context was destroyed" on the atlas
  * route. Re-running the sequence against the new document is the correct response; failing would have
  * reported a navigation as a design defect.
  *
- * The sequence itself is documented on `settleOnce()`. It ends on the frame the
- * product actually shows a reader, which is the only frame in the run that is the
- * same every time.
+ * The sequence itself is documented on `settleOnce()`. It ends on the page the
+ * product actually shows a reader.
  */
 export async function settle(page: Page, route: RouteCase): Promise<void> {
   const ATTEMPTS = 3
@@ -1633,9 +603,8 @@ export async function settle(page: Page, route: RouteCase): Promise<void> {
  *
  * Measured on this app at :3003, at the two viewports the suite actually runs:
  * hydration lands 85–256 ms after `domcontentloaded` on Chromium at 1440x900 and
- * 196–427 ms on WebKit at 393x659, and after this quiet period four consecutive
- * full-page captures are byte-identical on both engines. Without it, WebKit's first
- * capture differed from the three that followed it.
+ * 196–427 ms on WebKit at 393x659, and after this quiet period the document has
+ * stopped changing under the assertions on both engines.
  *
  * `DOM_QUIET_FLOOR_MS` is the one thing quiet alone cannot express: a control that
  * mounts on a *timer*, in a document that has nothing else to do while the timer
@@ -1643,13 +612,10 @@ export async function settle(page: Page, route: RouteCase): Promise<void> {
  * Radix's fallback with `delayMs={200}` when a user has an image, so the initials
  * land about 200 ms after mount and nothing mutates in between. A 150 ms quiet
  * window can therefore close at ~150 ms, 50 ms before the initials exist, and the
- * frame is a blank circle instead of "RW". Both frames are inside
- * `maxDiffPixelRatio`, which is why this never turned a run red and why the
- * committed baselines held the blank one: it is a flap the tolerance was paying
- * for. Holding the observer open past the longest timer the product arms means the
- * mutation is seen and quiet restarts after it, so the frame is the same frame
- * every run. 350 ms is that timer plus half of it again, and it stays well under
- * the cap.
+ * page a journey then reads is one the product has not finished rendering.
+ * Holding the observer open past the longest timer the product arms means the
+ * mutation is seen and quiet restarts after it. 350 ms is that timer plus half of
+ * it again, and it stays well under the cap.
  *
  * All three are exported because the numbers are only half the guarantee: the
  * other half is *which* of them the wait actually ends on, and for a while the
@@ -1666,8 +632,8 @@ export const DOM_QUIET_CAP_MS = 2_000
  *
  * React stamps `__reactFiber$…` on each host node as it hydrates it, so the last
  * element in document order carrying one means the walk reached the end. Run in
- * the page, and shared by the capture path and the day-boundary probe so the two
- * cannot disagree about what "hydrated" means.
+ * the page, and shared by `settle()` and `readCaptureState()` so the two cannot
+ * disagree about what "hydrated" means.
  */
 function hydratedIn(selector: string): boolean {
   const claimed = (node: Element): boolean =>
@@ -1697,10 +663,10 @@ function hydratedIn(selector: string): boolean {
  * `page.clock.setFixedTime` before the first navigation, so in-page `Date` does not
  * move: the difference was 0 ms on every evaluation, the floor was never satisfied,
  * `stop()` rescheduled itself forever, and the only path that ever resolved was the
- * cap. Measured on this app in both engines: 2003 ms and 2004 ms, every frame, for
- * a wait whose designed answer is 353 ms. The gate was not photographing unsettled
+ * cap. Measured on this app in both engines: 2003 ms and 2004 ms, every route, for
+ * a wait whose designed answer is 353 ms. The suite was not reading unsettled
  * pages — two seconds is longer than the quiet path it was meant to take — but it
- * had no quiet guarantee at all, and it was paying 1.65 s a frame to have none.
+ * had no quiet guarantee at all, and it was paying 1.65 s a route to have none.
  *
  * `performance.now()` would have fixed it (it advances in real time under a fixed
  * `Date`, measured), and it is still a clock. This does not read one. The floor is
@@ -1715,20 +681,16 @@ function hydratedIn(selector: string): boolean {
  * The cap stays outside both latches, as it always has: it is the one timer whose
  * job is to give up, and the floor must never be able to defer it.
  *
- * **No baseline moved for this.** Worth stating, because the repair shortens every
- * frame in the suite from ~2000 ms of holding to ~350 ms, and a shorter hold is the
- * shape of change that photographs a page mid-render. All fifty-two frames compared
- * clean against the baselines recorded under the cap, on both projects, in
- * consecutive full runs — which is the evidence that the extra 1.65 s was buying
- * nothing a reader could see, and that what the floor now guarantees is what the
- * cap was accidentally providing.
+ * The repair shortened every settle in the suite from ~2000 ms of holding to
+ * ~350 ms, and the whole suite stayed green across consecutive full runs — which
+ * is the evidence that the extra 1.65 s was buying nothing, and that what the
+ * floor now guarantees is what the cap was accidentally providing.
  *
  * Exported for the same reason `readMapCensus()` is: which of the three timers the
- * wait ends on is invisible in a green run, and it was wrong for every frame in
- * the suite while every frame in the suite passed. `the gate itself` measures this
- * function directly — with the gate's own frozen clock installed — rather than
- * measuring `settle()`, so what it asserts is the wait and not the round trips
- * around it.
+ * wait ends on is invisible in a green run, and it was wrong for every route in
+ * the suite while every route in the suite passed. `the gate itself` measures this
+ * function directly — with the frozen clock installed — rather than measuring
+ * `settle()`, so what it asserts is the wait and not the round trips around it.
  */
 export async function settleMutations(page: Page): Promise<void> {
   await page.evaluate(
@@ -1789,27 +751,29 @@ export async function settleMutations(page: Page): Promise<void> {
 }
 
 /**
- * Take the development toolbar out of the frame.
+ * Take the development toolbar out of the way.
  *
  * `src/routes/__root.tsx` mounts TanStack's devtools behind
  * `import.meta.env.DEV`, and it appears as a 60x60 fixed trigger over the
  * bottom-right of the viewport the moment the tree hydrates. It is tooling, not
  * product: Vite replaces the flag with `false` in the deployed bundle, so no
- * reader ever sees it. Hiding it is what keeps the baseline a picture of the
- * product rather than a picture of the dev server.
+ * reader ever sees it.
  *
- * Hidden by a rule, not by an inline style, and the difference is a defect this
- * round found in the recorded baselines. Writing `display: none` onto the element
- * is a one-shot: it hides whatever exists at that instant, and the trigger has two
- * ways to get past it. It can mount *after* this step — the toolbar is client-only
- * and arrives whenever the dev server gets round to it, which under a full
- * fifty-two-frame run in parallel workers is measurably later than under a
- * three-route one — and its own React render owns its `style` attribute, so a
- * re-render puts back what it had before. Either way the trigger is in the frame.
- * Both were, in the committed baselines: the palm-tree trigger sits over the
- * "Journey" tab in every mobile-safari frame recorded before this change, which is
- * ~3500 differing pixels the next run either reproduced or failed on depending on
- * how loaded the machine was.
+ * It is not merely untidy. On the phone viewport the trigger lands *on* the
+ * shell's tab bar - measured on WebKit at 393x659 and again at 393x852, the
+ * trigger's own box over the "Trips" destination at 0,595, 98x64 - and
+ * `document.elementFromPoint` at the middle of that tab resolves inside the
+ * toolbar. A finger aiming at Trips reaches the dev server. Hiding it is what
+ * makes every touch assertion in this suite a statement about the product, and
+ * `a finger reaches the same facts on a phone` asserts the tab bar is reachable
+ * from the other side, so this cannot rot silently.
+ *
+ * Hidden by a rule, not by an inline style. Writing `display: none` onto the
+ * element is a one-shot: it hides whatever exists at that instant, and the trigger
+ * has two ways past it. It can mount *after* this step — the toolbar is
+ * client-only and arrives whenever the dev server gets round to it — and its own
+ * React render owns its `style` attribute, so a re-render puts back what it had
+ * before.
  *
  * A stylesheet rule cannot be raced or re-rendered away. `!important` beats an
  * inline style, and a rule matches an element that does not exist yet, so the
@@ -1836,88 +800,35 @@ async function hideDevChrome(page: Page): Promise<void> {
 }
 
 /**
- * The deterministic capture sequence.
+ * The settling sequence.
  *
  * Ordered, and the order is the whole point: every step is a thing that would
- * otherwise still be happening while the shutter is open.
+ * otherwise still be happening while a journey asserted against the page.
  *
  *  1. the route's own content is on screen;
  *  2. webfonts have loaded, so nothing reflows from a fallback face;
- *  3. **React has hydrated the tree** — the step this round added. Before it, the
- *     gate photographed whichever of two documents won a race: the server's
- *     markup, or the client's. They are not the same picture. `/settings` failed
- *     three full-suite runs in six at a 0.01 diff ratio — five times the 0.002
- *     budget — and the diff, reproduced here, is the native `<select>` controls
- *     and the avatar the client renders, landing in some runs and not others. On
- *     `/login` the two documents differ by 109px of document height, because the
- *     passkey affordance can only be resolved in the browser;
+ *  3. **React has hydrated the tree.** Without it a journey reads whichever of two
+ *     documents won a race: the server's markup, or the client's. They are not the
+ *     same page - on `/login` they differ by 109px of document height, because the
+ *     passkey affordance can only be resolved in the browser - and a console
+ *     assertion taken across that boundary is graded against a hydration that has
+ *     not finished;
  *  4. nothing in the document has mutated for `DOM_QUIET_MS`, and not before
  *     `DOM_QUIET_FLOOR_MS` — which is where a staggered entrance finishes, where a
  *     client-only panel arrives, and where a control the product mounts on a timer
  *     is waited for rather than raced;
  *  5. every `<img>` now in the DOM has decoded — after 3 and 4, so an image the
  *     client added is included rather than missed;
- *  6. the dev toolbar is ruled out of the frame — a stylesheet rule rather than an
- *     inline style, so a trigger that mounts after this step or re-renders over its
- *     own `style` attribute is still hidden;
+ *  6. the dev toolbar is hidden — a stylesheet rule rather than an inline style, so
+ *     a trigger that mounts after this step or re-renders over its own `style`
+ *     attribute is still out of the way of the controls under it;
  *  7. pointer and scroll reset, and only then the map census: the reset is the
  *     last thing that can set a hover feature-state on a map, so reading the
  *     marker after it folds any repaint it caused into the map's own first
  *     `idle` — the marker latches once and cannot report a second settle;
  *  8. the map has finished drawing (`settleMap`);
- *  9. two animation frames, last, so the commit for everything above is on
- *     screen before anything is captured.
- *
- * Steps 3 and 4 moved six of the fifty-two baselines when step 3 was added, and
- * exactly six: `login` in both themes on both projects, where the passkey
- * affordance is client-only, and `settings` in both themes on mobile-safari, where
- * the native controls and the avatar are.
- *
- * Step 4's floor and step 6's rule moved thirty more, and every one of them is a
- * picture of the product finishing something the old sequence photographed it
- * halfway through. The list below is the whole thirty, with nothing left over:
- * attributed by differencing each committed pair and reading the connected
- * components of the difference, rather than by reasoning about what ought to have
- * moved. (The same commit re-recorded the four `atlas-*` frames. Those belong to
- * whoever owns that screen and are not this sequence's doing; the other eighteen
- * of the fifty-two came back byte-identical, which is the evidence that none of
- * this photographs a different design.)
- *
- * - **the theme toggle — nineteen frames, every dark frame that carries a
- *   header.** The twelve dark public ones (`landing`, `pricing`, `register`,
- *   `forgot-password`, `legal/terms`, `legal/privacy`, both projects), the five
- *   dark app frames on Chromium (`dashboard`, `journey`, `trips`, `vacay`,
- *   `settings`), and `trips` and `vacay` in dark on mobile WebKit. One 16–18px
- *   glyph in each: the sun the toggle shows before the client has resolved the
- *   colour scheme, now the moon a reader in dark mode actually sees.
- * - **the account chip — thirteen app frames, on both projects.** This is the
- *   entry an earlier version of this note got wrong: it claimed the avatar moved
- *   "every Chromium app frame", and it moved mobile WebKit too. All ten Chromium
- *   app frames, both themes, where a blank black disc is now the initials "RW"
- *   and the name beside it re-rendered with them; and three mobile ones — `vacay`
- *   in light, where the whole 32px disc moved, and `trips` and `vacay` in dark,
- *   where the initials did. Radix's fallback is given `delayMs={200}` in
- *   `src/components/layout/kit.tsx`, and 200 ms was on the wrong side of a 150 ms
- *   quiet window. It did not move the other five mobile app frames because which
- *   side of that race a recording landed on was luck, and those five had been
- *   recorded on the winning side — which is the failure mode, not an exception to
- *   it.
- * - **`settings` in both themes on Chromium — two frames.** Its six native
- *   `<select>` controls were photographed empty. They now read "Workspace
- *   default — en-GB", "GBP — Pound sterling" and the rest, because the values
- *   arrive after the old quiet window had already closed.
- * - **the dev toolbar's trigger — five mobile frames.** `dashboard` and `journey`
- *   in both themes and `trips` in light carried it, sitting over the "Journey"
- *   tab. On `trips` in light the whole frame differs by 3,927 pixels against a
- *   budget of 1,322 — three times over `maxDiffPixelRatio`, spent on a picture of
- *   the dev server.
- *
- * Eight of the thirty also moved for a reason that is not this sequence's:
- * `dashboard` and `trips`, all four frames each, whose countdown badge is now
- * masked at the size of its pinned string — on `trips` in light on Chromium the
- * excluded rectangle went from 52x20 at +411+718 to 50x20 at +413+718, which is
- * the two pixels of unmasked page that pinning exists to remove. The attribution
- * for that is on RELATIVE_TIME_SITES.
+ *  9. two animation frames, last, so the commit for everything above is on screen
+ *     before the journey touches it.
  */
 async function settleOnce(page: Page, route: RouteCase): Promise<void> {
   await page.locator(route.ready).first().waitFor({ state: 'visible' })
@@ -1951,11 +862,11 @@ async function settleOnce(page: Page, route: RouteCase): Promise<void> {
   )
 }
 
-/** What `settle()` promises about the frame it hands to the shutter. */
+/** What `settle()` promises about the page it hands back. */
 export type CaptureState = {
-  /** React has claimed the whole tree, so the frame is the client's, not the server's. */
+  /** React has claimed the whole tree, so the page is the client's, not the server's. */
   readonly hydrated: boolean
-  /** The dev toolbar is still on screen, which would put tooling in the baseline. */
+  /** The dev toolbar is still on screen, where it takes presses meant for the product. */
   readonly devChromeShown: boolean
 }
 
@@ -1963,10 +874,9 @@ export type CaptureState = {
  * Read back the two conditions `settle()` exists to guarantee.
  *
  * Asserted by a spec rather than trusted, because both failures are silent: a
- * `settle()` that stopped waiting for hydration would photograph whichever
- * document won a race, and a dev toolbar that stopped being hidden would put a
- * 60x60 badge in the corner of every frame. Either would look like a design
- * change on the next run and nothing would say otherwise.
+ * `settle()` that stopped waiting for hydration would grade whichever document won
+ * a race, and a dev toolbar that stopped being hidden would sit over the phone's
+ * tab bar. Neither announces itself.
  */
 export async function readCaptureState(
   page: Page,
@@ -2003,16 +913,11 @@ export {
  * caught, split by verdict. The quality bar in docs/SPEC.md §2 is zero console
  * errors, so this is an assertion input, not diagnostics.
  *
- * Assert on `fatal` on both sides of the capture, which this round made possible.
- * Playwright's capture options (`caret: 'hide'`, `animations: 'disabled'`) and
- * its mask overlays mutate the page, and while the gate photographed a document
- * React had not hydrated yet, those mutations produced a hydration-mismatch error
- * of the harness's own making — reproduced on `/trips` in both engines, and gone
- * the moment `settle()` started ending on the hydrated frame. So the reading no
- * longer has to stop at the shutter, and it should not: Chromium emits the
- * graphics-driver advisory *during* `toHaveScreenshot`'s captures, which means an
- * assertion that ran only before them was never testing the one warning the
- * classifier exists for.
+ * One watcher per route, and the watcher is attached before the navigation it
+ * grades. A journey that walks several routes gives each one its own page for the
+ * same reason: an unmount runs while the next route is already being watched, and
+ * an exception thrown there would be reported against a screen that did not throw
+ * it.
  *
  * `tolerated` is returned rather than dropped on purpose. A filter that starts
  * swallowing real defects has to be visible in the run, not invisible by
@@ -2068,15 +973,13 @@ const fontsUnblocked = new WeakSet<Page>()
  * header outside the CORS safelist stops being a simple request and earns a
  * preflight; `fonts.gstatic.com` answers that preflight without naming the
  * header, the browser refuses the response, and both faces fall back to the
- * system stack. Every frame in the suite is then a picture of the wrong
- * typeface, announced as four console errors rather than as the typographic
- * regression it looks like.
+ * system stack — and, because it is announced as four console errors, every walk
+ * in the suite then fails on the fonts rather than on what it was asserting.
  *
  * Routing those two origins hands the request to Playwright, which issues it
  * outside the page's CORS enforcement and returns it verbatim — the same bytes,
  * from the same CDN, with the preflight no longer in the way. Nothing about the
- * fonts themselves changes, which is the point: the baselines were recorded with
- * the real faces and still match them.
+ * fonts themselves changes, which is the point.
  *
  * Registered once per page rather than once per navigation, because `visit()`
  * runs several times in some specs and Playwright keeps every handler it is
@@ -2101,7 +1004,7 @@ export async function visit(
   await applyTheme(page, theme)
   // Before `goto`, and before the document exists: the fixed time is installed
   // as an init script. It costs the frame nothing, because it runs on the
-  // navigation rather than between settling and the shutter.
+  // navigation rather than after the page has settled.
   await page.clock.setFixedTime(new Date(FROZEN_NOW))
   const response = await page.goto(route.path, {
     waitUntil: 'domcontentloaded',
@@ -2114,138 +1017,6 @@ export async function visit(
   await settle(page, route)
 }
 
-/**
- * The regions this route's frame excludes, and only for a route that declares
- * one.
- *
- * Resolving a locator is a round trip, and Playwright resolves the mask list
- * before every capture — see `auditRelativeTime()` on how little slack there is
- * before the shutter. The ten routes with no clock-derived copy therefore pay
- * nothing, and are captured exactly as they were before this existed.
- */
-function maskFor(page: Page, route: RouteCase): Array<Locator> {
-  const masks: Array<Locator> = []
-  if (route.relativeTime === true) {
-    const region = relativeTimeRegion(page)
-    if (region !== null) {
-      masks.push(region)
-    }
-  }
-  /**
-   * WebKit has no software-renderer switch, so on `mobile-safari` the live map
-   * canvas is rasterised by whatever GPU the host machine has — the same commit
-   * paints different pixels on CI and on another developer's laptop. Chromium is
-   * unaffected: headless Chromium already rasterises WebGL in software
-   * (SwiftShader), which is why its map baselines are stable and stay compared.
-   * Masking only the canvas keeps the atlas chrome, shelf and cards in the
-   * comparison; the map's own regressions remain covered by the chromium frames.
-   */
-  if (
-    route.map === true &&
-    page.context().browser()?.browserType().name() === 'webkit'
-  ) {
-    masks.push(page.locator('.maplibregl-canvas'))
-  }
-  return masks
-}
-
-/** How a route's frame is captured, and why the two differ. */
-export type CaptureMode = 'full-page' | 'viewport-after-resize'
-
-/**
- * Which capture path a route takes.
- *
- * A named decision rather than an inline branch, so the mapping is assertable
- * without recording a baseline for a page that is not the product — a capture
- * path first exercised on the day it is needed is a path nobody has tested, and
- * this one is silent when it is wrong: `fullPage` on a live map does not fail, it
- * times out.
- */
-export function captureMode(route: RouteCase): CaptureMode {
-  return route.map === true ? 'viewport-after-resize' : 'full-page'
-}
-
-/**
- * Grow the viewport to the document, then settle again.
- *
- * The alternative — Chromium's `fullPage` capture — perturbs the viewport to
- * reach below the fold, the page emits `resize`, MapLibre re-sizes its canvas and
- * repaints mid-capture, and because `toHaveScreenshot` needs two consecutive
- * identical captures the assertion times out instead of failing cleanly. Measured
- * on the planner's map screen: `fullPage: true` fired one `resize` per capture and
- * produced three different images, while resizing once and then capturing the
- * viewport produced four identical ones. Same coverage, without the perturbation.
- *
- * **What the re-settle after the resize does, and what it does not.** It re-runs
- * the DOM-level guarantees against the new layout — the `ready` root, fonts,
- * hydration, mutation-quiet, images, the pointer reset, two animation frames — and
- * it re-takes the map census, so a resize that unmounted the canvas fails here
- * rather than in a picture. It does *not* wait for the canvas's repaint, and an
- * earlier version of this comment claimed it did. It cannot: the readiness marker
- * latches once and never returns to `false` (that contract is the whole reason
- * `settleMap()` can be cheap), and MapLibre redrawing its own framebuffer mutates
- * no DOM, so neither `settleMap()` nor `settleMutations()` has anything to observe.
- * The repaint is covered instead by `toHaveScreenshot`'s own stability loop, which
- * will not compare until two consecutive captures are identical — a real guarantee,
- * and the one this path has always actually relied on. A cheaper and more direct
- * signal would be a resize epoch published next to the readiness marker; that
- * belongs to whoever owns `MapCanvas`, not to `e2e/`.
- *
- * Returns whether it resized, which is what a spec can assert without recording a
- * baseline for a page that is not the product.
- */
-export async function fitViewportToDocument(
-  page: Page,
-  route: RouteCase,
-): Promise<boolean> {
-  const viewport = page.viewportSize()
-  const height = await page.evaluate(
-    () => document.documentElement.scrollHeight,
-  )
-  if (viewport === null || height <= viewport.height) {
-    return false
-  }
-  await page.setViewportSize({ width: viewport.width, height })
-  await settle(page, route)
-  return true
-}
-
-/**
- * Baseline comparison, named for the snapshotPathTemplate.
- *
- * Two capture paths, one per `captureMode()`: a page with no live map is
- * photographed full-page, and a page with one is photographed at a viewport
- * grown to the document instead. See `fitViewportToDocument()` for the
- * measurement behind that.
- *
- * Both paths pin the clock-derived strings first. It has to happen here rather
- * than in `settle()` — the day-boundary probe settles these same routes in order
- * to read what the clock produced — and it has to happen before
- * `fitViewportToDocument()`, because pinning is a text change and a text change
- * can be a layout change, so the height that decides the viewport must be measured
- * on the page that is about to be photographed.
- */
-export async function shoot(
-  page: Page,
-  route: RouteCase,
-  theme: Theme,
-): Promise<void> {
-  const name = `${route.name}-${theme}.png`
-  await pinRelativeTime(page, route)
-  if (captureMode(route) === 'full-page') {
-    await expect(page).toHaveScreenshot(name, {
-      fullPage: true,
-      mask: maskFor(page, route),
-    })
-    return
-  }
-  await fitViewportToDocument(page, route)
-  await expect(page).toHaveScreenshot(name, {
-    fullPage: false,
-    mask: maskFor(page, route),
-  })
-}
-
 /* -------------------------------------------------------------------------------------------------
  * The platform console
  * ---------------------------------------------------------------------------------------------- */
@@ -2256,21 +1027,19 @@ export async function shoot(
  * Three reasons, and none of them is tidiness. The account screen's path carries a `$userId` that
  * only the running database can supply, so it cannot be a constant in a table every audit iterates.
  * The whole tree is behind a *platform role* rather than merely behind a session, so a run against a
- * database seeded before that fixture existed has to skip these rather than photograph the redirect
- * to `/dashboard` — which is a frame that looks like evidence and is not. And `APP_ROUTES` is
+ * database seeded before that fixture existed has to skip these rather than walk the redirect to
+ * `/dashboard` — a green run that asserted nothing about the console. And `APP_ROUTES` is
  * documented as the six screens the product's own navigation reaches; the console is reached from
  * the user menu, by an operator who already knows it is there.
  *
- * They are still audited by the same machinery: `frame()` runs `auditRelativeTime()` over them, and
- * the spec runs `auditServerClock()` over the same list, so a console screen that starts printing a
- * clock-derived string is as fatal here as anywhere else.
+ * They are walked by the same machinery, so a console screen that 500s, never hydrates or writes to
+ * the console fails the run exactly as an application screen does.
  *
- * `/console/users` is photographed under an explicit sort, and that is load-bearing rather than
+ * `/console/users` is walked under an explicit sort, and that is load-bearing rather than
  * decorative. The demo fixture anchors every account's `created_at` to the same instant, so the
  * default `created_at desc` ordering has no tiebreaker and SQLite is free to return the four rows in
- * any order it likes — a baseline recorded under it would hold whatever order that database file
- * happened to produce. `?sort=name&dir=asc` is a total order over the fixture, and it photographs
- * the sort control in its active state as well.
+ * any order it likes. `?sort=name&dir=asc` is a total order over the fixture, and it exercises the
+ * sort control in its active state as well.
  */
 const CONSOLE_OVERVIEW_ROUTE: RouteCase = {
   name: 'console',
@@ -2286,14 +1055,12 @@ export const CONSOLE_ACCOUNTS_ROUTE: RouteCase = {
 }
 
 /**
- * The agent-run registry (`docs/adr/0009`), and the one console screen whose baseline is stable
- * *because* of what this deployment is not.
+ * The agent-run registry (`docs/adr/0009`), and what it draws when this deployment is not the one
+ * coordinating the fleet.
  *
  * The registry binding is declared on `env.staging` alone - a second registry would let two fleets
  * each believe they hold the backlog - so a local or CI Worker has none, and the screen draws its
- * "this deployment does not coordinate the fleet" state. That frame holds no run id, no host, no
- * uptime and no lease countdown, which is the only reason this screen can be photographed at all:
- * the fleet view is made of durations that move between two captures by construction.
+ * "this deployment does not coordinate the fleet" state.
  */
 const CONSOLE_SANDCASTLE_ROUTE: RouteCase = {
   name: 'console-sandcastle',
@@ -2302,18 +1069,12 @@ const CONSOLE_SANDCASTLE_ROUTE: RouteCase = {
 }
 
 /**
- * The provider meters, and a frame that is stable for the same reason the registry's is: what the
- * demo fixture does not have.
+ * The provider meters, reached for the same reason the registry is: an empty state the product
+ * ships and every deployment starts in.
  *
  * Nothing in the seed makes an outbound call, so `provider_usage` is empty and every panel draws
- * its designed empty state — which is the state worth photographing anyway, because it is the one
- * every deployment starts in. A populated frame would move on every run: the counters are live and
- * the forecast is anchored to the current month.
- *
- * The screen renders no clock-derived string at all, which `auditServerClock` below asserts for
- * every route in this list. That is a constraint on the page rather than an accident of the
- * fixture: durations are whole-window words and instants are dates computed from the loader's own
- * `asOf`, never from the browser.
+ * its designed empty state — which is the state worth walking anyway, because it is the one every
+ * deployment starts in.
  */
 const CONSOLE_PROVIDERS_ROUTE: RouteCase = {
   name: 'console-providers',
@@ -2329,22 +1090,11 @@ export const CONSOLE_ROUTES: ReadonlyArray<RouteCase> = [
 ]
 
 /**
- * The account the `/console/users/$userId` baseline is recorded against.
+ * The account `/console/users/$userId` is walked against.
  *
- * A collaborator rather than the demo owner, and specifically one that has never signed in. The
- * account screen lists live sessions with their start and expiry instants, and those are minted by
- * the wall clock at sign-in — the operator's own account would put two moving timestamps in a
- * committed frame. This one holds none, so the panel shows its designed empty state and the frame is
- * the same every run. It is also the fixture's `curator`, which is what puts the middle rung of the
- * role scale in the picture.
- *
- * **The seed gives this account a password now, so "holds none" is a property somebody can break.**
- * The three collaborators are signable, because a curator who cannot sign in cannot demonstrate that
- * they see the catalogue and not the accounts tab. Signing in as one of them locally leaves a live
- * session, and this frame then carries a session row with two wall-clock instants in it. That is a
- * real diff and not a flake: revoke it from the account's own actions menu — *Revoke every session*
- * — and the frame comes back. The seed cannot do it for you: a session lives in KV as well as D1,
- * and only the product's own path takes down both.
+ * A collaborator rather than the demo owner: it is the fixture's `curator`, which is the middle rung
+ * of the role scale and therefore the row that exercises the screen's role handling rather than the
+ * operator's own.
  */
 export const CONSOLE_ACCOUNT_NAME = 'Mika Tanaka'
 
@@ -2354,11 +1104,10 @@ export const CONSOLE_ACCOUNT_NAME = 'Mika Tanaka'
  * Asked over `page.request` rather than by navigating, and that is a repair rather than a
  * preference. The guard is a `beforeLoad` redirect, so the honest question is which response the
  * server gives — and a probe that answered it by *navigating* left the page half way through loading
- * the client entry, which `frame()` then cancelled with its own `goto`. Chromium swallows the
- * aborted module import; WebKit reports it as `pageerror: Importing a module script failed`, and the
- * gate reads a page error as fatal whatever produced it. Every console frame failed on
- * `mobile-safari` and none on `chromium`, which is exactly the shape of a defect that gets blamed on
- * the code under test.
+ * the client entry, which the next `visit()` then cancelled with its own `goto`. Chromium swallows the
+ * aborted module import; WebKit reports it as `pageerror: Importing a module script failed`, and a
+ * page error is fatal whatever produced it. Every console route failed on `mobile-safari` and none
+ * on `chromium`, which is exactly the shape of a defect that gets blamed on the code under test.
  *
  * `page.request` shares the page's cookie jar and the context's headers, so this is the same
  * request the browser would make, and `maxRedirects: 0` is what makes the redirect readable instead
@@ -2382,12 +1131,12 @@ export async function hasPlatformConsole(page: Page): Promise<boolean> {
  * here would be the one it cancels.
  *
  * **Matched inside the anchor, not by proximity to the name.** The obvious version of this - find
- * the name, take the nearest `href` before it - photographed the *previous* row for four rounds of
- * baselines without anyone noticing, because `Avatar` rendered the same name a second time as a
- * screen-reader label a few hundred bytes ahead of the link, and the nearest href before *that* is
- * the row above. The frames looked entirely plausible: a real account screen, for the wrong account,
- * committed under a name that says otherwise. So the anchor's own text is what decides, which is the
- * property the row actually guarantees - the account's name is the link.
+ * the name, take the nearest `href` before it - resolved the *previous* row for four rounds without
+ * anyone noticing, because `Avatar` rendered the same name a second time as a screen-reader label a
+ * few hundred bytes ahead of the link, and the nearest href before *that* is the row above. It
+ * looked entirely plausible: a real account screen, for the wrong account. So the anchor's own text
+ * is what decides, which is the property the row actually guarantees - the account's name is the
+ * link.
  *
  * That duplicate is gone: `AccountIdentity` now marks the avatar `aria-hidden`, because the name it
  * repeated is printed one node to the right and every row was announcing the person twice. The
@@ -2423,19 +1172,8 @@ export async function consoleAccountPath(page: Page): Promise<string | null> {
 /** The account the impersonation fixture wears: a plain `user`, never an admin (docs/ACCESS.md §2.4). */
 export const IMPERSONATION_TARGET_NAME = 'Jonas Berg'
 
-/** The bar itself. One selector, used by the fixture, the mask and the capture. */
+/** The bar itself. One selector, used by the fixture and by the journeys. */
 export const IMPERSONATION_BAR = '[aria-label="Impersonated session"]'
-
-/**
- * The live countdown inside it, which is the one thing in that bar a baseline cannot hold.
- *
- * `docs/ACCESS.md` §6.2 gives an impersonated session 900 seconds and §6.1 requires the remaining
- * time on screen as a live figure. The session is minted against the wall clock and the page's clock
- * is frozen at `FROZEN_NOW`, so the two disagree by however far the fixture's day is from the
- * recording day — the figure is neither 15:00 nor stable. It is excluded from the comparison, and
- * nothing else about the bar is.
- */
-export const IMPERSONATION_TIMER = `${IMPERSONATION_BAR} [role="timer"]`
 
 /**
  * Mints an impersonated session by driving the console, which is the only way there is.

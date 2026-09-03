@@ -3,18 +3,17 @@
  *
  * 1. **The fixture does not read a clock.** Every date and instant the seed writes is measured from
  *    `SEED_ANCHOR_DAY`, so the rows in D1 are a pure function of `../dataset`. A seed run in October
- *    writes the same workspace as one run in August, which is what lets a visual baseline outlive
- *    the day it was recorded.
- * 2. **The fixture and the visual gate agree about what day it is.** The suite pins the Worker's
- *    clock to `BASELINE_DAY`; the fixture writes its dates around `SEED_ANCHOR_DAY`. Those two
- *    constants cannot be shared by import — nothing in the Worker may reach into `e2e/` — so they
- *    are compared here, off disk, against the two files that declare them.
+ *    writes the same workspace as one run in August.
+ * 2. **The fixture and the e2e suite agree about what day it is.** The suite pins the Worker's
+ *    clock to `FIXTURE_DAY` in `playwright.config.ts`; the fixture writes its dates around
+ *    `SEED_ANCHOR_DAY`. Those two constants cannot be shared by import — nothing in the Worker may
+ *    reach into `e2e/` — so they are compared here, off disk, against the file that declares them.
  *
  * The lifecycle assertions at the end are the reason any of it matters: they state, in the same
  * comparisons the repositories make, that the fixture still shows a trip under way, a trip finished,
- * a trip ahead and a booking in the rail. Those are the row sets the authenticated baselines
- * photograph, and a fixture edit that quietly empties one of them fails here rather than as an
- * unexplained red frame.
+ * a trip ahead and a booking in the rail. Those are the row sets the authenticated journeys walk,
+ * and a fixture edit that quietly empties one of them fails here rather than as a journey that
+ * skipped.
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
@@ -71,23 +70,15 @@ function seedSources(): ReadonlyArray<readonly [string, string]> {
 }
 
 describe('the fixture anchor', () => {
-  it('names the same day the visual gate pins the Worker to', () => {
-    const declaration = /const BASELINE_DAY = '(\d{4}-\d{2}-\d{2})'/
+  it('names the same day the e2e suite pins the Worker to', () => {
+    const declaration = /const FIXTURE_DAY = '(\d{4}-\d{2}-\d{2})'/
     const inConfig = declaration.exec(read('playwright.config.ts'))
-    const inHelper = /export const BASELINE_DAY = '(\d{4}-\d{2}-\d{2})'/.exec(
-      read('e2e/helpers/shoot.ts'),
-    )
 
     expect(
       inConfig?.[1],
-      'playwright.config.ts must declare BASELINE_DAY',
-    ).toBeDefined()
-    expect(
-      inHelper?.[1],
-      'e2e/helpers/shoot.ts must export BASELINE_DAY',
+      'playwright.config.ts must declare FIXTURE_DAY',
     ).toBeDefined()
     expect(inConfig?.[1]).toBe(SEED_ANCHOR_DAY)
-    expect(inHelper?.[1]).toBe(SEED_ANCHOR_DAY)
   })
 
   it('counts whole days in both directions, across months and years', () => {
