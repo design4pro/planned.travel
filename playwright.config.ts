@@ -105,12 +105,15 @@ export default defineConfig({
   // One per CI shard, measured: two workers on the 2-vCPU runner starved the
   // atlas tests — MapLibre renders through software WebGL there, and with two
   // browsers plus Vite SSR competing, React hydration outran the 10 s action
-  // timeout on 17 tests and left 12 flaky, all timeouts, no pixel diffs
-  // (PR #84, run 33155138232). Parallelism in CI comes from the shards in
+  // timeout on 17 tests and left 12 flaky, all timeouts (PR #84, run
+  // 33155138232). That was measured over eighty-seven test instances a project
+  // and has not been re-measured over fourteen; the starvation was contention
+  // for one software renderer, which fewer tests do not relieve, so it stands
+  // until somebody times it. Parallelism in CI comes from the shards in
   // ci.yml; locally Playwright's default (half the cores) applies.
   workers: isCI ? 1 : undefined,
   timeout: 30_000,
-  // Per CI shard (ci.yml splits the suite twelve ways): ~2.5 min of tests, sized
+  // Per CI shard (ci.yml splits the suite two ways): ~3 min of journeys, sized
   // generously so a retry-heavy shard still reports instead of being cut off —
   // the report is what tells load from regression.
   globalTimeout: isCI ? 10 * 60_000 : undefined,

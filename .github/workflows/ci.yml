@@ -3,8 +3,7 @@ name: CI
 on:
   pull_request:
     branches: [main, develop]
-    # `labeled` lets adding the `needs-e2e` label trigger the e2e job on a PR.
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
   push:
     branches: [main, develop]
   workflow_dispatch:
@@ -34,8 +33,8 @@ jobs:
     name: lint · typecheck · build
     # A develop→main (or main→develop) PR duplicates the push-triggered run on
     # the same commits; the push run is canonical for the shared branches. The
-    # `e2e` job carries the same clause in its own `if`, since it no longer
-    # waits on this one.
+    # `e2e` job carries the same clause in its own `if`, since it does not wait
+    # on this one.
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -118,10 +117,10 @@ jobs:
       - name: Check the build left the route tree alone
         run: git diff --exit-code -- src/routeTree.gen.ts
 
-  # The unit suite, sharded the way the visual gate is, and for the same reason:
+  # The unit suite, sharded the way the journeys are, and for the same reason:
   # the runner has two vCPUs, vitest already fills both, and the suite is
   # CPU-bound - so the only way left to make it finish sooner is to give it more
-  # machines. As one job it was 361 s, 74% of a 486 s gate.
+  # machines. As one job it was 361 s, 74% of a 486 s pipeline.
   #
   # Three rather than more. Vitest cuts shards by file, and the files are not
   # equal: measured, three shards carry 27% / 34% / 39% of the work and four
@@ -256,51 +255,41 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # The visual gate. Runs on Linux inside the Playwright image, which is the
-  # platform the `-linux` baselines under e2e/__screenshots__ were recorded on;
-  # a macOS run compares against its own `-darwin` set. See docs/CLOUD.md §4.
+  # The end-to-end journeys: fourteen declarations in `visual.spec.ts` plus three
+  # in `trips-core.visual.spec.ts`, over two browser projects. Not a visual gate
+  # any more - no screenshot is compared anywhere (ADR 0016). What a run asserts
+  # is that every screen answers, renders, hydrates, says nothing in the console,
+  # and lets a reader act on it.
   #
-  # Twelve shards on the standard 2-vCPU runner, one Playwright worker each
-  # (two starved the map tests into timeouts — see `workers` in
-  # playwright.config), started alongside `verify` rather than behind it: the
-  # suite is ~1250 s of CPU-bound test execution at one worker, and every job
-  # pays ~2.5 min of fixed cost (image pull, install, migrations, basemap,
-  # seed) that no worker count shortens — so a single job can never answer
-  # inside five minutes, and a `needs: verify` in front of it (5-7 min of
-  # vitest coverage) cannot either. Twelve rather than six because Playwright
-  # cuts shards as contiguous runs of the test list, and the sixteen atlas
-  # interaction tests sit side by side in visual.spec.ts: at six shards the two
-  # carrying them ran 8.5 min while others ran 4 (PR #84); at twelve the block
-  # spans two shards of ~2.5 min each. Each shard is its own container with
-  # its own D1, so shards never share state; `e2e-report` below merges the
-  # blob reports into one HTML.
-  # The price of not waiting on `verify` is a wasted e2e run when a typecheck
-  # fails, which is rare and cheap next to the 20 minutes this used to take.
+  # Two shards on the standard 2-vCPU runner, one Playwright worker each (two
+  # starved the map tests into timeouts - see `workers` in playwright.config),
+  # started alongside `verify` rather than behind it: every job pays ~2 min of
+  # fixed cost (image pull, install, migrations, seed) that no worker count
+  # shortens, and a `needs: verify` in front of it (5-7 min of vitest coverage)
+  # would double the wall clock. Twelve shards were sized for eighty-seven test
+  # instances a project; seventeen declarations do not divide usefully past two.
+  # Each shard is its own container with its own D1, so shards never share
+  # state; `e2e-report` below merges the blob reports into one HTML.
+  # The price of not waiting on `verify` is a wasted run when a typecheck fails,
+  # which is rare and cheap next to what this used to take.
   #
-  # Demoted from every-PR to a post-merge safety net: the sandcastle loop runs
-  # this exact suite, in this exact container image, per issue and again in the
-  # per-iteration audit — so a PR from the loop arrives already visually
-  # validated. The job still runs on every push to develop/main, on demand
-  # (workflow_dispatch), and on any PR carrying the `needs-e2e` label — the
-  # escape hatch for PRs with no local loop behind them (cloud agents, manual
-  # branches). A labelled develop→main PR still defers to the push run, as
-  # `verify` does.
+  # Back on every PR. It was demoted to a post-merge net when it cost ~60 min of
+  # runner per event; at ~9 min the feedback loop is worth more than the saving,
+  # and the `needs-e2e` escape hatch that demotion needed goes with it. No R2
+  # credentials are read any more either (the journeys need no basemap - see the
+  # `basemap` input of the composite action), so the job runs on a fork.
+  # A develop→main PR still defers to the push run, as `verify` does.
   e2e:
-    name: e2e · visual regression (${{ matrix.shard }}/12)
-    if: >
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      (contains(github.event.pull_request.labels.*.name, 'needs-e2e') &&
-       !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
+    name: e2e · critical journeys (${{ matrix.shard }}/2)
+    if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ubuntu-latest
-    # ~2.5 min fixed cost + ~2.5 min of tests; the config's 10 min
-    # globalTimeout fires first, so a slow shard still uploads a report instead
-    # of vanishing.
-    timeout-minutes: 15
+    # ~2 min fixed cost + ~3 min of journeys; the config's 10 min globalTimeout
+    # fires first, so a slow shard still uploads a report instead of vanishing.
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        shard: [1, 2]
     # Keep in step with the `@playwright/test` devDependency in package.json:
     # the image carries the browsers that version expects, and a mismatch is
     # reported as a missing executable rather than as a wrong one.
@@ -308,36 +297,14 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
 
     steps:
-      # The `secrets` context is not available in a job-level `if`, so the gate
-      # is a first step: a fork or a freshly cloned repo without Cloudflare
-      # credentials reports a warning and skips, instead of failing red on a
-      # basemap it was never going to be able to read.
-      - name: Check the R2 credentials are configured
-        id: gate
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo 'configured=false' >> "$GITHUB_OUTPUT"
-            echo '::warning title=e2e skipped::Set CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and the E2E_TILES_KEY variable to run the visual gate.'
-          else
-            echo 'configured=true' >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Check out
-        if: steps.gate.outputs.configured == 'true'
         uses: actions/checkout@v5
 
       - name: Prepare the e2e environment
-        if: steps.gate.outputs.configured == 'true'
         uses: ./.github/actions/e2e-env
         with:
-          cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          tiles-key: ${{ vars.E2E_TILES_KEY }}
-          # Twelve shards seed twelve identical databases; auditing the seed
-          # once is proof enough, and 25 s off every other shard's critical path.
+          # Both shards seed identical databases; auditing the seed once is
+          # proof enough, and 25 s off the other shard's critical path.
           verify-seed: ${{ matrix.shard == 1 }}
 
       # `PLAYWRIGHT_BASE_URL` points the suite at the server the composite
@@ -346,13 +313,12 @@ jobs:
       # the config's reporters with the one `merge-reports` consumes — traces
       # and screenshots of failures travel inside the blob.
       - name: Run this shard of the suite
-        if: steps.gate.outputs.configured == 'true'
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
         run: pnpm exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=blob
 
       - name: Upload the blob report
-        if: always() && steps.gate.outputs.configured == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: blob-report-${{ matrix.shard }}
@@ -360,8 +326,8 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
-  # One report for the twelve shards: the GitHub annotations and the HTML report
-  # (with the failing frames' diffs and traces) that a single job used to give.
+  # One report for the two shards: the GitHub annotations and the HTML report
+  # (with the failing journeys' traces and videos) that a single job would give.
   e2e-report:
     name: e2e · merged report
     needs: e2e
@@ -392,13 +358,13 @@ jobs:
           path: all-blob-reports
           merge-multiple: true
 
-      # No blobs means the shards skipped on the credentials gate — a notice,
-      # not a failure, for the same reason the gate itself is not one.
+      # No blobs means the shards did not run — on a develop→main PR, which
+      # defers to the push run. A notice, not a failure.
       - name: Merge the shard reports
         run: |
           set -euo pipefail
           if [ -z "$(ls -A all-blob-reports 2>/dev/null)" ]; then
-            echo '::notice title=e2e report::no shard reports to merge — the visual gate was skipped.'
+            echo '::notice title=e2e report::no shard reports to merge — the journeys did not run.'
             exit 0
           fi
           pnpm exec playwright merge-reports --reporter html,github ./all-blob-reports
