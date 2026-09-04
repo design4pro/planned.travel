@@ -166,8 +166,15 @@ echo "==> dev server on :${PORT}"
 # to four browsers for twenty minutes runs out of - dev-server.log ending in `JavaScript heap out
 # of memory` and a rung of ECONNREFUSED specs (run 20260830-3, issue #117, attempt 3). The ladder's
 # probe now reports that as infra rather than as a red branch; this makes it rare as well.
+#
+# E2E=1 is what vite.config.ts reads to turn the devtools console relay off. Without it the
+# Worker's own console.error lines - the seeded sign-up's auth email dead-letters here, because
+# this .dev.vars carries no EMAIL_API_KEY - are streamed into whichever browser page Playwright
+# happens to have open, and the spec holding that page fails on someone else's background error.
+# Scoped to this one process on purpose: the seed and everything after it must not see it, and a
+# developer's own `pnpm dev` keeps the relay.
 mkdir -p .agent
-NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" \
+E2E=1 NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" \
   nohup pnpm exec vite dev --port "${PORT}" --strictPort --host 127.0.0.1 > dev-server.log 2>&1 &
 echo $! > .agent/dev-server.pid
 for _ in $(seq 1 60); do

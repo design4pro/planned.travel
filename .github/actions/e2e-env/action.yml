@@ -146,6 +146,13 @@ runs:
     # Worker, so there is no seeding a database without a server in front of it.
     - name: Start the dev server
       shell: bash
+      # E2E=1 is what vite.config.ts reads to turn the devtools console relay off. Without it the
+      # Worker's own console.error lines - the seeded sign-up's auth email dead-letters here,
+      # because this environment carries no EMAIL_API_KEY - are streamed into whichever browser
+      # page Playwright happens to have open, and the spec holding that page fails on someone
+      # else's background error. Scoped to this step so the seed and the suite do not inherit it.
+      env:
+        E2E: '1'
       run: |
         set -euo pipefail
         # --host binds v4 and v6. The wait loop below (curl) reaches a
