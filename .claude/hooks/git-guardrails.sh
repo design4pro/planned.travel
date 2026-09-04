@@ -35,7 +35,15 @@ agent_block() {
 
 echo "$command" | grep -Eq 'git\s+add\s+(-A|--all|\.)(\s|$)' && agent_block 'git add -A|.'
 echo "$command" | grep -Eiq '\b(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s*:?\s*#[0-9]+' && agent_block 'closing keyword (Closes #n)'
-echo "$command" | grep -Eq 'gh\s+(issue|pr)\s+(create|edit|close|reopen|comment|delete|transfer|pin|unpin|lock|unlock|merge|review|ready|checkout)\b' && agent_block 'gh issue|pr mutation'
+echo "$command" | grep -Eq 'gh\s+(issue|pr)\s+(create|edit|close|reopen|delete|transfer|pin|unpin|lock|unlock|merge|review|ready|checkout)\b' && agent_block 'gh issue|pr mutation'
+# `comment` is the one verb with an exception. The code review posts its summary with
+# `gh pr comment`, and that job is the one agent run whose whole purpose is to write to a pull
+# request. Only .github/workflows/claude-code-review.yml sets the variable, and a pull request
+# cannot set it for itself: editing that workflow makes the action's OIDC exchange refuse to run
+# the review at all. `gh issue comment` stays blocked either way.
+comment_targets='issue|pr'
+[ "${CLAUDE_REVIEW_PR_COMMENT:-}" = 1 ] && comment_targets='issue'
+echo "$command" | grep -Eq "gh\s+($comment_targets)\s+comment\b" && agent_block 'gh issue|pr mutation'
 echo "$command" | grep -Eq 'gh\s+(label|release|repo|secret|variable|workflow|run)\s' && agent_block 'gh mutation surface'
 if echo "$command" | grep -Eq '(^|[^[:alnum:]_/-])gh\s+api\b'; then
   echo "$command" | grep -Eq '(--method|-X)[[:space:]=]*(POST|PATCH|PUT|DELETE)|(^|\s)(-f|-F|--field|--raw-field|--input)(\s|=)' && agent_block 'gh api non-GET'

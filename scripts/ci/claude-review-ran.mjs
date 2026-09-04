@@ -90,8 +90,9 @@ const denials = Number(result.permission_denials_count ?? 0)
 
 if (denials > 0) {
   fail(
-    `The review was denied ${denials} tool call(s), so it did not read the pull request. Add what ` +
-      'it asked for to `claude_args: --allowedTools` in .github/workflows/claude-code-review.yml.',
+    `The review was denied ${denials} tool call(s), so it did not read the pull request. The ` +
+      'review runs under `bypassPermissions`, so the only thing left that denies it is ' +
+      '`.claude/hooks/git-guardrails.sh` - read the log for which call it blocked and why.',
   )
 }
 
