@@ -42,27 +42,27 @@ const messages = {
   'transports.filtered.action': 'Mostra tots els trajectes',
   'transports.alert.impossible.title': {
     one: 'Un enllaç no es pot fer',
-    many: '{legs} enllaços no es poden fer',
-    other: '{legs} enllaços no es poden fer',
+    many: '{value} enllaços no es poden fer',
+    other: '{value} enllaços no es poden fer',
   },
   'transports.alert.impossible.body':
     'Un trajecte surt abans que arribi l’anterior. Els nusos de sota diuen quins i per quant.',
   'transports.alert.tight.title': {
     one: 'Un enllaç va just',
-    many: '{legs} enllaços van justos',
-    other: '{legs} enllaços van justos',
+    many: '{value} enllaços van justos',
+    other: '{value} enllaços van justos',
   },
   'transports.alert.tight.body':
     'Hi ha temps, però poc per al mitjà que has d’agafar. Els nusos de sota mostren quant en deixa cadascun.',
   'transports.badge.impossible': {
-    one: '{legs} enllaç trencat',
-    many: '{legs} enllaços trencats',
-    other: '{legs} enllaços trencats',
+    one: '{value} enllaç trencat',
+    many: '{value} enllaços trencats',
+    other: '{value} enllaços trencats',
   },
   'transports.badge.tight': {
-    one: '{legs} enllaç just',
-    many: '{legs} enllaços justos',
-    other: '{legs} enllaços justos',
+    one: '{value} enllaç just',
+    many: '{value} enllaços justos',
+    other: '{value} enllaços justos',
   },
   'transports.badge.ok': 'Tots els enllaços funcionen',
   'transports.remove.body':

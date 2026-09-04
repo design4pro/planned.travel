@@ -43,7 +43,10 @@ import { resolve } from '../shared/deferred-message'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { Locale, Translate } from '#/lib/i18n'
-import { deleteLegFn, setLegStatusFn } from '#/server/fns/transports'
+import {
+  deleteTransportFn,
+  setTransportStatusFn,
+} from '#/server/fns/transports'
 import {
   ConfirmDialog,
   FactList,
@@ -57,10 +60,10 @@ import {
 } from '../shared'
 import {
   analyseConnections,
-  sortLegsByDeparture,
+  sortTransportsByDeparture,
   summariseConnections,
 } from './connections'
-import { LegDialog } from './leg-dialog'
+import { TransportDialog } from './leg-dialog'
 import {
   STATUS_LABELS,
   TRANSPORT_STATUSES,
@@ -133,8 +136,8 @@ export interface TransportsTimelineProps {
    * call site is a masking flag that leaks a code.
    */
   readonly maskCodes: boolean
-  readonly newLegOpen: boolean
-  readonly onNewLegOpenChange: (open: boolean) => void
+  readonly newTransportOpen: boolean
+  readonly onNewTransportOpenChange: (open: boolean) => void
 }
 
 type ModeFilter = 'all' | string
@@ -145,8 +148,8 @@ export function TransportsTimeline({
   days,
   currency,
   maskCodes,
-  newLegOpen,
-  onNewLegOpenChange,
+  newTransportOpen,
+  onNewTransportOpenChange,
 }: TransportsTimelineProps) {
   const locale = useLocale()
   const t = useTranslate()
@@ -157,11 +160,11 @@ export function TransportsTimeline({
 
   const statuses = useOptimistic<TransportStatus>()
 
-  const setStatus = useAction(setLegStatusFn, {
+  const setStatus = useAction(setTransportStatusFn, {
     failure: t('modules.transports.toast.statusFailed.title'),
     fallback: t('modules.transports.toast.statusFailed.body'),
   })
-  const remove = useAction(deleteLegFn, {
+  const remove = useAction(deleteTransportFn, {
     success: t('modules.transports.toast.removed'),
     failure: t('modules.transports.toast.removeFailed'),
     onSuccess: () => setConfirm(null),
@@ -212,7 +215,7 @@ export function TransportsTimeline({
     return [...tally.entries()].sort((left, right) => right[1] - left[1])
   }, [rendered])
 
-  const ordered = useMemo(() => sortLegsByDeparture(rendered), [rendered])
+  const ordered = useMemo(() => sortTransportsByDeparture(rendered), [rendered])
   const visible = ordered.filter(
     (transport) => filter === 'all' || transport.mode === filter,
   )
@@ -242,18 +245,18 @@ export function TransportsTimeline({
             <Button
               variant="primary"
               shape="pill"
-              onClick={() => onNewLegOpenChange(true)}
+              onClick={() => onNewTransportOpenChange(true)}
             >
               {t('modules.transports.empty.action')}
             </Button>
           }
         />
-        <LegDialog
+        <TransportDialog
           tripId={tripId}
           days={days}
           currency={currency}
-          open={newLegOpen}
-          onOpenChange={onNewLegOpenChange}
+          open={newTransportOpen}
+          onOpenChange={onNewTransportOpenChange}
         />
       </>
     )
@@ -266,7 +269,7 @@ export function TransportsTimeline({
           tone="danger"
           title={t('modules.transports.alert.impossible.title', {
             count: summary.impossible,
-            legs: formatNumber(summary.impossible, locale),
+            value: formatNumber(summary.impossible, locale),
           })}
         >
           {t('modules.transports.alert.impossible.body')}
@@ -277,7 +280,7 @@ export function TransportsTimeline({
           tone="warning"
           title={t('modules.transports.alert.tight.title', {
             count: summary.tight,
-            legs: formatNumber(summary.tight, locale),
+            value: formatNumber(summary.tight, locale),
           })}
         >
           {t('modules.transports.alert.tight.body')}
@@ -375,16 +378,16 @@ export function TransportsTimeline({
         </ol>
       )}
 
-      <LegDialog
+      <TransportDialog
         tripId={tripId}
         transport={editing ?? undefined}
         days={days}
         currency={currency}
-        open={newLegOpen || editing !== null}
+        open={newTransportOpen || editing !== null}
         onOpenChange={(next) => {
           if (!next) {
             setEditing(null)
-            onNewLegOpenChange(false)
+            onNewTransportOpenChange(false)
           }
         }}
       />
@@ -878,7 +881,7 @@ export function ConnectionsBadge({
       <Badge tone="danger" dot size="lg">
         {t('modules.transports.badge.impossible', {
           count: impossible,
-          legs: formatNumber(impossible, locale),
+          value: formatNumber(impossible, locale),
         })}
       </Badge>
     )
@@ -888,7 +891,7 @@ export function ConnectionsBadge({
       <Badge tone="warning" dot size="lg">
         {t('modules.transports.badge.tight', {
           count: tight,
-          legs: formatNumber(tight, locale),
+          value: formatNumber(tight, locale),
         })}
       </Badge>
     )

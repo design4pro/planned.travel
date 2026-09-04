@@ -54,14 +54,14 @@ import {
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import {
-  createLegFn,
-  saveLegChainFn,
-  updateLegFn,
+  createTransportFn,
+  saveTransportChainFn,
+  updateTransportFn,
 } from '#/server/fns/transports'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import { ChainEditor } from './chain-editor'
 import { ConnectionSearch } from './connection-search'
-import { formatGap, legTimingError } from './connections'
+import { formatGap, transportTimingError } from './connections'
 import {
   STATUS_LABELS,
   TRANSPORT_MODES,
@@ -72,27 +72,27 @@ import {
   chainPayload,
   dayLabel,
   emptyChain,
-  emptyLegDraft,
+  emptyTransportDraft,
   endpointLabels,
   flatChain,
   hasChainErrors,
-  hasLegErrors,
+  hasTransportErrors,
   isTransportMode,
   isTransportStatus,
   kilometresToMetres,
   metresToKilometres,
   modeLabel,
-  suggestLegTitle,
+  suggestTransportTitle,
   usesCodes,
   usesSeat,
   usesService,
   validateChain,
-  validateLegDraft,
+  validateTransportDraft,
 } from './leg-form'
 import { MODE_ICON } from './mode-icon'
-import { legDurationMinutes } from './leg-timing'
+import { transportDurationMinutes } from './leg-timing'
 
-import type { ChainDraft, ChainOwnedField, LegDraft } from './leg-form'
+import type { ChainDraft, ChainOwnedField, TransportDraft } from './leg-form'
 import type { TransportData, TransportDayData } from './types'
 
 /** Which of the dialog's two ways of filling a journey in is on screen. */
@@ -122,7 +122,7 @@ function unbrokenChainFor(transport: TransportData | undefined): ChainDraft {
 function draftFrom(
   transport: TransportData,
   fallbackCurrency: string,
-): LegDraft {
+): TransportDraft {
   const currency = transport.currency ?? fallbackCurrency
   return {
     mode: isTransportMode(transport.mode) ? transport.mode : 'other',
@@ -152,7 +152,7 @@ function draftFrom(
   }
 }
 
-export function LegDialog({
+export function TransportDialog({
   tripId,
   transport,
   days,
@@ -174,7 +174,9 @@ export function LegDialog({
   const editing = transport !== undefined
   const formId = useId()
 
-  const [draft, setDraft] = useState<LegDraft>(() => emptyLegDraft(currency))
+  const [draft, setDraft] = useState<TransportDraft>(() =>
+    emptyTransportDraft(currency),
+  )
   const [chain, setChain] = useState<ChainDraft>(() => chainFor(transport))
   const [touched, setTouched] = useState(false)
   const [fillMode, setFillMode] = useState<DialogMode>('form')
@@ -195,7 +197,7 @@ export function LegDialog({
     }
     setDraft(
       transport === undefined
-        ? emptyLegDraft(currency)
+        ? emptyTransportDraft(currency)
         : draftFrom(transport, currency),
     )
     setChain(chainFor(transport))
@@ -214,22 +216,25 @@ export function LegDialog({
    */
   const searchable = days.some((day) => day.date !== null)
 
-  const create = useAction(createLegFn, {
+  const create = useAction(createTransportFn, {
     success: t('modules.transports.toast.added'),
     description: t('modules.transports.toast.addedBody'),
     failure: t('modules.transports.toast.addFailed'),
   })
-  const update = useAction(updateLegFn, {
+  const update = useAction(updateTransportFn, {
     success: t('modules.transports.toast.updated'),
     failure: t('modules.transports.toast.updateFailed'),
   })
-  const saveChain = useAction(saveLegChainFn, {
+  const saveChain = useAction(saveTransportChainFn, {
     failure: t('modules.transports.toast.chainFailed'),
     fallback: t('modules.transports.toast.chainFallback'),
   })
   const action = editing || savedId !== null ? update : create
 
-  const errors = useMemo(() => validateLegDraft(draft, days), [draft, days])
+  const errors = useMemo(
+    () => validateTransportDraft(draft, days),
+    [draft, days],
+  )
   const chainErrors = useMemo(
     () => validateChain(chain, draft.mode, days),
     [chain, draft.mode, days],
@@ -245,10 +250,10 @@ export function LegDialog({
     [days, t, locale],
   )
   const invalid =
-    hasLegErrors(blockingLegErrors(errors, chain)) ||
+    hasTransportErrors(blockingLegErrors(errors, chain)) ||
     (chain.broken && hasChainErrors(chainErrors))
   const labels = endpointLabels(draft.mode)
-  const proposal = suggestLegTitle(draft)
+  const proposal = suggestTransportTitle(draft)
   const suggestion =
     proposal === null
       ? ''
@@ -260,26 +265,26 @@ export function LegDialog({
         })
 
   /** Live, not on submit: the one rule that makes a transport impossible. */
-  const timing = legTimingError({
+  const timing = transportTimingError({
     departureDate: draft.departureDate,
     departureTime: draft.departureTime,
     arrivalDate: draft.arrivalDate,
     arrivalTime: draft.arrivalTime,
   })
-  const duration = legDurationMinutes(draft)
+  const duration = transportDurationMinutes(draft)
 
-  function set<TKey extends keyof LegDraft>(
+  function set<TKey extends keyof TransportDraft>(
     key: TKey,
-    value: LegDraft[TKey],
+    value: TransportDraft[TKey],
   ): void {
     setDraft((current) => ({ ...current, [key]: value }))
   }
 
   /**
-   * `validateLegDraft` hands back a key rather than a sentence, so the resolving
+   * `validateTransportDraft` hands back a key rather than a sentence, so the resolving
    * happens here, where there is a provider.
    */
-  function errorFor(key: keyof LegDraft): string | undefined {
+  function errorFor(key: keyof TransportDraft): string | undefined {
     const error = touched ? errors[key] : undefined
     return error === undefined ? undefined : t(error)
   }
@@ -293,7 +298,7 @@ export function LegDialog({
    * save whose second half never lands. The two day references have no such
    * second writer, so this is the only place they are decided.
    */
-  function recordEndpoints(): Pick<LegDraft, ChainOwnedField> {
+  function recordEndpoints(): Pick<TransportDraft, ChainOwnedField> {
     const first = chain.stations.at(0)
     const last = chain.stations.at(-1)
     const firstLeg = chain.legs.at(0)
@@ -943,7 +948,7 @@ export function LegDialog({
  * photograph a state that does not exist at rest, and a selector picked off the
  * styling would break the evidence the next time the button is restyled.
  */
-export function NewLegAction({ onClick }: { onClick: () => void }) {
+export function NewTransportAction({ onClick }: { onClick: () => void }) {
   const t = useTranslate()
   return (
     <Button

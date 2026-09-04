@@ -1,14 +1,14 @@
 /**
- * The shape of the leg dialog, and the rules it enforces before it submits.
+ * The shape of the transport dialog, and the rules it enforces before it submits.
  *
- * A leg is the one row on this trip that a traveller reads back to a stranger at a
+ * A transport is the one row on this trip that a traveller reads back to a stranger at a
  * desk — a booking reference, a seat, a service number — so the form's job is to
- * keep those exact, and to refuse the two things that make a leg nonsense: no name,
+ * keep those exact, and to refuse the two things that make a transport nonsense: no name,
  * and an arrival before its departure.
  */
 import { formatWeekday } from '#/lib/format'
 import { isKnownTimeZone } from '#/lib/timezones'
-import { legTimingError } from './connections'
+import { transportTimingError } from './connections'
 
 import { isTransportMode, modeLabel } from './vocabulary'
 
@@ -180,7 +180,7 @@ export function endpointLabels(mode: string): EndpointLabels {
 
 /* ------------------------------------------------------------------- draft */
 
-export interface LegDraft {
+export interface TransportDraft {
   readonly mode: TransportMode
   readonly status: TransportStatus
   readonly title: string
@@ -212,7 +212,7 @@ export interface LegDraft {
   readonly notes: string
 }
 
-export function emptyLegDraft(currency: string): LegDraft {
+export function emptyTransportDraft(currency: string): TransportDraft {
   return {
     mode: 'flight',
     status: 'pending',
@@ -239,18 +239,20 @@ export function emptyLegDraft(currency: string): LegDraft {
 }
 
 /**
- * The name the leg gets when the traveller has not typed one: "SAS from LHR to
+ * The name the transport gets when the traveller has not typed one: "SAS from LHR to
  * HND", "Train from Tokyo to Kyoto". Suggested, never forced — the field stays
  * editable and this only fills a blank.
  */
-export interface LegTitleSuggestion {
+export interface TransportTitleSuggestion {
   readonly key: MessageKey
   readonly params: Readonly<Record<string, string>>
   /** The mode label to resolve into `operator`, when no carrier was typed. */
   readonly operatorKey: MessageKey | null
 }
 
-export function suggestLegTitle(draft: LegDraft): LegTitleSuggestion | null {
+export function suggestTransportTitle(
+  draft: TransportDraft,
+): TransportTitleSuggestion | null {
   const from =
     draft.departureCode.trim() !== ''
       ? draft.departureCode.trim().toUpperCase()
@@ -292,16 +294,18 @@ export function suggestLegTitle(draft: LegDraft): LegTitleSuggestion | null {
 
 /* -------------------------------------------------------------- validation */
 
-export type LegErrors = Partial<Record<keyof LegDraft | 'form', MessageKey>>
+export type TransportErrors = Partial<
+  Record<keyof TransportDraft | 'form', MessageKey>
+>
 
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/u
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u
 
-export function validateLegDraft(
-  draft: LegDraft,
+export function validateTransportDraft(
+  draft: TransportDraft,
   days: ReadonlyArray<DayChoice> = [],
-): LegErrors {
-  const errors: LegErrors = {}
+): TransportErrors {
+  const errors: TransportErrors = {}
 
   if (draft.title.trim().length === 0) {
     errors.title = 'modules.transports.error.titleEmpty'
@@ -329,7 +333,7 @@ export function validateLegDraft(
     errors.arrivalDate = 'modules.transports.error.arrivalNeedsDate'
   }
 
-  const ordering = legTimingError({
+  const ordering = transportTimingError({
     departureDate: draft.departureDate.trim(),
     departureTime: draft.departureTime.trim(),
     arrivalDate: draft.arrivalDate.trim(),
@@ -376,7 +380,7 @@ export function validateLegDraft(
  * rule.
  */
 function dayOrderError(
-  draft: LegDraft,
+  draft: TransportDraft,
   days: ReadonlyArray<DayChoice>,
 ): MessageKey | null {
   const from = days.find((day) => day.id === draft.departureDayId)
@@ -391,7 +395,7 @@ function dayOrderError(
   return endpointLabels(draft.mode).dayOrder
 }
 
-export function hasLegErrors(errors: LegErrors): boolean {
+export function hasTransportErrors(errors: TransportErrors): boolean {
   return Object.keys(errors).length > 0
 }
 
@@ -889,7 +893,7 @@ function chainLegErrors(
     }
   }
 
-  const ordering = legTimingError({
+  const ordering = transportTimingError({
     departureDate: leg.departureDate.trim(),
     departureTime: leg.departureTime.trim(),
     arrivalDate: leg.arrivalDate.trim(),
@@ -933,7 +937,7 @@ export function validateChain(
  * The record fields a broken chain owns, and which the flat form therefore no
  * longer asks about.
  *
- * `LegDialog` writes all ten from the outer stations of the chain, and hides the
+ * `TransportDialog` writes all ten from the outer stations of the chain, and hides the
  * pair of endpoint fieldsets that used to hold them. An error raised against one
  * of those hidden fields is neither visible to the traveller nor theirs to
  * repair, so it must not be what stops the save — a disabled button with no
@@ -950,7 +954,7 @@ const CHAIN_OWNED_FIELDS = [
   'arrivalDate',
   'arrivalTime',
   'arrivalDayId',
-] as const satisfies ReadonlyArray<keyof LegDraft>
+] as const satisfies ReadonlyArray<keyof TransportDraft>
 
 /** A record field written from the chain rather than typed into the flat form. */
 export type ChainOwnedField = (typeof CHAIN_OWNED_FIELDS)[number]
@@ -963,13 +967,13 @@ export type ChainOwnedField = (typeof CHAIN_OWNED_FIELDS)[number]
  * the repository re-runs every one of them over what is sent.
  */
 export function blockingLegErrors(
-  errors: LegErrors,
+  errors: TransportErrors,
   chain: ChainDraft,
-): LegErrors {
+): TransportErrors {
   if (!chain.broken) {
     return errors
   }
-  const kept: LegErrors = { ...errors }
+  const kept: TransportErrors = { ...errors }
   for (const field of CHAIN_OWNED_FIELDS) {
     delete kept[field]
   }

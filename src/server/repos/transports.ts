@@ -177,7 +177,7 @@ export type UpdateTransportInput = z.infer<typeof updateTransportInput>
  * Reads
  * ---------------------------------------------------------------------------------------------- */
 
-/** A trip's legs in travel order: dated legs first by date and time, undated ideas last. */
+/** A trip's transports in travel order: dated ones first by date and time, undated ideas last. */
 export async function listTripTransports(
   scope: TenantScope,
   tripId: string,
@@ -218,7 +218,7 @@ export async function listDayTransports(
   })
 }
 
-/** The next leg the traveller has to catch, across every trip in the tenant. */
+/** The next transport the traveller has to catch, across every trip in the tenant. */
 export async function nextDeparture(
   scope: TenantScope,
   options: { readonly from?: string } = {},
@@ -239,11 +239,11 @@ export async function nextDeparture(
 
 export interface TransportModeTotals {
   readonly mode: (typeof TRANSPORT_MODES)[number]
-  readonly legs: number
+  readonly count: number
   readonly distanceMetres: number
 }
 
-/** Legs and distance grouped by mode — the "how you travelled" breakdown on the transports screen. */
+/** Transports and distance grouped by mode — the "how you travelled" breakdown on the transports screen. */
 export async function summariseTripTransports(
   scope: TenantScope,
   tripId: string,
@@ -251,7 +251,7 @@ export async function summariseTripTransports(
   const rows = await scope.db
     .select({
       mode: transports.mode,
-      legs: count(),
+      count: count(),
       distanceMetres: sum(transports.distanceMetres),
     })
     .from(transports)
@@ -264,7 +264,7 @@ export async function summariseTripTransports(
       ? [
           {
             mode: row.mode as (typeof TRANSPORT_MODES)[number],
-            legs: row.legs,
+            count: row.count,
             distanceMetres: Number(row.distanceMetres ?? 0),
           },
         ]
@@ -272,7 +272,7 @@ export async function summariseTripTransports(
   )
 }
 
-/** Total distance of a trip's legs, in metres. */
+/** Total distance of a trip's transports, in metres. */
 export async function totalTripDistanceMetres(
   scope: TenantScope,
   tripId: string,

@@ -27,11 +27,11 @@ import {
   chainPayload,
   emptyChain,
   emptyStation,
-  emptyLegDraft,
+  emptyTransportDraft,
   fillStationFromCode,
   flatChain,
   hasChainErrors,
-  hasLegErrors,
+  hasTransportErrors,
   isLookupCode,
   removeStationAt,
   updateStationByKey,
@@ -40,7 +40,7 @@ import {
   validateChain,
 } from '../leg-form'
 
-import type { ChainDraft, LegErrors, StationLookup } from '../leg-form'
+import type { ChainDraft, TransportErrors, StationLookup } from '../leg-form'
 import type { TransportData } from '../types'
 
 /** A transport as the loader hands it over, with only what the chain reads set. */
@@ -246,7 +246,7 @@ describe('putting a chained journey back as one', () => {
  */
 describe('the draft errors a broken chain no longer answers for', () => {
   /** A time with no date beside it: the flat form's rule, on a hidden field. */
-  const HIDDEN: LegErrors = {
+  const HIDDEN: TransportErrors = {
     departureDate: 'modules.transports.error.departureNeedsDate',
   }
 
@@ -255,14 +255,14 @@ describe('the draft errors a broken chain no longer answers for', () => {
 
     expect(chain.broken).toBe(false)
     expect(blockingLegErrors(HIDDEN, chain)).toEqual(HIDDEN)
-    expect(hasLegErrors(blockingLegErrors(HIDDEN, chain))).toBe(true)
+    expect(hasTransportErrors(blockingLegErrors(HIDDEN, chain))).toBe(true)
   })
 
   it('drops it once the chain owns that field', () => {
     const chain = threeStations()
 
     expect(chain.broken).toBe(true)
-    expect(hasLegErrors(blockingLegErrors(HIDDEN, chain))).toBe(false)
+    expect(hasTransportErrors(blockingLegErrors(HIDDEN, chain))).toBe(false)
   })
 
   it('keeps the errors on fields the flat form still asks about', () => {
@@ -280,7 +280,7 @@ describe('the draft errors a broken chain no longer answers for', () => {
   })
 
   it('leaves the errors it was handed alone', () => {
-    const errors: LegErrors = { ...HIDDEN }
+    const errors: TransportErrors = { ...HIDDEN }
     blockingLegErrors(errors, threeStations())
 
     expect(errors).toEqual(HIDDEN)
@@ -288,8 +288,8 @@ describe('the draft errors a broken chain no longer answers for', () => {
 
   it('drops exactly the fields the record is written from', () => {
     const everything = Object.fromEntries(
-      Object.keys(emptyLegDraft('JPY')).map((key) => [key, 'wrong']),
-    ) as LegErrors
+      Object.keys(emptyTransportDraft('JPY')).map((key) => [key, 'wrong']),
+    ) as TransportErrors
     const kept = blockingLegErrors(everything, threeStations())
 
     expect(Object.keys(kept).sort()).toEqual(
@@ -815,7 +815,7 @@ describe('a station edit that resolves late', () => {
 describe('breaking a journey into legs', () => {
   it('opens on the stations typed into the flat form, not on a blank pair', () => {
     const draft = {
-      ...emptyLegDraft('EUR'),
+      ...emptyTransportDraft('EUR'),
       departureName: 'Lisboa Oriente',
       departureCode: 'LIS',
       departureDate: '2026-05-04',
@@ -849,7 +849,7 @@ describe('breaking a journey into legs', () => {
   it('prefers an edit typed since the dialog opened over the stored record', () => {
     const record = transport()
     const draft = {
-      ...emptyLegDraft('EUR'),
+      ...emptyTransportDraft('EUR'),
       departureName: 'Kyoto',
       departureCode: 'UKY',
       departureDate: record.departureDate ?? '',
@@ -869,6 +869,6 @@ describe('breaking a journey into legs', () => {
   it('leaves a chain that is already broken exactly as it stands', () => {
     const chained = chainFromTransport(transport({ legs: RECORDED_LEGS }))
 
-    expect(breakIntoLegs(chained, emptyLegDraft('EUR'))).toBe(chained)
+    expect(breakIntoLegs(chained, emptyTransportDraft('EUR'))).toBe(chained)
   })
 })

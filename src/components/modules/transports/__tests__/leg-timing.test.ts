@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { legDurationMinutes, legElapsedMinutes } from '../leg-timing'
+import { transportDurationMinutes, legElapsedMinutes } from '../leg-timing'
 
-describe('legDurationMinutes', () => {
-  it('measures a same-day leg', () => {
+describe('transportDurationMinutes', () => {
+  it('measures a same-day transport', () => {
     expect(
-      legDurationMinutes({
+      transportDurationMinutes({
         departureDate: '2026-04-16',
         departureTime: '08:00',
         arrivalDate: '2026-04-16',
@@ -14,9 +14,9 @@ describe('legDurationMinutes', () => {
     ).toBe(270)
   })
 
-  it('measures an overnight leg', () => {
+  it('measures an overnight transport', () => {
     expect(
-      legDurationMinutes({
+      transportDurationMinutes({
         departureDate: '2026-04-16',
         departureTime: '22:00',
         arrivalDate: '2026-04-17',
@@ -27,7 +27,7 @@ describe('legDurationMinutes', () => {
 
   it('reads a missing time as the start of its day', () => {
     expect(
-      legDurationMinutes({
+      transportDurationMinutes({
         departureDate: '2026-04-16',
         departureTime: '',
         arrivalDate: '2026-04-17',
@@ -38,7 +38,7 @@ describe('legDurationMinutes', () => {
 
   it('says nothing while either date is still blank', () => {
     expect(
-      legDurationMinutes({
+      transportDurationMinutes({
         departureDate: '',
         departureTime: '08:00',
         arrivalDate: '2026-04-16',
@@ -46,7 +46,7 @@ describe('legDurationMinutes', () => {
       }),
     ).toBeNull()
     expect(
-      legDurationMinutes({
+      transportDurationMinutes({
         departureDate: '2026-04-16',
         departureTime: '08:00',
         arrivalDate: '',
@@ -55,9 +55,9 @@ describe('legDurationMinutes', () => {
     ).toBeNull()
   })
 
-  it('says nothing for a leg that arrives before it departs', () => {
+  it('says nothing for a transport that arrives before it departs', () => {
     expect(
-      legDurationMinutes({
+      transportDurationMinutes({
         departureDate: '2026-04-16',
         departureTime: '12:00',
         arrivalDate: '2026-04-16',
@@ -66,9 +66,9 @@ describe('legDurationMinutes', () => {
     ).toBeNull()
   })
 
-  it('says nothing for a zero-length leg rather than reporting "0m"', () => {
+  it('says nothing for a zero-length transport rather than reporting "0m"', () => {
     expect(
-      legDurationMinutes({
+      transportDurationMinutes({
         departureDate: '2026-04-16',
         departureTime: '08:00',
         arrivalDate: '2026-04-16',
@@ -79,7 +79,7 @@ describe('legDurationMinutes', () => {
 
   it('says nothing for a malformed date', () => {
     expect(
-      legDurationMinutes({
+      transportDurationMinutes({
         departureDate: '16/04/2026',
         departureTime: '08:00',
         arrivalDate: '2026-04-16',
@@ -113,7 +113,7 @@ describe('legElapsedMinutes', () => {
 
   /**
    * And the case the naive subtraction does not merely mis-measure but loses. Arriving at a clock
-   * reading *earlier* than the one departed makes `legDurationMinutes` answer `null`, so the hint
+   * reading *earlier* than the one departed makes `transportDurationMinutes` answer `null`, so the hint
    * disappears for precisely the journeys it exists to explain.
    */
   it('measures a flight that lands before the clock it left', () => {
@@ -124,7 +124,7 @@ describe('legElapsedMinutes', () => {
       arrivalTime: '08:00',
     }
 
-    expect(legDurationMinutes(leg)).toBeNull()
+    expect(transportDurationMinutes(leg)).toBeNull()
     expect(
       legElapsedMinutes(leg, {
         from: 'Europe/London',
@@ -142,7 +142,7 @@ describe('legElapsedMinutes', () => {
       arrivalTime: '11:00',
     }
 
-    expect(legDurationMinutes(leg)).toBe(120)
+    expect(transportDurationMinutes(leg)).toBe(120)
     expect(
       legElapsedMinutes(leg, { from: 'Asia/Shanghai', to: 'Asia/Seoul' }),
     ).toBe(60)
@@ -158,7 +158,7 @@ describe('legElapsedMinutes', () => {
 
     expect(
       legElapsedMinutes(leg, { from: 'Europe/Warsaw', to: 'Europe/Warsaw' }),
-    ).toBe(legDurationMinutes(leg))
+    ).toBe(transportDurationMinutes(leg))
   })
 
   /**

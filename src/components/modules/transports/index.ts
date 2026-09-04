@@ -2,7 +2,7 @@
 export { ConnectionsBadge, TransportsTimeline } from './transports-timeline'
 export type { TransportsTimelineProps } from './transports-timeline'
 
-export { LegDialog, NewLegAction } from './leg-dialog'
+export { TransportDialog, NewTransportAction } from './leg-dialog'
 
 export { ChainEditor } from './chain-editor'
 export type { ChainEditorProps } from './chain-editor'
@@ -20,18 +20,18 @@ export type { ConnectionSearchProps } from './connection-search'
 export {
   analyseConnections,
   formatGap,
-  legArrivalAt,
-  legDepartureAt,
-  legTimingError,
+  transportArrivalAt,
+  transportDepartureAt,
+  transportTimingError,
   minimumConnectionMinutes,
-  sortLegsByDeparture,
+  sortTransportsByDeparture,
   summariseConnections,
 } from './connections'
 export type {
   Connection,
   ConnectionSeverity,
   ConnectionSummary,
-  LegLike,
+  TransportLike,
 } from './connections'
 
 export {
@@ -48,13 +48,13 @@ export {
   chainPayload,
   emptyChain,
   emptyChainLeg,
-  emptyLegDraft,
+  emptyTransportDraft,
   emptyStation,
   endpointLabels,
   fillStationFromCode,
   flatChain,
   hasChainErrors,
-  hasLegErrors,
+  hasTransportErrors,
   isLookupCode,
   isTransportMode,
   isTransportStatus,
@@ -64,14 +64,14 @@ export {
   removeStationAt,
   splitLegAt,
   stationLabel,
-  suggestLegTitle,
+  suggestTransportTitle,
   transportStatusLabel,
   updateStationByKey,
   usesCodes,
   usesSeat,
   usesService,
   validateChain,
-  validateLegDraft,
+  validateTransportDraft,
 } from './leg-form'
 export type {
   ChainDraft,
@@ -85,8 +85,8 @@ export type {
   DayChoice,
   EndpointLabels,
   FlatEndpoints,
-  LegDraft,
-  LegErrors,
+  TransportDraft,
+  TransportErrors,
   StationDraft,
   StationErrors,
   StationLookup,
@@ -95,5 +95,5 @@ export type {
 } from './leg-form'
 
 export { MODE_ICON, modeIcon } from './mode-icon'
-export { legDurationMinutes, legElapsedMinutes } from './leg-timing'
+export { transportDurationMinutes, legElapsedMinutes } from './leg-timing'
 export type { TransportData, TransportDayData, TransportLegData } from './types'

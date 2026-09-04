@@ -92,27 +92,27 @@ const messages = {
    */
   'transports.alert.impossible.title': {
     one: 'One hand-over cannot be made',
-    other: '{legs} hand-overs cannot be made',
+    other: '{value} hand-overs cannot be made',
   },
   'transports.alert.impossible.body':
     'A transport departs before the one before it arrives. The junctions below say which, and by how much.',
   'transports.alert.tight.title': {
     one: 'One connection is tight',
-    other: '{legs} connections are tight',
+    other: '{value} connections are tight',
   },
   'transports.alert.tight.body':
     'There is time, but not much of it for the mode you are catching. The junctions below show how long each one leaves you.',
   /**
    * Was `{n} broken hand-over{n === 1 ? "" : "s"}`: an English suffix appended
-   * in JSX. `{legs}` arrives already grouped for the locale.
+   * in JSX. `{value}` arrives already grouped for the locale.
    */
   'transports.badge.impossible': {
-    one: '{legs} broken hand-over',
-    other: '{legs} broken hand-overs',
+    one: '{value} broken hand-over',
+    other: '{value} broken hand-overs',
   },
   'transports.badge.tight': {
-    one: '{legs} tight connection',
-    other: '{legs} tight connections',
+    one: '{value} tight connection',
+    other: '{value} tight connections',
   },
   'transports.badge.ok': 'Every hand-over works',
   /**

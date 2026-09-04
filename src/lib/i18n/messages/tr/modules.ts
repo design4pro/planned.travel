@@ -40,24 +40,24 @@ const messages = {
     'Bu gezideki her yolculuk başka türlü gidiyor. Hepsini görmek için “{label}” seçeneğine dön.',
   'transports.filtered.action': 'Tüm yolculukları göster',
   'transports.alert.impossible.title': {
-    one: '{legs} aktarma yapılamıyor',
-    other: '{legs} aktarma yapılamıyor',
+    one: '{value} aktarma yapılamıyor',
+    other: '{value} aktarma yapılamıyor',
   },
   'transports.alert.impossible.body':
     'Bir yolculuk, kendinden önceki gelmeden kalkıyor. Aşağıdaki kavşaklar hangisi ve ne kadar olduğunu söylüyor.',
   'transports.alert.tight.title': {
-    one: '{legs} aktarma çok sıkı',
-    other: '{legs} aktarma çok sıkı',
+    one: '{value} aktarma çok sıkı',
+    other: '{value} aktarma çok sıkı',
   },
   'transports.alert.tight.body':
     'Zaman var ama yakalayacağın araç için bol değil. Aşağıdaki kavşaklar her birinin ne kadar bıraktığını gösteriyor.',
   'transports.badge.impossible': {
-    one: '{legs} kopuk aktarma',
-    other: '{legs} kopuk aktarma',
+    one: '{value} kopuk aktarma',
+    other: '{value} kopuk aktarma',
   },
   'transports.badge.tight': {
-    one: '{legs} sıkı aktarma',
-    other: '{legs} sıkı aktarma',
+    one: '{value} sıkı aktarma',
+    other: '{value} sıkı aktarma',
   },
   'transports.badge.ok': 'Her aktarma tutuyor',
   'transports.remove.body':

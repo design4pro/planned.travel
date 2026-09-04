@@ -71,7 +71,7 @@ import {
   usesSeat,
   usesService,
 } from './leg-form'
-import { legDurationMinutes, legElapsedMinutes } from './leg-timing'
+import { transportDurationMinutes, legElapsedMinutes } from './leg-timing'
 
 import type { ComboboxOption } from '#/components/ui'
 import type { MessageKey, Translate } from '#/lib/i18n'
@@ -436,14 +436,14 @@ function LegRow({
   const crossesZones =
     from.timezone !== '' && to.timezone !== '' && from.timezone !== to.timezone
   /*
-   * And it is a different subtraction. `legDurationMinutes` differences the two wall clocks,
+   * And it is a different subtraction. `transportDurationMinutes` differences the two wall clocks,
    * which is the elapsed time only while they are the same clock; across zones the offsets have
    * to come off first. Saying "3h" over an eight-hour flight would be worse than saying nothing,
    * because it is the one number this label exists to correct.
    */
   const duration = crossesZones
     ? legElapsedMinutes(leg, { from: from.timezone, to: to.timezone })
-    : legDurationMinutes(leg)
+    : transportDurationMinutes(leg)
   const departureClock = localClockLabel({
     time: leg.departureTime,
     timezone: from.timezone,

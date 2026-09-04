@@ -40,27 +40,27 @@ const messages = {
   'transports.filtered.action': 'Mostrar todos os deslocamentos',
   'transports.alert.impossible.title': {
     one: 'Uma conexão é impossível',
-    many: '{legs} conexões são impossíveis',
-    other: '{legs} conexões são impossíveis',
+    many: '{value} conexões são impossíveis',
+    other: '{value} conexões são impossíveis',
   },
   'transports.alert.impossible.body':
     'Um deslocamento parte antes de o anterior chegar. Os nós abaixo dizem quais e por quanto.',
   'transports.alert.tight.title': {
     one: 'Uma conexão está apertada',
-    many: '{legs} conexões estão apertadas',
-    other: '{legs} conexões estão apertadas',
+    many: '{value} conexões estão apertadas',
+    other: '{value} conexões estão apertadas',
   },
   'transports.alert.tight.body':
     'Há tempo, mas pouco para o meio que você vai pegar. Os nós abaixo mostram quanto cada um deixa.',
   'transports.badge.impossible': {
-    one: '{legs} conexão quebrada',
-    many: '{legs} conexões quebradas',
-    other: '{legs} conexões quebradas',
+    one: '{value} conexão quebrada',
+    many: '{value} conexões quebradas',
+    other: '{value} conexões quebradas',
   },
   'transports.badge.tight': {
-    one: '{legs} conexão apertada',
-    many: '{legs} conexões apertadas',
-    other: '{legs} conexões apertadas',
+    one: '{value} conexão apertada',
+    many: '{value} conexões apertadas',
+    other: '{value} conexões apertadas',
   },
   'transports.badge.ok': 'Todas as conexões funcionam',
   'transports.remove.body':

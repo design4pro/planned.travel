@@ -1,8 +1,8 @@
 /**
- * How long one leg takes, from what the form holds.
+ * How long one transport takes, from what the form holds.
  *
  * Kept beside the dialog rather than in `connections.ts` because that module
- * reasons about the *gaps between* legs; this is the leg's own duration, and the
+ * reasons about the *gaps between* transports; this is the transport's own duration, and the
  * dialog shows it live so a traveller can sanity-check a red-eye they have just
  * typed in.
  */
@@ -24,14 +24,14 @@ function instantOf(date: string, time: string): number | null {
  * Minutes from departure to arrival, or `null` when either end is not yet known
  * or the pair is the wrong way round (which the form reports as an error instead).
  */
-export function legDurationMinutes(leg: {
+export function transportDurationMinutes(transport: {
   readonly departureDate: string
   readonly departureTime: string
   readonly arrivalDate: string
   readonly arrivalTime: string
 }): number | null {
-  const from = instantOf(leg.departureDate, leg.departureTime)
-  const to = instantOf(leg.arrivalDate, leg.arrivalTime)
+  const from = instantOf(transport.departureDate, transport.departureTime)
+  const to = instantOf(transport.arrivalDate, transport.arrivalTime)
   if (from === null || to === null || to <= from) {
     return null
   }
@@ -41,7 +41,7 @@ export function legDurationMinutes(leg: {
 /**
  * The same duration for a leg whose two ends are on different clocks — the elapsed time.
  *
- * {@link legDurationMinutes} subtracts one wall clock from the other, which is right only when
+ * {@link transportDurationMinutes} subtracts one wall clock from the other, which is right only when
  * both are the same clock. Across zones it is wrong by the difference between them, and wrong in
  * the direction that matters most: a westbound flight arrives at a clock reading *earlier* than
  * the one it left, so the naive subtraction answers `null` and the label vanishes for exactly the

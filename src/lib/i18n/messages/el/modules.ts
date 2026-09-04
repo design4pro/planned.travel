@@ -42,23 +42,23 @@ const messages = {
   'transports.filtered.action': 'Δείξε όλες τις μετακινήσεις',
   'transports.alert.impossible.title': {
     one: 'Μια μετεπιβίβαση δεν γίνεται',
-    other: '{legs} μετεπιβιβάσεις δεν γίνονται',
+    other: '{value} μετεπιβιβάσεις δεν γίνονται',
   },
   'transports.alert.impossible.body':
     'Μια μετακίνηση αναχωρεί πριν φτάσει η προηγούμενη. Οι κόμβοι παρακάτω λένε ποιες και κατά πόσο.',
   'transports.alert.tight.title': {
     one: 'Μια μετεπιβίβαση είναι στο τσακ',
-    other: '{legs} μετεπιβιβάσεις είναι στο τσακ',
+    other: '{value} μετεπιβιβάσεις είναι στο τσακ',
   },
   'transports.alert.tight.body':
     'Υπάρχει χρόνος, αλλά λίγος για το μέσο που προλαβαίνεις. Οι κόμβοι παρακάτω δείχνουν πόσο αφήνει ο καθένας.',
   'transports.badge.impossible': {
-    one: '{legs} σπασμένη μετεπιβίβαση',
-    other: '{legs} σπασμένες μετεπιβιβάσεις',
+    one: '{value} σπασμένη μετεπιβίβαση',
+    other: '{value} σπασμένες μετεπιβιβάσεις',
   },
   'transports.badge.tight': {
-    one: '{legs} οριακή μετεπιβίβαση',
-    other: '{legs} οριακές μετεπιβιβάσεις',
+    one: '{value} οριακή μετεπιβίβαση',
+    other: '{value} οριακές μετεπιβιβάσεις',
   },
   'transports.badge.ok': 'Κάθε μετεπιβίβαση βγαίνει',
   'transports.remove.body':

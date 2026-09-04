@@ -40,20 +40,20 @@ const messages = {
     'Setiap transportasi perjalanan ini ditempuh dengan cara berbeda. Kembali ke “{label}” untuk melihat semuanya.',
   'transports.filtered.action': 'Tampilkan semua transportasi',
   'transports.alert.impossible.title': {
-    other: '{legs} perpindahan tidak mungkin',
+    other: '{value} perpindahan tidak mungkin',
   },
   'transports.alert.impossible.body':
     'Sebuah transportasi berangkat sebelum yang sebelumnya tiba. Titik sambung di bawah menyebut yang mana dan selisihnya.',
   'transports.alert.tight.title': {
-    other: '{legs} perpindahan terlalu mepet',
+    other: '{value} perpindahan terlalu mepet',
   },
   'transports.alert.tight.body':
     'Waktunya ada, tapi tidak banyak untuk moda yang harus kamu kejar. Titik sambung di bawah menunjukkan sisa waktu masing-masing.',
   'transports.badge.impossible': {
-    other: '{legs} perpindahan rusak',
+    other: '{value} perpindahan rusak',
   },
   'transports.badge.tight': {
-    other: '{legs} perpindahan mepet',
+    other: '{value} perpindahan mepet',
   },
   'transports.badge.ok': 'Semua perpindahan aman',
   'transports.remove.body':

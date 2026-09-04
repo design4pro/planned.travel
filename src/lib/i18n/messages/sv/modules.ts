@@ -41,23 +41,23 @@ const messages = {
   'transports.filtered.action': 'Visa alla färder',
   'transports.alert.impossible.title': {
     one: 'Ett byte går inte',
-    other: '{legs} byten går inte',
+    other: '{value} byten går inte',
   },
   'transports.alert.impossible.body':
     'En färd avgår innan den föregående kommer fram. Knutpunkterna nedan säger vilka, och med hur mycket.',
   'transports.alert.tight.title': {
     one: 'Ett byte är tight',
-    other: '{legs} byten är tighta',
+    other: '{value} byten är tighta',
   },
   'transports.alert.tight.body':
     'Tiden finns, men inte mycket för färdmedlet du ska hinna med. Knutpunkterna nedan visar hur mycket var och en lämnar.',
   'transports.badge.impossible': {
-    one: '{legs} brutet byte',
-    other: '{legs} brutna byten',
+    one: '{value} brutet byte',
+    other: '{value} brutna byten',
   },
   'transports.badge.tight': {
-    one: '{legs} tight byte',
-    other: '{legs} tighta byten',
+    one: '{value} tight byte',
+    other: '{value} tighta byten',
   },
   'transports.badge.ok': 'Varje byte håller',
   'transports.remove.body':

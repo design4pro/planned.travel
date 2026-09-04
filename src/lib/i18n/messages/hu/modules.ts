@@ -40,24 +40,24 @@ const messages = {
     'Ezen az utazáson minden út máshogy megy. Lépj vissza a „{label}” szűrőre, hogy mindet lásd.',
   'transports.filtered.action': 'Minden út megjelenítése',
   'transports.alert.impossible.title': {
-    one: '{legs} átszállás nem megy',
-    other: '{legs} átszállás nem megy',
+    one: '{value} átszállás nem megy',
+    other: '{value} átszállás nem megy',
   },
   'transports.alert.impossible.body':
     'Egy út előbb indul, mint hogy az előző megérkezne. A lenti csomópontok megmondják, melyek és mennyivel.',
   'transports.alert.tight.title': {
-    one: '{legs} átszállás szoros',
-    other: '{legs} átszállás szoros',
+    one: '{value} átszállás szoros',
+    other: '{value} átszállás szoros',
   },
   'transports.alert.tight.body':
     'Van idő, de nem sok arra a járműre, amit el kell érni. A lenti csomópontok mutatják, mennyit hagy mindegyik.',
   'transports.badge.impossible': {
-    one: '{legs} elszakadt átszállás',
-    other: '{legs} elszakadt átszállás',
+    one: '{value} elszakadt átszállás',
+    other: '{value} elszakadt átszállás',
   },
   'transports.badge.tight': {
-    one: '{legs} szoros átszállás',
-    other: '{legs} szoros átszállás',
+    one: '{value} szoros átszállás',
+    other: '{value} szoros átszállás',
   },
   'transports.badge.ok': 'Minden átszállás összejön',
   'transports.remove.body':

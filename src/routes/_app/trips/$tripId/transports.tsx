@@ -7,7 +7,7 @@ import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
   ConnectionsBadge,
-  NewLegAction,
+  NewTransportAction,
   TransportsTimeline,
   analyseConnections,
   modeLabel,
@@ -59,10 +59,10 @@ function TransportsPage() {
   const t = useTranslate()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
-  const [newLegOpen, setNewLegOpen] = useState(false)
+  const [newTransportOpen, setNewTransportOpen] = useState(false)
 
   const busiest = [...data.byMode]
-    .sort((left, right) => right.legs - left.legs)
+    .sort((left, right) => right.count - left.count)
     .at(0)
   const priced = data.transports.filter(
     (transport) => transport.priceMinor !== null,
@@ -99,7 +99,9 @@ function TransportsPage() {
                   ),
                 ].join(' · ')
           }
-          actions={<NewLegAction onClick={() => setNewLegOpen(true)} />}
+          actions={
+            <NewTransportAction onClick={() => setNewTransportOpen(true)} />
+          }
         >
           {summary.checked === 0 ? null : (
             <ConnectionsBadge
@@ -164,8 +166,8 @@ function TransportsPage() {
           days={data.days}
           currency={data.currency}
           maskCodes={data.maskCodes}
-          newLegOpen={newLegOpen}
-          onNewLegOpenChange={setNewLegOpen}
+          newTransportOpen={newTransportOpen}
+          onNewTransportOpenChange={setNewTransportOpen}
         />
       </AppSections>
     </AppFrame>

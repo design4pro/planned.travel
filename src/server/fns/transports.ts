@@ -109,7 +109,7 @@ const optionalCurrency = z
     'must be an ISO-4217 alphabetic code',
   )
 
-const legFields = {
+const transportFields = {
   mode: z.enum(TRANSPORT_MODES),
   status: z.enum(TRANSPORT_STATUSES),
   title: titleText,
@@ -134,28 +134,30 @@ const legFields = {
   notes: z.string().trim().max(4000),
 }
 
-export const legInputSchema = z.object({ tripId, ...legFields })
-export const legUpdateSchema = z.object({
+export const transportInputSchema = z.object({ tripId, ...transportFields })
+export const transportUpdateSchema = z.object({
   tripId,
   transportId: rowId,
-  ...legFields,
+  ...transportFields,
 })
 
-export type LegInput = z.infer<typeof legInputSchema>
+export type TransportInput = z.infer<typeof transportInputSchema>
 
-/** A leg that lands before it takes off is a typo, and the server says so too. */
-function assertOrder(data: LegInput): void {
+/** A transport that lands before it takes off is a typo, and the server says so too. */
+function assertOrder(data: TransportInput): void {
   if (data.departureDate === '' || data.arrivalDate === '') {
     return
   }
   const from = `${data.departureDate}T${data.departureTime === '' ? '00:00' : data.departureTime}`
   const to = `${data.arrivalDate}T${data.arrivalTime === '' ? '23:59' : data.arrivalTime}`
   if (to < from) {
-    throw new Error('This leg arrives before it departs. Check the times.')
+    throw new Error(
+      'This transport arrives before it departs. Check the times.',
+    )
   }
 }
 
-function payload(data: LegInput) {
+function payload(data: TransportInput) {
   return {
     mode: data.mode,
     status: data.status,
@@ -227,7 +229,7 @@ const chainLegSchema = z.object({
  *
  * Both writers send the same two arrays and both mean the same thing by `''` — "not stated" — so
  * the translation is written once. It is a mapping and nothing else: what a chain has to satisfy
- * is stated by {@link legChainSchema} on the way in and by `replaceTransportChain` at the write.
+ * is stated by {@link transportChainSchema} on the way in and by `replaceTransportChain` at the write.
  */
 function chainInput(data: {
   readonly stations: ReadonlyArray<z.infer<typeof stationSchema>>
@@ -264,7 +266,7 @@ function chainInput(data: {
  * record's own endpoints are the journey, which is what every transport written
  * before this stage already is.
  */
-export const legChainSchema = z
+export const transportChainSchema = z
   .object({
     tripId,
     transportId: rowId,
@@ -520,52 +522,56 @@ export const findStationFn = createServerFn({ method: 'GET' })
 
 /* ------------------------------------------------------------------ writes */
 
-export const createLegFn = createServerFn({ method: 'POST' })
-  .validator(legInputSchema)
+export const createTransportFn = createServerFn({ method: 'POST' })
+  .validator(transportInputSchema)
   .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
     assertOrder(data)
 
-    const leg = await createTransport(scope, {
+    const transport = await createTransport(scope, {
       tripId: data.tripId,
       ...payload(data),
     })
 
     await mirrorToRoom(scope, data.tripId, [
-      patch('route', leg.id, {
+      patch('route', transport.id, {
         title: data.title,
         mode: data.mode,
         status: data.status,
-        departureDayId: leg.dayId,
-        arrivalDayId: leg.arrivalDayId,
+        departureDayId: transport.dayId,
+        arrivalDayId: transport.arrivalDayId,
       }),
     ])
-    return { transportId: leg.id }
+    return { transportId: transport.id }
   })
 
-export const updateLegFn = createServerFn({ method: 'POST' })
-  .validator(legUpdateSchema)
+export const updateTransportFn = createServerFn({ method: 'POST' })
+  .validator(transportUpdateSchema)
   .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
     assertOrder(data)
 
-    const leg = await updateTransport(scope, data.transportId, payload(data))
+    const transport = await updateTransport(
+      scope,
+      data.transportId,
+      payload(data),
+    )
 
     await mirrorToRoom(scope, data.tripId, [
       patch('route', data.transportId, {
         title: data.title,
         mode: data.mode,
         status: data.status,
-        departureDayId: leg.dayId,
-        arrivalDayId: leg.arrivalDayId,
+        departureDayId: transport.dayId,
+        arrivalDayId: transport.arrivalDayId,
       }),
     ])
     return { transportId: data.transportId }
   })
 
-export const setLegStatusFn = createServerFn({ method: 'POST' })
+export const setTransportStatusFn = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       tripId,
@@ -598,8 +604,8 @@ export const setLegStatusFn = createServerFn({ method: 'POST' })
  * hears "this journey now has four legs" refetches rather than trying to apply
  * twelve rows through a 32 KiB frame.
  */
-export const saveLegChainFn = createServerFn({ method: 'POST' })
-  .validator(legChainSchema)
+export const saveTransportChainFn = createServerFn({ method: 'POST' })
+  .validator(transportChainSchema)
   .handler(async ({ data }): Promise<{ readonly legs: number }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
@@ -622,7 +628,7 @@ export const saveLegChainFn = createServerFn({ method: 'POST' })
     return { legs: legs.length }
   })
 
-export const deleteLegFn = createServerFn({ method: 'POST' })
+export const deleteTransportFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, transportId: rowId }))
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
@@ -746,7 +752,7 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
  * status and booking fields are left exactly where they were.
  *
  * The mirror carries the leg count and the two outer endpoints rather than the chain, for the
- * reason `saveLegChainFn` gives: a patch is a notification and D1 is the record.
+ * reason `saveTransportChainFn` gives: a patch is a notification and D1 is the record.
  */
 export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
   .validator(

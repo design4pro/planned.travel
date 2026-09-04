@@ -42,27 +42,27 @@ const messages = {
   'transports.filtered.action': 'Mostra tutti gli spostamenti',
   'transports.alert.impossible.title': {
     one: 'Una coincidenza è impossibile',
-    many: '{legs} coincidenze sono impossibili',
-    other: '{legs} coincidenze sono impossibili',
+    many: '{value} coincidenze sono impossibili',
+    other: '{value} coincidenze sono impossibili',
   },
   'transports.alert.impossible.body':
     'Uno spostamento parte prima che arrivi quello precedente. I nodi qui sotto dicono quali e di quanto.',
   'transports.alert.tight.title': {
     one: 'Una coincidenza è stretta',
-    many: '{legs} coincidenze sono strette',
-    other: '{legs} coincidenze sono strette',
+    many: '{value} coincidenze sono strette',
+    other: '{value} coincidenze sono strette',
   },
   'transports.alert.tight.body':
     'Il tempo c’è, ma poco per il mezzo che devi prendere. I nodi qui sotto mostrano quanto ne lascia ciascuno.',
   'transports.badge.impossible': {
-    one: '{legs} coincidenza rotta',
-    many: '{legs} coincidenze rotte',
-    other: '{legs} coincidenze rotte',
+    one: '{value} coincidenza rotta',
+    many: '{value} coincidenze rotte',
+    other: '{value} coincidenze rotte',
   },
   'transports.badge.tight': {
-    one: '{legs} coincidenza stretta',
-    many: '{legs} coincidenze strette',
-    other: '{legs} coincidenze strette',
+    one: '{value} coincidenza stretta',
+    many: '{value} coincidenze strette',
+    other: '{value} coincidenze strette',
   },
   'transports.badge.ok': 'Ogni coincidenza tiene',
   'transports.remove.body':
