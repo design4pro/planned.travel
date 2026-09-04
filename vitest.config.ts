@@ -11,8 +11,9 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  * - `server` runs repositories, queue handlers and route handlers in plain
  *   Node. Nothing there may import `cloudflare:workers`; bindings arrive as
  *   arguments, which is what makes them fake-able.
- * - `tooling` runs the agent tooling in plain Node as well, but over
- *   `scripts/**` rather than `src/**`.
+ * - `tooling` runs in plain Node as well, but over the policy that lives
+ *   outside `src/**` - the agent tooling under `scripts/**`, and the handful
+ *   of files elsewhere that decide how the suite itself behaves.
  *
  * `server` collects `.tsx` as well as `.ts` because the transactional email
  * templates under `src/server/email` are React components: they render to a
@@ -81,6 +82,11 @@ export default defineConfig({
             // to assert a string against a regular expression. `console-policy.ts`
             // imports nothing, so it runs here for free.
             'e2e/helpers/__tests__/*.test.ts',
+            // Build config, for the same reason: `vite.config.ts` decides whether
+            // the devtools console relay pipes the Worker's own errors into a
+            // watching Playwright spec, and nothing but a test holds that gate
+            // shut. It sits at the repo root, so no `src/**` glob reaches it.
+            'vite.config.test.ts',
           ],
           restoreMocks: true,
         },
