@@ -468,7 +468,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Этот переезд прибывает раньше, чем отправляется.',
   'transports.error.timingHint':
-    'Сдвиньте одно из них, чтобы на этот переезд реально можно было успеть.',
+    'Сдвиньте одно из времён, чтобы на этот переезд реально можно было успеть.',
   'transports.bookingRefFor': 'номер брони для {title}',
   'transports.doorToDoor': 'Это {gap} от двери до двери.',
   'transports.title.fromTo': '{operator}: {from} — {to}',
@@ -490,7 +490,7 @@ const messages = {
     'На {mode} в {place} обычно нужно около {required}. Здесь впритык.',
   'transports.junction.ok.headline': '{gap} между ними',
   'transports.junction.ok.detail':
-    'Прибытие в {landing}, но следующий переезд отправляется из {boarding} — придётся добираться.',
+    'Прибытие в {landing}, но следующий переезд отправляется из {boarding} — придётся перебраться.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Заметка опубликована',

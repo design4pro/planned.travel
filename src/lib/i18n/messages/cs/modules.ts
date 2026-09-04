@@ -463,7 +463,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Tenhle přesun přijíždí dřív, než odjíždí.',
   'transports.error.timingHint':
-    'Posuň jeden z nich, aby se ten přesun dal opravdu stihnout.',
+    'Posuň jeden z časů, aby se ten přesun dal opravdu stihnout.',
   'transports.bookingRefFor': 'číslo rezervace pro {title}',
   'transports.doorToDoor': 'To je {gap} od dveří ke dveřím.',
   'transports.title.fromTo': '{operator} z {from} do {to}',
@@ -485,7 +485,7 @@ const messages = {
     'Na {mode} v {place} obvykle potřebuješ asi {required}. Tady je to těsné.',
   'transports.junction.ok.headline': '{gap} mezi tím',
   'transports.junction.ok.detail':
-    'Přijezd do {landing}, ale další přesun odjíždí z {boarding} — budeš se muset přemístit.',
+    'Přijezd do {landing}, ale další přesun odjíždí z {boarding} — budeš se tam muset dostat.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Poznámka nasdílena',

@@ -463,7 +463,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Αυτή η μετακίνηση φτάνει πριν αναχωρήσει.',
   'transports.error.timingHint':
-    'Μετακίνησε το ένα από τα δύο, ώστε η μετακίνηση να προλαβαίνεται πραγματικά.',
+    'Άλλαξε την ώρα στη μία από τις δύο, ώστε η μετακίνηση να προλαβαίνεται πραγματικά.',
   'transports.bookingRefFor': 'ο κωδικός κράτησης του {title}',
   'transports.doorToDoor': 'Αυτό είναι {gap} από πόρτα σε πόρτα.',
   'transports.title.fromTo': '{operator} από {from} προς {to}',

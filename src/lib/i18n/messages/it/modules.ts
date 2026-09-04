@@ -468,7 +468,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Questo spostamento arriva prima di partire.',
   'transports.error.timingHint':
-    'Cambia uno dei due, così lo spostamento si può davvero prendere.',
+    'Sposta uno dei due orari, così lo spostamento si può davvero prendere.',
   'transports.bookingRefFor': 'il codice di prenotazione di {title}',
   'transports.doorToDoor': 'Sono {gap} porta a porta.',
   'transports.title.fromTo': '{operator} da {from} a {to}',

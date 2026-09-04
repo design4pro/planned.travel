@@ -37,14 +37,14 @@ const messages = {
   'transports.empty.action': 'Ersten Transfer hinzufügen',
   'transports.filtered.title': 'Keine Transfers dieser Art',
   'transports.filtered.body':
-    'Jeder Transfer dieser Reise fährt anders. Wechsle zurück zu „{label}“, um alle zu sehen.',
+    'Jeder Transfer dieser Reise nutzt ein anderes Verkehrsmittel. Wechsle zurück zu „{label}“, um alle zu sehen.',
   'transports.filtered.action': 'Alle Transfers zeigen',
   'transports.alert.impossible.title': {
     one: 'Ein Übergang ist nicht machbar',
     other: '{value} Übergänge sind nicht machbar',
   },
   'transports.alert.impossible.body':
-    'Ein Transfer fährt ab, bevor der vorherige ankommt. Die Knoten unten sagen, welcher und um wie viel.',
+    'Ein Transfer fährt ab, bevor der vorherige ankommt. Die Knoten unten sagen, welche und um wie viel.',
   'transports.alert.tight.title': {
     one: 'Ein Übergang ist knapp',
     other: '{value} Übergänge sind knapp',
@@ -468,7 +468,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Dieser Transfer kommt an, bevor er abfährt.',
   'transports.error.timingHint':
-    'Verschiebe eine davon, damit der Transfer tatsächlich erreichbar ist.',
+    'Verschiebe eine der beiden Zeiten, damit der Transfer tatsächlich erreichbar ist.',
   'transports.bookingRefFor': 'die Buchungsnummer für {title}',
   'transports.doorToDoor': 'Das sind {gap} von Tür zu Tür.',
   'transports.title.fromTo': '{operator} von {from} nach {to}',

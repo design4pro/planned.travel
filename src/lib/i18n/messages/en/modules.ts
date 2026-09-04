@@ -12,6 +12,39 @@
  * an English suffix appended inside JSX. None of that can be right in a
  * language with four plural categories, and no amount of translating the
  * surrounding words fixes it.
+ *
+ * **A transport is not a leg.** `CONTEXT.md` reserves "leg" for the part of a
+ * transport between two consecutive stations; a whole journey is a transport.
+ * The `transports.*` copy below predated that glossary and said "leg" for both,
+ * which the chain editor would have made unreadable: "Add a leg" carrying a
+ * "Break this into legs" inside it. So each locale now holds two distinct
+ * nouns. The first names the whole transport and is what the keys below use;
+ * the second is reserved, unused so far, for the `transports.chain.*` keys the
+ * chain editor adds.
+ *
+ * - `ar` تنقل, leg: مرحلة
+ * - `ca` trajecte, leg: tram
+ * - `cs` přesun, leg: úsek
+ * - `de` Transfer, leg: Etappe
+ * - `el` μετακίνηση, leg: σκέλος
+ * - `en` transport, leg: leg
+ * - `es` trayecto, leg: tramo
+ * - `fr` trajet, leg: tronçon
+ * - `hu` út, leg: szakasz
+ * - `id` transportasi, leg: ruas
+ * - `it` spostamento, leg: tratta
+ * - `ja` 移動, leg: 区間
+ * - `ko` 이동, leg: 구간
+ * - `nl` traject, leg: etappe
+ * - `pl` przejazd, leg: odcinek
+ * - `pt-BR` deslocamento, leg: trecho
+ * - `ru` переезд, leg: участок
+ * - `sv` färd, leg: etapp
+ * - `tr` yolculuk, leg: etap
+ * - `uk` переїзд, leg: ділянка
+ * - `vi` lượt di chuyển, leg: chặng
+ * - `zh-Hans` 交通, leg: 路段
+ * - `zh-Hant` 交通, leg: 路段
  */
 
 import type { NamespaceMessages } from '../../types'
@@ -39,11 +72,11 @@ const messages = {
   'presence.reconnect': 'Reconnect',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Every transport',
-  'transports.empty.title': 'No transport yet',
+  'transports.empty.title': 'No transports yet',
   'transports.empty.body':
     'Flights, trains, ferries and the drive from the airport all live here, with their booking codes and seat numbers to hand on the day — and each hand-over checked against the one before it.',
   'transports.empty.action': 'Add the first transport',
-  'transports.filtered.title': 'No transport of that kind',
+  'transports.filtered.title': 'No transports of that kind',
   /**
    * Names the chip that clears the filter, so the sentence and the control
    * cannot drift apart in translation: `{label}` is that chip's own message.
@@ -299,7 +332,7 @@ const messages = {
    * `shell.trip.tab.transports` so the module has one owner for its own name.
    */
   'book.hint.transport':
-    'A booked seat. Whole transports with carriers and codes belong in {module}.',
+    'A booked seat. Full transports with carriers and codes belong in {module}.',
   'book.hint.other': 'Anything held in your name that does not fit the others.',
 
   /* -------------------------------------- lists: the dialogs */

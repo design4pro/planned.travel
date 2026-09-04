@@ -69,7 +69,7 @@ const messages = {
   },
   'transports.badge.ok': 'Усі пересадки складаються',
   'transports.remove.body':
-    'Переїзд іде з цієї подорожі назавжди, разом із номером бронювання й місцем. Якщо його лише скасовано, поставте йому статус «Скасовано».',
+    'Переїзд іде з цієї подорожі назавжди, разом із номером бронювання й місцем. Якщо він лише скасований, поставте йому статус «Скасовано».',
   'transports.remove.confirm': 'Вилучити переїзд',
   'transports.menu.edit': 'Змінити переїзд…',
   'transports.field.service': 'Рейс',
@@ -469,7 +469,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Цей переїзд прибуває раніше, ніж відправляється.',
   'transports.error.timingHint':
-    'Зсуньте одне з них, щоб на цей переїзд справді можна було встигнути.',
+    'Зсуньте один із часів, щоб на цей переїзд справді можна було встигнути.',
   'transports.bookingRefFor': 'номер бронювання для {title}',
   'transports.doorToDoor': 'Це {gap} від дверей до дверей.',
   'transports.title.fromTo': '{operator}: {from} — {to}',
@@ -491,7 +491,7 @@ const messages = {
     'На {mode} у {place} звично потрібно близько {required}. Тут упритул.',
   'transports.junction.ok.headline': '{gap} між ними',
   'transports.junction.ok.detail':
-    'Прибуття до {landing}, але наступний переїзд відправляється з {boarding} — доведеться перейти.',
+    'Прибуття до {landing}, але наступний переїзд відправляється з {boarding} — доведеться перебратися.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Нотатку опубліковано',

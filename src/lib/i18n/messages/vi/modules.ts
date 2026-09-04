@@ -420,7 +420,7 @@ const messages = {
   'transports.mode.bike': 'Xe đạp',
   'transports.mode.walk': 'Đi bộ',
   'transports.mode.other': 'Khác',
-  'transports.mode.fallback': 'Di chuyển',
+  'transports.mode.fallback': 'Lượt di chuyển',
   'transports.status.idea': 'Ý tưởng',
   'transports.status.pending': 'Chờ xác nhận',
   'transports.status.confirmed': 'Đã xác nhận',
@@ -446,7 +446,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Lượt di chuyển này đến trước khi khởi hành.',
   'transports.error.timingHint':
-    'Dịch một trong hai để thực sự bắt được lượt này.',
+    'Dịch một trong hai giờ để thực sự bắt được lượt di chuyển này.',
   'transports.bookingRefFor': 'mã đặt chỗ của {title}',
   'transports.doorToDoor': 'Tính cả đi lại là {gap}.',
   'transports.title.fromTo': '{operator} từ {from} đến {to}',
@@ -456,9 +456,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Không có giờ nào để so',
   'transports.junction.unknown.detail':
-    'Điền ngày và giờ cho cả hai lượt, việc nối chuyến này sẽ được kiểm tra giúp bạn.',
+    'Điền ngày và giờ cho cả hai lượt di chuyển, việc nối chuyến này sẽ được kiểm tra giúp bạn.',
   'transports.junction.impossible.headline':
-    'Khởi hành trước khi lượt trước tới {gap}',
+    'Khởi hành trước khi lượt di chuyển trước tới {gap}',
   'transports.junction.impossible.detail':
     '“{to}” khởi hành trước khi “{from}” tới, nên không bắt được cả hai. Dịch một lượt.',
   'transports.junction.tight.headline': '{gap} để nối chuyến',
@@ -468,7 +468,7 @@ const messages = {
     '{mode} ở {place} thường cần khoảng {required}. Lần này hơi sát.',
   'transports.junction.ok.headline': 'Cách nhau {gap}',
   'transports.junction.ok.detail':
-    'Tới {landing} nhưng lượt sau khởi hành từ {boarding} — bạn sẽ phải di chuyển qua.',
+    'Tới {landing} nhưng lượt di chuyển sau khởi hành từ {boarding} — bạn sẽ phải sang bên đó.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Đã chia sẻ ghi chú',

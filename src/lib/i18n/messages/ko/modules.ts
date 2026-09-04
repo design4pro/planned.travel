@@ -36,7 +36,7 @@ const messages = {
   'transports.empty.action': '첫 이동 추가',
   'transports.filtered.title': '그런 종류의 이동이 없습니다',
   'transports.filtered.body':
-    '이 여행의 이동은 각각 이동 방식이 다릅니다. “{label}”로 돌아가면 전부 보입니다.',
+    '이 여행의 이동은 각각 방식이 다릅니다. “{label}”로 돌아가면 전부 보입니다.',
   'transports.filtered.action': '모든 이동 보기',
   'transports.alert.impossible.title': {
     other: '환승 {value}건이 불가능합니다',

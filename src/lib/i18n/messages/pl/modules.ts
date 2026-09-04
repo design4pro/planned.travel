@@ -471,7 +471,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Ten przejazd przyjeżdża przed odjazdem.',
   'transports.error.timingHint':
-    'Przesuń jedną z nich, żeby ten przejazd dało się złapać.',
+    'Przesuń jedną z godzin, żeby ten przejazd dało się złapać.',
   'transports.bookingRefFor': 'numer rezerwacji dla: {title}',
   'transports.doorToDoor': 'To {gap} od drzwi do drzwi.',
   'transports.title.fromTo': '{operator} z {from} do {to}',

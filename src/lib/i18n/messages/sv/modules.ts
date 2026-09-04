@@ -30,21 +30,21 @@ const messages = {
     'Liveuppdateringar är av. Allt sparas fortfarande; ladda om eller försök igen för att hämta upp.',
   'presence.reconnect': 'Återanslut',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Alla transporter',
-  'transports.empty.title': 'Inga transporter än',
+  'transports.filter.all': 'Alla färder',
+  'transports.empty.title': 'Inga färder än',
   'transports.empty.body':
     'Flyg, tåg, färjor och resan från flygplatsen bor här, med bokningskoder och platsnummer till hands på dagen — och varje byte kontrollerat mot det föregående.',
-  'transports.empty.action': 'Lägg till första transporten',
-  'transports.filtered.title': 'Inga transporter av det slaget',
+  'transports.empty.action': 'Lägg till första färden',
+  'transports.filtered.title': 'Inga färder av det slaget',
   'transports.filtered.body':
-    'Varje transport på den här resan går på sitt eget sätt. Gå tillbaka till ”{label}” för att se alla.',
-  'transports.filtered.action': 'Visa alla transporter',
+    'Varje färd på den här resan går på sitt eget sätt. Gå tillbaka till ”{label}” för att se alla.',
+  'transports.filtered.action': 'Visa alla färder',
   'transports.alert.impossible.title': {
     one: 'Ett byte går inte',
     other: '{value} byten går inte',
   },
   'transports.alert.impossible.body':
-    'En transport avgår innan den föregående kommer fram. Knutpunkterna nedan säger vilka, och med hur mycket.',
+    'En färd avgår innan den föregående kommer fram. Knutpunkterna nedan säger vilka, och med hur mycket.',
   'transports.alert.tight.title': {
     one: 'Ett byte är tight',
     other: '{value} byten är tighta',
@@ -61,9 +61,9 @@ const messages = {
   },
   'transports.badge.ok': 'Varje byte håller',
   'transports.remove.body':
-    'Transporten lämnar resan för gott, tillsammans med bokningsreferens och plats. Är den bara inställd, sätt statusen till Inställd i stället.',
-  'transports.remove.confirm': 'Ta bort transporten',
-  'transports.menu.edit': 'Redigera transporten…',
+    'Färden lämnar resan för gott, tillsammans med bokningsreferens och plats. Är den bara inställd, sätt statusen till Inställd i stället.',
+  'transports.remove.confirm': 'Ta bort färden',
+  'transports.menu.edit': 'Redigera färden…',
   'transports.field.service': 'Förbindelse',
   'transports.field.bookingRef': 'Bokningsreferens',
   'transports.field.seat': 'Plats',
@@ -71,13 +71,13 @@ const messages = {
   'transports.noTime': 'Ingen tid än',
   'transports.toast.statusFailed.title': 'Statusen ändrades inte',
   'transports.toast.statusFailed.body':
-    'Transporten står kvar i sitt tidigare läge.',
-  'transports.toast.removed': 'Transporten borttagen',
-  'transports.toast.removeFailed': 'Transporten togs inte bort',
+    'Färden står kvar i sitt tidigare läge.',
+  'transports.toast.removed': 'Färden borttagen',
+  'transports.toast.removeFailed': 'Färden togs inte bort',
 
   /* --------------------------------------- the transport dialog */
-  'transports.dialog.addTitle': 'Lägg till en transport',
-  'transports.dialog.editTitle': 'Redigera den här transporten',
+  'transports.dialog.addTitle': 'Lägg till en färd',
+  'transports.dialog.editTitle': 'Redigera den här färden',
   'transports.dialog.description':
     'Flyg, tåg, färjor och resan från flygplatsen. Tiderna är de lokala som står på biljetten.',
   'transports.form.modeLegend': 'Hur reser du',
@@ -93,14 +93,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Koden du läser upp vid disken.',
   'transports.field.notesPlaceholder':
     'Önskar gångplats. Bagaget incheckat hela vägen till Kyoto.',
-  'transports.action.add': 'Lägg till transporten',
-  'transports.action.save': 'Spara transporten',
-  'transports.action.saving': 'Sparar transporten',
-  'transports.toast.added': 'Transporten tillagd',
+  'transports.action.add': 'Lägg till färden',
+  'transports.action.save': 'Spara färden',
+  'transports.action.saving': 'Sparar färden',
+  'transports.toast.added': 'Färden tillagd',
   'transports.toast.addedBody': 'Den ligger nu i reseordningen.',
-  'transports.toast.addFailed': 'Transporten lades inte till',
-  'transports.toast.updated': 'Transporten uppdaterad',
-  'transports.toast.updateFailed': 'Transporten uppdaterades inte',
+  'transports.toast.addFailed': 'Färden lades inte till',
+  'transports.toast.updated': 'Färden uppdaterad',
+  'transports.toast.updateFailed': 'Färden uppdaterades inte',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Namn',
@@ -212,7 +212,7 @@ const messages = {
   'book.hint.ticket':
     'En tidsbokad entré, ett museikort, en match. Ha koden nära.',
   'book.hint.transport':
-    'En bokad plats. Hela transporter med koder hör till {module}.',
+    'En bokad plats. Hela färder med koder hör till {module}.',
   'book.hint.other':
     'Allt som står i ditt namn och inte passar någon annanstans.',
 
@@ -426,7 +426,7 @@ const messages = {
   'transports.mode.bike': 'Cykel',
   'transports.mode.walk': 'Till fots',
   'transports.mode.other': 'Övrigt',
-  'transports.mode.fallback': 'Transport',
+  'transports.mode.fallback': 'Färd',
   'transports.status.idea': 'Idé',
   'transports.status.pending': 'Väntar',
   'transports.status.confirmed': 'Bekräftad',
@@ -441,7 +441,7 @@ const messages = {
   'transports.end.from': 'Från',
   'transports.end.to': 'Till',
   'transports.error.titleEmpty':
-    'Ge den här transporten ett namn du känner igen i en lista.',
+    'Ge den här färden ett namn du känner igen i en lista.',
   'transports.error.date': 'Ett datum skrivs ÅÅÅÅ-MM-DD.',
   'transports.error.time': 'En tid skrivs TT:MM på 24-timmarsklocka.',
   'transports.error.departureNeedsDate':
@@ -452,9 +452,9 @@ const messages = {
   'transports.error.distance':
     'En sträcka är ett antal kilometer, upp till 100 000.',
   'transports.error.arrivesBeforeDeparts':
-    'Den här transporten anländer innan den avgår.',
+    'Den här färden anländer innan den avgår.',
   'transports.error.timingHint':
-    'Flytta en av dem, så att transporten verkligen går att hinna med.',
+    'Flytta en av tiderna, så att färden verkligen går att hinna med.',
   'transports.bookingRefFor': 'bokningsnumret för {title}',
   'transports.doorToDoor': 'Det är {gap} dörr till dörr.',
   'transports.title.fromTo': '{operator} från {from} till {to}',
@@ -464,9 +464,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Inga tider att jämföra',
   'transports.junction.unknown.detail':
-    'Fyll i datum och tid på båda transporterna, så kontrolleras det här bytet för dig.',
+    'Fyll i datum och tid på båda färderna, så kontrolleras det här bytet för dig.',
   'transports.junction.impossible.headline':
-    'Avgår {gap} innan den förra transporten landar',
+    'Avgår {gap} innan den förra färden landar',
   'transports.junction.impossible.detail':
     '”{to}” avgår innan ”{from}” anländer, så båda går inte att hinna med. Flytta en av dem.',
   'transports.junction.tight.headline': '{gap} till bytet',
@@ -476,7 +476,7 @@ const messages = {
     'För {mode} behövs i {place} oftast ungefär {required}. Det här är knappt.',
   'transports.junction.ok.headline': '{gap} emellan',
   'transports.junction.ok.detail':
-    'Anländer till {landing} men nästa transport avgår från {boarding} — du måste ta dig dit.',
+    'Anländer till {landing} men nästa färd avgår från {boarding} — du måste ta dig dit.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Anteckningen delad',

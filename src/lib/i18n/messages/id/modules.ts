@@ -37,13 +37,13 @@ const messages = {
   'transports.empty.action': 'Tambahkan transportasi pertama',
   'transports.filtered.title': 'Tidak ada transportasi jenis itu',
   'transports.filtered.body':
-    'Setiap transportasi dalam perjalanan ini ditempuh dengan cara berbeda. Kembali ke “{label}” untuk melihat semuanya.',
+    'Setiap transportasi perjalanan ini ditempuh dengan cara berbeda. Kembali ke “{label}” untuk melihat semuanya.',
   'transports.filtered.action': 'Tampilkan semua transportasi',
   'transports.alert.impossible.title': {
     other: '{value} perpindahan tidak mungkin',
   },
   'transports.alert.impossible.body':
-    'Sebuah transportasi berangkat sebelum transportasi sebelumnya tiba. Titik sambung di bawah menyebut yang mana dan selisihnya.',
+    'Sebuah transportasi berangkat sebelum yang sebelumnya tiba. Titik sambung di bawah menyebut yang mana dan selisihnya.',
   'transports.alert.tight.title': {
     other: '{value} perpindahan terlalu mepet',
   },
@@ -452,7 +452,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Transportasi ini tiba sebelum berangkat.',
   'transports.error.timingHint':
-    'Geser salah satunya supaya transportasi ini benar-benar bisa dikejar.',
+    'Geser salah satu waktunya supaya transportasi ini benar-benar bisa dikejar.',
   'transports.bookingRefFor': 'nomor pemesanan untuk {title}',
   'transports.doorToDoor': 'Itu {gap} dari pintu ke pintu.',
   'transports.title.fromTo': '{operator} dari {from} ke {to}',

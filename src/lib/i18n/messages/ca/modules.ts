@@ -669,7 +669,7 @@ const messages = {
   'files.drop.idle': 'Arrossega fitxers aquí',
   'files.empty.title': 'No hi ha fitxers en aquest viatge',
   'files.empty.body':
-    'Tot allò que altrajecteent hauries de remenar en una safata d’entrada al taulell de facturació és aquí, lligat al viatge a què pertany.',
+    'Tot allò que altrament hauries de remenar en una safata d’entrada al taulell de facturació és aquí, lligat al viatge a què pertany.',
   'files.empty.hint':
     'Targetes d’embarcament, confirmacions d’hotel, entrades, documents d’assegurança i els rebuts que avalen les teves despeses.',
   'files.heading': 'Adjunts',

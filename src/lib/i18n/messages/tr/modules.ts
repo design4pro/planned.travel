@@ -448,7 +448,7 @@ const messages = {
   'transports.error.arrivesBeforeDeparts':
     'Bu yolculuk kalkmadan önce varıyor.',
   'transports.error.timingHint':
-    'Birini kaydır da bu yolculuğa gerçekten yetişilebilsin.',
+    'Saatlerden birini kaydır da bu yolculuğa gerçekten yetişilebilsin.',
   'transports.bookingRefFor': '{title} için rezervasyon numarası',
   'transports.doorToDoor': 'Kapıdan kapıya {gap} sürüyor.',
   'transports.title.fromTo': '{operator} {from} – {to}',
