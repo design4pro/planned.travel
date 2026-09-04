@@ -41,23 +41,23 @@ const messages = {
   'transports.filtered.action': 'Toon alle trajecten',
   'transports.alert.impossible.title': {
     one: 'Eén overstap kan niet',
-    other: '{legs} overstappen kunnen niet',
+    other: '{value} overstappen kunnen niet',
   },
   'transports.alert.impossible.body':
     'Een traject vertrekt voordat het vorige aankomt. De knooppunten hieronder zeggen welke, en met hoeveel.',
   'transports.alert.tight.title': {
     one: 'Eén overstap is krap',
-    other: '{legs} overstappen zijn krap',
+    other: '{value} overstappen zijn krap',
   },
   'transports.alert.tight.body':
     'Er is tijd, maar niet veel voor het vervoermiddel dat je haalt. De knooppunten hieronder tonen hoeveel elk je laat.',
   'transports.badge.impossible': {
-    one: '{legs} gebroken overstap',
-    other: '{legs} gebroken overstappen',
+    one: '{value} gebroken overstap',
+    other: '{value} gebroken overstappen',
   },
   'transports.badge.tight': {
-    one: '{legs} krappe overstap',
-    other: '{legs} krappe overstappen',
+    one: '{value} krappe overstap',
+    other: '{value} krappe overstappen',
   },
   'transports.badge.ok': 'Elke overstap klopt',
   'transports.remove.body':

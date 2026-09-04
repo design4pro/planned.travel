@@ -39,20 +39,20 @@ const messages = {
     '이 여행의 이동은 각각 방식이 다릅니다. “{label}”로 돌아가면 전부 보입니다.',
   'transports.filtered.action': '모든 이동 보기',
   'transports.alert.impossible.title': {
-    other: '환승 {legs}건이 불가능합니다',
+    other: '환승 {value}건이 불가능합니다',
   },
   'transports.alert.impossible.body':
     '앞 이동이 도착하기 전에 다음 이동이 출발합니다. 아래 연결 지점이 어느 것이 얼마나 어긋나는지 알려 줍니다.',
   'transports.alert.tight.title': {
-    other: '환승 {legs}건이 촉박합니다',
+    other: '환승 {value}건이 촉박합니다',
   },
   'transports.alert.tight.body':
     '시간은 있지만 잡아야 하는 교통편에는 넉넉하지 않습니다. 아래 연결 지점이 각각 얼마를 남기는지 보여 줍니다.',
   'transports.badge.impossible': {
-    other: '불가능한 환승 {legs}건',
+    other: '불가능한 환승 {value}건',
   },
   'transports.badge.tight': {
-    other: '촉박한 환승 {legs}건',
+    other: '촉박한 환승 {value}건',
   },
   'transports.badge.ok': '모든 환승이 가능합니다',
   'transports.remove.body':

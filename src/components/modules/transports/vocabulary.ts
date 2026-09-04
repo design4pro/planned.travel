@@ -1,8 +1,8 @@
 /**
- * What a transport mode and a leg status are called.
+ * What a transport mode and a transport status are called.
  *
  * Its own file because two callers need it and one of them already imports the
- * other: `leg-form.ts` reads `legTimingError` out of `connections.ts`, and
+ * other: `leg-form.ts` reads `transportTimingError` out of `connections.ts`, and
  * `connections.ts` needs a mode's label to say how long a hand-over usually
  * takes. Everything here is a message key, so the file carries no English.
  */

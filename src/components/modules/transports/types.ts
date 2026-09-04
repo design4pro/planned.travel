@@ -6,7 +6,7 @@
  * format.
  */
 
-export interface LegData {
+export interface TransportData {
   readonly id: string
   readonly mode: string
   readonly status: string

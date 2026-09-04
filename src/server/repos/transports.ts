@@ -1,14 +1,18 @@
 /**
- * Transports — the legs between places: flights, trains, ferries, the hire car.
+ * Transports — the journeys between places: flights, trains, ferries, the hire car.
  *
- * A leg is stored with its own departure/arrival endpoints rather than as a pair of place ids,
- * because most legs start or end somewhere that is not a place on the itinerary (an airport, a
- * station). Legs may hang off a day, but they do not have to.
+ * A transport is stored with its own departure/arrival endpoints rather than as a pair of place
+ * ids, because most journeys start or end somewhere that is not a place on the itinerary (an
+ * airport, a station). Transports may hang off a day, but they do not have to.
  */
 
 import { and, asc, count, desc, eq, gte, isNotNull, sum } from 'drizzle-orm'
 import { z } from 'zod'
-import { TRANSPORT_MODES, TRANSPORT_STATUSES, transports } from '#/server/db/schema'
+import {
+  TRANSPORT_MODES,
+  TRANSPORT_STATUSES,
+  transports,
+} from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
 import { requireTripDay } from './days'
 import { requireTrip } from './trips'
@@ -30,7 +34,10 @@ import {
 import type { Transport } from '#/server/db/types'
 import type { TenantScope } from './base'
 
-export const transportsRepository = createTenantRepository(transports, 'transport')
+export const transportsRepository = createTenantRepository(
+  transports,
+  'transport',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -68,7 +75,10 @@ const transportFields = {
   sortOrder: sortOrderSchema.optional(),
 }
 
-export const createTransportInput = z.object({ tripId: idSchema, ...transportFields })
+export const createTransportInput = z.object({
+  tripId: idSchema,
+  ...transportFields,
+})
 export type CreateTransportInput = z.infer<typeof createTransportInput>
 
 export const updateTransportInput = z.object({
@@ -81,11 +91,14 @@ export type UpdateTransportInput = z.infer<typeof updateTransportInput>
  * Reads
  * ---------------------------------------------------------------------------------------------- */
 
-/** A trip's legs in travel order: dated legs first by date and time, undated ideas last. */
+/** A trip's transports in travel order: dated ones first by date and time, undated ideas last. */
 export async function listTripTransports(
   scope: TenantScope,
   tripId: string,
-  options: { readonly mode?: (typeof TRANSPORT_MODES)[number]; readonly status?: (typeof TRANSPORT_STATUSES)[number] } = {},
+  options: {
+    readonly mode?: (typeof TRANSPORT_MODES)[number]
+    readonly status?: (typeof TRANSPORT_STATUSES)[number]
+  } = {},
 ): Promise<Array<Transport>> {
   return transportsRepository.findMany(scope, {
     where: and(
@@ -119,14 +132,19 @@ export async function listDayTransports(
   })
 }
 
-/** The next leg the traveller has to catch, across every trip in the tenant. */
+/** The next transport the traveller has to catch, across every trip in the tenant. */
 export async function nextDeparture(
   scope: TenantScope,
   options: { readonly from?: string } = {},
 ): Promise<Transport | null> {
-  const from = dateSchema.parse(options.from ?? new Date().toISOString().slice(0, 10))
+  const from = dateSchema.parse(
+    options.from ?? new Date().toISOString().slice(0, 10),
+  )
   const rows = await transportsRepository.findMany(scope, {
-    where: and(gte(transports.departureDate, from), eq(transports.status, 'confirmed')),
+    where: and(
+      gte(transports.departureDate, from),
+      eq(transports.status, 'confirmed'),
+    ),
     orderBy: [asc(transports.departureDate), asc(transports.departureTime)],
     limit: 1,
   })
@@ -135,11 +153,11 @@ export async function nextDeparture(
 
 export interface TransportModeTotals {
   readonly mode: (typeof TRANSPORT_MODES)[number]
-  readonly legs: number
+  readonly count: number
   readonly distanceMetres: number
 }
 
-/** Legs and distance grouped by mode — the "how you travelled" breakdown on the transports screen. */
+/** Transports and distance grouped by mode — the "how you travelled" breakdown on the transports screen. */
 export async function summariseTripTransports(
   scope: TenantScope,
   tripId: string,
@@ -147,7 +165,7 @@ export async function summariseTripTransports(
   const rows = await scope.db
     .select({
       mode: transports.mode,
-      legs: count(),
+      count: count(),
       distanceMetres: sum(transports.distanceMetres),
     })
     .from(transports)
@@ -160,7 +178,7 @@ export async function summariseTripTransports(
       ? [
           {
             mode: row.mode as (typeof TRANSPORT_MODES)[number],
-            legs: row.legs,
+            count: row.count,
             distanceMetres: Number(row.distanceMetres ?? 0),
           },
         ]
@@ -168,7 +186,7 @@ export async function summariseTripTransports(
   )
 }
 
-/** Total distance of a trip's legs, in metres. */
+/** Total distance of a trip's transports, in metres. */
 export async function totalTripDistanceMetres(
   scope: TenantScope,
   tripId: string,
@@ -219,6 +237,9 @@ export async function setTransportStatus(
   })
 }
 
-export async function deleteTransport(scope: TenantScope, transportId: string): Promise<void> {
+export async function deleteTransport(
+  scope: TenantScope,
+  transportId: string,
+): Promise<void> {
   await transportsRepository.requireRemove(scope, transportId)
 }

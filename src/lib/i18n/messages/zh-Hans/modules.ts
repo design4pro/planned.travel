@@ -39,20 +39,20 @@ const messages = {
     '这次旅行的每段交通走法都不一样。切回“{label}”即可看到全部。',
   'transports.filtered.action': '显示全部交通',
   'transports.alert.impossible.title': {
-    other: '{legs} 次换乘无法完成',
+    other: '{value} 次换乘无法完成',
   },
   'transports.alert.impossible.body':
     '有一段交通在前一段到达之前就出发了。下面的衔接点会说明是哪些、差多少。',
   'transports.alert.tight.title': {
-    other: '{legs} 次换乘时间紧张',
+    other: '{value} 次换乘时间紧张',
   },
   'transports.alert.tight.body':
     '时间是有的，但对你要赶的交通方式来说并不宽裕。下面的衔接点显示各自留出多少。',
   'transports.badge.impossible': {
-    other: '{legs} 次换乘中断',
+    other: '{value} 次换乘中断',
   },
   'transports.badge.tight': {
-    other: '{legs} 次换乘紧张',
+    other: '{value} 次换乘紧张',
   },
   'transports.badge.ok': '每次换乘都来得及',
   'transports.remove.body':

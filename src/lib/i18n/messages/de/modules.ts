@@ -41,23 +41,23 @@ const messages = {
   'transports.filtered.action': 'Alle Transfers zeigen',
   'transports.alert.impossible.title': {
     one: 'Ein Übergang ist nicht machbar',
-    other: '{legs} Übergänge sind nicht machbar',
+    other: '{value} Übergänge sind nicht machbar',
   },
   'transports.alert.impossible.body':
     'Ein Transfer fährt ab, bevor der vorherige ankommt. Die Knoten unten sagen, welche und um wie viel.',
   'transports.alert.tight.title': {
     one: 'Ein Übergang ist knapp',
-    other: '{legs} Übergänge sind knapp',
+    other: '{value} Übergänge sind knapp',
   },
   'transports.alert.tight.body':
     'Zeit ist da, aber nicht viel für das Verkehrsmittel, das du erwischen willst. Die Knoten unten zeigen, wie viel jeder lässt.',
   'transports.badge.impossible': {
-    one: '{legs} gebrochener Übergang',
-    other: '{legs} gebrochene Übergänge',
+    one: '{value} gebrochener Übergang',
+    other: '{value} gebrochene Übergänge',
   },
   'transports.badge.tight': {
-    one: '{legs} knapper Übergang',
-    other: '{legs} knappe Übergänge',
+    one: '{value} knapper Übergang',
+    other: '{value} knappe Übergänge',
   },
   'transports.badge.ok': 'Jeder Übergang passt',
   'transports.remove.body':

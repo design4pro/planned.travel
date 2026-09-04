@@ -1,17 +1,17 @@
 /**
- * Whether a trip's legs actually connect.
+ * Whether a trip's transports actually connect.
  *
- * A list of legs is only a plan if each one can be caught after the last one
- * lands. This module reads a trip's legs in departure order and reports, for each
+ * A list of transports is only a plan if each one can be caught after the last one
+ * lands. This module reads a trip's transports in departure order and reports, for each
  * hand-over, how much time there is, whether that is enough for the mode being
  * caught, and whether the two ends even name the same place. It never refuses a
- * save — a traveller is allowed to record a leg they have not sorted out yet — it
+ * save — a traveller is allowed to record a transport they have not sorted out yet — it
  * gives the screen something honest to say.
  *
  * **Times are compared as wall clock.** The columns hold a local date and a local
  * time with no offset, so a Tokyo arrival and a Kyoto departure are compared in
- * the same frame the traveller typed them in. Cross-timezone legs are the reason
- * `departureTimezone`/`arrivalTimezone` exist on the row; until a leg carries them
+ * the same frame the traveller typed them in. Cross-timezone transports are the reason
+ * `departureTimezone`/`arrivalTimezone` exist on the row; until a transport carries them
  * this is the comparison that matches what a person sees on their ticket.
  */
 
@@ -20,7 +20,7 @@ import { modeLabel } from './vocabulary'
 import type { DeferredMessage } from '../shared/deferred-message'
 import type { MessageKey } from '#/lib/i18n'
 
-export interface LegLike {
+export interface TransportLike {
   readonly id: string
   readonly title: string
   readonly mode: string
@@ -52,10 +52,10 @@ export function minimumConnectionMinutes(mode: string): number {
 }
 
 /**
- * A wall-clock instant in milliseconds, or `null` when the leg has no date.
+ * A wall-clock instant in milliseconds, or `null` when the transport has no date.
  *
  * A missing time is read as the start of the day for a departure and the end of it
- * for an arrival by the callers below, so an undated-time leg is never *wrongly*
+ * for an arrival by the callers below, so an undated-time transport is never *wrongly*
  * flagged as impossible.
  */
 function instantOf(date: string | null, time: string | null): number | null {
@@ -68,20 +68,24 @@ function instantOf(date: string | null, time: string | null): number | null {
   return Number.isNaN(parsed) ? null : parsed
 }
 
-export function legDepartureAt(leg: LegLike): number | null {
-  return instantOf(leg.departureDate, leg.departureTime)
+export function transportDepartureAt(transport: TransportLike): number | null {
+  return instantOf(transport.departureDate, transport.departureTime)
 }
 
-export function legArrivalAt(leg: LegLike): number | null {
-  return instantOf(leg.arrivalDate, leg.arrivalTime)
+export function transportArrivalAt(transport: TransportLike): number | null {
+  return instantOf(transport.arrivalDate, transport.arrivalTime)
 }
 
-/** Travel order: dated legs by departure, then undated ones in the order given. */
-export function sortLegsByDeparture<T extends LegLike>(
-  legs: ReadonlyArray<T>,
+/** Travel order: dated transports by departure, then undated ones in the order given. */
+export function sortTransportsByDeparture<T extends TransportLike>(
+  transports: ReadonlyArray<T>,
 ): Array<T> {
-  return [...legs]
-    .map((leg, index) => ({ leg, index, at: legDepartureAt(leg) }))
+  return [...transports]
+    .map((transport, index) => ({
+      transport,
+      index,
+      at: transportDepartureAt(transport),
+    }))
     .sort((left, right) => {
       if (left.at === null && right.at === null) {
         return left.index - right.index
@@ -96,7 +100,7 @@ export function sortLegsByDeparture<T extends LegLike>(
         ? left.index - right.index
         : left.at - right.at
     })
-    .map((entry) => entry.leg)
+    .map((entry) => entry.transport)
 }
 
 export type ConnectionSeverity = 'ok' | 'tight' | 'impossible' | 'unknown'
@@ -117,7 +121,7 @@ export interface Connection {
   readonly headline: DeferredMessage
   /** The reason, when there is something worth explaining. */
   readonly detail: DeferredMessage | null
-  /** True when the previous leg lands somewhere the next one does not leave from. */
+  /** True when the previous transport lands somewhere the next one does not leave from. */
   readonly placeMismatch: boolean
 }
 
@@ -137,7 +141,7 @@ export function formatGap(minutes: number): string {
   return `${mins}m`
 }
 
-/** The name a reader would use for one end of a leg. */
+/** The name a reader would use for one end of a transport. */
 function endpointLabel(
   code: string | null,
   name: string | null,
@@ -180,16 +184,16 @@ function samePlace(
 }
 
 /**
- * The hand-over between every pair of consecutive legs, in travel order.
+ * The hand-over between every pair of consecutive transports, in travel order.
  *
- * Pass the legs already sorted (or let this sort them) — the result is one entry
+ * Pass the transports already sorted (or let this sort them) — the result is one entry
  * shorter than the input, in the same order, so a renderer can interleave it
  * between the cards it describes.
  */
 export function analyseConnections(
-  legs: ReadonlyArray<LegLike>,
+  transports: ReadonlyArray<TransportLike>,
 ): Array<Connection> {
-  const ordered = sortLegsByDeparture(legs)
+  const ordered = sortTransportsByDeparture(transports)
   const connections: Array<Connection> = []
 
   for (let index = 0; index + 1 < ordered.length; index += 1) {
@@ -197,8 +201,8 @@ export function analyseConnections(
     const from = ordered[index]
     const to = ordered[index + 1]
 
-    const landedAt = legArrivalAt(from) ?? legDepartureAt(from)
-    const leavesAt = legDepartureAt(to)
+    const landedAt = transportArrivalAt(from) ?? transportDepartureAt(from)
+    const leavesAt = transportDepartureAt(to)
     const mismatch = !samePlace(
       from.arrivalCode,
       from.arrivalName,
@@ -320,25 +324,25 @@ export function summariseConnections(
 }
 
 /**
- * Whether one leg's own times make sense. Used live in the dialog, where the
+ * Whether one transport's own times make sense. Used live in the dialog, where the
  * answer has to appear as the traveller types rather than after a round trip.
  */
-export function legTimingError(leg: {
+export function transportTimingError(transport: {
   readonly departureDate: string
   readonly departureTime: string
   readonly arrivalDate: string
   readonly arrivalTime: string
 }): MessageKey | null {
-  if (leg.departureDate === '' || leg.arrivalDate === '') {
+  if (transport.departureDate === '' || transport.arrivalDate === '') {
     return null
   }
   const from = instantOf(
-    leg.departureDate,
-    leg.departureTime === '' ? '00:00' : leg.departureTime,
+    transport.departureDate,
+    transport.departureTime === '' ? '00:00' : transport.departureTime,
   )
   const to = instantOf(
-    leg.arrivalDate,
-    leg.arrivalTime === '' ? '23:59' : leg.arrivalTime,
+    transport.arrivalDate,
+    transport.arrivalTime === '' ? '23:59' : transport.arrivalTime,
   )
   if (from === null || to === null) {
     return null

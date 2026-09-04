@@ -40,20 +40,20 @@ const messages = {
     'Mỗi lượt di chuyển của chuyến này đi một cách khác nhau. Quay lại “{label}” để xem tất cả.',
   'transports.filtered.action': 'Hiện mọi lượt di chuyển',
   'transports.alert.impossible.title': {
-    other: '{legs} lần nối chuyến không thể thực hiện',
+    other: '{value} lần nối chuyến không thể thực hiện',
   },
   'transports.alert.impossible.body':
     'Một lượt di chuyển khởi hành trước khi lượt trước đó đến. Các điểm nối bên dưới cho biết lượt nào và lệch bao nhiêu.',
   'transports.alert.tight.title': {
-    other: '{legs} lần nối chuyến quá sát',
+    other: '{value} lần nối chuyến quá sát',
   },
   'transports.alert.tight.body':
     'Vẫn còn thời gian, nhưng không nhiều cho phương tiện bạn phải bắt. Các điểm nối bên dưới cho thấy mỗi lần còn lại bao lâu.',
   'transports.badge.impossible': {
-    other: '{legs} lần nối chuyến bị vỡ',
+    other: '{value} lần nối chuyến bị vỡ',
   },
   'transports.badge.tight': {
-    other: '{legs} lần nối chuyến quá sát',
+    other: '{value} lần nối chuyến quá sát',
   },
   'transports.badge.ok': 'Mọi lần nối chuyến đều ổn',
   'transports.remove.body':

@@ -3,19 +3,21 @@ import { describe, expect, it } from 'vitest'
 import {
   analyseConnections,
   formatGap,
-  legArrivalAt,
-  legDepartureAt,
-  legTimingError,
+  transportArrivalAt,
+  transportDepartureAt,
+  transportTimingError,
   minimumConnectionMinutes,
-  sortLegsByDeparture,
+  sortTransportsByDeparture,
   summariseConnections,
 } from '../connections'
 
-import type { LegLike } from '../connections'
+import type { TransportLike } from '../connections'
 
-function leg(overrides: Partial<LegLike> & { id: string }): LegLike {
+function transport(
+  overrides: Partial<TransportLike> & { id: string },
+): TransportLike {
   return {
-    title: `Leg ${overrides.id}`,
+    title: `Transport ${overrides.id}`,
     mode: 'train',
     departureName: null,
     departureCode: null,
@@ -52,36 +54,48 @@ describe('formatGap', () => {
   })
 })
 
-describe('legDepartureAt / legArrivalAt', () => {
+describe('transportDepartureAt / transportArrivalAt', () => {
   it('reads a date and time as a wall-clock instant', () => {
-    const at = legDepartureAt(
-      leg({ id: 'a', departureDate: '2026-04-16', departureTime: '10:30' }),
+    const at = transportDepartureAt(
+      transport({
+        id: 'a',
+        departureDate: '2026-04-16',
+        departureTime: '10:30',
+      }),
     )
     expect(at).toBe(Date.parse('2026-04-16T10:30:00.000Z'))
   })
 
   it('treats a missing time as the start of the day', () => {
-    const at = legDepartureAt(leg({ id: 'a', departureDate: '2026-04-16' }))
+    const at = transportDepartureAt(
+      transport({ id: 'a', departureDate: '2026-04-16' }),
+    )
     expect(at).toBe(Date.parse('2026-04-16T00:00:00.000Z'))
   })
 
   it('returns null without a date', () => {
-    expect(legDepartureAt(leg({ id: 'a', departureTime: '10:30' }))).toBeNull()
-    expect(legArrivalAt(leg({ id: 'a' }))).toBeNull()
+    expect(
+      transportDepartureAt(transport({ id: 'a', departureTime: '10:30' })),
+    ).toBeNull()
+    expect(transportArrivalAt(transport({ id: 'a' }))).toBeNull()
   })
 
   it('returns null for a malformed date rather than an invalid instant', () => {
     expect(
-      legDepartureAt(leg({ id: 'a', departureDate: '16/04/2026' })),
+      transportDepartureAt(transport({ id: 'a', departureDate: '16/04/2026' })),
     ).toBeNull()
   })
 })
 
-describe('sortLegsByDeparture', () => {
-  it('puts dated legs in departure order', () => {
-    const ordered = sortLegsByDeparture([
-      leg({ id: 'later', departureDate: '2026-04-18', departureTime: '09:00' }),
-      leg({
+describe('sortTransportsByDeparture', () => {
+  it('puts dated transports in departure order', () => {
+    const ordered = sortTransportsByDeparture([
+      transport({
+        id: 'later',
+        departureDate: '2026-04-18',
+        departureTime: '09:00',
+      }),
+      transport({
         id: 'earlier',
         departureDate: '2026-04-16',
         departureTime: '09:00',
@@ -90,19 +104,27 @@ describe('sortLegsByDeparture', () => {
     expect(ordered.map((entry) => entry.id)).toEqual(['earlier', 'later'])
   })
 
-  it('sorts same-day legs by time', () => {
-    const ordered = sortLegsByDeparture([
-      leg({ id: 'pm', departureDate: '2026-04-16', departureTime: '18:00' }),
-      leg({ id: 'am', departureDate: '2026-04-16', departureTime: '08:00' }),
+  it('sorts same-day transports by time', () => {
+    const ordered = sortTransportsByDeparture([
+      transport({
+        id: 'pm',
+        departureDate: '2026-04-16',
+        departureTime: '18:00',
+      }),
+      transport({
+        id: 'am',
+        departureDate: '2026-04-16',
+        departureTime: '08:00',
+      }),
     ])
     expect(ordered.map((entry) => entry.id)).toEqual(['am', 'pm'])
   })
 
-  it('keeps undated legs last, in the order they arrived', () => {
-    const ordered = sortLegsByDeparture([
-      leg({ id: 'idea-1' }),
-      leg({ id: 'dated', departureDate: '2026-04-16' }),
-      leg({ id: 'idea-2' }),
+  it('keeps undated transports last, in the order they arrived', () => {
+    const ordered = sortTransportsByDeparture([
+      transport({ id: 'idea-1' }),
+      transport({ id: 'dated', departureDate: '2026-04-16' }),
+      transport({ id: 'idea-2' }),
     ])
     expect(ordered.map((entry) => entry.id)).toEqual([
       'dated',
@@ -111,10 +133,14 @@ describe('sortLegsByDeparture', () => {
     ])
   })
 
-  it('is stable for two legs departing at the same instant', () => {
-    const ordered = sortLegsByDeparture([
-      leg({ id: 'first', departureDate: '2026-04-16', departureTime: '08:00' }),
-      leg({
+  it('is stable for two transports departing at the same instant', () => {
+    const ordered = sortTransportsByDeparture([
+      transport({
+        id: 'first',
+        departureDate: '2026-04-16',
+        departureTime: '08:00',
+      }),
+      transport({
         id: 'second',
         departureDate: '2026-04-16',
         departureTime: '08:00',
@@ -124,12 +150,12 @@ describe('sortLegsByDeparture', () => {
   })
 
   it('does not mutate the input', () => {
-    const legs = [
-      leg({ id: 'b', departureDate: '2026-04-18' }),
-      leg({ id: 'a', departureDate: '2026-04-16' }),
+    const transports = [
+      transport({ id: 'b', departureDate: '2026-04-18' }),
+      transport({ id: 'a', departureDate: '2026-04-16' }),
     ]
-    sortLegsByDeparture(legs)
-    expect(legs.map((entry) => entry.id)).toEqual(['b', 'a'])
+    sortTransportsByDeparture(transports)
+    expect(transports.map((entry) => entry.id)).toEqual(['b', 'a'])
   })
 })
 
@@ -146,7 +172,7 @@ describe('minimumConnectionMinutes', () => {
 })
 
 describe('analyseConnections', () => {
-  const landsAtNoon = leg({
+  const landsAtNoon = transport({
     id: 'flight',
     title: 'Flight to Tokyo',
     mode: 'flight',
@@ -162,7 +188,7 @@ describe('analyseConnections', () => {
   it('reports a comfortable gap', () => {
     const [connection] = analyseConnections([
       landsAtNoon,
-      leg({
+      transport({
         id: 'train',
         title: 'Train to Kyoto',
         mode: 'train',
@@ -184,7 +210,7 @@ describe('analyseConnections', () => {
   it('flags a departure before the previous arrival as impossible', () => {
     const [connection] = analyseConnections([
       landsAtNoon,
-      leg({
+      transport({
         id: 'train',
         title: 'Train to Kyoto',
         mode: 'train',
@@ -208,7 +234,7 @@ describe('analyseConnections', () => {
   it('flags a gap shorter than the mode needs as tight', () => {
     const [connection] = analyseConnections([
       landsAtNoon,
-      leg({
+      transport({
         id: 'onward',
         title: 'Flight to Osaka',
         mode: 'flight',
@@ -229,7 +255,7 @@ describe('analyseConnections', () => {
   it('accepts the same gap when the onward mode needs less time', () => {
     const [connection] = analyseConnections([
       landsAtNoon,
-      leg({
+      transport({
         id: 'metro',
         title: 'Metro into town',
         mode: 'metro',
@@ -242,10 +268,10 @@ describe('analyseConnections', () => {
     expect(connection.severity).toBe('ok')
   })
 
-  it('notices when the next leg leaves from somewhere else', () => {
+  it('notices when the next transport leaves from somewhere else', () => {
     const [connection] = analyseConnections([
       landsAtNoon,
-      leg({
+      transport({
         id: 'train',
         title: 'Train to Kyoto',
         mode: 'train',
@@ -264,7 +290,7 @@ describe('analyseConnections', () => {
 
   it('matches endpoints by name when neither carries a code', () => {
     const [connection] = analyseConnections([
-      leg({
+      transport({
         id: 'a',
         arrivalName: 'Hakone-Yumoto',
         arrivalDate: '2026-04-17',
@@ -272,7 +298,7 @@ describe('analyseConnections', () => {
         departureDate: '2026-04-17',
         departureTime: '08:00',
       }),
-      leg({
+      transport({
         id: 'b',
         departureName: 'hakone-yumoto',
         departureDate: '2026-04-17',
@@ -285,23 +311,31 @@ describe('analyseConnections', () => {
 
   it('does not call an unrecorded endpoint a mismatch', () => {
     const [connection] = analyseConnections([
-      leg({
+      transport({
         id: 'a',
         departureDate: '2026-04-17',
         departureTime: '08:00',
         arrivalDate: '2026-04-17',
         arrivalTime: '10:00',
       }),
-      leg({ id: 'b', departureDate: '2026-04-17', departureTime: '12:00' }),
+      transport({
+        id: 'b',
+        departureDate: '2026-04-17',
+        departureTime: '12:00',
+      }),
     ])
 
     expect(connection.placeMismatch).toBe(false)
   })
 
-  it('falls back to the departure instant when a leg records no arrival', () => {
+  it('falls back to the departure instant when a transport records no arrival', () => {
     const [connection] = analyseConnections([
-      leg({ id: 'a', departureDate: '2026-04-16', departureTime: '08:00' }),
-      leg({
+      transport({
+        id: 'a',
+        departureDate: '2026-04-16',
+        departureTime: '08:00',
+      }),
+      transport({
         id: 'b',
         mode: 'flight',
         departureDate: '2026-04-16',
@@ -318,36 +352,40 @@ describe('analyseConnections', () => {
 
   it('says so when there are no times to compare', () => {
     const [connection] = analyseConnections([
-      leg({ id: 'a', departureDate: '2026-04-16', departureTime: '08:00' }),
-      leg({ id: 'b' }),
+      transport({
+        id: 'a',
+        departureDate: '2026-04-16',
+        departureTime: '08:00',
+      }),
+      transport({ id: 'b' }),
     ])
 
     expect(connection.severity).toBe('unknown')
     expect(connection.gapMinutes).toBeNull()
   })
 
-  it('produces one fewer entry than there are legs', () => {
-    const legs = [
-      leg({ id: 'a', departureDate: '2026-04-16' }),
-      leg({ id: 'b', departureDate: '2026-04-17' }),
-      leg({ id: 'c', departureDate: '2026-04-18' }),
+  it('produces one fewer entry than there are transports', () => {
+    const transports = [
+      transport({ id: 'a', departureDate: '2026-04-16' }),
+      transport({ id: 'b', departureDate: '2026-04-17' }),
+      transport({ id: 'c', departureDate: '2026-04-18' }),
     ]
-    expect(analyseConnections(legs)).toHaveLength(2)
+    expect(analyseConnections(transports)).toHaveLength(2)
   })
 
-  it('returns nothing for zero or one leg', () => {
+  it('returns nothing for zero or one transport', () => {
     expect(analyseConnections([])).toEqual([])
-    expect(analyseConnections([leg({ id: 'only' })])).toEqual([])
+    expect(analyseConnections([transport({ id: 'only' })])).toEqual([])
   })
 
   it('analyses in travel order even when the input is not sorted', () => {
     const connections = analyseConnections([
-      leg({
+      transport({
         id: 'second',
         departureDate: '2026-04-17',
         departureTime: '09:00',
       }),
-      leg({
+      transport({
         id: 'first',
         departureDate: '2026-04-16',
         departureTime: '09:00',
@@ -365,7 +403,7 @@ describe('summariseConnections', () => {
   it('counts each kind of problem', () => {
     const summary = summariseConnections(
       analyseConnections([
-        leg({
+        transport({
           id: 'a',
           mode: 'flight',
           departureDate: '2026-04-16',
@@ -374,7 +412,7 @@ describe('summariseConnections', () => {
           arrivalDate: '2026-04-16',
           arrivalTime: '12:00',
         }),
-        leg({
+        transport({
           id: 'b',
           mode: 'flight',
           departureCode: 'NRT',
@@ -383,7 +421,7 @@ describe('summariseConnections', () => {
           arrivalDate: '2026-04-16',
           arrivalTime: '14:00',
         }),
-        leg({
+        transport({
           id: 'c',
           mode: 'train',
           departureDate: '2026-04-16',
@@ -408,10 +446,10 @@ describe('summariseConnections', () => {
   })
 })
 
-describe('legTimingError', () => {
-  it('accepts a leg that arrives after it departs', () => {
+describe('transportTimingError', () => {
+  it('accepts a transport that arrives after it departs', () => {
     expect(
-      legTimingError({
+      transportTimingError({
         departureDate: '2026-04-16',
         departureTime: '08:00',
         arrivalDate: '2026-04-16',
@@ -420,9 +458,9 @@ describe('legTimingError', () => {
     ).toBeNull()
   })
 
-  it('rejects a leg that arrives before it departs', () => {
+  it('rejects a transport that arrives before it departs', () => {
     expect(
-      legTimingError({
+      transportTimingError({
         departureDate: '2026-04-16',
         departureTime: '12:00',
         arrivalDate: '2026-04-16',
@@ -433,7 +471,7 @@ describe('legTimingError', () => {
 
   it('stays quiet while a date is still blank', () => {
     expect(
-      legTimingError({
+      transportTimingError({
         departureDate: '',
         departureTime: '12:00',
         arrivalDate: '2026-04-16',
@@ -442,9 +480,9 @@ describe('legTimingError', () => {
     ).toBeNull()
   })
 
-  it('reads a blank arrival time as the end of the day, so a same-day leg passes', () => {
+  it('reads a blank arrival time as the end of the day, so a same-day transport passes', () => {
     expect(
-      legTimingError({
+      transportTimingError({
         departureDate: '2026-04-16',
         departureTime: '18:00',
         arrivalDate: '2026-04-16',
@@ -455,7 +493,7 @@ describe('legTimingError', () => {
 
   it('still rejects an arrival date before the departure date', () => {
     expect(
-      legTimingError({
+      transportTimingError({
         departureDate: '2026-04-18',
         departureTime: '',
         arrivalDate: '2026-04-16',

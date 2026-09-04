@@ -39,20 +39,20 @@ const messages = {
     'この旅行の移動はそれぞれ手段が違います。「{label}」に戻すとすべて表示されます。',
   'transports.filtered.action': 'すべての移動を表示',
   'transports.alert.impossible.title': {
-    other: '乗り継ぎ{legs}件が成立しません',
+    other: '乗り継ぎ{value}件が成立しません',
   },
   'transports.alert.impossible.body':
     'ある移動が、その前の移動の到着より先に出発します。下の接続点がどれをどれだけ超えているかを示します。',
   'transports.alert.tight.title': {
-    other: '乗り継ぎ{legs}件が余裕不足です',
+    other: '乗り継ぎ{value}件が余裕不足です',
   },
   'transports.alert.tight.body':
     '時間はありますが、乗る手段には余裕が足りません。下の接続点が、それぞれどれだけ残すかを示します。',
   'transports.badge.impossible': {
-    other: '成立しない乗り継ぎ{legs}件',
+    other: '成立しない乗り継ぎ{value}件',
   },
   'transports.badge.tight': {
-    other: '余裕のない乗り継ぎ{legs}件',
+    other: '余裕のない乗り継ぎ{value}件',
   },
   'transports.badge.ok': 'すべての乗り継ぎが成立',
   'transports.remove.body':

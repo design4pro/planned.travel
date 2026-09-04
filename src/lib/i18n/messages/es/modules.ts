@@ -41,27 +41,27 @@ const messages = {
   'transports.filtered.action': 'Mostrar todos los trayectos',
   'transports.alert.impossible.title': {
     one: 'Un enlace es imposible',
-    many: '{legs} enlaces son imposibles',
-    other: '{legs} enlaces son imposibles',
+    many: '{value} enlaces son imposibles',
+    other: '{value} enlaces son imposibles',
   },
   'transports.alert.impossible.body':
     'Un trayecto sale antes de que llegue el anterior. Los enlaces de abajo dicen cuáles y por cuánto.',
   'transports.alert.tight.title': {
     one: 'Un enlace va justo',
-    many: '{legs} enlaces van justos',
-    other: '{legs} enlaces van justos',
+    many: '{value} enlaces van justos',
+    other: '{value} enlaces van justos',
   },
   'transports.alert.tight.body':
     'Hay tiempo, pero poco para el medio que vas a coger. Los enlaces de abajo muestran cuánto deja cada uno.',
   'transports.badge.impossible': {
-    one: '{legs} enlace roto',
-    many: '{legs} enlaces rotos',
-    other: '{legs} enlaces rotos',
+    one: '{value} enlace roto',
+    many: '{value} enlaces rotos',
+    other: '{value} enlaces rotos',
   },
   'transports.badge.tight': {
-    one: '{legs} enlace justo',
-    many: '{legs} enlaces justos',
-    other: '{legs} enlaces justos',
+    one: '{value} enlace justo',
+    many: '{value} enlaces justos',
+    other: '{value} enlaces justos',
   },
   'transports.badge.ok': 'Todos los enlaces funcionan',
   'transports.remove.body':

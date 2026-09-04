@@ -27,7 +27,7 @@ lines) loads `loadBookingDeskFn` and renders four stat tiles plus
 `src/components/modules/book/bookings-timeline.tsx` (658 lines), which groups by date, edits status
 from the card's own pill, copies a confirmation code and deletes behind a confirm dialog.
 `src/routes/_app/trips/$tripId/transports.tsx` (132 lines) loads `loadTripTransports` and renders
-`src/components/modules/transports/legs-timeline.tsx` (673 lines) with a connections analyser
+`src/components/modules/transports/transports-timeline.tsx` (673 lines) with a connections analyser
 (`connections.ts`, 309 lines) that already flags an impossible or a tight change between two legs.
 Neither screen is a skeleton, and no stage here rewrites one.
 
@@ -396,11 +396,12 @@ complete first.
   `endpointLabels` gains the hire-car case; `validateLegDraft` gains the day-order rule.
 - `src/components/modules/transports/leg-dialog.tsx` — edit. Two day selects, and the relabelled
   legend.
-- `src/components/modules/transports/legs-timeline.tsx` → `transports-timeline.tsx` — edit **and
-  rename**. The card shows which day it belongs to, and its date formatter is replaced by the shared
-  one — see **Verification**. The rename is the vocabulary fix below, not a tidy-up.
-- `src/components/modules/transports/types.ts` — edit. `LegData` is renamed `TransportData` and gains
-  `departureDayId`, `arrivalDayId`.
+- `src/components/modules/transports/transports-timeline.tsx` — edit. The card shows which day it
+  belongs to, and its date formatter is replaced by the shared one — see **Verification**. The
+  rename from `legs-timeline.tsx` — the vocabulary fix below, not a tidy-up — already landed ahead
+  of this stage, so this entry is an edit only.
+- `src/components/modules/transports/types.ts` — edit. `TransportData`, already renamed from
+  `LegData` ahead of this stage, gains `departureDayId`, `arrivalDayId`.
 - `src/components/modules/transports/index.ts` — edit. The two new exports.
 - `src/components/modules/transports/__tests__/leg-form.test.ts` — edit. Extended, never rewritten.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
@@ -671,7 +672,7 @@ abbreviated-month call sites that build their own `Intl.DateTimeFormat` with `mo
 workerd and WebKit resolve from different ICU builds, and states the defect is "latent today and
 active the moment a trip tab is baselined". **This stage is the first in the repository to baseline a
 trip tab**, and two of the seven are in files it owns:
-`src/components/modules/transports/legs-timeline.tsx:83` — the file this stage renames — and
+`src/components/modules/transports/transports-timeline.tsx` — renamed ahead of this stage — and
 `src/components/modules/book/bookings-timeline.tsx:89` (the latter is `03-S6`'s to fix, and is named
 here so the inheritance is recorded once).
 

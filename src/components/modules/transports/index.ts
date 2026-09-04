@@ -1,24 +1,24 @@
 /** The transports module's public surface. */
-export { ConnectionsBadge, LegsTimeline } from './legs-timeline'
-export type { LegsTimelineProps } from './legs-timeline'
+export { ConnectionsBadge, TransportsTimeline } from './transports-timeline'
+export type { TransportsTimelineProps } from './transports-timeline'
 
-export { LegDialog, NewLegAction } from './leg-dialog'
+export { TransportDialog, NewTransportAction } from './leg-dialog'
 
 export {
   analyseConnections,
   formatGap,
-  legArrivalAt,
-  legDepartureAt,
-  legTimingError,
+  transportArrivalAt,
+  transportDepartureAt,
+  transportTimingError,
   minimumConnectionMinutes,
-  sortLegsByDeparture,
+  sortTransportsByDeparture,
   summariseConnections,
 } from './connections'
 export type {
   Connection,
   ConnectionSeverity,
   ConnectionSummary,
-  LegLike,
+  TransportLike,
 } from './connections'
 
 export {
@@ -26,28 +26,28 @@ export {
   STATUS_LABELS as TRANSPORT_STATUS_LABELS,
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
-  emptyLegDraft,
+  emptyTransportDraft,
   endpointLabels,
-  hasLegErrors,
+  hasTransportErrors,
   isTransportMode,
   isTransportStatus,
   kilometresToMetres,
   metresToKilometres,
   modeLabel,
-  suggestLegTitle,
+  suggestTransportTitle,
   transportStatusLabel,
   usesCodes,
   usesSeat,
   usesService,
-  validateLegDraft,
+  validateTransportDraft,
 } from './leg-form'
 export type {
-  LegDraft,
-  LegErrors,
+  TransportDraft,
+  TransportErrors,
   TransportMode,
   TransportStatus,
 } from './leg-form'
 
 export { MODE_ICON, modeIcon } from './mode-icon'
-export { legDurationMinutes } from './leg-timing'
-export type { LegData } from './types'
+export { transportDurationMinutes } from './leg-timing'
+export type { TransportData } from './types'
