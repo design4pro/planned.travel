@@ -500,6 +500,16 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'La ricerca di connessioni è spenta su questo deployment',
   'transports.connection.refusal.provider': 'Il servizio orari non ha risposto',
+  'transports.connection.refusal.plan':
+    'La ricerca di connessioni non fa parte di questo piano',
+  'transports.connection.refusal.planBody':
+    'Passa a un altro piano per cercare gli orari da dentro un viaggio. Uno spostamento si può sempre annotare a mano.',
+  'transports.connection.refusal.ceilingBody':
+    'Il monte mensile di {ceiling} è esaurito e si rinnova il primo del mese prossimo. Uno spostamento si può sempre annotare a mano.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Qui non è configurato nessun servizio orari, quindi non è stato cercato niente. Annota lo spostamento a mano.',
+  'transports.connection.refusal.providerBody':
+    'Non è tornato niente da mostrare. Riprova tra poco, oppure annota lo spostamento a mano.',
   'transports.connection.invitation':
     'Due fermate e una data, e l’orario risponde. Niente viene salvato finché non ne scegli una.',
   'transports.connection.empty':

@@ -481,6 +481,16 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'Pencarian koneksi dimatikan pada penyebaran ini',
   'transports.connection.refusal.provider': 'Layanan jadwal tidak menjawab',
+  'transports.connection.refusal.plan':
+    'Pencarian koneksi tidak termasuk dalam paket ini',
+  'transports.connection.refusal.planBody':
+    'Naikkan paket untuk mencari jadwal dari dalam perjalanan. Perjalanan tetap bisa dicatat manual.',
+  'transports.connection.refusal.ceilingBody':
+    'Jatah bulan ini sebanyak {ceiling} sudah habis dan diperbarui pada tanggal satu bulan depan. Perjalanan tetap bisa dicatat manual.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Tidak ada layanan jadwal yang disiapkan di sini, jadi tidak ada yang dicari. Catat perjalanan secara manual.',
+  'transports.connection.refusal.providerBody':
+    'Tidak ada yang kembali untuk ditampilkan. Coba lagi sebentar, atau catat perjalanan secara manual.',
   'transports.connection.invitation':
     'Dua perhentian dan satu tanggal, lalu jadwal menjawab. Tidak ada yang disimpan sampai kamu memilih satu.',
   'transports.connection.empty':

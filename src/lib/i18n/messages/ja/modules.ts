@@ -463,6 +463,16 @@ const messages = {
     'この配備では接続検索が無効です',
   'transports.connection.refusal.provider':
     '時刻表サービスから応答がありません',
+  'transports.connection.refusal.plan':
+    '接続検索はこのプランに含まれていません',
+  'transports.connection.refusal.planBody':
+    '旅程の中から時刻表を検索するにはプランを変更してください。移動は手入力でも記録できます。',
+  'transports.connection.refusal.ceilingBody':
+    '今月分の{ceiling}回を使い切りました。翌月1日に戻ります。移動は手入力でも記録できます。',
+  'transports.connection.refusal.unconfiguredBody':
+    'ここには時刻表サービスが設定されていないため、検索は行われていません。移動は手入力で記録してください。',
+  'transports.connection.refusal.providerBody':
+    '表示できるものが返ってきませんでした。少し待って再試行するか、移動を手入力で記録してください。',
   'transports.connection.invitation':
     '停留所を二つと日付を、時刻表が答えます。選ぶまで何も保存されません。',
   'transports.connection.empty':

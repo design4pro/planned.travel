@@ -499,6 +499,16 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'البحث عن الرحلات معطّل في هذا النشر',
   'transports.connection.refusal.provider': 'لم تُجب خدمة الجداول',
+  'transports.connection.refusal.plan':
+    'البحث عن الرحلات غير مشمول في هذه الخطة',
+  'transports.connection.refusal.planBody':
+    'ارتقِ بالخطة للبحث في الجداول من داخل الرحلة. ولا يزال بالإمكان تدوين التنقل يدويًا.',
+  'transports.connection.refusal.ceilingBody':
+    'استُنفد رصيد الشهر البالغ {ceiling}، ويتجدد في أول الشهر المقبل. ولا يزال بالإمكان تدوين التنقل يدويًا.',
+  'transports.connection.refusal.unconfiguredBody':
+    'لا توجد خدمة جداول مُعدّة هنا، فلم يجرِ أي بحث. دوّن التنقل يدويًا.',
+  'transports.connection.refusal.providerBody':
+    'لم يعد شيء لعرضه. أعد المحاولة بعد لحظة أو دوّن التنقل يدويًا.',
   'transports.connection.invitation':
     'محطتان وتاريخ، وتجيب الجداول. لا يُحفظ شيء قبل أن تختار.',
   'transports.connection.empty':

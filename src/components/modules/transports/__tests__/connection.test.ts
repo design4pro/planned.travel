@@ -22,10 +22,13 @@ import {
   journeyLegs,
   placeOf,
   rankConnections,
+  refusalBody,
+  refusalTitle,
 } from '../connection-search'
 
 import { modulesTranslate as t } from '#/lib/i18n/__tests__/modules-translate'
 
+import type { ConnectionRefusal } from '../connection-search'
 import type { StationMatch, TransitConnection } from '#/server/fns/transports'
 
 /**
@@ -295,5 +298,69 @@ describe('chainFor', () => {
       legs: [leg('bus', '', 'Town', null, null)],
     })
     expect(chainFor(unnamed, null, null, t).stations[0].name).toBe('Stop')
+  })
+})
+
+/**
+ * The five refusals, and the one thing every one of them has to be: a sentence out of the
+ * catalogue.
+ *
+ * This is the only surface in the dialog where a *server* decides what the reader is told, and the
+ * shape that invites the mistake is a `message` on the wire: rendering it puts one language's
+ * sentence in front of twenty-three, and the parity gate never sees it because it is not a key.
+ * So the wire carries facts and this maps them, and these tests are the guard the parity gate
+ * cannot be — every state resolves, every state says something of its own, and the allowance says
+ * how big it was.
+ */
+describe('refusalTitle and refusalBody', () => {
+  const refusal = (
+    over: Partial<ConnectionRefusal> = {},
+  ): ConnectionRefusal => ({
+    ok: false,
+    reason: 'unreachable',
+    ceiling: 50,
+    ...over,
+  })
+
+  const states: ReadonlyArray<ConnectionRefusal> = [
+    refusal({ reason: 'ceiling', ceiling: 0 }),
+    refusal({ reason: 'ceiling', ceiling: 50 }),
+    refusal({ reason: 'unconfigured' }),
+    refusal({ reason: 'unreachable' }),
+    refusal({ reason: 'refused' }),
+    refusal({ reason: 'malformed' }),
+  ]
+
+  it('resolves every reason to a real sentence rather than to its key', () => {
+    for (const state of states) {
+      const title = t(refusalTitle(state))
+      const body = refusalBody(state, t, 'en')
+      expect(title).not.toContain('modules.transports')
+      expect(body).not.toContain('modules.transports')
+      expect(body.length).toBeGreaterThan(20)
+    }
+  })
+
+  /** Buying an allowance and waiting for one are different answers, so they are different words. */
+  it('separates an allowance that is absent from one that is spent', () => {
+    const [absent, spent] = states
+    expect(refusalTitle(absent)).not.toBe(refusalTitle(spent))
+    expect(refusalBody(absent, t, 'en')).not.toBe(refusalBody(spent, t, 'en'))
+    expect(refusalBody(spent, t, 'en')).toContain('50')
+    expect(refusalBody(absent, t, 'en')).not.toContain('0')
+  })
+
+  /** Unreachable, refused and nonsense are one answer to a reader: try again, or write it down. */
+  it('gives the three provider failures the same words', () => {
+    const [, , , unreachable, refused, malformed] = states
+    expect(refusalBody(refused, t, 'en')).toBe(
+      refusalBody(unreachable, t, 'en'),
+    )
+    expect(refusalBody(malformed, t, 'en')).toBe(
+      refusalBody(unreachable, t, 'en'),
+    )
+    expect(refusalBody(unreachable, t, 'en')).not.toBe(
+      refusalBody(states[2], t, 'en'),
+    )
   })
 })

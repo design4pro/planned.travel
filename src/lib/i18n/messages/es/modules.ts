@@ -496,6 +496,16 @@ const messages = {
     'La búsqueda de conexiones está apagada en este despliegue',
   'transports.connection.refusal.provider':
     'El servicio de horarios no respondió',
+  'transports.connection.refusal.plan':
+    'La búsqueda de conexiones no entra en este plan',
+  'transports.connection.refusal.planBody':
+    'Cambia de plan para consultar horarios desde dentro de un viaje. Un trayecto siempre se puede anotar a mano.',
+  'transports.connection.refusal.ceilingBody':
+    'El cupo mensual de {ceiling} está agotado y se renueva el primero del mes que viene. Un trayecto siempre se puede anotar a mano.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Aquí no hay ningún servicio de horarios configurado, así que no se buscó nada. Anota el trayecto a mano.',
+  'transports.connection.refusal.providerBody':
+    'No volvió nada que mostrar. Inténtalo en un momento o anota el trayecto a mano.',
   'transports.connection.invitation':
     'Dos paradas y una fecha, y los horarios responden. No se guarda nada hasta que elijas una.',
   'transports.connection.empty':

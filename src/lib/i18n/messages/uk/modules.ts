@@ -498,6 +498,15 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'Пошук сполучень вимкнено на цьому розгортанні',
   'transports.connection.refusal.provider': 'Служба розкладів не відповіла',
+  'transports.connection.refusal.plan': 'Пошук сполучень не входить у цей план',
+  'transports.connection.refusal.planBody':
+    'Перейдіть на інший план, щоб шукати розклади просто з подорожі. Поїздку завжди можна записати вручну.',
+  'transports.connection.refusal.ceilingBody':
+    'Місячний ліміт {ceiling} вичерпано, він оновиться першого числа наступного місяця. Поїздку завжди можна записати вручну.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Тут не налаштовано службу розкладів, тож нічого не шукали. Запишіть поїздку вручну.',
+  'transports.connection.refusal.providerBody':
+    'Не повернулося нічого, що можна показати. Спробуйте за мить або запишіть поїздку вручну.',
   'transports.connection.invitation':
     'Дві зупинки й дата — розклад відповість. Нічого не зберігається, доки ви не оберете.',
   'transports.connection.empty':

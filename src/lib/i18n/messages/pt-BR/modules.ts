@@ -493,6 +493,16 @@ const messages = {
     'A busca de conexões está desligada neste deployment',
   'transports.connection.refusal.provider':
     'O serviço de horários não respondeu',
+  'transports.connection.refusal.plan':
+    'A busca de conexões não faz parte deste plano',
+  'transports.connection.refusal.planBody':
+    'Mude de plano para consultar horários de dentro de uma viagem. Um trecho continua podendo ser anotado à mão.',
+  'transports.connection.refusal.ceilingBody':
+    'A cota mensal de {ceiling} acabou e renova no primeiro dia do mês que vem. Um trecho continua podendo ser anotado à mão.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Nenhum serviço de horários está configurado aqui, então nada foi buscado. Anote o trecho à mão.',
+  'transports.connection.refusal.providerBody':
+    'Não voltou nada para mostrar. Tente de novo daqui a pouco ou anote o trecho à mão.',
   'transports.connection.invitation':
     'Duas paradas e uma data, e os horários respondem. Nada é salvo até você escolher uma.',
   'transports.connection.empty':

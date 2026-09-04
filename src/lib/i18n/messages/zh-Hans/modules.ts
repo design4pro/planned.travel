@@ -450,6 +450,15 @@ const messages = {
   'transports.connection.refusal.ceiling': '本月的搜索次数已用完',
   'transports.connection.refusal.unconfigured': '此部署未开启路线搜索',
   'transports.connection.refusal.provider': '时刻表服务没有响应',
+  'transports.connection.refusal.plan': '此套餐不含路线搜索',
+  'transports.connection.refusal.planBody':
+    '升级套餐即可在行程中搜索时刻表。行程仍可手动记录。',
+  'transports.connection.refusal.ceilingBody':
+    '本月的 {ceiling} 次额度已用完，下月一号恢复。行程仍可手动记录。',
+  'transports.connection.refusal.unconfiguredBody':
+    '这里没有配置时刻表服务，因此没有进行搜索。请手动记录这段行程。',
+  'transports.connection.refusal.providerBody':
+    '没有返回可显示的内容。请稍后重试，或手动记录这段行程。',
   'transports.connection.invitation':
     '两个站点加一个日期，时刻表就会回答。在你选定之前不会保存任何内容。',
   'transports.connection.empty':

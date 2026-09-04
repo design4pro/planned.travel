@@ -480,6 +480,16 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'Förbindelsesökningen är avstängd på den här driftsättningen',
   'transports.connection.refusal.provider': 'Tidtabellstjänsten svarade inte',
+  'transports.connection.refusal.plan':
+    'Förbindelsesökning ingår inte i den här planen',
+  'transports.connection.refusal.planBody':
+    'Byt plan för att söka i tidtabeller inifrån en resa. En resa går fortfarande att skriva in för hand.',
+  'transports.connection.refusal.ceilingBody':
+    'Månadens pott på {ceiling} är slut och förnyas den första nästa månad. En resa går fortfarande att skriva in för hand.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Ingen tidtabellstjänst är uppsatt här, så ingenting söktes. Skriv in resan för hand i stället.',
+  'transports.connection.refusal.providerBody':
+    'Ingenting kom tillbaka att visa. Försök igen om en stund, eller skriv in resan för hand.',
   'transports.connection.invitation':
     'Två stopp och ett datum, så svarar tidtabellen. Ingenting sparas förrän du väljer en.',
   'transports.connection.empty':

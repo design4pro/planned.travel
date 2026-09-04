@@ -497,6 +497,16 @@ const messages = {
     'Die Verbindungssuche ist auf diesem Deployment aus',
   'transports.connection.refusal.provider':
     'Der Fahrplandienst hat nicht geantwortet',
+  'transports.connection.refusal.plan':
+    'Die Verbindungssuche gehört nicht zu diesem Tarif',
+  'transports.connection.refusal.planBody':
+    'Wechsle den Tarif, um Fahrpläne direkt aus einer Reise heraus zu durchsuchen. Eine Fahrt lässt sich weiterhin von Hand eintragen.',
+  'transports.connection.refusal.ceilingBody':
+    'Das Monatskontingent von {ceiling} ist aufgebraucht und erneuert sich am Ersten des nächsten Monats. Eine Fahrt lässt sich weiterhin von Hand eintragen.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Hier ist kein Fahrplandienst eingerichtet, also wurde nichts gesucht. Trage die Fahrt von Hand ein.',
+  'transports.connection.refusal.providerBody':
+    'Es kam nichts zurück, das sich zeigen ließe. Versuch es gleich noch einmal oder trage die Fahrt von Hand ein.',
   'transports.connection.invitation':
     'Zwei Halte und ein Datum, und der Fahrplan antwortet. Gespeichert wird nichts, bis du eine wählst.',
   'transports.connection.empty':

@@ -493,6 +493,16 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'Vyhledávání spojení je na tomhle nasazení vypnuté',
   'transports.connection.refusal.provider': 'Jízdní řády neodpověděly',
+  'transports.connection.refusal.plan':
+    'Vyhledávání spojení k tomuhle tarifu nepatří',
+  'transports.connection.refusal.planBody':
+    'Přejdi na jiný tarif, ať můžeš hledat v jízdních řádech přímo z cesty. Přesun jde pořád zapsat ručně.',
+  'transports.connection.refusal.ceilingBody':
+    'Měsíční příděl {ceiling} je vyčerpaný a obnoví se prvního příštího měsíce. Přesun jde pořád zapsat ručně.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Není tu nastavená žádná služba jízdních řádů, takže se nic nehledalo. Zapiš přesun ručně.',
+  'transports.connection.refusal.providerBody':
+    'Nevrátilo se nic, co by šlo ukázat. Zkus to za chvíli, nebo přesun zapiš ručně.',
   'transports.connection.invitation':
     'Dvě zastávky a datum, a jízdní řády odpoví. Nic se neuloží, dokud si nevybereš.',
   'transports.connection.empty':

@@ -501,6 +501,16 @@ const messages = {
     'La recherche de connexions est désactivée sur ce déploiement',
   'transports.connection.refusal.provider':
     'Le service d’horaires n’a pas répondu',
+  'transports.connection.refusal.plan':
+    'La recherche de connexions ne fait pas partie de cette formule',
+  'transports.connection.refusal.planBody':
+    'Changez de formule pour interroger les horaires depuis un voyage. Un trajet peut toujours être saisi à la main.',
+  'transports.connection.refusal.ceilingBody':
+    'Le quota mensuel de {ceiling} est épuisé ; il se renouvelle le premier du mois prochain. Un trajet peut toujours être saisi à la main.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Aucun service d’horaires n’est configuré ici, donc rien n’a été cherché. Saisissez le trajet à la main.',
+  'transports.connection.refusal.providerBody':
+    'Rien n’est revenu à afficher. Réessayez dans un instant, ou saisissez le trajet à la main.',
   'transports.connection.invitation':
     'Deux arrêts et une date, et l’horaire répond. Rien n’est enregistré tant que vous n’avez pas choisi.',
   'transports.connection.empty':

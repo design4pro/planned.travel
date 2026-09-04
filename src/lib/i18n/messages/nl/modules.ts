@@ -489,6 +489,16 @@ const messages = {
     'Verbindingzoeken staat uit op deze deployment',
   'transports.connection.refusal.provider':
     'De dienstregelingdienst gaf geen antwoord',
+  'transports.connection.refusal.plan':
+    'Verbindingzoeken hoort niet bij dit plan',
+  'transports.connection.refusal.planBody':
+    'Stap over op een ander plan om dienstregelingen vanuit een reis te doorzoeken. Een rit blijft met de hand te noteren.',
+  'transports.connection.refusal.ceilingBody':
+    'Het maandtegoed van {ceiling} is op en vernieuwt op de eerste van volgende maand. Een rit blijft met de hand te noteren.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Hier is geen dienstregelingdienst ingesteld, dus er is niets gezocht. Noteer de rit met de hand.',
+  'transports.connection.refusal.providerBody':
+    'Er kwam niets terug om te tonen. Probeer het zo nog eens, of noteer de rit met de hand.',
   'transports.connection.invitation':
     'Twee haltes en een datum, en de dienstregeling antwoordt. Er wordt niets bewaard tot je er een kiest.',
   'transports.connection.empty':

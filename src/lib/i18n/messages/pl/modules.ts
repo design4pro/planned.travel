@@ -503,6 +503,16 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'Wyszukiwanie połączeń jest wyłączone w tym wdrożeniu',
   'transports.connection.refusal.provider': 'Serwis rozkładów nie odpowiedział',
+  'transports.connection.refusal.plan':
+    'Wyszukiwanie połączeń nie jest częścią tego planu',
+  'transports.connection.refusal.planBody':
+    'Zmień plan, aby wyszukiwać rozkłady z wnętrza podróży. Przejazd nadal można zapisać ręcznie.',
+  'transports.connection.refusal.ceilingBody':
+    'Miesięczny limit {ceiling} został wyczerpany i odnawia się pierwszego dnia następnego miesiąca. Przejazd nadal można zapisać ręcznie.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Nie skonfigurowano tu serwisu rozkładów, więc nic nie zostało wyszukane. Zapisz przejazd ręcznie.',
+  'transports.connection.refusal.providerBody':
+    'Nie wróciło nic do pokazania. Spróbuj za chwilę albo zapisz przejazd ręcznie.',
   'transports.connection.invitation':
     'Dwa przystanki i data, a rozkład odpowiada. Nic nie zapisuje się, dopóki nie wybierzesz.',
   'transports.connection.empty':

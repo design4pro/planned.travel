@@ -477,6 +477,16 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'Bu dağıtımda bağlantı araması kapalı',
   'transports.connection.refusal.provider': 'Tarife servisi yanıt vermedi',
+  'transports.connection.refusal.plan':
+    'Bağlantı araması bu pakete dahil değil',
+  'transports.connection.refusal.planBody':
+    'Tarifeleri bir gezinin içinden aramak için paketini yükselt. Yolculuk yine elle yazılabilir.',
+  'transports.connection.refusal.ceilingBody':
+    'Aylık {ceiling} hakkı tükendi; gelecek ayın ilk günü yenilenir. Yolculuk yine elle yazılabilir.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Burada tarife servisi kurulu değil, bu yüzden hiçbir arama yapılmadı. Yolculuğu elle yaz.',
+  'transports.connection.refusal.providerBody':
+    'Gösterecek bir şey dönmedi. Birazdan yeniden dene ya da yolculuğu elle yaz.',
   'transports.connection.invitation':
     'İki durak ve bir tarih, tarife yanıtlar. Sen birini seçene kadar hiçbir şey kaydedilmez.',
   'transports.connection.empty':

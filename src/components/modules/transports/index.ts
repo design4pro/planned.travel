@@ -14,8 +14,13 @@ export {
   journeyLegs,
   placeOf,
   rankConnections,
+  refusalBody,
+  refusalTitle,
 } from './connection-search'
-export type { ConnectionSearchProps } from './connection-search'
+export type {
+  ConnectionRefusal,
+  ConnectionSearchProps,
+} from './connection-search'
 
 export {
   analyseConnections,

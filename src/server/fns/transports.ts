@@ -667,9 +667,18 @@ export type ConnectionSearchOutcome =
       readonly ceiling: number
     }
   | {
+      /**
+       * A refusal carries the two facts the screen needs and no sentence.
+       *
+       * `RateCeilingError` and `TransitProviderError` each hold an English message, and it is
+       * written for the log rather than for a reader: sending it here would put untranslated
+       * English in front of twenty-two other languages, and the parity gate could not see it
+       * because it would never be a key. The screen reads `reason` - and `ceiling`, which
+       * separates an allowance that has to be bought from one that has to be waited out - and
+       * takes its words from the catalogue.
+       */
       readonly ok: false
       readonly reason: 'ceiling' | TransitFailureReason
-      readonly message: string
       readonly ceiling: number
     }
 
@@ -729,15 +738,10 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
       }
     } catch (cause) {
       if (cause instanceof RateCeilingError) {
-        return { ok: false, reason: 'ceiling', message: cause.message, ceiling }
+        return { ok: false, reason: 'ceiling', ceiling }
       }
       if (cause instanceof TransitProviderError) {
-        return {
-          ok: false,
-          reason: cause.reason,
-          message: cause.message,
-          ceiling,
-        }
+        return { ok: false, reason: cause.reason, ceiling }
       }
       throw cause
     }

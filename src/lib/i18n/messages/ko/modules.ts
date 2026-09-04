@@ -462,6 +462,16 @@ const messages = {
     '이 배포에서는 연결 검색이 꺼져 있습니다',
   'transports.connection.refusal.provider':
     '시간표 서비스가 응답하지 않았습니다',
+  'transports.connection.refusal.plan':
+    '연결 검색은 이 플랜에 포함되어 있지 않습니다',
+  'transports.connection.refusal.planBody':
+    '여행 안에서 시간표를 검색하려면 플랜을 변경하세요. 이동은 직접 입력해서 기록할 수도 있습니다.',
+  'transports.connection.refusal.ceilingBody':
+    '이번 달 {ceiling}회를 모두 썼습니다. 다음 달 1일에 다시 채워집니다. 이동은 직접 입력해서 기록할 수도 있습니다.',
+  'transports.connection.refusal.unconfiguredBody':
+    '여기에는 시간표 서비스가 설정되어 있지 않아 아무것도 검색하지 않았습니다. 이동을 직접 입력해 기록하세요.',
+  'transports.connection.refusal.providerBody':
+    '보여줄 것이 돌아오지 않았습니다. 잠시 후 다시 시도하거나 이동을 직접 입력해 기록하세요.',
   'transports.connection.invitation':
     '정류장 둘과 날짜만 있으면 시간표가 답합니다. 고르기 전까지는 아무것도 저장되지 않습니다.',
   'transports.connection.empty':

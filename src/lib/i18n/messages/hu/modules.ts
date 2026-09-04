@@ -488,6 +488,16 @@ const messages = {
     'A kapcsolatkeresés ki van kapcsolva ezen a telepítésen',
   'transports.connection.refusal.provider':
     'A menetrendszolgáltatás nem válaszolt',
+  'transports.connection.refusal.plan':
+    'A kapcsolatkeresés nem része ennek a csomagnak',
+  'transports.connection.refusal.planBody':
+    'Válts csomagot, hogy az utazáson belülről kereshess a menetrendekben. Egy szakasz kézzel is rögzíthető.',
+  'transports.connection.refusal.ceilingBody':
+    'A havi {ceiling} keret elfogyott, és a következő hónap elsején újul meg. Egy szakasz kézzel is rögzíthető.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Itt nincs beállítva menetrendszolgáltatás, így semmi nem lett lekérdezve. Rögzítsd a szakaszt kézzel.',
+  'transports.connection.refusal.providerBody':
+    'Nem jött vissza semmi megjeleníthető. Próbáld újra egy pillanat múlva, vagy rögzítsd a szakaszt kézzel.',
   'transports.connection.invitation':
     'Két megálló és egy dátum, és a menetrend válaszol. Semmi sem mentődik, amíg nem választasz.',
   'transports.connection.empty':

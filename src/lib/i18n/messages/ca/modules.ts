@@ -496,6 +496,16 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'La cerca de connexions està desactivada en aquest desplegament',
   'transports.connection.refusal.provider': 'El servei d’horaris no ha respost',
+  'transports.connection.refusal.plan':
+    'La cerca de connexions no entra en aquest pla',
+  'transports.connection.refusal.planBody':
+    'Canvia de pla per consultar horaris des de dins d’un viatge. Un trajecte sempre es pot anotar a mà.',
+  'transports.connection.refusal.ceilingBody':
+    'La quota mensual de {ceiling} s’ha exhaurit i es renova l’u del mes que ve. Un trajecte sempre es pot anotar a mà.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Aquí no hi ha cap servei d’horaris configurat, així que no s’ha cercat res. Anota el trajecte a mà.',
+  'transports.connection.refusal.providerBody':
+    'No ha tornat res per mostrar. Torna-ho a provar d’aquí a un moment, o anota el trajecte a mà.',
   'transports.connection.invitation':
     'Dues parades i una data, i els horaris responen. No es desa res fins que en triïs una.',
   'transports.connection.empty':

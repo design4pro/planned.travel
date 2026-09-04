@@ -494,6 +494,16 @@ const messages = {
     'Η αναζήτηση συνδέσεων είναι κλειστή σ’ αυτή την εγκατάσταση',
   'transports.connection.refusal.provider':
     'Η υπηρεσία δρομολογίων δεν απάντησε',
+  'transports.connection.refusal.plan':
+    'Η αναζήτηση συνδέσεων δεν ανήκει σ’ αυτό το πλάνο',
+  'transports.connection.refusal.planBody':
+    'Αναβάθμισε το πλάνο για να ψάχνεις δρομολόγια μέσα από ένα ταξίδι. Μια διαδρομή γράφεται πάντα και στο χέρι.',
+  'transports.connection.refusal.ceilingBody':
+    'Το μηνιαίο όριο των {ceiling} εξαντλήθηκε και ανανεώνεται την πρώτη του επόμενου μήνα. Μια διαδρομή γράφεται πάντα και στο χέρι.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Δεν έχει ρυθμιστεί εδώ υπηρεσία δρομολογίων, οπότε δεν έγινε καμία αναζήτηση. Γράψε τη διαδρομή στο χέρι.',
+  'transports.connection.refusal.providerBody':
+    'Δεν γύρισε τίποτα για να δείξουμε. Δοκίμασε ξανά σε λίγο ή γράψε τη διαδρομή στο χέρι.',
   'transports.connection.invitation':
     'Δύο στάσεις και μια ημερομηνία, και τα δρομολόγια απαντούν. Τίποτα δεν αποθηκεύεται ώσπου να διαλέξεις.',
   'transports.connection.empty':

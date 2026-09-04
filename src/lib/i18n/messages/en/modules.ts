@@ -635,6 +635,15 @@ const messages = {
     'Connection search is off on this deployment',
   'transports.connection.refusal.provider':
     'The timetable service did not answer',
+  'transports.connection.refusal.plan': 'Connection search is not on this plan',
+  'transports.connection.refusal.planBody':
+    'Upgrade the workspace to search timetables from inside a trip. A journey can still be recorded by hand.',
+  'transports.connection.refusal.ceilingBody':
+    'This month’s allowance of {ceiling} is spent, and renews on the first of next month. A journey can still be recorded by hand.',
+  'transports.connection.refusal.unconfiguredBody':
+    'No timetable service is set up here, so nothing was searched. Record the journey by hand instead.',
+  'transports.connection.refusal.providerBody':
+    'Nothing came back to show. Try again in a moment, or record the journey by hand.',
   'transports.connection.invitation':
     'Two stops and a date, and the timetable answers. Nothing is saved until you choose one.',
   'transports.connection.empty':

@@ -59,7 +59,7 @@ import { modeIcon } from './mode-icon'
 import { MODE_LABELS } from './vocabulary'
 
 import type { ComboboxOption } from '#/components/ui'
-import type { MessageKey, Translate } from '#/lib/i18n'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { ChainPayload } from './leg-form'
 import type {
   ConnectionSearchOutcome,
@@ -539,22 +539,51 @@ function ConnectionRow({
 /* ----------------------------------------------------------- what came back */
 
 /** The half of an outcome that is a refusal, so the panel below can be typed by it. */
-type ConnectionRefusal = Extract<ConnectionSearchOutcome, { ok: false }>
+export type ConnectionRefusal = Extract<ConnectionSearchOutcome, { ok: false }>
 
 /**
- * What a refusal is called on screen.
+ * What a refusal is called on screen, and what it says underneath.
  *
- * One title per reason rather than one for all of them: a spent allowance and a provider having a
- * moment are different facts about the world, and only one of them is worth waiting out.
+ * One pair of words per state a reader can *act* on differently rather than one per reason: an
+ * allowance that has to be bought and one that has to be waited out are two different answers,
+ * while a provider unreachable, refusing or answering nonsense are one - try again, or write the
+ * journey down by hand.
+ *
+ * Both halves are chosen here rather than carried on the wire. The errors behind these reasons
+ * (`RateCeilingError`, `TransitProviderError`) hold an English sentence because that sentence is
+ * for the log; rendering it would hand a reader in one of twenty-three languages the diagnostic,
+ * and the parity gate would never see it because it is not a key. The reason and the ceiling are
+ * facts, so they cross the wire; the words are the catalogue's.
  */
-function refusalTitle(reason: ConnectionRefusal['reason']): MessageKey {
-  switch (reason) {
+export function refusalTitle(outcome: ConnectionRefusal): MessageKey {
+  switch (outcome.reason) {
     case 'ceiling':
-      return 'modules.transports.connection.refusal.ceiling'
+      return outcome.ceiling === 0
+        ? 'modules.transports.connection.refusal.plan'
+        : 'modules.transports.connection.refusal.ceiling'
     case 'unconfigured':
       return 'modules.transports.connection.refusal.unconfigured'
     default:
       return 'modules.transports.connection.refusal.provider'
+  }
+}
+
+export function refusalBody(
+  outcome: ConnectionRefusal,
+  t: Translate,
+  locale: Locale,
+): string {
+  switch (outcome.reason) {
+    case 'ceiling':
+      return outcome.ceiling === 0
+        ? t('modules.transports.connection.refusal.planBody')
+        : t('modules.transports.connection.refusal.ceilingBody', {
+            ceiling: formatNumber(outcome.ceiling, locale),
+          })
+    case 'unconfigured':
+      return t('modules.transports.connection.refusal.unconfiguredBody')
+    default:
+      return t('modules.transports.connection.refusal.providerBody')
   }
 }
 
@@ -584,6 +613,7 @@ function SearchOutcome({
   onSave: (connection: TransitConnection) => void
 }) {
   const t = useTranslate()
+  const locale = useLocale()
 
   if (pending) {
     return (
@@ -610,9 +640,9 @@ function SearchOutcome({
       <Alert
         data-part="connection-refusal"
         tone={outcome.reason === 'ceiling' ? 'warning' : 'danger'}
-        title={t(refusalTitle(outcome.reason))}
+        title={t(refusalTitle(outcome))}
       >
-        {outcome.message}
+        {refusalBody(outcome, t, locale)}
       </Alert>
     )
   }

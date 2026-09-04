@@ -476,6 +476,15 @@ const messages = {
     'Tìm tuyến bị tắt trên bản triển khai này',
   'transports.connection.refusal.provider':
     'Dịch vụ thời gian biểu không trả lời',
+  'transports.connection.refusal.plan': 'Tìm tuyến không nằm trong gói này',
+  'transports.connection.refusal.planBody':
+    'Nâng gói để tìm thời gian biểu ngay trong chuyến đi. Chặng đi vẫn có thể ghi tay.',
+  'transports.connection.refusal.ceilingBody':
+    'Hạn mức {ceiling} lượt của tháng đã dùng hết, sẽ làm mới vào ngày đầu tháng sau. Chặng đi vẫn có thể ghi tay.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Ở đây chưa cài dịch vụ thời gian biểu nên không tìm gì cả. Hãy ghi chặng đi bằng tay.',
+  'transports.connection.refusal.providerBody':
+    'Không có gì trả về để hiển thị. Thử lại sau giây lát, hoặc ghi chặng đi bằng tay.',
   'transports.connection.invitation':
     'Hai điểm dừng và một ngày, thời gian biểu sẽ trả lời. Không có gì được lưu cho tới khi bạn chọn.',
   'transports.connection.empty':

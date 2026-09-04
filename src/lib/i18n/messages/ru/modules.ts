@@ -497,6 +497,15 @@ const messages = {
   'transports.connection.refusal.unconfigured':
     'Поиск маршрутов выключен на этом развёртывании',
   'transports.connection.refusal.provider': 'Служба расписаний не ответила',
+  'transports.connection.refusal.plan': 'Поиск маршрутов не входит в этот план',
+  'transports.connection.refusal.planBody':
+    'Перейдите на другой план, чтобы искать расписания прямо из поездки. Маршрут всегда можно записать вручную.',
+  'transports.connection.refusal.ceilingBody':
+    'Месячный лимит {ceiling} исчерпан, он обновится первого числа следующего месяца. Маршрут всегда можно записать вручную.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Здесь не настроена служба расписаний, поэтому ничего не искали. Запишите маршрут вручную.',
+  'transports.connection.refusal.providerBody':
+    'Не вернулось ничего, что можно показать. Попробуйте через мгновение или запишите маршрут вручную.',
   'transports.connection.invitation':
     'Две остановки и дата — расписание ответит. Ничего не сохраняется, пока вы не выберете.',
   'transports.connection.empty':
