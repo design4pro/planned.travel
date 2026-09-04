@@ -44,7 +44,6 @@ type: maintenance
 prd
 auto-advance
 agent-pr
-needs-e2e
 agent-docs'
 
 # `status: in progress` followed by U+FE0F (bytes EF B8 8F): the label whose name cannot be typed.
@@ -130,7 +129,6 @@ ensure_label 'type: maintenance'   c2e0c6 'Internal work with no user-visible be
 ensure_label 'prd'                 6f42c1 'Parent issue: title PRD:, body prd/v1, its sub-issues are the tickets'
 ensure_label 'auto-advance'        8250df 'PRD only: the sweeper adds run: implement to each child as it unblocks'
 ensure_label 'agent-pr'            0e8a16 'Draft PR opened by an implement run'
-ensure_label 'needs-e2e'           0e8a16 'Run the Playwright visual gate on this PR (ci.yml e2e escape hatch)'
 ensure_label 'agent-docs'          c5def5 'PR carrying CONTEXT.md or ADR changes from a plan run'
 [ "$APPLY" = 1 ] && LABELS=$(labels_now)
 

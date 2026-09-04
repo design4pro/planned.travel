@@ -23,7 +23,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "e2e:update": "playwright test --update-snapshots",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply planned-travel-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply planned-travel-db --remote",

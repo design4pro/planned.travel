@@ -23,7 +23,8 @@ Goal: the PRD gets its vertical-slice sub-issues with native dependencies, creat
   Two tickets the graph does not order must not share a path; ordered tickets may.
 - Definition of Done: one to three acceptance criteria. Tenant isolation test: the case a new
   tenant-scoped data path must add, or `None: <why>`. Verification: the commands that prove it
-  (`pnpm typecheck && pnpm lint && pnpm test`; UI slices add "visual gate runs in CI").
+  (`pnpm typecheck && pnpm lint && pnpm test`; a UI slice adds the blind A/B pair - ADR 0016
+  retired the pixel gate, so a screen that changed shape is caught only by somebody looking).
 - Dependencies live only in the graph; a body never mirrors them and never says `Closes #n`.
 
 ## Rounds

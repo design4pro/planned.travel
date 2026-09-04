@@ -1,11 +1,7 @@
 import { test as setup } from '@playwright/test'
-import {
-  APP_ROUTES,
-  CONSOLE_ROUTES,
-  DEMO_EMAIL,
-  PUBLIC_ROUTES,
-  cacheSession,
-} from './helpers/shoot.ts'
+import { CONSOLE_ROUTES } from './helpers/admin.ts'
+import { APP_ROUTES, PUBLIC_ROUTES } from './helpers/routes.ts'
+import { DEMO_EMAIL, cacheSession } from './helpers/session.ts'
 
 /**
  * Signs the demo account in once per run and caches the session for every other spec.

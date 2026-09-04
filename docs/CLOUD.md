@@ -123,14 +123,19 @@ that belongs here, and only because it can be scoped to `R2:read` on
 `planned-travel-tiles` and nothing else - a token that can read a basemap and
 perform no other operation on the account.
 
+Since ADR 0016 CI no longer pulls the basemap, so `E2E_TILES_KEY` and the token
+are needed here only by a session that wants real tiles in its own dev server -
+`scripts/agent/setup-e2e.sh`, or the `basemap` input of `.github/actions/e2e-env`
+switched on deliberately.
+
 Nothing from `.dev.vars.example` goes here. `BETTER_AUTH_SECRET` is generated
 fresh by the SessionStart hook, and a Stripe key, a Resend key or a deploy token
 would be sitting in plaintext in a shared configuration for the sake of a session
 that has no business making live calls anyway.
 
 `E2E_TILES_KEY` is a repository _variable_ on GitHub as well, for the same reason
-the Stripe price ids are: it is public information, and CI needs it to name the
-object it pulls.
+the Stripe price ids are: it is public information. CI no longer reads it (ADR
+0016); it stays for the deliberate `basemap: true` path.
 
 ### 2.4 What does not come across
 
@@ -178,8 +183,9 @@ from a local session does both, if you would rather not do it by hand).
 
 Note what this _is not_: it runs on a GitHub runner, so it does not touch the
 cloud environment from §2 at all. The basemap is not there, which means Claude
-cannot run the visual gate from inside that job - it pushes a branch, and CI runs
-the gate on that branch like it would for anyone else.
+cannot run the journeys from inside that job - it pushes a branch, and CI runs
+them on that branch like it would for anyone else. Since ADR 0016 the journeys
+need no basemap either, so this is a smaller gap than it was.
 
 **Routines, for the pull request side.** A `pull_request.opened` trigger for a
 review against your own checklist; **Auto-fix** on a specific pull request to have
@@ -190,66 +196,47 @@ by it.
 
 ---
 
-## 4. Baselines are per platform now
+## 4. The journeys, and what the cloud can run
 
-`e2e/__screenshots__` was recorded on macOS. A Linux runner renders the same
-correct page with different font antialiasing, and at `maxDiffPixelRatio: 0.002`
-that is enough to fail almost every frame that contains a paragraph. Nothing
-about the design moved; the comparison was simply being asked to hold across two
-rasterisers.
+There are no baselines any more. ADR 0016 retired `toHaveScreenshot`,
+`e2e/__screenshots__` and the platform-split `{platform}` template that came with
+it; a cloud session that opens a pull request no longer has to think about which
+rasteriser recorded what. What `pnpm e2e` runs is twenty declarations that assert
+a screen answers, renders its own content, hydrates, says nothing in the console
+and can be acted on. Nothing is compared byte for byte.
 
-So `snapshotPathTemplate` now carries `{platform}`, and the two sets live side by
-side:
+The visual judgement moved to the blind A/B pair,
+`node scripts/visual/capture.mjs`, which writes **outside** the repository and is
+read at review rather than at commit. A cloud session can run it; a cloud session
+cannot decide with it, because the deciding is somebody looking.
 
-```
-e2e/__screenshots__/visual.spec.ts/atlas-dark-chromium-darwin.png   ← your machine
-e2e/__screenshots__/visual.spec.ts/atlas-dark-chromium-linux.png    ← CI, cloud sessions
-```
+### 4.1 What the journeys need, and why it is a composite action
 
-The `-darwin` set is the existing one, renamed. The `-linux` set is recorded by
-the **Update e2e baselines** workflow, which is `workflow_dispatch` only and
-opens a pull request rather than committing: a regenerated baseline is how a real
-regression gets laundered into an accepted picture, so it goes through review like
-any other change to the design.
+`.github/actions/e2e-env` prepares the `e2e` job in `ci.yml`: it writes a
+throwaway `.dev.vars`, migrates local D1, starts `pnpm dev` and seeds the demo
+workspace - the seed endpoint lives inside the Worker, so there is no seeding a
+database without a server in front of it.
 
-The cost of this is honest and worth stating: a deliberate design change now
-needs both sets refreshed - yours locally, the Linux ones through the workflow.
-The alternative was to make Linux the only truth and take the local gate away
-from you, which is worse. If you decide otherwise later, it is one token in
-`playwright.config.ts` and a `git mv`.
+**The basemap is no longer part of that.** It used to be the expensive step, ~480
+MB pulled from production R2 under its dated key and cached on it, and it was the
+reason the job needed an `R2:read` token and therefore could not run on a fork.
+Measured on the branch that retired the baselines: the six atlas journeys are
+green against an empty `.e2e-tiles/`. `src/lib/map/world.ts` draws land, water and
+borders from Natural Earth 1:110m in the bundle precisely because the archive is
+routinely absent in development and on a cold bucket, and `map-canvas.tsx` probes
+it once and builds the map either way. The composite action keeps a `basemap`
+input, off by default, so it can be switched back on if a future journey needs a
+real tile.
 
-### 4.1 What the gate needs, and why it is a composite action
+The job is two shards, not twelve. Twelve was sized for eighty-seven test
+instances a project; twenty declarations do not divide usefully past two. Each
+shard runs one Playwright worker (two starved the software-WebGL map tests into
+timeouts on 2 vCPU) in its own container with its own D1, started alongside
+`verify` rather than behind it, and an `e2e-report` job merges the blob reports
+into one HTML report. The seed is audited (`verify.mjs`) on shard 1 only.
 
-`.github/actions/e2e-env` prepares both the gate job in `ci.yml` and the baseline
-refresh, because two copies of this sequence would drift and the drift would
-present as screenshots that only fail in one of them. It writes a throwaway
-`.dev.vars`, migrates local D1, pulls the basemap out of R2 into the Miniflare
-bucket, starts `pnpm dev` and seeds the demo workspace - the seed endpoint lives
-inside the Worker, so there is no seeding a database without a server in front of
-it.
-
-The basemap is the interesting step. It is ~480 MB, and it is the reason the gate
-could not simply be switched on: local Miniflare has it because you put it there,
-and nothing else did. It is now pulled from production R2 under its dated,
-immutable key and cached on that key, so the download happens once per new
-basemap and every run after that is a cache hit. Both jobs skip themselves with a
-warning when `CLOUDFLARE_API_TOKEN` is absent, matching the gate already at the
-top of `deploy.yml`.
-
-The gate is twelve jobs, not one. The suite is ~1250 s of CPU-bound test
-execution on the standard 2-vCPU runner, and every job carries ~2.5 min of fixed
-cost (image pull, install, migrations, basemap, seed) that no worker count
-shortens - so one job could never answer inside five minutes, and neither could
-anything queued behind `verify`. `ci.yml` therefore runs `playwright test
---shard=k/12` in twelve containers started alongside `verify`, each with one
-worker (two starved the software-WebGL map tests into timeouts on 2 vCPU) and its
-own D1, and an `e2e-report` job merges the blob reports into the single HTML
-report the one job used to upload. Twelve because Playwright cuts shards as
-contiguous runs of the test list and the atlas interaction tests sit together in
-`visual.spec.ts`; six left two shards at 8.5 min. The seed is audited
-(`verify.mjs`) on shard 1 only, and the basemap cache entry is saved right after
-the download rather than in a post step, so a red shard still leaves the next run
-a hit.
+Because there is no R2 credential left to gate on, the job runs on every pull
+request - including one from a fork.
 
 ---
 

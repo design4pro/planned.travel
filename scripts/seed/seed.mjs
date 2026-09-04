@@ -56,8 +56,8 @@ const ENDPOINT = '/api/dev/seed'
  * The seeded rows must not depend on what day the Worker thinks it is: every date the fixture writes
  * is an offset from the anchor in `src/routes/api/dev/-seed/dataset/anchor.ts`, and nothing in the
  * seed path reads a clock. `--today` is how that claim is falsifiable rather than merely asserted —
- * seed under three widely separated days, run the visual gate against the same baselines after each,
- * and a fixture that had smuggled a clock in shows up as a red frame.
+ * seed under three widely separated days, run the end-to-end journeys after each, and a fixture
+ * that had smuggled a clock in shows up as a row count that moved.
  */
 const SERVER_TODAY_HEADER = 'x-pt-server-today'
 const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/
@@ -156,7 +156,7 @@ async function findOrigin(explicit) {
     `No dev server answered ${ENDPOINT} on ports ${DEFAULT_PORTS.join(', ')}.\n` +
       'Start one with `pnpm exec vite dev --port 3030 --strictPort`, or pass\n' +
       '--url http://localhost:<port>. Note that `pnpm dev` hardcodes --port 3000, which\n' +
-      'playwright.config.ts refuses to run the visual gate against.',
+      'playwright.config.ts refuses to run the journeys against.',
   )
 }
 
@@ -375,8 +375,8 @@ async function main() {
  * `e2e/.auth/demo.json`, and a run that inherits it does not skip - it renders a 500 on the first
  * authenticated route and reports it as a failing route.
  *
- * That cost a full round: two items were rejected on a visual gate that was measuring a stale
- * cookie rather than the code under test. Deleting the file here, rather than asking every caller
+ * That cost a full round: two items were rejected on a suite that was measuring a stale cookie
+ * rather than the code under test. Deleting the file here, rather than asking every caller
  * to remember, is the mechanical version of the instruction.
  *
  * It runs on **every** seed rather than only on `--force`, which it did not used to. The seed now

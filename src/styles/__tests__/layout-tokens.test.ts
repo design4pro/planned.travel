@@ -185,3 +185,71 @@ describe('the chrome offsets that read the bar', () => {
     )
   })
 })
+
+/**
+ * The two map tiers, and the header they must both stay under.
+ *
+ * This used to be asserted in the browser, by opening `/atlas`, pressing a
+ * country and reading `getComputedStyle().zIndex` off the rendered layers. The
+ * claim never needed a browser: it is an ordering between three declared
+ * numbers, and the only way it breaks is somebody editing one of them. Reading
+ * `tokens.css` off disk catches the same edit in milliseconds, and catches it on
+ * every route rather than only on the one the gate happened to photograph.
+ *
+ * What is deliberately *not* here is that the surfaces host actually claims the
+ * tier — that is a render fact, and it is asserted where the overlay renders.
+ */
+describe('the map surface tiers', () => {
+  it('puts the map chrome below the map surfaces, and both below the app header', () => {
+    // The reason the two tiers exist at all: a card summoned over the zoom
+    // cluster has to land beside it rather than slide under it, and neither
+    // tier may ever cover the app nav.
+    const { attribute } = contexts()
+    const overlay = declaredValue(attribute, '--z-map-overlay')
+    const surface = declaredValue(attribute, '--z-map-surface')
+    const nav = declaredValue(attribute, '--z-nav')
+    expect(overlay, '--z-map-overlay').toBeDefined()
+    expect(surface, '--z-map-surface').toBeDefined()
+    expect(nav, '--z-nav').toBeDefined()
+    expect(Number(overlay)).toBeLessThan(Number(surface))
+    expect(Number(surface)).toBeLessThan(Number(nav))
+  })
+
+  it('declares both tiers once, in the theme-independent block', () => {
+    const { light, media } = contexts()
+    for (const token of ['--z-map-overlay', '--z-map-surface'] as const) {
+      expect(declaredValue(light, token), `${token} in :root`).toBeUndefined()
+      expect(
+        declaredValue(media, token),
+        `${token} in the dark media block`,
+      ).toBeUndefined()
+    }
+  })
+
+  it('ships both as utilities, in the same form as every other z token', () => {
+    // A component writes `z-map-surface` exactly as it writes `z-nav`, and
+    // Tailwind emits nothing at all for a `@utility` that is not there.
+    const css = stylesheet()
+    expect(css).toContain(
+      '@utility z-map-overlay {\n  z-index: var(--z-map-overlay);\n}',
+    )
+    expect(css).toContain(
+      '@utility z-map-surface {\n  z-index: var(--z-map-surface);\n}',
+    )
+  })
+
+  it('has the atlas surface layer claim the surface tier by name', () => {
+    // The tier means nothing until something stands on it, and the thing that
+    // does is one class in one composed string. Radix's own popover layers
+    // default to `--z-dropdown`, which is *above* `--z-nav`, so a surface layer
+    // that lost this class would not fall to the back — it would float over the
+    // app header and, on a phone, over the tab bar.
+    const screen = readFileSync(
+      join(stylesDir(), '..', 'routes', '_app', '-ui', 'atlas-screen.tsx'),
+      'utf8',
+    )
+    const layer = /const SURFACE_LAYER = cn\(([\s\S]*?)\n\)/.exec(screen)
+    expect(layer, 'SURFACE_LAYER').not.toBeNull()
+    expect(layer?.[1]).toContain('z-map-surface')
+  })
+})

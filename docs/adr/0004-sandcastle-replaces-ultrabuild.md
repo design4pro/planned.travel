@@ -13,7 +13,7 @@ We adopt the Matt Pocock workflow end to end and retire ultrabuild:
 
 - **Backlog** moves to GitHub Issues: PRD = parent issue (`ready-for-agent`), tickets = vertical-slice sub-issues with native `blockedBy` dependencies; sub-issue order is execution order; issues are closed after merge (no doc rot). `docs/plans/` is migrated area by area through grilling → `/to-spec-project` → `/to-tickets-project`, and each migrated plan file is deleted.
 - **AFK implementation** runs on `@ai-hero/sandcastle` (`.sandcastle/`): planner → parallel Docker-sandboxed implementers → reviewer → merger, driven by open GitHub issues.
-- **The visual gate stays.** Playwright visual suites, the committed baselines and the CI `e2e` job are independent of ultrabuild and unchanged. The `pixel-critic` agent is kept and invoked during review of UI-touching changes. Retiring ultrabuild retires an orchestrator, not pixel checking.
+- **The visual gate stays.** Playwright visual suites, the committed baselines and the CI `e2e` job are independent of ultrabuild and unchanged. The `pixel-critic` agent is kept and invoked during review of UI-touching changes. Retiring ultrabuild retires an orchestrator, not pixel checking. _Superseded in part by ADR 0016: the baselines are gone and the blind A/B pair is the whole visual judgement._
 - Durable operational facts from ultrabuild's knowledge store are distilled into the `verifying-changes` skill before the directory is deleted.
 
 Considered and deferred: a GitHub Actions label state machine (`agent:queued` → `agent:implement` → draft PR) running sandcastle in CI, per mattpocock/course-video-manager. Revisit once the local loop has settled; requires an `AGENT_PAT`.

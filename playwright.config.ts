@@ -45,55 +45,52 @@ if (!isCI && process.env.PLAYWRIGHT_ALLOW_ANY_PORT !== '1') {
  *
  * The server picks *which rows* a screen shows by comparing a fixture date
  * against its own `new Date()` — the dashboard's reservation rail reads forward
- * from today, the journal splits its backlog on it — so a baseline recorded one
- * evening photographs a different set of rows the next morning. No mask absorbs
- * that: a row leaving a list moves everything below it.
+ * from today, the journal splits its backlog on it. Unpinned, the fixture drains:
+ * on the seeded workspace the rail is empty for good after 2026-10-12, and
+ * `trips-core.spec.ts` starts skipping because the trip it navigates is no
+ * longer in the list it navigates from. That is a suite going green by covering
+ * less, on a morning nobody touched it, which is exactly the silent loss ADR 0016
+ * says the thinner e2e layer must not buy.
  *
  * `serverToday()` in `src/server/clock.ts` therefore accepts this header on a
  * development request, and both browser projects send it on every request the
  * context makes, so the SSR document and the server-function RPCs that follow it
- * agree about the day. The value is the day the baselines in
- * `e2e/__screenshots__` were recorded, kept in step with `BASELINE_DAY` in
- * `e2e/helpers/shoot.ts`; it is deliberately *not* `FROZEN_NOW`, which pins the
- * clock inside the page and is a separate seam with its own reasons.
+ * agree about the day. It is deliberately *not* `FROZEN_NOW`, which pins the clock
+ * inside the page and is a separate seam with its own reasons.
  *
  * The header is inert against anything but a dev server: the guard around it is
  * `import.meta.env.DEV`, which the production build folds to `false` and drops.
  */
 const SERVER_TODAY_HEADER = 'x-pt-server-today'
-const BASELINE_DAY = '2026-08-20'
-const clockPin = { [SERVER_TODAY_HEADER]: BASELINE_DAY }
+const FIXTURE_DAY = '2026-08-20'
+const clockPin = { [SERVER_TODAY_HEADER]: FIXTURE_DAY }
 
 /**
- * End-to-end and visual-regression suite.
+ * The end-to-end journeys.
  *
  * Two projects, matching the two layouts the design system actually ships:
  * a desktop viewport wide enough for the three-column planner, and an iPhone
  * running WebKit — mobile Safari is where safe-area insets, `100dvh` and
  * momentum scrolling behave differently from everything else.
  *
- * Screenshot baselines are per project and per theme, and are compared with
- * animations disabled so a mid-transition frame can never fail a run.
+ * No screenshot is compared here any more (ADR 0016). What a run asserts is that
+ * every screen answers, renders its own content, hydrates, says nothing in the
+ * console, and lets a reader act on it.
  */
 export default defineConfig({
   testDir: './e2e',
-  snapshotDir: './e2e/__screenshots__',
   /**
-   * `{platform}` is in the path because font rasterisation is not portable.
+   * `.spec.ts` and nothing else, because `e2e/` is no longer only Playwright's.
    *
-   * The same correct page, rendered by the same browser build, antialiases text
-   * differently on macOS and on Linux. At the 0.2% tolerance below that is
-   * enough to fail nearly every frame carrying a paragraph — a difference in
-   * where the pixels came from, not in what the design says. Recording one set
-   * per platform is what lets the gate run both on a laptop and in CI without
-   * either one being a second-class approximation of the other.
-   *
-   * `-darwin` is recorded locally; `-linux` by the `Update e2e baselines`
-   * workflow, which runs in the same container image the gate does. A design
-   * change therefore needs both refreshed. See docs/CLOUD.md §4.
+   * The console policy is pure - it grades a string against a table and imports
+   * nothing - so it is tested by the `tooling` vitest project, from a file that
+   * lives beside the helper it covers. Playwright's default `testMatch` claims
+   * `*.test.ts` as well, so it collected that file, tried to run vitest's
+   * `describe` inside its own runner, and failed the whole suite before a single
+   * browser had started. The `setup` project carries its own `testMatch` for
+   * `auth.setup.ts` and is unaffected by this.
    */
-  snapshotPathTemplate:
-    '{snapshotDir}/{testFileName}/{arg}-{projectName}-{platform}{ext}',
+  testMatch: '**/*.spec.ts',
   outputDir: './test-results',
   fullyParallel: true,
   forbidOnly: isCI,
@@ -108,15 +105,31 @@ export default defineConfig({
   // One per CI shard, measured: two workers on the 2-vCPU runner starved the
   // atlas tests — MapLibre renders through software WebGL there, and with two
   // browsers plus Vite SSR competing, React hydration outran the 10 s action
-  // timeout on 17 tests and left 12 flaky, all timeouts, no pixel diffs
-  // (PR #84, run 33155138232). Parallelism in CI comes from the shards in
+  // timeout on 17 tests and left 12 flaky, all timeouts (PR #84, run
+  // 33155138232). That was measured over eighty-seven test instances a project
+  // and has not been re-measured over fourteen; the starvation was contention
+  // for one software renderer, which fewer tests do not relieve, so it stands
+  // until somebody times it. Parallelism in CI comes from the shards in
   // ci.yml; locally Playwright's default (half the cores) applies.
   workers: isCI ? 1 : undefined,
-  timeout: 30_000,
-  // Per CI shard (ci.yml splits the suite twelve ways): ~2.5 min of tests, sized
-  // generously so a retry-heavy shard still reports instead of being cut off —
-  // the report is what tells load from regression.
-  globalTimeout: isCI ? 10 * 60_000 : undefined,
+  // Doubled under CI, because the runner is about three times slower than the
+  // machine this number was chosen on and the budget was sized on the wrong one.
+  // Measured: `the click surface never takes the reader's input` is 10.7 s in
+  // chromium locally and blew the 30 s budget on all three attempts on the
+  // 2-vCPU runner (run 33804783700) — three identical failures is a budget, not
+  // a flake. The penalty is the same everywhere: the whole suite is 4.1 min
+  // locally at one worker and ~7-8 min a shard there, on software WebGL. Raised
+  // uniformly rather than per test, so the next atlas journey to sit near the
+  // edge does not have to discover this again; `globalTimeout` still bounds the
+  // shard, and a genuinely hung test still fails, one minute later.
+  timeout: isCI ? 60_000 : 30_000,
+  // Per CI shard (ci.yml splits the suite two ways). Measured on the 2-vCPU
+  // runner: 6m41s of journeys on shard 1 and over 8 min on shard 2, against the
+  // ~3 min a local run at two workers suggested. 15 min leaves a retry-heavy
+  // shard room to finish and report instead of being cut off — the report is
+  // what tells load from regression — and stays under ci.yml's own
+  // `timeout-minutes: 20`, which must never be the one that fires first.
+  globalTimeout: isCI ? 15 * 60_000 : undefined,
   reporter: isCI
     ? [
         ['github'],
@@ -127,15 +140,6 @@ export default defineConfig({
 
   expect: {
     timeout: 5_000,
-    toHaveScreenshot: {
-      // ~0.2% of a 1440x900 viewport: absorbs font antialiasing across
-      // platforms without hiding a shifted card or a wrong colour.
-      maxDiffPixelRatio: 0.002,
-      threshold: 0.2,
-      animations: 'disabled',
-      caret: 'hide',
-      scale: 'css',
-    },
   },
 
   use: {

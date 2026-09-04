@@ -54,7 +54,8 @@ your first turn.
    as questions the reporter can answer).
 
    The worktree is thrown away after the run: a temporary test you wrote is never committed and
-   never pushed. Never run `--update-snapshots`, never edit `e2e/__screenshots__`.
+   never pushed. A claim about how a screen looks is settled with `node scripts/visual/capture.mjs`
+   into the scratchpad, never with a frame committed to the repository.
 5. **Fix direction.** A brief commits to one direction. Choose only when SPEC, the ADRs and the
    code make the choice mechanical, and write down what settles it. When the body lists
    alternatives with different user-visible or contract consequences and nothing in the docs

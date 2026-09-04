@@ -18,10 +18,6 @@ case "$file_path" in
     echo "BLOCKED: drizzle/ migrations are generated. Run 'pnpm db:generate' after changing the schema instead of editing SQL by hand." >&2
     exit 2
     ;;
-  */e2e/__screenshots__/*)
-    echo "BLOCKED: Playwright baselines change only via 'pnpm e2e:update' (darwin) or the update-snapshots.yml workflow (linux), never by direct edits." >&2
-    exit 2
-    ;;
 esac
 
 [ -n "${CEZ_TASK_ID:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ] || exit 0

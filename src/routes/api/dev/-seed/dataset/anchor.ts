@@ -8,11 +8,10 @@
  * `endDate >= today`, `listUpcomingReservations` reads forward from `today`, the
  * journal splits its backlog on it. A fixture written in loose calendar literals
  * therefore has a shelf life: the trip that is "in progress" stops being in
- * progress, the reservation rail empties, and a screenshot recorded one week
- * photographs a different number of rows the next. A row entering or leaving a
- * list changes the *height* of the document, and `toHaveScreenshot` refuses two
- * images of different size before it consults a single pixel of tolerance — so
- * that rot is not something a wider threshold can absorb.
+ * progress, the reservation rail empties for good, and an end-to-end journey that
+ * navigates from a list to the trip in it starts skipping because the trip is no
+ * longer there. That is a suite going green by covering less, on a morning nobody
+ * touched it — the silent loss ADR 0016 says the thinner e2e layer must not buy.
  *
  * Every date this fixture writes is therefore an offset from one anchor, and the
  * anchor is a constant rather than a clock. Nothing under `-seed/` reads the wall
@@ -23,20 +22,17 @@
  *
  * ## Why the anchor is *this* day
  *
- * `SEED_ANCHOR_DAY` is the day the visual baselines in `e2e/__screenshots__` were
- * recorded, as the *server* saw it. The suite pins the Worker's clock to that day
- * — `serverToday()` in `src/server/clock.ts` accepts an `x-pt-server-today`
- * header on a development request, and `playwright.config.ts` sends
- * `BASELINE_DAY` on both browser projects — so the fixture and the reader of the
- * fixture agree about the day without either of them asking the machine. The two
- * constants are deliberately duplicated across the `src/` and `e2e/` boundary
- * (nothing in the Worker may import a test helper) and
- * `__tests__/anchor.test.ts` reads both files back off disk and fails if they
- * ever drift apart.
+ * `SEED_ANCHOR_DAY` is the day the end-to-end suite tells the Worker it is.
+ * `serverToday()` in `src/server/clock.ts` accepts an `x-pt-server-today` header
+ * on a development request, and `playwright.config.ts` sends `FIXTURE_DAY` on
+ * both browser projects — so the fixture and the reader of the fixture agree
+ * about the day without either of them asking the machine. The two constants are
+ * deliberately duplicated across the `src/` and `e2e/` boundary (nothing in the
+ * Worker may import a test helper) and `__tests__/fixture-calendar.test.ts` reads
+ * the config back off disk and fails if they ever drift apart.
  *
- * Moving the anchor translates the whole fixture calendar rigidly and re-records
- * every authenticated baseline. Do it in one commit, with `BASELINE_DAY` in both
- * `e2e/helpers/shoot.ts` and `playwright.config.ts` moved to match.
+ * Moving the anchor translates the whole fixture calendar rigidly. Do it in one
+ * commit, with `FIXTURE_DAY` in `playwright.config.ts` moved to match.
  *
  * ## The three helpers, and when each is right
  *
@@ -62,8 +58,8 @@ const MS_PER_DAY = 86_400_000
 /**
  * The fixture's today, as `YYYY-MM-DD`.
  *
- * Keep in step with `BASELINE_DAY` in `e2e/helpers/shoot.ts` and in
- * `playwright.config.ts`. `__tests__/anchor.test.ts` enforces it.
+ * Keep in step with `FIXTURE_DAY` in `playwright.config.ts`.
+ * `__tests__/fixture-calendar.test.ts` enforces it.
  */
 export const SEED_ANCHOR_DAY = '2026-08-20'
 

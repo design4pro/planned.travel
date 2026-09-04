@@ -263,9 +263,11 @@ Cztery rundy z rzędu puściły Playwrighta na porcie spoza zakresu: dwa razy 30
 odpowiadający 500 na wszystko, raz na 3002 należący do innego worktree - i ta ostatnia runda
 sfotografowała aplikację z cudzej gałęzi, po czym zaliczyła dziewięć porażek jako dowód. Od Fazy A
 `playwright.config.ts` **rzuca wyjątkiem**, jeśli port rozwiązany z `PLAYWRIGHT_BASE_URL` nie mieści
-się w 3010-3020; furtką jest `PLAYWRIGHT_ALLOW_ANY_PORT=1`, a `CI` jest zwolnione. Komunikat błędu
-podaje jedyne poprawne wywołanie ręczne: `pnpm exec vite dev --port 3010 --strictPort` - nigdy
-`pnpm dev`, który ma na sztywno `--port 3000`.
+się w zarezerwowanym zakresie; furtką jest `PLAYWRIGHT_ALLOW_ANY_PORT=1`, a `CI` jest zwolnione.
+Komunikat błędu podaje jedyne poprawne wywołanie ręczne: `pnpm exec vite dev --port <port>
+--strictPort` - nigdy `pnpm dev`, który ma na sztywno `--port 3000`. (Zakres z tej rundy, 3010-3020,
+przeniósł się później na **3030-3040**, bo money-tracker na tym samym hoście ma 3010 na sztywno
+i nie ma alokatora. Aktualny zakres jest zawsze w `playwright.config.ts`.)
 
 Dwie konsekwencje warte zapisania. Po pierwsze: `pnpm dev` zostaje z portem 3000, bo to port
 dewelopera, więc reguła o zakresie zarezerwowanym może żyć tylko w tym pliku konfiguracyjnym oraz
@@ -273,7 +275,7 @@ w dokumentach.
 Po drugie: `scripts/seed/seed.mjs` **nie może** mieć takiego strażnika - to klient HTTP, więc
 każdy origin odpowiadający na `/api/dev/seed` wygląda dla niego tak samo. Skrypt sonduje listę
 portów i bierze pierwszy, który odpowie, a zarezerwowany zakres jest współdzielony między
-worktree'ami; dlatego re-seed pod rundę wymaga `--url http://localhost:3010`, inaczej można po
+worktree'ami; dlatego re-seed pod rundę wymaga jawnego `--url http://localhost:<port>`, inaczej można po
 cichu przebudować cudzy workspace. Trzy rundy coraz bardziej stanowczej prozy nie zrobiły tego, co
 jedno mechaniczne ograniczenie zrobiło za pierwszym razem.
 
@@ -281,8 +283,8 @@ jedno mechaniczne ograniczenie zrobiło za pierwszym razem.
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test`,
 `pnpm generate-routes && git diff --exit-code -- src/routeTree.gen.ts`, `pnpm build`, oraz
-Playwright **wyłącznie** z jawnym `PLAYWRIGHT_BASE_URL` na porcie z przedziału 3010-3020, który
-runda sama zbindowała i ubija po sobie.
+Playwright **wyłącznie** z jawnym `PLAYWRIGHT_BASE_URL` na porcie z zarezerwowanego przedziału
+(dziś 3030-3040), który runda sama zbindowała i ubija po sobie.
 
 ### Akceptacja Fazy A - matryca w sandboxie Polara
 
@@ -398,6 +400,11 @@ i nie przeszła własnej poprzeczki. Poniżej rozdzielone jest to, co **zmierzon
   tablicą Zoda.
 
 ### Sześć czerwonych baseline'ów - dlaczego zostają czerwone
+
+> _Zapis historyczny. ADR 0016 zlikwidował baseline'y w całości: `e2e/__screenshots__/` już nie
+> istnieje, `--update-snapshots` nie ma czego zapisać, a oceną wizualną jest ślepa para
+> `scripts/visual/capture.mjs`. Sześć różnic opisanych niżej nigdy nie zostało wyjaśnionych co do
+> przyczyny i nie zostanie - nie ma już czym ich zmierzyć._
 
 `atlas dark`, `settings dark` i cztery migawki `console-user`. Te ostatnie zmieniły wymiary
 (1440×2204 → 1440×2078), bo ekran konta dostał trzy panele, których wymaga `docs/ACCESS.md`.

@@ -9,7 +9,7 @@ The project deploys two long-lived environments from one repository and needs ag
 
 ## Decision
 
-Feature branches (`feat/*`, `fix/*`, `claude/*`, `sandcastle/*`) target `develop` via PR. Merging `develop` auto-deploys staging. Promotion is a PR `develop` → `main`, which deploys production. CI runs the full gate (lint, typecheck, unit, build, visual e2e) on every PR; database migrations are additive so a running Worker survives the migrate-then-deploy window.
+Feature branches (`feat/*`, `fix/*`, `claude/*`, `sandcastle/*`) target `develop` via PR. Merging `develop` auto-deploys staging. Promotion is a PR `develop` → `main`, which deploys production. CI runs the full gate (lint, typecheck, unit, build, visual e2e) on every PR; _ADR 0016 replaced the visual e2e half with the critical journeys, which compare no pixels;_ database migrations are additive so a running Worker survives the migrate-then-deploy window.
 
 ## Consequences
 
