@@ -223,10 +223,15 @@ describe("the stay's reservation link", () => {
       const [migration] = carriers
       expect(migration.sql).not.toMatch(/__new_/)
       expect(migration.sql).not.toMatch(/\bDROP\b/i)
+      // Narrowed to the statements that name this table: one journal entry
+      // carries whatever else the same generation produced, and a `CREATE TABLE`
+      // for a table that did not exist is not a rebuild of this one.
       expect(
-        statementsOf(migration.sql).filter(
-          (statement) => !/^(ALTER TABLE|CREATE INDEX)/i.test(statement),
-        ),
+        statementsOf(migration.sql)
+          .filter((statement) => /day_accommodations/i.test(statement))
+          .filter(
+            (statement) => !/^(ALTER TABLE|CREATE INDEX)/i.test(statement),
+          ),
       ).toEqual([])
     })
   })

@@ -339,10 +339,13 @@ describe('the transport chain and airport catalogue schema', () => {
       expect(migration.sql).toMatch(/CREATE TABLE `?airports`?/i)
       expect(migration.sql).not.toMatch(/__new_/)
       expect(migration.sql).not.toMatch(/\bDROP\b/i)
+      // Narrowed to the two tables this stage creates: one journal entry carries
+      // whatever else the same generation produced, and an `ALTER TABLE` adding
+      // a column to some other table says nothing about these two.
       expect(
-        statementsOf(migration.sql).filter((statement) =>
-          /^ALTER TABLE/i.test(statement),
-        ),
+        statementsOf(migration.sql)
+          .filter((statement) => /transport_legs|airports/i.test(statement))
+          .filter((statement) => /^ALTER TABLE/i.test(statement)),
       ).toEqual([])
     })
   })

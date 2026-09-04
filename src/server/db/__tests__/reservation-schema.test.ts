@@ -247,10 +247,15 @@ describe('the reservation ledger link, import marker and masking switch', () => 
       expect(migration.sql).toMatch(/ADD `?mask_confirmation_codes`?/i)
       expect(migration.sql).not.toMatch(/__new_/)
       expect(migration.sql).not.toMatch(/\bDROP\b/i)
+      // Narrowed to the two tables this stage touches: one journal entry carries
+      // whatever else the same generation produced, and a `CREATE TABLE` for a
+      // table that did not exist is not a rebuild of either of these.
       expect(
-        statementsOf(migration.sql).filter(
-          (statement) => !/^(ALTER TABLE|CREATE INDEX)/i.test(statement),
-        ),
+        statementsOf(migration.sql)
+          .filter((statement) => /reservations|user_settings/i.test(statement))
+          .filter(
+            (statement) => !/^(ALTER TABLE|CREATE INDEX)/i.test(statement),
+          ),
       ).toEqual([])
     })
   })
