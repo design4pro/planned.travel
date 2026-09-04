@@ -30,7 +30,10 @@ A Claude Code session is an agent run when `CEZ_TASK_ID` (cezar) or `GITHUB_ACTI
 `.claude/hooks/` then tighten:
 
 - `git-guardrails.sh` also blocks `git add -A|.`, closing keywords (`Closes #n`), every `gh issue|pr`
-  mutation, non-GET `gh api`, `pnpm dlx|exec|run`, `npx`, `printenv` and `env` dumps.
+  mutation, non-GET `gh api`, `pnpm dlx|exec|run`, `npx`, `printenv` and `env` dumps. One exception:
+  `claude-code-review.yml` sets `CLAUDE_REVIEW_PR_COMMENT=1`, which opens `gh pr comment` for the job
+  whose purpose is to post a review, because that job runs with `--permission-mode bypassPermissions`
+  and this hook is its only gate.
 - `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree and denies `.dev.vars`, `.env*`,
   `.e2e-tiles/`, cezar run state and `.agent/handoff*`.
 - `guard-generated.sh` also refuses edits under `.github/`, `.claude/`, `.husky/`, `.ai/cezar/`,
@@ -53,7 +56,7 @@ variable list (`cez-lib.sh: clean_env`). Every string that reaches GitHub passes
 | `cez-reseed.sh`                                 | agent (allowlist)                   | `seed.mjs --force` + `verify.mjs` on the pinned port                                                                                                                                                                                                                                        |
 | `gh-ro.sh <path> [--paginate] [--jq]`           | agent (allowlist)                   | GET-only window onto `repos/design4pro/planned.travel/{issues,pulls,labels,commits,compare,contents,git/ref,search}`                                                                                                                                                                        |
 | `cez-claim.sh`                                  | workflow `implement-ticket` (claim) | per-issue lock, refresh onto `origin/develop`, one-call preflight (open, `run: implement`, `ready`/`needs-human`, leaf, no open blocker, no open agent PR); a refusal drops `run:` and comments `refused`; a claim swaps to `in-progress` and adopts a clean `claude/issue-<n>-*` branch    |
-| `cez-handback.sh [--blocked --reason]`          | agent (allowlist)                   | green: push `claude/issue-<n>-<run8>`, draft PR `agent-pr`, `status: review`, `CEZ:PR=<n>`; blocked: WIP pushed, digest, `status: needs-human`; protected paths or `package.json` scripts never push; frees the port                                                        |
+| `cez-handback.sh [--blocked --reason]`          | agent (allowlist)                   | green: push `claude/issue-<n>-<run8>`, draft PR `agent-pr`, `status: review`, `CEZ:PR=<n>`; blocked: WIP pushed, digest, `status: needs-human`; protected paths or `package.json` scripts never push; frees the port                                                                        |
 | `cez-automations.sh [--dry-run]`                | operator                            | registers `docs/agents/cezar-automations.json` with the running cezar over its API (create enabled or update in place)                                                                                                                                                                      |
 | `cez-triage-claim.sh`                           | workflow `triage` (claim)           | per-issue lock, refresh onto `origin/develop`, preflight (open, leaf, not held, not in review); without `run: triage` only `status: triage` without the `<!-- agent-triage -->` marker qualifies, and a stand-down writes nothing; with it a refusal drops the label and comments `refused` |
 | `triage-apply.sh [--check]`                     | agent (allowlist)                   | the only writer of a verdict: `.agent/triage.json` + `triage/notes.md` (+ `triage/brief.md`, a `ticket/v2` body, for `promoted`) → the `<!-- agent-triage -->` comment, the brief into the body, `status: ready \| needs-info \| backlog \| needs-human`; never closes                      |

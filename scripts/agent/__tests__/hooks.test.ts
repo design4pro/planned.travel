@@ -103,6 +103,29 @@ describe('git-guardrails.sh', () => {
   it('treats GITHUB_ACTIONS as agent mode too', () => {
     expect(bash('git add -A', { GITHUB_ACTIONS: 'true' }).status).toBe(2)
   })
+
+  // claude-code-review.yml runs with `--permission-mode bypassPermissions`, which leaves this hook
+  // as the only gate, and the review's one job is to post its summary on the pull request.
+  describe('the code review exception for gh pr comment', () => {
+    const REVIEW = { ...AGENT, CLAUDE_REVIEW_PR_COMMENT: '1' }
+
+    it('opens gh pr comment only when the review sets the variable', () => {
+      expect(bash('gh pr comment 12 -b hi', AGENT).status).toBe(2)
+      expect(bash('gh pr comment 12 -b hi', REVIEW).status).toBe(0)
+    })
+
+    it.each([
+      'gh issue comment 12 -b hi',
+      'gh pr create --draft',
+      'gh pr edit 12 --add-label x',
+      'gh pr merge 12',
+      'gh api --method POST repos/x/y/issues/1/comments',
+      'gh label delete x',
+      'git add -A',
+    ])('leaves %s blocked', (command) => {
+      expect(bash(command, REVIEW).status).toBe(2)
+    })
+  })
 })
 
 describe('guard-generated.sh', () => {
