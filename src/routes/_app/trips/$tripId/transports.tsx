@@ -7,8 +7,8 @@ import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
   ConnectionsBadge,
-  LegsTimeline,
-  NewLegAction,
+  TransportsTimeline,
+  NewTransportAction,
   analyseConnections,
   summariseConnections,
 } from '#/components/modules/transports'
@@ -40,17 +40,19 @@ function TransportsPage() {
   const locale = useLocale()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
-  const [newLegOpen, setNewLegOpen] = useState(false)
+  const [newTransportOpen, setNewTransportOpen] = useState(false)
 
   const busiest = [...data.byMode]
-    .sort((left, right) => right.legs - left.legs)
+    .sort((left, right) => right.count - left.count)
     .at(0)
-  const priced = data.legs.filter((leg) => leg.priceMinor !== null)
+  const priced = data.transports.filter(
+    (transport) => transport.priceMinor !== null,
+  )
   const totalPriced = priced.reduce(
-    (sum, leg) => sum + (leg.priceMinor ?? 0),
+    (sum, transport) => sum + (transport.priceMinor ?? 0),
     0,
   )
-  const summary = summariseConnections(analyseConnections(data.legs))
+  const summary = summariseConnections(analyseConnections(data.transports))
 
   return (
     <AppFrame>
@@ -58,11 +60,13 @@ function TransportsPage() {
         <TripModuleHeader
           title="Transports"
           description={
-            data.legs.length === 0
-              ? 'No legs recorded yet'
-              : `${pluralise(data.legs.length, 'leg')} · ${formatDistance(data.totalDistanceMetres, data.distanceUnit)}`
+            data.transports.length === 0
+              ? 'No transports recorded yet'
+              : `${pluralise(data.transports.length, 'transport')} · ${formatDistance(data.totalDistanceMetres, data.distanceUnit)}`
           }
-          actions={<NewLegAction onClick={() => setNewLegOpen(true)} />}
+          actions={
+            <NewTransportAction onClick={() => setNewTransportOpen(true)} />
+          }
         >
           {summary.checked === 0 ? null : (
             <ConnectionsBadge
@@ -72,7 +76,7 @@ function TransportsPage() {
           )}
         </TripModuleHeader>
 
-        {data.legs.length === 0 ? null : (
+        {data.transports.length === 0 ? null : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               tone="inverse"
@@ -86,8 +90,8 @@ function TransportsPage() {
               caption={`≈ ${(data.totalDistanceMetres / 40_075_000).toFixed(2)}× around the equator`}
             />
             <StatCard
-              label="Legs"
-              value={data.legs.length}
+              label="Transports"
+              value={data.transports.length}
               caption={
                 busiest === undefined
                   ? 'Nothing grouped yet'
@@ -97,9 +101,11 @@ function TransportsPage() {
             <StatCard
               label="Confirmed"
               value={
-                data.legs.filter((leg) => leg.status === 'confirmed').length
+                data.transports.filter(
+                  (transport) => transport.status === 'confirmed',
+                ).length
               }
-              caption={`${formatNumber(data.legs.filter((leg) => leg.status === 'pending').length, locale)} still pending`}
+              caption={`${formatNumber(data.transports.filter((transport) => transport.status === 'pending').length, locale)} still pending`}
             />
             <StatCard
               label="Spent on travel"
@@ -107,18 +113,18 @@ function TransportsPage() {
               caption={
                 priced.length === 0
                   ? 'No prices recorded'
-                  : `across ${pluralise(priced.length, 'priced leg')}`
+                  : `across ${pluralise(priced.length, 'priced transport')}`
               }
             />
           </div>
         )}
 
-        <LegsTimeline
+        <TransportsTimeline
           tripId={tripId}
-          legs={data.legs}
+          transports={data.transports}
           currency={data.currency}
-          newLegOpen={newLegOpen}
-          onNewLegOpenChange={setNewLegOpen}
+          newTransportOpen={newTransportOpen}
+          onNewTransportOpenChange={setNewTransportOpen}
         />
       </AppSections>
     </AppFrame>

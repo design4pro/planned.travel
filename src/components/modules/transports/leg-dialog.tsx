@@ -1,10 +1,10 @@
 /**
- * Add or edit one travel leg.
+ * Add or edit one travel transport.
  *
  * The mode picker at the top decides what the rest of the form asks for: a flight
  * wants airports and a service number, a taxi wants neither. The two endpoints are
  * laid out as they read on a ticket — from on the left, to on the right — and the
- * timing rule is checked live, so a leg that arrives before it departs is caught
+ * timing rule is checked live, so a transport that arrives before it departs is caught
  * while it is being typed rather than after a round trip.
  */
 import { useEffect, useId, useMemo, useState } from 'react'
@@ -27,80 +27,85 @@ import {
   Textarea,
 } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
-import { createLegFn, updateLegFn } from '#/server/fns/transports'
+import { createTransportFn, updateTransportFn } from '#/server/fns/transports'
 import { useAction } from '../shared'
-import { formatGap, legTimingError } from './connections'
+import { formatGap, transportTimingError } from './connections'
 import {
   STATUS_LABELS,
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
-  emptyLegDraft,
+  emptyTransportDraft,
   endpointLabels,
-  hasLegErrors,
+  hasTransportErrors,
   isTransportMode,
   isTransportStatus,
   kilometresToMetres,
   metresToKilometres,
   modeLabel,
-  suggestLegTitle,
+  suggestTransportTitle,
   usesCodes,
   usesSeat,
   usesService,
-  validateLegDraft,
+  validateTransportDraft,
 } from './leg-form'
 import { MODE_ICON } from './mode-icon'
-import { legDurationMinutes } from './leg-timing'
+import { transportDurationMinutes } from './leg-timing'
 
-import type { LegDraft } from './leg-form'
-import type { LegData } from './types'
+import type { TransportDraft } from './leg-form'
+import type { TransportData } from './types'
 
-function draftFrom(leg: LegData, fallbackCurrency: string): LegDraft {
-  const currency = leg.currency ?? fallbackCurrency
+function draftFrom(
+  transport: TransportData,
+  fallbackCurrency: string,
+): TransportDraft {
+  const currency = transport.currency ?? fallbackCurrency
   return {
-    mode: isTransportMode(leg.mode) ? leg.mode : 'other',
-    status: isTransportStatus(leg.status) ? leg.status : 'pending',
-    title: leg.title,
-    carrier: leg.carrier ?? '',
-    serviceNumber: leg.serviceNumber ?? '',
-    bookingCode: leg.bookingCode ?? '',
-    seat: leg.seat ?? '',
-    departureName: leg.departureName ?? '',
-    departureCode: leg.departureCode ?? '',
-    departureDate: leg.departureDate ?? '',
-    departureTime: leg.departureTime ?? '',
-    arrivalName: leg.arrivalName ?? '',
-    arrivalCode: leg.arrivalCode ?? '',
-    arrivalDate: leg.arrivalDate ?? '',
-    arrivalTime: leg.arrivalTime ?? '',
-    distanceKm: metresToKilometres(leg.distanceMetres),
+    mode: isTransportMode(transport.mode) ? transport.mode : 'other',
+    status: isTransportStatus(transport.status) ? transport.status : 'pending',
+    title: transport.title,
+    carrier: transport.carrier ?? '',
+    serviceNumber: transport.serviceNumber ?? '',
+    bookingCode: transport.bookingCode ?? '',
+    seat: transport.seat ?? '',
+    departureName: transport.departureName ?? '',
+    departureCode: transport.departureCode ?? '',
+    departureDate: transport.departureDate ?? '',
+    departureTime: transport.departureTime ?? '',
+    arrivalName: transport.arrivalName ?? '',
+    arrivalCode: transport.arrivalCode ?? '',
+    arrivalDate: transport.arrivalDate ?? '',
+    arrivalTime: transport.arrivalTime ?? '',
+    distanceKm: metresToKilometres(transport.distanceMetres),
     price:
-      leg.priceMinor === null || leg.priceMinor === 0
+      transport.priceMinor === null || transport.priceMinor === 0
         ? ''
-        : String(leg.priceMinor / 100),
+        : String(transport.priceMinor / 100),
     currency,
-    notes: leg.notes ?? '',
+    notes: transport.notes ?? '',
   }
 }
 
-export function LegDialog({
+export function TransportDialog({
   tripId,
-  leg,
+  transport,
   currency,
   open,
   onOpenChange,
 }: {
   tripId: string
-  /** Absent for a new leg. */
-  leg?: LegData
+  /** Absent for a new transport. */
+  transport?: TransportData
   currency: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
   const t = useTranslate()
-  const editing = leg !== undefined
+  const editing = transport !== undefined
   const formId = useId()
 
-  const [draft, setDraft] = useState<LegDraft>(() => emptyLegDraft(currency))
+  const [draft, setDraft] = useState<TransportDraft>(() =>
+    emptyTransportDraft(currency),
+  )
   const [touched, setTouched] = useState(false)
 
   useEffect(() => {
@@ -108,26 +113,28 @@ export function LegDialog({
       return
     }
     setDraft(
-      leg === undefined ? emptyLegDraft(currency) : draftFrom(leg, currency),
+      transport === undefined
+        ? emptyTransportDraft(currency)
+        : draftFrom(transport, currency),
     )
     setTouched(false)
-  }, [open, leg, currency])
+  }, [open, transport, currency])
 
-  const create = useAction(createLegFn, {
+  const create = useAction(createTransportFn, {
     success: t('modules.transports.toast.added'),
     description: t('modules.transports.toast.addedBody'),
     failure: t('modules.transports.toast.addFailed'),
   })
-  const update = useAction(updateLegFn, {
+  const update = useAction(updateTransportFn, {
     success: t('modules.transports.toast.updated'),
     failure: t('modules.transports.toast.updateFailed'),
   })
   const action = editing ? update : create
 
-  const errors = useMemo(() => validateLegDraft(draft), [draft])
-  const invalid = hasLegErrors(errors)
+  const errors = useMemo(() => validateTransportDraft(draft), [draft])
+  const invalid = hasTransportErrors(errors)
   const labels = endpointLabels(draft.mode)
-  const proposal = suggestLegTitle(draft)
+  const proposal = suggestTransportTitle(draft)
   const suggestion =
     proposal === null
       ? ''
@@ -138,23 +145,23 @@ export function LegDialog({
             : { operator: t(proposal.operatorKey) }),
         })
 
-  /** Live, not on submit: the one rule that makes a leg impossible. */
-  const timing = legTimingError({
+  /** Live, not on submit: the one rule that makes a transport impossible. */
+  const timing = transportTimingError({
     departureDate: draft.departureDate,
     departureTime: draft.departureTime,
     arrivalDate: draft.arrivalDate,
     arrivalTime: draft.arrivalTime,
   })
-  const duration = legDurationMinutes(draft)
+  const duration = transportDurationMinutes(draft)
 
-  function set<TKey extends keyof LegDraft>(
+  function set<TKey extends keyof TransportDraft>(
     key: TKey,
-    value: LegDraft[TKey],
+    value: TransportDraft[TKey],
   ): void {
     setDraft((current) => ({ ...current, [key]: value }))
   }
 
-  function errorFor(key: keyof LegDraft): string | undefined {
+  function errorFor(key: keyof TransportDraft): string | undefined {
     return touched ? errors[key] : undefined
   }
 
@@ -191,7 +198,7 @@ export function LegDialog({
       notes: draft.notes,
     }
     const result = editing
-      ? await update.run({ data: { ...payload, transportId: leg.id } })
+      ? await update.run({ data: { ...payload, transportId: transport.id } })
       : await create.run({ data: payload })
     if (result !== null) {
       onOpenChange(false)
@@ -590,7 +597,7 @@ export function LegDialog({
  * emphasis was never the problem: this is the thing to do on the screen, and it
  * is drawn as such.
  */
-export function NewLegAction({ onClick }: { onClick: () => void }) {
+export function NewTransportAction({ onClick }: { onClick: () => void }) {
   const t = useTranslate()
 
   return (

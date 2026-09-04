@@ -30,40 +30,40 @@ const messages = {
     'Live-updates staan uit. Er wordt nog gewoon opgeslagen; herlaad of probeer opnieuw om bij te komen.',
   'presence.reconnect': 'Opnieuw verbinden',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Alle etappes',
-  'transports.empty.title': 'Nog geen etappes',
+  'transports.filter.all': 'Alle verplaatsingen',
+  'transports.empty.title': 'Nog geen verplaatsingen',
   'transports.empty.body':
     'Vluchten, treinen, veerboten en de rit van het vliegveld wonen hier, met hun boekingscodes en stoelnummers bij de hand op de dag zelf — en elke overstap gecheckt tegen de vorige.',
-  'transports.empty.action': 'Voeg de eerste etappe toe',
-  'transports.filtered.title': 'Geen etappes van dat soort',
+  'transports.empty.action': 'Voeg de eerste verplaatsing toe',
+  'transports.filtered.title': 'Geen verplaatsingen van dat soort',
   'transports.filtered.body':
-    'Elke etappe van deze reis gaat anders. Ga terug naar „{label}” om ze allemaal te zien.',
-  'transports.filtered.action': 'Toon alle etappes',
+    'Elke verplaatsing van deze reis gaat anders. Ga terug naar „{label}” om ze allemaal te zien.',
+  'transports.filtered.action': 'Toon alle verplaatsingen',
   'transports.alert.impossible.title': {
     one: 'Eén overstap kan niet',
-    other: '{legs} overstappen kunnen niet',
+    other: '{value} overstappen kunnen niet',
   },
   'transports.alert.impossible.body':
-    'Een etappe vertrekt voordat de vorige aankomt. De knooppunten hieronder zeggen welke, en met hoeveel.',
+    'Een verplaatsing vertrekt voordat de vorige aankomt. De knooppunten hieronder zeggen welke, en met hoeveel.',
   'transports.alert.tight.title': {
     one: 'Eén overstap is krap',
-    other: '{legs} overstappen zijn krap',
+    other: '{value} overstappen zijn krap',
   },
   'transports.alert.tight.body':
     'Er is tijd, maar niet veel voor het vervoermiddel dat je haalt. De knooppunten hieronder tonen hoeveel elk je laat.',
   'transports.badge.impossible': {
-    one: '{legs} gebroken overstap',
-    other: '{legs} gebroken overstappen',
+    one: '{value} gebroken overstap',
+    other: '{value} gebroken overstappen',
   },
   'transports.badge.tight': {
-    one: '{legs} krappe overstap',
-    other: '{legs} krappe overstappen',
+    one: '{value} krappe overstap',
+    other: '{value} krappe overstappen',
   },
   'transports.badge.ok': 'Elke overstap klopt',
   'transports.remove.body':
-    'De etappe gaat definitief van deze reis af, samen met het boekingsnummer en de stoel. Is hij alleen geannuleerd, zet zijn status dan op Geannuleerd.',
-  'transports.remove.confirm': 'Etappe verwijderen',
-  'transports.menu.edit': 'Etappe bewerken…',
+    'De verplaatsing gaat definitief van deze reis af, samen met het boekingsnummer en de stoel. Is de verplaatsing alleen geannuleerd, zet de status dan op Geannuleerd.',
+  'transports.remove.confirm': 'Verplaatsing verwijderen',
+  'transports.menu.edit': 'Verplaatsing bewerken…',
   'transports.field.service': 'Verbinding',
   'transports.field.bookingRef': 'Boekingsnummer',
   'transports.field.seat': 'Stoel',
@@ -71,13 +71,13 @@ const messages = {
   'transports.noTime': 'Nog geen tijd',
   'transports.toast.statusFailed.title': 'De status is niet gewijzigd',
   'transports.toast.statusFailed.body':
-    'De etappe staat nog op de vorige stand.',
-  'transports.toast.removed': 'Etappe verwijderd',
-  'transports.toast.removeFailed': 'De etappe is niet verwijderd',
+    'De verplaatsing staat nog op de vorige stand.',
+  'transports.toast.removed': 'Verplaatsing verwijderd',
+  'transports.toast.removeFailed': 'De verplaatsing is niet verwijderd',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Etappe toevoegen',
-  'transports.dialog.editTitle': 'Deze etappe bewerken',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Verplaatsing toevoegen',
+  'transports.dialog.editTitle': 'Deze verplaatsing bewerken',
   'transports.dialog.description':
     'Vluchten, treinen, veerboten en de rit van het vliegveld. De tijden zijn de lokale die op het ticket staan.',
   'transports.form.modeLegend': 'Waarmee reis je',
@@ -93,14 +93,14 @@ const messages = {
   'transports.field.bookingRefHint': 'De code die je aan de balie voorleest.',
   'transports.field.notesPlaceholder':
     'Stoel aan het gangpad gevraagd. Bagage doorgecheckt naar Kioto.',
-  'transports.action.add': 'Etappe toevoegen',
-  'transports.action.save': 'Etappe opslaan',
-  'transports.action.saving': 'Etappe wordt opgeslagen',
-  'transports.toast.added': 'Etappe toegevoegd',
+  'transports.action.add': 'Verplaatsing toevoegen',
+  'transports.action.save': 'Verplaatsing opslaan',
+  'transports.action.saving': 'Verplaatsing wordt opgeslagen',
+  'transports.toast.added': 'Verplaatsing toegevoegd',
   'transports.toast.addedBody': 'Hij staat nu in de reisvolgorde.',
-  'transports.toast.addFailed': 'De etappe is niet toegevoegd',
-  'transports.toast.updated': 'Etappe bijgewerkt',
-  'transports.toast.updateFailed': 'De etappe is niet bijgewerkt',
+  'transports.toast.addFailed': 'De verplaatsing is niet toegevoegd',
+  'transports.toast.updated': 'Verplaatsing bijgewerkt',
+  'transports.toast.updateFailed': 'De verplaatsing is niet bijgewerkt',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Naam',
@@ -214,7 +214,7 @@ const messages = {
   'book.hint.ticket':
     'Een tijdslot, een museumpas, een wedstrijd. Houd de code bij de hand.',
   'book.hint.transport':
-    'Een geboekte stoel. Volledige trajecten met codes horen bij {module}.',
+    'Een geboekte stoel. Volledige verplaatsingen met codes horen bij {module}.',
   'book.hint.other': 'Alles wat op jouw naam staat en nergens anders past.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -432,7 +432,7 @@ const messages = {
   'transports.mode.bike': 'Fiets',
   'transports.mode.walk': 'Te voet',
   'transports.mode.other': 'Overig',
-  'transports.mode.fallback': 'Etappe',
+  'transports.mode.fallback': 'Verplaatsing',
   'transports.status.idea': 'Idee',
   'transports.status.pending': 'In afwachting',
   'transports.status.confirmed': 'Bevestigd',
@@ -447,7 +447,7 @@ const messages = {
   'transports.end.from': 'Vanaf',
   'transports.end.to': 'Naar',
   'transports.error.titleEmpty':
-    'Geef deze etappe een naam die je in een lijst terugkent.',
+    'Geef deze verplaatsing een naam die je in een lijst terugkent.',
   'transports.error.date': 'Een datum schrijf je JJJJ-MM-DD.',
   'transports.error.time': 'Een tijd schrijf je UU:MM op een 24-uursklok.',
   'transports.error.departureNeedsDate':
@@ -458,9 +458,9 @@ const messages = {
   'transports.error.distance':
     'Een afstand is een aantal kilometers, tot 100.000.',
   'transports.error.arrivesBeforeDeparts':
-    'Deze etappe komt aan voordat hij vertrekt.',
+    'Deze verplaatsing komt aan voordat ze vertrekt.',
   'transports.error.timingHint':
-    'Verschuif er een, zodat de etappe echt te halen is.',
+    'Verschuif er een, zodat de verplaatsing echt te halen is.',
   'transports.bookingRefFor': 'het boekingsnummer van {title}',
   'transports.doorToDoor': 'Dat is {gap} van deur tot deur.',
   'transports.title.fromTo': '{operator} van {from} naar {to}',
@@ -470,9 +470,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Geen tijden om te vergelijken',
   'transports.junction.unknown.detail':
-    'Zet datum en tijd bij beide etappes, dan wordt deze overstap voor je nagekeken.',
+    'Zet datum en tijd bij beide verplaatsingen, dan wordt deze overstap voor je nagekeken.',
   'transports.junction.impossible.headline':
-    'Vertrekt {gap} voordat de vorige etappe aankomt',
+    'Vertrekt {gap} voordat de vorige verplaatsing aankomt',
   'transports.junction.impossible.detail':
     '„{to}” vertrekt voordat „{from}” aankomt, dus beide zijn niet te halen. Verschuif er een.',
   'transports.junction.tight.headline': '{gap} om over te stappen',
@@ -482,7 +482,7 @@ const messages = {
     'Voor {mode} heb je in {place} meestal ongeveer {required} nodig. Dit is krap.',
   'transports.junction.ok.headline': '{gap} ertussen',
   'transports.junction.ok.detail':
-    'Aankomst op {landing} maar de volgende etappe vertrekt van {boarding} — je moet er nog naartoe.',
+    'Aankomst op {landing} maar de volgende verplaatsing vertrekt van {boarding} — je moet er nog naartoe.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Notitie gedeeld',

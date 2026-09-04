@@ -29,49 +29,49 @@ const messages = {
     'ライブ更新は止まっています。保存は続きます。再読み込みか再試行で追いつけます。',
   'presence.reconnect': '再接続',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'すべての区間',
-  'transports.empty.title': 'まだ移動区間がありません',
+  'transports.filter.all': 'すべての移動',
+  'transports.empty.title': 'まだ移動がありません',
   'transports.empty.body':
     '飛行機、列車、フェリー、空港からの移動はすべてここに。予約番号と座席番号を当日すぐ出せる形で持ち、乗り継ぎは一つ前と照らし合わせて確認します。',
-  'transports.empty.action': '最初の区間を追加',
-  'transports.filtered.title': 'その種類の区間はありません',
+  'transports.empty.action': '最初の移動を追加',
+  'transports.filtered.title': 'その種類の移動はありません',
   'transports.filtered.body':
-    'この旅行の区間はそれぞれ移動手段が違います。「{label}」に戻すとすべて表示されます。',
-  'transports.filtered.action': 'すべての区間を表示',
+    'この旅行の移動はそれぞれ手段が違います。「{label}」に戻すとすべて表示されます。',
+  'transports.filtered.action': 'すべての移動を表示',
   'transports.alert.impossible.title': {
-    other: '乗り継ぎ{legs}件が成立しません',
+    other: '乗り継ぎ{value}件が成立しません',
   },
   'transports.alert.impossible.body':
-    'ある区間が、その前の区間の到着より先に出発します。下の接続点がどれをどれだけ超えているかを示します。',
+    'ある移動が、その前の移動の到着より先に出発します。下の接続点がどれをどれだけ超えているかを示します。',
   'transports.alert.tight.title': {
-    other: '乗り継ぎ{legs}件が余裕不足です',
+    other: '乗り継ぎ{value}件が余裕不足です',
   },
   'transports.alert.tight.body':
     '時間はありますが、乗る手段には余裕が足りません。下の接続点が、それぞれどれだけ残すかを示します。',
   'transports.badge.impossible': {
-    other: '成立しない乗り継ぎ{legs}件',
+    other: '成立しない乗り継ぎ{value}件',
   },
   'transports.badge.tight': {
-    other: '余裕のない乗り継ぎ{legs}件',
+    other: '余裕のない乗り継ぎ{value}件',
   },
   'transports.badge.ok': 'すべての乗り継ぎが成立',
   'transports.remove.body':
-    'この区間は予約番号と座席ごと、この旅行から完全に外れます。欠航・運休だけなら、状態を「キャンセル」にしてください。',
-  'transports.remove.confirm': '区間を削除',
-  'transports.menu.edit': '区間を編集…',
+    'この移動は予約番号と座席ごと、この旅行から完全に外れます。欠航・運休だけなら、状態を「キャンセル」にしてください。',
+  'transports.remove.confirm': '移動を削除',
+  'transports.menu.edit': '移動を編集…',
   'transports.field.service': '便名',
   'transports.field.bookingRef': '予約番号',
   'transports.field.seat': '座席',
   'transports.field.distance': '距離',
   'transports.noTime': '時刻は未設定',
   'transports.toast.statusFailed.title': '状態を変更できませんでした',
-  'transports.toast.statusFailed.body': '区間は元の状態のままです。',
-  'transports.toast.removed': '区間を削除しました',
-  'transports.toast.removeFailed': '区間を削除できませんでした',
+  'transports.toast.statusFailed.body': '移動は元の状態のままです。',
+  'transports.toast.removed': '移動を削除しました',
+  'transports.toast.removeFailed': '移動を削除できませんでした',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': '区間を追加',
-  'transports.dialog.editTitle': 'この区間を編集',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': '移動を追加',
+  'transports.dialog.editTitle': 'この移動を編集',
   'transports.dialog.description':
     '飛行機、列車、フェリー、空港からの移動。時刻は切符に印字された現地時間です。',
   'transports.form.modeLegend': '移動手段',
@@ -87,14 +87,14 @@ const messages = {
   'transports.field.bookingRefHint': 'カウンターで読み上げる番号です。',
   'transports.field.notesPlaceholder':
     '通路側を希望。荷物は京都まで通しで預託。',
-  'transports.action.add': '区間を追加',
-  'transports.action.save': '区間を保存',
-  'transports.action.saving': '区間を保存中',
-  'transports.toast.added': '区間を追加しました',
+  'transports.action.add': '移動を追加',
+  'transports.action.save': '移動を保存',
+  'transports.action.saving': '移動を保存中',
+  'transports.toast.added': '移動を追加しました',
   'transports.toast.addedBody': '移動の順番に入りました。',
-  'transports.toast.addFailed': '区間を追加できませんでした',
-  'transports.toast.updated': '区間を更新しました',
-  'transports.toast.updateFailed': '区間を更新できませんでした',
+  'transports.toast.addFailed': '移動を追加できませんでした',
+  'transports.toast.updated': '移動を更新しました',
+  'transports.toast.updateFailed': '移動を更新できませんでした',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': '名称',
@@ -204,7 +204,7 @@ const messages = {
   'book.hint.activity': '教室、銭湯、予約した体験。',
   'book.hint.tour': '場所と時間、そして待っているガイド。',
   'book.hint.ticket': '時間指定の入場、美術館パス、試合。番号は手元に。',
-  'book.hint.transport': '予約した座席。区間まるごと・番号付きは{module}へ。',
+  'book.hint.transport': '予約した座席。移動まるごと・番号付きは{module}へ。',
   'book.hint.other': 'あなたの名前で押さえてあって、他に当てはまらないもの。',
 
   /* -------------------------------------- lists: the dialogs */
@@ -409,7 +409,7 @@ const messages = {
   'transports.mode.bike': '自転車',
   'transports.mode.walk': '徒歩',
   'transports.mode.other': 'その他',
-  'transports.mode.fallback': '区間',
+  'transports.mode.fallback': '移動',
   'transports.status.idea': '検討中',
   'transports.status.pending': '確認待ち',
   'transports.status.confirmed': '確定',
@@ -424,7 +424,7 @@ const messages = {
   'transports.end.from': '出発',
   'transports.end.to': '到着',
   'transports.error.titleEmpty':
-    'この区間に、一覧で見て分かる名前を付けてください。',
+    'この移動に、一覧で見て分かる名前を付けてください。',
   'transports.error.date': '日付は YYYY-MM-DD の形で書きます。',
   'transports.error.time': '時刻は 24 時間制の HH:MM で書きます。',
   'transports.error.departureNeedsDate': '出発時刻には、その日付が必要です。',
@@ -432,9 +432,9 @@ const messages = {
   'transports.error.code': 'コードは 2〜8 文字の英数字です。',
   'transports.error.distance': '距離はキロメートル単位の数値で、100,000 まで。',
   'transports.error.arrivesBeforeDeparts':
-    'この区間は出発より前に到着しています。',
+    'この移動は出発より前に到着しています。',
   'transports.error.timingHint':
-    'どちらかをずらして、この区間に実際に間に合うようにしてください。',
+    'どちらかをずらして、この移動に実際に間に合うようにしてください。',
   'transports.bookingRefFor': '{title} の予約番号',
   'transports.doorToDoor': 'ドアツードアで {gap} です。',
   'transports.title.fromTo': '{operator} {from}発 {to}行き',
@@ -444,9 +444,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': '比べる時刻がありません',
   'transports.junction.unknown.detail':
-    '両方の区間に日付と時刻を入れると、この乗り換えを確認します。',
+    '両方の移動に日付と時刻を入れると、この乗り換えを確認します。',
   'transports.junction.impossible.headline':
-    '前の区間の到着より {gap} 早く出発します',
+    '前の移動の到着より {gap} 早く出発します',
   'transports.junction.impossible.detail':
     '「{to}」が「{from}」の到着より先に出発するため、両方には乗れません。どちらかをずらしてください。',
   'transports.junction.tight.headline': '乗り換え {gap}',
@@ -456,7 +456,7 @@ const messages = {
     '{place} での {mode} はふつう {required} ほど必要です。これはぎりぎりです。',
   'transports.junction.ok.headline': '{gap} の間隔',
   'transports.junction.ok.detail':
-    '{landing} に到着しますが、次の区間は {boarding} 発です — 移動が必要です。',
+    '{landing} に到着しますが、次の移動は {boarding} 発です — そこまで行く必要があります。',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'メモを共有しました',

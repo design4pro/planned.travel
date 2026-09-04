@@ -316,7 +316,7 @@ export const loadTripPlan = createServerFn({ method: 'GET' })
 
 /* -------------------------------------------------------------- transports */
 
-export interface TransportLeg {
+export interface TransportRow {
   readonly id: string
   readonly mode: string
   readonly status: string
@@ -340,10 +340,10 @@ export interface TransportLeg {
 }
 
 export interface TransportsPayload {
-  readonly legs: ReadonlyArray<TransportLeg>
+  readonly transports: ReadonlyArray<TransportRow>
   readonly byMode: ReadonlyArray<{
     readonly mode: string
-    readonly legs: number
+    readonly count: number
     readonly distanceMetres: number
   }>
   readonly totalDistanceMetres: number
@@ -357,7 +357,7 @@ export const loadTripTransports = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
 
-    const [legs, byMode, totalDistanceMetres] = await Promise.all([
+    const [transports, byMode, totalDistanceMetres] = await Promise.all([
       listTripTransports(scope, trip.id),
       summariseTripTransports(scope, trip.id),
       totalTripDistanceMetres(scope, trip.id),
@@ -368,7 +368,7 @@ export const loadTripTransports = createServerFn({ method: 'GET' })
       totalDistanceMetres,
       distanceUnit: 'metric',
       currency: trip.currency,
-      legs: legs.map((row) => ({
+      transports: transports.map((row) => ({
         id: row.id,
         mode: row.mode,
         status: row.status,

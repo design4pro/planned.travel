@@ -42,27 +42,27 @@ const messages = {
   'transports.filtered.action': 'Afficher tous les trajets',
   'transports.alert.impossible.title': {
     one: 'Un enchaînement est impossible',
-    many: '{legs} enchaînements sont impossibles',
-    other: '{legs} enchaînements sont impossibles',
+    many: '{value} enchaînements sont impossibles',
+    other: '{value} enchaînements sont impossibles',
   },
   'transports.alert.impossible.body':
     'Un trajet part avant l’arrivée du précédent. Les jonctions ci-dessous disent lesquelles, et de combien.',
   'transports.alert.tight.title': {
     one: 'Un enchaînement est juste',
-    many: '{legs} enchaînements sont justes',
-    other: '{legs} enchaînements sont justes',
+    many: '{value} enchaînements sont justes',
+    other: '{value} enchaînements sont justes',
   },
   'transports.alert.tight.body':
     'Il y a du temps, mais peu pour le mode que vous attrapez. Les jonctions ci-dessous montrent ce que chacune laisse.',
   'transports.badge.impossible': {
-    one: '{legs} enchaînement rompu',
-    many: '{legs} enchaînements rompus',
-    other: '{legs} enchaînements rompus',
+    one: '{value} enchaînement rompu',
+    many: '{value} enchaînements rompus',
+    other: '{value} enchaînements rompus',
   },
   'transports.badge.tight': {
-    one: '{legs} enchaînement juste',
-    many: '{legs} enchaînements justes',
-    other: '{legs} enchaînements justes',
+    one: '{value} enchaînement juste',
+    many: '{value} enchaînements justes',
+    other: '{value} enchaînements justes',
   },
   'transports.badge.ok': 'Chaque enchaînement tient',
   'transports.remove.body':
@@ -80,7 +80,7 @@ const messages = {
   'transports.toast.removed': 'Trajet supprimé',
   'transports.toast.removeFailed': 'Le trajet n’a pas été supprimé',
 
-  /* --------------------------------------------- the leg dialog */
+  /* --------------------------------------- the transport dialog */
   'transports.dialog.addTitle': 'Ajouter un trajet',
   'transports.dialog.editTitle': 'Modifier ce trajet',
   'transports.dialog.description':

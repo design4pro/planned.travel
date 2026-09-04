@@ -141,7 +141,11 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
     'settings.billing.orders.document',
   ],
   pl: ['modules.transports.mode.metro'],
-  sv: ['marketing.legal.badge.version', 'modules.transports.mode.taxi'],
+  sv: [
+    'marketing.legal.badge.version',
+    'modules.transports.mode.fallback',
+    'modules.transports.mode.taxi',
+  ],
   tr: ['modules.transports.mode.metro'],
   vi: ['modules.transports.mode.taxi'],
 }

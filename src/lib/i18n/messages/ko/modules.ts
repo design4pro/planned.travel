@@ -29,49 +29,49 @@ const messages = {
     '실시간 업데이트가 꺼져 있습니다. 저장은 계속됩니다. 새로 고치거나 다시 시도하면 따라잡습니다.',
   'presence.reconnect': '다시 연결',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': '모든 구간',
-  'transports.empty.title': '아직 이동 구간이 없습니다',
+  'transports.filter.all': '모든 이동',
+  'transports.empty.title': '아직 이동이 없습니다',
   'transports.empty.body':
-    '항공, 기차, 페리, 공항에서의 이동이 모두 여기 모입니다. 예약 번호와 좌석 번호를 당일 바로 꺼낼 수 있고, 환승은 앞 구간과 맞춰 확인합니다.',
-  'transports.empty.action': '첫 구간 추가',
-  'transports.filtered.title': '그런 종류의 구간이 없습니다',
+    '항공, 기차, 페리, 공항에서의 이동이 모두 여기 모입니다. 예약 번호와 좌석 번호를 당일 바로 꺼낼 수 있고, 환승은 앞 이동과 맞춰 확인합니다.',
+  'transports.empty.action': '첫 이동 추가',
+  'transports.filtered.title': '그런 종류의 이동이 없습니다',
   'transports.filtered.body':
-    '이 여행의 구간은 각각 이동 방식이 다릅니다. “{label}”로 돌아가면 전부 보입니다.',
-  'transports.filtered.action': '모든 구간 보기',
+    '이 여행의 이동은 각각 이동 방식이 다릅니다. “{label}”로 돌아가면 전부 보입니다.',
+  'transports.filtered.action': '모든 이동 보기',
   'transports.alert.impossible.title': {
-    other: '환승 {legs}건이 불가능합니다',
+    other: '환승 {value}건이 불가능합니다',
   },
   'transports.alert.impossible.body':
-    '앞 구간이 도착하기 전에 다음 구간이 출발합니다. 아래 연결 지점이 어느 것이 얼마나 어긋나는지 알려 줍니다.',
+    '앞 이동이 도착하기 전에 다음 이동이 출발합니다. 아래 연결 지점이 어느 것이 얼마나 어긋나는지 알려 줍니다.',
   'transports.alert.tight.title': {
-    other: '환승 {legs}건이 촉박합니다',
+    other: '환승 {value}건이 촉박합니다',
   },
   'transports.alert.tight.body':
     '시간은 있지만 잡아야 하는 교통편에는 넉넉하지 않습니다. 아래 연결 지점이 각각 얼마를 남기는지 보여 줍니다.',
   'transports.badge.impossible': {
-    other: '불가능한 환승 {legs}건',
+    other: '불가능한 환승 {value}건',
   },
   'transports.badge.tight': {
-    other: '촉박한 환승 {legs}건',
+    other: '촉박한 환승 {value}건',
   },
   'transports.badge.ok': '모든 환승이 가능합니다',
   'transports.remove.body':
-    '이 구간은 예약 번호와 좌석까지 이 여행에서 완전히 사라집니다. 취소만 된 경우라면 상태를 “취소됨”으로 바꾸세요.',
-  'transports.remove.confirm': '구간 삭제',
-  'transports.menu.edit': '구간 편집…',
+    '이 이동은 예약 번호와 좌석까지 이 여행에서 완전히 사라집니다. 취소만 된 경우라면 상태를 “취소됨”으로 바꾸세요.',
+  'transports.remove.confirm': '이동 삭제',
+  'transports.menu.edit': '이동 편집…',
   'transports.field.service': '편명',
   'transports.field.bookingRef': '예약 번호',
   'transports.field.seat': '좌석',
   'transports.field.distance': '거리',
   'transports.noTime': '시간 미정',
   'transports.toast.statusFailed.title': '상태가 변경되지 않았습니다',
-  'transports.toast.statusFailed.body': '구간은 이전 상태 그대로입니다.',
-  'transports.toast.removed': '구간을 삭제했습니다',
-  'transports.toast.removeFailed': '구간을 삭제하지 못했습니다',
+  'transports.toast.statusFailed.body': '이동은 이전 상태 그대로입니다.',
+  'transports.toast.removed': '이동을 삭제했습니다',
+  'transports.toast.removeFailed': '이동을 삭제하지 못했습니다',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': '구간 추가',
-  'transports.dialog.editTitle': '이 구간 편집',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': '이동 추가',
+  'transports.dialog.editTitle': '이 이동 편집',
   'transports.dialog.description':
     '항공, 기차, 페리, 공항에서의 이동. 시간은 티켓에 인쇄된 현지 시간입니다.',
   'transports.form.modeLegend': '어떻게 이동하나요',
@@ -87,14 +87,14 @@ const messages = {
   'transports.field.bookingRefHint': '카운터에서 말할 번호입니다.',
   'transports.field.notesPlaceholder':
     '통로 쪽 좌석 요청. 수하물은 교토까지 연결 위탁.',
-  'transports.action.add': '구간 추가',
-  'transports.action.save': '구간 저장',
-  'transports.action.saving': '구간 저장 중',
-  'transports.toast.added': '구간을 추가했습니다',
+  'transports.action.add': '이동 추가',
+  'transports.action.save': '이동 저장',
+  'transports.action.saving': '이동 저장 중',
+  'transports.toast.added': '이동을 추가했습니다',
   'transports.toast.addedBody': '이동 순서에 들어갔습니다.',
-  'transports.toast.addFailed': '구간을 추가하지 못했습니다',
-  'transports.toast.updated': '구간을 수정했습니다',
-  'transports.toast.updateFailed': '구간을 수정하지 못했습니다',
+  'transports.toast.addFailed': '이동을 추가하지 못했습니다',
+  'transports.toast.updated': '이동을 수정했습니다',
+  'transports.toast.updateFailed': '이동을 수정하지 못했습니다',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': '이름',
@@ -203,7 +203,7 @@ const messages = {
   'book.hint.activity': '수업, 목욕탕, 예약한 체험.',
   'book.hint.tour': '장소와 시간, 그리고 기다리는 가이드.',
   'book.hint.ticket': '시간 지정 입장, 미술관 패스, 경기. 번호는 손닿는 곳에.',
-  'book.hint.transport': '예약한 좌석. 구간 전체와 번호는 {module}에 둡니다.',
+  'book.hint.transport': '예약한 좌석. 이동 전체와 번호는 {module}에 둡니다.',
   'book.hint.other': '내 이름으로 잡혀 있고 다른 데 맞지 않는 것.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -409,7 +409,7 @@ const messages = {
   'transports.mode.bike': '자전거',
   'transports.mode.walk': '걷기',
   'transports.mode.other': '기타',
-  'transports.mode.fallback': '구간',
+  'transports.mode.fallback': '이동',
   'transports.status.idea': '검토 중',
   'transports.status.pending': '확인 대기',
   'transports.status.confirmed': '확정',
@@ -424,7 +424,7 @@ const messages = {
   'transports.end.from': '출발',
   'transports.end.to': '도착',
   'transports.error.titleEmpty':
-    '이 구간에 목록에서 알아볼 수 있는 이름을 지어 주세요.',
+    '이 이동에 목록에서 알아볼 수 있는 이름을 지어 주세요.',
   'transports.error.date': '날짜는 YYYY-MM-DD 로 씁니다.',
   'transports.error.time': '시각은 24시간제 HH:MM 으로 씁니다.',
   'transports.error.departureNeedsDate': '출발 시각에는 그 날짜가 필요합니다.',
@@ -432,9 +432,9 @@ const messages = {
   'transports.error.code': '코드는 2~8자의 영문자나 숫자입니다.',
   'transports.error.distance': '거리는 킬로미터 단위 숫자로, 100,000까지.',
   'transports.error.arrivesBeforeDeparts':
-    '이 구간은 출발보다 먼저 도착합니다.',
+    '이 이동은 출발보다 먼저 도착합니다.',
   'transports.error.timingHint':
-    '둘 중 하나를 옮겨서 이 구간을 실제로 탈 수 있게 해 주세요.',
+    '둘 중 하나를 옮겨서 이 이동을 실제로 탈 수 있게 해 주세요.',
   'transports.bookingRefFor': '{title}의 예약 번호',
   'transports.doorToDoor': '문에서 문까지 {gap} 입니다.',
   'transports.title.fromTo': '{operator} {from} → {to}',
@@ -444,9 +444,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': '비교할 시각이 없습니다',
   'transports.junction.unknown.detail':
-    '두 구간에 날짜와 시각을 넣으면 이 환승을 확인해 드립니다.',
+    '두 이동에 날짜와 시각을 넣으면 이 환승을 확인해 드립니다.',
   'transports.junction.impossible.headline':
-    '이전 구간이 도착하기 {gap} 전에 출발합니다',
+    '이전 이동이 도착하기 {gap} 전에 출발합니다',
   'transports.junction.impossible.detail':
     '‘{to}’이(가) ‘{from}’ 도착보다 먼저 출발해서 둘 다 탈 수 없습니다. 하나를 옮겨 주세요.',
   'transports.junction.tight.headline': '환승 {gap}',
@@ -456,7 +456,7 @@ const messages = {
     '{place}에서 {mode}은(는) 보통 {required} 정도 필요합니다. 이건 빡빡합니다.',
   'transports.junction.ok.headline': '{gap} 간격',
   'transports.junction.ok.detail':
-    '{landing}에 도착하지만 다음 구간은 {boarding} 출발입니다 — 이동이 필요합니다.',
+    '{landing}에 도착하지만 다음 이동은 {boarding} 출발입니다 — 그곳까지 가야 합니다.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': '메모를 공유했습니다',

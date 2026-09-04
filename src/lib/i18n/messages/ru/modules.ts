@@ -29,61 +29,61 @@ const messages = {
     'Живые обновления выключены. Сохранение работает; обновите страницу или повторите, чтобы догнать.',
   'presence.reconnect': 'Переподключиться',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Все участки',
-  'transports.empty.title': 'Пока нет участков',
+  'transports.filter.all': 'Все переезды',
+  'transports.empty.title': 'Пока нет переездов',
   'transports.empty.body':
     'Рейсы, поезда, паромы и дорога из аэропорта живут здесь — с кодами брони и номерами мест под рукой в нужный день, и каждая пересадка проверена относительно предыдущей.',
-  'transports.empty.action': 'Добавить первый участок',
-  'transports.filtered.title': 'Участков такого вида нет',
+  'transports.empty.action': 'Добавить первый переезд',
+  'transports.filtered.title': 'Переездов такого вида нет',
   'transports.filtered.body':
-    'Каждый участок этой поездки идёт по-своему. Вернитесь к «{label}», чтобы увидеть все.',
-  'transports.filtered.action': 'Показать все участки',
+    'Каждый переезд этой поездки идёт по-своему. Вернитесь к «{label}», чтобы увидеть все.',
+  'transports.filtered.action': 'Показать все переезды',
   'transports.alert.impossible.title': {
     one: 'Одна пересадка невозможна',
-    few: '{legs} пересадки невозможны',
-    many: '{legs} пересадок невозможны',
-    other: '{legs} пересадки невозможны',
+    few: '{value} пересадки невозможны',
+    many: '{value} пересадок невозможны',
+    other: '{value} пересадки невозможны',
   },
   'transports.alert.impossible.body':
-    'Участок отправляется раньше, чем приходит предыдущий. Узлы ниже говорят какие и насколько.',
+    'Переезд отправляется раньше, чем приходит предыдущий. Узлы ниже говорят какие и насколько.',
   'transports.alert.tight.title': {
     one: 'Одна пересадка впритык',
-    few: '{legs} пересадки впритык',
-    many: '{legs} пересадок впритык',
-    other: '{legs} пересадки впритык',
+    few: '{value} пересадки впритык',
+    many: '{value} пересадок впритык',
+    other: '{value} пересадки впритык',
   },
   'transports.alert.tight.body':
     'Время есть, но его немного для того транспорта, который вы ловите. Узлы ниже показывают, сколько остаётся на каждый.',
   'transports.badge.impossible': {
-    one: '{legs} сломанная пересадка',
-    few: '{legs} сломанные пересадки',
-    many: '{legs} сломанных пересадок',
-    other: '{legs} сломанной пересадки',
+    one: '{value} сломанная пересадка',
+    few: '{value} сломанные пересадки',
+    many: '{value} сломанных пересадок',
+    other: '{value} сломанной пересадки',
   },
   'transports.badge.tight': {
-    one: '{legs} тесная пересадка',
-    few: '{legs} тесные пересадки',
-    many: '{legs} тесных пересадок',
-    other: '{legs} тесной пересадки',
+    one: '{value} тесная пересадка',
+    few: '{value} тесные пересадки',
+    many: '{value} тесных пересадок',
+    other: '{value} тесной пересадки',
   },
   'transports.badge.ok': 'Все пересадки складываются',
   'transports.remove.body':
-    'Участок уходит из этой поездки окончательно, вместе с номером брони и местом. Если он только отменён, поставьте ему статус «Отменён».',
-  'transports.remove.confirm': 'Удалить участок',
-  'transports.menu.edit': 'Изменить участок…',
+    'Переезд уходит из этой поездки окончательно, вместе с номером брони и местом. Если он только отменён, поставьте ему статус «Отменён».',
+  'transports.remove.confirm': 'Удалить переезд',
+  'transports.menu.edit': 'Изменить переезд…',
   'transports.field.service': 'Рейс',
   'transports.field.bookingRef': 'Номер брони',
   'transports.field.seat': 'Место',
   'transports.field.distance': 'Расстояние',
   'transports.noTime': 'Пока без времени',
   'transports.toast.statusFailed.title': 'Статус не изменился',
-  'transports.toast.statusFailed.body': 'Участок остался в прежнем состоянии.',
-  'transports.toast.removed': 'Участок удалён',
-  'transports.toast.removeFailed': 'Участок не удалён',
+  'transports.toast.statusFailed.body': 'Переезд остался в прежнем состоянии.',
+  'transports.toast.removed': 'Переезд удалён',
+  'transports.toast.removeFailed': 'Переезд не удалён',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Добавить участок',
-  'transports.dialog.editTitle': 'Изменить этот участок',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Добавить переезд',
+  'transports.dialog.editTitle': 'Изменить этот переезд',
   'transports.dialog.description':
     'Рейсы, поезда, паромы и дорога из аэропорта. Время местное, то, что напечатано на билете.',
   'transports.form.modeLegend': 'Чем вы едете',
@@ -99,14 +99,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Код, который вы назовёте на стойке.',
   'transports.field.notesPlaceholder':
     'Просили место у прохода. Багаж оформлен до Киото.',
-  'transports.action.add': 'Добавить участок',
-  'transports.action.save': 'Сохранить участок',
-  'transports.action.saving': 'Сохранение участка',
-  'transports.toast.added': 'Участок добавлен',
+  'transports.action.add': 'Добавить переезд',
+  'transports.action.save': 'Сохранить переезд',
+  'transports.action.saving': 'Сохранение переезда',
+  'transports.toast.added': 'Переезд добавлен',
   'transports.toast.addedBody': 'Он уже в порядке поездки.',
-  'transports.toast.addFailed': 'Участок не добавлен',
-  'transports.toast.updated': 'Участок изменён',
-  'transports.toast.updateFailed': 'Участок не изменён',
+  'transports.toast.addFailed': 'Переезд не добавлен',
+  'transports.toast.updated': 'Переезд изменён',
+  'transports.toast.updateFailed': 'Переезд не изменён',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Название',
@@ -219,7 +219,7 @@ const messages = {
   'book.hint.ticket':
     'Вход по времени, музейный билет, матч. Держите код под рукой.',
   'book.hint.transport':
-    'Забронированное место. Полные отрезки с кодами живут в {module}.',
+    'Забронированное место. Полные переезды с кодами живут в {module}.',
   'book.hint.other': 'Всё, что записано на ваше имя и не подходит к остальным.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -441,7 +441,7 @@ const messages = {
   'transports.mode.bike': 'Велосипед',
   'transports.mode.walk': 'Пешком',
   'transports.mode.other': 'Другое',
-  'transports.mode.fallback': 'Отрезок',
+  'transports.mode.fallback': 'Переезд',
   'transports.status.idea': 'Замысел',
   'transports.status.pending': 'Ожидает',
   'transports.status.confirmed': 'Подтверждён',
@@ -456,7 +456,7 @@ const messages = {
   'transports.end.from': 'Откуда',
   'transports.end.to': 'Куда',
   'transports.error.titleEmpty':
-    'Дайте этому отрезку название, которое узнаете в списке.',
+    'Дайте этому переезду название, которое узнаете в списке.',
   'transports.error.date': 'Дата пишется ГГГГ-ММ-ДД.',
   'transports.error.time': 'Время пишется ЧЧ:ММ в 24-часовом формате.',
   'transports.error.departureNeedsDate':
@@ -466,9 +466,9 @@ const messages = {
   'transports.error.code': 'Код — от 2 до 8 букв или цифр.',
   'transports.error.distance': 'Расстояние — число километров, до 100 000.',
   'transports.error.arrivesBeforeDeparts':
-    'Этот отрезок прибывает раньше, чем отправляется.',
+    'Этот переезд прибывает раньше, чем отправляется.',
   'transports.error.timingHint':
-    'Сдвиньте одно из них, чтобы на этот отрезок реально можно было успеть.',
+    'Сдвиньте одно из них, чтобы на этот переезд реально можно было успеть.',
   'transports.bookingRefFor': 'номер брони для {title}',
   'transports.doorToDoor': 'Это {gap} от двери до двери.',
   'transports.title.fromTo': '{operator}: {from} — {to}',
@@ -478,9 +478,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Нечего сравнивать',
   'transports.junction.unknown.detail':
-    'Укажите дату и время в обоих отрезках, и эта пересадка будет проверена.',
+    'Укажите дату и время в обоих переездах, и эта пересадка будет проверена.',
   'transports.junction.impossible.headline':
-    'Отправляется на {gap} раньше, чем прибывает предыдущий отрезок',
+    'Отправляется на {gap} раньше, чем прибывает предыдущий переезд',
   'transports.junction.impossible.detail':
     '«{to}» отправляется раньше, чем прибывает «{from}», так что оба не успеть. Сдвиньте один.',
   'transports.junction.tight.headline': '{gap} на пересадку',
@@ -490,7 +490,7 @@ const messages = {
     'На {mode} в {place} обычно нужно около {required}. Здесь впритык.',
   'transports.junction.ok.headline': '{gap} между ними',
   'transports.junction.ok.detail':
-    'Прибытие в {landing}, но следующий отрезок отправляется из {boarding} — придётся переехать.',
+    'Прибытие в {landing}, но следующий переезд отправляется из {boarding} — придётся добираться.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Заметка опубликована',

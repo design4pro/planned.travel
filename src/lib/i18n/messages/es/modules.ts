@@ -30,57 +30,58 @@ const messages = {
     'Las actualizaciones en directo están apagadas. Todo se sigue guardando; recarga o reinténtalo para ponerte al día.',
   'presence.reconnect': 'Reconectar',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Todos los tramos',
-  'transports.empty.title': 'Todavía no hay tramos',
+  'transports.filter.all': 'Todos los trayectos',
+  'transports.empty.title': 'Todavía no hay trayectos',
   'transports.empty.body':
     'Vuelos, trenes, ferris y el trayecto desde el aeropuerto viven aquí, con sus códigos de reserva y números de asiento a mano el día señalado, y cada enlace comprobado contra el anterior.',
-  'transports.empty.action': 'Añadir el primer tramo',
-  'transports.filtered.title': 'No hay tramos de ese tipo',
+  'transports.empty.action': 'Añadir el primer trayecto',
+  'transports.filtered.title': 'No hay trayectos de ese tipo',
   'transports.filtered.body':
-    'Cada tramo de este viaje va de otra manera. Vuelve a «{label}» para verlos todos.',
-  'transports.filtered.action': 'Mostrar todos los tramos',
+    'Cada trayecto de este viaje va de otra manera. Vuelve a «{label}» para verlos todos.',
+  'transports.filtered.action': 'Mostrar todos los trayectos',
   'transports.alert.impossible.title': {
     one: 'Un enlace es imposible',
-    many: '{legs} enlaces son imposibles',
-    other: '{legs} enlaces son imposibles',
+    many: '{value} enlaces son imposibles',
+    other: '{value} enlaces son imposibles',
   },
   'transports.alert.impossible.body':
-    'Un tramo sale antes de que llegue el anterior. Los enlaces de abajo dicen cuáles y por cuánto.',
+    'Un trayecto sale antes de que llegue el anterior. Los enlaces de abajo dicen cuáles y por cuánto.',
   'transports.alert.tight.title': {
     one: 'Un enlace va justo',
-    many: '{legs} enlaces van justos',
-    other: '{legs} enlaces van justos',
+    many: '{value} enlaces van justos',
+    other: '{value} enlaces van justos',
   },
   'transports.alert.tight.body':
     'Hay tiempo, pero poco para el medio que vas a coger. Los enlaces de abajo muestran cuánto deja cada uno.',
   'transports.badge.impossible': {
-    one: '{legs} enlace roto',
-    many: '{legs} enlaces rotos',
-    other: '{legs} enlaces rotos',
+    one: '{value} enlace roto',
+    many: '{value} enlaces rotos',
+    other: '{value} enlaces rotos',
   },
   'transports.badge.tight': {
-    one: '{legs} enlace justo',
-    many: '{legs} enlaces justos',
-    other: '{legs} enlaces justos',
+    one: '{value} enlace justo',
+    many: '{value} enlaces justos',
+    other: '{value} enlaces justos',
   },
   'transports.badge.ok': 'Todos los enlaces funcionan',
   'transports.remove.body':
-    'El tramo sale de este viaje para siempre, junto con su referencia de reserva y su asiento. Si solo está cancelado, ponle el estado Cancelado en su lugar.',
-  'transports.remove.confirm': 'Eliminar el tramo',
-  'transports.menu.edit': 'Editar el tramo…',
+    'El trayecto sale de este viaje para siempre, junto con su referencia de reserva y su asiento. Si solo está cancelado, ponle el estado Cancelado en su lugar.',
+  'transports.remove.confirm': 'Eliminar el trayecto',
+  'transports.menu.edit': 'Editar el trayecto…',
   'transports.field.service': 'Servicio',
   'transports.field.bookingRef': 'Referencia de reserva',
   'transports.field.seat': 'Asiento',
   'transports.field.distance': 'Distancia',
   'transports.noTime': 'Todavía sin hora',
   'transports.toast.statusFailed.title': 'El estado no cambió',
-  'transports.toast.statusFailed.body': 'El tramo sigue en su estado anterior.',
-  'transports.toast.removed': 'Tramo eliminado',
-  'transports.toast.removeFailed': 'El tramo no se eliminó',
+  'transports.toast.statusFailed.body':
+    'El trayecto sigue en su estado anterior.',
+  'transports.toast.removed': 'Trayecto eliminado',
+  'transports.toast.removeFailed': 'El trayecto no se eliminó',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Añadir un tramo',
-  'transports.dialog.editTitle': 'Editar este tramo',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Añadir un trayecto',
+  'transports.dialog.editTitle': 'Editar este trayecto',
   'transports.dialog.description':
     'Vuelos, trenes, ferris y el trayecto desde el aeropuerto. Las horas son las locales impresas en el billete.',
   'transports.form.modeLegend': 'Cómo viajas',
@@ -96,14 +97,14 @@ const messages = {
   'transports.field.bookingRefHint': 'El código que dirás en el mostrador.',
   'transports.field.notesPlaceholder':
     'Pedido asiento de pasillo. Maletas facturadas hasta Kioto.',
-  'transports.action.add': 'Añadir el tramo',
-  'transports.action.save': 'Guardar el tramo',
-  'transports.action.saving': 'Guardando el tramo',
-  'transports.toast.added': 'Tramo añadido',
+  'transports.action.add': 'Añadir el trayecto',
+  'transports.action.save': 'Guardar el trayecto',
+  'transports.action.saving': 'Guardando el trayecto',
+  'transports.toast.added': 'Trayecto añadido',
   'transports.toast.addedBody': 'Ya está en el orden del viaje.',
-  'transports.toast.addFailed': 'El tramo no se añadió',
-  'transports.toast.updated': 'Tramo actualizado',
-  'transports.toast.updateFailed': 'El tramo no se actualizó',
+  'transports.toast.addFailed': 'El trayecto no se añadió',
+  'transports.toast.updated': 'Trayecto actualizado',
+  'transports.toast.updateFailed': 'El trayecto no se actualizó',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Nombre',
@@ -437,7 +438,7 @@ const messages = {
   'transports.mode.bike': 'Bici',
   'transports.mode.walk': 'A pie',
   'transports.mode.other': 'Otro',
-  'transports.mode.fallback': 'Tramo',
+  'transports.mode.fallback': 'Trayecto',
   'transports.status.idea': 'Idea',
   'transports.status.pending': 'Pendiente',
   'transports.status.confirmed': 'Confirmado',
@@ -452,7 +453,7 @@ const messages = {
   'transports.end.from': 'Desde',
   'transports.end.to': 'Hasta',
   'transports.error.titleEmpty':
-    'Dale a este tramo un nombre que reconozcas en una lista.',
+    'Dale a este trayecto un nombre que reconozcas en una lista.',
   'transports.error.date': 'Una fecha se escribe AAAA-MM-DD.',
   'transports.error.time': 'Una hora se escribe HH:MM en formato de 24 horas.',
   'transports.error.departureNeedsDate':
@@ -462,9 +463,10 @@ const messages = {
   'transports.error.code': 'Un código tiene de 2 a 8 letras o dígitos.',
   'transports.error.distance':
     'Una distancia es un número de kilómetros, hasta 100.000.',
-  'transports.error.arrivesBeforeDeparts': 'Este tramo llega antes de salir.',
+  'transports.error.arrivesBeforeDeparts':
+    'Este trayecto llega antes de salir.',
   'transports.error.timingHint':
-    'Mueve una de las dos para que el tramo se pueda coger de verdad.',
+    'Mueve una de las dos para que el trayecto se pueda coger de verdad.',
   'transports.bookingRefFor': 'la referencia de reserva de {title}',
   'transports.doorToDoor': 'Son {gap} de puerta a puerta.',
   'transports.title.fromTo': '{operator} de {from} a {to}',
@@ -474,9 +476,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'No hay horas que comparar',
   'transports.junction.unknown.detail':
-    'Pon fecha y hora en los dos tramos y esta conexión se comprobará por ti.',
+    'Pon fecha y hora en los dos trayectos y esta conexión se comprobará por ti.',
   'transports.junction.impossible.headline':
-    'Sale {gap} antes de que llegue el tramo anterior',
+    'Sale {gap} antes de que llegue el trayecto anterior',
   'transports.junction.impossible.detail':
     '«{to}» sale antes de que llegue «{from}», así que no se pueden coger los dos. Mueve uno.',
   'transports.junction.tight.headline': '{gap} para enlazar',
@@ -486,7 +488,7 @@ const messages = {
     'Para {mode} suele hacer falta unos {required} en {place}. Esto va justo.',
   'transports.junction.ok.headline': '{gap} de margen',
   'transports.junction.ok.detail':
-    'Llega a {landing} pero el tramo siguiente sale de {boarding}: habrá que cruzar.',
+    'Llega a {landing} pero el trayecto siguiente sale de {boarding}: habrá que cruzar.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Nota compartida',

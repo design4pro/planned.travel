@@ -1,10 +1,10 @@
 /**
- * Write paths for the trip's travel legs.
+ * Write paths for the trip's travel transports.
  *
- * A leg carries its own endpoints rather than a pair of place ids, because most
- * legs start or end somewhere that is not a stop on the itinerary. The only rule
- * this layer adds on top of the repository is that a leg cannot arrive before it
- * departs; whether two *consecutive* legs connect is a judgement for the screen
+ * A transport carries its own endpoints rather than a pair of place ids, because most
+ * transports start or end somewhere that is not a stop on the itinerary. The only rule
+ * this layer adds on top of the repository is that a transport cannot arrive before it
+ * departs; whether two *consecutive* transports connect is a judgement for the screen
  * to surface, not a reason to refuse the save (see `connections.ts`).
  */
 import { createServerFn } from '@tanstack/react-start'
@@ -46,7 +46,7 @@ const optionalTime = z
     'must be a 24-hour time (HH:MM)',
   )
 
-const legFields = {
+const transportFields = {
   mode: z.enum(TRANSPORT_MODES),
   status: z.enum(TRANSPORT_STATUSES),
   title: z.string().trim().min(1).max(160),
@@ -75,28 +75,30 @@ const legFields = {
   notes: z.string().trim().max(4000),
 }
 
-export const legInputSchema = z.object({ tripId, ...legFields })
-export const legUpdateSchema = z.object({
+export const transportInputSchema = z.object({ tripId, ...transportFields })
+export const transportUpdateSchema = z.object({
   tripId,
   transportId: rowId,
-  ...legFields,
+  ...transportFields,
 })
 
-export type LegInput = z.infer<typeof legInputSchema>
+export type TransportInput = z.infer<typeof transportInputSchema>
 
-/** A leg that lands before it takes off is a typo, and the server says so too. */
-function assertOrder(data: LegInput): void {
+/** A transport that lands before it takes off is a typo, and the server says so too. */
+function assertOrder(data: TransportInput): void {
   if (data.departureDate === '' || data.arrivalDate === '') {
     return
   }
   const from = `${data.departureDate}T${data.departureTime === '' ? '00:00' : data.departureTime}`
   const to = `${data.arrivalDate}T${data.arrivalTime === '' ? '23:59' : data.arrivalTime}`
   if (to < from) {
-    throw new Error('This leg arrives before it departs. Check the times.')
+    throw new Error(
+      'This transport arrives before it departs. Check the times.',
+    )
   }
 }
 
-function payload(data: LegInput) {
+function payload(data: TransportInput) {
   return {
     mode: data.mode,
     status: data.status,
@@ -122,30 +124,30 @@ function payload(data: LegInput) {
 
 /* ------------------------------------------------------------------ writes */
 
-export const createLegFn = createServerFn({ method: 'POST' })
-  .validator(legInputSchema)
+export const createTransportFn = createServerFn({ method: 'POST' })
+  .validator(transportInputSchema)
   .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
     assertOrder(data)
 
-    const leg = await createTransport(scope, {
+    const transport = await createTransport(scope, {
       tripId: data.tripId,
       ...payload(data),
     })
 
     await mirrorToRoom(scope, data.tripId, [
-      patch('route', leg.id, {
+      patch('route', transport.id, {
         title: data.title,
         mode: data.mode,
         status: data.status,
       }),
     ])
-    return { transportId: leg.id }
+    return { transportId: transport.id }
   })
 
-export const updateLegFn = createServerFn({ method: 'POST' })
-  .validator(legUpdateSchema)
+export const updateTransportFn = createServerFn({ method: 'POST' })
+  .validator(transportUpdateSchema)
   .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
@@ -163,7 +165,7 @@ export const updateLegFn = createServerFn({ method: 'POST' })
     return { transportId: data.transportId }
   })
 
-export const setLegStatusFn = createServerFn({ method: 'POST' })
+export const setTransportStatusFn = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       tripId,
@@ -182,7 +184,7 @@ export const setLegStatusFn = createServerFn({ method: 'POST' })
     return { status: data.status }
   })
 
-export const deleteLegFn = createServerFn({ method: 'POST' })
+export const deleteTransportFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, transportId: rowId }))
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()

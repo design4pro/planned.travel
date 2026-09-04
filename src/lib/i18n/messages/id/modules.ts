@@ -30,49 +30,50 @@ const messages = {
     'Pembaruan langsung sedang mati. Penyimpanan tetap jalan; muat ulang atau coba lagi untuk menyusul.',
   'presence.reconnect': 'Sambung ulang',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Semua ruas',
-  'transports.empty.title': 'Belum ada ruas perjalanan',
+  'transports.filter.all': 'Semua transportasi',
+  'transports.empty.title': 'Belum ada transportasi',
   'transports.empty.body':
     'Penerbangan, kereta, feri, dan perjalanan dari bandara semuanya tinggal di sini, dengan kode pemesanan dan nomor tempat duduk siap di hari-H — dan setiap perpindahan diperiksa terhadap yang sebelumnya.',
-  'transports.empty.action': 'Tambahkan ruas pertama',
-  'transports.filtered.title': 'Tidak ada ruas jenis itu',
+  'transports.empty.action': 'Tambahkan transportasi pertama',
+  'transports.filtered.title': 'Tidak ada transportasi jenis itu',
   'transports.filtered.body':
-    'Setiap ruas perjalanan ini ditempuh dengan cara berbeda. Kembali ke “{label}” untuk melihat semuanya.',
-  'transports.filtered.action': 'Tampilkan semua ruas',
+    'Setiap transportasi dalam perjalanan ini ditempuh dengan cara berbeda. Kembali ke “{label}” untuk melihat semuanya.',
+  'transports.filtered.action': 'Tampilkan semua transportasi',
   'transports.alert.impossible.title': {
-    other: '{legs} perpindahan tidak mungkin',
+    other: '{value} perpindahan tidak mungkin',
   },
   'transports.alert.impossible.body':
-    'Sebuah ruas berangkat sebelum ruas sebelumnya tiba. Titik sambung di bawah menyebut yang mana dan selisihnya.',
+    'Sebuah transportasi berangkat sebelum transportasi sebelumnya tiba. Titik sambung di bawah menyebut yang mana dan selisihnya.',
   'transports.alert.tight.title': {
-    other: '{legs} perpindahan terlalu mepet',
+    other: '{value} perpindahan terlalu mepet',
   },
   'transports.alert.tight.body':
     'Waktunya ada, tapi tidak banyak untuk moda yang harus kamu kejar. Titik sambung di bawah menunjukkan sisa waktu masing-masing.',
   'transports.badge.impossible': {
-    other: '{legs} perpindahan rusak',
+    other: '{value} perpindahan rusak',
   },
   'transports.badge.tight': {
-    other: '{legs} perpindahan mepet',
+    other: '{value} perpindahan mepet',
   },
   'transports.badge.ok': 'Semua perpindahan aman',
   'transports.remove.body':
-    'Ruas ini keluar dari perjalanan untuk selamanya, bersama nomor pemesanan dan tempat duduknya. Kalau hanya dibatalkan, ubah statusnya menjadi “Dibatalkan” saja.',
-  'transports.remove.confirm': 'Hapus ruas',
-  'transports.menu.edit': 'Ubah ruas…',
+    'Transportasi ini keluar dari perjalanan untuk selamanya, bersama nomor pemesanan dan tempat duduknya. Kalau hanya dibatalkan, ubah statusnya menjadi “Dibatalkan” saja.',
+  'transports.remove.confirm': 'Hapus transportasi',
+  'transports.menu.edit': 'Ubah transportasi…',
   'transports.field.service': 'Nomor layanan',
   'transports.field.bookingRef': 'Nomor pemesanan',
   'transports.field.seat': 'Tempat duduk',
   'transports.field.distance': 'Jarak',
   'transports.noTime': 'Belum ada waktu',
   'transports.toast.statusFailed.title': 'Status tidak berubah',
-  'transports.toast.statusFailed.body': 'Ruas masih dalam keadaan sebelumnya.',
-  'transports.toast.removed': 'Ruas dihapus',
-  'transports.toast.removeFailed': 'Ruas tidak terhapus',
+  'transports.toast.statusFailed.body':
+    'Transportasi masih dalam keadaan sebelumnya.',
+  'transports.toast.removed': 'Transportasi dihapus',
+  'transports.toast.removeFailed': 'Transportasi tidak terhapus',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Tambah satu ruas',
-  'transports.dialog.editTitle': 'Ubah ruas ini',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Tambah satu transportasi',
+  'transports.dialog.editTitle': 'Ubah transportasi ini',
   'transports.dialog.description':
     'Penerbangan, kereta, feri, dan perjalanan dari bandara. Waktunya waktu setempat yang tercetak di tiket.',
   'transports.form.modeLegend': 'Kamu naik apa',
@@ -88,14 +89,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Kode yang akan kamu sebut di konter.',
   'transports.field.notesPlaceholder':
     'Minta kursi dekat lorong. Bagasi dikirim langsung sampai Kyoto.',
-  'transports.action.add': 'Tambah ruas',
-  'transports.action.save': 'Simpan ruas',
-  'transports.action.saving': 'Menyimpan ruas',
-  'transports.toast.added': 'Ruas ditambahkan',
+  'transports.action.add': 'Tambah transportasi',
+  'transports.action.save': 'Simpan transportasi',
+  'transports.action.saving': 'Menyimpan transportasi',
+  'transports.toast.added': 'Transportasi ditambahkan',
   'transports.toast.addedBody': 'Sekarang sudah masuk urutan perjalanan.',
-  'transports.toast.addFailed': 'Ruas tidak ditambahkan',
-  'transports.toast.updated': 'Ruas diperbarui',
-  'transports.toast.updateFailed': 'Ruas tidak diperbarui',
+  'transports.toast.addFailed': 'Transportasi tidak ditambahkan',
+  'transports.toast.updated': 'Transportasi diperbarui',
+  'transports.toast.updateFailed': 'Transportasi tidak diperbarui',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Nama',
@@ -208,7 +209,7 @@ const messages = {
   'book.hint.ticket':
     'Masuk berjadwal, pas museum, sebuah pertandingan. Simpan kodenya dekat.',
   'book.hint.transport':
-    'Kursi yang sudah dipesan. Rute lengkap berkode masuk ke {module}.',
+    'Kursi yang sudah dipesan. Transportasi lengkap berkode masuk ke {module}.',
   'book.hint.other':
     'Apa pun yang ditahan atas namamu dan tidak cocok di yang lain.',
 
@@ -423,7 +424,7 @@ const messages = {
   'transports.mode.bike': 'Sepeda',
   'transports.mode.walk': 'Jalan kaki',
   'transports.mode.other': 'Lainnya',
-  'transports.mode.fallback': 'Ruas',
+  'transports.mode.fallback': 'Transportasi',
   'transports.status.idea': 'Gagasan',
   'transports.status.pending': 'Menunggu',
   'transports.status.confirmed': 'Terkonfirmasi',
@@ -438,7 +439,7 @@ const messages = {
   'transports.end.from': 'Dari',
   'transports.end.to': 'Ke',
   'transports.error.titleEmpty':
-    'Beri ruas ini nama yang kamu kenali di daftar.',
+    'Beri transportasi ini nama yang kamu kenali di daftar.',
   'transports.error.date': 'Tanggal ditulis YYYY-MM-DD.',
   'transports.error.time': 'Waktu ditulis HH:MM dengan jam 24.',
   'transports.error.departureNeedsDate':
@@ -448,9 +449,10 @@ const messages = {
   'transports.error.code': 'Kode terdiri dari 2 sampai 8 huruf atau angka.',
   'transports.error.distance':
     'Jarak adalah angka dalam kilometer, sampai 100.000.',
-  'transports.error.arrivesBeforeDeparts': 'Ruas ini tiba sebelum berangkat.',
+  'transports.error.arrivesBeforeDeparts':
+    'Transportasi ini tiba sebelum berangkat.',
   'transports.error.timingHint':
-    'Geser salah satunya supaya ruas ini benar-benar bisa dikejar.',
+    'Geser salah satunya supaya transportasi ini benar-benar bisa dikejar.',
   'transports.bookingRefFor': 'nomor pemesanan untuk {title}',
   'transports.doorToDoor': 'Itu {gap} dari pintu ke pintu.',
   'transports.title.fromTo': '{operator} dari {from} ke {to}',
@@ -460,9 +462,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Tidak ada waktu untuk dibandingkan',
   'transports.junction.unknown.detail':
-    'Isi tanggal dan waktu di kedua ruas, maka perpindahan ini akan diperiksa untukmu.',
+    'Isi tanggal dan waktu di kedua transportasi, maka perpindahan ini akan diperiksa untukmu.',
   'transports.junction.impossible.headline':
-    'Berangkat {gap} sebelum ruas sebelumnya tiba',
+    'Berangkat {gap} sebelum transportasi sebelumnya tiba',
   'transports.junction.impossible.detail':
     '“{to}” berangkat sebelum “{from}” tiba, jadi keduanya tidak bisa dikejar. Geser salah satu.',
   'transports.junction.tight.headline': '{gap} untuk berpindah',
@@ -472,7 +474,7 @@ const messages = {
     '{mode} di {place} biasanya perlu sekitar {required}. Yang ini mepet.',
   'transports.junction.ok.headline': 'Jeda {gap}',
   'transports.junction.ok.detail':
-    'Tiba di {landing} tapi ruas berikutnya berangkat dari {boarding} — kamu perlu menyeberang.',
+    'Tiba di {landing} tapi transportasi berikutnya berangkat dari {boarding} — kamu perlu menyeberang.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Catatan dibagikan',

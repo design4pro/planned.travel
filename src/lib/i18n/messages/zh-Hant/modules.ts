@@ -29,49 +29,49 @@ const messages = {
     '即時更新已關閉。儲存照常進行；重新載入或重試即可跟上。',
   'presence.reconnect': '重新連線',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': '全部路段',
-  'transports.empty.title': '還沒有行程路段',
+  'transports.filter.all': '全部交通',
+  'transports.empty.title': '還沒有交通安排',
   'transports.empty.body':
-    '航班、火車、渡輪與從機場出發的那段路都在這裡，訂位編號與座位號在出發當天隨手可得，每次轉乘都會與前一段核對。',
-  'transports.empty.action': '新增第一個路段',
-  'transports.filtered.title': '沒有這一類的路段',
+    '航班、火車、渡輪與從機場出發的那段路都在這裡，訂位編號與座位號在出發當天隨手可得，每次轉乘都會與上一趟核對。',
+  'transports.empty.action': '新增第一趟交通',
+  'transports.filtered.title': '沒有這一類的交通',
   'transports.filtered.body':
-    '這次旅行的每個路段走法都不一樣。切回「{label}」即可看到全部。',
-  'transports.filtered.action': '顯示全部路段',
+    '這次旅行的每趟交通走法都不一樣。切回「{label}」即可看到全部。',
+  'transports.filtered.action': '顯示全部交通',
   'transports.alert.impossible.title': {
-    other: '{legs} 次轉乘無法完成',
+    other: '{value} 次轉乘無法完成',
   },
   'transports.alert.impossible.body':
-    '有一個路段在前一段抵達之前就出發了。下面的銜接點會說明是哪些、差多少。',
+    '有一趟交通在上一趟抵達之前就出發了。下面的銜接點會說明是哪些、差多少。',
   'transports.alert.tight.title': {
-    other: '{legs} 次轉乘時間吃緊',
+    other: '{value} 次轉乘時間吃緊',
   },
   'transports.alert.tight.body':
     '時間是有的，但對你要趕的交通方式來說並不寬裕。下面的銜接點顯示各自留出多少。',
   'transports.badge.impossible': {
-    other: '{legs} 次轉乘中斷',
+    other: '{value} 次轉乘中斷',
   },
   'transports.badge.tight': {
-    other: '{legs} 次轉乘吃緊',
+    other: '{value} 次轉乘吃緊',
   },
   'transports.badge.ok': '每次轉乘都趕得上',
   'transports.remove.body':
-    '這個路段會連同訂位編號與座位一起徹底離開本次旅行。如果只是取消了，請改把狀態設為「已取消」。',
-  'transports.remove.confirm': '刪除路段',
-  'transports.menu.edit': '編輯路段…',
+    '這趟交通會連同訂位編號與座位一起徹底離開本次旅行。如果只是取消了，請改把狀態設為「已取消」。',
+  'transports.remove.confirm': '刪除交通',
+  'transports.menu.edit': '編輯交通…',
   'transports.field.service': '車次／航班',
   'transports.field.bookingRef': '訂位編號',
   'transports.field.seat': '座位',
   'transports.field.distance': '距離',
   'transports.noTime': '還沒有時間',
   'transports.toast.statusFailed.title': '狀態沒有改變',
-  'transports.toast.statusFailed.body': '這個路段仍處於原來的狀態。',
-  'transports.toast.removed': '已刪除路段',
-  'transports.toast.removeFailed': '未能刪除該路段',
+  'transports.toast.statusFailed.body': '這趟交通仍處於原來的狀態。',
+  'transports.toast.removed': '已刪除交通',
+  'transports.toast.removeFailed': '未能刪除該交通',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': '新增路段',
-  'transports.dialog.editTitle': '編輯這個路段',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': '新增交通',
+  'transports.dialog.editTitle': '編輯這趟交通',
   'transports.dialog.description':
     '航班、火車、渡輪與從機場出發的那段路。時間是票面上的當地時間。',
   'transports.form.modeLegend': '怎麼走',
@@ -86,14 +86,14 @@ const messages = {
   'transports.field.serviceNumber': '航班／車次號',
   'transports.field.bookingRefHint': '在櫃檯要報的編號。',
   'transports.field.notesPlaceholder': '已申請靠走道座位。行李直掛至京都。',
-  'transports.action.add': '新增路段',
-  'transports.action.save': '儲存路段',
-  'transports.action.saving': '正在儲存路段',
-  'transports.toast.added': '已新增路段',
+  'transports.action.add': '新增交通',
+  'transports.action.save': '儲存交通',
+  'transports.action.saving': '正在儲存交通',
+  'transports.toast.added': '已新增交通',
   'transports.toast.addedBody': '它已經排進行程順序了。',
-  'transports.toast.addFailed': '未能新增該路段',
-  'transports.toast.updated': '已更新路段',
-  'transports.toast.updateFailed': '未能更新該路段',
+  'transports.toast.addFailed': '未能新增該交通',
+  'transports.toast.updated': '已更新交通',
+  'transports.toast.updateFailed': '未能更新該交通',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': '名稱',
@@ -402,7 +402,7 @@ const messages = {
   'transports.mode.bike': '騎行',
   'transports.mode.walk': '步行',
   'transports.mode.other': '其他',
-  'transports.mode.fallback': '行程段',
+  'transports.mode.fallback': '交通',
   'transports.status.idea': '構想',
   'transports.status.pending': '待確認',
   'transports.status.confirmed': '已確認',
@@ -416,15 +416,15 @@ const messages = {
   'transports.end.toStation': '抵達車站',
   'transports.end.from': '從',
   'transports.end.to': '到',
-  'transports.error.titleEmpty': '給這段行程起個在清單裡認得出的名字。',
+  'transports.error.titleEmpty': '給這趟交通起個在清單裡認得出的名字。',
   'transports.error.date': '日期寫成 YYYY-MM-DD。',
   'transports.error.time': '時刻按 24 小時制寫成 HH:MM。',
   'transports.error.departureNeedsDate': '出發時刻需要它所在的日期。',
   'transports.error.arrivalNeedsDate': '抵達時刻需要它所在的日期。',
   'transports.error.code': '代碼是 2 到 8 位字母或數字。',
   'transports.error.distance': '距離是以公里計的數字，最多 100000。',
-  'transports.error.arrivesBeforeDeparts': '這段行程在出發之前就抵達了。',
-  'transports.error.timingHint': '把其中一個挪一下，這段行程才真的趕得上。',
+  'transports.error.arrivesBeforeDeparts': '這趟交通在出發之前就抵達了。',
+  'transports.error.timingHint': '把其中一個挪一下，這趟交通才真的趕得上。',
   'transports.bookingRefFor': '{title} 的訂位號',
   'transports.doorToDoor': '門到門一共 {gap}。',
   'transports.title.fromTo': '{operator} {from} 至 {to}',
@@ -434,10 +434,10 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': '沒有可比的時刻',
   'transports.junction.unknown.detail':
-    '給兩段行程都填上日期和時刻，這次轉乘就會幫你檢查。',
-  'transports.junction.impossible.headline': '比上一段抵達早 {gap} 出發',
+    '給兩趟交通都填上日期和時刻，這次轉乘就會幫你檢查。',
+  'transports.junction.impossible.headline': '比上一趟抵達早 {gap} 出發',
   'transports.junction.impossible.detail':
-    '「{to}」在「{from}」抵達之前就出發，兩段趕不上。請挪動其中一段。',
+    '「{to}」在「{from}」抵達之前就出發，兩趟都趕不上。請挪動其中一趟。',
   'transports.junction.tight.headline': '轉乘 {gap}',
   'transports.junction.tight.detail':
     '{mode} 通常需要大約 {required}。這次很緊。',
@@ -445,7 +445,7 @@ const messages = {
     '在{place}搭{mode}通常需要大約 {required}。這次很緊。',
   'transports.junction.ok.headline': '中間隔 {gap}',
   'transports.junction.ok.detail':
-    '抵達 {landing}，但下一段從 {boarding} 出發——你需要過去一趟。',
+    '抵達 {landing}，但下一趟從 {boarding} 出發——你需要先趕過去。',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': '便條已共用',

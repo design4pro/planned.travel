@@ -3,26 +3,30 @@ import { describe, expect, it } from 'vitest'
 import {
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
-  emptyLegDraft,
+  emptyTransportDraft,
   endpointLabels,
-  hasLegErrors,
+  hasTransportErrors,
   isTransportMode,
   isTransportStatus,
   kilometresToMetres,
   metresToKilometres,
   modeLabel,
-  suggestLegTitle,
+  suggestTransportTitle,
   transportStatusLabel,
   usesCodes,
   usesSeat,
   usesService,
-  validateLegDraft,
+  validateTransportDraft,
 } from '../leg-form'
 
-import type { LegDraft } from '../leg-form'
+import type { TransportDraft } from '../leg-form'
 
-function draft(overrides: Partial<LegDraft> = {}): LegDraft {
-  return { ...emptyLegDraft('EUR'), title: 'Flight to Tokyo', ...overrides }
+function draft(overrides: Partial<TransportDraft> = {}): TransportDraft {
+  return {
+    ...emptyTransportDraft('EUR'),
+    title: 'Flight to Tokyo',
+    ...overrides,
+  }
 }
 
 describe('mode and status vocabulary', () => {
@@ -61,7 +65,7 @@ describe('mode and status vocabulary', () => {
     expect(usesSeat('ferry')).toBe(false)
   })
 
-  it('names each end of a leg the way the mode does', () => {
+  it('names each end of a transport the way the mode does', () => {
     expect(endpointLabels('flight')).toEqual({
       from: 'modules.transports.end.fromAirport',
       to: 'modules.transports.end.toAirport',
@@ -77,10 +81,10 @@ describe('mode and status vocabulary', () => {
   })
 })
 
-describe('suggestLegTitle', () => {
+describe('suggestTransportTitle', () => {
   it('builds a name from the carrier and both codes', () => {
     expect(
-      suggestLegTitle(
+      suggestTransportTitle(
         draft({ carrier: 'SAS', departureCode: 'lhr', arrivalCode: 'hnd' }),
       ),
     ).toEqual({
@@ -92,7 +96,7 @@ describe('suggestLegTitle', () => {
 
   it('falls back to the mode when there is no carrier', () => {
     expect(
-      suggestLegTitle(
+      suggestTransportTitle(
         draft({
           mode: 'train',
           departureName: 'Tokyo',
@@ -108,7 +112,7 @@ describe('suggestLegTitle', () => {
 
   it('prefers a code over a name', () => {
     expect(
-      suggestLegTitle(
+      suggestTransportTitle(
         draft({
           carrier: 'JR',
           departureName: 'Tokyo Station',
@@ -125,14 +129,14 @@ describe('suggestLegTitle', () => {
 
   it('copes with only one end filled in', () => {
     expect(
-      suggestLegTitle(draft({ carrier: 'SAS', arrivalCode: 'HND' })),
+      suggestTransportTitle(draft({ carrier: 'SAS', arrivalCode: 'HND' })),
     ).toEqual({
       key: 'modules.transports.title.to',
       params: { operator: 'SAS', to: 'HND' },
       operatorKey: null,
     })
     expect(
-      suggestLegTitle(draft({ carrier: 'SAS', departureCode: 'LHR' })),
+      suggestTransportTitle(draft({ carrier: 'SAS', departureCode: 'LHR' })),
     ).toEqual({
       key: 'modules.transports.title.from',
       params: { operator: 'SAS', from: 'LHR' },
@@ -141,15 +145,15 @@ describe('suggestLegTitle', () => {
   })
 
   it('suggests nothing when neither end is known', () => {
-    expect(suggestLegTitle(draft({ carrier: 'SAS' }))).toBeNull()
+    expect(suggestTransportTitle(draft({ carrier: 'SAS' }))).toBeNull()
   })
 })
 
-describe('validateLegDraft', () => {
-  it('accepts a complete leg', () => {
+describe('validateTransportDraft', () => {
+  it('accepts a complete transport', () => {
     expect(
-      hasLegErrors(
-        validateLegDraft(
+      hasTransportErrors(
+        validateTransportDraft(
           draft({
             departureCode: 'LHR',
             departureDate: '2026-04-16',
@@ -166,17 +170,17 @@ describe('validateLegDraft', () => {
   })
 
   it('insists on a name', () => {
-    expect(validateLegDraft(draft({ title: '  ' })).title).toBeDefined()
+    expect(validateTransportDraft(draft({ title: '  ' })).title).toBeDefined()
   })
 
   it('rejects a name longer than the column', () => {
     expect(
-      validateLegDraft(draft({ title: 'x'.repeat(200) })).title,
+      validateTransportDraft(draft({ title: 'x'.repeat(200) })).title,
     ).toBeDefined()
   })
 
   it('rejects a malformed date and time', () => {
-    const errors = validateLegDraft(
+    const errors = validateTransportDraft(
       draft({ departureDate: '16/04/2026', departureTime: '25:00' }),
     )
     expect(errors.departureDate).toBeDefined()
@@ -185,16 +189,16 @@ describe('validateLegDraft', () => {
 
   it('refuses a time with no date to sit on', () => {
     expect(
-      validateLegDraft(draft({ departureTime: '08:00' })).departureDate,
+      validateTransportDraft(draft({ departureTime: '08:00' })).departureDate,
     ).toBe('modules.transports.error.departureNeedsDate')
-    expect(validateLegDraft(draft({ arrivalTime: '08:00' })).arrivalDate).toBe(
-      'modules.transports.error.arrivalNeedsDate',
-    )
+    expect(
+      validateTransportDraft(draft({ arrivalTime: '08:00' })).arrivalDate,
+    ).toBe('modules.transports.error.arrivalNeedsDate')
   })
 
-  it('refuses a leg that arrives before it departs', () => {
+  it('refuses a transport that arrives before it departs', () => {
     expect(
-      validateLegDraft(
+      validateTransportDraft(
         draft({
           departureDate: '2026-04-16',
           departureTime: '12:00',
@@ -206,7 +210,7 @@ describe('validateLegDraft', () => {
   })
 
   it('does not let the ordering message hide a malformed date', () => {
-    const errors = validateLegDraft(
+    const errors = validateTransportDraft(
       draft({
         departureDate: '2026-04-16',
         arrivalDate: 'nonsense',
@@ -217,34 +221,37 @@ describe('validateLegDraft', () => {
 
   it('rejects a station code that is not a code', () => {
     expect(
-      validateLegDraft(draft({ departureCode: 'L' })).departureCode,
+      validateTransportDraft(draft({ departureCode: 'L' })).departureCode,
     ).toBeDefined()
     expect(
-      validateLegDraft(draft({ arrivalCode: 'TOO-LONG-HERE' })).arrivalCode,
+      validateTransportDraft(draft({ arrivalCode: 'TOO-LONG-HERE' }))
+        .arrivalCode,
     ).toBeDefined()
     expect(
-      validateLegDraft(draft({ departureCode: 'lhr' })).departureCode,
+      validateTransportDraft(draft({ departureCode: 'lhr' })).departureCode,
     ).toBeUndefined()
   })
 
   it('rejects a distance that is not a number of kilometres', () => {
     expect(
-      validateLegDraft(draft({ distanceKm: 'far' })).distanceKm,
+      validateTransportDraft(draft({ distanceKm: 'far' })).distanceKm,
     ).toBeDefined()
     expect(
-      validateLegDraft(draft({ distanceKm: '-5' })).distanceKm,
+      validateTransportDraft(draft({ distanceKm: '-5' })).distanceKm,
     ).toBeDefined()
     expect(
-      validateLegDraft(draft({ distanceKm: '9,560' })).distanceKm,
+      validateTransportDraft(draft({ distanceKm: '9,560' })).distanceKm,
     ).toBeUndefined()
   })
 
   it('rejects a price it cannot read', () => {
-    expect(validateLegDraft(draft({ price: 'about 600' })).price).toBeDefined()
+    expect(
+      validateTransportDraft(draft({ price: 'about 600' })).price,
+    ).toBeDefined()
   })
 
   it('reports every problem at once', () => {
-    const errors = validateLegDraft(
+    const errors = validateTransportDraft(
       draft({ title: '', departureCode: 'X', distanceKm: 'far' }),
     )
     expect(Object.keys(errors).sort()).toEqual([

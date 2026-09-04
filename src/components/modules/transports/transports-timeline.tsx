@@ -1,9 +1,9 @@
 /**
  * The transports screen, laid out as a journey rather than a list.
  *
- * Legs are shown in departure order with the *hand-over between* them drawn as a
+ * Transports are shown in departure order with the *hand-over between* them drawn as a
  * junction on the rail: how long there is, whether that is enough for the mode
- * being caught, and whether the two ends even name the same place. A leg that
+ * being caught, and whether the two ends even name the same place. A transport that
  * cannot be caught after the one before it is a real, named warning — not a
  * silently wrong plan.
  *
@@ -32,7 +32,10 @@ import { resolve } from '../shared/deferred-message'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { Locale, Translate } from '#/lib/i18n'
-import { deleteLegFn, setLegStatusFn } from '#/server/fns/transports'
+import {
+  deleteTransportFn,
+  setTransportStatusFn,
+} from '#/server/fns/transports'
 import {
   ConfirmDialog,
   CopyValue,
@@ -46,10 +49,10 @@ import {
 } from '../shared'
 import {
   analyseConnections,
-  sortLegsByDeparture,
+  sortTransportsByDeparture,
   summariseConnections,
 } from './connections'
-import { LegDialog } from './leg-dialog'
+import { TransportDialog } from './leg-dialog'
 import {
   STATUS_LABELS,
   TRANSPORT_STATUSES,
@@ -62,7 +65,7 @@ import type { BadgeTone } from '#/components/ui'
 import type { ConfirmRequest, FactItem, StatusOption } from '../shared'
 import type { Connection } from './connections'
 import type { TransportStatus } from './leg-form'
-import type { LegData } from './types'
+import type { TransportData } from './types'
 
 /* ------------------------------------------------------------------- labels */
 
@@ -106,53 +109,55 @@ function formatKilometres(metres: number, locale: Locale): string {
 
 /* ------------------------------------------------------------------ screen */
 
-export interface LegsTimelineProps {
+export interface TransportsTimelineProps {
   readonly tripId: string
-  readonly legs: ReadonlyArray<LegData>
+  readonly transports: ReadonlyArray<TransportData>
   readonly currency: string
-  readonly newLegOpen: boolean
-  readonly onNewLegOpenChange: (open: boolean) => void
+  readonly newTransportOpen: boolean
+  readonly onNewTransportOpenChange: (open: boolean) => void
 }
 
 type ModeFilter = 'all' | string
 
-export function LegsTimeline({
+export function TransportsTimeline({
   tripId,
-  legs,
+  transports,
   currency,
-  newLegOpen,
-  onNewLegOpenChange,
-}: LegsTimelineProps) {
+  newTransportOpen,
+  onNewTransportOpenChange,
+}: TransportsTimelineProps) {
   const locale = useLocale()
   const t = useTranslate()
 
   const [filter, setFilter] = useState<ModeFilter>('all')
-  const [editing, setEditing] = useState<LegData | null>(null)
+  const [editing, setEditing] = useState<TransportData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
   const statuses = useOptimistic<TransportStatus>()
 
-  const setStatus = useAction(setLegStatusFn, {
+  const setStatus = useAction(setTransportStatusFn, {
     failure: t('modules.transports.toast.statusFailed.title'),
     fallback: t('modules.transports.toast.statusFailed.body'),
   })
-  const remove = useAction(deleteLegFn, {
+  const remove = useAction(deleteTransportFn, {
     success: t('modules.transports.toast.removed'),
     failure: t('modules.transports.toast.removeFailed'),
     onSuccess: () => setConfirm(null),
   })
 
-  const rendered = useMemo<Array<LegData>>(
+  const rendered = useMemo<Array<TransportData>>(
     () =>
-      legs.map((leg) => {
-        const claimed = statuses.get(leg.id)
-        return claimed === undefined ? leg : { ...leg, status: claimed }
+      transports.map((transport) => {
+        const claimed = statuses.get(transport.id)
+        return claimed === undefined
+          ? transport
+          : { ...transport, status: claimed }
       }),
-    [legs, statuses],
+    [transports, statuses],
   )
 
   /**
-   * Connections are analysed over *every* leg, not the filtered set: hiding the
+   * Connections are analysed over *every* transport, not the filtered set: hiding the
    * ferry does not make the flight after it catchable, so the warnings must not
    * disappear with the filter.
    */
@@ -168,27 +173,29 @@ export function LegsTimeline({
 
   const modes = useMemo(() => {
     const tally = new Map<string, number>()
-    for (const leg of rendered) {
-      tally.set(leg.mode, (tally.get(leg.mode) ?? 0) + 1)
+    for (const transport of rendered) {
+      tally.set(transport.mode, (tally.get(transport.mode) ?? 0) + 1)
     }
     return [...tally.entries()].sort((left, right) => right[1] - left[1])
   }, [rendered])
 
-  const ordered = useMemo(() => sortLegsByDeparture(rendered), [rendered])
+  const ordered = useMemo(() => sortTransportsByDeparture(rendered), [rendered])
   const visible = ordered.filter(
-    (leg) => filter === 'all' || leg.mode === filter,
+    (transport) => filter === 'all' || transport.mode === filter,
   )
 
-  function changeStatus(leg: LegData, next: string): void {
-    if (!isTransportStatus(next) || next === leg.status) {
+  function changeStatus(transport: TransportData, next: string): void {
+    if (!isTransportStatus(next) || next === transport.status) {
       return
     }
-    void statuses.claim([[leg.id, next]], () =>
-      setStatus.run({ data: { tripId, transportId: leg.id, status: next } }),
+    void statuses.claim([[transport.id, next]], () =>
+      setStatus.run({
+        data: { tripId, transportId: transport.id, status: next },
+      }),
     )
   }
 
-  if (legs.length === 0) {
+  if (transports.length === 0) {
     return (
       <>
         <EmptyState
@@ -202,17 +209,17 @@ export function LegsTimeline({
             <Button
               variant="primary"
               shape="pill"
-              onClick={() => onNewLegOpenChange(true)}
+              onClick={() => onNewTransportOpenChange(true)}
             >
               {t('modules.transports.empty.action')}
             </Button>
           }
         />
-        <LegDialog
+        <TransportDialog
           tripId={tripId}
           currency={currency}
-          open={newLegOpen}
-          onOpenChange={onNewLegOpenChange}
+          open={newTransportOpen}
+          onOpenChange={onNewTransportOpenChange}
         />
       </>
     )
@@ -225,7 +232,7 @@ export function LegsTimeline({
           tone="danger"
           title={t('modules.transports.alert.impossible.title', {
             count: summary.impossible,
-            legs: formatNumber(summary.impossible, locale),
+            value: formatNumber(summary.impossible, locale),
           })}
         >
           {t('modules.transports.alert.impossible.body')}
@@ -236,7 +243,7 @@ export function LegsTimeline({
           tone="warning"
           title={t('modules.transports.alert.tight.title', {
             count: summary.tight,
-            legs: formatNumber(summary.tight, locale),
+            value: formatNumber(summary.tight, locale),
           })}
         >
           {t('modules.transports.alert.tight.body')}
@@ -290,31 +297,33 @@ export function LegsTimeline({
         />
       ) : (
         <ol className="flex min-w-0 flex-col gap-0">
-          {visible.map((leg, index) => {
-            const connection = byFromId.get(leg.id)
+          {visible.map((transport, index) => {
+            const connection = byFromId.get(transport.id)
             const nextVisible =
               index + 1 < visible.length ? visible[index + 1] : null
             return (
-              <li key={leg.id} className="min-w-0">
-                <LegCard
-                  leg={leg}
+              <li key={transport.id} className="min-w-0">
+                <TransportCard
+                  transport={transport}
                   currency={currency}
-                  onEdit={() => setEditing(leg)}
-                  onStatus={(next) => changeStatus(leg, next)}
+                  onEdit={() => setEditing(transport)}
+                  onStatus={(next) => changeStatus(transport, next)}
                   onDelete={() =>
                     setConfirm({
                       title: t('modules.remove.confirmTitle', {
-                        name: leg.title,
+                        name: transport.title,
                       }),
                       description: t('modules.transports.remove.body'),
                       confirmLabel: t('modules.transports.remove.confirm'),
                       onConfirm: () =>
-                        remove.run({ data: { tripId, transportId: leg.id } }),
+                        remove.run({
+                          data: { tripId, transportId: transport.id },
+                        }),
                     })
                   }
                 />
-                {/* The junction is only drawn when the leg it describes is the one
-                  actually shown next — a filter that hides the middle leg must not
+                {/* The junction is only drawn when the transport it describes is the one
+                  actually shown next — a filter that hides the middle transport must not
                   claim the two remaining ones connect. */}
                 {connection !== undefined &&
                 nextVisible !== null &&
@@ -329,15 +338,15 @@ export function LegsTimeline({
         </ol>
       )}
 
-      <LegDialog
+      <TransportDialog
         tripId={tripId}
-        leg={editing ?? undefined}
+        transport={editing ?? undefined}
         currency={currency}
-        open={newLegOpen || editing !== null}
+        open={newTransportOpen || editing !== null}
         onOpenChange={(next) => {
           if (!next) {
             setEditing(null)
-            onNewLegOpenChange(false)
+            onNewTransportOpenChange(false)
           }
         }}
       />
@@ -357,7 +366,7 @@ export function LegsTimeline({
 
 /* --------------------------------------------------------------- junction */
 
-/** The hand-over between two legs, drawn on the rail between their cards. */
+/** The hand-over between two transports, drawn on the rail between their cards. */
 function Junction({ connection }: { connection: Connection }) {
   const t = useTranslate()
 
@@ -419,14 +428,14 @@ function Junction({ connection }: { connection: Connection }) {
 
 /* ---------------------------------------------------------------- one card */
 
-function LegCard({
-  leg,
+function TransportCard({
+  transport,
   currency,
   onEdit,
   onStatus,
   onDelete,
 }: {
-  leg: LegData
+  transport: TransportData
   currency: string
   onEdit: () => void
   onStatus: (next: string) => void
@@ -435,19 +444,21 @@ function LegCard({
   const t = useTranslate()
   const locale = useLocale()
 
-  const Icon = modeIcon(leg.mode)
-  const cancelled = leg.status === 'cancelled'
+  const Icon = modeIcon(transport.mode)
+  const cancelled = transport.status === 'cancelled'
 
   const facts: Array<FactItem> = [
-    ...(leg.carrier === null && leg.serviceNumber === null
+    ...(transport.carrier === null && transport.serviceNumber === null
       ? []
       : [
           {
             label: t('modules.transports.field.service'),
-            value: [leg.carrier, leg.serviceNumber].filter(Boolean).join(' '),
+            value: [transport.carrier, transport.serviceNumber]
+              .filter(Boolean)
+              .join(' '),
           },
         ]),
-    ...(leg.bookingCode === null
+    ...(transport.bookingCode === null
       ? []
       : [
           {
@@ -455,39 +466,39 @@ function LegCard({
             mono: true,
             value: (
               <CopyValue
-                value={leg.bookingCode}
+                value={transport.bookingCode}
                 label={t('modules.transports.bookingRefFor', {
-                  title: leg.title,
+                  title: transport.title,
                 })}
               />
             ),
           },
         ]),
-    ...(leg.seat === null
+    ...(transport.seat === null
       ? []
       : [
           {
             label: t('modules.transports.field.seat'),
             mono: true,
-            value: leg.seat,
+            value: transport.seat,
           },
         ]),
-    ...(leg.distanceMetres === null || leg.distanceMetres === 0
+    ...(transport.distanceMetres === null || transport.distanceMetres === 0
       ? []
       : [
           {
             label: t('modules.transports.field.distance'),
-            value: formatKilometres(leg.distanceMetres, locale),
+            value: formatKilometres(transport.distanceMetres, locale),
           },
         ]),
-    ...(leg.priceMinor === null || leg.priceMinor === 0
+    ...(transport.priceMinor === null || transport.priceMinor === 0
       ? []
       : [
           {
             label: t('modules.field.price'),
             value: formatMoney(
-              leg.priceMinor,
-              leg.currency ?? currency,
+              transport.priceMinor,
+              transport.currency ?? currency,
               locale,
             ),
           },
@@ -505,7 +516,7 @@ function LegCard({
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-edge-faint px-4 py-3 sm:px-5">
         <span className="inline-flex shrink-0 items-center gap-1.5 text-caption font-medium text-ink-3">
           <Icon aria-hidden className="size-3.5" />
-          {t(modeLabel(leg.mode))}
+          {t(modeLabel(transport.mode))}
         </span>
         <h2
           className={cn(
@@ -513,16 +524,16 @@ function LegCard({
             cancelled && 'line-through',
           )}
         >
-          {leg.title}
+          {transport.title}
         </h2>
         <StatusMenu
-          current={statusOption(leg.status, t)}
+          current={statusOption(transport.status, t)}
           options={statusOptions(t)}
-          label={t('modules.statusOf', { title: leg.title })}
+          label={t('modules.statusOf', { title: transport.title })}
           onSelect={onStatus}
         />
         <RowMenu
-          label={t('modules.actionsFor', { name: leg.title })}
+          label={t('modules.actionsFor', { name: transport.title })}
           items={[
             {
               label: t('modules.transports.menu.edit'),
@@ -543,20 +554,20 @@ function LegCard({
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-5">
         <div className="flex min-w-0 items-start gap-3">
           <Endpoint
-            code={leg.departureCode}
-            name={leg.departureName}
-            date={leg.departureDate}
-            time={leg.departureTime}
+            code={transport.departureCode}
+            name={transport.departureName}
+            date={transport.departureDate}
+            time={transport.departureTime}
           />
           <ArrowRight
             aria-hidden
             className="mt-1.5 size-4 shrink-0 text-ink-4"
           />
           <Endpoint
-            code={leg.arrivalCode}
-            name={leg.arrivalName}
-            date={leg.arrivalDate}
-            time={leg.arrivalTime}
+            code={transport.arrivalCode}
+            name={transport.arrivalName}
+            date={transport.arrivalDate}
+            time={transport.arrivalTime}
             align="right"
           />
         </div>
@@ -565,8 +576,10 @@ function LegCard({
           <FactList items={facts} columns={facts.length > 3 ? 4 : 3} />
         )}
 
-        {leg.notes === null ? null : (
-          <FactNote label={t('modules.field.notes')}>{leg.notes}</FactNote>
+        {transport.notes === null ? null : (
+          <FactNote label={t('modules.field.notes')}>
+            {transport.notes}
+          </FactNote>
         )}
       </div>
     </article>
@@ -574,7 +587,7 @@ function LegCard({
 }
 
 /**
- * One end of a leg.
+ * One end of a transport.
  *
  * Both ends are identifiers a traveller reads back at a desk, so both are set in
  * the UI face rather than the rounded display face: at this size the display face
@@ -639,7 +652,7 @@ export function ConnectionsBadge({
       <Badge tone="danger" dot size="lg">
         {t('modules.transports.badge.impossible', {
           count: impossible,
-          legs: formatNumber(impossible, locale),
+          value: formatNumber(impossible, locale),
         })}
       </Badge>
     )
@@ -649,7 +662,7 @@ export function ConnectionsBadge({
       <Badge tone="warning" dot size="lg">
         {t('modules.transports.badge.tight', {
           count: tight,
-          legs: formatNumber(tight, locale),
+          value: formatNumber(tight, locale),
         })}
       </Badge>
     )
