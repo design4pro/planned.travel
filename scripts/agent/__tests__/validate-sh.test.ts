@@ -551,6 +551,7 @@ describe('the verdict of a red e2e step', () => {
     expect(run.verdict.uiTouched).toBe(true)
     expect(run.verdict.steps.map((s) => s.name)).toEqual([
       'route-tree',
+      'db-drift',
       'typecheck',
       'lint',
       'vitest',
@@ -637,6 +638,7 @@ describe('the UI-touched heuristic', () => {
     expect(run.verdict.uiTouched).toBe(false)
     expect(run.verdict.steps.map((s) => s.name)).toEqual([
       'route-tree',
+      'db-drift',
       'typecheck',
       'lint',
       'vitest',

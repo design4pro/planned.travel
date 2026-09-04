@@ -43,17 +43,8 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
 
       # `src/routeTree.gen.ts` is generated and committed. Regenerating it here
       # proves the committed copy matches the route files in the same commit —
@@ -62,7 +53,34 @@ jobs:
         run: pnpm generate-routes
 
       - name: Check the committed route tree is current
-        run: git diff --exit-code -- src/routeTree.gen.ts
+        run: |
+          set -euo pipefail
+          # --intent-to-add first: `git diff` is blind to a file git has never
+          # seen, so without this a *new* generated file - a first route in a
+          # new directory - reports clean and the drift ships.
+          git add --intent-to-add -- src/routeTree.gen.ts
+          git diff --exit-code -- src/routeTree.gen.ts
+
+      # `drizzle/` is generated and committed the same way the route tree is, and
+      # a schema edit with no committed migration is caught here rather than in
+      # production, where it presents as a query against a column that does not
+      # exist.
+      #
+      # `< /dev/null` because drizzle-kit asks, on a rename it cannot infer,
+      # whether a column was created or renamed. On a runner there is nobody to
+      # answer, and a prompt with no stdin hangs until the job timeout instead of
+      # failing. Closed stdin turns that into an immediate, readable error.
+      - name: Generate migrations from the schema
+        run: pnpm db:generate < /dev/null
+
+      - name: Check every schema change has a committed migration
+        run: |
+          set -euo pipefail
+          git add --intent-to-add -- drizzle/
+          if ! git diff --exit-code -- drizzle/; then
+            echo "::error title=Uncommitted migration::The schema and drizzle/ disagree. Run 'pnpm db:generate' and commit the result - migrations are additive, and the running Worker has to survive the migrate-then-deploy window."
+            exit 1
+          fi
 
       # ESLint spends its time building a typed program and then walking it, and
       # on a pull request almost none of that work is new. `--cache` skips a file
@@ -146,17 +164,8 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
 
       # `--coverage` on every shard because v8 has to instrument the run that
       # executes the code; the merge step cannot invent coverage for files a
@@ -207,17 +216,8 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
 
       - name: Download the blob reports
         uses: actions/download-artifact@v4
@@ -358,17 +358,8 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
 
       - name: Download the blob reports
         uses: actions/download-artifact@v4

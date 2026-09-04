@@ -95,7 +95,20 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          # The trailing instruction is load-bearing, not decoration. The plugin spawns its
+          # reading agents with `Agent`, and in run 33895385603 it backgrounded them: it said
+          # "I'll wait for the background agent's notification" and the session ended thirteen
+          # seconds later with the eligibility check still running. A non-interactive run has no
+          # waiting - ending a turn ends the run - so a backgrounded agent is one whose findings
+          # nobody ever reads. `claude-review-ran.mjs` now fails a run that ends with a subagent
+          # still working, and this is the half that stops it happening.
+          prompt: |
+            /code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+            Spawn every subagent in the foreground, with `run_in_background: false`. This run is
+            non-interactive: when you end your turn the session ends, so there is nothing to wait
+            with and a backgrounded agent's findings reach nobody.
+
           # The repository is private, so the transcript this prints is already as visible as the
           # diff it quotes - and without it a crippled review leaves nothing in the log to read.
           show_full_output: true

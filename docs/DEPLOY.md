@@ -1424,6 +1424,13 @@ pnpm exec wrangler deployments list          # find the previous version id
 pnpm exec wrangler rollback VERSION_ID
 ```
 
+Or, without a local checkout and without credentials on your machine: the **Rollback production**
+workflow (`.github/workflows/rollback.yml`), run from Actions with that version id and a one-line
+reason. It shares the `deploy-production` concurrency group, so it cannot race the deploy it is
+undoing, and it ends on the same two smoke requests `deploy.yml` does. It moves nothing else —
+`main` still points at the version you rolled back, so the follow-up is a revert PR or the next
+merge re-deploys it.
+
 Rollback reverts code, not data. **That is only safe across migrations that are additive**, and §5
 says why: the reader a rollback strands is the previous Worker's SQL, not the rows. An additive
 migration leaves every column the old Worker names still present, so it serves. A rename or a drop
