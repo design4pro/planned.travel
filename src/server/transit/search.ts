@@ -282,7 +282,15 @@ export interface TransitSearchRuntime {
   readonly cache: TransitCache
   /** Where allowances are tallied — per workspace, on purpose. */
   readonly counters: RateCounterStore
-  readonly client: TransitClient
+  /**
+   * The provider, or `null` on a deployment that holds no credential for one.
+   *
+   * Absent rather than throwing on use, because the two are not the same to the meter: a client
+   * that refuses when called is called after the allowance has been spent, and a search that never
+   * leaves the Worker would burn a unit of it every time. `null` is a refusal this module can make
+   * one line earlier - see {@link searchTransitConnections}.
+   */
+  readonly client: TransitClient | null
   readonly organizationId: string
   /** `resolveLimits().rates.transit_searches_per_month` for this workspace. */
   readonly ceiling: number
@@ -330,6 +338,10 @@ async function cached(
  * *tally* before the cache would charge a workspace for an answer we already had, and calling the
  * provider first would make the ceiling advisory.
  *
+ * A provider this deployment has no credential for is not part of it either, and is refused
+ * between the cache and the meter: the answers already held are still served, and the workspace is
+ * not charged for a search that never leaves the Worker.
+ *
  * A ceiling of zero is not part of that trade, and is answered before anything else. It is a plan
  * boundary rather than a rate limit — the workspace may make no search at all, ever — and
  * `transitCacheKey` deliberately carries no organization, so entries are shared across tenants.
@@ -356,6 +368,16 @@ export async function searchTransitConnections(
       spent: null,
       ceiling: runtime.ceiling,
     }
+  }
+
+  // Before the meter and after the cache. A deployment with no provider credential can still serve
+  // what it already holds, but it must not spend a workspace's allowance on a call that cannot be
+  // made - the reader sees the same refusal either way, and the allowance is the difference.
+  if (runtime.client === null) {
+    throw new TransitProviderError(
+      'unconfigured',
+      'Connection search is not configured on this deployment.',
+    )
   }
 
   // Throws `RateCeilingError`, which the caller turns into a refusal the reader can act on.

@@ -315,6 +315,7 @@ pnpm exec wrangler secret put CLOUDFLARE_API_TOKEN        # scoped: D1:read
 pnpm exec wrangler secret put D1_DATABASE_ID              # the id from §1
 pnpm exec wrangler secret put BROWSER_RENDERING_API_TOKEN # PDF export
 pnpm exec wrangler secret put FIRECRAWL_API_KEY           # catalogue scrape — phase D, §15.1
+pnpm exec wrangler secret put HERE_API_KEY                # connection search — ADR 0011
 pnpm exec wrangler secret put FIRECRAWL_WEBHOOK_SECRET    # crawl callbacks  — phase D, §15.2
 openssl rand -base64 32 | pnpm exec wrangler secret put MCP_TOKEN_PEPPER  # phase E, §14.3
 ```

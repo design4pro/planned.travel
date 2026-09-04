@@ -39,10 +39,11 @@ export interface TransitRuntimeOptions {
  * **One namespace, two roles, and they must not be confused**: the answers are keyed on the query
  * alone and shared by every tenant, while the tallies are keyed per organization.
  *
- * **The provider client is built when a call is actually made**, not when this runtime is
- * assembled: `createHereClient` refuses an empty key, so building it eagerly would refuse the whole
- * search before the cache was consulted — and a deployment whose credential was removed must still
- * serve what it already holds.
+ * **A deployment with no credential gets no client, rather than one that throws when called.**
+ * `createHereClient` refuses an empty key, and a refusal raised from inside `search` is raised
+ * after `./search` has already spent a unit of the workspace's allowance on it. Handing over
+ * `null` instead lets `./search` refuse one line earlier, before the meter — and it still consults
+ * the cache first, so a deployment whose credential was removed serves what it already holds.
  */
 export function transitRuntime(
   options: TransitRuntimeOptions,
@@ -50,14 +51,24 @@ export function transitRuntime(
   return {
     cache: env.KV,
     counters: env.KV,
-    client: {
-      search: (query) =>
-        createHereClient({ apiKey: env.HERE_API_KEY ?? '', fetch }).search(
-          query,
-        ),
-    },
+    client: hereClient(),
     organizationId: options.organizationId,
     ceiling: options.ceiling,
     now: () => new Date(),
+  }
+}
+
+/**
+ * This Worker's HERE client, or `null` when it holds no key for one.
+ *
+ * The key is read here and nowhere else, and whether it is usable is `createHereClient`'s own
+ * judgement rather than a second copy of it in this file — which is why the refusal is caught
+ * rather than pre-empted by an emptiness check that would have to stay in step with it.
+ */
+function hereClient(): TransitSearchRuntime['client'] {
+  try {
+    return createHereClient({ apiKey: env.HERE_API_KEY ?? '', fetch })
+  } catch {
+    return null
   }
 }

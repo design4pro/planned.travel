@@ -340,6 +340,48 @@ describe('searchTransitConnections', () => {
     expect(second.spent).toBeNull()
   })
 
+  /**
+   * The deployment with no credential, which is a realistic state: `HERE_API_KEY` is an optional
+   * binding and a Worker that never had it set reaches this line on every cache miss.
+   *
+   * The refusal the reader sees is the same either way — `connection-search.tsx` renders
+   * `unconfigured` as a refusal in all 23 locales — so the only observable difference is the one
+   * asserted here: whether a unit of a monthly allowance was spent on a call that never left the
+   * Worker. Left after the meter, a Solo workspace's 250 searches drain to zero without a single
+   * search having been made.
+   */
+  it('refuses an unconfigured provider without spending the allowance', async () => {
+    const counters = memoryStore()
+
+    const error = await searchTransitConnections(
+      runtime({ counters, client: null }),
+      QUERY,
+    ).catch((cause: unknown) => cause)
+
+    expect(error).toBeInstanceOf(TransitProviderError)
+    expect((error as TransitProviderError).reason).toBe('unconfigured')
+    expect([...counters.entries.keys()]).toEqual([])
+  })
+
+  /** And the cache is still read first, so what the deployment already holds is still served. */
+  it('serves a cached answer with no provider at all', async () => {
+    const cache = memoryStore()
+    const counters = memoryStore()
+
+    expect(
+      (await searchTransitConnections(runtime({ cache, counters }), QUERY))
+        .cached,
+    ).toBe(false)
+
+    const second = await searchTransitConnections(
+      runtime({ cache, counters, client: null }),
+      QUERY,
+    )
+
+    expect(second.cached).toBe(true)
+    expect(second.connections).toEqual([CONNECTION])
+  })
+
   it('refuses at the ceiling, before the provider is called', async () => {
     const client = stubClient()
     const deps = runtime({ client, ceiling: 0 })
