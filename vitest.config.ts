@@ -81,6 +81,11 @@ export default defineConfig({
             // to assert a string against a regular expression. `console-policy.ts`
             // imports nothing, so it runs here for free.
             'e2e/helpers/__tests__/*.test.ts',
+            // Build config, for the same reason: `vite.config.ts` decides whether
+            // the devtools console relay pipes the Worker's own errors into a
+            // watching Playwright spec, and nothing but a test holds that gate
+            // shut. It sits at the repo root, so no `src/**` glob reaches it.
+            'vite.config.test.ts',
           ],
           restoreMocks: true,
         },
