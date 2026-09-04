@@ -178,6 +178,16 @@ export function LegDialog({
   const [chain, setChain] = useState<ChainDraft>(() => chainFor(transport))
   const [touched, setTouched] = useState(false)
   const [fillMode, setFillMode] = useState<DialogMode>('form')
+  /**
+   * The transport this dialog has already written, when it wrote one and stayed open.
+   *
+   * A new transport is saved in two calls — the record, then its chain — and only the first can
+   * succeed alone. When the chain write fails the dialog stays open with the traveller's stops
+   * still in it, which is the point; but the record now exists, so the retry has to be an
+   * *update* of that row. Without this the second press creates a second transport and abandons
+   * the first with no legs. `BookingDialog` keeps the same note for the same reason.
+   */
+  const [savedId, setSavedId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
@@ -191,6 +201,7 @@ export function LegDialog({
     setChain(chainFor(transport))
     setTouched(false)
     setFillMode('form')
+    setSavedId(null)
   }, [open, transport, currency])
 
   /**
@@ -216,7 +227,7 @@ export function LegDialog({
     failure: t('modules.transports.toast.chainFailed'),
     fallback: t('modules.transports.toast.chainFallback'),
   })
-  const action = editing ? update : create
+  const action = editing || savedId !== null ? update : create
 
   const errors = useMemo(() => validateLegDraft(draft, days), [draft, days])
   const chainErrors = useMemo(
@@ -346,9 +357,11 @@ export function LegDialog({
         Number.isFinite(priceMinor) && priceMinor > 0 ? draft.currency : '',
       notes: draft.notes,
     }
-    const result = editing
-      ? await update.run({ data: { ...payload, transportId: transport.id } })
-      : await create.run({ data: payload })
+    const existingId = transport?.id ?? savedId
+    const result =
+      existingId === null
+        ? await create.run({ data: payload })
+        : await update.run({ data: { ...payload, transportId: existingId } })
     if (result === null) {
       return
     }
@@ -360,11 +373,14 @@ export function LegDialog({
      * "this transport has no legs", which is what removes the rows a journey
      * used to have when the traveller puts it back together.
      */
-    const transportId = editing ? transport.id : result.transportId
+    const transportId = result.transportId
     const chained = await saveChain.run({
       data: { tripId, transportId, ...chainPayload(chain) },
     })
     if (chained === null) {
+      // The record is written and its legs are not. Remembering the id is what makes the next
+      // press finish this transport rather than start another one.
+      setSavedId(transportId)
       return
     }
     onOpenChange(false)

@@ -18,7 +18,7 @@
  * real foreign keys, real `CHECK` constraints.
  */
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   createAssignment,
@@ -26,6 +26,7 @@ import {
   createPlace,
   createReservation,
   createTrip,
+  deleteExpense,
   getExpense,
   getReservation,
   linkReservationExpense,
@@ -625,5 +626,102 @@ describe('the booking desk’s payload', () => {
       ),
     ).rejects.toBeInstanceOf(NotFoundError)
     expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
+  })
+})
+
+/**
+ * The delete path, on the database D1 is actually running.
+ *
+ * `{ ddl: 'migrations' }` and not the default, and that is the whole test. `schema.ts` declares
+ * `reservations.expense_id` as `on delete: 'set null'`, so on a schema-built database the engine
+ * unlinks the booking by itself and this passes whatever `deleteExpense` does. What ships is a
+ * `REFERENCES` clause with no `ON DELETE` — drizzle-kit's `ADD COLUMN` cannot emit one — so the
+ * deployed rule is `NO ACTION` and the same delete raises `FOREIGN KEY constraint failed` unless
+ * the repository clears the column first. `reservation-schema.test.ts` pins that gap; this is the
+ * test that the code closes it.
+ */
+describe('deleting an expense a booking points at, as deployed', () => {
+  let deployed: Harness
+  let deployedScope: TenantScope
+  let deployedTrip: Trip
+
+  beforeEach(async () => {
+    deployed = await createHarness({ ddl: 'migrations' })
+    const seeded = await deployed.seedTenant('ledger-delete')
+    deployedScope = seeded.scope
+    deployedTrip = await createTrip(deployedScope, {
+      title: 'Kyoto',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'JPY',
+    })
+  })
+
+  afterEach(() => {
+    deployed.close()
+  })
+
+  it('unlinks the booking and keeps it, rather than failing on the foreign key', async () => {
+    const reservation = await createReservation(deployedScope, {
+      tripId: deployedTrip.id,
+      title: 'Ryokan',
+      startDate: '2026-04-11',
+    })
+    const created = await createExpense(deployedScope, {
+      tripId: deployedTrip.id,
+      title: 'Ryokan',
+      amountMinor: 42_000,
+      spentOn: '2026-04-11',
+    })
+    await linkReservationExpense(
+      deployedScope,
+      reservation.id,
+      created.expense.id,
+    )
+
+    await deleteExpense(deployedScope, created.expense.id)
+
+    expect(await getExpense(deployedScope, created.expense.id)).toBeNull()
+    const kept = await getReservation(deployedScope, reservation.id)
+    expect(kept?.title).toBe('Ryokan')
+    expect(kept?.expenseId).toBeNull()
+  })
+
+  /** The unlink is scoped like every other statement: another workspace's link is not touched. */
+  it('leaves another workspace’s link alone', async () => {
+    const other = await deployed.seedTenant('ledger-delete-other')
+    const otherTrip = await createTrip(other.scope, {
+      title: 'Osaka',
+      startDate: '2026-05-01',
+      endDate: '2026-05-02',
+    })
+    const otherReservation = await createReservation(other.scope, {
+      tripId: otherTrip.id,
+      title: 'Hotel',
+      startDate: '2026-05-01',
+    })
+    const otherExpense = await createExpense(other.scope, {
+      tripId: otherTrip.id,
+      title: 'Hotel',
+      amountMinor: 10_000,
+      spentOn: '2026-05-01',
+    })
+    await linkReservationExpense(
+      other.scope,
+      otherReservation.id,
+      otherExpense.expense.id,
+    )
+
+    const mine = await createExpense(deployedScope, {
+      tripId: deployedTrip.id,
+      title: 'Coffee',
+      amountMinor: 500,
+      spentOn: '2026-04-11',
+    })
+    await deleteExpense(deployedScope, mine.expense.id)
+
+    expect(
+      (await getReservation(other.scope, otherReservation.id))?.expenseId,
+    ).toBe(otherExpense.expense.id)
   })
 })

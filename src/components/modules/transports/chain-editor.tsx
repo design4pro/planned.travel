@@ -66,11 +66,12 @@ import {
   removeStationAt,
   splitLegAt,
   stationLabel,
+  updateStationByKey,
   usesCodes,
   usesSeat,
   usesService,
 } from './leg-form'
-import { legDurationMinutes } from './leg-timing'
+import { legDurationMinutes, legElapsedMinutes } from './leg-timing'
 
 import type { ComboboxOption } from '#/components/ui'
 import type { MessageKey, Translate } from '#/lib/i18n'
@@ -214,6 +215,7 @@ function StationRow({
   mode,
   errors,
   onChange,
+  onResolve,
   onRemove,
 }: {
   station: StationDraft
@@ -222,6 +224,15 @@ function StationRow({
   mode: string
   errors: StationErrors | undefined
   onChange: (next: StationDraft) => void
+  /**
+   * An edit that arrives late, applied to whatever the station holds by then.
+   *
+   * Separate from `onChange` because it is answering a different question. `onChange` reports
+   * what the traveller just typed, and the value it carries is the newest there is. This one
+   * carries the resolution of a round trip that started some renders ago, so it has to be
+   * handed the current station rather than the one it was started from.
+   */
+  onResolve: (update: (current: StationDraft) => StationDraft) => void
   onRemove: () => void
 }) {
   const t = useTranslate()
@@ -246,6 +257,13 @@ function StationRow({
    * that cannot be reached, both do nothing at all: the fields are free text and
    * stay exactly as typed, which is what keeps the lookup a shortcut rather than
    * a gate in front of recording an airport that opened last week.
+   *
+   * Through `onResolve` and never `onChange`, because a round trip is long enough to type in.
+   * `fillStationFromCode` back-fills blank fields and keeps every other one, so handing it this
+   * render's station would write that whole snapshot back — and a name typed, a stop inserted or
+   * a timezone picked while the answer was in the air would silently revert. `useStationSearch`
+   * guards the same race above with its `live` flag; here the concurrent edit has to survive
+   * rather than be discarded, so the fill is applied to the current station instead.
    */
   async function resolveTypedCode(): Promise<void> {
     const code = station.code.trim()
@@ -254,7 +272,7 @@ function StationRow({
     }
     const match = await findStationFn({ data: { code } }).catch(() => null)
     if (match !== null) {
-      onChange(fillStationFromCode(station, match))
+      onResolve((current) => fillStationFromCode(current, match))
     }
   }
 
@@ -399,7 +417,6 @@ function LegRow({
   const t = useTranslate()
 
   const labels = endpointLabels(mode)
-  const duration = legDurationMinutes(leg)
   /*
    * Two zones is the case that stops being obvious: 09:00 Tokyo to 08:30 Seoul
    * is a ninety-minute flight, not a journey backwards in time. The wall clocks
@@ -408,6 +425,15 @@ function LegRow({
    */
   const crossesZones =
     from.timezone !== '' && to.timezone !== '' && from.timezone !== to.timezone
+  /*
+   * And it is a different subtraction. `legDurationMinutes` differences the two wall clocks,
+   * which is the elapsed time only while they are the same clock; across zones the offsets have
+   * to come off first. Saying "3h" over an eight-hour flight would be worse than saying nothing,
+   * because it is the one number this label exists to correct.
+   */
+  const duration = crossesZones
+    ? legElapsedMinutes(leg, { from: from.timezone, to: to.timezone })
+    : legDurationMinutes(leg)
   const departureClock = localClockLabel({
     time: leg.departureTime,
     timezone: from.timezone,
@@ -624,7 +650,13 @@ export interface ChainEditorProps {
   readonly errors: ChainErrors
   /** Errors are shown once the traveller has tried to save, never before. */
   readonly showErrors: boolean
-  readonly onChange: (next: ChainDraft) => void
+  /**
+   * Accepts an updater as well as a value: a station lookup resolves after an await and has to
+   * be applied to the chain as it stands then, not as it stood when the lookup started.
+   */
+  readonly onChange: (
+    next: ChainDraft | ((current: ChainDraft) => ChainDraft),
+  ) => void
 }
 
 export function ChainEditor({
@@ -659,6 +691,14 @@ export function ChainEditor({
     })
   }
 
+  /** A late edit, addressed by the station's own key because indices move under it. */
+  function updateStation(
+    key: string,
+    update: (current: StationDraft) => StationDraft,
+  ): void {
+    onChange((current) => updateStationByKey(current, key, update))
+  }
+
   function setLeg(index: number, next: ChainLegDraft): void {
     onChange({
       ...chain,
@@ -683,6 +723,7 @@ export function ChainEditor({
             mode={mode}
             errors={showErrors ? errors.stations?.[index] : undefined}
             onChange={(next) => setStation(index, next)}
+            onResolve={(update) => updateStation(station.key, update)}
             onRemove={() => onChange(removeStationAt(chain, index))}
           />
           {index < chain.legs.length ? (

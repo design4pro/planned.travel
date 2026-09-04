@@ -65,6 +65,7 @@ export {
   stationLabel,
   suggestLegTitle,
   transportStatusLabel,
+  updateStationByKey,
   usesCodes,
   usesSeat,
   usesService,
@@ -92,5 +93,5 @@ export type {
 } from './leg-form'
 
 export { MODE_ICON, modeIcon } from './mode-icon'
-export { legDurationMinutes } from './leg-timing'
+export { legDurationMinutes, legElapsedMinutes } from './leg-timing'
 export type { TransportData, TransportDayData, TransportLegData } from './types'

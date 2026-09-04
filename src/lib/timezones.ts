@@ -171,6 +171,24 @@ export function timeZoneOffsetLabel(
     : `UTC${sign}${hours}:${String(minutes).padStart(2, '0')}`
 }
 
+/**
+ * Minutes a zone is ahead of UTC on a given date — `540` for `Asia/Tokyo`, `-300` for
+ * `America/New_York` in winter.
+ *
+ * The same number {@link timeZoneOffsetLabel} prints, exported for the callers that have to do
+ * arithmetic with it rather than show it. Two wall clocks in two zones are two different instants,
+ * and nothing can subtract one from the other without this.
+ *
+ * Read on the date asked about, because the answer moves: a zone that is `-300` in January is
+ * `-240` in July, and a flight in July priced on January's offset is an hour wrong.
+ */
+export function timeZoneOffsetMinutes(
+  zone: string | null | undefined,
+  date?: string | null,
+): number {
+  return offsetMinutes(resolveTimeZone(zone), instantFor(date))
+}
+
 /* -------------------------------------------------------------------------------------------------
  * The picker and the label
  * ---------------------------------------------------------------------------------------------- */

@@ -31,6 +31,7 @@ import {
   hasLegErrors,
   isLookupCode,
   removeStationAt,
+  updateStationByKey,
   splitLegAt,
   stationLabel,
   validateChain,
@@ -669,5 +670,74 @@ describe('a code worth looking up', () => {
     for (const value of ['', 'N', 'NR', 'NARITA', 'NR T', 'NR-T']) {
       expect(isLookupCode(value)).toBe(false)
     }
+  })
+})
+
+/**
+ * The address a late answer uses.
+ *
+ * The code lookup in the editor is a server round trip started when the traveller leaves the code
+ * field, and a traveller does not stop typing while it is in the air. Everything here is about the
+ * gap between "the lookup started" and "the lookup answered": the answer has to land on the
+ * station as it stands *then*, not rebuild it from the snapshot the lookup was started with.
+ */
+describe('a station edit that resolves late', () => {
+  it('applies to the station as it stands, not as it was', () => {
+    const chain = threeStations()
+    const key = chain.stations[1].key
+
+    // The traveller types a name while the lookup for the code is still in flight.
+    const meanwhile = updateStationByKey(chain, key, (current) => ({
+      ...current,
+      name: 'Typed while waiting',
+    }))
+    // And now the answer lands, carrying only what it knows.
+    const resolved = updateStationByKey(meanwhile, key, (current) => ({
+      ...current,
+      code: 'NRT',
+    }))
+
+    expect(resolved.stations[1].name).toBe('Typed while waiting')
+    expect(resolved.stations[1].code).toBe('NRT')
+  })
+
+  it('follows the station when a stop is inserted before it', () => {
+    const chain = threeStations()
+    const key = chain.stations[2].key
+    const moved = splitLegAt(chain, 0)
+
+    expect(moved.stations[2].key).not.toBe(key)
+    const resolved = updateStationByKey(moved, key, (current) => ({
+      ...current,
+      code: 'HND',
+    }))
+
+    expect(resolved.stations.find((station) => station.key === key)?.code).toBe(
+      'HND',
+    )
+    // And nobody else was touched.
+    expect(
+      resolved.stations.filter((station) => station.code === 'HND'),
+    ).toHaveLength(1)
+  })
+
+  it('changes nothing when the stop was removed while the answer was in the air', () => {
+    const chain = threeStations()
+    const key = chain.stations[1].key
+    const without = removeStationAt(chain, 1)
+
+    expect(updateStationByKey(without, key, () => emptyStation())).toBe(without)
+  })
+
+  it('keeps the chain arithmetic', () => {
+    const chain = threeStations()
+    const resolved = updateStationByKey(
+      chain,
+      chain.stations[0].key,
+      (current) => ({ ...current, timezone: 'Asia/Tokyo' }),
+    )
+
+    expect(resolved.legs).toHaveLength(resolved.stations.length - 1)
+    expect(resolved.legs).toEqual(chain.legs)
   })
 })

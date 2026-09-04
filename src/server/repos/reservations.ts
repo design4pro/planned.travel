@@ -398,6 +398,33 @@ export async function linkReservationExpense(
   })
 }
 
+/**
+ * Unlinks every booking of this tenant that points at one expense, and answers how many.
+ *
+ * Called by {@link deleteExpense} immediately before the expense row goes, and that ordering is
+ * the whole point. `schema.ts` declares the column `on delete: 'set null'`, but drizzle-kit's
+ * `ADD COLUMN` emits `REFERENCES` with no `ON DELETE` clause, so what D1 actually enforces is
+ * `NO ACTION` — pinned, deliberately, by `reservation-schema.test.ts`. Closing that gap in the
+ * database would mean either hand-editing a generated migration or rebuilding the table, and
+ * `drizzle/` forbids the first. So the rule the schema promises is kept here instead: without
+ * this, deleting a priced booking's cost line raises `FOREIGN KEY constraint failed` and the
+ * reader gets a 500 where the doc comment promised a quiet unlink.
+ *
+ * Scoped like every other statement in this file, so an expense id belonging to another
+ * organization matches no row rather than clearing one.
+ */
+export async function unlinkReservationsFromExpense(
+  scope: TenantScope,
+  expenseId: string,
+): Promise<number> {
+  const rows = await reservationsRepository.updateWhere(
+    scope,
+    eq(reservations.expenseId, expenseId),
+    { expenseId: null },
+  )
+  return rows.length
+}
+
 /** The id list one import may mark in a single statement — the engine's own ceiling, not a second opinion. */
 const IMPORT_BATCH_LIMIT = 500
 

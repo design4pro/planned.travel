@@ -36,7 +36,7 @@
 import { z } from 'zod'
 
 import { TRANSPORT_MODES } from '#/server/db/schema'
-import { spendRateUnit } from './meter'
+import { RateCeilingError, spendRateUnit } from './meter'
 
 import type { RateCounterStore } from './meter'
 
@@ -324,16 +324,28 @@ async function cached(
 }
 
 /**
- * Search public-transport connections, through the cache and the meter.
+ * Search public-transport connections, through the plan gate, the cache and the meter.
  *
- * The order is the whole contract: **cache, then meter, then provider**. Checking the ceiling
- * first would charge a workspace for an answer we already had, and calling the provider first
- * would make the ceiling advisory.
+ * The order is the whole contract: **gate, then cache, then meter, then provider**. Checking the
+ * *tally* before the cache would charge a workspace for an answer we already had, and calling the
+ * provider first would make the ceiling advisory.
+ *
+ * A ceiling of zero is not part of that trade, and is answered before anything else. It is a plan
+ * boundary rather than a rate limit — the workspace may make no search at all, ever — and
+ * `transitCacheKey` deliberately carries no organization, so entries are shared across tenants.
+ * Left behind the cache, a Free workspace would get real results for any route a paying one had
+ * asked about in the last six hours, and see neither a meter nor a refusal. Nothing leaks and
+ * nothing is spent, but the boundary stops being one, so it is enforced where the cache cannot
+ * reach around it.
  */
 export async function searchTransitConnections(
   runtime: TransitSearchRuntime,
   query: TransitQuery,
 ): Promise<TransitSearchResult> {
+  if (runtime.ceiling <= 0) {
+    throw new RateCeilingError('transit_searches_per_month', runtime.ceiling, 0)
+  }
+
   const key = transitCacheKey(query)
 
   const hit = await cached(runtime, key)

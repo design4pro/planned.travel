@@ -3,7 +3,9 @@
  *
  * The DDL is generated from the Drizzle schema itself (`drizzle-kit/api`), so these tests exercise the
  * real column types, the real `CHECK` constraints and the real foreign keys — including
- * `ON DELETE CASCADE` — rather than a hand-written approximation that could drift.
+ * `ON DELETE CASCADE` — rather than a hand-written approximation that could drift. Pass
+ * `{ ddl: 'migrations' }` to build the database D1 is running instead; see {@link HarnessOptions}
+ * for when that difference matters.
  *
  * The database is reached through Drizzle's proxy driver, whose handle satisfies the same
  * {@link Database} type the Worker's D1 handle does. Both the single-statement and the `batch`
@@ -11,13 +13,17 @@
  */
 
 import { DatabaseSync } from 'node:sqlite'
-import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/api'
+import {
+  generateSQLiteDrizzleJson,
+  generateSQLiteMigration,
+} from 'drizzle-kit/api'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { authSchema, member, organization, user } from '#/server/db/auth-schema'
 import * as domainSchema from '#/server/db/schema'
 import { newId } from '#/server/db/schema'
 import { ceilingsForPlan } from '#/server/billing/limits'
 import { ceilingColumns } from '#/server/billing/store'
+import { replayMigrations } from '#/server/db/__tests__/migration-files'
 import { createScope } from '../base'
 import { upsertSubscription } from '../billing'
 import type { PlanId } from '#/lib/plans'
@@ -33,7 +39,10 @@ let ddl: Promise<Array<string>> | undefined
 function schemaStatements(): Promise<Array<string>> {
   ddl ??= (async () => {
     const empty = await generateSQLiteDrizzleJson({})
-    const current = await generateSQLiteDrizzleJson({ ...authSchema, ...domainSchema })
+    const current = await generateSQLiteDrizzleJson({
+      ...authSchema,
+      ...domainSchema,
+    })
     return generateSQLiteMigration(empty, current)
   })()
   return ddl
@@ -109,18 +118,42 @@ export interface Harness {
   close: () => void
 }
 
+export interface HarnessOptions {
+  /**
+   * Where the DDL comes from — `'schema'` (the default) or `'migrations'`.
+   *
+   * They are not the same database, and the difference is the point of the option. `'schema'`
+   * builds what `schema.ts` declares, which is what a repository is written against. `'migrations'`
+   * replays `drizzle/*.sql` in journal order, which is what D1 is actually running — and
+   * drizzle-kit's `ADD COLUMN` cannot express every clause the schema declares, so a rule that
+   * holds in one can be absent from the other (`reservations.expense_id` is the live example:
+   * `set null` declared, `NO ACTION` deployed). A repository whose correctness depends on closing
+   * such a gap has to be tested on the second one, or the test proves the gap does not matter.
+   */
+  readonly ddl?: 'schema' | 'migrations'
+}
+
 /** Builds a fresh, fully migrated database. Call it in `beforeEach` so tests never share state. */
-export async function createHarness(): Promise<Harness> {
-  const statements = await schemaStatements()
-  const sqlite = new DatabaseSync(':memory:')
-  for (const statement of statements) {
-    sqlite.exec(statement)
+export async function createHarness(
+  options: HarnessOptions = {},
+): Promise<Harness> {
+  let sqlite: DatabaseSync
+  if (options.ddl === 'migrations') {
+    sqlite = replayMigrations()
+  } else {
+    sqlite = new DatabaseSync(':memory:')
+    for (const statement of await schemaStatements()) {
+      sqlite.exec(statement)
+    }
   }
 
   const db: Database = drizzle(
-    async (query, params, method) => runStatement(sqlite, query, params, method),
+    async (query, params, method) =>
+      runStatement(sqlite, query, params, method),
     async (queries) =>
-      queries.map((entry) => runStatement(sqlite, entry.sql, entry.params, entry.method)),
+      queries.map((entry) =>
+        runStatement(sqlite, entry.sql, entry.params, entry.method),
+      ),
   )
 
   async function insertUser(name: string): Promise<string> {
@@ -157,13 +190,19 @@ export async function createHarness(): Promise<Harness> {
       createdAt: now,
     })
 
-    const scopeFor = (userId: string, role: OrganizationRole = 'member'): TenantScope =>
-      createScope(db, { userId, organizationId, role })
+    const scopeFor = (
+      userId: string,
+      role: OrganizationRole = 'member',
+    ): TenantScope => createScope(db, { userId, organizationId, role })
 
     return {
       organizationId,
       ownerUserId,
-      scope: createScope(db, { userId: ownerUserId, organizationId, role: 'owner' }),
+      scope: createScope(db, {
+        userId: ownerUserId,
+        organizationId,
+        role: 'owner',
+      }),
       scopeFor,
       async addUser(name, role = 'member') {
         const userId = await insertUser(name)
@@ -215,7 +254,9 @@ export async function subscribeTenant(
 }
 
 /** Asserts that `run` rejects, and returns the error so the caller can check its `code`. */
-export async function captureError(run: () => Promise<unknown>): Promise<Error> {
+export async function captureError(
+  run: () => Promise<unknown>,
+): Promise<Error> {
   try {
     await run()
   } catch (error) {

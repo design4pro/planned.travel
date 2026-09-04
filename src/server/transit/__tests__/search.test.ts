@@ -350,6 +350,43 @@ describe('searchTransitConnections', () => {
     expect(client.calls).toEqual([])
   })
 
+  /**
+   * The one place the shared cache and the plan boundary meet, and they have to be ordered.
+   *
+   * A zero ceiling is not "no searches left this month", it is "this plan does not search" — and
+   * the cache is shared by design, so a paying workspace asking about a popular route leaves an
+   * answer sitting there for six hours. Answered from the cache, a Free workspace would get real
+   * results with `ok: true`, no meter and no refusal. Nothing leaks and nothing is billed, which
+   * is exactly why this needs a test: every symptom the mistake has is invisible.
+   */
+  it('refuses a zero ceiling even when another tenant has warmed the cache', async () => {
+    const cache = memoryStore()
+    const client = stubClient()
+
+    // A paying workspace asks first, and the answer is now in the shared entry.
+    const paying = await searchTransitConnections(
+      runtime({ cache, client, organizationId: 'org-alpha', ceiling: 250 }),
+      QUERY,
+    )
+    expect(paying.cached).toBe(false)
+
+    const free = runtime({
+      cache,
+      client,
+      organizationId: 'org-free',
+      ceiling: 0,
+    })
+    await expect(searchTransitConnections(free, QUERY)).rejects.toBeInstanceOf(
+      RateCeilingError,
+    )
+    // And the refusal is a gate rather than a race: the entry is still there for the plan that
+    // may read it.
+    expect(
+      (await searchTransitConnections(runtime({ cache, client }), QUERY))
+        .cached,
+    ).toBe(true)
+  })
+
   it('treats a cache entry it cannot parse as a miss rather than as an answer', async () => {
     const cache = memoryStore()
     const client = stubClient()

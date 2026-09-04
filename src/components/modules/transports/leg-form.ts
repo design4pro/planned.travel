@@ -678,6 +678,37 @@ export function splitLegAt(chain: ChainDraft, index: number): ChainDraft {
 }
 
 /**
+ * Applies an edit to one station, found by its own key rather than by where it sits.
+ *
+ * For edits that resolve *later* — today that is the code lookup in `chain-editor.tsx`, which is a
+ * server round trip started on blur. By the time it answers, the traveller may have typed a name,
+ * picked a timezone or inserted a stop, so neither the station the lookup started from nor its
+ * index is still a safe address: rebuilding the chain from the pre-await snapshot would put every
+ * one of those edits back the way it was, and an index would land the answer on somebody else's
+ * stop. The key is local to the editing session and never moves, which is what makes it the one
+ * stable handle a late answer can hold.
+ *
+ * A key that names no station — the stop was removed while the answer was in the air — changes
+ * nothing. That is the right outcome and not a silent failure: the row the answer was about is
+ * gone.
+ */
+export function updateStationByKey(
+  chain: ChainDraft,
+  key: string,
+  update: (current: StationDraft) => StationDraft,
+): ChainDraft {
+  if (!chain.stations.some((station) => station.key === key)) {
+    return chain
+  }
+  return {
+    ...chain,
+    stations: chain.stations.map((station) =>
+      station.key === key ? update(station) : station,
+    ),
+  }
+}
+
+/**
  * Removes a stop, joining the two legs either side of it.
  *
  * A middle stop leaves one leg carrying the departure of the leg before it and
