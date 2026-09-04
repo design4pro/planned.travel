@@ -11,8 +11,9 @@
  *   empty column read as `NULL` rather than as `''`.
  * - **A name with an apostrophe survives**, because roughly a hundred rows of the committed cut
  *   carry one and a naive quote would turn each into a syntax error — or, worse, into SQL.
- * - **The load replaces rather than merges**, which is what makes a refresh able to drop an
- *   airport that closed, and what makes re-running the script free.
+ * - **The load upserts and then sweeps**, which is how a refresh drops an airport that closed
+ *   without the table ever being empty — `d1 execute` promises no transaction across a file, and
+ *   this runs against production on every deploy.
  * - **Two runs of the same artefact address the same rows.** The id is derived from the IATA code,
  *   so a refresh reads as the rows it changed rather than as nine thousand rewritten ones.
  * - **A malformed artefact is refused whole**, rather than loaded half-way.
@@ -119,11 +120,29 @@ describe('scripts/seed/airports.mjs', () => {
     expect(sql).not.toContain("'Coeur d'Alene")
   })
 
-  it('replaces the table rather than merging into it', () => {
+  it('never leaves the table empty, and sweeps what the artefact dropped', () => {
     const { sql } = generate(FIXTURE)
 
-    expect(sql.startsWith('DELETE FROM `airports`;\n')).toBe(true)
-    expect(sql).not.toMatch(/ON CONFLICT|OR REPLACE|OR IGNORE/iu)
+    // No blanket delete up front: that is the window this shape exists to avoid.
+    expect(sql).not.toMatch(/^DELETE FROM `airports`;$/mu)
+    expect(sql).toMatch(/ON CONFLICT\(`id`\) DO UPDATE SET/u)
+    // `OR REPLACE` would delete on the two unique indexes as well, so an ICAO that moved between
+    // airports would silently take the other one's row with it.
+    expect(sql).not.toMatch(/OR REPLACE|OR IGNORE/iu)
+
+    // The sweep is last, and it is keyed on the stamp every row above just took.
+    const stamp = /`updated_at` <> (\d+);\n$/u.exec(sql)
+    expect(stamp).not.toBeNull()
+    expect(sql).toContain(`, ${stamp?.[1]}, ${stamp?.[1]})`)
+  })
+
+  it('leaves created_at alone on a row that is already there', () => {
+    const { sql } = generate(FIXTURE)
+
+    // Every column the artefact owns is reassigned on conflict; `created_at` is not one of them,
+    // so it keeps meaning when the row first appeared rather than when it was last loaded.
+    expect(sql).toContain('`updated_at` = excluded.`updated_at`')
+    expect(sql).not.toContain('`created_at` = excluded.`created_at`')
   })
 
   it('addresses the same rows on a second run of the same artefact', () => {

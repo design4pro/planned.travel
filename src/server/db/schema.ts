@@ -3023,8 +3023,9 @@ export const providerUsage = sqliteTable(
  *
  * Ships empty, and is filled out of band: the migration creates the shape and
  * `scripts/seed/airports.mjs` loads the committed artefact
- * `public/atlas/airports-iata.v1.txt` into it (`pnpm db:airports:local`, and the `:remote`
- * pair for a deployment). Nothing in the request path ever writes here.
+ * `public/atlas/airports-iata.v1.txt` into it - `pnpm db:airports:local` in a checkout, and a
+ * step of both deploy workflows on a deployed database. Nothing in the request path ever
+ * writes here.
  */
 export const airports = sqliteTable(
   'airports',

@@ -192,9 +192,16 @@ pnpm db:airports:local           # after db:migrate:local, in a checkout
 pnpm db:airports:remote          # after db:migrate:remote  (--env staging for staging)
 ```
 
-Run it after the first migration and again after any deploy that carries a refreshed
-`public/atlas/airports-iata.v1.txt`. The load replaces the table's contents inside one
-transaction, so re-running it is free and an airport that left the cut leaves the table.
+Deployed databases need no hand: both deploy workflows run the loader between the migration and
+the Worker upload, so a refreshed `public/atlas/airports-iata.v1.txt` reaches production by being
+merged. The commands above are for a checkout, and for repairing a deployed table out of band.
+
+The load is an upsert followed by a sweep, not a replace: every artefact row is written with the
+same stamp in `updated_at`, and one `DELETE` afterwards removes whatever that pass did not touch —
+which is how an airport that left the cut leaves the table. It is written that way because
+`d1 execute` promises no transaction across a file's statements, so a `DELETE` first would leave a
+window with an empty catalogue on every single deploy. Re-running it is therefore free and never
+visible to a reader.
 
 Skipping it is not a loud failure: everywhere the catalogue is a shortcut over free text, the
 screens keep working. The connection search is the exception — its stop picker is a gate,

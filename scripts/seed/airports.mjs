@@ -13,20 +13,27 @@
  * catalogue as a gate rather than a shortcut — the connection search's stop picker, which
  * needs coordinates a traveller cannot type — can never resolve a stop.
  *
- * It is **not** run at request time and **not** part of `pnpm build`. It runs when a checkout
- * is provisioned (`scripts/worktree/bootstrap.sh`) and after a deploy that carries a refreshed
- * artefact (docs/DEPLOY.md), which is the same cadence as the migration that creates the table.
+ * It is **not** run at request time and **not** part of `pnpm build`. It runs when a checkout is
+ * provisioned (`scripts/worktree/bootstrap.sh`) and, on a deployed database, between the migration
+ * and the Worker upload in both deploy workflows - the same cadence as the migration that creates
+ * the table, which is what keeps a refreshed artefact from needing a hand after the merge.
  *
- * ## Replace, rather than merge
+ * ## Upsert, then sweep — and never a moment with an empty table
  *
- * The load is `DELETE` then `INSERT`, inside one transaction. The table is wholly owned by the
- * artefact — no other writer, no foreign key pointing into it, nothing user-entered — so a
- * merge would have no way to express the one thing a refresh does besides adding rows: an
- * airport that closed leaves the cut, and an upsert would keep serving it for ever. Re-running
- * the script is therefore idempotent by construction rather than by a conflict clause.
+ * The obvious shape is `DELETE` then `INSERT`, and it is the wrong one here: `d1 execute` makes
+ * no promise that a file's statements share a transaction, so on a deployed database that shape
+ * has a window in which the catalogue is empty and every type-ahead answers nothing. This runs
+ * against production on every deploy, so the window is not hypothetical.
  *
- * `created_at` and `updated_at` are stamped at load time, which is what the catalogue module
- * already documents them as: "the artefact's load stamps", saying nothing about the airport.
+ * Instead every artefact row is written with `INSERT ... ON CONFLICT DO UPDATE`, all carrying the
+ * same load stamp, and one `DELETE` afterwards removes whatever the sweep did not touch. That is
+ * what expresses the one thing a refresh does besides adding rows — an airport that closed leaves
+ * the cut, and a plain upsert would keep serving it for ever — without the table ever being
+ * empty, and it makes re-running the script idempotent rather than merely repeatable.
+ *
+ * The stamp doing the sweeping is `updated_at`, which is what the catalogue module already
+ * documents it as: "the artefact's load stamps", saying nothing about the airport. `created_at`
+ * is left alone on a row that already exists, so it keeps meaning when this row first appeared.
  *
  * ## Why SQL through wrangler rather than a client
  *
@@ -155,17 +162,41 @@ function number(value) {
   return value === null ? 'NULL' : String(value)
 }
 
+/** Every column the artefact owns — the whole row apart from `created_at`, which it only seeds. */
+const UPDATED_COLUMNS = [
+  'iata_code',
+  'icao_code',
+  'name',
+  'city',
+  'country_code',
+  'timezone',
+  'lat',
+  'lng',
+  'updated_at',
+]
+
 /**
- * The whole load as one script: replace the table's contents, atomically.
+ * The whole load as one script: upsert every row of the artefact, then sweep what it did not
+ * carry.
  *
- * `now` is a parameter rather than a call so the generator is a function of its inputs and the
- * test can assert on its output.
+ * `now` is a parameter rather than a call so the generator is a function of its inputs — which is
+ * what lets the test assert on its output, and what makes the sweep's `<>` legible: every row this
+ * load touched carries this stamp, so anything else is a row the artefact no longer has.
+ *
+ * The conflict target is the primary key, and it is reached rather than guessed: {@link idFor}
+ * derives the id from the IATA code, and the cut is one row per IATA code, so a row that is
+ * already there is a row with this id. `OR REPLACE` would do the same job by deleting first, and
+ * would take the two unique indexes with it — an ICAO that moved between airports would silently
+ * delete the other one's row rather than fail.
  */
 function buildSql(rows, now, batchRows = BATCH_ROWS) {
   const columns =
     '(`id`, `iata_code`, `icao_code`, `name`, `city`, `country_code`, `timezone`, `lat`, `lng`, `created_at`, `updated_at`)'
+  const assignments = UPDATED_COLUMNS.map(
+    (column) => `\`${column}\` = excluded.\`${column}\``,
+  ).join(', ')
 
-  const statements = ['DELETE FROM `airports`;']
+  const statements = []
   for (let start = 0; start < rows.length; start += batchRows) {
     const values = rows
       .slice(start, start + batchRows)
@@ -186,8 +217,14 @@ function buildSql(rows, now, batchRows = BATCH_ROWS) {
           ].join(', ')})`,
       )
       .join(',\n  ')
-    statements.push(`INSERT INTO \`airports\` ${columns} VALUES\n  ${values};`)
+    statements.push(
+      `INSERT INTO \`airports\` ${columns} VALUES\n  ${values}\nON CONFLICT(\`id\`) DO UPDATE SET ${assignments};`,
+    )
   }
+  // Whatever the upsert above did not touch is a row the artefact no longer carries.
+  statements.push(
+    `DELETE FROM \`airports\` WHERE \`updated_at\` <> ${String(now)};`,
+  )
   return `${statements.join('\n')}\n`
 }
 
