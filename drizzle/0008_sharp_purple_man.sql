@@ -62,4 +62,11 @@ CREATE INDEX `transport_legs_org_trip_idx` ON `transport_legs` (`organization_id
 CREATE INDEX `transport_legs_transport_position_idx` ON `transport_legs` (`transport_id`,`position`);--> statement-breakpoint
 CREATE INDEX `transport_legs_departure_day_idx` ON `transport_legs` (`departure_day_id`);--> statement-breakpoint
 CREATE INDEX `transport_legs_arrival_day_idx` ON `transport_legs` (`arrival_day_id`);--> statement-breakpoint
+ALTER TABLE `day_accommodations` ADD `reservation_id` text REFERENCES reservations(id);--> statement-breakpoint
+CREATE INDEX `day_accommodations_reservation_idx` ON `day_accommodations` (`reservation_id`);--> statement-breakpoint
+ALTER TABLE `reservations` ADD `expense_id` text REFERENCES expenses(id);--> statement-breakpoint
+ALTER TABLE `reservations` ADD `imported_at` integer;--> statement-breakpoint
+CREATE INDEX `reservations_expense_idx` ON `reservations` (`expense_id`);--> statement-breakpoint
+CREATE INDEX `reservations_org_imported_at_idx` ON `reservations` (`organization_id`,`imported_at`);--> statement-breakpoint
+ALTER TABLE `user_settings` ADD `mask_confirmation_codes` integer DEFAULT false NOT NULL;--> statement-breakpoint
 CREATE INDEX `transports_org_arrival_day_idx` ON `transports` (`organization_id`,`arrival_day_id`);

@@ -61,22 +61,8 @@
     {
       "idx": 8,
       "version": "6",
-      "when": 1788122483677,
-      "tag": "0008_first_callisto",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1788161703781,
-      "tag": "0009_lumpy_black_tom",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1788194242932,
-      "tag": "0010_stale_ben_parker",
+      "when": 1788543141737,
+      "tag": "0008_sharp_purple_man",
       "breakpoints": true
     }
   ]
