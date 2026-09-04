@@ -63,7 +63,24 @@ const config = defineConfig({
   },
   plugins: [
     devtools(isE2E ? { consolePiping: { enabled: false } } : undefined),
-    cloudflare({ viteEnvironment: { name: 'ssr' } }),
+    /**
+     * `remoteBindings: false` keeps `vite dev` credential-free, and that is a requirement
+     * rather than a preference: `.github/actions/e2e-env` boots this very server on a runner
+     * that holds no Cloudflare login, and so does a contributor who has cloned the repo and
+     * not run `wrangler login`.
+     *
+     * The plugin opens a remote proxy session for every binding whose *type* has no local
+     * simulator, whatever the binding's own `remote` flag says - and `wrangler.jsonc` now
+     * declares `AI`, which is exactly such a type. Left on, the session is opened at boot and
+     * the plugin aborts with "necessary to set a CLOUDFLARE_API_TOKEN" before a single route
+     * is served. Nothing calls `AI` yet (`src/server/ai/bindings.ts` is the whole surface), so
+     * the proxy buys nothing today and costs every credential-free boot.
+     *
+     * This is a dev-server switch and nothing else: a deployed Worker always talks to the real
+     * service. The stage that adds the first `AI` caller is the one that has to decide how it
+     * is exercised locally, and can turn this back on for itself.
+     */
+    cloudflare({ viteEnvironment: { name: 'ssr' }, remoteBindings: false }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),

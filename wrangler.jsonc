@@ -117,13 +117,16 @@
   // src/server/billing/limits.ts; nothing calls the binding until the stage that enforces
   // it lands, so declaring it here costs nothing until then.
   //
-  // `remote: true` states a fact rather than choosing an option: Workers AI has no local
-  // simulator, so a call made from `pnpm dev` reaches the real service and is billed like
-  // any other. Without it wrangler warns about exactly that on every boot. Measured on
-  // this checkout: the dev server behaves identically either way - it opens the same
-  // remote connection, serves the same 200 and needs no Cloudflare credentials to start,
-  // because nothing calls the binding yet.
-  "ai": { "binding": "AI", "remote": true },
+  // No `remote: true`, because for this binding the flag decides nothing. Workers AI has no
+  // local simulator at all, and the vite plugin proxies every such binding to the real service
+  // whether or not the flag is set (`pickRemoteBindings` in @cloudflare/vite-plugin keys off
+  // the binding *type* first). Writing it here would only suggest the choice was ours.
+  //
+  // What that proxy costs is a Cloudflare login at dev-server boot, which a runner does not
+  // have - CI failed on exactly that. The switch that settles it is `remoteBindings: false` on
+  // the plugin in vite.config.ts, where the reasoning lives; this row stays as the deployed
+  // fact it always was.
+  "ai": { "binding": "AI" },
 
   // No SANDCASTLE_REGISTRY here, and that is the point: the sandcastle run
   // coordinator is deployed to staging alone (see env.staging below and
@@ -228,8 +231,9 @@
       ],
       // Declared again rather than inherited: a named environment takes no binding from
       // the top level, so an `AI` left out here is an extraction that works in production
-      // and throws on the deployment that is meant to catch that.
-      "ai": { "binding": "AI", "remote": true },
+      // and throws on the deployment that is meant to catch that. No `remote` here either, for
+      // the reason the top-level block gives.
+      "ai": { "binding": "AI" },
       "durable_objects": {
         "bindings": [
           { "name": "TRIP_ROOM", "class_name": "TripRoom" },
