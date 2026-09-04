@@ -37,6 +37,7 @@ import {
 import { useTranslate } from '#/lib/i18n'
 import { createBookingFn, updateBookingFn } from '#/server/fns/reservations'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
+import { resolve } from '../shared/deferred-message'
 import {
   BOOKING_STATUSES,
   BOOKING_TYPES,
@@ -171,11 +172,13 @@ export function BookingDialog({
    * Only shows a field's error once the traveller has tried to submit.
    *
    * `validateBookingDraft` hands back a key and its parameters rather than a
-   * sentence, so the resolving happens here, where there is a provider.
+   * sentence, so the resolving happens here, where there is a provider —
+   * through `resolve`, because a required-field error names the field with a
+   * key of its own and that name has to be translated before it is interpolated.
    */
   function errorFor(key: keyof BookingDraft): string | undefined {
     const error = touched ? errors[key] : undefined
-    return error === undefined ? undefined : t(error.key, error.params)
+    return error === undefined ? undefined : resolve(error, t)
   }
 
   async function submit(): Promise<void> {
