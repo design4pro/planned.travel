@@ -60,6 +60,10 @@ jobs:
       # It had listed the inline-comment tool alone, which denied the plugin's first `gh pr view`
       # and ended the run in eighteen seconds, green. The entries below are the `allowed-tools` of
       # `/code-review:code-review` itself plus the four its subagents read with.
+      #
+      # `Task` and `Agent` are both listed because the plugin spawns subagents with whichever its
+      # Claude Code version offers - `Task` when this was written, `Agent` from 2.1.260 on. Naming
+      # only one is a denial waiting for the next upgrade.
       - name: Run Claude Code Review
         id: claude-review
         if: steps.gate.outputs.configured == 'true'
@@ -69,13 +73,26 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          # The trailing instruction is load-bearing, not decoration. The plugin spawns its
+          # reading agents with `Agent`, and in run 33895385603 it backgrounded them: it said
+          # "I'll wait for the background agent's notification" and the session ended thirteen
+          # seconds later with the eligibility check still running. A non-interactive run has no
+          # waiting - ending a turn ends the run - so a backgrounded agent is one whose findings
+          # nobody ever reads. `claude-review-ran.mjs` now fails a run that ends with a subagent
+          # still working, and this is the half that stops it happening.
+          prompt: |
+            /code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+            Spawn every subagent in the foreground, with `run_in_background: false`. This run is
+            non-interactive: when you end your turn the session ends, so there is nothing to wait
+            with and a backgrounded agent's findings reach nobody.
+
           # The repository is private, so the transcript this prints is already as visible as the
           # diff it quotes - and without it a crippled review leaves nothing in the log to read.
           show_full_output: true
           claude_args: >-
             --allowedTools
-            "Task,Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh search:*)"
+            "Task,Agent,Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh search:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
