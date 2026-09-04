@@ -43,17 +43,8 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
 
       # `src/routeTree.gen.ts` is generated and committed. Regenerating it here
       # proves the committed copy matches the route files in the same commit —
@@ -146,17 +137,8 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
 
       # `--coverage` on every shard because v8 has to instrument the run that
       # executes the code; the merge step cannot invent coverage for files a
@@ -207,17 +189,8 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
 
       - name: Download the blob reports
         uses: actions/download-artifact@v4
@@ -358,17 +331,8 @@ jobs:
       - name: Check out
         uses: actions/checkout@v5
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
 
       - name: Download the blob reports
         uses: actions/download-artifact@v4
