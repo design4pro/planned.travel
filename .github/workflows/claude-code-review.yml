@@ -51,8 +51,15 @@ jobs:
         with:
           fetch-depth: 1
 
-      # `continue-on-error`, because the step that follows decides what the failure meant: a spent
-      # usage limit reviewed nothing and is not a finding, anything else still fails the job.
+      # `continue-on-error`, because the two steps that follow decide what the outcome meant: a
+      # spent usage limit reviewed nothing and is not a finding, a review that was denied its tools
+      # reviewed nothing either and must not pass as one.
+      #
+      # `--allowedTools` is the whole allowlist, not an addition to a default: the action injects
+      # none of its own (src/modes/agent), so whatever is listed here is all the review may call.
+      # It had listed the inline-comment tool alone, which denied the plugin's first `gh pr view`
+      # and ended the run in eighteen seconds, green. The entries below are the `allowed-tools` of
+      # `/code-review:code-review` itself plus the four its subagents read with.
       - name: Run Claude Code Review
         id: claude-review
         if: steps.gate.outputs.configured == 'true'
@@ -63,7 +70,12 @@ jobs:
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
+          # The repository is private, so the transcript this prints is already as visible as the
+          # diff it quotes - and without it a crippled review leaves nothing in the log to read.
+          show_full_output: true
+          claude_args: >-
+            --allowedTools
+            "Task,Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh search:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
@@ -74,3 +86,11 @@ jobs:
         env:
           EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
         run: node scripts/ci/claude-usage-limit.mjs
+
+      # The other half of the same job: the step above catches a review that failed, this one
+      # catches a review that succeeded without reviewing. Only one of the two ever runs.
+      - name: Fail a review that never read the pull request
+        if: steps.claude-review.outcome == 'success'
+        env:
+          EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
+        run: node scripts/ci/claude-review-ran.mjs
