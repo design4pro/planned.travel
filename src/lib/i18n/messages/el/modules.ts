@@ -31,21 +31,21 @@ const messages = {
     'Οι ζωντανές ενημερώσεις είναι κλειστές. Η αποθήκευση συνεχίζεται· ανανέωσε ή ξαναδοκίμασε για να προλάβεις.',
   'presence.reconnect': 'Επανασύνδεση',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Όλα τα σκέλη',
-  'transports.empty.title': 'Κανένα σκέλος ακόμη',
+  'transports.filter.all': 'Όλες οι μετακινήσεις',
+  'transports.empty.title': 'Καμία μετακίνηση ακόμη',
   'transports.empty.body':
     'Πτήσεις, τρένα, πλοία και η διαδρομή από το αεροδρόμιο ζουν εδώ, με τους κωδικούς κράτησης και τους αριθμούς θέσεων πρόχειρους την ημέρα — και κάθε μετεπιβίβαση ελεγμένη ως προς την προηγούμενη.',
-  'transports.empty.action': 'Πρόσθεσε το πρώτο σκέλος',
-  'transports.filtered.title': 'Κανένα σκέλος αυτού του τύπου',
+  'transports.empty.action': 'Πρόσθεσε την πρώτη μετακίνηση',
+  'transports.filtered.title': 'Καμία μετακίνηση αυτού του τύπου',
   'transports.filtered.body':
-    'Κάθε σκέλος αυτού του ταξιδιού γίνεται αλλιώς. Γύρνα στο «{label}» για να τα δεις όλα.',
-  'transports.filtered.action': 'Δείξε όλα τα σκέλη',
+    'Κάθε μετακίνηση αυτού του ταξιδιού γίνεται αλλιώς. Γύρνα στο «{label}» για να τις δεις όλες.',
+  'transports.filtered.action': 'Δείξε όλες τις μετακινήσεις',
   'transports.alert.impossible.title': {
     one: 'Μια μετεπιβίβαση δεν γίνεται',
     other: '{legs} μετεπιβιβάσεις δεν γίνονται',
   },
   'transports.alert.impossible.body':
-    'Ένα σκέλος αναχωρεί πριν φτάσει το προηγούμενο. Οι κόμβοι παρακάτω λένε ποια και κατά πόσο.',
+    'Μια μετακίνηση αναχωρεί πριν φτάσει η προηγούμενη. Οι κόμβοι παρακάτω λένε ποιες και κατά πόσο.',
   'transports.alert.tight.title': {
     one: 'Μια μετεπιβίβαση είναι στο τσακ',
     other: '{legs} μετεπιβιβάσεις είναι στο τσακ',
@@ -62,9 +62,9 @@ const messages = {
   },
   'transports.badge.ok': 'Κάθε μετεπιβίβαση βγαίνει',
   'transports.remove.body':
-    'Το σκέλος φεύγει από το ταξίδι για πάντα, μαζί με τον κωδικό κράτησης και τη θέση του. Αν είναι μόνο ακυρωμένο, βάλε την κατάστασή του σε «Ακυρώθηκε» αντ’ αυτού.',
-  'transports.remove.confirm': 'Αφαίρεση σκέλους',
-  'transports.menu.edit': 'Επεξεργασία σκέλους…',
+    'Η μετακίνηση φεύγει από το ταξίδι για πάντα, μαζί με τον κωδικό κράτησης και τη θέση της. Αν είναι μόνο ακυρωμένη, βάλε την κατάστασή της σε «Ακυρώθηκε» αντ’ αυτού.',
+  'transports.remove.confirm': 'Αφαίρεση μετακίνησης',
+  'transports.menu.edit': 'Επεξεργασία μετακίνησης…',
   'transports.field.service': 'Δρομολόγιο',
   'transports.field.bookingRef': 'Κωδικός κράτησης',
   'transports.field.seat': 'Θέση',
@@ -72,13 +72,13 @@ const messages = {
   'transports.noTime': 'Χωρίς ώρα ακόμη',
   'transports.toast.statusFailed.title': 'Η κατάσταση δεν άλλαξε',
   'transports.toast.statusFailed.body':
-    'Το σκέλος έμεινε στην προηγούμενη κατάστασή του.',
-  'transports.toast.removed': 'Το σκέλος αφαιρέθηκε',
-  'transports.toast.removeFailed': 'Το σκέλος δεν αφαιρέθηκε',
+    'Η μετακίνηση έμεινε στην προηγούμενη κατάστασή της.',
+  'transports.toast.removed': 'Η μετακίνηση αφαιρέθηκε',
+  'transports.toast.removeFailed': 'Η μετακίνηση δεν αφαιρέθηκε',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Πρόσθεσε σκέλος',
-  'transports.dialog.editTitle': 'Επεξεργασία αυτού του σκέλους',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Πρόσθεσε μετακίνηση',
+  'transports.dialog.editTitle': 'Επεξεργασία αυτής της μετακίνησης',
   'transports.dialog.description':
     'Πτήσεις, τρένα, πλοία και η διαδρομή από το αεροδρόμιο. Οι ώρες είναι οι τοπικές που γράφει το εισιτήριο.',
   'transports.form.modeLegend': 'Με τι ταξιδεύεις',
@@ -94,14 +94,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Ο κωδικός που θα πεις στο γκισέ.',
   'transports.field.notesPlaceholder':
     'Ζητήθηκε θέση στο διάδρομο. Οι αποσκευές πάνε μέχρι το Κιότο.',
-  'transports.action.add': 'Πρόσθεσε το σκέλος',
-  'transports.action.save': 'Αποθήκευση σκέλους',
-  'transports.action.saving': 'Αποθήκευση σκέλους σε εξέλιξη',
-  'transports.toast.added': 'Το σκέλος προστέθηκε',
+  'transports.action.add': 'Πρόσθεσε τη μετακίνηση',
+  'transports.action.save': 'Αποθήκευση μετακίνησης',
+  'transports.action.saving': 'Αποθήκευση μετακίνησης σε εξέλιξη',
+  'transports.toast.added': 'Η μετακίνηση προστέθηκε',
   'transports.toast.addedBody': 'Μπήκε στη σειρά του ταξιδιού.',
-  'transports.toast.addFailed': 'Το σκέλος δεν προστέθηκε',
-  'transports.toast.updated': 'Το σκέλος ενημερώθηκε',
-  'transports.toast.updateFailed': 'Το σκέλος δεν ενημερώθηκε',
+  'transports.toast.addFailed': 'Η μετακίνηση δεν προστέθηκε',
+  'transports.toast.updated': 'Η μετακίνηση ενημερώθηκε',
+  'transports.toast.updateFailed': 'Η μετακίνηση δεν ενημερώθηκε',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Όνομα',
@@ -131,11 +131,14 @@ const messages = {
     'Δεν υπάρχει κράτηση από τα είδη που διάλεξες. Καθάρισε το φίλτρο για να δεις τα υπόλοιπα.',
   'book.filtered.action': 'Καθαρισμός φίλτρου',
   'book.panel.outstanding': 'Εκκρεμούν',
-  'book.panel.outstandingEmpty': 'Δεν εκκρεμεί τίποτα — όλα εδώ είναι τακτοποιημένα.',
+  'book.panel.outstandingEmpty':
+    'Δεν εκκρεμεί τίποτα — όλα εδώ είναι τακτοποιημένα.',
   'book.panel.settled': 'Τακτοποιημένα',
-  'book.panel.settledEmpty': 'Τίποτα τακτοποιημένο ακόμη — όλα θέλουν ακόμη κυνήγι.',
+  'book.panel.settledEmpty':
+    'Τίποτα τακτοποιημένο ακόμη — όλα θέλουν ακόμη κυνήγι.',
   'book.import.badge': 'Ανέλεγκτη εισαγωγή',
-  'book.import.hint': 'Εισήχθη από επιβεβαίωση. Άνοιξέ την και αποθήκευσέ την για να σημειωθεί ως ελεγμένη.',
+  'book.import.hint':
+    'Εισήχθη από επιβεβαίωση. Άνοιξέ την και αποθήκευσέ την για να σημειωθεί ως ελεγμένη.',
   'book.journeyLink': 'Στην καρτέλα μεταφορών',
   'filter.all': 'Όλα',
   'book.remove.body':
@@ -224,7 +227,7 @@ const messages = {
   'book.hint.ticket':
     'Είσοδος με ώρα, πάσο μουσείου, ένας αγώνας. Κράτα τον κωδικό κοντά.',
   'book.hint.transport':
-    'Μια κλεισμένη θέση. Ολόκληρα σκέλη με κωδικούς πάνε στο {module}.',
+    'Μια κλεισμένη θέση. Ολόκληρες μετακινήσεις με κωδικούς πάνε στο {module}.',
   'book.hint.other': 'Ό,τι κρατείται στο όνομά σου και δεν ταιριάζει στα άλλα.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -440,12 +443,14 @@ const messages = {
   'book.fieldName.stop': 'στάση',
   'book.field.stop': 'Συνδεδεμένη στάση',
   'book.field.stopHint': 'Σε ποια στάση του σχεδίου αφορά αυτή η κράτηση.',
-  'book.field.stopHintEmpty': 'Πρόσθεσε πρώτα ένα μέρος σε μια μέρα και μετά σύνδεσε την κράτηση με αυτό',
+  'book.field.stopHintEmpty':
+    'Πρόσθεσε πρώτα ένα μέρος σε μια μέρα και μετά σύνδεσε την κράτηση με αυτό',
   'book.field.stopPlaceholder': 'Χωρίς στάση',
   'book.field.stopSearch': 'Αναζήτηση σε στάσεις και μέρες',
   'book.field.stopEmpty': 'Καμία στάση δεν ταιριάζει',
   'book.ledger.refused.title': 'Αποθηκεύτηκε, αλλά δεν μπήκε στα έξοδα',
-  'book.ledger.refused.body': 'Η κράτηση είναι στο ταξίδι. Η γραμμή εξόδου της δεν μπήκε στα έξοδα του ταξιδιού — δοκίμασε ξανά αυτό το μισό.',
+  'book.ledger.refused.body':
+    'Η κράτηση είναι στο ταξίδι. Η γραμμή εξόδου της δεν μπήκε στα έξοδα του ταξιδιού — δοκίμασε ξανά αυτό το μισό.',
   'book.action.ledgerRetry': 'Πρόσθεσέ το στα έξοδα',
   'book.copyConfirmation': 'ο κωδικός επιβεβαίωσης του {title}',
 
@@ -462,12 +467,13 @@ const messages = {
   'transports.mode.bike': 'Ποδήλατο',
   'transports.mode.walk': 'Με τα πόδια',
   'transports.mode.other': 'Άλλο',
-  'transports.mode.fallback': 'Σκέλος',
+  'transports.mode.fallback': 'Μετακίνηση',
   'transports.rank.earliest': 'Νωρίτερη άφιξη',
   'transports.rank.fewestChanges': 'Λιγότερες αλλαγές',
   'transports.connection.findStop': 'Βρες στάση',
   'transports.connection.findStopSearch': 'ATH, Λαρίσης, Αθήνα…',
-  'transports.connection.findStopEmpty': 'Καμία στάση μ’ αυτό το όνομα στον κατάλογο.',
+  'transports.connection.findStopEmpty':
+    'Καμία στάση μ’ αυτό το όνομα στον κατάλογο.',
   'transports.connection.hideStops': 'Κρύψε τις στάσεις',
   'transports.connection.seeStops': 'Δες τις στάσεις',
   'transports.connection.saving': 'Αποθηκεύεται η σύνδεση',
@@ -479,20 +485,28 @@ const messages = {
     one: '{changes} αλλαγή',
     other: '{changes} αλλαγές',
   },
-  'transports.connection.tooLong': 'Αυτή η σύνδεση έχει πάνω από {max} σκέλη, περισσότερα απ’ όσα χωρά μία εγγραφή ταξιδιού. Ψάξε μικρότερη απόσταση και γράψε τα υπόλοιπα χωριστά.',
-  'transports.connection.refusal.ceiling': 'Δεν απομένουν αναζητήσεις αυτόν τον μήνα',
-  'transports.connection.refusal.unconfigured': 'Η αναζήτηση συνδέσεων είναι κλειστή σ’ αυτή την εγκατάσταση',
-  'transports.connection.refusal.provider': 'Η υπηρεσία δρομολογίων δεν απάντησε',
-  'transports.connection.invitation': 'Δύο στάσεις και μια ημερομηνία, και τα δρομολόγια απαντούν. Τίποτα δεν αποθηκεύεται ώσπου να διαλέξεις.',
-  'transports.connection.empty': 'Δεν βρέθηκε σύνδεση ανάμεσα σ’ αυτές τις δύο στάσεις εκείνη την ημερομηνία. Δοκίμασε γειτονικό σταθμό ή διεύρυνε το φίλτρο.',
+  'transports.connection.tooLong':
+    'Αυτή η σύνδεση έχει πάνω από {max} σκέλη, περισσότερα απ’ όσα χωρά μία εγγραφή ταξιδιού. Ψάξε μικρότερη απόσταση και γράψε τα υπόλοιπα χωριστά.',
+  'transports.connection.refusal.ceiling':
+    'Δεν απομένουν αναζητήσεις αυτόν τον μήνα',
+  'transports.connection.refusal.unconfigured':
+    'Η αναζήτηση συνδέσεων είναι κλειστή σ’ αυτή την εγκατάσταση',
+  'transports.connection.refusal.provider':
+    'Η υπηρεσία δρομολογίων δεν απάντησε',
+  'transports.connection.invitation':
+    'Δύο στάσεις και μια ημερομηνία, και τα δρομολόγια απαντούν. Τίποτα δεν αποθηκεύεται ώσπου να διαλέξεις.',
+  'transports.connection.empty':
+    'Δεν βρέθηκε σύνδεση ανάμεσα σ’ αυτές τις δύο στάσεις εκείνη την ημερομηνία. Δοκίμασε γειτονικό σταθμό ή διεύρυνε το φίλτρο.',
   'transports.connection.searchFailed': 'Η αναζήτηση δεν έτρεξε',
   'transports.connection.searchFailedBody': 'Δοκίμασε ξανά σε λίγο.',
   'transports.connection.saved': 'Η σύνδεση αποθηκεύτηκε',
   'transports.connection.replaced': 'Η διαδρομή αντικαταστάθηκε',
-  'transports.connection.replacedBody': 'Ο κωδικός κράτησης και η θέση μένουν ως έχουν.',
+  'transports.connection.replacedBody':
+    'Ο κωδικός κράτησης και η θέση μένουν ως έχουν.',
   'transports.connection.saveFailed': 'Η σύνδεση δεν αποθηκεύτηκε',
   'transports.connection.saveError': 'Αυτό δεν αποθηκεύτηκε',
-  'transports.connection.fromHint': 'Διάλεξε στάση — ένα δρομολόγιο ρωτιέται πού, όχι πώς λέγεται.',
+  'transports.connection.fromHint':
+    'Διάλεξε στάση — ένα δρομολόγιο ρωτιέται πού, όχι πώς λέγεται.',
   'transports.connection.toHint': 'Διάλεξε στάση από τον κατάλογο.',
   'transports.connection.onlyModes': 'Μόνο αυτά τα μέσα',
   'transports.connection.searching': 'Ψάχνω στα δρομολόγια',
@@ -519,7 +533,7 @@ const messages = {
   'transports.end.returnDay': 'Ημέρα παράδοσης',
   'transports.dayNumber': 'Ημέρα {n}',
   'transports.error.titleEmpty':
-    'Δώσε σε αυτό το σκέλος ένα όνομα που θα αναγνωρίσεις σε μια λίστα.',
+    'Δώσε σε αυτή τη μετακίνηση ένα όνομα που θα αναγνωρίσεις σε μια λίστα.',
   'transports.error.date': 'Η ημερομηνία γράφεται ΕΕΕΕ-ΜΜ-ΗΗ.',
   'transports.error.time': 'Η ώρα γράφεται ΩΩ:ΛΛ σε 24ωρη μορφή.',
   'transports.error.departureNeedsDate':
@@ -530,9 +544,9 @@ const messages = {
   'transports.error.distance':
     'Μια απόσταση είναι ένας αριθμός χιλιομέτρων, έως 100.000.',
   'transports.error.arrivesBeforeDeparts':
-    'Αυτό το σκέλος φτάνει πριν αναχωρήσει.',
+    'Αυτή η μετακίνηση φτάνει πριν αναχωρήσει.',
   'transports.error.timingHint':
-    'Μετακίνησε το ένα από τα δύο, ώστε το σκέλος να προλαβαίνεται πραγματικά.',
+    'Άλλαξε την ώρα στη μία από τις δύο, ώστε η μετακίνηση να προλαβαίνεται πραγματικά.',
   'transports.error.arrivalDayBeforeDeparture':
     'Η ημέρα άφιξης προηγείται της ημέρας αναχώρησης.',
   'transports.error.returnDayBeforePickUp':
@@ -556,7 +570,8 @@ const messages = {
   'transports.chain.findStation': 'Βρες αεροδρόμιο ή σταθμό',
   'transports.chain.findStationFor': 'Βρες αεροδρόμιο ή σταθμό για {label}',
   'transports.chain.findPlaceholder': 'ATH, Ελ. Βενιζέλος, Αθήνα…',
-  'transports.chain.findEmpty': 'Καμία αντιστοιχία — γράψε τη στάση μόνος σου πιο κάτω.',
+  'transports.chain.findEmpty':
+    'Καμία αντιστοιχία — γράψε τη στάση μόνος σου πιο κάτω.',
   'transports.chain.stopLabel': 'Στάση',
   'transports.chain.stopPlaceholder': 'Αθήνα Λαρίσης',
   'transports.chain.timezoneHint': 'Σε ποιο ρολόι διαβάζεται αυτή η στάση',
@@ -570,8 +585,10 @@ const messages = {
   'transports.chain.reaches': 'Φτάνει στο {label}',
   'transports.chain.dayOfLeg': '{label} του σκέλους {n}',
   'transports.chain.formError': 'Αυτή η αλυσίδα δεν αποθηκεύεται',
-  'transports.chain.atCap': 'Μια αλυσίδα χωρά το πολύ {max} σκέλη — αυτό είναι όριο του τι κουβαλά μία αποθήκευση, όχι του πόσες αλλαγές έχει ένα ταξίδι.',
-  'transports.chain.hint': 'Πρόσθεσε στάση σε όποιο σκέλος θέλεις για μια αλλαγή τρένου· κάθε σκέλος κρατά τον δικό του αριθμό, αποβάθρα και θέση.',
+  'transports.chain.atCap':
+    'Μια αλυσίδα χωρά το πολύ {max} σκέλη — αυτό είναι όριο του τι κουβαλά μία αποθήκευση, όχι του πόσες αλλαγές έχει ένα ταξίδι.',
+  'transports.chain.hint':
+    'Πρόσθεσε στάση σε όποιο σκέλος θέλεις για μια αλλαγή τρένου· κάθε σκέλος κρατά τον δικό του αριθμό, αποβάθρα και θέση.',
   'transports.field.timezone': 'Ζώνη ώρας',
   'transports.field.platform': 'Αποβάθρα',
   'transports.chain.legNumber': 'Σκέλος {n}',
@@ -593,9 +610,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Δεν υπάρχουν ώρες για σύγκριση',
   'transports.junction.unknown.detail':
-    'Συμπλήρωσε ημερομηνία και ώρα στα δύο σκέλη, και αυτή η μετεπιβίβαση θα ελεγχθεί για σένα.',
+    'Συμπλήρωσε ημερομηνία και ώρα στις δύο μετακινήσεις, και αυτή η μετεπιβίβαση θα ελεγχθεί για σένα.',
   'transports.junction.impossible.headline':
-    'Αναχωρεί {gap} πριν φτάσει το προηγούμενο σκέλος',
+    'Αναχωρεί {gap} πριν φτάσει η προηγούμενη μετακίνηση',
   'transports.junction.impossible.detail':
     'Το «{to}» αναχωρεί πριν φτάσει το «{from}», άρα δεν προλαβαίνονται και τα δύο. Μετακίνησε το ένα.',
   'transports.junction.tight.headline': '{gap} για τη μετεπιβίβαση',
@@ -605,7 +622,7 @@ const messages = {
     'Για {mode} στο {place} χρειάζεται συνήθως περίπου {required}. Εδώ είναι στενά.',
   'transports.junction.ok.headline': '{gap} ενδιάμεσα',
   'transports.junction.ok.detail':
-    'Φτάνει στο {landing} αλλά το επόμενο σκέλος φεύγει από το {boarding} — θα πρέπει να μεταφερθείς.',
+    'Φτάνει στο {landing} αλλά η επόμενη μετακίνηση φεύγει από το {boarding} — θα πρέπει να μεταφερθείς.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Η σημείωση κοινοποιήθηκε',

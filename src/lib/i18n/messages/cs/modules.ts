@@ -30,15 +30,15 @@ const messages = {
     'Živé aktualizace jsou vypnuté. Ukládá se dál; obnov stránku nebo to zkus znovu, ať doženeš zbytek.',
   'presence.reconnect': 'Připojit znovu',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Všechny úseky',
-  'transports.empty.title': 'Zatím žádné úseky',
+  'transports.filter.all': 'Všechny přesuny',
+  'transports.empty.title': 'Zatím žádné přesuny',
   'transports.empty.body':
     'Lety, vlaky, trajekty i cesta z letiště žijí tady, s rezervačními kódy a čísly sedadel po ruce v den odjezdu — a každý přestup zkontrolovaný proti tomu předchozímu.',
-  'transports.empty.action': 'Přidat první úsek',
-  'transports.filtered.title': 'Žádné úseky toho druhu',
+  'transports.empty.action': 'Přidat první přesun',
+  'transports.filtered.title': 'Žádné přesuny toho druhu',
   'transports.filtered.body':
-    'Každý úsek této cesty jede jinak. Vrať se na „{label}“, ať vidíš všechny.',
-  'transports.filtered.action': 'Zobrazit všechny úseky',
+    'Každý přesun této cesty jede jinak. Vrať se na „{label}“, ať vidíš všechny.',
+  'transports.filtered.action': 'Zobrazit všechny přesuny',
   'transports.alert.impossible.title': {
     one: 'Jeden přestup nejde stihnout',
     few: '{legs} přestupy nejdou stihnout',
@@ -46,7 +46,7 @@ const messages = {
     other: '{legs} přestupů nejde stihnout',
   },
   'transports.alert.impossible.body':
-    'Úsek odjíždí, než přijede ten předchozí. Uzly níže říkají které a o kolik.',
+    'Přesun odjíždí, než přijede ten předchozí. Uzly níže říkají které a o kolik.',
   'transports.alert.tight.title': {
     one: 'Jeden přestup je na těsno',
     few: '{legs} přestupy jsou na těsno',
@@ -69,22 +69,22 @@ const messages = {
   },
   'transports.badge.ok': 'Každý přestup vychází',
   'transports.remove.body':
-    'Úsek z této cesty zmizí nadobro, i s rezervačním číslem a sedadlem. Pokud je jen zrušený, nastav mu místo toho stav Zrušeno.',
-  'transports.remove.confirm': 'Odebrat úsek',
-  'transports.menu.edit': 'Upravit úsek…',
+    'Přesun z této cesty zmizí nadobro, i s rezervačním číslem a sedadlem. Pokud je jen zrušený, nastav mu místo toho stav Zrušeno.',
+  'transports.remove.confirm': 'Odebrat přesun',
+  'transports.menu.edit': 'Upravit přesun…',
   'transports.field.service': 'Spoj',
   'transports.field.bookingRef': 'Rezervační číslo',
   'transports.field.seat': 'Sedadlo',
   'transports.field.distance': 'Vzdálenost',
   'transports.noTime': 'Zatím bez času',
   'transports.toast.statusFailed.title': 'Stav se nezměnil',
-  'transports.toast.statusFailed.body': 'Úsek zůstal v předchozím stavu.',
-  'transports.toast.removed': 'Úsek odebrán',
-  'transports.toast.removeFailed': 'Úsek nebyl odebrán',
+  'transports.toast.statusFailed.body': 'Přesun zůstal v předchozím stavu.',
+  'transports.toast.removed': 'Přesun odebrán',
+  'transports.toast.removeFailed': 'Přesun nebyl odebrán',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Přidat úsek',
-  'transports.dialog.editTitle': 'Upravit tento úsek',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Přidat přesun',
+  'transports.dialog.editTitle': 'Upravit tento přesun',
   'transports.dialog.description':
     'Lety, vlaky, trajekty a cesta z letiště. Časy jsou místní, ty vytištěné na jízdence.',
   'transports.form.modeLegend': 'Čím jedeš',
@@ -100,14 +100,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Kód, který přečteš u přepážky.',
   'transports.field.notesPlaceholder':
     'Vyžádané sedadlo u uličky. Zavazadla odbavena až do Kjóta.',
-  'transports.action.add': 'Přidat úsek',
-  'transports.action.save': 'Uložit úsek',
-  'transports.action.saving': 'Ukládání úseku',
-  'transports.toast.added': 'Úsek přidán',
+  'transports.action.add': 'Přidat přesun',
+  'transports.action.save': 'Uložit přesun',
+  'transports.action.saving': 'Ukládání přesunu',
+  'transports.toast.added': 'Přesun přidán',
   'transports.toast.addedBody': 'Už je v pořadí cesty.',
-  'transports.toast.addFailed': 'Úsek nebyl přidán',
-  'transports.toast.updated': 'Úsek upraven',
-  'transports.toast.updateFailed': 'Úsek nebyl upraven',
+  'transports.toast.addFailed': 'Přesun nebyl přidán',
+  'transports.toast.updated': 'Přesun upraven',
+  'transports.toast.updateFailed': 'Přesun nebyl upraven',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Název',
@@ -138,9 +138,11 @@ const messages = {
   'book.panel.outstanding': 'Ještě vyřídit',
   'book.panel.outstandingEmpty': 'Nic nezbývá — všechno tady je vyřízené.',
   'book.panel.settled': 'Vyřízeno',
-  'book.panel.settledEmpty': 'Zatím nic vyřízeného — všechno je ještě třeba dotáhnout.',
+  'book.panel.settledEmpty':
+    'Zatím nic vyřízeného — všechno je ještě třeba dotáhnout.',
   'book.import.badge': 'Neprověřený import',
-  'book.import.hint': 'Naimportováno z potvrzení. Otevři a ulož, tím se označí jako prověřené.',
+  'book.import.hint':
+    'Naimportováno z potvrzení. Otevři a ulož, tím se označí jako prověřené.',
   'book.journeyLink': 'Na kartě dopravy',
   'filter.all': 'Vše',
   'book.remove.body':
@@ -226,7 +228,7 @@ const messages = {
   'book.hint.tour': 'Místo, čas a průvodce, který čeká.',
   'book.hint.ticket': 'Vstup na čas, muzejní pas, zápas. Měj kód po ruce.',
   'book.hint.transport':
-    'Rezervované místo. Celé úseky s kódy patří do {module}.',
+    'Rezervované místo. Celé přesuny s kódy patří do {module}.',
   'book.hint.other': 'Cokoli vedeného na tvé jméno, co nezapadá do ostatních.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -440,12 +442,14 @@ const messages = {
   'book.fieldName.stop': 'zastávka',
   'book.field.stop': 'Připojená zastávka',
   'book.field.stopHint': 'Ke které zastávce plánu tato rezervace patří.',
-  'book.field.stopHintEmpty': 'Nejdřív přidej místo do některého dne, pak k němu půjde rezervaci připojit',
+  'book.field.stopHintEmpty':
+    'Nejdřív přidej místo do některého dne, pak k němu půjde rezervaci připojit',
   'book.field.stopPlaceholder': 'Bez zastávky',
   'book.field.stopSearch': 'Hledej zastávky a dny',
   'book.field.stopEmpty': 'Žádná zastávka neodpovídá',
   'book.ledger.refused.title': 'Uloženo, ale nepřidáno do nákladů',
-  'book.ledger.refused.body': 'Rezervace je na výletě. Přidat její položku do nákladů výletu se nepovedlo — zkus tuhle půlku znovu.',
+  'book.ledger.refused.body':
+    'Rezervace je na výletě. Přidat její položku do nákladů výletu se nepovedlo — zkus tuhle půlku znovu.',
   'book.action.ledgerRetry': 'Přidat do nákladů',
   'book.copyConfirmation': 'potvrzovací číslo pro {title}',
 
@@ -462,7 +466,7 @@ const messages = {
   'transports.mode.bike': 'Kolo',
   'transports.mode.walk': 'Pěšky',
   'transports.mode.other': 'Ostatní',
-  'transports.mode.fallback': 'Úsek',
+  'transports.mode.fallback': 'Přesun',
   'transports.rank.earliest': 'Nejdřívější příjezd',
   'transports.rank.fewestChanges': 'Nejméně přestupů',
   'transports.connection.findStop': 'Najdi zastávku',
@@ -481,20 +485,27 @@ const messages = {
     many: '{changes} přestupu',
     other: '{changes} přestupů',
   },
-  'transports.connection.tooLong': 'Tohle spojení má víc než {max} úseků, což je víc, než unese jeden záznam cesty. Hledej kratší úsek a zbytek zapiš zvlášť.',
-  'transports.connection.refusal.ceiling': 'Tenhle měsíc už žádné hledání nezbývá',
-  'transports.connection.refusal.unconfigured': 'Vyhledávání spojení je na tomhle nasazení vypnuté',
+  'transports.connection.tooLong':
+    'Tohle spojení má víc než {max} úseků, což je víc, než unese jeden záznam cesty. Hledej kratší úsek a zbytek zapiš zvlášť.',
+  'transports.connection.refusal.ceiling':
+    'Tenhle měsíc už žádné hledání nezbývá',
+  'transports.connection.refusal.unconfigured':
+    'Vyhledávání spojení je na tomhle nasazení vypnuté',
   'transports.connection.refusal.provider': 'Jízdní řády neodpověděly',
-  'transports.connection.invitation': 'Dvě zastávky a datum, a jízdní řády odpoví. Nic se neuloží, dokud si nevybereš.',
-  'transports.connection.empty': 'Mezi těmi dvěma zastávkami se v ten den žádné spojení nenašlo. Zkus sousední stanici nebo rozšiř filtr módů.',
+  'transports.connection.invitation':
+    'Dvě zastávky a datum, a jízdní řády odpoví. Nic se neuloží, dokud si nevybereš.',
+  'transports.connection.empty':
+    'Mezi těmi dvěma zastávkami se v ten den žádné spojení nenašlo. Zkus sousední stanici nebo rozšiř filtr módů.',
   'transports.connection.searchFailed': 'Hledání neproběhlo',
   'transports.connection.searchFailedBody': 'Zkus to za chvíli znovu.',
   'transports.connection.saved': 'Spojení uloženo',
   'transports.connection.replaced': 'Trasa nahrazena',
-  'transports.connection.replacedBody': 'Kód rezervace a sedadlo zůstávají beze změny.',
+  'transports.connection.replacedBody':
+    'Kód rezervace a sedadlo zůstávají beze změny.',
   'transports.connection.saveFailed': 'Spojení se neuložilo',
   'transports.connection.saveError': 'Tohle se neuložilo',
-  'transports.connection.fromHint': 'Vyber zastávku — jízdního řádu se ptáš kde, ne jak se to jmenuje.',
+  'transports.connection.fromHint':
+    'Vyber zastávku — jízdního řádu se ptáš kde, ne jak se to jmenuje.',
   'transports.connection.toHint': 'Vyber zastávku z katalogu.',
   'transports.connection.onlyModes': 'Jen tyhle módy',
   'transports.connection.searching': 'Prohledávám jízdní řády',
@@ -521,7 +532,7 @@ const messages = {
   'transports.end.returnDay': 'Den vrácení',
   'transports.dayNumber': 'Den {n}',
   'transports.error.titleEmpty':
-    'Dej tomuhle úseku název, který v seznamu poznáš.',
+    'Dej tomuhle přesunu název, který v seznamu poznáš.',
   'transports.error.date': 'Datum se píše RRRR-MM-DD.',
   'transports.error.time': 'Čas se píše HH:MM ve 24hodinovém formátu.',
   'transports.error.departureNeedsDate':
@@ -531,9 +542,9 @@ const messages = {
   'transports.error.code': 'Kód má 2 až 8 písmen nebo číslic.',
   'transports.error.distance': 'Vzdálenost je počet kilometrů, až 100 000.',
   'transports.error.arrivesBeforeDeparts':
-    'Tenhle úsek přijíždí dřív, než odjíždí.',
+    'Tenhle přesun přijíždí dřív, než odjíždí.',
   'transports.error.timingHint':
-    'Posuň jeden z nich, aby se ten úsek dal opravdu stihnout.',
+    'Posuň jeden z časů, aby se ten přesun dal opravdu stihnout.',
   'transports.error.arrivalDayBeforeDeparture':
     'Den příjezdu předchází dni odjezdu.',
   'transports.error.returnDayBeforePickUp':
@@ -571,8 +582,10 @@ const messages = {
   'transports.chain.reaches': 'Přijíždí do {label}',
   'transports.chain.dayOfLeg': '{label} úseku {n}',
   'transports.chain.formError': 'Tenhle řetěz nejde uložit',
-  'transports.chain.atCap': 'Řetěz pojme nejvýš {max} úseků — to je limit toho, co unese jedno uložení, ne toho, kolik přestupů cesta může mít.',
-  'transports.chain.hint': 'Přidej zastávku na kterýkoli úsek, když měníš vlak; každý úsek si drží vlastní číslo spoje, nástupiště a sedadlo.',
+  'transports.chain.atCap':
+    'Řetěz pojme nejvýš {max} úseků — to je limit toho, co unese jedno uložení, ne toho, kolik přestupů cesta může mít.',
+  'transports.chain.hint':
+    'Přidej zastávku na kterýkoli úsek, když měníš vlak; každý úsek si drží vlastní číslo spoje, nástupiště a sedadlo.',
   'transports.field.timezone': 'Časové pásmo',
   'transports.field.platform': 'Nástupiště',
   'transports.chain.legNumber': 'Úsek {n}',
@@ -593,9 +606,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Není co porovnávat',
   'transports.junction.unknown.detail':
-    'Doplň u obou úseků datum a čas a tenhle přestup se ti zkontroluje.',
+    'Doplň u obou přesunů datum a čas a tenhle přestup se ti zkontroluje.',
   'transports.junction.impossible.headline':
-    'Odjíždí {gap} před příjezdem předchozího úseku',
+    'Odjíždí {gap} před příjezdem předchozího přesunu',
   'transports.junction.impossible.detail':
     '„{to}“ odjíždí, než přijede „{from}“, takže obojí stihnout nelze. Posuň jeden z nich.',
   'transports.junction.tight.headline': '{gap} na přestup',
@@ -605,7 +618,7 @@ const messages = {
     'Na {mode} v {place} obvykle potřebuješ asi {required}. Tady je to těsné.',
   'transports.junction.ok.headline': '{gap} mezi tím',
   'transports.junction.ok.detail':
-    'Přijezd do {landing}, ale další úsek odjíždí z {boarding} — budeš se muset přesunout.',
+    'Přijezd do {landing}, ale další přesun odjíždí z {boarding} — budeš se tam muset dostat.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Poznámka nasdílena',

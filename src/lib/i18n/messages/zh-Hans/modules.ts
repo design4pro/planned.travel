@@ -29,20 +29,20 @@ const messages = {
     '实时更新已关闭。保存照常进行；重新加载或重试即可跟上。',
   'presence.reconnect': '重新连接',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': '全部路段',
-  'transports.empty.title': '还没有行程路段',
+  'transports.filter.all': '全部交通',
+  'transports.empty.title': '还没有交通安排',
   'transports.empty.body':
     '航班、火车、渡轮和从机场出发的那段路都在这里，预订编号和座位号在出行当天随手可得，每次换乘都会与前一段核对。',
-  'transports.empty.action': '添加第一个路段',
-  'transports.filtered.title': '没有这一类的路段',
+  'transports.empty.action': '添加第一段交通',
+  'transports.filtered.title': '没有这一类的交通',
   'transports.filtered.body':
-    '这次旅行的每个路段走法都不一样。切回“{label}”即可看到全部。',
-  'transports.filtered.action': '显示全部路段',
+    '这次旅行的每段交通走法都不一样。切回“{label}”即可看到全部。',
+  'transports.filtered.action': '显示全部交通',
   'transports.alert.impossible.title': {
     other: '{legs} 次换乘无法完成',
   },
   'transports.alert.impossible.body':
-    '有一个路段在前一段到达之前就出发了。下面的衔接点会说明是哪些、差多少。',
+    '有一段交通在前一段到达之前就出发了。下面的衔接点会说明是哪些、差多少。',
   'transports.alert.tight.title': {
     other: '{legs} 次换乘时间紧张',
   },
@@ -56,22 +56,22 @@ const messages = {
   },
   'transports.badge.ok': '每次换乘都来得及',
   'transports.remove.body':
-    '这个路段会连同预订编号和座位一起彻底离开本次旅行。如果只是取消了，请改把状态设为“已取消”。',
-  'transports.remove.confirm': '删除路段',
-  'transports.menu.edit': '编辑路段…',
+    '这段交通会连同预订编号和座位一起彻底离开本次旅行。如果只是取消了，请改把状态设为“已取消”。',
+  'transports.remove.confirm': '删除这段交通',
+  'transports.menu.edit': '编辑这段交通…',
   'transports.field.service': '车次／航班',
   'transports.field.bookingRef': '预订编号',
   'transports.field.seat': '座位',
   'transports.field.distance': '距离',
   'transports.noTime': '还没有时间',
   'transports.toast.statusFailed.title': '状态没有改变',
-  'transports.toast.statusFailed.body': '这个路段仍处于原来的状态。',
-  'transports.toast.removed': '已删除路段',
-  'transports.toast.removeFailed': '未能删除该路段',
+  'transports.toast.statusFailed.body': '这段交通仍处于原来的状态。',
+  'transports.toast.removed': '已删除这段交通',
+  'transports.toast.removeFailed': '未能删除这段交通',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': '添加路段',
-  'transports.dialog.editTitle': '编辑这个路段',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': '添加交通',
+  'transports.dialog.editTitle': '编辑这段交通',
   'transports.dialog.description':
     '航班、火车、渡轮和从机场出发的那段路。时间是票面上的当地时间。',
   'transports.form.modeLegend': '怎么走',
@@ -86,14 +86,14 @@ const messages = {
   'transports.field.serviceNumber': '航班／车次号',
   'transports.field.bookingRefHint': '在柜台要报的编号。',
   'transports.field.notesPlaceholder': '已申请靠走道座位。行李直挂至京都。',
-  'transports.action.add': '添加路段',
-  'transports.action.save': '保存路段',
-  'transports.action.saving': '正在保存路段',
-  'transports.toast.added': '已添加路段',
+  'transports.action.add': '添加交通',
+  'transports.action.save': '保存交通',
+  'transports.action.saving': '正在保存交通',
+  'transports.toast.added': '已添加交通',
   'transports.toast.addedBody': '它已经排进行程顺序了。',
-  'transports.toast.addFailed': '未能添加该路段',
-  'transports.toast.updated': '已更新路段',
-  'transports.toast.updateFailed': '未能更新该路段',
+  'transports.toast.addFailed': '未能添加这段交通',
+  'transports.toast.updated': '已更新交通',
+  'transports.toast.updateFailed': '未能更新这段交通',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': '名称',
@@ -208,7 +208,7 @@ const messages = {
   'book.hint.activity': '一堂课、一次泡澡、一段订好的体验。',
   'book.hint.tour': '一个地点、一个时间，还有等着的导游。',
   'book.hint.ticket': '限时入场、美术馆通票、一场比赛。把编号放在手边。',
-  'book.hint.transport': '订好的座位。完整行程和编号放在{module}里。',
+  'book.hint.transport': '订好的座位。完整交通和编号放在{module}里。',
   'book.hint.other': '以你的名字留着、又归不进别类的东西。',
 
   /* -------------------------------------- lists: the dialogs */
@@ -404,12 +404,14 @@ const messages = {
   'book.fieldName.stop': '站点',
   'book.field.stop': '关联的停留点',
   'book.field.stopHint': '这条预订对应计划中的哪个停留点。',
-  'book.field.stopHintEmpty': '先给某一天添加一个地点，然后就能把这条预订挂上去',
+  'book.field.stopHintEmpty':
+    '先给某一天添加一个地点，然后就能把这条预订挂上去',
   'book.field.stopPlaceholder': '不关联停留点',
   'book.field.stopSearch': '在停留点和日期中搜索',
   'book.field.stopEmpty': '没有匹配的停留点',
   'book.ledger.refused.title': '已保存，但未计入费用',
-  'book.ledger.refused.body': '预订已在行程里。把它的费用行加进行程费用没有成功 — 请重试这一半。',
+  'book.ledger.refused.body':
+    '预订已在行程里。把它的费用行加进行程费用没有成功 — 请重试这一半。',
   'book.action.ledgerRetry': '加入费用',
   'book.copyConfirmation': '{title} 的确认号',
 
@@ -426,7 +428,7 @@ const messages = {
   'transports.mode.bike': '骑行',
   'transports.mode.walk': '步行',
   'transports.mode.other': '其他',
-  'transports.mode.fallback': '行程段',
+  'transports.mode.fallback': '交通',
   'transports.rank.earliest': '最早到达',
   'transports.rank.fewestChanges': '换乘最少',
   'transports.connection.findStop': '查找站点',
@@ -442,12 +444,15 @@ const messages = {
   'transports.connection.changes': {
     other: '换乘 {changes} 次',
   },
-  'transports.connection.tooLong': '这条路线的区段超过 {max} 段，超出一条行程记录能装下的量。请搜索更短的一段，其余分开记录。',
+  'transports.connection.tooLong':
+    '这条路线的路段超过 {max} 段，超出一条行程记录能装下的量。请搜索更短的一段，其余分开记录。',
   'transports.connection.refusal.ceiling': '本月的搜索次数已用完',
   'transports.connection.refusal.unconfigured': '此部署未开启路线搜索',
   'transports.connection.refusal.provider': '时刻表服务没有响应',
-  'transports.connection.invitation': '两个站点加一个日期，时刻表就会回答。在你选定之前不会保存任何内容。',
-  'transports.connection.empty': '在那个日期没有找到连接这两个站点的路线。可以试试邻近车站，或者放宽方式筛选。',
+  'transports.connection.invitation':
+    '两个站点加一个日期，时刻表就会回答。在你选定之前不会保存任何内容。',
+  'transports.connection.empty':
+    '在那个日期没有找到连接这两个站点的路线。可以试试邻近车站，或者放宽方式筛选。',
   'transports.connection.searchFailed': '搜索未执行',
   'transports.connection.searchFailedBody': '请稍后再试一次。',
   'transports.connection.saved': '路线已保存',
@@ -455,7 +460,8 @@ const messages = {
   'transports.connection.replacedBody': '订位号和座位保持不变。',
   'transports.connection.saveFailed': '路线未保存',
   'transports.connection.saveError': '没有保存成功',
-  'transports.connection.fromHint': '请选一个站点 — 时刻表问的是地点，不是它叫什么。',
+  'transports.connection.fromHint':
+    '请选一个站点 — 时刻表问的是地点，不是它叫什么。',
   'transports.connection.toHint': '请从目录中选一个站点。',
   'transports.connection.onlyModes': '只要这些方式',
   'transports.connection.searching': '正在搜索时刻表',
@@ -481,19 +487,19 @@ const messages = {
   'transports.end.pickUpDay': '取车日',
   'transports.end.returnDay': '还车日',
   'transports.dayNumber': '第 {n} 天',
-  'transports.error.titleEmpty': '给这段行程起个在列表里认得出的名字。',
+  'transports.error.titleEmpty': '给这段交通起个在列表里认得出的名字。',
   'transports.error.date': '日期写成 YYYY-MM-DD。',
   'transports.error.time': '时刻按 24 小时制写成 HH:MM。',
   'transports.error.departureNeedsDate': '出发时刻需要它所在的日期。',
   'transports.error.arrivalNeedsDate': '到达时刻需要它所在的日期。',
   'transports.error.code': '代码是 2 到 8 位字母或数字。',
   'transports.error.distance': '距离是以公里计的数字，最多 100000。',
-  'transports.error.arrivesBeforeDeparts': '这段行程在出发之前就到达了。',
-  'transports.error.timingHint': '把其中一个挪一下，这段行程才真的赶得上。',
+  'transports.error.arrivesBeforeDeparts': '这段交通在出发之前就到达了。',
+  'transports.error.timingHint': '把其中一个时刻挪一下，这段交通才真的赶得上。',
   'transports.error.arrivalDayBeforeDeparture': '到达日早于出发日。',
   'transports.error.returnDayBeforePickUp': '还车日早于取车日。',
-  'transports.toast.chainFailed': '区段未保存',
-  'transports.toast.chainFallback': '行程已保存，但其区段未保存。',
+  'transports.toast.chainFailed': '路段未保存',
+  'transports.toast.chainFallback': '行程已保存，但其路段未保存。',
   'transports.field.noDay': '尚未指定日期',
   'transports.fill.legend': '如何填写',
   'transports.fill.manual': '自己填写',
@@ -503,7 +509,7 @@ const messages = {
   'transports.field.arrivalDayHint': '次日早上抵达的行程会在这里说明。',
   'transports.chain.splitHint':
     '途中要换乘吗？把每一段连同车次、站台、座位和时刻分别记下来。',
-  'transports.chain.split': '拆分为区段',
+  'transports.chain.split': '拆分为路段',
   'transports.chain.stopNumber': '第 {n} 站',
   'transports.chain.change': '第 {n} 次换乘',
   'transports.chain.removeStation': '删除{label}',
@@ -524,8 +530,10 @@ const messages = {
   'transports.chain.reaches': '到达{label}',
   'transports.chain.dayOfLeg': '第 {n} 段的{label}',
   'transports.chain.formError': '这条链保存不了',
-  'transports.chain.atCap': '一条链最多 {max} 段 — 这是一次保存能带的量，不是一趟行程能换乘几次。',
-  'transports.chain.hint': '在任一段上添加停留点即可记下换乘，每段各自保留车次、站台和座位。',
+  'transports.chain.atCap':
+    '一条链最多 {max} 段 — 这是一次保存能带的量，不是一趟行程能换乘几次。',
+  'transports.chain.hint':
+    '在任一段上添加停留点即可记下换乘，每段各自保留车次、站台和座位。',
   'transports.field.timezone': '时区',
   'transports.field.platform': '站台',
   'transports.chain.legNumber': '第 {n} 段',
@@ -534,7 +542,7 @@ const messages = {
   'transports.chain.error.stopName': '每一站都需要名称 — 你在这里换乘。',
   'transports.chain.error.stopNameLong': '站点名称需少于 200 个字符。',
   'transports.chain.error.timezone': '请从列表中选择时区。',
-  'transports.chain.error.tooManyLegs': '一条行程链最多包含 {max} 个区段。',
+  'transports.chain.error.tooManyLegs': '一条行程链最多包含 {max} 个路段。',
   'transports.bookingRefFor': '{title} 的预订号',
   'transports.doorToDoor': '门到门一共 {gap}。',
   'transports.title.fromTo': '{operator} {from} 至 {to}',
@@ -544,8 +552,8 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': '没有可比的时刻',
   'transports.junction.unknown.detail':
-    '给两段行程都填上日期和时刻，这次换乘就会帮你检查。',
-  'transports.junction.impossible.headline': '比上一段到达早 {gap} 出发',
+    '给两段交通都填上日期和时刻，这次换乘就会帮你检查。',
+  'transports.junction.impossible.headline': '比上一段交通到达早 {gap} 出发',
   'transports.junction.impossible.detail':
     '「{to}」在「{from}」到达之前就出发，两段赶不上。请挪动其中一段。',
   'transports.junction.tight.headline': '换乘 {gap}',
@@ -555,7 +563,7 @@ const messages = {
     '在{place}乘{mode}通常需要大约 {required}。这次很紧。',
   'transports.junction.ok.headline': '中间隔 {gap}',
   'transports.junction.ok.detail':
-    '到达 {landing}，但下一段从 {boarding} 出发——你需要过去一趟。',
+    '到达 {landing}，但下一段交通从 {boarding} 出发——你需要过去一趟。',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': '便签已共享',

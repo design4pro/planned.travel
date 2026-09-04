@@ -30,15 +30,15 @@ const messages = {
     'Aktualizacje na żywo są wyłączone. Zapis działa; odśwież albo ponów, żeby nadrobić.',
   'presence.reconnect': 'Połącz ponownie',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Wszystkie odcinki',
-  'transports.empty.title': 'Jeszcze bez odcinków podróży',
+  'transports.filter.all': 'Wszystkie przejazdy',
+  'transports.empty.title': 'Jeszcze bez przejazdów',
   'transports.empty.body':
     'Loty, pociągi, promy i dojazd z lotniska mieszkają tutaj, z kodami rezerwacji i numerami miejsc pod ręką na dzień wyjazdu — a każda przesiadka jest sprawdzona względem poprzedniej.',
-  'transports.empty.action': 'Dodaj pierwszy odcinek',
-  'transports.filtered.title': 'Brak odcinków tego rodzaju',
+  'transports.empty.action': 'Dodaj pierwszy przejazd',
+  'transports.filtered.title': 'Brak przejazdów tego rodzaju',
   'transports.filtered.body':
-    'Każdy odcinek tej wycieczki jedzie inaczej. Wróć do „{label}”, żeby zobaczyć wszystkie.',
-  'transports.filtered.action': 'Pokaż wszystkie odcinki',
+    'Każdy przejazd tej wycieczki jedzie inaczej. Wróć do „{label}”, żeby zobaczyć wszystkie.',
+  'transports.filtered.action': 'Pokaż wszystkie przejazdy',
   'transports.alert.impossible.title': {
     one: 'Jedna przesiadka jest niemożliwa',
     few: '{legs} przesiadki są niemożliwe',
@@ -46,7 +46,7 @@ const messages = {
     other: '{legs} przesiadki są niemożliwe',
   },
   'transports.alert.impossible.body':
-    'Odcinek odjeżdża, zanim przyjedzie poprzedni. Węzły poniżej mówią które i o ile.',
+    'Przejazd odjeżdża, zanim przyjedzie poprzedni. Węzły poniżej mówią które i o ile.',
   'transports.alert.tight.title': {
     one: 'Jedna przesiadka jest ciasna',
     few: '{legs} przesiadki są ciasne',
@@ -69,22 +69,22 @@ const messages = {
   },
   'transports.badge.ok': 'Każda przesiadka działa',
   'transports.remove.body':
-    'Odcinek schodzi z tej wycieczki na dobre, razem z numerem rezerwacji i miejscem. Jeśli jest tylko odwołany, ustaw mu status Odwołany.',
-  'transports.remove.confirm': 'Usuń odcinek',
-  'transports.menu.edit': 'Edytuj odcinek…',
+    'Przejazd schodzi z tej wycieczki na dobre, razem z numerem rezerwacji i miejscem. Jeśli jest tylko odwołany, ustaw mu status Odwołany.',
+  'transports.remove.confirm': 'Usuń przejazd',
+  'transports.menu.edit': 'Edytuj przejazd…',
   'transports.field.service': 'Połączenie',
   'transports.field.bookingRef': 'Numer rezerwacji',
   'transports.field.seat': 'Miejsce',
   'transports.field.distance': 'Odległość',
   'transports.noTime': 'Jeszcze bez godziny',
   'transports.toast.statusFailed.title': 'Status się nie zmienił',
-  'transports.toast.statusFailed.body': 'Odcinek został w poprzednim stanie.',
-  'transports.toast.removed': 'Odcinek usunięty',
-  'transports.toast.removeFailed': 'Odcinek nie został usunięty',
+  'transports.toast.statusFailed.body': 'Przejazd został w poprzednim stanie.',
+  'transports.toast.removed': 'Przejazd usunięty',
+  'transports.toast.removeFailed': 'Przejazd nie został usunięty',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Dodaj odcinek',
-  'transports.dialog.editTitle': 'Edytuj ten odcinek',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Dodaj przejazd',
+  'transports.dialog.editTitle': 'Edytuj ten przejazd',
   'transports.dialog.description':
     'Loty, pociągi, promy i dojazd z lotniska. Godziny są lokalne, te wydrukowane na bilecie.',
   'transports.form.modeLegend': 'Czym jedziesz',
@@ -100,14 +100,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Kod, który odczytasz przy stanowisku.',
   'transports.field.notesPlaceholder':
     'Prośba o miejsce przy przejściu. Bagaż nadany do Kioto.',
-  'transports.action.add': 'Dodaj odcinek',
-  'transports.action.save': 'Zapisz odcinek',
-  'transports.action.saving': 'Zapisywanie odcinka',
-  'transports.toast.added': 'Odcinek dodany',
+  'transports.action.add': 'Dodaj przejazd',
+  'transports.action.save': 'Zapisz przejazd',
+  'transports.action.saving': 'Zapisywanie przejazdu',
+  'transports.toast.added': 'Przejazd dodany',
   'transports.toast.addedBody': 'Jest już w kolejności podróży.',
-  'transports.toast.addFailed': 'Odcinek nie został dodany',
-  'transports.toast.updated': 'Odcinek zaktualizowany',
-  'transports.toast.updateFailed': 'Odcinek nie został zaktualizowany',
+  'transports.toast.addFailed': 'Przejazd nie został dodany',
+  'transports.toast.updated': 'Przejazd zaktualizowany',
+  'transports.toast.updateFailed': 'Przejazd nie został zaktualizowany',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Nazwa',
@@ -136,11 +136,14 @@ const messages = {
     'Nie ma tu nic zarezerwowanego w wybranych rodzajach. Wyczyść filtr, żeby zobaczyć resztę.',
   'book.filtered.action': 'Wyczyść filtr',
   'book.panel.outstanding': 'Do załatwienia',
-  'book.panel.outstandingEmpty': 'Nic nie zostało — wszystko tutaj jest załatwione.',
+  'book.panel.outstandingEmpty':
+    'Nic nie zostało — wszystko tutaj jest załatwione.',
   'book.panel.settled': 'Załatwione',
-  'book.panel.settledEmpty': 'Nic jeszcze nie załatwione — wszystkiego trzeba dopilnować.',
+  'book.panel.settledEmpty':
+    'Nic jeszcze nie załatwione — wszystkiego trzeba dopilnować.',
   'book.import.badge': 'Niesprawdzony import',
-  'book.import.hint': 'Zaimportowane z potwierdzenia. Otwórz i zapisz, żeby oznaczyć jako sprawdzone.',
+  'book.import.hint':
+    'Zaimportowane z potwierdzenia. Otwórz i zapisz, żeby oznaczyć jako sprawdzone.',
   'book.journeyLink': 'Na karcie transportu',
   'filter.all': 'Wszystko',
   'book.remove.body':
@@ -228,7 +231,7 @@ const messages = {
   'book.hint.ticket':
     'Wejście na godzinę, karnet do muzeum, mecz. Trzymaj kod pod ręką.',
   'book.hint.transport':
-    'Wykupione miejsce. Pełne odcinki z przewoźnikami i kodami należą do {module}.',
+    'Wykupione miejsce. Pełne przejazdy z przewoźnikami i kodami należą do {module}.',
   'book.hint.other':
     'Cokolwiek trzymanego na twoje nazwisko, co nie pasuje do reszty.',
 
@@ -448,12 +451,14 @@ const messages = {
   'book.fieldName.stop': 'przystanek',
   'book.field.stop': 'Powiązany przystanek',
   'book.field.stopHint': 'Którego przystanku planu dotyczy ta rezerwacja.',
-  'book.field.stopHintEmpty': 'Najpierw dodaj miejsce do któregoś dnia, wtedy będzie można powiązać z nim tę rezerwację',
+  'book.field.stopHintEmpty':
+    'Najpierw dodaj miejsce do któregoś dnia, wtedy będzie można powiązać z nim tę rezerwację',
   'book.field.stopPlaceholder': 'Bez przystanku',
   'book.field.stopSearch': 'Szukaj wśród przystanków i dni',
   'book.field.stopEmpty': 'Żaden przystanek nie pasuje',
   'book.ledger.refused.title': 'Zapisane, ale nie dodane do kosztów',
-  'book.ledger.refused.body': 'Rezerwacja jest na wyjeździe. Dodanie jej pozycji do kosztów wyjazdu się nie udało — spróbuj jeszcze raz tej połowy.',
+  'book.ledger.refused.body':
+    'Rezerwacja jest na wyjeździe. Dodanie jej pozycji do kosztów wyjazdu się nie udało — spróbuj jeszcze raz tej połowy.',
   'book.action.ledgerRetry': 'Dodaj do kosztów',
   'book.copyConfirmation': 'numer potwierdzenia dla: {title}',
 
@@ -470,12 +475,13 @@ const messages = {
   'transports.mode.bike': 'Rower',
   'transports.mode.walk': 'Pieszo',
   'transports.mode.other': 'Inne',
-  'transports.mode.fallback': 'Odcinek',
+  'transports.mode.fallback': 'Przejazd',
   'transports.rank.earliest': 'Najwcześniejszy przyjazd',
   'transports.rank.fewestChanges': 'Najmniej przesiadek',
   'transports.connection.findStop': 'Znajdź przystanek',
   'transports.connection.findStopSearch': 'WAW, Centralna, Warszawa…',
-  'transports.connection.findStopEmpty': 'W katalogu nie ma przystanku o tej nazwie.',
+  'transports.connection.findStopEmpty':
+    'W katalogu nie ma przystanku o tej nazwie.',
   'transports.connection.hideStops': 'Ukryj przystanki',
   'transports.connection.seeStops': 'Pokaż przystanki',
   'transports.connection.saving': 'Zapisuję połączenie',
@@ -489,20 +495,27 @@ const messages = {
     many: '{changes} przesiadek',
     other: '{changes} przesiadki',
   },
-  'transports.connection.tooLong': 'To połączenie ma więcej niż {max} odcinków, czyli więcej, niż mieści jeden zapis podróży. Poszukaj krótszego odcinka, a resztę zapisz osobno.',
-  'transports.connection.refusal.ceiling': 'W tym miesiącu nie zostały już wyszukiwania',
-  'transports.connection.refusal.unconfigured': 'Wyszukiwanie połączeń jest wyłączone w tym wdrożeniu',
+  'transports.connection.tooLong':
+    'To połączenie ma więcej niż {max} odcinków, czyli więcej, niż mieści jeden zapis podróży. Poszukaj krótszego odcinka, a resztę zapisz osobno.',
+  'transports.connection.refusal.ceiling':
+    'W tym miesiącu nie zostały już wyszukiwania',
+  'transports.connection.refusal.unconfigured':
+    'Wyszukiwanie połączeń jest wyłączone w tym wdrożeniu',
   'transports.connection.refusal.provider': 'Serwis rozkładów nie odpowiedział',
-  'transports.connection.invitation': 'Dwa przystanki i data, a rozkład odpowiada. Nic nie zapisuje się, dopóki nie wybierzesz.',
-  'transports.connection.empty': 'Nie znaleziono połączenia między tymi przystankami w tym dniu. Spróbuj sąsiedniej stacji albo poszerz filtr środków.',
+  'transports.connection.invitation':
+    'Dwa przystanki i data, a rozkład odpowiada. Nic nie zapisuje się, dopóki nie wybierzesz.',
+  'transports.connection.empty':
+    'Nie znaleziono połączenia między tymi przystankami w tym dniu. Spróbuj sąsiedniej stacji albo poszerz filtr środków.',
   'transports.connection.searchFailed': 'Wyszukiwanie się nie odbyło',
   'transports.connection.searchFailedBody': 'Spróbuj za chwilę.',
   'transports.connection.saved': 'Połączenie zapisane',
   'transports.connection.replaced': 'Trasa zastąpiona',
-  'transports.connection.replacedBody': 'Kod rezerwacji i miejsce zostają bez zmian.',
+  'transports.connection.replacedBody':
+    'Kod rezerwacji i miejsce zostają bez zmian.',
   'transports.connection.saveFailed': 'Połączenie nie zostało zapisane',
   'transports.connection.saveError': 'To się nie zapisało',
-  'transports.connection.fromHint': 'Wybierz przystanek — rozkładu pytasz gdzie, a nie jak się nazywa.',
+  'transports.connection.fromHint':
+    'Wybierz przystanek — rozkładu pytasz gdzie, a nie jak się nazywa.',
   'transports.connection.toHint': 'Wybierz przystanek z katalogu.',
   'transports.connection.onlyModes': 'Tylko te środki',
   'transports.connection.searching': 'Przeszukuję rozkłady',
@@ -529,7 +542,7 @@ const messages = {
   'transports.end.returnDay': 'Dzień zwrotu',
   'transports.dayNumber': 'Dzień {n}',
   'transports.error.titleEmpty':
-    'Nadaj temu odcinkowi nazwę, którą rozpoznasz na liście.',
+    'Nadaj temu przejazdowi nazwę, którą rozpoznasz na liście.',
   'transports.error.date': 'Datę zapisuje się jako RRRR-MM-DD.',
   'transports.error.time':
     'Godzinę zapisuje się jako GG:MM w formacie 24-godzinnym.',
@@ -540,9 +553,9 @@ const messages = {
   'transports.error.code': 'Kod ma od 2 do 8 liter lub cyfr.',
   'transports.error.distance': 'Odległość to liczba kilometrów, do 100 000.',
   'transports.error.arrivesBeforeDeparts':
-    'Ten odcinek przyjeżdża przed odjazdem.',
+    'Ten przejazd przyjeżdża przed odjazdem.',
   'transports.error.timingHint':
-    'Przesuń jedną z nich, żeby ten odcinek dało się złapać.',
+    'Przesuń jedną z godzin, żeby ten przejazd dało się złapać.',
   'transports.error.arrivalDayBeforeDeparture':
     'Dzień przyjazdu wypada przed dniem wyjazdu.',
   'transports.error.returnDayBeforePickUp':
@@ -567,7 +580,8 @@ const messages = {
   'transports.chain.findStation': 'Znajdź lotnisko lub stację',
   'transports.chain.findStationFor': 'Znajdź lotnisko lub stację dla {label}',
   'transports.chain.findPlaceholder': 'WAW, Okęcie, Warszawa…',
-  'transports.chain.findEmpty': 'Brak dopasowania — wpisz przystanek samodzielnie poniżej.',
+  'transports.chain.findEmpty':
+    'Brak dopasowania — wpisz przystanek samodzielnie poniżej.',
   'transports.chain.stopLabel': 'Przystanek',
   'transports.chain.stopPlaceholder': 'Kraków Główny',
   'transports.chain.timezoneHint': 'Według którego zegara idzie ten przystanek',
@@ -581,8 +595,10 @@ const messages = {
   'transports.chain.reaches': 'Przyjazd do {label}',
   'transports.chain.dayOfLeg': '{label} odcinka {n}',
   'transports.chain.formError': 'Tego łańcucha nie da się zapisać',
-  'transports.chain.atCap': 'Łańcuch mieści najwyżej {max} odcinków — to granica tego, co udźwignie jeden zapis, a nie tego, ile przesiadek może mieć podróż.',
-  'transports.chain.hint': 'Dodaj przystanek na dowolnym odcinku, żeby zapisać przesiadkę; każdy odcinek trzyma własny numer pociągu, peron i miejsce.',
+  'transports.chain.atCap':
+    'Łańcuch mieści najwyżej {max} odcinków — to granica tego, co udźwignie jeden zapis, a nie tego, ile przesiadek może mieć podróż.',
+  'transports.chain.hint':
+    'Dodaj przystanek na dowolnym odcinku, żeby zapisać przesiadkę; każdy odcinek trzyma własny numer pociągu, peron i miejsce.',
   'transports.field.timezone': 'Strefa czasowa',
   'transports.field.platform': 'Peron',
   'transports.chain.legNumber': 'Odcinek {n}',
@@ -603,9 +619,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Brak godzin do porównania',
   'transports.junction.unknown.detail':
-    'Dodaj datę i godzinę do obu odcinków, a ta przesiadka zostanie sprawdzona.',
+    'Dodaj datę i godzinę do obu przejazdów, a ta przesiadka zostanie sprawdzona.',
   'transports.junction.impossible.headline':
-    'Odjeżdża {gap} przed przyjazdem poprzedniego odcinka',
+    'Odjeżdża {gap} przed przyjazdem poprzedniego przejazdu',
   'transports.junction.impossible.detail':
     '„{to}” odjeżdża przed przyjazdem „{from}”, więc nie da się złapać obu. Przesuń jeden z nich.',
   'transports.junction.tight.headline': '{gap} na przesiadkę',
@@ -615,7 +631,7 @@ const messages = {
     'Na {mode} zwykle trzeba około {required} w {place}. Tu jest ciasno.',
   'transports.junction.ok.headline': '{gap} przerwy',
   'transports.junction.ok.detail':
-    'Przyjazd do {landing}, ale następny odcinek odjeżdża z {boarding} — trzeba się przemieścić.',
+    'Przyjazd do {landing}, ale następny przejazd odjeżdża z {boarding} — trzeba się przemieścić.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Notatka udostępniona',

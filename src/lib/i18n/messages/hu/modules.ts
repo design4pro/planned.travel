@@ -30,21 +30,21 @@ const messages = {
     'Az élő frissítések ki vannak kapcsolva. A mentés működik; töltsd újra vagy próbáld újra a felzárkózáshoz.',
   'presence.reconnect': 'Újrakapcsolódás',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Minden szakasz',
-  'transports.empty.title': 'Még nincs útszakasz',
+  'transports.filter.all': 'Minden út',
+  'transports.empty.title': 'Még nincs egy út sem',
   'transports.empty.body':
     'A repülők, vonatok, kompok és a reptérről vezető út mind itt lakik, foglalási kódokkal és üléshelyekkel kézre esően az adott napon — és minden átszállás az előzőhöz mérve ellenőrizve.',
-  'transports.empty.action': 'Add hozzá az első szakaszt',
-  'transports.filtered.title': 'Nincs ilyen fajta szakasz',
+  'transports.empty.action': 'Add hozzá az első utat',
+  'transports.filtered.title': 'Nincs ilyen fajta út',
   'transports.filtered.body':
-    'Ezen az utazáson minden szakasz máshogy megy. Lépj vissza a „{label}” szűrőre, hogy mindet lásd.',
-  'transports.filtered.action': 'Minden szakasz megjelenítése',
+    'Ezen az utazáson minden út máshogy megy. Lépj vissza a „{label}” szűrőre, hogy mindet lásd.',
+  'transports.filtered.action': 'Minden út megjelenítése',
   'transports.alert.impossible.title': {
     one: '{legs} átszállás nem megy',
     other: '{legs} átszállás nem megy',
   },
   'transports.alert.impossible.body':
-    'Egy szakasz előbb indul, mint hogy az előző megérkezne. A lenti csomópontok megmondják, melyek és mennyivel.',
+    'Egy út előbb indul, mint hogy az előző megérkezne. A lenti csomópontok megmondják, melyek és mennyivel.',
   'transports.alert.tight.title': {
     one: '{legs} átszállás szoros',
     other: '{legs} átszállás szoros',
@@ -61,23 +61,22 @@ const messages = {
   },
   'transports.badge.ok': 'Minden átszállás összejön',
   'transports.remove.body':
-    'A szakasz végleg lekerül erről az utazásról, a foglalási számával és az ülésével együtt. Ha csak törölték, inkább állítsd az állapotát „Törölve” értékre.',
-  'transports.remove.confirm': 'Szakasz eltávolítása',
-  'transports.menu.edit': 'Szakasz szerkesztése…',
+    'Az út végleg lekerül erről az utazásról, a foglalási számával és az ülésével együtt. Ha csak törölték, inkább állítsd az állapotát „Törölve” értékre.',
+  'transports.remove.confirm': 'Út eltávolítása',
+  'transports.menu.edit': 'Út szerkesztése…',
   'transports.field.service': 'Járat',
   'transports.field.bookingRef': 'Foglalási szám',
   'transports.field.seat': 'Ülés',
   'transports.field.distance': 'Távolság',
   'transports.noTime': 'Még nincs időpont',
   'transports.toast.statusFailed.title': 'Az állapot nem változott',
-  'transports.toast.statusFailed.body':
-    'A szakasz a korábbi állapotában maradt.',
-  'transports.toast.removed': 'Szakasz eltávolítva',
-  'transports.toast.removeFailed': 'A szakasz nem lett eltávolítva',
+  'transports.toast.statusFailed.body': 'Az út a korábbi állapotában maradt.',
+  'transports.toast.removed': 'Út eltávolítva',
+  'transports.toast.removeFailed': 'Az út nem lett eltávolítva',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Szakasz hozzáadása',
-  'transports.dialog.editTitle': 'Ennek a szakasznak a szerkesztése',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Út hozzáadása',
+  'transports.dialog.editTitle': 'Ennek az útnak a szerkesztése',
   'transports.dialog.description':
     'Repülők, vonatok, kompok és a reptérről vezető út. Az időpontok a jegyre nyomtatott helyi időpontok.',
   'transports.form.modeLegend': 'Mivel utazol',
@@ -93,14 +92,14 @@ const messages = {
   'transports.field.bookingRefHint': 'A kód, amit a pultnál felolvasol.',
   'transports.field.notesPlaceholder':
     'Folyosó melletti ülést kértünk. A csomag Kiotóig fel van adva.',
-  'transports.action.add': 'Szakasz hozzáadása',
-  'transports.action.save': 'Szakasz mentése',
-  'transports.action.saving': 'Szakasz mentése folyamatban',
-  'transports.toast.added': 'Szakasz hozzáadva',
+  'transports.action.add': 'Út hozzáadása',
+  'transports.action.save': 'Út mentése',
+  'transports.action.saving': 'Út mentése folyamatban',
+  'transports.toast.added': 'Út hozzáadva',
   'transports.toast.addedBody': 'Már benne van az utazás sorrendjében.',
-  'transports.toast.addFailed': 'A szakasz nem lett hozzáadva',
-  'transports.toast.updated': 'Szakasz frissítve',
-  'transports.toast.updateFailed': 'A szakasz nem lett frissítve',
+  'transports.toast.addFailed': 'Az út nem lett hozzáadva',
+  'transports.toast.updated': 'Út frissítve',
+  'transports.toast.updateFailed': 'Az út nem lett frissítve',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Megnevezés',
@@ -129,11 +128,14 @@ const messages = {
     'A kiválasztott típusokból itt nincs foglalás. Töröld a szűrőt, és látod a pult többi részét.',
   'book.filtered.action': 'Szűrő törlése',
   'book.panel.outstanding': 'Még rendezni kell',
-  'book.panel.outstandingEmpty': 'Nincs függőben semmi — itt minden rendezve van.',
+  'book.panel.outstandingEmpty':
+    'Nincs függőben semmi — itt minden rendezve van.',
   'book.panel.settled': 'Rendezve',
-  'book.panel.settledEmpty': 'Még semmi sincs rendezve — mindennek utána kell járni.',
+  'book.panel.settledEmpty':
+    'Még semmi sincs rendezve — mindennek utána kell járni.',
   'book.import.badge': 'Ellenőrizetlen import',
-  'book.import.hint': 'Egy visszaigazolásból importálva. Nyisd meg és mentsd el, ezzel ellenőrzöttnek jelölöd.',
+  'book.import.hint':
+    'Egy visszaigazolásból importálva. Nyisd meg és mentsd el, ezzel ellenőrzöttnek jelölöd.',
   'book.journeyLink': 'A közlekedés fülön',
   'filter.all': 'Minden',
   'book.remove.body':
@@ -222,7 +224,7 @@ const messages = {
   'book.hint.ticket':
     'Időpontos belépés, múzeumi bérlet, egy meccs. A kód legyen kéznél.',
   'book.hint.transport':
-    'Egy lefoglalt hely. A teljes szakaszok kódokkal a {module} alá tartoznak.',
+    'Egy lefoglalt hely. A teljes utak kódokkal a {module} alá tartoznak.',
   'book.hint.other':
     'Bármi, ami a nevedre van fenntartva, és nem illik a többihez.',
 
@@ -435,12 +437,14 @@ const messages = {
   'book.fieldName.stop': 'megálló',
   'book.field.stop': 'Kapcsolt megálló',
   'book.field.stopHint': 'A terv melyik megállójához tartozik ez a foglalás.',
-  'book.field.stopHintEmpty': 'Előbb adj egy helyet valamelyik naphoz, utána köthető hozzá ez a foglalás',
+  'book.field.stopHintEmpty':
+    'Előbb adj egy helyet valamelyik naphoz, utána köthető hozzá ez a foglalás',
   'book.field.stopPlaceholder': 'Nincs megállóhoz kötve',
   'book.field.stopSearch': 'Keresés megállók és napok között',
   'book.field.stopEmpty': 'Nincs találat a megállók közt',
   'book.ledger.refused.title': 'Mentve, de a költségekhez nem került be',
-  'book.ledger.refused.body': 'A foglalás rajta van az úton. A költségsorát nem sikerült az út költségeihez adni — próbáld újra ezt a felét.',
+  'book.ledger.refused.body':
+    'A foglalás rajta van az úton. A költségsorát nem sikerült az út költségeihez adni — próbáld újra ezt a felét.',
   'book.action.ledgerRetry': 'Hozzáadás a költségekhez',
   'book.copyConfirmation': '{title} visszaigazolási száma',
 
@@ -457,12 +461,13 @@ const messages = {
   'transports.mode.bike': 'Kerékpár',
   'transports.mode.walk': 'Gyalog',
   'transports.mode.other': 'Egyéb',
-  'transports.mode.fallback': 'Szakasz',
+  'transports.mode.fallback': 'Út',
   'transports.rank.earliest': 'Legkorábbi érkezés',
   'transports.rank.fewestChanges': 'Legkevesebb átszállás',
   'transports.connection.findStop': 'Keress megállót',
   'transports.connection.findStopSearch': 'BUD, Keleti, Budapest…',
-  'transports.connection.findStopEmpty': 'Ilyen nevű megálló nincs a katalógusban.',
+  'transports.connection.findStopEmpty':
+    'Ilyen nevű megálló nincs a katalógusban.',
   'transports.connection.hideStops': 'Megállók elrejtése',
   'transports.connection.seeStops': 'Megállók mutatása',
   'transports.connection.saving': 'Mentem a kapcsolatot',
@@ -474,20 +479,28 @@ const messages = {
     one: '{changes} átszállás',
     other: '{changes} átszállás',
   },
-  'transports.connection.tooLong': 'Ennek a kapcsolatnak több mint {max} szakasza van, több, mint amennyi egy utazásrekordba fér. Keress rövidebb szakaszt, a többit külön írd fel.',
-  'transports.connection.refusal.ceiling': 'Ebben a hónapban nincs több keresés',
-  'transports.connection.refusal.unconfigured': 'A kapcsolatkeresés ki van kapcsolva ezen a telepítésen',
-  'transports.connection.refusal.provider': 'A menetrendszolgáltatás nem válaszolt',
-  'transports.connection.invitation': 'Két megálló és egy dátum, és a menetrend válaszol. Semmi sem mentődik, amíg nem választasz.',
-  'transports.connection.empty': 'Azon a napon nem találtunk kapcsolatot a két megálló között. Próbálj szomszédos állomást, vagy bővítsd a szűrőt.',
+  'transports.connection.tooLong':
+    'Ennek a kapcsolatnak több mint {max} szakasza van, több, mint amennyi egy utazásrekordba fér. Keress rövidebb szakaszt, a többit külön írd fel.',
+  'transports.connection.refusal.ceiling':
+    'Ebben a hónapban nincs több keresés',
+  'transports.connection.refusal.unconfigured':
+    'A kapcsolatkeresés ki van kapcsolva ezen a telepítésen',
+  'transports.connection.refusal.provider':
+    'A menetrendszolgáltatás nem válaszolt',
+  'transports.connection.invitation':
+    'Két megálló és egy dátum, és a menetrend válaszol. Semmi sem mentődik, amíg nem választasz.',
+  'transports.connection.empty':
+    'Azon a napon nem találtunk kapcsolatot a két megálló között. Próbálj szomszédos állomást, vagy bővítsd a szűrőt.',
   'transports.connection.searchFailed': 'A keresés nem futott le',
   'transports.connection.searchFailedBody': 'Próbáld újra egy pillanat múlva.',
   'transports.connection.saved': 'Kapcsolat mentve',
   'transports.connection.replaced': 'Útvonal lecserélve',
-  'transports.connection.replacedBody': 'A foglalási kód és az ülés érintetlen marad.',
+  'transports.connection.replacedBody':
+    'A foglalási kód és az ülés érintetlen marad.',
   'transports.connection.saveFailed': 'A kapcsolat nem mentődött',
   'transports.connection.saveError': 'Ez nem mentődött',
-  'transports.connection.fromHint': 'Válassz megállót — a menetrendet arról kérdezed, hol, nem arról, hogy hívják.',
+  'transports.connection.fromHint':
+    'Válassz megállót — a menetrendet arról kérdezed, hol, nem arról, hogy hívják.',
   'transports.connection.toHint': 'Válassz megállót a katalógusból.',
   'transports.connection.onlyModes': 'Csak ezek a módok',
   'transports.connection.searching': 'Keresek a menetrendben',
@@ -514,7 +527,7 @@ const messages = {
   'transports.end.returnDay': 'Leadás napja',
   'transports.dayNumber': '{n}. nap',
   'transports.error.titleEmpty':
-    'Adj ennek a szakasznak nevet, amit egy listában felismersz.',
+    'Adj ennek az útnak nevet, amit egy listában felismersz.',
   'transports.error.date': 'A dátumot ÉÉÉÉ-HH-NN alakban írjuk.',
   'transports.error.time': 'Az időt ÓÓ:PP alakban, 24 órás formában írjuk.',
   'transports.error.departureNeedsDate':
@@ -525,9 +538,9 @@ const messages = {
   'transports.error.distance':
     'A távolság kilométerben megadott szám, legfeljebb 100 000.',
   'transports.error.arrivesBeforeDeparts':
-    'Ez a szakasz előbb érkezik meg, mint ahogy elindul.',
+    'Ez az út előbb érkezik meg, mint ahogy elindul.',
   'transports.error.timingHint':
-    'Tolj el az egyiket, hogy a szakasz valóban elérhető legyen.',
+    'Tolj el az egyik időpontot, hogy az út valóban elérhető legyen.',
   'transports.error.arrivalDayBeforeDeparture':
     'Az érkezés napja megelőzi az indulás napját.',
   'transports.error.returnDayBeforePickUp':
@@ -549,7 +562,8 @@ const messages = {
   'transports.chain.change': '{n}. átszállás',
   'transports.chain.removeStation': '{label} eltávolítása',
   'transports.chain.findStation': 'Keress repteret vagy állomást',
-  'transports.chain.findStationFor': 'Keress repteret vagy állomást ehhez: {label}',
+  'transports.chain.findStationFor':
+    'Keress repteret vagy állomást ehhez: {label}',
   'transports.chain.findPlaceholder': 'BUD, Liszt Ferenc, Budapest…',
   'transports.chain.findEmpty': 'Nincs találat — írd be lent a megállót magad.',
   'transports.chain.stopLabel': 'Megálló',
@@ -565,8 +579,10 @@ const messages = {
   'transports.chain.reaches': 'Érkezik ide: {label}',
   'transports.chain.dayOfLeg': '{n}. szakasz {label}',
   'transports.chain.formError': 'Ez a lánc nem menthető',
-  'transports.chain.atCap': 'Egy lánc legfeljebb {max} szakaszt fog — ez arra korlát, mennyit bír egy mentés, nem arra, hány átszállása lehet egy útnak.',
-  'transports.chain.hint': 'Adj hozzá megállót bármelyik szakaszhoz, ha vonatot cserélsz; minden szakasz megtartja a saját járatszámát, vágányát és ülését.',
+  'transports.chain.atCap':
+    'Egy lánc legfeljebb {max} szakaszt fog — ez arra korlát, mennyit bír egy mentés, nem arra, hány átszállása lehet egy útnak.',
+  'transports.chain.hint':
+    'Adj hozzá megállót bármelyik szakaszhoz, ha vonatot cserélsz; minden szakasz megtartja a saját járatszámát, vágányát és ülését.',
   'transports.field.timezone': 'Időzóna',
   'transports.field.platform': 'Vágány',
   'transports.chain.legNumber': '{n}. szakasz',
@@ -588,9 +604,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Nincs mit összehasonlítani',
   'transports.junction.unknown.detail':
-    'Add meg mindkét szakasznál a dátumot és az időt, és ezt az átszállást ellenőrizzük neked.',
+    'Add meg mindkét útnál a dátumot és az időt, és ezt az átszállást ellenőrizzük neked.',
   'transports.junction.impossible.headline':
-    '{gap}-cal az előző szakasz megérkezése előtt indul',
+    '{gap}-cal az előző út megérkezése előtt indul',
   'transports.junction.impossible.detail':
     'A(z) „{to}” elindul, mielőtt a(z) „{from}” megérkezik, így nem érhető el mindkettő. Tolj el az egyiket.',
   'transports.junction.tight.headline': '{gap} az átszállásra',
@@ -600,7 +616,7 @@ const messages = {
     'A(z) {mode} {place} esetében általában körülbelül {required} igényel. Ez szoros.',
   'transports.junction.ok.headline': '{gap} közte',
   'transports.junction.ok.detail':
-    '{landing} a megérkezés, de a következő szakasz {boarding} felől indul — át kell érned.',
+    '{landing} a megérkezés, de a következő út {boarding} felől indul — át kell érned.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Jegyzet megosztva',

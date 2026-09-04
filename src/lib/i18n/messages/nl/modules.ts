@@ -30,21 +30,21 @@ const messages = {
     'Live-updates staan uit. Er wordt nog gewoon opgeslagen; herlaad of probeer opnieuw om bij te komen.',
   'presence.reconnect': 'Opnieuw verbinden',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Alle etappes',
-  'transports.empty.title': 'Nog geen etappes',
+  'transports.filter.all': 'Alle trajecten',
+  'transports.empty.title': 'Nog geen trajecten',
   'transports.empty.body':
     'Vluchten, treinen, veerboten en de rit van het vliegveld wonen hier, met hun boekingscodes en stoelnummers bij de hand op de dag zelf — en elke overstap gecheckt tegen de vorige.',
-  'transports.empty.action': 'Voeg de eerste etappe toe',
-  'transports.filtered.title': 'Geen etappes van dat soort',
+  'transports.empty.action': 'Voeg het eerste traject toe',
+  'transports.filtered.title': 'Geen trajecten van dat soort',
   'transports.filtered.body':
-    'Elke etappe van deze reis gaat anders. Ga terug naar „{label}” om ze allemaal te zien.',
-  'transports.filtered.action': 'Toon alle etappes',
+    'Elk traject van deze reis gaat anders. Ga terug naar „{label}” om ze allemaal te zien.',
+  'transports.filtered.action': 'Toon alle trajecten',
   'transports.alert.impossible.title': {
     one: 'Eén overstap kan niet',
     other: '{legs} overstappen kunnen niet',
   },
   'transports.alert.impossible.body':
-    'Een etappe vertrekt voordat de vorige aankomt. De knooppunten hieronder zeggen welke, en met hoeveel.',
+    'Een traject vertrekt voordat het vorige aankomt. De knooppunten hieronder zeggen welke, en met hoeveel.',
   'transports.alert.tight.title': {
     one: 'Eén overstap is krap',
     other: '{legs} overstappen zijn krap',
@@ -61,9 +61,9 @@ const messages = {
   },
   'transports.badge.ok': 'Elke overstap klopt',
   'transports.remove.body':
-    'De etappe gaat definitief van deze reis af, samen met het boekingsnummer en de stoel. Is hij alleen geannuleerd, zet zijn status dan op Geannuleerd.',
-  'transports.remove.confirm': 'Etappe verwijderen',
-  'transports.menu.edit': 'Etappe bewerken…',
+    'Het traject gaat definitief van deze reis af, samen met het boekingsnummer en de stoel. Is het alleen geannuleerd, zet de status dan op Geannuleerd.',
+  'transports.remove.confirm': 'Traject verwijderen',
+  'transports.menu.edit': 'Traject bewerken…',
   'transports.field.service': 'Verbinding',
   'transports.field.bookingRef': 'Boekingsnummer',
   'transports.field.seat': 'Stoel',
@@ -71,13 +71,13 @@ const messages = {
   'transports.noTime': 'Nog geen tijd',
   'transports.toast.statusFailed.title': 'De status is niet gewijzigd',
   'transports.toast.statusFailed.body':
-    'De etappe staat nog op de vorige stand.',
-  'transports.toast.removed': 'Etappe verwijderd',
-  'transports.toast.removeFailed': 'De etappe is niet verwijderd',
+    'Het traject staat nog op de vorige stand.',
+  'transports.toast.removed': 'Traject verwijderd',
+  'transports.toast.removeFailed': 'Het traject is niet verwijderd',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Etappe toevoegen',
-  'transports.dialog.editTitle': 'Deze etappe bewerken',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Traject toevoegen',
+  'transports.dialog.editTitle': 'Dit traject bewerken',
   'transports.dialog.description':
     'Vluchten, treinen, veerboten en de rit van het vliegveld. De tijden zijn de lokale die op het ticket staan.',
   'transports.form.modeLegend': 'Waarmee reis je',
@@ -93,14 +93,14 @@ const messages = {
   'transports.field.bookingRefHint': 'De code die je aan de balie voorleest.',
   'transports.field.notesPlaceholder':
     'Stoel aan het gangpad gevraagd. Bagage doorgecheckt naar Kioto.',
-  'transports.action.add': 'Etappe toevoegen',
-  'transports.action.save': 'Etappe opslaan',
-  'transports.action.saving': 'Etappe wordt opgeslagen',
-  'transports.toast.added': 'Etappe toegevoegd',
+  'transports.action.add': 'Traject toevoegen',
+  'transports.action.save': 'Traject opslaan',
+  'transports.action.saving': 'Traject wordt opgeslagen',
+  'transports.toast.added': 'Traject toegevoegd',
   'transports.toast.addedBody': 'Hij staat nu in de reisvolgorde.',
-  'transports.toast.addFailed': 'De etappe is niet toegevoegd',
-  'transports.toast.updated': 'Etappe bijgewerkt',
-  'transports.toast.updateFailed': 'De etappe is niet bijgewerkt',
+  'transports.toast.addFailed': 'Het traject is niet toegevoegd',
+  'transports.toast.updated': 'Traject bijgewerkt',
+  'transports.toast.updateFailed': 'Het traject is niet bijgewerkt',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Naam',
@@ -131,9 +131,11 @@ const messages = {
   'book.panel.outstanding': 'Nog te regelen',
   'book.panel.outstandingEmpty': 'Niets openstaand — alles hier is geregeld.',
   'book.panel.settled': 'Geregeld',
-  'book.panel.settledEmpty': 'Nog niets geregeld — het moet allemaal nog achterna.',
+  'book.panel.settledEmpty':
+    'Nog niets geregeld — het moet allemaal nog achterna.',
   'book.import.badge': 'Ongecontroleerde import',
-  'book.import.hint': 'Geïmporteerd uit een bevestiging. Open en bewaar hem om hem als gecontroleerd te merken.',
+  'book.import.hint':
+    'Geïmporteerd uit een bevestiging. Open en bewaar hem om hem als gecontroleerd te merken.',
   'book.journeyLink': 'Op het vervoertabblad',
   'filter.all': 'Alles',
   'book.remove.body':
@@ -436,12 +438,14 @@ const messages = {
   'book.fieldName.stop': 'halte',
   'book.field.stop': 'Gekoppelde halte',
   'book.field.stopHint': 'Bij welke halte van het plan deze boeking hoort.',
-  'book.field.stopHintEmpty': 'Voeg eerst een plek aan een dag toe, daarna kun je deze boeking eraan koppelen',
+  'book.field.stopHintEmpty':
+    'Voeg eerst een plek aan een dag toe, daarna kun je deze boeking eraan koppelen',
   'book.field.stopPlaceholder': 'Niet aan een halte gebonden',
   'book.field.stopSearch': 'Zoek in haltes en dagen',
   'book.field.stopEmpty': 'Geen halte komt overeen',
   'book.ledger.refused.title': 'Bewaard, maar niet bij de kosten gezet',
-  'book.ledger.refused.body': 'De boeking staat op de reis. De kostenregel bij de reiskosten zetten lukte niet — probeer die helft opnieuw.',
+  'book.ledger.refused.body':
+    'De boeking staat op de reis. De kostenregel bij de reiskosten zetten lukte niet — probeer die helft opnieuw.',
   'book.action.ledgerRetry': 'Bij de kosten zetten',
   'book.copyConfirmation': 'het bevestigingsnummer van {title}',
 
@@ -458,12 +462,13 @@ const messages = {
   'transports.mode.bike': 'Fiets',
   'transports.mode.walk': 'Te voet',
   'transports.mode.other': 'Overig',
-  'transports.mode.fallback': 'Etappe',
+  'transports.mode.fallback': 'Traject',
   'transports.rank.earliest': 'Vroegste aankomst',
   'transports.rank.fewestChanges': 'Minste overstappen',
   'transports.connection.findStop': 'Zoek een halte',
   'transports.connection.findStopSearch': 'AMS, Centraal, Amsterdam…',
-  'transports.connection.findStopEmpty': 'Geen halte met die naam in de catalogus.',
+  'transports.connection.findStopEmpty':
+    'Geen halte met die naam in de catalogus.',
   'transports.connection.hideStops': 'Verberg de haltes',
   'transports.connection.seeStops': 'Bekijk de haltes',
   'transports.connection.saving': 'Verbinding wordt bewaard',
@@ -475,20 +480,28 @@ const messages = {
     one: '{changes} overstap',
     other: '{changes} overstappen',
   },
-  'transports.connection.tooLong': 'Deze verbinding heeft meer dan {max} etappes, meer dan één reisrecord bevat. Zoek een kortere hop en noteer de rest apart.',
-  'transports.connection.refusal.ceiling': 'Deze maand geen zoekopdrachten meer over',
-  'transports.connection.refusal.unconfigured': 'Verbindingzoeken staat uit op deze deployment',
-  'transports.connection.refusal.provider': 'De dienstregelingdienst gaf geen antwoord',
-  'transports.connection.invitation': 'Twee haltes en een datum, en de dienstregeling antwoordt. Er wordt niets bewaard tot je er een kiest.',
-  'transports.connection.empty': 'Er is op die datum geen verbinding gevonden tussen die twee haltes. Probeer een naburig station, of verbreed het modusfilter.',
+  'transports.connection.tooLong':
+    'Deze verbinding heeft meer dan {max} etappes, meer dan één reisrecord bevat. Zoek een kortere hop en noteer de rest apart.',
+  'transports.connection.refusal.ceiling':
+    'Deze maand geen zoekopdrachten meer over',
+  'transports.connection.refusal.unconfigured':
+    'Verbindingzoeken staat uit op deze deployment',
+  'transports.connection.refusal.provider':
+    'De dienstregelingdienst gaf geen antwoord',
+  'transports.connection.invitation':
+    'Twee haltes en een datum, en de dienstregeling antwoordt. Er wordt niets bewaard tot je er een kiest.',
+  'transports.connection.empty':
+    'Er is op die datum geen verbinding gevonden tussen die twee haltes. Probeer een naburig station, of verbreed het modusfilter.',
   'transports.connection.searchFailed': 'De zoekopdracht liep niet',
   'transports.connection.searchFailedBody': 'Probeer het zo nog eens.',
   'transports.connection.saved': 'Verbinding bewaard',
   'transports.connection.replaced': 'Route vervangen',
-  'transports.connection.replacedBody': 'De boekingscode en de stoel blijven onaangeroerd.',
+  'transports.connection.replacedBody':
+    'De boekingscode en de stoel blijven onaangeroerd.',
   'transports.connection.saveFailed': 'De verbinding is niet bewaard',
   'transports.connection.saveError': 'Dat is niet bewaard',
-  'transports.connection.fromHint': 'Kies een halte — een dienstregeling wordt gevraagd waar, niet hoe het heet.',
+  'transports.connection.fromHint':
+    'Kies een halte — een dienstregeling wordt gevraagd waar, niet hoe het heet.',
   'transports.connection.toHint': 'Kies een halte uit de catalogus.',
   'transports.connection.onlyModes': 'Alleen deze modi',
   'transports.connection.searching': 'De dienstregeling wordt doorzocht',
@@ -515,7 +528,7 @@ const messages = {
   'transports.end.returnDay': 'Inleverdag',
   'transports.dayNumber': 'Dag {n}',
   'transports.error.titleEmpty':
-    'Geef deze etappe een naam die je in een lijst terugkent.',
+    'Geef dit traject een naam die je in een lijst terugkent.',
   'transports.error.date': 'Een datum schrijf je JJJJ-MM-DD.',
   'transports.error.time': 'Een tijd schrijf je UU:MM op een 24-uursklok.',
   'transports.error.departureNeedsDate':
@@ -526,9 +539,9 @@ const messages = {
   'transports.error.distance':
     'Een afstand is een aantal kilometers, tot 100.000.',
   'transports.error.arrivesBeforeDeparts':
-    'Deze etappe komt aan voordat hij vertrekt.',
+    'Dit traject komt aan voordat het vertrekt.',
   'transports.error.timingHint':
-    'Verschuif er een, zodat de etappe echt te halen is.',
+    'Verschuif een van beide tijden, zodat het traject echt te halen is.',
   'transports.error.arrivalDayBeforeDeparture':
     'De aankomstdag ligt vóór de vertrekdag.',
   'transports.error.returnDayBeforePickUp':
@@ -550,7 +563,8 @@ const messages = {
   'transports.chain.change': 'Overstap {n}',
   'transports.chain.removeStation': '{label} verwijderen',
   'transports.chain.findStation': 'Zoek een luchthaven of station',
-  'transports.chain.findStationFor': 'Zoek een luchthaven of station voor {label}',
+  'transports.chain.findStationFor':
+    'Zoek een luchthaven of station voor {label}',
   'transports.chain.findPlaceholder': 'AMS, Schiphol, Amsterdam…',
   'transports.chain.findEmpty': 'Geen match — typ de halte hieronder zelf in.',
   'transports.chain.stopLabel': 'Halte',
@@ -566,8 +580,10 @@ const messages = {
   'transports.chain.reaches': 'Komt aan in {label}',
   'transports.chain.dayOfLeg': '{label} van etappe {n}',
   'transports.chain.formError': 'Deze keten kan niet worden bewaard',
-  'transports.chain.atCap': 'Een keten bevat hoogstens {max} etappes — dat begrenst wat één keer bewaren draagt, niet hoeveel overstappen een reis mag hebben.',
-  'transports.chain.hint': 'Voeg op elke etappe een halte toe om een treinwissel vast te leggen; elke etappe houdt haar eigen treinnummer, spoor en stoel.',
+  'transports.chain.atCap':
+    'Een keten bevat hoogstens {max} etappes — dat begrenst wat één keer bewaren draagt, niet hoeveel overstappen een reis mag hebben.',
+  'transports.chain.hint':
+    'Voeg op elke etappe een halte toe om een treinwissel vast te leggen; elke etappe houdt haar eigen treinnummer, spoor en stoel.',
   'transports.field.timezone': 'Tijdzone',
   'transports.field.platform': 'Spoor',
   'transports.chain.legNumber': 'Etappe {n}',
@@ -589,9 +605,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Geen tijden om te vergelijken',
   'transports.junction.unknown.detail':
-    'Zet datum en tijd bij beide etappes, dan wordt deze overstap voor je nagekeken.',
+    'Zet datum en tijd bij beide trajecten, dan wordt deze overstap voor je nagekeken.',
   'transports.junction.impossible.headline':
-    'Vertrekt {gap} voordat de vorige etappe aankomt',
+    'Vertrekt {gap} voordat het vorige traject aankomt',
   'transports.junction.impossible.detail':
     '„{to}” vertrekt voordat „{from}” aankomt, dus beide zijn niet te halen. Verschuif er een.',
   'transports.junction.tight.headline': '{gap} om over te stappen',
@@ -601,7 +617,7 @@ const messages = {
     'Voor {mode} heb je in {place} meestal ongeveer {required} nodig. Dit is krap.',
   'transports.junction.ok.headline': '{gap} ertussen',
   'transports.junction.ok.detail':
-    'Aankomst op {landing} maar de volgende etappe vertrekt van {boarding} — je moet er nog naartoe.',
+    'Aankomst op {landing} maar het volgende traject vertrekt van {boarding} — je moet er nog naartoe.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Notitie gedeeld',

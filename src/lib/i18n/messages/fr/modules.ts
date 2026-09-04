@@ -80,7 +80,7 @@ const messages = {
   'transports.toast.removed': 'Trajet supprimé',
   'transports.toast.removeFailed': 'Le trajet n’a pas été supprimé',
 
-  /* --------------------------------------------- the leg dialog */
+  /* --------------------------------------- the transport dialog */
   'transports.dialog.addTitle': 'Ajouter un trajet',
   'transports.dialog.editTitle': 'Modifier ce trajet',
   'transports.dialog.description':
@@ -137,9 +137,11 @@ const messages = {
   'book.panel.outstanding': 'Encore à régler',
   'book.panel.outstandingEmpty': 'Rien en attente — tout ici est réglé.',
   'book.panel.settled': 'Réglé',
-  'book.panel.settledEmpty': 'Rien de réglé pour l’instant — tout reste à relancer.',
+  'book.panel.settledEmpty':
+    'Rien de réglé pour l’instant — tout reste à relancer.',
   'book.import.badge': 'Import non vérifié',
-  'book.import.hint': 'Importé depuis une confirmation. Ouvrez-le et enregistrez-le pour le marquer vérifié.',
+  'book.import.hint':
+    'Importé depuis une confirmation. Ouvrez-le et enregistrez-le pour le marquer vérifié.',
   'book.journeyLink': 'Dans l’onglet transports',
   'filter.all': 'Tout',
   'book.remove.body':
@@ -448,12 +450,14 @@ const messages = {
   'book.fieldName.stop': 'arrêt',
   'book.field.stop': 'Arrêt lié',
   'book.field.stopHint': 'À quel arrêt du plan cette réservation correspond.',
-  'book.field.stopHintEmpty': 'Ajoutez d’abord un lieu à une journée, puis vous pourrez y rattacher cette réservation',
+  'book.field.stopHintEmpty':
+    'Ajoutez d’abord un lieu à une journée, puis vous pourrez y rattacher cette réservation',
   'book.field.stopPlaceholder': 'Lié à aucun arrêt',
   'book.field.stopSearch': 'Rechercher parmi les arrêts et les journées',
   'book.field.stopEmpty': 'Aucun arrêt ne correspond',
   'book.ledger.refused.title': 'Enregistré, mais pas ajouté aux dépenses',
-  'book.ledger.refused.body': 'La réservation est sur le voyage. L’ajout de sa ligne de dépense aux dépenses du voyage n’a pas abouti — réessayez cette moitié.',
+  'book.ledger.refused.body':
+    'La réservation est sur le voyage. L’ajout de sa ligne de dépense aux dépenses du voyage n’a pas abouti — réessayez cette moitié.',
   'book.action.ledgerRetry': 'Ajouter aux dépenses',
   'book.copyConfirmation': 'le numéro de confirmation de {title}',
 
@@ -475,7 +479,8 @@ const messages = {
   'transports.rank.fewestChanges': 'Moins de correspondances',
   'transports.connection.findStop': 'Trouver un arrêt',
   'transports.connection.findStopSearch': 'CDG, Gare de Lyon, Paris…',
-  'transports.connection.findStopEmpty': 'Aucun arrêt de ce nom dans le catalogue.',
+  'transports.connection.findStopEmpty':
+    'Aucun arrêt de ce nom dans le catalogue.',
   'transports.connection.hideStops': 'Masquer les arrêts',
   'transports.connection.seeStops': 'Voir les arrêts',
   'transports.connection.saving': 'Enregistrement de la connexion',
@@ -488,20 +493,27 @@ const messages = {
     many: '{changes} correspondances',
     other: '{changes} correspondances',
   },
-  'transports.connection.tooLong': 'Cette connexion compte plus de {max} trajets, soit plus qu’un seul enregistrement de voyage ne contient. Cherchez un saut plus court et notez le reste à part.',
+  'transports.connection.tooLong':
+    'Cette connexion compte plus de {max} tronçons, soit plus qu’un seul enregistrement de voyage ne contient. Cherchez un saut plus court et notez le reste à part.',
   'transports.connection.refusal.ceiling': 'Plus aucune recherche ce mois-ci',
-  'transports.connection.refusal.unconfigured': 'La recherche de connexions est désactivée sur ce déploiement',
-  'transports.connection.refusal.provider': 'Le service d’horaires n’a pas répondu',
-  'transports.connection.invitation': 'Deux arrêts et une date, et l’horaire répond. Rien n’est enregistré tant que vous n’avez pas choisi.',
-  'transports.connection.empty': 'Aucune connexion trouvée entre ces deux arrêts à cette date. Essayez une gare voisine ou élargissez le filtre de modes.',
+  'transports.connection.refusal.unconfigured':
+    'La recherche de connexions est désactivée sur ce déploiement',
+  'transports.connection.refusal.provider':
+    'Le service d’horaires n’a pas répondu',
+  'transports.connection.invitation':
+    'Deux arrêts et une date, et l’horaire répond. Rien n’est enregistré tant que vous n’avez pas choisi.',
+  'transports.connection.empty':
+    'Aucune connexion trouvée entre ces deux arrêts à cette date. Essayez une gare voisine ou élargissez le filtre de modes.',
   'transports.connection.searchFailed': 'La recherche n’a pas eu lieu',
   'transports.connection.searchFailedBody': 'Réessayez dans un instant.',
   'transports.connection.saved': 'Connexion enregistrée',
   'transports.connection.replaced': 'Itinéraire remplacé',
-  'transports.connection.replacedBody': 'Le code de réservation et le siège restent intacts.',
+  'transports.connection.replacedBody':
+    'Le code de réservation et le siège restent intacts.',
   'transports.connection.saveFailed': 'La connexion n’a pas été enregistrée',
   'transports.connection.saveError': 'Cela n’a pas été enregistré',
-  'transports.connection.fromHint': 'Choisissez un arrêt — on demande à un horaire où, pas comment cela s’appelle.',
+  'transports.connection.fromHint':
+    'Choisissez un arrêt — on demande à un horaire où, pas comment cela s’appelle.',
   'transports.connection.toHint': 'Choisissez un arrêt dans le catalogue.',
   'transports.connection.onlyModes': 'Seulement ces modes',
   'transports.connection.searching': 'Recherche dans les horaires',
@@ -563,9 +575,11 @@ const messages = {
   'transports.chain.change': 'Correspondance {n}',
   'transports.chain.removeStation': 'Supprimer {label}',
   'transports.chain.findStation': 'Trouver un aéroport ou une gare',
-  'transports.chain.findStationFor': 'Trouver un aéroport ou une gare pour {label}',
+  'transports.chain.findStationFor':
+    'Trouver un aéroport ou une gare pour {label}',
   'transports.chain.findPlaceholder': 'CDG, Roissy, Paris…',
-  'transports.chain.findEmpty': 'Aucun résultat — saisissez l’arrêt vous-même ci-dessous.',
+  'transports.chain.findEmpty':
+    'Aucun résultat — saisissez l’arrêt vous-même ci-dessous.',
   'transports.chain.stopLabel': 'Arrêt',
   'transports.chain.stopPlaceholder': 'Paris Gare de Lyon',
   'transports.chain.timezoneHint': 'Sur quelle horloge se lit cet arrêt',
@@ -577,13 +591,15 @@ const messages = {
   'transports.chain.servicePlaceholder': 'TGV 6215',
   'transports.chain.leaves': 'Départ de {label}',
   'transports.chain.reaches': 'Arrivée à {label}',
-  'transports.chain.dayOfLeg': '{label} du trajet {n}',
+  'transports.chain.dayOfLeg': '{label} du tronçon {n}',
   'transports.chain.formError': 'Cette chaîne ne peut pas être enregistrée',
-  'transports.chain.atCap': 'Une chaîne contient au plus {max} trajets — c’est une limite de ce qu’un enregistrement transporte, pas du nombre de correspondances d’un voyage.',
-  'transports.chain.hint': 'Ajoutez un arrêt sur n’importe quel trajet pour noter un changement de train ; chaque trajet garde son numéro, sa voie et son siège.',
+  'transports.chain.atCap':
+    'Une chaîne contient au plus {max} tronçons — c’est une limite de ce qu’un enregistrement transporte, pas du nombre de correspondances d’un voyage.',
+  'transports.chain.hint':
+    'Ajoutez un arrêt sur n’importe quel tronçon pour noter un changement de train ; chaque tronçon garde son numéro, sa voie et son siège.',
   'transports.field.timezone': 'Fuseau horaire',
   'transports.field.platform': 'Voie',
-  'transports.chain.legNumber': 'Trajet {n}',
+  'transports.chain.legNumber': 'Tronçon {n}',
   'transports.chain.platform': 'Voie {value}',
   'transports.chain.seat': 'Siège {value}',
   'transports.chain.error.stopName':

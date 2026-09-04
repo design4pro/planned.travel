@@ -29,20 +29,20 @@ const messages = {
     'ライブ更新は止まっています。保存は続きます。再読み込みか再試行で追いつけます。',
   'presence.reconnect': '再接続',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'すべての区間',
-  'transports.empty.title': 'まだ移動区間がありません',
+  'transports.filter.all': 'すべての移動',
+  'transports.empty.title': 'まだ移動がありません',
   'transports.empty.body':
     '飛行機、列車、フェリー、空港からの移動はすべてここに。予約番号と座席番号を当日すぐ出せる形で持ち、乗り継ぎは一つ前と照らし合わせて確認します。',
-  'transports.empty.action': '最初の区間を追加',
-  'transports.filtered.title': 'その種類の区間はありません',
+  'transports.empty.action': '最初の移動を追加',
+  'transports.filtered.title': 'その種類の移動はありません',
   'transports.filtered.body':
-    'この旅行の区間はそれぞれ移動手段が違います。「{label}」に戻すとすべて表示されます。',
-  'transports.filtered.action': 'すべての区間を表示',
+    'この旅行の移動はそれぞれ手段が違います。「{label}」に戻すとすべて表示されます。',
+  'transports.filtered.action': 'すべての移動を表示',
   'transports.alert.impossible.title': {
     other: '乗り継ぎ{legs}件が成立しません',
   },
   'transports.alert.impossible.body':
-    'ある区間が、その前の区間の到着より先に出発します。下の接続点がどれをどれだけ超えているかを示します。',
+    'ある移動が、その前の移動の到着より先に出発します。下の接続点がどれをどれだけ超えているかを示します。',
   'transports.alert.tight.title': {
     other: '乗り継ぎ{legs}件が余裕不足です',
   },
@@ -56,22 +56,22 @@ const messages = {
   },
   'transports.badge.ok': 'すべての乗り継ぎが成立',
   'transports.remove.body':
-    'この区間は予約番号と座席ごと、この旅行から完全に外れます。欠航・運休だけなら、状態を「キャンセル」にしてください。',
-  'transports.remove.confirm': '区間を削除',
-  'transports.menu.edit': '区間を編集…',
+    'この移動は予約番号と座席ごと、この旅行から完全に外れます。欠航・運休だけなら、状態を「キャンセル」にしてください。',
+  'transports.remove.confirm': '移動を削除',
+  'transports.menu.edit': '移動を編集…',
   'transports.field.service': '便名',
   'transports.field.bookingRef': '予約番号',
   'transports.field.seat': '座席',
   'transports.field.distance': '距離',
   'transports.noTime': '時刻は未設定',
   'transports.toast.statusFailed.title': '状態を変更できませんでした',
-  'transports.toast.statusFailed.body': '区間は元の状態のままです。',
-  'transports.toast.removed': '区間を削除しました',
-  'transports.toast.removeFailed': '区間を削除できませんでした',
+  'transports.toast.statusFailed.body': '移動は元の状態のままです。',
+  'transports.toast.removed': '移動を削除しました',
+  'transports.toast.removeFailed': '移動を削除できませんでした',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': '区間を追加',
-  'transports.dialog.editTitle': 'この区間を編集',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': '移動を追加',
+  'transports.dialog.editTitle': 'この移動を編集',
   'transports.dialog.description':
     '飛行機、列車、フェリー、空港からの移動。時刻は切符に印字された現地時間です。',
   'transports.form.modeLegend': '移動手段',
@@ -87,14 +87,14 @@ const messages = {
   'transports.field.bookingRefHint': 'カウンターで読み上げる番号です。',
   'transports.field.notesPlaceholder':
     '通路側を希望。荷物は京都まで通しで預託。',
-  'transports.action.add': '区間を追加',
-  'transports.action.save': '区間を保存',
-  'transports.action.saving': '区間を保存中',
-  'transports.toast.added': '区間を追加しました',
+  'transports.action.add': '移動を追加',
+  'transports.action.save': '移動を保存',
+  'transports.action.saving': '移動を保存中',
+  'transports.toast.added': '移動を追加しました',
   'transports.toast.addedBody': '移動の順番に入りました。',
-  'transports.toast.addFailed': '区間を追加できませんでした',
-  'transports.toast.updated': '区間を更新しました',
-  'transports.toast.updateFailed': '区間を更新できませんでした',
+  'transports.toast.addFailed': '移動を追加できませんでした',
+  'transports.toast.updated': '移動を更新しました',
+  'transports.toast.updateFailed': '移動を更新できませんでした',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': '名称',
@@ -123,11 +123,14 @@ const messages = {
     '選んだ種類の予約はここにはありません。フィルターを解除すると残りが表示されます。',
   'book.filtered.action': 'フィルターを解除',
   'book.panel.outstanding': 'まだ片づいていない',
-  'book.panel.outstandingEmpty': '未処理はありません — ここはすべて片づいています。',
+  'book.panel.outstandingEmpty':
+    '未処理はありません — ここはすべて片づいています。',
   'book.panel.settled': '片づいた',
-  'book.panel.settledEmpty': 'まだ何も片づいていません — すべてこれから追いかけます。',
+  'book.panel.settledEmpty':
+    'まだ何も片づいていません — すべてこれから追いかけます。',
   'book.import.badge': '未確認のインポート',
-  'book.import.hint': '確認メールから取り込みました。開いて保存すると確認済みになります。',
+  'book.import.hint':
+    '確認メールから取り込みました。開いて保存すると確認済みになります。',
   'book.journeyLink': '移動タブで見る',
   'filter.all': 'すべて',
   'book.remove.body':
@@ -212,7 +215,7 @@ const messages = {
   'book.hint.activity': '教室、銭湯、予約した体験。',
   'book.hint.tour': '場所と時間、そして待っているガイド。',
   'book.hint.ticket': '時間指定の入場、美術館パス、試合。番号は手元に。',
-  'book.hint.transport': '予約した座席。区間まるごと・番号付きは{module}へ。',
+  'book.hint.transport': '予約した座席。移動まるごと・番号付きは{module}へ。',
   'book.hint.other': 'あなたの名前で押さえてあって、他に当てはまらないもの。',
 
   /* -------------------------------------- lists: the dialogs */
@@ -412,12 +415,14 @@ const messages = {
   'book.fieldName.stop': '停車地',
   'book.field.stop': '紐づける立ち寄り先',
   'book.field.stopHint': 'この予約が予定のどの立ち寄り先のものか。',
-  'book.field.stopHintEmpty': 'まず日程に場所を追加すると、この予約を紐づけられます',
+  'book.field.stopHintEmpty':
+    'まず日程に場所を追加すると、この予約を紐づけられます',
   'book.field.stopPlaceholder': '立ち寄り先なし',
   'book.field.stopSearch': '立ち寄り先と日を検索',
   'book.field.stopEmpty': '該当する立ち寄り先はありません',
   'book.ledger.refused.title': '保存しましたが、費用には入れられませんでした',
-  'book.ledger.refused.body': '予約は旅程に入りました。費用の行を旅程の費用に追加できませんでした — その半分だけやり直してください。',
+  'book.ledger.refused.body':
+    '予約は旅程に入りました。費用の行を旅程の費用に追加できませんでした — その半分だけやり直してください。',
   'book.action.ledgerRetry': '費用に追加する',
   'book.copyConfirmation': '{title} の確認番号',
 
@@ -434,7 +439,7 @@ const messages = {
   'transports.mode.bike': '自転車',
   'transports.mode.walk': '徒歩',
   'transports.mode.other': 'その他',
-  'transports.mode.fallback': '区間',
+  'transports.mode.fallback': '移動',
   'transports.rank.earliest': '到着が早い順',
   'transports.rank.fewestChanges': '乗り換えが少ない順',
   'transports.connection.findStop': '停留所を探す',
@@ -450,20 +455,27 @@ const messages = {
   'transports.connection.changes': {
     other: '乗り換え {changes} 回',
   },
-  'transports.connection.tooLong': 'この接続は区間が {max} を超えていて、旅程の記録一つには収まりません。短い区間で探し、残りは別に記録してください。',
+  'transports.connection.tooLong':
+    'この接続は区間が {max} を超えていて、旅程の記録一つには収まりません。短い区間で探し、残りは別に記録してください。',
   'transports.connection.refusal.ceiling': '今月の検索回数は残っていません',
-  'transports.connection.refusal.unconfigured': 'この配備では接続検索が無効です',
-  'transports.connection.refusal.provider': '時刻表サービスから応答がありません',
-  'transports.connection.invitation': '停留所を二つと日付を、時刻表が答えます。選ぶまで何も保存されません。',
-  'transports.connection.empty': 'その日、その二つの停留所を結ぶ接続は見つかりませんでした。隣の駅を試すか、交通手段の絞り込みを広げてください。',
+  'transports.connection.refusal.unconfigured':
+    'この配備では接続検索が無効です',
+  'transports.connection.refusal.provider':
+    '時刻表サービスから応答がありません',
+  'transports.connection.invitation':
+    '停留所を二つと日付を、時刻表が答えます。選ぶまで何も保存されません。',
+  'transports.connection.empty':
+    'その日、その二つの停留所を結ぶ接続は見つかりませんでした。隣の駅を試すか、交通手段の絞り込みを広げてください。',
   'transports.connection.searchFailed': '検索は実行されませんでした',
-  'transports.connection.searchFailedBody': '少ししてからもう一度お試しください。',
+  'transports.connection.searchFailedBody':
+    '少ししてからもう一度お試しください。',
   'transports.connection.saved': '接続を保存しました',
   'transports.connection.replaced': '経路を差し替えました',
   'transports.connection.replacedBody': '予約番号と座席はそのままです。',
   'transports.connection.saveFailed': '接続は保存されませんでした',
   'transports.connection.saveError': '保存できませんでした',
-  'transports.connection.fromHint': '停留所を選んでください — 時刻表が尋ねるのは場所で、名前ではありません。',
+  'transports.connection.fromHint':
+    '停留所を選んでください — 時刻表が尋ねるのは場所で、名前ではありません。',
   'transports.connection.toHint': '目録から停留所を選んでください。',
   'transports.connection.onlyModes': 'この手段だけ',
   'transports.connection.searching': '時刻表を検索しています',
@@ -490,7 +502,7 @@ const messages = {
   'transports.end.returnDay': '返却日',
   'transports.dayNumber': '{n}日目',
   'transports.error.titleEmpty':
-    'この区間に、一覧で見て分かる名前を付けてください。',
+    'この移動に、一覧で見て分かる名前を付けてください。',
   'transports.error.date': '日付は YYYY-MM-DD の形で書きます。',
   'transports.error.time': '時刻は 24 時間制の HH:MM で書きます。',
   'transports.error.departureNeedsDate': '出発時刻には、その日付が必要です。',
@@ -498,9 +510,9 @@ const messages = {
   'transports.error.code': 'コードは 2〜8 文字の英数字です。',
   'transports.error.distance': '距離はキロメートル単位の数値で、100,000 まで。',
   'transports.error.arrivesBeforeDeparts':
-    'この区間は出発より前に到着しています。',
+    'この移動は出発より前に到着しています。',
   'transports.error.timingHint':
-    'どちらかをずらして、この区間に実際に間に合うようにしてください。',
+    'どちらかをずらして、この移動に実際に間に合うようにしてください。',
   'transports.error.arrivalDayBeforeDeparture':
     '到着日が出発日より前になっています。',
   'transports.error.returnDayBeforePickUp':
@@ -538,8 +550,10 @@ const messages = {
   'transports.chain.reaches': '{label} 着',
   'transports.chain.dayOfLeg': '区間 {n} の{label}',
   'transports.chain.formError': 'この連続は保存できません',
-  'transports.chain.atCap': '一つの連続に入る区間は最大 {max} — 一度の保存が運べる量の上限であって、乗り換えの回数の上限ではありません。',
-  'transports.chain.hint': 'どの区間にも停車地を足せば乗り換えを記録できます。区間ごとに列車番号・番線・座席を持ちます。',
+  'transports.chain.atCap':
+    '一つの連続に入る区間は最大 {max} — 一度の保存が運べる量の上限であって、乗り換えの回数の上限ではありません。',
+  'transports.chain.hint':
+    'どの区間にも停車地を足せば乗り換えを記録できます。区間ごとに列車番号・番線・座席を持ちます。',
   'transports.field.timezone': 'タイムゾーン',
   'transports.field.platform': '番線',
   'transports.chain.legNumber': '区間 {n}',
@@ -561,9 +575,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': '比べる時刻がありません',
   'transports.junction.unknown.detail':
-    '両方の区間に日付と時刻を入れると、この乗り換えを確認します。',
+    '両方の移動に日付と時刻を入れると、この乗り換えを確認します。',
   'transports.junction.impossible.headline':
-    '前の区間の到着より {gap} 早く出発します',
+    '前の移動の到着より {gap} 早く出発します',
   'transports.junction.impossible.detail':
     '「{to}」が「{from}」の到着より先に出発するため、両方には乗れません。どちらかをずらしてください。',
   'transports.junction.tight.headline': '乗り換え {gap}',
@@ -573,7 +587,7 @@ const messages = {
     '{place} での {mode} はふつう {required} ほど必要です。これはぎりぎりです。',
   'transports.junction.ok.headline': '{gap} の間隔',
   'transports.junction.ok.detail':
-    '{landing} に到着しますが、次の区間は {boarding} 発です — 移動が必要です。',
+    '{landing} に到着しますが、次の移動は {boarding} 発です — そこまで行く必要があります。',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'メモを共有しました',
