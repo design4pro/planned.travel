@@ -25,10 +25,16 @@ vi.mock('@vitejs/plugin-react', () => ({ default: () => [] }))
 vi.mock('@sentry/vite-plugin', () => ({ sentryVitePlugin: () => [] }))
 
 /**
+ * The argument `devtools()` was handed with `E2E` set to `e2e`.
+ *
  * `vite.config.ts` reads `process.env.E2E` once, at module evaluation, so a test that cares about
  * it has to stub the environment and re-evaluate the module.
+ *
+ * What this pins is the argument, not what the plugin then resolves it to: `undefined` means "no
+ * override", and that it leaves the relay on is the plugin's default
+ * (`args?.consolePiping ?? { enabled: true }`), not ours to assert.
  */
-async function devtoolsConfigWith(e2e: string | undefined) {
+async function devtoolsArgsWithE2E(e2e: string | undefined) {
   vi.resetModules()
   devtoolsArgs.length = 0
   vi.stubEnv('E2E', e2e)
@@ -44,17 +50,20 @@ afterEach(() => {
 
 describe('the devtools console relay', () => {
   it('is off under e2e, where it drops the Worker’s own errors into a watching spec', async () => {
-    expect(await devtoolsConfigWith('1')).toEqual({
+    // The whole argument, not just its `consolePiping` key: the gate is the only reason this call
+    // site takes an argument at all, so a second option appearing here should be a deliberate act
+    // that comes back and says so.
+    expect(await devtoolsArgsWithE2E('1')).toEqual({
       consolePiping: { enabled: false },
     })
   })
 
   it('keeps the plugin default everywhere else, so `pnpm dev` still relays', async () => {
-    expect(await devtoolsConfigWith(undefined)).toBeUndefined()
+    expect(await devtoolsArgsWithE2E(undefined)).toBeUndefined()
   })
 
   it('reads the flag exactly, not truthily', async () => {
-    expect(await devtoolsConfigWith('0')).toBeUndefined()
-    expect(await devtoolsConfigWith('true')).toBeUndefined()
+    expect(await devtoolsArgsWithE2E('0')).toBeUndefined()
+    expect(await devtoolsArgsWithE2E('true')).toBeUndefined()
   })
 })

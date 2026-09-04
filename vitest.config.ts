@@ -11,8 +11,9 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  * - `server` runs repositories, queue handlers and route handlers in plain
  *   Node. Nothing there may import `cloudflare:workers`; bindings arrive as
  *   arguments, which is what makes them fake-able.
- * - `tooling` runs the agent tooling in plain Node as well, but over
- *   `scripts/**` rather than `src/**`.
+ * - `tooling` runs in plain Node as well, but over the policy that lives
+ *   outside `src/**` - the agent tooling under `scripts/**`, and the handful
+ *   of files elsewhere that decide how the suite itself behaves.
  *
  * `server` collects `.tsx` as well as `.ts` because the transactional email
  * templates under `src/server/email` are React components: they render to a
