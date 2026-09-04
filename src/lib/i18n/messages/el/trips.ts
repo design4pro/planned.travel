@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Τα έξοδα δεν φορτώθηκαν',
   'error.collab': 'Η συνομιλία δεν φορτώθηκε',
   'error.book': 'Οι κρατήσεις δεν φορτώθηκαν',
+  'error.transports': 'Οι μετακινήσεις δεν φορτώθηκαν',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Πρόγραμμα',
   'plan.places': 'Τοποθεσίες',
@@ -63,6 +64,28 @@ const messages = {
   'book.committedCaption': 'Σε όλες τις κρατήσεις αυτού του ταξιδιού',
   'book.onItinerary': 'Στο πρόγραμμα',
   'book.pinnedCaption': 'Καρφιτσωμένο σε μια μέρα του προγράμματος',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Μετακινήσεις',
+  'transports.empty': 'Τίποτα καταγεγραμμένο ακόμη',
+  'transports.count.transports': {
+    one: '{transports} μετακίνηση',
+    other: '{transports} μετακινήσεις',
+  },
+  'transports.distance': 'Απόσταση που διανύθηκε',
+  'transports.equator': '≈ {times}× ο γύρος του ισημερινού',
+  'transports.noGrouping': 'Τίποτα ομαδοποιημένο ακόμη',
+  'transports.mostly': 'κυρίως {mode}',
+  'transports.confirmed': 'Επιβεβαιωμένες',
+  'transports.stillPending': {
+    one: '{pending} ακόμη σε εκκρεμότητα',
+    other: '{pending} ακόμη σε εκκρεμότητα',
+  },
+  'transports.spent': 'Δαπάνη για ταξίδια',
+  'transports.noPrices': 'Καμία τιμή καταγεγραμμένη',
+  'transports.priced': {
+    one: 'σε {priced} μετακίνηση με τιμή',
+    other: 'σε {priced} μετακινήσεις με τιμή',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

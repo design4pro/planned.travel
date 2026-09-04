@@ -531,6 +531,31 @@ function text(value: string | null | undefined): string {
 }
 
 /**
+ * The twelve fields a journey with no legs of its own already is: two named
+ * ends, the one set of times between them, and the ticket that carries it.
+ *
+ * A shape rather than `TransportData`, because two different things hold those
+ * fields under those names and {@link flatChain} has to read both - the stored
+ * transport, and the draft being typed over it. The record's are
+ * `string | null` and the draft's are `string`; the wider type takes either,
+ * and `text()` flattens the difference on the way in.
+ */
+export interface FlatEndpoints {
+  readonly departureName: string | null
+  readonly departureCode: string | null
+  readonly departureDate: string | null
+  readonly departureTime: string | null
+  readonly departureDayId: string | null
+  readonly arrivalName: string | null
+  readonly arrivalCode: string | null
+  readonly arrivalDate: string | null
+  readonly arrivalTime: string | null
+  readonly arrivalDayId: string | null
+  readonly serviceNumber: string | null
+  readonly seat: string | null
+}
+
+/**
  * The one-leg chain a transport's own columns already describe, **unbroken**.
  *
  * The compatibility claim of this whole stage, and the reason the migration
@@ -541,32 +566,32 @@ function text(value: string | null | undefined): string {
  * statement read in the other direction — a chain the traveller has collapsed is
  * a journey whose endpoints are the record's again.
  */
-export function flatChain(transport: TransportData): ChainDraft {
+export function flatChain(endpoints: FlatEndpoints): ChainDraft {
   return {
     broken: false,
     stations: [
       {
         ...emptyStation(),
-        name: text(transport.departureName),
-        code: text(transport.departureCode),
+        name: text(endpoints.departureName),
+        code: text(endpoints.departureCode),
       },
       {
         ...emptyStation(),
-        name: text(transport.arrivalName),
-        code: text(transport.arrivalCode),
+        name: text(endpoints.arrivalName),
+        code: text(endpoints.arrivalCode),
       },
     ],
     legs: [
       {
         ...emptyChainLeg(),
-        serviceNumber: text(transport.serviceNumber),
-        seat: text(transport.seat),
-        departureDayId: text(transport.departureDayId),
-        departureDate: text(transport.departureDate),
-        departureTime: text(transport.departureTime),
-        arrivalDayId: text(transport.arrivalDayId),
-        arrivalDate: text(transport.arrivalDate),
-        arrivalTime: text(transport.arrivalTime),
+        serviceNumber: text(endpoints.serviceNumber),
+        seat: text(endpoints.seat),
+        departureDayId: text(endpoints.departureDayId),
+        departureDate: text(endpoints.departureDate),
+        departureTime: text(endpoints.departureTime),
+        arrivalDayId: text(endpoints.arrivalDayId),
+        arrivalDate: text(endpoints.arrivalDate),
+        arrivalTime: text(endpoints.arrivalTime),
       },
     ],
   }
@@ -624,9 +649,24 @@ export function chainFromTransport(transport: TransportData): ChainDraft {
   }
 }
 
-/** Breaks a recorded journey into legs without changing anything about it. */
-export function breakIntoLegs(chain: ChainDraft): ChainDraft {
-  return chain.broken ? chain : { ...chain, broken: true }
+/**
+ * Breaks a journey into legs, seeded from the endpoints on screen.
+ *
+ * On screen, and not on the record - which is the whole of what this argument
+ * is for. A transport being added has no record to read: seeded from one, the
+ * first press would open a blank editor, and the save after it would write
+ * those blanks over the two stations the traveller had just typed. A transport
+ * being edited has a record that stopped being current the moment anything was
+ * typed into the flat form above.
+ *
+ * A chain that is already broken holds stations and legs nothing else holds, so
+ * it is its own truth and comes back untouched.
+ */
+export function breakIntoLegs(
+  chain: ChainDraft,
+  endpoints: FlatEndpoints,
+): ChainDraft {
+  return chain.broken ? chain : { ...flatChain(endpoints), broken: true }
 }
 
 /**

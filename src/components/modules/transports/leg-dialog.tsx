@@ -750,7 +750,7 @@ export function LegDialog({
                       variant="secondary"
                       size="sm"
                       shape="pill"
-                      onClick={() => setChain(breakIntoLegs(chain))}
+                      onClick={() => setChain(breakIntoLegs(chain, draft))}
                     >
                       {t('modules.transports.chain.split')}
                     </Button>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Route as RouteIcon } from 'lucide-react'
 
-import { useLocale } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
@@ -10,6 +10,7 @@ import {
   NewLegAction,
   TransportsTimeline,
   analyseConnections,
+  modeLabel,
   summariseConnections,
 } from '#/components/modules/transports'
 import { Card, StatCard } from '#/components/ui'
@@ -19,8 +20,6 @@ import {
   formatDistance,
   formatMoneyMinor,
   formatNumber,
-  humaniseToken,
-  pluralise,
 } from '../../-lib/format'
 import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
@@ -41,16 +40,23 @@ export const Route = createFileRoute('/_app/trips/$tripId/transports')({
     return { ...desk, maskCodes: display.maskConfirmationCodes }
   },
   pendingComponent: TransportsPending,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="The transports did not load" />
-    </AppFrame>
-  ),
+  errorComponent: TransportsError,
   component: TransportsPage,
 })
 
+function TransportsError({ error }: { error: Error }) {
+  const t = useTranslate()
+
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('trips.error.transports')} />
+    </AppFrame>
+  )
+}
+
 function TransportsPage() {
   const locale = useLocale()
+  const t = useTranslate()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
   const [newLegOpen, setNewLegOpen] = useState(false)
@@ -77,11 +83,21 @@ function TransportsPage() {
     <AppFrame>
       <AppSections>
         <TripModuleHeader
-          title="Transports"
+          title={t('trips.transports.title')}
           description={
             data.transports.length === 0
-              ? 'Nothing recorded yet'
-              : `${pluralise(data.transports.length, 'transport')} · ${formatDistance(data.totalDistanceMetres, data.distanceUnit)}`
+              ? t('trips.transports.empty')
+              : [
+                  t('trips.transports.count.transports', {
+                    count: data.transports.length,
+                    transports: formatNumber(data.transports.length, locale),
+                  }),
+                  formatDistance(
+                    data.totalDistanceMetres,
+                    data.distanceUnit,
+                    locale,
+                  ),
+                ].join(' · ')
           }
           actions={<NewLegAction onClick={() => setNewLegOpen(true)} />}
         >
@@ -98,35 +114,45 @@ function TransportsPage() {
             <StatCard
               tone="inverse"
               icon={<RouteIcon />}
-              label="Distance travelled"
+              label={t('trips.transports.distance')}
               value={formatNumber(
                 Math.round(data.totalDistanceMetres / 1000),
                 locale,
               )}
               unit="km"
-              caption={`≈ ${(data.totalDistanceMetres / 40_075_000).toFixed(2)}× around the equator`}
+              caption={t('trips.transports.equator', {
+                times: (data.totalDistanceMetres / 40_075_000).toFixed(2),
+              })}
             />
             <StatCard
-              label="Transports"
+              label={t('trips.transports.title')}
               value={data.transports.length}
               caption={
                 busiest === undefined
-                  ? 'Nothing grouped yet'
-                  : `mostly ${humaniseToken(busiest.mode).toLowerCase()}`
+                  ? t('trips.transports.noGrouping')
+                  : t('trips.transports.mostly', {
+                      mode: t(modeLabel(busiest.mode)),
+                    })
               }
             />
             <StatCard
-              label="Confirmed"
+              label={t('trips.transports.confirmed')}
               value={confirmed}
-              caption={`${formatNumber(pending, locale)} still pending`}
+              caption={t('trips.transports.stillPending', {
+                count: pending,
+                pending: formatNumber(pending, locale),
+              })}
             />
             <StatCard
-              label="Spent on travel"
+              label={t('trips.transports.spent')}
               value={formatMoneyMinor(totalPriced, data.currency, locale)}
               caption={
                 priced.length === 0
-                  ? 'No prices recorded'
-                  : `across ${pluralise(priced.length, 'priced transport')}`
+                  ? t('trips.transports.noPrices')
+                  : t('trips.transports.priced', {
+                      count: priced.length,
+                      priced: formatNumber(priced.length, locale),
+                    })
               }
             />
           </div>

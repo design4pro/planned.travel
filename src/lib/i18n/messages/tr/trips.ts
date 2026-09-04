@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Masraflar yüklenemedi',
   'error.collab': 'Sohbet yüklenemedi',
   'error.book': 'Rezervasyonlar yüklenemedi',
+  'error.transports': 'Yolculuklar yüklenemedi',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Yerler',
@@ -63,6 +64,28 @@ const messages = {
   'book.committedCaption': 'Bu gezinin tüm rezervasyonlarında',
   'book.onItinerary': 'Programda',
   'book.pinnedCaption': 'Programın bir gününe sabitlendi',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Yolculuklar',
+  'transports.empty': 'Henüz bir kayıt yok',
+  'transports.count.transports': {
+    one: '{transports} yolculuk',
+    other: '{transports} yolculuk',
+  },
+  'transports.distance': 'Kat edilen mesafe',
+  'transports.equator': '≈ {times}× ekvator turu',
+  'transports.noGrouping': 'Henüz gruplanan yok',
+  'transports.mostly': 'çoğunlukla {mode}',
+  'transports.confirmed': 'Onaylandı',
+  'transports.stillPending': {
+    one: '{pending} hâlâ bekliyor',
+    other: '{pending} hâlâ bekliyor',
+  },
+  'transports.spent': 'Yolculuğa harcanan',
+  'transports.noPrices': 'Kayıtlı fiyat yok',
+  'transports.priced': {
+    one: 'fiyatı girilmiş {priced} yolculukta',
+    other: 'fiyatı girilmiş {priced} yolculukta',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

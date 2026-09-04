@@ -2664,11 +2664,12 @@ export const appSettings = sqliteTable(
  * rather than a tenant discriminator, it is nullable because a cron belongs to no workspace, and it
  * carries no foreign key so that deleting a workspace cannot delete the platform's own accounting.
  *
- * Four of the five are also names docs/SPEC.md §5 carves out of "every domain row is scoped by
- * organization_id". `airports` is the fifth and the one §5 has still to name: that list is eleven
- * names and closed, and this is a twelfth, which the section says is an amendment rather than a
- * schema decision taken on the way past. Issue #168 owns this file and not `docs/SPEC.md`, so the
- * amendment is reported there rather than written here.
+ * All five are names docs/SPEC.md §5 carves out of "every domain row is scoped by
+ * organization_id". `airports` is the twelfth name on that list and joined it by the amendment §5
+ * carries, the way `platform_audit_log` and the provider pair joined it before: the list is closed,
+ * and a table lands on it by argument rather than by a schema decision taken on the way past. The
+ * argument is there and not here - what is worth repeating is its conclusion, that this table has
+ * no write path at all, so adding one is a change to that contract.
  * ---------------------------------------------------------------------------------------------- */
 
 /**

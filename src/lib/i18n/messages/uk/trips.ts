@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Не вдалося завантажити витрати',
   'error.collab': 'Не вдалося завантажити листування',
   'error.book': 'Не вдалося завантажити бронювання',
+  'error.transports': 'Переїзди не завантажилися',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Маршрут',
   'plan.places': 'Місця',
@@ -75,6 +76,34 @@ const messages = {
   'book.committedCaption': 'З усіх бронювань цієї подорожі',
   'book.onItinerary': 'У маршруті',
   'book.pinnedCaption': 'Закріплено за днем маршруту',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Переїзди',
+  'transports.empty': 'Поки нічого не записано',
+  'transports.count.transports': {
+    one: '{transports} переїзд',
+    few: '{transports} переїзди',
+    many: '{transports} переїздів',
+    other: '{transports} переїзду',
+  },
+  'transports.distance': 'Пройдена відстань',
+  'transports.equator': '≈ {times}× навколо екватора',
+  'transports.noGrouping': 'Поки нічого не згруповано',
+  'transports.mostly': 'здебільшого {mode}',
+  'transports.confirmed': 'Підтверджено',
+  'transports.stillPending': {
+    one: '{pending} ще очікує',
+    few: '{pending} ще очікують',
+    many: '{pending} ще очікує',
+    other: '{pending} ще очікує',
+  },
+  'transports.spent': 'Витрачено на дорогу',
+  'transports.noPrices': 'Цін не записано',
+  'transports.priced': {
+    one: 'за {priced} переїздом із ціною',
+    few: 'за {priced} переїздами із ціною',
+    many: 'за {priced} переїздами із ціною',
+    other: 'за {priced} переїздами із ціною',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

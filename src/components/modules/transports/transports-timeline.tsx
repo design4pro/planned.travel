@@ -646,12 +646,20 @@ function Stop({
   code,
   name,
   timezone,
+  date,
   time,
   showZone,
 }: {
   code: string | null
   name: string
   timezone: string | null
+  /**
+   * The day this stop is read on, because the offset is a fact about the
+   * instant and not about the zone: Paris is `UTC+1` in January and `UTC+2` in
+   * July, and a July flight labelled from the winter offset is off by an hour
+   * in the one place on the card whose whole job is to say which hour it is.
+   */
+  date: string | null
   time: string | null
   /** Only when the journey crosses zones; otherwise it is noise on every row. */
   showZone: boolean
@@ -659,7 +667,7 @@ function Stop({
   const clock = formatClock(time)
   const zone =
     showZone && timezone !== null && timezone !== ''
-      ? timeZoneOffsetLabel(timezone)
+      ? timeZoneOffsetLabel(timezone, date)
       : null
   // A code leads and the name follows it; with no code the name leads alone.
   const coded = code !== null && code !== ''
@@ -740,6 +748,7 @@ function Chain({ legs }: { legs: ReadonlyArray<TransportLegData> }) {
           code={first.fromCode}
           name={first.fromName}
           timezone={first.fromTimezone}
+          date={first.departureDate}
           time={first.departureTime}
           showZone={showZone}
         />
@@ -768,6 +777,7 @@ function Chain({ legs }: { legs: ReadonlyArray<TransportLegData> }) {
               code={leg.toCode}
               name={leg.toName}
               timezone={leg.toTimezone}
+              date={leg.arrivalDate}
               time={leg.arrivalTime}
               showZone={showZone}
             />

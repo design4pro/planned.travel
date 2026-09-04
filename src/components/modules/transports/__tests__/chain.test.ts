@@ -22,7 +22,9 @@ import {
   applyStationMatch,
   blockingLegErrors,
   chainFromTransport,
+  breakIntoLegs,
   chainPayload,
+  emptyChain,
   emptyStation,
   emptyLegDraft,
   fillStationFromCode,
@@ -739,5 +741,75 @@ describe('a station edit that resolves late', () => {
 
     expect(resolved.legs).toHaveLength(resolved.stations.length - 1)
     expect(resolved.legs).toEqual(chain.legs)
+  })
+})
+
+/**
+ * The door in, and the one thing it must carry through with it.
+ *
+ * Breaking a journey up is a change of editor and never a change of journey, so
+ * what the traveller has already typed has to survive the press. Both readings
+ * of that were broken in the same way: a transport being added has no record to
+ * read the endpoints back from, and a transport being edited has one that is
+ * out of date the moment anything is typed above.
+ */
+describe('breaking a journey into legs', () => {
+  it('opens on the stations typed into the flat form, not on a blank pair', () => {
+    const draft = {
+      ...emptyLegDraft('EUR'),
+      departureName: 'Lisboa Oriente',
+      departureCode: 'LIS',
+      departureDate: '2026-05-04',
+      departureTime: '08:10',
+      arrivalName: 'Porto Campanhã',
+      arrivalCode: 'OPO',
+      arrivalDate: '2026-05-04',
+      arrivalTime: '11:05',
+      serviceNumber: 'AP 125',
+      seat: '12F',
+    }
+
+    const broken = breakIntoLegs(emptyChain(), draft)
+
+    expect(broken.broken).toBe(true)
+    expect(broken.stations.map((station) => station.name)).toEqual([
+      'Lisboa Oriente',
+      'Porto Campanhã',
+    ])
+    expect(broken.legs).toHaveLength(1)
+    expect(broken.legs[0].departureTime).toBe('08:10')
+    expect(broken.legs[0].arrivalTime).toBe('11:05')
+    expect(broken.legs[0].serviceNumber).toBe('AP 125')
+  })
+
+  /**
+   * The half the record cannot answer for. The chain is read from the stored
+   * transport when the dialog opens; an edit typed after that lives only in the
+   * draft, and seeding from the record would drop it on the floor at the press.
+   */
+  it('prefers an edit typed since the dialog opened over the stored record', () => {
+    const record = transport()
+    const draft = {
+      ...emptyLegDraft('EUR'),
+      departureName: 'Kyoto',
+      departureCode: 'UKY',
+      departureDate: record.departureDate ?? '',
+      departureTime: '10:30',
+      arrivalName: record.arrivalName ?? '',
+      arrivalCode: record.arrivalCode ?? '',
+      arrivalDate: record.arrivalDate ?? '',
+      arrivalTime: record.arrivalTime ?? '',
+    }
+
+    const broken = breakIntoLegs(flatChain(record), draft)
+
+    expect(broken.stations[0].name).toBe('Kyoto')
+    expect(broken.legs[0].departureTime).toBe('10:30')
+  })
+
+  it('leaves a chain that is already broken exactly as it stands', () => {
+    const chained = chainFromTransport(transport({ legs: RECORDED_LEGS }))
+
+    expect(breakIntoLegs(chained, emptyLegDraft('EUR'))).toBe(chained)
   })
 })

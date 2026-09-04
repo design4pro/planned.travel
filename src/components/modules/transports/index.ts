@@ -83,6 +83,7 @@ export type {
   ChainStationPayload,
   DayChoice,
   EndpointLabels,
+  FlatEndpoints,
   LegDraft,
   LegErrors,
   StationDraft,

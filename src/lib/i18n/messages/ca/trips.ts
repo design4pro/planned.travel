@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'No s’han pogut carregar les despeses',
   'error.collab': 'No s’ha pogut carregar la conversa',
   'error.book': 'No s’han pogut carregar les reserves',
+  'error.transports': 'Els trajectes no s’han carregat',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerari',
   'plan.places': 'Llocs',
@@ -69,6 +70,31 @@ const messages = {
   'book.committedCaption': 'De totes les reserves d’aquest viatge',
   'book.onItinerary': 'A l’itinerari',
   'book.pinnedCaption': 'Fixat a un dia del pla',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Trajectes',
+  'transports.empty': 'Encara no s’ha registrat res',
+  'transports.count.transports': {
+    one: '{transports} trajecte',
+    many: '{transports} trajectes',
+    other: '{transports} trajectes',
+  },
+  'transports.distance': 'Distància recorreguda',
+  'transports.equator': '≈ {times}× la volta a l’equador',
+  'transports.noGrouping': 'Encara no s’ha agrupat res',
+  'transports.mostly': 'sobretot {mode}',
+  'transports.confirmed': 'Confirmats',
+  'transports.stillPending': {
+    one: '{pending} encara pendent',
+    many: '{pending} encara pendents',
+    other: '{pending} encara pendents',
+  },
+  'transports.spent': 'Gastat en desplaçaments',
+  'transports.noPrices': 'Cap preu registrat',
+  'transports.priced': {
+    one: 'en {priced} trajecte amb preu',
+    many: 'en {priced} trajectes amb preu',
+    other: 'en {priced} trajectes amb preu',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

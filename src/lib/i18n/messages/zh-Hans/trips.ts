@@ -20,6 +20,7 @@ const messages = {
   'error.costs': '无法加载费用',
   'error.collab': '无法加载对话',
   'error.book': '无法加载预订',
+  'error.transports': '交通未能加载',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '行程',
   'plan.places': '地点',
@@ -57,6 +58,25 @@ const messages = {
   'book.committedCaption': '涵盖这次旅行的所有预订',
   'book.onItinerary': '已排入行程',
   'book.pinnedCaption': '已固定到行程中的某一天',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': '交通',
+  'transports.empty': '尚未记录',
+  'transports.count.transports': {
+    other: '{transports} 段交通',
+  },
+  'transports.distance': '已行距离',
+  'transports.equator': '≈ 绕赤道 {times} 圈',
+  'transports.noGrouping': '尚未归类',
+  'transports.mostly': '多为{mode}',
+  'transports.confirmed': '已确认',
+  'transports.stillPending': {
+    other: '{pending} 项仍待确认',
+  },
+  'transports.spent': '交通花费',
+  'transports.noPrices': '未记录价格',
+  'transports.priced': {
+    other: '来自 {priced} 段有价交通',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

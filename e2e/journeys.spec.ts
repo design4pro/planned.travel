@@ -1158,11 +1158,23 @@ test.describe('the trip sections behind a route parameter', () => {
    * escaped unresolved. Read off the document's text rather than off a list of
    * the keys this change added, so a key any future change mistypes on these two
    * screens is caught by the same assertion.
+   *
+   * All eleven namespaces, not only `modules`: the timelines come from the
+   * module components, but the page around them - headings, empty states, the
+   * summary cards - is `trips`, and the shell above it is `shell`. A guard that
+   * watched one namespace would have read the same screen and seen nothing.
    */
   async function rawMessageKeys(page: Page): Promise<Array<string>> {
     return page.evaluate(() => {
+      const namespaces =
+        'atlas|auth|console|costs|journal|marketing|modules|settings|shell|trips|ui'
       const text = document.body.innerText
-      return [...new Set(text.match(/\bmodules\.[a-z][\w.]*/gu) ?? [])]
+      return [
+        ...new Set(
+          text.match(new RegExp(`\\b(?:${namespaces})\\.[a-z][\\w.]*`, 'gu')) ??
+            [],
+        ),
+      ]
     })
   }
 
