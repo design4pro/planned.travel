@@ -30,20 +30,20 @@ const messages = {
     'Cập nhật trực tiếp đang tắt. Việc lưu vẫn hoạt động; tải lại hoặc thử lại để bắt kịp.',
   'presence.reconnect': 'Kết nối lại',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Mọi chặng',
-  'transports.empty.title': 'Chưa có chặng di chuyển nào',
+  'transports.filter.all': 'Mọi lượt di chuyển',
+  'transports.empty.title': 'Chưa có lượt di chuyển nào',
   'transports.empty.body':
-    'Chuyến bay, tàu, phà và đoạn đường từ sân bay đều ở đây, kèm mã đặt chỗ và số ghế sẵn trong tay đúng ngày — và mỗi lần nối chuyến đều được đối chiếu với chặng trước.',
-  'transports.empty.action': 'Thêm chặng đầu tiên',
-  'transports.filtered.title': 'Không có chặng loại đó',
+    'Chuyến bay, tàu, phà và đoạn đường từ sân bay đều ở đây, kèm mã đặt chỗ và số ghế sẵn trong tay đúng ngày — và mỗi lần nối chuyến đều được đối chiếu với lượt trước.',
+  'transports.empty.action': 'Thêm lượt di chuyển đầu tiên',
+  'transports.filtered.title': 'Không có lượt di chuyển loại đó',
   'transports.filtered.body':
-    'Mỗi chặng của chuyến này đi một cách khác nhau. Quay lại “{label}” để xem tất cả.',
-  'transports.filtered.action': 'Hiện mọi chặng',
+    'Mỗi lượt di chuyển của chuyến này đi một cách khác nhau. Quay lại “{label}” để xem tất cả.',
+  'transports.filtered.action': 'Hiện mọi lượt di chuyển',
   'transports.alert.impossible.title': {
     other: '{legs} lần nối chuyến không thể thực hiện',
   },
   'transports.alert.impossible.body':
-    'Một chặng khởi hành trước khi chặng trước đó đến. Các điểm nối bên dưới cho biết chặng nào và lệch bao nhiêu.',
+    'Một lượt di chuyển khởi hành trước khi lượt trước đó đến. Các điểm nối bên dưới cho biết lượt nào và lệch bao nhiêu.',
   'transports.alert.tight.title': {
     other: '{legs} lần nối chuyến quá sát',
   },
@@ -57,22 +57,23 @@ const messages = {
   },
   'transports.badge.ok': 'Mọi lần nối chuyến đều ổn',
   'transports.remove.body':
-    'Chặng này rời chuyến đi vĩnh viễn, cùng với mã đặt chỗ và số ghế. Nếu chỉ bị huỷ, hãy đặt trạng thái là “Đã huỷ” thay vì xoá.',
-  'transports.remove.confirm': 'Xoá chặng',
-  'transports.menu.edit': 'Sửa chặng…',
+    'Lượt di chuyển này rời chuyến đi vĩnh viễn, cùng với mã đặt chỗ và số ghế. Nếu chỉ bị huỷ, hãy đặt trạng thái là “Đã huỷ” thay vì xoá.',
+  'transports.remove.confirm': 'Xoá lượt di chuyển',
+  'transports.menu.edit': 'Sửa lượt di chuyển…',
   'transports.field.service': 'Chuyến',
   'transports.field.bookingRef': 'Mã đặt chỗ',
   'transports.field.seat': 'Ghế',
   'transports.field.distance': 'Khoảng cách',
   'transports.noTime': 'Chưa có giờ',
   'transports.toast.statusFailed.title': 'Trạng thái không thay đổi',
-  'transports.toast.statusFailed.body': 'Chặng vẫn ở trạng thái trước đó.',
-  'transports.toast.removed': 'Đã xoá chặng',
-  'transports.toast.removeFailed': 'Không xoá được chặng',
+  'transports.toast.statusFailed.body':
+    'Lượt di chuyển vẫn ở trạng thái trước đó.',
+  'transports.toast.removed': 'Đã xoá lượt di chuyển',
+  'transports.toast.removeFailed': 'Không xoá được lượt di chuyển',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Thêm một chặng',
-  'transports.dialog.editTitle': 'Sửa chặng này',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Thêm một lượt di chuyển',
+  'transports.dialog.editTitle': 'Sửa lượt di chuyển này',
   'transports.dialog.description':
     'Chuyến bay, tàu, phà và đoạn đường từ sân bay. Giờ là giờ địa phương in trên vé.',
   'transports.form.modeLegend': 'Bạn đi bằng gì',
@@ -88,14 +89,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Mã bạn sẽ đọc ở quầy.',
   'transports.field.notesPlaceholder':
     'Đã xin ghế cạnh lối đi. Hành lý gửi thẳng tới Kyoto.',
-  'transports.action.add': 'Thêm chặng',
-  'transports.action.save': 'Lưu chặng',
-  'transports.action.saving': 'Đang lưu chặng',
-  'transports.toast.added': 'Đã thêm chặng',
+  'transports.action.add': 'Thêm lượt di chuyển',
+  'transports.action.save': 'Lưu lượt di chuyển',
+  'transports.action.saving': 'Đang lưu lượt di chuyển',
+  'transports.toast.added': 'Đã thêm lượt di chuyển',
   'transports.toast.addedBody': 'Nó đã vào thứ tự hành trình.',
-  'transports.toast.addFailed': 'Chưa thêm được chặng',
-  'transports.toast.updated': 'Đã cập nhật chặng',
-  'transports.toast.updateFailed': 'Chưa cập nhật được chặng',
+  'transports.toast.addFailed': 'Chưa thêm được lượt di chuyển',
+  'transports.toast.updated': 'Đã cập nhật lượt di chuyển',
+  'transports.toast.updateFailed': 'Chưa cập nhật được lượt di chuyển',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Tên',
@@ -207,7 +208,7 @@ const messages = {
   'book.hint.ticket':
     'Vào theo giờ, vé vào bảo tàng, một trận đấu. Giữ mã trong tay.',
   'book.hint.transport':
-    'Một chỗ ngồi đã đặt. Chặng đầy đủ kèm mã thuộc về {module}.',
+    'Một chỗ ngồi đã đặt. Lượt di chuyển đầy đủ kèm mã thuộc về {module}.',
   'book.hint.other':
     'Bất cứ thứ gì giữ dưới tên bạn mà không khớp phần nào khác.',
 
@@ -419,7 +420,7 @@ const messages = {
   'transports.mode.bike': 'Xe đạp',
   'transports.mode.walk': 'Đi bộ',
   'transports.mode.other': 'Khác',
-  'transports.mode.fallback': 'Chặng',
+  'transports.mode.fallback': 'Lượt di chuyển',
   'transports.status.idea': 'Ý tưởng',
   'transports.status.pending': 'Chờ xác nhận',
   'transports.status.confirmed': 'Đã xác nhận',
@@ -434,7 +435,7 @@ const messages = {
   'transports.end.from': 'Từ',
   'transports.end.to': 'Đến',
   'transports.error.titleEmpty':
-    'Đặt cho chặng này một cái tên bạn nhận ra trong danh sách.',
+    'Đặt cho lượt di chuyển này một cái tên bạn nhận ra trong danh sách.',
   'transports.error.date': 'Ngày viết theo YYYY-MM-DD.',
   'transports.error.time': 'Giờ viết theo HH:MM, đồng hồ 24 giờ.',
   'transports.error.departureNeedsDate':
@@ -442,9 +443,10 @@ const messages = {
   'transports.error.arrivalNeedsDate': 'Giờ đến cần ngày mà nó thuộc về.',
   'transports.error.code': 'Mã gồm 2 đến 8 chữ hoặc số.',
   'transports.error.distance': 'Khoảng cách là số kilômét, tối đa 100.000.',
-  'transports.error.arrivesBeforeDeparts': 'Chặng này đến trước khi khởi hành.',
+  'transports.error.arrivesBeforeDeparts':
+    'Lượt di chuyển này đến trước khi khởi hành.',
   'transports.error.timingHint':
-    'Dịch một trong hai để thực sự bắt được chặng này.',
+    'Dịch một trong hai giờ để thực sự bắt được lượt di chuyển này.',
   'transports.bookingRefFor': 'mã đặt chỗ của {title}',
   'transports.doorToDoor': 'Tính cả đi lại là {gap}.',
   'transports.title.fromTo': '{operator} từ {from} đến {to}',
@@ -454,11 +456,11 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Không có giờ nào để so',
   'transports.junction.unknown.detail':
-    'Điền ngày và giờ cho cả hai chặng, việc nối chuyến này sẽ được kiểm tra giúp bạn.',
+    'Điền ngày và giờ cho cả hai lượt di chuyển, việc nối chuyến này sẽ được kiểm tra giúp bạn.',
   'transports.junction.impossible.headline':
-    'Khởi hành trước khi chặng trước tới {gap}',
+    'Khởi hành trước khi lượt di chuyển trước tới {gap}',
   'transports.junction.impossible.detail':
-    '“{to}” khởi hành trước khi “{from}” tới, nên không bắt được cả hai. Dịch một chặng.',
+    '“{to}” khởi hành trước khi “{from}” tới, nên không bắt được cả hai. Dịch một lượt.',
   'transports.junction.tight.headline': '{gap} để nối chuyến',
   'transports.junction.tight.detail':
     '{mode} thường cần khoảng {required}. Lần này hơi sát.',
@@ -466,7 +468,7 @@ const messages = {
     '{mode} ở {place} thường cần khoảng {required}. Lần này hơi sát.',
   'transports.junction.ok.headline': 'Cách nhau {gap}',
   'transports.junction.ok.detail':
-    'Tới {landing} nhưng chặng sau khởi hành từ {boarding} — bạn sẽ phải di chuyển qua.',
+    'Tới {landing} nhưng lượt di chuyển sau khởi hành từ {boarding} — bạn sẽ phải sang bên đó.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Đã chia sẻ ghi chú',

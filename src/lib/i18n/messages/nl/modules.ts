@@ -30,21 +30,21 @@ const messages = {
     'Live-updates staan uit. Er wordt nog gewoon opgeslagen; herlaad of probeer opnieuw om bij te komen.',
   'presence.reconnect': 'Opnieuw verbinden',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Alle etappes',
-  'transports.empty.title': 'Nog geen etappes',
+  'transports.filter.all': 'Alle trajecten',
+  'transports.empty.title': 'Nog geen trajecten',
   'transports.empty.body':
     'Vluchten, treinen, veerboten en de rit van het vliegveld wonen hier, met hun boekingscodes en stoelnummers bij de hand op de dag zelf — en elke overstap gecheckt tegen de vorige.',
-  'transports.empty.action': 'Voeg de eerste etappe toe',
-  'transports.filtered.title': 'Geen etappes van dat soort',
+  'transports.empty.action': 'Voeg het eerste traject toe',
+  'transports.filtered.title': 'Geen trajecten van dat soort',
   'transports.filtered.body':
-    'Elke etappe van deze reis gaat anders. Ga terug naar „{label}” om ze allemaal te zien.',
-  'transports.filtered.action': 'Toon alle etappes',
+    'Elk traject van deze reis gaat anders. Ga terug naar „{label}” om ze allemaal te zien.',
+  'transports.filtered.action': 'Toon alle trajecten',
   'transports.alert.impossible.title': {
     one: 'Eén overstap kan niet',
     other: '{legs} overstappen kunnen niet',
   },
   'transports.alert.impossible.body':
-    'Een etappe vertrekt voordat de vorige aankomt. De knooppunten hieronder zeggen welke, en met hoeveel.',
+    'Een traject vertrekt voordat het vorige aankomt. De knooppunten hieronder zeggen welke, en met hoeveel.',
   'transports.alert.tight.title': {
     one: 'Eén overstap is krap',
     other: '{legs} overstappen zijn krap',
@@ -61,9 +61,9 @@ const messages = {
   },
   'transports.badge.ok': 'Elke overstap klopt',
   'transports.remove.body':
-    'De etappe gaat definitief van deze reis af, samen met het boekingsnummer en de stoel. Is hij alleen geannuleerd, zet zijn status dan op Geannuleerd.',
-  'transports.remove.confirm': 'Etappe verwijderen',
-  'transports.menu.edit': 'Etappe bewerken…',
+    'Het traject gaat definitief van deze reis af, samen met het boekingsnummer en de stoel. Is het alleen geannuleerd, zet de status dan op Geannuleerd.',
+  'transports.remove.confirm': 'Traject verwijderen',
+  'transports.menu.edit': 'Traject bewerken…',
   'transports.field.service': 'Verbinding',
   'transports.field.bookingRef': 'Boekingsnummer',
   'transports.field.seat': 'Stoel',
@@ -71,13 +71,13 @@ const messages = {
   'transports.noTime': 'Nog geen tijd',
   'transports.toast.statusFailed.title': 'De status is niet gewijzigd',
   'transports.toast.statusFailed.body':
-    'De etappe staat nog op de vorige stand.',
-  'transports.toast.removed': 'Etappe verwijderd',
-  'transports.toast.removeFailed': 'De etappe is niet verwijderd',
+    'Het traject staat nog op de vorige stand.',
+  'transports.toast.removed': 'Traject verwijderd',
+  'transports.toast.removeFailed': 'Het traject is niet verwijderd',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Etappe toevoegen',
-  'transports.dialog.editTitle': 'Deze etappe bewerken',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Traject toevoegen',
+  'transports.dialog.editTitle': 'Dit traject bewerken',
   'transports.dialog.description':
     'Vluchten, treinen, veerboten en de rit van het vliegveld. De tijden zijn de lokale die op het ticket staan.',
   'transports.form.modeLegend': 'Waarmee reis je',
@@ -93,14 +93,14 @@ const messages = {
   'transports.field.bookingRefHint': 'De code die je aan de balie voorleest.',
   'transports.field.notesPlaceholder':
     'Stoel aan het gangpad gevraagd. Bagage doorgecheckt naar Kioto.',
-  'transports.action.add': 'Etappe toevoegen',
-  'transports.action.save': 'Etappe opslaan',
-  'transports.action.saving': 'Etappe wordt opgeslagen',
-  'transports.toast.added': 'Etappe toegevoegd',
+  'transports.action.add': 'Traject toevoegen',
+  'transports.action.save': 'Traject opslaan',
+  'transports.action.saving': 'Traject wordt opgeslagen',
+  'transports.toast.added': 'Traject toegevoegd',
   'transports.toast.addedBody': 'Hij staat nu in de reisvolgorde.',
-  'transports.toast.addFailed': 'De etappe is niet toegevoegd',
-  'transports.toast.updated': 'Etappe bijgewerkt',
-  'transports.toast.updateFailed': 'De etappe is niet bijgewerkt',
+  'transports.toast.addFailed': 'Het traject is niet toegevoegd',
+  'transports.toast.updated': 'Traject bijgewerkt',
+  'transports.toast.updateFailed': 'Het traject is niet bijgewerkt',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Naam',
@@ -432,7 +432,7 @@ const messages = {
   'transports.mode.bike': 'Fiets',
   'transports.mode.walk': 'Te voet',
   'transports.mode.other': 'Overig',
-  'transports.mode.fallback': 'Etappe',
+  'transports.mode.fallback': 'Traject',
   'transports.status.idea': 'Idee',
   'transports.status.pending': 'In afwachting',
   'transports.status.confirmed': 'Bevestigd',
@@ -447,7 +447,7 @@ const messages = {
   'transports.end.from': 'Vanaf',
   'transports.end.to': 'Naar',
   'transports.error.titleEmpty':
-    'Geef deze etappe een naam die je in een lijst terugkent.',
+    'Geef dit traject een naam die je in een lijst terugkent.',
   'transports.error.date': 'Een datum schrijf je JJJJ-MM-DD.',
   'transports.error.time': 'Een tijd schrijf je UU:MM op een 24-uursklok.',
   'transports.error.departureNeedsDate':
@@ -458,9 +458,9 @@ const messages = {
   'transports.error.distance':
     'Een afstand is een aantal kilometers, tot 100.000.',
   'transports.error.arrivesBeforeDeparts':
-    'Deze etappe komt aan voordat hij vertrekt.',
+    'Dit traject komt aan voordat het vertrekt.',
   'transports.error.timingHint':
-    'Verschuif er een, zodat de etappe echt te halen is.',
+    'Verschuif een van beide tijden, zodat het traject echt te halen is.',
   'transports.bookingRefFor': 'het boekingsnummer van {title}',
   'transports.doorToDoor': 'Dat is {gap} van deur tot deur.',
   'transports.title.fromTo': '{operator} van {from} naar {to}',
@@ -470,9 +470,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Geen tijden om te vergelijken',
   'transports.junction.unknown.detail':
-    'Zet datum en tijd bij beide etappes, dan wordt deze overstap voor je nagekeken.',
+    'Zet datum en tijd bij beide trajecten, dan wordt deze overstap voor je nagekeken.',
   'transports.junction.impossible.headline':
-    'Vertrekt {gap} voordat de vorige etappe aankomt',
+    'Vertrekt {gap} voordat het vorige traject aankomt',
   'transports.junction.impossible.detail':
     '„{to}” vertrekt voordat „{from}” aankomt, dus beide zijn niet te halen. Verschuif er een.',
   'transports.junction.tight.headline': '{gap} om over te stappen',
@@ -482,7 +482,7 @@ const messages = {
     'Voor {mode} heb je in {place} meestal ongeveer {required} nodig. Dit is krap.',
   'transports.junction.ok.headline': '{gap} ertussen',
   'transports.junction.ok.detail':
-    'Aankomst op {landing} maar de volgende etappe vertrekt van {boarding} — je moet er nog naartoe.',
+    'Aankomst op {landing} maar het volgende traject vertrekt van {boarding} — je moet er nog naartoe.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Notitie gedeeld',

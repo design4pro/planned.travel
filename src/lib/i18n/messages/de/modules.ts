@@ -30,21 +30,21 @@ const messages = {
     'Live-Aktualisierungen sind aus. Gespeichert wird weiterhin; lade neu oder versuche es erneut, um aufzuholen.',
   'presence.reconnect': 'Neu verbinden',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Alle Etappen',
-  'transports.empty.title': 'Noch keine Reiseetappen',
+  'transports.filter.all': 'Alle Transfers',
+  'transports.empty.title': 'Noch keine Transfers',
   'transports.empty.body':
     'Flüge, Züge, Fähren und die Fahrt vom Flughafen wohnen hier, mit Buchungscodes und Sitzplatznummern zur Hand am Reisetag — und jeder Übergang gegen den vorherigen geprüft.',
-  'transports.empty.action': 'Erste Etappe hinzufügen',
-  'transports.filtered.title': 'Keine Etappen dieser Art',
+  'transports.empty.action': 'Ersten Transfer hinzufügen',
+  'transports.filtered.title': 'Keine Transfers dieser Art',
   'transports.filtered.body':
-    'Jede Etappe dieser Reise fährt anders. Wechsle zurück zu „{label}“, um alle zu sehen.',
-  'transports.filtered.action': 'Alle Etappen zeigen',
+    'Jeder Transfer dieser Reise nutzt ein anderes Verkehrsmittel. Wechsle zurück zu „{label}“, um alle zu sehen.',
+  'transports.filtered.action': 'Alle Transfers zeigen',
   'transports.alert.impossible.title': {
     one: 'Ein Übergang ist nicht machbar',
     other: '{legs} Übergänge sind nicht machbar',
   },
   'transports.alert.impossible.body':
-    'Eine Etappe fährt ab, bevor die vorherige ankommt. Die Knoten unten sagen, welche und um wie viel.',
+    'Ein Transfer fährt ab, bevor der vorherige ankommt. Die Knoten unten sagen, welche und um wie viel.',
   'transports.alert.tight.title': {
     one: 'Ein Übergang ist knapp',
     other: '{legs} Übergänge sind knapp',
@@ -61,9 +61,9 @@ const messages = {
   },
   'transports.badge.ok': 'Jeder Übergang passt',
   'transports.remove.body':
-    'Die Etappe verlässt diese Reise endgültig, samt Buchungsnummer und Sitzplatz. Wenn sie nur abgesagt ist, setze ihren Status stattdessen auf Abgesagt.',
-  'transports.remove.confirm': 'Etappe entfernen',
-  'transports.menu.edit': 'Etappe bearbeiten…',
+    'Der Transfer verlässt diese Reise endgültig, samt Buchungsnummer und Sitzplatz. Wenn er nur abgesagt ist, setze seinen Status stattdessen auf Abgesagt.',
+  'transports.remove.confirm': 'Transfer entfernen',
+  'transports.menu.edit': 'Transfer bearbeiten…',
   'transports.field.service': 'Verbindung',
   'transports.field.bookingRef': 'Buchungsnummer',
   'transports.field.seat': 'Sitzplatz',
@@ -71,13 +71,13 @@ const messages = {
   'transports.noTime': 'Noch keine Uhrzeit',
   'transports.toast.statusFailed.title': 'Der Status hat sich nicht geändert',
   'transports.toast.statusFailed.body':
-    'Die Etappe steht noch auf ihrem vorherigen Stand.',
-  'transports.toast.removed': 'Etappe entfernt',
-  'transports.toast.removeFailed': 'Die Etappe wurde nicht entfernt',
+    'Der Transfer steht noch auf seinem vorherigen Stand.',
+  'transports.toast.removed': 'Transfer entfernt',
+  'transports.toast.removeFailed': 'Der Transfer wurde nicht entfernt',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Etappe hinzufügen',
-  'transports.dialog.editTitle': 'Diese Etappe bearbeiten',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Transfer hinzufügen',
+  'transports.dialog.editTitle': 'Diesen Transfer bearbeiten',
   'transports.dialog.description':
     'Flüge, Züge, Fähren und die Fahrt vom Flughafen. Die Zeiten sind die lokalen, die auf dem Ticket stehen.',
   'transports.form.modeLegend': 'Womit reist du',
@@ -94,14 +94,14 @@ const messages = {
     'Der Code, den du am Schalter vorlesen wirst.',
   'transports.field.notesPlaceholder':
     'Gangplatz gewünscht. Gepäck bis Kyoto durchgecheckt.',
-  'transports.action.add': 'Etappe hinzufügen',
-  'transports.action.save': 'Etappe speichern',
-  'transports.action.saving': 'Etappe wird gespeichert',
-  'transports.toast.added': 'Etappe hinzugefügt',
+  'transports.action.add': 'Transfer hinzufügen',
+  'transports.action.save': 'Transfer speichern',
+  'transports.action.saving': 'Transfer wird gespeichert',
+  'transports.toast.added': 'Transfer hinzugefügt',
   'transports.toast.addedBody': 'Sie steht jetzt in der Reisefolge.',
-  'transports.toast.addFailed': 'Die Etappe wurde nicht hinzugefügt',
-  'transports.toast.updated': 'Etappe aktualisiert',
-  'transports.toast.updateFailed': 'Die Etappe wurde nicht aktualisiert',
+  'transports.toast.addFailed': 'Der Transfer wurde nicht hinzugefügt',
+  'transports.toast.updated': 'Transfer aktualisiert',
+  'transports.toast.updateFailed': 'Der Transfer wurde nicht aktualisiert',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Bezeichnung',
@@ -217,7 +217,7 @@ const messages = {
   'book.hint.ticket':
     'Ein Zeitfenster, ein Museumspass, ein Spiel. Halte den Code parat.',
   'book.hint.transport':
-    'Ein gebuchter Platz. Ganze Etappen mit Codes gehören zu {module}.',
+    'Ein gebuchter Platz. Ganze Transfers mit Codes gehören zu {module}.',
   'book.hint.other':
     'Alles, was auf deinen Namen läuft und nirgends sonst passt.',
 
@@ -439,7 +439,7 @@ const messages = {
   'transports.mode.bike': 'Fahrrad',
   'transports.mode.walk': 'Zu Fuß',
   'transports.mode.other': 'Sonstiges',
-  'transports.mode.fallback': 'Etappe',
+  'transports.mode.fallback': 'Transfer',
   'transports.status.idea': 'Idee',
   'transports.status.pending': 'Offen',
   'transports.status.confirmed': 'Bestätigt',
@@ -454,7 +454,7 @@ const messages = {
   'transports.end.from': 'Von',
   'transports.end.to': 'Nach',
   'transports.error.titleEmpty':
-    'Gib dieser Etappe einen Namen, den du in einer Liste wiedererkennst.',
+    'Gib diesem Transfer einen Namen, den du in einer Liste wiedererkennst.',
   'transports.error.date': 'Ein Datum schreibt man JJJJ-MM-TT.',
   'transports.error.time':
     'Eine Uhrzeit schreibt man HH:MM im 24-Stunden-Format.',
@@ -466,9 +466,9 @@ const messages = {
   'transports.error.distance':
     'Eine Entfernung ist eine Zahl in Kilometern, bis 100.000.',
   'transports.error.arrivesBeforeDeparts':
-    'Diese Etappe kommt an, bevor sie abfährt.',
+    'Dieser Transfer kommt an, bevor er abfährt.',
   'transports.error.timingHint':
-    'Verschiebe eine davon, damit die Etappe tatsächlich erreichbar ist.',
+    'Verschiebe eine der beiden Zeiten, damit der Transfer tatsächlich erreichbar ist.',
   'transports.bookingRefFor': 'die Buchungsnummer für {title}',
   'transports.doorToDoor': 'Das sind {gap} von Tür zu Tür.',
   'transports.title.fromTo': '{operator} von {from} nach {to}',
@@ -478,9 +478,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Keine Zeiten zum Vergleichen',
   'transports.junction.unknown.detail':
-    'Trage bei beiden Etappen Datum und Uhrzeit ein, dann wird dieser Übergang für dich geprüft.',
+    'Trage bei beiden Transfers Datum und Uhrzeit ein, dann wird dieser Übergang für dich geprüft.',
   'transports.junction.impossible.headline':
-    'Fährt {gap} vor der Ankunft der vorigen Etappe ab',
+    'Fährt {gap} vor der Ankunft des vorigen Transfers ab',
   'transports.junction.impossible.detail':
     '„{to}“ fährt ab, bevor „{from}“ ankommt — beide sind nicht zu erreichen. Verschiebe eine davon.',
   'transports.junction.tight.headline': '{gap} zum Umsteigen',
@@ -490,7 +490,7 @@ const messages = {
     'Für {mode} braucht man in {place} meist etwa {required}. Das hier ist knapp.',
   'transports.junction.ok.headline': '{gap} dazwischen',
   'transports.junction.ok.detail':
-    'Ankunft in {landing}, aber die nächste Etappe fährt von {boarding} — du musst hinüberkommen.',
+    'Ankunft in {landing}, aber der nächste Transfer fährt von {boarding} — du musst hinüberkommen.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Notiz geteilt',

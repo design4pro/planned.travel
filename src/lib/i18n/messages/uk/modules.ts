@@ -30,15 +30,15 @@ const messages = {
     'Живі оновлення вимкнені. Збереження працює; оновіть сторінку або повторіть, щоб наздогнати.',
   'presence.reconnect': 'Перепідключитися',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Усі ділянки',
-  'transports.empty.title': 'Поки немає ділянок',
+  'transports.filter.all': 'Усі переїзди',
+  'transports.empty.title': 'Поки немає переїздів',
   'transports.empty.body':
     'Рейси, поїзди, пороми й дорога з аеропорту живуть тут — із кодами бронювання й номерами місць під рукою в потрібний день, і кожна пересадка перевірена щодо попередньої.',
-  'transports.empty.action': 'Додати першу ділянку',
-  'transports.filtered.title': 'Ділянок такого виду немає',
+  'transports.empty.action': 'Додати перший переїзд',
+  'transports.filtered.title': 'Переїздів такого виду немає',
   'transports.filtered.body':
-    'Кожна ділянка цієї подорожі йде по-своєму. Поверніться до «{label}», щоб побачити всі.',
-  'transports.filtered.action': 'Показати всі ділянки',
+    'Кожен переїзд цієї подорожі йде по-своєму. Поверніться до «{label}», щоб побачити всі.',
+  'transports.filtered.action': 'Показати всі переїзди',
   'transports.alert.impossible.title': {
     one: 'Одна пересадка неможлива',
     few: '{legs} пересадки неможливі',
@@ -46,7 +46,7 @@ const messages = {
     other: '{legs} пересадки неможливі',
   },
   'transports.alert.impossible.body':
-    'Ділянка вирушає раніше, ніж приїздить попередня. Вузли нижче кажуть які й наскільки.',
+    'Переїзд вирушає раніше, ніж приїздить попередній. Вузли нижче кажуть які й наскільки.',
   'transports.alert.tight.title': {
     one: 'Одна пересадка впритул',
     few: '{legs} пересадки впритул',
@@ -69,9 +69,9 @@ const messages = {
   },
   'transports.badge.ok': 'Усі пересадки складаються',
   'transports.remove.body':
-    'Ділянка йде з цієї подорожі назавжди, разом із номером бронювання й місцем. Якщо вона лише скасована, поставте їй статус «Скасовано».',
-  'transports.remove.confirm': 'Вилучити ділянку',
-  'transports.menu.edit': 'Змінити ділянку…',
+    'Переїзд іде з цієї подорожі назавжди, разом із номером бронювання й місцем. Якщо він лише скасований, поставте йому статус «Скасовано».',
+  'transports.remove.confirm': 'Вилучити переїзд',
+  'transports.menu.edit': 'Змінити переїзд…',
   'transports.field.service': 'Рейс',
   'transports.field.bookingRef': 'Номер бронювання',
   'transports.field.seat': 'Місце',
@@ -79,13 +79,13 @@ const messages = {
   'transports.noTime': 'Поки без часу',
   'transports.toast.statusFailed.title': 'Статус не змінився',
   'transports.toast.statusFailed.body':
-    'Ділянка залишилася в попередньому стані.',
-  'transports.toast.removed': 'Ділянку вилучено',
-  'transports.toast.removeFailed': 'Ділянку не вилучено',
+    'Переїзд залишився в попередньому стані.',
+  'transports.toast.removed': 'Переїзд вилучено',
+  'transports.toast.removeFailed': 'Переїзд не вилучено',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Додати ділянку',
-  'transports.dialog.editTitle': 'Змінити цю ділянку',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Додати переїзд',
+  'transports.dialog.editTitle': 'Змінити цей переїзд',
   'transports.dialog.description':
     'Рейси, поїзди, пороми й дорога з аеропорту. Час місцевий, той, що надрукований на квитку.',
   'transports.form.modeLegend': 'Чим ви їдете',
@@ -101,14 +101,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Код, який ви назвете на стійці.',
   'transports.field.notesPlaceholder':
     'Просили місце біля проходу. Багаж оформлено до Кіото.',
-  'transports.action.add': 'Додати ділянку',
-  'transports.action.save': 'Зберегти ділянку',
-  'transports.action.saving': 'Збереження ділянки',
-  'transports.toast.added': 'Ділянку додано',
+  'transports.action.add': 'Додати переїзд',
+  'transports.action.save': 'Зберегти переїзд',
+  'transports.action.saving': 'Збереження переїзду',
+  'transports.toast.added': 'Переїзд додано',
   'transports.toast.addedBody': 'Вона вже в порядку подорожі.',
-  'transports.toast.addFailed': 'Ділянку не додано',
-  'transports.toast.updated': 'Ділянку змінено',
-  'transports.toast.updateFailed': 'Ділянку не змінено',
+  'transports.toast.addFailed': 'Переїзд не додано',
+  'transports.toast.updated': 'Переїзд змінено',
+  'transports.toast.updateFailed': 'Переїзд не змінено',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Назва',
@@ -220,7 +220,7 @@ const messages = {
   'book.hint.ticket':
     'Вхід за часом, музейний квиток, матч. Тримайте код під рукою.',
   'book.hint.transport':
-    'Заброньоване місце. Повні відрізки з кодами живуть у {module}.',
+    'Заброньоване місце. Повні переїзди з кодами живуть у {module}.',
   'book.hint.other': 'Усе, що записано на ваше імʼя і не пасує до решти.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -442,7 +442,7 @@ const messages = {
   'transports.mode.bike': 'Велосипед',
   'transports.mode.walk': 'Пішки',
   'transports.mode.other': 'Інше',
-  'transports.mode.fallback': 'Відрізок',
+  'transports.mode.fallback': 'Переїзд',
   'transports.status.idea': 'Задум',
   'transports.status.pending': 'Очікує',
   'transports.status.confirmed': 'Підтверджений',
@@ -457,7 +457,7 @@ const messages = {
   'transports.end.from': 'Звідки',
   'transports.end.to': 'Куди',
   'transports.error.titleEmpty':
-    'Дайте цьому відрізку назву, яку впізнаєте у списку.',
+    'Дайте цьому переїзду назву, яку впізнаєте у списку.',
   'transports.error.date': 'Дата пишеться РРРР-ММ-ДД.',
   'transports.error.time': 'Час пишеться ГГ:ХХ у 24-годинному форматі.',
   'transports.error.departureNeedsDate':
@@ -467,9 +467,9 @@ const messages = {
   'transports.error.code': 'Код — від 2 до 8 літер або цифр.',
   'transports.error.distance': 'Відстань — число кілометрів, до 100 000.',
   'transports.error.arrivesBeforeDeparts':
-    'Цей відрізок прибуває раніше, ніж відправляється.',
+    'Цей переїзд прибуває раніше, ніж відправляється.',
   'transports.error.timingHint':
-    'Зсуньте одне з них, щоб на цей відрізок справді можна було встигнути.',
+    'Зсуньте один із часів, щоб на цей переїзд справді можна було встигнути.',
   'transports.bookingRefFor': 'номер бронювання для {title}',
   'transports.doorToDoor': 'Це {gap} від дверей до дверей.',
   'transports.title.fromTo': '{operator}: {from} — {to}',
@@ -479,9 +479,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Нічого порівнювати',
   'transports.junction.unknown.detail':
-    'Вкажіть дату й час в обох відрізках, і цю пересадку буде перевірено.',
+    'Вкажіть дату й час в обох переїздах, і цю пересадку буде перевірено.',
   'transports.junction.impossible.headline':
-    'Відправляється на {gap} раніше, ніж прибуває попередній відрізок',
+    'Відправляється на {gap} раніше, ніж прибуває попередній переїзд',
   'transports.junction.impossible.detail':
     '«{to}» відправляється раніше, ніж прибуває «{from}», тож на обидва не встигнути. Зсуньте один.',
   'transports.junction.tight.headline': '{gap} на пересадку',
@@ -491,7 +491,7 @@ const messages = {
     'На {mode} у {place} звично потрібно близько {required}. Тут упритул.',
   'transports.junction.ok.headline': '{gap} між ними',
   'transports.junction.ok.detail':
-    'Прибуття до {landing}, але наступний відрізок відправляється з {boarding} — доведеться переїхати.',
+    'Прибуття до {landing}, але наступний переїзд відправляється з {boarding} — доведеться перебратися.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Нотатку опубліковано',

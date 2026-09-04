@@ -80,7 +80,7 @@ const messages = {
   'transports.toast.removed': 'Trajet supprimé',
   'transports.toast.removeFailed': 'Le trajet n’a pas été supprimé',
 
-  /* --------------------------------------------- the leg dialog */
+  /* --------------------------------------- the transport dialog */
   'transports.dialog.addTitle': 'Ajouter un trajet',
   'transports.dialog.editTitle': 'Modifier ce trajet',
   'transports.dialog.description':
