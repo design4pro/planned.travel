@@ -29,15 +29,15 @@ const messages = {
     'التحديثات الحيّة متوقفة. الحفظ ما زال يعمل؛ أعد التحميل أو حاول مرة أخرى لتلحق بالباقي.',
   'presence.reconnect': 'أعد الاتصال',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'كل المراحل',
-  'transports.empty.title': 'لا مراحل سفر بعد',
+  'transports.filter.all': 'كل التنقلات',
+  'transports.empty.title': 'لا تنقلات بعد',
   'transports.empty.body':
     'الرحلات الجوية والقطارات والعبّارات والطريق من المطار تسكن هنا، مع أكواد الحجز وأرقام المقاعد في متناول اليد يوم السفر — وكل انتقال مُراجَع مقابل الذي قبله.',
-  'transports.empty.action': 'أضف المرحلة الأولى',
-  'transports.filtered.title': 'لا مراحل من هذا النوع',
+  'transports.empty.action': 'أضف التنقل الأول',
+  'transports.filtered.title': 'لا تنقلات من هذا النوع',
   'transports.filtered.body':
-    'كل مرحلة في هذه الرحلة تسير بطريقة مختلفة. ارجع إلى «{label}» لتراها كلها.',
-  'transports.filtered.action': 'اعرض كل المراحل',
+    'كل تنقل في هذه الرحلة يسير بطريقة مختلفة. ارجع إلى «{label}» لتراها كلها.',
+  'transports.filtered.action': 'اعرض كل التنقلات',
   'transports.alert.impossible.title': {
     zero: 'لا انتقال متعذّر',
     one: 'انتقال واحد متعذّر',
@@ -47,7 +47,7 @@ const messages = {
     other: '{legs} انتقال متعذّر',
   },
   'transports.alert.impossible.body':
-    'مرحلة تنطلق قبل وصول التي تسبقها. العُقد أدناه تقول أيّها وبكم.',
+    'تنقل ينطلق قبل وصول الذي يسبقه. العُقد أدناه تقول أيّها وبكم.',
   'transports.alert.tight.title': {
     zero: 'لا انتقال ضيّق',
     one: 'انتقال واحد ضيّق',
@@ -76,22 +76,22 @@ const messages = {
   },
   'transports.badge.ok': 'كل انتقال ينجح',
   'transports.remove.body':
-    'تخرج المرحلة من هذه الرحلة نهائيًا، ومعها مرجع الحجز والمقعد. إن كانت ملغاة فقط، فاضبط حالتها على «ملغاة» بدلًا من ذلك.',
-  'transports.remove.confirm': 'إزالة المرحلة',
-  'transports.menu.edit': 'تعديل المرحلة…',
+    'يخرج التنقل من هذه الرحلة نهائيًا، ومعه مرجع الحجز والمقعد. إن كان ملغى فقط، فاضبط حالته على «ملغاة» بدلًا من ذلك.',
+  'transports.remove.confirm': 'إزالة التنقل',
+  'transports.menu.edit': 'تعديل التنقل…',
   'transports.field.service': 'الرحلة',
   'transports.field.bookingRef': 'مرجع الحجز',
   'transports.field.seat': 'المقعد',
   'transports.field.distance': 'المسافة',
   'transports.noTime': 'لا وقت بعد',
   'transports.toast.statusFailed.title': 'لم تتغيّر الحالة',
-  'transports.toast.statusFailed.body': 'بقيت المرحلة على حالتها السابقة.',
-  'transports.toast.removed': 'أُزيلت المرحلة',
-  'transports.toast.removeFailed': 'لم تُزَل المرحلة',
+  'transports.toast.statusFailed.body': 'بقي التنقل على حالته السابقة.',
+  'transports.toast.removed': 'أُزيل التنقل',
+  'transports.toast.removeFailed': 'لم يُزَل التنقل',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'إضافة مرحلة',
-  'transports.dialog.editTitle': 'تعديل هذه المرحلة',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'إضافة تنقل',
+  'transports.dialog.editTitle': 'تعديل هذا التنقل',
   'transports.dialog.description':
     'الرحلات الجوية والقطارات والعبّارات والطريق من المطار. الأوقات محلية، كما هي مطبوعة على التذكرة.',
   'transports.form.modeLegend': 'بماذا تسافر',
@@ -107,14 +107,14 @@ const messages = {
   'transports.field.bookingRefHint': 'الرمز الذي ستقرأه عند المكتب.',
   'transports.field.notesPlaceholder':
     'طُلب مقعد على الممر. الحقائب مشحونة حتى كيوتو.',
-  'transports.action.add': 'إضافة المرحلة',
-  'transports.action.save': 'حفظ المرحلة',
-  'transports.action.saving': 'جارٍ حفظ المرحلة',
-  'transports.toast.added': 'أُضيفت المرحلة',
+  'transports.action.add': 'إضافة التنقل',
+  'transports.action.save': 'حفظ التنقل',
+  'transports.action.saving': 'جارٍ حفظ التنقل',
+  'transports.toast.added': 'أُضيف التنقل',
   'transports.toast.addedBody': 'هي الآن في ترتيب الرحلة.',
-  'transports.toast.addFailed': 'لم تُضَف المرحلة',
-  'transports.toast.updated': 'حُدِّثت المرحلة',
-  'transports.toast.updateFailed': 'لم تُحدَّث المرحلة',
+  'transports.toast.addFailed': 'لم يُضَف التنقل',
+  'transports.toast.updated': 'حُدِّث التنقل',
+  'transports.toast.updateFailed': 'لم يُحدَّث التنقل',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'الاسم',
@@ -223,7 +223,8 @@ const messages = {
   'book.hint.activity': 'درس أو حمّام عام أو تجربة محجوزة.',
   'book.hint.tour': 'مكان ووقت ومرشد ينتظر.',
   'book.hint.ticket': 'دخول بموعد، تصريح متحف، مباراة. أبقِ الرمز في متناولك.',
-  'book.hint.transport': 'مقعد محجوز. الرحلات الكاملة برموزها مكانها {module}.',
+  'book.hint.transport':
+    'مقعد محجوز. التنقلات الكاملة برموزها مكانها {module}.',
   'book.hint.other': 'أي شيء محجوز باسمك ولا يناسب البقية.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -443,7 +444,7 @@ const messages = {
   'transports.mode.bike': 'دراجة',
   'transports.mode.walk': 'سيرًا',
   'transports.mode.other': 'أخرى',
-  'transports.mode.fallback': 'مرحلة',
+  'transports.mode.fallback': 'تنقل',
   'transports.status.idea': 'فكرة',
   'transports.status.pending': 'قيد الانتظار',
   'transports.status.confirmed': 'مؤكدة',
@@ -457,7 +458,7 @@ const messages = {
   'transports.end.toStation': 'إلى محطة',
   'transports.end.from': 'من',
   'transports.end.to': 'إلى',
-  'transports.error.titleEmpty': 'أعطِ هذه المرحلة اسمًا تعرفه في قائمة.',
+  'transports.error.titleEmpty': 'أعطِ هذا التنقل اسمًا تعرفه في قائمة.',
   'transports.error.date': 'التاريخ يُكتب سنة-شهر-يوم.',
   'transports.error.time': 'الوقت يُكتب ساعة:دقيقة بنظام 24 ساعة.',
   'transports.error.departureNeedsDate':
@@ -465,9 +466,9 @@ const messages = {
   'transports.error.arrivalNeedsDate': 'وقت الوصول يحتاج اليوم الذي يقع فيه.',
   'transports.error.code': 'الرمز من حرفين إلى 8 حروف أو أرقام.',
   'transports.error.distance': 'المسافة عدد من الكيلومترات، حتى 100000.',
-  'transports.error.arrivesBeforeDeparts': 'هذه المرحلة تصل قبل أن تغادر.',
+  'transports.error.arrivesBeforeDeparts': 'هذا التنقل يصل قبل أن يغادر.',
   'transports.error.timingHint':
-    'حرّك أحدهما ليصبح بالإمكان فعلًا إدراك هذه المرحلة.',
+    'حرّك أحدهما ليصبح بالإمكان فعلًا إدراك هذا التنقل.',
   'transports.bookingRefFor': 'رقم الحجز الخاص بـ {title}',
   'transports.doorToDoor': 'هذه {gap} من الباب إلى الباب.',
   'transports.title.fromTo': '{operator} من {from} إلى {to}',
@@ -477,9 +478,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'لا أوقات للمقارنة',
   'transports.junction.unknown.detail':
-    'أضِف التاريخ والوقت إلى المرحلتين وسيُتحقَّق من هذا الانتقال نيابة عنك.',
+    'أضِف التاريخ والوقت إلى التنقلين وسيُتحقَّق من هذا الانتقال نيابة عنك.',
   'transports.junction.impossible.headline':
-    'يغادر قبل وصول المرحلة السابقة بـ {gap}',
+    'يغادر قبل وصول التنقل السابق بـ {gap}',
   'transports.junction.impossible.detail':
     '«{to}» يغادر قبل وصول «{from}»، فلا يمكن إدراك الاثنين. حرّك إحداهما.',
   'transports.junction.tight.headline': '{gap} للانتقال',
@@ -489,7 +490,7 @@ const messages = {
     'يحتاج {mode} في {place} عادةً نحو {required}. هذا ضيّق.',
   'transports.junction.ok.headline': '{gap} بينهما',
   'transports.junction.ok.detail':
-    'الوصول إلى {landing} لكن المرحلة التالية تنطلق من {boarding} — ستحتاج إلى الانتقال.',
+    'الوصول إلى {landing} لكن التنقل التالي ينطلق من {boarding} — ستحتاج إلى الانتقال.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'شُوركت الملاحظة',
