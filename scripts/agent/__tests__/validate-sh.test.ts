@@ -46,7 +46,7 @@ type Validation = {
   e2eProjects: string[]
   steps: Array<{ name: string; ok: boolean; durationMs: number }>
   e2e: {
-    failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
+    failed: Array<{ title: string; error: string }>
   }
   infra: string | null
   ok: boolean
@@ -76,8 +76,8 @@ function resultsJson(specs: Array<Record<string, unknown>>): string {
     config: { version: '1.62.1' },
     suites: [
       {
-        title: 'e2e/visual.spec.ts',
-        file: 'e2e/visual.spec.ts',
+        title: 'e2e/journeys.spec.ts',
+        file: 'e2e/journeys.spec.ts',
         specs: [],
         suites: [{ title: 'planner', specs }],
       },
@@ -112,21 +112,21 @@ function spec(
 }
 
 /** The failures the fixtures below are built from; the verdict quotes the first line of each. */
-const PLANNER_PIXEL_DIFF =
-  'Error: expect(page).toHaveScreenshot(planner.png)\n\n  12345 pixels differ'
-const ITINERARY_PIXEL_DIFF =
-  'Error: expect(page).toHaveScreenshot(itinerary.png)\n\n  99 pixels differ'
+const PLANNER_HOVER_CARD =
+  "Error: expect(locator).toBeVisible()\n\n  Locator: getByRole('dialog')"
+const ITINERARY_ORDER =
+  'Error: expect(received).toEqual(expected)\n\n  - Expected  - 1'
 const ASSERTION_DIFF =
-  'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.visual.spec.ts:41'
+  'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.spec.ts:41'
 const CONNECTION_REFUSED =
-  'Error: page.goto: Connection refused\n  at e2e/trips-core.visual.spec.ts:41'
+  'Error: page.goto: Connection refused\n  at e2e/trips-core.spec.ts:41'
 const SOCKET_HANG_UP =
-  'Error: page.goto: socket hang up\n  at e2e/trips-core.visual.spec.ts:41'
+  'Error: page.goto: socket hang up\n  at e2e/trips-core.spec.ts:41'
 
 const RESULTS_FIXTURE = resultsJson([
   spec('passes', true, ['passed']),
   spec('the hover card never lands on the panel it would hide behind', false, [
-    { failedWith: PLANNER_PIXEL_DIFF },
+    { failedWith: PLANNER_HOVER_CARD },
   ]),
   spec('the trip tab is remembered', false, [{ failedWith: ASSERTION_DIFF }]),
 ])
@@ -134,7 +134,7 @@ const RESULTS_FIXTURE = resultsJson([
 /**
  * A retried run, as the reporter records it: `results` grows one entry per attempt, oldest first,
  * and the spec's own `ok` is the verdict over all of them. The dev-server blip passes on its
- * second attempt; the pixel diff below does not.
+ * second attempt; the regression below does not.
  */
 const RETRIED_BLIP = spec('the trip tab is remembered', true, [
   { failedWith: CONNECTION_REFUSED },
@@ -144,7 +144,7 @@ const RETRIED_BLIP = spec('the trip tab is remembered', true, [
 const RETRIED_REGRESSION = spec(
   'the hover card never lands on the panel it would hide behind',
   false,
-  [{ failedWith: PLANNER_PIXEL_DIFF }, { failedWith: PLANNER_PIXEL_DIFF }],
+  [{ failedWith: PLANNER_HOVER_CARD }, { failedWith: PLANNER_HOVER_CARD }],
 )
 
 /**
@@ -154,7 +154,7 @@ const RETRIED_REGRESSION = spec(
 const BLIPPED_THEN_REGRESSED = spec(
   'the itinerary day list keeps its order',
   false,
-  [{ failedWith: SOCKET_HANG_UP }, { failedWith: ITINERARY_PIXEL_DIFF }],
+  [{ failedWith: SOCKET_HANG_UP }, { failedWith: ITINERARY_ORDER }],
 )
 
 /**
@@ -257,7 +257,6 @@ function runValidate(
     forceE2e?: boolean
     e2eProjects?: string
     e2eGrep?: string
-    updateSnapshots?: boolean
     env?: Record<string, string>
     /** Whether the dev-server probe finds anything answering; defaults to yes. */
     devServerUp?: boolean
@@ -338,7 +337,6 @@ function runValidate(
         ? []
         : ['--e2e-projects', opts.e2eProjects]),
       ...(opts.e2eGrep === undefined ? [] : ['--e2e-grep', opts.e2eGrep]),
-      ...(opts.updateSnapshots === true ? ['--update-snapshots'] : []),
     ],
     {
       cwd: dir,
@@ -490,8 +488,7 @@ describe('the e2e rung against a dev server that drops a connection', () => {
     expect(run.verdict.e2e.failed).toEqual([
       {
         title: 'the hover card never lands on the panel it would hide behind',
-        error: 'Error: expect(page).toHaveScreenshot(planner.png)',
-        snapshotDiff: true,
+        error: 'Error: expect(locator).toBeVisible()',
       },
     ])
     expect(run.verdict.ok).toBe(false)
@@ -501,8 +498,8 @@ describe('the e2e rung against a dev server that drops a connection', () => {
 
   it('describes a failing spec by its last attempt, not its first', () => {
     // The attempt that decided `ok == false` is the last one. Naming the first would hand the fix
-    // agent the transport blip this rung now tolerates and clear `snapshotDiff`, sending it to
-    // look at the dev server for what is a snapshot regression.
+    // agent the transport blip this rung now tolerates, sending it to look at the dev server for
+    // what is a real regression.
     const run = runValidate({
       pwExit: 1,
       results: resultsJson([BLIPPED_THEN_REGRESSED]),
@@ -511,8 +508,7 @@ describe('the e2e rung against a dev server that drops a connection', () => {
     expect(run.verdict.e2e.failed).toEqual([
       {
         title: 'the itinerary day list keeps its order',
-        error: 'Error: expect(page).toHaveScreenshot(itinerary.png)',
-        snapshotDiff: true,
+        error: 'Error: expect(received).toEqual(expected)',
       },
     ])
   })
@@ -531,19 +527,17 @@ describe('the ladder shipped outside the worktree', () => {
 })
 
 describe('the verdict of a red e2e step', () => {
-  it('names every failing spec with its first error line and a snapshot flag', () => {
+  it('names every failing spec with its first error line', () => {
     const run = runValidate({ pwExit: 1, results: RESULTS_FIXTURE })
 
     expect(run.verdict.e2e.failed).toEqual([
       {
         title: 'the hover card never lands on the panel it would hide behind',
-        error: 'Error: expect(page).toHaveScreenshot(planner.png)',
-        snapshotDiff: true,
+        error: 'Error: expect(locator).toBeVisible()',
       },
       {
         title: 'the trip tab is remembered',
         error: 'Error: expect(received).toBe(expected)',
-        snapshotDiff: false,
       },
     ])
     expect(run.verdict.ok).toBe(false)
@@ -684,17 +678,6 @@ describe('--e2e-projects', () => {
       '--project=mobile-safari',
     ])
     expect(run.verdict.e2eProjects).toEqual(['chromium', 'mobile-safari'])
-  })
-
-  it('still coexists with --update-snapshots', () => {
-    // The re-record path runs the whole matrix, but nothing in the script should stop the two
-    // flags being combined — and a future caller narrowing a re-record must not silently lose one.
-    const run = runValidate({
-      e2eProjects: 'mobile-safari',
-      updateSnapshots: true,
-    })
-    expect(run.pwArgs).toContain('--update-snapshots')
-    expect(run.pwArgs).toContain('--project=mobile-safari')
   })
 })
 

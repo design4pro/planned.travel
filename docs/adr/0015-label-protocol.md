@@ -42,7 +42,8 @@ it is deleted.
   as its blockers close. That is the one place autonomy widens, and a human turns it on per PRD.
 - Dependencies are native `blocked_by` relations, written by the ticket publisher after the tickets
   exist and before any is labelled `ready`. Bodies do not mirror them.
-- Three PR labels: `agent-pr`, `needs-e2e`, `agent-docs`. No priority axis; "visual change
+- Three PR labels: `agent-pr`, `needs-e2e`, `agent-docs`. _Amended by ADR 0016: `needs-e2e` is
+  retired, leaving two._ No priority axis; "visual change
   expected" is a body section.
 
 A sweeper on the cezar host (later `agent-state.yml` when Actions is reliable) is the only writer

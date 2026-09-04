@@ -65,10 +65,9 @@ export function AccountIdentity({
         hear.
 
         The duplicate had a second victim worth recording. `consoleAccountPath()` in
-        `e2e/helpers/shoot.ts` reads the account link out of the accounts document, and an earlier
+        `e2e/helpers/admin.ts` reads the account link out of the accounts document, and an earlier
         version of it matched on proximity to the name — which found the avatar's hidden copy a few
-        hundred bytes ahead of the real link and photographed the row above for four rounds of
-        baselines.
+        hundred bytes ahead of the real link and walked the row above for four rounds.
       */}
       <Avatar aria-hidden="true" name={name} src={image} size={size} />
       <span className="flex min-w-0 flex-col gap-0.5">

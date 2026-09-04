@@ -4,14 +4,13 @@
 # after every fix-loop resume.
 #
 #   TARGET_BRANCH=<integration branch> bash scripts/agent/validate.sh --json-out <path> \
-#     [--force-e2e] [--skip-e2e] [--build] [--update-snapshots] [--e2e-projects <csv>]
-#     [--e2e-grep <regex>]
+#     [--force-e2e] [--skip-e2e] [--build] [--e2e-projects <csv>] [--e2e-grep <regex>]
 #
 # Always: route-tree freshness gate, typecheck, lint, vitest. --build adds `pnpm build`
 # after vitest (the cezar ladder turns it on; SPEC §7.1).
 # When the diff since TARGET_BRANCH touches UI paths (glob heuristic below):
-# setup-e2e.sh --if-needed, then the Playwright suite against the -linux
-# baselines (this container is CI's exact Playwright image).
+# setup-e2e.sh --if-needed, then the Playwright journeys (this container is CI's
+# exact Playwright image).
 #
 # --e2e-grep narrows it further, to the specs whose full title matches the regex
 # (Playwright's `-g`). The step is then named `<step> (narrowed)`, because a
@@ -36,7 +35,6 @@ set -uo pipefail
 JSON_OUT=""
 FORCE_E2E=0
 SKIP_E2E=0
-UPDATE_SNAPSHOTS=0
 E2E_PROJECTS=""
 BUILD=0
 E2E_GREP=""
@@ -46,7 +44,6 @@ while [ $# -gt 0 ]; do
     --force-e2e) FORCE_E2E=1; shift ;;
     --skip-e2e) SKIP_E2E=1; shift ;;
     --build) BUILD=1; shift ;;
-    --update-snapshots) UPDATE_SNAPSHOTS=1; shift ;;
     --e2e-projects) E2E_PROJECTS="$2"; shift 2 ;;
     --e2e-grep) E2E_GREP="$2"; shift 2 ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
@@ -155,6 +152,16 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # inside what one VM sustains without the machine-load TIMEOUT flakes.
     # Override with E2E_WORKERS to measure a different knee.
     #
+    # That knee is lower than core count suggests, and it is not CPU. Measured on
+    # a 16-core laptop against the post-ADR-0016 suite: `a member reaches every
+    # screen behind the session` takes 23 s alone on mobile-safari and 186 s at
+    # --workers=2, blowing its own 180 s budget - an 8x slowdown from one extra
+    # worker on a machine with fifteen idle cores. The contention is for the one
+    # dev server's SSR and the one software WebGL renderer, which is the same
+    # thing PR #84 measured on the 2-vCPU runner. Two consecutive full runs at
+    # --workers=1 were green in 4.4 and 4.1 min. So a TIMEOUT here is about the
+    # worker count far more often than it is about the diff.
+    #
     # One `--reporter`, comma-separated: Playwright declares the option as
     # `--reporter <reporter>` ("Reporter to use, comma-separated"), so a
     # repeated flag is not a list — the last occurrence wins and the rest are
@@ -166,7 +173,7 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # them are load-bearing here: the port guard is `if (!isCI && …)`, which its own comment calls
     # "a hard stop rather than a warning" after four automated rounds photographed the wrong
     # server — and this rung is exactly such a round — while `globalTimeout: isCI ? 10 * 60_000 :
-    # undefined` is sized, per its comment, for one of ci.yml's twelve shards, where this runs the
+    # undefined` is sized, per its comment, for one of ci.yml's two shards, where this runs the
     # whole unsharded suite. (CI would also flip `workers` and `reporter`, which the flags on the
     # line below happen to override today and would stop overriding the day either one moves.) A
     # retry flag buys the tolerance and nothing else.
@@ -175,7 +182,8 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # deliberately intolerant run. See issue #143: a dev server that dropped four connections
     # reddened a whole iteration and pointed the auditor at unrelated issues. Measured over the
     # recorded runs, 101 of 108 failing specs were infrastructure (ECONNREFUSED, timeouts, `Target
-    # crashed`) and 7 were pixel diffs, and each red rung costs a fix session plus a re-run - for a
+    # crashed`) and 7 were pixel diffs - a category ADR 0016 has since abolished, which leaves the
+    # infrastructure share at 100%. Each red rung costs a fix session plus a re-run - for a
     # spec that passes when asked again. The JSON reporter marks a spec `ok` when its last attempt
     # passed, so a retried-green spec never reaches `e2e.failed` below, and a spec red twice in a
     # row still does. Real regressions pay one extra attempt; flakes stop spending the fix budget.
@@ -184,7 +192,6 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # lines, and the second - a hard-coded `--retries=1` - silently overrode the E2E_RETRIES
     # override above. validate-sh.test.ts pins the override, so a second line here goes red.
     PW_ARGS=(--workers="${E2E_WORKERS:-4}" --retries="${E2E_RETRIES:-1}" --reporter=line,json,html)
-    [ "$UPDATE_SNAPSHOTS" -eq 1 ] && PW_ARGS+=(--update-snapshots)
     # Repeated `--project` IS a list, unlike `--reporter` above: playwright declares it as
     # `--project <project-name...>`. Narrowing to chromium is what lets the fix loop re-validate
     # for roughly half the time — mobile-safari is the larger half of the suite — while the caller
@@ -242,9 +249,9 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
       # `results[-1]`, not `results[0]`: with the retry above, `results` holds one entry per
       # attempt, oldest first, and it is the *last* attempt that decided `ok == false`. Reading the
       # first would describe a spec that blipped on `Connection refused` and then failed for real
-      # on a pixel diff as a connection error with `snapshotDiff: false` — handing the fix agent
-      # the flake this rung was taught to tolerate instead of the regression it caught.
-      E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | (.tests[0].results[-1].error.message // "") as $msg | {title: .title, error: ($msg | split("\n")[0] | .[0:300]), snapshotDiff: ($msg | test("toHaveScreenshot|screenshot comparison"))}] | .[0:40]' "$E2E_RESULTS_FILE" 2>/dev/null || echo '[]')
+      # as a connection error — handing the fix agent the flake this rung was taught to tolerate
+      # instead of the regression it caught.
+      E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | (.tests[0].results[-1].error.message // "") as $msg | {title: .title, error: ($msg | split("\n")[0] | .[0:300])}] | .[0:40]' "$E2E_RESULTS_FILE" 2>/dev/null || echo '[]')
     elif [ "$E2E_OK" -ne 0 ]; then
       # Not a step of its own: the ladder is already red and run_step has just
       # printed the tail, which still carries the line reporter. What this says

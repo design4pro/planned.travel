@@ -2,9 +2,10 @@
  * The provider screen's arithmetic, kept out of the component so it can be argued with.
  *
  * Everything here is pure and takes its clock as an argument. That is not only for testability:
- * `e2e/visual.spec.ts` runs `auditServerClock` over every console route, so this screen may render
- * no string derived from the browser's clock at all. Computing the numbers here, from an instant
- * the loader supplies, is what keeps the rendered output a function of the data.
+ * this screen may render no string derived from the browser's clock at all (see the note on
+ * `../providers.tsx`). Computing the numbers here, from an instant the loader supplies, is what
+ * keeps the rendered output a function of the data - and the unit tests over this module are what
+ * is left holding it, now that the e2e audit that policed the whole console tree is gone.
  *
  * ## Three numbers, because there are three questions
  *

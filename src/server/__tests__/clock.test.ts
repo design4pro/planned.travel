@@ -144,28 +144,24 @@ describe('serverToday', () => {
     await expect(duringRequest({}, serverToday)).resolves.toBe('2029-03-02')
   })
 
-  it('agrees with the header the visual gate actually sends', () => {
+  it('agrees with the header the e2e suite actually sends', () => {
     // `playwright.config.ts` writes the name and the day as literals because a
-    // Playwright config cannot resolve the `#/` alias into `src/`, and
-    // `e2e/helpers/shoot.ts` writes the day again because that is the value its
-    // calendar report measures the fixture against. Three files, one wire: this
-    // is what stops them drifting apart in silence, which they would otherwise
-    // do as a green run photographing the wrong day.
+    // Playwright config cannot resolve the `#/` alias into `src/`. Two files, one
+    // wire: this is what stops them drifting apart in silence, which they would
+    // otherwise do as a green run reading the wrong day.
+    //
+    // There used to be a third copy in the e2e helpers, for a calendar
+    // audit that measured the screenshot baselines against it. The baselines are
+    // gone (ADR 0016) and so is the copy; the pin is not, because the fixture
+    // drains without it.
     const read = (file: string): string =>
       readFileSync(new URL(`../../../${file}`, import.meta.url), 'utf8')
     const config = read('playwright.config.ts')
     expect(config).toContain(`const SERVER_TODAY_HEADER = '${PIN_HEADER}'`)
 
-    const pinned = /const BASELINE_DAY = '(\d{4}-\d{2}-\d{2})'/.exec(config)
-    const recorded = /export const BASELINE_DAY = '(\d{4}-\d{2}-\d{2})'/.exec(
-      read('e2e/helpers/shoot.ts'),
-    )
-    expect(pinned?.[1], 'playwright.config.ts pins no baseline day').toBeTypeOf(
+    const pinned = /const FIXTURE_DAY = '(\d{4}-\d{2}-\d{2})'/.exec(config)
+    expect(pinned?.[1], 'playwright.config.ts pins no fixture day').toBeTypeOf(
       'string',
     )
-    expect(
-      recorded?.[1],
-      'the gate declares no baseline day to pin against',
-    ).toBe(pinned?.[1])
   })
 })

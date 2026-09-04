@@ -10,8 +10,8 @@
  * those is a defect of the capture, and every one was reported to the critic as a defect of the
  * product.
  *
- * The seams this closes are the ones e2e/helpers/shoot.ts closes for the gate, and where the two
- * overlap this file follows shoot.ts rather than inventing a second answer:
+ * The seams this closes are the ones e2e/helpers/settle.ts closes for the journeys, and where the
+ * two overlap this file follows those helpers rather than inventing a second answer:
  *   - the theme is selected with `page.emulateMedia({ colorScheme })` and nothing else. Writing
  *     `data-theme` fights the app's own theme script, and driving the app's theme MENU only opens a
  *     dropdown, which is how three rounds came to report a half-dark frame as a product defect;
@@ -27,9 +27,9 @@
  * (`--enter`), and its welcome overlay is pressed away on every frame (`--dismiss`). Why two flags
  * and not one `--click`: ./click-through.mjs.
  *
- * It deliberately does NOT record anything under e2e/__screenshots__. Those baselines are compared
- * pixel for pixel across machines and belong to Playwright's own projects; this script writes only
- * into the shot directory it is given, for a blind critic to look at.
+ * It writes only into the shot directory it is given, and that directory belongs outside the
+ * repository. Nothing here is a baseline: since ADR 0016 no pixel in this repo is compared to a
+ * stored one, and this script is the whole of the visual judgement - two frames, and a reader.
  *
  * Usage:
  *   node scripts/visual/capture.mjs \
@@ -65,7 +65,7 @@ const DEV_TOOLBAR = '[data-testid="tanstack_devtools"]'
  * only a message whose own stack frame is a Vite dev-server namespace is let through. An error the
  * app raises is still fatal even when it quotes one of these word for word.
  *
- * This list is NOT the gate's list. `TOLERATED_CONSOLE_WARNINGS` in e2e/helpers/shoot.ts governs
+ * This list is NOT the journeys' list. `TOLERATED_CONSOLE_WARNINGS` in e2e/helpers/console-policy.ts governs
  * what fails a Playwright run and must stay as strict as it is; a dev-client HMR handler cannot
  * reach the gate at all, because the gate does not run one. It reached the capture, was reported as
  * a blocking console error, and failed two finished items in round 9 of the atlas run.
@@ -187,7 +187,7 @@ async function settle(page, { map }) {
   await page.evaluate(() => document.fonts.ready).catch(() => {})
   if (map) {
     // Absence of an unsettled marker, plus at least one marker present — the same two-sided check
-    // `settleMap()` makes in e2e/helpers/shoot.ts. A bare wait for `[data-map-ready="true"]` was
+    // `settleMap()` makes in e2e/helpers/settle.ts. A bare wait for `[data-map-ready="true"]` was
     // tried first and hung: the marker sits on a wrapper Playwright does not always call visible.
     await page.waitForFunction(
       () =>

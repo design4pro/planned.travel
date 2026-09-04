@@ -1,32 +1,47 @@
 name: Prepare the e2e environment
 description: >
   Everything the Playwright suite needs before a single spec runs: dependencies,
-  a migrated local D1, the PMTiles archive in the local R2 simulator, a dev
-  server on port 3000 and the seeded demo workspace behind it.
-
-  Two workflows need this identical preparation - the gate in ci.yml and the
-  baseline refresh in update-snapshots.yml - and a drift between them would show
-  up as screenshots that only fail in one of the two. So it lives here once.
+  a migrated local D1, a dev server on port 3000 and the seeded demo workspace
+  behind it. Optionally the PMTiles basemap in the local R2 simulator - see the
+  `basemap` input, which is off.
 
   Assumes a runner that already carries the browsers, i.e. a job running in
   `mcr.microsoft.com/playwright:v<version>-noble`. Installing them per run costs
   a couple of minutes and pins nothing extra.
 
 inputs:
+  basemap:
+    description: >
+      Pull the PMTiles archive out of production R2 into the local simulator.
+
+      Off, because no journey needs it. The land, water and borders the atlas
+      journeys click on come from Natural Earth 1:110m in the bundle, not from
+      the archive - `src/lib/map/world.ts` carries that fallback precisely
+      because the archive is "routinely absent in development and on a cold
+      bucket", and `map-canvas.tsx` probes it once and builds the map either
+      way. Measured on this branch: the six atlas journeys are green against an
+      empty `.e2e-tiles/`, `data-map-ready` latches on MapLibre's `idle` as it
+      does with tiles, and no journey asserts a coverage note or a street.
+
+      Turning it on costs a ~480 MB cache restore on every shard and, because
+      the download needs an R2 token, makes the job unrunnable on a fork. Both
+      inputs below are required only when this is 'true'.
+    required: false
+    default: 'false'
   cloudflare-api-token:
     description: >
       Token with R2:read on planned-travel-tiles. Only used to pull the basemap
       archive out of production R2 into the local simulator.
-    required: true
+    required: false
   cloudflare-account-id:
     description: Cloudflare account that owns the bucket.
-    required: true
+    required: false
   tiles-key:
     description: >
       Object key of the archive to pull, e.g. basemaps/planet-20260818.pmtiles.
       Dated and immutable by policy (docs/DEPLOY.md 7.4), which is what makes it
       a sound cache key.
-    required: true
+    required: false
   verify-seed:
     description: >
       Run scripts/seed/verify.mjs after seeding. On by default; the sharded gate
@@ -67,13 +82,18 @@ runs:
         APP_URL=http://localhost:3000
         TILES_ARCHIVE_KEY=basemaps/e2e.pmtiles
         EOF
+        # The key is written whether or not the object exists behind it. With
+        # `basemap: false` /api/tiles/* answers 404 and the map draws its
+        # bundled world instead, which is the same path a cold bucket takes in
+        # production.
 
     - name: Apply D1 migrations
       shell: bash
       run: pnpm db:migrate:local
 
-    # The archive is ~480 MB and immutable under its dated key, so a hit here is
-    # the normal case and the download below runs once per new basemap.
+    # Only when `basemap` is on. The archive is ~480 MB and immutable under its
+    # dated key, so a hit here is the normal case and the download below runs
+    # once per new basemap.
     #
     # Restore and save are separate steps on purpose. `actions/cache` saves in a
     # post step that is skipped when the job fails, so a red run after a miss
@@ -83,13 +103,14 @@ runs:
     # key; the first wins and the rest log a reservation warning, not an error.
     - name: Restore the basemap archive
       id: tiles-cache
+      if: inputs.basemap == 'true'
       uses: actions/cache/restore@v4
       with:
         path: .e2e-tiles/basemap.pmtiles
         key: pmtiles-${{ inputs.tiles-key }}
 
     - name: Download the basemap archive from R2
-      if: steps.tiles-cache.outputs.cache-hit != 'true'
+      if: inputs.basemap == 'true' && steps.tiles-cache.outputs.cache-hit != 'true'
       shell: bash
       env:
         CLOUDFLARE_API_TOKEN: ${{ inputs.cloudflare-api-token }}
@@ -102,7 +123,7 @@ runs:
           --remote --file .e2e-tiles/basemap.pmtiles
 
     - name: Save the basemap archive to the cache
-      if: steps.tiles-cache.outputs.cache-hit != 'true'
+      if: inputs.basemap == 'true' && steps.tiles-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
         path: .e2e-tiles/basemap.pmtiles
@@ -111,6 +132,7 @@ runs:
     # Into the Miniflare bucket under the key .dev.vars names, so /api/tiles/*
     # resolves the same way it does on your machine.
     - name: Load the archive into the local R2 simulator
+      if: inputs.basemap == 'true'
       shell: bash
       run: |
         set -euo pipefail

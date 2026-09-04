@@ -9,7 +9,7 @@ Refs #<issue>
 - [ ] `pnpm build` succeeds
 - [ ] `pnpm lint` and `pnpm typecheck` clean, no new suppressions
 - [ ] New logic has tests; `pnpm test` passes
-- [ ] Visually verified in a browser: light and dark, desktop and mobile (UI changes; `needs-e2e` for the full matrix)
+- [ ] Visually verified in a browser: light and dark, desktop and mobile (UI changes). Nothing in CI photographs a screen (ADR 0016), so for a deliberate visual change run `node scripts/visual/capture.mjs` and look at the pair
 - [ ] No TODOs, placeholder copy, `console.log` or commented-out code
 - [ ] Only files inside the ticket's Owned paths were touched
 - [ ] User-facing copy landed in all 23 locales (`i18n-messages`)

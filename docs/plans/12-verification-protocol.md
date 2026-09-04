@@ -12,6 +12,16 @@ It is not a plan. It carries no `gap-rows.json` row, owns no source file, and ad
 own. `TEMPLATE.md` fixes the shape of a stage; this file fixes what the stage's **Verification**
 heading has to contain and what the words in it mean.
 
+> **Rewritten in part by ADR 0016.** This file was written over a visual gate that compared every
+> screen against a committed PNG. That gate is gone: no pixel in this repo is compared to a stored
+> one, `e2e/__screenshots__/` no longer exists, and `e2e/helpers/shoot.ts` was split into five
+> modules with the baseline machinery cut out. Sections 2, 4 and 6 have been brought to HEAD and
+> section 5 (which governed `maxDiffPixelRatio`) is deleted. Sections 3 and 7 still argue in terms
+> of "frames" and "baselines": read "frame" there as a capture in a blind A/B pair, and treat any
+> claim about what a _comparison_ enforces as historical. What remains true throughout is the part
+> that was never about pixels - a stage owes named frames at named widths in both themes, in the
+> state its change is about, and owes a clean console.
+
 ---
 
 ## 1. The container rule for stage blocks
@@ -56,9 +66,11 @@ binds what is inside a stage block, not what is before the first one.
 ### There is no `test:e2e` script, and no stage may write one
 
 Measured in `package.json`: the scripts are `dev`, `generate-routes`, `build`, `preview`, `lint`,
-`format`, `check`, `deploy`, `typecheck`, `test`, `test:watch`, `db:generate`, `db:migrate:local`,
-`db:migrate:remote`, `cf-typegen`. **There is no `test:e2e`, no `test:visual`, no
-`playwright` script and no `e2e` script.** `pnpm test` is `vitest run` and runs no browser.
+`format`, `check`, `deploy`, `deploy:staging`, `typecheck`, `test`, `test:watch`, `e2e`,
+`db:generate`, `db:migrate:local`, `db:migrate:remote`, `db:migrate:remote:staging`, `cf-typegen`,
+`worktree:bootstrap`, `prepare`, `sentry-triage`. **There is no `test:e2e`, no `test:visual` and no
+`playwright` script**; `pnpm e2e` is the whole suite and `pnpm test` is `vitest run`, which runs no
+browser. A stage that wants one spec file writes the `playwright` invocation out in full.
 
 `docs/SPEC.md` §3 freezes `package.json`, so a stage cannot add one either. Every plan therefore
 writes the Playwright invocation out in full, and a stage whose Verification block cites a script
@@ -82,12 +94,14 @@ server produces failures that look like product defects. When the port is in dou
 pass it explicitly rather than probing by hand:
 
 ```sh
-PORT=$(scripts/ultrabuild/resolve-port.sh)     # add --start only if the pool is empty
+PORT=$(scripts/agent/cez-port.sh acquire)     # a port from the 3030-3040 automation pool
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test
 ```
 
 `PLAYWRIGHT_BASE_URL` is read by `playwright.config.ts` and suppresses the `webServer` block
-entirely. Without it the config waits on 3000 until the global timeout.
+entirely. Without it the config waits on 3000 until the global timeout. Outside CI the config also
+_refuses_ a base URL outside 3030-3040 unless `PLAYWRIGHT_ALLOW_ANY_PORT=1` is set, because four
+consecutive rounds ran the suite against somebody else's server and reported the result as evidence.
 
 ### The Playwright projects, as declared
 
@@ -96,13 +110,18 @@ Three, and only these three names are valid after `--project=`:
 | Project         | Engine and viewport                                      | What it is for                                                                                               |
 | --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `setup`         | Desktop Chrome, `e2e/auth.setup.ts` only                 | Signs the demo account in once and caches the session at `e2e/.auth/demo.json`. Both others depend on it.    |
-| `chromium`      | `devices['Desktop Chrome']`, viewport pinned to 1440x900 | The desktop half. Every desktop baseline.                                                                    |
+| `chromium`      | `devices['Desktop Chrome']`, viewport pinned to 1440x900 | The desktop half, and the one project for any claim no browser is really involved in.                        |
 | `mobile-safari` | `devices['iPhone 15']` — WebKit, touch, 393x659 viewport | The mobile half. Safe-area insets, `100dvh` and momentum scrolling behave differently here and nowhere else. |
 
-Both browser projects send `x-pt-server-today: 2026-08-20` on every request, matching `BASELINE_DAY`
-in `e2e/helpers/shoot.ts`. Comparison settings live in `expect.toHaveScreenshot`:
-`maxDiffPixelRatio: 0.002`, `threshold: 0.2`, `animations: 'disabled'`, `caret: 'hide'`,
-`scale: 'css'`. §5 governs what a stage may do with those numbers, which is nothing.
+Both browser projects send `x-pt-server-today: 2026-08-20` on every request. That value is
+`FIXTURE_DAY` in `playwright.config.ts`, and it is pinned for a reason that outlived the baselines:
+the Worker selects rows by comparing fixture dates against its own `new Date()`, so unpinned, the
+seeded workspace's dashboard rail empties for good after 2026-10-12 and `trips-core.spec.ts` starts
+skipping - a suite going green by covering less, on a morning nobody touched it. Two vitest guards
+read the literal out of the config so the pin cannot drift in silence.
+
+There are no comparison settings, because nothing is compared. `expect.timeout` is 5 s and that is
+the whole of the `expect` block.
 
 The commands a stage cites, in the order it runs them:
 
@@ -111,30 +130,28 @@ The commands a stage cites, in the order it runs them:
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
 
 # the stage's own spec, both engines
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/<module>.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/<module>.spec.ts
 
 # one engine, when triaging a failure that only appears there
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/<module>.visual.spec.ts --project=mobile-safari
-
-# record the stage's own new baselines - never another stage's
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/<module>.visual.spec.ts --update-snapshots
+  e2e/<module>.spec.ts --project=mobile-safari
 ```
+
+There is no fourth command. Recording a baseline was the fourth, and there are no baselines.
 
 A cached session does not expire loudly. It redirects to `/login`, and a run against a stale one
 reports the login screen as the product. `--project=setup` is the whole fix and costs one command.
 
 ### The interaction frames
 
-`scripts/ultrabuild/capture.mjs` takes the frames a human or a blind critic looks at. It is a real
-file in this repository, it drives Chromium through `@playwright/test`, and it deliberately writes
-**nothing** under `e2e/__screenshots__`:
+`scripts/visual/capture.mjs` takes the frames a human or a blind critic looks at. It is a real file
+in this repository, it drives Chromium through `@playwright/test`, and since ADR 0016 it is the
+**whole** of the visual judgement rather than the half of it that ran at review:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/<route>" \
-  --out ".claude/ultrabuild/shots/<slug>/round-<n>/<stage-id>" \
+  --out "<scratchpad>/shots/<slug>/round-<n>/<stage-id>" \
   --label B \
   --viewports 360x800,1280x900,2560x1440 \
   --themes light,dark \
@@ -142,7 +159,9 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   [--map] [--state <name>] [--hover '<selector>'] [--click '<selector>'] [--settle 800]
 ```
 
-It prints one JSON object — `{ files, console, warnings }` — and that object is the stage's evidence.
+It prints one JSON object — `{ requestedUrl, files, console, warnings, captureValid }` — and that
+object is the stage's evidence. `captureValid: false` with exit 2 means the frames are of a broken
+dev server, not of the change.
 What it already handles, so no stage re-derives it: the theme is selected with
 `page.emulateMedia({ colorScheme })` and nothing else; `--map` waits for the two-sided
 `[data-map-ready]` predicate again after every resize and every theme change; entrance motion is
@@ -154,28 +173,29 @@ refused rather than filed; and `--auth` refuses to file a frame that landed on `
 The clock pin is the one seam `capture.mjs` does **not** apply on its own, and the environment
 variable in the command above is not decoration. Measured in the script: the header is read from
 `process.env.PT_SERVER_TODAY` and the `context.route()` interceptor that attaches it is installed
-only `if (serverToday)` (`scripts/ultrabuild/capture.mjs:168-178`). Unset, no request carries
-`x-pt-server-today`, the Worker answers from its own wall clock, and the frames show whichever rows
-today selects — next to baselines recorded on `BASELINE_DAY`. What the script fixes is the
+only `if (serverToday)`. Unset, no request carries `x-pt-server-today`, the Worker answers from its
+own wall clock, and the two halves of a blind pair can be photographed on two different days - which
+is a comparison of two products, not of one change. What the script fixes is the
 _scoping_, not the setting: when the value is present it is attached per request and only to the
 capture URL's own origin, because setting it context-wide is what made Google Fonts reject the
-preflight and recorded every baseline in the fallback face.
+preflight and photographed every frame in the fallback face.
 
-`2026-08-20` is the value, and it is not a free choice — it is `BASELINE_DAY` in
-`e2e/helpers/shoot.ts:1014` and the same string `playwright.config.ts` sends. A stage that pins the
-capture to one day and the gate to another has produced two pictures of two products.
+`2026-08-20` is the value, and it is not a free choice — it is `FIXTURE_DAY` in
+`playwright.config.ts`, the same string both browser projects send. A stage that pins the capture to
+one day and the suite to another has produced two pictures of two products.
 
 One limit, measured, that decides where a capture may be pointed: `serverToday()` reads the header
 inside an `if (import.meta.env.DEV)` branch (`src/server/clock.ts:73-90`), which the production
-build folds out. The pin therefore works against `pnpm dev` — which is what
-`scripts/ultrabuild/resolve-port.sh` resolves and what the gate's `webServer` starts — and does
-nothing at all against `pnpm preview` or a deployed Worker. A stage that wants pinned frames captures
+build folds out. The pin therefore works against `pnpm dev` — which is what `cez-port.sh` allocates
+a port for and what the config's `webServer` starts — and does nothing at all against `pnpm preview`
+or a deployed Worker. A stage that wants pinned frames captures
 against the dev server, and a stage with a reason to capture against a built Worker says in its
 evidence that its frames are on the real day.
 
-Frames go under `.claude/ultrabuild/shots/<slug>/round-<n>/<stage-id>/` and nowhere else — not the
-repository root, not `docs/`. Scratch scripts go in the session scratchpad and are deleted after
-they have served their purpose.
+Frames go **outside the repository** — the session scratchpad, under
+`shots/<slug>/round-<n>/<stage-id>/` — and nowhere else: not the repository root, not `docs/`.
+Thirty-six findings in one round were about scratch PNGs left at the repository root. Scratch
+scripts go in the scratchpad too, and are deleted after they have served their purpose.
 
 ---
 
@@ -234,143 +254,78 @@ quietly.
 
 ### Measured, at HEAD
 
-`e2e/visual.spec.ts` is 2,994 lines and 118 KB. `pnpm exec playwright test --list` reports **137
-tests in 2 files** — 68 per browser project plus the `setup` test — and
-`e2e/__screenshots__/visual.spec.ts/` holds **52 baseline PNGs** (13 routes × 2 themes × 2
-projects). Every module still to be built would append to that one file.
+`e2e/journeys.spec.ts` is 1,568 lines and 67 KB, and carries fourteen `test()` declarations.
+`e2e/trips-core.spec.ts` carries three and `e2e/csrf.spec.ts` two, so `pnpm e2e` is nineteen
+declarations across two browser projects plus the `setup` test. Every module still to be built
+would otherwise append to the first of those files.
 
 ### The rule
 
-**A module plan adds `e2e/<module>.visual.spec.ts`. It never appends to `e2e/visual.spec.ts`.**
+**A module plan adds `e2e/<module>.spec.ts`. It never appends to `e2e/journeys.spec.ts`.**
 
 `<module>` is the plan's area name in the same kebab-case as its plan file, so
-`04-budget-and-currencies.md` produces `e2e/budget-and-currencies.visual.spec.ts`. One spec file per
-plan file, not one per stage: stages within a plan share the file and are told apart by their
+`04-budget-and-currencies.md` produces `e2e/budget-and-currencies.spec.ts`. One spec file per plan
+file, not one per stage: stages within a plan share the file and are told apart by their
 `test.describe` block, whose name is the stage id and title.
 
-`e2e/visual.spec.ts` stays where it is and keeps what it has. It is not split retroactively — its 52
-baselines are approved frames and moving a spec file moves its baseline directory, which would
-re-record all 52 for no design reason. It is simply frozen against growth.
+The `.visual.` infix the earlier version of this rule mandated is gone with the gate that justified
+it (ADR 0016). `trips-core.visual.spec.ts` was renamed to `trips-core.spec.ts` in the same change,
+and `playwright.config.ts` matches `**/*.spec.ts` and nothing else - a `.test.ts` under `e2e/`
+belongs to vitest, which is where the pure helpers are graded.
 
-### Why the split is safe, and it is a property of the config rather than a hope
+### Why the split is safe
 
-`playwright.config.ts` sets
+Not a property of any snapshot template any more - there are no snapshots. It is the plainer
+property that two plans writing two files touch two disjoint paths, which is the same disjointness
+`README.md` requires of **Owned paths**, obtained mechanically. `fullyParallel: true` then runs them
+in different workers against one dev server and one D1 file, which is safe because the suite writes
+to the fixture from exactly three places, all of them named in the `workers` comment in
+`playwright.config.ts`.
 
-```
-snapshotPathTemplate: '{snapshotDir}/{testFileName}/{arg}-{projectName}{ext}'
-```
-
-so a new spec file gets its own baseline directory — `e2e/__screenshots__/<module>.visual.spec.ts/`
-— and **cannot collide with or disturb an existing baseline**. Two stages in the same wave, in two
-different plans, writing two different spec files, cannot touch each other's pixels. That is the
-same disjointness `README.md` requires of **Owned paths**, obtained mechanically.
-
-A stage's **Owned paths** lists its spec file and its baseline directory explicitly:
+A stage's **Owned paths** lists its spec file explicitly, and nothing else under `e2e/` unless it
+genuinely adds a helper:
 
 ```
-e2e/budget-and-currencies.visual.spec.ts                     new
-e2e/__screenshots__/budget-and-currencies.visual.spec.ts/    new
+e2e/budget-and-currencies.spec.ts                            new
 ```
 
 ### The shared helpers, which are reused and never re-implemented
 
-`e2e/helpers/shoot.ts` is the one implementation of everything below. A new spec imports from
-`./helpers/shoot.ts`; **a second implementation of any of these in a module spec is a defect, not a
-convenience.**
+Five modules under `e2e/helpers/`, one seam each. A new spec imports from them; **a second
+implementation of any of these in a module spec is a defect, not a convenience.**
 
-| Helper                                                                                                   | What it settles                                                                                                                                                                |
-| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `visit(page, route, theme)`                                                                              | Cross-origin fonts unblocked, theme emulated, clock fixed at `FROZEN_NOW`, navigate, assert status < 400, then `settle()`.                                                     |
-| `settle(page, route)`                                                                                    | The nine-step wait: ready selector, `document.fonts.ready`, hydration, DOM quiet, images decoded, dev chrome hidden, pointer and scroll reset, map idle, two animation frames. |
-| `settleMap(page, route, census)` / `readMapCensus(page)`                                                 | The two-sided `[data-map-ready]` predicate. A bare wait on `="true"` hangs.                                                                                                    |
-| `settleMutations(page)`                                                                                  | The DOM-quiet window, with its floor and its give-up cap.                                                                                                                      |
-| `shoot(page, route, theme)`                                                                              | Pins the relative-time region, picks full-page vs viewport-after-resize, applies the mask, takes the baseline.                                                                 |
-| `captureMode(route)` / `fitViewportToDocument(page, route)`                                              | Why a map route is captured at a grown viewport instead of full-page.                                                                                                          |
-| `applyTheme(page, theme)` and `THEMES`                                                                   | `page.emulateMedia({ colorScheme })` and nothing else. Never write `data-theme`; never drive the app's theme menu.                                                             |
-| `useSession` / `hasSession` / `AUTH_STATE`                                                               | The cached demo session, and skipping with an actionable reason when there is none.                                                                                            |
-| `watchConsole(page, route)` + `classifyConsoleMessage(...)` + `TOLERATED_CONSOLE_WARNINGS`               | The console verdict. §6 governs it.                                                                                                                                            |
-| `RouteCase`, `PUBLIC_ROUTES`, `APP_ROUTES`, `PINNED_YEAR`                                                | The route declaration: `name`, `path`, `ready`, the `map` flag, which is audited in both directions, and the `relativeTime` flag, which is not — see below.                    |
-| `BASELINE_DAY`, `FROZEN_NOW`, `reportServerCalendar`, `shiftServerToday`, `crossedBoundaries`, `holdsOn` | The clock seams, and the diagnosis printed when a fixture date has crossed one.                                                                                                |
+| Module              | What it owns                                                                                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session.ts`        | The one sign-in a run gets: `useSession` / `hasSession` / `AUTH_STATE`, and `pinDemoLanguage`, which puts the demo traveller back on the workspace default after any probe that writes `user_settings.locale`. |
+| `routes.ts`         | The screens and their shape: `RouteCase` (`name`, `path`, `ready`, the `map` flag), `PUBLIC_ROUTES`, `APP_ROUTES`, `PINNED_YEAR`, and `applyTheme` / `THEMES`.                                                 |
+| `settle.ts`         | Paint timing and the live map: `settle()`, `settleMutations()` with its floor and cap, `settleMap()` / `readMapCensus()` and the two-sided `[data-map-ready]` predicate, `FROZEN_NOW`, `readCaptureState`.     |
+| `console.ts`        | The visit and the verdict: `visit(page, route, theme)` and `watchConsole(page, route)`.                                                                                                                        |
+| `admin.ts`          | The two fixtures no product surface can mint for itself: the platform console (`CONSOLE_ROUTES`, `hasPlatformConsole`) and an impersonated session (`beginImpersonation` / `endImpersonationFixture`).         |
+| `console-policy.ts` | `classifyConsoleMessage` and `TOLERATED_CONSOLE_WARNINGS`. Pure, imports nothing, and graded by the `tooling` vitest project rather than by a browser. §6 governs it.                                          |
 
 A stage that needs a helper none of these provides adds it **to `e2e/helpers/`** — a new module such
-as `e2e/helpers/<module>.ts` if it is module-specific, or `e2e/helpers/shoot.ts` if it genuinely
-belongs to the shared settle — and lists it under **Owned paths**. `e2e/helpers/shoot.ts` is not one
-of the six shared paths in `README.md`, so a stage may claim it; but two stages in the same wave may
-not both claim it, and the second one to want it declares a module-local helper instead.
+as `e2e/helpers/<module>.ts` if it is module-specific, or the module above whose seam it genuinely
+belongs to — and lists it under **Owned paths**. None of the five is one of the six shared paths in
+`README.md`, so a stage may claim one; but two stages in the same wave may not both claim the same
+one, and the second to want it declares a module-local helper instead.
 
-### The two route flags are not equally self-policing, and the difference is the module spec's to carry
+### The `map` flag is self-policing; nothing else in the table is
 
-`map` is safe to declare and forget. `settleMap()` (`e2e/helpers/shoot.ts:1407-1430`) fails a route
+`map` is safe to declare and forget. `settleMap()` (`e2e/helpers/settle.ts:130-146`) fails a route
 that renders a `[data-map-ready]` marker without declaring `map: true` **and** a route that declares
 one and renders none, so neither half can rot in silence. It reads a generic attribute every map
-wrapper in the product publishes, so it holds on a module screen the helper has never seen.
+wrapper in the product publishes, so it holds on a module screen the helper has never seen. Both
+halves are additionally exercised by `the harness itself` against a document built for them, because
+a canvas that never latches is a state no real screen can be asked to enter.
 
-`relativeTime` is not that, and a plan that assumes it is will ship a baseline with an unpinned clock
-string in it. Three things, measured in the source rather than assumed:
-
-1. **Declared-but-shows-none is reported, not failed.** `auditRelativeTime()`
-   (`e2e/helpers/shoot.ts:776-796`) returns an array of sentences in that direction and asserts
-   nothing. Its header says why, and the reason is good: how many clock-derived strings a screen
-   shows is itself the calendar's decision — `/trips` prints none from 2026-10-10 on the seeded
-   fixture — so counting elements cannot tell a moved fixture apart from a deleted string.
-2. **The fatal direction only sees strings it already knows.** `countRelativeTime()`
-   (`:743-748`) sums locators built from `RELATIVE_TIME_SITES` (`:573`), which is **three
-   hand-written entries**: the trip-card countdown badge, the dashboard hero `Starts in` / `Started`
-   stat, and the journey backlog reason line. A new module screen that prints a fourth shape of
-   clock-derived string counts as `0` on a route declaring nothing, and the assertion passes.
-3. **The calendar-proof half is fatal in both directions but is pointed at six routes.**
-   `auditServerClock()` (`:820-844`) compares the flag against `today` in the streamed document and
-   fails either way round. It is called in exactly one place — `e2e/visual.spec.ts:310`, over
-   `APP_ROUTES`. A route declared in a module spec's own table is in nobody's `APP_ROUTES` and is
-   audited by nothing.
-
-So a module spec that declares any authenticated route owes three things, and a stage that skips one
-has an unaudited declaration rather than a passing one:
-
-- **Call `auditServerClock(page, <the spec's own route table>)` once, in a `describe` of its own.**
-  This is the only check that reads the declaration against the payload, it is the one the calendar
-  cannot move, and it is one line.
-- **If the screen prints a clock-derived string of a shape not already in `RELATIVE_TIME_SITES`, add
-  the entry** — `source`, `within`, `region`, optional `keyedOn`, `drifts`, `variants`, `fixed`,
-  `pinned`, the same fields the three existing ones carry — and claim `e2e/helpers/shoot.ts` under
-  **Owned paths**, subject to the one-claimant-per-wave rule stated just above. Without the entry
-  `pinRelativeTime()` writes nothing on that screen and the mask covers nothing, so the string is
-  inside the comparison at full size and the baseline fails on a morning nobody designed.
-- **Read the report instead of discarding it.** A non-empty return from `auditRelativeTime()` means
-  that run's exclusion covered nothing and the whole frame was compared. That is legitimate when the
-  day the suite is pinned to sits past the rows that carry the string — `CALENDAR_SELECTIONS` names
-  each of those crossings — and it is the identical signal a silently deleted string produces. The
-  stage says in its evidence which of the two it is.
-
----
-
-## 5. Raising `maxDiffPixelRatio` is forbidden
-
-`playwright.config.ts` sets `maxDiffPixelRatio: 0.002` — about 0.2% of a 1440x900 viewport, which is
-the budget for cross-platform font antialiasing and nothing else. A shifted card, a wrong colour, a
-missing row and a re-flowed paragraph all cost far more than that.
-
-**No stage raises it. Not globally, not per project, not per call.** That includes the
-`toHaveScreenshot` option of the same name, `maxDiffPixels`, and widening `threshold` past 0.2. A
-diff of, say, 3,798 pixels against a budget of 1,322 is not a budget that is too tight; it is a real
-difference of about three times the budget, and a stage that widens the budget to absorb it has
-deleted the only mechanism that would have caught the next one.
-
-When a comparison fails, exactly two remedies are legitimate:
-
-1. **Pin the renderer**, if the difference is the engine's and not the product's. §7.3 names the one
-   precondition that has to land for this to be possible, and until it does the honest report is
-   "this baseline is not trustworthy on a second machine", not a wider budget.
-2. **Fix the source of the difference** — the product changed, and either the change is right and
-   the baseline is re-recorded with `--update-snapshots`, or the change is wrong and the code is
-   fixed. Re-recording is a decision a stage states and argues, never a reflex: the re-recorded
-   frames travel in the stage's diff and an auditor reads them.
-
-A third thing is legitimate and is not a remedy: **excluding a region that is genuinely the clock's
-to decide**, via the `relativeTime` declaration and `pinRelativeTime()`, which pins the string first
-so the excluded rectangle is a constant on every run and every calendar day. That machinery exists
-and is narrow. Widening a mask to cover a component that merely regressed is the same defect as
-widening the ratio, wearing different clothes.
+The `relativeTime` declaration, `RELATIVE_TIME_SITES`, `pinRelativeTime()` and `auditServerClock()`
+that earlier versions of this section required are **gone**. They existed to hold a clock-derived
+string still inside a pixel comparison, and there is no comparison. What survives of that concern is
+the day itself: the header pin described in §2, and the two vitest guards that read `FIXTURE_DAY`
+out of `playwright.config.ts`. One rule from that machinery is worth keeping as a rule for humans,
+because nothing enforces it any more: a console route must not print a date computed from the
+browser's clock when the Worker's is what selected the row. The unit tests over
+`src/server/fns/console/-lib/providers.ts` are what is left of the enforcement.
 
 ---
 
@@ -384,8 +339,9 @@ whose Verification block omits either is incomplete.
 
 `docs/SPEC.md` §2: "Zero console errors or warnings." The stage's spec attaches `watchConsole(page,
 route)` before it navigates and asserts the returned report's `fatal` list is empty at the end of
-every test — including the tests that only take a frame, because a warning that only appears in dark
-at 360px is exactly the kind nobody finds by hand.
+every test — including the ones that only walk a screen, because a warning that only appears in dark
+at 360px is exactly the kind nobody finds by hand. Since ADR 0016 this is the widest net the suite
+casts: it is what still fails a run for a defect no assertion was written to catch.
 
 `classifyConsoleMessage()` is the only arbiter, and `TOLERATED_CONSOLE_WARNINGS` is the only
 tolerance list. It currently holds two entries, both anchored at the start of the message so a
@@ -393,16 +349,16 @@ warning the app writes itself stays fatal even when it quotes one word for word:
 software rasteriser's GL driver advisory, scoped to routes that declare a live map; and the resource
 loader's unused-preload advisory, scoped by URL to paths only `vite dev` publishes.
 
-**A stage does not add to that list to make its own run green.** Adding an entry is a change to the
-gate's own contract, is argued on its own terms, and is asserted in the `the gate itself` describe
-block in both directions — that the tolerated form passes and that the same message from a
+**A stage does not add to that list to make its own run green.** Adding an entry removes coverage,
+is argued on its own terms, and is asserted in the `the harness itself` describe block in both
+directions — that the tolerated form passes and that the same message from a
 production-shaped URL still fails. A React hydration mismatch cannot be tolerated at all: React 19
 surfaces it as an uncaught error and a `console.error`, and both classify as `fatal` before the list
 is consulted.
 
 `capture.mjs` keeps a separate and deliberately wider list — it runs against `vite dev` with an HMR
-client the gate never loads. Its `console.fatal` array being empty is the capture's bar; the gate's
-is stricter and neither relaxes the other.
+client the suite never loads. Its `console.fatal` array being empty is the capture's bar; the
+suite's is stricter and neither relaxes the other.
 
 ### No layout shift after paint
 
@@ -539,12 +495,12 @@ Chromium's contribution is at least deterministic: it paints through a software 
 why `shoot.ts` tolerates that rasteriser's GL advisory on map routes. The WebKit half has no
 equivalent guarantee recorded.
 
-**Status: deferred. Blocking for treating any baseline as cross-machine truth.** Today the baselines
-are a single-machine regression net, which is a real and useful thing; they are not yet a shared
-one. A stage may rely on them to prove _it_ changed nothing. A stage may not claim a green comparison
-as evidence that the design renders identically anywhere else, and a stage that meets a
-`mobile-safari` difference it cannot attribute reports it under **Blockers** and pins nothing — §5
-forbids the shortcut.
+**Status: closed by ADR 0016, and worth reading anyway.** There are no baselines, so nothing here
+blocks anything. What the diagnosis still says is true of a blind pair: two frames taken on two
+machines differ for reasons that are the renderer's, and neither the critic nor the reader can tell
+those from the product's. Capture both halves of a pair on one machine, and a stage that meets a
+`mobile-safari` difference it cannot attribute reports it under **Blockers** rather than explaining
+it away.
 
 ---
 

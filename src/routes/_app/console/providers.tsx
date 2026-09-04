@@ -28,11 +28,12 @@ import type { Translate } from '#/lib/i18n'
  * to cost.
  *
  * **Every number is computed from `view.asOf`, never from the browser's clock.** That is a hard
- * constraint rather than a preference: `auditServerClock` in `e2e/visual.spec.ts` runs over every
- * console route, so a screen whose output moves with the wall clock cannot have a stable baseline —
- * and a dashboard that renders differently on each load is one nobody can screenshot for a bug
- * report either. So there is no "2 hours ago" anywhere here; durations are whole-window words and
- * instants are dates.
+ * constraint rather than a preference: a dashboard that renders differently on each load is one
+ * nobody can screenshot for a bug report, and whose two readings cannot be compared. So there is
+ * no "2 hours ago" anywhere here; durations are whole-window words and instants are dates.
+ *
+ * The e2e audit that used to enforce this over every console route went with the pixel baselines
+ * (ADR 0016). The rule did not; it is now held by reading rather than by a run.
  *
  * **A provider with no client behind it renders an empty state, not a zero.** "Nothing called it"
  * and "nothing can call it" are opposite facts and a `0` cannot tell them apart — the same argument

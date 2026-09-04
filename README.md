@@ -10,7 +10,7 @@ basemap.
 pnpm worktree:bootstrap   # fresh checkout or worktree: everything below, once
 pnpm dev                  # http://localhost:3000
 pnpm test                 # unit tests (Vitest)
-pnpm e2e                  # e2e + visual regression (Playwright)
+pnpm e2e                  # critical journeys (Playwright); no screenshots
 ```
 
 Four fixtures are gitignored and per-checkout: `node_modules`, `.dev.vars`, a
@@ -32,11 +32,12 @@ in, then `pnpm db:migrate:local`, load the basemap, and seed.
   (`deploy-staging.yml`).
 - Promotion is a pull request `develop` → **`main`**; merging deploys
   **production**: https://planned.travel (`deploy.yml`).
-- CI (`ci.yml`) runs lint · typecheck · unit tests · build plus the e2e visual
-  gate on every pull request to `develop` and `main`. Screenshot baselines are
-  per platform: `-darwin` recorded locally (`pnpm e2e:update`), `-linux`
-  re-recorded via the manual **Update e2e baselines** workflow, which opens a
-  reviewable PR.
+- CI (`ci.yml`) runs lint · typecheck · unit tests · build plus the critical
+  journeys on every pull request to `develop` and `main`. Nothing compares a
+  screenshot (ADR 0016): a journey asserts that a screen answers, renders,
+  hydrates, says nothing in the console and can be acted on. A deliberate
+  visual change is judged by the blind A/B pair (`scripts/visual/capture.mjs`),
+  at review.
 
 ## Working with agents
 
@@ -53,5 +54,5 @@ in, then `pnpm db:migrate:local`, load the basemap, and seed.
 - `docs/ARCHITECTURE.md` — system architecture
 - `docs/SPEC.md` — product spec
 - `docs/DEPLOY.md` — provisioning and deploy runbook (D1, R2, basemap, Stripe)
-- `docs/CLOUD.md` — working from the cloud (sessions, `@claude`, baselines)
+- `docs/CLOUD.md` — working from the cloud (sessions, `@claude`, the journeys)
 - `docs/plans/` — implementation plans

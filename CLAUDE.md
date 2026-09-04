@@ -8,7 +8,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 - `pnpm dev` — dev server on :3000
 - `pnpm typecheck` / `pnpm lint` / `pnpm test` — the fast feedback loop; run these before committing
 - `pnpm build` — production build
-- `pnpm e2e` — Playwright visual + i18n suites (needs local D1 migrations and the basemap)
+- `pnpm e2e` — Playwright critical journeys + i18n parity (needs local D1 migrations; no basemap, ADR 0016)
 - `pnpm generate-routes` — regenerate the route tree; `src/routeTree.gen.ts` is generated, never hand-edit
 - `pnpm db:generate` — generate Drizzle migrations; `drizzle/` is generated, never hand-edit
 

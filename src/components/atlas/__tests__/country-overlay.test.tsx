@@ -1337,6 +1337,99 @@ describe('CountryOverlay panel', () => {
     ).toBeTruthy()
   })
 
+  /**
+   * The panel stays inside the slice it was given.
+   *
+   * Radix renders a dialog through a portal to `document.body` by default, and
+   * a panel that took that default would leave the map's isolated stacking
+   * context entirely — landing over the app header and, on a phone, over the
+   * tab bar, whatever tier its own layer claims. The `container` prop is what
+   * holds it in; this is the assertion that says the prop is still honoured.
+   */
+  it('renders into the host layer rather than portalling to the body', () => {
+    const map = new FakeMap()
+    mount(map, { selectedCode: 'FR', selectionToken: 1 })
+
+    const panel = document.querySelector('[data-part="country-panel"]')
+    expect(panel, 'the panel has to be open to be located').not.toBeNull()
+    expect(
+      screen.getByTestId('surface-host').contains(panel),
+      'the panel lives inside the layer the screen gave the overlay',
+    ).toBe(true)
+    expect(
+      document.body.querySelector(':scope > [data-part="country-panel"]'),
+      'nothing here portals to the document body, where it would escape the slice',
+    ).toBeNull()
+  })
+
+  /**
+   * One surface family, two moments — asserted as an equality rather than as
+   * two separate readings.
+   *
+   * The defect this prevents is a call site picking four of the eight columns:
+   * it compiles, it renders, and it prints an empty state beside a record that
+   * is not empty. Reading each surface against its own expected list cannot
+   * catch that, because a bridge written twice can be wrong twice in the same
+   * way; comparing the two projections can. Both call sites spread
+   * `factColumns`, and this is the assertion that says so.
+   *
+   * Two mounts rather than one because the overlay deliberately stands hover
+   * down while the panel for that country is open — the surfaces never coexist
+   * for a single code, which is the behaviour asserted two tests above.
+   */
+  it('projects the same card from the pointer and from the press', () => {
+    const project = (surface: Element | null | undefined) => {
+      const card = surface?.querySelector('article') ?? null
+      if (card === null) return null
+      return {
+        country: card.getAttribute('data-country'),
+        record: card.getAttribute('data-record'),
+        visited: card.getAttribute('data-visited'),
+        labels: [...card.querySelectorAll('dt')].map((node) =>
+          node.textContent.trim(),
+        ),
+        values: [...card.querySelectorAll('dd')].map((node) =>
+          node.textContent.trim(),
+        ),
+      }
+    }
+
+    // The visit-only country, because that is the row whose two shapes the
+    // bridge exists to reconcile: trip aggregates flat, visits nested.
+    const hovered = new FakeMap()
+    const first = mount(hovered, { countries: [FRANCE, UNITED_STATES] })
+    moveOver(hovered, 'US', -98, 39)
+    const pointed = project(
+      screen
+        .getByTestId('surface-host')
+        .querySelector('[data-part="country-hover"]'),
+    )
+    expect(
+      pointed,
+      'the pointer has to have opened a card to compare',
+    ).not.toBeNull()
+    expect(pointed?.labels).toHaveLength(4)
+
+    first.unmount()
+
+    const pressed = new FakeMap()
+    mount(pressed, {
+      countries: [FRANCE, UNITED_STATES],
+      selectedCode: 'US',
+      selectionToken: 1,
+    })
+    const panel = project(
+      screen
+        .getByTestId('surface-host')
+        .querySelector('[data-part="country-panel"]'),
+    )
+
+    expect(
+      panel,
+      'pointing and pressing are two moments of one surface, not two answers',
+    ).toEqual(pointed)
+  })
+
   it('offers both writes for a country with nothing recorded against it', () => {
     const map = new FakeMap()
     mount(map, { selectedCode: 'DZ', selectionToken: 1 })
