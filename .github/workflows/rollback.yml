@@ -1,0 +1,125 @@
+name: Rollback production
+
+# Puts a known-good Worker version back in front of traffic, without a build.
+#
+# `wrangler rollback` re-points the deployment at a version that is already
+# uploaded, so it is seconds rather than the ~10 minutes a revert-and-redeploy
+# costs. Find the version id with:
+#
+#   pnpm exec wrangler deployments list
+#
+# ── What this does NOT do ─────────────────────────────────────────────────────
+# It does not touch the database. Migrations are additive by policy
+# (docs/DEPLOY.md), which is exactly what makes this safe: the schema the broken
+# version migrated to still serves the older code. A rollback across a migration
+# that was *not* additive is a data incident, not a deploy operation, and this
+# workflow will not tell you which one you have - read the migration first.
+#
+# It also does not move `main`. The bad commit is still what the branch says is
+# deployed, so the follow-up is a revert PR; otherwise the next merge silently
+# re-deploys the version you just rolled back.
+#
+# `workflow_dispatch` only, and deliberately so: an automatic rollback on a red
+# smoke check would flip production back and forth while nobody was reading.
+#
+# ── GitHub configuration this workflow needs ──────────────────────────────────
+# secrets  CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+#          CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET  (the smoke check)
+# ──────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: >
+          The known-good Worker version id, from `wrangler deployments list`.
+        required: true
+        type: string
+      reason:
+        description: One line, for the deployment message and the run log.
+        required: true
+        type: string
+
+# The same group as `deploy.yml`, and that is the point: a rollback must never
+# race the deploy it is undoing, and neither may be cancelled half-way.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    name: Roll production back to ${{ inputs.version_id }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://planned.travel
+
+    steps:
+      # The `secrets` context is not available in a job-level `if`, so the gate
+      # is a first step, as in both deploy workflows.
+      - name: Check deploy credentials are configured
+        id: gate
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            echo '::warning title=Rollback skipped::Set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets to enable rollbacks.'
+          else
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      # For `wrangler.jsonc`: `rollback` reads the Worker name out of it, so
+      # there is a checkout here even though nothing is built.
+      - name: Check out
+        if: steps.gate.outputs.configured == 'true'
+        uses: actions/checkout@v5
+
+      # `--yes` answers the confirmation prompt. Without it the command waits on
+      # a stdin nobody is holding and the job sits until its timeout.
+      - name: Roll the Worker back
+        if: steps.gate.outputs.configured == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          # Keep in step with the `wrangler` devDependency in package.json, as
+          # both deploy workflows do.
+          wranglerVersion: '4.70.0'
+          command: >-
+            rollback ${{ inputs.version_id }} --yes
+            --message "Rollback from GitHub Actions: ${{ inputs.reason }}"
+
+      # The same two requests deploy.yml ends on, for the same reason: proof
+      # that what is now serving actually answers. A rollback that restored a
+      # version just as broken is worth knowing about here rather than from a
+      # customer.
+      - name: Smoke-check the rolled-back deployment
+        if: steps.gate.outputs.configured == 'true'
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          auth=(--header "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+                --header "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET")
+          code=$(curl --silent --show-error --output /dev/null \
+            --write-out '%{http_code}' "${auth[@]}" https://planned.travel/)
+          echo "landing: $code"; test "$code" = 200
+          code=$(curl --silent --show-error --output /dev/null \
+            --header 'Range: bytes=0-15' --write-out '%{http_code}' "${auth[@]}" \
+            https://planned.travel/api/tiles/basemap.pmtiles)
+          echo "tiles: $code"; test "$code" = 206
+
+      - name: Say what to do next
+        if: steps.gate.outputs.configured == 'true'
+        run: |
+          echo "::notice title=Rollback done::Production serves ${{ inputs.version_id }}. \
+          \`main\` still points at the version that was rolled back - open a revert PR, or the \
+          next merge re-deploys it."
