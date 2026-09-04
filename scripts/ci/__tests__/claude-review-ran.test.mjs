@@ -35,7 +35,7 @@ function run(messages) {
   )
   const { status, stdout } = spawnSync(process.execPath, [script], {
     encoding: 'utf-8',
-    env: { ...process.env, EXECUTION_FILE: file },
+    env: { ...process.env, EXECUTION_FILE: file, GITHUB_STEP_SUMMARY: '' },
   })
   return { status, stdout }
 }
@@ -98,5 +98,19 @@ describe('claude-review-ran', () => {
 
   it('fails when the execution output is unreadable', () => {
     expect(run('{ not json').status).toBe(1)
+  })
+
+  /**
+   * The action skips itself before starting Claude on any pull request that edits this workflow -
+   * the OIDC exchange refuses a file that differs from the default branch's copy - and reports
+   * success with no `execution_file`. Failing there would keep every change to the review red.
+   */
+  it('stands down when the action reported no execution output at all', () => {
+    const { status, stdout } = spawnSync(process.execPath, [script], {
+      encoding: 'utf-8',
+      env: { ...process.env, EXECUTION_FILE: '', GITHUB_STEP_SUMMARY: '' },
+    })
+    expect(status).toBe(0)
+    expect(stdout).toContain('::warning::')
   })
 })

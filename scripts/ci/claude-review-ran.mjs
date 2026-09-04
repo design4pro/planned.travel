@@ -23,25 +23,37 @@
  *     alone is one - so a transcript with no subagent in it never started reviewing.
  *
  * Neither signal reads the review's own text, and both are cheap to satisfy honestly.
+ *
+ * An empty `execution_file` is the third case and is not a finding: the action skipped itself
+ * before starting Claude. It does that on any pull request that edits this workflow, because the
+ * OIDC token exchange refuses a workflow file that differs from the one on the default branch -
+ * so a hard failure here would leave every future change to the review permanently red, which is
+ * the same unreadable check from the other side.
  */
 
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { appendFileSync, readFileSync } from 'node:fs'
 
 function fail(reason) {
   console.log(`::error::${reason}`)
   process.exit(1)
 }
 
-const file =
-  process.env.EXECUTION_FILE ||
-  (process.env.RUNNER_TEMP
-    ? join(process.env.RUNNER_TEMP, 'claude-execution-output.json')
-    : '')
+function skip(reason) {
+  console.log(`::warning::${reason}`)
+  const summary = process.env.GITHUB_STEP_SUMMARY
+  if (summary) {
+    appendFileSync(summary, `\n> [!WARNING]\n> ${reason}\n`)
+  }
+  process.exit(0)
+}
+
+const file = process.env.EXECUTION_FILE
 
 if (!file) {
-  fail(
-    'Claude reported success and left no execution output to confirm it reviewed anything.',
+  skip(
+    'The action reported no execution output, so no review was started and this pull request has ' +
+      'not been reviewed. It skips itself this way when the workflow file differs from the copy ' +
+      'on the default branch, which is every pull request that edits the review itself.',
   )
 }
 

@@ -89,6 +89,11 @@ jobs:
 
       # The other half of the same job: the step above catches a review that failed, this one
       # catches a review that succeeded without reviewing. Only one of the two ever runs.
+      #
+      # A pull request that edits this file never reaches either. The action's OIDC exchange
+      # refuses a workflow that differs from the copy on the default branch and skips itself with
+      # no execution output, which the gate reports as a warning rather than a failure - so any
+      # change here is first exercised once it reaches `main`, never on the branch proposing it.
       - name: Fail a review that never read the pull request
         if: steps.claude-review.outcome == 'success'
         env:
