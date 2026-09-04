@@ -25,6 +25,20 @@ const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN
 const uploadsSourceMaps =
   sentryAuthToken !== undefined && sentryAuthToken !== ''
 
+/**
+ * The devtools console relay is a developer affordance, and under Playwright it is a hazard.
+ *
+ * `consolePiping` streams the Worker's own console output into whatever browser page is attached,
+ * prefixed `%c[Server]%c`. A seeded sign-up's auth email dead-letters under e2e (`EMAIL_API_KEY` is
+ * never set there), `logger.error` writes two `console.error` lines, and the relay drops them into
+ * whichever spec happens to have a page open at that moment - where `classifyConsoleMessage()`
+ * fails the run on someone else's background error. Which spec catches it is a lottery, so the red
+ * moves from run to run.
+ *
+ * Off under e2e, plugin default (`enabled: true`) everywhere else, so `pnpm dev` keeps the relay.
+ */
+const isE2E = process.env.E2E === '1'
+
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   build: { sourcemap: uploadsSourceMaps ? 'hidden' : false },
@@ -48,7 +62,7 @@ const config = defineConfig({
     },
   },
   plugins: [
-    devtools(),
+    devtools(isE2E ? { consolePiping: { enabled: false } } : undefined),
     cloudflare({ viteEnvironment: { name: 'ssr' } }),
     tailwindcss(),
     tanstackStart(),
