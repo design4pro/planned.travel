@@ -1,0 +1,2 @@
+ALTER TABLE `day_accommodations` ADD `reservation_id` text REFERENCES reservations(id);--> statement-breakpoint
+CREATE INDEX `day_accommodations_reservation_idx` ON `day_accommodations` (`reservation_id`);

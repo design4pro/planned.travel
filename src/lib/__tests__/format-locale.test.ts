@@ -602,18 +602,23 @@ describe('the shipped source under src/lib', () => {
   })
 
   /**
-   * The two literals in `src/lib` that no reader ever sees.
+   * The three literals in `src/lib` that no reader ever sees.
    *
    * `time.ts` hands `en-GB` to `Intl` to find out whether a time-zone name is
    * one the runtime knows, and throws the formatter away without formatting
    * anything. It picks `en-CA` for the cache key because that locale's numeric
    * date format is already `YYYY-MM-DD`, so the key needs no reassembly from
-   * parts. Neither choice reaches a screen; both would be wrong as a reader's
-   * locale, and that is the point.
+   * parts. `timezones.ts` picks `en-CA` for the same reason and for a stronger
+   * one: it reads *numeric* parts to derive a zone's offset arithmetically,
+   * because `timeZoneName: 'shortOffset'` resolves its names from the engine's
+   * own ICU build and workerd and WebKit do not always agree. None of the three
+   * reaches a screen; all three would be wrong as a reader's locale, and that
+   * is the point.
    */
   const PINNED_BY_DESIGN: ReadonlyArray<string> = [
     'time.ts: en-GB',
     'time.ts: en-CA',
+    'timezones.ts: en-CA',
   ]
 
   it('never pins a locale tag as a literal', () => {

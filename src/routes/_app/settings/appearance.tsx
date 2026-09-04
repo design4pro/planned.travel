@@ -77,6 +77,7 @@ function AppearancePage() {
   const t = useTranslate()
 
   const [reduceMotion, setReduceMotion] = useState(data.reduceMotion)
+  const [maskCodes, setMaskCodes] = useState(data.maskConfirmationCodes)
   const [mapStyle, setMapStyle] = useState(
     data.mapStyle === data.workspaceMapStyle
       ? WORKSPACE_MAP_STYLE
@@ -216,6 +217,36 @@ function AppearancePage() {
                   ariaLabel={t('settings.appearance.map.label')}
                 />
               </Field>
+            }
+          />
+        </div>
+      </SettingsSection>
+
+      {/*
+        A privacy switch and not a motion one, so it gets its own section rather
+        than being filed under “Motion and maps”. Additive: the reduce-motion row
+        above is the idiom it follows — local state moves first, the write
+        follows, and a refused write leaves the switch where the reader put it
+        with the toast saying so, never snapping back under their hand.
+      */}
+      <SettingsSection title={t('settings.appearance.privacy.title')}>
+        <div className="flex flex-col">
+          <SettingsRow
+            label={t('settings.appearance.privacy.codesLabel')}
+            hint={t('settings.appearance.privacy.codesHint')}
+            control={
+              <div className="flex sm:justify-end">
+                <Switch
+                  data-part="mask-confirmation-codes"
+                  checked={maskCodes}
+                  disabled={busy}
+                  aria-label={t('settings.appearance.privacy.codesLabel')}
+                  onCheckedChange={(next) => {
+                    setMaskCodes(next)
+                    void persist({ maskConfirmationCodes: next })
+                  }}
+                />
+              </div>
             }
           />
         </div>

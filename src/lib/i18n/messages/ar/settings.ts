@@ -159,6 +159,11 @@ const messages = {
   'appearance.map.workspace': 'اتبع مساحة العمل',
   'appearance.map.light': 'ورقي — فاتح',
   'appearance.map.dark': 'فحمي — داكن',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'على شاشة مشتركة',
+  'appearance.privacy.codesLabel': 'إخفاء رموز التأكيد حتى أطلبها',
+  'appearance.privacy.codesHint':
+    'تبقى مراجع الحجز وأرقام التأكيد مخفيّة في مكتب الحجوزات وفي التنقلات حتى تمرّ فوقها أو تركّز عليها أو تنقرها. أما الأسعار فلا تُخفى أبداً.',
   'appearance.saveFailed': 'لم يُخزَّن ذلك التغيير',
   'appearance.saveFailedBody':
     'يظهر هنا، لكن الجهاز التالي الذي تسجّل منه الدخول لن يحمله.',
