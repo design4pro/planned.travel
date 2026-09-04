@@ -63,18 +63,9 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: pnpm/action-setup@v4
+      - name: Set up the toolchain
         if: steps.gate.outputs.configured == 'true'
-
-      - uses: actions/setup-node@v5
-        if: steps.gate.outputs.configured == 'true'
-        with:
-          node-version: 24.x
-          cache: pnpm
-
-      - name: Install dependencies
-        if: steps.gate.outputs.configured == 'true'
-        run: pnpm install --frozen-lockfile
+        uses: ./.github/actions/setup
 
       - name: Install the Claude Code CLI
         if: steps.gate.outputs.configured == 'true'

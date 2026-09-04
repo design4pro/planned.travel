@@ -48,6 +48,31 @@ function called(name) {
   }
 }
 
+/**
+ * A backgrounded subagent, as the SDK streams it: `task_started` announces it, and
+ * `task_notification` reports it when it is done. Omitting the second is run 33895385603 - the
+ * session ended while the agent was still working.
+ */
+function subagent(id, { reported = true, status = 'completed' } = {}) {
+  const messages = [
+    {
+      type: 'system',
+      subtype: 'task_started',
+      task_id: id,
+      description: `Check PR review eligibility (${id})`,
+    },
+  ]
+  if (reported) {
+    messages.push({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: id,
+      status,
+    })
+  }
+  return messages
+}
+
 /** The terminal message of a run the action reports as a success. */
 function finished(extra = {}) {
   return {
@@ -65,6 +90,15 @@ describe('claude-review-ran', () => {
     const { status, stdout } = run([called('Task'), finished()])
     expect(status).toBe(0)
     expect(stdout).toContain('::notice::')
+  })
+
+  /**
+   * The plugin spawned subagents with `Task` when this script was written and with `Agent` from
+   * Claude Code 2.1.260 on. Run 33895385603 called `Agent`, and a check that knew only `Task`
+   * failed a review for a reason that was not true.
+   */
+  it('accepts `Agent` as a subagent spawn, not only `Task`', () => {
+    expect(run([called('Agent'), finished()]).status).toBe(0)
   })
 
   it('fails the run whose tools were denied, green though the action called it', () => {
@@ -90,6 +124,71 @@ describe('claude-review-ran', () => {
     expect(
       run([finished({ permission_denials_count: undefined })]).status,
     ).toBe(1)
+  })
+
+  /**
+   * Run 33895385603: `Agent` was called with `run_in_background`, the review announced it would
+   * wait for the notification, and the session ended six turns later with the eligibility check
+   * still running. Spawning is not reading.
+   */
+  it('fails a run that ended while a subagent was still working', () => {
+    const { status, stdout } = run([
+      called('Agent'),
+      ...subagent('ae897656e60f5c2d8', { reported: false }),
+      finished(),
+    ])
+    expect(status).toBe(1)
+    expect(stdout).toContain('still working')
+    expect(stdout).toContain('ae897656e60f5c2d8')
+  })
+
+  it('passes when every subagent it started reported back', () => {
+    const { status, stdout } = run([
+      called('Agent'),
+      ...subagent('one'),
+      ...subagent('two'),
+      finished(),
+    ])
+    expect(status).toBe(0)
+    expect(stdout).toContain('2 subagent(s) reported')
+  })
+
+  /**
+   * A subagent that failed still handed the review something to react to; one still running when
+   * the session ended did not. Only the second is this check's business.
+   */
+  it('counts a failed subagent as reported', () => {
+    expect(
+      run([
+        called('Agent'),
+        ...subagent('one', { status: 'failed' }),
+        finished(),
+      ]).status,
+    ).toBe(0)
+    expect(
+      run([
+        called('Agent'),
+        ...subagent('one', { status: 'running' }),
+        finished(),
+      ]).status,
+    ).toBe(1)
+  })
+
+  /** `task_updated` carries the status under `patch`, `task_notification` at the top level. */
+  it('reads a completion reported through task_updated', () => {
+    expect(
+      run([
+        called('Agent'),
+        ...subagent('one', { reported: false }),
+        {
+          type: 'system',
+          subtype: 'task_updated',
+          task_id: 'one',
+          patch: { status: 'completed' },
+        },
+        finished(),
+      ]).status,
+    ).toBe(0)
   })
 
   it('fails when the run never reported a result', () => {
