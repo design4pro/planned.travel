@@ -91,6 +91,7 @@ const messages = {
   'transports.field.place': 'Luogo',
   'transports.field.code': 'Codice',
   'transports.field.date': 'Data',
+  'transports.field.time': 'Partenza dopo le',
   'transports.field.departurePlaceholder': 'Roma Fiumicino',
   'transports.field.arrivalPlaceholder': 'Aeroporto di Tokyo-Haneda',
   'transports.field.carrier': 'Vettore',
@@ -514,6 +515,8 @@ const messages = {
   'transports.connection.fromHint':
     'Scegli una fermata — a un orario si chiede dove, non come si chiama.',
   'transports.connection.toHint': 'Scegli una fermata dal catalogo.',
+  'transports.connection.timeHint':
+    'Un orario risponde con le prossime partenze, quindi questo decide quali.',
   'transports.connection.onlyModes': 'Solo questi modi',
   'transports.connection.searching': 'Cerco negli orari',
   'transports.connection.search': 'Cerca connessioni',

@@ -86,6 +86,7 @@ const messages = {
   'transports.field.place': 'Plats',
   'transports.field.code': 'Kod',
   'transports.field.date': 'Datum',
+  'transports.field.time': 'Avgång efter',
   'transports.field.departurePlaceholder': 'Stockholm Arlanda',
   'transports.field.arrivalPlaceholder': 'Tokyo-Haneda',
   'transports.field.carrier': 'Bolag',
@@ -493,6 +494,8 @@ const messages = {
   'transports.connection.fromHint':
     'Välj ett stopp — en tidtabell får frågan var, inte vad det heter.',
   'transports.connection.toHint': 'Välj ett stopp ur katalogen.',
+  'transports.connection.timeHint':
+    'En tidtabell svarar med de närmaste avgångarna, så det här avgör vilka.',
   'transports.connection.onlyModes': 'Bara de här färdsätten',
   'transports.connection.searching': 'Söker i tidtabellen',
   'transports.connection.search': 'Sök förbindelser',

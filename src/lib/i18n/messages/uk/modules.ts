@@ -94,6 +94,7 @@ const messages = {
   'transports.field.place': 'Місце',
   'transports.field.code': 'Код',
   'transports.field.date': 'Дата',
+  'transports.field.time': 'Відправлення після',
   'transports.field.departurePlaceholder': 'Київ Бориспіль',
   'transports.field.arrivalPlaceholder': 'Токіо Наріта',
   'transports.field.carrier': 'Перевізник',
@@ -511,6 +512,8 @@ const messages = {
   'transports.connection.fromHint':
     'Оберіть зупинку — розклад питають де, а не як це зветься.',
   'transports.connection.toHint': 'Оберіть зупинку з каталогу.',
+  'transports.connection.timeHint':
+    'Розклад відповідає найближчими рейсами, тож саме це вирішує, якими.',
   'transports.connection.onlyModes': 'Лише ці види',
   'transports.connection.searching': 'Шукаємо в розкладі',
   'transports.connection.search': 'Шукати сполучення',

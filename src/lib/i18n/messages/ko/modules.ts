@@ -80,6 +80,7 @@ const messages = {
   'transports.field.place': '장소',
   'transports.field.code': '코드',
   'transports.field.date': '날짜',
+  'transports.field.time': '이 시각 이후 출발',
   'transports.field.departurePlaceholder': '서울 인천',
   'transports.field.arrivalPlaceholder': '도쿄 하네다',
   'transports.field.carrier': '운항사',
@@ -475,6 +476,8 @@ const messages = {
   'transports.connection.fromHint':
     '정류장을 고르세요 — 시간표에 묻는 것은 장소이지 이름이 아닙니다.',
   'transports.connection.toHint': '목록에서 정류장을 고르세요.',
+  'transports.connection.timeHint':
+    '시간표는 바로 다음 몇 편으로 답하므로, 이 시각이 어떤 편인지를 정합니다.',
   'transports.connection.onlyModes': '이 수단만',
   'transports.connection.searching': '시간표를 찾는 중',
   'transports.connection.search': '연결 검색',

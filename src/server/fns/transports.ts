@@ -704,6 +704,7 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
       origin: data.origin,
       destination: data.destination,
       date: data.date,
+      time: data.time,
       modes: data.modes,
     }
 

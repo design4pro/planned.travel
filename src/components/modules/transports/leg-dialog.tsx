@@ -373,14 +373,16 @@ export function LegDialog({
      * "this transport has no legs", which is what removes the rows a journey
      * used to have when the traveller puts it back together.
      */
+    // Remembered here rather than on the failure below. From the moment the record exists this
+    // dialog is editing it, and every way out - a chain that does not land, a press that arrives
+    // while one is in flight - has to finish that transport rather than start a second one.
     const transportId = result.transportId
+    setSavedId(transportId)
+
     const chained = await saveChain.run({
       data: { tripId, transportId, ...chainPayload(chain) },
     })
     if (chained === null) {
-      // The record is written and its legs are not. Remembering the id is what makes the next
-      // press finish this transport rather than start another one.
-      setSavedId(transportId)
       return
     }
     onOpenChange(false)
@@ -457,9 +459,15 @@ export function LegDialog({
                 void submit()
               }}
             >
-              {action.error === null ? null : (
+              {/*
+                Both writes, because they are two calls behind one button. The chain is written
+                after the record, so a chain that fails leaves the record saved and the dialog
+                open - and rendering only the record's error would leave that state with nothing
+                on screen to explain it, which is the state that invites a second press.
+              */}
+              {(action.error ?? saveChain.error) === null ? null : (
                 <Alert tone="danger" title={t('modules.form.saveError')}>
-                  {action.error}
+                  {action.error ?? saveChain.error}
                 </Alert>
               )}
 
@@ -907,7 +915,14 @@ export function LegDialog({
               variant="primary"
               shape="pill"
               disabled={touched && invalid}
-              loading={action.pending}
+              /*
+                Both writes. `useAction` clears its own `pending` in a `finally`, so the record's
+                clears the moment it resolves - while the chain write it is followed by is still in
+                flight. Reading only the record's would re-enable the button inside that window,
+                and `savedId` is not set until the chain write *fails*, so a press there starts a
+                second transport rather than finishing this one.
+              */
+              loading={action.pending || saveChain.pending}
               loadingLabel={t('modules.transports.action.saving')}
             >
               {editing

@@ -85,6 +85,7 @@ const messages = {
   'transports.field.place': 'Hely',
   'transports.field.code': 'Kód',
   'transports.field.date': 'Dátum',
+  'transports.field.time': 'Indulás ettől',
   'transports.field.departurePlaceholder': 'Budapest Liszt Ferenc',
   'transports.field.arrivalPlaceholder': 'Tokió Haneda',
   'transports.field.carrier': 'Szolgáltató',
@@ -502,6 +503,8 @@ const messages = {
   'transports.connection.fromHint':
     'Válassz megállót — a menetrendet arról kérdezed, hol, nem arról, hogy hívják.',
   'transports.connection.toHint': 'Válassz megállót a katalógusból.',
+  'transports.connection.timeHint':
+    'A menetrend a következő indulásokkal válaszol, ez dönti el, melyekkel.',
   'transports.connection.onlyModes': 'Csak ezek a módok',
   'transports.connection.searching': 'Keresek a menetrendben',
   'transports.connection.search': 'Kapcsolatok keresése',

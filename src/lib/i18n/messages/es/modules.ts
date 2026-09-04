@@ -90,6 +90,7 @@ const messages = {
   'transports.field.place': 'Lugar',
   'transports.field.code': 'Código',
   'transports.field.date': 'Fecha',
+  'transports.field.time': 'Salida a partir de',
   'transports.field.departurePlaceholder': 'Madrid Barajas',
   'transports.field.arrivalPlaceholder': 'Tokio Haneda',
   'transports.field.carrier': 'Compañía',
@@ -511,6 +512,8 @@ const messages = {
   'transports.connection.fromHint':
     'Elige una parada — a un horario se le pregunta dónde, no cómo se llama.',
   'transports.connection.toHint': 'Elige una parada del catálogo.',
+  'transports.connection.timeHint':
+    'Un horario responde con las próximas salidas, así que esto decide cuáles.',
   'transports.connection.onlyModes': 'Solo estos modos',
   'transports.connection.searching': 'Buscando en los horarios',
   'transports.connection.search': 'Busca conexiones',

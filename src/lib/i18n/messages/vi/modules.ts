@@ -82,6 +82,7 @@ const messages = {
   'transports.field.place': 'Nơi',
   'transports.field.code': 'Mã',
   'transports.field.date': 'Ngày',
+  'transports.field.time': 'Khởi hành sau',
   'transports.field.departurePlaceholder': 'TP.HCM Tân Sơn Nhất',
   'transports.field.arrivalPlaceholder': 'Sân bay Tokyo Haneda',
   'transports.field.carrier': 'Hãng',
@@ -489,6 +490,8 @@ const messages = {
   'transports.connection.fromHint':
     'Hãy chọn một điểm dừng — thời gian biểu được hỏi ở đâu, không phải tên gọi.',
   'transports.connection.toHint': 'Hãy chọn một điểm dừng từ danh mục.',
+  'transports.connection.timeHint':
+    'Lịch trình trả về vài chuyến kế tiếp, nên giờ này quyết định là những chuyến nào.',
   'transports.connection.onlyModes': 'Chỉ những phương tiện này',
   'transports.connection.searching': 'Đang tìm trong thời gian biểu',
   'transports.connection.search': 'Tìm tuyến',

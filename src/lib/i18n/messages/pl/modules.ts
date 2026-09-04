@@ -93,6 +93,7 @@ const messages = {
   'transports.field.place': 'Miejsce',
   'transports.field.code': 'Kod',
   'transports.field.date': 'Data',
+  'transports.field.time': 'Odjazd po',
   'transports.field.departurePlaceholder': 'Warszawa Okęcie',
   'transports.field.arrivalPlaceholder': 'Tokio Narita',
   'transports.field.carrier': 'Przewoźnik',
@@ -517,6 +518,8 @@ const messages = {
   'transports.connection.fromHint':
     'Wybierz przystanek — rozkładu pytasz gdzie, a nie jak się nazywa.',
   'transports.connection.toHint': 'Wybierz przystanek z katalogu.',
+  'transports.connection.timeHint':
+    'Rozkład odpowiada kilkoma najbliższymi odjazdami, więc to decyduje którymi.',
   'transports.connection.onlyModes': 'Tylko te środki',
   'transports.connection.searching': 'Przeszukuję rozkłady',
   'transports.connection.search': 'Szukaj połączeń',

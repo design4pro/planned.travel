@@ -93,6 +93,7 @@ const messages = {
   'transports.field.place': 'Místo',
   'transports.field.code': 'Kód',
   'transports.field.date': 'Datum',
+  'transports.field.time': 'Odjezd po',
   'transports.field.departurePlaceholder': 'Praha Ruzyně',
   'transports.field.arrivalPlaceholder': 'Tokio Narita',
   'transports.field.carrier': 'Dopravce',
@@ -507,6 +508,8 @@ const messages = {
   'transports.connection.fromHint':
     'Vyber zastávku — jízdního řádu se ptáš kde, ne jak se to jmenuje.',
   'transports.connection.toHint': 'Vyber zastávku z katalogu.',
+  'transports.connection.timeHint':
+    'Jízdní řád odpoví několika nejbližšími spoji, tohle rozhoduje kterými.',
   'transports.connection.onlyModes': 'Jen tyhle módy',
   'transports.connection.searching': 'Prohledávám jízdní řády',
   'transports.connection.search': 'Hledat spojení',

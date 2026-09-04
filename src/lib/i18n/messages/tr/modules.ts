@@ -85,6 +85,7 @@ const messages = {
   'transports.field.place': 'Yer',
   'transports.field.code': 'Kod',
   'transports.field.date': 'Tarih',
+  'transports.field.time': 'Şu saatten sonra',
   'transports.field.departurePlaceholder': 'İstanbul Havalimanı',
   'transports.field.arrivalPlaceholder': 'Tokyo Haneda Havalimanı',
   'transports.field.carrier': 'Taşıyıcı',
@@ -491,6 +492,8 @@ const messages = {
   'transports.connection.fromHint':
     'Bir durak seç — tarifeye nerede diye sorulur, adı ne diye değil.',
   'transports.connection.toHint': 'Katalogdan bir durak seç.',
+  'transports.connection.timeHint':
+    'Tarife en yakın birkaç kalkışı döndürür; hangileri olduğunu bu belirler.',
   'transports.connection.onlyModes': 'Yalnızca bu türler',
   'transports.connection.searching': 'Tarife aranıyor',
   'transports.connection.search': 'Bağlantı ara',

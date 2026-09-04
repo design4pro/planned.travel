@@ -80,6 +80,7 @@ const messages = {
   'transports.field.place': '場所',
   'transports.field.code': 'コード',
   'transports.field.date': '日付',
+  'transports.field.time': '出発時刻以降',
   'transports.field.departurePlaceholder': '東京 羽田',
   'transports.field.arrivalPlaceholder': 'パリ シャルル・ド・ゴール',
   'transports.field.carrier': '運行会社',
@@ -477,6 +478,8 @@ const messages = {
   'transports.connection.fromHint':
     '停留所を選んでください — 時刻表が尋ねるのは場所で、名前ではありません。',
   'transports.connection.toHint': '目録から停留所を選んでください。',
+  'transports.connection.timeHint':
+    '時刻表は直後の数便を返すため、ここでどの便かが決まります。',
   'transports.connection.onlyModes': 'この手段だけ',
   'transports.connection.searching': '時刻表を検索しています',
   'transports.connection.search': '接続を検索',

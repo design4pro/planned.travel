@@ -41,6 +41,7 @@ export {
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
   applyStationMatch,
+  applyTypedCodeMatch,
   blockingLegErrors,
   breakIntoLegs,
   chainFromTransport,

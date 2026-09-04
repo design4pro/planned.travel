@@ -86,6 +86,7 @@ const messages = {
   'transports.field.place': 'Ort',
   'transports.field.code': 'Kürzel',
   'transports.field.date': 'Datum',
+  'transports.field.time': 'Abfahrt ab',
   'transports.field.departurePlaceholder': 'Frankfurt Flughafen',
   'transports.field.arrivalPlaceholder': 'Tokio Haneda',
   'transports.field.carrier': 'Anbieter',
@@ -511,6 +512,8 @@ const messages = {
   'transports.connection.fromHint':
     'Wähle einen Halt — ein Fahrplan wird gefragt wo, nicht wie es heißt.',
   'transports.connection.toHint': 'Wähle einen Halt aus dem Katalog.',
+  'transports.connection.timeHint':
+    'Ein Fahrplan antwortet mit den nächsten Abfahrten - das hier entscheidet, mit welchen.',
   'transports.connection.onlyModes': 'Nur diese Modi',
   'transports.connection.searching': 'Fahrplan wird durchsucht',
   'transports.connection.search': 'Verbindungen suchen',

@@ -1138,6 +1138,31 @@ export function fillStationFromCode(
 }
 
 /**
+ * A lookup answer applied to the station as it stands **now**, or that station untouched.
+ *
+ * The code field's lookup runs on blur, and two blurs are two calls with no ordering between them,
+ * so an earlier one can land last. Type `NRT`, tab out, correct it to `HND`, tab out: if `HND`
+ * answers first it fills the then-blank name, zone and coordinates, and the late `NRT` answer then
+ * meets {@link fillStationFromCode}'s non-blank guards on every field except the one they do not
+ * cover. That field is the code itself, which is canonicalised unconditionally — so the row is
+ * left reading `NRT` at Haneda's coordinates, and nothing on screen says so.
+ *
+ * The guard is a comparison rather than a sequence token because of what is stale here. An answer
+ * that no longer matches what the field asks is worthless whatever its order; an edit made while
+ * it was in the air is not, and has to survive. So `station` is the current draft rather than the
+ * one the lookup was started from, and the answer is kept only while the two still agree.
+ */
+export function applyTypedCodeMatch(
+  station: StationDraft,
+  code: string,
+  match: StationLookup,
+): StationDraft {
+  return station.code.trim().toUpperCase() === code.trim().toUpperCase()
+    ? fillStationFromCode(station, match)
+    : station
+}
+
+/**
  * Whether a typed code is worth asking the catalogue about.
  *
  * The lookup runs when the traveller leaves the code field, so this is what

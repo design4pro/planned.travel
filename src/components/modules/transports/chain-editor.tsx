@@ -61,7 +61,7 @@ import {
   applyStationMatch,
   dayLabel,
   endpointLabels,
-  fillStationFromCode,
+  applyTypedCodeMatch,
   isLookupCode,
   removeStationAt,
   splitLegAt,
@@ -264,6 +264,15 @@ function StationRow({
    * a timezone picked while the answer was in the air would silently revert. `useStationSearch`
    * guards the same race above with its `live` flag; here the concurrent edit has to survive
    * rather than be discarded, so the fill is applied to the current station instead.
+   *
+   * And applied only while it is still an answer to the question the field is asking. Two blurs
+   * are two calls with no ordering between them, so an earlier one can land last: type `NRT`, tab
+   * out, correct it to `HND`, tab out. If `HND` answers first it fills the then-blank name, zone
+   * and coordinates; the late `NRT` then meets those non-blank guards and rewrites the one field
+   * they do not cover — the code — leaving a stop reading `NRT` at Haneda's coordinates. Comparing
+   * the answered code against the field as it stands now is what discards it instead, and it is a
+   * comparison rather than a `live` flag for the same reason as above: what is stale is the
+   * answer, not the edit that overtook it.
    */
   async function resolveTypedCode(): Promise<void> {
     const code = station.code.trim()
@@ -271,9 +280,10 @@ function StationRow({
       return
     }
     const match = await findStationFn({ data: { code } }).catch(() => null)
-    if (match !== null) {
-      onResolve((current) => fillStationFromCode(current, match))
+    if (match === null) {
+      return
     }
+    onResolve((current) => applyTypedCodeMatch(current, code, match))
   }
 
   return (

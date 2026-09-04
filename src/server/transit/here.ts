@@ -44,7 +44,12 @@ export const HERE_TRANSIT_ENDPOINT =
 /** Long enough for a slow timetable, short enough that a dialog is never hung on one. */
 export const HERE_TIMEOUT_MS = 10_000
 
-/** How many alternatives to ask for. Five is a list a person reads; twenty is a list they scroll. */
+/**
+ * How many alternatives to ask for. Five is a list a person reads; twenty is a list they scroll.
+ *
+ * Which is why {@link TransitQuery} carries a departure clock: the router answers with the five
+ * services after the instant it is given, so *when* the window opens decides what is in it.
+ */
 const ALTERNATIVES = 5
 
 /* ---------------------------------------------------------------- the wire */
@@ -281,7 +286,7 @@ function requestUrl(options: HereClientOptions, query: TransitQuery): URL {
     'destination',
     `${query.destination.lat},${query.destination.lng}`,
   )
-  url.searchParams.set('departureTime', `${query.date}T00:00:00`)
+  url.searchParams.set('departureTime', `${query.date}T${query.time}:00`)
   url.searchParams.set('alternatives', String(ALTERNATIVES))
   url.searchParams.set('return', 'intermediate,fares')
   const modes = query.modes.flatMap((mode) => HERE_FOR_MODE[mode] ?? [])

@@ -82,6 +82,7 @@ const messages = {
   'transports.field.place': 'Tempat',
   'transports.field.code': 'Kode',
   'transports.field.date': 'Tanggal',
+  'transports.field.time': 'Berangkat setelah',
   'transports.field.departurePlaceholder': 'Jakarta Soekarno-Hatta',
   'transports.field.arrivalPlaceholder': 'Bandara Tokyo Haneda',
   'transports.field.carrier': 'Maskapai',
@@ -495,6 +496,8 @@ const messages = {
   'transports.connection.fromHint':
     'Pilih perhentian — jadwal ditanya di mana, bukan apa namanya.',
   'transports.connection.toHint': 'Pilih perhentian dari katalog.',
+  'transports.connection.timeHint':
+    'Jadwal menjawab dengan beberapa keberangkatan berikutnya, jadi ini yang menentukan.',
   'transports.connection.onlyModes': 'Hanya moda ini',
   'transports.connection.searching': 'Mencari di jadwal',
   'transports.connection.search': 'Cari koneksi',

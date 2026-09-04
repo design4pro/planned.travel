@@ -80,6 +80,7 @@ const messages = {
   'transports.field.place': '地點',
   'transports.field.code': '代碼',
   'transports.field.date': '日期',
+  'transports.field.time': '此時間之後出發',
   'transports.field.departurePlaceholder': '臺北桃園',
   'transports.field.arrivalPlaceholder': '東京羽田',
   'transports.field.carrier': '承運方',
@@ -463,6 +464,8 @@ const messages = {
   'transports.connection.fromHint':
     '請選一個站點 — 時刻表問的是地點，不是它叫什麼。',
   'transports.connection.toHint': '請從目錄中選一個站點。',
+  'transports.connection.timeHint':
+    '時刻表只回傳隨後的幾班車次，所以這個時間決定了是哪幾班。',
   'transports.connection.onlyModes': '只要這些方式',
   'transports.connection.searching': '正在搜尋時刻表',
   'transports.connection.search': '搜尋路線',

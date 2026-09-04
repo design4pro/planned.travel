@@ -156,6 +156,7 @@ const messages = {
   'transports.field.place': 'Place',
   'transports.field.code': 'Code',
   'transports.field.date': 'Date',
+  'transports.field.time': 'Leaving after',
   'transports.field.departurePlaceholder': 'London Heathrow',
   'transports.field.arrivalPlaceholder': 'Tokyo Haneda',
   'transports.field.carrier': 'Carrier',
@@ -649,6 +650,8 @@ const messages = {
   'transports.connection.fromHint':
     'Pick a stop — a timetable is asked where, not what it is called.',
   'transports.connection.toHint': 'Pick a stop from the catalogue.',
+  'transports.connection.timeHint':
+    'A timetable answers with the next few departures, so this decides which ones.',
   'transports.connection.onlyModes': 'Only these modes',
   'transports.connection.searching': 'Searching the timetable',
   'transports.connection.search': 'Search connections',

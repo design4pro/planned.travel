@@ -88,6 +88,17 @@ const MODE_FILTERS: ReadonlyArray<TransitMode> = [
   'ferry',
 ]
 
+/**
+ * The clock a search starts from before the traveller moves it.
+ *
+ * Some hour has to be picked, and midnight is the one hour that cannot be right: the router
+ * returns the five services after the instant it is given, so a midnight search is a search of the
+ * night trains. Eight is the earliest hour a person plans an ordinary day around, which makes it
+ * the choice that hides the fewest services - anything before it is still reachable by moving the
+ * field back, and everything after it is in the window already.
+ */
+const DEFAULT_DEPARTURE_TIME = '08:00'
+
 type Ranking = 'earliest' | 'fewest-changes'
 
 const RANKINGS: ReadonlyArray<{
@@ -658,6 +669,7 @@ export function ConnectionSearch({
   const [origin, setOrigin] = useState<StationMatch | null>(null)
   const [destination, setDestination] = useState<StationMatch | null>(null)
   const [date, setDate] = useState(() => dated.at(0) ?? '')
+  const [time, setTime] = useState(DEFAULT_DEPARTURE_TIME)
   const [modes, setModes] = useState<ReadonlyArray<TransitMode>>([])
   const [ranking, setRanking] = useState<Ranking>('earliest')
   const [outcome, setOutcome] = useState<ConnectionSearchOutcome | null>(null)
@@ -691,7 +703,7 @@ export function ConnectionSearch({
    */
   const from = placeOf(origin)
   const to = placeOf(destination)
-  const ready = from !== null && to !== null && date !== ''
+  const ready = from !== null && to !== null && date !== '' && time !== ''
   const results = useMemo(
     () =>
       outcome !== null && outcome.ok
@@ -720,6 +732,7 @@ export function ConnectionSearch({
           origin: from,
           destination: to,
           date,
+          time,
           modes: [...modes],
         },
       }),
@@ -768,7 +781,7 @@ export function ConnectionSearch({
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
+      <div className="grid gap-4 sm:grid-cols-[12rem_8rem_minmax(0,1fr)]">
         <Field label={t('modules.transports.field.date')}>
           <Input
             type="date"
@@ -776,6 +789,21 @@ export function ConnectionSearch({
             min={dated.at(0)}
             max={dated.at(-1)}
             onChange={(event) => setDate(event.target.value)}
+          />
+        </Field>
+        {/*
+          Not a refinement of the date but the other half of the question. The router answers with
+          the services after an instant, five of them, so a search with no clock is a search of the
+          night - see `transports.connection.fromHint` for the same point about the stops.
+        */}
+        <Field
+          label={t('modules.transports.field.time')}
+          hint={t('modules.transports.connection.timeHint')}
+        >
+          <Input
+            type="time"
+            value={time}
+            onChange={(event) => setTime(event.target.value)}
           />
         </Field>
         <fieldset className="min-w-0">

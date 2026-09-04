@@ -20,8 +20,9 @@
  * traveller could learn about another workspace, because they carry nothing about any workspace.
  * §5's global-table clauses — an explicit actor, `requirePermission`, an audit row — bind the
  * *write* paths of the global tables. Nothing here writes: the artefact is built by
- * `scripts/build-airports.mjs` and loaded out of band, and this module has no insert, no update and
- * no delete.
+ * `scripts/build-airports.mjs` when the dataset is refreshed and loaded by `scripts/seed/airports.mjs`
+ * when a checkout is provisioned or a deployment carries a new cut — both out of band, neither on a
+ * request path — and this module has no insert, no update and no delete.
  *
  * ## The type-ahead is a shortcut over free text and never a gate in front of it
  *

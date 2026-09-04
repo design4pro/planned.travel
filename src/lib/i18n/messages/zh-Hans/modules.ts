@@ -80,6 +80,7 @@ const messages = {
   'transports.field.place': '地点',
   'transports.field.code': '代码',
   'transports.field.date': '日期',
+  'transports.field.time': '此时间之后出发',
   'transports.field.departurePlaceholder': '北京首都',
   'transports.field.arrivalPlaceholder': '东京羽田',
   'transports.field.carrier': '承运方',
@@ -463,6 +464,8 @@ const messages = {
   'transports.connection.fromHint':
     '请选一个站点 — 时刻表问的是地点，不是它叫什么。',
   'transports.connection.toHint': '请从目录中选一个站点。',
+  'transports.connection.timeHint':
+    '时刻表只返回随后的几班车次，所以这个时间决定了是哪几班。',
   'transports.connection.onlyModes': '只要这些方式',
   'transports.connection.searching': '正在搜索时刻表',
   'transports.connection.search': '搜索路线',

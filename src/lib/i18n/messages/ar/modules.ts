@@ -100,6 +100,7 @@ const messages = {
   'transports.field.place': 'المكان',
   'transports.field.code': 'الرمز',
   'transports.field.date': 'التاريخ',
+  'transports.field.time': 'المغادرة بعد',
   'transports.field.departurePlaceholder': 'دبي الدولي',
   'transports.field.arrivalPlaceholder': 'طوكيو هانيدا',
   'transports.field.carrier': 'الناقل',
@@ -512,6 +513,8 @@ const messages = {
   'transports.connection.fromHint':
     'اختر محطة — الجداول تُسأل عن المكان، لا عن اسمه.',
   'transports.connection.toHint': 'اختر محطة من الفهرس.',
+  'transports.connection.timeHint':
+    'يردّ الجدول بالرحلات القليلة التالية، فهذا الوقت يحدّد أيّها.',
   'transports.connection.onlyModes': 'هذه الوسائل فقط',
   'transports.connection.searching': 'يجري البحث في الجداول',
   'transports.connection.search': 'ابحث عن رحلات',

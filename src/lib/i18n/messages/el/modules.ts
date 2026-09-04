@@ -87,6 +87,7 @@ const messages = {
   'transports.field.place': 'Τόπος',
   'transports.field.code': 'Κωδικός',
   'transports.field.date': 'Ημερομηνία',
+  'transports.field.time': 'Αναχώρηση μετά τις',
   'transports.field.departurePlaceholder': 'Αθήνα Ελ. Βενιζέλος',
   'transports.field.arrivalPlaceholder': 'Τόκιο Χανέντα',
   'transports.field.carrier': 'Μεταφορέας',
@@ -508,6 +509,8 @@ const messages = {
   'transports.connection.fromHint':
     'Διάλεξε στάση — ένα δρομολόγιο ρωτιέται πού, όχι πώς λέγεται.',
   'transports.connection.toHint': 'Διάλεξε στάση από τον κατάλογο.',
+  'transports.connection.timeHint':
+    'Το δρομολόγιο απαντά με τις επόμενες αναχωρήσεις· αυτό κρίνει ποιες.',
   'transports.connection.onlyModes': 'Μόνο αυτά τα μέσα',
   'transports.connection.searching': 'Ψάχνω στα δρομολόγια',
   'transports.connection.search': 'Αναζήτηση συνδέσεων',

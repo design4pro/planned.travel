@@ -91,6 +91,7 @@ const messages = {
   'transports.field.place': 'Lieu',
   'transports.field.code': 'Indicatif',
   'transports.field.date': 'Jour',
+  'transports.field.time': 'Départ à partir de',
   'transports.field.departurePlaceholder': 'Paris Charles-de-Gaulle',
   'transports.field.arrivalPlaceholder': 'Tokyo-Haneda',
   'transports.field.carrier': 'Transporteur',
@@ -515,6 +516,8 @@ const messages = {
   'transports.connection.fromHint':
     'Choisissez un arrêt — on demande à un horaire où, pas comment cela s’appelle.',
   'transports.connection.toHint': 'Choisissez un arrêt dans le catalogue.',
+  'transports.connection.timeHint':
+    'Un horaire répond avec les prochains départs, donc ceci décide lesquels.',
   'transports.connection.onlyModes': 'Seulement ces modes',
   'transports.connection.searching': 'Recherche dans les horaires',
   'transports.connection.search': 'Rechercher des connexions',

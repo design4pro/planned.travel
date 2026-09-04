@@ -86,6 +86,7 @@ const messages = {
   'transports.field.place': 'Plek',
   'transports.field.code': 'Lettercode',
   'transports.field.date': 'Datum',
+  'transports.field.time': 'Vertrek vanaf',
   'transports.field.departurePlaceholder': 'Amsterdam Schiphol',
   'transports.field.arrivalPlaceholder': 'Tokio Haneda',
   'transports.field.carrier': 'Vervoerder',
@@ -503,6 +504,8 @@ const messages = {
   'transports.connection.fromHint':
     'Kies een halte — een dienstregeling wordt gevraagd waar, niet hoe het heet.',
   'transports.connection.toHint': 'Kies een halte uit de catalogus.',
+  'transports.connection.timeHint':
+    'Een dienstregeling antwoordt met de eerstvolgende vertrektijden; dit bepaalt welke.',
   'transports.connection.onlyModes': 'Alleen deze modi',
   'transports.connection.searching': 'De dienstregeling wordt doorzocht',
   'transports.connection.search': 'Verbindingen zoeken',

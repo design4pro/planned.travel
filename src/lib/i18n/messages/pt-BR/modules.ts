@@ -89,6 +89,7 @@ const messages = {
   'transports.field.place': 'Local',
   'transports.field.code': 'Código',
   'transports.field.date': 'Data',
+  'transports.field.time': 'Partida a partir de',
   'transports.field.departurePlaceholder': 'São Paulo Guarulhos',
   'transports.field.arrivalPlaceholder': 'Tóquio Haneda',
   'transports.field.carrier': 'Companhia',
@@ -507,6 +508,8 @@ const messages = {
   'transports.connection.fromHint':
     'Escolha uma parada — a um horário se pergunta onde, não como se chama.',
   'transports.connection.toHint': 'Escolha uma parada do catálogo.',
+  'transports.connection.timeHint':
+    'Um horário responde com as próximas partidas, então isto decide quais.',
   'transports.connection.onlyModes': 'Só estes modos',
   'transports.connection.searching': 'Buscando nos horários',
   'transports.connection.search': 'Buscar conexões',

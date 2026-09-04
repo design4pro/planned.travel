@@ -91,6 +91,7 @@ const messages = {
   'transports.field.place': 'Lloc',
   'transports.field.code': 'Codi',
   'transports.field.date': 'Data',
+  'transports.field.time': 'Sortida a partir de',
   'transports.field.departurePlaceholder': 'Barcelona el Prat',
   'transports.field.arrivalPlaceholder': 'Tòquio Haneda',
   'transports.field.carrier': 'Companyia',
@@ -511,6 +512,8 @@ const messages = {
   'transports.connection.fromHint':
     'Tria una parada — a un horari se li pregunta on, no com es diu.',
   'transports.connection.toHint': 'Tria una parada del catàleg.',
+  'transports.connection.timeHint':
+    'Un horari respon amb les properes sortides, així que això decideix quines.',
   'transports.connection.onlyModes': 'Només aquests modes',
   'transports.connection.searching': 'Cercant als horaris',
   'transports.connection.search': 'Cerca connexions',

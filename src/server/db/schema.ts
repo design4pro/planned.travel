@@ -3021,7 +3021,10 @@ export const providerUsage = sqliteTable(
  * treats `NULL`s inside a `UNIQUE` index as distinct, which is what lets one plain unique index
  * hold "one row per code" and "thousands of rows with no code" at the same time.
  *
- * Ships empty. `03-S2` adds the loader, the read and the picker; this stage adds the shape.
+ * Ships empty, and is filled out of band: the migration creates the shape and
+ * `scripts/seed/airports.mjs` loads the committed artefact
+ * `public/atlas/airports-iata.v1.txt` into it (`pnpm db:airports:local`, and the `:remote`
+ * pair for a deployment). Nothing in the request path ever writes here.
  */
 export const airports = sqliteTable(
   'airports',

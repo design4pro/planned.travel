@@ -92,6 +92,7 @@ const messages = {
   'transports.field.place': 'Место',
   'transports.field.code': 'Код',
   'transports.field.date': 'Дата',
+  'transports.field.time': 'Отправление после',
   'transports.field.departurePlaceholder': 'Москва Шереметьево',
   'transports.field.arrivalPlaceholder': 'Токио Ханэда',
   'transports.field.carrier': 'Перевозчик',
@@ -511,6 +512,8 @@ const messages = {
   'transports.connection.fromHint':
     'Выберите остановку — расписание спрашивают где, а не как это называется.',
   'transports.connection.toHint': 'Выберите остановку из каталога.',
+  'transports.connection.timeHint':
+    'Расписание отвечает ближайшими рейсами, и это решает, какими именно.',
   'transports.connection.onlyModes': 'Только эти виды',
   'transports.connection.searching': 'Ищем в расписании',
   'transports.connection.search': 'Искать маршруты',

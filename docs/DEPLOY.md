@@ -181,6 +181,31 @@ pnpm exec wrangler d1 execute planned-travel-db --remote \
   --command "select name from sqlite_master where type='table' order by name;"
 ```
 
+### The airport catalogue
+
+One table ships empty on purpose. `airports` is platform reference data — a build-time cut of a
+public-domain source, identical for every workspace — so the migration creates the shape and a
+committed artefact carries the rows:
+
+```bash
+pnpm db:airports:local           # after db:migrate:local, in a checkout
+pnpm db:airports:remote          # after db:migrate:remote  (--env staging for staging)
+```
+
+Run it after the first migration and again after any deploy that carries a refreshed
+`public/atlas/airports-iata.v1.txt`. The load replaces the table's contents inside one
+transaction, so re-running it is free and an airport that left the cut leaves the table.
+
+Skipping it is not a loud failure: everywhere the catalogue is a shortcut over free text, the
+screens keep working. The connection search is the exception — its stop picker is a gate,
+because a timetable router is asked _where_ and free text carries no coordinates — so an empty
+table means that one feature can never resolve a stop.
+
+```bash
+pnpm exec wrangler d1 execute planned-travel-db --remote \
+  --command "select count(*) from airports;"   # 9057 for the committed artefact
+```
+
 You should see **62 domain tables + 9 Better Auth tables** (`user`, `session`, `account`,
 `verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). Both numbers are
 read off the schema rather than remembered: `grep -c 'sqliteTable(' src/server/db/schema.ts` prints

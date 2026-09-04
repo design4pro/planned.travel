@@ -77,6 +77,16 @@ export interface TransitQuery {
   readonly destination: TransitPlace
   /** The day the traveller wants to travel, `YYYY-MM-DD`. */
   readonly date: string
+  /**
+   * The clock the search departs from, `HH:MM`, in the origin stop's own time.
+   *
+   * A timetable router answers with the services departing *at or after* an instant, and it
+   * answers with a handful of them rather than with the day. So this is not a refinement of the
+   * date - it is the half of the question that decides which services can be reached at all: a
+   * search anchored at midnight can only ever return the night's first few departures, and a
+   * traveller looking for the 09:00 would be shown sleeper buses and told that is what runs.
+   */
+  readonly time: string
   /** Empty means "every mode this provider answers". */
   readonly modes: ReadonlyArray<TransitMode>
 }
@@ -92,6 +102,7 @@ export const transitQuerySchema = z.object({
   origin: placeSchema,
   destination: placeSchema,
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be a calendar date'),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'must be a wall clock'),
   modes: z.array(z.enum(TRANSIT_MODES)).max(TRANSIT_MODES.length),
 })
 
@@ -256,8 +267,13 @@ function atCoordinates(place: TransitPlace): string {
 /**
  * The cache key: the normalised query and nothing else.
  *
- * Bounded by construction — two coordinate pairs, a date and at most five mode names — so no
- * traveller's typing can push it past KV's 512-byte key limit.
+ * Bounded by construction — two coordinate pairs, a date, a clock and at most five mode names — so
+ * no traveller's typing can push it past KV's 512-byte key limit.
+ *
+ * The clock is part of it, and has to be: the provider answers with the services after the instant
+ * it is given, so two searches of the same day at two different hours are two different questions
+ * with two different answers. Keyed on the date alone, the first search of the day would be served
+ * to everyone asking about it for the next six hours.
  */
 export function transitCacheKey(query: TransitQuery): string {
   const modes = [...new Set(query.modes)].sort()
@@ -265,7 +281,7 @@ export function transitCacheKey(query: TransitQuery): string {
     `transit:${CACHE_VERSION}`,
     atCoordinates(query.origin),
     atCoordinates(query.destination),
-    query.date,
+    `${query.date}T${query.time}`,
     modes.length === 0 ? 'any' : modes.join('+'),
   ].join(':')
 }

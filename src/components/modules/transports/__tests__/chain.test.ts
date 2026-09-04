@@ -20,6 +20,7 @@ import { modulesTranslate } from '#/lib/i18n/__tests__/modules-translate'
 import {
   CHAIN_MAX_LEGS,
   applyStationMatch,
+  applyTypedCodeMatch,
   blockingLegErrors,
   chainFromTransport,
   breakIntoLegs,
@@ -649,6 +650,64 @@ describe('filling a station from the catalogue', () => {
       })
 
       expect(filled).toMatchObject({ lat: null, lng: null })
+    })
+  })
+
+  /**
+   * The race the lookup has with itself, and the one that leaves no trace on screen.
+   *
+   * The lookup runs on blur, so two corrections are two calls with no ordering between them. The
+   * fill above is deliberately asymmetric - it keeps every field the traveller wrote and rewrites
+   * the code unconditionally, because the code is the field they were typing into - and that
+   * asymmetry is exactly what a late answer exploits: every guard holds, and the one field they do
+   * not cover is rewritten to a code from a different airport.
+   */
+  const HANEDA: StationLookup = {
+    code: 'HND',
+    name: 'Tokyo Haneda Airport',
+    timezone: 'Asia/Tokyo',
+    lat: 35.5533,
+    lng: 139.7811,
+  }
+
+  describe('when an answer arrives after the field moved on', () => {
+    it('discards it rather than rewriting the code under the row', () => {
+      // `HND` answered first and filled the blanks; the late `NRT` answer arrives here.
+      const filled = fillStationFromCode(emptyStation(), HANEDA)
+
+      expect(applyTypedCodeMatch(filled, 'NRT', NARITA)).toEqual(filled)
+    })
+
+    it('applies it while it is still the code the field asks about', () => {
+      const typing = { ...emptyStation(), code: 'NRT' }
+
+      expect(applyTypedCodeMatch(typing, 'NRT', NARITA)).toMatchObject({
+        code: 'NRT',
+        name: 'Narita International Airport',
+        timezone: 'Asia/Tokyo',
+      })
+    })
+
+    /** The field upper-cases as it is typed and the lookup trims; neither is a mismatch. */
+    it('compares the code rather than the spelling', () => {
+      expect(
+        applyTypedCodeMatch({ ...emptyStation(), code: ' nrt ' }, 'NRT', NARITA)
+          .name,
+      ).toBe('Narita International Airport')
+    })
+
+    /**
+     * The concurrent edit still survives, which is the property the guard must not cost: a name
+     * typed while the answer was in the air is kept, because the fill is applied to the station as
+     * it stands rather than to the one the lookup started from.
+     */
+    it('keeps what was typed while the answer was in the air', () => {
+      const typing = { ...emptyStation(), code: 'NRT', name: 'Terminal 2' }
+
+      expect(applyTypedCodeMatch(typing, 'NRT', NARITA)).toMatchObject({
+        name: 'Terminal 2',
+        timezone: 'Asia/Tokyo',
+      })
     })
   })
 })

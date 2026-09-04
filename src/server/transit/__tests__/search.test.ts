@@ -119,6 +119,7 @@ const QUERY: TransitQuery = {
   origin: { name: 'Lisboa Santa Apolónia', lat: 38.713_2, lng: -9.122_4 },
   destination: { name: 'Porto Campanhã', lat: 41.148_9, lng: -8.585_1 },
   date: '2026-10-09',
+  time: '08:00',
   modes: ['train', 'bus'],
 }
 
@@ -168,10 +169,14 @@ describe('transitCacheKey', () => {
     )
   })
 
-  it('separates a different date, a different filter and a different stop', () => {
+  it('separates a different date, a different clock, a different filter and a different stop', () => {
     const keys = new Set([
       transitCacheKey(QUERY),
       transitCacheKey({ ...QUERY, date: '2026-10-10' }),
+      // The clock has to be in the key: the provider answers with the services *after* it, so the
+      // morning and the evening of one day are two questions. Keyed on the date alone, whichever
+      // was asked first would be served to the whole workspace for the next six hours.
+      transitCacheKey({ ...QUERY, time: '18:15' }),
       transitCacheKey({ ...QUERY, modes: ['train'] }),
       transitCacheKey({ ...QUERY, modes: [] }),
       transitCacheKey({
@@ -179,7 +184,7 @@ describe('transitCacheKey', () => {
         destination: { ...QUERY.destination, lat: 41.2 },
       }),
     ])
-    expect(keys.size).toBe(5)
+    expect(keys.size).toBe(6)
   })
 
   it('stays inside a KV key, whatever the traveller typed', () => {
@@ -578,7 +583,7 @@ describe('the HERE client', () => {
     const url = new URL(transport.urls[0])
     expect(url.searchParams.get('origin')).toBe('38.7132,-9.1224')
     expect(url.searchParams.get('destination')).toBe('41.1489,-8.5851')
-    expect(url.searchParams.get('departureTime')).toBe('2026-10-09T00:00:00')
+    expect(url.searchParams.get('departureTime')).toBe('2026-10-09T08:00:00')
     expect(url.searchParams.get('return')).toBe('intermediate,fares')
     // Our two filter modes, in the vendor's own vocabulary and deduplicated.
     expect(url.searchParams.get('modes')?.split(',')).toEqual([
@@ -591,6 +596,35 @@ describe('the HERE client', () => {
       'privateBus',
       'busRapid',
     ])
+  })
+
+  /**
+   * The clock is the half of the question that decides which services are reachable at all.
+   *
+   * The router answers with the `alternatives` services departing at or after the instant it is
+   * given — five of them — so the hour is not a refinement of the date, it selects the window. A
+   * client that sent the day and dropped the clock would ask for the night's first five departures
+   * on every search, and would look correct doing it: the request succeeds, the answer parses, and
+   * the traveller is simply told that the sleeper is what runs.
+   */
+  it('anchors the window on the clock it was given, not on the start of the day', async () => {
+    const morning = jsonFetch(HERE_RESPONSE)
+    await createHereClient({ apiKey: 'secret', fetch: morning.fetch }).search({
+      ...QUERY,
+      time: '09:30',
+    })
+    const evening = jsonFetch(HERE_RESPONSE)
+    await createHereClient({ apiKey: 'secret', fetch: evening.fetch }).search({
+      ...QUERY,
+      time: '18:15',
+    })
+
+    expect(new URL(morning.urls[0]).searchParams.get('departureTime')).toBe(
+      '2026-10-09T09:30:00',
+    )
+    expect(new URL(evening.urls[0]).searchParams.get('departureTime')).toBe(
+      '2026-10-09T18:15:00',
+    )
   })
 
   /**
