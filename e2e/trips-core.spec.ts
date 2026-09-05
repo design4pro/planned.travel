@@ -225,7 +225,12 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
    * against a fixture this spec restates.
    */
   async function firstTripTitle(page: Page): Promise<string> {
-    const heading = page.locator('[data-part="trip-tile"] h3').first()
+    // By role rather than by tag: the index renders its tiles at `h2` and the dashboard grid at
+    // `h3`, and which level a card takes is the surrounding outline's business, not this claim's.
+    const heading = page
+      .locator('[data-part="trip-tile"]')
+      .first()
+      .getByRole('heading')
     await expect(heading).toHaveCount(1)
     return (await heading.innerText()).trim()
   }

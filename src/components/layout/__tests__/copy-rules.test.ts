@@ -54,6 +54,7 @@ const APP_FILES = [
   join('-ui', 'trip-card.tsx'),
   join('-ui', 'new-trip-dialog.tsx'),
   join('-ui', 'trip-form.tsx'),
+  join('-ui', 'trip-actions.tsx'),
   join('-ui', 'create-dialogs.tsx'),
   join('-server', 'shell.ts'),
   join('-server', 'context.ts'),
@@ -109,6 +110,13 @@ function shippedSources(): ReadonlyArray<Source> {
 const AWAITING_LOCALISATION: ReadonlySet<string> = new Set([
   // Whole file: every string in the impersonation bar.
   'impersonation-bar.tsx',
+  // Whole file: the trip action menu, the edit sheet and the graduated delete dialog. The
+  // surface's own header says its copy arrives in the last slice of `01-S1`, and the field set
+  // it renders is `01-S8a`'s to widen (#121) - so the strings are written once, against the
+  // final field list, rather than translated twice into twenty-three languages. It is read here
+  // all the same, so the direction and mirroring rules hold over it from the start and the keys
+  // it will eventually take cannot read as unused.
+  join('-ui', 'trip-actions.tsx'),
   // ONE string, not the file: the "Platform console" entry. Everything else here is localised and
   // stays that way. It needs its own key rather than `account.admin`, which names the workspace
   // panel — keeping the two vocabularies apart is why `isAdmin` was left alone in the first place.
