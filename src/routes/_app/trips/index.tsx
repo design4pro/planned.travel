@@ -35,6 +35,12 @@ const searchSchema = z.object({
   scope: z.enum(['all', 'favourites', 'archived']).optional(),
 })
 
+/**
+ * The favourites scope and its count are the **caller's own** bookmarks (PRD #104 decision 5):
+ * `loadTrips` filters and counts through `trip_favourites` keyed by the acting user, so a colleague's
+ * star never lands in this reader's shortlist. Nothing here reads the deprecated `trips.is_favourite`
+ * column, which held one boolean for the whole trip and so recorded nobody's choice.
+ */
 export const Route = createFileRoute('/_app/trips/')({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => search,
@@ -110,10 +116,17 @@ function TripsPage() {
                         }),
                       ]
                     : []),
-                  t('shell.trips.count.favourites', {
-                    count: data.totals.favourites,
-                    value: formatNumber(data.totals.favourites, locale),
-                  }),
+                  // The favourites figure is the reader's own shortlist, so it
+                  // is absent rather than "0 favourites" until they have made
+                  // one — the same rule the archived clause already follows.
+                  ...(data.totals.favourites > 0
+                    ? [
+                        t('shell.trips.count.favourites', {
+                          count: data.totals.favourites,
+                          value: formatNumber(data.totals.favourites, locale),
+                        }),
+                      ]
+                    : []),
                 ].join(' · ')
           }
           actions={
@@ -160,6 +173,9 @@ function TripsPage() {
               >
                 <Star aria-hidden className="size-3.5" />
                 {t('shell.trips.filter.favourites')}
+                <FilterCount>
+                  {formatNumber(data.totals.favourites, locale)}
+                </FilterCount>
               </Link>
               <Link
                 to="/trips"

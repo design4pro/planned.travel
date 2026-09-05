@@ -17,7 +17,6 @@ import { z } from 'zod'
 import {
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
-  TRIP_MEMBER_ROLES,
   transportLegs,
   transports,
 } from '#/server/db/schema'
@@ -25,7 +24,9 @@ import { createTenantRepository, tenantFilter } from './base'
 import { runBatch } from './batch'
 import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
-import { requireTrip, tripRoleFor } from './trips'
+import { assertTripRole, requireTrip } from './trips'
+
+import type { TripRole } from './trips'
 import { resolveTimeZone } from '#/lib/time'
 import {
   currencySchema,
@@ -65,56 +66,6 @@ export const transportLegsRepository = createTenantRepository(
 /* -------------------------------------------------------------------------------------------------
  * Who may write here
  * ---------------------------------------------------------------------------------------------- */
-
-/** One of the three roles a person holds *on a trip*, which is not an organization role. */
-export type TripRole = (typeof TRIP_MEMBER_ROLES)[number]
-
-/** Thrown when the caller is on the trip but not in a role that may change it. */
-export class TripRoleError extends RepositoryError {
-  constructor(
-    readonly required: ReadonlyArray<TripRole>,
-    readonly actual: TripRole | null,
-  ) {
-    super(
-      `A ${actual ?? 'non-member'} may not change this trip; requires one of: ${required.join(', ')}.`,
-      'TRIP_ROLE',
-    )
-  }
-}
-
-const tripRoleSchema = z.enum(TRIP_MEMBER_ROLES)
-
-/**
- * Refuses a writer whose **trip** role is not one of `required`.
- *
- * Membership is not a role. `requireTrip` answers "is this trip inside the
- * caller's tenant", which is the boundary the whole data layer is built on and
- * is a different question from "may this person change the plan" — so at HEAD a
- * viewer could write a transport while `trip-room.ts:358` refused them the very
- * same edit over the collaborative session. Two answers to one question is a
- * defect whichever of them is right, and the restrictive one is right: a viewer
- * reads.
- *
- * Read paths are deliberately not guarded. A viewer is on the trip to see it,
- * and the tenant filter already decides what they can see.
- */
-export async function assertTripRole(
-  scope: TenantScope,
-  tripId: string,
-  required: ReadonlyArray<TripRole>,
-): Promise<void> {
-  // The column is plain `text` behind a `CHECK`, so what comes back is a string.
-  // Narrowing it through the enum rather than comparing raw text means a value
-  // the enum does not carry is *no role* — a refusal — rather than a value that
-  // slipped past a `includes` on a widened type. `required` needs no such parse:
-  // it is a constant of this module and never a value off the wire.
-  const stored = tripRoleSchema.safeParse(
-    await tripRoleFor(scope, tripId, scope.ctx.userId),
-  )
-  if (!stored.success || !required.includes(stored.data)) {
-    throw new TripRoleError(required, stored.success ? stored.data : null)
-  }
-}
 
 /** The roles that may change a trip's transports. */
 const WRITERS: ReadonlyArray<TripRole> = ['owner', 'editor']

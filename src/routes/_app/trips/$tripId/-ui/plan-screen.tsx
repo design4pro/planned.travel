@@ -558,9 +558,14 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
           await reorderPlanFn({
             data: {
               tripId: payload.tripId,
+              // Every id the board can produce today is an assignment id; notes
+              // become draggable — and the second `kind` reachable — in `01-S4b`.
               days: change.days.map((day) => ({
                 dayId: day.dayId,
-                assignmentIds: [...day.assignmentIds],
+                items: day.assignmentIds.map((assignmentId) => ({
+                  kind: 'stop' as const,
+                  id: assignmentId,
+                })),
               })),
             },
           })

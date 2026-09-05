@@ -9,8 +9,10 @@
  * rail and on the map, and sending it three times is three chances for the three
  * copies to disagree.
  *
- * Every write is one repository call behind a Zod boundary, and every one of them
- * touches exactly two columns of `day_assignments`: `day_id` and `order_index`.
+ * Every write is one repository call behind a Zod boundary, and the arrangement
+ * writes touch only the columns that say where a row sits: `day_assignments.day_id`
+ * and `order_index`, and — since the day became one sequence rather than two lists
+ * (PRD #104 decision 9) — `day_notes.sort_order` beside them, as one number line.
  * Nothing here writes `days.day_number`, which is what keeps the trip's contiguous
  * `1..n` day run — owned solely by `syncTripDays` — safe from a drag.
  */
@@ -20,6 +22,7 @@ import { z } from 'zod'
 
 import { RESERVATION_STATUSES } from '#/server/db/schema'
 import {
+  assertTripRole,
   createAssignment,
   createPlace,
   deleteAssignment,
@@ -31,7 +34,7 @@ import {
   listTripPlaces,
   listUnscheduledPlaces,
   moveAssignment,
-  reorderAssignments,
+  reorderDayTimeline,
   reorderPlaces,
   requireTrip,
   updateAssignment,
@@ -39,7 +42,7 @@ import {
 } from '#/server/repos'
 import { appScope } from '../../../-server/context'
 
-import type { TenantScope } from '#/server/repos'
+import type { TenantScope, TimelineItemInput } from '#/server/repos'
 import type { Trip } from '#/server/db/types'
 
 /**
@@ -238,73 +241,163 @@ export const loadPlanBoard = createServerFn({ method: 'GET' })
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * Tells the trip room that these days were rearranged: one `day` upsert each,
+ * carrying the merged order.
+ *
+ * The bridge is reached at call time rather than imported at the top of the file,
+ * and that is not stylistic. `#/server/fns/context` imports `cloudflare:workers` and
+ * the trip room's Durable Object module, and this file is imported by the planner
+ * route — so a static import puts both into that route's module graph. It is the
+ * posture `_app/-server/shell.ts` and `_app/-server/trip-lifecycle.ts` each record
+ * for the same reason, in the same words: reach the binding inside the function.
+ *
+ * Nothing here catches, because there is nothing to catch: D1 is the record and the
+ * room is a signal, so `mirrorToRoom` logs a refusal and returns.
+ */
+async function mirrorDayOrder(
+  scope: TenantScope,
+  tripId: string,
+  days: ReadonlyArray<{
+    readonly dayId: string
+    readonly items: ReadonlyArray<TimelineItemInput>
+  }>,
+): Promise<void> {
+  const { mirrorToRoom, patch } = await import('#/server/fns/context')
+  await mirrorToRoom(
+    scope,
+    tripId,
+    days.map((day) =>
+      patch('day', day.dayId, {
+        items: day.items.map((item) => ({ kind: item.kind, id: item.id })),
+      }),
+    ),
+  )
+}
+
+/** One row of a day's sequence, as the browser names it. */
+const timelineItem = z.strictObject(
+  { kind: z.enum(['stop', 'note']), id },
+  { error: 'A timeline item is a stop or a note, named by its id.' },
+)
+
+/** `kind/id` — the pair is the identity, because both tables mint ids the same way. */
+function timelineKey(item: z.infer<typeof timelineItem>): string {
+  return `${item.kind}/${item.id}`
+}
+
+/**
+ * The board's new arrangement: for each day a drag touched, the whole sequence.
+ *
+ * `clearTime` is the reader's answer to "move this and drop its 14:30?" (PRD #104
+ * decision 9) and is refined against `items` rather than trusted: clearing a time is
+ * a consequence of a move, so a row that is not being moved has no business losing
+ * one, and a payload that says otherwise is a bug or a forgery either way.
+ */
+export const reorderPlanInputSchema = z.strictObject({
+  tripId: id,
+  days: z
+    .array(
+      z
+        .strictObject({
+          dayId: id,
+          items: z.array(timelineItem).max(200),
+          clearTime: z.array(timelineItem).max(200).optional(),
+        })
+        .superRefine((day, ctx) => {
+          const moving = new Set(day.items.map(timelineKey))
+          for (const item of day.clearTime ?? []) {
+            if (moving.has(timelineKey(item))) continue
+            ctx.addIssue({
+              code: 'custom',
+              message: 'A time can only be dropped by the move that drops it',
+              path: ['clearTime'],
+            })
+          }
+        }),
+    )
+    .min(1)
+    .max(4),
+})
+
+/**
  * Applies the board's new arrangement.
  *
- * The client sends the *resulting* order of every day a drag touched — at most two —
- * and the server derives `order_index` from array position. That is what makes the
- * indices self-healing: whatever fractional values a mid-list insert left behind,
- * the next drag renumbers the day to `0..n-1`. It also means a client cannot inject
- * an index of its own choosing, only a permutation of ids it can already see.
+ * The client sends the *resulting* sequence of every day a drag touched — at most
+ * two — and the server derives every position from array index. That is what makes
+ * the indices self-healing: whatever fractional values a mid-list insert left behind,
+ * the next drag renumbers the day to `0..n-1` across both position columns at once.
+ * It also means a client cannot inject an index of its own choosing, only a
+ * permutation of ids it can already see.
  *
  * Ids that do not belong to this trip are dropped rather than rejected: the
  * repository layer would refuse them anyway, and a stale tab whose board is one
  * delete behind should still be able to reorder the rows that do exist.
+ *
+ * Two writes, in this order and for one reason each:
+ *
+ * - **A stop that changed day moves first.** `moveAssignment` re-checks that the
+ *   target day belongs to the same trip, so a forged day id fails before any
+ *   position is written — and by the time the renumber runs, both the day that lost
+ *   the row and the day that gained it hold exactly the rows they are about to be
+ *   numbered over.
+ * - **Then one `reorderDayTimeline` per day**, which is one batch per day writing
+ *   `day_assignments.order_index` and `day_notes.sort_order` as a single number line,
+ *   plus a `NULL` time for every `clearTime` entry. The reader's "drop its time and
+ *   move it" is therefore one transaction, never a moment in which the row has a
+ *   time and the wrong position.
+ *
+ * The plan's content is the editor's (PRD #104 decision 6), and the role is asserted
+ * once here rather than only inside the per-day write, because the cross-day step
+ * happens before that write and `moveAssignment` guards the trip but not the role.
+ *
+ * The result is mirrored to the trip room as one `day` upsert per touched day, so
+ * every other viewer's board catches up without polling — see {@link mirrorDayOrder},
+ * which also holds why that module is reached at call time.
  */
 export const reorderPlanFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      tripId: id,
-      days: z
-        .array(
-          z.object({
-            dayId: id,
-            assignmentIds: z.array(id).max(200),
-          }),
-        )
-        .min(1)
-        .max(4),
-    }),
-  )
+  .validator(reorderPlanInputSchema)
   .handler(async ({ data }): Promise<{ readonly moved: number }> => {
     const scope = await appScope()
     const trip = await writableTrip(scope, data.tripId)
+    // `reorderDayTimeline` asserts this itself, but the cross-day step below runs
+    // first and `moveAssignment` carries no role guard of its own — so a viewer would
+    // otherwise get one stop onto another day before being refused (decision 6).
+    await assertTripRole(scope, trip.id, ['owner', 'editor'])
 
     const existing = await listTripAssignments(scope, trip.id)
     const dayById = new Map(existing.map((row) => [row.id, row.dayId]))
 
-    const sameDay: Array<{ assignmentId: string; orderIndex: number }> = []
-    const crossDay: Array<{
-      assignmentId: string
-      dayId: string
-      orderIndex: number
-    }> = []
-
     for (const day of data.days) {
-      day.assignmentIds.forEach((assignmentId, index) => {
-        const currentDayId = dayById.get(assignmentId)
-        if (currentDayId === undefined) return
-        if (currentDayId === day.dayId) {
-          sameDay.push({ assignmentId, orderIndex: index })
-        } else {
-          crossDay.push({ assignmentId, dayId: day.dayId, orderIndex: index })
-        }
+      for (const [index, item] of day.items.entries()) {
+        if (item.kind !== 'stop') continue
+        const currentDayId = dayById.get(item.id)
+        if (currentDayId === undefined || currentDayId === day.dayId) continue
+        await moveAssignment(scope, item.id, {
+          dayId: day.dayId,
+          orderIndex: index,
+        })
+      }
+    }
+
+    const rearranged: Array<{
+      dayId: string
+      items: ReadonlyArray<TimelineItemInput>
+    }> = []
+    for (const day of data.days) {
+      const written = await reorderDayTimeline(scope, {
+        tripId: trip.id,
+        dayId: day.dayId,
+        items: day.items,
+        clearTime: day.clearTime,
       })
+      rearranged.push({ dayId: day.dayId, items: written })
     }
 
-    // Day changes first: `moveAssignment` re-checks that the target day belongs to
-    // the same trip, so a forged day id fails before any index is written.
-    for (const move of crossDay) {
-      await moveAssignment(scope, move.assignmentId, {
-        dayId: move.dayId,
-        orderIndex: move.orderIndex,
-      })
-    }
+    await mirrorDayOrder(scope, trip.id, rearranged)
 
-    if (sameDay.length > 0) {
-      await reorderAssignments(scope, sameDay)
+    return {
+      moved: rearranged.reduce((total, day) => total + day.items.length, 0),
     }
-
-    return { moved: crossDay.length + sameDay.length }
   })
 
 /**

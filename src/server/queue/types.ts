@@ -20,6 +20,10 @@ export const TASK_KINDS = [
   // Derived-cache rebuild. Six aggregate queries per row, so it is queued
   // rather than run on the write path that invalidates it.
   'travel-stats',
+  // The second half of a terminal trip delete: the R2 objects the trip owned.
+  // D1 cascades, R2 does not, so the sweep is queued and the delete never waits
+  // on it.
+  'trip-purge',
   // Billing follow-ups. The provider webhook answers the provider immediately and
   // hands the slow part off here, so these travel the same queue as everything else.
   'billing.subscription.changed',
@@ -111,6 +115,17 @@ export const backupPayloadSchema = z.object({
 
 export type BackupPayload = z.infer<typeof backupPayloadSchema>
 
+/**
+ * How many object keys one `trip-purge` message may carry.
+ *
+ * A Queues message body is capped at 128 KB. A storage key is
+ * `trips/<org>/<trip>/<file>-<filename>` (`storageKeyFor`), so ~200 bytes at its longest, and 500 of
+ * them leaves the envelope comfortably inside that ceiling with room for the rest of it. The producer
+ * chunks at this number; the handler chunks again at R2's own per-call ceiling, which is a different
+ * limit for a different reason.
+ */
+export const MAX_PURGE_KEYS = 500
+
 /** The `statYear` that means "every year the traveller has recorded". */
 export const ALL_TIME_STAT_YEAR = 0
 
@@ -145,6 +160,28 @@ export const travelStatsPayloadSchema = z.strictObject({
 })
 
 export type TravelStatsPayload = z.infer<typeof travelStatsPayloadSchema>
+
+/**
+ * The R2 keys a deleted trip owned (PRD #104 decision 3).
+ *
+ * `strictObject` for the same reason `travel-stats` is one: the envelope names the tenant and the
+ * keys, and nothing else about the sweep may be smuggled in beside them. The organization comes from
+ * the envelope, and the handler deletes only keys that lie inside that organization's own key
+ * namespace, so a forged message can only remove objects its tenant already owned.
+ *
+ * The producer is what confirms these keys against `trip_files` — it reads them through the
+ * tenant-scoped repository *before* the cascading delete. By the time this message is delivered the
+ * rows are gone, which is why the handler's own guard is the key rather than a second read.
+ *
+ * Bounded at {@link MAX_PURGE_KEYS} per message: `files` is `UNLIMITED` on the business tier, and a
+ * Queues message is capped at 128 KB, so a trip with more objects than one message can carry is
+ * split across several by the producer rather than silently truncated.
+ */
+export const tripPurgePayloadSchema = z.strictObject({
+  keys: z.array(z.string().min(1).max(1024)).min(1).max(MAX_PURGE_KEYS),
+})
+
+export type TripPurgePayload = z.infer<typeof tripPurgePayloadSchema>
 
 /**
  * Billing payloads mirror the `BillingTask` union in `../billing/types`. They
@@ -200,6 +237,7 @@ export interface TaskPayloadMap {
   thumbnail: ThumbnailPayload
   backup: BackupPayload
   'travel-stats': TravelStatsPayload
+  'trip-purge': TripPurgePayload
   'billing.subscription.changed': SubscriptionChangedPayload
   'billing.invoice.paid': InvoicePaidPayload
   'billing.invoice.payment_failed': InvoicePaymentFailedPayload
@@ -253,6 +291,11 @@ export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
     ...envelopeBase,
     kind: z.literal('travel-stats'),
     payload: travelStatsPayloadSchema,
+  }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('trip-purge'),
+    payload: tripPurgePayloadSchema,
   }),
   z.object({
     ...envelopeBase,
