@@ -119,6 +119,15 @@ FIRECRAWL_API_KEY=
 FIRECRAWL_WEBHOOK_SECRET=
 
 
+# ── Connection search (optional; the search refuses without it) ──────────────
+
+# https://platform.here.com → project → REST credential. The transit proxy in
+# `src/server/transit/` reads it once per Worker; unset, the search refuses
+# every miss with `unconfigured` and spends none of the workspace's monthly
+# allowance on it, while answers already cached are still served.
+HERE_API_KEY=
+
+
 # ── MCP staff tokens (optional; the agent surface stays off without it) ──────
 
 # HMAC-SHA256 key over a staff token's raw UTF-8 bytes; the digest is stored

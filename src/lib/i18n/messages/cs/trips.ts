@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Náklady se nepodařilo načíst',
   'error.collab': 'Konverzaci se nepodařilo načíst',
   'error.book': 'Rezervace se nepodařilo načíst',
+  'error.transports': 'Přesuny se nenačetly',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Místa',
@@ -75,6 +76,34 @@ const messages = {
   'book.committedCaption': 'Ze všech rezervací této cesty',
   'book.onItinerary': 'V programu',
   'book.pinnedCaption': 'Připnuto ke dni programu',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Přesuny',
+  'transports.empty': 'Zatím nic zaznamenáno',
+  'transports.count.transports': {
+    one: '{transports} přesun',
+    few: '{transports} přesuny',
+    many: '{transports} přesunu',
+    other: '{transports} přesunů',
+  },
+  'transports.distance': 'Ujetá vzdálenost',
+  'transports.equator': '≈ {times}× kolem rovníku',
+  'transports.noGrouping': 'Zatím nic seskupeno',
+  'transports.mostly': 'převážně {mode}',
+  'transports.confirmed': 'Potvrzeno',
+  'transports.stillPending': {
+    one: '{pending} stále čeká',
+    few: '{pending} stále čekají',
+    many: '{pending} stále čeká',
+    other: '{pending} stále čeká',
+  },
+  'transports.spent': 'Utraceno za cestování',
+  'transports.noPrices': 'Žádné ceny nezaznamenány',
+  'transports.priced': {
+    one: 'napříč {priced} oceněným přesunem',
+    few: 'napříč {priced} oceněnými přesuny',
+    many: 'napříč {priced} oceněnými přesuny',
+    other: 'napříč {priced} oceněnými přesuny',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

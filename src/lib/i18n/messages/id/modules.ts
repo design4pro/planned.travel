@@ -82,6 +82,7 @@ const messages = {
   'transports.field.place': 'Tempat',
   'transports.field.code': 'Kode',
   'transports.field.date': 'Tanggal',
+  'transports.field.time': 'Berangkat setelah',
   'transports.field.departurePlaceholder': 'Jakarta Soekarno-Hatta',
   'transports.field.arrivalPlaceholder': 'Bandara Tokyo Haneda',
   'transports.field.carrier': 'Maskapai',
@@ -106,6 +107,7 @@ const messages = {
   'field.status': 'Keadaan',
   'form.saveError': 'Itu tidak tersimpan',
   'action.cancel': 'Batal',
+  'action.showCode': 'Tampilkan {label}',
   'book.status.none': 'Belum ada keadaan',
   'book.status.pending': 'Menunggu',
   'book.status.confirmed': 'Terkonfirmasi',
@@ -119,10 +121,20 @@ const messages = {
   'book.empty.body':
     'Penginapan, meja, tur, dan tiket tempatnya di sini — dengan nomor konfirmasi di tempat kamu akan mencarinya di pintu, dan tanggal yang menaruhnya di garis waktu.',
   'book.empty.action': 'Tambahkan pemesanan pertama',
-  'book.filtered.title': 'Tidak ada yang berkeadaan itu',
+  'book.filtered.title': 'Belum ada yang seperti itu',
   'book.filtered.body':
-    'Setiap pemesanan perjalanan ini berada di tahap berbeda. Kembali ke “{label}” untuk melihat semuanya.',
-  'book.filtered.action': 'Tampilkan semua',
+    'Tidak ada pemesanan dari jenis yang kamu pilih di sini. Hapus filter untuk melihat sisanya.',
+  'book.filtered.action': 'Hapus filter',
+  'book.panel.outstanding': 'Masih harus dibereskan',
+  'book.panel.outstandingEmpty':
+    'Tidak ada yang tertunda — semua di sini sudah beres.',
+  'book.panel.settled': 'Beres',
+  'book.panel.settledEmpty':
+    'Belum ada yang beres — semuanya masih harus dikejar.',
+  'book.import.badge': 'Impor belum diperiksa',
+  'book.import.hint':
+    'Diimpor dari sebuah konfirmasi. Buka dan simpan untuk menandainya sudah diperiksa.',
+  'book.journeyLink': 'Di tab transportasi',
   'filter.all': 'Semua',
   'book.remove.body':
     'Ia keluar dari garis waktu untuk selamanya. Kalau hanya dibatalkan, ubah keadaannya menjadi “Dibatalkan” agar catatannya tetap ada.',
@@ -399,6 +411,15 @@ const messages = {
   'book.error.url': 'Tautan harus dimulai dengan http:// atau https://.',
   'book.error.confirmationLong':
     'Nomor konfirmasi itu terlalu panjang untuk disimpan.',
+  'book.error.stopGone': 'Perhentian itu sudah tidak ada di perjalanan ini.',
+  'book.ledger.unlinked':
+    'Baris biaya pemesanan ini tetap ada di biaya perjalanan, tetapi tidak lagi tertaut ke pemesanan.',
+  'book.ledger.updated':
+    'Baris biaya pemesanan ini akan diperbarui menjadi {money}.',
+  'book.ledger.needsDate':
+    'Beri tanggal pada pemesanan ini agar biayanya masuk ke biaya perjalanan.',
+  'book.ledger.added':
+    'Satu baris {money} akan ditambahkan ke biaya perjalanan ini.',
   'book.fieldName.provider': 'pengangkut',
   'book.fieldName.location': 'lokasi',
   'book.fieldName.confirmationNumber': 'nomor konfirmasi',
@@ -409,6 +430,18 @@ const messages = {
   'book.fieldName.endTime': 'waktu selesai',
   'book.fieldName.guests': 'jumlah orang',
   'book.fieldName.price': 'harga',
+  'book.fieldName.stop': 'perhentian',
+  'book.field.stop': 'Perhentian terkait',
+  'book.field.stopHint': 'Perhentian rencana mana yang dituju pemesanan ini.',
+  'book.field.stopHintEmpty':
+    'Tambahkan dulu sebuah tempat ke suatu hari, lalu pemesanan ini bisa dikaitkan ke sana',
+  'book.field.stopPlaceholder': 'Tidak terkait perhentian',
+  'book.field.stopSearch': 'Cari perhentian dan hari',
+  'book.field.stopEmpty': 'Tidak ada perhentian yang cocok',
+  'book.ledger.refused.title': 'Tersimpan, tetapi belum masuk ke biaya',
+  'book.ledger.refused.body':
+    'Pemesanan sudah ada di perjalanan. Menambahkan baris biayanya ke biaya perjalanan tidak berhasil — coba lagi bagian itu.',
+  'book.action.ledgerRetry': 'Tambahkan ke biaya',
   'book.copyConfirmation': 'nomor konfirmasi untuk {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -425,6 +458,60 @@ const messages = {
   'transports.mode.walk': 'Jalan kaki',
   'transports.mode.other': 'Lainnya',
   'transports.mode.fallback': 'Transportasi',
+  'transports.rank.earliest': 'Tiba paling awal',
+  'transports.rank.fewestChanges': 'Paling sedikit pindah',
+  'transports.connection.findStop': 'Cari perhentian',
+  'transports.connection.findStopSearch': 'CGK, Gambir, Jakarta…',
+  'transports.connection.findStopEmpty':
+    'Tidak ada perhentian bernama itu di katalog.',
+  'transports.connection.hideStops': 'Sembunyikan perhentian',
+  'transports.connection.seeStops': 'Lihat perhentian',
+  'transports.connection.saving': 'Menyimpan koneksi',
+  'transports.connection.use': 'Pakai yang ini',
+  'transports.connection.onFoot': 'Jalan kaki',
+  'transports.connection.service': 'Layanan',
+  'transports.connection.direct': 'langsung',
+  'transports.connection.changes': {
+    other: '{changes} kali pindah',
+  },
+  'transports.connection.tooLong':
+    'Koneksi ini punya lebih dari {max} ruas, lebih dari yang muat dalam satu catatan perjalanan. Cari lompatan lebih pendek dan catat sisanya terpisah.',
+  'transports.connection.refusal.ceiling':
+    'Tidak ada pencarian tersisa bulan ini',
+  'transports.connection.refusal.unconfigured':
+    'Pencarian koneksi dimatikan pada penyebaran ini',
+  'transports.connection.refusal.provider': 'Layanan jadwal tidak menjawab',
+  'transports.connection.refusal.plan':
+    'Pencarian koneksi tidak termasuk dalam paket ini',
+  'transports.connection.refusal.planBody':
+    'Naikkan paket untuk mencari jadwal dari dalam perjalanan. Perjalanan tetap bisa dicatat manual.',
+  'transports.connection.refusal.ceilingBody':
+    'Jatah bulan ini sebanyak {ceiling} sudah habis dan diperbarui pada tanggal satu bulan depan. Perjalanan tetap bisa dicatat manual.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Tidak ada layanan jadwal yang disiapkan di sini, jadi tidak ada yang dicari. Catat perjalanan secara manual.',
+  'transports.connection.refusal.providerBody':
+    'Tidak ada yang kembali untuk ditampilkan. Coba lagi sebentar, atau catat perjalanan secara manual.',
+  'transports.connection.invitation':
+    'Dua perhentian dan satu tanggal, lalu jadwal menjawab. Tidak ada yang disimpan sampai kamu memilih satu.',
+  'transports.connection.empty':
+    'Tidak ditemukan koneksi antara dua perhentian itu pada tanggal tersebut. Coba stasiun tetangga, atau perluas filter moda.',
+  'transports.connection.searchFailed': 'Pencarian tidak berjalan',
+  'transports.connection.searchFailedBody': 'Coba lagi sebentar lagi.',
+  'transports.connection.saved': 'Koneksi disimpan',
+  'transports.connection.replaced': 'Rute diganti',
+  'transports.connection.replacedBody':
+    'Kode pemesanan dan tempat duduk tidak tersentuh.',
+  'transports.connection.saveFailed': 'Koneksi tidak tersimpan',
+  'transports.connection.saveError': 'Itu tidak tersimpan',
+  'transports.connection.fromHint':
+    'Pilih perhentian — jadwal ditanya di mana, bukan apa namanya.',
+  'transports.connection.toHint': 'Pilih perhentian dari katalog.',
+  'transports.connection.timeHint':
+    'Jadwal menjawab dengan beberapa keberangkatan berikutnya, jadi ini yang menentukan.',
+  'transports.connection.onlyModes': 'Hanya moda ini',
+  'transports.connection.searching': 'Mencari di jadwal',
+  'transports.connection.search': 'Cari koneksi',
+  'transports.connection.title': 'Dari {from} ke {to}',
   'transports.status.idea': 'Gagasan',
   'transports.status.pending': 'Menunggu',
   'transports.status.confirmed': 'Terkonfirmasi',
@@ -438,6 +525,13 @@ const messages = {
   'transports.end.toStation': 'Ke stasiun',
   'transports.end.from': 'Dari',
   'transports.end.to': 'Ke',
+  'transports.end.pickUp': 'Pengambilan',
+  'transports.end.dropOff': 'Pengembalian',
+  'transports.end.departureDay': 'Hari keberangkatan',
+  'transports.end.arrivalDay': 'Hari kedatangan',
+  'transports.end.pickUpDay': 'Hari pengambilan',
+  'transports.end.returnDay': 'Hari pengembalian',
+  'transports.dayNumber': 'Hari {n}',
   'transports.error.titleEmpty':
     'Beri transportasi ini nama yang kamu kenali di daftar.',
   'transports.error.date': 'Tanggal ditulis YYYY-MM-DD.',
@@ -453,6 +547,61 @@ const messages = {
     'Transportasi ini tiba sebelum berangkat.',
   'transports.error.timingHint':
     'Geser salah satu waktunya supaya transportasi ini benar-benar bisa dikejar.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'Hari kedatangan jatuh sebelum hari keberangkatan.',
+  'transports.error.returnDayBeforePickUp':
+    'Hari pengembalian jatuh sebelum hari pengambilan.',
+  'transports.toast.chainFailed': 'Ruas tidak tersimpan',
+  'transports.toast.chainFallback':
+    'Perjalanan tersimpan, tetapi ruasnya tidak.',
+  'transports.field.noDay': 'Belum ada hari',
+  'transports.fill.legend': 'Cara mengisinya',
+  'transports.fill.manual': 'Isi sendiri',
+  'transports.fill.searchAgain': 'Cari lagi',
+  'transports.fill.search': 'Cari koneksi',
+  'transports.chain.unsplit': 'Jadikan satu perjalanan lagi',
+  'transports.field.arrivalDayHint':
+    'Perjalanan yang tiba keesokan paginya menyatakannya di sini.',
+  'transports.chain.splitHint':
+    'Berganti moda di tengah jalan? Catat tiap bagian dengan nomor layanan, peron, kursi, dan jamnya sendiri.',
+  'transports.chain.split': 'Bagi menjadi ruas',
+  'transports.chain.stopNumber': 'perhentian {n}',
+  'transports.chain.change': 'Pindah {n}',
+  'transports.chain.removeStation': 'Hapus {label}',
+  'transports.chain.findStation': 'Cari bandara atau stasiun',
+  'transports.chain.findStationFor': 'Cari bandara atau stasiun untuk {label}',
+  'transports.chain.findPlaceholder': 'CGK, Soekarno-Hatta, Jakarta…',
+  'transports.chain.findEmpty':
+    'Tidak ada yang cocok — ketik sendiri perhentiannya di bawah.',
+  'transports.chain.stopLabel': 'Perhentian',
+  'transports.chain.stopPlaceholder': 'Gambir',
+  'transports.chain.timezoneHint': 'Jam mana yang dipakai perhentian ini',
+  'transports.chain.timezoneAt': 'Zona waktu di {label}',
+  'transports.chain.timezonePlaceholder': 'Tidak disebutkan',
+  'transports.chain.timezoneSearch': 'Jakarta, Tokyo, UTC…',
+  'transports.chain.acrossClocks': '{gap} melintasi dua jam',
+  'transports.chain.addStopAfter': 'Tambahkan perhentian setelah {label}',
+  'transports.chain.servicePlaceholder': 'Argo Bromo Anggrek',
+  'transports.chain.leaves': 'Berangkat dari {label}',
+  'transports.chain.reaches': 'Tiba di {label}',
+  'transports.chain.dayOfLeg': '{label} ruas {n}',
+  'transports.chain.formError': 'Rantai ini tidak bisa disimpan',
+  'transports.chain.atCap':
+    'Satu rantai memuat paling banyak {max} ruas — itu batas apa yang dibawa satu penyimpanan, bukan berapa kali perjalanan boleh berganti.',
+  'transports.chain.hint':
+    'Tambahkan perhentian di ruas mana pun untuk mencatat pergantian kereta; tiap ruas menyimpan nomor layanan, peron, dan tempat duduknya sendiri.',
+  'transports.field.timezone': 'Zona waktu',
+  'transports.field.platform': 'Peron',
+  'transports.chain.legNumber': 'Ruas {n}',
+  'transports.chain.platform': 'Peron {value}',
+  'transports.chain.seat': 'Tempat duduk {value}',
+  'transports.chain.error.stopName':
+    'Setiap perhentian butuh nama — di sinilah kamu berganti moda.',
+  'transports.chain.error.stopNameLong':
+    'Nama perhentian harus kurang dari 200 karakter.',
+  'transports.chain.error.timezone': 'Pilih zona waktu dari daftar.',
+  'transports.chain.error.tooManyLegs':
+    'Satu rangkaian memuat paling banyak {max} ruas.',
   'transports.bookingRefFor': 'nomor pemesanan untuk {title}',
   'transports.doorToDoor': 'Itu {gap} dari pintu ke pintu.',
   'transports.title.fromTo': '{operator} dari {from} ke {to}',

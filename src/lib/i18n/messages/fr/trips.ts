@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Les dépenses n’ont pas pu être chargées',
   'error.collab': 'La conversation n’a pas pu être chargée',
   'error.book': 'Les réservations n’ont pas pu être chargées',
+  'error.transports': 'Les trajets n’ont pas été chargés',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinéraire',
   'plan.places': 'Lieux',
@@ -69,6 +70,31 @@ const messages = {
   'book.committedCaption': 'Sur toutes les réservations de ce voyage',
   'book.onItinerary': 'Dans l’itinéraire',
   'book.pinnedCaption': 'Épinglé à un jour du plan',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Trajets',
+  'transports.empty': 'Rien de noté pour l’instant',
+  'transports.count.transports': {
+    one: '{transports} trajet',
+    many: '{transports} trajets',
+    other: '{transports} trajets',
+  },
+  'transports.distance': 'Distance parcourue',
+  'transports.equator': '≈ {times}× le tour de l’équateur',
+  'transports.noGrouping': 'Rien de regroupé pour l’instant',
+  'transports.mostly': 'surtout {mode}',
+  'transports.confirmed': 'Confirmés',
+  'transports.stillPending': {
+    one: '{pending} encore en attente',
+    many: '{pending} encore en attente',
+    other: '{pending} encore en attente',
+  },
+  'transports.spent': 'Dépensé en transport',
+  'transports.noPrices': 'Aucun prix noté',
+  'transports.priced': {
+    one: 'sur {priced} trajet chiffré',
+    many: 'sur {priced} trajets chiffrés',
+    other: 'sur {priced} trajets chiffrés',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -27,8 +27,9 @@ import { TEST_PRODUCT_IDS } from './prices.fixture'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { PLANS, QUOTA_KEYS } from '#/lib/plans'
-import { UNLIMITED } from '#/server/db/types'
+import { PLAN_IDS, PLANS, QUOTA_KEYS } from '#/lib/plans'
+import { USAGE_METRICS } from '#/server/db/schema'
+import { PLAN_QUOTAS, UNLIMITED } from '#/server/db/types'
 import {
   createHarness as createDbHarness,
   captureError,
@@ -44,18 +45,31 @@ import {
 } from '../entitlements'
 import {
   METRIC_FOR_QUOTA,
+  PLAN_RATE_CEILINGS,
+  RATE_METRICS,
   ceilingsForPlan,
   planIdFromRow,
   resolveLimits,
   resolveLimitsFromRow,
 } from '../limits'
-import { ceilingColumns, createSubscriptionStore, recordFromRow } from '../store'
+import {
+  ceilingColumns,
+  createSubscriptionStore,
+  recordFromRow,
+} from '../store'
 import { billingContext } from '../types'
-import { createHarness as createBillingHarness, subscriptionRecord } from './harness'
+import {
+  createHarness as createBillingHarness,
+  subscriptionRecord,
+} from './harness'
 
 import type { PlanId } from '#/lib/plans'
+import type { QuotaOverrides } from '#/server/db/schema'
 import type { UpsertSubscriptionInput } from '#/server/repos'
-import type { Harness as DbHarness, SeededTenant } from '#/server/repos/__tests__/harness'
+import type {
+  Harness as DbHarness,
+  SeededTenant,
+} from '#/server/repos/__tests__/harness'
 import type { SubscriptionLimitsRow } from '../limits'
 import type { BillingRuntime, UsageSnapshot } from '../types'
 
@@ -63,7 +77,9 @@ const MEGABYTE = 1024 * 1024
 const GIGABYTE = 1024 * MEGABYTE
 
 /** A row shaped for the pure resolver, with only the interesting fields spelled out. */
-function row(overrides: Partial<SubscriptionLimitsRow> = {}): SubscriptionLimitsRow {
+function row(
+  overrides: Partial<SubscriptionLimitsRow> = {},
+): SubscriptionLimitsRow {
   return {
     plan: 'free',
     status: 'active',
@@ -80,7 +96,12 @@ function row(overrides: Partial<SubscriptionLimitsRow> = {}): SubscriptionLimits
 
 describe('authority order', () => {
   it('0 — a lapsed row grandfathers nothing, ceilings included', () => {
-    for (const status of ['canceled', 'unpaid', 'paused', 'incomplete_expired']) {
+    for (const status of [
+      'canceled',
+      'unpaid',
+      'paused',
+      'incomplete_expired',
+    ]) {
       const resolved = resolveLimitsFromRow(
         row({
           status,
@@ -94,7 +115,9 @@ describe('authority order', () => {
 
       expect(resolved.planId, status).toBe('free')
       expect(resolved.limits.seats, status).toBe(PLANS.free.limits.seats)
-      expect(resolved.limits.storageBytes, status).toBe(PLANS.free.limits.storageBytes)
+      expect(resolved.limits.storageBytes, status).toBe(
+        PLANS.free.limits.storageBytes,
+      )
       expect(resolved.limits.realtime, status).toBe(false)
     }
   })
@@ -102,7 +125,11 @@ describe('authority order', () => {
   it('1 — the provider product id outranks the tier column', () => {
     // A row whose tier says Free but whose product id says Crew is being charged for Crew.
     const resolved = resolveLimitsFromRow(
-      row({ plan: 'free', seats: 4, providerProductId: TEST_PRODUCT_IDS.crewMonthly }),
+      row({
+        plan: 'free',
+        seats: 4,
+        providerProductId: TEST_PRODUCT_IDS.crewMonthly,
+      }),
     )
 
     expect(resolved.planId).toBe('crew')
@@ -116,7 +143,9 @@ describe('authority order', () => {
     expect(planIdFromRow(row({ plan: 'starter', seats: 9 }))).toBe('free')
     // An id this deployment does not sell is no better than none at all.
     expect(
-      planIdFromRow(row({ plan: 'pro', seats: 1, providerProductId: 'product-retired' })),
+      planIdFromRow(
+        row({ plan: 'pro', seats: 1, providerProductId: 'product-retired' }),
+      ),
     ).toBe('solo')
   })
 
@@ -150,7 +179,12 @@ describe('authority order', () => {
     // The whole point of the escape hatch: a grandfathered Solo workspace on ten seats
     // and 20 GB, above everything its plan publishes.
     const resolved = resolveLimitsFromRow(
-      row({ plan: 'pro', seats: 1, seatLimit: 10, storageLimitBytes: 20 * GIGABYTE }),
+      row({
+        plan: 'pro',
+        seats: 1,
+        seatLimit: 10,
+        storageLimitBytes: 20 * GIGABYTE,
+      }),
     )
 
     expect(resolved.planId).toBe('solo')
@@ -199,7 +233,9 @@ describe('shape translation', () => {
     const resolved = resolveLimitsFromRow(row({ plan: 'business', seats: 3 }))
 
     for (const key of QUOTA_KEYS) {
-      expect(asMetric(resolved.limits[key])).toBe(resolved.metrics[METRIC_FOR_QUOTA[key]])
+      expect(asMetric(resolved.limits[key])).toBe(
+        resolved.metrics[METRIC_FOR_QUOTA[key]],
+      )
     }
   })
 
@@ -232,7 +268,11 @@ const ROW_CASES: ReadonlyArray<{
   { name: 'no subscription row at all', values: null, expectPlanId: 'free' },
   {
     name: 'a free row written by the sanctioned path',
-    values: { ...ceilingColumns(ceilingsForPlan('free', 1)), status: 'active', seats: 1 },
+    values: {
+      ...ceilingColumns(ceilingsForPlan('free', 1)),
+      status: 'active',
+      seats: 1,
+    },
     expectPlanId: 'free',
   },
   {
@@ -322,7 +362,10 @@ describe('the limits reported to the UI are the limits the repositories enforce'
   /** The billing runtime the screen would use, over this test's real database. */
   function runtimeOver(usage: UsageSnapshot): BillingRuntime {
     const billing = createBillingHarness({ usage })
-    return { ...billing.runtime, subscriptions: createSubscriptionStore(dbHarness.db) }
+    return {
+      ...billing.runtime,
+      subscriptions: createSubscriptionStore(dbHarness.db),
+    }
   }
 
   for (const testCase of ROW_CASES) {
@@ -347,7 +390,9 @@ describe('the limits reported to the UI are the limits the repositories enforce'
           asMetric(displayed.limits[key]),
           `${testCase.name}: ${key} displayed vs ${metric} enforced`,
         ).toBe(enforced.limits[metric])
-        expect(asMetric(displayed.quotas[key].limit)).toBe(enforced.limits[metric])
+        expect(asMetric(displayed.quotas[key].limit)).toBe(
+          enforced.limits[metric],
+        )
       }
 
       // `currentLimits()` is the same answer by a shorter route; it must not differ.
@@ -373,7 +418,9 @@ describe('the limits reported to the UI are the limits the repositories enforce'
       tenant.organizationId,
     )
     await expect(assertWithinLimit(under, 'seats', 1)).resolves.toBeUndefined()
-    await expect(assertQuota(tenant.scope, 'members', 2, 1)).resolves.toBeUndefined()
+    await expect(
+      assertQuota(tenant.scope, 'members', 2, 1),
+    ).resolves.toBeUndefined()
 
     // Exactly on it: both sides refuse, and name the same ceiling.
     const at = billingContext(
@@ -383,7 +430,9 @@ describe('the limits reported to the UI are the limits the repositories enforce'
     await expect(assertWithinLimit(at, 'seats', 1)).rejects.toMatchObject({
       violation: { key: 'seats', limit: 3, used: 3 },
     })
-    const guard = await captureError(() => assertQuota(tenant.scope, 'members', 3, 1))
+    const guard = await captureError(() =>
+      assertQuota(tenant.scope, 'members', 3, 1),
+    )
     expect(guard).toBeInstanceOf(QuotaExceededError)
     expect(guard.message).toContain('3')
   })
@@ -407,8 +456,16 @@ describe('the limits reported to the UI are the limits the repositories enforce'
     const displayed = await entitlements(ctx)
     const enforced = await resolveQuotas(tenant.scope)
 
-    expect(displayed.quotas.seats).toMatchObject({ limit: 1, used: 4, exceeded: true })
-    expect(displayed.quotas.trips).toMatchObject({ limit: 2, used: 9, exceeded: true })
+    expect(displayed.quotas.seats).toMatchObject({
+      limit: 1,
+      used: 4,
+      exceeded: true,
+    })
+    expect(displayed.quotas.trips).toMatchObject({
+      limit: 2,
+      used: 9,
+      exceeded: true,
+    })
     expect(displayed.quotas.storageBytes.exceeded).toBe(true)
     // The over-limit warning is driven by `used > limit`, so it has to be true here.
     for (const key of QUOTA_KEYS) {
@@ -440,7 +497,9 @@ describe('the limits reported to the UI are the limits the repositories enforce'
     const fromRecord = resolveLimits(planStateFromRecord(record))
     const fromRow = await resolveQuotas(tenant.scope)
     for (const key of QUOTA_KEYS) {
-      expect(asMetric(fromRecord.limits[key])).toBe(fromRow.limits[METRIC_FOR_QUOTA[key]])
+      expect(asMetric(fromRecord.limits[key])).toBe(
+        fromRow.limits[METRIC_FOR_QUOTA[key]],
+      )
     }
     expect(fromRecord.metrics.journeys).toBe(5)
   })
@@ -487,6 +546,144 @@ describe('ceilingsForPlan', () => {
       expect(resolved.limits.storageBytes, planId).toBe(
         PLANS[planId].limits.storageBytes,
       )
+    }
+  })
+})
+
+/* ----------------------------------------------------------------- rate ceilings */
+
+/**
+ * The second kind of ceiling, and the reason it is a second kind.
+ *
+ * Every metric above bounds a *row* a workspace owns: the guard counts what is in the table and
+ * `assertQuota()` refuses the next insert. Neither of the two below leaves a row. A transit search
+ * is a metered call to a routing provider; an extraction is a document turned into a draft booking
+ * by our own model binding. Both are made on a tenant's behalf and billed to us, and a tenant that
+ * makes either in a loop spends money every other tenant is paying for. So the numbers are resolved
+ * here, beside the ones they must never contradict, and enforced by the per-organization tally over
+ * KV that `03-S3` builds and `03-S7` reuses under the second name.
+ *
+ * The cases below are written over `RATE_METRICS` rather than over one metric, because everything
+ * that is true of the first is true of the second by construction: they resolve through the same
+ * step of the authority order, lapse with the same subscription and are refused the same escape
+ * hatch. A case naming one metric would leave the other asserted by nothing.
+ */
+describe('metered provider calls, ceilings on calls rather than on rows', () => {
+  it('resolves the plan its row is entitled to, for every plan', () => {
+    for (const planId of PLAN_IDS) {
+      const seats = planId === 'crew' ? 4 : 1
+      const resolved = resolveLimits({
+        planId,
+        seats,
+        ceilings: ceilingsForPlan(planId, seats),
+      })
+
+      for (const metric of RATE_METRICS) {
+        expect(resolved.rates[metric], `${planId}.${metric}`).toBe(
+          PLAN_RATE_CEILINGS[planId][metric],
+        )
+      }
+    }
+  })
+
+  it('takes the allowance away with the plan when a subscription lapses', () => {
+    // Step 0 of the authority order reaches these ceilings too: a cancelled Crew workspace keeps
+    // making provider calls at Crew's rate otherwise, on a subscription nobody is paying for.
+    const lapsed = resolveLimitsFromRow(
+      row({
+        status: 'canceled',
+        plan: 'business',
+        seats: 10,
+        providerProductId: TEST_PRODUCT_IDS.crewMonthly,
+      }),
+    )
+
+    expect(lapsed.planId).toBe('free')
+    for (const metric of RATE_METRICS) {
+      expect(lapsed.rates[metric], metric).toBe(PLAN_RATE_CEILINGS.free[metric])
+    }
+  })
+
+  it('sells no plan an unbounded number of provider calls', () => {
+    // `UNLIMITED` is available and deliberately unused: a row costs us storage, a call costs us
+    // money on somebody else's invoice, and an uncapped one has no ceiling to discover it by.
+    for (const planId of PLAN_IDS) {
+      for (const metric of RATE_METRICS) {
+        const ceiling = PLAN_RATE_CEILINGS[planId][metric]
+        expect(Number.isSafeInteger(ceiling), `${planId}.${metric}`).toBe(true)
+        expect(ceiling, `${planId}.${metric}`).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  it('gives an allowance to exactly the plans that can reach the desk', () => {
+    // Both calls are reached from the booking desk — the search from the add-transport dialog, the
+    // extraction from the import beside New booking — and the desk is the `reservations` module. A
+    // positive allowance on a plan that cannot open it would be a number nobody can spend; a zero
+    // one on a plan that can would be a screen that is on and refuses every press.
+    for (const planId of PLAN_IDS) {
+      const resolved = resolveLimits({ planId, seats: 1, ceilings: null })
+
+      for (const metric of RATE_METRICS) {
+        expect(resolved.rates[metric] > 0, `${planId}.${metric}`).toBe(
+          resolved.limits.reservations,
+        )
+      }
+    }
+  })
+
+  it('costs more per extraction than per lookup, and is sized accordingly', () => {
+    // A transit search is one request to a timetable. An extraction converts a document to text and
+    // then runs a model over it, so it is the dearer call of the two and its allowance is never the
+    // looser one. Stated as an ordering rather than as two literals, so the argument survives the
+    // next time either figure is re-sized.
+    for (const planId of PLAN_IDS) {
+      expect(
+        PLAN_RATE_CEILINGS[planId].extraction_calls_per_month,
+        planId,
+      ).toBeLessThanOrEqual(
+        PLAN_RATE_CEILINGS[planId].transit_searches_per_month,
+      )
+    }
+  })
+
+  it('is not raisable by the per-tenant escape hatch, which counts rows only', () => {
+    // `quota_overrides` is `Partial<Record<UsageMetric, number>>` under a CHECK-constrained enum,
+    // and neither of these metrics is a `UsageMetric`. An operator who writes the key gets it
+    // ignored rather than applied — stated here so the next reader does not take the silence for
+    // an override that worked.
+    const overrides = Object.fromEntries(
+      RATE_METRICS.map((metric) => [metric, 9_999]),
+    )
+    const resolved = resolveLimitsFromRow(
+      row({
+        plan: 'pro',
+        seats: 1,
+        quotaOverrides: overrides as unknown as QuotaOverrides,
+      }),
+    )
+
+    expect(resolved.planId).toBe('solo')
+    for (const metric of RATE_METRICS) {
+      expect(resolved.rates[metric], metric).toBe(
+        PLAN_RATE_CEILINGS.solo[metric],
+      )
+      expect(Object.keys(resolved.metrics)).not.toContain(metric)
+    }
+  })
+
+  it('stays out of the published quota table, on both sides of it', () => {
+    // The published table sells ceilings on rows a workspace owns and is rendered as such. Neither
+    // of these is sold or counted there, and `assertQuota()` must never find one: a guard that
+    // half-applies a ceiling is worse than one that does not apply it at all.
+    for (const metric of RATE_METRICS) {
+      expect(USAGE_METRICS as ReadonlyArray<string>).not.toContain(metric)
+      expect(QUOTA_KEYS as ReadonlyArray<string>).not.toContain(metric)
+      for (const tier of Object.keys(PLAN_QUOTAS)) {
+        expect(
+          Object.keys(PLAN_QUOTAS[tier as keyof typeof PLAN_QUOTAS]),
+        ).not.toContain(metric)
+      }
     }
   })
 })

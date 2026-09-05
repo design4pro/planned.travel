@@ -1,11 +1,21 @@
 /**
  * The transports screen, laid out as a journey rather than a list.
  *
- * Transports are shown in departure order with the *hand-over between* them drawn as a
- * junction on the rail: how long there is, whether that is enough for the mode
- * being caught, and whether the two ends even name the same place. A transport that
- * cannot be caught after the one before it is a real, named warning — not a
+ * Transports are shown in departure order with the *hand-over between* them drawn
+ * as a junction on the rail: how long there is, whether that is enough for the
+ * mode being caught, and whether the two ends even name the same place. A journey
+ * that cannot be caught after the one before it is a real, named warning — not a
  * silently wrong plan.
+ *
+ * Each card says which day of the trip it belongs to, and says both when the
+ * journey spans two — the overnight train that leaves on day 3 and lands on day 4
+ * is the case the whole second reference exists for.
+ *
+ * A journey with more than two stations reads as the chain it is: the stations
+ * down the rail with their own clocks, and the service number, platform and seat
+ * of each leg between them. A journey with no legs recorded keeps the two-endpoint
+ * row it has always had, which is the compatibility claim of `03-S2b` seen from
+ * the reading side.
  *
  * Stored values are typeset as facts. A previous round of this screen presented
  * them as filled grey rounded rectangles, which reads as a form full of disabled
@@ -28,6 +38,7 @@ import { Alert, Badge, Button, Chip, EmptyState } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatNumber, formatWeekday } from '#/lib/format'
 import { formatMoney } from '#/lib/money'
+import { timeZoneOffsetLabel } from '#/lib/timezones'
 import { resolve } from '../shared/deferred-message'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
@@ -38,10 +49,10 @@ import {
 } from '#/server/fns/transports'
 import {
   ConfirmDialog,
-  CopyValue,
   FactList,
   FactNote,
   FilterRow,
+  MaskedCode,
   RowMenu,
   StatusMenu,
   useAction,
@@ -65,7 +76,7 @@ import type { BadgeTone } from '#/components/ui'
 import type { ConfirmRequest, FactItem, StatusOption } from '../shared'
 import type { Connection } from './connections'
 import type { TransportStatus } from './leg-form'
-import type { TransportData } from './types'
+import type { TransportData, TransportDayData, TransportLegData } from './types'
 
 /* ------------------------------------------------------------------- labels */
 
@@ -112,7 +123,19 @@ function formatKilometres(metres: number, locale: Locale): string {
 export interface TransportsTimelineProps {
   readonly tripId: string
   readonly transports: ReadonlyArray<TransportData>
+  /** The trip's days: what the two day selects offer, and what a day chip reads. */
+  readonly days: ReadonlyArray<TransportDayData>
   readonly currency: string
+  /**
+   * The reader's own display preference, read by the route beside the transport
+   * desk and handed down: a `components/modules` component never fetches and
+   * never imports from `server/`, so the booking reference below obeys a switch
+   * it is told about rather than one it goes looking for.
+   *
+   * Required rather than defaulted — a masking flag that can be forgotten at a
+   * call site is a masking flag that leaks a code.
+   */
+  readonly maskCodes: boolean
   readonly newTransportOpen: boolean
   readonly onNewTransportOpenChange: (open: boolean) => void
 }
@@ -122,7 +145,9 @@ type ModeFilter = 'all' | string
 export function TransportsTimeline({
   tripId,
   transports,
+  days,
   currency,
+  maskCodes,
   newTransportOpen,
   onNewTransportOpenChange,
 }: TransportsTimelineProps) {
@@ -157,9 +182,9 @@ export function TransportsTimeline({
   )
 
   /**
-   * Connections are analysed over *every* transport, not the filtered set: hiding the
-   * ferry does not make the flight after it catchable, so the warnings must not
-   * disappear with the filter.
+   * Connections are analysed over *every* transport, not the filtered set:
+   * hiding the ferry does not make the flight after it catchable, so the
+   * warnings must not disappear with the filter.
    */
   const connections = useMemo(() => analyseConnections(rendered), [rendered])
   const summary = useMemo(
@@ -170,6 +195,17 @@ export function TransportsTimeline({
     () => new Map(connections.map((entry) => [entry.fromId, entry])),
     [connections],
   )
+
+  /** Day id → the number a person refers to that day by. */
+  const dayNumbers = useMemo(
+    () => new Map(days.map((day) => [day.id, day.dayNumber])),
+    [days],
+  )
+
+  /** The number behind a day reference, or `null` where the end names no day. */
+  function dayNumberOf(dayId: string | null): number | null {
+    return dayId === null ? null : (dayNumbers.get(dayId) ?? null)
+  }
 
   const modes = useMemo(() => {
     const tally = new Map<string, number>()
@@ -217,6 +253,7 @@ export function TransportsTimeline({
         />
         <TransportDialog
           tripId={tripId}
+          days={days}
           currency={currency}
           open={newTransportOpen}
           onOpenChange={onNewTransportOpenChange}
@@ -306,6 +343,9 @@ export function TransportsTimeline({
                 <TransportCard
                   transport={transport}
                   currency={currency}
+                  maskCodes={maskCodes}
+                  departureDay={dayNumberOf(transport.departureDayId)}
+                  arrivalDay={dayNumberOf(transport.arrivalDayId)}
                   onEdit={() => setEditing(transport)}
                   onStatus={(next) => changeStatus(transport, next)}
                   onDelete={() =>
@@ -322,9 +362,9 @@ export function TransportsTimeline({
                     })
                   }
                 />
-                {/* The junction is only drawn when the transport it describes is the one
-                  actually shown next — a filter that hides the middle transport must not
-                  claim the two remaining ones connect. */}
+                {/* The junction is only drawn when the transport it describes
+                  is the one actually shown next — a filter that hides the middle
+                  transport must not claim the two remaining ones connect. */}
                 {connection !== undefined &&
                 nextVisible !== null &&
                 connection.toId === nextVisible.id ? (
@@ -341,6 +381,7 @@ export function TransportsTimeline({
       <TransportDialog
         tripId={tripId}
         transport={editing ?? undefined}
+        days={days}
         currency={currency}
         open={newTransportOpen || editing !== null}
         onOpenChange={(next) => {
@@ -431,12 +472,20 @@ function Junction({ connection }: { connection: Connection }) {
 function TransportCard({
   transport,
   currency,
+  maskCodes,
+  departureDay,
+  arrivalDay,
   onEdit,
   onStatus,
   onDelete,
 }: {
   transport: TransportData
   currency: string
+  /** Whether the booking reference below is kept off the screen until it is asked for. */
+  maskCodes: boolean
+  /** The day numbers this journey is anchored to, or `null` where it names none. */
+  departureDay: number | null
+  arrivalDay: number | null
   onEdit: () => void
   onStatus: (next: string) => void
   onDelete: () => void
@@ -465,11 +514,12 @@ function TransportCard({
             label: t('modules.transports.field.bookingRef'),
             mono: true,
             value: (
-              <CopyValue
+              <MaskedCode
                 value={transport.bookingCode}
                 label={t('modules.transports.bookingRefFor', {
                   title: transport.title,
                 })}
+                masked={maskCodes}
               />
             ),
           },
@@ -552,25 +602,31 @@ function TransportCard({
       </div>
 
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-5">
-        <div className="flex min-w-0 items-start gap-3">
-          <Endpoint
-            code={transport.departureCode}
-            name={transport.departureName}
-            date={transport.departureDate}
-            time={transport.departureTime}
-          />
-          <ArrowRight
-            aria-hidden
-            className="mt-1.5 size-4 shrink-0 text-ink-4"
-          />
-          <Endpoint
-            code={transport.arrivalCode}
-            name={transport.arrivalName}
-            date={transport.arrivalDate}
-            time={transport.arrivalTime}
-            align="right"
-          />
-        </div>
+        {transport.legs.length > 1 ? (
+          <Chain legs={transport.legs} />
+        ) : (
+          <div className="flex min-w-0 items-start gap-3">
+            <Endpoint
+              code={transport.departureCode}
+              name={transport.departureName}
+              date={transport.departureDate}
+              time={transport.departureTime}
+              dayNumber={departureDay}
+            />
+            <ArrowRight
+              aria-hidden
+              className="mt-1.5 size-4 shrink-0 text-ink-4"
+            />
+            <Endpoint
+              code={transport.arrivalCode}
+              name={transport.arrivalName}
+              date={transport.arrivalDate}
+              time={transport.arrivalTime}
+              dayNumber={arrivalDay}
+              align="right"
+            />
+          </div>
+        )}
 
         {facts.length === 0 ? null : (
           <FactList items={facts} columns={facts.length > 3 ? 4 : 3} />
@@ -583,6 +639,155 @@ function TransportCard({
         )}
       </div>
     </article>
+  )
+}
+
+/* -------------------------------------------------------------- the chain */
+
+/** One stop on the rail: its name or code, and the clock it is read on. */
+function Stop({
+  code,
+  name,
+  timezone,
+  date,
+  time,
+  showZone,
+}: {
+  code: string | null
+  name: string
+  timezone: string | null
+  /**
+   * The day this stop is read on, because the offset is a fact about the
+   * instant and not about the zone: Paris is `UTC+1` in January and `UTC+2` in
+   * July, and a July flight labelled from the winter offset is off by an hour
+   * in the one place on the card whose whole job is to say which hour it is.
+   */
+  date: string | null
+  time: string | null
+  /** Only when the journey crosses zones; otherwise it is noise on every row. */
+  showZone: boolean
+}) {
+  const clock = formatClock(time)
+  const zone =
+    showZone && timezone !== null && timezone !== ''
+      ? timeZoneOffsetLabel(timezone, date)
+      : null
+  // A code leads and the name follows it; with no code the name leads alone.
+  const coded = code !== null && code !== ''
+
+  return (
+    <div className="flex min-w-0 flex-1 items-baseline gap-2">
+      <p className="min-w-0 truncate text-label font-semibold text-ink">
+        {coded ? code : name}
+      </p>
+      {coded ? (
+        <p className="min-w-0 truncate text-caption text-ink-3">{name}</p>
+      ) : null}
+      <span className="flex-1" />
+      <span className="shrink-0 text-caption tabular-nums text-ink-3">
+        {clock ?? '—'}
+        {zone === null ? null : <span className="ps-1 text-ink-4">{zone}</span>}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * What is read between two stops: the ticket, or nothing worth a line.
+ *
+ * `null` rather than `''` so the caller decides what an unrecorded leg is
+ * called, which is the only thing it can be called — its place in the chain.
+ */
+function ticketLine(leg: TransportLegData, t: Translate): string | null {
+  const parts = [
+    leg.serviceNumber,
+    leg.platform === null
+      ? null
+      : t('modules.transports.chain.platform', { value: leg.platform }),
+    leg.seat === null
+      ? null
+      : t('modules.transports.chain.seat', { value: leg.seat }),
+  ].filter(Boolean)
+  return parts.length === 0 ? null : parts.join(' · ')
+}
+
+/**
+ * A journey with more than two stations, read as the chain it is.
+ *
+ * The stations are the rail and the ticket facts hang between them, which is the
+ * same grammar the editor uses — so what a traveller typed and what they read
+ * back are the same shape. The zone is printed beside a clock **only when the
+ * journey crosses one**: on a chain that stays inside Japan it says nothing, and
+ * on one that leaves it, it is the difference between a ninety-minute flight and
+ * an apparent journey backwards in time.
+ */
+function Chain({ legs }: { legs: ReadonlyArray<TransportLegData> }) {
+  const t = useTranslate()
+
+  const ordered = [...legs].sort(
+    (left, right) => left.position - right.position,
+  )
+  const first = ordered.at(0)
+  if (first === undefined) {
+    // Its one caller renders the flat endpoints instead; said here too so the
+    // component answers for itself rather than for what happens to call it.
+    return null
+  }
+  const zones = new Set(
+    ordered
+      .flatMap((leg) => [leg.fromTimezone, leg.toTimezone])
+      .filter((zone): zone is string => zone !== null && zone !== ''),
+  )
+  const showZone = zones.size > 1
+
+  return (
+    <ol data-part="chain" className="flex min-w-0 flex-col">
+      <li className="flex min-w-0 items-start gap-3">
+        <span
+          aria-hidden
+          className="mt-1.5 size-2 shrink-0 rounded-full bg-brand"
+        />
+        <Stop
+          code={first.fromCode}
+          name={first.fromName}
+          timezone={first.fromTimezone}
+          date={first.departureDate}
+          time={first.departureTime}
+          showZone={showZone}
+        />
+      </li>
+      {ordered.map((leg, index) => (
+        <li key={leg.id} className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 items-stretch gap-3">
+            <span
+              aria-hidden
+              className="ms-[0.1875rem] w-px shrink-0 bg-edge"
+            />
+            <p className="min-w-0 truncate py-1 text-caption text-ink-4">
+              {ticketLine(leg, t) ??
+                t('modules.transports.chain.legNumber', { n: index + 1 })}
+            </p>
+          </div>
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              aria-hidden
+              className={cn(
+                'mt-1.5 size-2 shrink-0 rounded-full',
+                index === ordered.length - 1 ? 'bg-brand' : 'bg-edge-strong',
+              )}
+            />
+            <Stop
+              code={leg.toCode}
+              name={leg.toName}
+              timezone={leg.toTimezone}
+              date={leg.arrivalDate}
+              time={leg.arrivalTime}
+              showZone={showZone}
+            />
+          </div>
+        </li>
+      ))}
+    </ol>
   )
 }
 
@@ -599,17 +804,26 @@ function Endpoint({
   name,
   date,
   time,
+  dayNumber,
   align = 'left',
 }: {
   code: string | null
   name: string | null
   date: string | null
   time: string | null
+  /** The trip day this end is anchored to, or `null` when it names none. */
+  dayNumber: number | null
   align?: 'left' | 'right'
 }) {
   const t = useTranslate()
   const locale = useLocale()
 
+  /*
+   * `2026-06-23` → `Tue 23 Jun`, from the shared CLDR table rather than from a
+   * module-local `Intl.DateTimeFormat`: workerd and WebKit resolve an
+   * abbreviated month from different ICU builds, and a divergence there is a
+   * hydration error rather than a tolerance.
+   */
   const day = formatWeekday(date, locale)
   const clock = formatClock(time)
   const when = [day, clock].filter((part) => part !== null).join(' · ')
@@ -629,9 +843,24 @@ function Endpoint({
       {code === null || name === null ? null : (
         <p className="truncate text-caption text-ink-3">{name}</p>
       )}
-      <p className="truncate text-caption tabular-nums text-ink-4">
-        {when === '' ? t('modules.transports.noTime') : when}
-      </p>
+      <div
+        className={cn(
+          'flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1',
+          align === 'right' && 'justify-end',
+        )}
+      >
+        <span className="truncate text-caption tabular-nums text-ink-4">
+          {when === '' ? t('modules.transports.noTime') : when}
+        </span>
+        {dayNumber === null ? null : (
+          <span
+            data-part="day-chip"
+            className="shrink-0 rounded-full bg-surface-2 px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums text-ink-3"
+          >
+            {t('modules.transports.dayNumber', { n: dayNumber })}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

@@ -3,8 +3,8 @@
  *
  * `docs/SPEC.md` §8 reserves this namespace by name; it was one of the five it
  * named and nobody wrote. This file covers the tab shells — the header, the
- * stat tiles and the failure titles — for the itinerary, collab and bookings
- * tabs. The modules those tabs render have their own namespace.
+ * stat tiles and the failure titles — for the itinerary, collab, bookings and
+ * transports tabs. The modules those tabs render have their own namespace.
  *
  * **Composed sentences are messages, not concatenation.** The header
  * descriptions used to be template literals: `${pluralise(total, 'booking')} ·
@@ -29,6 +29,7 @@ const messages = {
   'error.costs': 'The costs did not load',
   'error.collab': 'The conversation did not load',
   'error.book': 'The bookings did not load',
+  'error.transports': 'The transports did not load',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerary',
   'plan.places': 'Places',
@@ -89,6 +90,44 @@ const messages = {
   'book.committedCaption': 'Across every booking on this trip',
   'book.onItinerary': 'On the itinerary',
   'book.pinnedCaption': 'Pinned to a day of the plan',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Transports',
+  'transports.empty': 'Nothing recorded yet',
+  /**
+   * The header's two tallies, joined by the component with a middle dot. The
+   * distance beside it is a figure and not a sentence, so it needs no message
+   * of its own - it comes out of `formatDistance` already in the reader's
+   * units and grouping.
+   */
+  'transports.count.transports': {
+    one: '{transports} transport',
+    other: '{transports} transports',
+  },
+  'transports.distance': 'Distance travelled',
+  /**
+   * The distance read as something a body can picture. `{times}` arrives
+   * already rounded to two places, and the multiplication sign is the message's
+   * own so a locale that writes it differently can.
+   */
+  'transports.equator': '≈ {times}× around the equator',
+  'transports.noGrouping': 'Nothing grouped yet',
+  /**
+   * `{mode}` is a mode label from the transports module's own vocabulary, so
+   * the word a reader sees here is the same word the mode radio group offers -
+   * one owner for the name of a way of travelling.
+   */
+  'transports.mostly': 'mostly {mode}',
+  'transports.confirmed': 'Confirmed',
+  'transports.stillPending': {
+    one: '{pending} still pending',
+    other: '{pending} still pending',
+  },
+  'transports.spent': 'Spent on travel',
+  'transports.noPrices': 'No prices recorded',
+  'transports.priced': {
+    one: 'across {priced} priced transport',
+    other: 'across {priced} priced transports',
+  },
 } as const satisfies NamespaceMessages
 
 export default messages

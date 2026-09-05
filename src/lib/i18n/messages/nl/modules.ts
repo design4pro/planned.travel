@@ -86,6 +86,7 @@ const messages = {
   'transports.field.place': 'Plek',
   'transports.field.code': 'Lettercode',
   'transports.field.date': 'Datum',
+  'transports.field.time': 'Vertrek vanaf',
   'transports.field.departurePlaceholder': 'Amsterdam Schiphol',
   'transports.field.arrivalPlaceholder': 'Tokio Haneda',
   'transports.field.carrier': 'Vervoerder',
@@ -110,6 +111,7 @@ const messages = {
   'field.status': 'Toestand',
   'form.saveError': 'Dat is niet opgeslagen',
   'action.cancel': 'Annuleren',
+  'action.showCode': '{label} tonen',
   'book.status.none': 'Zonder toestand',
   'book.status.pending': 'In afwachting',
   'book.status.confirmed': 'Bevestigd',
@@ -123,10 +125,19 @@ const messages = {
   'book.empty.body':
     'Verblijven, tafels, tours en tickets horen hier — met het bevestigingsnummer waar je het aan de deur terugvindt, en de datum die ze op de tijdlijn zet.',
   'book.empty.action': 'Voeg de eerste boeking toe',
-  'book.filtered.title': 'Niets in die toestand',
+  'book.filtered.title': 'Nog niets van dat soort',
   'book.filtered.body':
-    'Elke boeking van deze reis staat er anders voor. Ga terug naar „{label}” om ze allemaal te zien.',
-  'book.filtered.action': 'Alles tonen',
+    'Van de soorten die je koos is hier niets geboekt. Wis het filter om de rest van de balie te zien.',
+  'book.filtered.action': 'Filter wissen',
+  'book.panel.outstanding': 'Nog te regelen',
+  'book.panel.outstandingEmpty': 'Niets openstaand — alles hier is geregeld.',
+  'book.panel.settled': 'Geregeld',
+  'book.panel.settledEmpty':
+    'Nog niets geregeld — het moet allemaal nog achterna.',
+  'book.import.badge': 'Ongecontroleerde import',
+  'book.import.hint':
+    'Geïmporteerd uit een bevestiging. Open en bewaar hem om hem als gecontroleerd te merken.',
+  'book.journeyLink': 'Op het vervoertabblad',
   'filter.all': 'Alles',
   'book.remove.body':
     'Hij gaat definitief van de tijdlijn af. Is hij alleen geannuleerd, zet zijn toestand dan op Geannuleerd zodat het record blijft.',
@@ -407,6 +418,14 @@ const messages = {
   'book.error.url': 'Een koppeling moet met http:// of https:// beginnen.',
   'book.error.confirmationLong':
     'Dat bevestigingsnummer is te lang om op te slaan.',
+  'book.error.stopGone': 'Die halte hoort niet meer bij deze reis.',
+  'book.ledger.unlinked':
+    'De kostenregel van deze boeking blijft in de reiskosten staan, maar is er niet langer aan gekoppeld.',
+  'book.ledger.updated': 'De kostenregel van deze boeking wordt {money}.',
+  'book.ledger.needsDate':
+    'Geef deze boeking een datum, dan komen de kosten bij de reiskosten.',
+  'book.ledger.added':
+    'Er wordt een regel van {money} aan de kosten van deze reis toegevoegd.',
   'book.fieldName.provider': 'aanbieder',
   'book.fieldName.location': 'locatie',
   'book.fieldName.confirmationNumber': 'bevestigingsnummer',
@@ -417,6 +436,18 @@ const messages = {
   'book.fieldName.endTime': 'eindtijd',
   'book.fieldName.guests': 'aantal personen',
   'book.fieldName.price': 'prijs',
+  'book.fieldName.stop': 'halte',
+  'book.field.stop': 'Gekoppelde halte',
+  'book.field.stopHint': 'Bij welke halte van het plan deze boeking hoort.',
+  'book.field.stopHintEmpty':
+    'Voeg eerst een plek aan een dag toe, daarna kun je deze boeking eraan koppelen',
+  'book.field.stopPlaceholder': 'Niet aan een halte gebonden',
+  'book.field.stopSearch': 'Zoek in haltes en dagen',
+  'book.field.stopEmpty': 'Geen halte komt overeen',
+  'book.ledger.refused.title': 'Bewaard, maar niet bij de kosten gezet',
+  'book.ledger.refused.body':
+    'De boeking staat op de reis. De kostenregel bij de reiskosten zetten lukte niet — probeer die helft opnieuw.',
+  'book.action.ledgerRetry': 'Bij de kosten zetten',
   'book.copyConfirmation': 'het bevestigingsnummer van {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -433,6 +464,62 @@ const messages = {
   'transports.mode.walk': 'Te voet',
   'transports.mode.other': 'Overig',
   'transports.mode.fallback': 'Traject',
+  'transports.rank.earliest': 'Vroegste aankomst',
+  'transports.rank.fewestChanges': 'Minste overstappen',
+  'transports.connection.findStop': 'Zoek een halte',
+  'transports.connection.findStopSearch': 'AMS, Centraal, Amsterdam…',
+  'transports.connection.findStopEmpty':
+    'Geen halte met die naam in de catalogus.',
+  'transports.connection.hideStops': 'Verberg de haltes',
+  'transports.connection.seeStops': 'Bekijk de haltes',
+  'transports.connection.saving': 'Verbinding wordt bewaard',
+  'transports.connection.use': 'Neem deze',
+  'transports.connection.onFoot': 'Te voet',
+  'transports.connection.service': 'Rit',
+  'transports.connection.direct': 'rechtstreeks',
+  'transports.connection.changes': {
+    one: '{changes} overstap',
+    other: '{changes} overstappen',
+  },
+  'transports.connection.tooLong':
+    'Deze verbinding heeft meer dan {max} etappes, meer dan één reisrecord bevat. Zoek een kortere hop en noteer de rest apart.',
+  'transports.connection.refusal.ceiling':
+    'Deze maand geen zoekopdrachten meer over',
+  'transports.connection.refusal.unconfigured':
+    'Verbindingzoeken staat uit op deze deployment',
+  'transports.connection.refusal.provider':
+    'De dienstregelingdienst gaf geen antwoord',
+  'transports.connection.refusal.plan':
+    'Verbindingzoeken hoort niet bij dit plan',
+  'transports.connection.refusal.planBody':
+    'Stap over op een ander plan om dienstregelingen vanuit een reis te doorzoeken. Een rit blijft met de hand te noteren.',
+  'transports.connection.refusal.ceilingBody':
+    'Het maandtegoed van {ceiling} is op en vernieuwt op de eerste van volgende maand. Een rit blijft met de hand te noteren.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Hier is geen dienstregelingdienst ingesteld, dus er is niets gezocht. Noteer de rit met de hand.',
+  'transports.connection.refusal.providerBody':
+    'Er kwam niets terug om te tonen. Probeer het zo nog eens, of noteer de rit met de hand.',
+  'transports.connection.invitation':
+    'Twee haltes en een datum, en de dienstregeling antwoordt. Er wordt niets bewaard tot je er een kiest.',
+  'transports.connection.empty':
+    'Er is op die datum geen verbinding gevonden tussen die twee haltes. Probeer een naburig station, of verbreed het modusfilter.',
+  'transports.connection.searchFailed': 'De zoekopdracht liep niet',
+  'transports.connection.searchFailedBody': 'Probeer het zo nog eens.',
+  'transports.connection.saved': 'Verbinding bewaard',
+  'transports.connection.replaced': 'Route vervangen',
+  'transports.connection.replacedBody':
+    'De boekingscode en de stoel blijven onaangeroerd.',
+  'transports.connection.saveFailed': 'De verbinding is niet bewaard',
+  'transports.connection.saveError': 'Dat is niet bewaard',
+  'transports.connection.fromHint':
+    'Kies een halte — een dienstregeling wordt gevraagd waar, niet hoe het heet.',
+  'transports.connection.toHint': 'Kies een halte uit de catalogus.',
+  'transports.connection.timeHint':
+    'Een dienstregeling antwoordt met de eerstvolgende vertrektijden; dit bepaalt welke.',
+  'transports.connection.onlyModes': 'Alleen deze modi',
+  'transports.connection.searching': 'De dienstregeling wordt doorzocht',
+  'transports.connection.search': 'Verbindingen zoeken',
+  'transports.connection.title': 'Van {from} naar {to}',
   'transports.status.idea': 'Idee',
   'transports.status.pending': 'In afwachting',
   'transports.status.confirmed': 'Bevestigd',
@@ -446,6 +533,13 @@ const messages = {
   'transports.end.toStation': 'Naar station',
   'transports.end.from': 'Vanaf',
   'transports.end.to': 'Naar',
+  'transports.end.pickUp': 'Ophalen',
+  'transports.end.dropOff': 'Inleveren',
+  'transports.end.departureDay': 'Vertrekdag',
+  'transports.end.arrivalDay': 'Aankomstdag',
+  'transports.end.pickUpDay': 'Ophaaldag',
+  'transports.end.returnDay': 'Inleverdag',
+  'transports.dayNumber': 'Dag {n}',
   'transports.error.titleEmpty':
     'Geef dit traject een naam die je in een lijst terugkent.',
   'transports.error.date': 'Een datum schrijf je JJJJ-MM-DD.',
@@ -461,6 +555,60 @@ const messages = {
     'Dit traject komt aan voordat het vertrekt.',
   'transports.error.timingHint':
     'Verschuif een van beide tijden, zodat het traject echt te halen is.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'De aankomstdag ligt vóór de vertrekdag.',
+  'transports.error.returnDayBeforePickUp':
+    'De inleverdag ligt vóór de ophaaldag.',
+  'transports.toast.chainFailed': 'De etappes zijn niet opgeslagen',
+  'transports.toast.chainFallback': 'De reis is opgeslagen, de etappes niet.',
+  'transports.field.noDay': 'Nog geen dag',
+  'transports.fill.legend': 'Hoe je dit invult',
+  'transports.fill.manual': 'Zelf invoeren',
+  'transports.fill.searchAgain': 'Opnieuw zoeken',
+  'transports.fill.search': 'Verbindingen zoeken',
+  'transports.chain.unsplit': 'Weer één reis van maken',
+  'transports.field.arrivalDayHint':
+    'Een reis die de volgende ochtend aankomt, zegt dat hier.',
+  'transports.chain.splitHint':
+    'Onderweg overstappen? Leg elk deel vast met een eigen treinnummer, spoor, stoel en tijden.',
+  'transports.chain.split': 'Opdelen in etappes',
+  'transports.chain.stopNumber': 'halte {n}',
+  'transports.chain.change': 'Overstap {n}',
+  'transports.chain.removeStation': '{label} verwijderen',
+  'transports.chain.findStation': 'Zoek een luchthaven of station',
+  'transports.chain.findStationFor':
+    'Zoek een luchthaven of station voor {label}',
+  'transports.chain.findPlaceholder': 'AMS, Schiphol, Amsterdam…',
+  'transports.chain.findEmpty': 'Geen match — typ de halte hieronder zelf in.',
+  'transports.chain.stopLabel': 'Halte',
+  'transports.chain.stopPlaceholder': 'Amsterdam Centraal',
+  'transports.chain.timezoneHint': 'Op welke klok deze halte loopt',
+  'transports.chain.timezoneAt': 'Tijdzone bij {label}',
+  'transports.chain.timezonePlaceholder': 'Niet opgegeven',
+  'transports.chain.timezoneSearch': 'Tokio, Lissabon, UTC…',
+  'transports.chain.acrossClocks': '{gap} over twee klokken',
+  'transports.chain.addStopAfter': 'Halte toevoegen na {label}',
+  'transports.chain.servicePlaceholder': 'IC 3021',
+  'transports.chain.leaves': 'Vertrekt uit {label}',
+  'transports.chain.reaches': 'Komt aan in {label}',
+  'transports.chain.dayOfLeg': '{label} van etappe {n}',
+  'transports.chain.formError': 'Deze keten kan niet worden bewaard',
+  'transports.chain.atCap':
+    'Een keten bevat hoogstens {max} etappes — dat begrenst wat één keer bewaren draagt, niet hoeveel overstappen een reis mag hebben.',
+  'transports.chain.hint':
+    'Voeg op elke etappe een halte toe om een treinwissel vast te leggen; elke etappe houdt haar eigen treinnummer, spoor en stoel.',
+  'transports.field.timezone': 'Tijdzone',
+  'transports.field.platform': 'Spoor',
+  'transports.chain.legNumber': 'Etappe {n}',
+  'transports.chain.platform': 'Spoor {value}',
+  'transports.chain.seat': 'Stoel {value}',
+  'transports.chain.error.stopName':
+    'Elke halte heeft een naam nodig — hier stap je over.',
+  'transports.chain.error.stopNameLong':
+    'Houd de naam van een halte onder 200 tekens.',
+  'transports.chain.error.timezone': 'Kies een tijdzone uit de lijst.',
+  'transports.chain.error.tooManyLegs':
+    'Een keten bevat hoogstens {max} trajecten.',
   'transports.bookingRefFor': 'het boekingsnummer van {title}',
   'transports.doorToDoor': 'Dat is {gap} van deur tot deur.',
   'transports.title.fromTo': '{operator} van {from} naar {to}',

@@ -90,6 +90,7 @@ const messages = {
   'transports.field.place': 'Lugar',
   'transports.field.code': 'Código',
   'transports.field.date': 'Fecha',
+  'transports.field.time': 'Salida a partir de',
   'transports.field.departurePlaceholder': 'Madrid Barajas',
   'transports.field.arrivalPlaceholder': 'Tokio Haneda',
   'transports.field.carrier': 'Compañía',
@@ -114,6 +115,7 @@ const messages = {
   'field.status': 'Estado',
   'form.saveError': 'Eso no se guardó',
   'action.cancel': 'Cancelar',
+  'action.showCode': 'Muestra {label}',
   'book.status.none': 'Sin estado',
   'book.status.pending': 'Pendiente',
   'book.status.confirmed': 'Confirmada',
@@ -127,10 +129,20 @@ const messages = {
   'book.empty.body':
     'Alojamientos, mesas, visitas y entradas van aquí — con el número de confirmación donde lo encontrarás en la puerta, y la fecha que las coloca en la línea de tiempo.',
   'book.empty.action': 'Añadir la primera reserva',
-  'book.filtered.title': 'Nada en ese estado',
+  'book.filtered.title': 'Todavía no hay nada de ese tipo',
   'book.filtered.body':
-    'Cada reserva de este viaje está en una fase distinta. Vuelve a «{label}» para verlas todas.',
-  'book.filtered.action': 'Mostrar todo',
+    'No hay nada reservado de los tipos que has elegido. Quita el filtro para ver el resto del mostrador.',
+  'book.filtered.action': 'Quitar el filtro',
+  'book.panel.outstanding': 'Aún por resolver',
+  'book.panel.outstandingEmpty':
+    'No queda nada pendiente — todo lo de aquí está resuelto.',
+  'book.panel.settled': 'Resuelto',
+  'book.panel.settledEmpty':
+    'Todavía no hay nada resuelto — está todo por perseguir.',
+  'book.import.badge': 'Importación sin revisar',
+  'book.import.hint':
+    'Importado de una confirmación. Ábrelo y guárdalo para marcarlo como revisado.',
+  'book.journeyLink': 'En la pestaña de transportes',
   'filter.all': 'Todo',
   'book.remove.body':
     'Sale de la línea de tiempo para siempre. Si solo está cancelada, ponle el estado Cancelada para conservar el registro.',
@@ -413,6 +425,14 @@ const messages = {
   'book.error.url': 'Un enlace tiene que empezar por http:// o https://.',
   'book.error.confirmationLong':
     'Ese número de confirmación es demasiado largo para guardarlo.',
+  'book.error.stopGone': 'Esa parada ya no está en este viaje.',
+  'book.ledger.unlinked':
+    'La línea de coste de esta reserva seguirá en los costes del viaje, pero ya no estará vinculada a ella.',
+  'book.ledger.updated': 'La línea de coste de esta reserva pasará a {money}.',
+  'book.ledger.needsDate':
+    'Dale una fecha a esta reserva y su coste se añadirá a los costes del viaje.',
+  'book.ledger.added':
+    'Se añadirá una línea de {money} a los costes de este viaje.',
   'book.fieldName.provider': 'operador',
   'book.fieldName.location': 'lugar',
   'book.fieldName.confirmationNumber': 'número de confirmación',
@@ -423,6 +443,18 @@ const messages = {
   'book.fieldName.endTime': 'hora de fin',
   'book.fieldName.guests': 'número de personas',
   'book.fieldName.price': 'precio',
+  'book.fieldName.stop': 'parada',
+  'book.field.stop': 'Parada vinculada',
+  'book.field.stopHint': 'A qué parada del plan corresponde esta reserva.',
+  'book.field.stopHintEmpty':
+    'Añade primero un lugar a un día y luego podrás vincular esta reserva a él',
+  'book.field.stopPlaceholder': 'Sin parada',
+  'book.field.stopSearch': 'Busca paradas y días',
+  'book.field.stopEmpty': 'Ninguna parada coincide',
+  'book.ledger.refused.title': 'Guardado, pero no añadido a los gastos',
+  'book.ledger.refused.body':
+    'La reserva está en el viaje. Añadir su línea de gasto a los gastos del viaje no funcionó — vuelve a intentar esa mitad.',
+  'book.action.ledgerRetry': 'Añádelo a los gastos',
   'book.copyConfirmation': 'el número de confirmación de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -439,6 +471,63 @@ const messages = {
   'transports.mode.walk': 'A pie',
   'transports.mode.other': 'Otro',
   'transports.mode.fallback': 'Trayecto',
+  'transports.rank.earliest': 'Llegada más temprana',
+  'transports.rank.fewestChanges': 'Menos transbordos',
+  'transports.connection.findStop': 'Busca una parada',
+  'transports.connection.findStopSearch': 'MAD, Atocha, Madrid…',
+  'transports.connection.findStopEmpty':
+    'Ninguna parada con ese nombre en el catálogo.',
+  'transports.connection.hideStops': 'Oculta las paradas',
+  'transports.connection.seeStops': 'Ver las paradas',
+  'transports.connection.saving': 'Guardando la conexión',
+  'transports.connection.use': 'Elige esta',
+  'transports.connection.onFoot': 'A pie',
+  'transports.connection.service': 'Servicio',
+  'transports.connection.direct': 'directo',
+  'transports.connection.changes': {
+    one: '{changes} transbordo',
+    many: '{changes} transbordos',
+    other: '{changes} transbordos',
+  },
+  'transports.connection.tooLong':
+    'Esta conexión tiene más de {max} tramos, más de lo que cabe en un registro de viaje. Busca un salto más corto y anota el resto aparte.',
+  'transports.connection.refusal.ceiling': 'No quedan búsquedas este mes',
+  'transports.connection.refusal.unconfigured':
+    'La búsqueda de conexiones está apagada en este despliegue',
+  'transports.connection.refusal.provider':
+    'El servicio de horarios no respondió',
+  'transports.connection.refusal.plan':
+    'La búsqueda de conexiones no entra en este plan',
+  'transports.connection.refusal.planBody':
+    'Cambia de plan para consultar horarios desde dentro de un viaje. Un trayecto siempre se puede anotar a mano.',
+  'transports.connection.refusal.ceilingBody':
+    'El cupo mensual de {ceiling} está agotado y se renueva el primero del mes que viene. Un trayecto siempre se puede anotar a mano.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Aquí no hay ningún servicio de horarios configurado, así que no se buscó nada. Anota el trayecto a mano.',
+  'transports.connection.refusal.providerBody':
+    'No volvió nada que mostrar. Inténtalo en un momento o anota el trayecto a mano.',
+  'transports.connection.invitation':
+    'Dos paradas y una fecha, y los horarios responden. No se guarda nada hasta que elijas una.',
+  'transports.connection.empty':
+    'No se encontró ninguna conexión entre esas dos paradas en esa fecha. Prueba una estación vecina o amplía el filtro de modos.',
+  'transports.connection.searchFailed': 'La búsqueda no se hizo',
+  'transports.connection.searchFailedBody':
+    'Vuelve a intentarlo en un momento.',
+  'transports.connection.saved': 'Conexión guardada',
+  'transports.connection.replaced': 'Ruta sustituida',
+  'transports.connection.replacedBody':
+    'El código de reserva y el asiento quedan intactos.',
+  'transports.connection.saveFailed': 'La conexión no se guardó',
+  'transports.connection.saveError': 'Eso no se guardó',
+  'transports.connection.fromHint':
+    'Elige una parada — a un horario se le pregunta dónde, no cómo se llama.',
+  'transports.connection.toHint': 'Elige una parada del catálogo.',
+  'transports.connection.timeHint':
+    'Un horario responde con las próximas salidas, así que esto decide cuáles.',
+  'transports.connection.onlyModes': 'Solo estos modos',
+  'transports.connection.searching': 'Buscando en los horarios',
+  'transports.connection.search': 'Busca conexiones',
+  'transports.connection.title': 'De {from} a {to}',
   'transports.status.idea': 'Idea',
   'transports.status.pending': 'Pendiente',
   'transports.status.confirmed': 'Confirmado',
@@ -452,6 +541,13 @@ const messages = {
   'transports.end.toStation': 'Estación de llegada',
   'transports.end.from': 'Desde',
   'transports.end.to': 'Hasta',
+  'transports.end.pickUp': 'Recogida',
+  'transports.end.dropOff': 'Devolución',
+  'transports.end.departureDay': 'Día de salida',
+  'transports.end.arrivalDay': 'Día de llegada',
+  'transports.end.pickUpDay': 'Día de recogida',
+  'transports.end.returnDay': 'Día de devolución',
+  'transports.dayNumber': 'Día {n}',
   'transports.error.titleEmpty':
     'Dale a este trayecto un nombre que reconozcas en una lista.',
   'transports.error.date': 'Una fecha se escribe AAAA-MM-DD.',
@@ -467,6 +563,61 @@ const messages = {
     'Este trayecto llega antes de salir.',
   'transports.error.timingHint':
     'Mueve una de las dos horas para que el trayecto se pueda coger de verdad.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'El día de llegada es anterior al día de salida.',
+  'transports.error.returnDayBeforePickUp':
+    'El día de devolución es anterior al día de recogida.',
+  'transports.toast.chainFailed': 'Los tramos no se guardaron',
+  'transports.toast.chainFallback': 'El viaje se guardó, pero sus tramos no.',
+  'transports.field.noDay': 'Todavía sin día',
+  'transports.fill.legend': 'Cómo rellenar esto',
+  'transports.fill.manual': 'Escríbelo tú',
+  'transports.fill.searchAgain': 'Buscar otra vez',
+  'transports.fill.search': 'Buscar conexiones',
+  'transports.chain.unsplit': 'Volver a dejarlo como un solo viaje',
+  'transports.field.arrivalDayHint':
+    'Un viaje que llega a la mañana siguiente lo dice aquí.',
+  'transports.chain.splitHint':
+    '¿Transbordo por el camino? Anota cada parte con su número de servicio, andén, asiento y horas.',
+  'transports.chain.split': 'Dividir en tramos',
+  'transports.chain.stopNumber': 'parada {n}',
+  'transports.chain.change': 'Transbordo {n}',
+  'transports.chain.removeStation': 'Elimina {label}',
+  'transports.chain.findStation': 'Busca un aeropuerto o una estación',
+  'transports.chain.findStationFor':
+    'Busca un aeropuerto o una estación para {label}',
+  'transports.chain.findPlaceholder': 'MAD, Barajas, Madrid…',
+  'transports.chain.findEmpty':
+    'Sin coincidencias — escribe la parada tú mismo abajo.',
+  'transports.chain.stopLabel': 'Parada',
+  'transports.chain.stopPlaceholder': 'Madrid Atocha',
+  'transports.chain.timezoneHint': 'Con qué reloj va esta parada',
+  'transports.chain.timezoneAt': 'Zona horaria en {label}',
+  'transports.chain.timezonePlaceholder': 'Sin indicar',
+  'transports.chain.timezoneSearch': 'Tokio, Lisboa, UTC…',
+  'transports.chain.acrossClocks': '{gap} entre dos relojes',
+  'transports.chain.addStopAfter': 'Añade una parada después de {label}',
+  'transports.chain.servicePlaceholder': 'AVE 3092',
+  'transports.chain.leaves': 'Sale de {label}',
+  'transports.chain.reaches': 'Llega a {label}',
+  'transports.chain.dayOfLeg': '{label} del tramo {n}',
+  'transports.chain.formError': 'Esta cadena no se puede guardar',
+  'transports.chain.atCap':
+    'Una cadena admite como máximo {max} tramos — es un límite de lo que puede llevar un guardado, no de cuántos transbordos puede tener un viaje.',
+  'transports.chain.hint':
+    'Añade una parada en cualquier tramo para registrar un cambio de tren; cada tramo guarda su número de servicio, andén y asiento.',
+  'transports.field.timezone': 'Zona horaria',
+  'transports.field.platform': 'Andén',
+  'transports.chain.legNumber': 'Tramo {n}',
+  'transports.chain.platform': 'Andén {value}',
+  'transports.chain.seat': 'Asiento {value}',
+  'transports.chain.error.stopName':
+    'Cada parada necesita un nombre — aquí es donde haces transbordo.',
+  'transports.chain.error.stopNameLong':
+    'El nombre de una parada debe tener menos de 200 caracteres.',
+  'transports.chain.error.timezone': 'Elige una zona horaria de la lista.',
+  'transports.chain.error.tooManyLegs':
+    'Una cadena admite como máximo {max} tramos.',
   'transports.bookingRefFor': 'la referencia de reserva de {title}',
   'transports.doorToDoor': 'Son {gap} de puerta a puerta.',
   'transports.title.fromTo': '{operator} de {from} a {to}',

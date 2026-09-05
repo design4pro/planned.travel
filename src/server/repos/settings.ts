@@ -54,7 +54,10 @@ export const organizationSettingsRepository = createTenantRepository(
   organizationSettings,
   'workspace settings',
 )
-export const userSettingsRepository = createTenantRepository(userSettings, 'user settings')
+export const userSettingsRepository = createTenantRepository(
+  userSettings,
+  'user settings',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -126,7 +129,9 @@ export const updateOrganizationSettingsInput = z.object({
  * as `en-GB` still compiles and is canonicalised by the parse; the row that
  * reaches D1 always carries the narrowed {@link Locale}.
  */
-export type UpdateOrganizationSettingsInput = z.input<typeof updateOrganizationSettingsInput>
+export type UpdateOrganizationSettingsInput = z.input<
+  typeof updateOrganizationSettingsInput
+>
 
 export const updateUserSettingsInput = z.object({
   theme: z.enum(THEME_PREFERENCES).optional(),
@@ -139,6 +144,15 @@ export const updateUserSettingsInput = z.object({
   mapStyle: mapStyleSchema.nullish(),
   accentColour: colourSchema.nullish(),
   reduceMotion: z.boolean().optional(),
+  /**
+   * Declared here or the switch reports success and saves nothing: this is a
+   * `z.object`, and {@link updateUserSettings} parses its input through it, so a
+   * key the schema has not been told about is **stripped** rather than refused.
+   *
+   * `z.boolean()` with no coercion — a control that posts the string `"false"`
+   * is a client bug and must fail loudly rather than be read as `true`.
+   */
+  maskConfirmationCodes: z.boolean().optional(),
   onboardingCompletedAt: instantSchema.nullish(),
 })
 /** As {@link UpdateOrganizationSettingsInput}: the input side, canonicalised on parse. */
@@ -151,7 +165,9 @@ export type UpdateUserSettingsInput = z.input<typeof updateUserSettingsInput>
 export async function getOrganizationSettings(
   scope: TenantScope,
 ): Promise<OrganizationSettings | null> {
-  const rows = await organizationSettingsRepository.findMany(scope, { limit: 1 })
+  const rows = await organizationSettingsRepository.findMany(scope, {
+    limit: 1,
+  })
   return rows[0] ?? null
 }
 
@@ -168,7 +184,10 @@ export async function ensureOrganizationSettings(
   scope: TenantScope,
 ): Promise<OrganizationSettings> {
   const existing = await getOrganizationSettings(scope)
-  return existing ?? organizationSettingsRepository.insert(scope, { locale: DEFAULT_LOCALE })
+  return (
+    existing ??
+    organizationSettingsRepository.insert(scope, { locale: DEFAULT_LOCALE })
+  )
 }
 
 /**
@@ -201,7 +220,9 @@ export async function markOrganizationOnboarded(
   if (row.onboardedAt !== null) {
     return row
   }
-  return organizationSettingsRepository.requireUpdate(scope, row.id, { onboardedAt: new Date() })
+  return organizationSettingsRepository.requireUpdate(scope, row.id, {
+    onboardedAt: new Date(),
+  })
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -264,6 +285,8 @@ export interface EffectiveSettings {
   readonly mapStyle: string
   readonly accentColour: string | null
   readonly reduceMotion: boolean
+  /** Hide confirmation codes until the reader asks for one. Personal; a workspace never decides it. */
+  readonly maskConfirmationCodes: boolean
   readonly features: JsonRecord
   readonly onboarded: boolean
 }
@@ -283,7 +306,10 @@ export async function getEffectiveSettings(
     .parse(user?.distanceUnit ?? organization.distanceUnit)
 
   return {
-    theme: z.enum(THEME_PREFERENCES).catch('system').parse(user?.theme ?? 'system'),
+    theme: z
+      .enum(THEME_PREFERENCES)
+      .catch('system')
+      .parse(user?.theme ?? 'system'),
     // Same normalisation, same precedence and same fallback the request-time negotiator runs, because
     // it *is* that function: a row written before the picker existed can hold `en-GB`, `pl-PL` or
     // free text, and a caller that asked for the effective settings must never be handed a tag the
@@ -298,6 +324,16 @@ export async function getEffectiveSettings(
     mapStyle: user?.mapStyle ?? organization.mapStyle,
     accentColour: user?.accentColour ?? null,
     reduceMotion: user?.reduceMotion ?? false,
+    /*
+     * Named here as well as on the interface, and that is not redundancy: this
+     * function hand-builds its answer key by key rather than spreading either
+     * row, so a column added to `user_settings` and to the write validator
+     * reaches no reader at all until this literal names it. `?? false` is the
+     * whole precedence rule — `organization_settings` deliberately carries no
+     * counterpart, because a workspace cannot decide on a member's behalf
+     * whether their own screen is shoulder-safe.
+     */
+    maskConfirmationCodes: user?.maskConfirmationCodes ?? false,
     features: organization.features ?? {},
     onboarded: organization.onboardedAt !== null,
   }
@@ -348,12 +384,18 @@ export const appSettingsStore = {
 
     const rows = await db
       .insert(appSettings)
-      .values({ key: parsedKey, value: parsedValue, description: parsedDescription })
+      .values({
+        key: parsedKey,
+        value: parsedValue,
+        description: parsedDescription,
+      })
       .onConflictDoUpdate({
         target: appSettings.key,
         set: {
           value: parsedValue,
-          ...(parsedDescription === undefined ? {} : { description: parsedDescription }),
+          ...(parsedDescription === undefined
+            ? {}
+            : { description: parsedDescription }),
           updatedAt: new Date(),
         },
       })

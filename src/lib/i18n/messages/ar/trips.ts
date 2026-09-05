@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'تعذّر تحميل النفقات',
   'error.collab': 'تعذّر تحميل المحادثة',
   'error.book': 'تعذّر تحميل الحجوزات',
+  'error.transports': 'لم تُحمَّل التنقلات',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'البرنامج',
   'plan.places': 'الأماكن',
@@ -87,6 +88,40 @@ const messages = {
   'book.committedCaption': 'عبر كل حجوزات هذه الرحلة',
   'book.onItinerary': 'في البرنامج',
   'book.pinnedCaption': 'مثبَّت على يوم من البرنامج',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'التنقلات',
+  'transports.empty': 'لا شيء مسجَّل بعد',
+  'transports.count.transports': {
+    zero: '{transports} تنقل',
+    one: '{transports} تنقل',
+    two: '{transports} تنقلان',
+    few: '{transports} تنقلات',
+    many: '{transports} تنقلًا',
+    other: '{transports} تنقل',
+  },
+  'transports.distance': 'المسافة المقطوعة',
+  'transports.equator': '≈ {times}× حول خط الاستواء',
+  'transports.noGrouping': 'لا تجميع بعد',
+  'transports.mostly': 'غالبًا {mode}',
+  'transports.confirmed': 'مؤكَّد',
+  'transports.stillPending': {
+    zero: '{pending} ما زال معلَّقًا',
+    one: '{pending} ما زال معلَّقًا',
+    two: '{pending} ما زالا معلَّقين',
+    few: '{pending} ما زالت معلَّقة',
+    many: '{pending} ما زالت معلَّقة',
+    other: '{pending} ما زالت معلَّقة',
+  },
+  'transports.spent': 'المصروف على السفر',
+  'transports.noPrices': 'لا أسعار مسجَّلة',
+  'transports.priced': {
+    zero: 'عبر {priced} تنقل مسعَّر',
+    one: 'عبر {priced} تنقل مسعَّر',
+    two: 'عبر {priced} تنقلين مسعَّرين',
+    few: 'عبر {priced} تنقلات مسعَّرة',
+    many: 'عبر {priced} تنقلًا مسعَّرًا',
+    other: 'عبر {priced} تنقل مسعَّر',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

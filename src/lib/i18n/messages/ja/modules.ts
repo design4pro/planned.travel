@@ -80,6 +80,7 @@ const messages = {
   'transports.field.place': '場所',
   'transports.field.code': 'コード',
   'transports.field.date': '日付',
+  'transports.field.time': '出発時刻以降',
   'transports.field.departurePlaceholder': '東京 羽田',
   'transports.field.arrivalPlaceholder': 'パリ シャルル・ド・ゴール',
   'transports.field.carrier': '運行会社',
@@ -104,6 +105,7 @@ const messages = {
   'field.status': '状態',
   'form.saveError': '保存できませんでした',
   'action.cancel': 'キャンセル',
+  'action.showCode': '{label} を表示',
   'book.status.none': '状態なし',
   'book.status.pending': '確認待ち',
   'book.status.confirmed': '確定',
@@ -117,10 +119,20 @@ const messages = {
   'book.empty.body':
     '宿、席、ツアー、チケットはここに。入口で必要になる確認番号を控え、日付を入れれば旅程の時間軸に並びます。',
   'book.empty.action': '最初の予約を追加',
-  'book.filtered.title': 'その状態のものはありません',
+  'book.filtered.title': 'その種類はまだありません',
   'book.filtered.body':
-    'この旅行の予約はそれぞれ進み方が違います。「{label}」に戻すとすべて表示されます。',
-  'book.filtered.action': 'すべて表示',
+    '選んだ種類の予約はここにはありません。フィルターを解除すると残りが表示されます。',
+  'book.filtered.action': 'フィルターを解除',
+  'book.panel.outstanding': 'まだ片づいていない',
+  'book.panel.outstandingEmpty':
+    '未処理はありません — ここはすべて片づいています。',
+  'book.panel.settled': '片づいた',
+  'book.panel.settledEmpty':
+    'まだ何も片づいていません — すべてこれから追いかけます。',
+  'book.import.badge': '未確認のインポート',
+  'book.import.hint':
+    '確認メールから取り込みました。開いて保存すると確認済みになります。',
+  'book.journeyLink': '移動タブで見る',
   'filter.all': 'すべて',
   'book.remove.body':
     '時間軸から完全に消えます。取消だけなら、記録を残すために状態を「キャンセル済み」にしてください。',
@@ -384,6 +396,13 @@ const messages = {
   'error.price': 'この金額は読み取れません。',
   'book.error.url': 'リンクは http:// か https:// で始めてください。',
   'book.error.confirmationLong': 'この確認番号は長すぎて保存できません。',
+  'book.error.stopGone': 'その停車地はこの旅程にもうありません。',
+  'book.ledger.unlinked':
+    'この予約の費用行は旅の費用に残りますが、予約とのひも付けは解除されます。',
+  'book.ledger.updated': 'この予約の費用行は{money}に更新されます。',
+  'book.ledger.needsDate':
+    'この予約に日付を入れると、費用が旅の費用に追加されます。',
+  'book.ledger.added': 'この旅の費用に{money}の行が追加されます。',
   'book.fieldName.provider': '運行会社',
   'book.fieldName.location': '場所',
   'book.fieldName.confirmationNumber': '確認番号',
@@ -394,6 +413,18 @@ const messages = {
   'book.fieldName.endTime': '終了時刻',
   'book.fieldName.guests': '人数',
   'book.fieldName.price': '料金',
+  'book.fieldName.stop': '停車地',
+  'book.field.stop': '紐づける立ち寄り先',
+  'book.field.stopHint': 'この予約が予定のどの立ち寄り先のものか。',
+  'book.field.stopHintEmpty':
+    'まず日程に場所を追加すると、この予約を紐づけられます',
+  'book.field.stopPlaceholder': '立ち寄り先なし',
+  'book.field.stopSearch': '立ち寄り先と日を検索',
+  'book.field.stopEmpty': '該当する立ち寄り先はありません',
+  'book.ledger.refused.title': '保存しましたが、費用には入れられませんでした',
+  'book.ledger.refused.body':
+    '予約は旅程に入りました。費用の行を旅程の費用に追加できませんでした — その半分だけやり直してください。',
+  'book.action.ledgerRetry': '費用に追加する',
   'book.copyConfirmation': '{title} の確認番号',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -410,6 +441,59 @@ const messages = {
   'transports.mode.walk': '徒歩',
   'transports.mode.other': 'その他',
   'transports.mode.fallback': '移動',
+  'transports.rank.earliest': '到着が早い順',
+  'transports.rank.fewestChanges': '乗り換えが少ない順',
+  'transports.connection.findStop': '停留所を探す',
+  'transports.connection.findStopSearch': 'HND、東京、羽田…',
+  'transports.connection.findStopEmpty': 'その名前の停留所は目録にありません。',
+  'transports.connection.hideStops': '停車地を隠す',
+  'transports.connection.seeStops': '停車地を見る',
+  'transports.connection.saving': '接続を保存しています',
+  'transports.connection.use': 'これにする',
+  'transports.connection.onFoot': '徒歩',
+  'transports.connection.service': '便',
+  'transports.connection.direct': '直通',
+  'transports.connection.changes': {
+    other: '乗り換え {changes} 回',
+  },
+  'transports.connection.tooLong':
+    'この接続は区間が {max} を超えていて、旅程の記録一つには収まりません。短い区間で探し、残りは別に記録してください。',
+  'transports.connection.refusal.ceiling': '今月の検索回数は残っていません',
+  'transports.connection.refusal.unconfigured':
+    'この配備では接続検索が無効です',
+  'transports.connection.refusal.provider':
+    '時刻表サービスから応答がありません',
+  'transports.connection.refusal.plan':
+    '接続検索はこのプランに含まれていません',
+  'transports.connection.refusal.planBody':
+    '旅程の中から時刻表を検索するにはプランを変更してください。移動は手入力でも記録できます。',
+  'transports.connection.refusal.ceilingBody':
+    '今月分の{ceiling}回を使い切りました。翌月1日に戻ります。移動は手入力でも記録できます。',
+  'transports.connection.refusal.unconfiguredBody':
+    'ここには時刻表サービスが設定されていないため、検索は行われていません。移動は手入力で記録してください。',
+  'transports.connection.refusal.providerBody':
+    '表示できるものが返ってきませんでした。少し待って再試行するか、移動を手入力で記録してください。',
+  'transports.connection.invitation':
+    '停留所を二つと日付を、時刻表が答えます。選ぶまで何も保存されません。',
+  'transports.connection.empty':
+    'その日、その二つの停留所を結ぶ接続は見つかりませんでした。隣の駅を試すか、交通手段の絞り込みを広げてください。',
+  'transports.connection.searchFailed': '検索は実行されませんでした',
+  'transports.connection.searchFailedBody':
+    '少ししてからもう一度お試しください。',
+  'transports.connection.saved': '接続を保存しました',
+  'transports.connection.replaced': '経路を差し替えました',
+  'transports.connection.replacedBody': '予約番号と座席はそのままです。',
+  'transports.connection.saveFailed': '接続は保存されませんでした',
+  'transports.connection.saveError': '保存できませんでした',
+  'transports.connection.fromHint':
+    '停留所を選んでください — 時刻表が尋ねるのは場所で、名前ではありません。',
+  'transports.connection.toHint': '目録から停留所を選んでください。',
+  'transports.connection.timeHint':
+    '時刻表は直後の数便を返すため、ここでどの便かが決まります。',
+  'transports.connection.onlyModes': 'この手段だけ',
+  'transports.connection.searching': '時刻表を検索しています',
+  'transports.connection.search': '接続を検索',
+  'transports.connection.title': '{from} から {to} へ',
   'transports.status.idea': '検討中',
   'transports.status.pending': '確認待ち',
   'transports.status.confirmed': '確定',
@@ -423,6 +507,13 @@ const messages = {
   'transports.end.toStation': '到着駅',
   'transports.end.from': '出発',
   'transports.end.to': '到着',
+  'transports.end.pickUp': '受取',
+  'transports.end.dropOff': '返却',
+  'transports.end.departureDay': '出発日',
+  'transports.end.arrivalDay': '到着日',
+  'transports.end.pickUpDay': '受取日',
+  'transports.end.returnDay': '返却日',
+  'transports.dayNumber': '{n}日目',
   'transports.error.titleEmpty':
     'この移動に、一覧で見て分かる名前を付けてください。',
   'transports.error.date': '日付は YYYY-MM-DD の形で書きます。',
@@ -435,6 +526,59 @@ const messages = {
     'この移動は出発より前に到着しています。',
   'transports.error.timingHint':
     'どちらかをずらして、この移動に実際に間に合うようにしてください。',
+  'transports.error.arrivalDayBeforeDeparture':
+    '到着日が出発日より前になっています。',
+  'transports.error.returnDayBeforePickUp':
+    '返却日が受取日より前になっています。',
+  'transports.toast.chainFailed': '区間を保存できませんでした',
+  'transports.toast.chainFallback':
+    '旅程は保存されましたが、その区間は保存されていません。',
+  'transports.field.noDay': '日付はまだ未定',
+  'transports.fill.legend': '入力のしかた',
+  'transports.fill.manual': '自分で入力する',
+  'transports.fill.searchAgain': 'もう一度検索',
+  'transports.fill.search': '接続を検索',
+  'transports.chain.unsplit': 'ひとつの旅程に戻す',
+  'transports.field.arrivalDayHint': '翌朝に到着する旅程はここでそう伝えます。',
+  'transports.chain.splitHint':
+    '途中で乗り換えますか。各区間を便名・のりば・座席・時刻ごとに記録します。',
+  'transports.chain.split': '区間に分ける',
+  'transports.chain.stopNumber': '停車地{n}',
+  'transports.chain.change': '乗り換え {n}',
+  'transports.chain.removeStation': '{label} を削除',
+  'transports.chain.findStation': '空港や駅を探す',
+  'transports.chain.findStationFor': '{label} の空港や駅を探す',
+  'transports.chain.findPlaceholder': 'HND、羽田、東京…',
+  'transports.chain.findEmpty': '該当なし — 下に自分で入力してください。',
+  'transports.chain.stopLabel': '停車地',
+  'transports.chain.stopPlaceholder': '新大阪',
+  'transports.chain.timezoneHint': 'この停車地の時計',
+  'transports.chain.timezoneAt': '{label} のタイムゾーン',
+  'transports.chain.timezonePlaceholder': '未指定',
+  'transports.chain.timezoneSearch': '東京、リスボン、UTC…',
+  'transports.chain.acrossClocks': '{gap}（時計は二つ）',
+  'transports.chain.addStopAfter': '{label} の後に停車地を追加',
+  'transports.chain.servicePlaceholder': 'ひかり500号',
+  'transports.chain.leaves': '{label} 発',
+  'transports.chain.reaches': '{label} 着',
+  'transports.chain.dayOfLeg': '区間 {n} の{label}',
+  'transports.chain.formError': 'この連続は保存できません',
+  'transports.chain.atCap':
+    '一つの連続に入る区間は最大 {max} — 一度の保存が運べる量の上限であって、乗り換えの回数の上限ではありません。',
+  'transports.chain.hint':
+    'どの区間にも停車地を足せば乗り換えを記録できます。区間ごとに列車番号・番線・座席を持ちます。',
+  'transports.field.timezone': 'タイムゾーン',
+  'transports.field.platform': '番線',
+  'transports.chain.legNumber': '区間 {n}',
+  'transports.chain.platform': '{value} 番線',
+  'transports.chain.seat': '座席 {value}',
+  'transports.chain.error.stopName':
+    'すべての停車地に名前が必要です — ここで乗り換えます。',
+  'transports.chain.error.stopNameLong':
+    '停車地の名前は200文字未満にしてください。',
+  'transports.chain.error.timezone': 'リストからタイムゾーンを選んでください。',
+  'transports.chain.error.tooManyLegs':
+    '1つの経路に含められる区間は最大{max}件です。',
   'transports.bookingRefFor': '{title} の予約番号',
   'transports.doorToDoor': 'ドアツードアで {gap} です。',
   'transports.title.fromTo': '{operator} {from}発 {to}行き',

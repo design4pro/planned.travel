@@ -9,7 +9,6 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import {
-  countTripReservationsByStatus,
   createPlace,
   getMemberBalances,
   getStorageUsage,
@@ -29,27 +28,20 @@ import {
   listTripListsWithProgress,
   listTripMembers,
   listTripPlacesWithTags,
-  listTripReservations,
-  listTripTransports,
   listUnscheduledPlaces,
   listUserProfiles,
   listVotes,
   postMessage,
   requireTrip,
   resolveQuotas,
-  summariseTripTransports,
-  totalTripDistanceMetres,
-  totalTripReservationsMinor,
   listItems,
 } from '#/server/repos'
 import { serverToday } from '#/server/clock'
 import { appScope } from './context'
 import { isoOf, isoOfRequired } from './serialise'
-import { toReservationCard } from './overview'
 
 import type { TenantScope } from '#/server/repos'
 import type { PollOption } from '#/server/db/schema'
-import type { ReservationCard } from './overview'
 import { resolveTimeZone } from '#/lib/time'
 
 const tripInput = z.object({ tripId: z.string().trim().min(1).max(64) })
@@ -311,117 +303,6 @@ export const loadTripPlan = createServerFn({ method: 'GET' })
         lng: place.lng,
         tags: place.tags.map((tag) => ({ id: tag.id, name: tag.name })),
       })),
-    }
-  })
-
-/* -------------------------------------------------------------- transports */
-
-export interface TransportRow {
-  readonly id: string
-  readonly mode: string
-  readonly status: string
-  readonly title: string
-  readonly carrier: string | null
-  readonly serviceNumber: string | null
-  readonly bookingCode: string | null
-  readonly seat: string | null
-  readonly departureName: string | null
-  readonly departureCode: string | null
-  readonly departureDate: string | null
-  readonly departureTime: string | null
-  readonly arrivalName: string | null
-  readonly arrivalCode: string | null
-  readonly arrivalDate: string | null
-  readonly arrivalTime: string | null
-  readonly distanceMetres: number | null
-  readonly priceMinor: number | null
-  readonly currency: string | null
-  readonly notes: string | null
-}
-
-export interface TransportsPayload {
-  readonly transports: ReadonlyArray<TransportRow>
-  readonly byMode: ReadonlyArray<{
-    readonly mode: string
-    readonly count: number
-    readonly distanceMetres: number
-  }>
-  readonly totalDistanceMetres: number
-  readonly distanceUnit: 'metric' | 'imperial'
-  readonly currency: string
-}
-
-export const loadTripTransports = createServerFn({ method: 'GET' })
-  .validator(tripInput)
-  .handler(async ({ data }): Promise<TransportsPayload> => {
-    const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
-
-    const [transports, byMode, totalDistanceMetres] = await Promise.all([
-      listTripTransports(scope, trip.id),
-      summariseTripTransports(scope, trip.id),
-      totalTripDistanceMetres(scope, trip.id),
-    ])
-
-    return {
-      byMode,
-      totalDistanceMetres,
-      distanceUnit: 'metric',
-      currency: trip.currency,
-      transports: transports.map((row) => ({
-        id: row.id,
-        mode: row.mode,
-        status: row.status,
-        title: row.title,
-        carrier: row.carrier,
-        serviceNumber: row.serviceNumber,
-        bookingCode: row.bookingCode,
-        seat: row.seat,
-        departureName: row.departureName,
-        departureCode: row.departureCode,
-        departureDate: row.departureDate,
-        departureTime: row.departureTime,
-        arrivalName: row.arrivalName,
-        arrivalCode: row.arrivalCode,
-        arrivalDate: row.arrivalDate,
-        arrivalTime: row.arrivalTime,
-        distanceMetres: row.distanceMetres,
-        priceMinor: row.priceMinor,
-        currency: row.currency,
-        notes: row.notes,
-      })),
-    }
-  })
-
-/* ------------------------------------------------------------------ book */
-
-export interface BookingsPayload {
-  readonly reservations: ReadonlyArray<ReservationCard>
-  readonly byStatus: ReadonlyArray<{
-    readonly status: string
-    readonly value: number
-  }>
-  readonly committedMinor: number
-  readonly currency: string
-}
-
-export const loadTripBookings = createServerFn({ method: 'GET' })
-  .validator(tripInput)
-  .handler(async ({ data }): Promise<BookingsPayload> => {
-    const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
-
-    const [rows, byStatus, committedMinor] = await Promise.all([
-      listTripReservations(scope, { tripId: trip.id }),
-      countTripReservationsByStatus(scope, trip.id),
-      totalTripReservationsMinor(scope, trip.id),
-    ])
-
-    return {
-      byStatus,
-      committedMinor,
-      currency: trip.currency,
-      reservations: rows.map(toReservationCard),
     }
   })
 

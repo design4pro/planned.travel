@@ -20,6 +20,7 @@ const messages = {
   'error.costs': '비용을 불러오지 못했습니다',
   'error.collab': '대화를 불러오지 못했습니다',
   'error.book': '예약을 불러오지 못했습니다',
+  'error.transports': '이동을 불러오지 못했습니다',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '일정',
   'plan.places': '장소',
@@ -57,6 +58,25 @@ const messages = {
   'book.committedCaption': '이 여행의 모든 예약 기준',
   'book.onItinerary': '일정에 등록',
   'book.pinnedCaption': '일정의 특정 날짜에 고정됨',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': '이동',
+  'transports.empty': '아직 기록된 것이 없습니다',
+  'transports.count.transports': {
+    other: '이동 {transports}건',
+  },
+  'transports.distance': '이동 거리',
+  'transports.equator': '≈ 적도 {times}바퀴',
+  'transports.noGrouping': '아직 묶인 것이 없습니다',
+  'transports.mostly': '주로 {mode}',
+  'transports.confirmed': '확정',
+  'transports.stillPending': {
+    other: '{pending}건 대기 중',
+  },
+  'transports.spent': '이동에 쓴 비용',
+  'transports.noPrices': '기록된 가격이 없습니다',
+  'transports.priced': {
+    other: '가격이 있는 이동 {priced}건 기준',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

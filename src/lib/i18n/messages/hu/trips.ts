@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'A költségeket nem sikerült betölteni',
   'error.collab': 'A beszélgetést nem sikerült betölteni',
   'error.book': 'A foglalásokat nem sikerült betölteni',
+  'error.transports': 'Az utak nem töltődtek be',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Útiterv',
   'plan.places': 'Helyek',
@@ -63,6 +64,28 @@ const messages = {
   'book.committedCaption': 'Az utazás összes foglalására',
   'book.onItinerary': 'Az útitervben',
   'book.pinnedCaption': 'Az útiterv egy napjához rögzítve',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Utak',
+  'transports.empty': 'Még nincs rögzítve semmi',
+  'transports.count.transports': {
+    one: '{transports} út',
+    other: '{transports} út',
+  },
+  'transports.distance': 'Megtett távolság',
+  'transports.equator': '≈ {times}× az Egyenlítő körül',
+  'transports.noGrouping': 'Még nincs csoportosítva semmi',
+  'transports.mostly': 'többnyire {mode}',
+  'transports.confirmed': 'Megerősítve',
+  'transports.stillPending': {
+    one: '{pending} még függőben',
+    other: '{pending} még függőben',
+  },
+  'transports.spent': 'Utazásra költve',
+  'transports.noPrices': 'Nincs rögzített ár',
+  'transports.priced': {
+    one: '{priced} árazott úton',
+    other: '{priced} árazott úton',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -121,6 +121,34 @@ jobs:
           wranglerVersion: '4.70.0'
           command: d1 migrations apply planned-travel-db-staging --remote --env staging
 
+      # The `airports` table is the one the migration above creates and does not
+      # fill: it is platform reference data cut from a public-domain source at
+      # build time, so the rows live in a committed artefact rather than in the
+      # schema. The connection search's stop picker is a gate rather than a
+      # shortcut — a timetable router is asked *where*, and free text carries no
+      # coordinates — so an unloaded table is that feature not working at all.
+      #
+      # Runs on every deploy rather than only when the artefact changed, because
+      # the load is an upsert followed by a sweep on its own load stamp: the
+      # table is never empty for a reader, and a deploy carrying an unchanged
+      # artefact rewrites nine thousand rows to the values they already hold,
+      # which costs seconds and changes nothing anyone can observe. The SQL is
+      # generated first so the execute below is the same wrangler-action, on the
+      # same pinned version, as every other call here.
+      - name: Load the airport catalogue
+        if: steps.gate.outputs.configured == 'true'
+        run: node scripts/seed/airports.mjs --sql-out airports.sql
+
+      - name: Apply the airport catalogue
+        if: steps.gate.outputs.configured == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          wranglerVersion: '4.70.0'
+          command: d1 execute planned-travel-db-staging --remote --env staging --file airports.sql --yes
+
       - name: Deploy Worker
         if: steps.gate.outputs.configured == 'true'
         uses: cloudflare/wrangler-action@v3

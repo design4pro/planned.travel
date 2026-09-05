@@ -91,6 +91,7 @@ const messages = {
   'transports.field.place': 'Lloc',
   'transports.field.code': 'Codi',
   'transports.field.date': 'Data',
+  'transports.field.time': 'Sortida a partir de',
   'transports.field.departurePlaceholder': 'Barcelona el Prat',
   'transports.field.arrivalPlaceholder': 'Tòquio Haneda',
   'transports.field.carrier': 'Companyia',
@@ -115,6 +116,7 @@ const messages = {
   'field.status': 'Estat',
   'form.saveError': 'Això no s’ha desat',
   'action.cancel': 'Cancel·la',
+  'action.showCode': 'Mostra {label}',
   'book.status.none': 'Sense estat',
   'book.status.pending': 'Pendent',
   'book.status.confirmed': 'Confirmada',
@@ -129,10 +131,20 @@ const messages = {
   'book.empty.body':
     'Allotjaments, taules, visites i entrades van aquí — amb el número de confirmació allà on el trobaràs a la porta, i la data que les col·loca a la línia de temps.',
   'book.empty.action': 'Afegeix la primera reserva',
-  'book.filtered.title': 'Res en aquest estat',
+  'book.filtered.title': 'Encara no hi ha res d’aquest tipus',
   'book.filtered.body':
-    'Cada reserva d’aquest viatge està en una fase diferent. Torna a «{label}» per veure-les totes.',
-  'book.filtered.action': 'Mostra-ho tot',
+    'Aquí no hi ha res reservat dels tipus que has triat. Neteja el filtre per veure la resta del taulell.',
+  'book.filtered.action': 'Neteja el filtre',
+  'book.panel.outstanding': 'Encara per resoldre',
+  'book.panel.outstandingEmpty':
+    'No queda res pendent — tot el que hi ha aquí està resolt.',
+  'book.panel.settled': 'Resolt',
+  'book.panel.settledEmpty':
+    'Encara no hi ha res resolt — tot està per perseguir.',
+  'book.import.badge': 'Importació sense revisar',
+  'book.import.hint':
+    'Importat d’una confirmació. Obre’l i desa’l per marcar-lo com a revisat.',
+  'book.journeyLink': 'A la pestanya de transports',
   'filter.all': 'Tot',
   'book.remove.body':
     'Surt de la línia de temps per sempre. Si només està cancel·lada, posa-li l’estat «Cancel·lada» per conservar-ne el registre.',
@@ -413,6 +425,15 @@ const messages = {
   'book.error.url': 'Un enllaç ha de començar per http:// o https://.',
   'book.error.confirmationLong':
     'Aquest número de confirmació és massa llarg per desar-lo.',
+  'book.error.stopGone': 'Aquesta parada ja no és en aquest viatge.',
+  'book.ledger.unlinked':
+    'La línia de cost d’aquesta reserva es quedarà als costos del viatge, però ja no hi estarà vinculada.',
+  'book.ledger.updated':
+    'La línia de cost d’aquesta reserva passarà a {money}.',
+  'book.ledger.needsDate':
+    'Dona una data a aquesta reserva i el seu cost s’afegirà als costos del viatge.',
+  'book.ledger.added':
+    'S’afegirà una línia de {money} als costos d’aquest viatge.',
   'book.fieldName.provider': 'operador',
   'book.fieldName.location': 'lloc',
   'book.fieldName.confirmationNumber': 'número de confirmació',
@@ -423,6 +444,18 @@ const messages = {
   'book.fieldName.endTime': 'hora de fi',
   'book.fieldName.guests': 'nombre de persones',
   'book.fieldName.price': 'preu',
+  'book.fieldName.stop': 'parada',
+  'book.field.stop': 'Parada vinculada',
+  'book.field.stopHint': 'A quina parada del pla correspon aquesta reserva.',
+  'book.field.stopHintEmpty':
+    'Afegeix primer un lloc a un dia i després hi podràs vincular aquesta reserva',
+  'book.field.stopPlaceholder': 'Sense parada',
+  'book.field.stopSearch': 'Cerca parades i dies',
+  'book.field.stopEmpty': 'Cap parada coincideix',
+  'book.ledger.refused.title': 'Desat, però no afegit a les despeses',
+  'book.ledger.refused.body':
+    'La reserva és al viatge. Afegir-ne la línia de despesa a les despeses del viatge no ha funcionat — torna a provar aquesta meitat.',
+  'book.action.ledgerRetry': 'Afegeix-ho a les despeses',
   'book.copyConfirmation': 'el número de confirmació de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -439,6 +472,62 @@ const messages = {
   'transports.mode.walk': 'A peu',
   'transports.mode.other': 'Altre',
   'transports.mode.fallback': 'Trajecte',
+  'transports.rank.earliest': 'Arribada més aviat',
+  'transports.rank.fewestChanges': 'Menys transbordaments',
+  'transports.connection.findStop': 'Cerca una parada',
+  'transports.connection.findStopSearch': 'BCN, Sants, Barcelona…',
+  'transports.connection.findStopEmpty':
+    'Cap parada amb aquest nom al catàleg.',
+  'transports.connection.hideStops': 'Amaga les parades',
+  'transports.connection.seeStops': 'Mostra les parades',
+  'transports.connection.saving': 'Desant la connexió',
+  'transports.connection.use': 'Tria aquesta',
+  'transports.connection.onFoot': 'A peu',
+  'transports.connection.service': 'Servei',
+  'transports.connection.direct': 'directe',
+  'transports.connection.changes': {
+    one: '{changes} transbordament',
+    many: '{changes} transbordaments',
+    other: '{changes} transbordaments',
+  },
+  'transports.connection.tooLong':
+    'Aquesta connexió té més de {max} trams, més del que cap en un sol registre de viatge. Cerca un salt més curt i registra la resta a part.',
+  'transports.connection.refusal.ceiling': 'No queden cerques aquest mes',
+  'transports.connection.refusal.unconfigured':
+    'La cerca de connexions està desactivada en aquest desplegament',
+  'transports.connection.refusal.provider': 'El servei d’horaris no ha respost',
+  'transports.connection.refusal.plan':
+    'La cerca de connexions no entra en aquest pla',
+  'transports.connection.refusal.planBody':
+    'Canvia de pla per consultar horaris des de dins d’un viatge. Un trajecte sempre es pot anotar a mà.',
+  'transports.connection.refusal.ceilingBody':
+    'La quota mensual de {ceiling} s’ha exhaurit i es renova l’u del mes que ve. Un trajecte sempre es pot anotar a mà.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Aquí no hi ha cap servei d’horaris configurat, així que no s’ha cercat res. Anota el trajecte a mà.',
+  'transports.connection.refusal.providerBody':
+    'No ha tornat res per mostrar. Torna-ho a provar d’aquí a un moment, o anota el trajecte a mà.',
+  'transports.connection.invitation':
+    'Dues parades i una data, i els horaris responen. No es desa res fins que en triïs una.',
+  'transports.connection.empty':
+    'No s’ha trobat cap connexió entre aquestes dues parades en aquesta data. Prova una estació veïna o amplia el filtre de modes.',
+  'transports.connection.searchFailed': 'La cerca no s’ha fet',
+  'transports.connection.searchFailedBody':
+    'Torna-ho a provar d’aquí a un moment.',
+  'transports.connection.saved': 'Connexió desada',
+  'transports.connection.replaced': 'Ruta substituïda',
+  'transports.connection.replacedBody':
+    'El codi de reserva i el seient queden intactes.',
+  'transports.connection.saveFailed': 'La connexió no s’ha desat',
+  'transports.connection.saveError': 'Això no s’ha desat',
+  'transports.connection.fromHint':
+    'Tria una parada — a un horari se li pregunta on, no com es diu.',
+  'transports.connection.toHint': 'Tria una parada del catàleg.',
+  'transports.connection.timeHint':
+    'Un horari respon amb les properes sortides, així que això decideix quines.',
+  'transports.connection.onlyModes': 'Només aquests modes',
+  'transports.connection.searching': 'Cercant als horaris',
+  'transports.connection.search': 'Cerca connexions',
+  'transports.connection.title': 'De {from} a {to}',
   'transports.status.idea': 'Idea',
   'transports.status.pending': 'Pendent',
   'transports.status.confirmed': 'Confirmat',
@@ -452,6 +541,13 @@ const messages = {
   'transports.end.toStation': 'Estació d’arribada',
   'transports.end.from': 'Des de',
   'transports.end.to': 'Fins a',
+  'transports.end.pickUp': 'Recollida',
+  'transports.end.dropOff': 'Devolució',
+  'transports.end.departureDay': 'Dia de sortida',
+  'transports.end.arrivalDay': 'Dia d’arribada',
+  'transports.end.pickUpDay': 'Dia de recollida',
+  'transports.end.returnDay': 'Dia de devolució',
+  'transports.dayNumber': 'Dia {n}',
   'transports.error.titleEmpty':
     'Posa-li a aquest trajecte un nom que reconeguis en una llista.',
   'transports.error.date': 'Una data s’escriu AAAA-MM-DD.',
@@ -467,6 +563,62 @@ const messages = {
     'Aquest trajecte arriba abans de sortir.',
   'transports.error.timingHint':
     'Mou-ne un dels dos perquè el trajecte es pugui agafar de debò.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'El dia d’arribada és anterior al dia de sortida.',
+  'transports.error.returnDayBeforePickUp':
+    'El dia de devolució és anterior al dia de recollida.',
+  'transports.toast.chainFailed': 'Els trams no s’han desat',
+  'transports.toast.chainFallback':
+    'El viatge s’ha desat, però els seus trams no.',
+  'transports.field.noDay': 'Encara sense dia',
+  'transports.fill.legend': 'Com omplir això',
+  'transports.fill.manual': 'Escriu-ho tu',
+  'transports.fill.searchAgain': 'Torna a cercar',
+  'transports.fill.search': 'Cerca connexions',
+  'transports.chain.unsplit': 'Torna a deixar-ho com un sol viatge',
+  'transports.field.arrivalDayHint':
+    'Un viatge que arriba l’endemà al matí ho diu aquí.',
+  'transports.chain.splitHint':
+    'Transbord pel camí? Anota cada part amb el seu número de servei, andana, seient i hores.',
+  'transports.chain.split': 'Divideix en trams',
+  'transports.chain.stopNumber': 'parada {n}',
+  'transports.chain.change': 'Transbord {n}',
+  'transports.chain.removeStation': 'Elimina {label}',
+  'transports.chain.findStation': 'Cerca un aeroport o una estació',
+  'transports.chain.findStationFor':
+    'Cerca un aeroport o una estació per a {label}',
+  'transports.chain.findPlaceholder': 'BCN, el Prat, Barcelona…',
+  'transports.chain.findEmpty':
+    'Cap coincidència — escriu la parada tu mateix a sota.',
+  'transports.chain.stopLabel': 'Parada',
+  'transports.chain.stopPlaceholder': 'Barcelona Sants',
+  'transports.chain.timezoneHint': 'A quin rellotge va aquesta parada',
+  'transports.chain.timezoneAt': 'Fus horari a {label}',
+  'transports.chain.timezonePlaceholder': 'Sense indicar',
+  'transports.chain.timezoneSearch': 'Tòquio, Lisboa, UTC…',
+  'transports.chain.acrossClocks': '{gap} entre dos rellotges',
+  'transports.chain.addStopAfter': 'Afegeix una parada després de {label}',
+  'transports.chain.servicePlaceholder': 'AVE 3092',
+  'transports.chain.leaves': 'Surt de {label}',
+  'transports.chain.reaches': 'Arriba a {label}',
+  'transports.chain.dayOfLeg': '{label} del tram {n}',
+  'transports.chain.formError': 'Aquesta cadena no es pot desar',
+  'transports.chain.atCap':
+    'Una cadena admet com a màxim {max} trams — és un límit del que pot carregar un desat, no de quants transbordaments pot tenir un viatge.',
+  'transports.chain.hint':
+    'Afegeix una parada a qualsevol tram per registrar un canvi de tren, i cada tram manté el seu número de servei, andana i seient.',
+  'transports.field.timezone': 'Fus horari',
+  'transports.field.platform': 'Andana',
+  'transports.chain.legNumber': 'Tram {n}',
+  'transports.chain.platform': 'Andana {value}',
+  'transports.chain.seat': 'Seient {value}',
+  'transports.chain.error.stopName':
+    'Cada parada necessita un nom — aquí és on fas transbord.',
+  'transports.chain.error.stopNameLong':
+    'El nom d’una parada ha de tenir menys de 200 caràcters.',
+  'transports.chain.error.timezone': 'Tria un fus horari de la llista.',
+  'transports.chain.error.tooManyLegs':
+    'Una cadena admet com a màxim {max} trams.',
   'transports.bookingRefFor': 'la referència de reserva de {title}',
   'transports.doorToDoor': 'Són {gap} de porta a porta.',
   'transports.title.fromTo': '{operator} de {from} a {to}',

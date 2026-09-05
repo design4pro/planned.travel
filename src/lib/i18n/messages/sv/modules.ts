@@ -86,6 +86,7 @@ const messages = {
   'transports.field.place': 'Plats',
   'transports.field.code': 'Kod',
   'transports.field.date': 'Datum',
+  'transports.field.time': 'Avgång efter',
   'transports.field.departurePlaceholder': 'Stockholm Arlanda',
   'transports.field.arrivalPlaceholder': 'Tokyo-Haneda',
   'transports.field.carrier': 'Bolag',
@@ -110,6 +111,7 @@ const messages = {
   'field.status': 'Tillstånd',
   'form.saveError': 'Det sparades inte',
   'action.cancel': 'Avbryt',
+  'action.showCode': 'Visa {label}',
   'book.status.none': 'Utan tillstånd',
   'book.status.pending': 'Väntar',
   'book.status.confirmed': 'Bekräftad',
@@ -123,10 +125,18 @@ const messages = {
   'book.empty.body':
     'Boenden, bord, turer och biljetter hör hit — med bokningsnumret där du hittar det vid dörren, och datumet som lägger dem på tidslinjen.',
   'book.empty.action': 'Lägg till första bokningen',
-  'book.filtered.title': 'Inget i det läget',
+  'book.filtered.title': 'Inget av det slaget än',
   'book.filtered.body':
-    'Varje bokning på den här resan står på olika ställen. Gå tillbaka till ”{label}” för att se alla.',
-  'book.filtered.action': 'Visa allt',
+    'Inget är bokat av de slag du valde. Rensa filtret för att se resten av disken.',
+  'book.filtered.action': 'Rensa filtret',
+  'book.panel.outstanding': 'Kvar att reda ut',
+  'book.panel.outstandingEmpty': 'Inget utestående — allt här är utrett.',
+  'book.panel.settled': 'Utrett',
+  'book.panel.settledEmpty': 'Inget utrett än — allt är fortfarande att jaga.',
+  'book.import.badge': 'Ogranskad import',
+  'book.import.hint':
+    'Importerad från en bekräftelse. Öppna och spara den för att märka den granskad.',
+  'book.journeyLink': 'På transportfliken',
   'filter.all': 'Allt',
   'book.remove.body':
     'Den lämnar tidslinjen för gott. Är den bara inställd, sätt tillståndet till Inställd i stället så att posten finns kvar.',
@@ -401,6 +411,13 @@ const messages = {
   'error.price': 'Det beloppet kan vi inte läsa.',
   'book.error.url': 'En länk måste börja med http:// eller https://.',
   'book.error.confirmationLong': 'Det bokningsnumret är för långt att spara.',
+  'book.error.stopGone': 'Den hållplatsen finns inte längre på den här resan.',
+  'book.ledger.unlinked':
+    'Bokningens kostnadsrad blir kvar i resans kostnader, men är inte längre kopplad till bokningen.',
+  'book.ledger.updated': 'Bokningens kostnadsrad ändras till {money}.',
+  'book.ledger.needsDate':
+    'Ge bokningen ett datum, så hamnar kostnaden bland resans kostnader.',
+  'book.ledger.added': 'En rad på {money} läggs till i resans kostnader.',
   'book.fieldName.provider': 'trafikföretag',
   'book.fieldName.location': 'plats',
   'book.fieldName.confirmationNumber': 'bokningsnummer',
@@ -411,6 +428,18 @@ const messages = {
   'book.fieldName.endTime': 'sluttid',
   'book.fieldName.guests': 'antal personer',
   'book.fieldName.price': 'pris',
+  'book.fieldName.stop': 'hållplats',
+  'book.field.stop': 'Kopplat stopp',
+  'book.field.stopHint': 'Vilket stopp i planen den här bokningen gäller.',
+  'book.field.stopHintEmpty':
+    'Lägg först till en plats på en dag, sedan kan bokningen kopplas dit',
+  'book.field.stopPlaceholder': 'Inte kopplad till ett stopp',
+  'book.field.stopSearch': 'Sök bland stopp och dagar',
+  'book.field.stopEmpty': 'Inget stopp matchar',
+  'book.ledger.refused.title': 'Sparad, men inte lagd till kostnaderna',
+  'book.ledger.refused.body':
+    'Bokningen ligger på resan. Att lägga dess kostnadsrad till resans kostnader gick inte — försök med den halvan igen.',
+  'book.action.ledgerRetry': 'Lägg till i kostnaderna',
   'book.copyConfirmation': 'bokningsnumret för {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -427,6 +456,60 @@ const messages = {
   'transports.mode.walk': 'Till fots',
   'transports.mode.other': 'Övrigt',
   'transports.mode.fallback': 'Färd',
+  'transports.rank.earliest': 'Tidigast ankomst',
+  'transports.rank.fewestChanges': 'Färrest byten',
+  'transports.connection.findStop': 'Hitta ett stopp',
+  'transports.connection.findStopSearch': 'ARN, Centralen, Stockholm…',
+  'transports.connection.findStopEmpty':
+    'Inget stopp med det namnet i katalogen.',
+  'transports.connection.hideStops': 'Dölj stoppen',
+  'transports.connection.seeStops': 'Se stoppen',
+  'transports.connection.saving': 'Sparar förbindelsen',
+  'transports.connection.use': 'Ta den här',
+  'transports.connection.onFoot': 'Till fots',
+  'transports.connection.service': 'Tur',
+  'transports.connection.direct': 'direkt',
+  'transports.connection.changes': {
+    one: '{changes} byte',
+    other: '{changes} byten',
+  },
+  'transports.connection.tooLong':
+    'Den här förbindelsen har fler än {max} etapper, mer än vad en enda resepost rymmer. Sök ett kortare hopp och skriv upp resten separat.',
+  'transports.connection.refusal.ceiling':
+    'Inga sökningar kvar den här månaden',
+  'transports.connection.refusal.unconfigured':
+    'Förbindelsesökningen är avstängd på den här driftsättningen',
+  'transports.connection.refusal.provider': 'Tidtabellstjänsten svarade inte',
+  'transports.connection.refusal.plan':
+    'Förbindelsesökning ingår inte i den här planen',
+  'transports.connection.refusal.planBody':
+    'Byt plan för att söka i tidtabeller inifrån en resa. En resa går fortfarande att skriva in för hand.',
+  'transports.connection.refusal.ceilingBody':
+    'Månadens pott på {ceiling} är slut och förnyas den första nästa månad. En resa går fortfarande att skriva in för hand.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Ingen tidtabellstjänst är uppsatt här, så ingenting söktes. Skriv in resan för hand i stället.',
+  'transports.connection.refusal.providerBody':
+    'Ingenting kom tillbaka att visa. Försök igen om en stund, eller skriv in resan för hand.',
+  'transports.connection.invitation':
+    'Två stopp och ett datum, så svarar tidtabellen. Ingenting sparas förrän du väljer en.',
+  'transports.connection.empty':
+    'Ingen förbindelse hittades mellan de två stoppen det datumet. Prova en granne till stationen, eller vidga färdsättsfiltret.',
+  'transports.connection.searchFailed': 'Sökningen kördes inte',
+  'transports.connection.searchFailedBody': 'Försök igen om en stund.',
+  'transports.connection.saved': 'Förbindelsen sparad',
+  'transports.connection.replaced': 'Rutten ersatt',
+  'transports.connection.replacedBody': 'Bokningskoden och platsen är orörda.',
+  'transports.connection.saveFailed': 'Förbindelsen sparades inte',
+  'transports.connection.saveError': 'Det sparades inte',
+  'transports.connection.fromHint':
+    'Välj ett stopp — en tidtabell får frågan var, inte vad det heter.',
+  'transports.connection.toHint': 'Välj ett stopp ur katalogen.',
+  'transports.connection.timeHint':
+    'En tidtabell svarar med de närmaste avgångarna, så det här avgör vilka.',
+  'transports.connection.onlyModes': 'Bara de här färdsätten',
+  'transports.connection.searching': 'Söker i tidtabellen',
+  'transports.connection.search': 'Sök förbindelser',
+  'transports.connection.title': 'Från {from} till {to}',
   'transports.status.idea': 'Idé',
   'transports.status.pending': 'Väntar',
   'transports.status.confirmed': 'Bekräftad',
@@ -440,6 +523,13 @@ const messages = {
   'transports.end.toStation': 'Till station',
   'transports.end.from': 'Från',
   'transports.end.to': 'Till',
+  'transports.end.pickUp': 'Upphämtning',
+  'transports.end.dropOff': 'Återlämning',
+  'transports.end.departureDay': 'Avresedag',
+  'transports.end.arrivalDay': 'Ankomstdag',
+  'transports.end.pickUpDay': 'Upphämtningsdag',
+  'transports.end.returnDay': 'Återlämningsdag',
+  'transports.dayNumber': 'Dag {n}',
   'transports.error.titleEmpty':
     'Ge den här färden ett namn du känner igen i en lista.',
   'transports.error.date': 'Ett datum skrivs ÅÅÅÅ-MM-DD.',
@@ -455,6 +545,59 @@ const messages = {
     'Den här färden anländer innan den avgår.',
   'transports.error.timingHint':
     'Flytta en av tiderna, så att färden verkligen går att hinna med.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'Ankomstdagen ligger före avresedagen.',
+  'transports.error.returnDayBeforePickUp':
+    'Återlämningsdagen ligger före upphämtningsdagen.',
+  'transports.toast.chainFailed': 'Etapperna sparades inte',
+  'transports.toast.chainFallback': 'Resan sparades, men inte dess etapper.',
+  'transports.field.noDay': 'Ingen dag än',
+  'transports.fill.legend': 'Så fyller du i det här',
+  'transports.fill.manual': 'Skriv in själv',
+  'transports.fill.searchAgain': 'Sök igen',
+  'transports.fill.search': 'Sök förbindelser',
+  'transports.chain.unsplit': 'Gör om det till en enda resa',
+  'transports.field.arrivalDayHint':
+    'En resa som landar nästa morgon säger det här.',
+  'transports.chain.splitHint':
+    'Byte på vägen? Notera varje del med eget turnummer, spår, plats och tider.',
+  'transports.chain.split': 'Dela upp i etapper',
+  'transports.chain.stopNumber': 'hållplats {n}',
+  'transports.chain.change': 'Byte {n}',
+  'transports.chain.removeStation': 'Ta bort {label}',
+  'transports.chain.findStation': 'Hitta en flygplats eller station',
+  'transports.chain.findStationFor':
+    'Hitta en flygplats eller station för {label}',
+  'transports.chain.findPlaceholder': 'ARN, Arlanda, Stockholm…',
+  'transports.chain.findEmpty': 'Ingen träff — skriv in stoppet själv nedan.',
+  'transports.chain.stopLabel': 'Stopp',
+  'transports.chain.stopPlaceholder': 'Stockholm Central',
+  'transports.chain.timezoneHint': 'Vilken klocka det här stoppet går efter',
+  'transports.chain.timezoneAt': 'Tidszon vid {label}',
+  'transports.chain.timezonePlaceholder': 'Ej angiven',
+  'transports.chain.timezoneSearch': 'Tokyo, Lissabon, UTC…',
+  'transports.chain.acrossClocks': '{gap} över två klockor',
+  'transports.chain.addStopAfter': 'Lägg till ett stopp efter {label}',
+  'transports.chain.servicePlaceholder': 'SJ 522',
+  'transports.chain.leaves': 'Avgår från {label}',
+  'transports.chain.reaches': 'Ankommer {label}',
+  'transports.chain.dayOfLeg': '{label} för etapp {n}',
+  'transports.chain.formError': 'Den här kedjan går inte att spara',
+  'transports.chain.atCap':
+    'En kedja rymmer högst {max} etapper — det är en gräns för vad en sparning bär, inte för hur många byten en resa får ha.',
+  'transports.chain.hint':
+    'Lägg till ett stopp på vilken etapp som helst för ett tågbyte; varje etapp behåller sitt eget tågnummer, spår och plats.',
+  'transports.field.timezone': 'Tidszon',
+  'transports.field.platform': 'Spår',
+  'transports.chain.legNumber': 'Etapp {n}',
+  'transports.chain.platform': 'Spår {value}',
+  'transports.chain.seat': 'Plats {value}',
+  'transports.chain.error.stopName':
+    'Varje hållplats behöver ett namn — det är här du byter.',
+  'transports.chain.error.stopNameLong':
+    'Håll hållplatsens namn under 200 tecken.',
+  'transports.chain.error.timezone': 'Välj en tidszon i listan.',
+  'transports.chain.error.tooManyLegs': 'En kedja rymmer högst {max} etapper.',
   'transports.bookingRefFor': 'bokningsnumret för {title}',
   'transports.doorToDoor': 'Det är {gap} dörr till dörr.',
   'transports.title.fromTo': '{operator} från {from} till {to}',

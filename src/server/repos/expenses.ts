@@ -23,6 +23,7 @@ import { createTenantRepository, tenantFilter } from './base'
 import { RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { placesRepository } from './places'
+import { unlinkReservationsFromExpense } from './reservations'
 import { requireTrip } from './trips'
 import {
   currencySchema,
@@ -480,10 +481,24 @@ export async function markShareSettled(
   return expenseSharesRepository.requireUpdate(scope, shareId, { isSettled })
 }
 
+/**
+ * Removes an expense, unlinking any booking that pointed at it first.
+ *
+ * The unlink is not a nicety: the deployed foreign key on `reservations.expense_id` is
+ * `NO ACTION`, not the `set null` `schema.ts` declares, so deleting a linked expense raises
+ * `FOREIGN KEY constraint failed` unless the column is cleared first. See
+ * {@link unlinkReservationsFromExpense} for why the database cannot be made to do it.
+ *
+ * Not a transaction, because D1 gives this module none. The order is chosen so that the failure
+ * modes are survivable in either direction: an unlink that succeeds and a delete that fails leaves
+ * a booking with a price and no cost line, which the desk can relink; the reverse would be a
+ * booking pointing at a row that is gone.
+ */
 export async function deleteExpense(
   scope: TenantScope,
   expenseId: string,
 ): Promise<void> {
+  await unlinkReservationsFromExpense(scope, expenseId)
   await expensesRepository.requireRemove(scope, expenseId)
 }
 

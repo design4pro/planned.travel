@@ -169,6 +169,12 @@ const messages = {
   'appearance.map.workspace': 'Ikuti ruang kerja',
   'appearance.map.light': 'Kertas — terang',
   'appearance.map.dark': 'Arang — gelap',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'Di layar bersama',
+  'appearance.privacy.codesLabel':
+    'Sembunyikan kode konfirmasi sampai saya memintanya',
+  'appearance.privacy.codesHint':
+    'Referensi pemesanan dan nomor konfirmasi tetap tersamar di meja pemesanan dan di transportasi sampai Anda mengarahkan kursor, memberi fokus, atau mengetuknya. Harga tidak pernah disembunyikan.',
   'appearance.saveFailed': 'Perubahan itu tidak tersimpan',
   'appearance.saveFailedBody':
     'Ia tampil di sini, tetapi perangkat berikutnya yang Anda pakai tidak akan mendapatkannya.',

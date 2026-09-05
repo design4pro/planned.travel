@@ -20,6 +20,7 @@ const messages = {
   'error.costs': '費用を読み込めませんでした',
   'error.collab': '会話を読み込めませんでした',
   'error.book': '予約を読み込めませんでした',
+  'error.transports': '移動を読み込めませんでした',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '旅程',
   'plan.places': '場所',
@@ -57,6 +58,25 @@ const messages = {
   'book.committedCaption': 'この旅行のすべての予約',
   'book.onItinerary': '旅程に登録',
   'book.pinnedCaption': '旅程の日に紐づけ済み',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': '移動',
+  'transports.empty': 'まだ何も記録されていません',
+  'transports.count.transports': {
+    other: '移動 {transports} 件',
+  },
+  'transports.distance': '移動距離',
+  'transports.equator': '≈ 赤道 {times} 周分',
+  'transports.noGrouping': 'まだ集計されていません',
+  'transports.mostly': '主に{mode}',
+  'transports.confirmed': '確定',
+  'transports.stillPending': {
+    other: '{pending} 件が保留中',
+  },
+  'transports.spent': '移動にかけた費用',
+  'transports.noPrices': '価格の記録はありません',
+  'transports.priced': {
+    other: '価格のある移動 {priced} 件',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

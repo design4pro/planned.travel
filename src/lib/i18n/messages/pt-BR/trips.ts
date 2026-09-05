@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Não foi possível carregar as despesas',
   'error.collab': 'Não foi possível carregar a conversa',
   'error.book': 'Não foi possível carregar as reservas',
+  'error.transports': 'Os deslocamentos não carregaram',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Roteiro',
   'plan.places': 'Lugares',
@@ -69,6 +70,31 @@ const messages = {
   'book.committedCaption': 'De todas as reservas desta viagem',
   'book.onItinerary': 'No roteiro',
   'book.pinnedCaption': 'Fixado a um dia do roteiro',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Deslocamentos',
+  'transports.empty': 'Nada registrado ainda',
+  'transports.count.transports': {
+    one: '{transports} deslocamento',
+    many: '{transports} deslocamentos',
+    other: '{transports} deslocamentos',
+  },
+  'transports.distance': 'Distância percorrida',
+  'transports.equator': '≈ {times}× a volta ao equador',
+  'transports.noGrouping': 'Nada agrupado ainda',
+  'transports.mostly': 'principalmente {mode}',
+  'transports.confirmed': 'Confirmados',
+  'transports.stillPending': {
+    one: '{pending} ainda pendente',
+    many: '{pending} ainda pendentes',
+    other: '{pending} ainda pendentes',
+  },
+  'transports.spent': 'Gasto com viagem',
+  'transports.noPrices': 'Nenhum preço registrado',
+  'transports.priced': {
+    one: 'em {priced} deslocamento com preço',
+    many: 'em {priced} deslocamentos com preço',
+    other: 'em {priced} deslocamentos com preço',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -108,3 +108,8 @@ unit-blob-reports/
 # Per-run scratch of the cezar workflows (scripts/agent/): port pin, ladder verdicts and
 # digests, handoff. Never committed; the agent's PR carries what matters.
 .agent/
+
+# The SQL the airport loader generates on its way to D1 (scripts/seed/airports.mjs
+# --sql-out, which the deploy workflows use). A megabyte of INSERTs regenerated
+# from the committed artefact every time, so it is output rather than source.
+airports.sql

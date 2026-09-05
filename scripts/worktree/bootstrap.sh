@@ -142,6 +142,29 @@ have_dev_vars() { [ -f .dev.vars ]; }
 # `vite dev` creates .wrangler/state/v3/d1 holding nothing but metadata.sqlite on
 # its first boot, so a directory test skips the migrations forever after one
 # failed start. That is the exact state a broken worktree is found in.
+ARTEFACT_PATH=public/atlas/airports-iata.v1.txt
+
+# Whether the airport catalogue has been loaded. Counted rather than merely
+# present, because the migration creates the table and leaves it empty - the
+# state this predicate exists to tell apart from a loaded one.
+have_airports() {
+  local f
+  command -v sqlite3 >/dev/null 2>&1 || return 0
+  for f in "$D1_DIR"/*.sqlite; do
+    [ -e "$f" ] || continue
+    case "$f" in */metadata.sqlite) continue ;; esac
+    [ -s "$f" ] || continue
+    if [ "$(sqlite3 "file:${f}?mode=ro" \
+      "select count(*) from sqlite_master where type='table' and name='airports';" \
+      2>/dev/null)" = "1" ] &&
+      [ "$(sqlite3 "file:${f}?mode=ro" \
+        "select count(*) > 0 from airports;" 2>/dev/null)" = "1" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 have_schema() {
   local f found=1
   for f in "$D1_DIR"/*.sqlite; do
@@ -169,6 +192,7 @@ missing_list() {
   have_deps      || echo "node_modules (pnpm install)"
   have_dev_vars  || echo ".dev.vars (BETTER_AUTH_SECRET; without it /login answers 500)"
   have_schema    || echo "local D1 schema (pnpm db:migrate:local)"
+  have_airports  || echo "airport catalogue in local D1 (pnpm db:airports:local)"
   have_basemap   || echo "basemap in local R2 (the map renders without tiles)"
 }
 
@@ -299,6 +323,20 @@ if [ "$FORCE" = 1 ] || ! have_schema; then
   have_schema || die "migrations ran but no schema is visible in ${D1_DIR}"
 else
   say "local D1 already has the schema"
+fi
+
+# The `airports` table ships empty - the migration creates the shape and the
+# committed artefact carries the rows. The connection search's stop picker is
+# the one surface that treats the catalogue as a gate rather than a shortcut, so
+# without this it cannot resolve a stop at all. The load replaces the table's
+# contents, so re-running it is free.
+
+if [ "$FORCE" = 1 ] || ! have_airports; then
+  say "loading the airport catalogue"
+  pnpm db:airports:local >/dev/null
+  have_airports || die "the airport load ran but ${ARTEFACT_PATH} is not in the database"
+else
+  say "local D1 already has the airport catalogue"
 fi
 
 # ── 5. Basemap ───────────────────────────────────────────────────────────────
