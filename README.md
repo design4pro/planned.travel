@@ -30,7 +30,8 @@ in, then `pnpm db:migrate:local`, load the basemap, and seed.
 - Feature branches (`claude/*`, `feat/*`, …) → pull request to **`develop`**.
 - Merging to `develop` auto-deploys **staging**: https://staging.planned.travel
   (`deploy-staging.yml`).
-- Promotion is a pull request `develop` → **`main`**; merging deploys
+- Promotion is a pull request `develop` → **`main`**, opened automatically after
+  every merge into `develop` (`promote-develop.yml`); merging deploys
   **production**: https://planned.travel (`deploy.yml`).
 - CI (`ci.yml`) runs lint · typecheck · unit tests · build plus the critical
   journeys on every pull request to `develop` and `main`. Nothing compares a

@@ -18,8 +18,6 @@
  * summary asks for (PRD #104 decision 10). It never derives the threshold itself: the same server
  * function that hands it `requiresTitle` re-derives the rule on the write, so a browser that skipped
  * the dialog gains nothing.
- *
- * Copy arrives in the last slice of `01-S1`.
  */
 import { useEffect, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
@@ -66,6 +64,8 @@ import {
   useAction,
   useOptimistic,
 } from '#/components/modules/shared'
+import { useLocale, useTranslate } from '#/lib/i18n'
+import { formatNumber } from '../-lib/format'
 import {
   archiveTripFn,
   deleteTripFn,
@@ -103,6 +103,7 @@ export function TripEditSheet({
   open,
   onOpenChange,
 }: TripEditSheetProps) {
+  const t = useTranslate()
   const router = useRouter()
   const direction = useSheetDirection('end')
 
@@ -128,11 +129,9 @@ export function TripEditSheet({
       })
       await router.invalidate()
       onOpenChange(false)
-      toast.success('Trip updated')
+      toast.success(t('shell.editTrip.saved'))
     } catch (cause) {
-      setError(
-        messageOf(cause, 'The trip could not be saved. Try again in a moment.'),
-      )
+      setError(messageOf(cause, t('shell.editTrip.error')))
     } finally {
       setSaving(false)
     }
@@ -155,7 +154,7 @@ export function TripEditSheet({
         data-part="trip-edit-sheet"
       >
         <SheetHeader className="pe-14">
-          <SheetTitle>Edit trip</SheetTitle>
+          <SheetTitle>{t('shell.editTrip.title')}</SheetTitle>
         </SheetHeader>
 
         <SheetBody>
@@ -172,7 +171,7 @@ export function TripEditSheet({
             {error === null ? null : (
               <Alert
                 tone="danger"
-                title="That did not save"
+                title={t('shell.editTrip.errorTitle')}
                 actions={
                   <Button
                     type="button"
@@ -183,7 +182,7 @@ export function TripEditSheet({
                       if (form.canSave) void submit()
                     }}
                   >
-                    Try again
+                    {t('shell.editTrip.retry')}
                   </Button>
                 }
               >
@@ -203,7 +202,7 @@ export function TripEditSheet({
             disabled={saving}
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('shell.editTrip.cancel')}
           </Button>
           <Button
             type="submit"
@@ -212,9 +211,9 @@ export function TripEditSheet({
             shape="pill"
             disabled={!form.canSave}
             loading={saving}
-            loadingLabel="Saving the trip"
+            loadingLabel={t('shell.editTrip.saving')}
           >
-            Save changes
+            {t('shell.editTrip.submit')}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -232,23 +231,27 @@ export interface TripDeleteDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-/** One line of the inventory, drawn only when there is something to count. */
-function Carried({
-  count,
-  one,
-  many,
-}: {
-  count: number
-  one: string
-  many: string
-}) {
+/**
+ * One line of the inventory, drawn only when there is something to count.
+ *
+ * The figure and the noun are two elements because the column reads as a column: `tabular-nums`
+ * lines the digits up under each other, and a noun inside that span would inherit a width no word
+ * wants. Which noun it is remains the *catalogue's* answer rather than this component's - the
+ * caller passes an already-plural string, so Polish gets its `few`/`many` split and Arabic its six
+ * categories from the same call, where a `count === 1` ternary here would have hard-coded English's
+ * two.
+ */
+function Carried({ count, noun }: { count: number; noun: string }) {
+  const locale = useLocale()
   if (count === 0) {
     return null
   }
   return (
     <li className="flex items-baseline gap-2">
-      <span className="tabular-nums font-medium text-ink">{count}</span>
-      <span className="text-ink-2">{count === 1 ? one : many}</span>
+      <span className="tabular-nums font-medium text-ink">
+        {formatNumber(count, locale)}
+      </span>
+      <span className="text-ink-2">{noun}</span>
     </li>
   )
 }
@@ -271,13 +274,14 @@ export function TripDeleteDialog({
   open,
   onOpenChange,
 }: TripDeleteDialogProps) {
+  const t = useTranslate()
   const [summary, setSummary] = useState<TripDeleteSummary | null>(null)
   const [summaryError, setSummaryError] = useState<string | null>(null)
   const [typed, setTyped] = useState('')
 
   const remove = useAction(deleteTripFn, {
-    success: 'Trip deleted',
-    failure: 'The trip could not be deleted',
+    success: t('shell.deleteTrip.deleted'),
+    failure: t('shell.deleteTrip.failed'),
     onSuccess: () => onOpenChange(false),
   })
 
@@ -296,9 +300,7 @@ export function TripDeleteDialog({
       })
       .catch((cause: unknown) => {
         if (live) {
-          setSummaryError(
-            messageOf(cause, 'What this trip holds could not be read.'),
-          )
+          setSummaryError(messageOf(cause, t('shell.deleteTrip.summaryError')))
         }
       })
 
@@ -307,6 +309,9 @@ export function TripDeleteDialog({
     return () => {
       live = false
     }
+    // `t` is deliberately not a dependency: it is stable for a locale, and a locale change
+    // remounts the tree the provider holds, so naming it could only re-read the summary for a
+    // reason that never happens while this dialog is open.
   }, [open, trip.id])
 
   /**
@@ -345,10 +350,11 @@ export function TripDeleteDialog({
     >
       <DialogContent size="sm" data-part="trip-delete-dialog">
         <DialogHeader>
-          <DialogTitle>Delete “{trip.title}” for good?</DialogTitle>
+          <DialogTitle>
+            {t('shell.deleteTrip.title', { title: trip.title })}
+          </DialogTitle>
           <DialogDescription>
-            There is no undo and no bin. Archiving keeps a trip out of the list
-            without losing it.
+            {t('shell.deleteTrip.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -362,7 +368,7 @@ export function TripDeleteDialog({
             }}
           >
             {summaryError === null ? null : (
-              <Alert tone="danger" title="That did not load">
+              <Alert tone="danger" title={t('shell.deleteTrip.errorTitle')}>
                 {summaryError}
               </Alert>
             )}
@@ -371,7 +377,7 @@ export function TripDeleteDialog({
               <SkeletonText
                 lines={3}
                 role="status"
-                aria-label="Reading what this trip holds"
+                aria-label={t('shell.deleteTrip.reading')}
               />
             ) : null}
 
@@ -380,22 +386,39 @@ export function TripDeleteDialog({
                 <ul className="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 text-sm">
                   <Carried
                     count={summary.reservations}
-                    one="booking"
-                    many="bookings"
+                    noun={t('shell.deleteTrip.carried.reservations', {
+                      count: summary.reservations,
+                    })}
                   />
-                  <Carried count={summary.transports} one="leg" many="legs" />
+                  <Carried
+                    count={summary.transports}
+                    noun={t('shell.deleteTrip.carried.transports', {
+                      count: summary.transports,
+                    })}
+                  />
                   <Carried
                     count={summary.expenses}
-                    one="expense"
-                    many="expenses"
+                    noun={t('shell.deleteTrip.carried.expenses', {
+                      count: summary.expenses,
+                    })}
                   />
-                  <Carried count={summary.files} one="file" many="files" />
-                  <Carried count={summary.members} one="person" many="people" />
+                  <Carried
+                    count={summary.files}
+                    noun={t('shell.deleteTrip.carried.files', {
+                      count: summary.files,
+                    })}
+                  />
+                  <Carried
+                    count={summary.members}
+                    noun={t('shell.deleteTrip.carried.members', {
+                      count: summary.members,
+                    })}
+                  />
                 </ul>
 
                 {summary.requiresTitle ? (
                   <Field
-                    label="Type the trip’s name to confirm"
+                    label={t('shell.deleteTrip.confirmLabel')}
                     hint={summary.title}
                     required
                   >
@@ -421,7 +444,7 @@ export function TripDeleteDialog({
             disabled={remove.pending}
             onClick={() => onOpenChange(false)}
           >
-            Keep it
+            {t('ui.action.keep')}
           </Button>
           <Button
             type="submit"
@@ -430,9 +453,9 @@ export function TripDeleteDialog({
             shape="pill"
             disabled={!armed}
             loading={remove.pending}
-            loadingLabel="Deleting the trip"
+            loadingLabel={t('shell.deleteTrip.deleting')}
           >
-            Delete permanently
+            {t('shell.tripActions.deleteForGood')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -455,6 +478,7 @@ export interface TripActionsMenuProps {
  * hands a screen-reader user a column of identically-named buttons.
  */
 export function TripActionsMenu({ trip }: TripActionsMenuProps) {
+  const t = useTranslate()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -467,16 +491,16 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
    */
   const stars = useOptimistic<boolean>()
   const favourite = useAction(setTripFavouriteFn, {
-    failure: 'That star did not save',
-    fallback: 'The trip has been put back the way it was.',
+    failure: t('shell.tripActions.starFailed'),
+    fallback: t('shell.tripActions.starFallback'),
   })
   const archive = useAction(archiveTripFn, {
-    success: 'Trip archived',
-    failure: 'The trip could not be archived',
+    success: t('shell.tripActions.archived'),
+    failure: t('shell.tripActions.archiveFailed'),
   })
   const restore = useAction(restoreTripFn, {
-    success: 'Trip restored',
-    failure: 'The trip could not be restored',
+    success: t('shell.tripActions.restored'),
+    failure: t('shell.tripActions.restoreFailed'),
   })
 
   const starred = stars.get(trip.id) ?? trip.isFavourite
@@ -495,7 +519,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
         <DropdownMenuTrigger asChild>
           <IconButton
             icon={<MoreHorizontal />}
-            label={`Actions for ${trip.title}`}
+            label={t('shell.tripActions.trigger', { title: trip.title })}
             size="sm"
             variant="glass"
             data-part="trip-actions-trigger"
@@ -515,7 +539,9 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
             onSelect={() => void toggleFavourite()}
             disabled={busy}
           >
-            {starred ? 'Unfavourite' : 'Favourite'}
+            {starred
+              ? t('shell.tripActions.unfavourite')
+              : t('shell.tripActions.favourite')}
           </DropdownMenuItem>
 
           {/*
@@ -530,7 +556,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
                 onSelect={() => setEditing(true)}
                 disabled={busy}
               >
-                Edit
+                {t('shell.tripActions.edit')}
               </DropdownMenuItem>
               {trip.isArchived ? (
                 <DropdownMenuItem
@@ -540,7 +566,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
                   }
                   disabled={busy}
                 >
-                  Restore
+                  {t('shell.tripActions.restore')}
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
@@ -550,7 +576,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
                   }
                   disabled={busy}
                 >
-                  Archive
+                  {t('shell.tripActions.archive')}
                 </DropdownMenuItem>
               )}
 
@@ -567,7 +593,9 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
                 onSelect={() => setDeleting(true)}
                 disabled={busy}
               >
-                {trip.isArchived ? 'Delete permanently' : 'Delete'}
+                {trip.isArchived
+                  ? t('shell.tripActions.deleteForGood')
+                  : t('shell.tripActions.delete')}
               </DropdownMenuItem>
             </>
           ) : null}

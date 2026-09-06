@@ -336,6 +336,58 @@ const messages = {
   'newTrip.created': '旅行を作成しました',
   'newTrip.createdBody': '地図に場所を置いていきましょう。',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': '{title} の操作',
+  'tripActions.favourite': 'お気に入りに追加',
+  'tripActions.unfavourite': 'お気に入りから削除',
+  'tripActions.edit': '編集',
+  'tripActions.archive': 'アーカイブ',
+  'tripActions.restore': '元に戻す',
+  'tripActions.delete': '削除',
+  'tripActions.deleteForGood': '完全に削除',
+  'tripActions.starFailed': 'お気に入りを保存できませんでした',
+  'tripActions.starFallback': '旅行は元の状態に戻りました。',
+  'tripActions.archived': '旅行をアーカイブしました',
+  'tripActions.archiveFailed': '旅行をアーカイブできませんでした',
+  'tripActions.restored': '旅行を元に戻しました',
+  'tripActions.restoreFailed': '旅行を元に戻せませんでした',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': '旅行を編集',
+  'editTrip.submit': '変更を保存',
+  'editTrip.saving': '旅行を保存しています',
+  'editTrip.cancel': 'キャンセル',
+  'editTrip.saved': '旅行を更新しました',
+  'editTrip.errorTitle': '保存できませんでした',
+  'editTrip.retry': '再試行',
+  'editTrip.error':
+    '旅行を保存できませんでした。しばらくしてからもう一度お試しください。',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': '「{title}」を完全に削除しますか？',
+  'deleteTrip.description':
+    '取り消しもゴミ箱もありません。アーカイブなら、失わずに一覧から外せます。',
+  'deleteTrip.reading': 'この旅行の内容を読み込んでいます',
+  'deleteTrip.errorTitle': '読み込めませんでした',
+  'deleteTrip.summaryError': 'この旅行の内容を読み込めませんでした。',
+  'deleteTrip.confirmLabel': '確認のため旅行名を入力してください',
+  'deleteTrip.deleting': '旅行を削除しています',
+  'deleteTrip.deleted': '旅行を削除しました',
+  'deleteTrip.failed': '旅行を削除できませんでした',
+  'deleteTrip.carried.reservations': {
+    other: '件の予約',
+  },
+  'deleteTrip.carried.transports': {
+    other: '件の移動',
+  },
+  'deleteTrip.carried.expenses': {
+    other: '件の支出',
+  },
+  'deleteTrip.carried.files': {
+    other: '件のファイル',
+  },
+  'deleteTrip.carried.members': {
+    other: '人のメンバー',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': '見られる人',
   'visibility.private': '自分だけ',

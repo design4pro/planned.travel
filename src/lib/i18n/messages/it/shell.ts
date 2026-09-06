@@ -435,6 +435,69 @@ const messages = {
   'newTrip.created': 'Viaggio creato',
   'newTrip.createdBody': 'Comincia a mettere luoghi sulla mappa.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Azioni per {title}',
+  'tripActions.favourite': 'Aggiungi ai preferiti',
+  'tripActions.unfavourite': 'Rimuovi dai preferiti',
+  'tripActions.edit': 'Modifica',
+  'tripActions.archive': 'Archivia',
+  'tripActions.restore': 'Ripristina',
+  'tripActions.delete': 'Elimina',
+  'tripActions.deleteForGood': 'Elimina definitivamente',
+  'tripActions.starFailed': 'Il preferito non è stato salvato',
+  'tripActions.starFallback': 'Il viaggio è tornato com’era.',
+  'tripActions.archived': 'Viaggio archiviato',
+  'tripActions.archiveFailed': 'Non è stato possibile archiviare il viaggio',
+  'tripActions.restored': 'Viaggio ripristinato',
+  'tripActions.restoreFailed': 'Non è stato possibile ripristinare il viaggio',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Modifica viaggio',
+  'editTrip.submit': 'Salva modifiche',
+  'editTrip.saving': 'Salvataggio del viaggio',
+  'editTrip.cancel': 'Annulla',
+  'editTrip.saved': 'Viaggio aggiornato',
+  'editTrip.errorTitle': 'Non è stato salvato',
+  'editTrip.retry': 'Riprova',
+  'editTrip.error':
+    'Non è stato possibile salvare il viaggio. Riprova tra un momento.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Eliminare «{title}» per sempre?',
+  'deleteTrip.description':
+    'Non c’è annulla né cestino. L’archivio toglie un viaggio dall’elenco senza perderlo.',
+  'deleteTrip.reading': 'Lettura di ciò che contiene questo viaggio',
+  'deleteTrip.errorTitle': 'Non è stato caricato',
+  'deleteTrip.summaryError':
+    'Non è stato possibile leggere ciò che contiene questo viaggio.',
+  'deleteTrip.confirmLabel': 'Digita il nome del viaggio per confermare',
+  'deleteTrip.deleting': 'Eliminazione del viaggio',
+  'deleteTrip.deleted': 'Viaggio eliminato',
+  'deleteTrip.failed': 'Non è stato possibile eliminare il viaggio',
+  'deleteTrip.carried.reservations': {
+    one: 'prenotazione',
+    many: 'prenotazioni',
+    other: 'prenotazioni',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'spostamento',
+    many: 'spostamenti',
+    other: 'spostamenti',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'spesa',
+    many: 'spese',
+    other: 'spese',
+  },
+  'deleteTrip.carried.files': {
+    one: 'file',
+    many: 'file',
+    other: 'file',
+  },
+  'deleteTrip.carried.members': {
+    one: 'persona',
+    many: 'persone',
+    other: 'persone',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Chi può vederlo',
   'visibility.private': 'Solo io',

@@ -408,6 +408,62 @@ const messages = {
   'newTrip.created': 'Resa skapad',
   'newTrip.createdBody': 'Börja lägga ut platser på kartan.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Åtgärder för {title}',
+  'tripActions.favourite': 'Lägg till som favorit',
+  'tripActions.unfavourite': 'Ta bort som favorit',
+  'tripActions.edit': 'Redigera',
+  'tripActions.archive': 'Arkivera',
+  'tripActions.restore': 'Återställ',
+  'tripActions.delete': 'Ta bort',
+  'tripActions.deleteForGood': 'Ta bort permanent',
+  'tripActions.starFailed': 'Favoriten sparades inte',
+  'tripActions.starFallback': 'Resan är tillbaka som den var.',
+  'tripActions.archived': 'Resan arkiverad',
+  'tripActions.archiveFailed': 'Resan kunde inte arkiveras',
+  'tripActions.restored': 'Resan återställd',
+  'tripActions.restoreFailed': 'Resan kunde inte återställas',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Redigera resa',
+  'editTrip.submit': 'Spara ändringar',
+  'editTrip.saving': 'Sparar resan',
+  'editTrip.cancel': 'Avbryt',
+  'editTrip.saved': 'Resan uppdaterad',
+  'editTrip.errorTitle': 'Det sparades inte',
+  'editTrip.retry': 'Försök igen',
+  'editTrip.error': 'Resan kunde inte sparas. Försök igen om en stund.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Ta bort ”{title}” för gott?',
+  'deleteTrip.description':
+    'Det finns ingen ångra och ingen papperskorg. Arkivering tar bort en resa från listan utan att förlora den.',
+  'deleteTrip.reading': 'Läser vad resan innehåller',
+  'deleteTrip.errorTitle': 'Det laddades inte',
+  'deleteTrip.summaryError': 'Det gick inte att läsa vad resan innehåller.',
+  'deleteTrip.confirmLabel': 'Skriv resans namn för att bekräfta',
+  'deleteTrip.deleting': 'Tar bort resan',
+  'deleteTrip.deleted': 'Resan borttagen',
+  'deleteTrip.failed': 'Resan kunde inte tas bort',
+  'deleteTrip.carried.reservations': {
+    one: 'bokning',
+    other: 'bokningar',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'resa',
+    other: 'resor',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'utgift',
+    other: 'utgifter',
+  },
+  'deleteTrip.carried.files': {
+    one: 'fil',
+    other: 'filer',
+  },
+  'deleteTrip.carried.members': {
+    one: 'person',
+    other: 'personer',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Vem som kan se det',
   'visibility.private': 'Bara jag',
