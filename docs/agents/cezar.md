@@ -29,15 +29,14 @@ comes from a script in `scripts/agent/`, and the sweeper below is the only write
 A Claude Code session is an agent run when `CEZ_TASK_ID` (cezar) or `GITHUB_ACTIONS` is set. The hooks in
 `.claude/hooks/` then tighten:
 
-- `git-guardrails.sh` also blocks `git add -A|.`, closing keywords (`Closes #n`), every `gh issue|pr`
-  mutation, non-GET `gh api`, `pnpm dlx|exec|run`, `npx`, `printenv` and `env` dumps. One exception:
-  `claude-code-review.yml` sets `CLAUDE_REVIEW_PR_COMMENT=1`, which opens `gh pr comment` for the job
-  whose purpose is to post a review, because that job runs with `--permission-mode bypassPermissions`
-  and this hook is its only gate.
+- `git-guardrails.sh` also blocks `pnpm add|remove|update` (the stack is pinned, docs/SPEC.md §3),
+  `printenv` and `env` dumps. GitHub mutations, `git add -A`, closing keywords and `pnpm exec` are
+  open: the om-* skills perform them through `.ai/trackers/github.md` and `SDLC.md` governs them.
 - `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree and denies `.dev.vars`, `.env*`,
-  `.e2e-tiles/`, cezar run state and `.agent/handoff*`.
+  `.e2e-tiles/`, cezar run state and `.ai/qa/test-env.env`.
 - `guard-generated.sh` also refuses edits under `.github/`, `.claude/`, `.husky/`, `.ai/cezar/`,
-  `scripts/agent/`, `.npmrc` and `pnpm-workspace.yaml`.
+  `.ai/agentic.config.json`, `.ai/trackers/`, `.ai/browsers/`, `.ai/skills/`, `.npmrc` and
+  `pnpm-workspace.yaml`.
 
 Workflows give the agent a `bashAllowlist` of prefixes; every entry must be safe for any suffix, which is why
 the scripts below have closed argument spaces and why repo code always runs under `env -i` with an explicit

@@ -1,5 +1,8 @@
 // The Claude Code hooks in .claude/hooks/ as black boxes: JSON on stdin, exit 2 = blocked.
-// Agent mode is CEZ_TASK_ID (cezar) or GITHUB_ACTIONS; without either a developer keeps gh and pnpm.
+// Agent mode is CEZ_TASK_ID (cezar) or GITHUB_ACTIONS; without either a developer keeps pnpm and env.
+// The om-* skills mutate GitHub through .ai/trackers/github.md (`gh api`), stage with `git add -A`,
+// write `Closes #n` and run `pnpm exec`, so none of those is blocked in agent mode any more; what is
+// blocked is the pinned stack (`pnpm add`) and the environment dump.
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -40,37 +43,19 @@ describe('git-guardrails.sh', () => {
     expect(bash('git status').status).toBe(0)
   })
 
-  it('leaves gh, pnpm and env alone outside agent runs', () => {
-    for (const c of [
-      'gh issue edit 1 --add-label x',
-      'gh api --method POST repos/x/y/issues',
-      'pnpm exec vitest',
-      'git add -A',
-      'env',
-    ]) {
+  it('leaves pnpm and env alone outside agent runs', () => {
+    for (const c of ['pnpm add left-pad', 'printenv', 'env']) {
       expect(bash(c).status).toBe(0)
     }
   })
 
   it.each([
-    ['git add -A', 'git add -A|.'],
-    ['git add .', 'git add -A|.'],
-    ['git add --all', 'git add -A|.'],
-    ['git commit -m "fix: x\n\nCloses #12"', 'closing keyword'],
-    ['git commit -m "Fixes #7"', 'closing keyword'],
-    ['gh issue edit 1 --add-label "status: ready"', 'gh issue|pr mutation'],
-    ['gh pr create --draft', 'gh issue|pr mutation'],
-    ['gh issue comment 1 -b hi', 'gh issue|pr mutation'],
-    ['gh label delete x', 'gh mutation surface'],
-    ['gh api --method POST repos/x/y/issues/1/comments', 'gh api non-GET'],
-    ['gh api -X PATCH repos/x/y/issues/1', 'gh api non-GET'],
-    ['gh api repos/x/y/issues/1/comments -f body=hi', 'gh api non-GET'],
-    ['gh api repos/x/y/issues -F title=@f', 'gh api non-GET'],
-    ['gh api --input body.json repos/x/y/issues', 'gh api non-GET'],
-    ['pnpm exec playwright test', 'pnpm dlx|exec|run'],
-    ['pnpm dlx cowsay', 'pnpm dlx|exec|run'],
-    ['pnpm run build', 'pnpm dlx|exec|run'],
-    ['npx prettier .', 'pnpm dlx|exec|run'],
+    ['pnpm add left-pad', 'pnpm add|remove|update'],
+    ['pnpm add -D vitest@2', 'pnpm add|remove|update'],
+    ['pnpm remove zod', 'pnpm add|remove|update'],
+    ['pnpm update', 'pnpm add|remove|update'],
+    ['pnpm up --latest', 'pnpm add|remove|update'],
+    ['pnpm install && pnpm add x', 'pnpm add|remove|update'],
     ['printenv', 'printenv'],
     ['env', 'env dump'],
     ['env | grep TOKEN', 'env dump'],
@@ -82,49 +67,34 @@ describe('git-guardrails.sh', () => {
 
   it.each([
     'git add src/x.ts',
-    'git add scripts/agent/../../src/x.ts',
-    'git commit -m "feat: closer look at #12"',
+    'git add -A',
+    'git add .',
+    'git commit -m "fix: x\n\nCloses #12"',
     'git commit -m "fix(map): rings (refs #12)"',
+    'git push -u origin fix/issue-12-rings',
     'gh issue view 12 --json body',
-    'gh issue list --label "status: ready"',
-    'gh pr list',
+    'gh pr create --base develop --title x --body-file b.md',
+    'gh pr comment 12 -b hi',
+    'gh label create review --color 0366d6',
     'gh api repos/x/y/issues/1',
-    'gh api --method GET repos/x/y/issues/1 --paginate',
+    'gh api --method POST repos/x/y/issues/1/comments -f body=hi',
+    'gh api -X PATCH repos/x/y/issues/1 --input body.json',
     'pnpm typecheck',
     'pnpm test',
     'pnpm lint',
+    'pnpm install --frozen-lockfile',
+    'pnpm exec playwright test',
+    'pnpm exec vite dev --port 3030 --strictPort --host 127.0.0.1',
+    'npx -y skills@latest --version',
+    'bash .ai/scripts/test-env-up.sh',
     'env -i PATH=/bin true',
-    'bash scripts/agent/cez-ladder.sh',
-    'scripts/agent/gh-ro.sh issues/1',
+    'pnpm run build',
   ])('agent mode allows %s', (command) => {
     expect(bash(command, AGENT).status).toBe(0)
   })
 
   it('treats GITHUB_ACTIONS as agent mode too', () => {
-    expect(bash('git add -A', { GITHUB_ACTIONS: 'true' }).status).toBe(2)
-  })
-
-  // claude-code-review.yml runs with `--permission-mode bypassPermissions`, which leaves this hook
-  // as the only gate, and the review's one job is to post its summary on the pull request.
-  describe('the code review exception for gh pr comment', () => {
-    const REVIEW = { ...AGENT, CLAUDE_REVIEW_PR_COMMENT: '1' }
-
-    it('opens gh pr comment only when the review sets the variable', () => {
-      expect(bash('gh pr comment 12 -b hi', AGENT).status).toBe(2)
-      expect(bash('gh pr comment 12 -b hi', REVIEW).status).toBe(0)
-    })
-
-    it.each([
-      'gh issue comment 12 -b hi',
-      'gh pr create --draft',
-      'gh pr edit 12 --add-label x',
-      'gh pr merge 12',
-      'gh api --method POST repos/x/y/issues/1/comments',
-      'gh label delete x',
-      'git add -A',
-    ])('leaves %s blocked', (command) => {
-      expect(bash(command, REVIEW).status).toBe(2)
-    })
+    expect(bash('pnpm add left-pad', { GITHUB_ACTIONS: 'true' }).status).toBe(2)
   })
 })
 
@@ -144,7 +114,11 @@ describe('guard-generated.sh', () => {
     '.claude/settings.json',
     '.husky/pre-commit',
     '.ai/cezar/config.json',
-    'scripts/agent/cez-lib.sh',
+    '.ai/cezar/workflows/issue-autofix.yml',
+    '.ai/agentic.config.json',
+    '.ai/trackers/github.md',
+    '.ai/browsers/playwright.md',
+    '.ai/skills/om-fix/SKILL.md',
     '.npmrc',
     'pnpm-workspace.yaml',
   ])('agent mode blocks %s', (rel) => {
@@ -161,8 +135,15 @@ describe('guard-generated.sh', () => {
     for (const rel of [
       'src/x.ts',
       'scripts/seed/seed.mjs',
+      'scripts/agent/cez-lib.sh',
       'docs/agents/cezar.md',
       'src/.npmrc-ish.ts',
+      '.ai/runs/2026-09-06-rings/PLAN.md',
+      '.ai/specs/2026-09-06-rings.md',
+      '.ai/analysis/12.md',
+      '.ai/qa/test-env.json',
+      '.ai/scripts/test-env-up.sh',
+      '.ai/agentic.config.json.bak',
     ]) {
       expect(
         hook(
@@ -184,10 +165,14 @@ describe('guard-read.sh', () => {
   mkdirSync(join(root, 'src'), { recursive: true })
   mkdirSync(join(root, '.ai', 'cezar', 'runs'), { recursive: true })
   mkdirSync(join(root, '.e2e-tiles'), { recursive: true })
-  mkdirSync(join(root, '.agent'), { recursive: true })
+  mkdirSync(join(root, '.ai', 'qa'), { recursive: true })
+  mkdirSync(join(root, '.ai', 'runs', 'x'), { recursive: true })
   writeFileSync(join(root, '.dev.vars'), 'SECRET=1')
   writeFileSync(join(root, '.dev.vars.example'), 'SECRET=')
   writeFileSync(join(root, 'src', 'a.ts'), '')
+  writeFileSync(join(root, '.ai', 'qa', 'test-env.env'), 'TEST_DEMO_PASSWORD=x')
+  writeFileSync(join(root, '.ai', 'qa', 'test-env.json'), '{}')
+  writeFileSync(join(root, '.ai', 'runs', 'x', 'HANDOFF.md'), '')
   const read = (
     input: Record<string, string>,
     env: Record<string, string> = AGENT,
@@ -202,6 +187,11 @@ describe('guard-read.sh', () => {
     expect(read({ file_path: 'src/new.ts' }).status).toBe(0)
     expect(read({ path: root, pattern: '**/*.ts' }).status).toBe(0)
     expect(read({ file_path: join(root, '.dev.vars.example') }).status).toBe(0)
+    expect(read({ file_path: '.ai/qa/test-env.json' }).status).toBe(0)
+    expect(read({ file_path: '.ai/runs/x/HANDOFF.md' }).status).toBe(0)
+    expect(read({ path: root, pattern: '.ai/runs/**/HANDOFF.md' }).status).toBe(
+      0,
+    )
   })
 
   it.each([
@@ -213,7 +203,7 @@ describe('guard-read.sh', () => {
     ['.e2e-tiles/basemap.pmtiles', 'basemap cache'],
     ['.ai/cezar/runs/x.json', 'cezar run state'],
     ['.ai/cezar/runs.json', 'cezar run state'],
-    ['.agent/handoff.md', 'handoff file'],
+    ['.ai/qa/test-env.env', 'test-env credential file'],
     ['.git/config', 'git internals'],
   ])('denies %s', (file_path, reason) => {
     const r = read({ file_path })
@@ -225,5 +215,6 @@ describe('guard-read.sh', () => {
     expect(read({ pattern: '../**/*.ts' }).status).toBe(2)
     expect(read({ path: root, pattern: '**/.dev.vars' }).status).toBe(2)
     expect(read({ path: root, pattern: '*.env.local' }).status).toBe(2)
+    expect(read({ path: root, pattern: '.ai/qa/test-env.env' }).status).toBe(2)
   })
 })
