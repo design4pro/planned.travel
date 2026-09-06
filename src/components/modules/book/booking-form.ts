@@ -13,6 +13,7 @@
  */
 
 import type { MessageKey } from '#/lib/i18n'
+import type { DeferredMessage } from '../shared/deferred-message'
 
 export const BOOKING_TYPES = [
   'accommodation',
@@ -540,11 +541,13 @@ export function ledgerNotice(
  * interpolate. Keeping it a key rather than a sentence is what lets this file
  * stay free of React and of English, and lets the tests assert identity instead
  * of prose.
+ *
+ * It is a `DeferredMessage` rather than its own shape because a field's *name*
+ * is copy as well, and only that shape carries the difference: a name goes in
+ * `keyParams`, so the dialog resolves it before it lands in the sentence.
+ * Through `params` the key itself is what the reader would see.
  */
-export interface BookingError {
-  readonly key: MessageKey
-  readonly params?: Readonly<Record<string, string | number>>
-}
+export type BookingError = DeferredMessage
 
 export type BookingErrors = Partial<
   Record<keyof BookingDraft | 'form', BookingError>
@@ -600,7 +603,7 @@ export function validateBookingDraft(
     if (draft[field].trim().length === 0) {
       errors[field] = {
         key: 'modules.book.error.required',
-        params: { field: FIELD_NAMES[field] },
+        keyParams: { field: FIELD_NAMES[field] },
       }
     }
   }

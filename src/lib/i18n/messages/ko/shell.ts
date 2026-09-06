@@ -327,6 +327,57 @@ const messages = {
   'newTrip.created': '여행을 만들었습니다',
   'newTrip.createdBody': '지도에 장소를 놓아 보세요.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': '{title} 작업',
+  'tripActions.favourite': '즐겨찾기에 추가',
+  'tripActions.unfavourite': '즐겨찾기에서 제거',
+  'tripActions.edit': '편집',
+  'tripActions.archive': '보관',
+  'tripActions.restore': '복원',
+  'tripActions.delete': '삭제',
+  'tripActions.deleteForGood': '영구 삭제',
+  'tripActions.starFailed': '즐겨찾기를 저장하지 못했습니다',
+  'tripActions.starFallback': '여행이 이전 상태로 돌아갔습니다.',
+  'tripActions.archived': '여행을 보관했습니다',
+  'tripActions.archiveFailed': '여행을 보관하지 못했습니다',
+  'tripActions.restored': '여행을 복원했습니다',
+  'tripActions.restoreFailed': '여행을 복원하지 못했습니다',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': '여행 편집',
+  'editTrip.submit': '변경 사항 저장',
+  'editTrip.saving': '여행을 저장하는 중',
+  'editTrip.cancel': '취소',
+  'editTrip.saved': '여행을 업데이트했습니다',
+  'editTrip.errorTitle': '저장되지 않았습니다',
+  'editTrip.retry': '다시 시도',
+  'editTrip.error': '여행을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': '“{title}”을(를) 영구 삭제할까요?',
+  'deleteTrip.description':
+    '되돌리기도 휴지통도 없습니다. 보관하면 잃지 않고 목록에서만 뺄 수 있습니다.',
+  'deleteTrip.reading': '이 여행에 담긴 내용을 읽는 중',
+  'deleteTrip.errorTitle': '불러오지 못했습니다',
+  'deleteTrip.summaryError': '이 여행에 담긴 내용을 읽지 못했습니다.',
+  'deleteTrip.confirmLabel': '확인하려면 여행 이름을 입력하세요',
+  'deleteTrip.deleting': '여행을 삭제하는 중',
+  'deleteTrip.deleted': '여행을 삭제했습니다',
+  'deleteTrip.failed': '여행을 삭제하지 못했습니다',
+  'deleteTrip.carried.reservations': {
+    other: '건의 예약',
+  },
+  'deleteTrip.carried.transports': {
+    other: '건의 이동',
+  },
+  'deleteTrip.carried.expenses': {
+    other: '건의 지출',
+  },
+  'deleteTrip.carried.files': {
+    other: '개의 파일',
+  },
+  'deleteTrip.carried.members': {
+    other: '명의 멤버',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': '볼 수 있는 사람',
   'visibility.private': '나만',

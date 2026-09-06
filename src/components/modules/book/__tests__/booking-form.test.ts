@@ -17,7 +17,10 @@ import {
   validateBookingDraft,
 } from '../booking-form'
 
-import type { BookingDraft } from '../booking-form'
+import { modulesTranslate as t } from '#/lib/i18n/__tests__/modules-translate'
+import { resolve } from '../../shared/deferred-message'
+
+import type { BookingDraft, BookingError } from '../booking-form'
 
 function draft(overrides: Partial<BookingDraft> = {}): BookingDraft {
   return { ...emptyBookingDraft('EUR'), title: 'Hotel Gracery', ...overrides }
@@ -316,6 +319,30 @@ describe('validateBookingDraft', () => {
       'title',
       'url',
     ])
+  })
+})
+
+describe('a required-field error as the traveller reads it', () => {
+  /**
+   * What the dialog does with an error, minus the dialog — `booking-dialog.test.tsx`
+   * is what pins the dialog itself.
+   */
+  function sentence(error: BookingError | undefined): string {
+    if (error === undefined) {
+      throw new Error('expected the draft to be refused')
+    }
+    return resolve(error, t)
+  }
+
+  it('names the missing field in words, not by its catalogue key', () => {
+    const errors = validateBookingDraft(draft({ type: 'accommodation' }))
+    expect(sentence(errors.startDate)).toBe('This booking needs a date.')
+  })
+
+  it('does the same for every field a type refuses to submit without', () => {
+    const errors = validateBookingDraft(draft({ type: 'restaurant' }))
+    expect(sentence(errors.startDate)).toBe('This booking needs a date.')
+    expect(sentence(errors.startTime)).toBe('This booking needs a time.')
   })
 })
 

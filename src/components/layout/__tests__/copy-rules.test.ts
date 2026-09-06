@@ -53,6 +53,8 @@ const APP_FILES = [
   join('-ui', 'scaffold.tsx'),
   join('-ui', 'trip-card.tsx'),
   join('-ui', 'new-trip-dialog.tsx'),
+  join('-ui', 'trip-form.tsx'),
+  join('-ui', 'trip-actions.tsx'),
   join('-ui', 'create-dialogs.tsx'),
   join('-server', 'shell.ts'),
   join('-server', 'context.ts'),

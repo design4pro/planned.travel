@@ -7,9 +7,12 @@ import {
   ideaItemId,
   indexOf,
   isIdeaItemId,
+  isNoteItemId,
   itemsIn,
   movePlanItem,
   movePlanItemToDay,
+  noteIdOfNoteItem,
+  noteItemId,
   placeIdOfIdeaItem,
   removePlanItem,
   scheduledCount,
@@ -57,6 +60,14 @@ describe('item ids', () => {
 
   it('survives a place id that looks like a prefix', () => {
     expect(placeIdOfIdeaItem(ideaItemId('idea:weird'))).toBe('idea:weird')
+  })
+
+  it('keeps notes in a third space that neither of the other two claims', () => {
+    expect(isNoteItemId(noteItemId('n1'))).toBe(true)
+    expect(isNoteItemId('a11')).toBe(false)
+    expect(isNoteItemId(ideaItemId('px'))).toBe(false)
+    expect(isIdeaItemId(noteItemId('n1'))).toBe(false)
+    expect(noteIdOfNoteItem(noteItemId('note:weird'))).toBe('note:weird')
   })
 })
 
@@ -325,5 +336,188 @@ describe('removePlanItem', () => {
 
   it('is a no-op for something already gone', () => {
     expect(removePlanItem(board, 'ghost')).toEqual(board)
+  })
+})
+
+/* -------------------------------------------------------------------------------------------------
+ * The merged day (PRD #104 decision 9)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * A two-day board whose first day interleaves stops and notes, with times on two of
+ * the stops. `PLACES` above does not know these ids, which is exactly right: a note
+ * has no place, so the duplicate guard has nothing to ask about it.
+ */
+const merged: PlanOrder = {
+  days: [
+    {
+      dayId: 'd1',
+      itemIds: ['m11', noteItemId('n1'), 'm12', noteItemId('n2')],
+    },
+    { dayId: 'd2', itemIds: ['m21'] },
+  ],
+  ideaIds: [ideaItemId('px')],
+}
+
+const TIMES: Readonly<Record<string, string>> = {
+  m11: '09:00',
+  m12: '17:00',
+  m21: '12:00',
+}
+
+const timed = {
+  placeOfItem: (itemId: string): string | null =>
+    itemId === 'm11' || itemId === 'm12' || itemId === 'm21' ? itemId : null,
+  timeOfItem: (itemId: string): string | null => TIMES[itemId] ?? null,
+}
+
+describe('a note in the merged day', () => {
+  it('moves within its own day like any other row', () => {
+    const result = succeed(
+      movePlanItem(
+        merged,
+        noteItemId('n2'),
+        { container: 'd1', index: 0 },
+        timed,
+      ),
+    )
+    expect(itemsIn(result.order, 'd1')).toEqual([
+      noteItemId('n2'),
+      'm11',
+      noteItemId('n1'),
+      'm12',
+    ])
+    expect(result.change).toEqual({
+      kind: 'reorder',
+      days: [
+        {
+          dayId: 'd1',
+          assignmentIds: [noteItemId('n2'), 'm11', noteItemId('n1'), 'm12'],
+        },
+      ],
+    })
+  })
+
+  it('moves to another day, taking its position with it', () => {
+    const result = succeed(
+      movePlanItem(
+        merged,
+        noteItemId('n1'),
+        { container: 'd2', index: 0 },
+        timed,
+      ),
+    )
+    expect(itemsIn(result.order, 'd2')).toEqual([noteItemId('n1'), 'm21'])
+    expect(itemsIn(result.order, 'd1')).toEqual([
+      'm11',
+      'm12',
+      noteItemId('n2'),
+    ])
+  })
+
+  it('is refused into the ideas column, which holds places and nothing else', () => {
+    expect(
+      movePlanItem(
+        merged,
+        noteItemId('n1'),
+        { container: IDEAS_CONTAINER, index: 0 },
+        timed,
+      ),
+    ).toEqual({ ok: false, reason: 'not-in-ideas' })
+  })
+
+  it('leaves the board exactly as it was when it is refused', () => {
+    const snapshot = structuredClone(merged)
+    movePlanItem(
+      merged,
+      noteItemId('n1'),
+      { container: IDEAS_CONTAINER, index: 0 },
+      timed,
+    )
+    expect(merged).toEqual(snapshot)
+  })
+
+  it('has no place, so the duplicate guard never fires on it', () => {
+    const result = succeed(
+      movePlanItemToDay(merged, noteItemId('n1'), 'd2', timed),
+    )
+    expect(itemsIn(result.order, 'd2')).toEqual(['m21', noteItemId('n1')])
+  })
+})
+
+describe('a timed row dragged against its own clock', () => {
+  it('is refused with `timed` when it would land after a later item', () => {
+    // 17:00 dropped above 09:00.
+    expect(
+      movePlanItem(merged, 'm12', { container: 'd1', index: 0 }, timed),
+    ).toEqual({ ok: false, reason: 'timed' })
+  })
+
+  it('is refused with `timed` when it would land before an earlier item', () => {
+    // 09:00 dropped below 17:00.
+    expect(
+      movePlanItem(merged, 'm11', { container: 'd1', index: 3 }, timed),
+    ).toEqual({ ok: false, reason: 'timed' })
+  })
+
+  it('is refused across days too, where the contradiction is the target day’s', () => {
+    // 09:00 dropped after the 12:00 that is already on d2.
+    expect(
+      movePlanItem(merged, 'm11', { container: 'd2', index: 1 }, timed),
+    ).toEqual({ ok: false, reason: 'timed' })
+  })
+
+  it('returns the board unchanged, so the screen can ask instead of undo', () => {
+    const snapshot = structuredClone(merged)
+    movePlanItem(merged, 'm12', { container: 'd1', index: 0 }, timed)
+    expect(merged).toEqual(snapshot)
+  })
+
+  it('allows the move when the clock agrees with the new position', () => {
+    const result = succeed(
+      movePlanItem(merged, 'm11', { container: 'd2', index: 0 }, timed),
+    )
+    expect(itemsIn(result.order, 'd2')).toEqual(['m11', 'm21'])
+  })
+
+  it('never fires for an untimed row, whatever it is dropped between', () => {
+    const result = succeed(
+      movePlanItem(
+        merged,
+        noteItemId('n2'),
+        { container: 'd1', index: 1 },
+        timed,
+      ),
+    )
+    expect(itemsIn(result.order, 'd1')).toEqual([
+      'm11',
+      noteItemId('n2'),
+      noteItemId('n1'),
+      'm12',
+    ])
+  })
+
+  it('never fires without a time lookup, so nothing that shipped can start refusing', () => {
+    const result = succeed(
+      movePlanItem(merged, 'm12', { container: 'd1', index: 0 }),
+    )
+    expect(itemsIn(result.order, 'd1')?.[0]).toBe('m12')
+  })
+
+  it('still refuses a duplicate place before it ever looks at a clock', () => {
+    const board2: PlanOrder = {
+      days: [
+        { dayId: 'd1', itemIds: ['m11'] },
+        { dayId: 'd2', itemIds: ['m21'] },
+      ],
+      ideaIds: [],
+    }
+    const sameLookups = {
+      placeOfItem: (): string => 'one place',
+      timeOfItem: (itemId: string): string | null => TIMES[itemId] ?? null,
+    }
+    expect(
+      movePlanItem(board2, 'm11', { container: 'd2', index: 1 }, sameLookups),
+    ).toEqual({ ok: false, reason: 'duplicate' })
   })
 })

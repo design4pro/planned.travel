@@ -16,6 +16,7 @@ import {
   collabMessageReactions,
   collectionPlaceLabels,
   placeTags,
+  places,
 } from '#/server/db/schema'
 import { NotFoundError, QuotaExceededError, RepositoryError } from '../context'
 import {
@@ -78,6 +79,7 @@ import {
   createDayNote,
   dayNotesRepository,
   daysRepository,
+  listDayNotes,
   listTripDays,
 } from '../days'
 import {
@@ -94,12 +96,17 @@ import {
   settlementsRepository,
 } from '../expenses'
 import { getStorageUsage, recordFile, tripFilesRepository } from '../files'
+import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
+import { purgeContext } from '#/server/queue/handlers/__tests__/purge-context'
+import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import {
   createAccommodation,
   createAssignment,
   dayAccommodationsRepository,
   dayAssignmentsRepository,
   getTripItinerary,
+  listDayAssignments,
+  reorderDayTimeline,
   setAssignmentParticipants,
 } from '../itinerary'
 import {
@@ -166,7 +173,6 @@ import {
 } from '../settings'
 import { createTag, tagsRepository } from '../tags'
 import {
-  TripRoleError,
   createTransport,
   deleteTransport,
   getTransport,
@@ -185,15 +191,30 @@ import {
   updateTransport,
 } from '../transports'
 import {
+  countFavourites,
+  listFavouriteTripIds,
+  setFavourite,
+} from '../trip-favourites'
+import {
   addTripMember,
+  archiveTrip,
+  canReadTrip,
   countTripsByStatus,
+  TripRoleError,
   createShareLink,
   createTrip,
+  deleteTrip,
+  listTripMembers,
+  listTrips,
   removeTripMember,
+  requireTrip,
+  restoreTrip,
   shareLinksRepository,
   tripMembersRepository,
+  tripRolesFor,
   tripsRepository,
   updateTrip,
+  updateTripMember,
 } from '../trips'
 import {
   addCompanyHoliday,
@@ -224,6 +245,7 @@ import type {
 } from '../base'
 import type { TaskBindings } from '#/server/queue/types'
 import type { UserSettings } from '#/server/db/types'
+import type { FakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import type { Harness, SeededTenant } from './harness'
 
 /* -------------------------------------------------------------------------------------------------
@@ -3145,6 +3167,156 @@ describe('tenant isolation', () => {
   })
 
   /**
+   * The trip lifecycle (`01-S1`, PRD #104 decisions 1, 2 and 6).
+   *
+   * Two refusals that must never collapse into one. Across the boundary every lifecycle write is a
+   * `NotFoundError`, identical to the one a trip that does not exist raises — so B's trip ids stay
+   * unguessable from A. Inside A's own organization the refusal is `FORBIDDEN`, and that is safe
+   * precisely because the caller has already proved they may see the trip.
+   */
+  describe('trip lifecycle', () => {
+    it('refuses every lifecycle write across the boundary, leaving B untouched', async () => {
+      const scope = alpha.tenant.scope
+      const before = await tripsRepository.findById(
+        beta.tenant.scope,
+        beta.tripId,
+      )
+
+      for (const attempt of [
+        () => updateTrip(scope, beta.tripId, { title: 'Hijacked' }),
+        () => archiveTrip(scope, beta.tripId),
+        () => restoreTrip(scope, beta.tripId),
+        () => deleteTrip(scope, beta.tripId),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        await tripsRepository.findById(beta.tenant.scope, beta.tripId),
+      ).toEqual(before)
+      expect(
+        (await listTripDays(beta.tenant.scope, beta.tripId)).length,
+      ).toBeGreaterThan(0)
+      expect(
+        await placesRepository.count(
+          beta.tenant.scope,
+          eq(places.tripId, beta.tripId),
+        ),
+      ).toBe(1)
+    })
+
+    it('answers a demoted owner with FORBIDDEN, not NOT_FOUND', async () => {
+      const scope = alpha.tenant.scope
+      const membership = (await listTripMembers(scope, alpha.tripId)).find(
+        (row) => row.userId === alpha.tenant.ownerUserId,
+      )
+      expect(membership).toBeDefined()
+      if (membership === undefined) return
+
+      await updateTripMember(scope, membership.id, { role: 'editor' })
+
+      const refusal = await captureError(() => archiveTrip(scope, alpha.tripId))
+      expect(refusal).toBeInstanceOf(RepositoryError)
+      expect(refusal).not.toBeInstanceOf(NotFoundError)
+      expect((refusal as RepositoryError).code).toBe('FORBIDDEN')
+
+      // Still readable, which is what makes the two failures different questions.
+      expect((await requireTrip(scope, alpha.tripId)).id).toBe(alpha.tripId)
+    })
+
+    it('never lets a foreign trip into a list, a count or a role map', async () => {
+      const scope = alpha.tenant.scope
+
+      expect((await listTrips(scope)).map((row) => row.id)).toEqual([
+        alpha.tripId,
+      ])
+      expect((await countTripsByStatus(scope)).total).toBe(1)
+      expect((await tripRolesFor(scope, [beta.tripId])).size).toBe(0)
+      expect(await canReadTrip(scope, beta.tripId)).toBe(false)
+    })
+
+    it('refuses a delete to a demoted owner, and the trip survives it', async () => {
+      const scope = alpha.tenant.scope
+      const membership = (await listTripMembers(scope, alpha.tripId)).find(
+        (row) => row.userId === alpha.tenant.ownerUserId,
+      )
+      expect(membership).toBeDefined()
+      if (membership === undefined) return
+
+      await updateTripMember(scope, membership.id, { role: 'editor' })
+
+      const refusal = await captureError(() => deleteTrip(scope, alpha.tripId))
+      expect((refusal as RepositoryError).code).toBe('FORBIDDEN')
+      expect((await requireTrip(scope, alpha.tripId)).id).toBe(alpha.tripId)
+    })
+
+    it('refuses a favourite on B’s trip and never lists B’s ids', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() => setFavourite(scope, beta.tripId, true)),
+      ).toBeInstanceOf(NotFoundError)
+
+      // A's own star, so the reads below have something to be wrong about.
+      await setFavourite(scope, alpha.tripId, true)
+      await setFavourite(beta.tenant.scope, beta.tripId, true)
+
+      expect(await listFavouriteTripIds(scope)).toEqual([alpha.tripId])
+      expect(await countFavourites(scope)).toBe(1)
+      expect(await listFavouriteTripIds(beta.tenant.scope)).toEqual([
+        beta.tripId,
+      ])
+    })
+  })
+  /**
+   * The purge is the one half of a delete that leaves the database entirely, so it is the one place
+   * a boundary could be crossed without a tenant filter to stop it (PRD #104 decision 3). R2 has no
+   * `organization_id`; what it has is a key namespace, and every key this product mints names its
+   * organization in the second path segment. The envelope's `orgId` is the authority and the keys are
+   * a request, so an envelope forged under A that names B's objects deletes nothing.
+   */
+  describe('the storage purge', () => {
+    async function purge(
+      orgId: string,
+      keys: ReadonlyArray<string>,
+      bucket: FakeBucket,
+    ): Promise<void> {
+      await handleTripPurge({ keys: [...keys] }, purgeContext(orgId, bucket))
+    }
+
+    /** The key `seedWorld` recorded for that tenant's one file. */
+    async function fileKey(world: World): Promise<string> {
+      const file = await tripFilesRepository.findById(
+        world.tenant.scope,
+        world.fileId,
+      )
+      expect(file).not.toBeNull()
+      return file?.storageKey ?? ''
+    }
+
+    it('deletes nothing when A’s envelope names B’s objects', async () => {
+      const key = await fileKey(beta)
+      const bucket = fakeBucket([key])
+
+      await purge(alpha.tenant.organizationId, [key], bucket)
+
+      expect(bucket.calls).toEqual([])
+      expect([...bucket.remaining]).toEqual([key])
+    })
+
+    it('deletes A’s own objects and drops B’s from the same envelope', async () => {
+      const mine = await fileKey(alpha)
+      const theirs = await fileKey(beta)
+      const bucket = fakeBucket([mine, theirs])
+
+      await purge(alpha.tenant.organizationId, [mine, theirs], bucket)
+
+      expect(bucket.calls).toEqual([[mine]])
+      expect([...bucket.remaining]).toEqual([theirs])
+    })
+  })
+
+  /**
    * `updateUserSettings`, specified against what it actually does rather than
    * against what a guard would do.
    *
@@ -3209,6 +3381,156 @@ describe('tenant isolation', () => {
       expect(
         (await getEffectiveSettings(beta.tenant.scope)).maskConfirmationCodes,
       ).toBe(false)
+    })
+  })
+
+  /**
+   * `01-S4a`: one number line per day, written across two tables in one batch.
+   *
+   * The batch is the reason this block exists rather than riding on the generic
+   * per-repository cases above. `reorderDayTimeline` is the only write in the
+   * product that touches two tables at once, and a tenant filter that held on one of
+   * them and not the other would renumber a stranger's day at the moment a reader
+   * dragged their own.
+   */
+  describe('day timeline ordering', () => {
+    /** Positions of a day's stops and notes, keyed by row id, for a byte-for-byte diff. */
+    async function positionsOf(
+      scope: TenantScope,
+      dayId: string,
+    ): Promise<Record<string, number>> {
+      const [stops, notes] = await Promise.all([
+        listDayAssignments(scope, dayId),
+        listDayNotes(scope, dayId),
+      ])
+      return Object.fromEntries([
+        ...stops.map((row) => [row.id, row.orderIndex] as const),
+        ...notes.map((row) => [row.id, row.sortOrder] as const),
+      ])
+    }
+
+    it('refuses B’s day, named with B’s trip or with A’s own', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          reorderDayTimeline(scope, {
+            tripId: beta.tripId,
+            dayId: beta.dayId,
+            items: [{ kind: 'stop', id: beta.assignmentId }],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // A's own trip with B's day: `requireTripDay`'s job, and the one a caller who
+      // has already proved they own a trip could otherwise reach through.
+      expect(
+        await captureError(() =>
+          reorderDayTimeline(scope, {
+            tripId: alpha.tripId,
+            dayId: beta.dayId,
+            items: [],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('drops B’s ids and renumbers A over its own items only', async () => {
+      const scope = alpha.tenant.scope
+      const before = await positionsOf(beta.tenant.scope, beta.dayId)
+
+      const second = await createPlace(scope, {
+        tripId: alpha.tripId,
+        name: 'Time Out Market',
+      })
+      const extraStop = await createAssignment(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        placeId: second.id,
+      })
+      const extraNote = await createDayNote(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        body: 'Book the tram tickets.',
+      })
+
+      const written = await reorderDayTimeline(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        items: [
+          { kind: 'stop', id: beta.assignmentId },
+          { kind: 'note', id: alpha.dayNoteId },
+          { kind: 'note', id: beta.dayNoteId },
+          { kind: 'stop', id: extraStop.id },
+          { kind: 'note', id: extraNote.id },
+          { kind: 'stop', id: alpha.assignmentId },
+        ],
+      })
+
+      // B's two ids are gone from the write, and A's four are numbered 0..3.
+      expect(written).toEqual([
+        { kind: 'note', id: alpha.dayNoteId },
+        { kind: 'stop', id: extraStop.id },
+        { kind: 'note', id: extraNote.id },
+        { kind: 'stop', id: alpha.assignmentId },
+      ])
+      expect(await positionsOf(scope, alpha.dayId)).toEqual({
+        [alpha.dayNoteId]: 0,
+        [extraStop.id]: 1,
+        [extraNote.id]: 2,
+        [alpha.assignmentId]: 3,
+      })
+
+      // And B's own day is byte-identical.
+      expect(await positionsOf(beta.tenant.scope, beta.dayId)).toEqual(before)
+    })
+
+    it('leaves A a complete renumber when every id it was sent is a stranger’s', async () => {
+      const scope = alpha.tenant.scope
+      const before = await positionsOf(beta.tenant.scope, beta.dayId)
+
+      // Nothing addressable is left after the drop, so the day is rewritten from its
+      // own current order: a whole 0..n-1, never half a batch.
+      await reorderDayTimeline(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        items: [
+          { kind: 'stop', id: beta.assignmentId },
+          { kind: 'note', id: beta.dayNoteId },
+        ],
+      })
+
+      // The seed's note and stop are both at 0 — two tables, one number line not yet
+      // written — so which of the two leads is the id tiebreak's business and not
+      // this test's. What is asserted is that the day came out a whole `0..n-1`.
+      const after = await positionsOf(scope, alpha.dayId)
+      expect(Object.keys(after).sort()).toEqual(
+        [alpha.dayNoteId, alpha.assignmentId].sort(),
+      )
+      expect(Object.values(after).sort()).toEqual([0, 1])
+      expect(await positionsOf(beta.tenant.scope, beta.dayId)).toEqual(before)
+    })
+
+    it('refuses to clear a foreign row’s time through `clearTime`', async () => {
+      const scope = alpha.tenant.scope
+      const before = await dayAssignmentsRepository.findById(
+        beta.tenant.scope,
+        beta.assignmentId,
+      )
+
+      await reorderDayTimeline(scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        items: [{ kind: 'stop', id: beta.assignmentId }],
+        clearTime: [{ kind: 'stop', id: beta.assignmentId }],
+      })
+
+      expect(
+        await dayAssignmentsRepository.findById(
+          beta.tenant.scope,
+          beta.assignmentId,
+        ),
+      ).toEqual(before)
     })
   })
 })

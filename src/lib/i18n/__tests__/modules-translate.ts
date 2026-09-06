@@ -1,26 +1,18 @@
 /**
- * The English translator the module unit tests read their sentences through.
+ * The English translator the trip modules' unit tests read their sentences through.
  *
- * The same choice `console-translate.ts` describes, made the same way: the pure helpers under
- * `src/components/modules/` take a `Translate` because a hook cannot be called from a select's
- * label function or from a test, and resolving the real English catalogue is stronger than a
- * key-returning stub — a stub still passes when the wiring points a field at the wrong key.
+ * The module screens keep their rules in plain functions that name a message rather than write one —
+ * `booking-form.ts` says why a draft will not save, `connections.ts` whether a hand-over can be
+ * caught — and this resolves what they named. See `./namespace-translate` for why the catalogue is
+ * real rather than stubbed.
  *
  * Not a `.test.ts`, so vitest collects no suite from it, and inside `__tests__`, so the source rules
  * that grep the shipped i18n module skip it.
  */
 
-import { createTranslator } from '../catalogue'
 import En from '../messages/en/modules'
+import { namespaceTranslate } from './namespace-translate'
 
-import type { Catalogue, Translate } from '../types'
+import type { Translate } from '../types'
 
-/** `'transports.dayNumber'` in the file is `'modules.transports.dayNumber'` to `t()`. */
-const MODULES_CATALOGUE: Catalogue = Object.fromEntries(
-  Object.entries(En).map(([key, message]) => [`modules.${key}`, message]),
-)
-
-export const modulesTranslate: Translate = createTranslator(
-  'en',
-  MODULES_CATALOGUE,
-)
+export const modulesTranslate: Translate = namespaceTranslate('modules', En)

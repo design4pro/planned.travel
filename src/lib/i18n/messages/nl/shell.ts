@@ -419,6 +419,63 @@ const messages = {
   'newTrip.created': 'Reis aangemaakt',
   'newTrip.createdBody': 'Begin plekken op de kaart te zetten.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Acties voor {title}',
+  'tripActions.favourite': 'Toevoegen aan favorieten',
+  'tripActions.unfavourite': 'Uit favorieten halen',
+  'tripActions.edit': 'Bewerken',
+  'tripActions.archive': 'Archiveren',
+  'tripActions.restore': 'Terugzetten',
+  'tripActions.delete': 'Verwijderen',
+  'tripActions.deleteForGood': 'Definitief verwijderen',
+  'tripActions.starFailed': 'De favoriet is niet opgeslagen',
+  'tripActions.starFallback': 'De reis staat weer zoals hij stond.',
+  'tripActions.archived': 'Reis gearchiveerd',
+  'tripActions.archiveFailed': 'De reis kon niet worden gearchiveerd',
+  'tripActions.restored': 'Reis teruggezet',
+  'tripActions.restoreFailed': 'De reis kon niet worden teruggezet',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Reis bewerken',
+  'editTrip.submit': 'Wijzigingen opslaan',
+  'editTrip.saving': 'De reis wordt opgeslagen',
+  'editTrip.cancel': 'Annuleren',
+  'editTrip.saved': 'Reis bijgewerkt',
+  'editTrip.errorTitle': 'Dat is niet opgeslagen',
+  'editTrip.retry': 'Opnieuw proberen',
+  'editTrip.error':
+    'De reis kon niet worden opgeslagen. Probeer het zo nog eens.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': '“{title}” voorgoed verwijderen?',
+  'deleteTrip.description':
+    'Er is geen ongedaan maken en geen prullenbak. Archiveren haalt een reis uit de lijst zonder hem kwijt te raken.',
+  'deleteTrip.reading': 'Lezen wat deze reis bevat',
+  'deleteTrip.errorTitle': 'Dat is niet geladen',
+  'deleteTrip.summaryError': 'Wat deze reis bevat, kon niet worden gelezen.',
+  'deleteTrip.confirmLabel': 'Typ de naam van de reis om te bevestigen',
+  'deleteTrip.deleting': 'De reis wordt verwijderd',
+  'deleteTrip.deleted': 'Reis verwijderd',
+  'deleteTrip.failed': 'De reis kon niet worden verwijderd',
+  'deleteTrip.carried.reservations': {
+    one: 'boeking',
+    other: 'boekingen',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'rit',
+    other: 'ritten',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'uitgave',
+    other: 'uitgaven',
+  },
+  'deleteTrip.carried.files': {
+    one: 'bestand',
+    other: 'bestanden',
+  },
+  'deleteTrip.carried.members': {
+    one: 'persoon',
+    other: 'personen',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Wie het kan zien',
   'visibility.private': 'Alleen ik',

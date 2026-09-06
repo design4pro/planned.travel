@@ -427,6 +427,65 @@ const messages = {
   'newTrip.created': 'Reise angelegt',
   'newTrip.createdBody': 'Fang an, Orte auf der Karte zu setzen.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Aktionen für {title}',
+  'tripActions.favourite': 'Zu Favoriten',
+  'tripActions.unfavourite': 'Aus Favoriten entfernen',
+  'tripActions.edit': 'Bearbeiten',
+  'tripActions.archive': 'Archivieren',
+  'tripActions.restore': 'Wiederherstellen',
+  'tripActions.delete': 'Löschen',
+  'tripActions.deleteForGood': 'Endgültig löschen',
+  'tripActions.starFailed': 'Der Favorit wurde nicht gespeichert',
+  'tripActions.starFallback': 'Die Reise ist wieder wie zuvor.',
+  'tripActions.archived': 'Reise archiviert',
+  'tripActions.archiveFailed': 'Die Reise konnte nicht archiviert werden',
+  'tripActions.restored': 'Reise wiederhergestellt',
+  'tripActions.restoreFailed':
+    'Die Reise konnte nicht wiederhergestellt werden',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Reise bearbeiten',
+  'editTrip.submit': 'Änderungen speichern',
+  'editTrip.saving': 'Reise wird gespeichert',
+  'editTrip.cancel': 'Abbrechen',
+  'editTrip.saved': 'Reise aktualisiert',
+  'editTrip.errorTitle': 'Das wurde nicht gespeichert',
+  'editTrip.retry': 'Erneut versuchen',
+  'editTrip.error':
+    'Die Reise konnte nicht gespeichert werden. Versuche es gleich noch einmal.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': '„{title}“ endgültig löschen?',
+  'deleteTrip.description':
+    'Es gibt kein Rückgängig und keinen Papierkorb. Das Archiv nimmt eine Reise aus der Liste, ohne sie zu verlieren.',
+  'deleteTrip.reading': 'Inhalt dieser Reise wird gelesen',
+  'deleteTrip.errorTitle': 'Das wurde nicht geladen',
+  'deleteTrip.summaryError':
+    'Der Inhalt dieser Reise konnte nicht gelesen werden.',
+  'deleteTrip.confirmLabel': 'Zum Bestätigen den Namen der Reise eingeben',
+  'deleteTrip.deleting': 'Reise wird gelöscht',
+  'deleteTrip.deleted': 'Reise gelöscht',
+  'deleteTrip.failed': 'Die Reise konnte nicht gelöscht werden',
+  'deleteTrip.carried.reservations': {
+    one: 'Buchung',
+    other: 'Buchungen',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'Fahrt',
+    other: 'Fahrten',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'Ausgabe',
+    other: 'Ausgaben',
+  },
+  'deleteTrip.carried.files': {
+    one: 'Datei',
+    other: 'Dateien',
+  },
+  'deleteTrip.carried.members': {
+    one: 'Person',
+    other: 'Personen',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Wer es sehen kann',
   'visibility.private': 'Nur ich',
