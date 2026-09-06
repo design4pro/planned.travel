@@ -33,7 +33,8 @@
     "cf-typegen": "wrangler types",
     "worktree:bootstrap": "bash scripts/worktree/bootstrap.sh",
     "prepare": "husky",
-    "sentry-triage": "tsx scripts/sentry-triage/sentry-triage.ts"
+    "sentry-triage": "tsx scripts/sentry-triage/sentry-triage.ts",
+    "install-skills": "npx -y skills@latest add open-mercato/skills --skill \"*\" -a claude-code -y && npx -y skills@latest update --project -y"
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write"

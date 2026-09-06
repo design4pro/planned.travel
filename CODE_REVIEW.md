@@ -1,0 +1,100 @@
+# Code review
+
+Review rules for this repository, read by `om-code-review` (and therefore by `om-auto-review-pr`
+and `om-review-prs`) on top of its built-in checklist. The binding standards are docs/SPEC.md §6
+and §7; docs/agents/CODING_STANDARDS.md distils them and is the `reviewChecklist` in
+`.ai/agentic.config.json`. Where this file and those disagree, docs/SPEC.md wins.
+
+## Severity
+
+- **Blocker** - the PR must not merge as is. A layering-contract violation, a suppression, a
+  removed or skipped test, a missing locale key, a missing tenant-isolation test, a hand-edited
+  generated file, a new dependency, a red validation gate.
+- **Should fix** - a real defect or a clear standards miss that does not break a contract:
+  a `console.log`, a nested ternary, a default export outside a route module, an untested branch
+  the ticket names, a smell from the baseline that the author cannot justify.
+- **Nit** - style or naming with no behavioural consequence. Never blocks; batched into one comment.
+
+A red required check or a conflicted head is reported as a blocker together with the full code
+review, never instead of it.
+
+## Blockers: the floor
+
+These are mechanical and admit no judgement. The pre-migration pipeline enforced them with
+`scripts/agent/floor-guard.mjs`; the review now does.
+
+1. **No new suppressions.** Any added `@ts-ignore`, `@ts-expect-error`, `eslint-disable`,
+   `eslint-disable-next-line` or `eslint-disable-line` is a blocker, whatever the comment says.
+2. **No skipped or narrowed tests.** Any added `.skip`, `.only`, `.todo`, `.fixme`, `xit`,
+   `xdescribe` or `xtest` in a test file is a blocker.
+3. **No deleted test files.** A removed `*.test.ts`, `*.test.tsx`, `*.spec.ts` or `e2e/**/*.ts`
+   spec is a blocker unless the code it tested was deleted in the same PR and the PR body says so.
+4. **Generated files are never hand-edited.** A diff in `src/routeTree.gen.ts` must be exactly what
+   `pnpm generate-routes` produces; a diff in `drizzle/` exactly what `pnpm db:generate` produces.
+   `bash .ai/scripts/check-generated.sh` proves it.
+5. **The stack is pinned.** A change to `dependencies` or `devDependencies` in `package.json`, or
+   a `pnpm-lock.yaml` diff not explained by an existing dependency's transitive update, is a blocker
+   (docs/SPEC.md §3). Dependabot PRs carry `dependencies` and are the one exception.
+
+## Layering contract (blockers)
+
+- **SQL only in `src/server/repos`**, through the tenant-scoped base repository; the tenant filter
+  must not be removable. `src/server/catalog` is the single stated exception (global tables plus one
+  cron discovery read, docs/SPEC.md §5 and §6). SQL anywhere else is a blocker.
+- **Every new or changed repo method has a tenant-isolation test**: a row of another organisation
+  must be invisible to the call. No test, blocker.
+- **Routes call server functions (`src/server/fns`); server functions call repos.** A route with
+  a query in it, or a server function called from inside another server function's handler
+  (`scripts/check-server-fn-manifest.mjs` explains why that ships broken), is a blocker.
+- **Zod on every server-function input.** An input typed by hand or trusted from the client is a
+  blocker.
+- **`src/components/ui` never fetches data and never imports from `src/server`.**
+- **`src/server/public` returns named, column-whitelisted, read-only projections**, with the tenant
+  scope derived from the resolved share record.
+- **`src/server/email` imports no Worker binding**; `src/server/auth/email.ts` owns the message
+  union; `src/server/queue/handlers/email.ts` delivers.
+- **D1 migrations are additive** - a running Worker must survive the migrate-then-deploy window.
+  See BACKWARD_COMPATIBILITY.md.
+
+## Localisation (blocker)
+
+User-facing copy is never hardcoded. A new string means a new key in `en` and in every other locale
+under `src/lib/i18n/messages/` in the same PR; the parity test enforces the set. Rendering a literal
+string, or adding a key to `en` only, is a blocker. Procedure: the `i18n-messages` skill;
+contract: docs/SPEC.md §9. RTL (`ar`) layouts use logical properties, never `left`/`right`.
+
+## Style (should fix)
+
+- TypeScript strict. No `any`; no non-null `!` on a value that can genuinely be null.
+- Named exports only; default exports only in route modules.
+- `cn()` from `src/lib/cn.ts` for class merging.
+- No nested ternaries. Switch or if/else chains.
+- No TODOs, placeholder copy, `console.log`, or commented-out code.
+- Conventional Commits, in English.
+
+## Tests (should fix)
+
+New logic has tests at the seams the ticket names, not implementation-coupled and not tautological.
+Component tests run in the `ui` vitest project, server code in `server`, and tooling and policy
+files in `tooling` (vitest.config.ts). A new e2e journey belongs in `e2e/` and must run against the
+3030-3040 port range that `playwright.config.ts` insists on.
+
+## Definition of done (docs/SPEC.md §7)
+
+The reviewer confirms the PR body's checklist against the diff:
+
+1. `pnpm build` succeeds.
+2. `pnpm lint` and `pnpm typecheck` are clean with no new suppressions.
+3. New logic has tests and `pnpm test` passes.
+4. UI changes are visually verified light and dark, desktop and mobile, by the blind A/B pair
+   from `scripts/visual/capture.mjs`; both frames are attached to the PR (`om-auto-qa-pr`
+   produces them). A UI diff without the pair carries `needs-qa` and cannot merge without it.
+5. No TODOs, placeholder copy, `console.log`, or commented-out code.
+6. Files outside the ticket's ownership are untouched; anything noticed elsewhere goes under
+   "Noticed but not touching" in the PR body.
+
+## Smell baseline (judgement)
+
+The Fowler smell baseline in docs/agents/CODING_STANDARDS.md applies as labelled heuristics
+("possible Feature Envy"), never as hard violations, and never where a documented standard endorses
+the shape. Skip anything `pnpm lint` already reports.

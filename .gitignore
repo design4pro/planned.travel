@@ -113,3 +113,15 @@ unit-blob-reports/
 # --sql-out, which the deploy workflows use). A megabyte of INSERTs regenerated
 # from the committed artefact every time, so it is output rather than source.
 airports.sql
+
+# om-prepare-test-env working state: the live-environment descriptor, the demo
+# credential env file the up script writes beside it, QA screenshot artefacts
+# and per-run scratch of the om-* skills. The scripts that produce them are
+# tracked; their output never is.
+.ai/qa/test-env.json
+.ai/qa/test-env.env
+.ai/qa/test-env-build-cache.json
+.ai/qa/test-env.lock/
+.ai/qa/dev-server.pid
+.ai/qa/artifacts_*/
+.ai/tmp/
