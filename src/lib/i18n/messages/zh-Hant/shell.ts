@@ -316,6 +316,57 @@ const messages = {
   'newTrip.created': '行程已建立',
   'newTrip.createdBody': '開始在地圖上放置地點吧。',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': '{title} 的操作',
+  'tripActions.favourite': '加入收藏',
+  'tripActions.unfavourite': '取消收藏',
+  'tripActions.edit': '編輯',
+  'tripActions.archive': '封存',
+  'tripActions.restore': '還原',
+  'tripActions.delete': '刪除',
+  'tripActions.deleteForGood': '永久刪除',
+  'tripActions.starFailed': '收藏未儲存',
+  'tripActions.starFallback': '行程已回復原狀。',
+  'tripActions.archived': '行程已封存',
+  'tripActions.archiveFailed': '行程封存失敗',
+  'tripActions.restored': '行程已還原',
+  'tripActions.restoreFailed': '行程還原失敗',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': '編輯行程',
+  'editTrip.submit': '儲存變更',
+  'editTrip.saving': '正在儲存行程',
+  'editTrip.cancel': '取消',
+  'editTrip.saved': '行程已更新',
+  'editTrip.errorTitle': '未能儲存',
+  'editTrip.retry': '重試',
+  'editTrip.error': '行程儲存失敗。請稍後再試。',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': '永久刪除「{title}」？',
+  'deleteTrip.description':
+    '沒有復原，也沒有垃圾桶。封存可以把行程移出清單而不會遺失。',
+  'deleteTrip.reading': '正在讀取此行程的內容',
+  'deleteTrip.errorTitle': '未能載入',
+  'deleteTrip.summaryError': '無法讀取此行程的內容。',
+  'deleteTrip.confirmLabel': '輸入行程名稱以確認',
+  'deleteTrip.deleting': '正在刪除行程',
+  'deleteTrip.deleted': '行程已刪除',
+  'deleteTrip.failed': '行程刪除失敗',
+  'deleteTrip.carried.reservations': {
+    other: '項預訂',
+  },
+  'deleteTrip.carried.transports': {
+    other: '段行程',
+  },
+  'deleteTrip.carried.expenses': {
+    other: '筆支出',
+  },
+  'deleteTrip.carried.files': {
+    other: '個檔案',
+  },
+  'deleteTrip.carried.members': {
+    other: '位成員',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': '誰能看到',
   'visibility.private': '僅我可見',

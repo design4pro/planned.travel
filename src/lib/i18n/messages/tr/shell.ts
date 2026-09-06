@@ -404,6 +404,62 @@ const messages = {
   'newTrip.created': 'Gezi oluşturuldu',
   'newTrip.createdBody': 'Haritaya yer eklemeye başla.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': '{title} için işlemler',
+  'tripActions.favourite': 'Favorilere ekle',
+  'tripActions.unfavourite': 'Favorilerden çıkar',
+  'tripActions.edit': 'Düzenle',
+  'tripActions.archive': 'Arşivle',
+  'tripActions.restore': 'Geri al',
+  'tripActions.delete': 'Sil',
+  'tripActions.deleteForGood': 'Kalıcı olarak sil',
+  'tripActions.starFailed': 'Favori kaydedilmedi',
+  'tripActions.starFallback': 'Gezi eski hâline döndü.',
+  'tripActions.archived': 'Gezi arşivlendi',
+  'tripActions.archiveFailed': 'Gezi arşivlenemedi',
+  'tripActions.restored': 'Gezi geri alındı',
+  'tripActions.restoreFailed': 'Gezi geri alınamadı',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Geziyi düzenle',
+  'editTrip.submit': 'Değişiklikleri kaydet',
+  'editTrip.saving': 'Gezi kaydediliyor',
+  'editTrip.cancel': 'Vazgeç',
+  'editTrip.saved': 'Gezi güncellendi',
+  'editTrip.errorTitle': 'Bu kaydedilmedi',
+  'editTrip.retry': 'Yeniden dene',
+  'editTrip.error': 'Gezi kaydedilemedi. Birazdan yeniden deneyin.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': '“{title}” kalıcı olarak silinsin mi?',
+  'deleteTrip.description':
+    'Geri alma da çöp kutusu da yok. Arşivlemek geziyi kaybetmeden listeden çıkarır.',
+  'deleteTrip.reading': 'Bu gezinin içeriği okunuyor',
+  'deleteTrip.errorTitle': 'Bu yüklenmedi',
+  'deleteTrip.summaryError': 'Bu gezinin içeriği okunamadı.',
+  'deleteTrip.confirmLabel': 'Onaylamak için gezinin adını yazın',
+  'deleteTrip.deleting': 'Gezi siliniyor',
+  'deleteTrip.deleted': 'Gezi silindi',
+  'deleteTrip.failed': 'Gezi silinemedi',
+  'deleteTrip.carried.reservations': {
+    one: 'rezervasyon',
+    other: 'rezervasyon',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'ulaşım',
+    other: 'ulaşım',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'harcama',
+    other: 'harcama',
+  },
+  'deleteTrip.carried.files': {
+    one: 'dosya',
+    other: 'dosya',
+  },
+  'deleteTrip.carried.members': {
+    one: 'kişi',
+    other: 'kişi',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Kim görebilir',
   'visibility.private': 'Yalnızca ben',

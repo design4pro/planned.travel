@@ -437,6 +437,68 @@ const messages = {
   'newTrip.created': 'Viagem criada',
   'newTrip.createdBody': 'Comece a marcar lugares no mapa.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Ações de {title}',
+  'tripActions.favourite': 'Adicionar aos favoritos',
+  'tripActions.unfavourite': 'Remover dos favoritos',
+  'tripActions.edit': 'Editar',
+  'tripActions.archive': 'Arquivar',
+  'tripActions.restore': 'Restaurar',
+  'tripActions.delete': 'Excluir',
+  'tripActions.deleteForGood': 'Excluir definitivamente',
+  'tripActions.starFailed': 'O favorito não foi salvo',
+  'tripActions.starFallback': 'A viagem voltou ao que era.',
+  'tripActions.archived': 'Viagem arquivada',
+  'tripActions.archiveFailed': 'Não foi possível arquivar a viagem',
+  'tripActions.restored': 'Viagem restaurada',
+  'tripActions.restoreFailed': 'Não foi possível restaurar a viagem',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Editar viagem',
+  'editTrip.submit': 'Salvar alterações',
+  'editTrip.saving': 'Salvando a viagem',
+  'editTrip.cancel': 'Cancelar',
+  'editTrip.saved': 'Viagem atualizada',
+  'editTrip.errorTitle': 'Isso não foi salvo',
+  'editTrip.retry': 'Tentar de novo',
+  'editTrip.error':
+    'Não foi possível salvar a viagem. Tente de novo em instantes.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Excluir “{title}” para sempre?',
+  'deleteTrip.description':
+    'Não há desfazer nem lixeira. Arquivar tira a viagem da lista sem perdê-la.',
+  'deleteTrip.reading': 'Lendo o que esta viagem contém',
+  'deleteTrip.errorTitle': 'Isso não carregou',
+  'deleteTrip.summaryError': 'Não foi possível ler o que esta viagem contém.',
+  'deleteTrip.confirmLabel': 'Digite o nome da viagem para confirmar',
+  'deleteTrip.deleting': 'Excluindo a viagem',
+  'deleteTrip.deleted': 'Viagem excluída',
+  'deleteTrip.failed': 'Não foi possível excluir a viagem',
+  'deleteTrip.carried.reservations': {
+    one: 'reserva',
+    many: 'reservas',
+    other: 'reservas',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'trajeto',
+    many: 'trajetos',
+    other: 'trajetos',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'despesa',
+    many: 'despesas',
+    other: 'despesas',
+  },
+  'deleteTrip.carried.files': {
+    one: 'arquivo',
+    many: 'arquivos',
+    other: 'arquivos',
+  },
+  'deleteTrip.carried.members': {
+    one: 'pessoa',
+    many: 'pessoas',
+    other: 'pessoas',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Quem pode ver',
   'visibility.private': 'Só eu',

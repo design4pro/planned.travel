@@ -462,6 +462,73 @@ const messages = {
   'newTrip.created': 'Поездка создана',
   'newTrip.createdBody': 'Начните расставлять места на карте.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Действия для «{title}»',
+  'tripActions.favourite': 'В избранное',
+  'tripActions.unfavourite': 'Убрать из избранного',
+  'tripActions.edit': 'Изменить',
+  'tripActions.archive': 'В архив',
+  'tripActions.restore': 'Восстановить',
+  'tripActions.delete': 'Удалить',
+  'tripActions.deleteForGood': 'Удалить навсегда',
+  'tripActions.starFailed': 'Избранное не сохранилось',
+  'tripActions.starFallback': 'Поездка вернулась в прежнее состояние.',
+  'tripActions.archived': 'Поездка в архиве',
+  'tripActions.archiveFailed': 'Не удалось отправить поездку в архив',
+  'tripActions.restored': 'Поездка восстановлена',
+  'tripActions.restoreFailed': 'Не удалось восстановить поездку',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Изменить поездку',
+  'editTrip.submit': 'Сохранить изменения',
+  'editTrip.saving': 'Сохранение поездки',
+  'editTrip.cancel': 'Отмена',
+  'editTrip.saved': 'Поездка обновлена',
+  'editTrip.errorTitle': 'Это не сохранилось',
+  'editTrip.retry': 'Повторить',
+  'editTrip.error':
+    'Не удалось сохранить поездку. Попробуйте ещё раз через мгновение.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Удалить «{title}» навсегда?',
+  'deleteTrip.description':
+    'Отмены и корзины нет. Архив убирает поездку из списка, не теряя её.',
+  'deleteTrip.reading': 'Читаем, что содержит эта поездка',
+  'deleteTrip.errorTitle': 'Это не загрузилось',
+  'deleteTrip.summaryError': 'Не удалось прочитать, что содержит эта поездка.',
+  'deleteTrip.confirmLabel': 'Введите название поездки для подтверждения',
+  'deleteTrip.deleting': 'Удаление поездки',
+  'deleteTrip.deleted': 'Поездка удалена',
+  'deleteTrip.failed': 'Не удалось удалить поездку',
+  'deleteTrip.carried.reservations': {
+    one: 'бронирование',
+    few: 'бронирования',
+    many: 'бронирований',
+    other: 'бронирования',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'перемещение',
+    few: 'перемещения',
+    many: 'перемещений',
+    other: 'перемещения',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'расход',
+    few: 'расхода',
+    many: 'расходов',
+    other: 'расхода',
+  },
+  'deleteTrip.carried.files': {
+    one: 'файл',
+    few: 'файла',
+    many: 'файлов',
+    other: 'файла',
+  },
+  'deleteTrip.carried.members': {
+    one: 'человек',
+    few: 'человека',
+    many: 'человек',
+    other: 'человека',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Кто это увидит',
   'visibility.private': 'Только я',

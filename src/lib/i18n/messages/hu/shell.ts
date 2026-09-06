@@ -418,6 +418,64 @@ const messages = {
   'newTrip.created': 'Utazás létrehozva',
   'newTrip.createdBody': 'Kezdj helyeket rakni a térképre.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Műveletek: {title}',
+  'tripActions.favourite': 'Kedvencekhez adás',
+  'tripActions.unfavourite': 'Eltávolítás a kedvencekből',
+  'tripActions.edit': 'Szerkesztés',
+  'tripActions.archive': 'Archiválás',
+  'tripActions.restore': 'Visszaállítás',
+  'tripActions.delete': 'Törlés',
+  'tripActions.deleteForGood': 'Végleges törlés',
+  'tripActions.starFailed': 'A kedvenc nem mentődött el',
+  'tripActions.starFallback': 'Az utazás visszaállt a korábbi állapotára.',
+  'tripActions.archived': 'Utazás archiválva',
+  'tripActions.archiveFailed': 'Az utazást nem sikerült archiválni',
+  'tripActions.restored': 'Utazás visszaállítva',
+  'tripActions.restoreFailed': 'Az utazást nem sikerült visszaállítani',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Utazás szerkesztése',
+  'editTrip.submit': 'Módosítások mentése',
+  'editTrip.saving': 'Utazás mentése',
+  'editTrip.cancel': 'Mégse',
+  'editTrip.saved': 'Utazás frissítve',
+  'editTrip.errorTitle': 'Ez nem mentődött el',
+  'editTrip.retry': 'Újra',
+  'editTrip.error':
+    'Az utazást nem sikerült menteni. Próbáld újra egy pillanat múlva.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Véglegesen törlöd ezt: „{title}”?',
+  'deleteTrip.description':
+    'Nincs visszavonás és nincs kuka. Az archiválás kiveszi az utazást a listából anélkül, hogy elveszne.',
+  'deleteTrip.reading': 'Az utazás tartalmának beolvasása',
+  'deleteTrip.errorTitle': 'Ez nem töltődött be',
+  'deleteTrip.summaryError':
+    'Nem sikerült beolvasni, mit tartalmaz ez az utazás.',
+  'deleteTrip.confirmLabel': 'A megerősítéshez írd be az utazás nevét',
+  'deleteTrip.deleting': 'Utazás törlése',
+  'deleteTrip.deleted': 'Utazás törölve',
+  'deleteTrip.failed': 'Az utazást nem sikerült törölni',
+  'deleteTrip.carried.reservations': {
+    one: 'foglalás',
+    other: 'foglalás',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'közlekedés',
+    other: 'közlekedés',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'kiadás',
+    other: 'kiadás',
+  },
+  'deleteTrip.carried.files': {
+    one: 'fájl',
+    other: 'fájl',
+  },
+  'deleteTrip.carried.members': {
+    one: 'fő',
+    other: 'fő',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Ki láthatja',
   'visibility.private': 'Csak én',

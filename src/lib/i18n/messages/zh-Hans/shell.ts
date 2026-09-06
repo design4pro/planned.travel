@@ -314,6 +314,57 @@ const messages = {
   'newTrip.created': '行程已创建',
   'newTrip.createdBody': '开始在地图上放置地点吧。',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': '{title} 的操作',
+  'tripActions.favourite': '添加到收藏',
+  'tripActions.unfavourite': '取消收藏',
+  'tripActions.edit': '编辑',
+  'tripActions.archive': '归档',
+  'tripActions.restore': '恢复',
+  'tripActions.delete': '删除',
+  'tripActions.deleteForGood': '永久删除',
+  'tripActions.starFailed': '收藏未保存',
+  'tripActions.starFallback': '行程已恢复原样。',
+  'tripActions.archived': '行程已归档',
+  'tripActions.archiveFailed': '行程归档失败',
+  'tripActions.restored': '行程已恢复',
+  'tripActions.restoreFailed': '行程恢复失败',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': '编辑行程',
+  'editTrip.submit': '保存更改',
+  'editTrip.saving': '正在保存行程',
+  'editTrip.cancel': '取消',
+  'editTrip.saved': '行程已更新',
+  'editTrip.errorTitle': '未能保存',
+  'editTrip.retry': '重试',
+  'editTrip.error': '行程保存失败。请稍后重试。',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': '永久删除“{title}”？',
+  'deleteTrip.description':
+    '没有撤销，也没有回收站。归档可以把行程移出列表而不丢失它。',
+  'deleteTrip.reading': '正在读取此行程的内容',
+  'deleteTrip.errorTitle': '未能加载',
+  'deleteTrip.summaryError': '无法读取此行程的内容。',
+  'deleteTrip.confirmLabel': '输入行程名称以确认',
+  'deleteTrip.deleting': '正在删除行程',
+  'deleteTrip.deleted': '行程已删除',
+  'deleteTrip.failed': '行程删除失败',
+  'deleteTrip.carried.reservations': {
+    other: '项预订',
+  },
+  'deleteTrip.carried.transports': {
+    other: '段行程',
+  },
+  'deleteTrip.carried.expenses': {
+    other: '笔支出',
+  },
+  'deleteTrip.carried.files': {
+    other: '个文件',
+  },
+  'deleteTrip.carried.members': {
+    other: '位成员',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': '谁能看到',
   'visibility.private': '仅我可见',
