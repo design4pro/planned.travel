@@ -20,6 +20,7 @@
 import { eq } from 'drizzle-orm'
 import { tripFavourites } from '#/server/db/schema'
 import { allOf, createTenantRepository } from './base'
+import { isUniqueConstraintViolation } from './context'
 import { favouritedTripFilter, readableTrips, requireTrip } from './trips'
 import type { SQL } from 'drizzle-orm'
 import type { TenantScope } from './base'
@@ -50,9 +51,15 @@ function ownRow(scope: TenantScope, tripId: string): SQL {
  * nothing on the trip and nobody else can see it — but it names a trip id, so a caller who may not
  * see that trip is answered with `NotFoundError` and learns nothing.
  *
- * Idempotent in both directions, which is what a double click needs: setting twice leaves one row
- * (the read-then-insert here, backstopped by the unique index on `(trip_id, user_id)`), and
- * clearing a star that was never set is a no-op rather than a missing-row error.
+ * Idempotent in both directions, which is what a double click needs: clearing a star that was never
+ * set is a no-op rather than a missing-row error, and setting twice leaves one row.
+ *
+ * The read before the insert answers the ordinary second click without a refusal in the log; the
+ * unique index on `(trip_id, user_id)` answers the one the read cannot see, where a second request
+ * commits between this one's read and its write. A double click is two requests, so that window is
+ * exactly the case this verb exists to survive - and the loser of that race has nothing to do,
+ * because the row it wanted is the row that is now there. Only *that* refusal is swallowed: any
+ * other failure is re-thrown, so a broken write still reads as broken.
  */
 export async function setFavourite(
   scope: TenantScope,
@@ -69,10 +76,16 @@ export async function setFavourite(
   if ((await tripFavouritesRepository.findOne(scope, where)) !== null) {
     return
   }
-  await tripFavouritesRepository.insert(scope, {
-    tripId,
-    userId: scope.ctx.userId,
-  })
+  try {
+    await tripFavouritesRepository.insert(scope, {
+      tripId,
+      userId: scope.ctx.userId,
+    })
+  } catch (cause) {
+    if (!isUniqueConstraintViolation(cause)) {
+      throw cause
+    }
+  }
 }
 
 /**

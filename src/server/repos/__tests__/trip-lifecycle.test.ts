@@ -258,6 +258,27 @@ describe('trip lifecycle', () => {
       expect(rows.map((row) => row.status)).toEqual(['completed'])
     })
 
+    it('clears a legacy `archived` status when the trip comes back', async () => {
+      const trip = await createTrip(tenant.scope, { title: 'Marrakech' })
+      // The shape the code this replaced left behind, and the only one that can reach the branch:
+      // the flag set *and* the status overwritten, so what it went in with is already lost.
+      await harness.db
+        .update(trips)
+        .set({ isArchived: true, status: 'archived' })
+        .where(eq(trips.id, trip.id))
+
+      const restored = await restoreTrip(tenant.scope, trip.id)
+
+      expect(restored.isArchived).toBe(false)
+      // Not `'archived'`: the badge and the status breakdown would both still say archived on a
+      // trip the archived list no longer shows.
+      expect(restored.status).toBe('planning')
+      const counts = await countTripsByStatus(tenant.scope)
+      expect(counts.byStatus.archived).toBe(0)
+      expect(counts.byStatus.planning).toBe(1)
+      expect(counts.archived).toBe(0)
+    })
+
     it('leaves an archived trip readable by its members', async () => {
       const trip = await createTrip(tenant.scope, { title: 'Patagonia' })
       await archiveTrip(tenant.scope, trip.id)
@@ -403,6 +424,23 @@ describe('trip lifecycle', () => {
       await expect(
         setFavourite(tenant.scope, trip.id, false),
       ).resolves.toBeUndefined()
+    })
+
+    it('leaves one row when two requests set it at once', async () => {
+      const trip = await createTrip(tenant.scope, { title: 'Lisbon' })
+
+      // A double click is two requests, and started together they interleave at every `await`:
+      // both read no row, then both insert. The read cannot answer that one - the unique index on
+      // `(trip_id, user_id)` does, and the loser has nothing left to do because the row it wanted
+      // is the row that is now there.
+      await Promise.all([
+        setFavourite(tenant.scope, trip.id, true),
+        setFavourite(tenant.scope, trip.id, true),
+      ])
+
+      expect(await favouriteRows()).toEqual([
+        { tripId: trip.id, userId: tenant.ownerUserId },
+      ])
     })
 
     it('counts and lists for the caller alone', async () => {

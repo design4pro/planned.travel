@@ -692,13 +692,25 @@ export async function archiveTrip(
   return tripsRepository.requireUpdate(scope, tripId, { isArchived: true })
 }
 
-/** Brings a trip back with the lifecycle status it went in with. See {@link archiveTrip}. */
+/**
+ * Brings a trip back with the lifecycle status it went in with. See {@link archiveTrip}.
+ *
+ * The one exception is a row shelved by the code this replaced, which wrote `status = 'archived'`
+ * over whatever the trip was. That value is not a status the flag can restore *to*: the badge would
+ * still read "Archived" and `countTripsByStatus` would still count it there, on a trip the archived
+ * list no longer shows. What it went in with is unrecoverable - the old write destroyed it - so the
+ * column goes back to the default it carries when nobody has said, rather than staying a fifth
+ * answer nothing else agrees with. No new row can reach this branch.
+ */
 export async function restoreTrip(
   scope: TenantScope,
   tripId: string,
 ): Promise<Trip> {
-  await requireOwnedTrip(scope, tripId)
-  return tripsRepository.requireUpdate(scope, tripId, { isArchived: false })
+  const trip = await requireOwnedTrip(scope, tripId)
+  return tripsRepository.requireUpdate(scope, tripId, {
+    isArchived: false,
+    ...(trip.status === 'archived' ? { status: 'planning' } : {}),
+  })
 }
 
 /** Deletes the trip; every child row goes with it through `ON DELETE CASCADE`. */
