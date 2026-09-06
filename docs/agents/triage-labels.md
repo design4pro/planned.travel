@@ -27,8 +27,10 @@ reported by `om-review-prs`, not repaired by a sweeper.
 A command is not a state. Adding one starts a cezar run (docs/agents/cezar-automations.json); the
 skill's repo-local override removes it first, so a command still present is a run nobody took.
 
-- `groom` - re-run `om-auto-manage-issues` on this issue (labels, Definition of Ready check,
-  implementation notes). Every new issue is groomed once without it.
+- `groom` - run `om-auto-manage-issues` on this issue (labels, Definition of Ready check,
+  implementation notes). An issue a maintainer opens is groomed once without it; an issue from
+  anyone else waits for a maintainer to add it, because the groom run reads the issue body as its
+  prompt with an unrestricted shell. The Sentry sweep files with it.
 - `autofix` - `om-auto-fix-issue`: a bug goes verify → root cause → fix → PR → review → QA (UI);
   a feature goes spec → implement. Excluded while `in-progress`, `blocked`, `do-not-merge` or `spec`.
 - `spec` - `om-auto-write-spec` on a `feature` issue: the spec lands in `.ai/specs/` on a
@@ -37,8 +39,8 @@ skill's repo-local override removes it first, so a command still present is a ru
 ## Flow
 
 ```
-issue form / Sentry sweep ─► category (+ priority-high for Sentry)
-      ─(issue.opened: issue-groom)─► + priority, risk, Definition of Ready comment, implementation notes
+issue form ─► category;  Sentry sweep ─► bug + priority-high + groom
+      ─(issue.opened by a maintainer, or the groom label)─► + priority, risk, Definition of Ready comment, implementation notes
 human: autofix ─► in-progress ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► human review
 human: spec (feature) ─► spec PR (documentation, skip-qa) ─► human merges ─► cockpit: implement-spec
 PR opened by a human ─(pull_request.opened: pr-autopilot)─► review / fix / QA, never merge
@@ -69,6 +71,6 @@ labels and open issues before it ran live under `docs/agents/migration/`.
 - **People**, through the issue forms (`.github/ISSUE_TEMPLATE/`); blank issues are off so every
   issue enters with a category.
 - **Sentry** findings (`.github/workflows/sentry-triage.yml`, ADR 0008 as amended by ADR 0018) as
-  `bug` + `priority-high` with `<!-- sentry-issue: SHORT-ID -->` in the body; dedup is keyed on the
+  `bug` + `priority-high` + `groom` with `<!-- sentry-issue: SHORT-ID -->` in the body; dedup is keyed on the
   marker across open and closed issues. Never `autofix`: a human decides.
 - **Follow-ups** from `om-followup-issue-from-pr` and `om-review-prs`, groomed like any other.

@@ -6,8 +6,11 @@
 #   .ai/scripts/housekeeping.sh
 #
 # Env: CEZ_API (default http://localhost:4321), CEZ_PROJECT (default planned-travel).
-# Falls back to a headless `cezar run` in the main checkout when the cockpit is not up; that
-# run still lands in the cockpit's history, it just does not share its queue.
+# Exactly one run per call: a reachable cockpit is the authority, whatever it answers (a 2xx is
+# queued; anything else is an error that ends this script non-zero, never a second run beside
+# it). Only when nothing answers at all (curl cannot connect) does the work move to a headless
+# `cezar run` in the main checkout; that run still lands in the cockpit's history, it just does
+# not share its queue.
 set -euo pipefail
 
 API="${CEZ_API:-http://localhost:4321}/api/v1/p/${CEZ_PROJECT:-planned-travel}/runs"
@@ -17,12 +20,11 @@ BODY='{"workflow":"housekeeping","task":"housekeeping","worktree":true,"autonomo
 if out=$(curl -sS --max-time 10 -X POST "$API" -H 'content-type: application/json' -d "$BODY" -w '\n%{http_code}' 2>/dev/null); then
   code=$(tail -1 <<<"$out")
   case "$code" in
-    200|201) printf 'housekeeping queued: %s\n' "$(sed '$d' <<<"$out" | jq -r '.run.id // .id // "?"' 2>/dev/null)"; exit 0 ;;
-    *) printf 'POST %s -> %s: %s\n' "$API" "$code" "$(sed '$d' <<<"$out")" >&2 ;;
+    2??) printf 'housekeeping queued: %s\n' "$(sed '$d' <<<"$out" | jq -r '.run.id // .id // "?"' 2>/dev/null)"; exit 0 ;;
+    *) printf 'POST %s -> %s: %s\n' "$API" "$code" "$(sed '$d' <<<"$out")" >&2; exit 1 ;;
   esac
-else
-  printf 'cockpit unreachable at %s, running headless\n' "$API" >&2
 fi
 
+printf 'cockpit unreachable at %s, running headless\n' "$API" >&2
 cd "$ROOT"
 exec npx --yes @open-mercato/cezar@0.10.1 run "housekeeping" --workflow housekeeping

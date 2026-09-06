@@ -1,5 +1,5 @@
-// Sentry → GitHub issues. Recurring, high-impact errors become `bug` + `priority-high` tickets;
-// the cezar `issue-groom` automation picks every new issue up, adds risk and implementation
+// Sentry → GitHub issues. Recurring, high-impact errors become `bug` + `priority-high` + `groom`
+// tickets; the `groom` label starts the cezar groom run, which adds risk and implementation
 // notes, and a human decides whether to add `autofix` (ADR 0008 as amended by ADR 0018). This
 // routine never applies `autofix`: it has reproduced nothing.
 //
@@ -347,13 +347,18 @@ for (const candidate of filingOrder(report.candidates, forced)) {
       'create',
       '--title',
       title,
-      // Exactly these two labels and no others: the category and the priority a Sentry finding
-      // earns by clearing the threshold. `autofix` is a human's to add, after the groom run has
-      // added risk and implementation notes; this routine has reproduced nothing.
+      // Exactly these three labels and no others: the category and the priority a Sentry finding
+      // earns by clearing the threshold, and `groom`, the command that starts the groom run.
+      // `issue.opened` alone would not: that automation is gated on maintainer authors because
+      // the run holds an unrestricted shell, and this routine files as the Actions bot. `autofix`
+      // is a human's to add, after the groom run has added risk and implementation notes; this
+      // routine has reproduced nothing.
       '--label',
       'bug',
       '--label',
       'priority-high',
+      '--label',
+      'groom',
       '--body-file',
       '-',
     ],

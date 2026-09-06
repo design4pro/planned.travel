@@ -65,9 +65,13 @@ end to end (PR C).
   protected paths, secrets), a fine-grained PAT without the Workflows and Administration scopes,
   one worktree per run, and `maxParallel: 2`. The eight workflows: `issue-groom`, `issue-autofix`,
   `spec`, `implement-spec`, `pr-autopilot`, `pr-review`, `housekeeping`, `brainstorm`.
-- **Automations are the schedule; launchd is the clock.** `issue.opened` grooms every new issue;
-  `issue.labeled` with `groom`, `autofix` or `spec` starts the matching run; `pull_request.opened`
-  by a human maintainer starts `pr-autopilot` without `--allow-merge`. Cezar has no cron, so
+- **Automations are the schedule; launchd is the clock.** `issue.opened` by a maintainer grooms
+  the issue; `issue.labeled` with `groom`, `autofix` or `spec` starts the matching run;
+  `pull_request.opened` by a human maintainer starts `pr-autopilot` without `--allow-merge`.
+  Every trigger is gated on who can produce it: an author filter on the open events, and on the
+  label events the fact that only a collaborator can set a label. An issue from anyone else is
+  data until a maintainer adds `groom`, because the run's prompt is the issue body and its agent
+  step holds an unrestricted shell. Cezar has no cron, so
   `housekeeping` (`om-review-prs`, `om-merge-buddy`, `om-close-fixed-issues`) is a POST to the
   cockpit from launchd three times a day on weekdays. The sweeper and its invariants retire.
 - **Nothing autonomous merges, and no automation approves QA.** `om-approve-merge-pr` runs from
@@ -75,8 +79,9 @@ end to end (PR C).
   A/B pair from `node scripts/visual/capture.mjs` (ADR 0016) and never `qa-approved`.
 - **`Closes #n` returns.** GitHub ignores it on merge into `develop`; `om-close-fixed-issues` in
   housekeeping reads it and closes the issue. Spec-only and partial PRs say `Refs #n`.
-- **Sentry findings** enter as `bug` + `priority-high` (ADR 0008 amended), get groomed like any
-  issue, and wait for a human's `autofix`. Nothing auto-promotes: ADR 0006's "reproduce, then
+- **Sentry findings** enter as `bug` + `priority-high` + `groom` (ADR 0008 amended; the sweep
+  files as the Actions bot, so the label is what starts its groom run), and wait for a human's
+  `autofix`. Nothing auto-promotes: ADR 0006's "reproduce, then
   ready" becomes the groom run's read-only implementation notes and a human's decision.
 - **An area still in `docs/plans/`** goes through `spec` on its issue with the plan file named in
   the body, once `plan-area` retires with the scripts it calls (PR C); the panel of project

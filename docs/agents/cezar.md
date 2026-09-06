@@ -95,14 +95,19 @@ in the cutover below and nothing starts them.
 
 Registered with the running cockpit by `.ai/scripts/cez-automations.sh` (idempotent: update in
 place or create enabled; it lists definitions the cockpit holds that the file no longer names).
-Five definitions: `issue-groom` on `issue.opened`; `issue-regroom`, `issue-autofix`, `issue-spec`
-on `issue.labeled` with `changedLabels` `groom` / `autofix` / `spec`; `pr-autopilot` on
-`pull_request.opened` with `authors` naming the human maintainers, so agent PRs
-(`planned-travel-agent`, already reviewed inside their chain) and dependabot never enter the
-autopilot. Every filter excludes `in-progress`; `lookbackDays: 3` and `maxRecords` 5-10 bound a
-mistaken mass relabel to a handful of runs. The three command labels are the only things that
-start code-writing work, and no skill adds them (the overrides say so), so no run can start
-another.
+Five definitions: `issue-groom` on `issue.opened` with `authors` naming the human maintainers;
+`issue-regroom`, `issue-autofix`, `issue-spec` on `issue.labeled` with `changedLabels` `groom` /
+`autofix` / `spec`; `pr-autopilot` on `pull_request.opened`, again with `authors`. Every trigger
+is gated on who can produce it: the open events by author, the label events because only a
+collaborator can set a label. This matters because the agent step holds Bash with no allowlist and
+the issue body is its prompt: an issue anyone on GitHub can open must not start a run by itself,
+so an external report is groomed when a maintainer adds `groom`, and the Sentry sweep (which files
+as the Actions bot, a login the poller's author filter cannot express) files with `groom`
+already on. Agent PRs (`planned-travel-agent`, already reviewed inside their chain) and dependabot
+never enter the autopilot. Every filter excludes `in-progress`; `lookbackDays: 3` and
+`maxRecords` 5-10 bound a mistaken mass relabel to a handful of runs. The three command labels are
+the only things that start code-writing work, and no skill adds them (the overrides say so), so no
+run can start another.
 
 ## Housekeeping
 
@@ -141,7 +146,7 @@ must stop before `status:*` is stripped and the surviving labels renamed.
 6. `bash .ai/scripts/cez-automations.sh --dry-run`, then without the flag: the five new automations
    are created enabled.
 7. Install the housekeeping plist (above) and run `bash .ai/scripts/housekeeping.sh` once by hand.
-8. Verify end to end on a test issue: open it with the Bug form → within two minutes an
+8. Verify end to end on a test issue: open it with the Bug form (as a maintainer) → within two minutes an
    `issue-groom` run adds priority and risk and posts the Definition of Ready and implementation
    notes → add `autofix` → the run removes the label, claims with `in-progress`, opens a draft PR on
    develop and ends with it ready, labelled `review` + category + `needs-qa|skip-qa` + priority +

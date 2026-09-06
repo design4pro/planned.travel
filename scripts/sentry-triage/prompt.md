@@ -63,7 +63,7 @@ Do not call `analyze_issue_with_seer` even if it is offered. It is slow, it cost
 # PROHIBITIONS
 
 - Never run `gh issue create`, `gh issue edit`, `gh issue comment` or `gh issue close`. The orchestrator files the tickets.
-- Never apply `autofix` to anything. A Sentry finding enters the backlog as `bug` + `priority-high`, the groom run adds the rest, and a human decides whether it gets fixed (SDLC.md, docs/adr/0018).
+- Never apply `autofix` to anything. A Sentry finding enters the backlog as `bug` + `priority-high` + `groom`, the groom run adds the rest, and a human decides whether it gets fixed (SDLC.md, docs/adr/0018).
 - Never call `update_issue`, or otherwise resolve, ignore or assign anything in Sentry. That state is the on-call engineer's.
 - Never edit a file. Never commit.
 

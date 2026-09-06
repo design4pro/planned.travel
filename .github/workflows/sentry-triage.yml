@@ -1,9 +1,10 @@
 name: Sentry triage
 
 # Weekly sweep of Sentry for recurring, high-impact errors, filing the ones that clear the
-# threshold as `bug` + `priority-high`. The cezar `issue-groom` automation picks every new issue
-# up, adds the remaining SDLC labels and implementation notes (ADR 0018); a human decides whether
-# to add `autofix`. This workflow never applies `autofix` itself.
+# threshold as `bug` + `priority-high` + `groom`. The `groom` label starts the cezar groom run
+# (the `issue.opened` automation is gated on maintainer authors, and this job files as the Actions
+# bot), which adds the remaining SDLC labels and implementation notes (ADR 0018); a human decides
+# whether to add `autofix`. This workflow never applies `autofix` itself.
 #
 # It runs the SAME script as `pnpm sentry-triage`, on the runner: the thresholds, the dedup index
 # and the issue body live in scripts/sentry-triage/policy.ts, so the local run and this one cannot
