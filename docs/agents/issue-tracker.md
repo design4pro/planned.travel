@@ -20,7 +20,7 @@ gh api "repos/$GH_REPO/issues/<n>/sub_issues" --jq '.[].number'
 Humans and the scripts in `scripts/agent/` write labels, comments and issues; an agent never does so
 directly. The two commands a human gives are labels: `run: triage` and `run: implement`. Planning is
 started from the cezar cockpit (GitHub tab → issue → "Hand this to the agent" → workflow `plan`,
-prompt `spec`, `prd` or `tickets`), and each artefact stops at `status: review` for a human.
+prompt `spec`, `prd` or `tickets`; workflow `plan-area` for an area still in `docs/plans/`), and each artefact stops at `status: review` for a human.
 
 ```bash
 gh issue edit <n> --add-label "run: implement"        # the only way work starts
