@@ -94,7 +94,7 @@ runs:
     - name: Restore the basemap archive
       id: tiles-cache
       if: inputs.basemap == 'true'
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       with:
         path: .e2e-tiles/basemap.pmtiles
         key: pmtiles-${{ inputs.tiles-key }}
@@ -114,7 +114,7 @@ runs:
 
     - name: Save the basemap archive to the cache
       if: inputs.basemap == 'true' && steps.tiles-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v6
       with:
         path: .e2e-tiles/basemap.pmtiles
         key: pmtiles-${{ inputs.tiles-key }}

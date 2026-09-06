@@ -1457,7 +1457,9 @@ export const marrakechTrip: SeedTrip = {
   endDate: day(-278),
   timezone: 'Africa/Casablanca',
   currency: 'MAD',
-  status: 'archived',
+  // Archive is a flag, not a status: the shelf is `isArchived` below, and this says what the trip
+  // itself is. A seeded `'archived'` here would be a shape today's `archiveTrip` cannot produce.
+  status: 'completed',
   visibility: 'private',
   accentColour: '#b22f22',
   budgetTargetMinor: 1_800_000,

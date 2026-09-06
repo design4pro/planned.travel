@@ -702,6 +702,18 @@ export const trips = sqliteTable(
     isArchived: integer('is_archived', { mode: 'boolean' })
       .notNull()
       .default(false),
+    /**
+     * @deprecated The favourite is one person's, and lives in `trip_favourites`
+     * ({@link tripFavourites}) — one row per person and trip. This column is a single boolean
+     * shared by every member, so it records nobody's choice (`CONTEXT.md`, **Favourite**) and no
+     * new code may read or write it. It stays rather than being dropped because dropping a column
+     * is a table rebuild on SQLite, which docs/DEPLOY.md §5 admits only through the register in
+     * its §12.
+     *
+     * The trips surfaces written before wave 1 still read and write it; moving them onto the
+     * table is the whole of what `01-S1` (`docs/plans/01-trips-core.md`) has to move. A `grep`
+     * for `isFavourite` names them, and a list kept here would go stale on the first rename.
+     */
     isFavourite: integer('is_favourite', { mode: 'boolean' })
       .notNull()
       .default(false),
@@ -787,6 +799,38 @@ export const days = sqliteTable(
     index('days_org_trip_idx').on(t.organizationId, t.tripId),
     index('days_org_date_idx').on(t.organizationId, t.date),
     check('days_day_number_chk', sql.raw('"day_number" >= 1')),
+  ],
+)
+
+/**
+ * One person's bookmark on a trip they may read: private to them, showing nothing to anyone else
+ * and granting nothing (`CONTEXT.md`, **Favourite**). The row's existence *is* the favourite, so
+ * unfavouriting is a delete and there is no column a writer could ever update — hence `createdAt()`
+ * alone, as `place_tags` and the other immutable join rows in this file do, and not `timestamps()`.
+ *
+ * Keyed by `id`, with the person's choice held unique on `(trip_id, user_id)` exactly as
+ * `trip_members` — the other per-person trip row — holds it, rather than keyless on a composite
+ * `primaryKey()` like `place_tags`. The two per-person trip rows are then reached the same way,
+ * through the keyed tenant repository.
+ *
+ * Its reader and writer are `src/server/repos/trip-favourites.ts`, which lands with `01-S1`
+ * (`docs/plans/01-trips-core.md`); the table ships ahead of it. Nothing was backfilled from the
+ * deprecated {@link trips.isFavourite}, which holds no person's choice to copy.
+ */
+export const tripFavourites = sqliteTable(
+  'trip_favourites',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    tripId: text('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    userId: userRef('user_id').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('trip_favourites_trip_user_unq').on(t.tripId, t.userId),
+    index('trip_favourites_org_user_idx').on(t.organizationId, t.userId),
   ],
 )
 

@@ -78,13 +78,13 @@ jobs:
       # there is a checkout here even though nothing is built.
       - name: Check out
         if: steps.gate.outputs.configured == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # `--yes` answers the confirmation prompt. Without it the command waits on
       # a stdin nobody is holding and the job sits until its timeout.
       - name: Roll the Worker back
         if: steps.gate.outputs.configured == 'true'
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

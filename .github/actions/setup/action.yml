@@ -23,7 +23,7 @@ runs:
     # Pinning here would be a second copy of that version, free to drift from
     # the first.
     - name: Set up pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v6
 
     # `cache: pnpm` caches pnpm's content-addressable store (the directory
     # `pnpm store path` prints), keyed on pnpm-lock.yaml. That is the expensive
@@ -31,7 +31,7 @@ runs:
     # seconds and is deliberately not cached, so a corrupted tree can never be
     # restored from a previous run.
     - name: Set up Node
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v7
       with:
         node-version: 24.x
         cache: pnpm

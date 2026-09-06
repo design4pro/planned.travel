@@ -26,6 +26,7 @@ import {
   achieveBucketListItem,
   createBucketListItem,
   getAtlasSummary,
+  isUniqueConstraintViolation,
   listBucketList,
   listVisitedCountries,
 } from '#/server/repos'
@@ -192,7 +193,6 @@ const {
   addCountryToBucketListFn,
   addCountryToBucketListInputSchema,
   atlasCountryState,
-  isUniqueConstraintViolation,
   markCountryVisitedFn,
   markCountryVisitedInputSchema,
   removeCountryFromBucketListFn,
