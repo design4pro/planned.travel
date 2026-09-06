@@ -441,6 +441,68 @@ const messages = {
   'newTrip.created': 'Viatge creat',
   'newTrip.createdBody': 'Comença a posar llocs al mapa.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Accions per a {title}',
+  'tripActions.favourite': 'Afegeix als preferits',
+  'tripActions.unfavourite': 'Treu dels preferits',
+  'tripActions.edit': 'Edita',
+  'tripActions.archive': 'Arxiva',
+  'tripActions.restore': 'Restaura',
+  'tripActions.delete': 'Elimina',
+  'tripActions.deleteForGood': 'Elimina definitivament',
+  'tripActions.starFailed': 'El preferit no s’ha desat',
+  'tripActions.starFallback': 'El viatge ha tornat a com era.',
+  'tripActions.archived': 'Viatge arxivat',
+  'tripActions.archiveFailed': 'No s’ha pogut arxivar el viatge',
+  'tripActions.restored': 'Viatge restaurat',
+  'tripActions.restoreFailed': 'No s’ha pogut restaurar el viatge',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Edita el viatge',
+  'editTrip.submit': 'Desa els canvis',
+  'editTrip.saving': 'S’està desant el viatge',
+  'editTrip.cancel': 'Cancel·la',
+  'editTrip.saved': 'Viatge actualitzat',
+  'editTrip.errorTitle': 'Això no s’ha desat',
+  'editTrip.retry': 'Torna-ho a provar',
+  'editTrip.error':
+    'No s’ha pogut desar el viatge. Torna-ho a provar d’aquí a un moment.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Vols eliminar «{title}» per sempre?',
+  'deleteTrip.description':
+    'No hi ha desfés ni paperera. Arxivar treu un viatge de la llista sense perdre’l.',
+  'deleteTrip.reading': 'S’està llegint què conté aquest viatge',
+  'deleteTrip.errorTitle': 'Això no s’ha carregat',
+  'deleteTrip.summaryError': 'No s’ha pogut llegir què conté aquest viatge.',
+  'deleteTrip.confirmLabel': 'Escriu el nom del viatge per confirmar',
+  'deleteTrip.deleting': 'S’està eliminant el viatge',
+  'deleteTrip.deleted': 'Viatge eliminat',
+  'deleteTrip.failed': 'No s’ha pogut eliminar el viatge',
+  'deleteTrip.carried.reservations': {
+    one: 'reserva',
+    many: 'reserves',
+    other: 'reserves',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'trajecte',
+    many: 'trajectes',
+    other: 'trajectes',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'despesa',
+    many: 'despeses',
+    other: 'despeses',
+  },
+  'deleteTrip.carried.files': {
+    one: 'fitxer',
+    many: 'fitxers',
+    other: 'fitxers',
+  },
+  'deleteTrip.carried.members': {
+    one: 'persona',
+    many: 'persones',
+    other: 'persones',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Qui ho pot veure',
   'visibility.private': 'Només jo',

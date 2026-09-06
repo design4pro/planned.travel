@@ -469,6 +469,73 @@ const messages = {
   'newTrip.created': 'Wyjazd utworzony',
   'newTrip.createdBody': 'Zacznij nanosić miejsca na mapę.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Działania dla „{title}”',
+  'tripActions.favourite': 'Dodaj do ulubionych',
+  'tripActions.unfavourite': 'Usuń z ulubionych',
+  'tripActions.edit': 'Edytuj',
+  'tripActions.archive': 'Archiwizuj',
+  'tripActions.restore': 'Przywróć',
+  'tripActions.delete': 'Usuń',
+  'tripActions.deleteForGood': 'Usuń trwale',
+  'tripActions.starFailed': 'Nie udało się zapisać ulubionego',
+  'tripActions.starFallback': 'Wyjazd wrócił do poprzedniego stanu.',
+  'tripActions.archived': 'Wyjazd zarchiwizowany',
+  'tripActions.archiveFailed': 'Nie udało się zarchiwizować wyjazdu',
+  'tripActions.restored': 'Wyjazd przywrócony',
+  'tripActions.restoreFailed': 'Nie udało się przywrócić wyjazdu',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Edytuj wyjazd',
+  'editTrip.submit': 'Zapisz zmiany',
+  'editTrip.saving': 'Zapisywanie wyjazdu',
+  'editTrip.cancel': 'Anuluj',
+  'editTrip.saved': 'Wyjazd zaktualizowany',
+  'editTrip.errorTitle': 'To się nie zapisało',
+  'editTrip.retry': 'Spróbuj ponownie',
+  'editTrip.error':
+    'Nie udało się zapisać wyjazdu. Spróbuj ponownie za chwilę.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Usunąć „{title}” na zawsze?',
+  'deleteTrip.description':
+    'Nie ma cofnięcia ani kosza. Archiwum zdejmuje wyjazd z listy, nie tracąc go.',
+  'deleteTrip.reading': 'Sprawdzamy, co zawiera ten wyjazd',
+  'deleteTrip.errorTitle': 'To się nie wczytało',
+  'deleteTrip.summaryError': 'Nie udało się odczytać, co zawiera ten wyjazd.',
+  'deleteTrip.confirmLabel': 'Wpisz nazwę wyjazdu, aby potwierdzić',
+  'deleteTrip.deleting': 'Usuwanie wyjazdu',
+  'deleteTrip.deleted': 'Wyjazd usunięty',
+  'deleteTrip.failed': 'Nie udało się usunąć wyjazdu',
+  'deleteTrip.carried.reservations': {
+    one: 'rezerwacja',
+    few: 'rezerwacje',
+    many: 'rezerwacji',
+    other: 'rezerwacji',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'przejazd',
+    few: 'przejazdy',
+    many: 'przejazdów',
+    other: 'przejazdu',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'wydatek',
+    few: 'wydatki',
+    many: 'wydatków',
+    other: 'wydatku',
+  },
+  'deleteTrip.carried.files': {
+    one: 'plik',
+    few: 'pliki',
+    many: 'plików',
+    other: 'pliku',
+  },
+  'deleteTrip.carried.members': {
+    one: 'osoba',
+    few: 'osoby',
+    many: 'osób',
+    other: 'osoby',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Kto to zobaczy',
   'visibility.private': 'Tylko ja',

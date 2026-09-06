@@ -376,6 +376,57 @@ const messages = {
   'newTrip.created': 'Perjalanan dibuat',
   'newTrip.createdBody': 'Mulai menaruh tempat di peta.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Tindakan untuk {title}',
+  'tripActions.favourite': 'Tambahkan ke favorit',
+  'tripActions.unfavourite': 'Hapus dari favorit',
+  'tripActions.edit': 'Ubah',
+  'tripActions.archive': 'Arsipkan',
+  'tripActions.restore': 'Pulihkan',
+  'tripActions.delete': 'Hapus',
+  'tripActions.deleteForGood': 'Hapus permanen',
+  'tripActions.starFailed': 'Favorit tidak tersimpan',
+  'tripActions.starFallback': 'Perjalanan kembali seperti semula.',
+  'tripActions.archived': 'Perjalanan diarsipkan',
+  'tripActions.archiveFailed': 'Perjalanan tidak dapat diarsipkan',
+  'tripActions.restored': 'Perjalanan dipulihkan',
+  'tripActions.restoreFailed': 'Perjalanan tidak dapat dipulihkan',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Ubah perjalanan',
+  'editTrip.submit': 'Simpan perubahan',
+  'editTrip.saving': 'Menyimpan perjalanan',
+  'editTrip.cancel': 'Batal',
+  'editTrip.saved': 'Perjalanan diperbarui',
+  'editTrip.errorTitle': 'Itu tidak tersimpan',
+  'editTrip.retry': 'Coba lagi',
+  'editTrip.error': 'Perjalanan tidak dapat disimpan. Coba lagi sebentar.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Hapus “{title}” selamanya?',
+  'deleteTrip.description':
+    'Tidak ada urungkan dan tidak ada tempat sampah. Mengarsipkan mengeluarkan perjalanan dari daftar tanpa kehilangannya.',
+  'deleteTrip.reading': 'Membaca isi perjalanan ini',
+  'deleteTrip.errorTitle': 'Itu tidak termuat',
+  'deleteTrip.summaryError': 'Isi perjalanan ini tidak dapat dibaca.',
+  'deleteTrip.confirmLabel': 'Ketik nama perjalanan untuk mengonfirmasi',
+  'deleteTrip.deleting': 'Menghapus perjalanan',
+  'deleteTrip.deleted': 'Perjalanan dihapus',
+  'deleteTrip.failed': 'Perjalanan tidak dapat dihapus',
+  'deleteTrip.carried.reservations': {
+    other: 'pemesanan',
+  },
+  'deleteTrip.carried.transports': {
+    other: 'transportasi',
+  },
+  'deleteTrip.carried.expenses': {
+    other: 'pengeluaran',
+  },
+  'deleteTrip.carried.files': {
+    other: 'berkas',
+  },
+  'deleteTrip.carried.members': {
+    other: 'orang',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Siapa yang bisa melihat',
   'visibility.private': 'Hanya saya',
