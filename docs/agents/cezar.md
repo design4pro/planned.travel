@@ -114,8 +114,8 @@ and `/plan-area {{task}}` (opus, with `Agent` allowed).
 - The panel: `plan-reader` (a digest of at most 15 kB, once), `plan-fact-checker` (the plan's claims
   about HEAD), `plan-domain-architect`, `plan-product-owner` (the human's seat), `plan-qa-strategist`,
   `plan-critic` (every draft, at most three passes). Subagents run under the step's `allowedTools`
-  and `bashAllowlist`; `scripts/agent/__tests__/plan-area.test.ts` keeps the agents' declared tools
-  inside that list.
+  and `bashAllowlist`, so no panel member holds `Bash` (the publish, commit and handback entries
+  would be theirs too); `scripts/agent/__tests__/plan-area.test.ts` enforces both.
 - The spec publishes first (the issue reads `status: review` while the run continues); the PRD
   publishes only when "Open questions" is `None.`. A decision that is a human's (money, commercial
   terms, a clean-room risk) stays open, the run ends after the spec, and `plan` in mode `prd` grills

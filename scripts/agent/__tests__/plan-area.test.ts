@@ -3,7 +3,9 @@
  * gives a human, and the seam between the two is a permission list: a subagent runs under the
  * agent step's `--allowedTools` (cezar passes the list; `--permission-mode dontAsk` denies the
  * rest without a prompt), so a tool named in `.claude/agents/plan-*.md` and absent from the step's
- * list is denied at call time, silently, in the middle of a run. Nothing else checks that.
+ * list is denied at call time, silently, in the middle of a run. The converse matters as much:
+ * the step's `bashAllowlist` (publish, commit, handback) is shared too, so a panel member that
+ * holds `Bash` can publish the draft mid-run; none may. Nothing else checks either.
  *
  * The same guard for every workflow: a `scripts/agent/*.sh` a step names must exist and be
  * executable, or the agent reaches for it after the claim has already moved the label.
@@ -63,6 +65,10 @@ describe('plan-area: the panel and its workflow agree', () => {
       const allowed = allowedTools(WORKFLOW)
       for (const t of tools)
         expect(allowed, `${file} names tool ${t}`).toContain(t)
+      expect(
+        tools,
+        `${file} holds Bash, and with it the step's allowlist`,
+      ).not.toContain('Bash')
       if (fm.model) expect(['sonnet', 'opus', 'haiku']).toContain(fm.model)
     },
   )

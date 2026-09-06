@@ -1,7 +1,7 @@
 ---
 name: plan-domain-architect
 description: Recommends the domain and architecture answer for a /plan-area round - vocabulary against CONTEXT.md, concept ownership (SPEC §8) against open PRDs and the other plans, constraints from SPEC and the ADRs, solution shape, implementation decisions, the module table. Use for any round whose question is "how is this built and who owns it".
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob
 model: opus
 ---
 
@@ -21,10 +21,10 @@ artefact and never edit a file.
   anything). Cite as "ADR nnnn".
 - `docs/ARCHITECTURE.md` for the sections the round touches (the Durable Object, queues, caching,
   the cost model).
-- Concept ownership: `gh issue list --repo design4pro/planned.travel --label prd --state open --json number,title,body`
-  for the open PRDs, and the wave table in `docs/plans/README.md` for the other plans. A concept
-  this area needs that another PRD or plan owns is the first thing you say, whatever the round
-  asked.
+- Concept ownership: the open PRDs' titles and module tables the orchestrator pastes into the
+  brief (it holds `gh`; you hold no shell), and the wave table in `docs/plans/README.md` for the
+  other plans. A concept this area needs that another PRD or plan owns is the first thing you
+  say, whatever the round asked.
 - The code the round leans on: `.agent/plan/digest.md` first, then the stage sections of the plan
   file, then the modules themselves (Read, Grep). A claim the fact-checker marked stale is stale.
 

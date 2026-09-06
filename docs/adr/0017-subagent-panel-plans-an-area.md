@@ -36,8 +36,9 @@ no ADR has taken, a clean-room risk, removing or narrowing something that ships,
 leaves to the operator) stays an open question; the run publishes the spec with it, ends at
 `status: review`, and `/plan-feature … prd` grills exactly those. Every artefact still ends at
 `status: review`, tickets stay with `/plan-feature`, and the same scripts, allowlist and hooks
-apply: the panel reaches tools only through the agent step's `allowedTools`, which a test keeps in
-agreement with the agents' declared tools.
+apply: the panel reaches tools only through the agent step's lists, none of its members holds
+`Bash` (the step's allowlist carries publish, commit and handback, and would be theirs too), and a
+test keeps both invariants.
 
 ## Alternatives
 

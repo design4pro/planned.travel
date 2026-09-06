@@ -1,7 +1,7 @@
 ---
 name: plan-fact-checker
 description: Verifies a docs/plans area's claims about the code at HEAD (files, functions, line ranges, callers, tests) for the /plan-area orchestrator. Use after the digest exists, and again whenever a round leans on a claim about what ships today.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob
 model: sonnet
 ---
 
@@ -20,12 +20,14 @@ its own words.
 
 1. Locate: Glob for the file, Grep for the symbol, Read the range. A line number in the plan is a
    hint, not the claim; the claim is what the plan says exists or does not.
-2. Measure the way the plan did: `grep -rn` over `src` for callers, a test file's cases, a schema
-   column and its CHECK. `git log --oneline -5 -- <path>` says when it moved.
-3. Verdict: `holds`, `stale` (the thing changed; say to what), `gone` (removed; say when if git
-   log shows it), `partly` (say which half).
+2. Measure the way the plan did: Grep over `src` for callers, a test file's cases, a schema
+   column and its CHECK.
+3. Verdict: `holds`, `stale` (the thing changed; say to what), `gone` (removed), `partly` (say
+   which half).
 
-Repository code never runs here: no `pnpm`, no `node`, no scripts; read-only git only.
+You hold no shell: nothing runs here, and git history is not yours. A claim that only history
+could settle (when something moved) is "could not verify", with the path the orchestrator can
+ask `git log` about.
 
 ## Return
 

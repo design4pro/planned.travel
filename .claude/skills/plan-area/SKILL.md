@@ -48,8 +48,10 @@ Six project subagents in `.claude/agents/`, one job each. Dispatch them with the
 parallel when their questions are independent (several Agent calls in one message), never more
 than three per round, and always with a brief that names the round, your hypothesis and how sure
 you are, the two to four options with the consequence of each, `.agent/plan/digest.md`, the plan
-file and the stages that matter, and the return shape the agent's own file specifies. A subagent
-recommends; it never decides and never writes an artefact.
+file and the stages that matter, for an ownership round the open PRDs' titles and module tables
+(you hold `gh`; the panel holds no shell), and the return shape the agent's own file specifies. A
+subagent recommends; it never decides and never writes an artefact. No panel member holds Bash:
+the step's allowlist (publish, commit, handback) would be theirs too.
 
 | agent                   | when                                                                                       | returns                                                                      |
 | ----------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
