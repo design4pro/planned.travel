@@ -33,24 +33,16 @@ import { describe, expect, it } from 'vitest'
 import {
   MIGRATIONS_DIR,
   journalTags,
-  openReplayDatabase,
+  physicalColumns,
+  replayMigrations,
   shippedMigrations,
-  statementsOf,
 } from '#/server/db/__tests__/migration-files'
 
 /** Column names of `subscriptions` after every migration has been applied in order. */
 function migratedColumns(): Array<string> {
-  const sqlite = openReplayDatabase()
+  const sqlite = replayMigrations()
   try {
-    for (const migration of shippedMigrations()) {
-      for (const statement of statementsOf(migration.sql)) {
-        sqlite.exec(statement)
-      }
-    }
-    return sqlite
-      .prepare("SELECT name FROM pragma_table_info('subscriptions')")
-      .all()
-      .map((row) => String(row.name))
+    return physicalColumns(sqlite, 'subscriptions')
   } finally {
     sqlite.close()
   }

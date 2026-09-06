@@ -1010,6 +1010,15 @@ export const dayAccommodations = sqliteTable(
     endDayId: text('end_day_id')
       .notNull()
       .references(() => days.id, { onDelete: 'cascade' }),
+    /**
+     * The booking this stay was made under, so the nights and the confirmation are one fact rather
+     * than two. `set null` and never `cascade`: a stay is the record of where somebody slept and
+     * outlives the reservation that held it — see
+     * `docs/plans/03-reservations-and-transport.md`, `03-S8`.
+     */
+    reservationId: text('reservation_id').references(() => reservations.id, {
+      onDelete: 'set null',
+    }),
     name: text('name').notNull(),
     address: text('address'),
     checkInTime: text('check_in_time'),
@@ -1026,6 +1035,7 @@ export const dayAccommodations = sqliteTable(
     index('day_accommodations_start_day_idx').on(t.startDayId),
     index('day_accommodations_end_day_idx').on(t.endDayId),
     index('day_accommodations_place_idx').on(t.placeId),
+    index('day_accommodations_reservation_idx').on(t.reservationId),
     nonNegativeCheck('day_accommodations_price_chk', t.priceMinor),
   ],
 )
@@ -1091,10 +1101,104 @@ export const transports = sqliteTable(
     index('transports_org_mode_idx').on(t.organizationId, t.mode),
     index('transports_day_idx').on(t.dayId),
     index('transports_arrival_day_idx').on(t.arrivalDayId),
+    // "What lands on this day", asked the only way a repository can ask it: `tenantFilter()` puts
+    // `organization_id` in the WHERE clause of every statement, so the tenant column leads. The
+    // bare `transports_arrival_day_idx` above predates it and is now redundant under every
+    // tenant-scoped read; dropping an index is not additive, so it is reported on #168 rather than
+    // removed here.
+    index('transports_org_arrival_day_idx').on(
+      t.organizationId,
+      t.arrivalDayId,
+    ),
     enumCheck('transports_mode_chk', t.mode, TRANSPORT_MODES),
     enumCheck('transports_status_chk', t.status, TRANSPORT_STATUSES),
     nonNegativeCheck('transports_price_chk', t.priceMinor),
     nonNegativeCheck('transports_distance_chk', t.distanceMetres),
+  ],
+)
+
+/**
+ * The legs of one transport record, ordered: N stations make N−1 legs
+ * (`docs/plans/03-reservations-and-transport.md`, `03-S2`).
+ *
+ * **An empty chain is a one-leg journey, not a broken one.** A transport with no rows here is read
+ * as a single leg whose endpoints are the record's own `departure_*` and `arrival_*` columns, which
+ * is what makes this table additive with no backfill: every journey written before it keeps
+ * rendering exactly as it does today, and a rolled-back Worker reads those same columns and ignores
+ * a table it does not know. The record's flat endpoint columns keep being written for the first and
+ * last station of a chain, so the two representations cannot disagree.
+ *
+ * **`position` and `sort_order` are different questions and both are needed.** `position` is the
+ * 0-based index of a leg *inside its own chain* — leg 2 of 4 — and is what the writer assigns from
+ * an array index; `sort_order` is the fractional key that places a leg among everything else
+ * happening on a day, which is the shared idiom every other timeline row in this file uses. A chain
+ * reordered inside itself and a chain dragged around a day are not the same edit.
+ *
+ * **No mode and no money, both deliberately.** The mode belongs to the parent record: a leg of a
+ * flight is not a different kind of thing from the flight. And a ticket is priced once, on the
+ * record — splitting a fare across four legs would invent four numbers nobody was charged — so the
+ * price stays on `transports.price_minor` beside its ISO-4217 `currency`.
+ *
+ * **The `set null` on the two day references is the deployed one**, unlike
+ * `transports.arrival_day_id` above: this table arrives by `CREATE TABLE`, which carries the
+ * `ON DELETE` clause SQLite's `ADD COLUMN` cannot.
+ *
+ * Nothing reads or writes this table yet. `03-S2` mints `transportLegsRepository` and the chain
+ * writer; this stage ships the shape so that stage has one to compile against.
+ */
+export const transportLegs = sqliteTable(
+  'transport_legs',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    tripId: text('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    transportId: text('transport_id')
+      .notNull()
+      .references(() => transports.id, { onDelete: 'cascade' }),
+    /** 0-based index in the chain. See the note above on why `sort_order` is not this. */
+    position: integer('position').notNull().default(0),
+    fromName: text('from_name').notNull(),
+    fromCode: text('from_code', { length: 8 }),
+    fromLat: real('from_lat'),
+    fromLng: real('from_lng'),
+    /** IANA zone of the departure endpoint: what makes `departure_time` readable elsewhere. */
+    fromTimezone: text('from_timezone'),
+    toName: text('to_name').notNull(),
+    toCode: text('to_code', { length: 8 }),
+    toLat: real('to_lat'),
+    toLng: real('to_lng'),
+    toTimezone: text('to_timezone'),
+    /** The three facts a person reads at a desk, per leg rather than per journey. */
+    serviceNumber: text('service_number'),
+    platform: text('platform'),
+    seat: text('seat'),
+    departureDayId: text('departure_day_id').references(() => days.id, {
+      onDelete: 'set null',
+    }),
+    arrivalDayId: text('arrival_day_id').references(() => days.id, {
+      onDelete: 'set null',
+    }),
+    departureDate: text('departure_date'),
+    arrivalDate: text('arrival_date'),
+    /** Wall-clock `HH:MM` at the endpoint's own zone, never converted on the way in. */
+    departureTime: text('departure_time'),
+    arrivalTime: text('arrival_time'),
+    sortOrder: sortOrder(),
+    ...timestamps(),
+  },
+  (t) => [
+    index('transport_legs_org_trip_idx').on(t.organizationId, t.tripId),
+    index('transport_legs_transport_position_idx').on(
+      t.transportId,
+      t.position,
+    ),
+    index('transport_legs_departure_day_idx').on(t.departureDayId),
+    index('transport_legs_arrival_day_idx').on(t.arrivalDayId),
+    nonNegativeCheck('transport_legs_position_chk', t.position),
+    ...latLngChecks('transport_legs_from_lat_chk', t.fromLat, t.fromLng),
+    ...latLngChecks('transport_legs_to_lat_chk', t.toLat, t.toLng),
   ],
 )
 
@@ -1119,6 +1223,21 @@ export const reservations = sqliteTable(
     transportId: text('transport_id').references(() => transports.id, {
       onDelete: 'set null',
     }),
+    /**
+     * The ledger line this booking paid for, so editing a price rewrites one expense instead of
+     * leaving a new one behind each time. The link lives on this side because a deleted cost line
+     * then unlinks the booking with no code of ours running — see
+     * `docs/plans/03-reservations-and-transport.md`, `03-S4`.
+     */
+    expenseId: text('expense_id').references(() => expenses.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * When a machine wrote this row and nobody has checked it yet — cleared by the first save a
+     * person makes. An instant rather than a flag, at the width `read_at` and `onboarded_at`
+     * already use, so "unchecked" keeps the date it became true on.
+     */
+    importedAt: integer('imported_at', { mode: 'timestamp_ms' }),
     type: text('type').notNull().default('other'),
     status: text('status').notNull().default('pending'),
     title: text('title').notNull(),
@@ -1147,6 +1266,13 @@ export const reservations = sqliteTable(
     index('reservations_place_idx').on(t.placeId),
     index('reservations_assignment_idx').on(t.assignmentId),
     index('reservations_transport_idx').on(t.transportId),
+    index('reservations_expense_idx').on(t.expenseId),
+    // `tenantFilter()` puts `organization_id` in every WHERE clause, so it leads: this is the
+    // index behind "which bookings on this desk has nobody checked yet".
+    index('reservations_org_imported_at_idx').on(
+      t.organizationId,
+      t.importedAt,
+    ),
     enumCheck('reservations_type_chk', t.type, RESERVATION_TYPES),
     enumCheck('reservations_status_chk', t.status, RESERVATION_STATUSES),
     nonNegativeCheck('reservations_price_chk', t.priceMinor),
@@ -2479,6 +2605,16 @@ export const userSettings = sqliteTable(
     reduceMotion: integer('reduce_motion', { mode: 'boolean' })
       .notNull()
       .default(false),
+    /**
+     * Hide confirmation codes on the booking desk until the reader asks for one. A display
+     * preference always has an answer, so it is `NOT NULL` with a default — off, because a product
+     * that hides the reader's own data on first sight has decided for them.
+     */
+    maskConfirmationCodes: integer('mask_confirmation_codes', {
+      mode: 'boolean',
+    })
+      .notNull()
+      .default(false),
     onboardingCompletedAt: integer('onboarding_completed_at', {
       mode: 'timestamp_ms',
     }),
@@ -2519,15 +2655,21 @@ export const appSettings = sqliteTable(
 /* -------------------------------------------------------------------------------------------------
  * Platform tables — global, never tenant-scoped
  *
- * Four of the eleven tables docs/SPEC.md §5 carves out of "every domain row is scoped by
- * organization_id". None is ever reachable through `createTenantRepository()` or
- * `src/server/repos/base.ts`, and every mutation that touches one takes an explicit platform actor
- * instead of a tenant context.
+ * The five global tables declared in this file. None is ever reachable through
+ * `createTenantRepository()` or `src/server/repos/base.ts`, and every mutation that touches one
+ * takes an explicit platform actor instead of a tenant context.
  *
- * Three of the four carry no `organization_id` at all. `provider_usage` is the exception §5's
+ * Four of the five carry no `organization_id` at all. `provider_usage` is the exception §5's
  * amendment argues: its column is attribution — which workspace a metered call was made *for* —
  * rather than a tenant discriminator, it is nullable because a cron belongs to no workspace, and it
  * carries no foreign key so that deleting a workspace cannot delete the platform's own accounting.
+ *
+ * All five are names docs/SPEC.md §5 carves out of "every domain row is scoped by
+ * organization_id". `airports` is the twelfth name on that list and joined it by the amendment §5
+ * carries, the way `platform_audit_log` and the provider pair joined it before: the list is closed,
+ * and a table lands on it by argument rather than by a schema decision taken on the way past. The
+ * argument is there and not here - what is worth repeating is its conclusion, that this table has
+ * no write path at all, so adding one is a change to that contract.
  * ---------------------------------------------------------------------------------------------- */
 
 /**
@@ -2854,5 +2996,61 @@ export const providerUsage = sqliteTable(
     nonNegativeCheck('provider_usage_calls_chk', t.calls),
     nonNegativeCheck('provider_usage_errors_chk', t.errors),
     nonNegativeCheck('provider_usage_blocked_chk', t.blocked),
+  ],
+)
+
+/**
+ * The airport reference dataset behind the endpoint type-ahead (`03-S2`, PRD #167 decision 4).
+ *
+ * **It carries no `organization_id`, and that is the point.** An airport belongs to no workspace,
+ * so there is no tenant discriminator for a filter to be forgotten on — the single stated exception
+ * to the tenant-scoped repository rule (`CLAUDE.md`, docs/SPEC.md §6). Reads go through
+ * `src/server/catalog/**` when `03-S2` writes them, never through `createTenantRepository()`.
+ *
+ * **A build-time artefact, not a provider.** The rows are loaded from a committed artefact built
+ * from a pinned public-domain source, so nothing here is fetched at runtime and no licence follows
+ * a request. That is also why `id` is the artefact's own stable identifier rather than a fresh
+ * {@link newId} on every load: the build has to be byte-identical from one run to the next, and a
+ * random primary key would make it differ for no reason. `pk()`'s default stands behind a loader
+ * that does not supply one, and a loader that does not supply one is a defect in the loader.
+ *
+ * **The type-ahead is a shortcut over free text and never a gate in front of it.** A traveller may
+ * type a code this catalogue does not hold — an airport that opened after our last build — and
+ * choose the zone themselves; nothing in the write path resolves against this table. So both codes
+ * are nullable: most airports in a public-domain dataset carry no IATA code at all, and SQLite
+ * treats `NULL`s inside a `UNIQUE` index as distinct, which is what lets one plain unique index
+ * hold "one row per code" and "thousands of rows with no code" at the same time.
+ *
+ * Ships empty, and is filled out of band: the migration creates the shape and
+ * `scripts/seed/airports.mjs` loads the committed artefact
+ * `public/atlas/airports-iata.v1.txt` into it - `pnpm db:airports:local` in a checkout, and a
+ * step of both deploy workflows on a deployed database. Nothing in the request path ever
+ * writes here.
+ */
+export const airports = sqliteTable(
+  'airports',
+  {
+    id: pk(),
+    /** IATA three-letter code, the one a traveller types. Null for most of the dataset. */
+    iataCode: text('iata_code', { length: 3 }),
+    /** ICAO four-letter code, which the source dataset keys on. */
+    icaoCode: text('icao_code', { length: 4 }),
+    name: text('name').notNull(),
+    city: text('city'),
+    /** ISO-3166-1 alpha-2, the same vocabulary `trips.country_codes` carries. */
+    countryCode: text('country_code', { length: 2 }),
+    /** IANA zone name: the fourth field a resolved code fills in, and the one that reads a time. */
+    timezone: text('timezone'),
+    ...geo(),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('airports_iata_unq').on(t.iataCode),
+    uniqueIndex('airports_icao_unq').on(t.icaoCode),
+    // The type-ahead matches a prefix of the code, the name or the city; the two codes are covered
+    // by their unique indexes above.
+    index('airports_name_idx').on(t.name),
+    index('airports_city_idx').on(t.city),
+    ...latLngChecks('airports_lat_chk', t.lat, t.lng),
   ],
 )

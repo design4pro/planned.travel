@@ -12,6 +12,40 @@
  * an English suffix appended inside JSX. None of that can be right in a
  * language with four plural categories, and no amount of translating the
  * surrounding words fixes it.
+ *
+ * **A transport is not a leg.** `CONTEXT.md` reserves "leg" for the part of a
+ * transport between two consecutive stations; a whole journey is a transport.
+ * The `transports.*` copy below predated that glossary and said "leg" for both,
+ * which the chain editor would have made unreadable: "Add a leg" carrying a
+ * "Break this into legs" inside it. So each locale now holds two distinct
+ * nouns. The first names the whole transport and is what the keys below use;
+ * the second belongs to the `transports.chain.*` keys, which the chain editor
+ * brought in, and to nothing else. A locale that reaches for the first noun
+ * inside a `chain` key has undone the distinction this table exists to hold.
+ *
+ * - `ar` تنقل, leg: مرحلة
+ * - `ca` trajecte, leg: tram
+ * - `cs` přesun, leg: úsek
+ * - `de` Transfer, leg: Etappe
+ * - `el` μετακίνηση, leg: σκέλος
+ * - `en` transport, leg: leg
+ * - `es` trayecto, leg: tramo
+ * - `fr` trajet, leg: tronçon
+ * - `hu` út, leg: szakasz
+ * - `id` transportasi, leg: ruas
+ * - `it` spostamento, leg: tratta
+ * - `ja` 移動, leg: 区間
+ * - `ko` 이동, leg: 구간
+ * - `nl` traject, leg: etappe
+ * - `pl` przejazd, leg: odcinek
+ * - `pt-BR` deslocamento, leg: trecho
+ * - `ru` переезд, leg: участок
+ * - `sv` färd, leg: etapp
+ * - `tr` yolculuk, leg: etap
+ * - `uk` переїзд, leg: ділянка
+ * - `vi` lượt di chuyển, leg: chặng
+ * - `zh-Hans` 交通, leg: 路段
+ * - `zh-Hant` 交通, leg: 路段
  */
 
 import type { NamespaceMessages } from '../../types'
@@ -38,19 +72,19 @@ const messages = {
     'Live updates are off. Everything still saves; reload or retry to catch up.',
   'presence.reconnect': 'Reconnect',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Every leg',
-  'transports.empty.title': 'No travel legs yet',
+  'transports.filter.all': 'Every transport',
+  'transports.empty.title': 'No transports yet',
   'transports.empty.body':
     'Flights, trains, ferries and the drive from the airport all live here, with their booking codes and seat numbers to hand on the day — and each hand-over checked against the one before it.',
-  'transports.empty.action': 'Add the first leg',
-  'transports.filtered.title': 'No legs of that kind',
+  'transports.empty.action': 'Add the first transport',
+  'transports.filtered.title': 'No transports of that kind',
   /**
    * Names the chip that clears the filter, so the sentence and the control
    * cannot drift apart in translation: `{label}` is that chip's own message.
    */
   'transports.filtered.body':
-    'Every leg on this trip travels a different way. Switch back to “{label}” to see them all.',
-  'transports.filtered.action': 'Show every leg',
+    'Every transport on this trip travels a different way. Switch back to “{label}” to see them all.',
+  'transports.filtered.action': 'Show every transport',
   /**
    * Was a hand-rolled two-branch English plural — `count === 1 ? "One …" :
    * `${count} …`` — which is only ever right in English, and whose verb also
@@ -58,27 +92,27 @@ const messages = {
    */
   'transports.alert.impossible.title': {
     one: 'One hand-over cannot be made',
-    other: '{legs} hand-overs cannot be made',
+    other: '{value} hand-overs cannot be made',
   },
   'transports.alert.impossible.body':
-    'A leg departs before the one before it arrives. The junctions below say which, and by how much.',
+    'A transport departs before the one before it arrives. The junctions below say which, and by how much.',
   'transports.alert.tight.title': {
     one: 'One connection is tight',
-    other: '{legs} connections are tight',
+    other: '{value} connections are tight',
   },
   'transports.alert.tight.body':
     'There is time, but not much of it for the mode you are catching. The junctions below show how long each one leaves you.',
   /**
    * Was `{n} broken hand-over{n === 1 ? "" : "s"}`: an English suffix appended
-   * in JSX. `{legs}` arrives already grouped for the locale.
+   * in JSX. `{value}` arrives already grouped for the locale.
    */
   'transports.badge.impossible': {
-    one: '{legs} broken hand-over',
-    other: '{legs} broken hand-overs',
+    one: '{value} broken hand-over',
+    other: '{value} broken hand-overs',
   },
   'transports.badge.tight': {
-    one: '{legs} tight connection',
-    other: '{legs} tight connections',
+    one: '{value} tight connection',
+    other: '{value} tight connections',
   },
   'transports.badge.ok': 'Every hand-over works',
   /**
@@ -87,9 +121,9 @@ const messages = {
    * reader which other control to use instead.
    */
   'transports.remove.body':
-    'The leg comes off this trip for good, along with its booking reference and seat. If it is only cancelled, set its status to Cancelled instead.',
-  'transports.remove.confirm': 'Remove leg',
-  'transports.menu.edit': 'Edit leg…',
+    'The transport comes off this trip for good, along with its booking reference and seat. If it is only cancelled, set its status to Cancelled instead.',
+  'transports.remove.confirm': 'Remove transport',
+  'transports.menu.edit': 'Edit transport…',
   'transports.field.service': 'Service',
   'transports.field.bookingRef': 'Booking reference',
   'transports.field.seat': 'Seat',
@@ -97,13 +131,13 @@ const messages = {
   'transports.noTime': 'No time yet',
   'transports.toast.statusFailed.title': 'The status did not change',
   'transports.toast.statusFailed.body':
-    'The leg is still in its previous state.',
-  'transports.toast.removed': 'Leg removed',
-  'transports.toast.removeFailed': 'The leg was not removed',
+    'The transport is still in its previous state.',
+  'transports.toast.removed': 'Transport removed',
+  'transports.toast.removeFailed': 'The transport was not removed',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Add a leg',
-  'transports.dialog.editTitle': 'Edit this leg',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Add a transport',
+  'transports.dialog.editTitle': 'Edit this transport',
   'transports.dialog.description':
     'Flights, trains, ferries and the drive from the airport. Times are the local ones printed on the ticket.',
   'transports.form.modeLegend': 'How are you travelling',
@@ -122,6 +156,7 @@ const messages = {
   'transports.field.place': 'Place',
   'transports.field.code': 'Code',
   'transports.field.date': 'Date',
+  'transports.field.time': 'Leaving after',
   'transports.field.departurePlaceholder': 'London Heathrow',
   'transports.field.arrivalPlaceholder': 'Tokyo Haneda',
   'transports.field.carrier': 'Carrier',
@@ -129,14 +164,14 @@ const messages = {
   'transports.field.bookingRefHint': 'The code you will read back at the desk.',
   'transports.field.notesPlaceholder':
     'Aisle seat requested. Bags checked through to Kyoto.',
-  'transports.action.add': 'Add leg',
-  'transports.action.save': 'Save leg',
-  'transports.action.saving': 'Saving the leg',
-  'transports.toast.added': 'Leg added',
+  'transports.action.add': 'Add transport',
+  'transports.action.save': 'Save transport',
+  'transports.action.saving': 'Saving the transport',
+  'transports.toast.added': 'Transport added',
   'transports.toast.addedBody': 'It is in the travel order now.',
-  'transports.toast.addFailed': 'The leg was not added',
-  'transports.toast.updated': 'Leg updated',
-  'transports.toast.updateFailed': 'The leg was not updated',
+  'transports.toast.addFailed': 'The transport was not added',
+  'transports.toast.updated': 'Transport updated',
+  'transports.toast.updateFailed': 'The transport was not updated',
 
   /* ------------------------------- shared labels and the bookings timeline */
   /**
@@ -152,6 +187,7 @@ const messages = {
   'field.status': 'Status',
   'form.saveError': 'That did not save',
   'action.cancel': 'Cancel',
+  'action.showCode': 'Show {label}',
   /**
    * The five stored `booking.status` values, one key each. This is the shape
    * `humaniseToken()` cannot have: a label per token rather than a title-cased
@@ -170,14 +206,19 @@ const messages = {
   'book.empty.body':
     'Stays, tables, tours and tickets belong here — with the confirmation number where you can find it at the door, and the date it lands on the timeline.',
   'book.empty.action': 'Add the first booking',
-  'book.filtered.title': 'Nothing with that status',
-  /**
-   * Names the chip that clears the filter, so the sentence and the control
-   * cannot drift apart in translation.
-   */
+  'book.filtered.title': 'Nothing of that kind yet',
   'book.filtered.body':
-    'Every booking on this trip is at a different stage. Switch back to “{label}” to see them all.',
-  'book.filtered.action': 'Show everything',
+    'Nothing of the kinds you picked is booked here. Clear the filter to see the rest of the desk.',
+  'book.filtered.action': 'Clear filter',
+  'book.panel.outstanding': 'Still to settle',
+  'book.panel.outstandingEmpty':
+    'Nothing outstanding — every booking here is settled.',
+  'book.panel.settled': 'Settled',
+  'book.panel.settledEmpty': 'Nothing settled yet — it is all still to chase.',
+  'book.import.badge': 'Unchecked import',
+  'book.import.hint':
+    'Imported from a confirmation. Open and save it to mark it checked.',
+  'book.journeyLink': 'On the transports tab',
   'filter.all': 'Everything',
   'book.remove.body':
     'It comes off the timeline for good. If it is only cancelled, set its status to Cancelled instead so you keep the record.',
@@ -299,7 +340,7 @@ const messages = {
    * `shell.trip.tab.transports` so the module has one owner for its own name.
    */
   'book.hint.transport':
-    'A booked seat. Full legs with carriers and codes belong in {module}.',
+    'A booked seat. Full transports with carriers and codes belong in {module}.',
   'book.hint.other': 'Anything held in your name that does not fit the others.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -525,6 +566,13 @@ const messages = {
    * A field name as it reads *inside* a sentence, which is not the same string
    * as the label above the input: English lowercases it, German does not.
    */
+  'book.error.stopGone': 'That stop is not on this trip any more.',
+  'book.ledger.unlinked':
+    'This booking’s cost line will stay in the trip’s costs, no longer linked to this booking.',
+  'book.ledger.updated': 'This booking’s cost line will be updated to {money}.',
+  'book.ledger.needsDate':
+    'Give this booking a date and its cost will be added to the trip’s costs.',
+  'book.ledger.added': 'A {money} line will be added to this trip’s costs.',
   'book.fieldName.provider': 'provider',
   'book.fieldName.location': 'location',
   'book.fieldName.confirmationNumber': 'confirmation number',
@@ -535,6 +583,18 @@ const messages = {
   'book.fieldName.endTime': 'end time',
   'book.fieldName.guests': 'guests',
   'book.fieldName.price': 'price',
+  'book.fieldName.stop': 'stop',
+  'book.field.stop': 'Linked stop',
+  'book.field.stopHint': 'Which stop of the plan this booking is for.',
+  'book.field.stopHintEmpty':
+    'Add a place to a day first, then you can attach this booking to it',
+  'book.field.stopPlaceholder': 'Not tied to a stop',
+  'book.field.stopSearch': 'Search stops and days',
+  'book.field.stopEmpty': 'No stop matches that',
+  'book.ledger.refused.title': 'Saved, but not added to the costs',
+  'book.ledger.refused.body':
+    'The booking is on the trip. Adding its cost line to the trip’s costs did not go through — try that half again.',
+  'book.action.ledgerRetry': 'Add it to the ledger',
   'book.copyConfirmation': 'the confirmation number for {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -550,7 +610,61 @@ const messages = {
   'transports.mode.bike': 'Bike',
   'transports.mode.walk': 'Walk',
   'transports.mode.other': 'Other',
-  'transports.mode.fallback': 'Leg',
+  'transports.mode.fallback': 'Transport',
+  'transports.rank.earliest': 'Earliest arrival',
+  'transports.rank.fewestChanges': 'Fewest changes',
+  'transports.connection.findStop': 'Find a stop',
+  'transports.connection.findStopSearch': 'LIS, Santa Apolónia, Lisboa…',
+  'transports.connection.findStopEmpty':
+    'No stop with that name in the catalogue.',
+  'transports.connection.hideStops': 'Hide the stops',
+  'transports.connection.seeStops': 'See the stops',
+  'transports.connection.saving': 'Saving the connection',
+  'transports.connection.use': 'Use this one',
+  'transports.connection.onFoot': 'On foot',
+  'transports.connection.service': 'Service',
+  'transports.connection.direct': 'direct',
+  'transports.connection.changes': {
+    one: '{changes} change',
+    other: '{changes} changes',
+  },
+  'transports.connection.tooLong':
+    'This connection has more than {max} legs, which is more than one journey record holds. Search a shorter hop and record the rest separately.',
+  'transports.connection.refusal.ceiling': 'No searches left this month',
+  'transports.connection.refusal.unconfigured':
+    'Connection search is off on this deployment',
+  'transports.connection.refusal.provider':
+    'The timetable service did not answer',
+  'transports.connection.refusal.plan': 'Connection search is not on this plan',
+  'transports.connection.refusal.planBody':
+    'Upgrade the workspace to search timetables from inside a trip. A journey can still be recorded by hand.',
+  'transports.connection.refusal.ceilingBody':
+    'This month’s allowance of {ceiling} is spent, and renews on the first of next month. A journey can still be recorded by hand.',
+  'transports.connection.refusal.unconfiguredBody':
+    'No timetable service is set up here, so nothing was searched. Record the journey by hand instead.',
+  'transports.connection.refusal.providerBody':
+    'Nothing came back to show. Try again in a moment, or record the journey by hand.',
+  'transports.connection.invitation':
+    'Two stops and a date, and the timetable answers. Nothing is saved until you choose one.',
+  'transports.connection.empty':
+    'No connection was found between those two stops on that date. Try a neighbouring station, or widen the mode filter.',
+  'transports.connection.searchFailed': 'The search did not run',
+  'transports.connection.searchFailedBody': 'Try again in a moment.',
+  'transports.connection.saved': 'Connection saved',
+  'transports.connection.replaced': 'Route replaced',
+  'transports.connection.replacedBody':
+    'The booking code and the seat are untouched.',
+  'transports.connection.saveFailed': 'The connection was not saved',
+  'transports.connection.saveError': 'That did not save',
+  'transports.connection.fromHint':
+    'Pick a stop — a timetable is asked where, not what it is called.',
+  'transports.connection.toHint': 'Pick a stop from the catalogue.',
+  'transports.connection.timeHint':
+    'A timetable answers with the next few departures, so this decides which ones.',
+  'transports.connection.onlyModes': 'Only these modes',
+  'transports.connection.searching': 'Searching the timetable',
+  'transports.connection.search': 'Search connections',
+  'transports.connection.title': '{from} to {to}',
   'transports.status.idea': 'Idea',
   'transports.status.pending': 'Pending',
   'transports.status.confirmed': 'Confirmed',
@@ -564,8 +678,15 @@ const messages = {
   'transports.end.toStation': 'To station',
   'transports.end.from': 'From',
   'transports.end.to': 'To',
+  'transports.end.pickUp': 'Pick-up',
+  'transports.end.dropOff': 'Drop-off',
+  'transports.end.departureDay': 'Departure day',
+  'transports.end.arrivalDay': 'Arrival day',
+  'transports.end.pickUpDay': 'Pick-up day',
+  'transports.end.returnDay': 'Return day',
+  'transports.dayNumber': 'Day {n}',
   'transports.error.titleEmpty':
-    'Give this leg a name you will recognise in a list.',
+    'Give this transport a name you will recognise in a list.',
   'transports.error.date': 'A date is written YYYY-MM-DD.',
   'transports.error.time': 'A time is written HH:MM on a 24-hour clock.',
   'transports.error.departureNeedsDate':
@@ -576,9 +697,61 @@ const messages = {
   'transports.error.distance':
     'A distance is a number of kilometres, up to 100,000.',
   'transports.error.arrivesBeforeDeparts':
-    'This leg arrives before it departs.',
+    'This transport arrives before it departs.',
   'transports.error.timingHint':
-    'Move one of them so the leg can actually be caught.',
+    'Move one of them so the transport can actually be caught.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'The arrival day comes before the departure day.',
+  'transports.error.returnDayBeforePickUp':
+    'The return day comes before the pick-up day.',
+  'transports.toast.chainFailed': 'The legs were not saved',
+  'transports.toast.chainFallback': 'The journey was saved; its legs were not.',
+  'transports.field.noDay': 'No day yet',
+  'transports.fill.legend': 'How to fill this in',
+  'transports.fill.manual': 'Enter it yourself',
+  'transports.fill.searchAgain': 'Search again',
+  'transports.fill.search': 'Search connections',
+  'transports.chain.unsplit': 'Put it back as one journey',
+  'transports.field.arrivalDayHint':
+    'A journey that lands the next morning says so here.',
+  'transports.chain.splitHint':
+    'Changing trains on the way? Record each part with its own service number, platform, seat and clock.',
+  'transports.chain.split': 'Break this into legs',
+  'transports.chain.stopNumber': 'stop {n}',
+  'transports.chain.change': 'Change {n}',
+  'transports.chain.removeStation': 'Remove {label}',
+  'transports.chain.findStation': 'Find an airport or station',
+  'transports.chain.findStationFor': 'Find an airport or station for {label}',
+  'transports.chain.findPlaceholder': 'LHR, Heathrow, London…',
+  'transports.chain.findEmpty': 'No match — type the stop in yourself below.',
+  'transports.chain.stopLabel': 'Stop',
+  'transports.chain.stopPlaceholder': 'Shin-Osaka',
+  'transports.chain.timezoneHint': 'Which clock this stop is on',
+  'transports.chain.timezoneAt': 'Time zone at {label}',
+  'transports.chain.timezonePlaceholder': 'Not stated',
+  'transports.chain.timezoneSearch': 'Tokyo, Lisbon, UTC…',
+  'transports.chain.acrossClocks': '{gap} across two clocks',
+  'transports.chain.addStopAfter': 'Add a stop after {label}',
+  'transports.chain.servicePlaceholder': 'Hikari 500',
+  'transports.chain.leaves': 'Leaves {label}',
+  'transports.chain.reaches': 'Reaches {label}',
+  'transports.chain.dayOfLeg': '{label} of leg {n}',
+  'transports.chain.formError': 'This chain cannot be saved',
+  'transports.chain.atCap':
+    'A chain holds at most {max} legs — that is a limit on what one save can carry, not on how many changes a journey may have.',
+  'transports.chain.hint':
+    'Add a stop on any leg to record a change of train, and each leg keeps its own service number, platform and seat.',
+  'transports.field.timezone': 'Time zone',
+  'transports.field.platform': 'Platform',
+  'transports.chain.legNumber': 'Leg {n}',
+  'transports.chain.platform': 'Platform {value}',
+  'transports.chain.seat': 'Seat {value}',
+  'transports.chain.error.stopName':
+    'Every stop needs a name — this is where you change.',
+  'transports.chain.error.stopNameLong':
+    'Keep a stop’s name under 200 characters.',
+  'transports.chain.error.timezone': 'Pick a time zone from the list.',
+  'transports.chain.error.tooManyLegs': 'A chain holds at most {max} legs.',
   'transports.bookingRefFor': 'the booking reference for {title}',
   /**
    * One whole sentence. The duration used to sit inside a bold span, which made
@@ -594,9 +767,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'No times to compare',
   'transports.junction.unknown.detail':
-    'Add a date and time to both legs and this hand-over will be checked for you.',
+    'Add a date and time to both transports and this hand-over will be checked for you.',
   'transports.junction.impossible.headline':
-    'Leaves {gap} before the previous leg lands',
+    'Leaves {gap} before the previous transport lands',
   'transports.junction.impossible.detail':
     '“{to}” departs before “{from}” arrives, so this pair cannot both be caught. Move one of them.',
   'transports.junction.tight.headline': '{gap} to connect',
@@ -606,7 +779,7 @@ const messages = {
     'A {mode} usually needs about {required} at {place}. This one is tight.',
   'transports.junction.ok.headline': '{gap} in between',
   'transports.junction.ok.detail':
-    'Lands at {landing} but the next leg leaves from {boarding} — you will need to get across.',
+    'Lands at {landing} but the next transport leaves from {boarding} — you will need to get across.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Note shared',

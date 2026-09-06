@@ -30,53 +30,53 @@ const messages = {
     'Canlı güncellemeler kapalı. Kayıt sürüyor; yakalamak için sayfayı yenile ya da yeniden dene.',
   'presence.reconnect': 'Yeniden bağlan',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Tüm etaplar',
-  'transports.empty.title': 'Henüz yolculuk etabı yok',
+  'transports.filter.all': 'Tüm yolculuklar',
+  'transports.empty.title': 'Henüz yolculuk yok',
   'transports.empty.body':
     'Uçuşlar, trenler, vapurlar ve havalimanından çıkış hep burada; rezervasyon kodları ve koltuk numaraları o gün elinin altında — ve her aktarma bir öncekine göre kontrol ediliyor.',
-  'transports.empty.action': 'İlk etabı ekle',
-  'transports.filtered.title': 'O türden etap yok',
+  'transports.empty.action': 'İlk yolculuğu ekle',
+  'transports.filtered.title': 'O türden yolculuk yok',
   'transports.filtered.body':
-    'Bu gezideki her etap başka türlü gidiyor. Hepsini görmek için “{label}” seçeneğine dön.',
-  'transports.filtered.action': 'Tüm etapları göster',
+    'Bu gezideki her yolculuk başka türlü gidiyor. Hepsini görmek için “{label}” seçeneğine dön.',
+  'transports.filtered.action': 'Tüm yolculukları göster',
   'transports.alert.impossible.title': {
-    one: '{legs} aktarma yapılamıyor',
-    other: '{legs} aktarma yapılamıyor',
+    one: '{value} aktarma yapılamıyor',
+    other: '{value} aktarma yapılamıyor',
   },
   'transports.alert.impossible.body':
-    'Bir etap, kendinden önceki gelmeden kalkıyor. Aşağıdaki kavşaklar hangisi ve ne kadar olduğunu söylüyor.',
+    'Bir yolculuk, kendinden önceki gelmeden kalkıyor. Aşağıdaki kavşaklar hangisi ve ne kadar olduğunu söylüyor.',
   'transports.alert.tight.title': {
-    one: '{legs} aktarma çok sıkı',
-    other: '{legs} aktarma çok sıkı',
+    one: '{value} aktarma çok sıkı',
+    other: '{value} aktarma çok sıkı',
   },
   'transports.alert.tight.body':
     'Zaman var ama yakalayacağın araç için bol değil. Aşağıdaki kavşaklar her birinin ne kadar bıraktığını gösteriyor.',
   'transports.badge.impossible': {
-    one: '{legs} kopuk aktarma',
-    other: '{legs} kopuk aktarma',
+    one: '{value} kopuk aktarma',
+    other: '{value} kopuk aktarma',
   },
   'transports.badge.tight': {
-    one: '{legs} sıkı aktarma',
-    other: '{legs} sıkı aktarma',
+    one: '{value} sıkı aktarma',
+    other: '{value} sıkı aktarma',
   },
   'transports.badge.ok': 'Her aktarma tutuyor',
   'transports.remove.body':
-    'Etap, rezervasyon numarası ve koltuğuyla birlikte bu geziden tamamen çıkar. Yalnızca iptal edildiyse bunun yerine durumunu “İptal edildi” yap.',
-  'transports.remove.confirm': 'Etabı kaldır',
-  'transports.menu.edit': 'Etabı düzenle…',
+    'Yolculuk, rezervasyon numarası ve koltuğuyla birlikte bu geziden tamamen çıkar. Yalnızca iptal edildiyse bunun yerine durumunu “İptal edildi” yap.',
+  'transports.remove.confirm': 'Yolculuğu kaldır',
+  'transports.menu.edit': 'Yolculuğu düzenle…',
   'transports.field.service': 'Sefer',
   'transports.field.bookingRef': 'Rezervasyon numarası',
   'transports.field.seat': 'Koltuk',
   'transports.field.distance': 'Mesafe',
   'transports.noTime': 'Henüz saat yok',
   'transports.toast.statusFailed.title': 'Durum değişmedi',
-  'transports.toast.statusFailed.body': 'Etap önceki durumunda kaldı.',
-  'transports.toast.removed': 'Etap kaldırıldı',
-  'transports.toast.removeFailed': 'Etap kaldırılamadı',
+  'transports.toast.statusFailed.body': 'Yolculuk önceki durumunda kaldı.',
+  'transports.toast.removed': 'Yolculuk kaldırıldı',
+  'transports.toast.removeFailed': 'Yolculuk kaldırılamadı',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Etap ekle',
-  'transports.dialog.editTitle': 'Bu etabı düzenle',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Yolculuk ekle',
+  'transports.dialog.editTitle': 'Bu yolculuğu düzenle',
   'transports.dialog.description':
     'Uçuşlar, trenler, vapurlar ve havalimanından çıkış. Saatler biletin üzerindeki yerel saatler.',
   'transports.form.modeLegend': 'Neyle gidiyorsun',
@@ -85,6 +85,7 @@ const messages = {
   'transports.field.place': 'Yer',
   'transports.field.code': 'Kod',
   'transports.field.date': 'Tarih',
+  'transports.field.time': 'Şu saatten sonra',
   'transports.field.departurePlaceholder': 'İstanbul Havalimanı',
   'transports.field.arrivalPlaceholder': 'Tokyo Haneda Havalimanı',
   'transports.field.carrier': 'Taşıyıcı',
@@ -92,14 +93,14 @@ const messages = {
   'transports.field.bookingRefHint': 'Bankoda okuyacağın kod.',
   'transports.field.notesPlaceholder':
     'Koridor koltuğu istendi. Bagaj Kyoto’ya kadar aktarmalı verildi.',
-  'transports.action.add': 'Etabı ekle',
-  'transports.action.save': 'Etabı kaydet',
-  'transports.action.saving': 'Etap kaydediliyor',
-  'transports.toast.added': 'Etap eklendi',
+  'transports.action.add': 'Yolculuğu ekle',
+  'transports.action.save': 'Yolculuğu kaydet',
+  'transports.action.saving': 'Yolculuk kaydediliyor',
+  'transports.toast.added': 'Yolculuk eklendi',
   'transports.toast.addedBody': 'Artık yolculuk sırasında.',
-  'transports.toast.addFailed': 'Etap eklenmedi',
-  'transports.toast.updated': 'Etap güncellendi',
-  'transports.toast.updateFailed': 'Etap güncellenmedi',
+  'transports.toast.addFailed': 'Yolculuk eklenmedi',
+  'transports.toast.updated': 'Yolculuk güncellendi',
+  'transports.toast.updateFailed': 'Yolculuk güncellenmedi',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Ad',
@@ -109,6 +110,7 @@ const messages = {
   'field.status': 'Durum',
   'form.saveError': 'Bu kaydedilmedi',
   'action.cancel': 'Vazgeç',
+  'action.showCode': '{label} göster',
   'book.status.none': 'Durumu yok',
   'book.status.pending': 'Bekliyor',
   'book.status.confirmed': 'Onaylandı',
@@ -122,10 +124,20 @@ const messages = {
   'book.empty.body':
     'Konaklamalar, masalar, turlar ve biletler buraya ait — kapıda arayacağın yerdeki onay numarasıyla ve onları zaman çizgisine oturtan tarihle.',
   'book.empty.action': 'İlk rezervasyonu ekle',
-  'book.filtered.title': 'Bu durumda bir şey yok',
+  'book.filtered.title': 'Bu türden henüz bir şey yok',
   'book.filtered.body':
-    'Bu gezideki her rezervasyon başka aşamada. Hepsini görmek için “{label}” seçeneğine dön.',
-  'book.filtered.action': 'Hepsini göster',
+    'Seçtiğin türlerden burada rezervasyon yok. Filtreyi temizleyip gerisini gör.',
+  'book.filtered.action': 'Filtreyi temizle',
+  'book.panel.outstanding': 'Hâlâ halledilecek',
+  'book.panel.outstandingEmpty':
+    'Bekleyen bir şey yok — buradaki her şey halledildi.',
+  'book.panel.settled': 'Halledildi',
+  'book.panel.settledEmpty':
+    'Henüz hiçbir şey halledilmedi — hepsinin hâlâ peşine düşülecek.',
+  'book.import.badge': 'Denetlenmemiş içe aktarma',
+  'book.import.hint':
+    'Bir onaydan içe aktarıldı. Açıp kaydedince denetlenmiş sayılır.',
+  'book.journeyLink': 'Ulaşım sekmesinde',
   'filter.all': 'Hepsi',
   'book.remove.body':
     'Zaman çizgisinden tamamen çıkar. Yalnızca iptal edildiyse kaydı korumak için durumunu “İptal edildi” yap.',
@@ -211,7 +223,7 @@ const messages = {
   'book.hint.ticket':
     'Saatli giriş, müze kartı, bir maç. Kodu elinin altında tut.',
   'book.hint.transport':
-    'Ayrılmış bir koltuk. Kodlu tam etaplar {module} bölümüne ait.',
+    'Ayrılmış bir koltuk. Kodlu tam yolculuklar {module} bölümüne ait.',
   'book.hint.other': 'Adına tutulmuş ve diğerlerine uymayan her şey.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -396,6 +408,15 @@ const messages = {
   'error.price': 'Bu tutarı okuyamıyoruz.',
   'book.error.url': 'Bir bağlantı http:// ya da https:// ile başlamalı.',
   'book.error.confirmationLong': 'Bu onay numarası saklamak için fazla uzun.',
+  'book.error.stopGone': 'Bu durak artık bu gezide değil.',
+  'book.ledger.unlinked':
+    'Bu rezervasyonun masraf satırı gezinin masraflarında kalacak, ama artık rezervasyona bağlı olmayacak.',
+  'book.ledger.updated':
+    'Bu rezervasyonun masraf satırı {money} olarak güncellenecek.',
+  'book.ledger.needsDate':
+    'Bu rezervasyona bir tarih verin, masrafı gezinin masraflarına eklensin.',
+  'book.ledger.added':
+    'Bu gezinin masraflarına {money} tutarında bir satır eklenecek.',
   'book.fieldName.provider': 'taşıyıcı',
   'book.fieldName.location': 'yer',
   'book.fieldName.confirmationNumber': 'onay numarası',
@@ -406,6 +427,18 @@ const messages = {
   'book.fieldName.endTime': 'bitiş saati',
   'book.fieldName.guests': 'kişi sayısı',
   'book.fieldName.price': 'fiyat',
+  'book.fieldName.stop': 'durak',
+  'book.field.stop': 'Bağlı durak',
+  'book.field.stopHint': 'Bu rezervasyon planın hangi durağına ait.',
+  'book.field.stopHintEmpty':
+    'Önce bir güne yer ekle, sonra bu rezervasyonu ona bağlayabilirsin',
+  'book.field.stopPlaceholder': 'Bir durağa bağlı değil',
+  'book.field.stopSearch': 'Duraklarda ve günlerde ara',
+  'book.field.stopEmpty': 'Eşleşen durak yok',
+  'book.ledger.refused.title': 'Kaydedildi ama masraflara eklenmedi',
+  'book.ledger.refused.body':
+    'Rezervasyon gezide. Masraf satırını gezinin masraflarına eklemek olmadı — o yarısını tekrar dene.',
+  'book.action.ledgerRetry': 'Masraflara ekle',
   'book.copyConfirmation': '{title} için onay numarası',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -421,7 +454,60 @@ const messages = {
   'transports.mode.bike': 'Bisiklet',
   'transports.mode.walk': 'Yürüyüş',
   'transports.mode.other': 'Diğer',
-  'transports.mode.fallback': 'Etap',
+  'transports.mode.fallback': 'Yolculuk',
+  'transports.rank.earliest': 'En erken varış',
+  'transports.rank.fewestChanges': 'En az aktarma',
+  'transports.connection.findStop': 'Durak bul',
+  'transports.connection.findStopSearch': 'IST, Gar, İstanbul…',
+  'transports.connection.findStopEmpty': 'Katalogda bu adda durak yok.',
+  'transports.connection.hideStops': 'Durakları gizle',
+  'transports.connection.seeStops': 'Durakları gör',
+  'transports.connection.saving': 'Bağlantı kaydediliyor',
+  'transports.connection.use': 'Bunu al',
+  'transports.connection.onFoot': 'Yürüyerek',
+  'transports.connection.service': 'Sefer',
+  'transports.connection.direct': 'aktarmasız',
+  'transports.connection.changes': {
+    one: '{changes} aktarma',
+    other: '{changes} aktarma',
+  },
+  'transports.connection.tooLong':
+    'Bu bağlantının {max} etaptan fazlası var, bu da tek bir yolculuk kaydının tuttuğundan fazla. Daha kısa bir parça ara, kalanını ayrı yaz.',
+  'transports.connection.refusal.ceiling': 'Bu ay arama hakkı kalmadı',
+  'transports.connection.refusal.unconfigured':
+    'Bu dağıtımda bağlantı araması kapalı',
+  'transports.connection.refusal.provider': 'Tarife servisi yanıt vermedi',
+  'transports.connection.refusal.plan':
+    'Bağlantı araması bu pakete dahil değil',
+  'transports.connection.refusal.planBody':
+    'Tarifeleri bir gezinin içinden aramak için paketini yükselt. Yolculuk yine elle yazılabilir.',
+  'transports.connection.refusal.ceilingBody':
+    'Aylık {ceiling} hakkı tükendi; gelecek ayın ilk günü yenilenir. Yolculuk yine elle yazılabilir.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Burada tarife servisi kurulu değil, bu yüzden hiçbir arama yapılmadı. Yolculuğu elle yaz.',
+  'transports.connection.refusal.providerBody':
+    'Gösterecek bir şey dönmedi. Birazdan yeniden dene ya da yolculuğu elle yaz.',
+  'transports.connection.invitation':
+    'İki durak ve bir tarih, tarife yanıtlar. Sen birini seçene kadar hiçbir şey kaydedilmez.',
+  'transports.connection.empty':
+    'O tarihte bu iki durak arasında bağlantı bulunamadı. Komşu bir istasyon dene ya da tür filtresini genişlet.',
+  'transports.connection.searchFailed': 'Arama çalışmadı',
+  'transports.connection.searchFailedBody': 'Birazdan yeniden dene.',
+  'transports.connection.saved': 'Bağlantı kaydedildi',
+  'transports.connection.replaced': 'Güzergâh değiştirildi',
+  'transports.connection.replacedBody':
+    'Rezervasyon kodu ve koltuk dokunulmadan kaldı.',
+  'transports.connection.saveFailed': 'Bağlantı kaydedilmedi',
+  'transports.connection.saveError': 'Bu kaydedilmedi',
+  'transports.connection.fromHint':
+    'Bir durak seç — tarifeye nerede diye sorulur, adı ne diye değil.',
+  'transports.connection.toHint': 'Katalogdan bir durak seç.',
+  'transports.connection.timeHint':
+    'Tarife en yakın birkaç kalkışı döndürür; hangileri olduğunu bu belirler.',
+  'transports.connection.onlyModes': 'Yalnızca bu türler',
+  'transports.connection.searching': 'Tarife aranıyor',
+  'transports.connection.search': 'Bağlantı ara',
+  'transports.connection.title': '{from} — {to}',
   'transports.status.idea': 'Fikir',
   'transports.status.pending': 'Bekliyor',
   'transports.status.confirmed': 'Onaylandı',
@@ -435,7 +521,14 @@ const messages = {
   'transports.end.toStation': 'Varış istasyonu',
   'transports.end.from': 'Nereden',
   'transports.end.to': 'Nereye',
-  'transports.error.titleEmpty': 'Bu etaba listede tanıyacağın bir ad ver.',
+  'transports.end.pickUp': 'Teslim alma',
+  'transports.end.dropOff': 'Teslim etme',
+  'transports.end.departureDay': 'Kalkış günü',
+  'transports.end.arrivalDay': 'Varış günü',
+  'transports.end.pickUpDay': 'Teslim alma günü',
+  'transports.end.returnDay': 'Teslim etme günü',
+  'transports.dayNumber': '{n}. gün',
+  'transports.error.titleEmpty': 'Bu yolculuğa listede tanıyacağın bir ad ver.',
   'transports.error.date': 'Tarih YYYY-AA-GG biçiminde yazılır.',
   'transports.error.time': 'Saat 24 saatlik SS:DD biçiminde yazılır.',
   'transports.error.departureNeedsDate':
@@ -445,9 +538,64 @@ const messages = {
   'transports.error.code': 'Kod 2 ile 8 arası harf ya da rakamdır.',
   'transports.error.distance':
     'Mesafe kilometre cinsinden bir sayıdır, 100.000’e kadar.',
-  'transports.error.arrivesBeforeDeparts': 'Bu etap kalkmadan önce varıyor.',
+  'transports.error.arrivesBeforeDeparts':
+    'Bu yolculuk kalkmadan önce varıyor.',
   'transports.error.timingHint':
-    'Birini kaydır da bu etaba gerçekten yetişilebilsin.',
+    'Saatlerden birini kaydır da bu yolculuğa gerçekten yetişilebilsin.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'Varış günü kalkış gününden önce geliyor.',
+  'transports.error.returnDayBeforePickUp':
+    'Teslim etme günü teslim alma gününden önce geliyor.',
+  'transports.toast.chainFailed': 'Etaplar kaydedilmedi',
+  'transports.toast.chainFallback':
+    'Yolculuk kaydedildi, etapları kaydedilmedi.',
+  'transports.field.noDay': 'Henüz gün yok',
+  'transports.fill.legend': 'Bunu nasıl doldurursunuz',
+  'transports.fill.manual': 'Kendiniz girin',
+  'transports.fill.searchAgain': 'Tekrar ara',
+  'transports.fill.search': 'Bağlantı ara',
+  'transports.chain.unsplit': 'Yeniden tek bir yolculuk yap',
+  'transports.field.arrivalDayHint':
+    'Ertesi sabah varan bir yolculuk bunu burada söyler.',
+  'transports.chain.splitHint':
+    'Yolda aktarma mı var? Her parçayı kendi sefer numarası, peronu, koltuğu ve saatleriyle kaydedin.',
+  'transports.chain.split': 'Etaplara böl',
+  'transports.chain.stopNumber': '{n}. durak',
+  'transports.chain.change': '{n}. aktarma',
+  'transports.chain.removeStation': '{label} kaldır',
+  'transports.chain.findStation': 'Havalimanı veya istasyon bul',
+  'transports.chain.findStationFor':
+    '{label} için havalimanı veya istasyon bul',
+  'transports.chain.findPlaceholder': 'IST, Havalimanı, İstanbul…',
+  'transports.chain.findEmpty': 'Eşleşme yok — durağı aşağıya kendin yaz.',
+  'transports.chain.stopLabel': 'Durak',
+  'transports.chain.stopPlaceholder': 'Ankara Gar',
+  'transports.chain.timezoneHint': 'Bu durak hangi saate göre',
+  'transports.chain.timezoneAt': '{label} saat dilimi',
+  'transports.chain.timezonePlaceholder': 'Belirtilmedi',
+  'transports.chain.timezoneSearch': 'Tokyo, Lizbon, UTC…',
+  'transports.chain.acrossClocks': 'iki saat arasında {gap}',
+  'transports.chain.addStopAfter': '{label} sonrasına durak ekle',
+  'transports.chain.servicePlaceholder': 'YHT 82004',
+  'transports.chain.leaves': '{label} kalkış',
+  'transports.chain.reaches': '{label} varış',
+  'transports.chain.dayOfLeg': '{n}. etabın {label}',
+  'transports.chain.formError': 'Bu zincir kaydedilemiyor',
+  'transports.chain.atCap':
+    'Bir zincir en çok {max} etap tutar — bu, bir kaydın taşıdığının sınırıdır, bir yolculuğun kaç aktarması olabileceğinin değil.',
+  'transports.chain.hint':
+    'Tren değişimini kaydetmek için herhangi bir etaba durak ekle; her etap kendi sefer numarasını, peronunu ve koltuğunu tutar.',
+  'transports.field.timezone': 'Saat dilimi',
+  'transports.field.platform': 'Peron',
+  'transports.chain.legNumber': '{n}. etap',
+  'transports.chain.platform': '{value}. peron',
+  'transports.chain.seat': '{value}. koltuk',
+  'transports.chain.error.stopName':
+    'Her durağın bir adı olmalı — aktarmayı burada yapıyorsunuz.',
+  'transports.chain.error.stopNameLong':
+    'Bir durağın adı 200 karakterin altında kalmalı.',
+  'transports.chain.error.timezone': 'Listeden bir saat dilimi seçin.',
+  'transports.chain.error.tooManyLegs': 'Bir zincir en fazla {max} etap tutar.',
   'transports.bookingRefFor': '{title} için rezervasyon numarası',
   'transports.doorToDoor': 'Kapıdan kapıya {gap} sürüyor.',
   'transports.title.fromTo': '{operator} {from} – {to}',
@@ -457,9 +605,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Karşılaştırılacak saat yok',
   'transports.junction.unknown.detail':
-    'İki etaba da tarih ve saat gir, bu aktarma senin için denetlenir.',
+    'İki yolculuğa da tarih ve saat gir, bu aktarma senin için denetlenir.',
   'transports.junction.impossible.headline':
-    'Önceki etap varmadan {gap} önce kalkıyor',
+    'Önceki yolculuk varmadan {gap} önce kalkıyor',
   'transports.junction.impossible.detail':
     '“{to}”, “{from}” varmadan kalkıyor; ikisine de yetişilmez. Birini kaydır.',
   'transports.junction.tight.headline': 'Aktarma için {gap}',
@@ -469,7 +617,7 @@ const messages = {
     '{place} içinde {mode} genelde yaklaşık {required} gerektirir. Bu sefer dar.',
   'transports.junction.ok.headline': 'Arada {gap}',
   'transports.junction.ok.detail':
-    '{landing} varışlı, ama sonraki etap {boarding} çıkışlı — karşıya geçmen gerekecek.',
+    '{landing} varışlı, ama sonraki yolculuk {boarding} çıkışlı — karşıya geçmen gerekecek.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Not paylaşıldı',

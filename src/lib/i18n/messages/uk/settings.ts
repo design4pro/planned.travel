@@ -165,6 +165,12 @@ const messages = {
   'appearance.map.workspace': 'Як у просторі',
   'appearance.map.light': 'Папір — світла',
   'appearance.map.dark': 'Графіт — темна',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'На спільному екрані',
+  'appearance.privacy.codesLabel':
+    'Приховувати коди підтвердження, доки я не попрошу',
+  'appearance.privacy.codesHint':
+    'Номери бронювань і коди підтвердження лишаються прихованими в розділі бронювань і в переїздах, доки ви не наведете на них курсор, не переведете фокус або не торкнетеся їх. Ціни не приховуються ніколи.',
   'appearance.saveFailed': 'Ця зміна не збереглася',
   'appearance.saveFailedBody':
     'Тут вона видна, але на наступному пристрої, звідки ви увійдете, її не буде.',

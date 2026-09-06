@@ -181,6 +181,38 @@ pnpm exec wrangler d1 execute planned-travel-db --remote \
   --command "select name from sqlite_master where type='table' order by name;"
 ```
 
+### The airport catalogue
+
+One table ships empty on purpose. `airports` is platform reference data — a build-time cut of a
+public-domain source, identical for every workspace — so the migration creates the shape and a
+committed artefact carries the rows:
+
+```bash
+pnpm db:airports:local           # after db:migrate:local, in a checkout
+pnpm db:airports:remote          # after db:migrate:remote  (--env staging for staging)
+```
+
+Deployed databases need no hand: both deploy workflows run the loader between the migration and
+the Worker upload, so a refreshed `public/atlas/airports-iata.v1.txt` reaches production by being
+merged. The commands above are for a checkout, and for repairing a deployed table out of band.
+
+The load is an upsert followed by a sweep, not a replace: every artefact row is written with the
+same stamp in `updated_at`, and one `DELETE` afterwards removes whatever that pass did not touch —
+which is how an airport that left the cut leaves the table. It is written that way because
+`d1 execute` promises no transaction across a file's statements, so a `DELETE` first would leave a
+window with an empty catalogue on every single deploy. Re-running it is therefore free and never
+visible to a reader.
+
+Skipping it is not a loud failure: everywhere the catalogue is a shortcut over free text, the
+screens keep working. The connection search is the exception — its stop picker is a gate,
+because a timetable router is asked _where_ and free text carries no coordinates — so an empty
+table means that one feature can never resolve a stop.
+
+```bash
+pnpm exec wrangler d1 execute planned-travel-db --remote \
+  --command "select count(*) from airports;"   # 9057 for the committed artefact
+```
+
 You should see **62 domain tables + 9 Better Auth tables** (`user`, `session`, `account`,
 `verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). Both numbers are
 read off the schema rather than remembered: `grep -c 'sqliteTable(' src/server/db/schema.ts` prints
@@ -315,6 +347,7 @@ pnpm exec wrangler secret put CLOUDFLARE_API_TOKEN        # scoped: D1:read
 pnpm exec wrangler secret put D1_DATABASE_ID              # the id from §1
 pnpm exec wrangler secret put BROWSER_RENDERING_API_TOKEN # PDF export
 pnpm exec wrangler secret put FIRECRAWL_API_KEY           # catalogue scrape — phase D, §15.1
+pnpm exec wrangler secret put HERE_API_KEY                # connection search — ADR 0011
 pnpm exec wrangler secret put FIRECRAWL_WEBHOOK_SECRET    # crawl callbacks  — phase D, §15.2
 openssl rand -base64 32 | pnpm exec wrangler secret put MCP_TOKEN_PEPPER  # phase E, §14.3
 ```
@@ -1423,6 +1456,13 @@ Workers_ grant §10 already gives it.
 pnpm exec wrangler deployments list          # find the previous version id
 pnpm exec wrangler rollback VERSION_ID
 ```
+
+Or, without a local checkout and without credentials on your machine: the **Rollback production**
+workflow (`.github/workflows/rollback.yml`), run from Actions with that version id and a one-line
+reason. It shares the `deploy-production` concurrency group, so it cannot race the deploy it is
+undoing, and it ends on the same two smoke requests `deploy.yml` does. It moves nothing else —
+`main` still points at the version you rolled back, so the follow-up is a revert PR or the next
+merge re-deploys it.
 
 Rollback reverts code, not data. **That is only safe across migrations that are additive**, and §5
 says why: the reader a rollback strands is the previous Worker's SQL, not the rows. An additive

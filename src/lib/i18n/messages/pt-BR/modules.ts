@@ -29,57 +29,58 @@ const messages = {
     'As atualizações ao vivo estão desligadas. Tudo continua salvando; recarregue ou tente de novo para se atualizar.',
   'presence.reconnect': 'Reconectar',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Todos os trechos',
-  'transports.empty.title': 'Ainda sem trechos',
+  'transports.filter.all': 'Todos os deslocamentos',
+  'transports.empty.title': 'Ainda sem deslocamentos',
   'transports.empty.body':
     'Voos, trens, balsas e o trajeto do aeroporto moram aqui, com os códigos de reserva e números de assento à mão no dia — e cada conexão conferida contra a anterior.',
-  'transports.empty.action': 'Adicionar o primeiro trecho',
-  'transports.filtered.title': 'Nenhum trecho desse tipo',
+  'transports.empty.action': 'Adicionar o primeiro deslocamento',
+  'transports.filtered.title': 'Nenhum deslocamento desse tipo',
   'transports.filtered.body':
-    'Cada trecho desta viagem vai de um jeito diferente. Volte para “{label}” para ver todos.',
-  'transports.filtered.action': 'Mostrar todos os trechos',
+    'Cada deslocamento desta viagem vai de um jeito diferente. Volte para “{label}” para ver todos.',
+  'transports.filtered.action': 'Mostrar todos os deslocamentos',
   'transports.alert.impossible.title': {
     one: 'Uma conexão é impossível',
-    many: '{legs} conexões são impossíveis',
-    other: '{legs} conexões são impossíveis',
+    many: '{value} conexões são impossíveis',
+    other: '{value} conexões são impossíveis',
   },
   'transports.alert.impossible.body':
-    'Um trecho parte antes de o anterior chegar. Os nós abaixo dizem quais e por quanto.',
+    'Um deslocamento parte antes de o anterior chegar. Os nós abaixo dizem quais e por quanto.',
   'transports.alert.tight.title': {
     one: 'Uma conexão está apertada',
-    many: '{legs} conexões estão apertadas',
-    other: '{legs} conexões estão apertadas',
+    many: '{value} conexões estão apertadas',
+    other: '{value} conexões estão apertadas',
   },
   'transports.alert.tight.body':
     'Há tempo, mas pouco para o meio que você vai pegar. Os nós abaixo mostram quanto cada um deixa.',
   'transports.badge.impossible': {
-    one: '{legs} conexão quebrada',
-    many: '{legs} conexões quebradas',
-    other: '{legs} conexões quebradas',
+    one: '{value} conexão quebrada',
+    many: '{value} conexões quebradas',
+    other: '{value} conexões quebradas',
   },
   'transports.badge.tight': {
-    one: '{legs} conexão apertada',
-    many: '{legs} conexões apertadas',
-    other: '{legs} conexões apertadas',
+    one: '{value} conexão apertada',
+    many: '{value} conexões apertadas',
+    other: '{value} conexões apertadas',
   },
   'transports.badge.ok': 'Todas as conexões funcionam',
   'transports.remove.body':
-    'O trecho sai desta viagem de vez, junto com a referência da reserva e o assento. Se ele só foi cancelado, mude o status para Cancelado em vez disso.',
-  'transports.remove.confirm': 'Remover o trecho',
-  'transports.menu.edit': 'Editar o trecho…',
+    'O deslocamento sai desta viagem de vez, junto com a referência da reserva e o assento. Se ele só foi cancelado, mude o status para Cancelado em vez disso.',
+  'transports.remove.confirm': 'Remover o deslocamento',
+  'transports.menu.edit': 'Editar o deslocamento…',
   'transports.field.service': 'Serviço',
   'transports.field.bookingRef': 'Referência da reserva',
   'transports.field.seat': 'Assento',
   'transports.field.distance': 'Distância',
   'transports.noTime': 'Ainda sem horário',
   'transports.toast.statusFailed.title': 'O status não mudou',
-  'transports.toast.statusFailed.body': 'O trecho continua no estado anterior.',
-  'transports.toast.removed': 'Trecho removido',
-  'transports.toast.removeFailed': 'O trecho não foi removido',
+  'transports.toast.statusFailed.body':
+    'O deslocamento continua no estado anterior.',
+  'transports.toast.removed': 'Deslocamento removido',
+  'transports.toast.removeFailed': 'O deslocamento não foi removido',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Adicionar um trecho',
-  'transports.dialog.editTitle': 'Editar este trecho',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Adicionar um deslocamento',
+  'transports.dialog.editTitle': 'Editar este deslocamento',
   'transports.dialog.description':
     'Voos, trens, balsas e o trajeto do aeroporto. Os horários são os locais impressos no bilhete.',
   'transports.form.modeLegend': 'Como você vai',
@@ -88,6 +89,7 @@ const messages = {
   'transports.field.place': 'Local',
   'transports.field.code': 'Código',
   'transports.field.date': 'Data',
+  'transports.field.time': 'Partida a partir de',
   'transports.field.departurePlaceholder': 'São Paulo Guarulhos',
   'transports.field.arrivalPlaceholder': 'Tóquio Haneda',
   'transports.field.carrier': 'Companhia',
@@ -96,14 +98,14 @@ const messages = {
     'O código que você vai informar no balcão.',
   'transports.field.notesPlaceholder':
     'Pedido assento no corredor. Bagagem despachada até Quioto.',
-  'transports.action.add': 'Adicionar o trecho',
-  'transports.action.save': 'Salvar o trecho',
-  'transports.action.saving': 'Salvando o trecho',
-  'transports.toast.added': 'Trecho adicionado',
+  'transports.action.add': 'Adicionar o deslocamento',
+  'transports.action.save': 'Salvar o deslocamento',
+  'transports.action.saving': 'Salvando o deslocamento',
+  'transports.toast.added': 'Deslocamento adicionado',
   'transports.toast.addedBody': 'Já está na ordem da viagem.',
-  'transports.toast.addFailed': 'O trecho não foi adicionado',
-  'transports.toast.updated': 'Trecho atualizado',
-  'transports.toast.updateFailed': 'O trecho não foi atualizado',
+  'transports.toast.addFailed': 'O deslocamento não foi adicionado',
+  'transports.toast.updated': 'Deslocamento atualizado',
+  'transports.toast.updateFailed': 'O deslocamento não foi atualizado',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Nome',
@@ -113,6 +115,7 @@ const messages = {
   'field.status': 'Situação',
   'form.saveError': 'Isso não foi salvo',
   'action.cancel': 'Cancelar',
+  'action.showCode': 'Mostrar {label}',
   'book.status.none': 'Sem situação',
   'book.status.pending': 'Pendente',
   'book.status.confirmed': 'Confirmada',
@@ -126,10 +129,19 @@ const messages = {
   'book.empty.body':
     'Hospedagens, mesas, passeios e ingressos ficam aqui — com o número de confirmação onde você vai achar na porta, e a data que os coloca na linha do tempo.',
   'book.empty.action': 'Adicionar a primeira reserva',
-  'book.filtered.title': 'Nada nessa situação',
+  'book.filtered.title': 'Ainda nada desse tipo',
   'book.filtered.body':
-    'Cada reserva desta viagem está em um estágio diferente. Volte para “{label}” para ver todas.',
-  'book.filtered.action': 'Mostrar tudo',
+    'Não há nada reservado dos tipos que você escolheu. Limpe o filtro para ver o resto do balcão.',
+  'book.filtered.action': 'Limpar filtro',
+  'book.panel.outstanding': 'Ainda a resolver',
+  'book.panel.outstandingEmpty': 'Nada pendente — tudo aqui está resolvido.',
+  'book.panel.settled': 'Resolvido',
+  'book.panel.settledEmpty':
+    'Nada resolvido ainda — está tudo por correr atrás.',
+  'book.import.badge': 'Importação não conferida',
+  'book.import.hint':
+    'Importado de uma confirmação. Abra e salve para marcá-lo como conferido.',
+  'book.journeyLink': 'Na aba de transportes',
   'filter.all': 'Tudo',
   'book.remove.body':
     'Ela sai da linha do tempo de vez. Se só foi cancelada, mude a situação para Cancelada para manter o registro.',
@@ -217,7 +229,7 @@ const messages = {
   'book.hint.ticket':
     'Uma entrada com horário, um passe de museu, um jogo. Deixe o código à mão.',
   'book.hint.transport':
-    'Um assento reservado. Trechos completos com códigos ficam em {module}.',
+    'Um assento reservado. Deslocamentos completos com códigos ficam em {module}.',
   'book.hint.other': 'Qualquer coisa no seu nome que não caiba nas outras.',
 
   /* -------------------------------------- lists: the dialogs */
@@ -410,6 +422,14 @@ const messages = {
   'book.error.url': 'Um link precisa começar com http:// ou https://.',
   'book.error.confirmationLong':
     'Esse número de confirmação é comprido demais para guardar.',
+  'book.error.stopGone': 'Essa parada não está mais nesta viagem.',
+  'book.ledger.unlinked':
+    'A linha de custo desta reserva continuará nos custos da viagem, mas não estará mais vinculada a ela.',
+  'book.ledger.updated': 'A linha de custo desta reserva passará para {money}.',
+  'book.ledger.needsDate':
+    'Dê uma data a esta reserva e o custo dela entrará nos custos da viagem.',
+  'book.ledger.added':
+    'Uma linha de {money} será adicionada aos custos desta viagem.',
   'book.fieldName.provider': 'operadora',
   'book.fieldName.location': 'local',
   'book.fieldName.confirmationNumber': 'número de confirmação',
@@ -420,6 +440,18 @@ const messages = {
   'book.fieldName.endTime': 'horário de fim',
   'book.fieldName.guests': 'número de pessoas',
   'book.fieldName.price': 'preço',
+  'book.fieldName.stop': 'parada',
+  'book.field.stop': 'Parada vinculada',
+  'book.field.stopHint': 'A qual parada do plano esta reserva se refere.',
+  'book.field.stopHintEmpty':
+    'Adicione primeiro um lugar a um dia e depois você poderá vincular esta reserva a ele',
+  'book.field.stopPlaceholder': 'Sem parada',
+  'book.field.stopSearch': 'Busque paradas e dias',
+  'book.field.stopEmpty': 'Nenhuma parada corresponde',
+  'book.ledger.refused.title': 'Salvo, mas não adicionado aos custos',
+  'book.ledger.refused.body':
+    'A reserva está na viagem. Adicionar a linha de custo aos custos da viagem não deu certo — tente essa metade de novo.',
+  'book.action.ledgerRetry': 'Adicionar aos custos',
   'book.copyConfirmation': 'o número de confirmação de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -435,7 +467,63 @@ const messages = {
   'transports.mode.bike': 'Bicicleta',
   'transports.mode.walk': 'A pé',
   'transports.mode.other': 'Outro',
-  'transports.mode.fallback': 'Trecho',
+  'transports.mode.fallback': 'Deslocamento',
+  'transports.rank.earliest': 'Chegada mais cedo',
+  'transports.rank.fewestChanges': 'Menos baldeações',
+  'transports.connection.findStop': 'Busque uma parada',
+  'transports.connection.findStopSearch': 'GRU, Luz, São Paulo…',
+  'transports.connection.findStopEmpty':
+    'Nenhuma parada com esse nome no catálogo.',
+  'transports.connection.hideStops': 'Esconder as paradas',
+  'transports.connection.seeStops': 'Ver as paradas',
+  'transports.connection.saving': 'Salvando a conexão',
+  'transports.connection.use': 'Usar esta',
+  'transports.connection.onFoot': 'A pé',
+  'transports.connection.service': 'Serviço',
+  'transports.connection.direct': 'direto',
+  'transports.connection.changes': {
+    one: '{changes} baldeação',
+    many: '{changes} baldeações',
+    other: '{changes} baldeações',
+  },
+  'transports.connection.tooLong':
+    'Esta conexão tem mais de {max} trechos, mais do que cabe num único registro de viagem. Busque um salto mais curto e anote o resto à parte.',
+  'transports.connection.refusal.ceiling': 'Não restam buscas neste mês',
+  'transports.connection.refusal.unconfigured':
+    'A busca de conexões está desligada neste deployment',
+  'transports.connection.refusal.provider':
+    'O serviço de horários não respondeu',
+  'transports.connection.refusal.plan':
+    'A busca de conexões não faz parte deste plano',
+  'transports.connection.refusal.planBody':
+    'Mude de plano para consultar horários de dentro de uma viagem. Um trecho continua podendo ser anotado à mão.',
+  'transports.connection.refusal.ceilingBody':
+    'A cota mensal de {ceiling} acabou e renova no primeiro dia do mês que vem. Um trecho continua podendo ser anotado à mão.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Nenhum serviço de horários está configurado aqui, então nada foi buscado. Anote o trecho à mão.',
+  'transports.connection.refusal.providerBody':
+    'Não voltou nada para mostrar. Tente de novo daqui a pouco ou anote o trecho à mão.',
+  'transports.connection.invitation':
+    'Duas paradas e uma data, e os horários respondem. Nada é salvo até você escolher uma.',
+  'transports.connection.empty':
+    'Nenhuma conexão foi encontrada entre essas duas paradas nessa data. Tente uma estação vizinha, ou amplie o filtro de modos.',
+  'transports.connection.searchFailed': 'A busca não rodou',
+  'transports.connection.searchFailedBody': 'Tente de novo daqui a pouco.',
+  'transports.connection.saved': 'Conexão salva',
+  'transports.connection.replaced': 'Rota substituída',
+  'transports.connection.replacedBody':
+    'O código da reserva e o assento ficam intactos.',
+  'transports.connection.saveFailed': 'A conexão não foi salva',
+  'transports.connection.saveError': 'Isso não foi salvo',
+  'transports.connection.fromHint':
+    'Escolha uma parada — a um horário se pergunta onde, não como se chama.',
+  'transports.connection.toHint': 'Escolha uma parada do catálogo.',
+  'transports.connection.timeHint':
+    'Um horário responde com as próximas partidas, então isto decide quais.',
+  'transports.connection.onlyModes': 'Só estes modos',
+  'transports.connection.searching': 'Buscando nos horários',
+  'transports.connection.search': 'Buscar conexões',
+  'transports.connection.title': 'De {from} a {to}',
   'transports.status.idea': 'Ideia',
   'transports.status.pending': 'Pendente',
   'transports.status.confirmed': 'Confirmado',
@@ -449,8 +537,15 @@ const messages = {
   'transports.end.toStation': 'Estação de chegada',
   'transports.end.from': 'De onde',
   'transports.end.to': 'Para onde',
+  'transports.end.pickUp': 'Retirada',
+  'transports.end.dropOff': 'Devolução',
+  'transports.end.departureDay': 'Dia da partida',
+  'transports.end.arrivalDay': 'Dia da chegada',
+  'transports.end.pickUpDay': 'Dia da retirada',
+  'transports.end.returnDay': 'Dia da devolução',
+  'transports.dayNumber': 'Dia {n}',
   'transports.error.titleEmpty':
-    'Dê a este trecho um nome que você reconheça numa lista.',
+    'Dê a este deslocamento um nome que você reconheça numa lista.',
   'transports.error.date': 'Uma data se escreve AAAA-MM-DD.',
   'transports.error.time':
     'Um horário se escreve HH:MM no formato de 24 horas.',
@@ -461,9 +556,66 @@ const messages = {
   'transports.error.code': 'Um código tem de 2 a 8 letras ou dígitos.',
   'transports.error.distance':
     'Uma distância é um número de quilômetros, até 100.000.',
-  'transports.error.arrivesBeforeDeparts': 'Este trecho chega antes de partir.',
+  'transports.error.arrivesBeforeDeparts':
+    'Este deslocamento chega antes de partir.',
   'transports.error.timingHint':
-    'Mova um dos dois para o trecho poder ser pego de verdade.',
+    'Mova um dos dois horários para o deslocamento poder ser pego de verdade.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'O dia da chegada vem antes do dia da partida.',
+  'transports.error.returnDayBeforePickUp':
+    'O dia da devolução vem antes do dia da retirada.',
+  'transports.toast.chainFailed': 'Os trechos não foram salvos',
+  'transports.toast.chainFallback':
+    'A viagem foi salva, mas os trechos dela não.',
+  'transports.field.noDay': 'Ainda sem dia',
+  'transports.fill.legend': 'Como preencher isto',
+  'transports.fill.manual': 'Digitar você mesmo',
+  'transports.fill.searchAgain': 'Buscar de novo',
+  'transports.fill.search': 'Buscar conexões',
+  'transports.chain.unsplit': 'Voltar a ser uma viagem só',
+  'transports.field.arrivalDayHint':
+    'Uma viagem que chega na manhã seguinte diz isso aqui.',
+  'transports.chain.splitHint':
+    'Baldeação no caminho? Registre cada parte com o próprio número do serviço, plataforma, assento e horários.',
+  'transports.chain.split': 'Dividir em trechos',
+  'transports.chain.stopNumber': 'parada {n}',
+  'transports.chain.change': 'Baldeação {n}',
+  'transports.chain.removeStation': 'Remover {label}',
+  'transports.chain.findStation': 'Busque um aeroporto ou estação',
+  'transports.chain.findStationFor':
+    'Busque um aeroporto ou estação para {label}',
+  'transports.chain.findPlaceholder': 'GRU, Guarulhos, São Paulo…',
+  'transports.chain.findEmpty':
+    'Sem correspondência — digite a parada você mesmo abaixo.',
+  'transports.chain.stopLabel': 'Parada',
+  'transports.chain.stopPlaceholder': 'São Paulo Luz',
+  'transports.chain.timezoneHint': 'Em que relógio esta parada corre',
+  'transports.chain.timezoneAt': 'Fuso horário em {label}',
+  'transports.chain.timezonePlaceholder': 'Não informado',
+  'transports.chain.timezoneSearch': 'Tóquio, Lisboa, UTC…',
+  'transports.chain.acrossClocks': '{gap} entre dois relógios',
+  'transports.chain.addStopAfter': 'Adicionar parada depois de {label}',
+  'transports.chain.servicePlaceholder': 'Serra Verde 8',
+  'transports.chain.leaves': 'Sai de {label}',
+  'transports.chain.reaches': 'Chega a {label}',
+  'transports.chain.dayOfLeg': '{label} do trecho {n}',
+  'transports.chain.formError': 'Esta cadeia não pode ser salva',
+  'transports.chain.atCap':
+    'Uma cadeia comporta no máximo {max} trechos — é um limite do que um salvamento carrega, não de quantas baldeações uma viagem pode ter.',
+  'transports.chain.hint':
+    'Adicione uma parada em qualquer trecho para registrar uma troca de trem; cada trecho guarda seu número, plataforma e assento.',
+  'transports.field.timezone': 'Fuso horário',
+  'transports.field.platform': 'Plataforma',
+  'transports.chain.legNumber': 'Trecho {n}',
+  'transports.chain.platform': 'Plataforma {value}',
+  'transports.chain.seat': 'Assento {value}',
+  'transports.chain.error.stopName':
+    'Toda parada precisa de um nome — é aqui que você faz a baldeação.',
+  'transports.chain.error.stopNameLong':
+    'O nome de uma parada deve ter menos de 200 caracteres.',
+  'transports.chain.error.timezone': 'Escolha um fuso horário na lista.',
+  'transports.chain.error.tooManyLegs':
+    'Uma cadeia comporta no máximo {max} trechos.',
   'transports.bookingRefFor': 'o código de reserva de {title}',
   'transports.doorToDoor': 'São {gap} de porta a porta.',
   'transports.title.fromTo': '{operator} de {from} para {to}',
@@ -473,9 +625,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Nenhum horário para comparar',
   'transports.junction.unknown.detail':
-    'Coloque data e hora nos dois trechos e esta conexão será checada para você.',
+    'Coloque data e hora nos dois deslocamentos e esta conexão será checada para você.',
   'transports.junction.impossible.headline':
-    'Sai {gap} antes de o trecho anterior chegar',
+    'Sai {gap} antes de o deslocamento anterior chegar',
   'transports.junction.impossible.detail':
     '“{to}” sai antes de “{from}” chegar, então não dá para pegar os dois. Mova um deles.',
   'transports.junction.tight.headline': '{gap} para a conexão',
@@ -485,7 +637,7 @@ const messages = {
     'Para {mode} em {place} normalmente se precisa de cerca de {required}. Aqui está apertado.',
   'transports.junction.ok.headline': '{gap} de intervalo',
   'transports.junction.ok.detail':
-    'Chega em {landing} mas o trecho seguinte sai de {boarding} — vai ser preciso atravessar.',
+    'Chega em {landing} mas o deslocamento seguinte sai de {boarding} — vai ser preciso atravessar.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Nota compartilhada',

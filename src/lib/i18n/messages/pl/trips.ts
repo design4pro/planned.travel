@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Nie udało się wczytać kosztów',
   'error.collab': 'Nie udało się wczytać rozmowy',
   'error.book': 'Nie udało się wczytać rezerwacji',
+  'error.transports': 'Przejazdy się nie wczytały',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Plan dnia',
   'plan.places': 'Miejsca',
@@ -75,6 +76,34 @@ const messages = {
   'book.committedCaption': 'Ze wszystkich rezerwacji tej wycieczki',
   'book.onItinerary': 'W planie dnia',
   'book.pinnedCaption': 'Przypięte do dnia planu',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Przejazdy',
+  'transports.empty': 'Nic jeszcze nie zapisano',
+  'transports.count.transports': {
+    one: '{transports} przejazd',
+    few: '{transports} przejazdy',
+    many: '{transports} przejazdów',
+    other: '{transports} przejazdu',
+  },
+  'transports.distance': 'Pokonany dystans',
+  'transports.equator': '≈ {times}× dookoła równika',
+  'transports.noGrouping': 'Nic jeszcze nie pogrupowano',
+  'transports.mostly': 'głównie {mode}',
+  'transports.confirmed': 'Potwierdzone',
+  'transports.stillPending': {
+    one: '{pending} wciąż oczekuje',
+    few: '{pending} wciąż oczekują',
+    many: '{pending} wciąż oczekuje',
+    other: '{pending} wciąż oczekuje',
+  },
+  'transports.spent': 'Wydane na podróż',
+  'transports.noPrices': 'Brak zapisanych cen',
+  'transports.priced': {
+    one: 'z {priced} wycenionego przejazdu',
+    few: 'z {priced} wycenionych przejazdów',
+    many: 'z {priced} wycenionych przejazdów',
+    other: 'z {priced} wycenionych przejazdów',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

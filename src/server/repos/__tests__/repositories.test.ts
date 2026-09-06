@@ -830,7 +830,7 @@ describe('repositories', () => {
   })
 
   describe('transports', () => {
-    it('summarises legs by mode and totals the distance', async () => {
+    it('summarises transports by mode and totals the distance', async () => {
       const trip = await createTrip(tenant.scope, { title: 'Island hop' })
       await createTransport(tenant.scope, {
         tripId: trip.id,
@@ -857,7 +857,7 @@ describe('repositories', () => {
       const summary = await summariseTripTransports(tenant.scope, trip.id)
       expect(summary[0]).toEqual({
         mode: 'flight',
-        legs: 2,
+        count: 2,
         distanceMetres: 4_000_000,
       })
       expect(await totalTripDistanceMetres(tenant.scope, trip.id)).toBe(

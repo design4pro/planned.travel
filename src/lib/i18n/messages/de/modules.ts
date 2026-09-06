@@ -30,40 +30,40 @@ const messages = {
     'Live-Aktualisierungen sind aus. Gespeichert wird weiterhin; lade neu oder versuche es erneut, um aufzuholen.',
   'presence.reconnect': 'Neu verbinden',
   /* ------------------------------------------- the transports timeline */
-  'transports.filter.all': 'Alle Etappen',
-  'transports.empty.title': 'Noch keine Reiseetappen',
+  'transports.filter.all': 'Alle Transfers',
+  'transports.empty.title': 'Noch keine Transfers',
   'transports.empty.body':
     'Flüge, Züge, Fähren und die Fahrt vom Flughafen wohnen hier, mit Buchungscodes und Sitzplatznummern zur Hand am Reisetag — und jeder Übergang gegen den vorherigen geprüft.',
-  'transports.empty.action': 'Erste Etappe hinzufügen',
-  'transports.filtered.title': 'Keine Etappen dieser Art',
+  'transports.empty.action': 'Ersten Transfer hinzufügen',
+  'transports.filtered.title': 'Keine Transfers dieser Art',
   'transports.filtered.body':
-    'Jede Etappe dieser Reise fährt anders. Wechsle zurück zu „{label}“, um alle zu sehen.',
-  'transports.filtered.action': 'Alle Etappen zeigen',
+    'Jeder Transfer dieser Reise nutzt ein anderes Verkehrsmittel. Wechsle zurück zu „{label}“, um alle zu sehen.',
+  'transports.filtered.action': 'Alle Transfers zeigen',
   'transports.alert.impossible.title': {
     one: 'Ein Übergang ist nicht machbar',
-    other: '{legs} Übergänge sind nicht machbar',
+    other: '{value} Übergänge sind nicht machbar',
   },
   'transports.alert.impossible.body':
-    'Eine Etappe fährt ab, bevor die vorherige ankommt. Die Knoten unten sagen, welche und um wie viel.',
+    'Ein Transfer fährt ab, bevor der vorherige ankommt. Die Knoten unten sagen, welche und um wie viel.',
   'transports.alert.tight.title': {
     one: 'Ein Übergang ist knapp',
-    other: '{legs} Übergänge sind knapp',
+    other: '{value} Übergänge sind knapp',
   },
   'transports.alert.tight.body':
     'Zeit ist da, aber nicht viel für das Verkehrsmittel, das du erwischen willst. Die Knoten unten zeigen, wie viel jeder lässt.',
   'transports.badge.impossible': {
-    one: '{legs} gebrochener Übergang',
-    other: '{legs} gebrochene Übergänge',
+    one: '{value} gebrochener Übergang',
+    other: '{value} gebrochene Übergänge',
   },
   'transports.badge.tight': {
-    one: '{legs} knapper Übergang',
-    other: '{legs} knappe Übergänge',
+    one: '{value} knapper Übergang',
+    other: '{value} knappe Übergänge',
   },
   'transports.badge.ok': 'Jeder Übergang passt',
   'transports.remove.body':
-    'Die Etappe verlässt diese Reise endgültig, samt Buchungsnummer und Sitzplatz. Wenn sie nur abgesagt ist, setze ihren Status stattdessen auf Abgesagt.',
-  'transports.remove.confirm': 'Etappe entfernen',
-  'transports.menu.edit': 'Etappe bearbeiten…',
+    'Der Transfer verlässt diese Reise endgültig, samt Buchungsnummer und Sitzplatz. Wenn er nur abgesagt ist, setze seinen Status stattdessen auf Abgesagt.',
+  'transports.remove.confirm': 'Transfer entfernen',
+  'transports.menu.edit': 'Transfer bearbeiten…',
   'transports.field.service': 'Verbindung',
   'transports.field.bookingRef': 'Buchungsnummer',
   'transports.field.seat': 'Sitzplatz',
@@ -71,13 +71,13 @@ const messages = {
   'transports.noTime': 'Noch keine Uhrzeit',
   'transports.toast.statusFailed.title': 'Der Status hat sich nicht geändert',
   'transports.toast.statusFailed.body':
-    'Die Etappe steht noch auf ihrem vorherigen Stand.',
-  'transports.toast.removed': 'Etappe entfernt',
-  'transports.toast.removeFailed': 'Die Etappe wurde nicht entfernt',
+    'Der Transfer steht noch auf seinem vorherigen Stand.',
+  'transports.toast.removed': 'Transfer entfernt',
+  'transports.toast.removeFailed': 'Der Transfer wurde nicht entfernt',
 
-  /* --------------------------------------------- the leg dialog */
-  'transports.dialog.addTitle': 'Etappe hinzufügen',
-  'transports.dialog.editTitle': 'Diese Etappe bearbeiten',
+  /* --------------------------------------- the transport dialog */
+  'transports.dialog.addTitle': 'Transfer hinzufügen',
+  'transports.dialog.editTitle': 'Diesen Transfer bearbeiten',
   'transports.dialog.description':
     'Flüge, Züge, Fähren und die Fahrt vom Flughafen. Die Zeiten sind die lokalen, die auf dem Ticket stehen.',
   'transports.form.modeLegend': 'Womit reist du',
@@ -86,6 +86,7 @@ const messages = {
   'transports.field.place': 'Ort',
   'transports.field.code': 'Kürzel',
   'transports.field.date': 'Datum',
+  'transports.field.time': 'Abfahrt ab',
   'transports.field.departurePlaceholder': 'Frankfurt Flughafen',
   'transports.field.arrivalPlaceholder': 'Tokio Haneda',
   'transports.field.carrier': 'Anbieter',
@@ -94,14 +95,14 @@ const messages = {
     'Der Code, den du am Schalter vorlesen wirst.',
   'transports.field.notesPlaceholder':
     'Gangplatz gewünscht. Gepäck bis Kyoto durchgecheckt.',
-  'transports.action.add': 'Etappe hinzufügen',
-  'transports.action.save': 'Etappe speichern',
-  'transports.action.saving': 'Etappe wird gespeichert',
-  'transports.toast.added': 'Etappe hinzugefügt',
+  'transports.action.add': 'Transfer hinzufügen',
+  'transports.action.save': 'Transfer speichern',
+  'transports.action.saving': 'Transfer wird gespeichert',
+  'transports.toast.added': 'Transfer hinzugefügt',
   'transports.toast.addedBody': 'Sie steht jetzt in der Reisefolge.',
-  'transports.toast.addFailed': 'Die Etappe wurde nicht hinzugefügt',
-  'transports.toast.updated': 'Etappe aktualisiert',
-  'transports.toast.updateFailed': 'Die Etappe wurde nicht aktualisiert',
+  'transports.toast.addFailed': 'Der Transfer wurde nicht hinzugefügt',
+  'transports.toast.updated': 'Transfer aktualisiert',
+  'transports.toast.updateFailed': 'Der Transfer wurde nicht aktualisiert',
 
   /* ------------------------------- shared labels and the bookings timeline */
   'field.name': 'Bezeichnung',
@@ -111,6 +112,7 @@ const messages = {
   'field.status': 'Zustand',
   'form.saveError': 'Das wurde nicht gespeichert',
   'action.cancel': 'Abbrechen',
+  'action.showCode': '{label} anzeigen',
   'book.status.none': 'Ohne Zustand',
   'book.status.pending': 'Offen',
   'book.status.confirmed': 'Bestätigt',
@@ -125,10 +127,19 @@ const messages = {
   'book.empty.body':
     'Unterkünfte, Tische, Touren und Tickets gehören hierher — mit der Bestätigungsnummer dort, wo du sie an der Tür findest, und dem Datum, das sie auf die Zeitachse setzt.',
   'book.empty.action': 'Erste Buchung hinzufügen',
-  'book.filtered.title': 'Nichts in diesem Zustand',
+  'book.filtered.title': 'Noch nichts dieser Art',
   'book.filtered.body':
-    'Jede Buchung dieser Reise steht anders da. Wechsle zurück zu „{label}“, um alle zu sehen.',
-  'book.filtered.action': 'Alles zeigen',
+    'Von den gewählten Arten ist hier nichts gebucht. Setze den Filter zurück, um den Rest des Schalters zu sehen.',
+  'book.filtered.action': 'Filter zurücksetzen',
+  'book.panel.outstanding': 'Noch zu klären',
+  'book.panel.outstandingEmpty': 'Nichts offen — alles hier ist geklärt.',
+  'book.panel.settled': 'Geklärt',
+  'book.panel.settledEmpty':
+    'Noch nichts geklärt — alles ist noch nachzuhalten.',
+  'book.import.badge': 'Ungeprüfter Import',
+  'book.import.hint':
+    'Aus einer Bestätigung importiert. Öffne und speichere sie, um sie als geprüft zu markieren.',
+  'book.journeyLink': 'Im Transport-Tab',
   'filter.all': 'Alles',
   'book.remove.body':
     'Sie verschwindet endgültig von der Zeitachse. Wenn sie nur abgesagt ist, setze ihren Zustand stattdessen auf Abgesagt, damit der Eintrag bleibt.',
@@ -217,7 +228,7 @@ const messages = {
   'book.hint.ticket':
     'Ein Zeitfenster, ein Museumspass, ein Spiel. Halte den Code parat.',
   'book.hint.transport':
-    'Ein gebuchter Platz. Ganze Etappen mit Codes gehören zu {module}.',
+    'Ein gebuchter Platz. Ganze Transfers mit Codes gehören zu {module}.',
   'book.hint.other':
     'Alles, was auf deinen Namen läuft und nirgends sonst passt.',
 
@@ -414,6 +425,15 @@ const messages = {
   'book.error.url': 'Ein Verweis muss mit http:// oder https:// beginnen.',
   'book.error.confirmationLong':
     'Diese Bestätigungsnummer ist zu lang zum Speichern.',
+  'book.error.stopGone': 'Dieser Halt gehört nicht mehr zu dieser Reise.',
+  'book.ledger.unlinked':
+    'Die Kostenzeile dieser Buchung bleibt in den Reisekosten, ist aber nicht mehr mit der Buchung verknüpft.',
+  'book.ledger.updated':
+    'Die Kostenzeile dieser Buchung wird auf {money} geändert.',
+  'book.ledger.needsDate':
+    'Geben Sie dieser Buchung ein Datum, dann wandern ihre Kosten in die Reisekosten.',
+  'book.ledger.added':
+    'Den Kosten dieser Reise wird eine Zeile über {money} hinzugefügt.',
   'book.fieldName.provider': 'Anbieter',
   'book.fieldName.location': 'Ort',
   'book.fieldName.confirmationNumber': 'Bestätigungsnummer',
@@ -424,6 +444,19 @@ const messages = {
   'book.fieldName.endTime': 'Endzeit',
   'book.fieldName.guests': 'Personenzahl',
   'book.fieldName.price': 'Preis',
+  'book.fieldName.stop': 'Halt',
+  'book.field.stop': 'Verknüpfter Halt',
+  'book.field.stopHint': 'Zu welchem Halt des Plans diese Buchung gehört.',
+  'book.field.stopHintEmpty':
+    'Füge erst einen Ort zu einem Tag hinzu, dann lässt sich die Buchung damit verknüpfen',
+  'book.field.stopPlaceholder': 'An keinen Halt gebunden',
+  'book.field.stopSearch': 'Halte und Tage durchsuchen',
+  'book.field.stopEmpty': 'Kein Halt passt dazu',
+  'book.ledger.refused.title':
+    'Gespeichert, aber nicht zu den Kosten hinzugefügt',
+  'book.ledger.refused.body':
+    'Die Buchung steht auf der Reise. Ihre Kostenzeile zu den Reisekosten hinzuzufügen hat nicht geklappt — versuche diese Hälfte noch einmal.',
+  'book.action.ledgerRetry': 'Zu den Kosten hinzufügen',
   'book.copyConfirmation': 'die Bestätigungsnummer für {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -439,7 +472,62 @@ const messages = {
   'transports.mode.bike': 'Fahrrad',
   'transports.mode.walk': 'Zu Fuß',
   'transports.mode.other': 'Sonstiges',
-  'transports.mode.fallback': 'Etappe',
+  'transports.mode.fallback': 'Transfer',
+  'transports.rank.earliest': 'Frühste Ankunft',
+  'transports.rank.fewestChanges': 'Wenigste Umstiege',
+  'transports.connection.findStop': 'Halt suchen',
+  'transports.connection.findStopSearch': 'FRA, Hbf, Frankfurt…',
+  'transports.connection.findStopEmpty': 'Kein Halt dieses Namens im Katalog.',
+  'transports.connection.hideStops': 'Halte ausblenden',
+  'transports.connection.seeStops': 'Halte anzeigen',
+  'transports.connection.saving': 'Verbindung wird gespeichert',
+  'transports.connection.use': 'Diese nehmen',
+  'transports.connection.onFoot': 'Zu Fuß',
+  'transports.connection.service': 'Fahrt',
+  'transports.connection.direct': 'direkt',
+  'transports.connection.changes': {
+    one: '{changes} Umstieg',
+    other: '{changes} Umstiege',
+  },
+  'transports.connection.tooLong':
+    'Diese Verbindung hat mehr als {max} Etappen und damit mehr, als ein Reisesatz fasst. Suche einen kürzeren Abschnitt und trage den Rest getrennt ein.',
+  'transports.connection.refusal.ceiling':
+    'Diesen Monat keine Suchen mehr übrig',
+  'transports.connection.refusal.unconfigured':
+    'Die Verbindungssuche ist auf diesem Deployment aus',
+  'transports.connection.refusal.provider':
+    'Der Fahrplandienst hat nicht geantwortet',
+  'transports.connection.refusal.plan':
+    'Die Verbindungssuche gehört nicht zu diesem Tarif',
+  'transports.connection.refusal.planBody':
+    'Wechsle den Tarif, um Fahrpläne direkt aus einer Reise heraus zu durchsuchen. Eine Fahrt lässt sich weiterhin von Hand eintragen.',
+  'transports.connection.refusal.ceilingBody':
+    'Das Monatskontingent von {ceiling} ist aufgebraucht und erneuert sich am Ersten des nächsten Monats. Eine Fahrt lässt sich weiterhin von Hand eintragen.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Hier ist kein Fahrplandienst eingerichtet, also wurde nichts gesucht. Trage die Fahrt von Hand ein.',
+  'transports.connection.refusal.providerBody':
+    'Es kam nichts zurück, das sich zeigen ließe. Versuch es gleich noch einmal oder trage die Fahrt von Hand ein.',
+  'transports.connection.invitation':
+    'Zwei Halte und ein Datum, und der Fahrplan antwortet. Gespeichert wird nichts, bis du eine wählst.',
+  'transports.connection.empty':
+    'Zwischen diesen beiden Halten wurde an dem Datum keine Verbindung gefunden. Versuche einen Nachbarbahnhof oder erweitere den Modusfilter.',
+  'transports.connection.searchFailed': 'Die Suche lief nicht',
+  'transports.connection.searchFailedBody': 'Versuche es gleich noch einmal.',
+  'transports.connection.saved': 'Verbindung gespeichert',
+  'transports.connection.replaced': 'Route ersetzt',
+  'transports.connection.replacedBody':
+    'Buchungscode und Sitzplatz bleiben unberührt.',
+  'transports.connection.saveFailed': 'Die Verbindung wurde nicht gespeichert',
+  'transports.connection.saveError': 'Das wurde nicht gespeichert',
+  'transports.connection.fromHint':
+    'Wähle einen Halt — ein Fahrplan wird gefragt wo, nicht wie es heißt.',
+  'transports.connection.toHint': 'Wähle einen Halt aus dem Katalog.',
+  'transports.connection.timeHint':
+    'Ein Fahrplan antwortet mit den nächsten Abfahrten - das hier entscheidet, mit welchen.',
+  'transports.connection.onlyModes': 'Nur diese Modi',
+  'transports.connection.searching': 'Fahrplan wird durchsucht',
+  'transports.connection.search': 'Verbindungen suchen',
+  'transports.connection.title': 'Von {from} nach {to}',
   'transports.status.idea': 'Idee',
   'transports.status.pending': 'Offen',
   'transports.status.confirmed': 'Bestätigt',
@@ -453,8 +541,15 @@ const messages = {
   'transports.end.toStation': 'Bis Bahnhof',
   'transports.end.from': 'Von',
   'transports.end.to': 'Nach',
+  'transports.end.pickUp': 'Abholung',
+  'transports.end.dropOff': 'Rückgabe',
+  'transports.end.departureDay': 'Abfahrtstag',
+  'transports.end.arrivalDay': 'Ankunftstag',
+  'transports.end.pickUpDay': 'Abholtag',
+  'transports.end.returnDay': 'Rückgabetag',
+  'transports.dayNumber': 'Tag {n}',
   'transports.error.titleEmpty':
-    'Gib dieser Etappe einen Namen, den du in einer Liste wiedererkennst.',
+    'Gib diesem Transfer einen Namen, den du in einer Liste wiedererkennst.',
   'transports.error.date': 'Ein Datum schreibt man JJJJ-MM-TT.',
   'transports.error.time':
     'Eine Uhrzeit schreibt man HH:MM im 24-Stunden-Format.',
@@ -466,9 +561,65 @@ const messages = {
   'transports.error.distance':
     'Eine Entfernung ist eine Zahl in Kilometern, bis 100.000.',
   'transports.error.arrivesBeforeDeparts':
-    'Diese Etappe kommt an, bevor sie abfährt.',
+    'Dieser Transfer kommt an, bevor er abfährt.',
   'transports.error.timingHint':
-    'Verschiebe eine davon, damit die Etappe tatsächlich erreichbar ist.',
+    'Verschiebe eine der beiden Zeiten, damit der Transfer tatsächlich erreichbar ist.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'Der Ankunftstag liegt vor dem Abfahrtstag.',
+  'transports.error.returnDayBeforePickUp':
+    'Der Rückgabetag liegt vor dem Abholtag.',
+  'transports.toast.chainFailed': 'Die Etappen wurden nicht gespeichert',
+  'transports.toast.chainFallback':
+    'Die Reise wurde gespeichert, ihre Etappen nicht.',
+  'transports.field.noDay': 'Noch kein Tag',
+  'transports.fill.legend': 'Wie du das ausfüllst',
+  'transports.fill.manual': 'Selbst eintragen',
+  'transports.fill.searchAgain': 'Erneut suchen',
+  'transports.fill.search': 'Verbindungen suchen',
+  'transports.chain.unsplit': 'Wieder zu einer Reise zusammenfassen',
+  'transports.field.arrivalDayHint':
+    'Eine Reise, die am nächsten Morgen landet, sagt das hier.',
+  'transports.chain.splitHint':
+    'Unterwegs umsteigen? Halte jeden Teil mit eigener Zugnummer, Gleis, Sitzplatz und Uhrzeit fest.',
+  'transports.chain.split': 'In Etappen aufteilen',
+  'transports.chain.stopNumber': 'Halt {n}',
+  'transports.chain.change': 'Umstieg {n}',
+  'transports.chain.removeStation': '{label} entfernen',
+  'transports.chain.findStation': 'Flughafen oder Bahnhof suchen',
+  'transports.chain.findStationFor':
+    'Flughafen oder Bahnhof für {label} suchen',
+  'transports.chain.findPlaceholder': 'FRA, Flughafen, Frankfurt…',
+  'transports.chain.findEmpty':
+    'Kein Treffer — trage den Halt unten selbst ein.',
+  'transports.chain.stopLabel': 'Halt',
+  'transports.chain.stopPlaceholder': 'Frankfurt Hbf',
+  'transports.chain.timezoneHint': 'Nach welcher Uhr dieser Halt geht',
+  'transports.chain.timezoneAt': 'Zeitzone bei {label}',
+  'transports.chain.timezonePlaceholder': 'Nicht angegeben',
+  'transports.chain.timezoneSearch': 'Tokio, Lissabon, UTC…',
+  'transports.chain.acrossClocks': '{gap} über zwei Uhren',
+  'transports.chain.addStopAfter': 'Halt nach {label} hinzufügen',
+  'transports.chain.servicePlaceholder': 'ICE 599',
+  'transports.chain.leaves': 'Ab {label}',
+  'transports.chain.reaches': 'An {label}',
+  'transports.chain.dayOfLeg': '{label} von Etappe {n}',
+  'transports.chain.formError': 'Diese Kette lässt sich nicht speichern',
+  'transports.chain.atCap':
+    'Eine Kette fasst höchstens {max} Etappen — das begrenzt, was ein Speichern trägt, nicht wie viele Umstiege eine Reise haben darf.',
+  'transports.chain.hint':
+    'Füge auf einer Etappe einen Halt hinzu, um einen Zugwechsel festzuhalten; jede Etappe behält ihre eigene Zugnummer, ihr Gleis und ihren Sitzplatz.',
+  'transports.field.timezone': 'Zeitzone',
+  'transports.field.platform': 'Gleis',
+  'transports.chain.legNumber': 'Etappe {n}',
+  'transports.chain.platform': 'Gleis {value}',
+  'transports.chain.seat': 'Sitzplatz {value}',
+  'transports.chain.error.stopName':
+    'Jeder Halt braucht einen Namen — hier steigen Sie um.',
+  'transports.chain.error.stopNameLong':
+    'Der Name eines Halts muss unter 200 Zeichen bleiben.',
+  'transports.chain.error.timezone': 'Wählen Sie eine Zeitzone aus der Liste.',
+  'transports.chain.error.tooManyLegs':
+    'Eine Kette fasst höchstens {max} Abschnitte.',
   'transports.bookingRefFor': 'die Buchungsnummer für {title}',
   'transports.doorToDoor': 'Das sind {gap} von Tür zu Tür.',
   'transports.title.fromTo': '{operator} von {from} nach {to}',
@@ -478,9 +629,9 @@ const messages = {
   /* ------------------ transports: whether a hand-over can be made */
   'transports.junction.unknown.headline': 'Keine Zeiten zum Vergleichen',
   'transports.junction.unknown.detail':
-    'Trage bei beiden Etappen Datum und Uhrzeit ein, dann wird dieser Übergang für dich geprüft.',
+    'Trage bei beiden Transfers Datum und Uhrzeit ein, dann wird dieser Übergang für dich geprüft.',
   'transports.junction.impossible.headline':
-    'Fährt {gap} vor der Ankunft der vorigen Etappe ab',
+    'Fährt {gap} vor der Ankunft des vorigen Transfers ab',
   'transports.junction.impossible.detail':
     '„{to}“ fährt ab, bevor „{from}“ ankommt — beide sind nicht zu erreichen. Verschiebe eine davon.',
   'transports.junction.tight.headline': '{gap} zum Umsteigen',
@@ -490,7 +641,7 @@ const messages = {
     'Für {mode} braucht man in {place} meist etwa {required}. Das hier ist knapp.',
   'transports.junction.ok.headline': '{gap} dazwischen',
   'transports.junction.ok.detail':
-    'Ankunft in {landing}, aber die nächste Etappe fährt von {boarding} — du musst hinüberkommen.',
+    'Ankunft in {landing}, aber der nächste Transfer fährt von {boarding} — du musst hinüberkommen.',
 
   /* ------------------------------ collab: the note and poll dialogs */
   'collab.note.toast.shared': 'Notiz geteilt',

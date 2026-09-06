@@ -6,7 +6,7 @@
 #   TARGET_BRANCH=<integration branch> bash scripts/agent/validate.sh --json-out <path> \
 #     [--force-e2e] [--skip-e2e] [--build] [--e2e-projects <csv>] [--e2e-grep <regex>]
 #
-# Always: route-tree freshness gate, typecheck, lint, vitest. --build adds `pnpm build`
+# Always: route-tree freshness gate, db-drift gate, typecheck, lint, vitest. --build adds `pnpm build`
 # after vitest (the cezar ladder turns it on; SPEC §7.1).
 # When the diff since TARGET_BRANCH touches UI paths (glob heuristic below):
 # setup-e2e.sh --if-needed, then the Playwright journeys (this container is CI's
@@ -99,7 +99,13 @@ run_step() { # name command...
 
 route_tree_gate() { pnpm generate-routes && git diff --exit-code -- src/routeTree.gen.ts; }
 
+# `drizzle/` is generated and committed, so a schema edit with no committed migration is a
+# drift exactly like a stale route tree. `< /dev/null` because drizzle-kit prompts on a rename
+# it cannot infer, and an agent loop has nobody to answer it.
+db_drift_gate() { pnpm db:generate < /dev/null && git diff --exit-code -- drizzle/; }
+
 run_step "route-tree" route_tree_gate
+run_step "db-drift" db_drift_gate
 run_step "typecheck" pnpm typecheck
 run_step "lint" pnpm lint
 run_step "vitest" pnpm test

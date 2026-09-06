@@ -16,11 +16,13 @@ export {
   BOOKING_TYPES,
   bookingShape,
   bookingTypeLabel,
+  chooseStop,
   emptyBookingDraft,
   formatMinorForInput,
   hasBookingErrors,
   isBookingStatus,
   isBookingType,
+  ledgerNotice,
   minorUnitDigits,
   parseMoneyToMinor,
   showsField,
@@ -28,9 +30,13 @@ export {
 } from './booking-form'
 export type {
   BookingDraft,
+  BookingDraftContext,
   BookingErrors,
   BookingField,
   BookingStatus,
+  BookingStopChoice,
   BookingType,
   BookingTypeShape,
+  LedgerNotice,
+  LedgerNoticeContext,
 } from './booking-form'

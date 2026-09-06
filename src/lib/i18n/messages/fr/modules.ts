@@ -42,27 +42,27 @@ const messages = {
   'transports.filtered.action': 'Afficher tous les trajets',
   'transports.alert.impossible.title': {
     one: 'Un enchaînement est impossible',
-    many: '{legs} enchaînements sont impossibles',
-    other: '{legs} enchaînements sont impossibles',
+    many: '{value} enchaînements sont impossibles',
+    other: '{value} enchaînements sont impossibles',
   },
   'transports.alert.impossible.body':
     'Un trajet part avant l’arrivée du précédent. Les jonctions ci-dessous disent lesquelles, et de combien.',
   'transports.alert.tight.title': {
     one: 'Un enchaînement est juste',
-    many: '{legs} enchaînements sont justes',
-    other: '{legs} enchaînements sont justes',
+    many: '{value} enchaînements sont justes',
+    other: '{value} enchaînements sont justes',
   },
   'transports.alert.tight.body':
     'Il y a du temps, mais peu pour le mode que vous attrapez. Les jonctions ci-dessous montrent ce que chacune laisse.',
   'transports.badge.impossible': {
-    one: '{legs} enchaînement rompu',
-    many: '{legs} enchaînements rompus',
-    other: '{legs} enchaînements rompus',
+    one: '{value} enchaînement rompu',
+    many: '{value} enchaînements rompus',
+    other: '{value} enchaînements rompus',
   },
   'transports.badge.tight': {
-    one: '{legs} enchaînement juste',
-    many: '{legs} enchaînements justes',
-    other: '{legs} enchaînements justes',
+    one: '{value} enchaînement juste',
+    many: '{value} enchaînements justes',
+    other: '{value} enchaînements justes',
   },
   'transports.badge.ok': 'Chaque enchaînement tient',
   'transports.remove.body':
@@ -80,7 +80,7 @@ const messages = {
   'transports.toast.removed': 'Trajet supprimé',
   'transports.toast.removeFailed': 'Le trajet n’a pas été supprimé',
 
-  /* --------------------------------------------- the leg dialog */
+  /* --------------------------------------- the transport dialog */
   'transports.dialog.addTitle': 'Ajouter un trajet',
   'transports.dialog.editTitle': 'Modifier ce trajet',
   'transports.dialog.description':
@@ -91,6 +91,7 @@ const messages = {
   'transports.field.place': 'Lieu',
   'transports.field.code': 'Indicatif',
   'transports.field.date': 'Jour',
+  'transports.field.time': 'Départ à partir de',
   'transports.field.departurePlaceholder': 'Paris Charles-de-Gaulle',
   'transports.field.arrivalPlaceholder': 'Tokyo-Haneda',
   'transports.field.carrier': 'Transporteur',
@@ -115,6 +116,7 @@ const messages = {
   'field.status': 'Statut',
   'form.saveError': 'Cela n’a pas été enregistré',
   'action.cancel': 'Annuler',
+  'action.showCode': 'Afficher {label}',
   'book.status.none': 'Sans statut',
   'book.status.pending': 'En attente',
   'book.status.confirmed': 'Confirmée',
@@ -129,10 +131,19 @@ const messages = {
   'book.empty.body':
     'Hébergements, tables, visites et billets vont ici — avec le numéro de confirmation là où vous le retrouverez à la porte, et la date qui les place sur la frise.',
   'book.empty.action': 'Ajouter la première réservation',
-  'book.filtered.title': 'Rien dans cet état',
+  'book.filtered.title': 'Rien de ce type pour l’instant',
   'book.filtered.body':
-    'Chaque réservation de ce voyage est à un stade différent. Revenez à « {label} » pour les voir toutes.',
-  'book.filtered.action': 'Tout afficher',
+    'Rien n’est réservé parmi les types que vous avez choisis. Effacez le filtre pour voir le reste du comptoir.',
+  'book.filtered.action': 'Effacer le filtre',
+  'book.panel.outstanding': 'Encore à régler',
+  'book.panel.outstandingEmpty': 'Rien en attente — tout ici est réglé.',
+  'book.panel.settled': 'Réglé',
+  'book.panel.settledEmpty':
+    'Rien de réglé pour l’instant — tout reste à relancer.',
+  'book.import.badge': 'Import non vérifié',
+  'book.import.hint':
+    'Importé depuis une confirmation. Ouvrez-le et enregistrez-le pour le marquer vérifié.',
+  'book.journeyLink': 'Dans l’onglet transports',
   'filter.all': 'Tout',
   'book.remove.body':
     'Elle quitte la frise définitivement. Si elle est seulement annulée, mettez plutôt son statut sur Annulée pour garder la trace.',
@@ -418,6 +429,15 @@ const messages = {
   'book.error.url': 'Un lien doit commencer par http:// ou https://.',
   'book.error.confirmationLong':
     'Ce numéro de confirmation est trop long à enregistrer.',
+  'book.error.stopGone': 'Cet arrêt ne fait plus partie de ce voyage.',
+  'book.ledger.unlinked':
+    'La ligne de coût de cette réservation restera dans les coûts du voyage, sans plus y être liée.',
+  'book.ledger.updated':
+    'La ligne de coût de cette réservation passera à {money}.',
+  'book.ledger.needsDate':
+    'Donnez une date à cette réservation et son coût rejoindra les coûts du voyage.',
+  'book.ledger.added':
+    'Une ligne de {money} sera ajoutée aux coûts de ce voyage.',
   'book.fieldName.provider': 'organisateur',
   'book.fieldName.location': 'lieu',
   'book.fieldName.confirmationNumber': 'numéro de confirmation',
@@ -428,6 +448,18 @@ const messages = {
   'book.fieldName.endTime': 'heure de fin',
   'book.fieldName.guests': 'nombre de personnes',
   'book.fieldName.price': 'prix',
+  'book.fieldName.stop': 'arrêt',
+  'book.field.stop': 'Arrêt lié',
+  'book.field.stopHint': 'À quel arrêt du plan cette réservation correspond.',
+  'book.field.stopHintEmpty':
+    'Ajoutez d’abord un lieu à une journée, puis vous pourrez y rattacher cette réservation',
+  'book.field.stopPlaceholder': 'Lié à aucun arrêt',
+  'book.field.stopSearch': 'Rechercher parmi les arrêts et les journées',
+  'book.field.stopEmpty': 'Aucun arrêt ne correspond',
+  'book.ledger.refused.title': 'Enregistré, mais pas ajouté aux dépenses',
+  'book.ledger.refused.body':
+    'La réservation est sur le voyage. L’ajout de sa ligne de dépense aux dépenses du voyage n’a pas abouti — réessayez cette moitié.',
+  'book.action.ledgerRetry': 'Ajouter aux dépenses',
   'book.copyConfirmation': 'le numéro de confirmation de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -444,6 +476,62 @@ const messages = {
   'transports.mode.walk': 'À pied',
   'transports.mode.other': 'Autre',
   'transports.mode.fallback': 'Trajet',
+  'transports.rank.earliest': 'Arrivée la plus tôt',
+  'transports.rank.fewestChanges': 'Moins de correspondances',
+  'transports.connection.findStop': 'Trouver un arrêt',
+  'transports.connection.findStopSearch': 'CDG, Gare de Lyon, Paris…',
+  'transports.connection.findStopEmpty':
+    'Aucun arrêt de ce nom dans le catalogue.',
+  'transports.connection.hideStops': 'Masquer les arrêts',
+  'transports.connection.seeStops': 'Voir les arrêts',
+  'transports.connection.saving': 'Enregistrement de la connexion',
+  'transports.connection.use': 'Prendre celle-ci',
+  'transports.connection.onFoot': 'À pied',
+  'transports.connection.service': 'Ligne',
+  'transports.connection.direct': 'sans correspondance',
+  'transports.connection.changes': {
+    one: '{changes} correspondance',
+    many: '{changes} correspondances',
+    other: '{changes} correspondances',
+  },
+  'transports.connection.tooLong':
+    'Cette connexion compte plus de {max} tronçons, soit plus qu’un seul enregistrement de voyage ne contient. Cherchez un saut plus court et notez le reste à part.',
+  'transports.connection.refusal.ceiling': 'Plus aucune recherche ce mois-ci',
+  'transports.connection.refusal.unconfigured':
+    'La recherche de connexions est désactivée sur ce déploiement',
+  'transports.connection.refusal.provider':
+    'Le service d’horaires n’a pas répondu',
+  'transports.connection.refusal.plan':
+    'La recherche de connexions ne fait pas partie de cette formule',
+  'transports.connection.refusal.planBody':
+    'Changez de formule pour interroger les horaires depuis un voyage. Un trajet peut toujours être saisi à la main.',
+  'transports.connection.refusal.ceilingBody':
+    'Le quota mensuel de {ceiling} est épuisé ; il se renouvelle le premier du mois prochain. Un trajet peut toujours être saisi à la main.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Aucun service d’horaires n’est configuré ici, donc rien n’a été cherché. Saisissez le trajet à la main.',
+  'transports.connection.refusal.providerBody':
+    'Rien n’est revenu à afficher. Réessayez dans un instant, ou saisissez le trajet à la main.',
+  'transports.connection.invitation':
+    'Deux arrêts et une date, et l’horaire répond. Rien n’est enregistré tant que vous n’avez pas choisi.',
+  'transports.connection.empty':
+    'Aucune connexion trouvée entre ces deux arrêts à cette date. Essayez une gare voisine ou élargissez le filtre de modes.',
+  'transports.connection.searchFailed': 'La recherche n’a pas eu lieu',
+  'transports.connection.searchFailedBody': 'Réessayez dans un instant.',
+  'transports.connection.saved': 'Connexion enregistrée',
+  'transports.connection.replaced': 'Itinéraire remplacé',
+  'transports.connection.replacedBody':
+    'Le code de réservation et le siège restent intacts.',
+  'transports.connection.saveFailed': 'La connexion n’a pas été enregistrée',
+  'transports.connection.saveError': 'Cela n’a pas été enregistré',
+  'transports.connection.fromHint':
+    'Choisissez un arrêt — on demande à un horaire où, pas comment cela s’appelle.',
+  'transports.connection.toHint': 'Choisissez un arrêt dans le catalogue.',
+  'transports.connection.timeHint':
+    'Un horaire répond avec les prochains départs, donc ceci décide lesquels.',
+  'transports.connection.onlyModes': 'Seulement ces modes',
+  'transports.connection.searching': 'Recherche dans les horaires',
+  'transports.connection.search': 'Rechercher des connexions',
+  'transports.connection.title': 'De {from} à {to}',
   'transports.status.idea': 'Idée',
   'transports.status.pending': 'En attente',
   'transports.status.confirmed': 'Confirmé',
@@ -457,6 +545,13 @@ const messages = {
   'transports.end.toStation': 'Gare d’arrivée',
   'transports.end.from': 'Départ',
   'transports.end.to': 'Arrivée',
+  'transports.end.pickUp': 'Prise en charge',
+  'transports.end.dropOff': 'Restitution',
+  'transports.end.departureDay': 'Jour de départ',
+  'transports.end.arrivalDay': 'Jour d’arrivée',
+  'transports.end.pickUpDay': 'Jour de prise en charge',
+  'transports.end.returnDay': 'Jour de restitution',
+  'transports.dayNumber': 'Jour {n}',
   'transports.error.titleEmpty':
     'Donne à ce trajet un nom que tu reconnaîtras dans une liste.',
   'transports.error.date': 'Une date s’écrit AAAA-MM-JJ.',
@@ -471,6 +566,63 @@ const messages = {
   'transports.error.arrivesBeforeDeparts': 'Ce trajet arrive avant de partir.',
   'transports.error.timingHint':
     'Décale l’un des deux pour que le trajet soit réellement attrapable.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'Le jour d’arrivée précède le jour de départ.',
+  'transports.error.returnDayBeforePickUp':
+    'Le jour de restitution précède le jour de prise en charge.',
+  'transports.toast.chainFailed': 'Les tronçons n’ont pas été enregistrés',
+  'transports.toast.chainFallback':
+    'Le voyage a été enregistré, mais pas ses tronçons.',
+  'transports.field.noDay': 'Aucun jour pour l’instant',
+  'transports.fill.legend': 'Comment remplir ceci',
+  'transports.fill.manual': 'Saisir vous-même',
+  'transports.fill.searchAgain': 'Chercher à nouveau',
+  'transports.fill.search': 'Chercher des correspondances',
+  'transports.chain.unsplit': 'Refaire un seul voyage',
+  'transports.field.arrivalDayHint':
+    'Un voyage qui arrive le lendemain matin le dit ici.',
+  'transports.chain.splitHint':
+    'Changement en route ? Notez chaque partie avec son propre numéro de service, quai, siège et horaires.',
+  'transports.chain.split': 'Découper en tronçons',
+  'transports.chain.stopNumber': 'arrêt {n}',
+  'transports.chain.change': 'Correspondance {n}',
+  'transports.chain.removeStation': 'Supprimer {label}',
+  'transports.chain.findStation': 'Trouver un aéroport ou une gare',
+  'transports.chain.findStationFor':
+    'Trouver un aéroport ou une gare pour {label}',
+  'transports.chain.findPlaceholder': 'CDG, Roissy, Paris…',
+  'transports.chain.findEmpty':
+    'Aucun résultat — saisissez l’arrêt vous-même ci-dessous.',
+  'transports.chain.stopLabel': 'Arrêt',
+  'transports.chain.stopPlaceholder': 'Paris Gare de Lyon',
+  'transports.chain.timezoneHint': 'Sur quelle horloge se lit cet arrêt',
+  'transports.chain.timezoneAt': 'Fuseau horaire à {label}',
+  'transports.chain.timezonePlaceholder': 'Non précisé',
+  'transports.chain.timezoneSearch': 'Tokyo, Lisbonne, UTC…',
+  'transports.chain.acrossClocks': '{gap} entre deux horloges',
+  'transports.chain.addStopAfter': 'Ajouter un arrêt après {label}',
+  'transports.chain.servicePlaceholder': 'TGV 6215',
+  'transports.chain.leaves': 'Départ de {label}',
+  'transports.chain.reaches': 'Arrivée à {label}',
+  'transports.chain.dayOfLeg': '{label} du tronçon {n}',
+  'transports.chain.formError': 'Cette chaîne ne peut pas être enregistrée',
+  'transports.chain.atCap':
+    'Une chaîne contient au plus {max} tronçons — c’est une limite de ce qu’un enregistrement transporte, pas du nombre de correspondances d’un voyage.',
+  'transports.chain.hint':
+    'Ajoutez un arrêt sur n’importe quel tronçon pour noter un changement de train ; chaque tronçon garde son numéro, sa voie et son siège.',
+  'transports.field.timezone': 'Fuseau horaire',
+  'transports.field.platform': 'Voie',
+  'transports.chain.legNumber': 'Tronçon {n}',
+  'transports.chain.platform': 'Voie {value}',
+  'transports.chain.seat': 'Siège {value}',
+  'transports.chain.error.stopName':
+    'Chaque arrêt a besoin d’un nom — c’est là que vous changez.',
+  'transports.chain.error.stopNameLong':
+    'Le nom d’un arrêt doit rester sous 200 caractères.',
+  'transports.chain.error.timezone':
+    'Choisissez un fuseau horaire dans la liste.',
+  'transports.chain.error.tooManyLegs':
+    'Une chaîne contient au plus {max} tronçons.',
   'transports.bookingRefFor': 'la référence de réservation de {title}',
   'transports.doorToDoor': 'Cela fait {gap} de porte à porte.',
   'transports.title.fromTo': '{operator} de {from} à {to}',

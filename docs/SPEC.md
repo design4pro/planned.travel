@@ -342,17 +342,18 @@ set of tables, excepted from both rules and stated immediately below. The second
 over rows that do carry an `organization_id`, excepted from the repository rule alone and admitted
 by amendment at the end of this section.
 
-Eleven tables are platform content rather than tenant data:
+Twelve tables are platform content rather than tenant data:
 
 `catalog_sources` · `catalog_runs` · `catalog_ingest` · `catalog_places` ·
 `catalog_place_sources` · `place_packs` · `place_pack_places` · `staff_api_tokens` ·
-`platform_audit_log` · `provider_registry` · `provider_usage`
+`platform_audit_log` · `provider_registry` · `provider_usage` · `airports`
 
-Ten of them carry no `organization_id` at all. `provider_usage` is the exception and the paragraph
-below argues it, because the column there is attribution rather than a tenant discriminator.
+Eleven of them carry no `organization_id` at all. `provider_usage` is the exception and the
+paragraph below argues it, because the column there is attribution rather than a tenant
+discriminator.
 
-That list is closed. A twelfth global table is a change to this contract, not a schema decision a
-builder makes on the way past.
+That list is closed. A thirteenth global table is a change to this contract, not a schema decision
+a builder makes on the way past.
 
 `platform_audit_log` joined the list in Faza B, by amendment rather than on the way past. The
 eight-name form of this sentence contradicted this same section's mandate to write that table on
@@ -405,7 +406,28 @@ a bucket's identity once written; and **unattributable by construction** — a r
 slug, an operation name, a bucket, an organization id and three integers, so no tenant-readable
 field crosses the boundary and a cross-tenant count cannot become a cross-tenant read.
 
-Eleven names, and a twelfth is an amendment.
+`airports` joined the list the same way, in the stage that gave a journey its stations, and the
+argument is shorter than the pair above because the table is simpler than either.
+
+**Why it is platform content.** An airport is a fact about the world - a code, a runway, a city and
+an IANA zone - built from a public-domain source, identical for every workspace and owned by none.
+There is no `organization_id` for `tenantFilter()` to put in a `WHERE` clause, and handing the
+tenant layer a fabricated scope to reach a table it cannot filter is exactly the reach the clause
+below forbids.
+
+**Why the writer clauses do not bind it, and what stands in.** An explicit platform actor,
+`requirePermission` and an audit row bind the _write_ paths of a global table, and this one has no
+write path at all: the rows are cut by `scripts/build-airports.mjs` and loaded out of band, and
+`src/server/catalog/airports.ts` - the only module that reads them - has no insert, no update and
+no delete. There is no authorisation check on the read either, and that is the same fact from the
+other side: a table that carries nothing about any workspace cannot hand one workspace's rows to
+another. What guards it instead is the shape of that module, stated as three properties: a plain
+`Database` rather than a `TenantScope`; **no import from `src/server/repos/**`**, which
+`src/server/catalog/__tests__/isolation.test.ts` checks by walking the module graph rather than by
+grepping for a spelling; and **read-only**, so the absent writer clauses have nothing to be absent
+from. Adding a write path to this table is a change to this contract and not a refactor.
+
+Twelve names, and a thirteenth is an amendment.
 
 These tables must **never** be reached through `src/server/repos/base.ts` or
 `createTenantRepository()`. That layer exists so that forgetting the tenant filter is not
@@ -413,11 +435,14 @@ expressible, and handing it a fabricated, empty, or placeholder tenant context i
 global rows destroys the single guarantee it was built to give. Reaching for
 `createTenantRepository()` here is a defect, not a shortcut.
 
-Their isolation invariant is different and equally mandatory. `platform_audit_log` is the one
-member of the list that `repo.ts` does not own: `repo.ts` appends to it, so it cannot also be
+Their isolation invariant is different and equally mandatory. `platform_audit_log` is one of two
+members of the list that `repo.ts` does not own: `repo.ts` appends to it, so it cannot also be
 reached through it. Its single writer is `src/server/catalog/audit.ts`, and every other clause
 below binds it unchanged - never `createTenantRepository()`, never `base.ts`, always an explicit
-platform actor. For the other eight, all access goes through
+platform actor. `airports` is the other, and it is out for the opposite reason - nothing writes it
+from the application at all, so there is no mutation for `repo.ts` to carry; its single reader is
+`src/server/catalog/airports.ts` and the amendment above states the three properties that stand in
+for the clauses a writer would answer. For the other eight, all access goes through
 `src/server/catalog/repo.ts`, where every mutation takes an explicit platform actor
 (`{ userId, actorKind, role }`), passes `requirePermission` before it touches a row, and writes a
 `platform_audit_log` entry in the same call: actor, action, entity type, entity id, and a

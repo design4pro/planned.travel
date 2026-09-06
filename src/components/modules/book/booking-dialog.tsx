@@ -22,6 +22,7 @@ import {
   Alert,
   Button,
   Chip,
+  Combobox,
   Dialog,
   DialogBody,
   DialogContent,
@@ -34,26 +35,35 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
-import { useTranslate } from '#/lib/i18n'
+import { cn } from '#/lib/cn'
+import { useLocale, useTranslate } from '#/lib/i18n'
+import { formatMoney } from '#/lib/money'
 import { createBookingFn, updateBookingFn } from '#/server/fns/reservations'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import {
   BOOKING_STATUSES,
   BOOKING_TYPES,
   bookingShape,
+  chooseStop,
   emptyBookingDraft,
   formatMinorForInput,
   hasBookingErrors,
   isBookingStatus,
   isBookingType,
+  ledgerNotice,
   parseMoneyToMinor,
   showsField,
   validateBookingDraft,
 } from './booking-form'
 
+import type { ComboboxOption } from '#/components/ui'
 import type { LucideIcon } from 'lucide-react'
 import type { MessageKey, Translate } from '#/lib/i18n'
-import type { BookingDraft, BookingType } from './booking-form'
+import type {
+  BookingDraft,
+  BookingStopChoice,
+  BookingType,
+} from './booking-form'
 import type { BookingDayOption, BookingRow } from '#/server/fns/reservations'
 
 const TYPE_ICON: { readonly [K in BookingType]: LucideIcon } = {
@@ -85,6 +95,75 @@ export function dayLabel(day: BookingDayOption, t: Translate): string {
   return parts.join(' — ')
 }
 
+/**
+ * Every stop of the trip as one option list, each row carrying the day it belongs to as its group.
+ *
+ * The `Combobox` renders a group as an uppercase heading, so "every stop, gathered under its day"
+ * is a shape of the data rather than a component of its own. The day label rides along in
+ * `description` as well as in `group` so that the search box can match it: the primitive filters on
+ * the label and the description, and a reader typing "day 7" is naming the day, not the place.
+ */
+function stopOptions(
+  days: ReadonlyArray<BookingDayOption>,
+  t: Translate,
+): ReadonlyArray<ComboboxOption> {
+  return days.flatMap((day) => {
+    const label = dayLabel(day, t)
+    return day.stops.map((stop) => ({
+      value: stop.assignmentId,
+      label: stop.placeName,
+      description:
+        stop.startTime === null ? label : `${label} · ${stop.startTime}`,
+      group: label,
+    }))
+  })
+}
+
+/**
+ * The picker's own search, over the group heading as well as the label and the description: a
+ * reader typing "day 7" is naming the day, and the primitive's own filter cannot see a group.
+ */
+function matchesStop(option: ComboboxOption, query: string): boolean {
+  const needle = query.trim().toLowerCase()
+  if (needle === '') {
+    return true
+  }
+  return [option.label, option.description, option.group].some(
+    (part) => part?.toLowerCase().includes(needle) ?? false,
+  )
+}
+
+/** The day and date behind one stop, so choosing it can fill an empty date. */
+function stopChoice(
+  days: ReadonlyArray<BookingDayOption>,
+  assignmentId: string,
+): BookingStopChoice | null {
+  for (const day of days) {
+    if (day.stops.some((stop) => stop.assignmentId === assignmentId)) {
+      return { assignmentId, dayId: day.id, date: day.date }
+    }
+  }
+  return null
+}
+
+/**
+ * What the save button offers, which is a statement of what is left to do.
+ *
+ * After a ledger refusal the booking itself is already saved, so pressing it again is not another
+ * save — it is the half that did not go through.
+ */
+function saveLabel(state: {
+  readonly ledgerRefused: boolean
+  readonly editing: boolean
+}): MessageKey {
+  if (state.ledgerRefused) {
+    return 'modules.book.action.ledgerRetry'
+  }
+  return state.editing
+    ? 'modules.book.action.save'
+    : 'modules.book.action.add'
+}
+
 function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
   const currency = row.currency ?? fallbackCurrency
   return {
@@ -103,6 +182,7 @@ function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
     price: formatMinorForInput(row.priceMinor, currency),
     currency,
     dayId: row.dayId ?? '',
+    assignmentId: row.assignmentId ?? '',
     notes: row.notes ?? '',
   }
 }
@@ -124,7 +204,9 @@ export function BookingDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const locale = useLocale()
   const t = useTranslate()
+
   const editing = booking !== undefined
   const formId = useId()
 
@@ -132,6 +214,15 @@ export function BookingDialog({
     emptyBookingDraft(currency),
   )
   const [touched, setTouched] = useState(false)
+  /**
+   * The booking this dialog has already written, when it wrote one and stayed open.
+   *
+   * Only a ledger refusal leaves it open after a successful save, and the retry has to be an
+   * *update* of that row rather than a second create — otherwise pressing "Add it to the ledger"
+   * would book the same thing twice.
+   */
+  const [savedId, setSavedId] = useState<string | null>(null)
+  const [ledgerRefused, setLedgerRefused] = useState(false)
 
   useEffect(() => {
     if (!open) {
@@ -143,6 +234,8 @@ export function BookingDialog({
         : draftFrom(booking, currency),
     )
     setTouched(false)
+    setSavedId(null)
+    setLedgerRefused(false)
   }, [open, booking, currency])
 
   const create = useAction(createBookingFn, {
@@ -154,11 +247,40 @@ export function BookingDialog({
     success: t('modules.book.toast.updated'),
     failure: t('modules.book.toast.updateFailed'),
   })
-  const action = editing ? update : create
+  const action = editing || savedId !== null ? update : create
 
-  const errors = useMemo(() => validateBookingDraft(draft), [draft])
+  const stops = useMemo(() => stopOptions(days, t), [days, t])
+  const stopIds = useMemo(() => stops.map((option) => option.value), [stops])
+  const errors = useMemo(
+    () => validateBookingDraft(draft, { stopIds }),
+    [draft, stopIds],
+  )
   const invalid = hasBookingErrors(errors)
   const shape = bookingShape(draft.type)
+
+  /** The date behind the day this booking is pinned to — the middle link of the ledger's chain. */
+  const linkedDayDate = days.find((day) => day.id === draft.dayId)?.date ?? null
+  /*
+   * The last link of that chain, read off day one rather than sent as a field of its own.
+   *
+   * A trip's day run is built from its own start date, so day one's date *is* the trip's start
+   * date, and an undated trip's days carry none. Deriving it here keeps the payload the route
+   * already forwards unchanged — the alternative is a new prop through two files this stage does
+   * not own — and it is the same figure the server falls back to, so the sentence under the price
+   * cannot promise a line the server then declines to write.
+   */
+  const tripStartDate = days.at(0)?.date ?? null
+  const notice = ledgerNotice(draft, {
+    /*
+     * The link the row carried when the dialog opened, and deliberately not `savedId`: the only
+     * thing that leaves this dialog open after a successful save is a ledger write that was
+     * *refused*, so at that moment there is still no line and the retry has one to add rather than
+     * one to update.
+     */
+    linked: booking?.hasLedgerLine ?? false,
+    dayDate: linkedDayDate,
+    tripStartDate,
+  })
 
   function set<TKey extends keyof BookingDraft>(
     key: TKey,
@@ -176,6 +298,13 @@ export function BookingDialog({
   function errorFor(key: keyof BookingDraft): string | undefined {
     const error = touched ? errors[key] : undefined
     return error === undefined ? undefined : t(error.key, error.params)
+  }
+
+  /** The picker hands back an id; `chooseStop` is what turns it into a day and a date. */
+  function pickStop(next: string | null): void {
+    setDraft((current) =>
+      chooseStop(current, next === null ? null : stopChoice(days, next)),
+    )
   }
 
   async function submit(): Promise<void> {
@@ -201,16 +330,26 @@ export function BookingDialog({
       priceMinor,
       currency: priceMinor === 0 ? '' : draft.currency,
       dayId: draft.dayId,
+      assignmentId: draft.assignmentId,
       notes: draft.notes,
     }
-    const result = editing
-      ? await update.run({
-          data: { ...payload, reservationId: booking.id },
-        })
-      : await create.run({ data: payload })
-    if (result !== null) {
-      onOpenChange(false)
+    const existingId = booking?.id ?? savedId
+    const result =
+      existingId === null
+        ? await create.run({ data: payload })
+        : await update.run({ data: { ...payload, reservationId: existingId } })
+    if (result === null) {
+      return
     }
+    if (result.ledger === 'failed') {
+      // A partial success: the booking is on the trip and its cost line is not. Saying so and
+      // closing would leave the reader to discover a missing line later, so the dialog stays open
+      // and offers the half that failed.
+      setSavedId(result.reservationId)
+      setLedgerRefused(true)
+      return
+    }
+    onOpenChange(false)
   }
 
   return (
@@ -241,6 +380,15 @@ export function BookingDialog({
                 {action.error}
               </Alert>
             )}
+
+            {ledgerRefused ? (
+              <Alert
+                tone="warning"
+                title={t('modules.book.ledger.refused.title')}
+              >
+                {t('modules.book.ledger.refused.body')}
+              </Alert>
+            ) : null}
 
             <fieldset className="min-w-0">
               <legend className="mb-2 text-label font-medium text-ink">
@@ -422,6 +570,39 @@ export function BookingDialog({
               </Field>
             </div>
 
+            {notice === null ? null : (
+              <p
+                data-part="ledger-notice"
+                /*
+                 * `role="status"` rather than an `Alert`: this is a running commentary on the price
+                 * field, so it is announced politely as the reader types and never interrupts them.
+                 * The entrance reuses the shared `pt-rise` keyframe at `--duration-fast`; the
+                 * stylesheet's global `prefers-reduced-motion` rule collapses it.
+                 */
+                role="status"
+                className={cn(
+                  'rounded-lg px-3 py-2 text-caption tabular-nums',
+                  '[animation:pt-rise_var(--duration-fast)_var(--ease-out-quint)_both]',
+                  notice.tone === 'warning'
+                    ? 'bg-warning-soft text-ink-2'
+                    : 'bg-info-soft text-ink-2',
+                )}
+              >
+                {t(
+                  notice.key,
+                  notice.amountMinor === null
+                    ? undefined
+                    : {
+                        money: formatMoney(
+                          notice.amountMinor,
+                          draft.currency,
+                          locale,
+                        ),
+                      },
+                )}
+              </p>
+            )}
+
             {showsField(draft.type, 'confirmationNumber') ? (
               <Field
                 label={t('modules.book.field.confirmation')}
@@ -463,6 +644,42 @@ export function BookingDialog({
                 />
               </Field>
             )}
+
+            {showsField(draft.type, 'assignmentId') ? (
+              <Field
+                label={t('modules.book.field.stop')}
+                error={errorFor('assignmentId')}
+                hint={t(
+                  stops.length === 0
+                    ? 'modules.book.field.stopHintEmpty'
+                    : 'modules.book.field.stopHint',
+                )}
+              >
+                {/*
+                 * The `data-part` hook a capture is driven by, on a wrapper rather than on the
+                 * trigger: `Combobox`'s props are declared rather than spread, so it takes no
+                 * arbitrary attribute. The wrapper is the trigger's only parent, so a click at its
+                 * centre lands on the button inside it.
+                 */}
+                <div data-part="stop-picker" className="w-full">
+                  <Combobox
+                    options={[...stops]}
+                    value={
+                      draft.assignmentId === '' ? null : draft.assignmentId
+                    }
+                    onChange={pickStop}
+                    disabled={stops.length === 0}
+                    clearable
+                    placeholder={t('modules.book.field.stopPlaceholder')}
+                    searchPlaceholder={t('modules.book.field.stopSearch')}
+                    emptyMessage={t('modules.book.field.stopEmpty')}
+                    ariaLabel={t('modules.book.field.stop')}
+                    invalid={errorFor('assignmentId') !== undefined}
+                    filter={matchesStop}
+                  />
+                </div>
+              </Field>
+            ) : null}
 
             {showsField(draft.type, 'url') ? (
               <Field
@@ -512,9 +729,7 @@ export function BookingDialog({
             loading={action.pending}
             loadingLabel={t('modules.book.action.saving')}
           >
-            {editing
-              ? t('modules.book.action.save')
-              : t('modules.book.action.add')}
+            {t(saveLabel({ ledgerRefused, editing }))}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -528,6 +743,7 @@ export function NewBookingAction({ onClick }: { onClick: () => void }) {
 
   return (
     <Button
+      data-part="new-booking"
       variant="primary"
       size="sm"
       shape="pill"

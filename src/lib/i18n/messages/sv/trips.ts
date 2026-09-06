@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Kostnaderna kunde inte läsas in',
   'error.collab': 'Samtalet kunde inte läsas in',
   'error.book': 'Bokningarna kunde inte läsas in',
+  'error.transports': 'Färderna kunde inte laddas',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Resplan',
   'plan.places': 'Platser',
@@ -63,6 +64,28 @@ const messages = {
   'book.committedCaption': 'Över alla bokningar på den här resan',
   'book.onItinerary': 'I resplanen',
   'book.pinnedCaption': 'Fäst vid en dag i planen',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Färder',
+  'transports.empty': 'Inget noterat än',
+  'transports.count.transports': {
+    one: '{transports} färd',
+    other: '{transports} färder',
+  },
+  'transports.distance': 'Tillryggalagd sträcka',
+  'transports.equator': '≈ {times}× runt ekvatorn',
+  'transports.noGrouping': 'Inget grupperat än',
+  'transports.mostly': 'mest {mode}',
+  'transports.confirmed': 'Bekräftade',
+  'transports.stillPending': {
+    one: '{pending} väntar fortfarande',
+    other: '{pending} väntar fortfarande',
+  },
+  'transports.spent': 'Spenderat på resor',
+  'transports.noPrices': 'Inga priser noterade',
+  'transports.priced': {
+    one: 'över {priced} prissatt färd',
+    other: 'över {priced} prissatta färder',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -161,6 +161,12 @@ const messages = {
   'appearance.map.workspace': 'A munkaterületet követi',
   'appearance.map.light': 'Papír — világos',
   'appearance.map.dark': 'Szénszürke — sötét',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'Megosztott képernyőn',
+  'appearance.privacy.codesLabel':
+    'Visszaigazolási kódok elrejtése, amíg meg nem nézem őket',
+  'appearance.privacy.codesHint':
+    'A foglalási hivatkozások és a visszaigazolási számok a foglalások és az utazások nézetében takarva maradnak, amíg rájuk nem mutat, fókuszba nem hozza vagy meg nem érinti őket. Az árakat sosem rejtjük el.',
   'appearance.saveFailed': 'Ez a módosítás nem lett eltárolva',
   'appearance.saveFailedBody':
     'Itt látszik, de a következő eszközön, ahonnan belép, már nem lesz meg.',
