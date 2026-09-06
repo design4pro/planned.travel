@@ -18,10 +18,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { NotFoundError, RepositoryError } from '../context'
 import { createDay, listTripDays } from '../days'
-import { addTripMember, createTrip } from '../trips'
+import { TripRoleError, addTripMember, createTrip } from '../trips'
 import {
   CHAIN_MAX_LEGS,
-  TripRoleError,
   createTransport,
   deleteTransport,
   getTransport,

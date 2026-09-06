@@ -189,3 +189,219 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
     }
   })
 })
+
+test.describe('01-S1 — Who may see a trip and who may change it', () => {
+  /**
+   * This block's route table. One route, because one is what the claim needs: the trip index is
+   * where every tile the demo owner owns is rendered, and the action menu is a property of the tile
+   * rather than of the screen around it.
+   */
+  const TRIPS: RouteCase = {
+    name: 'trips',
+    path: '/trips',
+    ready: 'main',
+  }
+
+  /** The same screen with the favourites scope picked, which is a different read. */
+  const FAVOURITES: RouteCase = {
+    name: 'trips-favourites',
+    path: '/trips?scope=favourites',
+    ready: 'main',
+  }
+
+  const TRIGGER = '[data-part="trip-actions-trigger"]'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * The name of the first tile on the index, read from its heading — the string the trigger's
+   * accessible name has to contain, so the assertion below is measured against the page rather than
+   * against a fixture this spec restates.
+   */
+  async function firstTripTitle(page: Page): Promise<string> {
+    // By role rather than by tag: the index renders its tiles at `h2` and the dashboard grid at
+    // `h3`, and which level a card takes is the surrounding outline's business, not this claim's.
+    const heading = page
+      .locator('[data-part="trip-tile"]')
+      .first()
+      .getByRole('heading')
+    await expect(heading).toHaveCount(1)
+    return (await heading.innerText()).trim()
+  }
+
+  test('the trigger on an owned tile names its own trip', async ({ page }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const title = await firstTripTitle(page)
+    const trigger = page.locator(TRIGGER).first()
+
+    // The demo owner owns every trip in the fixture, so a tile with no trigger at all would mean the
+    // role never reached the payload — the failure mode a menu that renders unconditionally hides.
+    await expect(trigger).toBeVisible()
+    await expect(trigger).toHaveAccessibleName(`Actions for ${title}`)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the menu offers the owner Edit and Archive, and the sheet opens on the trip', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const title = await firstTripTitle(page)
+    await page.locator(TRIGGER).first().click()
+
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: 'Edit' })).toBeVisible()
+    await expect(
+      menu.getByRole('menuitem', { name: /^(Archive|Restore)$/ }),
+    ).toBeVisible()
+    await expect(
+      menu.getByRole('menuitem', { name: /^(Favourite|Unfavourite)$/ }),
+    ).toBeVisible()
+    // Copy arrives in the last `01-S1` slice; a menu that already carried it here would be a menu
+    // whose item has no server function behind it.
+    await expect(
+      menu.getByRole('menuitem', { name: /^Delete( permanently)?$/ }),
+    ).toBeVisible()
+    await expect(menu.getByRole('menuitem')).toHaveCount(4)
+
+    await menu.getByRole('menuitem', { name: 'Edit' }).click()
+
+    const sheet = page.locator('[data-part="trip-edit-sheet"]')
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByLabel('Trip name')).toHaveValue(title)
+
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The trigger is a real tab stop, not a hover-only affordance. Above `md` it rests at zero opacity
+   * and is revealed by `group-focus-within` as well as by hover, which is exactly the property a
+   * CSS-only reveal loses the day somebody swaps the selector for `group-hover` alone — and losing
+   * it makes every trip's actions unreachable without a pointer.
+   */
+  test('the trigger is reachable by keyboard', async ({ page }) => {
+    await visit(page, TRIPS, 'light')
+
+    const trigger = page.locator(TRIGGER).first()
+    await trigger.focus()
+    await expect(trigger).toBeFocused()
+    await expect(trigger).toBeVisible()
+  })
+
+  /**
+   * The favourites scope, which after `01-S1b` is a read of `trip_favourites` for the acting user.
+   *
+   * Deliberately read-only, like every other case in this block. Two of the demo trips carry
+   * `trips.is_favourite = true` — the shared column decision 5 retires — so a scope that still read
+   * it would answer with those two tiles here. An empty list over a `0` pill is the only answer the
+   * per-person table can give a workspace where nobody has starred anything yet, and it is measured
+   * without writing a row, so this spec cannot leave a star behind for the frames another worker is
+   * capturing at the same moment.
+   */
+  test('the favourites scope answers from the reader’s own bookmarks, not the trip’s flag', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, FAVOURITES)
+    await visit(page, FAVOURITES, 'light')
+
+    await expect(page.getByRole('link', { name: 'Favourites 0' })).toBeVisible()
+    await expect(page.locator('[data-part="trip-tile"]')).toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The graduated confirmation (PRD #104 decision 10), measured without deleting anything.
+   *
+   * The claim is not "this fixture's first trip is heavy" — that is the seed's business and it can
+   * change. It is that the **dialog and the server agree**: the confirmation field is rendered when
+   * and only when `requiresTitle` came back true, and the button is armed when and only when the
+   * ceremony that answer asked for has been met. Both branches are asserted, so the case is honest
+   * whichever kind of trip the fixture leads with.
+   *
+   * Nothing is submitted. The delete is terminal and the fixture is shared with every other worker.
+   */
+  test('the delete dialog asks as hard as the server says it must', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const title = await firstTripTitle(page)
+    await page.locator(TRIGGER).first().click()
+    await page
+      .getByRole('menu')
+      .getByRole('menuitem', { name: /^Delete( permanently)?$/ })
+      .click()
+
+    const dialog = page.locator('[data-part="trip-delete-dialog"]')
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText(title)
+
+    const confirm = dialog.getByRole('button', { name: 'Delete permanently' })
+    const field = dialog.getByLabel(/Type the trip’s name/)
+
+    // The summary is fetched when the dialog opens, so the button's resting state is "not yet".
+    await expect(confirm).toBeDisabled()
+
+    // The inventory is drawn only once that answer lands, and it always names at least the one
+    // member every trip has — so waiting for its first line is what makes the branch below a reading
+    // of the answer rather than a race with the skeleton it replaces.
+    await expect(dialog.getByRole('listitem').first()).toBeVisible()
+
+    if ((await field.count()) === 1) {
+      // The heavy branch: nothing arms it but the trip's own name, character for character.
+      await field.fill(`${title} `)
+      await expect(confirm).toBeDisabled()
+      await field.fill(title)
+      await expect(confirm).toBeEnabled()
+    } else {
+      // The light branch: the server said the trip carries nothing, so it arms on its own.
+      await expect(confirm).toBeEnabled()
+    }
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The star is the one item a reader who owns nothing still gets (PRD #104 decision 6), so it is
+   * the item whose label has to be right: it names the state a press would move the trip *to*.
+   * Nothing is starred in the fixture, so every tile offers "Favourite".
+   */
+  test('every tile offers the star, labelled by what a press would do', async ({
+    page,
+  }) => {
+    await visit(page, TRIPS, 'light')
+
+    await page.locator(TRIGGER).first().click()
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+    await expect(
+      menu.getByRole('menuitem', { name: 'Favourite', exact: true }),
+    ).toBeVisible()
+    await expect(
+      menu.getByRole('menuitem', { name: 'Unfavourite', exact: true }),
+    ).toHaveCount(0)
+  })
+})

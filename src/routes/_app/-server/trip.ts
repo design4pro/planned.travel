@@ -73,7 +73,6 @@ export interface TripDetail {
   readonly coverImageUrl: string | null
   readonly accentColour: string | null
   readonly budgetTargetMinor: number | null
-  readonly isFavourite: boolean
   readonly isArchived: boolean
 }
 
@@ -141,7 +140,6 @@ export const loadTripHeader = createServerFn({ method: 'GET' })
         coverImageUrl: trip.coverImageUrl,
         accentColour: trip.accentColour,
         budgetTargetMinor: trip.budgetTargetMinor,
-        isFavourite: trip.isFavourite,
         isArchived: trip.isArchived,
       },
     }

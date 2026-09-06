@@ -21,50 +21,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Field,
-  Input,
-  SimpleSelect,
 } from '#/components/ui'
+import { messageOf } from '#/components/modules/shared'
 import { useTranslate } from '#/lib/i18n'
-import { currencyLabel } from '../settings/-lib/regional'
-import { createTripFn } from '../-server/overview'
-
-import type { Translate } from '#/lib/i18n'
-
-/**
- * The currencies a trip is most often budgeted in, plus the workspace default.
- *
- * The codes are the product's choice; the words beside them are not. Both used
- * to be written out here, which put a second English copy of nine currency names
- * beside the translated set `settings/-lib/regional.ts` already owns.
- */
-const CURRENCY_CODES: ReadonlyArray<string> = [
-  'EUR',
-  'GBP',
-  'USD',
-  'CHF',
-  'PLN',
-  'SEK',
-  'JPY',
-  'AUD',
-  'CAD',
-]
-
-function currencyOptions(
-  t: Translate,
-): ReadonlyArray<{ value: string; label: string }> {
-  return CURRENCY_CODES.map((code) => ({
-    value: code,
-    label: currencyLabel(t, code),
-  }))
-}
-
-function messageOf(t: Translate, error: unknown): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message
-  }
-  return t('shell.newTrip.error')
-}
+import { createTripFn } from '../-server/trip-lifecycle'
+import { TripFormFields, tripFormPayload, useTripForm } from './trip-form'
 
 export interface NewTripDialogProps {
   /** The workspace default currency, pre-selected for a new trip. */
@@ -86,22 +47,19 @@ export function NewTripDialog({
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
-  const [destination, setDestination] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [currency, setCurrency] = useState(defaultCurrency)
-
-  const datesOutOfOrder =
-    startDate !== '' && endDate !== '' && endDate < startDate
-  const canSave = title.trim().length > 0 && !datesOutOfOrder && !saving
+  const form = useTripForm(
+    {
+      title: '',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: defaultCurrency,
+    },
+    saving,
+  )
 
   function reset(): void {
-    setTitle('')
-    setDestination('')
-    setStartDate('')
-    setEndDate('')
-    setCurrency(defaultCurrency)
+    form.reset()
     setError(null)
   }
 
@@ -109,15 +67,7 @@ export function NewTripDialog({
     setSaving(true)
     setError(null)
     try {
-      const { tripId } = await createTripFn({
-        data: {
-          title: title.trim(),
-          destination: destination.trim(),
-          startDate,
-          endDate,
-          currency,
-        },
-      })
+      const { tripId } = await createTripFn({ data: tripFormPayload(form) })
       await router.invalidate()
       setOpen(false)
       reset()
@@ -126,7 +76,7 @@ export function NewTripDialog({
       })
       await navigate({ to: '/trips/$tripId/plan', params: { tripId } })
     } catch (cause) {
-      setError(messageOf(t, cause))
+      setError(messageOf(cause, t('shell.newTrip.error')))
     } finally {
       setSaving(false)
     }
@@ -168,7 +118,7 @@ export function NewTripDialog({
             className="flex flex-col gap-4"
             onSubmit={(event) => {
               event.preventDefault()
-              if (canSave) {
+              if (form.canSave) {
                 void submit()
               }
             }}
@@ -179,64 +129,7 @@ export function NewTripDialog({
               </Alert>
             )}
 
-            <Field label={t('shell.newTrip.name')} required>
-              <Input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder={t('shell.newTrip.namePlaceholder')}
-                maxLength={120}
-                autoComplete="off"
-                required
-              />
-            </Field>
-
-            <Field
-              label={t('shell.newTrip.destination')}
-              hint={t('shell.newTrip.destinationHint')}
-            >
-              <Input
-                value={destination}
-                onChange={(event) => setDestination(event.target.value)}
-                placeholder={t('shell.newTrip.destinationPlaceholder')}
-                maxLength={160}
-                autoComplete="off"
-              />
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={t('shell.newTrip.departure')}>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                />
-              </Field>
-              <Field
-                label={t('shell.newTrip.return')}
-                error={
-                  datesOutOfOrder ? t('shell.newTrip.returnError') : undefined
-                }
-              >
-                <Input
-                  type="date"
-                  value={endDate}
-                  min={startDate === '' ? undefined : startDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                />
-              </Field>
-            </div>
-
-            <Field
-              label={t('shell.newTrip.currency')}
-              hint={t('shell.newTrip.currencyHint')}
-            >
-              <SimpleSelect
-                options={[...currencyOptions(t)]}
-                value={currency}
-                onValueChange={setCurrency}
-                ariaLabel={t('shell.newTrip.currency')}
-              />
-            </Field>
+            <TripFormFields form={form} placeholders />
           </form>
         </DialogBody>
 
@@ -256,7 +149,7 @@ export function NewTripDialog({
             form="new-trip-form"
             variant="primary"
             shape="pill"
-            disabled={!canSave}
+            disabled={!form.canSave}
             loading={saving}
             loadingLabel={t('shell.newTrip.creating')}
           >
