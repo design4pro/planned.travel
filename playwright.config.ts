@@ -178,7 +178,8 @@ export default defineConfig({
     {
       name: 'mobile-safari',
       dependencies: ['setup'],
-      // Includes `defaultBrowserType: 'webkit'`, a 393x852 viewport and touch.
+      // Includes `defaultBrowserType: 'webkit'`, touch and a 393x659 viewport;
+      // its 393x852 is the device `screen`, which is never captured.
       use: { ...devices['iPhone 15'], extraHTTPHeaders: clockPin },
     },
   ],
