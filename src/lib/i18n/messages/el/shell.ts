@@ -400,6 +400,64 @@ const messages = {
   'newTrip.created': 'Το ταξίδι δημιουργήθηκε',
   'newTrip.createdBody': 'Ξεκίνα να βάζεις μέρη στον χάρτη.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Ενέργειες για {title}',
+  'tripActions.favourite': 'Προσθήκη στα αγαπημένα',
+  'tripActions.unfavourite': 'Αφαίρεση από τα αγαπημένα',
+  'tripActions.edit': 'Επεξεργασία',
+  'tripActions.archive': 'Αρχειοθέτηση',
+  'tripActions.restore': 'Επαναφορά',
+  'tripActions.delete': 'Διαγραφή',
+  'tripActions.deleteForGood': 'Οριστική διαγραφή',
+  'tripActions.starFailed': 'Το αγαπημένο δεν αποθηκεύτηκε',
+  'tripActions.starFallback': 'Το ταξίδι επανήλθε όπως ήταν.',
+  'tripActions.archived': 'Το ταξίδι αρχειοθετήθηκε',
+  'tripActions.archiveFailed': 'Το ταξίδι δεν αρχειοθετήθηκε',
+  'tripActions.restored': 'Το ταξίδι επανήλθε',
+  'tripActions.restoreFailed': 'Το ταξίδι δεν επανήλθε',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Επεξεργασία ταξιδιού',
+  'editTrip.submit': 'Αποθήκευση αλλαγών',
+  'editTrip.saving': 'Αποθήκευση ταξιδιού',
+  'editTrip.cancel': 'Ακύρωση',
+  'editTrip.saved': 'Το ταξίδι ενημερώθηκε',
+  'editTrip.errorTitle': 'Αυτό δεν αποθηκεύτηκε',
+  'editTrip.retry': 'Δοκιμάστε ξανά',
+  'editTrip.error': 'Το ταξίδι δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Οριστική διαγραφή του «{title}»;',
+  'deleteTrip.description':
+    'Δεν υπάρχει αναίρεση ούτε κάδος. Η αρχειοθέτηση βγάζει ένα ταξίδι από τη λίστα χωρίς να το χάσετε.',
+  'deleteTrip.reading': 'Ανάγνωση του περιεχομένου αυτού του ταξιδιού',
+  'deleteTrip.errorTitle': 'Αυτό δεν φορτώθηκε',
+  'deleteTrip.summaryError':
+    'Δεν ήταν δυνατή η ανάγνωση του περιεχομένου αυτού του ταξιδιού.',
+  'deleteTrip.confirmLabel':
+    'Πληκτρολογήστε το όνομα του ταξιδιού για επιβεβαίωση',
+  'deleteTrip.deleting': 'Διαγραφή ταξιδιού',
+  'deleteTrip.deleted': 'Το ταξίδι διαγράφηκε',
+  'deleteTrip.failed': 'Το ταξίδι δεν διαγράφηκε',
+  'deleteTrip.carried.reservations': {
+    one: 'κράτηση',
+    other: 'κρατήσεις',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'μετακίνηση',
+    other: 'μετακινήσεις',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'έξοδο',
+    other: 'έξοδα',
+  },
+  'deleteTrip.carried.files': {
+    one: 'αρχείο',
+    other: 'αρχεία',
+  },
+  'deleteTrip.carried.members': {
+    one: 'άτομο',
+    other: 'άτομα',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Ποιος μπορεί να το δει',
   'visibility.private': 'Μόνο εγώ',

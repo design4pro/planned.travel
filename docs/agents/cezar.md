@@ -12,6 +12,12 @@ comes from a script in `scripts/agent/`, and the sweeper below is the only write
   (`baseBranch: develop`, `worktreeRetention: 10`, `maxParallel: 2`, `reviewGate: false`, `skillsRepos: []`).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and automations out of git; only
   `config.json` is tracked, so a checkout that already has an untracked `config.json` must remove it first.
+- Language: `systemPrompt` in `.ai/cezar/config.json` (Settings → Agents edits the same key) is
+  appended to the system prompt of every agent step of every run here, and tells the run to talk to
+  the developer in Polish (messages, `CEZ:ASK` questions, the final report) while everything that
+  leaves the session (code, comments, commits, files, GitHub) stays English. A per-run system prompt
+  from the composer replaces it rather than adding to it, so such a run repeats the language rule;
+  `scripts/agent/__tests__/cezar-config.test.ts` fails when the key is cleared.
 - Service environment: `CEZ_AUTOMATIONS=1` (the `triage-*` and `implement` automations need it), `CEZ_AUTONOMOUS_DEFAULT=0`, and never
   `GH_TOKEN`, `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar copies its own env into the agent's, so a
   token in the service env is a token in every run.
@@ -88,6 +94,36 @@ The steps are `claim` (command), `setup --no-e2e` (command) and the interactive 
 - Tickets are created as `status: queued` and become `ready` only after `sub_issues` and `blocked_by` are
   verified on GitHub, so no implement run can start ahead of its blockers. `.ai/skills/plan-feature/` is a
   thin wrapper so the cockpit lists the skill.
+
+## Workflow `plan-area`
+
+`.ai/cezar/workflows/plan-area.yml` migrates one un-migrated area of `docs/plans/` into a spec and
+then a PRD on one issue, in one run and without a human in the loop (ADR 0017). The human's seat is
+a panel of six project subagents in `.claude/agents/plan-*.md`; the orchestrator
+(`.claude/skills/plan-area/`) dispatches them per round, decides, and logs every round with the
+panel's recommendations to the same `<!-- agent-grilling -->` comment. Start it from the GitHub tab:
+open (or create with the Idea form) the issue that will hold the PRD → "Hand this to the agent" →
+workflow `plan-area`, prompt template `plan-area` with the plan file filled in. The Autonomous flag
+changes nothing: the skill never asks. The steps are `claim` (`cez-plan-claim.sh`), `setup --no-e2e`
+and `/plan-area {{task}}` (opus, with `Agent` allowed).
+
+- Prompt template, added once per cockpit under Settings → Prompt templates (they live in
+  `~/.cezar/ui-state.json`, not in the repo): label `plan-area`, text `area docs/plans/NN-area.md`.
+  Replace `NN-area` before starting; the skill also accepts the two-digit ordinal alone.
+- The panel: `plan-reader` (a digest of at most 15 kB, once), `plan-fact-checker` (the plan's claims
+  about HEAD), `plan-domain-architect`, `plan-product-owner` (the human's seat), `plan-qa-strategist`,
+  `plan-critic` (every draft, at most three passes). Subagents run under the step's `allowedTools`
+  and `bashAllowlist`, so no panel member holds `Bash` (the publish, commit and handback entries
+  would be theirs too); `scripts/agent/__tests__/plan-area.test.ts` enforces both.
+- The spec publishes first (the issue reads `status: review` while the run continues); the PRD
+  publishes only when "Open questions" is `None.`. A decision that is a human's (money, commercial
+  terms, a clean-room risk) stays open, the run ends after the spec, and `plan` in mode `prd` grills
+  it. Tickets stay with `plan` in mode `tickets`.
+- Frozen plans (`01`, `03`) and `README.md`, `TEMPLATE.md`, `OPEN-FINDINGS.md` are refused. Once the
+  tickets exist a human freezes the plan file: the "Migrated — frozen." banner naming the PRD at its
+  top, and the "Migrated → PRD #n; frozen." row in the README table (ADR 0004, amendment).
+- Locally: `/plan-area <issue> <plan>` in `claude` with `.agent/issue` written first. Subagents,
+  skills and hooks are the project's, so nothing depends on the host's user-level configuration.
 
 ## Workflow `implement-ticket`
 

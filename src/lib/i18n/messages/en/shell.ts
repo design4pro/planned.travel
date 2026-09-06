@@ -478,6 +478,62 @@ const messages = {
   'newTrip.created': 'Trip created',
   'newTrip.createdBody': 'Start dropping places on the map.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Actions for {title}',
+  'tripActions.favourite': 'Favourite',
+  'tripActions.unfavourite': 'Unfavourite',
+  'tripActions.edit': 'Edit',
+  'tripActions.archive': 'Archive',
+  'tripActions.restore': 'Restore',
+  'tripActions.delete': 'Delete',
+  'tripActions.deleteForGood': 'Delete permanently',
+  'tripActions.starFailed': 'That star did not save',
+  'tripActions.starFallback': 'The trip has been put back the way it was.',
+  'tripActions.archived': 'Trip archived',
+  'tripActions.archiveFailed': 'The trip could not be archived',
+  'tripActions.restored': 'Trip restored',
+  'tripActions.restoreFailed': 'The trip could not be restored',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Edit trip',
+  'editTrip.submit': 'Save changes',
+  'editTrip.saving': 'Saving the trip',
+  'editTrip.cancel': 'Cancel',
+  'editTrip.saved': 'Trip updated',
+  'editTrip.errorTitle': 'That did not save',
+  'editTrip.retry': 'Try again',
+  'editTrip.error': 'The trip could not be saved. Try again in a moment.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Delete “{title}” for good?',
+  'deleteTrip.description':
+    'There is no undo and no bin. Archiving keeps a trip out of the list without losing it.',
+  'deleteTrip.reading': 'Reading what this trip holds',
+  'deleteTrip.errorTitle': 'That did not load',
+  'deleteTrip.summaryError': 'What this trip holds could not be read.',
+  'deleteTrip.confirmLabel': 'Type the trip’s name to confirm',
+  'deleteTrip.deleting': 'Deleting the trip',
+  'deleteTrip.deleted': 'Trip deleted',
+  'deleteTrip.failed': 'The trip could not be deleted',
+  'deleteTrip.carried.reservations': {
+    one: 'booking',
+    other: 'bookings',
+  },
+  'deleteTrip.carried.transports': {
+    one: 'transport',
+    other: 'transports',
+  },
+  'deleteTrip.carried.expenses': {
+    one: 'expense',
+    other: 'expenses',
+  },
+  'deleteTrip.carried.files': {
+    one: 'file',
+    other: 'files',
+  },
+  'deleteTrip.carried.members': {
+    one: 'person',
+    other: 'people',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Who can see it',
   'visibility.private': 'Only me',

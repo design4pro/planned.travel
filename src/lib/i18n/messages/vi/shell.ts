@@ -376,6 +376,57 @@ const messages = {
   'newTrip.created': 'Đã tạo chuyến đi',
   'newTrip.createdBody': 'Bắt đầu đặt địa điểm lên bản đồ.',
 
+  /* ------------------------------- the trip action menu */
+  'tripActions.trigger': 'Thao tác cho {title}',
+  'tripActions.favourite': 'Thêm vào yêu thích',
+  'tripActions.unfavourite': 'Bỏ khỏi yêu thích',
+  'tripActions.edit': 'Sửa',
+  'tripActions.archive': 'Lưu trữ',
+  'tripActions.restore': 'Khôi phục',
+  'tripActions.delete': 'Xóa',
+  'tripActions.deleteForGood': 'Xóa vĩnh viễn',
+  'tripActions.starFailed': 'Không lưu được mục yêu thích',
+  'tripActions.starFallback': 'Chuyến đi đã trở lại như cũ.',
+  'tripActions.archived': 'Đã lưu trữ chuyến đi',
+  'tripActions.archiveFailed': 'Không lưu trữ được chuyến đi',
+  'tripActions.restored': 'Đã khôi phục chuyến đi',
+  'tripActions.restoreFailed': 'Không khôi phục được chuyến đi',
+  /* --------------------------------- the trip edit sheet */
+  'editTrip.title': 'Sửa chuyến đi',
+  'editTrip.submit': 'Lưu thay đổi',
+  'editTrip.saving': 'Đang lưu chuyến đi',
+  'editTrip.cancel': 'Hủy',
+  'editTrip.saved': 'Đã cập nhật chuyến đi',
+  'editTrip.errorTitle': 'Chưa lưu được',
+  'editTrip.retry': 'Thử lại',
+  'editTrip.error': 'Không lưu được chuyến đi. Hãy thử lại sau giây lát.',
+  /* ------------------------------ the delete-trip dialog */
+  'deleteTrip.title': 'Xóa vĩnh viễn “{title}”?',
+  'deleteTrip.description':
+    'Không có hoàn tác và không có thùng rác. Lưu trữ đưa chuyến đi ra khỏi danh sách mà không làm mất nó.',
+  'deleteTrip.reading': 'Đang đọc nội dung của chuyến đi này',
+  'deleteTrip.errorTitle': 'Chưa tải được',
+  'deleteTrip.summaryError': 'Không đọc được nội dung của chuyến đi này.',
+  'deleteTrip.confirmLabel': 'Nhập tên chuyến đi để xác nhận',
+  'deleteTrip.deleting': 'Đang xóa chuyến đi',
+  'deleteTrip.deleted': 'Đã xóa chuyến đi',
+  'deleteTrip.failed': 'Không xóa được chuyến đi',
+  'deleteTrip.carried.reservations': {
+    other: 'đặt chỗ',
+  },
+  'deleteTrip.carried.transports': {
+    other: 'chặng di chuyển',
+  },
+  'deleteTrip.carried.expenses': {
+    other: 'khoản chi',
+  },
+  'deleteTrip.carried.files': {
+    other: 'tệp',
+  },
+  'deleteTrip.carried.members': {
+    other: 'người',
+  },
+
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Ai có thể xem',
   'visibility.private': 'Chỉ tôi',
