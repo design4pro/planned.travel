@@ -1,0 +1,15 @@
+# A human opened a pull request (the pr-autopilot automation filters on authors). om-pr-autopilot
+# diagnoses it and runs the right chain: continue, fix, review, QA. `--allow-merge` is absent on
+# purpose: nothing autonomous merges here; a human runs om-approve-merge-pr from the cockpit
+# (ADR 0018).
+name: pr-autopilot
+description: om-pr-autopilot on one PR - diagnose, then continue / fix / review / QA; never merges.
+steps:
+  - id: bootstrap
+    name: Provision the worktree (deps, routes, secrets, D1, basemap)
+    command: bash scripts/worktree/bootstrap.sh --profile worktree --no-seed
+  - id: autopilot
+    name: om-pr-autopilot
+    prompt: '/om-pr-autopilot {{task}}'
+    model: opus
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite]

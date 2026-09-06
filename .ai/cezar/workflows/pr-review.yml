@@ -1,0 +1,14 @@
+# Started from the cockpit on one PR number. om-auto-review-pr runs om-code-review (CODE_REVIEW.md,
+# BACKWARD_COMPATIBILITY.md), submits approve or request-changes, sets pipeline labels, and with
+# --autofix loops fix / validate / re-review on the agent's own PRs (ADR 0018).
+name: pr-review
+description: om-auto-review-pr --autofix on one PR - code review, pipeline labels, autofix loop on agent PRs.
+steps:
+  - id: bootstrap
+    name: Provision the worktree (deps, routes, secrets, D1, basemap)
+    command: bash scripts/worktree/bootstrap.sh --profile worktree --no-seed
+  - id: review
+    name: om-auto-review-pr
+    prompt: '/om-auto-review-pr {{task}} --autofix'
+    model: opus
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite]

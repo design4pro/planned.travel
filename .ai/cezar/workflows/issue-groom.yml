@@ -1,0 +1,15 @@
+# Every new issue, and every issue a human relabels `groom`, gets SDLC labels (category,
+# priority, risk), a Definition of Ready check and a read-only implementation-prep comment
+# (ADR 0018). The skill never edits source files, so the step holds no Edit or Write; the
+# bootstrap is deps and the route tree only, no D1 and no basemap.
+name: issue-groom
+description: om-auto-manage-issues on one issue - labels, Definition of Ready, implementation notes; never code.
+steps:
+  - id: bootstrap
+    name: Install dependencies and generate the route tree
+    command: pnpm install --frozen-lockfile --prefer-offline && pnpm generate-routes
+  - id: groom
+    name: om-auto-manage-issues
+    prompt: '/om-auto-manage-issues {{task}} --prep-impl'
+    model: sonnet
+    allowedTools: [Read, Grep, Glob, Bash, Skill, TodoWrite]

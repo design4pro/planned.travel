@@ -93,6 +93,9 @@ export default [
       // not application source, and it is not written against this project's tsconfig - so the
       // typed linter cannot parse it and reports every file as a project-membership error.
       '.github/**',
+      // Cezar checks out one worktree per run under here; each is a whole second copy of the
+      // repository, and linting it from the main checkout is both slow and wrong.
+      '.ai/cezar/worktrees/**',
       'dist/**',
       'playwright-report/**',
       'blob-report/**',
