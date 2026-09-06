@@ -1091,6 +1091,124 @@ test.describe('authenticated routes', () => {
 })
 
 /**
+ * The two trip sections a route parameter keeps out of `APP_ROUTES`.
+ *
+ * `/trips/<id>/transports` and `/trips/<id>/book` are the surfaces the recovered
+ * transport and booking work rebuilt, and both are addressed by an id the
+ * database mints — so neither can sit in a static table, and until now no
+ * journey rendered either of them at all.
+ *
+ * Two failure modes here belong to a browser and to nothing below it.
+ *
+ * **The document is composed twice.** Both timelines render weekdays, dates,
+ * counts and money on the Worker and again in the browser, and workerd and
+ * WebKit resolve `Intl` from different ICU builds. A disagreement is a
+ * hydration error, and it is the reason `src/lib/format.ts` freezes its date
+ * shapes in a table at all. This is the gate that proves the freeze holds on
+ * the two screens leaning hardest on it — `trips-core.spec.ts` documents the
+ * same divergence biting the costs tab from the other side.
+ *
+ * **A key that names no message renders as itself.** These screens moved onto
+ * the message catalogue in the change that recovered them, and a mistyped key is
+ * invisible to a unit test that asserts on keys. It is not invisible on a
+ * screen: it arrives as `modules.transports.…` in the middle of a sentence,
+ * which is exactly how five raw keys reached the colour picker earlier in the
+ * same migration.
+ */
+test.describe('the trip sections behind a route parameter', () => {
+  const TRIP_SECTIONS = 'nav[aria-label="Trip sections"]'
+
+  /** The trips list, which is the one screen that links to a trip by its id. */
+  const TRIPS = APP_ROUTES.find((candidate) => candidate.name === 'trips')
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * The id behind the first trip card, or a skip.
+   *
+   * Read off the card's own link rather than from a fixture, so the walk follows
+   * the same address a reader would. A workspace with no trips leaves this block
+   * nothing to render and says so.
+   */
+  async function aTripToWalk(page: Page): Promise<string> {
+    if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
+    await visit(page, TRIPS, 'light')
+    const tripId = await page.evaluate(() => {
+      for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
+        const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
+          anchor.getAttribute('href') ?? '',
+        )
+        if (match !== null) return match[1]
+      }
+      return null
+    })
+    test.skip(tripId === null, 'the workspace lists no trip to walk into')
+    if (tripId === null) throw new Error('unreachable: the test was skipped')
+    return tripId
+  }
+
+  /**
+   * Every message key the shipped catalogue can produce, as it would look if it
+   * escaped unresolved. Read off the document's text rather than off a list of
+   * the keys this change added, so a key any future change mistypes on these two
+   * screens is caught by the same assertion.
+   *
+   * All eleven namespaces, not only `modules`: the timelines come from the
+   * module components, but the page around them - headings, empty states, the
+   * summary cards - is `trips`, and the shell above it is `shell`. A guard that
+   * watched one namespace would have read the same screen and seen nothing.
+   */
+  async function rawMessageKeys(page: Page): Promise<Array<string>> {
+    return page.evaluate(() => {
+      const namespaces =
+        'atlas|auth|console|costs|journal|marketing|modules|settings|shell|trips|ui'
+      const text = document.body.innerText
+      return [
+        ...new Set(
+          text.match(new RegExp(`\\b(?:${namespaces})\\.[a-z][\\w.]*`, 'gu')) ??
+            [],
+        ),
+      ]
+    })
+  }
+
+  for (const tab of ['transports', 'book'] as const) {
+    test(`the ${tab} tab arrives composed the same way twice`, async ({
+      page,
+    }) => {
+      const tripId = await aTripToWalk(page)
+      const route: RouteCase = {
+        name: `trip-${tab}`,
+        path: `/trips/${tripId}/${tab}`,
+        ready: TRIP_SECTIONS,
+      }
+
+      // Watched from before the navigation: a hydration mismatch is reported
+      // while the document is being adopted, which is over before any assertion
+      // below could run.
+      const report = watchConsole(page, route)
+      await visit(page, route, 'light')
+
+      await expect(
+        page.locator(`${TRIP_SECTIONS} a[aria-current="page"]`),
+      ).toHaveAttribute('href', route.path)
+
+      const keys = await rawMessageKeys(page)
+      expect(keys, `unresolved message keys on ${route.path}`).toEqual([])
+
+      const verdict = report()
+      expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+    })
+  }
+})
+
+/**
  * The message a helper failed with, or null when it did not fail.
  *
  * Several of the harness's own mechanisms exist in order to *fail* — a map that

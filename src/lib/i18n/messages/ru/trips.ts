@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Не удалось загрузить расходы',
   'error.collab': 'Не удалось загрузить переписку',
   'error.book': 'Не удалось загрузить брони',
+  'error.transports': 'Переезды не загрузились',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Маршрут',
   'plan.places': 'Места',
@@ -75,6 +76,34 @@ const messages = {
   'book.committedCaption': 'По всем броням этой поездки',
   'book.onItinerary': 'В маршруте',
   'book.pinnedCaption': 'Закреплено за днём маршрута',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Переезды',
+  'transports.empty': 'Пока ничего не записано',
+  'transports.count.transports': {
+    one: '{transports} переезд',
+    few: '{transports} переезда',
+    many: '{transports} переездов',
+    other: '{transports} переезда',
+  },
+  'transports.distance': 'Пройденное расстояние',
+  'transports.equator': '≈ {times}× вокруг экватора',
+  'transports.noGrouping': 'Пока ничего не сгруппировано',
+  'transports.mostly': 'в основном {mode}',
+  'transports.confirmed': 'Подтверждено',
+  'transports.stillPending': {
+    one: '{pending} ещё в ожидании',
+    few: '{pending} ещё в ожидании',
+    many: '{pending} ещё в ожидании',
+    other: '{pending} ещё в ожидании',
+  },
+  'transports.spent': 'Потрачено на дорогу',
+  'transports.noPrices': 'Цены не записаны',
+  'transports.priced': {
+    one: 'по {priced} переезду с ценой',
+    few: 'по {priced} переездам с ценой',
+    many: 'по {priced} переездам с ценой',
+    other: 'по {priced} переездам с ценой',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

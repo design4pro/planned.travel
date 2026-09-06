@@ -946,15 +946,16 @@ export async function recomputeTravelStats(
   /**
    * Distance is the one aggregate that is *not* read through `tripIds`.
    *
-   * A leg carries its own `departure_date`, and a trip that starts on 30 December has legs in two
-   * calendar years; filtering them by the trip's `start_date` would file January's flight under the
-   * previous year. So a year row sums the legs that departed in that year, over the same population
-   * the trip rows come from — {@link memberOfTrip} against `transports.trip_id`, because the leg is
-   * reached by its own date rather than through `tripIds`. A leg with no distance recorded
+   * A transport carries its own `departure_date`, and a trip that starts on 30 December has
+   * transports in two calendar years; filtering them by the trip's `start_date` would file
+   * January's flight under the previous year. So a year row sums the transports that departed in
+   * that year, over the same population the trip rows come from — {@link memberOfTrip} against
+   * `transports.trip_id`, because the transport is reached by its own date rather than through
+   * `tripIds`. A transport with no distance recorded
    * contributes nothing, and a year with no distances at all writes `0` rather than leaving the
    * column at whatever a fixture put there.
    */
-  const legYearFilter =
+  const transportYearFilter =
     statYear === 0
       ? undefined
       : allOf(
@@ -1004,7 +1005,7 @@ export async function recomputeTravelStats(
           tenantFilter(
             scope,
             transports,
-            legYearFilter,
+            transportYearFilter,
             memberOfTrip(scope, userId, transports.tripId),
           ),
         ),

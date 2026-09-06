@@ -62,6 +62,8 @@ export interface BookingDraft {
   readonly price: string
   readonly currency: string
   readonly dayId: string
+  /** The stop on a day this booking is for — `''` for none. */
+  readonly assignmentId: string
   readonly notes: string
 }
 
@@ -82,6 +84,7 @@ export function emptyBookingDraft(currency: string): BookingDraft {
     price: '',
     currency,
     dayId: '',
+    assignmentId: '',
     notes: '',
   }
 }
@@ -99,6 +102,7 @@ export type BookingField =
   | 'endTime'
   | 'guests'
   | 'price'
+  | 'assignmentId'
 
 export interface BookingTypeShape {
   readonly label: MessageKey
@@ -166,6 +170,7 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'price',
       'confirmationNumber',
       'url',
+      'assignmentId',
     ],
     required: ['startDate', 'startTime'],
     hint: 'modules.book.hint.restaurant',
@@ -189,6 +194,7 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'price',
       'confirmationNumber',
       'url',
+      'assignmentId',
     ],
     required: ['startDate'],
     hint: 'modules.book.hint.activity',
@@ -212,6 +218,7 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'price',
       'confirmationNumber',
       'url',
+      'assignmentId',
     ],
     required: ['startDate', 'startTime'],
     hint: 'modules.book.hint.tour',
@@ -233,6 +240,7 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'price',
       'confirmationNumber',
       'url',
+      'assignmentId',
     ],
     required: ['startDate'],
     hint: 'modules.book.hint.ticket',
@@ -255,6 +263,7 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'price',
       'confirmationNumber',
       'url',
+      'assignmentId',
     ],
     required: ['startDate'],
     hint: 'modules.book.hint.transport',
@@ -277,6 +286,7 @@ const SHAPES: { readonly [K in BookingType]: BookingTypeShape } = {
       'price',
       'confirmationNumber',
       'url',
+      'assignmentId',
     ],
     required: [],
     hint: 'modules.book.hint.other',
@@ -399,6 +409,131 @@ export function formatMinorForInput(
   return (minor / 10 ** digits).toFixed(digits)
 }
 
+/* --------------------------------------------------------------- the stop */
+
+/** The stop a picker hands back: the row itself, the day it sits on, and that day's date. */
+export interface BookingStopChoice {
+  readonly assignmentId: string
+  readonly dayId: string
+  /** `null` until the trip is dated — a day of an undated trip has no calendar date. */
+  readonly date: string | null
+}
+
+/**
+ * Applies a stop choice to the draft.
+ *
+ * Two things follow from a stop and neither is guessed. The **day** is the stop's own, because a
+ * booking attached to a stop on day five that claims day three is two answers to one question. The
+ * **date** is filled only when the field is empty: a date the traveller typed is theirs, and a
+ * picker that overwrites it teaches them not to use the picker.
+ *
+ * Clearing the stop clears only the stop. Whatever it filled in stays, because by then it is the
+ * traveller's booking rather than the picker's suggestion.
+ */
+export function chooseStop(
+  draft: BookingDraft,
+  stop: BookingStopChoice | null,
+): BookingDraft {
+  if (stop === null) {
+    return { ...draft, assignmentId: '' }
+  }
+  return {
+    ...draft,
+    assignmentId: stop.assignmentId,
+    dayId: stop.dayId,
+    startDate:
+      draft.startDate === '' && stop.date !== null
+        ? stop.date
+        : draft.startDate,
+  }
+}
+
+/* ------------------------------------------------------ the ledger notice */
+
+/**
+ * What the trip's ledger will do about this booking.
+ *
+ * A key and the figure it needs, never a sentence: this file stays free of React
+ * and of English, and the caller — which has both a provider and a locale —
+ * turns the amount into money the reader can read.
+ */
+export interface LedgerNotice {
+  /** `warning` is the one branch where the reader has to do something for the line to exist. */
+  readonly tone: 'info' | 'warning'
+  readonly key: MessageKey
+  /** Minor units for `{money}`, or `null` when the sentence names no figure. */
+  readonly amountMinor: number | null
+}
+
+/** Everything outside the draft the notice needs to know. */
+export interface LedgerNoticeContext {
+  /** Whether this booking already has a line in the trip's costs. */
+  readonly linked: boolean
+  /** The date of the day this booking is pinned to, if any. */
+  readonly dayDate: string | null
+  /** The trip's own start date — the last fallback before "no date anywhere". */
+  readonly tripStartDate: string | null
+}
+
+/**
+ * The sentence under the price, stating the effect *before* the save.
+ *
+ * A side effect the reader discovers afterwards is a side effect they never agreed to, so each of
+ * the four branches of the server's own rule has a sentence here and the four sets match one for
+ * one. `null` is the fifth case and the only silent one: no price, no line, nothing to say.
+ *
+ * The date chain is the server's: the booking's own date, then the day it is pinned to, then the
+ * trip's start. When all three are missing the cost is not guessed onto a date — a wrong date on a
+ * money row is worse than no row — and the notice says what to do about it.
+ */
+export function ledgerNotice(
+  draft: BookingDraft,
+  context: LedgerNoticeContext,
+): LedgerNotice | null {
+  const minor = parseMoneyToMinor(draft.price, draft.currency)
+  if (minor === null) {
+    // Unreadable is the price field's own error to report; the notice stays quiet rather than
+    // guessing what the figure was going to be.
+    return null
+  }
+
+  if (minor === 0) {
+    return context.linked
+      ? {
+          tone: 'info',
+          key: 'modules.book.ledger.unlinked',
+          amountMinor: null,
+        }
+      : null
+  }
+
+  if (context.linked) {
+    return {
+      tone: 'info',
+      key: 'modules.book.ledger.updated',
+      amountMinor: minor,
+    }
+  }
+
+  const dated =
+    draft.startDate !== '' ||
+    context.dayDate !== null ||
+    context.tripStartDate !== null
+  if (!dated) {
+    return {
+      tone: 'warning',
+      key: 'modules.book.ledger.needsDate',
+      amountMinor: null,
+    }
+  }
+
+  return {
+    tone: 'info',
+    key: 'modules.book.ledger.added',
+    amountMinor: minor,
+  }
+}
+
 /* -------------------------------------------------------------- validation */
 
 /**
@@ -430,6 +565,7 @@ const FIELD_NAMES: { readonly [K in BookingField]: MessageKey } = {
   endTime: 'modules.book.fieldName.endTime',
   guests: 'modules.book.fieldName.guests',
   price: 'modules.book.fieldName.price',
+  assignmentId: 'modules.book.fieldName.stop',
 }
 
 /**
@@ -438,7 +574,22 @@ const FIELD_NAMES: { readonly [K in BookingField]: MessageKey } = {
  * The server checks the same things again — this exists so a traveller is told
  * before the round trip, not so the server can trust the client.
  */
-export function validateBookingDraft(draft: BookingDraft): BookingErrors {
+/** What the screen knows that the draft does not. */
+export interface BookingDraftContext {
+  /**
+   * Every stop the trip has, when the caller has the list.
+   *
+   * Left out, the stop is not checked at all: a caller with no list cannot tell a stop that was
+   * deleted from one it simply has not loaded, and refusing on the second would block a save that
+   * is perfectly good. The repository decides ownership either way.
+   */
+  readonly stopIds?: ReadonlyArray<string>
+}
+
+export function validateBookingDraft(
+  draft: BookingDraft,
+  context: BookingDraftContext = {},
+): BookingErrors {
   const errors: BookingErrors = {}
   const shape = SHAPES[draft.type]
 
@@ -502,6 +653,14 @@ export function validateBookingDraft(draft: BookingDraft): BookingErrors {
 
   if (draft.confirmationNumber.trim().length > 200) {
     errors.confirmationNumber = { key: 'modules.book.error.confirmationLong' }
+  }
+
+  if (
+    draft.assignmentId !== '' &&
+    context.stopIds !== undefined &&
+    !context.stopIds.includes(draft.assignmentId)
+  ) {
+    errors.assignmentId = { key: 'modules.book.error.stopGone' }
   }
 
   return errors

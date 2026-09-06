@@ -98,6 +98,36 @@
     { "binding": "TILES", "bucket_name": "planned-travel-tiles" },
   ],
 
+  // Workers AI: the model that turns a confirmation file into a draft booking
+  // (docs/adr/0012-workers-ai-for-confirmation-extraction.md), reached only through
+  // src/server/ai/bindings.ts. It runs on our own binding and never on a credential a
+  // tenant supplies, because a per-tenant model credential is a cross-tenant leak here.
+  //
+  // It is worth this much comment because it changes the cost model rather than adding a
+  // capability. Every other binding in this file is priced per stored byte or per request
+  // against a quota we already buy; this one is priced per inference, so a single
+  // tenant's loop is an invoice rather than a rate limit. Two documents still contradict
+  // the decision and neither is ours to edit:
+  // docs/plans/00-foundations.md's binding table records this row as "report only", on a
+  // justification (BKG-04 out of scope) that no longer holds, and docs/ARCHITECTURE.md §8
+  // prices Workers, D1, KV, DO, Queues and R2 and has no line for per-inference pricing at
+  // all. Both are reported on PRD #167.
+  //
+  // The ceiling that bounds the spend is PLAN_RATE_CEILINGS.extraction_calls_per_month in
+  // src/server/billing/limits.ts; nothing calls the binding until the stage that enforces
+  // it lands, so declaring it here costs nothing until then.
+  //
+  // No `remote: true`, because for this binding the flag decides nothing. Workers AI has no
+  // local simulator at all, and the vite plugin proxies every such binding to the real service
+  // whether or not the flag is set (`pickRemoteBindings` in @cloudflare/vite-plugin keys off
+  // the binding *type* first). Writing it here would only suggest the choice was ours.
+  //
+  // What that proxy costs is a Cloudflare login at dev-server boot, which a runner does not
+  // have - CI failed on exactly that. The switch that settles it is `remoteBindings: false` on
+  // the plugin in vite.config.ts, where the reasoning lives; this row stays as the deployed
+  // fact it always was.
+  "ai": { "binding": "AI" },
+
   // No SANDCASTLE_REGISTRY here, and that is the point: the sandcastle run
   // coordinator is deployed to staging alone (see env.staging below and
   // docs/adr/0009). A coordinator is only worth having if there is exactly one
@@ -199,6 +229,11 @@
         { "binding": "FILES", "bucket_name": "planned-travel-files-staging" },
         { "binding": "TILES", "bucket_name": "planned-travel-tiles" },
       ],
+      // Declared again rather than inherited: a named environment takes no binding from
+      // the top level, so an `AI` left out here is an extraction that works in production
+      // and throws on the deployment that is meant to catch that. No `remote` here either, for
+      // the reason the top-level block gives.
+      "ai": { "binding": "AI" },
       "durable_objects": {
         "bindings": [
           { "name": "TRIP_ROOM", "class_name": "TripRoom" },

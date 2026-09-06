@@ -42,23 +42,23 @@ const messages = {
   'transports.filtered.action': 'Δείξε όλες τις μετακινήσεις',
   'transports.alert.impossible.title': {
     one: 'Μια μετεπιβίβαση δεν γίνεται',
-    other: '{legs} μετεπιβιβάσεις δεν γίνονται',
+    other: '{value} μετεπιβιβάσεις δεν γίνονται',
   },
   'transports.alert.impossible.body':
     'Μια μετακίνηση αναχωρεί πριν φτάσει η προηγούμενη. Οι κόμβοι παρακάτω λένε ποιες και κατά πόσο.',
   'transports.alert.tight.title': {
     one: 'Μια μετεπιβίβαση είναι στο τσακ',
-    other: '{legs} μετεπιβιβάσεις είναι στο τσακ',
+    other: '{value} μετεπιβιβάσεις είναι στο τσακ',
   },
   'transports.alert.tight.body':
     'Υπάρχει χρόνος, αλλά λίγος για το μέσο που προλαβαίνεις. Οι κόμβοι παρακάτω δείχνουν πόσο αφήνει ο καθένας.',
   'transports.badge.impossible': {
-    one: '{legs} σπασμένη μετεπιβίβαση',
-    other: '{legs} σπασμένες μετεπιβιβάσεις',
+    one: '{value} σπασμένη μετεπιβίβαση',
+    other: '{value} σπασμένες μετεπιβιβάσεις',
   },
   'transports.badge.tight': {
-    one: '{legs} οριακή μετεπιβίβαση',
-    other: '{legs} οριακές μετεπιβιβάσεις',
+    one: '{value} οριακή μετεπιβίβαση',
+    other: '{value} οριακές μετεπιβιβάσεις',
   },
   'transports.badge.ok': 'Κάθε μετεπιβίβαση βγαίνει',
   'transports.remove.body':
@@ -87,6 +87,7 @@ const messages = {
   'transports.field.place': 'Τόπος',
   'transports.field.code': 'Κωδικός',
   'transports.field.date': 'Ημερομηνία',
+  'transports.field.time': 'Αναχώρηση μετά τις',
   'transports.field.departurePlaceholder': 'Αθήνα Ελ. Βενιζέλος',
   'transports.field.arrivalPlaceholder': 'Τόκιο Χανέντα',
   'transports.field.carrier': 'Μεταφορέας',
@@ -111,6 +112,7 @@ const messages = {
   'field.status': 'Κατάσταση',
   'form.saveError': 'Αυτό δεν αποθηκεύτηκε',
   'action.cancel': 'Άκυρο',
+  'action.showCode': 'Εμφάνιση {label}',
   'book.status.none': 'Χωρίς κατάσταση',
   'book.status.pending': 'Σε εκκρεμότητα',
   'book.status.confirmed': 'Επιβεβαιωμένη',
@@ -125,10 +127,20 @@ const messages = {
   'book.empty.body':
     'Καταλύματα, τραπέζια, εκδρομές και εισιτήρια ανήκουν εδώ — με τον κωδικό επιβεβαίωσης εκεί που θα τον βρεις στην πόρτα, και την ημερομηνία που τα βάζει στο χρονολόγιο.',
   'book.empty.action': 'Πρόσθεσε την πρώτη κράτηση',
-  'book.filtered.title': 'Τίποτα σε αυτήν την κατάσταση',
+  'book.filtered.title': 'Τίποτα αυτού του είδους ακόμη',
   'book.filtered.body':
-    'Κάθε κράτηση αυτού του ταξιδιού είναι σε άλλο στάδιο. Γύρνα στο «{label}» για να τις δεις όλες.',
-  'book.filtered.action': 'Δείξε όλα',
+    'Δεν υπάρχει κράτηση από τα είδη που διάλεξες. Καθάρισε το φίλτρο για να δεις τα υπόλοιπα.',
+  'book.filtered.action': 'Καθαρισμός φίλτρου',
+  'book.panel.outstanding': 'Εκκρεμούν',
+  'book.panel.outstandingEmpty':
+    'Δεν εκκρεμεί τίποτα — όλα εδώ είναι τακτοποιημένα.',
+  'book.panel.settled': 'Τακτοποιημένα',
+  'book.panel.settledEmpty':
+    'Τίποτα τακτοποιημένο ακόμη — όλα θέλουν ακόμη κυνήγι.',
+  'book.import.badge': 'Ανέλεγκτη εισαγωγή',
+  'book.import.hint':
+    'Εισήχθη από επιβεβαίωση. Άνοιξέ την και αποθήκευσέ την για να σημειωθεί ως ελεγμένη.',
+  'book.journeyLink': 'Στην καρτέλα μεταφορών',
   'filter.all': 'Όλα',
   'book.remove.body':
     'Φεύγει από το χρονολόγιο για πάντα. Αν είναι μόνο ακυρωμένη, βάλε την κατάστασή της σε «Ακυρωμένη» για να κρατήσεις το αρχείο.',
@@ -410,6 +422,15 @@ const messages = {
   'book.error.url': 'Ένας σύνδεσμος πρέπει να ξεκινά με http:// ή https://.',
   'book.error.confirmationLong':
     'Αυτός ο κωδικός επιβεβαίωσης είναι πολύ μεγάλος για αποθήκευση.',
+  'book.error.stopGone': 'Αυτή η στάση δεν ανήκει πια σε αυτό το ταξίδι.',
+  'book.ledger.unlinked':
+    'Η γραμμή κόστους αυτής της κράτησης θα παραμείνει στα έξοδα του ταξιδιού, χωρίς όμως να συνδέεται πια με την κράτηση.',
+  'book.ledger.updated':
+    'Η γραμμή κόστους αυτής της κράτησης θα γίνει {money}.',
+  'book.ledger.needsDate':
+    'Δώστε ημερομηνία στην κράτηση και το κόστος της θα μπει στα έξοδα του ταξιδιού.',
+  'book.ledger.added':
+    'Θα προστεθεί μια γραμμή {money} στα έξοδα αυτού του ταξιδιού.',
   'book.fieldName.provider': 'μεταφορέας',
   'book.fieldName.location': 'τόπος',
   'book.fieldName.confirmationNumber': 'κωδικός επιβεβαίωσης',
@@ -420,6 +441,18 @@ const messages = {
   'book.fieldName.endTime': 'ώρα λήξης',
   'book.fieldName.guests': 'αριθμός ατόμων',
   'book.fieldName.price': 'τιμή',
+  'book.fieldName.stop': 'στάση',
+  'book.field.stop': 'Συνδεδεμένη στάση',
+  'book.field.stopHint': 'Σε ποια στάση του σχεδίου αφορά αυτή η κράτηση.',
+  'book.field.stopHintEmpty':
+    'Πρόσθεσε πρώτα ένα μέρος σε μια μέρα και μετά σύνδεσε την κράτηση με αυτό',
+  'book.field.stopPlaceholder': 'Χωρίς στάση',
+  'book.field.stopSearch': 'Αναζήτηση σε στάσεις και μέρες',
+  'book.field.stopEmpty': 'Καμία στάση δεν ταιριάζει',
+  'book.ledger.refused.title': 'Αποθηκεύτηκε, αλλά δεν μπήκε στα έξοδα',
+  'book.ledger.refused.body':
+    'Η κράτηση είναι στο ταξίδι. Η γραμμή εξόδου της δεν μπήκε στα έξοδα του ταξιδιού — δοκίμασε ξανά αυτό το μισό.',
+  'book.action.ledgerRetry': 'Πρόσθεσέ το στα έξοδα',
   'book.copyConfirmation': 'ο κωδικός επιβεβαίωσης του {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -436,6 +469,62 @@ const messages = {
   'transports.mode.walk': 'Με τα πόδια',
   'transports.mode.other': 'Άλλο',
   'transports.mode.fallback': 'Μετακίνηση',
+  'transports.rank.earliest': 'Νωρίτερη άφιξη',
+  'transports.rank.fewestChanges': 'Λιγότερες αλλαγές',
+  'transports.connection.findStop': 'Βρες στάση',
+  'transports.connection.findStopSearch': 'ATH, Λαρίσης, Αθήνα…',
+  'transports.connection.findStopEmpty':
+    'Καμία στάση μ’ αυτό το όνομα στον κατάλογο.',
+  'transports.connection.hideStops': 'Κρύψε τις στάσεις',
+  'transports.connection.seeStops': 'Δες τις στάσεις',
+  'transports.connection.saving': 'Αποθηκεύεται η σύνδεση',
+  'transports.connection.use': 'Πάρε αυτή',
+  'transports.connection.onFoot': 'Με τα πόδια',
+  'transports.connection.service': 'Δρομολόγιο',
+  'transports.connection.direct': 'απευθείας',
+  'transports.connection.changes': {
+    one: '{changes} αλλαγή',
+    other: '{changes} αλλαγές',
+  },
+  'transports.connection.tooLong':
+    'Αυτή η σύνδεση έχει πάνω από {max} σκέλη, περισσότερα απ’ όσα χωρά μία εγγραφή ταξιδιού. Ψάξε μικρότερη απόσταση και γράψε τα υπόλοιπα χωριστά.',
+  'transports.connection.refusal.ceiling':
+    'Δεν απομένουν αναζητήσεις αυτόν τον μήνα',
+  'transports.connection.refusal.unconfigured':
+    'Η αναζήτηση συνδέσεων είναι κλειστή σ’ αυτή την εγκατάσταση',
+  'transports.connection.refusal.provider':
+    'Η υπηρεσία δρομολογίων δεν απάντησε',
+  'transports.connection.refusal.plan':
+    'Η αναζήτηση συνδέσεων δεν ανήκει σ’ αυτό το πλάνο',
+  'transports.connection.refusal.planBody':
+    'Αναβάθμισε το πλάνο για να ψάχνεις δρομολόγια μέσα από ένα ταξίδι. Μια διαδρομή γράφεται πάντα και στο χέρι.',
+  'transports.connection.refusal.ceilingBody':
+    'Το μηνιαίο όριο των {ceiling} εξαντλήθηκε και ανανεώνεται την πρώτη του επόμενου μήνα. Μια διαδρομή γράφεται πάντα και στο χέρι.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Δεν έχει ρυθμιστεί εδώ υπηρεσία δρομολογίων, οπότε δεν έγινε καμία αναζήτηση. Γράψε τη διαδρομή στο χέρι.',
+  'transports.connection.refusal.providerBody':
+    'Δεν γύρισε τίποτα για να δείξουμε. Δοκίμασε ξανά σε λίγο ή γράψε τη διαδρομή στο χέρι.',
+  'transports.connection.invitation':
+    'Δύο στάσεις και μια ημερομηνία, και τα δρομολόγια απαντούν. Τίποτα δεν αποθηκεύεται ώσπου να διαλέξεις.',
+  'transports.connection.empty':
+    'Δεν βρέθηκε σύνδεση ανάμεσα σ’ αυτές τις δύο στάσεις εκείνη την ημερομηνία. Δοκίμασε γειτονικό σταθμό ή διεύρυνε το φίλτρο.',
+  'transports.connection.searchFailed': 'Η αναζήτηση δεν έτρεξε',
+  'transports.connection.searchFailedBody': 'Δοκίμασε ξανά σε λίγο.',
+  'transports.connection.saved': 'Η σύνδεση αποθηκεύτηκε',
+  'transports.connection.replaced': 'Η διαδρομή αντικαταστάθηκε',
+  'transports.connection.replacedBody':
+    'Ο κωδικός κράτησης και η θέση μένουν ως έχουν.',
+  'transports.connection.saveFailed': 'Η σύνδεση δεν αποθηκεύτηκε',
+  'transports.connection.saveError': 'Αυτό δεν αποθηκεύτηκε',
+  'transports.connection.fromHint':
+    'Διάλεξε στάση — ένα δρομολόγιο ρωτιέται πού, όχι πώς λέγεται.',
+  'transports.connection.toHint': 'Διάλεξε στάση από τον κατάλογο.',
+  'transports.connection.timeHint':
+    'Το δρομολόγιο απαντά με τις επόμενες αναχωρήσεις· αυτό κρίνει ποιες.',
+  'transports.connection.onlyModes': 'Μόνο αυτά τα μέσα',
+  'transports.connection.searching': 'Ψάχνω στα δρομολόγια',
+  'transports.connection.search': 'Αναζήτηση συνδέσεων',
+  'transports.connection.title': 'Από {from} σε {to}',
   'transports.status.idea': 'Ιδέα',
   'transports.status.pending': 'Σε εκκρεμότητα',
   'transports.status.confirmed': 'Επιβεβαιωμένο',
@@ -449,6 +538,13 @@ const messages = {
   'transports.end.toStation': 'Προς σταθμό',
   'transports.end.from': 'Από',
   'transports.end.to': 'Προς',
+  'transports.end.pickUp': 'Παραλαβή',
+  'transports.end.dropOff': 'Παράδοση',
+  'transports.end.departureDay': 'Ημέρα αναχώρησης',
+  'transports.end.arrivalDay': 'Ημέρα άφιξης',
+  'transports.end.pickUpDay': 'Ημέρα παραλαβής',
+  'transports.end.returnDay': 'Ημέρα παράδοσης',
+  'transports.dayNumber': 'Ημέρα {n}',
   'transports.error.titleEmpty':
     'Δώσε σε αυτή τη μετακίνηση ένα όνομα που θα αναγνωρίσεις σε μια λίστα.',
   'transports.error.date': 'Η ημερομηνία γράφεται ΕΕΕΕ-ΜΜ-ΗΗ.',
@@ -464,6 +560,60 @@ const messages = {
     'Αυτή η μετακίνηση φτάνει πριν αναχωρήσει.',
   'transports.error.timingHint':
     'Άλλαξε την ώρα στη μία από τις δύο, ώστε η μετακίνηση να προλαβαίνεται πραγματικά.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'Η ημέρα άφιξης προηγείται της ημέρας αναχώρησης.',
+  'transports.error.returnDayBeforePickUp':
+    'Η ημέρα παράδοσης προηγείται της ημέρας παραλαβής.',
+  'transports.toast.chainFailed': 'Τα σκέλη δεν αποθηκεύτηκαν',
+  'transports.toast.chainFallback': 'Το ταξίδι αποθηκεύτηκε, τα σκέλη του όχι.',
+  'transports.field.noDay': 'Χωρίς ημέρα ακόμη',
+  'transports.fill.legend': 'Πώς να το συμπληρώσετε',
+  'transports.fill.manual': 'Γράψτε το μόνοι σας',
+  'transports.fill.searchAgain': 'Νέα αναζήτηση',
+  'transports.fill.search': 'Αναζήτηση ανταποκρίσεων',
+  'transports.chain.unsplit': 'Ξανακάντε το ένα ταξίδι',
+  'transports.field.arrivalDayHint':
+    'Ένα ταξίδι που φτάνει το επόμενο πρωί το λέει εδώ.',
+  'transports.chain.splitHint':
+    'Αλλάζετε στη διαδρομή; Καταγράψτε κάθε μέρος με δικό του αριθμό δρομολογίου, αποβάθρα, θέση και ώρες.',
+  'transports.chain.split': 'Χωρισμός σε σκέλη',
+  'transports.chain.stopNumber': 'στάση {n}',
+  'transports.chain.change': 'Αλλαγή {n}',
+  'transports.chain.removeStation': 'Αφαίρεση {label}',
+  'transports.chain.findStation': 'Βρες αεροδρόμιο ή σταθμό',
+  'transports.chain.findStationFor': 'Βρες αεροδρόμιο ή σταθμό για {label}',
+  'transports.chain.findPlaceholder': 'ATH, Ελ. Βενιζέλος, Αθήνα…',
+  'transports.chain.findEmpty':
+    'Καμία αντιστοιχία — γράψε τη στάση μόνος σου πιο κάτω.',
+  'transports.chain.stopLabel': 'Στάση',
+  'transports.chain.stopPlaceholder': 'Αθήνα Λαρίσης',
+  'transports.chain.timezoneHint': 'Σε ποιο ρολόι διαβάζεται αυτή η στάση',
+  'transports.chain.timezoneAt': 'Ζώνη ώρας στο {label}',
+  'transports.chain.timezonePlaceholder': 'Δεν δηλώθηκε',
+  'transports.chain.timezoneSearch': 'Τόκιο, Λισαβόνα, UTC…',
+  'transports.chain.acrossClocks': '{gap} ανάμεσα σε δύο ρολόγια',
+  'transports.chain.addStopAfter': 'Πρόσθεσε στάση μετά το {label}',
+  'transports.chain.servicePlaceholder': 'IC 51',
+  'transports.chain.leaves': 'Αναχωρεί από {label}',
+  'transports.chain.reaches': 'Φτάνει στο {label}',
+  'transports.chain.dayOfLeg': '{label} του σκέλους {n}',
+  'transports.chain.formError': 'Αυτή η αλυσίδα δεν αποθηκεύεται',
+  'transports.chain.atCap':
+    'Μια αλυσίδα χωρά το πολύ {max} σκέλη — αυτό είναι όριο του τι κουβαλά μία αποθήκευση, όχι του πόσες αλλαγές έχει ένα ταξίδι.',
+  'transports.chain.hint':
+    'Πρόσθεσε στάση σε όποιο σκέλος θέλεις για μια αλλαγή τρένου· κάθε σκέλος κρατά τον δικό του αριθμό, αποβάθρα και θέση.',
+  'transports.field.timezone': 'Ζώνη ώρας',
+  'transports.field.platform': 'Αποβάθρα',
+  'transports.chain.legNumber': 'Σκέλος {n}',
+  'transports.chain.platform': 'Αποβάθρα {value}',
+  'transports.chain.seat': 'Θέση {value}',
+  'transports.chain.error.stopName':
+    'Κάθε στάση χρειάζεται όνομα — εδώ κάνετε μετεπιβίβαση.',
+  'transports.chain.error.stopNameLong':
+    'Το όνομα μιας στάσης πρέπει να είναι κάτω από 200 χαρακτήρες.',
+  'transports.chain.error.timezone': 'Επιλέξτε ζώνη ώρας από τη λίστα.',
+  'transports.chain.error.tooManyLegs':
+    'Μια αλυσίδα χωράει το πολύ {max} σκέλη.',
   'transports.bookingRefFor': 'ο κωδικός κράτησης του {title}',
   'transports.doorToDoor': 'Αυτό είναι {gap} από πόρτα σε πόρτα.',
   'transports.title.fromTo': '{operator} από {from} προς {to}',

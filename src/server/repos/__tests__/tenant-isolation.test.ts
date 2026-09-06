@@ -17,7 +17,7 @@ import {
   collectionPlaceLabels,
   placeTags,
 } from '#/server/db/schema'
-import { NotFoundError, QuotaExceededError } from '../context'
+import { NotFoundError, QuotaExceededError, RepositoryError } from '../context'
 import {
   bucketListRepository,
   getTravelStats,
@@ -88,6 +88,7 @@ import {
   createSettlement,
   expenseSharesRepository,
   expensesRepository,
+  getExpense,
   getMemberBalances,
   getTripSpendSummary,
   settlementsRepository,
@@ -141,7 +142,18 @@ import {
   setPreference,
 } from '../notifications'
 import { createPlace, placesRepository, setPlaceTags } from '../places'
-import { createReservation, reservationsRepository } from '../reservations'
+import {
+  clearReservationImported,
+  createReservation,
+  deleteReservation,
+  getReservation,
+  linkReservationExpense,
+  listTripReservations,
+  markReservationsImported,
+  reservationsRepository,
+  setReservationStatus,
+  updateReservation,
+} from '../reservations'
 import {
   appSettingsStore,
   ensureOrganizationSettings,
@@ -153,7 +165,25 @@ import {
   userSettingsRepository,
 } from '../settings'
 import { createTag, tagsRepository } from '../tags'
-import { createTransport, transportsRepository } from '../transports'
+import {
+  TripRoleError,
+  createTransport,
+  deleteTransport,
+  getTransport,
+  listDayTransports,
+  listTransportLegs,
+  listTripLegs,
+  listTripTransports,
+  nextDeparture,
+  replaceTransportChain,
+  saveSearchedConnection,
+  setTransportStatus,
+  summariseTripTransports,
+  totalTripDistanceMetres,
+  transportLegsRepository,
+  transportsRepository,
+  updateTransport,
+} from '../transports'
 import {
   addTripMember,
   countTripsByStatus,
@@ -193,6 +223,7 @@ import type {
   TenantScope,
 } from '../base'
 import type { TaskBindings } from '#/server/queue/types'
+import type { UserSettings } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
 
 /* -------------------------------------------------------------------------------------------------
@@ -2381,6 +2412,803 @@ describe('tenant isolation', () => {
         (await listNotifications(alpha.tenant.scope, beta.tenant.ownerUserId))
           .items,
       ).toHaveLength(0)
+    })
+  })
+  /**
+   * 03-S1 — a transport anchored to a departure day and an arrival day.
+   *
+   * The new surface is a second day reference, and a reference is exactly what a
+   * tenant boundary is crossed by: a row parented onto a foreign day would be a
+   * dangling pointer into another workspace's itinerary, invisible in every list
+   * because the list is scoped and the pointer is not.
+   *
+   * The read half is asserted as what it is rather than as what a writer does.
+   * `listTripTransports`, `listDayTransports`, `summariseTripTransports`,
+   * `totalTripDistanceMetres` and `getTransport` take an id and filter on
+   * `organization_id`; handed B's id from A's scope they answer *empty*, which is
+   * the same isolation stated in the shape a `WHERE` clause can state it. Only the
+   * calls that resolve a row before acting on it — the four writers — can raise,
+   * and they do.
+   */
+  describe('a transport and both of its day references', () => {
+    it('answers nothing when asked, from A, about B rows', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(await getTransport(scope, beta.transportId)).toBeNull()
+      expect(await listTripTransports(scope, beta.tripId)).toEqual([])
+      expect(await listDayTransports(scope, beta.dayId)).toEqual([])
+      expect(await summariseTripTransports(scope, beta.tripId)).toEqual([])
+      expect(await totalTripDistanceMetres(scope, beta.tripId)).toBe(0)
+
+      // The same ids resolve for their own tenant, so it is scoping that hid them.
+      expect(
+        await getTransport(beta.tenant.scope, beta.transportId),
+      ).not.toBeNull()
+      expect(
+        await listTripTransports(beta.tenant.scope, beta.tripId),
+      ).toHaveLength(1)
+      expect(
+        await totalTripDistanceMetres(beta.tenant.scope, beta.tripId),
+      ).toBe(1_720_000)
+    })
+
+    it('never catches the other tenant’s next departure', async () => {
+      // Both worlds seed one flight on 2026-04-10. Confirming B's makes it the only
+      // candidate in the whole database, so a read that leaked would return it.
+      await setTransportStatus(beta.tenant.scope, beta.transportId, 'confirmed')
+
+      expect(
+        await nextDeparture(alpha.tenant.scope, { from: '2026-01-01' }),
+      ).toBeNull()
+      expect(
+        (await nextDeparture(beta.tenant.scope, { from: '2026-01-01' }))?.id,
+      ).toBe(beta.transportId)
+    })
+
+    it('refuses every write against a B row from A’s scope', async () => {
+      const scope = alpha.tenant.scope
+      const before = await getTransport(beta.tenant.scope, beta.transportId)
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () => updateTransport(scope, beta.transportId, { title: 'Hijacked' }),
+        () => setTransportStatus(scope, beta.transportId, 'cancelled'),
+        () => deleteTransport(scope, beta.transportId),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await getTransport(beta.tenant.scope, beta.transportId)).toEqual(
+        before,
+      )
+    })
+
+    it('refuses a departure day or an arrival day belonging to B', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          createTransport(scope, {
+            tripId: alpha.tripId,
+            title: 'Cross-parented departure',
+            mode: 'flight',
+            dayId: beta.dayId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        await captureError(() =>
+          createTransport(scope, {
+            tripId: alpha.tripId,
+            title: 'Cross-parented arrival',
+            mode: 'flight',
+            dayId: alpha.dayId,
+            arrivalDayId: beta.lastDayId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // Not one row landed: A's own transport count is still the single seeded one.
+      expect(await transportsRepository.count(scope)).toBe(1)
+    })
+
+    it('refuses to move an A row onto a B day', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          updateTransport(scope, alpha.transportId, { dayId: beta.dayId }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        await captureError(() =>
+          updateTransport(scope, alpha.transportId, {
+            arrivalDayId: beta.lastDayId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      const own = await getTransport(scope, alpha.transportId)
+      expect(own?.dayId).toBe(alpha.dayId)
+      expect(own?.arrivalDayId).toBeNull()
+    })
+
+    it('leaves B byte-identical after every refusal', async () => {
+      const scope = alpha.tenant.scope
+      const before = await listTripTransports(beta.tenant.scope, beta.tripId)
+      const daysBefore = await listTripDays(beta.tenant.scope, beta.tripId)
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          createTransport(scope, {
+            tripId: beta.tripId,
+            title: 'Stolen journey',
+            mode: 'train',
+          }),
+        () =>
+          createTransport(scope, {
+            tripId: alpha.tripId,
+            title: 'Cross-parented',
+            mode: 'train',
+            arrivalDayId: beta.dayId,
+          }),
+        () => updateTransport(scope, beta.transportId, { title: 'Hijacked' }),
+        () => setTransportStatus(scope, beta.transportId, 'cancelled'),
+        () => deleteTransport(scope, beta.transportId),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await listTripTransports(beta.tenant.scope, beta.tripId)).toEqual(
+        before,
+      )
+      expect(await listTripDays(beta.tenant.scope, beta.tripId)).toEqual(
+        daysBefore,
+      )
+    })
+  })
+  /**
+   * 03-S2b — the station chain, and who may replace it.
+   *
+   * Two boundaries meet on this writer and they are asserted apart. The first is
+   * the tenant one, which every other block here states: B's legs are invisible
+   * from A by transport id and by trip id, and a leg may not be parented onto B's
+   * day even when the parent transport is A's own.
+   *
+   * The second is destructive and belongs to this writer alone. `replaceTransportChain`
+   * **deletes before it inserts**, so "refused" is not enough: a call that threw
+   * after the delete and before the insert would leave B's journey with no legs
+   * and every other assertion in this file still green. B's rows are therefore
+   * counted before and after and must be identical.
+   *
+   * The third is not a tenant boundary at all. A trip role is a role *inside* one
+   * workspace, so it is asserted in both directions on one trip: a viewer on
+   * their own trip is refused and an editor on that same trip is allowed, which
+   * proves the guard discriminates rather than merely throws.
+   */
+  describe('a transport’s station chain', () => {
+    /** Three stations, so a refusal that dropped one leg would still be visible. */
+    const CHAIN = {
+      stations: [
+        { name: 'Shin-Osaka', code: 'OSA', timezone: 'Asia/Tokyo' },
+        { name: 'Nagoya', code: 'NGO', timezone: 'Asia/Tokyo' },
+        { name: 'Tokyo', code: 'TYO', timezone: 'Asia/Tokyo' },
+      ],
+      legs: [{ serviceNumber: 'Hikari 500' }, { serviceNumber: 'Nozomi 24' }],
+    }
+
+    beforeEach(async () => {
+      await replaceTransportChain(beta.tenant.scope, beta.transportId, CHAIN)
+    })
+
+    it('answers nothing when asked, from A, about B’s legs', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(await listTransportLegs(scope, beta.transportId)).toEqual([])
+      expect(await listTripLegs(scope, beta.tripId)).toEqual([])
+
+      // The same ids resolve for their own tenant, so it is scoping that hid them.
+      expect(
+        await listTransportLegs(beta.tenant.scope, beta.transportId),
+      ).toHaveLength(2)
+      expect(await listTripLegs(beta.tenant.scope, beta.tripId)).toHaveLength(2)
+    })
+
+    it('refuses to replace the chain of a B transport from A’s scope', async () => {
+      expect(
+        await captureError(() =>
+          replaceTransportChain(alpha.tenant.scope, beta.transportId, {
+            stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+            legs: [{}],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('refuses a leg parented onto a B day even on A’s own transport', async () => {
+      const scope = alpha.tenant.scope
+
+      for (const leg of [
+        { departureDayId: beta.dayId },
+        { arrivalDayId: beta.lastDayId },
+      ]) {
+        expect(
+          await captureError(() =>
+            replaceTransportChain(scope, alpha.transportId, {
+              stations: [{ name: 'Lisbon' }, { name: 'Porto' }],
+              legs: [leg],
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      // Not one row landed: a dropped reference would have written a leg anyway.
+      expect(await listTransportLegs(scope, alpha.transportId)).toEqual([])
+    })
+
+    it('deletes nothing of B’s while refusing', async () => {
+      const scope = alpha.tenant.scope
+      const before = await listTripLegs(beta.tenant.scope, beta.tripId)
+      expect(before).toHaveLength(2)
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          replaceTransportChain(scope, beta.transportId, {
+            stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+            legs: [{}],
+          }),
+        () =>
+          replaceTransportChain(scope, beta.transportId, {
+            stations: [],
+            legs: [],
+          }),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await listTripLegs(beta.tenant.scope, beta.tripId)).toEqual(before)
+      expect(await transportLegsRepository.count(beta.tenant.scope)).toBe(
+        before.length,
+      )
+    })
+
+    /**
+     * Not a tenant boundary: one workspace, one trip, two roles. Membership is
+     * not a role, and the collaborative session already refuses a viewer the
+     * equivalent edit (`src/server/do/trip-room.ts:358`).
+     */
+    it('refuses a viewer and admits an editor on the same trip', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer of A')
+      const editorId = await alpha.tenant.addUser('Editor of A')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+
+      expect(
+        await captureError(() =>
+          replaceTransportChain(
+            alpha.tenant.scopeFor(viewerId),
+            alpha.transportId,
+            { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
+          ),
+        ),
+      ).toBeInstanceOf(TripRoleError)
+      expect(
+        await listTransportLegs(alpha.tenant.scope, alpha.transportId),
+      ).toEqual([])
+
+      expect(
+        await replaceTransportChain(
+          alpha.tenant.scopeFor(editorId),
+          alpha.transportId,
+          { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
+        ),
+      ).toHaveLength(1)
+    })
+  })
+  /**
+   * 03-S4 — a booking that knows which stop it is for, and what it cost.
+   *
+   * Three surfaces cross the boundary here and each is asserted from the side
+   * that can be fooled. The **stop link** is a reference into another workspace's
+   * itinerary. The **cost link** is a reference the server writes on the caller's
+   * behalf, which is exactly the kind an attacker would rather supply than earn —
+   * so it is resolved through a scoped read on both ends rather than trusted. The
+   * **import marker** is written in bulk over a list of ids, which is the one
+   * write in this file whose `where` is not a single primary key.
+   *
+   * The role guard is asserted in the same block because it is the layer above
+   * all three: a `viewer` on their own trip is inside the tenant, inside the trip,
+   * and still may not write.
+   */
+  describe('a booking, the stop it is for, and the cost line it wrote', () => {
+    it('answers nothing when asked, from A, about B rows', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(await getReservation(scope, beta.reservationId)).toBeNull()
+      expect(
+        await listTripReservations(scope, { tripId: beta.tripId }),
+      ).toEqual([])
+
+      // The same ids resolve for their own tenant, so it is scoping that hid them.
+      expect(
+        await getReservation(beta.tenant.scope, beta.reservationId),
+      ).not.toBeNull()
+      expect(
+        await listTripReservations(beta.tenant.scope, { tripId: beta.tripId }),
+      ).toHaveLength(1)
+    })
+
+    it('refuses every write against a B booking from A’s scope', async () => {
+      const scope = alpha.tenant.scope
+      const before = await getReservation(beta.tenant.scope, beta.reservationId)
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          updateReservation(scope, beta.reservationId, { title: 'Hijacked' }),
+        () => setReservationStatus(scope, beta.reservationId, 'cancelled'),
+        () => deleteReservation(scope, beta.reservationId),
+        () =>
+          linkReservationExpense(scope, beta.reservationId, alpha.expenseId),
+        () => clearReservationImported(scope, beta.reservationId),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        await getReservation(beta.tenant.scope, beta.reservationId),
+      ).toEqual(before)
+    })
+
+    it('refuses to move an A booking onto a B stop', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          updateReservation(scope, alpha.reservationId, {
+            assignmentId: beta.assignmentId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      const own = await getReservation(scope, alpha.reservationId)
+      expect(own?.assignmentId).toBeNull()
+    })
+
+    /**
+     * The case that proves the cost link cannot be used to reach across tenants.
+     * A owns the booking, so `requireById` lets it through; the expense is B's,
+     * and the scoped read behind it returns null rather than a row.
+     */
+    it('refuses to link A’s booking to B’s cost line', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          linkReservationExpense(scope, alpha.reservationId, beta.expenseId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        (await getReservation(scope, alpha.reservationId))?.expenseId,
+      ).toBeNull()
+    })
+
+    it('links a booking to a cost line of its own trip, and unlinks it again', async () => {
+      const scope = alpha.tenant.scope
+
+      const linked = await linkReservationExpense(
+        scope,
+        alpha.reservationId,
+        alpha.expenseId,
+      )
+      expect(linked.expenseId).toBe(alpha.expenseId)
+
+      const unlinked = await linkReservationExpense(
+        scope,
+        alpha.reservationId,
+        null,
+      )
+      expect(unlinked.expenseId).toBeNull()
+    })
+
+    it('never writes a ledger row into B, whatever combination of ids it is given', async () => {
+      const scope = alpha.tenant.scope
+      const before = await expensesRepository.count(beta.tenant.scope)
+      const bookingsBefore = await listTripReservations(beta.tenant.scope, {
+        tripId: beta.tripId,
+      })
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          createExpense(scope, {
+            tripId: beta.tripId,
+            title: 'Stolen cost line',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
+        () => linkReservationExpense(scope, beta.reservationId, beta.expenseId),
+        () =>
+          linkReservationExpense(scope, alpha.reservationId, beta.expenseId),
+        () =>
+          linkReservationExpense(scope, beta.reservationId, alpha.expenseId),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await expensesRepository.count(beta.tenant.scope)).toBe(before)
+      expect(
+        await listTripReservations(beta.tenant.scope, { tripId: beta.tripId }),
+      ).toEqual(bookingsBefore)
+      expect(
+        (await getExpense(beta.tenant.scope, beta.expenseId))?.tripId,
+      ).toBe(beta.tripId)
+    })
+
+    /**
+     * The bulk writer's `where` is an id list, so it is the one place a foreign
+     * id could be marked by being named rather than by being owned. The count it
+     * returns is what makes that visible: without it, a silent no-op on B's id is
+     * indistinguishable from success.
+     */
+    it('marks only the rows the caller owns, and says how many', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await markReservationsImported(scope, [
+          alpha.reservationId,
+          beta.reservationId,
+        ]),
+      ).toBe(1)
+
+      expect(
+        (await getReservation(scope, alpha.reservationId))?.importedAt,
+      ).toBeInstanceOf(Date)
+      expect(
+        (await getReservation(beta.tenant.scope, beta.reservationId))
+          ?.importedAt,
+      ).toBeNull()
+    })
+
+    it('clears its own marker twice without complaining', async () => {
+      const scope = alpha.tenant.scope
+      await markReservationsImported(scope, [alpha.reservationId])
+
+      expect(
+        (await clearReservationImported(scope, alpha.reservationId)).importedAt,
+      ).toBeNull()
+      expect(
+        (await clearReservationImported(scope, alpha.reservationId)).importedAt,
+      ).toBeNull()
+    })
+
+    /**
+     * The strip defect this stage exists to close, asserted from the outside:
+     * `createReservationInput` and `updateReservationInput` are `z.object`s, so an
+     * `importedAt` handed to either is dropped rather than refused. If it were
+     * ever declared there, a hand-typed booking could claim to be machine-written.
+     */
+    it('cannot be marked as imported through a booking payload', async () => {
+      const scope = alpha.tenant.scope
+
+      // Declared as variables rather than inline, so the extra key reaches the
+      // validator instead of being caught by the compiler's excess-property check —
+      // a request off the wire is exactly that: a wider object than the schema.
+      const creation = {
+        tripId: alpha.tripId,
+        title: 'Typed by a person',
+        importedAt: new Date(),
+      }
+      const created = await createReservation(scope, creation)
+      expect(created.importedAt).toBeNull()
+
+      const edit = { title: 'Still typed by a person', importedAt: new Date() }
+      const updated = await updateReservation(scope, alpha.reservationId, edit)
+      expect(updated.title).toBe('Still typed by a person')
+      expect(updated.importedAt).toBeNull()
+    })
+
+    it('lets an editor write and refuses a viewer, on their own trip', async () => {
+      const editorId = await alpha.tenant.addUser('Editor')
+      const viewerId = await alpha.tenant.addUser('Viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+
+      const editor = alpha.tenant.scopeFor(editorId)
+      const viewer = alpha.tenant.scopeFor(viewerId)
+
+      const written = await createReservation(editor, {
+        tripId: alpha.tripId,
+        title: 'Added by the editor',
+      })
+      expect(written.tripId).toBe(alpha.tripId)
+
+      // `FORBIDDEN` is the code every caller maps to a 403, so it is the code that
+      // is asserted rather than the class or the sentence.
+      const refusalCode = async (
+        run: () => Promise<unknown>,
+      ): Promise<string> => {
+        const error = await captureError(run)
+        return error instanceof RepositoryError ? error.code : error.name
+      }
+
+      expect(
+        await refusalCode(() =>
+          createReservation(viewer, {
+            tripId: alpha.tripId,
+            title: 'Added by the viewer',
+          }),
+        ),
+      ).toBe('FORBIDDEN')
+
+      // And the same refusal on every other writer this file owns.
+      for (const attempt of [
+        () =>
+          updateReservation(viewer, alpha.reservationId, { title: 'Hijacked' }),
+        () => setReservationStatus(viewer, alpha.reservationId, 'cancelled'),
+        () => deleteReservation(viewer, alpha.reservationId),
+        () =>
+          linkReservationExpense(viewer, alpha.reservationId, alpha.expenseId),
+      ]) {
+        expect(await refusalCode(attempt)).toBe('FORBIDDEN')
+      }
+    })
+  })
+
+  /**
+   * 03-S3 — a connection found for the traveller, saved as an ordinary journey.
+   *
+   * Two ids arrive from the browser on this path and each is re-resolved in the
+   * caller's own scope. The **trip** id is the usual one. The **transport** id is
+   * the one worth a case of its own, because a re-search *replaces* rows: a
+   * missing scope check here would not fail loudly, it would quietly rewrite
+   * another workspace's journey with a route it never asked for.
+   *
+   * The cache key is asserted where it lives, in
+   * `src/server/transit/__tests__/search.test.ts`, and for the opposite reason:
+   * it must be the *same* string for both tenants.
+   */
+  describe('a connection saved as a journey, and re-searched in place', () => {
+    /** Two legs, so a refusal that dropped one would still be visible. */
+    const CONNECTION = {
+      mode: 'train' as const,
+      title: 'Lisboa to Porto',
+      stations: [
+        { name: 'Lisboa Santa Apolonia', code: 'LIS' },
+        { name: 'Coimbra-B' },
+        { name: 'Porto Campanha', code: 'OPO' },
+      ],
+      legs: [
+        { serviceNumber: 'IC 728', departureTime: '08:12' },
+        { serviceNumber: 'IC 728', arrivalTime: '11:03' },
+      ],
+    }
+
+    it('refuses to hang a found connection off B\u2019s trip, and writes nothing', async () => {
+      const before = await transportsRepository.count(beta.tenant.scope)
+
+      expect(
+        await captureError(() =>
+          saveSearchedConnection(alpha.tenant.scope, {
+            ...CONNECTION,
+            tripId: beta.tripId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await transportsRepository.count(beta.tenant.scope)).toBe(before)
+      expect(await transportLegsRepository.count(beta.tenant.scope)).toBe(0)
+      // Nor did it land in A's own workspace under B's trip id.
+      expect(await transportsRepository.count(alpha.tenant.scope)).toBe(1)
+    })
+
+    it('refuses to re-search B\u2019s journey, and leaves its chain byte-identical', async () => {
+      await saveSearchedConnection(beta.tenant.scope, {
+        ...CONNECTION,
+        tripId: beta.tripId,
+        transportId: beta.transportId,
+      })
+      const before = await listTransportLegs(
+        beta.tenant.scope,
+        beta.transportId,
+      )
+      expect(before).toHaveLength(2)
+
+      for (const tripId of [beta.tripId, alpha.tripId]) {
+        expect(
+          await captureError(() =>
+            saveSearchedConnection(alpha.tenant.scope, {
+              ...CONNECTION,
+              tripId,
+              transportId: beta.transportId,
+              stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+              legs: [{}],
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        await listTransportLegs(beta.tenant.scope, beta.transportId),
+      ).toEqual(before)
+    })
+
+    it('refuses a transport of another trip inside the same workspace', async () => {
+      const other = await createTrip(alpha.tenant.scope, {
+        title: 'A second trip of A',
+        startDate: '2027-01-01',
+        endDate: '2027-01-04',
+      })
+
+      expect(
+        await captureError(() =>
+          saveSearchedConnection(alpha.tenant.scope, {
+            ...CONNECTION,
+            tripId: other.id,
+            transportId: alpha.transportId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await listTransportLegs(alpha.tenant.scope, alpha.transportId),
+      ).toEqual([])
+    })
+
+    it('keeps the record\u2019s identity, status and booking fields on a re-search', async () => {
+      const scope = alpha.tenant.scope
+      const saved = await saveSearchedConnection(scope, {
+        ...CONNECTION,
+        tripId: alpha.tripId,
+        priceMinor: 2450,
+        currency: 'EUR',
+      })
+      await updateTransport(scope, saved.transport.id, {
+        status: 'confirmed',
+        bookingCode: 'TXK9QP',
+        seat: '21A',
+      })
+
+      const again = await saveSearchedConnection(scope, {
+        ...CONNECTION,
+        tripId: alpha.tripId,
+        transportId: saved.transport.id,
+        title: 'A different name the search proposed',
+        priceMinor: 9900,
+        currency: 'USD',
+        stations: [{ name: 'Lisboa Oriente' }, { name: 'Porto Campanha' }],
+        legs: [{ serviceNumber: 'AP 124' }],
+      })
+
+      expect(again.transport.id).toBe(saved.transport.id)
+      expect(again.transport.status).toBe('confirmed')
+      expect(again.transport.bookingCode).toBe('TXK9QP')
+      expect(again.transport.seat).toBe('21A')
+      expect(again.transport.title).toBe('Lisboa to Porto')
+      expect(again.transport.priceMinor).toBe(2450)
+      expect(again.transport.currency).toBe('EUR')
+      // The route, and only the route, is what a re-search replaces.
+      expect(again.legs).toHaveLength(1)
+      expect(again.transport.departureName).toBe('Lisboa Oriente')
+      expect(again.transport.arrivalName).toBe('Porto Campanha')
+    })
+
+    it('refuses a viewer and admits an editor on the same trip', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer of A')
+      const editorId = await alpha.tenant.addUser('Editor of A')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+
+      expect(
+        await captureError(() =>
+          saveSearchedConnection(alpha.tenant.scopeFor(viewerId), {
+            ...CONNECTION,
+            tripId: alpha.tripId,
+          }),
+        ),
+      ).toBeInstanceOf(TripRoleError)
+
+      const saved = await saveSearchedConnection(
+        alpha.tenant.scopeFor(editorId),
+        { ...CONNECTION, tripId: alpha.tripId },
+      )
+      expect(saved.legs).toHaveLength(2)
+    })
+  })
+
+  /**
+   * `updateUserSettings`, specified against what it actually does rather than
+   * against what a guard would do.
+   *
+   * It takes no row id from the caller: it resolves its row through
+   * `ensureUserSettings`, which looks the user id up **inside the tenant scope**
+   * and inserts a fresh row stamped with the caller's own `organization_id` when
+   * none exists. So a user id belonging to B, handed to a write made from A, is
+   * never *rejected* — it is ensured into A's organization, and B's row stays
+   * structurally unreachable. Asserting a `NotFoundError` here would assert a
+   * refusal this function cannot make.
+   */
+  describe('a display preference written for a foreign user id', () => {
+    /** The whole row, so a single-field check cannot pass a partial clobber. */
+    async function betaRow(): Promise<UserSettings | null> {
+      return getUserSettings(beta.tenant.scope, beta.tenant.ownerUserId)
+    }
+
+    it('lands in the caller’s own organization and leaves B’s row byte-identical', async () => {
+      const before = await betaRow()
+      expect(before).not.toBeNull()
+
+      await updateUserSettings(
+        alpha.tenant.scope,
+        { maskConfirmationCodes: true },
+        beta.tenant.ownerUserId,
+      )
+
+      // A now has a row for that user id, carrying the flag, in its own organization.
+      const written = await getUserSettings(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+      )
+      expect(written?.organizationId).toBe(alpha.tenant.organizationId)
+      expect(written?.maskConfirmationCodes).toBe(true)
+
+      // And B's own row is exactly what it was — every column, not one.
+      expect(await betaRow()).toEqual(before)
+    })
+
+    /**
+     * Not an isolation case, and it is here because this is the only test file
+     * this stage owns.
+     *
+     * The assertion is made through the **merge** rather than through the stored
+     * row on purpose: `getEffectiveSettings` hand-builds its answer key by key,
+     * so a column that reaches `user_settings` and the write validator but never
+     * reaches that literal passes a row assertion and fails this one — a switch
+     * that writes a boolean nothing can ever read.
+     */
+    it('reaches the effective settings of its own tenant and of nobody else’s', async () => {
+      expect(
+        (await getEffectiveSettings(alpha.tenant.scope)).maskConfirmationCodes,
+      ).toBe(false)
+
+      await updateUserSettings(alpha.tenant.scope, {
+        maskConfirmationCodes: true,
+      })
+
+      expect(
+        (await getEffectiveSettings(alpha.tenant.scope)).maskConfirmationCodes,
+      ).toBe(true)
+      expect(
+        (await getEffectiveSettings(beta.tenant.scope)).maskConfirmationCodes,
+      ).toBe(false)
     })
   })
 })

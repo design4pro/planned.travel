@@ -41,31 +41,31 @@ const messages = {
   'transports.filtered.action': 'Zobrazit všechny přesuny',
   'transports.alert.impossible.title': {
     one: 'Jeden přestup nejde stihnout',
-    few: '{legs} přestupy nejdou stihnout',
-    many: '{legs} přestupu nejde stihnout',
-    other: '{legs} přestupů nejde stihnout',
+    few: '{value} přestupy nejdou stihnout',
+    many: '{value} přestupu nejde stihnout',
+    other: '{value} přestupů nejde stihnout',
   },
   'transports.alert.impossible.body':
     'Přesun odjíždí, než přijede ten předchozí. Uzly níže říkají které a o kolik.',
   'transports.alert.tight.title': {
     one: 'Jeden přestup je na těsno',
-    few: '{legs} přestupy jsou na těsno',
-    many: '{legs} přestupu je na těsno',
-    other: '{legs} přestupů je na těsno',
+    few: '{value} přestupy jsou na těsno',
+    many: '{value} přestupu je na těsno',
+    other: '{value} přestupů je na těsno',
   },
   'transports.alert.tight.body':
     'Čas je, ale málo na dopravu, kterou chceš stihnout. Uzly níže ukazují, kolik každý nechává.',
   'transports.badge.impossible': {
-    one: '{legs} rozbitý přestup',
-    few: '{legs} rozbité přestupy',
-    many: '{legs} rozbitého přestupu',
-    other: '{legs} rozbitých přestupů',
+    one: '{value} rozbitý přestup',
+    few: '{value} rozbité přestupy',
+    many: '{value} rozbitého přestupu',
+    other: '{value} rozbitých přestupů',
   },
   'transports.badge.tight': {
-    one: '{legs} těsný přestup',
-    few: '{legs} těsné přestupy',
-    many: '{legs} těsného přestupu',
-    other: '{legs} těsných přestupů',
+    one: '{value} těsný přestup',
+    few: '{value} těsné přestupy',
+    many: '{value} těsného přestupu',
+    other: '{value} těsných přestupů',
   },
   'transports.badge.ok': 'Každý přestup vychází',
   'transports.remove.body':
@@ -93,6 +93,7 @@ const messages = {
   'transports.field.place': 'Místo',
   'transports.field.code': 'Kód',
   'transports.field.date': 'Datum',
+  'transports.field.time': 'Odjezd po',
   'transports.field.departurePlaceholder': 'Praha Ruzyně',
   'transports.field.arrivalPlaceholder': 'Tokio Narita',
   'transports.field.carrier': 'Dopravce',
@@ -117,6 +118,7 @@ const messages = {
   'field.status': 'Stav',
   'form.saveError': 'Tohle se neuložilo',
   'action.cancel': 'Zrušit',
+  'action.showCode': 'Zobrazit {label}',
   'book.status.none': 'Bez stavu',
   'book.status.pending': 'Čeká',
   'book.status.confirmed': 'Potvrzená',
@@ -130,10 +132,19 @@ const messages = {
   'book.empty.body':
     'Nocleh, stoly, výlety a vstupenky patří sem — s potvrzovacím číslem tam, kde ho najdeš u dveří, a s datem, které je posadí na časovou osu.',
   'book.empty.action': 'Přidat první rezervaci',
-  'book.filtered.title': 'Nic v tomto stavu',
+  'book.filtered.title': 'Zatím nic tohoto druhu',
   'book.filtered.body':
-    'Každá rezervace této cesty je jinak daleko. Vrať se na „{label}“, ať vidíš všechny.',
-  'book.filtered.action': 'Zobrazit vše',
+    'Z druhů, které jsi vybral, tu není nic rezervováno. Zrušením filtru zobrazíš zbytek pultu.',
+  'book.filtered.action': 'Zrušit filtr',
+  'book.panel.outstanding': 'Ještě vyřídit',
+  'book.panel.outstandingEmpty': 'Nic nezbývá — všechno tady je vyřízené.',
+  'book.panel.settled': 'Vyřízeno',
+  'book.panel.settledEmpty':
+    'Zatím nic vyřízeného — všechno je ještě třeba dotáhnout.',
+  'book.import.badge': 'Neprověřený import',
+  'book.import.hint':
+    'Naimportováno z potvrzení. Otevři a ulož, tím se označí jako prověřené.',
+  'book.journeyLink': 'Na kartě dopravy',
   'filter.all': 'Vše',
   'book.remove.body':
     'Z časové osy zmizí nadobro. Pokud je jen zrušená, nastav jí stav Zrušená, ať ti záznam zůstane.',
@@ -411,6 +422,14 @@ const messages = {
   'book.error.url': 'Odkaz musí začínat http:// nebo https://.',
   'book.error.confirmationLong':
     'Tohle potvrzovací číslo je moc dlouhé na uložení.',
+  'book.error.stopGone': 'Tato zastávka už na téhle cestě není.',
+  'book.ledger.unlinked':
+    'Nákladová položka této rezervace zůstane v nákladech cesty, ale už nebude s rezervací spojená.',
+  'book.ledger.updated':
+    'Nákladová položka této rezervace se změní na {money}.',
+  'book.ledger.needsDate':
+    'Přidejte rezervaci datum a její náklad se přidá k nákladům cesty.',
+  'book.ledger.added': 'Do nákladů této cesty se přidá položka {money}.',
   'book.fieldName.provider': 'přepravce',
   'book.fieldName.location': 'místo',
   'book.fieldName.confirmationNumber': 'potvrzovací číslo',
@@ -421,6 +440,18 @@ const messages = {
   'book.fieldName.endTime': 'čas konce',
   'book.fieldName.guests': 'počet osob',
   'book.fieldName.price': 'cena',
+  'book.fieldName.stop': 'zastávka',
+  'book.field.stop': 'Připojená zastávka',
+  'book.field.stopHint': 'Ke které zastávce plánu tato rezervace patří.',
+  'book.field.stopHintEmpty':
+    'Nejdřív přidej místo do některého dne, pak k němu půjde rezervaci připojit',
+  'book.field.stopPlaceholder': 'Bez zastávky',
+  'book.field.stopSearch': 'Hledej zastávky a dny',
+  'book.field.stopEmpty': 'Žádná zastávka neodpovídá',
+  'book.ledger.refused.title': 'Uloženo, ale nepřidáno do nákladů',
+  'book.ledger.refused.body':
+    'Rezervace je na výletě. Přidat její položku do nákladů výletu se nepovedlo — zkus tuhle půlku znovu.',
+  'book.action.ledgerRetry': 'Přidat do nákladů',
   'book.copyConfirmation': 'potvrzovací číslo pro {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -437,6 +468,62 @@ const messages = {
   'transports.mode.walk': 'Pěšky',
   'transports.mode.other': 'Ostatní',
   'transports.mode.fallback': 'Přesun',
+  'transports.rank.earliest': 'Nejdřívější příjezd',
+  'transports.rank.fewestChanges': 'Nejméně přestupů',
+  'transports.connection.findStop': 'Najdi zastávku',
+  'transports.connection.findStopSearch': 'PRG, hl. n., Praha…',
+  'transports.connection.findStopEmpty': 'Zastávka toho jména v katalogu není.',
+  'transports.connection.hideStops': 'Skrýt zastávky',
+  'transports.connection.seeStops': 'Ukázat zastávky',
+  'transports.connection.saving': 'Ukládám spojení',
+  'transports.connection.use': 'Vybrat tohle',
+  'transports.connection.onFoot': 'Pěšky',
+  'transports.connection.service': 'Spoj',
+  'transports.connection.direct': 'přímo',
+  'transports.connection.changes': {
+    one: '{changes} přestup',
+    few: '{changes} přestupy',
+    many: '{changes} přestupu',
+    other: '{changes} přestupů',
+  },
+  'transports.connection.tooLong':
+    'Tohle spojení má víc než {max} úseků, což je víc, než unese jeden záznam cesty. Hledej kratší úsek a zbytek zapiš zvlášť.',
+  'transports.connection.refusal.ceiling':
+    'Tenhle měsíc už žádné hledání nezbývá',
+  'transports.connection.refusal.unconfigured':
+    'Vyhledávání spojení je na tomhle nasazení vypnuté',
+  'transports.connection.refusal.provider': 'Jízdní řády neodpověděly',
+  'transports.connection.refusal.plan':
+    'Vyhledávání spojení k tomuhle tarifu nepatří',
+  'transports.connection.refusal.planBody':
+    'Přejdi na jiný tarif, ať můžeš hledat v jízdních řádech přímo z cesty. Přesun jde pořád zapsat ručně.',
+  'transports.connection.refusal.ceilingBody':
+    'Měsíční příděl {ceiling} je vyčerpaný a obnoví se prvního příštího měsíce. Přesun jde pořád zapsat ručně.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Není tu nastavená žádná služba jízdních řádů, takže se nic nehledalo. Zapiš přesun ručně.',
+  'transports.connection.refusal.providerBody':
+    'Nevrátilo se nic, co by šlo ukázat. Zkus to za chvíli, nebo přesun zapiš ručně.',
+  'transports.connection.invitation':
+    'Dvě zastávky a datum, a jízdní řády odpoví. Nic se neuloží, dokud si nevybereš.',
+  'transports.connection.empty':
+    'Mezi těmi dvěma zastávkami se v ten den žádné spojení nenašlo. Zkus sousední stanici nebo rozšiř filtr módů.',
+  'transports.connection.searchFailed': 'Hledání neproběhlo',
+  'transports.connection.searchFailedBody': 'Zkus to za chvíli znovu.',
+  'transports.connection.saved': 'Spojení uloženo',
+  'transports.connection.replaced': 'Trasa nahrazena',
+  'transports.connection.replacedBody':
+    'Kód rezervace a sedadlo zůstávají beze změny.',
+  'transports.connection.saveFailed': 'Spojení se neuložilo',
+  'transports.connection.saveError': 'Tohle se neuložilo',
+  'transports.connection.fromHint':
+    'Vyber zastávku — jízdního řádu se ptáš kde, ne jak se to jmenuje.',
+  'transports.connection.toHint': 'Vyber zastávku z katalogu.',
+  'transports.connection.timeHint':
+    'Jízdní řád odpoví několika nejbližšími spoji, tohle rozhoduje kterými.',
+  'transports.connection.onlyModes': 'Jen tyhle módy',
+  'transports.connection.searching': 'Prohledávám jízdní řády',
+  'transports.connection.search': 'Hledat spojení',
+  'transports.connection.title': 'Z {from} do {to}',
   'transports.status.idea': 'Nápad',
   'transports.status.pending': 'Čeká',
   'transports.status.confirmed': 'Potvrzený',
@@ -450,6 +537,13 @@ const messages = {
   'transports.end.toStation': 'Do stanice',
   'transports.end.from': 'Odkud',
   'transports.end.to': 'Kam',
+  'transports.end.pickUp': 'Vyzvednutí',
+  'transports.end.dropOff': 'Vrácení',
+  'transports.end.departureDay': 'Den odjezdu',
+  'transports.end.arrivalDay': 'Den příjezdu',
+  'transports.end.pickUpDay': 'Den vyzvednutí',
+  'transports.end.returnDay': 'Den vrácení',
+  'transports.dayNumber': 'Den {n}',
   'transports.error.titleEmpty':
     'Dej tomuhle přesunu název, který v seznamu poznáš.',
   'transports.error.date': 'Datum se píše RRRR-MM-DD.',
@@ -464,6 +558,58 @@ const messages = {
     'Tenhle přesun přijíždí dřív, než odjíždí.',
   'transports.error.timingHint':
     'Posuň jeden z časů, aby se ten přesun dal opravdu stihnout.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'Den příjezdu předchází dni odjezdu.',
+  'transports.error.returnDayBeforePickUp':
+    'Den vrácení předchází dni vyzvednutí.',
+  'transports.toast.chainFailed': 'Úseky se neuložily',
+  'transports.toast.chainFallback': 'Cesta se uložila, její úseky ne.',
+  'transports.field.noDay': 'Zatím bez dne',
+  'transports.fill.legend': 'Jak tohle vyplnit',
+  'transports.fill.manual': 'Zadejte sami',
+  'transports.fill.searchAgain': 'Hledat znovu',
+  'transports.fill.search': 'Hledat spojení',
+  'transports.chain.unsplit': 'Složit zpátky do jedné cesty',
+  'transports.field.arrivalDayHint':
+    'Cesta, která přistane další ráno, to říká tady.',
+  'transports.chain.splitHint':
+    'Přestup po cestě? Zapište každou část s vlastním číslem spoje, nástupištěm, místem a časy.',
+  'transports.chain.split': 'Rozdělit na úseky',
+  'transports.chain.stopNumber': 'zastávka {n}',
+  'transports.chain.change': 'Přestup {n}',
+  'transports.chain.removeStation': 'Odebrat {label}',
+  'transports.chain.findStation': 'Najdi letiště nebo nádraží',
+  'transports.chain.findStationFor': 'Najdi letiště nebo nádraží pro {label}',
+  'transports.chain.findPlaceholder': 'PRG, Ruzyně, Praha…',
+  'transports.chain.findEmpty': 'Žádná shoda — napiš zastávku sám níže.',
+  'transports.chain.stopLabel': 'Zastávka',
+  'transports.chain.stopPlaceholder': 'Praha hl. n.',
+  'transports.chain.timezoneHint': 'Podle jakých hodin se tahle zastávka čte',
+  'transports.chain.timezoneAt': 'Časové pásmo u {label}',
+  'transports.chain.timezonePlaceholder': 'Neuvedeno',
+  'transports.chain.timezoneSearch': 'Tokio, Lisabon, UTC…',
+  'transports.chain.acrossClocks': '{gap} přes dvoje hodiny',
+  'transports.chain.addStopAfter': 'Přidat zastávku za {label}',
+  'transports.chain.servicePlaceholder': 'EC 174 Jan Perner',
+  'transports.chain.leaves': 'Odjíždí z {label}',
+  'transports.chain.reaches': 'Přijíždí do {label}',
+  'transports.chain.dayOfLeg': '{label} úseku {n}',
+  'transports.chain.formError': 'Tenhle řetěz nejde uložit',
+  'transports.chain.atCap':
+    'Řetěz pojme nejvýš {max} úseků — to je limit toho, co unese jedno uložení, ne toho, kolik přestupů cesta může mít.',
+  'transports.chain.hint':
+    'Přidej zastávku na kterýkoli úsek, když měníš vlak; každý úsek si drží vlastní číslo spoje, nástupiště a sedadlo.',
+  'transports.field.timezone': 'Časové pásmo',
+  'transports.field.platform': 'Nástupiště',
+  'transports.chain.legNumber': 'Úsek {n}',
+  'transports.chain.platform': 'Nástupiště {value}',
+  'transports.chain.seat': 'Sedadlo {value}',
+  'transports.chain.error.stopName':
+    'Každá zastávka potřebuje název — tady přestupujete.',
+  'transports.chain.error.stopNameLong':
+    'Název zastávky musí mít méně než 200 znaků.',
+  'transports.chain.error.timezone': 'Vyberte časové pásmo ze seznamu.',
+  'transports.chain.error.tooManyLegs': 'Řetězec pojme nejvýše {max} úseků.',
   'transports.bookingRefFor': 'číslo rezervace pro {title}',
   'transports.doorToDoor': 'To je {gap} od dveří ke dveřím.',
   'transports.title.fromTo': '{operator} z {from} do {to}',

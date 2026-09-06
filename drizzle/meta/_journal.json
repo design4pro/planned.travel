@@ -57,6 +57,13 @@
       "when": 1788118039499,
       "tag": "0007_faithful_mephistopheles",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788543141737,
+      "tag": "0008_sharp_purple_man",
+      "breakpoints": true
     }
   ]
 }

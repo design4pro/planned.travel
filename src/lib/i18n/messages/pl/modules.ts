@@ -41,31 +41,31 @@ const messages = {
   'transports.filtered.action': 'Pokaż wszystkie przejazdy',
   'transports.alert.impossible.title': {
     one: 'Jedna przesiadka jest niemożliwa',
-    few: '{legs} przesiadki są niemożliwe',
-    many: '{legs} przesiadek jest niemożliwych',
-    other: '{legs} przesiadki są niemożliwe',
+    few: '{value} przesiadki są niemożliwe',
+    many: '{value} przesiadek jest niemożliwych',
+    other: '{value} przesiadki są niemożliwe',
   },
   'transports.alert.impossible.body':
     'Przejazd odjeżdża, zanim przyjedzie poprzedni. Węzły poniżej mówią które i o ile.',
   'transports.alert.tight.title': {
     one: 'Jedna przesiadka jest ciasna',
-    few: '{legs} przesiadki są ciasne',
-    many: '{legs} przesiadek jest ciasnych',
-    other: '{legs} przesiadki są ciasne',
+    few: '{value} przesiadki są ciasne',
+    many: '{value} przesiadek jest ciasnych',
+    other: '{value} przesiadki są ciasne',
   },
   'transports.alert.tight.body':
     'Czas jest, ale niewiele go na środek, który łapiesz. Węzły poniżej pokazują, ile zostaje na każdy.',
   'transports.badge.impossible': {
-    one: '{legs} zepsuta przesiadka',
-    few: '{legs} zepsute przesiadki',
-    many: '{legs} zepsutych przesiadek',
-    other: '{legs} zepsutej przesiadki',
+    one: '{value} zepsuta przesiadka',
+    few: '{value} zepsute przesiadki',
+    many: '{value} zepsutych przesiadek',
+    other: '{value} zepsutej przesiadki',
   },
   'transports.badge.tight': {
-    one: '{legs} ciasna przesiadka',
-    few: '{legs} ciasne przesiadki',
-    many: '{legs} ciasnych przesiadek',
-    other: '{legs} ciasnej przesiadki',
+    one: '{value} ciasna przesiadka',
+    few: '{value} ciasne przesiadki',
+    many: '{value} ciasnych przesiadek',
+    other: '{value} ciasnej przesiadki',
   },
   'transports.badge.ok': 'Każda przesiadka działa',
   'transports.remove.body':
@@ -93,6 +93,7 @@ const messages = {
   'transports.field.place': 'Miejsce',
   'transports.field.code': 'Kod',
   'transports.field.date': 'Data',
+  'transports.field.time': 'Odjazd po',
   'transports.field.departurePlaceholder': 'Warszawa Okęcie',
   'transports.field.arrivalPlaceholder': 'Tokio Narita',
   'transports.field.carrier': 'Przewoźnik',
@@ -117,6 +118,7 @@ const messages = {
   'field.status': 'Stan',
   'form.saveError': 'To się nie zapisało',
   'action.cancel': 'Anuluj',
+  'action.showCode': 'Pokaż {label}',
   'book.status.none': 'Bez statusu',
   'book.status.pending': 'Oczekuje',
   'book.status.confirmed': 'Potwierdzona',
@@ -130,10 +132,20 @@ const messages = {
   'book.empty.body':
     'Noclegi, stoliki, wycieczki i bilety należą tutaj — z numerem potwierdzenia tam, gdzie znajdziesz go przy wejściu, i datą, która wstawia je na osi czasu.',
   'book.empty.action': 'Dodaj pierwszą rezerwację',
-  'book.filtered.title': 'Nic w tym stanie',
+  'book.filtered.title': 'Nic tego rodzaju',
   'book.filtered.body':
-    'Każda rezerwacja tej wycieczki jest na innym etapie. Wróć do „{label}”, żeby zobaczyć wszystkie.',
-  'book.filtered.action': 'Pokaż wszystko',
+    'Nie ma tu nic zarezerwowanego w wybranych rodzajach. Wyczyść filtr, żeby zobaczyć resztę.',
+  'book.filtered.action': 'Wyczyść filtr',
+  'book.panel.outstanding': 'Do załatwienia',
+  'book.panel.outstandingEmpty':
+    'Nic nie zostało — wszystko tutaj jest załatwione.',
+  'book.panel.settled': 'Załatwione',
+  'book.panel.settledEmpty':
+    'Nic jeszcze nie załatwione — wszystkiego trzeba dopilnować.',
+  'book.import.badge': 'Niesprawdzony import',
+  'book.import.hint':
+    'Zaimportowane z potwierdzenia. Otwórz i zapisz, żeby oznaczyć jako sprawdzone.',
+  'book.journeyLink': 'Na karcie transportu',
   'filter.all': 'Wszystko',
   'book.remove.body':
     'Zniknie z osi czasu na dobre. Jeśli jest tylko odwołana, ustaw jej stan na Odwołana, żeby zachować zapis.',
@@ -418,6 +430,15 @@ const messages = {
   'book.error.url': 'Odnośnik musi zaczynać się od http:// lub https://.',
   'book.error.confirmationLong':
     'Ten numer potwierdzenia jest za długi, by go zapisać.',
+  'book.error.stopGone': 'Tego przystanku już nie ma na tej wyprawie.',
+  'book.ledger.unlinked':
+    'Pozycja kosztowa tej rezerwacji zostanie w kosztach wyprawy, ale nie będzie już z nią powiązana.',
+  'book.ledger.updated':
+    'Pozycja kosztowa tej rezerwacji zostanie zmieniona na {money}.',
+  'book.ledger.needsDate':
+    'Podaj datę rezerwacji, a jej koszt trafi do kosztów wyprawy.',
+  'book.ledger.added':
+    'Do kosztów tej wyprawy zostanie dodana pozycja {money}.',
   'book.fieldName.provider': 'dostawca',
   'book.fieldName.location': 'miejsce',
   'book.fieldName.confirmationNumber': 'numer potwierdzenia',
@@ -428,6 +449,18 @@ const messages = {
   'book.fieldName.endTime': 'godzina zakończenia',
   'book.fieldName.guests': 'liczba osób',
   'book.fieldName.price': 'cena',
+  'book.fieldName.stop': 'przystanek',
+  'book.field.stop': 'Powiązany przystanek',
+  'book.field.stopHint': 'Którego przystanku planu dotyczy ta rezerwacja.',
+  'book.field.stopHintEmpty':
+    'Najpierw dodaj miejsce do któregoś dnia, wtedy będzie można powiązać z nim tę rezerwację',
+  'book.field.stopPlaceholder': 'Bez przystanku',
+  'book.field.stopSearch': 'Szukaj wśród przystanków i dni',
+  'book.field.stopEmpty': 'Żaden przystanek nie pasuje',
+  'book.ledger.refused.title': 'Zapisane, ale nie dodane do kosztów',
+  'book.ledger.refused.body':
+    'Rezerwacja jest na wyjeździe. Dodanie jej pozycji do kosztów wyjazdu się nie udało — spróbuj jeszcze raz tej połowy.',
+  'book.action.ledgerRetry': 'Dodaj do kosztów',
   'book.copyConfirmation': 'numer potwierdzenia dla: {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -444,6 +477,63 @@ const messages = {
   'transports.mode.walk': 'Pieszo',
   'transports.mode.other': 'Inne',
   'transports.mode.fallback': 'Przejazd',
+  'transports.rank.earliest': 'Najwcześniejszy przyjazd',
+  'transports.rank.fewestChanges': 'Najmniej przesiadek',
+  'transports.connection.findStop': 'Znajdź przystanek',
+  'transports.connection.findStopSearch': 'WAW, Centralna, Warszawa…',
+  'transports.connection.findStopEmpty':
+    'W katalogu nie ma przystanku o tej nazwie.',
+  'transports.connection.hideStops': 'Ukryj przystanki',
+  'transports.connection.seeStops': 'Pokaż przystanki',
+  'transports.connection.saving': 'Zapisuję połączenie',
+  'transports.connection.use': 'Wybierz to',
+  'transports.connection.onFoot': 'Pieszo',
+  'transports.connection.service': 'Kurs',
+  'transports.connection.direct': 'bezpośrednio',
+  'transports.connection.changes': {
+    one: '{changes} przesiadka',
+    few: '{changes} przesiadki',
+    many: '{changes} przesiadek',
+    other: '{changes} przesiadki',
+  },
+  'transports.connection.tooLong':
+    'To połączenie ma więcej niż {max} odcinków, czyli więcej, niż mieści jeden zapis podróży. Poszukaj krótszego odcinka, a resztę zapisz osobno.',
+  'transports.connection.refusal.ceiling':
+    'W tym miesiącu nie zostały już wyszukiwania',
+  'transports.connection.refusal.unconfigured':
+    'Wyszukiwanie połączeń jest wyłączone w tym wdrożeniu',
+  'transports.connection.refusal.provider': 'Serwis rozkładów nie odpowiedział',
+  'transports.connection.refusal.plan':
+    'Wyszukiwanie połączeń nie jest częścią tego planu',
+  'transports.connection.refusal.planBody':
+    'Zmień plan, aby wyszukiwać rozkłady z wnętrza podróży. Przejazd nadal można zapisać ręcznie.',
+  'transports.connection.refusal.ceilingBody':
+    'Miesięczny limit {ceiling} został wyczerpany i odnawia się pierwszego dnia następnego miesiąca. Przejazd nadal można zapisać ręcznie.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Nie skonfigurowano tu serwisu rozkładów, więc nic nie zostało wyszukane. Zapisz przejazd ręcznie.',
+  'transports.connection.refusal.providerBody':
+    'Nie wróciło nic do pokazania. Spróbuj za chwilę albo zapisz przejazd ręcznie.',
+  'transports.connection.invitation':
+    'Dwa przystanki i data, a rozkład odpowiada. Nic nie zapisuje się, dopóki nie wybierzesz.',
+  'transports.connection.empty':
+    'Nie znaleziono połączenia między tymi przystankami w tym dniu. Spróbuj sąsiedniej stacji albo poszerz filtr środków.',
+  'transports.connection.searchFailed': 'Wyszukiwanie się nie odbyło',
+  'transports.connection.searchFailedBody': 'Spróbuj za chwilę.',
+  'transports.connection.saved': 'Połączenie zapisane',
+  'transports.connection.replaced': 'Trasa zastąpiona',
+  'transports.connection.replacedBody':
+    'Kod rezerwacji i miejsce zostają bez zmian.',
+  'transports.connection.saveFailed': 'Połączenie nie zostało zapisane',
+  'transports.connection.saveError': 'To się nie zapisało',
+  'transports.connection.fromHint':
+    'Wybierz przystanek — rozkładu pytasz gdzie, a nie jak się nazywa.',
+  'transports.connection.toHint': 'Wybierz przystanek z katalogu.',
+  'transports.connection.timeHint':
+    'Rozkład odpowiada kilkoma najbliższymi odjazdami, więc to decyduje którymi.',
+  'transports.connection.onlyModes': 'Tylko te środki',
+  'transports.connection.searching': 'Przeszukuję rozkłady',
+  'transports.connection.search': 'Szukaj połączeń',
+  'transports.connection.title': 'Z {from} do {to}',
   'transports.status.idea': 'Pomysł',
   'transports.status.pending': 'Oczekuje',
   'transports.status.confirmed': 'Potwierdzony',
@@ -457,6 +547,13 @@ const messages = {
   'transports.end.toStation': 'Przyjazd do',
   'transports.end.from': 'Skąd',
   'transports.end.to': 'Dokąd',
+  'transports.end.pickUp': 'Odbiór',
+  'transports.end.dropOff': 'Zwrot',
+  'transports.end.departureDay': 'Dzień wyjazdu',
+  'transports.end.arrivalDay': 'Dzień przyjazdu',
+  'transports.end.pickUpDay': 'Dzień odbioru',
+  'transports.end.returnDay': 'Dzień zwrotu',
+  'transports.dayNumber': 'Dzień {n}',
   'transports.error.titleEmpty':
     'Nadaj temu przejazdowi nazwę, którą rozpoznasz na liście.',
   'transports.error.date': 'Datę zapisuje się jako RRRR-MM-DD.',
@@ -472,6 +569,60 @@ const messages = {
     'Ten przejazd przyjeżdża przed odjazdem.',
   'transports.error.timingHint':
     'Przesuń jedną z godzin, żeby ten przejazd dało się złapać.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'Dzień przyjazdu wypada przed dniem wyjazdu.',
+  'transports.error.returnDayBeforePickUp':
+    'Dzień zwrotu wypada przed dniem odbioru.',
+  'transports.toast.chainFailed': 'Odcinki nie zostały zapisane',
+  'transports.toast.chainFallback':
+    'Podróż została zapisana, ale jej odcinki nie.',
+  'transports.field.noDay': 'Jeszcze bez dnia',
+  'transports.fill.legend': 'Jak to wypełnić',
+  'transports.fill.manual': 'Wpisz samodzielnie',
+  'transports.fill.searchAgain': 'Szukaj ponownie',
+  'transports.fill.search': 'Szukaj połączeń',
+  'transports.chain.unsplit': 'Złóż z powrotem w jedną podróż',
+  'transports.field.arrivalDayHint':
+    'Podróż, która ląduje następnego ranka, mówi to tutaj.',
+  'transports.chain.splitHint':
+    'Przesiadka po drodze? Zapisz każdą część z własnym numerem kursu, peronem, miejscem i godzinami.',
+  'transports.chain.split': 'Podziel na odcinki',
+  'transports.chain.stopNumber': 'przystanek {n}',
+  'transports.chain.change': 'Przesiadka {n}',
+  'transports.chain.removeStation': 'Usuń {label}',
+  'transports.chain.findStation': 'Znajdź lotnisko lub stację',
+  'transports.chain.findStationFor': 'Znajdź lotnisko lub stację dla {label}',
+  'transports.chain.findPlaceholder': 'WAW, Okęcie, Warszawa…',
+  'transports.chain.findEmpty':
+    'Brak dopasowania — wpisz przystanek samodzielnie poniżej.',
+  'transports.chain.stopLabel': 'Przystanek',
+  'transports.chain.stopPlaceholder': 'Kraków Główny',
+  'transports.chain.timezoneHint': 'Według którego zegara idzie ten przystanek',
+  'transports.chain.timezoneAt': 'Strefa czasowa w {label}',
+  'transports.chain.timezonePlaceholder': 'Nie podano',
+  'transports.chain.timezoneSearch': 'Tokio, Lizbona, UTC…',
+  'transports.chain.acrossClocks': '{gap} między dwoma zegarami',
+  'transports.chain.addStopAfter': 'Dodaj przystanek po {label}',
+  'transports.chain.servicePlaceholder': 'IC 3100 Tatry',
+  'transports.chain.leaves': 'Odjazd z {label}',
+  'transports.chain.reaches': 'Przyjazd do {label}',
+  'transports.chain.dayOfLeg': '{label} odcinka {n}',
+  'transports.chain.formError': 'Tego łańcucha nie da się zapisać',
+  'transports.chain.atCap':
+    'Łańcuch mieści najwyżej {max} odcinków — to granica tego, co udźwignie jeden zapis, a nie tego, ile przesiadek może mieć podróż.',
+  'transports.chain.hint':
+    'Dodaj przystanek na dowolnym odcinku, żeby zapisać przesiadkę; każdy odcinek trzyma własny numer pociągu, peron i miejsce.',
+  'transports.field.timezone': 'Strefa czasowa',
+  'transports.field.platform': 'Peron',
+  'transports.chain.legNumber': 'Odcinek {n}',
+  'transports.chain.platform': 'Peron {value}',
+  'transports.chain.seat': 'Miejsce {value}',
+  'transports.chain.error.stopName':
+    'Każdy przystanek potrzebuje nazwy — to tutaj się przesiadasz.',
+  'transports.chain.error.stopNameLong':
+    'Nazwa przystanku musi mieć mniej niż 200 znaków.',
+  'transports.chain.error.timezone': 'Wybierz strefę czasową z listy.',
+  'transports.chain.error.tooManyLegs': 'Trasa mieści najwyżej {max} odcinków.',
   'transports.bookingRefFor': 'numer rezerwacji dla: {title}',
   'transports.doorToDoor': 'To {gap} od drzwi do drzwi.',
   'transports.title.fromTo': '{operator} z {from} do {to}',

@@ -160,6 +160,11 @@ const messages = {
   'appearance.map.workspace': 'Çalışma alanını izle',
   'appearance.map.light': 'Kâğıt — açık',
   'appearance.map.dark': 'Kömür grisi — koyu',
+  /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
+  'appearance.privacy.title': 'Paylaşılan bir ekranda',
+  'appearance.privacy.codesLabel': 'Onay kodlarını ben isteyene kadar gizle',
+  'appearance.privacy.codesHint':
+    'Rezervasyon referansları ve onay numaraları; rezervasyon masasında ve ulaşımda, üzerine gelene, odaklanana veya dokunana kadar maskeli kalır. Fiyatlar asla gizlenmez.',
   'appearance.saveFailed': 'Bu değişiklik kaydedilmedi',
   'appearance.saveFailedBody':
     'Burada görünüyor ama giriş yapacağınız bir sonraki cihazda olmayacak.',

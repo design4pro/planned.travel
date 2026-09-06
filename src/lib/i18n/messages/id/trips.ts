@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Biaya tidak dapat dimuat',
   'error.collab': 'Percakapan tidak dapat dimuat',
   'error.book': 'Pemesanan tidak dapat dimuat',
+  'error.transports': 'Transportasi tidak dapat dimuat',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Rencana perjalanan',
   'plan.places': 'Tempat',
@@ -57,6 +58,25 @@ const messages = {
   'book.committedCaption': 'Dari seluruh pemesanan perjalanan ini',
   'book.onItinerary': 'Di rencana perjalanan',
   'book.pinnedCaption': 'Disematkan pada satu hari rencana',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Transportasi',
+  'transports.empty': 'Belum ada yang dicatat',
+  'transports.count.transports': {
+    other: '{transports} transportasi',
+  },
+  'transports.distance': 'Jarak tempuh',
+  'transports.equator': '≈ {times}× keliling khatulistiwa',
+  'transports.noGrouping': 'Belum ada yang dikelompokkan',
+  'transports.mostly': 'kebanyakan {mode}',
+  'transports.confirmed': 'Terkonfirmasi',
+  'transports.stillPending': {
+    other: '{pending} masih menunggu',
+  },
+  'transports.spent': 'Dibelanjakan untuk perjalanan',
+  'transports.noPrices': 'Belum ada harga dicatat',
+  'transports.priced': {
+    other: 'dari {priced} transportasi dengan harga',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

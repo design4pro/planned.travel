@@ -1,53 +1,104 @@
 /** The transports module's public surface. */
-export { ConnectionsBadge, LegsTimeline } from './legs-timeline'
-export type { LegsTimelineProps } from './legs-timeline'
+export { ConnectionsBadge, TransportsTimeline } from './transports-timeline'
+export type { TransportsTimelineProps } from './transports-timeline'
 
-export { LegDialog, NewLegAction } from './leg-dialog'
+export { TransportDialog, NewTransportAction } from './leg-dialog'
+
+export { ChainEditor } from './chain-editor'
+export type { ChainEditorProps } from './chain-editor'
+
+export {
+  ConnectionSearch,
+  chainFor as chainForConnection,
+  connectionMode,
+  journeyLegs,
+  placeOf,
+  rankConnections,
+  refusalBody,
+  refusalTitle,
+} from './connection-search'
+export type {
+  ConnectionRefusal,
+  ConnectionSearchProps,
+} from './connection-search'
 
 export {
   analyseConnections,
   formatGap,
-  legArrivalAt,
-  legDepartureAt,
-  legTimingError,
+  transportArrivalAt,
+  transportDepartureAt,
+  transportTimingError,
   minimumConnectionMinutes,
-  sortLegsByDeparture,
+  sortTransportsByDeparture,
   summariseConnections,
 } from './connections'
 export type {
   Connection,
   ConnectionSeverity,
   ConnectionSummary,
-  LegLike,
+  TransportLike,
 } from './connections'
 
 export {
+  CHAIN_MAX_LEGS,
   MODE_LABELS,
   STATUS_LABELS as TRANSPORT_STATUS_LABELS,
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
-  emptyLegDraft,
+  applyStationMatch,
+  applyTypedCodeMatch,
+  blockingLegErrors,
+  breakIntoLegs,
+  chainFromTransport,
+  chainPayload,
+  emptyChain,
+  emptyChainLeg,
+  emptyTransportDraft,
+  emptyStation,
   endpointLabels,
-  hasLegErrors,
+  fillStationFromCode,
+  flatChain,
+  hasChainErrors,
+  hasTransportErrors,
+  isLookupCode,
   isTransportMode,
   isTransportStatus,
   kilometresToMetres,
   metresToKilometres,
   modeLabel,
-  suggestLegTitle,
+  removeStationAt,
+  splitLegAt,
+  stationLabel,
+  suggestTransportTitle,
   transportStatusLabel,
+  updateStationByKey,
   usesCodes,
   usesSeat,
   usesService,
-  validateLegDraft,
+  validateChain,
+  validateTransportDraft,
 } from './leg-form'
 export type {
-  LegDraft,
-  LegErrors,
+  ChainDraft,
+  ChainErrors,
+  ChainLegDraft,
+  ChainLegErrors,
+  ChainLegPayload,
+  ChainOwnedField,
+  ChainPayload,
+  ChainStationPayload,
+  DayChoice,
+  EndpointLabels,
+  FlatEndpoints,
+  TransportDraft,
+  TransportErrors,
+  StationDraft,
+  StationErrors,
+  StationLookup,
   TransportMode,
   TransportStatus,
 } from './leg-form'
 
 export { MODE_ICON, modeIcon } from './mode-icon'
-export { legDurationMinutes } from './leg-timing'
-export type { LegData } from './types'
+export { transportDurationMinutes, legElapsedMinutes } from './leg-timing'
+export type { TransportData, TransportDayData, TransportLegData } from './types'

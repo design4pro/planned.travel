@@ -20,6 +20,7 @@ const messages = {
   'error.costs': '無法載入費用',
   'error.collab': '無法載入對話',
   'error.book': '無法載入訂房',
+  'error.transports': '交通未能載入',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '行程',
   'plan.places': '地點',
@@ -57,6 +58,25 @@ const messages = {
   'book.committedCaption': '涵蓋這次旅行的所有訂房',
   'book.onItinerary': '已排入行程',
   'book.pinnedCaption': '已固定到行程中的某一天',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': '交通',
+  'transports.empty': '尚未紀錄',
+  'transports.count.transports': {
+    other: '{transports} 段交通',
+  },
+  'transports.distance': '已行距離',
+  'transports.equator': '≈ 繞赤道 {times} 圈',
+  'transports.noGrouping': '尚未歸類',
+  'transports.mostly': '多為{mode}',
+  'transports.confirmed': '已確認',
+  'transports.stillPending': {
+    other: '{pending} 項仍待確認',
+  },
+  'transports.spent': '交通花費',
+  'transports.noPrices': '未紀錄價格',
+  'transports.priced': {
+    other: '來自 {priced} 段有價交通',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

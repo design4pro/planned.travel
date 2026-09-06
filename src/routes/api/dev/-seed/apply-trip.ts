@@ -309,41 +309,41 @@ export async function applyTrip(
   /* --------------------------------------------------------------------------------- transports */
 
   const transportIdByKey = new Map<string, string>()
-  for (const [index, leg] of (trip.transports ?? []).entries()) {
+  for (const [index, transport] of (trip.transports ?? []).entries()) {
     const row = await createTransport(owner, {
       tripId,
       dayId:
-        leg.dayNumber === undefined
+        transport.dayNumber === undefined
           ? null
-          : (dayIdByNumber.get(leg.dayNumber) ?? null),
-      mode: leg.mode,
-      status: leg.status,
-      title: leg.title,
-      carrier: leg.carrier ?? null,
-      serviceNumber: leg.serviceNumber ?? null,
-      bookingCode: leg.bookingCode ?? null,
-      seat: leg.seat ?? null,
-      departureName: leg.departureName,
-      departureCode: leg.departureCode ?? null,
-      departureLat: leg.departureLat,
-      departureLng: leg.departureLng,
-      departureDate: leg.departureDate,
-      departureTime: leg.departureTime,
-      departureTimezone: leg.departureTimezone,
-      arrivalName: leg.arrivalName,
-      arrivalCode: leg.arrivalCode ?? null,
-      arrivalLat: leg.arrivalLat,
-      arrivalLng: leg.arrivalLng,
-      arrivalDate: leg.arrivalDate,
-      arrivalTime: leg.arrivalTime,
-      arrivalTimezone: leg.arrivalTimezone,
-      distanceMetres: leg.distanceMetres,
-      priceMinor: leg.priceMinor,
-      currency: leg.currency,
-      notes: leg.notes ?? null,
+          : (dayIdByNumber.get(transport.dayNumber) ?? null),
+      mode: transport.mode,
+      status: transport.status,
+      title: transport.title,
+      carrier: transport.carrier ?? null,
+      serviceNumber: transport.serviceNumber ?? null,
+      bookingCode: transport.bookingCode ?? null,
+      seat: transport.seat ?? null,
+      departureName: transport.departureName,
+      departureCode: transport.departureCode ?? null,
+      departureLat: transport.departureLat,
+      departureLng: transport.departureLng,
+      departureDate: transport.departureDate,
+      departureTime: transport.departureTime,
+      departureTimezone: transport.departureTimezone,
+      arrivalName: transport.arrivalName,
+      arrivalCode: transport.arrivalCode ?? null,
+      arrivalLat: transport.arrivalLat,
+      arrivalLng: transport.arrivalLng,
+      arrivalDate: transport.arrivalDate,
+      arrivalTime: transport.arrivalTime,
+      arrivalTimezone: transport.arrivalTimezone,
+      distanceMetres: transport.distanceMetres,
+      priceMinor: transport.priceMinor,
+      currency: transport.currency,
+      notes: transport.notes ?? null,
       sortOrder: index,
     })
-    transportIdByKey.set(leg.key, row.id)
+    transportIdByKey.set(transport.key, row.id)
   }
 
   /* ------------------------------------------------------------------------------- reservations */

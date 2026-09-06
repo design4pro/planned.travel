@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Die Kosten konnten nicht geladen werden',
   'error.collab': 'Die Unterhaltung konnte nicht geladen werden',
   'error.book': 'Die Buchungen konnten nicht geladen werden',
+  'error.transports': 'Die Transfers konnten nicht geladen werden',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reiseverlauf',
   'plan.places': 'Orte',
@@ -63,6 +64,28 @@ const messages = {
   'book.committedCaption': 'Über alle Buchungen dieser Reise',
   'book.onItinerary': 'Im Reiseverlauf',
   'book.pinnedCaption': 'An einen Tag des Plans geheftet',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Transfers',
+  'transports.empty': 'Noch nichts erfasst',
+  'transports.count.transports': {
+    one: '{transports} Transfer',
+    other: '{transports} Transfers',
+  },
+  'transports.distance': 'Zurückgelegte Strecke',
+  'transports.equator': '≈ {times}× um den Äquator',
+  'transports.noGrouping': 'Noch nichts gruppiert',
+  'transports.mostly': 'meist {mode}',
+  'transports.confirmed': 'Bestätigt',
+  'transports.stillPending': {
+    one: '{pending} steht noch aus',
+    other: '{pending} stehen noch aus',
+  },
+  'transports.spent': 'Für die Reise ausgegeben',
+  'transports.noPrices': 'Keine Preise erfasst',
+  'transports.priced': {
+    one: 'über {priced} Transfer mit Preis',
+    other: 'über {priced} Transfers mit Preis',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

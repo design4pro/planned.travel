@@ -40,31 +40,31 @@ const messages = {
   'transports.filtered.action': 'Показать все переезды',
   'transports.alert.impossible.title': {
     one: 'Одна пересадка невозможна',
-    few: '{legs} пересадки невозможны',
-    many: '{legs} пересадок невозможны',
-    other: '{legs} пересадки невозможны',
+    few: '{value} пересадки невозможны',
+    many: '{value} пересадок невозможны',
+    other: '{value} пересадки невозможны',
   },
   'transports.alert.impossible.body':
     'Переезд отправляется раньше, чем приходит предыдущий. Узлы ниже говорят какие и насколько.',
   'transports.alert.tight.title': {
     one: 'Одна пересадка впритык',
-    few: '{legs} пересадки впритык',
-    many: '{legs} пересадок впритык',
-    other: '{legs} пересадки впритык',
+    few: '{value} пересадки впритык',
+    many: '{value} пересадок впритык',
+    other: '{value} пересадки впритык',
   },
   'transports.alert.tight.body':
     'Время есть, но его немного для того транспорта, который вы ловите. Узлы ниже показывают, сколько остаётся на каждый.',
   'transports.badge.impossible': {
-    one: '{legs} сломанная пересадка',
-    few: '{legs} сломанные пересадки',
-    many: '{legs} сломанных пересадок',
-    other: '{legs} сломанной пересадки',
+    one: '{value} сломанная пересадка',
+    few: '{value} сломанные пересадки',
+    many: '{value} сломанных пересадок',
+    other: '{value} сломанной пересадки',
   },
   'transports.badge.tight': {
-    one: '{legs} тесная пересадка',
-    few: '{legs} тесные пересадки',
-    many: '{legs} тесных пересадок',
-    other: '{legs} тесной пересадки',
+    one: '{value} тесная пересадка',
+    few: '{value} тесные пересадки',
+    many: '{value} тесных пересадок',
+    other: '{value} тесной пересадки',
   },
   'transports.badge.ok': 'Все пересадки складываются',
   'transports.remove.body':
@@ -92,6 +92,7 @@ const messages = {
   'transports.field.place': 'Место',
   'transports.field.code': 'Код',
   'transports.field.date': 'Дата',
+  'transports.field.time': 'Отправление после',
   'transports.field.departurePlaceholder': 'Москва Шереметьево',
   'transports.field.arrivalPlaceholder': 'Токио Ханэда',
   'transports.field.carrier': 'Перевозчик',
@@ -116,6 +117,7 @@ const messages = {
   'field.status': 'Статус',
   'form.saveError': 'Это не сохранилось',
   'action.cancel': 'Отмена',
+  'action.showCode': 'Показать {label}',
   'book.status.none': 'Без статуса',
   'book.status.pending': 'Ожидает',
   'book.status.confirmed': 'Подтверждена',
@@ -129,10 +131,19 @@ const messages = {
   'book.empty.body':
     'Жильё, столики, экскурсии и билеты — здесь, вместе с номером подтверждения там, где вы найдёте его у входа, и датой, которая ставит их на шкалу.',
   'book.empty.action': 'Добавить первую бронь',
-  'book.filtered.title': 'Ничего в этом статусе',
+  'book.filtered.title': 'Пока ничего такого',
   'book.filtered.body':
-    'Каждая бронь этой поездки на своей стадии. Вернитесь к «{label}», чтобы увидеть все.',
-  'book.filtered.action': 'Показать всё',
+    'Из выбранных видов здесь ничего не забронировано. Снимите фильтр, чтобы увидеть остальное.',
+  'book.filtered.action': 'Снять фильтр',
+  'book.panel.outstanding': 'Ещё уладить',
+  'book.panel.outstandingEmpty': 'Ничего не осталось — здесь всё улажено.',
+  'book.panel.settled': 'Улажено',
+  'book.panel.settledEmpty':
+    'Пока ничего не улажено — всё ещё предстоит добиться.',
+  'book.import.badge': 'Непроверенный импорт',
+  'book.import.hint':
+    'Взято из подтверждения. Откройте и сохраните, чтобы отметить проверенным.',
+  'book.journeyLink': 'На вкладке транспорта',
   'filter.all': 'Всё',
   'book.remove.body':
     'Она уйдёт со шкалы окончательно. Если она только отменена, поставьте статус «Отменена», чтобы запись осталась.',
@@ -416,6 +427,13 @@ const messages = {
   'book.error.url': 'Ссылка должна начинаться с http:// или https://.',
   'book.error.confirmationLong':
     'Этот номер подтверждения слишком длинный, чтобы его сохранить.',
+  'book.error.stopGone': 'Этой остановки больше нет в поездке.',
+  'book.ledger.unlinked':
+    'Строка расходов этой брони останется в расходах поездки, но перестанет быть с ней связана.',
+  'book.ledger.updated': 'Строка расходов этой брони изменится на {money}.',
+  'book.ledger.needsDate':
+    'Укажите дату брони, и её стоимость попадёт в расходы поездки.',
+  'book.ledger.added': 'В расходы поездки будет добавлена строка на {money}.',
   'book.fieldName.provider': 'перевозчик',
   'book.fieldName.location': 'место',
   'book.fieldName.confirmationNumber': 'номер подтверждения',
@@ -426,6 +444,18 @@ const messages = {
   'book.fieldName.endTime': 'время окончания',
   'book.fieldName.guests': 'число человек',
   'book.fieldName.price': 'цена',
+  'book.fieldName.stop': 'остановка',
+  'book.field.stop': 'Связанная остановка',
+  'book.field.stopHint': 'К какой остановке плана относится эта бронь.',
+  'book.field.stopHintEmpty':
+    'Сначала добавьте место в какой-нибудь день, тогда бронь можно будет к нему привязать',
+  'book.field.stopPlaceholder': 'Без остановки',
+  'book.field.stopSearch': 'Поиск по остановкам и дням',
+  'book.field.stopEmpty': 'Ни одна остановка не подходит',
+  'book.ledger.refused.title': 'Сохранено, но в расходы не добавлено',
+  'book.ledger.refused.body':
+    'Бронь уже в поездке. Добавить её строку в расходы поездки не удалось — повторите эту половину.',
+  'book.action.ledgerRetry': 'Добавить в расходы',
   'book.copyConfirmation': 'номер подтверждения для {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -442,6 +472,61 @@ const messages = {
   'transports.mode.walk': 'Пешком',
   'transports.mode.other': 'Другое',
   'transports.mode.fallback': 'Переезд',
+  'transports.rank.earliest': 'Раньше прибытие',
+  'transports.rank.fewestChanges': 'Меньше пересадок',
+  'transports.connection.findStop': 'Найдите остановку',
+  'transports.connection.findStopSearch': 'SVO, Курская, Москва…',
+  'transports.connection.findStopEmpty':
+    'Остановки с таким названием в каталоге нет.',
+  'transports.connection.hideStops': 'Скрыть остановки',
+  'transports.connection.seeStops': 'Показать остановки',
+  'transports.connection.saving': 'Сохраняем маршрут',
+  'transports.connection.use': 'Взять этот',
+  'transports.connection.onFoot': 'Пешком',
+  'transports.connection.service': 'Рейс',
+  'transports.connection.direct': 'напрямую',
+  'transports.connection.changes': {
+    one: '{changes} пересадка',
+    few: '{changes} пересадки',
+    many: '{changes} пересадок',
+    other: '{changes} пересадки',
+  },
+  'transports.connection.tooLong':
+    'В этом маршруте больше {max} участков — больше, чем вмещает одна запись поездки. Найдите участок покороче, остальное запишите отдельно.',
+  'transports.connection.refusal.ceiling': 'В этом месяце поисков не осталось',
+  'transports.connection.refusal.unconfigured':
+    'Поиск маршрутов выключен на этом развёртывании',
+  'transports.connection.refusal.provider': 'Служба расписаний не ответила',
+  'transports.connection.refusal.plan': 'Поиск маршрутов не входит в этот план',
+  'transports.connection.refusal.planBody':
+    'Перейдите на другой план, чтобы искать расписания прямо из поездки. Маршрут всегда можно записать вручную.',
+  'transports.connection.refusal.ceilingBody':
+    'Месячный лимит {ceiling} исчерпан, он обновится первого числа следующего месяца. Маршрут всегда можно записать вручную.',
+  'transports.connection.refusal.unconfiguredBody':
+    'Здесь не настроена служба расписаний, поэтому ничего не искали. Запишите маршрут вручную.',
+  'transports.connection.refusal.providerBody':
+    'Не вернулось ничего, что можно показать. Попробуйте через мгновение или запишите маршрут вручную.',
+  'transports.connection.invitation':
+    'Две остановки и дата — расписание ответит. Ничего не сохраняется, пока вы не выберете.',
+  'transports.connection.empty':
+    'Между этими двумя остановками на эту дату маршрут не найден. Попробуйте соседнюю станцию или расширьте фильтр.',
+  'transports.connection.searchFailed': 'Поиск не выполнился',
+  'transports.connection.searchFailedBody':
+    'Попробуйте ещё раз через мгновение.',
+  'transports.connection.saved': 'Маршрут сохранён',
+  'transports.connection.replaced': 'Маршрут заменён',
+  'transports.connection.replacedBody': 'Код брони и место остались прежними.',
+  'transports.connection.saveFailed': 'Маршрут не сохранён',
+  'transports.connection.saveError': 'Это не сохранилось',
+  'transports.connection.fromHint':
+    'Выберите остановку — расписание спрашивают где, а не как это называется.',
+  'transports.connection.toHint': 'Выберите остановку из каталога.',
+  'transports.connection.timeHint':
+    'Расписание отвечает ближайшими рейсами, и это решает, какими именно.',
+  'transports.connection.onlyModes': 'Только эти виды',
+  'transports.connection.searching': 'Ищем в расписании',
+  'transports.connection.search': 'Искать маршруты',
+  'transports.connection.title': 'Из {from} в {to}',
   'transports.status.idea': 'Замысел',
   'transports.status.pending': 'Ожидает',
   'transports.status.confirmed': 'Подтверждён',
@@ -455,6 +540,13 @@ const messages = {
   'transports.end.toStation': 'До станции',
   'transports.end.from': 'Откуда',
   'transports.end.to': 'Куда',
+  'transports.end.pickUp': 'Получение',
+  'transports.end.dropOff': 'Возврат',
+  'transports.end.departureDay': 'День отправления',
+  'transports.end.arrivalDay': 'День прибытия',
+  'transports.end.pickUpDay': 'День получения',
+  'transports.end.returnDay': 'День возврата',
+  'transports.dayNumber': 'День {n}',
   'transports.error.titleEmpty':
     'Дайте этому переезду название, которое узнаете в списке.',
   'transports.error.date': 'Дата пишется ГГГГ-ММ-ДД.',
@@ -469,6 +561,59 @@ const messages = {
     'Этот переезд прибывает раньше, чем отправляется.',
   'transports.error.timingHint':
     'Сдвиньте одно из времён, чтобы на этот переезд реально можно было успеть.',
+  'transports.error.arrivalDayBeforeDeparture':
+    'День прибытия наступает раньше дня отправления.',
+  'transports.error.returnDayBeforePickUp':
+    'День возврата наступает раньше дня получения.',
+  'transports.toast.chainFailed': 'Участки не сохранились',
+  'transports.toast.chainFallback': 'Поездка сохранена, а её участки нет.',
+  'transports.field.noDay': 'Пока без дня',
+  'transports.fill.legend': 'Как это заполнить',
+  'transports.fill.manual': 'Ввести самому',
+  'transports.fill.searchAgain': 'Искать снова',
+  'transports.fill.search': 'Искать рейсы',
+  'transports.chain.unsplit': 'Снова сделать одной поездкой',
+  'transports.field.arrivalDayHint':
+    'Поездка, которая прибывает следующим утром, говорит об этом здесь.',
+  'transports.chain.splitHint':
+    'Пересадка по пути? Запишите каждую часть со своим номером рейса, платформой, местом и временем.',
+  'transports.chain.split': 'Разбить на участки',
+  'transports.chain.stopNumber': 'остановка {n}',
+  'transports.chain.change': 'Пересадка {n}',
+  'transports.chain.removeStation': 'Удалить {label}',
+  'transports.chain.findStation': 'Найдите аэропорт или вокзал',
+  'transports.chain.findStationFor': 'Найдите аэропорт или вокзал для {label}',
+  'transports.chain.findPlaceholder': 'SVO, Шереметьево, Москва…',
+  'transports.chain.findEmpty': 'Совпадений нет — впишите остановку ниже сами.',
+  'transports.chain.stopLabel': 'Остановка',
+  'transports.chain.stopPlaceholder': 'Москва Курская',
+  'transports.chain.timezoneHint': 'По каким часам идёт эта остановка',
+  'transports.chain.timezoneAt': 'Часовой пояс в {label}',
+  'transports.chain.timezonePlaceholder': 'Не указан',
+  'transports.chain.timezoneSearch': 'Токио, Лиссабон, UTC…',
+  'transports.chain.acrossClocks': '{gap} между двумя часами',
+  'transports.chain.addStopAfter': 'Добавить остановку после {label}',
+  'transports.chain.servicePlaceholder': 'Сапсан 754',
+  'transports.chain.leaves': 'Отправление из {label}',
+  'transports.chain.reaches': 'Прибытие в {label}',
+  'transports.chain.dayOfLeg': '{label} участка {n}',
+  'transports.chain.formError': 'Эту цепочку сохранить нельзя',
+  'transports.chain.atCap':
+    'В цепочку входит не больше {max} участков — это предел того, что несёт одно сохранение, а не того, сколько пересадок бывает в поездке.',
+  'transports.chain.hint':
+    'Добавьте остановку на любом участке, чтобы записать пересадку; каждый участок хранит свой номер поезда, платформу и место.',
+  'transports.field.timezone': 'Часовой пояс',
+  'transports.field.platform': 'Платформа',
+  'transports.chain.legNumber': 'Участок {n}',
+  'transports.chain.platform': 'Платформа {value}',
+  'transports.chain.seat': 'Место {value}',
+  'transports.chain.error.stopName':
+    'У каждой остановки должно быть название — здесь вы пересаживаетесь.',
+  'transports.chain.error.stopNameLong':
+    'Название остановки должно быть короче 200 символов.',
+  'transports.chain.error.timezone': 'Выберите часовой пояс из списка.',
+  'transports.chain.error.tooManyLegs':
+    'Цепочка вмещает не более {max} участков.',
   'transports.bookingRefFor': 'номер брони для {title}',
   'transports.doorToDoor': 'Это {gap} от двери до двери.',
   'transports.title.fromTo': '{operator}: {from} — {to}',

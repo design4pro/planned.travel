@@ -20,6 +20,7 @@ const messages = {
   'error.costs': 'Không tải được chi phí',
   'error.collab': 'Không tải được cuộc trò chuyện',
   'error.book': 'Không tải được các chỗ đã đặt',
+  'error.transports': 'Không tải được các lượt di chuyển',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Lịch trình',
   'plan.places': 'Địa điểm',
@@ -57,6 +58,25 @@ const messages = {
   'book.committedCaption': 'Trên toàn bộ chỗ đã đặt của chuyến này',
   'book.onItinerary': 'Trong lịch trình',
   'book.pinnedCaption': 'Đã ghim vào một ngày của lịch trình',
+  /* ---------------------------------------------- the transports tab */
+  'transports.title': 'Di chuyển',
+  'transports.empty': 'Chưa ghi gì',
+  'transports.count.transports': {
+    other: '{transports} lượt di chuyển',
+  },
+  'transports.distance': 'Quãng đường đã đi',
+  'transports.equator': '≈ {times}× vòng quanh xích đạo',
+  'transports.noGrouping': 'Chưa nhóm được gì',
+  'transports.mostly': 'chủ yếu là {mode}',
+  'transports.confirmed': 'Đã xác nhận',
+  'transports.stillPending': {
+    other: '{pending} vẫn đang chờ',
+  },
+  'transports.spent': 'Chi cho di chuyển',
+  'transports.noPrices': 'Chưa ghi giá nào',
+  'transports.priced': {
+    other: 'trên {priced} lượt di chuyển có giá',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages
