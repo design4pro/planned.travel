@@ -1,6 +1,10 @@
-Refs #<issue>
+Closes #<issue>
 
-<!-- Never `Closes #n`: PRs target `develop`, where closing keywords do nothing. The sweeper closes the issue on merge. -->
+<!-- `Closes #n` for an implementation, `Refs #n` for a spec-only or partial PR. GitHub does not
+close on merge into develop; the housekeeping run (om-close-fixed-issues) reads this line and
+does. Labels, per SDLC.md: one category (bug / feature / refactor / security / dependencies /
+documentation), one priority-*, one risk-*, and `needs-qa` when a screen changes, otherwise
+`skip-qa`. `review` is the pipeline label a PR wears while it waits for a human. -->
 
 ## What
 
@@ -11,9 +15,9 @@ Refs #<issue>
 - [ ] New logic has tests; `pnpm test` passes
 - [ ] Visually verified in a browser: light and dark, desktop and mobile (UI changes). Nothing in CI photographs a screen (ADR 0016), so for a deliberate visual change run `node scripts/visual/capture.mjs` and look at the pair
 - [ ] No TODOs, placeholder copy, `console.log` or commented-out code
-- [ ] Only files inside the ticket's Owned paths were touched
+- [ ] Only files the issue or spec names were touched
 - [ ] User-facing copy landed in all 23 locales (`i18n-messages`)
 
 ## Noticed but not touching
 
-<!-- Things outside Owned paths that deserve their own issue. Leave "nothing" if empty. -->
+<!-- Things outside this change that deserve their own issue. Leave "nothing" if empty. -->

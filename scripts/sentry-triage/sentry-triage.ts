@@ -1,8 +1,7 @@
-// Sentry → GitHub issues. Recurring, high-impact errors become `type: bug` + `status: triage`
-// tickets, which is exactly the pair the cezar `triage` automation picks up — so a finding is
-// verified at HEAD and promoted, or not, by the machinery that already exists (ADR 0006 as amended
-// by ADR 0015). This routine never applies `status: ready`: it has reproduced nothing, and
-// promotion is earned by a reproduction.
+// Sentry → GitHub issues. Recurring, high-impact errors become `bug` + `priority-high` tickets;
+// the cezar `issue-groom` automation picks every new issue up, adds risk and implementation
+// notes, and a human decides whether to add `autofix` (ADR 0008 as amended by ADR 0018). This
+// routine never applies `autofix`: it has reproduced nothing.
 //
 //   pnpm sentry-triage                      # report only — files nothing
 //   pnpm sentry-triage --file-issues        # also file, capped
@@ -44,9 +43,10 @@ const REPORT_DIR = '.agent'
 const DEFAULT_MAX_FILED = 3
 
 /**
- * The backlog is the scarce resource, and this routine can only add to it. Past this many untriaged
- * bugs, filing more is not help — every one of them also starts a triage run. This is the brake that
- * matters: the per-run cap is per run, and a misconfigured schedule still runs.
+ * The backlog is the scarce resource, and this routine can only add to it. Past this many open
+ * high-priority bugs (the shape every Sentry finding has), filing more is not help — every one of
+ * them also starts a groom run. This is the brake that matters: the per-run cap is per run, and a
+ * misconfigured schedule still runs.
  */
 const BACKLOG_PRESSURE_LIMIT = 10
 
@@ -100,7 +100,7 @@ const gh = (args: ReadonlyArray<string>, input?: string): string =>
   })
 
 /**
- * Every `type: bug` ticket, open and closed, read through the issues API.
+ * Every `bug` ticket, open and closed, read through the issues API.
  *
  * `--state all` is not optional: a closed ticket means the bug was fixed, and re-filing it silently
  * would be this routine's worst failure. Nor is the choice of API — `--search` goes through
@@ -114,7 +114,7 @@ function trackedIssues(): ReadonlyArray<TrackedIssue> {
     '--state',
     'all',
     '--label',
-    'type: bug',
+    'bug',
     '--limit',
     '500',
     '--json',
@@ -141,9 +141,9 @@ function openUntriagedBugs(): number {
     '--state',
     'open',
     '--label',
-    'type: bug',
+    'bug',
     '--label',
-    'status: triage',
+    'priority-high',
     '--json',
     'number',
   ])
@@ -347,12 +347,13 @@ for (const candidate of filingOrder(report.candidates, forced)) {
       'create',
       '--title',
       title,
-      // Exactly these two labels and no others: the pair the triage automation picks up.
-      // `status: ready` is triage's to apply, after a reproduction this routine has not performed.
+      // Exactly these two labels and no others: the category and the priority a Sentry finding
+      // earns by clearing the threshold. `autofix` is a human's to add, after the groom run has
+      // added risk and implementation notes; this routine has reproduced nothing.
       '--label',
-      'type: bug',
+      'bug',
       '--label',
-      'status: triage',
+      'priority-high',
       '--body-file',
       '-',
     ],
