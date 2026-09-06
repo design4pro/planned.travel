@@ -1,8 +1,9 @@
 // The Claude Code hooks in .claude/hooks/ as black boxes: JSON on stdin, exit 2 = blocked.
 // Agent mode is CEZ_TASK_ID (cezar) or GITHUB_ACTIONS; without either a developer keeps pnpm and env.
 // The om-* skills mutate GitHub through .ai/trackers/github.md (`gh api`), stage with `git add -A`,
-// write `Closes #n` and run `pnpm exec`, so none of those is blocked in agent mode any more; what is
-// blocked is the pinned stack (`pnpm add`) and the environment dump.
+// write `Closes #n` and run `pnpm exec`, so none of those is blocked under cezar; what is blocked
+// there is the pinned stack (`pnpm add`) and the environment dump. Under GitHub Actions the review
+// job reads untrusted PR content with a write token, so every gh mutation stays blocked there.
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -12,6 +13,7 @@ import { describe, expect, it } from 'vitest'
 
 const HOOKS = resolve(__dirname, '../../../.claude/hooks')
 const AGENT = { CEZ_TASK_ID: '0123456789ab-test' }
+const ACTIONS = { GITHUB_ACTIONS: 'true' }
 
 function hook(
   name: string,
@@ -94,7 +96,65 @@ describe('git-guardrails.sh', () => {
   })
 
   it('treats GITHUB_ACTIONS as agent mode too', () => {
-    expect(bash('pnpm add left-pad', { GITHUB_ACTIONS: 'true' }).status).toBe(2)
+    expect(bash('pnpm add left-pad', ACTIONS).status).toBe(2)
+    expect(bash('env', ACTIONS).status).toBe(2)
+  })
+
+  // claude-code-review.yml runs with `--permission-mode bypassPermissions` on every pull request,
+  // which leaves this hook as the only gate between a crafted diff and `gh pr review --approve`.
+  describe('GitHub Actions keeps every gh mutation blocked', () => {
+    it.each([
+      ['gh issue edit 1 --add-label x', 'gh issue|pr mutation'],
+      ['gh pr create --draft', 'gh issue|pr mutation'],
+      ['gh pr review 12 --approve', 'gh issue|pr mutation'],
+      ['gh pr merge 12', 'gh issue|pr mutation'],
+      ['gh issue comment 1 -b hi', 'gh issue|pr mutation'],
+      ['gh pr comment 12 -b hi', 'gh issue|pr mutation'],
+      ['gh label delete x', 'gh mutation surface'],
+      ['gh api --method POST repos/x/y/issues/1/comments', 'gh api non-GET'],
+      ['gh api -X PATCH repos/x/y/issues/1', 'gh api non-GET'],
+      ['gh api repos/x/y/issues/1/comments -f body=hi', 'gh api non-GET'],
+      ['gh api repos/x/y/issues -F title=@f', 'gh api non-GET'],
+      ['gh api --input body.json repos/x/y/issues', 'gh api non-GET'],
+    ])('blocks %s', (command, pattern) => {
+      const r = bash(command, ACTIONS)
+      expect(r.status).toBe(2)
+      expect(r.stderr).toContain(pattern)
+    })
+
+    it.each([
+      'gh issue view 12 --json body',
+      'gh pr list',
+      'gh api repos/x/y/issues/1',
+      'gh api --method GET repos/x/y/issues/1 --paginate',
+      'git add -A',
+      'git commit -m "fix: x\n\nCloses #12"',
+      'pnpm exec playwright test',
+    ])('allows %s', (command) => {
+      expect(bash(command, ACTIONS).status).toBe(0)
+    })
+
+    // The review's one job is to post its summary on the pull request.
+    describe('the code review exception for gh pr comment', () => {
+      const REVIEW = { ...ACTIONS, CLAUDE_REVIEW_PR_COMMENT: '1' }
+
+      it('opens gh pr comment only when the review sets the variable', () => {
+        expect(bash('gh pr comment 12 -b hi', ACTIONS).status).toBe(2)
+        expect(bash('gh pr comment 12 -b hi', REVIEW).status).toBe(0)
+      })
+
+      it.each([
+        'gh issue comment 12 -b hi',
+        'gh pr create --draft',
+        'gh pr edit 12 --add-label x',
+        'gh pr review 12 --approve',
+        'gh pr merge 12',
+        'gh api --method POST repos/x/y/issues/1/comments',
+        'gh label delete x',
+      ])('leaves %s blocked', (command) => {
+        expect(bash(command, REVIEW).status).toBe(2)
+      })
+    })
   })
 })
 
@@ -119,6 +179,9 @@ describe('guard-generated.sh', () => {
     '.ai/trackers/github.md',
     '.ai/browsers/playwright.md',
     '.ai/skills/om-fix/SKILL.md',
+    '.ai/scripts/e2e.sh',
+    '.ai/scripts/test-env-up.sh',
+    'scripts/agent/cez-lib.sh',
     '.npmrc',
     'pnpm-workspace.yaml',
   ])('agent mode blocks %s', (rel) => {
@@ -135,14 +198,13 @@ describe('guard-generated.sh', () => {
     for (const rel of [
       'src/x.ts',
       'scripts/seed/seed.mjs',
-      'scripts/agent/cez-lib.sh',
+      'scripts/hooks/__tests__/hooks.test.ts',
       'docs/agents/cezar.md',
       'src/.npmrc-ish.ts',
       '.ai/runs/2026-09-06-rings/PLAN.md',
       '.ai/specs/2026-09-06-rings.md',
       '.ai/analysis/12.md',
       '.ai/qa/test-env.json',
-      '.ai/scripts/test-env-up.sh',
       '.ai/agentic.config.json.bak',
     ]) {
       expect(

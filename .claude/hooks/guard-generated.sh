@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # PreToolUse hook (Edit|Write): blocks hand-edits of generated files, and in agent runs
-# (CEZ_TASK_ID or GITHUB_ACTIONS) the paths that configure the agent itself (the om-* pipeline configuration; SDLC.md).
+# (CEZ_TASK_ID or GITHUB_ACTIONS) the paths that configure the agent itself: the om-* pipeline
+# configuration and the validation-gate scripts it names (a run must not rewrite its own gate),
+# plus scripts/agent/ while the exec allowlists of the old cezar workflows still name those scripts.
 # Contract: exit 2 blocks the tool call and feeds stderr back to the model; exit 0 allows.
 set -euo pipefail
 
@@ -24,7 +26,7 @@ esac
 
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 rel="${file_path#"$root"/}"
-if printf '%s' "$rel" | grep -Eq '^(\.github/|\.claude/|\.husky/|\.ai/cezar/|\.ai/agentic\.config\.json$|\.ai/trackers/|\.ai/browsers/|\.ai/skills/|\.npmrc$|pnpm-workspace\.yaml$)'; then
+if printf '%s' "$rel" | grep -Eq '^(\.github/|\.claude/|\.husky/|\.ai/cezar/|\.ai/agentic\.config\.json$|\.ai/trackers/|\.ai/browsers/|\.ai/skills/|\.ai/scripts/|scripts/agent/|\.npmrc$|pnpm-workspace\.yaml$)'; then
   echo "BLOCKED (agent run): '$rel' configures the agent; a run never edits it. Note it under 'Noticed but not touching' and carry on." >&2
   exit 2
 fi
