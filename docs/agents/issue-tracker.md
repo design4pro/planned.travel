@@ -1,64 +1,50 @@
 # Issue tracker contract
 
-The backlog lives in **GitHub Issues** on `design4pro/planned.travel`. A PRD is a parent issue; its
-tickets are sub-issues; order comes from the native dependency graph. Labels are the state machine
-(docs/agents/triage-labels.md, ADR 0015). Issues are closed when their work merges, by the sweeper,
-never by a `Closes #n` (PRs target `develop`, where closing keywords do nothing).
+The backlog lives in **GitHub Issues** on `design4pro/planned.travel`. Labels are the SDLC taxonomy
+(`SDLC.md`, docs/agents/triage-labels.md, ADR 0018). Every `om-*` skill reads and writes the
+tracker through `.ai/trackers/github.md` (`gh api` REST, gh >= 2.82.1) and mutates labels only
+through that descriptor's guards; a human uses `gh` directly.
 
 Set once per session if needed: `GH_REPO=design4pro/planned.travel`.
 
 ## Reading
 
 ```bash
-gh issue list --state open --json number,title,labels,parent
-gh issue view <n> --json state,labels,body,blockedBy,subIssuesSummary --comments
-gh api "repos/$GH_REPO/issues/<n>/sub_issues" --jq '.[].number'
+gh issue list --state open --json number,title,labels
+gh issue view <n> --json state,labels,body --comments
+gh pr list --state open --json number,title,labels,isDraft
 ```
 
 ## Writing
 
-Humans and the scripts in `scripts/agent/` write labels, comments and issues; an agent never does so
-directly. The two commands a human gives are labels: `run: triage` and `run: implement`. Planning is
-started from the cezar cockpit (GitHub tab → issue → "Hand this to the agent" → workflow `plan`,
-prompt `spec`, `prd` or `tickets`; workflow `plan-area` for an area still in `docs/plans/`), and each artefact stops at `status: review` for a human.
+Three labels are commands; adding one is how a human starts work (docs/agents/cezar-automations.json):
 
 ```bash
-gh issue edit <n> --add-label "run: implement"        # the only way work starts
-gh issue edit <n> --add-label "auto-advance"          # PRD only: children start on their own as they unblock
-gh issue comment <n> --body-file <file>
+gh issue edit <n> --add-label autofix          # fix or implement this issue (om-auto-fix-issue)
+gh issue edit <n> --add-label spec             # feature only: write the spec first (om-auto-write-spec)
+gh issue edit <n> --add-label groom            # re-run the issue manager after an edit or a reply
+gh issue edit <n> --add-label blocked          # human hold; nothing starts while it is there
+gh issue edit <n> --add-label do-not-close     # housekeeping must never close this one
 ```
 
-## Sub-issues and dependencies (what `publish-tickets.sh` does)
+A skill claims with assignee + `in-progress` + a 🤖 comment and releases both on exit, including on
+error. Everything else it writes (category, priority, risk, pipeline labels, review, QA request,
+run summary) follows `SDLC.md` and is explained in a comment.
 
-Both APIs want the numeric REST `id`, not the number and not the GraphQL node id:
+## Closing
 
-```bash
-ID=$(gh api "repos/$GH_REPO/issues/<child>" --jq '.id')
-gh api -X POST "repos/$GH_REPO/issues/<parent>/sub_issues" -F sub_issue_id="$ID"
-BLOCKER=$(gh api "repos/$GH_REPO/issues/<blocker>" --jq '.id')
-gh api -X POST "repos/$GH_REPO/issues/<child>/dependencies/blocked_by" -F issue_id="$BLOCKER"
-gh issue view <child> --json blockedBy                # verify the wave
-```
+A PR that implements an issue says `Closes #n` in its body (`.github/pull_request_template.md`).
+GitHub does not act on it, because PRs merge into `develop` and the default branch is `main`;
+`om-close-fixed-issues`, in the `housekeeping` run three times a day, does. A spec-only or partial
+PR says `Refs #n`. `do-not-close` on the issue wins over both.
 
-Order matters: create the children as `status: queued`, attach `sub_issues`, attach `blocked_by`,
-and only then move the unblocked ones to `status: ready`. A ticket labelled before its blockers
-exist is a ticket a run could claim too early. Dependencies live only in GitHub; a body never
-mirrors them.
+## Specs
 
-## Body schemas
-
-Each body starts with `<!-- schema: <name> -->`; the publish scripts validate the sections.
-
-**`ticket/v2`** (a sub-issue; no `type:` label, it inherits the PRD's): Summary · Current behaviour ·
-Desired behaviour · Fix direction · Key interfaces (optional) · Definition of Done (at most three
-acceptance criteria) · Owned paths · Tenant isolation test · Verification · Visual change expected
-(optional) · Out of scope. Estimated scope `XS`-`L`; `XL` only with `wave: solo`, when one concept
-owns the whole round (SPEC §8). Never `Closes #n`.
-
-**`spec/v1`** (written into the originating issue): Problem statement · Goals · Non-goals · Success
-criteria · Constraints · Boundaries (Always / Ask first / Never) · Decisions log · Open questions; the
-original request is kept in a `<details>` block. Open questions block the PRD step.
-
-**`prd/v1`** (same issue, retitled `PRD: …`, labelled `prd`): everything in `spec/v1` plus Solution ·
-User stories · Implementation decisions · Testing decisions · Module table (one concept, one owner) ·
-Out of scope · Further notes.
+A feature is specified before it is built. `om-auto-write-spec` (command label `spec`) writes
+`.ai/specs/<YYYY-MM-DD>-<slug>.md` on a design-only PR (`spec/<slug>`, `documentation`,
+`skip-qa`) that references the issue; the sections a spec must carry here are in
+`.ai/skills/om-auto-write-spec/SKILL.md` ("Visual change expected", "Copy"). A human merges the
+spec PR, then starts `implement-spec` from the cockpit with the spec path, its issue number or the
+spec-PR number; the implementation ships on its own PR with `Closes #n`. Interactive thinking
+before an issue exists is `brainstorm` (`om-brainstorm`), which ends by filing the issue through
+`om-prepare-issue`.
