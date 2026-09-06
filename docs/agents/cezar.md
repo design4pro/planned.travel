@@ -121,8 +121,8 @@ and `/plan-area {{task}}` (opus, with `Agent` allowed).
   terms, a clean-room risk) stays open, the run ends after the spec, and `plan` in mode `prd` grills
   it. Tickets stay with `plan` in mode `tickets`.
 - Frozen plans (`01`, `03`) and `README.md`, `TEMPLATE.md`, `OPEN-FINDINGS.md` are refused. Once the
-  tickets exist a human freezes the plan file with a "Migrated → PRD #n" banner (ADR 0004,
-  amendment).
+  tickets exist a human freezes the plan file: the "Migrated — frozen." banner naming the PRD at its
+  top, and the "Migrated → PRD #n; frozen." row in the README table (ADR 0004, amendment).
 - Locally: `/plan-area <issue> <plan>` in `claude` with `.agent/issue` written first. Subagents,
   skills and hooks are the project's, so nothing depends on the host's user-level configuration.
 

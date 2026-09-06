@@ -39,8 +39,8 @@ Hand back (below) when one fails:
   without `<!-- schema: prd/v1 -->` (a PRD revision is `/plan-feature <n> prd`). A body with
   `spec/v1` is a resumed run: the published spec is the draft, start at the PRD half.
 - The plan file exists, is not `README.md`, `TEMPLATE.md` or `OPEN-FINDINGS.md`, and does not
-  open with a "Migrated →" banner (that area belongs to the tracker; `docs/plans/README.md` lists
-  them).
+  open with a "Migrated — frozen." banner (that area belongs to the tracker; `docs/plans/README.md`
+  lists them).
 
 ## The panel
 
@@ -121,6 +121,7 @@ twice, or when three rounds in a row return nothing you can decide on. Never wor
 
 Report in a few lines: the issue and its status, what was published (spec, PRD, the docs PR if
 any), the open questions if any, and the human's next steps: read the PRD, start
-`/plan-feature <issue> tickets` from the cockpit, and once the tickets exist freeze the plan file
-with a "Migrated → PRD #n" banner in `docs/plans/README.md` (a human edit; ADR 0004, amendment).
+`/plan-feature <issue> tickets` from the cockpit, and once the tickets exist freeze the plan file:
+the "Migrated — frozen." banner naming the PRD at its top, and "Migrated → PRD #n; frozen." in the
+`docs/plans/README.md` table (a human edit; ADR 0004, amendment).
 Under cezar the last line of the run is `CEZ:DONE`.
