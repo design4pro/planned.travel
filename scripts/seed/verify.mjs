@@ -162,7 +162,23 @@ async function query(sql, remote) {
     '--command',
     sql,
   ]
-  const { stdout } = await run('pnpm', ['exec', ...args], { maxBuffer: 32 * 1024 * 1024 })
+  // The dev server the seed just ran against still holds the same SQLite file, and a query that
+  // lands while workerd writes to it gets `database is locked: SQLITE_BUSY` (seen in CI's
+  // "Verify the seed" step). The lock is held for milliseconds; a short retry is the fix, not a
+  // failure of the seed.
+  let stdout = ''
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      ;({ stdout } = await run('pnpm', ['exec', ...args], {
+        maxBuffer: 32 * 1024 * 1024,
+      }))
+      break
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (attempt >= 5 || !message.includes('SQLITE_BUSY')) throw error
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt))
+    }
+  }
   const start = stdout.indexOf('[')
   if (start === -1) {
     throw new Error(`wrangler returned no JSON for: ${sql.slice(0, 80)}`)
@@ -180,7 +196,10 @@ async function counts(remote) {
   for (let index = 0; index < COUNTERS.length; index += BATCH_SIZE) {
     const batch = COUNTERS.slice(index, index + BATCH_SIZE)
     const sql = batch
-      .map(([name, source]) => `SELECT '${name}' AS tbl, COUNT(*) AS n FROM ${source}`)
+      .map(
+        ([name, source]) =>
+          `SELECT '${name}' AS tbl, COUNT(*) AS n FROM ${source}`,
+      )
       .join(' UNION ALL ')
     rows.push(...(await query(sql, remote)))
   }
@@ -193,7 +212,9 @@ async function counts(remote) {
  */
 async function checkTripIdentifiers(remote) {
   const rows = await query(DEMO_TRIP_SQL, remote)
-  const idBySlug = new Map(rows.map((row) => [String(row.slug), String(row.id)]))
+  const idBySlug = new Map(
+    rows.map((row) => [String(row.slug), String(row.id)]),
+  )
 
   out('\nTrip identifiers')
   let held = true
@@ -202,7 +223,9 @@ async function checkTripIdentifiers(remote) {
     const actual = idBySlug.get(slug)
     const ok = actual === expected
     held = held && ok
-    out(`  ${slug.padEnd(26)} ${ok ? expected : `${actual ?? 'MISSING'}  EXPECTED ${expected}`}`)
+    out(
+      `  ${slug.padEnd(26)} ${ok ? expected : `${actual ?? 'MISSING'}  EXPECTED ${expected}`}`,
+    )
   }
 
   const readBack = rows.map((row) => String(row.id))
@@ -237,14 +260,28 @@ async function main() {
   const identifiersHeld = await checkTripIdentifiers(remote)
 
   const [{ mismatches }] = await query(SPLIT_INTEGRITY_SQL, remote)
-  out(`\nSplit integrity: ${mismatches === 0 ? 'every expense sums to its shares' : `${mismatches} MISMATCHES`}`)
+  out(
+    `\nSplit integrity: ${mismatches === 0 ? 'every expense sums to its shares' : `${mismatches} MISMATCHES`}`,
+  )
 
   const unclaimed = new Map(
-    (await query(UNCLAIMED_SQL, remote)).map((row) => [row.trip, Number(row.unclaimed)]),
+    (await query(UNCLAIMED_SQL, remote)).map((row) => [
+      row.trip,
+      Number(row.unclaimed),
+    ]),
   )
 
   out('\nBalances (paid − share + settled out − settled in)')
-  const header = ['trip', 'cur', 'person', 'paid', 'share', 'sent', 'recv', 'balance']
+  const header = [
+    'trip',
+    'cur',
+    'person',
+    'paid',
+    'share',
+    'sent',
+    'recv',
+    'balance',
+  ]
   out(
     `  ${header[0].padEnd(24)}${header[1].padEnd(5)}${header[2].padEnd(14)}` +
       `${header[3].padStart(11)}${header[4].padStart(11)}${header[5].padStart(9)}` +
@@ -282,6 +319,8 @@ async function main() {
 }
 
 main().catch((error) => {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+  process.stderr.write(
+    `${error instanceof Error ? error.message : String(error)}\n`,
+  )
   process.exitCode = 1
 })
