@@ -62,12 +62,15 @@ export interface BasemapPickerProps {
   readonly value: string
   /** Disables the whole group while a save is in flight. */
   readonly busy?: boolean
+  /** Id of the hint the row renders above the grid, so the group can point at it. */
+  readonly describedBy?: string
   readonly onValueChange: (next: string) => void
 }
 
 export function BasemapPicker({
   value,
   busy = false,
+  describedBy,
   onValueChange,
 }: BasemapPickerProps) {
   const t = useTranslate()
@@ -76,6 +79,8 @@ export function BasemapPicker({
   return (
     <RadioGroup
       aria-label={t('settings.appearance.map.label')}
+      aria-describedby={describedBy}
+      aria-busy={busy}
       className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
       value={value}
       disabled={busy}
@@ -117,9 +122,7 @@ function Swatch({ id, theme }: { id: BasemapId; theme: ResolvedTheme }) {
 
   return (
     <span
-      className="block size-9 overflow-hidden rounded-md ring-1 ring-edge-faint ring-inset"
-      aria-hidden="true"
-    >
+      className="block size-9 overflow-hidden rounded-md ring-1 ring-edge-faint ring-inset">
       <svg viewBox="0 0 36 36" className="block size-full">
         <rect width="36" height="36" fill={palette.earth} />
         <path

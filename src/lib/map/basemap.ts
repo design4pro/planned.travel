@@ -82,6 +82,11 @@ export function resolveBasemap(
   return {
     theme: entry.palette ?? theme,
     roadLabels: entry.roadLabels,
+    // Returned for completeness and deliberately unread today: `MapCanvas` keeps
+    // `poiLabels` on its own props, because every entry sets it to that
+    // component's default and it belongs to the screen rather than the basemap.
+    // The assertion on it in the unit tests is a claim about this table, not a
+    // claim that the value reaches a style.
     poiLabels: entry.poiLabels,
   }
 }

@@ -9,7 +9,10 @@
 
 export * from './palette'
 export * from './style'
-export * from './basemap'
+// `./basemap` is deliberately absent: it owns mutable module state and a React
+// hook, and every one of its four importers reaches for the deep path on purpose
+// — two of them so the server graph does not pull the store in. Re-exporting it
+// here would put that store in the graph of everything that imports `#/lib/map`.
 export * from './world'
 export * from './countries'
 export * from './coverage'

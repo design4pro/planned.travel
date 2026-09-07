@@ -21,6 +21,13 @@ import type { LucideIcon } from 'lucide-react'
  * reason the settings index does: a module-scope array cannot be translated, and
  * a literal key checked against `MessageKey` fails to compile if it is wrong.
  */
+/**
+ * The map row's hint is written outside the group, so the group has to point at
+ * it: a screen reader entering the cards would otherwise hear the label and none
+ * of the sentence a sighted reader gets above them.
+ */
+const MAP_HINT_ID = 'basemap-picker-hint'
+
 const THEMES: ReadonlyArray<{
   mode: ThemeMode
   label: MessageKey
@@ -81,17 +88,20 @@ function AppearancePage() {
   const [mapStyle, setMapStyle] = useState(data.mapStyleOverride ?? '')
   const [busy, setBusy] = useState(false)
 
+  /** Answers whether the column moved, so an optimistic control can put itself back. */
   async function persist(
     patch: Parameters<typeof saveAppearance>[0]['data'],
-  ): Promise<void> {
+  ): Promise<boolean> {
     setBusy(true)
     try {
       await saveAppearance({ data: patch })
       await router.invalidate()
+      return true
     } catch {
       toast.error(t('settings.appearance.saveFailed'), {
         description: t('settings.appearance.saveFailedBody'),
       })
+      return false
     } finally {
       setBusy(false)
     }
@@ -201,16 +211,25 @@ function AppearancePage() {
               <p className="text-label font-medium text-ink">
                 {t('settings.appearance.map.label')}
               </p>
-              <p className="mt-0.5 text-caption leading-relaxed text-ink-3">
+              <p
+                id={MAP_HINT_ID}
+                className="mt-0.5 text-caption leading-relaxed text-ink-3"
+              >
                 {t('settings.appearance.map.hint')}
               </p>
             </div>
             <BasemapPicker
               value={mapStyle}
               busy={busy}
+              describedBy={MAP_HINT_ID}
               onValueChange={(next) => {
+                const previous = mapStyle
                 setMapStyle(next)
-                void persist({ mapStyle: next })
+                void persist({ mapStyle: next }).then((saved) => {
+                  // The card must not keep showing a pick the write refused: the
+                  // toast says the save failed, and the group says what is stored.
+                  if (!saved) setMapStyle(previous)
+                })
               }}
             />
           </div>
