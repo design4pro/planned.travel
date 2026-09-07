@@ -121,13 +121,16 @@ Provisioning is `scripts/worktree/bootstrap.sh --profile worktree --no-seed` (de
 `.ai/scripts/test-env-up.sh` on a free port from 3030-3040 (`om-prepare-test-env` contract).
 
 Three older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`) and the scripts in
-`scripts/agent/` they call stay in the tree until PR C deletes them; their automations are disabled
-in the cutover below and nothing starts them.
+`scripts/agent/` they call stay in the tree until PR C deletes them; the automations that used to
+start them (`triage-opened`, `triage-relabel`, `implement`) are gone from the cockpit, so nothing
+does.
 
 ## Automations (`docs/agents/cezar-automations.json`)
 
 Registered with the running cockpit by `.ai/scripts/cez-automations.sh` (idempotent: update in
-place or create enabled; it lists definitions the cockpit holds that the file no longer names).
+place or create enabled; it lists definitions the cockpit holds that the file no longer names, and
+`--prune` deletes them, so this file is the whole truth about what can start a run - it refuses to
+delete an enabled stray, which is somebody's deliberate act, not a leftover).
 Five definitions: `issue-groom` on `issue.opened` with `authors` naming the human maintainers;
 `issue-regroom`, `issue-autofix`, `issue-spec` on `issue.labeled` with `changedLabels` `groom` /
 `autofix` / `spec`; `pr-autopilot` on `pull_request.opened`, again with `authors`. Every trigger
@@ -190,8 +193,11 @@ must stop before `status:*` is stripped and the surviving labels renamed.
 
 1. Unload the sweeper: `launchctl bootout gui/$(id -u)/dev.planned-travel.sweeper` and delete
    `~/Library/LaunchAgents/dev.planned-travel.sweeper.plist`.
-2. In the cockpit (Automations) disable `triage-opened`, `triage-relabel` and `implement`. Leave
-   them disabled until PR C; do not delete yet.
+2. In the cockpit (Automations) disable `triage-opened`, `triage-relabel` and `implement`, then
+   delete them with `bash .ai/scripts/cez-automations.sh --dry-run --prune` and the same without
+   the flag. All three are superseded: `implement` by `issue-autofix`, and the triage pair by the
+   groom layer - a Sentry finding reaches it because the sweep files `groom` on creation and
+   GitHub records that as a `labeled` timeline event, which is what the poller reads.
 3. Snapshot: `gh label list --limit 200 --json name,color,description > docs/agents/migration/labels-$(date +%F).json`
    and `gh issue list --state open --limit 500 --json number,labels > docs/agents/migration/issues-$(date +%F).json`;
    commit both.
