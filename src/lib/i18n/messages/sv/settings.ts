@@ -159,6 +159,16 @@ const messages = {
   'appearance.map.label': 'Kartstil',
   'appearance.map.hint': 'Bakgrundskartan i planeraren och på världskartan.',
   'appearance.map.workspace': 'Följ arbetsytan',
+  'appearance.map.workspaceHint': 'Det som arbetsytans ägare har valt.',
+  'appearance.map.auto': 'Automatisk',
+  'appearance.map.autoHint': 'Följer ditt ljusa eller mörka tema.',
+  'appearance.map.paper': 'Papper',
+  'appearance.map.paperHint': 'Varm och ljus, oavsett tema.',
+  'appearance.map.charcoal': 'Kol',
+  'appearance.map.charcoalHint': 'Varm och mörk, oavsett tema.',
+  'appearance.map.quiet': 'Lugn',
+  'appearance.map.quietHint':
+    'Utan gatu- och ortnamn, så syns dina nålar först.',
   'appearance.map.light': 'Papper — ljus',
   'appearance.map.dark': 'Kol — mörk',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

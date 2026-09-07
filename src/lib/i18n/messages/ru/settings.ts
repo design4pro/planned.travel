@@ -164,6 +164,16 @@ const messages = {
   'appearance.map.label': 'Стиль карты',
   'appearance.map.hint': 'Основа карты в планировщике и атласе.',
   'appearance.map.workspace': 'Как в пространстве',
+  'appearance.map.workspaceHint': 'То, что выбрал владелец пространства.',
+  'appearance.map.auto': 'Автоматический',
+  'appearance.map.autoHint': 'Следует вашей светлой или тёмной теме.',
+  'appearance.map.paper': 'Бумага',
+  'appearance.map.paperHint': 'Тёплая и светлая при любой теме.',
+  'appearance.map.charcoal': 'Графит',
+  'appearance.map.charcoalHint': 'Тёплая и тёмная при любой теме.',
+  'appearance.map.quiet': 'Спокойный',
+  'appearance.map.quietHint':
+    'Без названий улиц и мест, чтобы ваши метки читались первыми.',
   'appearance.map.light': 'Бумага — светлая',
   'appearance.map.dark': 'Графит — тёмная',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

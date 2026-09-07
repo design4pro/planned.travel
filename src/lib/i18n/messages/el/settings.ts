@@ -157,6 +157,17 @@ const messages = {
   'appearance.map.label': 'Στιλ χάρτη',
   'appearance.map.hint': 'Ο βασικός χάρτης στον σχεδιασμό και στον άτλαντα.',
   'appearance.map.workspace': 'Ακολούθησε τον χώρο εργασίας',
+  'appearance.map.workspaceHint':
+    'Ό,τι έχει επιλέξει ο ιδιοκτήτης του χώρου εργασίας.',
+  'appearance.map.auto': 'Αυτόματο',
+  'appearance.map.autoHint': 'Ακολουθεί το φωτεινό ή σκούρο θέμα σου.',
+  'appearance.map.paper': 'Χαρτί',
+  'appearance.map.paperHint': 'Ζεστό και φωτεινό, σε όποιο θέμα κι αν είσαι.',
+  'appearance.map.charcoal': 'Ανθρακί',
+  'appearance.map.charcoalHint': 'Ζεστό και σκούρο, σε όποιο θέμα κι αν είσαι.',
+  'appearance.map.quiet': 'Ήσυχο',
+  'appearance.map.quietHint':
+    'Χωρίς ονόματα δρόμων ή τόπων, ώστε να ξεχωρίζουν πρώτες οι πινέζες σου.',
   'appearance.map.light': 'Χαρτί — φωτεινό',
   'appearance.map.dark': 'Ανθρακί — σκούρο',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

@@ -168,6 +168,17 @@ const messages = {
   'appearance.map.hint':
     'Nền bản đồ dùng trong phần lên lịch trình và bản đồ thế giới.',
   'appearance.map.workspace': 'Theo không gian làm việc',
+  'appearance.map.workspaceHint':
+    'Theo lựa chọn của chủ sở hữu không gian làm việc.',
+  'appearance.map.auto': 'Tự động',
+  'appearance.map.autoHint': 'Theo giao diện sáng hoặc tối của bạn.',
+  'appearance.map.paper': 'Giấy',
+  'appearance.map.paperHint': 'Ấm và sáng, dù bạn dùng giao diện nào.',
+  'appearance.map.charcoal': 'Than',
+  'appearance.map.charcoalHint': 'Ấm và tối, dù bạn dùng giao diện nào.',
+  'appearance.map.quiet': 'Yên tĩnh',
+  'appearance.map.quietHint':
+    'Không có tên đường hay địa danh, để ghim của bạn nổi bật trước.',
   'appearance.map.light': 'Giấy — sáng',
   'appearance.map.dark': 'Than — tối',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

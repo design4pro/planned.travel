@@ -207,6 +207,16 @@ const messages = {
   'appearance.map.label': 'Map style',
   'appearance.map.hint': 'The basemap used on the planner and the atlas.',
   'appearance.map.workspace': 'Follow the workspace',
+  'appearance.map.workspaceHint': 'Whatever the workspace owner chose.',
+  'appearance.map.auto': 'Automatic',
+  'appearance.map.autoHint': 'Follows your light or dark theme.',
+  'appearance.map.paper': 'Paper',
+  'appearance.map.paperHint': 'Warm and light, whichever theme you are in.',
+  'appearance.map.charcoal': 'Charcoal',
+  'appearance.map.charcoalHint': 'Warm and dark, whichever theme you are in.',
+  'appearance.map.quiet': 'Quiet',
+  'appearance.map.quietHint':
+    'No road or place names, so your pins read first.',
   'appearance.map.light': 'Paper — light',
   'appearance.map.dark': 'Charcoal — dark',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

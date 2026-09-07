@@ -162,6 +162,18 @@ const messages = {
   'appearance.map.hint':
     'La mappa di base usata dal pianificatore e dalla mappa del mondo.',
   'appearance.map.workspace': 'Segui lo spazio di lavoro',
+  'appearance.map.workspaceHint':
+    'La scelta del proprietario dello spazio di lavoro.',
+  'appearance.map.auto': 'Automatico',
+  'appearance.map.autoHint': 'Segue il tuo tema chiaro o scuro.',
+  'appearance.map.paper': 'Carta',
+  'appearance.map.paperHint': 'Calda e chiara, qualunque tema tu stia usando.',
+  'appearance.map.charcoal': 'Carbone',
+  'appearance.map.charcoalHint':
+    'Calda e scura, qualunque tema tu stia usando.',
+  'appearance.map.quiet': 'Discreta',
+  'appearance.map.quietHint':
+    'Senza nomi di strade o luoghi, così i tuoi segnaposti si leggono per primi.',
   'appearance.map.light': 'Carta — chiara',
   'appearance.map.dark': 'Carbone — scura',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

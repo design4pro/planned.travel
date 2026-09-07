@@ -160,6 +160,17 @@ const messages = {
   'appearance.map.label': 'Estilo do mapa',
   'appearance.map.hint': 'O mapa base usado no planejador e no mapa-múndi.',
   'appearance.map.workspace': 'Seguir o espaço de trabalho',
+  'appearance.map.workspaceHint':
+    'O que o proprietário do espaço de trabalho escolheu.',
+  'appearance.map.auto': 'Automático',
+  'appearance.map.autoHint': 'Segue o seu tema claro ou escuro.',
+  'appearance.map.paper': 'Papel',
+  'appearance.map.paperHint': 'Quente e claro, seja qual for o seu tema.',
+  'appearance.map.charcoal': 'Carvão',
+  'appearance.map.charcoalHint': 'Quente e escuro, seja qual for o seu tema.',
+  'appearance.map.quiet': 'Discreto',
+  'appearance.map.quietHint':
+    'Sem nomes de ruas nem de lugares, para os seus alfinetes aparecerem primeiro.',
   'appearance.map.light': 'Papel — claro',
   'appearance.map.dark': 'Carvão — escuro',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

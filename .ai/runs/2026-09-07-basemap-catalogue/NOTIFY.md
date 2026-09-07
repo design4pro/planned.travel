@@ -60,3 +60,17 @@
   contract is exactly what the spec states; only the declared input type stays `string`.
 - Step 2.5 replaces the select with the typed picker, at which point the `z.string().trim()` prefix
   can be dropped and the field written as the spec has it.
+
+## 2026-09-07T20:58:00Z — Step 2.4 decisions: one forced Catalan wording, one neutral swatch
+
+- `ca` cannot render `settings.appearance.map.paper` as `Paper`: Catalan writes the word exactly as
+  English does, and `parity.test.ts` reads a byte-identical value as untranslated copy. The
+  `LOANWORDS` allow-list would exempt it, but this Step may not touch that file, so `ca` reads
+  `Paper clar` — which is also what its retiring `appearance.map.light` already said (`Paper — clar`).
+  Every other locale names the entry with its own single noun.
+- The workspace entry's swatch is the `Building2` workspace glyph on a neutral `bg-surface-2` tile,
+  not a cartography sketch. The picker is never told which id the workspace holds — the payload
+  carries the member override and nothing else — so any painted tile would be a guess that goes stale
+  the moment an owner changes the workspace default.
+- Both swatches paint an opaque `size-9` tile, because `RadioCard`'s icon wrapper turns `bg-brand`
+  while checked (`radio-group.tsx:178`) and would otherwise report the brand colour as the map's.

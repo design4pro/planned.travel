@@ -166,6 +166,16 @@ const messages = {
   'appearance.map.label': 'Styl mapy',
   'appearance.map.hint': 'Mapa bazowa planera i mapy świata.',
   'appearance.map.workspace': 'Idź za przestrzenią',
+  'appearance.map.workspaceHint': 'To, co wybrał właściciel przestrzeni.',
+  'appearance.map.auto': 'Automatyczny',
+  'appearance.map.autoHint': 'Zgodnie z twoim jasnym lub ciemnym motywem.',
+  'appearance.map.paper': 'Papier',
+  'appearance.map.paperHint': 'Ciepła i jasna w każdym motywie.',
+  'appearance.map.charcoal': 'Grafit',
+  'appearance.map.charcoalHint': 'Ciepła i ciemna w każdym motywie.',
+  'appearance.map.quiet': 'Spokojny',
+  'appearance.map.quietHint':
+    'Bez nazw ulic i miejsc, żeby twoje pinezki czytały się pierwsze.',
   'appearance.map.light': 'Papier — jasna',
   'appearance.map.dark': 'Grafit — ciemna',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

@@ -149,6 +149,17 @@ const messages = {
   'appearance.map.label': '地図のスタイル',
   'appearance.map.hint': 'プランナーとアトラスで使う地図です。',
   'appearance.map.workspace': 'ワークスペースに従う',
+  'appearance.map.workspaceHint':
+    'ワークスペースの所有者が選んだスタイルです。',
+  'appearance.map.auto': '自動',
+  'appearance.map.autoHint': 'ライトテーマかダークテーマに合わせます。',
+  'appearance.map.paper': '紙',
+  'appearance.map.paperHint': 'どのテーマでも、温かく明るいままです。',
+  'appearance.map.charcoal': '炭',
+  'appearance.map.charcoalHint': 'どのテーマでも、温かく暗いままです。',
+  'appearance.map.quiet': '静か',
+  'appearance.map.quietHint':
+    '道路名や地名を出さないので、ピンが先に目に入ります。',
   'appearance.map.light': '紙 — ライト',
   'appearance.map.dark': '炭 — ダーク',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

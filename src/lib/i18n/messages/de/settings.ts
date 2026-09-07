@@ -164,6 +164,17 @@ const messages = {
   'appearance.map.label': 'Kartenstil',
   'appearance.map.hint': 'Die Grundkarte für Planer und Weltkarte.',
   'appearance.map.workspace': 'Dem Arbeitsbereich folgen',
+  'appearance.map.workspaceHint':
+    'Was der Inhaber des Arbeitsbereichs gewählt hat.',
+  'appearance.map.auto': 'Automatisch',
+  'appearance.map.autoHint': 'Folgt dem hellen oder dunklen Erscheinungsbild.',
+  'appearance.map.paper': 'Papier',
+  'appearance.map.paperHint': 'Warm und hell, in jedem Erscheinungsbild.',
+  'appearance.map.charcoal': 'Kohle',
+  'appearance.map.charcoalHint': 'Warm und dunkel, in jedem Erscheinungsbild.',
+  'appearance.map.quiet': 'Ruhig',
+  'appearance.map.quietHint':
+    'Ohne Straßen- und Ortsnamen, damit die Pins zuerst gelesen werden.',
   'appearance.map.light': 'Papier — hell',
   'appearance.map.dark': 'Kohle — dunkel',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */

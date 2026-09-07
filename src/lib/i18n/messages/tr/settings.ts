@@ -158,6 +158,16 @@ const messages = {
   'appearance.map.hint':
     'Planlayıcıda ve dünya haritasında kullanılan taban harita.',
   'appearance.map.workspace': 'Çalışma alanını izle',
+  'appearance.map.workspaceHint': 'Çalışma alanının sahibinin seçtiği stil.',
+  'appearance.map.auto': 'Otomatik',
+  'appearance.map.autoHint': 'Açık veya koyu temanızı izler.',
+  'appearance.map.paper': 'Kâğıt',
+  'appearance.map.paperHint': 'Hangi temada olursanız olun sıcak ve açık.',
+  'appearance.map.charcoal': 'Kömür grisi',
+  'appearance.map.charcoalHint': 'Hangi temada olursanız olun sıcak ve koyu.',
+  'appearance.map.quiet': 'Sakin',
+  'appearance.map.quietHint':
+    'Yol ve yer adları olmadan, iğneleriniz önce okunur.',
   'appearance.map.light': 'Kâğıt — açık',
   'appearance.map.dark': 'Kömür grisi — koyu',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
