@@ -421,15 +421,16 @@ async function chooseBasemap(page: Page, option: string): Promise<void> {
   const written = page.waitForResponse(
     (response) =>
       response.request().method() === 'POST' &&
-      response.url().includes('/_serverFn/') &&
-      // A 500 is a response too, and the picker is optimistic, so without this
-      // the card would read `checked` and the wait would resolve on a write that
-      // never reached the column.
-      response.ok(),
+      response.url().includes('/_serverFn/'),
     { timeout: 15_000 },
   )
   await page.locator(option).click()
-  await written
+  // Asserted rather than folded into the predicate: a failed write is a response
+  // too, and the picker is optimistic, so the `checked` assertions after this
+  // would pass on a write that never reached the column. Read as an expectation
+  // it names the status; read as a filter it would only ever time out.
+  const response = await written
+  expect(response.status(), `the ${option} write was refused`).toBeLessThan(400)
 }
 
 /**
