@@ -105,3 +105,18 @@
 - `AppearancePending`'s second card now renders five `h-22` tiles on the picker's own
   `grid gap-3 sm:grid-cols-2 lg:grid-cols-3`, sized to `RadioCard`'s `p-4` + two-line description, so
   the section does not jump when the loader resolves.
+
+## 2026-09-07T21:06:00Z — Checkpoint 2 (Steps 2.1..2.5)
+
+- Typecheck, lint, `pnpm test` (5601 / 232 files) and `pnpm build` green. Full record:
+  `checkpoint-2-checks.md`.
+- Browser evidence captured against `.ai/scripts/test-env-up.sh` on `http://127.0.0.1:3034` and
+  posted to PR #308: four resting frames of `/settings/appearance` (1440 and 360, light and dark),
+  the Charcoal-selected frame, and the A/B pair on `/atlas` in the light theme with and without the
+  override. `captureValid: true` on every run.
+- The defect fix is proved at the column, not only at the pixel: after pressing Follow the workspace,
+  `user_settings.map_style` is `NULL` for every row. Under the old handler that press wrote nothing.
+- Two tests caught this change and both were right — the Catalan parity case (`1007e46e`) and the
+  settings copy-gate orphan check (`b5f86ff6`). Neither gate was relaxed; the change was corrected to
+  meet them.
+- No blocker. Next: Step 2.6, `e2e/basemap-preference.spec.ts`.
