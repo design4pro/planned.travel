@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 
+import { publishBasemap } from '#/lib/map/basemap'
 import { AppFrame } from '#/components/layout/app-frame'
 import { RootErrorBoundary } from '#/components/layout/error-state'
 import { ImpersonationBar } from '#/components/layout/impersonation-bar'
@@ -80,6 +82,20 @@ export const Route = createFileRoute('/_app')({
 function AppShell() {
   const { shell } = Route.useRouteContext()
   const impersonated = shell.session.impersonatedBy !== null
+
+  /*
+   * The traveller's basemap, onto the module store every mounted map reads.
+   *
+   * In an effect and not in the render body because the store is client-only by
+   * construction: module scope in a Worker isolate is shared across requests, so
+   * `publishBasemap` refuses to write on the server. An effect runs after
+   * hydration, which is also when MapLibre's own bootstrap runs — two dynamic
+   * imports inside `MapCanvas`'s mount effect — so no frame is ever painted from
+   * the `auto` server snapshot and there is nothing to correct.
+   */
+  useEffect(() => {
+    publishBasemap(shell.mapStyle)
+  }, [shell.mapStyle])
 
   return (
     <div

@@ -17,8 +17,8 @@
 | ----- | ---- | ---------------------------------------------------------- | -------------- | ------ | -------- |
 | 1     | 1.1  | Write the basemap catalogue module and its tests           | dispatch       | done   | 076095bf |
 | 1     | 1.2  | Re-export the catalogue from the map barrel                | inline         | done   | 668b41f1 |
-| 1     | 1.3  | Read the basemap store in MapCanvas                        | inline         | done   | pending  |
-| 1     | 1.4  | Carry the effective basemap id on the shell payload        | inline         | todo   | —        |
+| 1     | 1.3  | Read the basemap store in MapCanvas                        | inline         | done   | 55810e74 |
+| 1     | 1.4  | Carry the effective basemap id on the shell payload        | inline         | done   | pending  |
 | 2     | 2.1  | Narrow the map-style write path and clear the override     | dispatch       | todo   | —        |
 | 2     | 2.2  | Append the settings tenant-isolation case                  | dispatch:cheap | todo   | —        |
 | 2     | 2.3  | Expose the raw member override on AppearancePayload        | inline         | todo   | —        |
