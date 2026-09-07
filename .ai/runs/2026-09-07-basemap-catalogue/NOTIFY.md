@@ -47,3 +47,16 @@
   `roadLabels`, and `poiLabels` stays `MapCanvas`'s own prop. Applying the entry's value would have
   made a shipped prop inert while changing no pixel, because every entry already sets it to the
   component's default.
+
+## 2026-09-07T20:36:00Z — Step 2.1 decision: the appearance validator is piped, not a bare union
+
+- The spec's API contract writes `saveAppearance`'s field as
+  `z.union([z.literal(''), z.enum(BASEMAP_IDS)]).optional()`. Landing that literally makes
+  `pnpm typecheck` red at `appearance.tsx:211`: the screen's `SimpleSelect` hands `onValueChange` a
+  `string`, and `persist` is typed from the validator's _input_, so a narrowed input rejects the
+  call. `appearance.tsx` belongs to Step 2.5 and this Step may not touch it.
+- Resolution: `z.string().trim().pipe(z.union([z.literal(''), z.enum(BASEMAP_IDS)])).optional()` —
+  the same input-wide / output-narrow shape `localeOverride` already uses on this module. The runtime
+  contract is exactly what the spec states; only the declared input type stays `string`.
+- Step 2.5 replaces the select with the typed picker, at which point the `z.string().trim()` prefix
+  can be dropped and the field written as the spec has it.

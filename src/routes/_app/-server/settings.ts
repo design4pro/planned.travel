@@ -10,6 +10,9 @@ import { z } from 'zod'
 
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 import { resolveLocaleTag } from '#/lib/i18n/negotiate'
+// The catalogue module rather than the `#/lib/map` barrel, which would drag `style.ts`, `world.ts`
+// and the bundled world geometry into the server graph for one string array.
+import { BASEMAP_IDS } from '#/lib/map/basemap'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { getSession } from '#/server/auth/session'
 import {
@@ -299,7 +302,22 @@ export const saveAppearance = createServerFn({ method: 'POST' })
       theme: z.enum(THEME_PREFERENCES).optional(),
       reduceMotion: z.boolean().optional(),
       maskConfirmationCodes: z.boolean().optional(),
-      mapStyle: z.string().trim().max(64).optional(),
+      /**
+       * The same two-state field the regional form's five `Workspace default` options are: `''`
+       * clears the override, anything else must be an id the catalogue ships. Absent means the
+       * patch does not touch the column at all.
+       *
+       * Piped from `z.string()` rather than written as a bare union, exactly as
+       * {@link localeOverride} is: that keeps the schema's *input* type `string`, so the screen's
+       * `SimpleSelect` — whose `onValueChange` hands back a `string` — still type-checks while the
+       * parse narrows to the catalogue. The picker that replaces the select carries a narrowed
+       * value and the pipe can go with it.
+       */
+      mapStyle: z
+        .string()
+        .trim()
+        .pipe(z.union([z.literal(''), z.enum(BASEMAP_IDS)]))
+        .optional(),
     }),
   )
   .handler(async ({ data }): Promise<{ readonly saved: true }> => {
@@ -308,10 +326,14 @@ export const saveAppearance = createServerFn({ method: 'POST' })
       theme: data.theme,
       reduceMotion: data.reduceMotion,
       maskConfirmationCodes: data.maskConfirmationCodes,
+      // `undefined` is "leave the column alone" — {@link updateUserSettings} drops it in
+      // `definedOnly` — and `''` is the follow-the-workspace sentinel, cleared to `NULL` by the same
+      // {@link overrideOrNull} the language chip uses. This handler used to collapse both onto
+      // `undefined`, which left the UI no path back to `NULL`: picking "Follow the workspace" wrote
+      // nothing, so the member's row kept whatever id it already held and pinned a snapshot of the
+      // workspace value instead of following it.
       mapStyle:
-        data.mapStyle === undefined || data.mapStyle === ''
-          ? undefined
-          : data.mapStyle,
+        data.mapStyle === undefined ? undefined : overrideOrNull(data.mapStyle),
     })
     return { saved: true }
   })
