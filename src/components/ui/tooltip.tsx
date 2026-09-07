@@ -26,7 +26,7 @@ export const TooltipContent = React.forwardRef<
       sideOffset={sideOffset}
       data-motion-transform=""
       className={cn(
-        'z-modal max-w-64 origin-(--radix-tooltip-content-transform-origin) rounded-sm px-2 py-1.5',
+        'z-tooltip max-w-64 origin-(--radix-tooltip-content-transform-origin) rounded-sm px-2 py-1.5',
         'bg-inverse text-caption font-medium text-inverse-on shadow-elevated',
         'data-[state=delayed-open]:animate-tooltip-in data-[state=instant-open]:animate-tooltip-in',
         'data-[state=closed]:animate-tooltip-out',

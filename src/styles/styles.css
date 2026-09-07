@@ -718,6 +718,11 @@
 @utility z-popover {
   z-index: var(--z-popover);
 }
+/* The tooltip, above the poppers: it labels a control and is summoned by one,
+   including controls that live inside an open popover. */
+@utility z-tooltip {
+  z-index: var(--z-tooltip);
+}
 @utility z-toast {
   z-index: var(--z-toast);
 }

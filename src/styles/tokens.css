@@ -737,6 +737,17 @@
      Exported by `styles.css` as `@utility z-popover`. Theme-independent, like
      every layout token in this block. */
   --z-popover: 75;
+  /* The tooltip, one step above the poppers rather than beside them. A tooltip
+     labels a control, so it is always summoned by something already on screen
+     and must cover it: the reaction picker in
+     `src/components/modules/collab/thread.tsx` puts one on every button inside
+     an open `PopoverContent`, which is why this cannot share a band with
+     `--z-popover` and be settled by DOM order. It used to sit on `--z-modal`,
+     where it tied with the dialog surface and won only because a tooltip mounts
+     after the panel it is inside; the band makes that an ordering instead of a
+     coincidence. Below `--z-toast`, which outranks every transient layer.
+     Exported by `styles.css` as `@utility z-tooltip`. */
+  --z-tooltip: 78;
   --z-toast: 80;
   /* The impersonation warning bar (docs/ACCESS.md §6.1), and the only thing
      above the toast tier. A toast that covered the one control which ends a

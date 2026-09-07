@@ -69,6 +69,7 @@ const twMerge = extendTailwindMerge({
             'overlay',
             'modal',
             'popover',
+            'tooltip',
             'toast',
             'impersonation',
           ],

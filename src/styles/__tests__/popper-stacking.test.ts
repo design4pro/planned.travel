@@ -95,6 +95,41 @@ describe('the popper band', () => {
   })
 })
 
+/**
+ * The tooltip, which has to clear the band above.
+ *
+ * A tooltip labels a control, so whatever summoned it is already on screen and
+ * the tooltip has to cover it — including a control that lives *inside* an open
+ * popper. `src/components/modules/collab/thread.tsx` is the call site that makes
+ * this concrete: every button in the reaction picker carries a `Tooltip`, and
+ * the picker is a `PopoverContent`. On `--z-modal` the tooltip cleared the
+ * poppers only while they sat on `--z-dropdown`; raising them to `--z-popover`
+ * without raising the tooltip would have hidden those labels under the picker.
+ */
+describe('the tooltip band', () => {
+  it('outranks the poppers it can be summoned from inside, and stays under the toast', () => {
+    expect(tier('--z-tooltip')).toBeGreaterThan(tier('--z-popover'))
+    expect(tier('--z-tooltip')).toBeLessThan(tier('--z-toast'))
+  })
+
+  it('ships as a utility and is claimed by the tooltip primitive', () => {
+    expect(read('styles', 'styles.css')).toContain(
+      '@utility z-tooltip {\n  z-index: var(--z-tooltip);\n}',
+    )
+    const source = read('components', 'ui', 'tooltip.tsx')
+    expect(source).toContain('z-tooltip')
+    // It used to tie with the dialog surface and win on mount order alone.
+    expect(source, 'tooltip.tsx still on the modal tier').not.toContain(
+      'z-modal',
+    )
+  })
+
+  it('wins the merge against the popper band, in both orders', () => {
+    expect(cn('z-popover', 'z-tooltip')).toBe('z-tooltip')
+    expect(cn('z-tooltip', 'z-popover')).toBe('z-popover')
+  })
+})
+
 describe('the in-page elevation band it was split from', () => {
   it('stays below the scrim, which is what makes the split necessary', () => {
     // Raising `--z-dropdown` itself would have been the one-line fix, and it is
