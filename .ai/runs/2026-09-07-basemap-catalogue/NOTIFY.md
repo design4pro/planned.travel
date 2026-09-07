@@ -139,3 +139,42 @@
 - **No assertion was weakened and no gate was relaxed.** Measured under contention the test now runs
   in 34.1 s; a preference that is never read still fails on `expectGround`, not on the clock.
 - Two consecutive full-suite runs green afterwards: 30 passed, 1 skipped (mobile-safari), 0 failed.
+
+## 2026-09-07T22:05:00Z — `om-auto-review-pr 308 --autofix` claimed the chain lock
+
+- Review run with fresh eyes rather than the run's own, so the verdict was not the author grading
+  themselves. Metadata: base `develop`, head `bfaeb7da`, `MERGEABLE`, 0 prior reviews.
+- **CI is unreadable from this run:** `403 Resource not accessible by personal access token` on branch
+  protection, `gh pr checks` and the check-runs API. Disclosed in the review body rather than treated
+  as a blocker; required checks still gate the merge.
+
+## 2026-09-07T22:20:00Z — Verdict: request changes, 1 major
+
+- GitHub refuses `REQUEST_CHANGES` on a self-authored PR, so the full report was posted as a review
+  comment, verbatim and in the `om-code-review` structure.
+- **The major was real and the review was right about the mechanism.** The consumption seam
+  (`styleKey()` in `map-canvas.tsx`) had no test at any level, and the new e2e spec claimed in its own
+  docblock to be that guard when its fresh-document design cannot exercise the swap effect at all.
+  Deleting the basemap from the key left both `pnpm test` and `bash .ai/scripts/e2e.sh` green.
+
+## 2026-09-07T23:05:00Z — Review round closed: 7 Steps, every actionable finding answered
+
+- Phase 3 rows 3.1-3.7 in `PLAN.md`. Full write-up: `review-round-checks.md`.
+- The seam is guarded and the guard is **mutation-checked in both directions** — dropping the basemap
+  from the key fails 3 cases, dropping the applied-key comparison fails the over-eager case.
+- Two findings declined with reasons on the record (the `server/repos` import shape, the Polish
+  gender); one filed rather than fixed (issue #311, the two orphaned `AppearancePayload` fields,
+  which `BACKWARD_COMPATIBILITY.md` §2 keeps alive for one release).
+- **One decision worth naming: the `.trim()` removal.** `''` is the sentinel that clears the column,
+  so trimming turned `' '` into "follow the workspace" and silently dropped a member's override. The
+  accepted set is now exactly the spec's.
+
+## 2026-09-07T23:10:00Z — Full gate re-run green on `2d85569f`
+
+- typecheck, lint, 5610 tests / 232 files, check-generated, build, and `bash .ai/scripts/e2e.sh`
+  **twice consecutively** at 30 passed / 1 skipped / 0 failed. `detect.mjs` exit 0 on both screens.
+- **The e2e round cost real time and only one cause was ours**, recorded rather than buried: a fixed
+  15s write wait inside a 120s test (fixed in `2d85569f`), a concurrent `om-auto-fix-pr` run on PR
+  #310 holding load average above 70, and Spotlight indexing the `test-results/` artifacts each red
+  run wrote — load peaked at **126.76**. One bisect result (the barrel re-export) was a false
+  positive and is recorded as one: the confirmation run refuted it.

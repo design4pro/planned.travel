@@ -13,18 +13,30 @@
 >
 > **`Commit` is filled one Step late, on purpose.** A row cannot name the SHA of the commit that contains it — writing the hash changes the hash. So a Step's own commit flips `Status` to `done` and writes `pending`, and the next commit that touches this file replaces it with the real short SHA. `Status` is the resume field and is always correct in its own commit.
 
-| Phase | Step | Title                                                      | Exec           | Status | Commit   |
-| ----- | ---- | ---------------------------------------------------------- | -------------- | ------ | -------- |
-| 1     | 1.1  | Write the basemap catalogue module and its tests           | dispatch       | done   | 076095bf |
-| 1     | 1.2  | Re-export the catalogue from the map barrel                | inline         | done   | 668b41f1 |
-| 1     | 1.3  | Read the basemap store in MapCanvas                        | inline         | done   | 55810e74 |
-| 1     | 1.4  | Carry the effective basemap id on the shell payload        | inline         | done   | ce04f734 |
-| 2     | 2.1  | Narrow the map-style write path and clear the override     | dispatch       | done   | 56e41254 |
-| 2     | 2.2  | Append the settings tenant-isolation case                  | dispatch:cheap | done   | 3543cae7 |
-| 2     | 2.3  | Expose the raw member override on AppearancePayload        | inline         | done   | 580e6587 |
-| 2     | 2.4  | Land the catalogue copy in 23 locales and build the picker | dispatch       | done   | 872cc0f9 |
-| 2     | 2.5  | Mount the picker and retire the two theme-bound keys       | inline         | done   | dedd0c54 |
-| 2     | 2.6  | Add the browser evidence for the basemap preference        | dispatch       | done   | dd46434a |
+| Phase | Step | Title                                                       | Exec           | Status | Commit   |
+| ----- | ---- | ----------------------------------------------------------- | -------------- | ------ | -------- |
+| 1     | 1.1  | Write the basemap catalogue module and its tests            | dispatch       | done   | 076095bf |
+| 1     | 1.2  | Re-export the catalogue from the map barrel                 | inline         | done   | 668b41f1 |
+| 1     | 1.3  | Read the basemap store in MapCanvas                         | inline         | done   | 55810e74 |
+| 1     | 1.4  | Carry the effective basemap id on the shell payload         | inline         | done   | ce04f734 |
+| 2     | 2.1  | Narrow the map-style write path and clear the override      | dispatch       | done   | 56e41254 |
+| 2     | 2.2  | Append the settings tenant-isolation case                   | dispatch:cheap | done   | 3543cae7 |
+| 2     | 2.3  | Expose the raw member override on AppearancePayload         | inline         | done   | 580e6587 |
+| 2     | 2.4  | Land the catalogue copy in 23 locales and build the picker  | dispatch       | done   | 872cc0f9 |
+| 2     | 2.5  | Mount the picker and retire the two theme-bound keys        | inline         | done   | dedd0c54 |
+| 2     | 2.6  | Add the browser evidence for the basemap preference         | dispatch       | done   | dd46434a |
+| 3     | 3.1  | Guard the basemap consumption seam on a mounted map         | inline         | done   | c413844c |
+| 3     | 3.2  | Stop trimming the map-style payload, and cover the boundary | inline         | done   | 844bd4fd |
+| 3     | 3.3  | Revert a refused pick and name the hint for the group       | inline         | done   | fdb88c70 |
+| 3     | 3.4  | Stop the e2e teardown masking the failure it follows        | inline         | done   | 2cb86543 |
+| 3     | 3.5  | Pin precedence against a stale workspace map style          | inline         | done   | a79d8224 |
+| 3     | 3.6  | Assert the basemap write status instead of filtering on it  | inline         | done   | a1e5b7af |
+| 3     | 3.7  | Budget the basemap write for the suite it runs in           | inline         | done   | 2d85569f |
+
+> **Phase 3 is the `om-auto-review-pr` autofix round**, not new scope. Every row answers a finding
+> from the review on this PR: 3.1 the one major, 3.2-3.6 the actionable minors, 3.7 the failure 3.6
+> exposed. Numbered as a Phase rather than as `X.Y-review-fix` suffixes because there are seven of
+> them and the table is the resume contract.
 
 ## Goal
 
