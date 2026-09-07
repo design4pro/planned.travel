@@ -74,3 +74,16 @@
   the moment an owner changes the workspace default.
 - Both swatches paint an opaque `size-9` tile, because `RadioCard`'s icon wrapper turns `bg-brand`
   while checked (`radio-group.tsx:178`) and would otherwise report the brand colour as the map's.
+
+## 2026-09-07T21:00:00Z — Step 2.4 correction: `ca` reads `Paper`, exempted as a loanword
+
+- Reversal of the Catalan wording decision logged at 20:58:00Z. `Paper clar` makes the catalogue
+  worse to make a check pass, which is precisely what the `LOANWORDS` docblock in `parity.test.ts`
+  says not to do ("the alternative was to invent a second word a native speaker would not use").
+- It is also a semantic regression against the spec: the two entries were renamed from `Paper — light`
+  and `Charcoal — dark` _because they are no longer theme-bound_ — Paper stays paper in the dark
+  theme. `Paper clar` re-attaches the light theme to the name in the one locale.
+- Resolution: `ca` now reads `Paper`, and `settings.appearance.map.paper` is added to `LOANWORDS.ca`.
+  Catalan spells the word exactly as English does through the shared Latin root, which is the case
+  that list exists for — an addition to it is a visible decision, and this is that decision.
+- `npx vitest run src/lib/i18n` — 10 files, 258 tests, green.

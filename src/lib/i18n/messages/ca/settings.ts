@@ -166,7 +166,7 @@ const messages = {
     'El que hagi triat el propietari de l’espai de treball.',
   'appearance.map.auto': 'Automàtic',
   'appearance.map.autoHint': 'Segueix el teu tema clar o fosc.',
-  'appearance.map.paper': 'Paper clar',
+  'appearance.map.paper': 'Paper',
   'appearance.map.paperHint': 'Càlid i clar, siguis al tema que siguis.',
   'appearance.map.charcoal': 'Carbó',
   'appearance.map.charcoalHint': 'Càlid i fosc, siguis al tema que siguis.',
