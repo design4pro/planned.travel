@@ -1,6 +1,6 @@
 name: Maintenance
 description: Internal work with no user-visible behaviour change (refactor, tooling, docs, tests).
-labels: ['type: maintenance', 'status: triage']
+labels: ['refactor']
 body:
   - type: textarea
     id: what

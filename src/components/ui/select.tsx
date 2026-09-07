@@ -150,7 +150,7 @@ export const SelectContent = React.forwardRef<
         className={cn(
           layerSurface,
           popMotion,
-          'z-dropdown max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden p-1',
+          'z-popover max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden p-1',
           className,
         )}
         {...props}

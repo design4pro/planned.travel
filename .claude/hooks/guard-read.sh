@@ -49,7 +49,7 @@ check() { # path
   case "$rel" in
     .e2e-tiles|.e2e-tiles/*|*/.e2e-tiles|*/.e2e-tiles/*) deny "$1" "basemap cache" ;;
     .ai/cezar/runs*|.ai/cezar/worktrees*|.ai/cezar/tmp*) deny "$1" "cezar run state" ;;
-    .agent/handoff*) deny "$1" "handoff file" ;;
+    .ai/qa/test-env.env) deny "$1" "test-env credential file" ;;
     .git/*) deny "$1" "git internals" ;;
   esac
 }
@@ -58,7 +58,7 @@ check() { # path
 # A Glob pattern that walks upwards or names a denied file is a read of it.
 case "$pattern" in
   ../*|*/../*|/*) check "$pattern" ;;
-  *.dev.vars*|*.env|*.env.*|*.e2e-tiles*|*handoff*) deny "$pattern" "pattern names a protected file" ;;
+  *.dev.vars*|*.env|*.env.*|*.e2e-tiles*|*test-env.env*) deny "$pattern" "pattern names a protected file" ;;
 esac
 
 exit 0

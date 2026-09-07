@@ -1,52 +1,113 @@
 [
   {
-    "name": "triage-opened",
-    "description": "A new issue from an issue form, an audit or the Sentry sweep carries `status: triage`; the triage workflow reproduces it at HEAD and routes it (ADR 0015). The claim stands down when the `<!-- agent-triage -->` marker is already there.",
+    "name": "issue-groom",
+    "description": "A maintainer opens an issue; om-auto-manage-issues adds SDLC labels, a Definition of Ready check and implementation notes (ADR 0018). `authors` is the gate: the run holds Bash with no allowlist, so an issue from anyone else is groomed only when a maintainer adds `groom`. Issues a run holds or a human put on hold never match.",
     "events": ["issue.opened"],
-    "intervalSeconds": 60,
+    "intervalSeconds": 120,
     "filters": {
-      "anyLabels": ["status: triage"]
+      "authors": ["rafalwolak"],
+      "excludeLabels": ["in-progress", "blocked", "do-not-close"],
+      "lookbackDays": 3,
+      "maxRecords": 10
     },
     "task": {
-      "prompt": "{{github.number}} {{github.url}}",
-      "workflow": "triage",
+      "prompt": "{{github.number}}",
+      "workflow": "issue-groom",
       "autonomous": true,
       "worktree": true,
-      "variants": 1
+      "variants": 1,
+      "generateFollowups": false
     }
   },
   {
-    "name": "triage-relabel",
-    "description": "A human adds `run: triage` to (re)triage an issue; bypasses the already-triaged marker. Issues a run holds or that wait for a human never match.",
+    "name": "issue-regroom",
+    "description": "A label only a collaborator can set: `groom` re-runs om-auto-manage-issues on one issue (an external report a maintainer vouches for, an edit, a reply), and the Sentry sweep files with it so its issues are groomed too. The override removes the label first.",
     "events": ["issue.labeled"],
-    "intervalSeconds": 60,
+    "intervalSeconds": 120,
     "filters": {
-      "changedLabels": ["run: triage"],
-      "excludeLabels": ["status: in-progress", "status: review"]
+      "changedLabels": ["groom"],
+      "excludeLabels": ["in-progress"],
+      "lookbackDays": 3,
+      "maxRecords": 10
     },
     "task": {
-      "prompt": "{{github.number}} {{github.url}}",
-      "workflow": "triage",
+      "prompt": "{{github.number}}",
+      "workflow": "issue-groom",
       "autonomous": true,
       "worktree": true,
-      "variants": 1
+      "variants": 1,
+      "generateFollowups": false
     }
   },
   {
-    "name": "implement",
-    "description": "A human adds `run: implement` to a ready ticket; the implement-ticket workflow claims it (ADR 0015). Tickets already held, in review, or PRDs never match.",
+    "name": "issue-autofix",
+    "description": "A human adds `autofix`; om-auto-fix-issue drives the issue to a reviewed PR on develop (ADR 0018). Held, blocked, do-not-merge or spec-pending issues never match.",
     "events": ["issue.labeled"],
     "intervalSeconds": 60,
     "filters": {
-      "changedLabels": ["run: implement"],
-      "excludeLabels": ["status: in-progress", "status: review", "prd"]
+      "changedLabels": ["autofix"],
+      "excludeLabels": ["in-progress", "blocked", "do-not-merge", "spec"],
+      "lookbackDays": 3,
+      "maxRecords": 5
     },
     "task": {
-      "prompt": "{{github.number}} {{github.url}}",
-      "workflow": "implement-ticket",
+      "prompt": "{{github.number}}",
+      "workflow": "issue-autofix",
       "autonomous": true,
       "worktree": true,
-      "variants": 1
+      "variants": 1,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "issue-spec",
+    "description": "A human adds `spec` to a `feature` issue; om-auto-write-spec lands .ai/specs/<date>-<slug>.md on a design-only PR (ADR 0018).",
+    "events": ["issue.labeled"],
+    "intervalSeconds": 60,
+    "filters": {
+      "changedLabels": ["spec"],
+      "allLabels": ["feature"],
+      "excludeLabels": ["in-progress", "blocked"],
+      "lookbackDays": 3,
+      "maxRecords": 5
+    },
+    "task": {
+      "prompt": "{{github.number}}",
+      "workflow": "spec",
+      "autonomous": true,
+      "worktree": true,
+      "variants": 1,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "pr-autopilot",
+    "description": "A human maintainer opens a PR; om-pr-autopilot diagnoses and runs the right chain, never merges (ADR 0018). Agent PRs (authored by design4pro-agent, the cockpit's gh identity) and dependabot are excluded by author; pipeline labels exclude the race with om-open-pr.",
+    "events": ["pull_request.opened"],
+    "intervalSeconds": 300,
+    "filters": {
+      "authors": ["rafalwolak"],
+      "excludeLabels": [
+        "in-progress",
+        "review",
+        "changes-requested",
+        "merge-queue",
+        "qa",
+        "qa-failed",
+        "blocked",
+        "do-not-merge",
+        "ci-monitoring"
+      ],
+      "lookbackDays": 3,
+      "maxRecords": 5
+    },
+    "task": {
+      "prompt": "{{github.number}}",
+      "workflow": "pr-autopilot",
+      "autonomous": true,
+      "worktree": true,
+      "variants": 1,
+      "generateFollowups": false
     }
   }
 ]

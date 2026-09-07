@@ -48,7 +48,7 @@ export const PopoverContent = React.forwardRef<
         sideOffset={sideOffset}
         data-motion-transform=""
         className={cn(
-          'z-dropdown w-72 max-w-[calc(100vw-1.5rem)] rounded-lg border border-edge bg-surface text-ink shadow-popover',
+          'z-popover w-72 max-w-[calc(100vw-1.5rem)] rounded-lg border border-edge bg-surface text-ink shadow-popover',
           'max-h-(--radix-popover-content-available-height) overflow-y-auto overscroll-contain',
           popMotion,
           paddings[padding],

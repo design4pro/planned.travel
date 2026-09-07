@@ -27,14 +27,15 @@ Domain vocabulary lives in CONTEXT.md — a glossary and nothing else. Architect
 
 ## Agent skills
 
-Configuration for the mattpocock-skills plugin and project skills:
+Configuration for the skills in `.claude/skills/` — the project's own, plus the two vendored from mattpocock/skills (see docs/agents/ATTRIBUTION.md):
 
 - **Issue tracker**: GitHub Issues on `design4pro/planned.travel` — see docs/agents/issue-tracker.md
 - **Triage labels**: see docs/agents/triage-labels.md
 - **Domain docs**: see docs/agents/domain.md
 - **Reference product** (feature and quality benchmark; clean-room rule applies): see docs/agents/reference.md
-- **Cezar orchestration** (scripts, hooks in agent mode, sweeper): see docs/agents/cezar.md
+- **Cezar orchestration** (workflows, automations, hooks in agent mode, housekeeping, host cutover): see docs/agents/cezar.md
+- **Pipeline runtime documents** read by every `om-*` skill: `.ai/agentic.config.json`, `SDLC.md` (labels, Definition of Ready, QA gate), `CODE_REVIEW.md`, `BACKWARD_COMPATIBILITY.md`; repo-specific rules for a skill live in `.ai/skills/om-<name>/SKILL.md`
 
-Sentry findings enter the backlog through `pnpm sentry-triage` (report-only; `--file-issues` writes) as `type: bug` + `status: triage`, and are then pre-triaged like any other bug.
+Sentry findings enter the backlog through `pnpm sentry-triage` (report-only; `--file-issues` writes) as `bug` + `priority-high`, and are then groomed like any other issue.
 
-New work flows: issue form → `status: triage` → the cezar `triage` workflow verifies the claim at HEAD (`ready`, `needs-info`, `backlog` or `needs-human`; locally `/triage-ticket <issue>`) → for a feature `/plan-feature <issue> spec`, then `prd`, then `tickets` (from the cezar cockpit or locally; every artefact stops at `status: review`) → an area still in `docs/plans/` goes through the cezar `plan-area` workflow instead: spec and PRD in one run over a panel of project subagents (locally `/plan-area <issue> <plan>`), then `tickets` → `run: implement` on a ready ticket (the cezar `implement-ticket` workflow; locally `/implement-ticket <issue>`) → draft PR → merge → the sweeper closes the issue. Verification ladder: see the `verifying-changes` skill.
+New work flows (ADR 0018): issue form → the cezar `issue-groom` run adds SDLC labels, a Definition of Ready check and implementation notes (`om-auto-manage-issues`; re-run with the `groom` label) → a human adds `autofix` → the `issue-autofix` run (`om-auto-fix-issue`: verify, root cause, fix, PR, review, QA for UI; locally `/om-auto-fix-issue <issue>`) ends with a ready PR on `develop` carrying `Closes #n` → a human reviews and merges from the cockpit (`om-approve-merge-pr`; `needs-qa` needs `qa-approved`) → `housekeeping` closes the issue. A feature is specified first: `spec` on the issue → `om-auto-write-spec` lands `.ai/specs/<date>-<slug>.md` on a design-only PR → a human merges it → `implement-spec` from the cockpit (`om-auto-implement-spec`). Thinking before an issue exists is `/om-brainstorm`. Verification ladder: see the `verifying-changes` skill; the gate the skills run is `validation.commands` in `.ai/agentic.config.json`.

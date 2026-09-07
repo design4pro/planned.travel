@@ -33,7 +33,7 @@ export const ContextMenuContent = React.forwardRef<
       className={cn(
         layerSurface,
         popMotion,
-        'z-dropdown min-w-48 max-h-(--radix-context-menu-content-available-height)',
+        'z-popover min-w-48 max-h-(--radix-context-menu-content-available-height)',
         'overflow-y-auto overscroll-contain p-1',
         className,
       )}
@@ -191,7 +191,7 @@ export const ContextMenuSubContent = React.forwardRef<
       className={cn(
         layerSurface,
         popMotion,
-        'z-dropdown min-w-44 p-1',
+        'z-popover min-w-44 p-1',
         className,
       )}
       {...props}

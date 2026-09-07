@@ -14,10 +14,10 @@
  * Geoapify 3,000 credits a *day* and ADR 0011 gives HERE 30,000 a month; an operator can enter
  * either today so the gate is live from the first call rather than from the first invoice.
  *
- * **Radio cards rather than a select, for both choices.** A Radix select popover carries
- * `--z-dropdown`, which sits below `--z-overlay`, so one opened inside a dialog renders behind that
- * dialog's own scrim — measured on `create-account.tsx`, which carries the same note for the same
- * reason.
+ * **Radio cards rather than a select, for both choices.** Each option carries a consequence that
+ * has to be readable before the press, and a closed select shows one line. The layering that used
+ * to force this (issue #201, a select opened in a dialog painted under the scrim) is fixed —
+ * `SelectContent` now sits on `--z-popover` — so this is a presentation choice, not a workaround.
  */
 
 import { useCallback, useEffect, useState } from 'react'
