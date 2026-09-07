@@ -125,9 +125,10 @@ export function CreateAccountButton({ onCreated }: CreateAccountButtonProps) {
             }}
           />
         </Field>
-        {/* A radio set rather than a select: a Radix select popover carries `--z-dropdown`, which
-            is below `--z-overlay`, so one opened inside a dialog renders behind that dialog's own
-            scrim. Reported with this item; the control that needs no layer is the one used here. */}
+        {/* A radio set rather than a select: three roles with a sentence each read better opened
+            than closed. The layering that used to force it (issue #201) is fixed — `SelectContent`
+            sits on `--z-popover`, above the dialog scrim — so this is now a choice, not a
+            workaround. */}
         <Field label={t('console.users.column.role')}>
           <RadioGroup
             aria-label={t('console.users.column.role')}

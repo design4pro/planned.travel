@@ -713,9 +713,41 @@
      this block — a stacking order has no light and dark value to declare. */
   --z-map-surface: 35;
   --z-nav: 40;
+  /* In-page elevation: something that has to cover the map chrome and the app
+     nav while staying under the overlay tiers. `GlassPanel`'s floating variant
+     and a list item being dragged are what stand here. A layer that portals to
+     `document.body` does *not*: see `--z-popover`. */
   --z-dropdown: 50;
   --z-overlay: 60;
   --z-modal: 70;
+  /* Portalled poppers — the select listbox, the popover, the dropdown and
+     context menus, the chrome's own menu. Radix renders each of them into
+     `document.body`, so their z-index is compared against the dialog scrim and
+     the dialog surface at the root stacking context rather than nested inside
+     the panel that opened them. On `--z-dropdown` they lost that comparison:
+     a select opened inside a dialog painted under the scrim, dimmed, and a
+     click on an option landed on the scrim instead (issue #201).
+
+     So this band sits above `--z-modal`: a popper is logically above whatever
+     opened it, and a dialog is exactly the thing that opens one. It stays below
+     `--z-toast`, so a toast still announces itself over an open menu. Kept
+     separate from `--z-dropdown` on purpose — raising that token instead would
+     have lifted the map's glass chrome and a dragged list item over every
+     dialog and sheet in the product, which is not what either of them means.
+     Exported by `styles.css` as `@utility z-popover`. Theme-independent, like
+     every layout token in this block. */
+  --z-popover: 75;
+  /* The tooltip, one step above the poppers rather than beside them. A tooltip
+     labels a control, so it is always summoned by something already on screen
+     and must cover it: the reaction picker in
+     `src/components/modules/collab/thread.tsx` puts one on every button inside
+     an open `PopoverContent`, which is why this cannot share a band with
+     `--z-popover` and be settled by DOM order. It used to sit on `--z-modal`,
+     where it tied with the dialog surface and won only because a tooltip mounts
+     after the panel it is inside; the band makes that an ordering instead of a
+     coincidence. Below `--z-toast`, which outranks every transient layer.
+     Exported by `styles.css` as `@utility z-tooltip`. */
+  --z-tooltip: 78;
   --z-toast: 80;
   /* The impersonation warning bar (docs/ACCESS.md §6.1), and the only thing
      above the toast tier. A toast that covered the one control which ends a

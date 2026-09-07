@@ -414,12 +414,10 @@ export function UserActions({
         confirmDisabled={role === currentRole}
         onConfirm={changeRole}
       >
-        {/* Radio cards rather than a select, and not only because three options with a sentence
-            each read better opened than closed: a Radix select popover carries `--z-dropdown`,
-            which sits *below* `--z-overlay`, so a select opened inside a dialog renders behind
-            that dialog's own scrim and cannot be clicked at all. Measured on this panel. The
-            layering is `src/components/ui/select.tsx`'s to fix and is reported with this item;
-            what belongs here is a control that needs no layer of its own. */}
+        {/* Radio cards rather than a select, because three options with a sentence each read
+            better opened than closed. The layering that used to force it as well (issue #201: a
+            select opened inside a dialog painted under the scrim and could not be clicked) is
+            fixed — `SelectContent` sits on `--z-popover`, above the scrim. */}
         <Field label={t('console.users.column.role')}>
           <RadioGroup
             aria-label={t('console.users.column.role')}
