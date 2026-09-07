@@ -74,7 +74,7 @@
   {
     "id": "om-close-fixed-issues",
     "label": "om-close-fixed-issues - post-merge housekeeping on the tracker",
-    "text": "--limit 50\n\nOther flags: --since <ISO date|git ref|last-release> · --dry-run · --repo <owner>/<name>.\nClose only issues a merged PR authoritatively fixed - a fixes/closes/resolves keyword or\nclosingIssuesReferences. Never act on a bare #N mention. do-not-close wins over everything.\nHere PRs merge into develop while the default branch is main, so GitHub never auto-closes: this\nrun is what actually closes them. Comment, do not close, when the PR was closed unmerged or merged\ninto a non-base branch.",
+    "text": "--limit 50\n\n50 is deliberate and not the skill default of 100: it is what the housekeeping workflow runs\n(.ai/cezar/workflows/housekeeping.yml), so a hand-run sweep covers the same window as the\nscheduled one. Raise it only to catch up after housekeeping has been down.\nOther flags: --since <ISO date|git ref|last-release> · --dry-run · --repo <owner>/<name>.\nClose only issues a merged PR authoritatively fixed - a fixes/closes/resolves keyword or\nclosingIssuesReferences. Never act on a bare #N mention. do-not-close wins over everything.\nHere PRs merge into develop while the default branch is main, so GitHub never auto-closes: this\nrun is what actually closes them. Comment, do not close, when the PR was closed unmerged or merged\ninto a non-base branch.",
     "skills": ["om-close-fixed-issues"]
   },
   {
@@ -166,7 +166,7 @@
   {
     "id": "om-auto-qa-pr",
     "label": "om-auto-qa-pr - verify a PR's UI in a real browser",
-    "text": "<PR number only on this line - e.g. 312>\n\nFlags: --base <branch> · --evidence-only (default) · --self-qa-signoff · --keep-env ·\n--artifacts <dir> · --force. Leave the line above empty to QA the current worktree instead.\nBring the app up with sh .ai/scripts/test-env-up.sh and read baseUrl from .ai/qa/test-env.json;\ncredentials are references, never values.\nEvidence here is the blind A/B pair: node scripts/visual/capture.mjs for each changed route, base\nand head, light and dark, at 1440x900 and 360x800 - plus ar (RTL) when the layout changes. Attach\nthem with attach-image-evidence and keep the files under .ai/qa/.\nEvidence only: never apply qa-approved or qa-self-verified here - a human QA reviewer does that."
+    "text": "<PR number only on this line - e.g. 312>\n\nFlags: --base <branch> · --evidence-only (default) · --keep-env · --artifacts <dir> · --force.\nLeave the line above empty to QA the current worktree instead.\nBring the app up with sh .ai/scripts/test-env-up.sh and read baseUrl from .ai/qa/test-env.json;\ncredentials are references, never values.\nEvidence here is the blind A/B pair: node scripts/visual/capture.mjs for each changed route, base\nand head, light and dark, at 1440x900 and 360x800 - plus ar (RTL) when the layout changes. Attach\nthem with attach-image-evidence and keep the files under .ai/qa/.\nEvidence only: never apply qa-approved or qa-self-verified here - a human QA reviewer does that.\nThe --self-qa-signoff flag is left out of the list above on purpose: applying those two labels is\nits only effect, and .ai/skills/om-auto-qa-pr/SKILL.md forbids that from automation."
   },
   {
     "id": "om-ux-review-pr",
