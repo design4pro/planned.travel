@@ -16,17 +16,18 @@ the rules of `SDLC.md`.
   `reviewGate: false`, `skillsRepos[0].ref` pinned to the same SHA as `skills-lock.json`).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
   of git; `config.json` and `workflows/` are tracked.
-- Skills auto-update off: `skillsAutoUpdate: false` in `~/.cezar/config.json` (cockpit Settings,
-  or `PUT /api/v1/workspace/config`; `CEZ_SKILLS_AUTO_UPDATE=0` in the service environment does
-  the same). Cezar's default is on, and on every cockpit start it runs `npx skills update -p -y` in
-  each project root, which replaces the vendored `.claude/skills/om-*` directories with symlinks
-  into an untracked `.agents/skills/` and shows as 400 deleted files in `git status`. Recovery:
-  remove the symlinks, `git checkout -- .claude/skills`, delete `.agents/`.
-- Host patch: 0.10.1 fails every `issue.labeled` poll as soon as one recently updated issue has a
-  comment or cross-reference (open-mercato/cezar#914, fix in upstream PR #916, unreleased), so
-  `issue-regroom`, `issue-autofix` and `issue-spec` never fire. `bash .ai/scripts/cezar-patch-914.sh`
-  patches the cached copy the service runs and restarts it; run it again after the npx cache is
-  cleared, drop it once the pinned version carries #916.
+- Host patches: `bash .ai/scripts/cezar-host-patch.sh` patches the cached copy of 0.10.1 the
+  service runs, puts `CEZ_SKILLS_AUTO_UPDATE=0` in the service plist and restarts it. Rerun it
+  after the npx cache is cleared; drop each patch once the pinned version carries the fix.
+  - `issue.labeled` polls fail as soon as one recently updated issue has a comment or a
+    cross-reference (open-mercato/cezar#914, fix in upstream PR #916, unreleased), so
+    `issue-regroom`, `issue-autofix` and `issue-spec` never fire.
+  - On every cockpit start the skills coordinator runs `npx skills check <om-*> -p` in each project
+    root, and that command re-adds the skills from upstream HEAD: the vendored
+    `.claude/skills/om-*` directories become symlinks into an untracked `.agents/skills/`, which
+    shows as 400 deleted files in `git status`. `skillsAutoUpdate: false` (kept in
+    `~/.cezar/config.json`) gates only the update; the patch makes `CEZ_SKILLS_AUTO_UPDATE=0` skip
+    the check too. Recovery: remove the symlinks, `git checkout -- .claude/skills`, delete `.agents/`.
 - Skills: `.claude/skills/om-*` are vendored files, byte-identical to the pinned upstream SHA.
   `pnpm install-skills` re-installs and updates them; the diff is a PR, read with
   `/om-apply-upgrade-notes`, and the pin in `.ai/cezar/config.json` moves in the same commit.
@@ -152,8 +153,8 @@ must stop before `status:*` is stripped and the surviving labels renamed.
    `blocked`, `status:*` leaves every open issue, `run:*`, `type:*` and `agent-docs` move to their
    SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels wait for PR C.
 5. The cockpit service already runs 0.10.1 (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`);
-   confirm `.ai/cezar/config.json` in the main checkout is the merged one, apply the #914 host
-   patch (`bash .ai/scripts/cezar-patch-914.sh`, which also restarts the service so it reloads the
+   confirm `.ai/cezar/config.json` in the main checkout is the merged one, apply the host patches
+   (`bash .ai/scripts/cezar-host-patch.sh`, which also restarts the service so it reloads the
    workflows).
 6. `bash .ai/scripts/cez-automations.sh --dry-run`, then without the flag: the five new automations
    are created enabled.
