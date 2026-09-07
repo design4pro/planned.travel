@@ -8,6 +8,15 @@
         "rule": "overused-font",
         "value": "geist sans",
         "createdAt": "2026-09-01T11:58:06.165Z"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          ".ai/specs/assets/basemap-catalogue/picker-mockup.html"
+        ],
+        "createdAt": "2026-09-07T17:03:33.468Z",
+        "reason": "agent decided: static spec mockup that must mirror the product's own type scale. src/styles/tokens.css sets --text-caption 12px, --text-label 13px, --text-body 15px, --text-subtitle 18px; those steps are deliberately below 1.25 and the mockup depicts them rather than proposing a new scale. Widening them here would misrepresent the screen being specified."
       }
     ]
   }
