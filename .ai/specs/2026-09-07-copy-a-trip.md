@@ -441,6 +441,10 @@ No change to the trip grid's layout, the search field, the filter row, the archi
 empty state (`src/routes/_app/trips/index.tsx:262-290`) or the `CardsSkeleton` (`:317`) — `01-S7`
 owns their redesign and this stage is checked against them re-rendered, not against new ones.
 
+Frames of `/trips` as it stands today, and static mockups of both proposed surfaces in light and
+dark at both viewports, are in `.ai/specs/assets/copy-a-trip/` — see its `README.md` for how each was
+made and what in them is illustrative rather than measured.
+
 Per ADR 0016 the visual judgement is the blind A/B pair, not a pixel baseline: run
 `node scripts/visual/capture.mjs --url /trips --out <dir> --label <A|B> --viewports 360x800,1440x900 --themes light,dark --auth`
 for `/trips` and `/`, with a fixture seeding one trip with a non-null `copy_pending_at` so the
