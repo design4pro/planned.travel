@@ -139,3 +139,26 @@ jobs:
         env:
           EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
         run: node scripts/ci/claude-review-ran.mjs
+
+      # The threads this job leaves are what the `develop` ruleset holds the merge on, and nothing
+      # resolves them by itself - until now a maintainer cleared them by running `om-auto-fix-pr` by
+      # hand. This step applies `review-threads`, and the cezar automation of that name turns the
+      # label into the run (docs/agents/cezar.md). The label is the signal because cezar 0.10.1 has
+      # no automation event for a review.
+      #
+      # `always()`: a review that tripped either guard above may still have left threads behind, and
+      # threads from an earlier head hold the merge whatever this run did. The script is where the
+      # judgement lives - it arms only for live, non-outdated threads opened by the review bot, and
+      # only once per head - so the step condition stays deliberately blunt.
+      #
+      # `github.token` is enough: the consumer is cezar's poller, which reads the issues API, and
+      # GitHub emits no workflow-triggering events for actions taken with GITHUB_TOKEN - the same
+      # reasoning as the Sentry sweep in sentry-triage.yml.
+      - name: Arm the review-thread autofix when threads are left open
+        if: always() && steps.gate.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci/review-threads-label.mjs

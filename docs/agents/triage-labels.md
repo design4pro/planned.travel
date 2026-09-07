@@ -14,7 +14,7 @@ command labels, the human holds, the escape hatch, and the map from the retired 
 | Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | issue grooming, Sentry sweep (`priority-high`), PR skills                                                   |
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                   |
 | Hold     | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                             |
-| Command  | `groom`, `autofix`, `spec`                                                                 | humans only; the run removes it as its first mutation                                                       |
+| Command  | `groom`, `autofix`, `spec`, `review-threads`                                               | humans, except `review-threads` (the review job); the run removes it as its first mutation                  |
 | Outside  | `needs-e2e`                                                                                | humans on a PR: ci.yml runs the full e2e matrix (ADR 0016)                                                  |
 
 There is no `status:` axis. An open issue without `in-progress` or `blocked` is the backlog; the
@@ -35,6 +35,10 @@ skill's repo-local override removes it first, so a command still present is a ru
   a feature goes spec → implement. Excluded while `in-progress`, `blocked`, `do-not-merge` or `spec`.
 - `spec` - `om-auto-write-spec` on a `feature` issue: the spec lands in `.ai/specs/` on a
   design-only PR. Implementation is a separate, human-started run once that PR merges.
+- `review-threads` - the one command on a PR, and the one no human adds: the `claude-review` job
+  applies it when it leaves review threads the merge gate will hold, and `om-auto-fix-pr` clears
+  them. Once per head SHA, never while `in-progress`, `blocked` or `do-not-merge`
+  (docs/agents/cezar.md).
 
 ## Flow
 
@@ -44,6 +48,7 @@ issue form ─► category;  Sentry sweep ─► bug + priority-high + groom
 human: autofix ─► in-progress ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► human review
 human: spec (feature) ─► spec PR (documentation, skip-qa) ─► human merges ─► cockpit: implement-spec
 PR opened by a human ─(pull_request.opened: pr-autopilot)─► review / fix / QA, never merge
+claude-review leaves open threads ─► review-threads ─(pr-review-threads)─► om-auto-fix-pr replies and resolves
 housekeeping (07:00, 12:00, 17:00 weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
       ─► issue closed when its `Closes #n` PR merged into develop
 human: om-approve-merge-pr from the cockpit; needs-qa merges only with qa-approved
