@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Basemap catalogue — proposed picker (mockup)</title>
+    <!--
+      An illustrative static mockup of the "Map style" row proposed by
+      .ai/specs/2026-09-07-basemap-catalogue.md. It is not app code, imports
+      nothing from src/, and ships no behaviour: the colours are copied from
+      src/styles/tokens.css and src/lib/map/palette.ts so the proportions and
+      the contrast are honest, and the type face is a system stack rather than
+      Geist. Charcoal is drawn selected, which is the state the spec declares.
+    -->
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #faf9f7;
+        --surface: #ffffff;
+        --surface-2: #f3f1ed;
+        --ink: #16150f;
+        --ink-3: #5b5951;
+        --edge: #e3e0d8;
+        --brand: #256256;
+        --brand-on: #ffffff;
+        --brand-subtle: #e3efeb;
+        --shadow-card:
+          0 1px 2px rgb(22 21 15 / 0.06), 0 4px 12px rgb(22 21 15 / 0.04);
+
+        /* src/lib/map/palette.ts — LIGHT */
+        --map-l-earth: #faf9f7;
+        --map-l-water: #ccdfda;
+        --map-l-road: #d8d1c2;
+        /* src/lib/map/palette.ts — DARK */
+        --map-d-earth: #2a2a27;
+        --map-d-water: #0c1a17;
+        --map-d-road: #5b5749;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          color-scheme: dark;
+          --canvas: #121211;
+          --surface: #1a1a18;
+          --surface-2: #212120;
+          --ink: #f8f7f4;
+          --ink-3: #adaba3;
+          --edge: #33332f;
+          --brand: #5fbba0;
+          --brand-on: #07130f;
+          --brand-subtle: #12261f;
+          --shadow-card:
+            0 1px 2px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.35);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px 24px;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .card {
+        max-width: 1076px;
+        margin: 0 auto;
+        background: var(--surface);
+        border: 1px solid var(--edge);
+        border-radius: 20px; /* --radius-xl, Card */
+        box-shadow: var(--shadow-card);
+        padding: 24px;
+      }
+
+      .section-title {
+        margin: 0 0 20px;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .row-label {
+        font-weight: 600;
+      }
+
+      .row-hint {
+        margin: 2px 0 16px;
+        color: var(--ink-3);
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr;
+      }
+
+      @media (min-width: 640px) {
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      /* One RadioCard — src/components/ui/radio-group.tsx:157 */
+      .option {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        width: 100%;
+        padding: 16px;
+        text-align: start;
+        border: 1px solid var(--edge);
+        border-radius: 16px; /* --radius-lg, RadioCard */
+        background: var(--surface);
+      }
+
+      .option[data-state='checked'] {
+        border-color: var(--brand);
+        background: var(--brand-subtle);
+        box-shadow: var(--shadow-card);
+      }
+
+      .swatch {
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border-radius: 12px; /* --radius-md, RadioCard icon slot */
+        overflow: hidden;
+        background: var(--surface-2);
+      }
+
+      /* The swatch paints its own opaque tile, so the checked card's brand fill
+         on the icon wrapper never shows through — see the spec's UI/UX note. */
+      .tile {
+        width: 36px;
+        height: 36px;
+      }
+
+      .body {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .label {
+        display: block;
+        font-weight: 600;
+      }
+
+      .desc {
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+
+      .badge {
+        position: absolute;
+        top: -6px;
+        inset-inline-end: -6px;
+        display: grid;
+        place-items: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: var(--brand);
+        color: var(--brand-on);
+        box-shadow: var(--shadow-card);
+      }
+
+      .badge svg {
+        width: 12px;
+        height: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2 class="section-title">Motion and maps</h2>
+      <div class="row-label">Map style</div>
+      <p class="row-hint">The basemap used on the planner and the atlas.</p>
+
+      <div class="grid" role="radiogroup" aria-label="Map style">
+        <!-- 1 — the absence of an override -->
+        <div
+          class="option"
+          role="radio"
+          aria-checked="false"
+          data-part="basemap-option"
+          value=""
+        >
+          <span class="swatch" aria-hidden="true">
+            <svg class="tile" viewBox="0 0 36 36">
+              <rect width="36" height="36" fill="var(--map-l-earth)" />
+              <rect y="18" width="36" height="18" fill="var(--map-d-earth)" />
+              <path
+                d="M0 12h36"
+                stroke="var(--map-l-road)"
+                stroke-width="1.5"
+              />
+              <path
+                d="M0 27h36"
+                stroke="var(--map-d-road)"
+                stroke-width="1.5"
+              />
+            </svg>
+          </span>
+          <span class="body">
+            <span class="label">Follow the workspace</span>
+            <span class="desc">Whatever the workspace owner chose.</span>
+          </span>
+        </div>
+
+        <!-- 2 — auto -->
+        <div
+          class="option"
+          role="radio"
+          aria-checked="false"
+          data-part="basemap-option"
+          value="auto"
+        >
+          <span class="swatch" aria-hidden="true">
+            <svg class="tile" viewBox="0 0 36 36">
+              <rect width="36" height="36" fill="var(--map-l-earth)" />
+              <path d="M36 0v36H0z" fill="var(--map-d-earth)" />
+              <path
+                d="M0 22c8-4 16 2 36-3"
+                stroke="var(--map-l-water)"
+                stroke-width="4"
+                fill="none"
+              />
+            </svg>
+          </span>
+          <span class="body">
+            <span class="label">Automatic</span>
+            <span class="desc">Follows your light or dark theme.</span>
+          </span>
+        </div>
+
+        <!-- 3 — paper -->
+        <div
+          class="option"
+          role="radio"
+          aria-checked="false"
+          data-part="basemap-option"
+          value="planned-light"
+        >
+          <span class="swatch" aria-hidden="true">
+            <svg class="tile" viewBox="0 0 36 36">
+              <rect width="36" height="36" fill="var(--map-l-earth)" />
+              <path d="M0 24c10-6 18 3 36-2v14H0z" fill="var(--map-l-water)" />
+              <path
+                d="M2 6c8 3 12 10 22 9"
+                stroke="var(--map-l-road)"
+                stroke-width="2"
+                fill="none"
+              />
+              <path
+                d="M26 2c-2 8 2 12 8 14"
+                stroke="var(--map-l-road)"
+                stroke-width="1.5"
+                fill="none"
+              />
+            </svg>
+          </span>
+          <span class="body">
+            <span class="label">Paper</span>
+            <span class="desc"
+              >Warm and light, whichever theme you are in.</span
+            >
+          </span>
+        </div>
+
+        <!-- 4 — charcoal, drawn selected -->
+        <div
+          class="option"
+          role="radio"
+          aria-checked="true"
+          data-state="checked"
+          data-part="basemap-option"
+          value="planned-dark"
+        >
+          <span class="swatch" aria-hidden="true">
+            <svg class="tile" viewBox="0 0 36 36">
+              <rect width="36" height="36" fill="var(--map-d-earth)" />
+              <path d="M0 24c10-6 18 3 36-2v14H0z" fill="var(--map-d-water)" />
+              <path
+                d="M2 6c8 3 12 10 22 9"
+                stroke="var(--map-d-road)"
+                stroke-width="2"
+                fill="none"
+              />
+              <path
+                d="M26 2c-2 8 2 12 8 14"
+                stroke="var(--map-d-road)"
+                stroke-width="1.5"
+                fill="none"
+              />
+            </svg>
+          </span>
+          <span class="body">
+            <span class="label">Charcoal</span>
+            <span class="desc">Warm and dark, whichever theme you are in.</span>
+          </span>
+          <span class="badge" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </span>
+        </div>
+
+        <!-- 5 — quiet -->
+        <div
+          class="option"
+          role="radio"
+          aria-checked="false"
+          data-part="basemap-option"
+          value="planned-quiet"
+        >
+          <span class="swatch" aria-hidden="true">
+            <svg class="tile" viewBox="0 0 36 36">
+              <rect width="36" height="36" fill="var(--map-l-earth)" />
+              <path d="M0 24c10-6 18 3 36-2v14H0z" fill="var(--map-l-water)" />
+            </svg>
+          </span>
+          <span class="body">
+            <span class="label">Quiet</span>
+            <span class="desc"
+              >No road or place names, so your pins read first.</span
+            >
+          </span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
