@@ -27,7 +27,7 @@ Domain vocabulary lives in CONTEXT.md — a glossary and nothing else. Architect
 
 ## Agent skills
 
-Configuration for the mattpocock-skills plugin and project skills:
+Configuration for the skills in `.claude/skills/` — the project's own, plus the two vendored from mattpocock/skills (see docs/agents/ATTRIBUTION.md):
 
 - **Issue tracker**: GitHub Issues on `design4pro/planned.travel` — see docs/agents/issue-tracker.md
 - **Triage labels**: see docs/agents/triage-labels.md

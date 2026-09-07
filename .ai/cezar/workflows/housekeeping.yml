@@ -8,7 +8,7 @@ description: Review the queue, report what can merge, close issues whose PR merg
 steps:
   - id: bootstrap
     name: Install dependencies and generate the route tree
-    command: pnpm install --frozen-lockfile --prefer-offline && pnpm generate-routes
+    command: HUSKY=0 pnpm install --frozen-lockfile --prefer-offline && pnpm generate-routes
   - id: review-prs
     name: om-review-prs
     prompt: '/om-review-prs'
