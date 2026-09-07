@@ -100,6 +100,12 @@ end to end (PR C).
 - Load the skills from `skillsRepos` at run time instead of vendoring them. Rejected: chained
   skills run through the Skill tool in a fresh headless worktree and must be on disk and in git;
   the pin (`skills-lock.json`, `skillsRepos[0].ref`) is one SHA in both places.
+  Update 2026-09-07: `skillsRepos` is now empty, so the rejection stands harder - cezar clones
+  nothing at run time - but the pin is single-sourced rather than in two places. `skills-lock.json`
+  carries only a per-skill `computedHash`, which detects drift but names no provenance, so the
+  upstream SHA the vendored `.claude/skills/om-*` files match is recorded in the "Skills" bullet of
+  `docs/agents/cezar.md` and moves with them. It is not kept in `skills-lock.json`, which
+  `pnpm install-skills` regenerates.
 
 ## Consequences
 
