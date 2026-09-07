@@ -143,5 +143,16 @@ describe('map style persistence', () => {
         'planned-light',
       )
     })
+
+    it('keeps a member override the catalogue knows over a workspace value it does not', async () => {
+      // The degrade and the precedence are separate rules, and this is the row
+      // where they meet: a workspace still holding a string from before the
+      // catalogue must not drag a member's good pick down to `auto` with it.
+      await storeWorkspaceMapStyle(alpha, 'planned-neon')
+      await storeUserMapStyle(alpha, 'planned-dark')
+      expect((await getEffectiveSettings(alpha.scope)).mapStyle).toBe(
+        'planned-dark',
+      )
+    })
   })
 })
