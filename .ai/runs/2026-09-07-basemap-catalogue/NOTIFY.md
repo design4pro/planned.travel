@@ -31,3 +31,19 @@
   `done` and writes `pending`; the next commit touching `PLAN.md` replaces it with the real short
   SHA. `Status` — the field `om-auto-continue-pr-loop` actually resumes from — stays correct inside
   its own commit. Row 1.1 was corrected to `076095bf` in Step 1.2's commit.
+
+## 2026-09-07T18:33:00Z — checkpoint 1 (Steps 1.1..1.4, Phase 1 closed)
+
+- Typecheck, lint and the full suite (5589 tests / 231 files) are green. Route-tree and schema drift
+  are clean. Full log: `checkpoint-1-checks.md`.
+- Step review at `checkpoint` granularity over `602a3571..ce04f734` found no blocker and no major.
+- UI verification deliberately skipped: Phase 1 ships no user-visible change, and the visible proof
+  of the seam needs the picker that Phase 2 builds.
+- Environment repaired along the way — an 11-hour-old `vite dev` from an earlier session in this
+  worktree held `:3001`, so the first `pnpm worktree:bootstrap` died on `Port 3001 is already in use`
+  and the demo seed answered 500 on a query against `user`. The stale process was stopped and
+  bootstrap re-run; it now reports `ready` on `http://localhost:3001`.
+- Decision recorded for review: in `buildStyle`, the catalogue entry supplies `theme` and
+  `roadLabels`, and `poiLabels` stays `MapCanvas`'s own prop. Applying the entry's value would have
+  made a shipped prop inert while changing no pixel, because every entry already sets it to the
+  component's default.
