@@ -19,8 +19,8 @@
 | 1     | 1.2  | Re-export the catalogue from the map barrel                | inline         | done   | 668b41f1 |
 | 1     | 1.3  | Read the basemap store in MapCanvas                        | inline         | done   | 55810e74 |
 | 1     | 1.4  | Carry the effective basemap id on the shell payload        | inline         | done   | ce04f734 |
-| 2     | 2.1  | Narrow the map-style write path and clear the override     | dispatch       | done   | pending  |
-| 2     | 2.2  | Append the settings tenant-isolation case                  | dispatch:cheap | todo   | —        |
+| 2     | 2.1  | Narrow the map-style write path and clear the override     | dispatch       | done   | 56e41254 |
+| 2     | 2.2  | Append the settings tenant-isolation case                  | dispatch:cheap | done   | pending  |
 | 2     | 2.3  | Expose the raw member override on AppearancePayload        | inline         | todo   | —        |
 | 2     | 2.4  | Land the catalogue copy in 23 locales and build the picker | dispatch       | todo   | —        |
 | 2     | 2.5  | Mount the picker and retire the two theme-bound keys       | inline         | todo   | —        |
