@@ -110,6 +110,21 @@ test.describe('MAP-05 — the basemap a member picks is the basemap they get', (
   test('Charcoal paints the canvas dark under a light chrome, and Follow the workspace gives the workspace’s cartography back', async ({
     context,
   }) => {
+    /*
+     * Four documents, two of them a live map, plus two writes that have to land
+     * in D1 before the next document is opened. Playwright's flat 30 s is one
+     * document's budget — the reasoning `WALK_TIMEOUT_MS` sets out in
+     * `journeys.spec.ts` applies here for the same reason, at a quarter of the
+     * distance.
+     *
+     * Measured, not guessed: this runs in ~15 s alone and went over 30 s only in
+     * the full suite, where a second worker is loading MapLibre and its tiles at
+     * the same time. A ceiling and not an expectation — nothing waits for this
+     * number when the machine is quiet, and a preference that is never read
+     * still fails on `expectGround`, not on the clock.
+     */
+    test.setTimeout(120_000)
+
     expect(ATLAS, 'the atlas route is what the canvas is read on').toBeDefined()
     if (ATLAS === undefined) return
 
@@ -408,7 +423,12 @@ async function chooseBasemap(page: Page, option: string): Promise<void> {
 async function clearOverride(context: BrowserContext): Promise<void> {
   const page = await context.newPage()
   try {
-    await page.goto(APPEARANCE.path, { waitUntil: 'networkidle' })
+    // Plain `load`, deliberately not `networkidle`: this runs while the rest of
+    // the suite has the dev server busy, and a document that is still prefetching
+    // sibling routes never goes idle inside the test timeout — which is how the
+    // teardown, not the assertion, failed the first full-suite run. The wait that
+    // matters is the one on the next line, and it is a stronger signal anyway.
+    await page.goto(APPEARANCE.path)
     const follow = page.locator(FOLLOW_WORKSPACE)
     await follow.waitFor({ state: 'visible', timeout: 15_000 })
     if ((await follow.getAttribute('data-state')) !== 'checked') {

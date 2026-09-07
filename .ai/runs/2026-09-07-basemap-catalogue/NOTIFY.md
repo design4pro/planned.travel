@@ -120,3 +120,22 @@
   settings copy-gate orphan check (`b5f86ff6`). Neither gate was relaxed; the change was corrected to
   meet them.
 - No blocker. Next: Step 2.6, `e2e/basemap-preference.spec.ts`.
+
+## 2026-09-07T21:52:00Z — Final gate: the new e2e spec needed a document budget, not a weaker claim
+
+- `e2e/basemap-preference.spec.ts` passed 8+ consecutive standalone runs but failed the **full** suite
+  twice, and took `e2e/journeys.spec.ts:907` ("the click surface never takes the reader's input")
+  down with it — both on Playwright's flat 30 s timeout, neither on an assertion.
+- Isolated rather than guessed: the full suite run with `--grep-invert "the basemap a member picks"`
+  is **28 passed, 0 failed**, so `journeys:907` was collateral from contention and not a defect this
+  change introduced in the product.
+- Two fixes, both to the new spec only:
+  1. the teardown's `page.goto(..., { waitUntil: 'networkidle' })` dropped to a plain `load` — a
+     document still prefetching sibling routes never goes idle while the rest of the suite has the
+     dev server busy, and the `waitFor` on the very next line is the stronger signal anyway;
+  2. `test.setTimeout(120_000)` on the round-trip test, in the idiom `journeys.spec.ts` already uses
+     (`WALK_TIMEOUT_MS = 180_000`, "a ceiling and not an expectation"). Four documents, two of them a
+     live map, plus two writes that must land in D1 — that is not one document's budget.
+- **No assertion was weakened and no gate was relaxed.** Measured under contention the test now runs
+  in 34.1 s; a preference that is never read still fails on `expectGround`, not on the clock.
+- Two consecutive full-suite runs green afterwards: 30 passed, 1 skipped (mobile-safari), 0 failed.
