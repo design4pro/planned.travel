@@ -11,9 +11,15 @@ import { MAP_READY_TIMEOUT_MS } from './helpers/settle.ts'
  *
  * `/settings/appearance` has written `user_settings.map_style` since it shipped
  * and no map has ever read it, so the only way to fail this stage was to watch
- * the ground the canvas paints. That is what this file does, and it is the guard
- * the spec names for `styleKey()` in `map-canvas.tsx`: left out of that key a
- * saved preference never repaints a mounted map, and no unit test sees it.
+ * the ground the canvas paints. That is what this file does: it proves the
+ * column reaches a real style document, end to end, across a page load.
+ *
+ * It is deliberately **not** the guard for `styleKey()` in `map-canvas.tsx`, and
+ * cannot be: every read below happens on a freshly opened document, so the map
+ * is constructed with the right style and the swap effect never has to fire.
+ * A mounted map handed a new preference is the seam `styleKey()` owns, and it is
+ * covered where it is observable — `map-canvas.test.tsx`, "restyles a mounted map
+ * when a pinned basemap is published" and the two cases beside it.
  *
  * Two claims, in the order they can be trusted in:
  *
