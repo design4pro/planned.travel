@@ -712,6 +712,12 @@
 @utility z-modal {
   z-index: var(--z-modal);
 }
+/* Portalled poppers — select, popover, dropdown and context menus, the chrome
+   menu. Above the modal tier, because each of them renders into `document.body`
+   and has to escape the dialog that opened it. */
+@utility z-popover {
+  z-index: var(--z-popover);
+}
 @utility z-toast {
   z-index: var(--z-toast);
 }

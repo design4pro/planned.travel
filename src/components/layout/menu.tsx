@@ -16,7 +16,7 @@ export const MenuTrigger = DropdownMenu.Trigger
 export const MenuGroup = DropdownMenu.Group
 
 const contentClass = cn(
-  'z-dropdown min-w-56 overflow-hidden rounded-lg border border-edge-faint bg-surface p-1.5 text-ink shadow-dropdown',
+  'z-popover min-w-56 overflow-hidden rounded-lg border border-edge-faint bg-surface p-1.5 text-ink shadow-dropdown',
   'transition-[opacity,transform] duration-fast ease-out-quint',
   'starting:opacity-0 starting:scale-[0.97]',
   'data-[side=bottom]:origin-top data-[side=top]:origin-bottom',

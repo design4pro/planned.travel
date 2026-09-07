@@ -665,9 +665,20 @@ engineering invariants about layers, offsets and a third-party stylesheet, not v
 and The Single Reservation Rule), and the reasoning that produced them lives here.
 
 The bands are `--z-map-overlay 30`, `--z-map-surface 35`, `--z-nav 40`, `--z-dropdown 50`,
-`--z-overlay 60`, `--z-modal 70`, `--z-toast 80`, `--z-impersonation 90`. `--z-impersonation` is
-the top of the stack, one band above `--z-toast`: `docs/ACCESS.md` §6.1 requires that nothing can
-cover the control which ends an impersonated session, and a toast is the layer most likely to try.
+`--z-overlay 60`, `--z-modal 70`, `--z-popover 75`, `--z-toast 80`, `--z-impersonation 90`.
+`--z-impersonation` is the top of the stack, one band above `--z-toast`: `docs/ACCESS.md` §6.1
+requires that nothing can cover the control which ends an impersonated session, and a toast is the
+layer most likely to try.
+
+**A portalled popper is ranked against the whole document, not against the panel that opened it.**
+Radix renders the select listbox, the popover and the two menus into `document.body`, so their
+z-index meets the dialog scrim (`--z-overlay`) and the dialog surface (`--z-modal`) at the root
+stacking context. On `--z-dropdown` they lost: a select opened inside a dialog painted under the
+scrim and a click on an option landed on the scrim instead. `--z-popover` is their own band above
+`--z-modal` — a popper is logically above whatever opened it — and it is a _new_ band rather than a
+raised `--z-dropdown` because that token also carries in-page elevation for `GlassPanel`'s floating
+map chrome and for a list item being dragged, neither of which may outrank an open dialog.
+`src/styles/__tests__/popper-stacking.test.ts` holds both halves of that split.
 
 **A band binds nothing until the library inside it is bound.** Our toasts are `sonner`'s, and
 `sonner` pins its own container at `z-index: 999999999` — so for as long as `--z-toast` was

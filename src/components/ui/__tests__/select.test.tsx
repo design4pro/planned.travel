@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import './test-env'
 
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import userEvent from '@testing-library/user-event'
 
+import { Dialog, DialogContent, DialogTitle } from '../dialog'
 import { Field } from '../field'
 import { SimpleSelect } from '../select'
 
@@ -282,5 +287,58 @@ describe('SimpleSelect', () => {
     expect((trigger as HTMLButtonElement).disabled).toBe(true)
     // The Field owns the id, so its label points at the trigger.
     expect(screen.getByText('Currency').getAttribute('for')).toBe(trigger.id)
+  })
+})
+
+/**
+ * The layer a listbox lands on, read off the elements that actually render.
+ *
+ * Both the listbox and the dialog scrim portal to `document.body`, so the
+ * browser ranks them against each other at the root stacking context. Until
+ * issue #201 the listbox carried `z-dropdown` (50) against the scrim's
+ * `z-overlay` (60): the options were painted behind the scrim, visibly dimmed,
+ * and `document.elementFromPoint` at the centre of the list answered with the
+ * scrim, so a click on an option never reached it.
+ *
+ * jsdom applies no stylesheet, so the tier is resolved the way the browser
+ * would: take the `z-*` utility the element carries and look its token up in
+ * `tokens.css`. The ordering between the tokens themselves is asserted in
+ * `src/styles/__tests__/popper-stacking.test.ts`; what is asserted here is the
+ * render fact — that these two elements claim those two tiers.
+ */
+function tierOf(element: Element, label: string): number {
+  const utility = [...element.classList].find((name) =>
+    /^z-[a-z-]+$/.test(name),
+  )
+  expect(utility, `${label} carries a z-* utility`).toBeDefined()
+  const css = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '../../../styles/tokens.css'),
+    'utf8',
+  )
+  const declared = new RegExp(`^\\s*--${utility}:\\s*(\\d+);`, 'm').exec(css)
+  expect(declared, `--${utility} in tokens.css`).not.toBeNull()
+  return Number(declared?.[1])
+}
+
+describe('a Select opened inside a Dialog', () => {
+  it('renders its listbox above the dialog scrim', async () => {
+    const user = userEvent.setup()
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>Book a day</DialogTitle>
+          <SimpleSelect options={options} ariaLabel="Currency" />
+        </DialogContent>
+      </Dialog>,
+    )
+    await user.click(screen.getByRole('combobox', { name: 'Currency' }))
+
+    // The scrim is found by the treatment that makes it a scrim, not by the
+    // tier under test.
+    const scrim = document.querySelector('.bg-overlay')
+    expect(scrim, 'the dialog scrim').not.toBeNull()
+    expect(tierOf(screen.getByRole('listbox'), 'the listbox')).toBeGreaterThan(
+      tierOf(scrim as Element, 'the scrim'),
+    )
   })
 })

@@ -240,10 +240,10 @@ describe('the map surface tiers', () => {
 
   it('has the atlas surface layer claim the surface tier by name', () => {
     // The tier means nothing until something stands on it, and the thing that
-    // does is one class in one composed string. Radix's own popover layers
-    // default to `--z-dropdown`, which is *above* `--z-nav`, so a surface layer
-    // that lost this class would not fall to the back — it would float over the
-    // app header and, on a phone, over the tab bar.
+    // does is one class in one composed string. `GlassPanel`'s floating default
+    // is `--z-dropdown`, which is *above* `--z-nav`, so a surface layer that
+    // lost this class would not fall to the back — it would float over the app
+    // header and, on a phone, over the tab bar.
     const screen = readFileSync(
       join(stylesDir(), '..', 'routes', '_app', '-ui', 'atlas-screen.tsx'),
       'utf8',
