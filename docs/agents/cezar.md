@@ -16,6 +16,11 @@ the rules of `SDLC.md`.
   `reviewGate: false`, `skillsRepos[0].ref` pinned to the same SHA as `skills-lock.json`).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
   of git; `config.json` and `workflows/` are tracked.
+- Host patch: 0.10.1 fails every `issue.labeled` poll as soon as one recently updated issue has a
+  comment or cross-reference (open-mercato/cezar#914, fix in upstream PR #916, unreleased), so
+  `issue-regroom`, `issue-autofix` and `issue-spec` never fire. `bash .ai/scripts/cezar-patch-914.sh`
+  patches the cached copy the service runs and restarts it; run it again after the npx cache is
+  cleared, drop it once the pinned version carries #916.
 - Skills: `.claude/skills/om-*` are vendored files, byte-identical to the pinned upstream SHA.
   `pnpm install-skills` re-installs and updates them; the diff is a PR, read with
   `/om-apply-upgrade-notes`, and the pin in `.ai/cezar/config.json` moves in the same commit.
@@ -141,8 +146,9 @@ must stop before `status:*` is stripped and the surviving labels renamed.
    `blocked`, `status:*` leaves every open issue, `run:*`, `type:*` and `agent-docs` move to their
    SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels wait for PR C.
 5. The cockpit service already runs 0.10.1 (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`);
-   confirm `.ai/cezar/config.json` in the main checkout is the merged one and restart the service
-   so it reloads the workflows.
+   confirm `.ai/cezar/config.json` in the main checkout is the merged one, apply the #914 host
+   patch (`bash .ai/scripts/cezar-patch-914.sh`, which also restarts the service so it reloads the
+   workflows).
 6. `bash .ai/scripts/cez-automations.sh --dry-run`, then without the flag: the five new automations
    are created enabled.
 7. Install the housekeeping plist (above) and run `bash .ai/scripts/housekeeping.sh` once by hand.
