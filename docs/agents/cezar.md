@@ -16,6 +16,12 @@ the rules of `SDLC.md`.
   `reviewGate: false`, `skillsRepos[0].ref` pinned to the same SHA as `skills-lock.json`).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
   of git; `config.json` and `workflows/` are tracked.
+- Skills auto-update off: `skillsAutoUpdate: false` in `~/.cezar/config.json` (cockpit Settings,
+  or `PUT /api/v1/workspace/config`; `CEZ_SKILLS_AUTO_UPDATE=0` in the service environment does
+  the same). Cezar's default is on, and on every cockpit start it runs `npx skills update -p -y` in
+  each project root, which replaces the vendored `.claude/skills/om-*` directories with symlinks
+  into an untracked `.agents/skills/` and shows as 400 deleted files in `git status`. Recovery:
+  remove the symlinks, `git checkout -- .claude/skills`, delete `.agents/`.
 - Host patch: 0.10.1 fails every `issue.labeled` poll as soon as one recently updated issue has a
   comment or cross-reference (open-mercato/cezar#914, fix in upstream PR #916, unreleased), so
   `issue-regroom`, `issue-autofix` and `issue-spec` never fire. `bash .ai/scripts/cezar-patch-914.sh`
