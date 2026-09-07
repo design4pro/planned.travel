@@ -55,7 +55,11 @@ if [ -f "$PLIST" ]; then
   fi
   # bootout + bootstrap so the new environment is read; kickstart alone keeps the old one.
   launchctl bootout "gui/$(id -u)/dev.cezar.cockpit" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$PLIST" && echo "cockpit restarted"
+  # bootstrap right after bootout can fail with "Input/output error" while the old job unloads.
+  for attempt in 1 2 3 4 5; do
+    launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null && { echo "cockpit restarted"; break; }
+    [ "$attempt" -lt 5 ] && sleep 2 || { echo "bootstrap failed 5 times: launchctl bootstrap gui/$(id -u) $PLIST" >&2; exit 1; }
+  done
 else
   echo "no $PLIST; export CEZ_SKILLS_AUTO_UPDATE=0 wherever the cockpit is started" >&2
 fi
