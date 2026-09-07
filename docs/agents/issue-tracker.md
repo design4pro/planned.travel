@@ -28,8 +28,10 @@ gh issue edit <n> --add-label do-not-close     # housekeeping must never close t
 ```
 
 A skill claims with assignee + `in-progress` + a 🤖 comment and releases both on exit, including on
-error. Everything else it writes (category, priority, risk, pipeline labels, review, QA request,
-run summary) follows `SDLC.md` and is explained in a comment.
+error. A skill that acts on an inline review thread replies in it and resolves it (the `develop`
+ruleset merges nothing with an open thread); a thread it declines stays open for a human.
+Everything else it writes (category, priority, risk, pipeline labels, review, QA request, run
+summary) follows `SDLC.md` and is explained in a comment.
 
 ## Closing
 
