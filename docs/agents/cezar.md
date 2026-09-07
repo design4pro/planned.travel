@@ -53,9 +53,9 @@ the rules of `SDLC.md`.
   fine-grained PAT owned by that account: resource owner `design4pro`, only the two repositories,
   Contents, Issues and Pull requests read/write; **no Workflows, no Administration**: a run cannot
   push under `.github/workflows/` or delete a label; the organisation approves the token once).
-  The cockpit plist sets `GH_CONFIG_DIR` and cezar forwards it, so `gh` inside a run and `git
-push` over HTTPS (the global credential helper is `gh auth git-credential`, which reads the
-  same variable) both act as the bot, while `~/.config/gh` and the developer's terminal stay the
+  The cockpit plist sets `GH_CONFIG_DIR` and cezar forwards it, so `gh` inside a run and
+  `git push` over HTTPS (the global credential helper is `gh auth git-credential`, which reads
+  the same variable) both act as the bot, while `~/.config/gh` and the developer's terminal stay the
   developer's. Commits carry `user.name design4pro-agent` and `user.email bot@design4.pro` from
   the host clone's local git config, which every worktree shares. Re-login the bot only with an
   empty run queue: a run whose `gh` loses its login mid-way stops with a blocked handoff. The
