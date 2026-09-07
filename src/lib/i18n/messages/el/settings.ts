@@ -168,8 +168,6 @@ const messages = {
   'appearance.map.quiet': 'Ήσυχο',
   'appearance.map.quietHint':
     'Χωρίς ονόματα δρόμων ή τόπων, ώστε να ξεχωρίζουν πρώτες οι πινέζες σου.',
-  'appearance.map.light': 'Χαρτί — φωτεινό',
-  'appearance.map.dark': 'Ανθρακί — σκούρο',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Σε κοινόχρηστη οθόνη',
   'appearance.privacy.codesLabel':

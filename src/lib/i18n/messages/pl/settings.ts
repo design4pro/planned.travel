@@ -176,8 +176,6 @@ const messages = {
   'appearance.map.quiet': 'Spokojny',
   'appearance.map.quietHint':
     'Bez nazw ulic i miejsc, żeby twoje pinezki czytały się pierwsze.',
-  'appearance.map.light': 'Papier — jasna',
-  'appearance.map.dark': 'Grafit — ciemna',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Na wspólnym ekranie',
   'appearance.privacy.codesLabel':

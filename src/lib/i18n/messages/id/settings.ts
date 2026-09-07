@@ -177,8 +177,6 @@ const messages = {
   'appearance.map.quiet': 'Tenang',
   'appearance.map.quietHint':
     'Tanpa nama jalan atau tempat, supaya pin kamu terbaca lebih dulu.',
-  'appearance.map.light': 'Kertas — terang',
-  'appearance.map.dark': 'Arang — gelap',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Di layar bersama',
   'appearance.privacy.codesLabel':

@@ -169,8 +169,6 @@ const messages = {
   'appearance.map.quiet': 'Lugn',
   'appearance.map.quietHint':
     'Utan gatu- och ortnamn, så syns dina nålar först.',
-  'appearance.map.light': 'Papper — ljus',
-  'appearance.map.dark': 'Kol — mörk',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'På en delad skärm',
   'appearance.privacy.codesLabel': 'Dölj bekräftelsekoder tills jag ber om dem',

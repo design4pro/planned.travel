@@ -173,8 +173,6 @@ const messages = {
   'appearance.map.quiet': 'Tichý',
   'appearance.map.quietHint':
     'Bez názvů ulic a míst, aby vaše špendlíky vynikly.',
-  'appearance.map.light': 'Papír — světlá',
-  'appearance.map.dark': 'Grafit — tmavá',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Na sdílené obrazovce',
   'appearance.privacy.codesLabel':

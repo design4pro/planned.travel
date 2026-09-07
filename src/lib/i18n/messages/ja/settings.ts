@@ -160,8 +160,6 @@ const messages = {
   'appearance.map.quiet': '静か',
   'appearance.map.quietHint':
     '道路名や地名を出さないので、ピンが先に目に入ります。',
-  'appearance.map.light': '紙 — ライト',
-  'appearance.map.dark': '炭 — ダーク',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': '共有している画面では',
   'appearance.privacy.codesLabel': '確認コードは求めるまで隠す',

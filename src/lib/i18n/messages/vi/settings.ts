@@ -179,8 +179,6 @@ const messages = {
   'appearance.map.quiet': 'Yên tĩnh',
   'appearance.map.quietHint':
     'Không có tên đường hay địa danh, để ghim của bạn nổi bật trước.',
-  'appearance.map.light': 'Giấy — sáng',
-  'appearance.map.dark': 'Than — tối',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Trên màn hình dùng chung',
   'appearance.privacy.codesLabel': 'Ẩn mã xác nhận cho đến khi tôi yêu cầu',

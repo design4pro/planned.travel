@@ -168,8 +168,6 @@ const messages = {
   'appearance.map.quiet': 'Sakin',
   'appearance.map.quietHint':
     'Yol ve yer adları olmadan, iğneleriniz önce okunur.',
-  'appearance.map.light': 'Kâğıt — açık',
-  'appearance.map.dark': 'Kömür grisi — koyu',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Paylaşılan bir ekranda',
   'appearance.privacy.codesLabel': 'Onay kodlarını ben isteyene kadar gizle',

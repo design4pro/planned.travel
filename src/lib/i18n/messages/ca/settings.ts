@@ -173,8 +173,6 @@ const messages = {
   'appearance.map.quiet': 'Discret',
   'appearance.map.quietHint':
     'Sense noms de carrers ni de llocs, perquè els teus marcadors es llegeixin primer.',
-  'appearance.map.light': 'Paper — clar',
-  'appearance.map.dark': 'Carbó — fosc',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'En una pantalla compartida',
   'appearance.privacy.codesLabel':

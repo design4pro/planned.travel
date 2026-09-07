@@ -3,11 +3,12 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Laptop, Moon, Sun } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Card, Field, SimpleSelect, Skeleton, Switch } from '#/components/ui'
+import { Card, Skeleton, Switch } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { useTheme } from '#/lib/theme'
 import { loadAppearance, saveAppearance } from '../-server/settings'
+import { BasemapPicker } from '../-ui/basemap-picker'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
 import { RouteError } from './-ui/route-error'
 
@@ -50,14 +51,6 @@ const THEMES: ReadonlyArray<{
   },
 ]
 
-const WORKSPACE_MAP_STYLE = 'workspace'
-
-const MAP_STYLES: ReadonlyArray<{ value: string; label: MessageKey }> = [
-  { value: WORKSPACE_MAP_STYLE, label: 'settings.appearance.map.workspace' },
-  { value: 'planned-light', label: 'settings.appearance.map.light' },
-  { value: 'planned-dark', label: 'settings.appearance.map.dark' },
-]
-
 export const Route = createFileRoute('/_app/settings/appearance')({
   loader: () => loadAppearance(),
   pendingComponent: AppearancePending,
@@ -78,11 +71,14 @@ function AppearancePage() {
 
   const [reduceMotion, setReduceMotion] = useState(data.reduceMotion)
   const [maskCodes, setMaskCodes] = useState(data.maskConfirmationCodes)
-  const [mapStyle, setMapStyle] = useState(
-    data.mapStyle === data.workspaceMapStyle
-      ? WORKSPACE_MAP_STYLE
-      : data.mapStyle,
-  )
+  /*
+   * The raw override, not the merged value: `''` here means "follow the
+   * workspace" and is the same sentinel the write path clears the column with.
+   * This used to be derived by comparing the merged value to the workspace
+   * value, which reported "you follow the workspace" to anyone who had
+   * deliberately picked the entry the workspace happens to be on.
+   */
+  const [mapStyle, setMapStyle] = useState(data.mapStyleOverride ?? '')
   const [busy, setBusy] = useState(false)
 
   async function persist(
@@ -193,32 +189,31 @@ function AppearancePage() {
               </div>
             }
           />
-          <SettingsRow
-            label={t('settings.appearance.map.label')}
-            hint={t('settings.appearance.map.hint')}
-            control={
-              <Field>
-                <SimpleSelect
-                  options={MAP_STYLES.map((option) => ({
-                    value: option.value,
-                    label: t(option.label),
-                  }))}
-                  value={mapStyle}
-                  disabled={busy}
-                  onValueChange={(next) => {
-                    setMapStyle(next)
-                    void persist({
-                      mapStyle:
-                        next === WORKSPACE_MAP_STYLE
-                          ? data.workspaceMapStyle
-                          : next,
-                    })
-                  }}
-                  ariaLabel={t('settings.appearance.map.label')}
-                />
-              </Field>
-            }
-          />
+          {/*
+            Deliberately not a `SettingsRow`: that row clamps its control to
+            `sm:w-64`, which is the right width for a switch or a select and far
+            too narrow for a five-card grid. The label and hint keep the row's
+            own type scale and vertical rhythm, and the grid takes the section's
+            full width beneath them.
+          */}
+          <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+            <div className="min-w-0">
+              <p className="text-label font-medium text-ink">
+                {t('settings.appearance.map.label')}
+              </p>
+              <p className="mt-0.5 text-caption leading-relaxed text-ink-3">
+                {t('settings.appearance.map.hint')}
+              </p>
+            </div>
+            <BasemapPicker
+              value={mapStyle}
+              busy={busy}
+              onValueChange={(next) => {
+                setMapStyle(next)
+                void persist({ mapStyle: next })
+              }}
+            />
+          </div>
         </div>
       </SettingsSection>
 
@@ -270,7 +265,13 @@ function AppearancePending() {
       </Card>
       <Card className="space-y-4">
         <Skeleton className="h-4 w-32" radius="sm" />
-        <Skeleton className="h-10 w-full" radius="md" />
+        {/* Five tiles on the picker's own grid, so the section does not jump
+            when the loader resolves. */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="h-22" radius="lg" />
+          ))}
+        </div>
       </Card>
     </div>
   )

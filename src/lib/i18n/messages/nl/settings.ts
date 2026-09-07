@@ -173,8 +173,6 @@ const messages = {
   'appearance.map.quiet': 'Rustig',
   'appearance.map.quietHint':
     'Zonder straat- en plaatsnamen, zodat je pins eerst opvallen.',
-  'appearance.map.light': 'Papier — licht',
-  'appearance.map.dark': 'Houtskool — donker',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Op een gedeeld scherm',
   'appearance.privacy.codesLabel':

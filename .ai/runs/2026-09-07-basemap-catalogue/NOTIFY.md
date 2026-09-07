@@ -87,3 +87,21 @@
   Catalan spells the word exactly as English does through the shared Latin root, which is the case
   that list exists for — an addition to it is a visible decision, and this is that decision.
 - `npx vitest run src/lib/i18n` — 10 files, 258 tests, green.
+
+## 2026-09-07T21:12:00Z — Step 2.5 decisions: the row wrapper, and one field left dead on purpose
+
+- The picker is **not** wrapped in `SettingsRow`. That row clamps its control to `shrink-0 sm:w-64`
+  (`settings-nav.tsx:219`) — correct for a switch or a select, impossible for a five-card grid. The
+  label and hint keep the row's own type scale and vertical rhythm and the grid takes the section's
+  full width beneath them; the motion switch above it stays a real `SettingsRow` and keeps its
+  divider.
+- `AppearancePayload.workspaceMapStyle` now has **no reader**: `appearance.tsx` was its only one, and
+  both call sites (`:82` deriving the follow-the-workspace state, `:213` writing the workspace id
+  back) are gone — the raw `mapStyleOverride` answers the first and `''` answers the second.
+- It is deliberately **not deleted**. The field predates this run, the merged spec enumerates the
+  payload shape and keeps it, and removing a field from a spec-defined contract is a call for the
+  reviewer rather than for an unattended run. Flagged here and in checkpoint 2 so it is a decision on
+  the record, not an oversight. If the reviewer wants it gone it is a two-line follow-up.
+- `AppearancePending`'s second card now renders five `h-22` tiles on the picker's own
+  `grid gap-3 sm:grid-cols-2 lg:grid-cols-3`, sized to `RadioCard`'s `p-4` + two-line description, so
+  the section does not jump when the loader resolves.

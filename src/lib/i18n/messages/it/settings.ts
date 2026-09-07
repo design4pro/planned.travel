@@ -174,8 +174,6 @@ const messages = {
   'appearance.map.quiet': 'Discreta',
   'appearance.map.quietHint':
     'Senza nomi di strade o luoghi, così i tuoi segnaposti si leggono per primi.',
-  'appearance.map.light': 'Carta — chiara',
-  'appearance.map.dark': 'Carbone — scura',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Su uno schermo condiviso',
   'appearance.privacy.codesLabel':

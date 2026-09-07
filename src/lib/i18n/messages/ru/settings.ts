@@ -174,8 +174,6 @@ const messages = {
   'appearance.map.quiet': 'Спокойный',
   'appearance.map.quietHint':
     'Без названий улиц и мест, чтобы ваши метки читались первыми.',
-  'appearance.map.light': 'Бумага — светлая',
-  'appearance.map.dark': 'Графит — тёмная',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'На общем экране',
   'appearance.privacy.codesLabel':
