@@ -140,6 +140,28 @@ A review or autopilot run checks out the PR's head, hooks and `scripts/agent/` i
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
 
+## Prompt templates (`docs/agents/cezar-prompt-templates.json`)
+
+Installed into the cockpit by `.ai/scripts/cez-prompt-templates.sh` (`--dry-run` lists what it
+would write). One template per `om-*` skill, 37 of them: the task text with its argument
+placeholder, the flags, and the preconditions the skill's `SKILL.md` and its `.ai/skills/`
+override state, phrased as directives because the text is sent as the task. They replace cezar's
+five generic built-ins. The installer `PUT`s `promptTemplates` to
+`/api/v1/p/planned-travel/ui-state`, which merges shallowly at the top level, so it rewrites that
+one array and leaves every other preference alone; the store is `.ai/cezar/ui-state.json`, which
+is gitignored because it also accumulates per-developer state (`skillUsage`, `lastTask`,
+`appearance`). Edit the tracked JSON and re-run the script - never the ui-state file by hand.
+
+Cezar's normalizer truncates and drops silently, so the script checks the caps first: at most 50
+templates, `label` 80 characters, `text` 2000, ids unique and matching an installed skill.
+A template whose `skills` array names the skill selected in the composer is applied automatically,
+but only while the composer is still pristine. That is why only the 19 skills taking a free-text
+brief or no argument carry `skills`; the 18 that take an issue number, a PR number, a spec path or
+a URL carry none and are reached through "Insert a template". From the GitHub issue or PR panel an
+auto-applied template lands as `<number>` + the template text, and a second token there reads as a
+brief to `om-auto-fix-issue` - the same hazard the automations avoid by sending
+`{{github.number}}` alone.
+
 ## Housekeeping
 
 Cezar has no scheduler. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
