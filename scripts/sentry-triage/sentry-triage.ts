@@ -44,9 +44,10 @@ const DEFAULT_MAX_FILED = 3
 
 /**
  * The backlog is the scarce resource, and this routine can only add to it. Past this many open
- * high-priority bugs (the shape every Sentry finding has), filing more is not help — every one of
- * them also starts a groom run. This is the brake that matters: the per-run cap is per run, and a
- * misconfigured schedule still runs.
+ * bugs still waiting for their groom run (`groom` is the label this routine files with, and the
+ * run removes it as its first mutation, so the count drains as issues are looked at), filing more
+ * is not help — every one of them also starts a groom run. This is the brake that matters: the
+ * per-run cap is per run, and a misconfigured schedule still runs.
  */
 const BACKLOG_PRESSURE_LIMIT = 10
 
@@ -143,7 +144,7 @@ function openUntriagedBugs(): number {
     '--label',
     'bug',
     '--label',
-    'priority-high',
+    'groom',
     '--json',
     'number',
   ])

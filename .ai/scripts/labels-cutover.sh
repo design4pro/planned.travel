@@ -14,7 +14,11 @@
 #      now; an open issue without labels is the backlog);
 #   2. moves `status: queued` / `status: needs-human` holders to `blocked` first, so a human hold
 #      survives the strip;
-#   3. renames the labels that map one-to-one; merges `type: enhancement` into `feature`;
+#   3. renames the labels that map one-to-one; merges `type: enhancement` into `feature`. The two
+#      command labels (`run: *` -> `groom` / `autofix`) move on OPEN issues only: a command on a
+#      closed issue is history, and `groom` / `autofix` are live triggers that would start a run as
+#      soon as the automations register. Review the open `run: *` issues before `--apply`: each one
+#      becomes a pending command that starts once the automations register;
 #   4. leaves `prd`, `auto-advance`, `agent-pr`, the stripped `status: *` and `needs-e2e` in place
 #      - deleting them is PR C's step, once nothing reads them.
 set -euo pipefail
@@ -45,19 +49,22 @@ done
 
 # 3. renames (old -> new); the new label already exists from PR A, so this is a move of the issues
 # followed by a delete of the old name, not `gh label edit --name` (which would collide).
+# rename OLD NEW [STATE]: STATE is `all` for standing labels (history keeps its category) and
+# `open` for commands, where a closed issue must not receive a live trigger. The delete at the end
+# strips the old name from whatever was not moved.
 rename() {
-  local old="$1" new="$2"
+  local old="$1" new="$2" state="${3:-all}"
   have_label "$old" || { say "skip $old: absent"; return; }
-  gh issue list -R "$REPO" --state all --label "$old" --limit 1000 --json number --jq '.[].number' | while read -r n; do
+  gh issue list -R "$REPO" --state "$state" --label "$old" --limit 1000 --json number --jq '.[].number' | while read -r n; do
     run gh issue edit "$n" -R "$REPO" --add-label "$new" --remove-label "$old"
   done
-  gh pr list -R "$REPO" --state all --label "$old" --limit 1000 --json number --jq '.[].number' | while read -r n; do
+  gh pr list -R "$REPO" --state "$state" --label "$old" --limit 1000 --json number --jq '.[].number' | while read -r n; do
     run gh pr edit "$n" -R "$REPO" --add-label "$new" --remove-label "$old"
   done
   run gh label delete "$old" -R "$REPO" --yes
 }
-rename 'run: triage' groom
-rename 'run: implement' autofix
+rename 'run: triage' groom open
+rename 'run: implement' autofix open
 rename 'type: bug' bug
 rename 'type: feature' feature
 rename 'type: enhancement' feature

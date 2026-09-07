@@ -17,14 +17,21 @@ API="${CEZ_API:-http://localhost:4321}/api/v1/p/${CEZ_PROJECT:-planned-travel}/r
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BODY='{"workflow":"housekeeping","task":"housekeeping","worktree":true,"autonomous":true,"variants":1,"generateFollowups":false}'
 
-if out=$(curl -sS --max-time 10 -X POST "$API" -H 'content-type: application/json' -d "$BODY" -w '\n%{http_code}' 2>/dev/null); then
-  code=$(tail -1 <<<"$out")
-  case "$code" in
-    2??) printf 'housekeeping queued: %s\n' "$(sed '$d' <<<"$out" | jq -r '.run.id // .id // "?"' 2>/dev/null)"; exit 0 ;;
-    *) printf 'POST %s -> %s: %s\n' "$API" "$code" "$(sed '$d' <<<"$out")" >&2; exit 1 ;;
-  esac
-fi
+rc=0
+out=$(curl -sS --max-time 10 -X POST "$API" -H 'content-type: application/json' -d "$BODY" -w '\n%{http_code}') || rc=$?
+case "$rc" in
+  0)
+    code=$(tail -1 <<<"$out")
+    case "$code" in
+      2??) printf 'housekeeping queued: %s\n' "$(sed '$d' <<<"$out" | jq -r '.run.id // .id // "?"' 2>/dev/null)"; exit 0 ;;
+      *) printf 'POST %s -> %s: %s\n' "$API" "$code" "$(sed '$d' <<<"$out")" >&2; exit 1 ;;
+    esac ;;
+  # curl 6 = could not resolve host, 7 = could not connect: nothing is listening. Anything else
+  # (28 = timeout above all: the cockpit may have queued the run and answered slowly) is a
+  # failure to report, never a reason to start a second run beside a possible first.
+  6|7) printf 'cockpit unreachable at %s (curl %s), running headless\n' "$API" "$rc" >&2 ;;
+  *) printf 'POST %s failed (curl %s); not falling back, the run may have been queued\n' "$API" "$rc" >&2; exit 1 ;;
+esac
 
-printf 'cockpit unreachable at %s, running headless\n' "$API" >&2
 cd "$ROOT"
 exec npx --yes @open-mercato/cezar@0.10.1 run "housekeeping" --workflow housekeeping
