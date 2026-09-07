@@ -310,30 +310,33 @@ export const loadAppearance = createServerFn({ method: 'GET' }).handler(
   },
 )
 
+/** The four display preferences, exported so the boundary is testable without a session. */
+export const appearanceInput = z.object({
+  theme: z.enum(THEME_PREFERENCES).optional(),
+  reduceMotion: z.boolean().optional(),
+  maskConfirmationCodes: z.boolean().optional(),
+  /**
+   * The same two-state field the regional form's five `Workspace default` options are: `''`
+   * clears the override, anything else must be an id the catalogue ships. Absent means the
+   * patch does not touch the column at all.
+   *
+   * Piped from `z.string()` so the schema's *input* stays `string` — Radix hands
+   * {@link BasemapPicker} its value back as a bare `string`, so the screen would not type-check
+   * against a narrowed input. The parse is what narrows.
+   *
+   * The pipe carries no `.trim()`, and must not: `''` is the sentinel that clears the column, so
+   * trimming would turn `' '` into "follow the workspace" and silently drop a member's override
+   * instead of rejecting the payload. Without it the accepted set is exactly the spec's — and
+   * {@link localeOverride}'s — `z.union([z.literal(''), z.enum(...)])`.
+   */
+  mapStyle: z
+    .string()
+    .pipe(z.union([z.literal(''), z.enum(BASEMAP_IDS)]))
+    .optional(),
+})
+
 export const saveAppearance = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      theme: z.enum(THEME_PREFERENCES).optional(),
-      reduceMotion: z.boolean().optional(),
-      maskConfirmationCodes: z.boolean().optional(),
-      /**
-       * The same two-state field the regional form's five `Workspace default` options are: `''`
-       * clears the override, anything else must be an id the catalogue ships. Absent means the
-       * patch does not touch the column at all.
-       *
-       * Piped from `z.string()` rather than written as a bare union, exactly as
-       * {@link localeOverride} is: that keeps the schema's *input* type `string`, so the screen's
-       * `SimpleSelect` — whose `onValueChange` hands back a `string` — still type-checks while the
-       * parse narrows to the catalogue. The picker that replaces the select carries a narrowed
-       * value and the pipe can go with it.
-       */
-      mapStyle: z
-        .string()
-        .trim()
-        .pipe(z.union([z.literal(''), z.enum(BASEMAP_IDS)]))
-        .optional(),
-    }),
-  )
+  .validator(appearanceInput)
   .handler(async ({ data }): Promise<{ readonly saved: true }> => {
     const scope = await appScope()
     await updateUserSettings(scope, {
