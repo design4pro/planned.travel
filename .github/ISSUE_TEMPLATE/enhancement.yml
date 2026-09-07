@@ -1,6 +1,6 @@
 name: Enhancement
 description: An existing feature should work better than it does.
-labels: ['type: enhancement', 'status: triage']
+labels: ['feature']
 body:
   - type: textarea
     id: current

@@ -1,13 +1,13 @@
 name: Bug
 description: Something the app does wrong today.
-labels: ['type: bug', 'status: triage']
+labels: ['bug']
 body:
   - type: markdown
     attributes:
       value: |
-        A triage run reads this issue, tries to reproduce the claim at HEAD and answers with a verdict.
-        The more of the evidence below is concrete (a route, a command, a failing expectation), the
-        sooner it reaches `status: ready`.
+        A groom run reads this issue, adds the SDLC labels (priority, risk) and posts implementation
+        notes; a human then adds `autofix` to start the fix (SDLC.md). The more of the evidence below
+        is concrete (a route, a command, a failing expectation), the shorter that run is.
   - type: textarea
     id: current
     attributes:

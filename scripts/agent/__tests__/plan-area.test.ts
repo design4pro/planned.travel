@@ -98,10 +98,13 @@ describe('every workflow names scripts that exist and run', () => {
   const dir = join(ROOT, '.ai/cezar/workflows')
   it.each(readdirSync(dir).filter((f) => f.endsWith('.yml')))('%s', (file) => {
     const yml = readFileSync(join(dir, file), 'utf8')
+    // The om-* workflows (ADR 0018) name no scripts/agent/ entry: their agent step is a skill
+    // and their only command is the worktree bootstrap, so an empty list is legitimate there.
     const scripts = [
-      ...yml.matchAll(/^\s*(?:-|command:)\s+(scripts\/agent\/[\w.-]+)/gm),
+      ...yml.matchAll(
+        /^\s*(?:-|command:)\s+(?:bash\s+)?(scripts\/(?:agent|worktree)\/[\w.-]+)/gm,
+      ),
     ].map((m) => m[1])
-    expect(scripts.length).toBeGreaterThan(0)
     for (const s of scripts) {
       expect(existsSync(join(ROOT, s)), s).toBe(true)
       expect(
