@@ -52,6 +52,19 @@ const OPTION = '[data-part="basemap-option"]'
 const FOLLOW_WORKSPACE = `${OPTION}[value=""]`
 const CHARCOAL = `${OPTION}[value="planned-dark"]`
 
+/**
+ * Ceiling on a settings write, not an expectation of one.
+ *
+ * `pinDemoLanguage()` in `./helpers/session.ts` waits 15s on the same shape of
+ * POST, and that is right for it: it runs in the `setup` project, alone. This
+ * file runs inside the suite, where the dev server is answering several workers
+ * at once and a write that takes 2s alone takes far longer. Fifteen seconds here
+ * was tighter than the 120s the round trip is allowed overall, so the test failed
+ * on the fixture's clock rather than on anything it asserts — measured at 15.1s
+ * standalone against this 45s ceiling.
+ */
+const WRITE_TIMEOUT_MS = 45_000
+
 /** What a sample of the drawing buffer says about the ground it painted. */
 type CanvasSample = {
   /** Share of sampled pixels the canvas actually drew. */
@@ -422,7 +435,7 @@ async function chooseBasemap(page: Page, option: string): Promise<void> {
     (response) =>
       response.request().method() === 'POST' &&
       response.url().includes('/_serverFn/'),
-    { timeout: 15_000 },
+    { timeout: WRITE_TIMEOUT_MS },
   )
   await page.locator(option).click()
   // Asserted rather than folded into the predicate: a failed write is a response
@@ -451,7 +464,7 @@ async function clearOverride(context: BrowserContext): Promise<void> {
     // matters is the one on the next line, and it is a stronger signal anyway.
     await page.goto(APPEARANCE.path)
     const follow = page.locator(FOLLOW_WORKSPACE)
-    await follow.waitFor({ state: 'visible', timeout: 15_000 })
+    await follow.waitFor({ state: 'visible', timeout: WRITE_TIMEOUT_MS })
     if ((await follow.getAttribute('data-state')) !== 'checked') {
       await chooseBasemap(page, FOLLOW_WORKSPACE)
     }
