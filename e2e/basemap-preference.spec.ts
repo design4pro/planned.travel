@@ -186,7 +186,17 @@ test.describe('MAP-05 — the basemap a member picks is the basemap they get', (
         await expectGround(page, 'light')
       })
     } finally {
-      await clearOverride(context)
+      // Best-effort: a teardown that throws would replace the assertion error
+      // that actually failed the test, and the reader of a red run would see a
+      // timeout in the fixture instead of "the ground never went dark". Annotated
+      // rather than swallowed, because a clear that failed leaves the shared row
+      // dirty for the next run and that is worth saying out loud.
+      await clearOverride(context).catch((reason: unknown) => {
+        test.info().annotations.push({
+          type: 'teardown-failed',
+          description: `map_style was not cleared: ${String(reason)}`,
+        })
+      })
     }
   })
 })
@@ -411,7 +421,11 @@ async function chooseBasemap(page: Page, option: string): Promise<void> {
   const written = page.waitForResponse(
     (response) =>
       response.request().method() === 'POST' &&
-      response.url().includes('/_serverFn/'),
+      response.url().includes('/_serverFn/') &&
+      // A 500 is a response too, and the picker is optimistic, so without this
+      // the card would read `checked` and the wait would resolve on a write that
+      // never reached the column.
+      response.ok(),
     { timeout: 15_000 },
   )
   await page.locator(option).click()
