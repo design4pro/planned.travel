@@ -13,7 +13,9 @@ the rules of `SDLC.md`.
 - Pinned version: `@open-mercato/cezar@0.10.1` (`npx -y @open-mercato/cezar@0.10.1 serve`). The
   project entry in `~/.cezar/config.json` points at the main checkout; the versioned part is
   `.ai/cezar/config.json` (`baseBranch: develop`, `worktreeRetention: 10`, `maxParallel: 2`,
-  `reviewGate: false`, `skillsRepos[0].ref` pinned to the same SHA as `skills-lock.json`).
+  `reviewGate: false` so a successful non-autonomous run settles at `done` and the automations
+  keep driving themselves, `skillsRepos: []` because the vendored `.claude/skills/om-*` copies are
+  the only source and cezar must not clone the upstream repository at run time).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
   of git; `config.json` and `workflows/` are tracked.
 - Host patches: `bash .ai/scripts/cezar-host-patch.sh` patches the cached copy of 0.10.1 the
@@ -28,9 +30,12 @@ the rules of `SDLC.md`.
     shows as 400 deleted files in `git status`. `skillsAutoUpdate: false` (kept in
     `~/.cezar/config.json`) gates only the update; the patch makes `CEZ_SKILLS_AUTO_UPDATE=0` skip
     the check too. Recovery: remove the symlinks, `git checkout -- .claude/skills`, delete `.agents/`.
-- Skills: `.claude/skills/om-*` are vendored files, byte-identical to the pinned upstream SHA.
-  `pnpm install-skills` re-installs and updates them; the diff is a PR, read with
-  `/om-apply-upgrade-notes`, and the pin in `.ai/cezar/config.json` moves in the same commit.
+- Skills: `.claude/skills/om-*` are vendored files, byte-identical to
+  `open-mercato/skills@91f11c63721b5f7e17a859940b3e9c55ece698ee` - this line is the pin, because
+  `skills-lock.json` records only a per-skill `computedHash` and `.ai/cezar/config.json` no longer
+  carries a `skillsRepos` entry to hold a ref. `pnpm install-skills` re-installs and updates them;
+  the diff is a PR, read with `/om-apply-upgrade-notes`, and the SHA on this line moves in the same
+  commit.
   Repo specifics live in `.ai/skills/om-<name>/SKILL.md` as extensions of the installed skill.
 - Language: `systemPrompt` in `.ai/cezar/config.json` (Settings → Agents edits the same key) is
   appended to the system prompt of every agent step and tells the run to talk to the developer in
