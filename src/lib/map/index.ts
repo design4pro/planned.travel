@@ -9,6 +9,7 @@
 
 export * from './palette'
 export * from './style'
+export * from './basemap'
 export * from './world'
 export * from './countries'
 export * from './coverage'

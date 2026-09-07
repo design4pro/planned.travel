@@ -20,3 +20,14 @@
   from the `en` catalogue, so a component cannot name a key that does not exist yet.
 - Resolution: copy + picker land together as Step 2.4, and the mount absorbs the removal of the two
   retired theme-bound keys as Step 2.5. Same files, same diff, every Step green.
+
+## 2026-09-07T18:23:40Z — Step 1.1 delegated, and a convention corrected
+
+- Step 1.1 ran in an executor subagent at the default (`standard`) tier and landed `076095bf`.
+- It escalated a real defect in the per-Step procedure: the prescribed "write the SHA, then
+  `git commit --amend`" cannot converge, because writing a hash into the commit changes that hash.
+  It had recorded `73efbcf9`, the pre-amend hash, which names no object in the pushed history.
+- Convention adopted and written into the Tasks table's note: a Step's own commit flips `Status` to
+  `done` and writes `pending`; the next commit touching `PLAN.md` replaces it with the real short
+  SHA. `Status` — the field `om-auto-continue-pr-loop` actually resumes from — stays correct inside
+  its own commit. Row 1.1 was corrected to `076095bf` in Step 1.2's commit.

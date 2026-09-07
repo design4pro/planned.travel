@@ -10,11 +10,13 @@
 ## Tasks
 
 > Authoritative status table. `Status` is one of `todo` or `done`. On landing a Step, flip `Status` to `done` and fill the `Commit` column with the short SHA. The first row whose `Status` is not `done` is the resume point for `om-auto-continue-pr-loop`. Step ids and `Exec` cells are immutable once the plan is committed — per-Step commits touch only `Status` and `Commit`.
+>
+> **`Commit` is filled one Step late, on purpose.** A row cannot name the SHA of the commit that contains it — writing the hash changes the hash. So a Step's own commit flips `Status` to `done` and writes `pending`, and the next commit that touches this file replaces it with the real short SHA. `Status` is the resume field and is always correct in its own commit.
 
 | Phase | Step | Title                                                      | Exec           | Status | Commit   |
 | ----- | ---- | ---------------------------------------------------------- | -------------- | ------ | -------- |
-| 1     | 1.1  | Write the basemap catalogue module and its tests           | dispatch       | done   | 73efbcf9 |
-| 1     | 1.2  | Re-export the catalogue from the map barrel                | inline         | todo   | —        |
+| 1     | 1.1  | Write the basemap catalogue module and its tests           | dispatch       | done   | 076095bf |
+| 1     | 1.2  | Re-export the catalogue from the map barrel                | inline         | done   | pending  |
 | 1     | 1.3  | Read the basemap store in MapCanvas                        | inline         | todo   | —        |
 | 1     | 1.4  | Carry the effective basemap id on the shell payload        | inline         | todo   | —        |
 | 2     | 2.1  | Narrow the map-style write path and clear the override     | dispatch       | todo   | —        |
