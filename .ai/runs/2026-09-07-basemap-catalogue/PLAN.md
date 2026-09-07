@@ -23,8 +23,8 @@
 | 2     | 2.2  | Append the settings tenant-isolation case                  | dispatch:cheap | done   | 3543cae7 |
 | 2     | 2.3  | Expose the raw member override on AppearancePayload        | inline         | done   | 580e6587 |
 | 2     | 2.4  | Land the catalogue copy in 23 locales and build the picker | dispatch       | done   | 872cc0f9 |
-| 2     | 2.5  | Mount the picker and retire the two theme-bound keys       | inline         | done   | pending  |
-| 2     | 2.6  | Add the browser evidence for the basemap preference        | dispatch       | todo   | —        |
+| 2     | 2.5  | Mount the picker and retire the two theme-bound keys       | inline         | done   | dedd0c54 |
+| 2     | 2.6  | Add the browser evidence for the basemap preference        | dispatch       | done   | pending  |
 
 ## Goal
 
