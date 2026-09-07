@@ -30,7 +30,8 @@ APPLY=0
 say() { printf '%s\n' "$*" >&2; }
 run() { if [ "$APPLY" -eq 1 ]; then "$@"; else say "would: $*"; fi; }
 
-have_label() { gh label list -R "$REPO" --limit 200 --json name --jq '.[].name' | grep -qxF -- "$1"; }
+# No `grep -q`: under pipefail an early exit sends gh SIGPIPE and the pipeline reports the label absent.
+have_label() { gh label list -R "$REPO" --limit 200 --json name --jq '.[].name' | grep -xF -- "$1" >/dev/null; }
 
 # 2. human holds first
 for old in 'status: queued' 'status: needs-human'; do
