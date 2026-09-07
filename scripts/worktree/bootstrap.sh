@@ -221,7 +221,9 @@ fi
 
 if [ "$FORCE" = 1 ] || ! have_deps; then
   say "installing dependencies"
-  pnpm install --frozen-lockfile
+  # HUSKY=0 skips `prepare: husky`, which would rewrite core.hooksPath in the host clone's config
+  # (shared by every worktree); husky itself stays off in runs via CEZ_TASK_ID in .husky/pre-commit.
+  HUSKY=0 pnpm install --frozen-lockfile
 else
   say "dependencies present"
 fi

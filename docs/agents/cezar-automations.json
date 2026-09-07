@@ -82,7 +82,7 @@
   },
   {
     "name": "pr-autopilot",
-    "description": "A human maintainer opens a PR; om-pr-autopilot diagnoses and runs the right chain, never merges (ADR 0018). Agent PRs (planned-travel-agent) and dependabot are excluded by author; pipeline labels exclude the race with om-open-pr.",
+    "description": "A human maintainer opens a PR; om-pr-autopilot diagnoses and runs the right chain, never merges (ADR 0018). Agent PRs (authored by design4pro-agent, the cockpit's gh identity) and dependabot are excluded by author; pipeline labels exclude the race with om-open-pr.",
     "events": ["pull_request.opened"],
     "intervalSeconds": 300,
     "filters": {

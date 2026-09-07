@@ -62,7 +62,9 @@ end to end (PR C).
   load the thin override alone), with no `bashAllowlist`: the tracker descriptor is shell
   functions and `jq`, and a prefix allowlist would silently drop every label mutation. The gate
   is the hooks in `.claude/hooks/` (destructive git, environment dumps, the pinned stack,
-  protected paths, secrets), a fine-grained PAT without the Workflows and Administration scopes,
+  protected paths, secrets), a fine-grained PAT without the Workflows and Administration scopes
+  (held by the dedicated `design4pro-agent` account and reached through `GH_CONFIG_DIR` in the
+  cockpit's service environment; amended 2026-09-07, `docs/agents/cezar.md`, Host identity),
   one worktree per run, and `maxParallel: 2`. The eight workflows: `issue-groom`, `issue-autofix`,
   `spec`, `implement-spec`, `pr-autopilot`, `pr-review`, `housekeeping`, `brainstorm`.
 - **Automations are the schedule; launchd is the clock.** `issue.opened` by a maintainer grooms

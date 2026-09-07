@@ -12,6 +12,8 @@
 #    re-adds the skills from upstream HEAD, replacing the vendored `.claude/skills/om-*` with
 #    symlinks into an untracked `.agents/skills/`. The patch makes `CEZ_SKILLS_AUTO_UPDATE=0`
 #    short-circuit the check as well, and the service plist gets that variable.
+# 3. GH_CONFIG_DIR: the cockpit acts as design4pro-agent (docs/agents/cezar.md, Host identity); the
+#    plist carries the path to that account's gh config directory and cezar forwards it to every run.
 set -euo pipefail
 
 VERSION="${CEZ_VERSION:-0.10.1}"
@@ -54,6 +56,13 @@ if [ -f "$PLIST" ]; then
     echo "plist already carries CEZ_SKILLS_AUTO_UPDATE"
   else
     plutil -insert EnvironmentVariables.CEZ_SKILLS_AUTO_UPDATE -string 0 "$PLIST" && echo "plist: CEZ_SKILLS_AUTO_UPDATE=0"
+  fi
+  if plutil -extract EnvironmentVariables.GH_CONFIG_DIR raw "$PLIST" >/dev/null 2>&1; then
+    echo "plist already carries GH_CONFIG_DIR"
+  else
+    # The gh config directory holding the design4pro-agent login (a path, not a token; docs/agents/cezar.md,
+    # Host identity). Cezar forwards it, so gh and git push in a run act as the bot.
+    plutil -insert EnvironmentVariables.GH_CONFIG_DIR -string "$HOME/.config/gh-agent" "$PLIST" && echo "plist: GH_CONFIG_DIR"
   fi
   # bootout + bootstrap so the new environment is read; kickstart alone keeps the old one.
   launchctl bootout "gui/$(id -u)/dev.cezar.cockpit" 2>/dev/null || true
