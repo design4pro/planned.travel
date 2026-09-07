@@ -274,6 +274,19 @@ export interface AppearancePayload {
   readonly maskConfirmationCodes: boolean
   readonly accentColour: string | null
   readonly mapStyle: string
+  /**
+   * The member's own `user_settings.map_style`, raw and unmerged — `null` when
+   * they follow the workspace.
+   *
+   * {@link AppearancePayload.mapStyle} beside it is the merged value, which is
+   * what the map is drawn with but cannot answer the question the picker asks:
+   * "did this person choose this, or are they inheriting it?" Comparing the
+   * merged value to {@link AppearancePayload.workspaceMapStyle} guesses at it and
+   * guesses wrong precisely when the two coincide — pick Paper on a workspace
+   * that is already Paper, reload, and the screen reports you follow the
+   * workspace. Only the raw column distinguishes them.
+   */
+  readonly mapStyleOverride: string | null
   readonly workspaceMapStyle: string
 }
 
@@ -291,6 +304,7 @@ export const loadAppearance = createServerFn({ method: 'GET' }).handler(
       maskConfirmationCodes: userRow.maskConfirmationCodes,
       accentColour: userRow.accentColour,
       mapStyle: userRow.mapStyle ?? orgRow.mapStyle,
+      mapStyleOverride: userRow.mapStyle,
       workspaceMapStyle: orgRow.mapStyle,
     }
   },
