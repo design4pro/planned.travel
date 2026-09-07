@@ -16,8 +16,10 @@ set -euo pipefail
 
 VERSION="${CEZ_VERSION:-0.10.1}"
 PLIST="$HOME/Library/LaunchAgents/dev.cezar.cockpit.plist"
+# `|| true`: under pipefail a missing install makes grep exit non-zero and `set -e` would abort
+# here, before the message below.
 DIST=$(grep -lx "  \"version\": \"$VERSION\"," "$HOME"/.npm/_npx/*/node_modules/@open-mercato/cezar/package.json 2>/dev/null \
-  | head -1 | xargs -I{} dirname {} | sed 's|$|/dist|')
+  | head -1 | xargs -I{} dirname {} | sed 's|$|/dist|' || true)
 [ -n "$DIST" ] && [ -d "$DIST" ] || { echo "cezar $VERSION not found in the npx cache; start the cockpit once first" >&2; exit 1; }
 
 # patch FILE MARKER FROM TO [COUNT]: replace exactly COUNT (default 1) occurrences unless MARKER is present.
