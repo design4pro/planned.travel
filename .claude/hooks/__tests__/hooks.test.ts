@@ -149,28 +149,67 @@ describe('git-guardrails.sh', () => {
 
   // A rule matches the command, not prose about it. This is not hypothetical: the commit that
   // moved these tests was itself refused, because its message named a git command as text.
+  //
+  // Which commands get that reading is a closed list, and the list is of commands that *cannot*
+  // execute a string they are handed - not of the ones that can. See the two tests below for the
+  // four bypasses the other direction produced.
   it('reads a quoted mention as text, not as an invocation', () => {
     expect(bash('grep -rn "wrangler secret" docs/').status).toBe(0)
     expect(bash('git commit -m "docs: say why wrangler secret put is denied"').status).toBe(0)
-    expect(bash(`sed -i '' 's/wrangler secret/x/' docs/DEPLOY.md`).status).toBe(0)
     expect(bash('git commit -m "chore: fix the pnpm deploy script"', AGENT).status).toBe(0)
     expect(bash("git commit -F - <<'EOF'\nchore: document pnpm deploy\nEOF", AGENT).status).toBe(0)
+    // A heredoc written to a file is text for the same reason a commit message is - `cat` runs
+    // nothing. This is the case that keeps the fix above writable by the agent that writes it.
+    expect(bash("cat > docs/DEPLOY.md <<'EOF'\nnever run wrangler secret put\nEOF").status).toBe(0)
   })
 
-  it('still reads a string a shell will execute as the command', () => {
+  // The exemption used to be a denylist of ways to run a string - ` -c `, `eval `, `xargs`,
+  // matched as raw substrings anywhere in the command. Every one of these got past it, and each
+  // was reported against this hook rather than theorised.
+  it('reads every string a shell will execute as the command, listed or not', () => {
     expect(bash('bash -c "wrangler deploy"', AGENT).status).toBe(2)
     expect(bash(`sh -c 'wrangler secret put X'`).status).toBe(2)
     expect(bash(`eval "wrangler d1 delete planned-travel-db"`).status).toBe(2)
+    // Combined short options carry no ` -c ` substring, so the old check read them as prose.
+    expect(bash('bash -lc "wrangler deploy"', AGENT).status).toBe(2)
+    expect(bash(`sh -ec "wrangler secret put X"`).status).toBe(2)
+    expect(bash(`node -e 'run("wrangler deploy")'`, AGENT).status).toBe(2)
+    // A heredoc redirected into a shell is executed too, and the old shape deleted its body
+    // outright - so a tier-one rule, the tier that holds in every session, allowed this.
+    expect(bash("bash <<'EOF'\ngit reset --hard HEAD~5\nEOF").status).toBe(2)
+    expect(bash("sh <<'EOF'\nwrangler secret put X\nEOF", AGENT).status).toBe(2)
+    // `sed` and `awk` can execute a string as well - GNU `s///e` and `system()` - so neither is
+    // on the prose list, even though a substitution pattern reads exactly like prose.
+    expect(bash(`sed -i '' 's/wrangler secret/x/' docs/DEPLOY.md`).status).toBe(2)
   })
 
-  // Under GitHub Actions the command is matched raw, with no quote stripping. There the input is
-  // an attacker-authored diff, and normalisation would hand it a bypass: `gh pr "review" 12`
-  // strips to something no rule matches. A false positive there costs one unposted comment; a
-  // false negative costs an approval on a crafted pull request.
-  it('does not normalise quotes under GitHub Actions', () => {
+  // ...and the over-broad half of the same substring match: an unrelated flag, or a word in a
+  // message, disabled the stripping and made the whole message match as a command.
+  it('does not read an unrelated flag as a shell invocation', () => {
+    expect(bash('grep -c "wrangler secret" docs/DEPLOY.md').status).toBe(0)
+    expect(bash('git commit -m "docs: -c flag and wrangler secret put"').status).toBe(0)
+  })
+
+  // Quoting is not commenting: the shell drops the quote and keeps the word, so a quoted verb is
+  // still the verb. Deleting quoted *content* meant the verb vanished with it, and the tier this
+  // file's header calls "everyone, every session, no exceptions" let all three of these through.
+  it('sees through a quoted verb in every session', () => {
+    expect(bash('wrangler "secret" put BETTER_AUTH_SECRET').status).toBe(2)
+    expect(bash('git "reset" --hard HEAD~5').status).toBe(2)
+    expect(bash('git push "--force" origin main').status).toBe(2)
+  })
+
+  // Under GitHub Actions nothing is discarded at all, not even a commit message: the input is an
+  // attacker-authored diff. A false positive there costs one unposted comment; a false negative
+  // costs an approval on a crafted pull request.
+  it('discards nothing under GitHub Actions', () => {
     expect(bash('gh pr "review" 12 --approve', ACTIONS).status).toBe(2)
     expect(bash('gh "pr" review 12 --approve', ACTIONS).status).toBe(2)
     expect(bash('wrangler "secret" put X', ACTIONS).status).toBe(2)
+    // A backslash quotes exactly one character, and the shell drops it the same way - so
+    // deleting only the two quote marks left this running `gh pr review` unmatched.
+    expect(bash('gh pr \\review 12 --approve', ACTIONS).status).toBe(2)
+    expect(bash('gh \\pr review 12 --approve', ACTIONS).status).toBe(2)
     // ...and the trade is deliberate: the same string is read as prose for a cezar run.
     expect(bash('git commit -m "chore: mention wrangler secret put"', AGENT).status).toBe(0)
   })
