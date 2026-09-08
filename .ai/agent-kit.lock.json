@@ -1,0 +1,135 @@
+{
+  "kitVersion": 8,
+  "projectId": "planned-travel",
+  "rendered": {
+    ".ai/cezar/config.json": {
+      "sha256": "7aedd20917b1950e04f0eb895347598d4563b82ae719d963585a7eb4a7e546a4",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/brainstorm.yml": {
+      "sha256": "2fc6b4c7fabb782a9851efaa394a9d01093716666390567d8cca5958df33be03",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/housekeeping.yml": {
+      "sha256": "a36bfb7d98d8ad3f501e74aae0af62c93669ca1a851f1eac35ec71ab691ac311",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/implement-spec.yml": {
+      "sha256": "55aceb2e8779b56ce3c850680e868a5c3283e8d14ccb842e5d80088c09ae9688",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/issue-autofix.yml": {
+      "sha256": "23e8485ac83de587fc745104f0d884e525cf989efa75638a9bfb2179164074cf",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/issue-groom.yml": {
+      "sha256": "1f435b5291b7f75125839f020524f6483f1d0720b3fa6d3a576f27fb0495a701",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/pr-autopilot.yml": {
+      "sha256": "ed178ef0c797349c5df1c190bc3a8ff5f63ccad13e549a6910b9f0441e82c9d8",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/pr-fix.yml": {
+      "sha256": "8c71d0e90461bfd1eb2b100eb313f1097e65020b6bdc14d9d43094d24e58b585",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/pr-review.yml": {
+      "sha256": "c32414ddf3f4ea0db0dedd0a763ff0cd5229cf3ea54b7066ab766697028f5109",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/spec.yml": {
+      "sha256": "6243320c8e09c782bed63e2920270e74261f01767b3a6444118a63e5f30fb3be",
+      "mode": "100644"
+    },
+    ".ai/scripts/agent-kit-check.mjs": {
+      "sha256": "02824937c793827a7c510a1d91852d028fbcfaa822f9862421457c2fe44446ad",
+      "mode": "100755"
+    },
+    ".ai/scripts/cez-automations.sh": {
+      "sha256": "6c8b39fe2d9fbf43624caf68abea4c3a8af07edde4e181a2ad9d248a5abd9e4c",
+      "mode": "100755"
+    },
+    ".ai/scripts/cez-prompt-templates.sh": {
+      "sha256": "f66f860f7e0d6e7bcf6cc2299cf9a950788b528b227f5c267942a8d9dc34659f",
+      "mode": "100755"
+    },
+    ".ai/scripts/cezar-host-patch.sh": {
+      "sha256": "ce968aeb27109421afc50452676b0303dadd5a98769b3abc5969073b4c6e547a",
+      "mode": "100755"
+    },
+    ".ai/scripts/housekeeping.sh": {
+      "sha256": "ada590804e2ea2457c6b0e30652e81cd501fa1bad6cbedaba57c13d4fe69e446",
+      "mode": "100755"
+    },
+    ".ai/trackers/github.md": {
+      "sha256": "d28a45fe0957a9e08c5e4db67cfa30810d787bd95c421aa0dc9bd76db7b99756",
+      "mode": "100644"
+    },
+    ".claude/hooks/__tests__/hooks.test.ts": {
+      "sha256": "28e8d56a9ddb9251337ca45aa04de81680bf57a843c964b2aef04b6314dced72",
+      "mode": "100644"
+    },
+    ".claude/hooks/format-file.sh": {
+      "sha256": "720e9eda702807eb9bb90bcbbd5568ce3f102be72e84edcf23dc3bd99b68e058",
+      "mode": "100755"
+    },
+    ".claude/hooks/git-guardrails.sh": {
+      "sha256": "37479fc18df752388d1ee35a20659b98c38ef2b72ef4280c79b2f5137d60d4f9",
+      "mode": "100755"
+    },
+    ".claude/hooks/guard-generated.sh": {
+      "sha256": "c7981319a7532d1254f78a4fcd50c4fb3e65fe702c6568e6b3fce2b117bd730a",
+      "mode": "100755"
+    },
+    ".claude/hooks/guard-read.sh": {
+      "sha256": "06544f62293d17ea5c60d509ec01ff4c1e4de59cfdc113b8b226c79e1dfc315a",
+      "mode": "100755"
+    },
+    ".claude/settings.json": {
+      "sha256": "fd5c3d3f8990905ea19a6e3521d84e863647ff6ef6b2a960fc962cb4cb570363",
+      "mode": "100644"
+    },
+    ".github/workflows/claude-code-review.yml": {
+      "sha256": "d1abbdc354f1e6813cec1c00c1eb15168fb81a7bae7fc01539a5f853e042012a",
+      "mode": "100644"
+    },
+    ".github/workflows/claude.yml": {
+      "sha256": "6cab0d90856c11aca68002de31de2e52d6da9596968a70522701b855496ad6ae",
+      "mode": "100644"
+    },
+    "docs/agents/cezar-automations.json": {
+      "sha256": "81292b2274c5ed52b311c444fea9014cceeed0ca7fe4847b2642122bdc0d4e58",
+      "mode": "100644"
+    },
+    "scripts/ci/__tests__/claude-review-ran.test.mjs": {
+      "sha256": "ee682f3122d098973afeae4ea6ecb18f7bec00724454256a5004af741ce7e312",
+      "mode": "100644"
+    },
+    "scripts/ci/__tests__/claude-usage-limit.test.mjs": {
+      "sha256": "9800db77d220719c1560205dcc024af87b5b64a7acfabc12fd54bb7c81444a5d",
+      "mode": "100644"
+    },
+    "scripts/ci/__tests__/review-threads-label.test.mjs": {
+      "sha256": "3b729625f46362d6d827841a2a6033d9aaac26d553b0f31a4f56e2ea19b18c30",
+      "mode": "100644"
+    },
+    "scripts/ci/claude-review-ran.mjs": {
+      "sha256": "edf8b4c599891e1cec46dee335bf0eb0e45f16889fb68a8b4f7f8e54555d0718",
+      "mode": "100644"
+    },
+    "scripts/ci/claude-usage-limit.mjs": {
+      "sha256": "769dd1eafdc70f9b38f01d7930c7fc4af9b2728d337ae0cade093441291c3709",
+      "mode": "100644"
+    },
+    "scripts/ci/review-threads-label.mjs": {
+      "sha256": "3aab6b4fd29db41ce9312e99c8d0c8977e87eb35ca425f7f8a2c5632171d623a",
+      "mode": "100644"
+    }
+  },
+  "watched": {
+    "skills-lock.json": {
+      "sha256": "a270ddb9eed821d0c78396c20ea60fc710414cc17defed4e241a41019eed6ad8"
+    }
+  }
+}

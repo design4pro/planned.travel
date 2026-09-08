@@ -103,7 +103,9 @@ describe('git-guardrails.sh', () => {
       expect(bash('wrangler secret put BETTER_AUTH_SECRET', env).status).toBe(2)
       expect(bash('pnpm exec wrangler secret list', env).status).toBe(2)
       expect(bash('wrangler d1 delete planned-travel-db', env).status).toBe(2)
-      expect(bash('wrangler r2 bucket delete tiles', env).status).toBe(2)
+      expect(
+        bash('wrangler r2 bucket delete planned-travel-tiles', env).status,
+      ).toBe(2)
       expect(
         bash('wrangler kv namespace delete --namespace-id=1', env).status,
       ).toBe(2)
@@ -281,7 +283,10 @@ describe('git-guardrails.sh', () => {
     expect(r.stderr).toContain(pattern)
   })
 
-  it.each([
+  // Everything a run legitimately does, asserted in agent mode and in a developer's session
+  // alike. The developer tier is the permissive one, so a command refused there is a rule that
+  // has escaped its tier - which is why both tables run over the same list.
+  const ALLOWED = [
     'git add src/x.ts',
     'git add -A',
     'git add .',
@@ -306,8 +311,14 @@ describe('git-guardrails.sh', () => {
     'bash .ai/scripts/test-env-up.sh',
     'env -i PATH=/bin true',
     'pnpm run build',
-  ])('agent mode allows %s', (command) => {
+    'pnpm exec vitest run',
+    'npx prettier --check .',
+  ]
+  it.each(ALLOWED)('agent mode allows %s', (command) => {
     expect(bash(command, AGENT).status).toBe(0)
+  })
+  it.each(ALLOWED)('a developer session allows %s', (command) => {
+    expect(bash(command).status).toBe(0)
   })
 
   it('treats GITHUB_ACTIONS as agent mode too', () => {
@@ -322,10 +333,15 @@ describe('git-guardrails.sh', () => {
       ['gh issue edit 1 --add-label x', 'gh issue|pr mutation'],
       ['gh pr create --draft', 'gh issue|pr mutation'],
       ['gh pr review 12 --approve', 'gh issue|pr mutation'],
-      ['gh pr merge 12', 'gh issue|pr mutation'],
+      ['gh pr merge 12 --squash', 'gh issue|pr mutation'],
+      ['gh pr ready 12', 'gh issue|pr mutation'],
+      ['gh pr checkout 12', 'gh issue|pr mutation'],
       ['gh issue comment 1 -b hi', 'gh issue|pr mutation'],
       ['gh pr comment 12 -b hi', 'gh issue|pr mutation'],
       ['gh label delete x', 'gh mutation surface'],
+      ['gh release create v1.0.0', 'gh mutation surface'],
+      ['gh secret set TOKEN', 'gh mutation surface'],
+      ['gh workflow run deploy.yml', 'gh mutation surface'],
       ['gh api --method POST repos/x/y/issues/1/comments', 'gh api non-GET'],
       ['gh api -X PATCH repos/x/y/issues/1', 'gh api non-GET'],
       ['gh api repos/x/y/issues/1/comments -f body=hi', 'gh api non-GET'],
@@ -340,6 +356,7 @@ describe('git-guardrails.sh', () => {
     it.each([
       'gh issue view 12 --json body',
       'gh pr list',
+      'gh pr diff 12',
       'gh api repos/x/y/issues/1',
       'gh api --method GET repos/x/y/issues/1 --paginate',
       'git add -A',
@@ -408,6 +425,17 @@ describe('guard-generated.sh', () => {
     'docs/agents/out-of-scope.md',
     '.ai/scripts/test-env-up.sh',
     '.ai/scripts/__tests__/cezar-config.test.ts',
+    // The lock is the root of trust for agent-kit-check.mjs, which proves only that each file's
+    // hash equals the hash the lock states. A run able to edit both edits a rendered file and
+    // restates its hash in the same breath, and the gate still exits 0.
+    '.ai/agent-kit.lock.json',
+    // Kit-rendered, and review-threads-label.mjs is the single thing that arms pr-review-threads.
+    'scripts/ci/review-threads-label.mjs',
+    'scripts/ci/__tests__/review-threads-label.test.mjs',
+    // What the cockpit installs as this repository's automations and prompts. Only the first is
+    // kit-rendered; both are configuration a run is handed and must not rewrite.
+    'docs/agents/cezar-automations.json',
+    'docs/agents/cezar-prompt-templates.json',
     '.npmrc',
     'pnpm-workspace.yaml',
   ])('agent mode blocks %s', (rel) => {
@@ -424,6 +452,12 @@ describe('guard-generated.sh', () => {
     for (const rel of [
       'src/x.ts',
       'scripts/seed/seed.mjs',
+      // scripts/ci/ is guarded; the rest of scripts/ is not, and must stay that way.
+      'scripts/visual/capture.mjs',
+      // skills-lock.json stays editable so om-apply-upgrade-notes can still move it. Protecting
+      // the lock is what makes the `watched` entry for it meaningful: a run may write this file,
+      // and can no longer rewrite the hash that reports it.
+      'skills-lock.json',
       'docs/agents/cezar.md',
       'src/.npmrc-ish.ts',
       '.ai/runs/2026-09-06-rings/PLAN.md',
@@ -531,7 +565,10 @@ describe('guard-read.sh', () => {
   writeFileSync(join(root, '.dev.vars'), 'SECRET=1')
   writeFileSync(join(root, '.dev.vars.example'), 'SECRET=')
   writeFileSync(join(root, 'src', 'a.ts'), '')
-  writeFileSync(join(root, '.ai', 'qa', 'test-env.env'), 'TEST_DEMO_PASSWORD=x')
+  writeFileSync(
+    join(root, '.ai', 'qa', 'test-env.env'),
+    'TEST_DEMO_PASSWORD=x',
+  )
   writeFileSync(join(root, '.ai', 'qa', 'test-env.json'), '{}')
   writeFileSync(join(root, '.ai', 'runs', 'x', 'HANDOFF.md'), '')
   const read = (
@@ -634,10 +671,39 @@ describe('guard-read.sh', () => {
     expect(r.stderr).toContain(reason)
   })
 
+  // Explicitly labelled, because `Glob)` and the unlabelled fallback are different arms: the
+  // first reads any pattern as a path, the second only a path-shaped one. The test above covers
+  // the fallback; without the tool name here the labelled arm has no test at all.
   it('denies Glob patterns that escape or name a secret', () => {
-    expect(read({ pattern: '../**/*.ts' }).status).toBe(2)
-    expect(read({ path: root, pattern: '**/.dev.vars' }).status).toBe(2)
-    expect(read({ path: root, pattern: '*.env.local' }).status).toBe(2)
-    expect(read({ path: root, pattern: '.ai/qa/test-env.env' }).status).toBe(2)
+    expect(read({ pattern: '../**/*.ts' }, AGENT, 'Glob').status).toBe(2)
+    expect(
+      read({ path: root, pattern: '**/.dev.vars' }, AGENT, 'Glob').status,
+    ).toBe(2)
+    expect(
+      read({ path: root, pattern: '*.env.local' }, AGENT, 'Glob').status,
+    ).toBe(2)
+    expect(
+      read({ path: root, pattern: '.ai/qa/test-env.env' }, AGENT, 'Glob')
+        .status,
+    ).toBe(2)
+  })
+})
+
+describe('.husky/pre-commit', () => {
+  // Cezar forwards CEZ_* into the agent's env and drops HUSKY, so the hook itself is what keeps
+  // lint-staged, typecheck and the full test run out of a run's commits (ADR 0018, Husky).
+  it('exits at once, without running anything, inside a cezar run', () => {
+    const r = spawnSync(
+      '/bin/sh',
+      ['-e', resolve(HOOKS, '../../.husky/pre-commit')],
+      {
+        encoding: 'utf8',
+        // no pnpm, no npx on PATH: a fall-through would fail rather than pass quietly.
+        env: { PATH: '/nonexistent', ...AGENT } as unknown as NodeJS.ProcessEnv,
+        timeout: 5_000,
+      },
+    )
+    expect(r.status).toBe(0)
+    expect(r.stdout + r.stderr).toBe('')
   })
 })
