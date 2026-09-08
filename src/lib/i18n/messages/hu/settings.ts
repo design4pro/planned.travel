@@ -168,7 +168,7 @@ const messages = {
   'appearance.map.charcoalHint': 'Meleg és sötét, bármelyik témában.',
   'appearance.map.quiet': 'Csendes',
   'appearance.map.quietHint':
-    'Utca- és helynevek nélkül, hogy a tűid látszódjanak először.',
+    'Utcanevek nélkül, hogy a tűid látszódjanak először.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Megosztott képernyőn',
   'appearance.privacy.codesLabel':

@@ -175,7 +175,7 @@ const messages = {
   'appearance.map.charcoalHint': 'Ciepła i ciemna w każdym motywie.',
   'appearance.map.quiet': 'Spokojny',
   'appearance.map.quietHint':
-    'Bez nazw ulic i miejsc, żeby twoje pinezki czytały się pierwsze.',
+    'Bez nazw ulic, żeby twoje pinezki czytały się pierwsze.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Na wspólnym ekranie',
   'appearance.privacy.codesLabel':

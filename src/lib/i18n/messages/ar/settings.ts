@@ -165,7 +165,7 @@ const messages = {
   'appearance.map.charcoal': 'فحمي',
   'appearance.map.charcoalHint': 'دافئ وداكن مهما كان المظهر الذي تستخدمه.',
   'appearance.map.quiet': 'هادئ',
-  'appearance.map.quietHint': 'بلا أسماء طرق أو أماكن، لتظهر دبابيسك أولًا.',
+  'appearance.map.quietHint': 'بلا أسماء طرق، لتظهر دبابيسك أولًا.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'على شاشة مشتركة',
   'appearance.privacy.codesLabel': 'إخفاء رموز التأكيد حتى أطلبها',

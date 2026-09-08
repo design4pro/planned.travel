@@ -215,8 +215,7 @@ const messages = {
   'appearance.map.charcoal': 'Charcoal',
   'appearance.map.charcoalHint': 'Warm and dark, whichever theme you are in.',
   'appearance.map.quiet': 'Quiet',
-  'appearance.map.quietHint':
-    'No road or place names, so your pins read first.',
+  'appearance.map.quietHint': 'No road names, so your pins read first.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'On a shared screen',
   'appearance.privacy.codesLabel': 'Hide confirmation codes until I ask',

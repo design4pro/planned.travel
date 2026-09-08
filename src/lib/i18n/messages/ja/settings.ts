@@ -158,8 +158,7 @@ const messages = {
   'appearance.map.charcoal': '炭',
   'appearance.map.charcoalHint': 'どのテーマでも、温かく暗いままです。',
   'appearance.map.quiet': '静か',
-  'appearance.map.quietHint':
-    '道路名や地名を出さないので、ピンが先に目に入ります。',
+  'appearance.map.quietHint': '道路名を出さないので、ピンが先に目に入ります。',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': '共有している画面では',
   'appearance.privacy.codesLabel': '確認コードは求めるまで隠す',

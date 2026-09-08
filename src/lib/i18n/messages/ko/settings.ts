@@ -145,7 +145,7 @@ const messages = {
   'appearance.map.charcoal': '숯',
   'appearance.map.charcoalHint': '어떤 테마에서도 따뜻하고 어두워요.',
   'appearance.map.quiet': '조용한 지도',
-  'appearance.map.quietHint': '도로와 장소 이름이 없어서 핀이 먼저 보여요.',
+  'appearance.map.quietHint': '도로 이름이 없어서 핀이 먼저 보여요.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': '함께 보는 화면에서',
   'appearance.privacy.codesLabel': '확인 코드는 요청할 때까지 가리기',

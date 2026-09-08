@@ -174,7 +174,7 @@ const messages = {
   'appearance.map.charcoalHint': 'Warm und dunkel, in jedem Erscheinungsbild.',
   'appearance.map.quiet': 'Ruhig',
   'appearance.map.quietHint':
-    'Ohne Straßen- und Ortsnamen, damit die Pins zuerst gelesen werden.',
+    'Ohne Straßennamen, damit die Pins zuerst gelesen werden.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Auf einem geteilten Bildschirm',
   'appearance.privacy.codesLabel':

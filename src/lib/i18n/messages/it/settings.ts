@@ -173,7 +173,7 @@ const messages = {
     'Calda e scura, qualunque tema tu stia usando.',
   'appearance.map.quiet': 'Discreta',
   'appearance.map.quietHint':
-    'Senza nomi di strade o luoghi, così i tuoi segnaposti si leggono per primi.',
+    'Senza nomi di strade, così i tuoi segnaposti si leggono per primi.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Su uno schermo condiviso',
   'appearance.privacy.codesLabel':

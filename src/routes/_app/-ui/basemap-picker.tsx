@@ -11,6 +11,18 @@
  * whose `''` is the sentinel the write path reads as "clear my override" — the
  * one value that is not a basemap id, and the reason `value` is a `string` here
  * rather than a `BasemapId`.
+ *
+ * `busy` is announced rather than enforced. Radix propagates a group-level
+ * `disabled` down to every item, and each item is a native `<button>`, which the
+ * browser blurs the instant it is disabled. Because the screen sets `busy`
+ * synchronously before its first `await`, the very first arrow key would disable
+ * the button it had just moved focus to: focus falls to the document, every item
+ * leaves the tab order, and nothing puts it back when the save lands. A member
+ * navigating by keyboard would be stranded one keystroke into the group. So the
+ * group stays focusable and says `aria-busy`/`aria-disabled`, and the guard in
+ * `onValueChange` is what actually keeps a second pick from racing the first —
+ * the value is controlled, so a swallowed pick leaves the checked card where it
+ * was.
  */
 
 import { Building2 } from 'lucide-react'
@@ -60,7 +72,12 @@ const ROAD = 'M0 13h20l8 9v14'
 export interface BasemapPickerProps {
   /** The member's own override — `''` while they follow the workspace. */
   readonly value: string
-  /** Disables the whole group while a save is in flight. */
+  /**
+   * A save is in flight, so the group reports itself busy and ignores a second
+   * pick until the first one lands.
+   *
+   * Deliberately not the native `disabled`: see {@link BasemapPicker}.
+   */
   readonly busy?: boolean
   /** Id of the hint the row renders above the grid, so the group can point at it. */
   readonly describedBy?: string
@@ -81,10 +98,13 @@ export function BasemapPicker({
       aria-label={t('settings.appearance.map.label')}
       aria-describedby={describedBy}
       aria-busy={busy}
+      aria-disabled={busy || undefined}
       className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
       value={value}
-      disabled={busy}
-      onValueChange={onValueChange}
+      onValueChange={(next) => {
+        if (busy) return
+        onValueChange(next)
+      }}
     >
       <RadioCard
         data-part="basemap-option"
@@ -121,8 +141,7 @@ function Swatch({ id, theme }: { id: BasemapId; theme: ResolvedTheme }) {
   const palette = mapPalette(resolved.theme)
 
   return (
-    <span
-      className="block size-9 overflow-hidden rounded-md ring-1 ring-edge-faint ring-inset">
+    <span className="block size-9 overflow-hidden rounded-md ring-1 ring-edge-faint ring-inset">
       <svg viewBox="0 0 36 36" className="block size-full">
         <rect width="36" height="36" fill={palette.earth} />
         <path

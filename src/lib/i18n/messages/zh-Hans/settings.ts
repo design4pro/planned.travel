@@ -139,7 +139,7 @@ const messages = {
   'appearance.map.charcoal': '炭',
   'appearance.map.charcoalHint': '无论哪种主题，都是温暖的深色。',
   'appearance.map.quiet': '安静',
-  'appearance.map.quietHint': '不显示道路和地名，让你的图钉先被看到。',
+  'appearance.map.quietHint': '不显示道路名称，让你的图钉先被看到。',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': '在共用的屏幕上',
   'appearance.privacy.codesLabel': '在我需要之前隐藏确认码',

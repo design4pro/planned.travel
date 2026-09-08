@@ -50,6 +50,19 @@ CREATE UNIQUE INDEX `organization_settings_org_unq` ON `organization_settings` (
 -- indistinguishable from a workspace that never expressed a preference, and `'auto'` is what such
 -- a workspace saw before the column was read. `'planned-dark'` was never a default: a row holding
 -- it was chosen deliberately on the appearance screen, so it is left to take effect as picked.
--- `user_settings.map_style` is left untouched for the same reason — it defaults to NULL, so any id
--- stored there is an explicit override rather than an inherited default.
+--
+-- The member column moves too, and has to move first. `user_settings.map_style` does default to
+-- NULL, but NULL was never the only way a member said "follow the workspace": until this round the
+-- appearance screen stored a *snapshot* of the workspace value for that choice —
+-- `mapStyle: next === WORKSPACE_MAP_STYLE ? data.workspaceMapStyle : next` — so a member on a
+-- workspace still holding the old default stored `planned-light` by asking to follow it, not by
+-- picking paper. The same screen read the row back through the same equality it wrote: a member
+-- value equal to the workspace value was displayed as "Follow the workspace". Clearing exactly
+-- those rows therefore makes the stored data agree with what the screen had been reporting all
+-- along, and leaves every row that differs from its workspace alone — those are the overrides the
+-- old screen showed as overrides, and they survive for the same reason `planned-dark` does above.
+--
+-- The order of the two statements is load-bearing: the comparison is against the workspace value
+-- as it stood when the snapshot was taken, so it has to run before the remap below rewrites it.
+UPDATE `user_settings` SET `map_style` = NULL WHERE `map_style` = (SELECT `os`.`map_style` FROM `organization_settings` AS `os` WHERE `os`.`organization_id` = `user_settings`.`organization_id`);--> statement-breakpoint
 UPDATE `organization_settings` SET `map_style` = 'auto' WHERE `map_style` = 'planned-light';

@@ -172,7 +172,7 @@ const messages = {
   'appearance.map.charcoalHint': 'Cálido y oscuro, sea cual sea tu tema.',
   'appearance.map.quiet': 'Discreto',
   'appearance.map.quietHint':
-    'Sin nombres de calles ni de lugares, para que tus chinchetas se lean primero.',
+    'Sin nombres de calles, para que tus chinchetas se lean primero.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'En una pantalla compartida',
   'appearance.privacy.codesLabel':

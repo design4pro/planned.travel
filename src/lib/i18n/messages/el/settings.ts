@@ -167,7 +167,7 @@ const messages = {
   'appearance.map.charcoalHint': 'Ζεστό και σκούρο, σε όποιο θέμα κι αν είσαι.',
   'appearance.map.quiet': 'Ήσυχο',
   'appearance.map.quietHint':
-    'Χωρίς ονόματα δρόμων ή τόπων, ώστε να ξεχωρίζουν πρώτες οι πινέζες σου.',
+    'Χωρίς ονόματα δρόμων, ώστε να ξεχωρίζουν πρώτες οι πινέζες σου.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Σε κοινόχρηστη οθόνη',
   'appearance.privacy.codesLabel':

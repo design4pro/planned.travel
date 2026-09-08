@@ -170,7 +170,7 @@ const messages = {
   'appearance.map.charcoalHint': 'Quente e escuro, seja qual for o seu tema.',
   'appearance.map.quiet': 'Discreto',
   'appearance.map.quietHint':
-    'Sem nomes de ruas nem de lugares, para os seus alfinetes aparecerem primeiro.',
+    'Sem nomes de ruas, para os seus alfinetes aparecerem primeiro.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Em uma tela compartilhada',
   'appearance.privacy.codesLabel':

@@ -172,7 +172,7 @@ const messages = {
   'appearance.map.charcoalHint': 'Тепла та темна за будь-якої теми.',
   'appearance.map.quiet': 'Спокійний',
   'appearance.map.quietHint':
-    'Без назв вулиць і місць, щоб ваші позначки читалися першими.',
+    'Без назв вулиць, щоб ваші позначки читалися першими.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'На спільному екрані',
   'appearance.privacy.codesLabel':

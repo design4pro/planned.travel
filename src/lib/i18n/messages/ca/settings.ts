@@ -172,7 +172,7 @@ const messages = {
   'appearance.map.charcoalHint': 'Càlid i fosc, siguis al tema que siguis.',
   'appearance.map.quiet': 'Discret',
   'appearance.map.quietHint':
-    'Sense noms de carrers ni de llocs, perquè els teus marcadors es llegeixin primer.',
+    'Sense noms de carrers, perquè els teus marcadors es llegeixin primer.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'En una pantalla compartida',
   'appearance.privacy.codesLabel':

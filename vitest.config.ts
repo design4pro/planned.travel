@@ -64,6 +64,12 @@ export default defineConfig({
           include: [
             'src/components/**/*.test.{ts,tsx}',
             'src/lib/**/*.test.{ts,tsx}',
+            // Route-level components — the `-ui/` folders a screen mounts but
+            // the router does not route to. They are React and need a DOM, and
+            // the `server` project below deliberately collects only `.test.ts`
+            // under `src/routes/**`, so without this line a component test here
+            // is written, committed, and never run by anything.
+            'src/routes/**/*.test.tsx',
           ],
           restoreMocks: true,
         },

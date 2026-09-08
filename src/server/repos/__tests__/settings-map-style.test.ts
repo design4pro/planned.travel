@@ -259,7 +259,10 @@ describe('map style persistence', () => {
       // …and the hand-written half is still there, so a truncated file cannot pass the line above.
       // It is matched with `endsWith` rather than equality because the remap carries the prose
       // explaining itself, and comments share the statement they precede.
-      expect(shipped.length).toBeGreaterThan(generated.length)
+      expect(shipped.length).toBe(generated.length + 2)
+      expect(shipped.at(-2)).toMatch(
+        /^UPDATE `user_settings` SET `map_style` = NULL WHERE `map_style` = \(SELECT `os`\.`map_style` FROM `organization_settings` AS `os` WHERE `os`\.`organization_id` = `user_settings`\.`organization_id`\);$/m,
+      )
       expect(shipped.at(-1)).toMatch(
         /UPDATE `organization_settings` SET `map_style` = 'auto' WHERE `map_style` = 'planned-light';$/,
       )
@@ -312,23 +315,66 @@ describe('map style persistence', () => {
 
     /**
      * `planned-dark` was never a DDL default, so a row holding it was chosen on the appearance
-     * screen and has to survive — the migration remaps an inherited default, not a preference. A
-     * member override is left alone for the same reason: `user_settings.map_style` defaults to
-     * NULL, so any id stored there is explicit.
+     * screen and has to survive — the migration remaps an inherited default, not a preference.
      */
-    it('leaves a deliberate pick and a member override alone', async () => {
+    it('leaves a deliberate workspace pick alone', async () => {
       await storeWorkspaceMapStyle(alpha, 'planned-dark')
-      await storeWorkspaceMapStyle(beta, 'planned-light')
-      await storeUserMapStyle(beta, 'planned-light')
 
       applyMigration()
 
       expect((await getEffectiveSettings(alpha.scope)).mapStyle).toBe(
         'planned-dark',
       )
-      expect((await getEffectiveSettings(beta.scope)).mapStyle).toBe(
+    })
+
+    /**
+     * The member column carries the same ambiguity as the workspace one, for a different reason:
+     * NULL was not the only way to say "follow the workspace". The old appearance screen wrote a
+     * *snapshot* of the workspace value for that choice and read it back through the same
+     * equality, so a member row equal to its workspace is a follow, not an override — and left in
+     * place it would outlive the remap below it and pin paper under a dark chrome, which is the
+     * regression this whole migration exists to prevent.
+     */
+    it('clears a member row that only snapshotted the workspace value', async () => {
+      await storeWorkspaceMapStyle(beta, 'planned-light')
+      await storeUserMapStyle(beta, 'planned-light')
+
+      applyMigration()
+
+      const effective = await getEffectiveSettings(beta.scope)
+      expect(effective.mapStyle).toBe('auto')
+      expect(resolveBasemap(effective.mapStyle, 'dark').theme).toBe('dark')
+    })
+
+    /** A member row that differs from its workspace is the pick the old screen showed as a pick. */
+    it('keeps a member override that differs from the workspace', async () => {
+      await storeWorkspaceMapStyle(alpha, 'planned-dark')
+      await storeUserMapStyle(alpha, 'planned-light')
+
+      applyMigration()
+
+      expect((await getEffectiveSettings(alpha.scope)).mapStyle).toBe(
         'planned-light',
       )
+    })
+
+    /**
+     * One tenant's member row must not be cleared by another tenant's workspace value. The
+     * correlated subquery joins on `organization_id`; without that join every member row holding
+     * *any* workspace's value would be wiped.
+     */
+    it('correlates the member clear to that member’s own workspace', async () => {
+      await storeWorkspaceMapStyle(alpha, 'planned-dark')
+      await storeWorkspaceMapStyle(beta, 'planned-light')
+      await storeUserMapStyle(alpha, 'planned-light')
+      await storeUserMapStyle(beta, 'planned-light')
+
+      applyMigration()
+
+      expect((await getEffectiveSettings(alpha.scope)).mapStyle).toBe(
+        'planned-light',
+      )
+      expect((await getEffectiveSettings(beta.scope)).mapStyle).toBe('auto')
     })
 
     it('changes the column default so a row inserted without a style is `auto`', async () => {
