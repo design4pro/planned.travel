@@ -22,6 +22,11 @@
 #    automation: without the flag the behaviour is byte-for-byte what it was, so `issue-regroom`,
 #    `issue-autofix` and `issue-spec` cannot start firing on PRs that happen to carry their label.
 #    Used by `pr-review-threads` (docs/agents/cezar-automations.json).
+#
+# The cockpit is one per host and shared with money-tracker.online. That repository's copy of
+# .ai/scripts/cezar-host-patch.sh is identical apart from this paragraph; both are idempotent and
+# check their own markers, so running either one is enough. This copy exists so a host that only
+# carries this checkout is still self-sufficient.
 set -euo pipefail
 
 VERSION="${CEZ_VERSION:-0.10.1}"
@@ -55,12 +60,17 @@ patch "$DIST/automations/github-poller.js" 'cezar#914' \
         const rows = JSON.parse(raw).filter((entry) => entry?.event === 'labeled' || entry?.event === 'unlabeled');
         return z.array(timelineEventSchema).parse(rows);"
 
-patch "$DIST/automations/github-poller.js" 'host patch: includePullRequests (search scope)' \
+# The two markers below are fragments of the replacement code, not of its comment: both sites patch
+# the same file and the natural comment marker ("host patch: includePullRequests") is a prefix of
+# the other's, so a marker taken from a comment would either be absent after patching or match the
+# wrong site. Keep each marker a string the patched file holds exactly once and the stock file not
+# at all - `grep -c` on both is the check.
+patch "$DIST/automations/github-poller.js" "includePullRequests ? 'mixed' : 'issues'" \
   "            sources.push({ family: 'issues', activity: 'updated', opened: false, labels: true });" \
   "            // host patch: includePullRequests widens the label source to PRs ('mixed' emits no is: qualifier).
             sources.push({ family: definition.filters.includePullRequests ? 'mixed' : 'issues', activity: 'updated', opened: false, labels: true });"
 
-patch "$DIST/automations/github-poller.js" 'host patch: includePullRequests (hit filter)' \
+patch "$DIST/automations/github-poller.js" 'definition.filters.includePullRequests || !item.pull_request' \
   "                if (source.labels && !item.pull_request) {" \
   "                if (source.labels && (definition.filters.includePullRequests || !item.pull_request)) { // host patch: includePullRequests"
 

@@ -5,6 +5,7 @@
   "browser": { "provider": "playwright" },
   "validation": {
     "commands": [
+      "node .ai/scripts/agent-kit-check.mjs",
       "pnpm typecheck",
       "pnpm lint",
       "pnpm test",
