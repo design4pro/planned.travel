@@ -7,10 +7,13 @@ import {
   resetBasemapAvailability,
   resetPmtilesProtocol,
 } from '#/lib/map/pmtiles'
+import { publishBasemap } from '#/lib/map/basemap'
+import { mapPalette } from '#/lib/map/palette'
 import { MAP_ENGINE_TIMEOUT_MS, useMapContext } from '../map-context'
 import {
   BASEMAP_SOURCE_ID,
   GRATICULE_SOURCE_ID,
+  MAP_LAYER_IDS,
   WORLD_LAND_SOURCE_ID,
 } from '#/lib/map/style'
 import {
@@ -27,6 +30,10 @@ import {
 const harness = vi.hoisted(() => {
   interface StyleLike {
     readonly sources: Record<string, unknown>
+    readonly layers: ReadonlyArray<{
+      readonly id: string
+      readonly paint?: Record<string, unknown>
+    }>
   }
 
   class FakeMap {
@@ -255,11 +262,32 @@ function lastMap() {
   return map
 }
 
+/** Paint of a layer in the style most recently handed to MapLibre. */
+function paintOfLastStyle(
+  layerId: string,
+): Record<string, unknown> | undefined {
+  return lastMap()
+    .styles.at(-1)
+    ?.layers.find((layer) => layer.id === layerId)?.paint
+}
+
+/** Whether the style most recently handed to MapLibre draws a layer at all. */
+function lastStyleHasLayer(layerId: string): boolean {
+  return (
+    lastMap()
+      .styles.at(-1)
+      ?.layers.some((layer) => layer.id === layerId) ?? false
+  )
+}
+
 beforeEach(() => {
   harness.maps.length = 0
   harness.earlyListeners = []
   resetBasemapAvailability()
   resetPmtilesProtocol()
+  // The catalogue store is module state, so a preference published by one case
+  // would otherwise be the starting point of the next.
+  publishBasemap('auto')
 })
 
 afterEach(() => {
@@ -394,6 +422,75 @@ describe('MapCanvas', () => {
     })
     // Restyled in place: the same map instance, no refetch of anything else.
     expect(harness.maps).toHaveLength(1)
+  })
+
+  /**
+   * The consumption seam, in both of the directions `styleKey` can be wrong.
+   *
+   * The e2e suite cannot reach it: it changes the preference between documents,
+   * so every map it opens is *constructed* with the right style and the swap
+   * effect never has to fire. Only a mounted map that is handed a new preference
+   * exercises the key, which is what these three cases do.
+   */
+  it('restyles a mounted map when a pinned basemap is published', async () => {
+    serveArchive()
+    render(<MapCanvas label="Trip map" />)
+    await mapMounted()
+    // One style so far: the one the map was built with.
+    expect(lastMap().styles).toHaveLength(1)
+
+    act(() => {
+      publishBasemap('planned-dark')
+    })
+
+    await waitFor(() => {
+      expect(lastMap().styles).toHaveLength(2)
+    })
+    // Charcoal under light chrome — the entry's palette, not the theme's, which
+    // is the whole point of naming it beside Automatic.
+    expect(paintOfLastStyle(MAP_LAYER_IDS.earth)).toEqual({
+      'fill-color': mapPalette('dark').earth,
+    })
+  })
+
+  it('does not restyle when a re-render changes nothing the style depends on', async () => {
+    serveArchive()
+    const { rerender } = render(<MapCanvas label="Trip map" />)
+    await mapMounted()
+
+    act(() => {
+      publishBasemap('planned-dark')
+    })
+    await waitFor(() => {
+      expect(lastMap().styles).toHaveLength(2)
+    })
+
+    // A re-render, and the same preference published again. `setStyle` diffs
+    // against the live style but still drops the layers a consumer added at
+    // runtime, so calling it here would cost a route line for nothing.
+    rerender(<MapCanvas label="Trip map" />)
+    act(() => {
+      publishBasemap('planned-dark')
+    })
+    expect(lastMap().styles).toHaveLength(2)
+  })
+
+  it('carries the entry road-label choice into the vector style', async () => {
+    serveArchive()
+    render(<MapCanvas label="Trip map" />)
+    await mapMounted()
+    // Automatic labels its roads; Quiet is the entry that does not, and this is
+    // the only place the difference is observable without an archive in e2e.
+    expect(lastStyleHasLayer('pt-label-road')).toBe(true)
+
+    act(() => {
+      publishBasemap('planned-quiet')
+    })
+
+    await waitFor(() => {
+      expect(lastMap().styles).toHaveLength(2)
+    })
+    expect(lastStyleHasLayer('pt-label-road')).toBe(false)
   })
 
   it('names the canvas from the caller label, and leaves one region on the page', async () => {

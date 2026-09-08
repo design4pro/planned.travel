@@ -41,6 +41,7 @@ import { cn } from '#/lib/cn'
 import { useTheme } from '#/lib/theme'
 import { Spinner } from '#/components/ui'
 import { basemapStyle, fallbackStyle } from '#/lib/map/style'
+import { resolveBasemap, useBasemap } from '#/lib/map/basemap'
 import { isGlobalArchive } from '#/lib/map/coverage'
 import {
   basemapAvailability,
@@ -58,6 +59,7 @@ import { useAtlasCopy } from './copy'
 import { MapAttribution } from './map-attribution'
 
 import type { MapOptions } from 'maplibre-gl'
+import type { BasemapId } from '#/lib/map/basemap'
 import type { EdgePadding, LngLat, MapBounds } from '#/lib/map/bounds'
 import type { PmtilesHeader } from '#/lib/map/coverage'
 import type { GraticuleOptions } from '#/lib/map/graticule'
@@ -267,14 +269,26 @@ async function probeArchive(
 /**
  * Identity of the style document currently applied.
  *
- * Three inputs decide it: the theme, whether there is an archive, and whether that
- * archive is regional enough to need our own ground drawn underneath. Comparing
- * the key rather than the object is what keeps a re-render from calling `setStyle`
- * with a freshly-built copy of the style already on screen.
+ * Four inputs decide it: the theme, the chosen basemap, whether there is an
+ * archive, and whether that archive is regional enough to need our own ground
+ * drawn underneath. Comparing the key rather than the object is what keeps a
+ * re-render from calling `setStyle` with a freshly-built copy of the style
+ * already on screen.
+ *
+ * The basemap belongs here for the same reason the theme does, and getting it
+ * wrong in either direction is a defect no unit test sees: left out, changing the
+ * map style in settings never repaints a mounted map; folded in too eagerly,
+ * every render calls `setStyle` and the map flickers and drops the layers its
+ * consumers added at runtime.
  */
-function styleKey(theme: string, header: PmtilesHeader | null): string {
-  if (header === null) return `${theme}:none`
-  return `${theme}:archive:${isGlobalArchive(header.bounds) ? 'global' : 'regional'}`
+function styleKey(
+  theme: string,
+  basemap: BasemapId,
+  header: PmtilesHeader | null,
+): string {
+  const base = `${theme}:${basemap}`
+  if (header === null) return `${base}:none`
+  return `${base}:archive:${isGlobalArchive(header.bounds) ? 'global' : 'regional'}`
 }
 
 export function MapCanvas({
@@ -308,11 +322,16 @@ export function MapCanvas({
   const [probeToken, setProbeToken] = React.useState(0)
 
   const { resolved: theme } = useTheme()
+  // The traveller's map style, published onto a module store by the app shell.
+  // Read here rather than passed in, so both mount sites stay free of it.
+  const basemapId = useBasemap()
 
   // Latest values the async bootstrap needs, without making the mount effect
   // depend on props that legitimately change afterwards.
   const themeRef = React.useRef(theme)
   themeRef.current = theme
+  const basemapRef = React.useRef(basemapId)
+  basemapRef.current = basemapId
   const onMapReadyRef = React.useRef(onMapReady)
   onMapReadyRef.current = onMapReady
   const labelRef = React.useRef(label)
@@ -350,14 +369,30 @@ export function MapCanvas({
   const appliedRef = React.useRef<string | null>(null)
 
   const buildStyle = React.useCallback(
-    (nextTheme: typeof theme, header: PmtilesHeader | null) =>
-      header === null
+    (nextTheme: typeof theme, header: PmtilesHeader | null) => {
+      // The catalogue decides the cartography, the props decide the geometry.
+      //
+      // `theme` comes from the entry and not from the argument, which is the
+      // whole point of naming Paper and Charcoal beside Automatic: they stay
+      // paper and charcoal whatever the chrome is doing. `roadLabels` is the
+      // entry's alone — no caller has ever set it, and it is what Quiet is.
+      // `poiLabels` deliberately stays the caller's: every entry sets it to
+      // `false`, which is already this component's default, so reading it from
+      // the entry would change nothing today and would quietly retire a prop
+      // that belongs to the screen rather than to the basemap.
+      const cartography = resolveBasemap(basemapRef.current, nextTheme)
+
+      return header === null
         ? fallbackStyle({
-            theme: nextTheme,
+            // The fallback style carries no label layers at all, so `theme` is
+            // the only override that reaches it — enough for Paper to stay paper
+            // when the archive is missing.
+            theme: cartography.theme,
             graticule: styleOptionsRef.current.graticule,
           })
         : basemapStyle({
-            theme: nextTheme,
+            theme: cartography.theme,
+            roadLabels: cartography.roadLabels,
             buildings: styleOptionsRef.current.buildings,
             poiLabels: styleOptionsRef.current.poiLabels,
             // A regional archive has a world outside it, and that world has to
@@ -365,7 +400,8 @@ export function MapCanvas({
             // shows the underlay, so it does not pay for the geometry.
             ground: !isGlobalArchive(header.bounds),
             graticule: styleOptionsRef.current.graticule,
-          }),
+          })
+    },
     [],
   )
 
@@ -442,7 +478,7 @@ export function MapCanvas({
       const activeTheme = themeRef.current
       setBasemap(header === null ? 'unavailable' : 'available')
       setArchive(header)
-      appliedRef.current = styleKey(activeTheme, header)
+      appliedRef.current = styleKey(activeTheme, basemapRef.current, header)
 
       const initial = initialRef.current
       const fitPadding = resolvePadding(initial.padding)
@@ -634,17 +670,17 @@ export function MapCanvas({
     map.setMaxZoom(maxZoom)
   }, [map, maxZoom, minZoom])
 
-  /* ------------------------------------------------------------- theme swap */
+  /* ------------------------------------------------- theme and basemap swap */
 
   React.useEffect(() => {
     if (map === null || basemap === 'loading') return
-    const key = styleKey(theme, archive)
+    const key = styleKey(theme, basemapId, archive)
     if (appliedRef.current === key) return
     appliedRef.current = key
     // `diff: true` is the default; it keeps the vector source, and with it every
     // tile already in memory, so recolouring costs no network at all.
     map.setStyle(buildStyle(theme, archive))
-  }, [archive, basemap, buildStyle, map, theme])
+  }, [archive, basemap, basemapId, buildStyle, map, theme])
 
   /* ------------------------------------------------------------------ retry */
 

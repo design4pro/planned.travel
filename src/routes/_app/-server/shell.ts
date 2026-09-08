@@ -25,7 +25,12 @@ import { getSession } from '#/server/auth/session'
 import { isOrganizationRole, roleSatisfies } from '#/server/auth/tenant'
 import { getDb } from '#/server/db/client'
 import { createLogger } from '#/server/observability'
-import { countUnread, createScope, getOrganization } from '#/server/repos'
+import {
+  countUnread,
+  createScope,
+  getEffectiveSettings,
+  getOrganization,
+} from '#/server/repos'
 
 import type { Logger } from '#/server/observability'
 import type { AuthSession, OrganizationRole } from '#/server/auth/tenant'
@@ -40,6 +45,17 @@ export interface ShellPayload {
   readonly session: ShellSession
   readonly unreadCount: number
   readonly role: OrganizationRole
+  /**
+   * The basemap the traveller's maps are drawn with, already merged with the
+   * workspace default by {@link getEffectiveSettings}.
+   *
+   * The shell is the right carrier because a map can appear anywhere under
+   * `_app` and this is the one payload every screen behind the session already
+   * waits on — `loadDisplayPreferences` is a per-route opt-in whose two callers
+   * are the booking desk and the transports tab. Carried as the merged value so
+   * the precedence rule stays in the repository and nothing re-derives it.
+   */
+  readonly mapStyle: string
 }
 
 /**
@@ -260,9 +276,10 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
       role,
     })
 
-    const [organization, unreadCount] = await Promise.all([
+    const [organization, unreadCount, settings] = await Promise.all([
       getOrganization(scope),
       countUnread(scope, session.user.id),
+      getEffectiveSettings(scope),
     ])
 
     const active: ShellOrganization = {
@@ -276,6 +293,7 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
     return {
       role,
       unreadCount,
+      mapStyle: settings.mapStyle,
       session: buildShellSession({
         session,
         organizationRole: role,

@@ -162,8 +162,17 @@ const messages = {
   'appearance.map.label': 'Kaartstijl',
   'appearance.map.hint': 'De basiskaart op de planner en de wereldkaart.',
   'appearance.map.workspace': 'De werkruimte volgen',
-  'appearance.map.light': 'Papier — licht',
-  'appearance.map.dark': 'Houtskool — donker',
+  'appearance.map.workspaceHint':
+    'Wat de eigenaar van de werkruimte heeft gekozen.',
+  'appearance.map.auto': 'Automatisch',
+  'appearance.map.autoHint': 'Volgt je lichte of donkere thema.',
+  'appearance.map.paper': 'Papier',
+  'appearance.map.paperHint': 'Warm en licht, in welk thema je ook zit.',
+  'appearance.map.charcoal': 'Houtskool',
+  'appearance.map.charcoalHint': 'Warm en donker, in welk thema je ook zit.',
+  'appearance.map.quiet': 'Rustig',
+  'appearance.map.quietHint':
+    'Zonder straatnamen, zodat je pins eerst opvallen.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Op een gedeeld scherm',
   'appearance.privacy.codesLabel':

@@ -92,6 +92,7 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
     'modules.transports.mode.metro',
     'modules.transports.mode.taxi',
     'modules.transports.status.idea',
+    'settings.appearance.map.paper',
     'settings.billing.orders.document',
   ],
   cs: ['modules.transports.mode.metro', 'modules.transports.mode.taxi'],

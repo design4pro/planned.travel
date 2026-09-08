@@ -23,6 +23,10 @@ import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { DEFAULT_LOCALE, LOCALE_TAGS } from '#/lib/i18n/locales'
 import { negotiate, resolveLocaleTag } from '#/lib/i18n/negotiate'
+// The catalogue module, not the `#/lib/map` barrel: that barrel re-exports `style.ts`, `world.ts`
+// and the bundled world geometry, none of which the server graph has any business pulling in for one
+// string array.
+import { BASEMAP_IDS } from '#/lib/map/basemap'
 import {
   DISTANCE_UNITS,
   THEME_PREFERENCES,
@@ -111,7 +115,19 @@ export const localeSchema = z
 
 const timezoneSchema = z.string().trim().min(1).max(64)
 const dateFormatSchema = z.string().trim().min(1).max(32)
-const mapStyleSchema = z.string().trim().min(1).max(64)
+/**
+ * A stored basemap id, narrowed to the catalogue in `src/lib/map/basemap.ts`.
+ *
+ * Refusing an id the catalogue has never heard of is the point of having a
+ * catalogue at all — a column that can hold `charcoal-v2` is a map that silently
+ * falls back for the rest of that workspace's life. The read side is deliberately
+ * softer: {@link getEffectiveSettings} degrades a stale string to `auto`, because
+ * a settings screen that 500s on a row an older build wrote is a worse product
+ * than one that shows a default. Read degrades, write refuses.
+ */
+const mapStyleSchema = z.enum(BASEMAP_IDS, {
+  error: 'Pick a map style from the catalogue.',
+})
 
 export const updateOrganizationSettingsInput = z.object({
   defaultCurrency: currencySchema.optional(),
@@ -321,7 +337,13 @@ export async function getEffectiveSettings(
     weekStartsOn: user?.weekStartsOn ?? organization.weekStartsOn,
     dateFormat: user?.dateFormat ?? organization.dateFormat,
     distanceUnit,
-    mapStyle: user?.mapStyle ?? organization.mapStyle,
+    // The soft half of the rule {@link mapStyleSchema} states: a row written by an older build, or
+    // by a newer one after a rollback, resolves to the catalogue's neutral entry instead of taking
+    // the settings screen down with a parse error.
+    mapStyle: z
+      .enum(BASEMAP_IDS)
+      .catch('auto')
+      .parse(user?.mapStyle ?? organization.mapStyle),
     accentColour: user?.accentColour ?? null,
     reduceMotion: user?.reduceMotion ?? false,
     /*

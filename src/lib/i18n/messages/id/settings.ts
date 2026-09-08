@@ -167,8 +167,16 @@ const messages = {
   'appearance.map.hint':
     'Peta dasar yang dipakai di perencana dan di peta dunia.',
   'appearance.map.workspace': 'Ikuti ruang kerja',
-  'appearance.map.light': 'Kertas — terang',
-  'appearance.map.dark': 'Arang — gelap',
+  'appearance.map.workspaceHint': 'Apa pun yang dipilih pemilik ruang kerja.',
+  'appearance.map.auto': 'Otomatis',
+  'appearance.map.autoHint': 'Mengikuti tema terang atau gelap kamu.',
+  'appearance.map.paper': 'Kertas',
+  'appearance.map.paperHint': 'Hangat dan terang, apa pun temanya.',
+  'appearance.map.charcoal': 'Arang',
+  'appearance.map.charcoalHint': 'Hangat dan gelap, apa pun temanya.',
+  'appearance.map.quiet': 'Tenang',
+  'appearance.map.quietHint':
+    'Tanpa nama jalan, supaya pin kamu terbaca lebih dulu.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Di layar bersama',
   'appearance.privacy.codesLabel':

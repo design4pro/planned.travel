@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { regionalSettingsInput } from '../../../-server/settings'
+import { BASEMAP_IDS } from '#/lib/map/basemap'
+import {
+  appearanceInput,
+  regionalSettingsInput,
+} from '../../../-server/settings'
 import { languageSettingsFrom, regionalOverridesInput } from '../preferences'
 
 import type { AuthSession } from '#/server/auth/session'
@@ -138,5 +142,37 @@ describe('the profile form cannot write the language column', () => {
     expect(() =>
       regionalOverridesInput.parse({ ...submission, distanceUnit: 'leagues' }),
     ).toThrow()
+  })
+})
+
+describe('the appearance form cannot write a map style off the catalogue', () => {
+  it('accepts every id the catalogue ships', () => {
+    for (const id of BASEMAP_IDS) {
+      expect(appearanceInput.parse({ mapStyle: id }).mapStyle).toBe(id)
+    }
+  })
+
+  it('accepts the empty sentinel, which is what clears the column', () => {
+    expect(appearanceInput.parse({ mapStyle: '' }).mapStyle).toBe('')
+  })
+
+  it('leaves the column alone when the patch does not mention it', () => {
+    const parsed = appearanceInput.parse({ reduceMotion: true })
+    expect(parsed.mapStyle).toBeUndefined()
+    expect('mapStyle' in parsed).toBe(false)
+  })
+
+  it('refuses whitespace rather than reading it as the sentinel', () => {
+    // A trim here would make `' '` parse to `''` and silently clear a member's
+    // override. The accepted set has to be the catalogue plus the sentinel and
+    // nothing between them.
+    expect(() => appearanceInput.parse({ mapStyle: ' ' })).toThrow()
+    expect(() =>
+      appearanceInput.parse({ mapStyle: ' planned-dark ' }),
+    ).toThrow()
+  })
+
+  it('refuses an id no map could resolve', () => {
+    expect(() => appearanceInput.parse({ mapStyle: 'planned-neon' })).toThrow()
   })
 })

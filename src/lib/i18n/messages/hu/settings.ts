@@ -159,8 +159,16 @@ const messages = {
   'appearance.map.label': 'Térkép stílusa',
   'appearance.map.hint': 'A tervezőben és az atlaszban használt alaptérkép.',
   'appearance.map.workspace': 'A munkaterületet követi',
-  'appearance.map.light': 'Papír — világos',
-  'appearance.map.dark': 'Szénszürke — sötét',
+  'appearance.map.workspaceHint': 'Amit a munkaterület tulajdonosa választott.',
+  'appearance.map.auto': 'Automatikus',
+  'appearance.map.autoHint': 'A világos vagy sötét témádat követi.',
+  'appearance.map.paper': 'Papír',
+  'appearance.map.paperHint': 'Meleg és világos, bármelyik témában.',
+  'appearance.map.charcoal': 'Szénszürke',
+  'appearance.map.charcoalHint': 'Meleg és sötét, bármelyik témában.',
+  'appearance.map.quiet': 'Csendes',
+  'appearance.map.quietHint':
+    'Utcanevek nélkül, hogy a tűid látszódjanak először.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Megosztott képernyőn',
   'appearance.privacy.codesLabel':

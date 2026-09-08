@@ -1471,6 +1471,45 @@ describe('tenant isolation', () => {
       expect(betaVotes).toHaveLength(1)
       expect(betaVotes[0]?.optionId).toBe('sunrise')
     })
+
+    it('rejects a foreign settings row on the map style write path', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          userSettingsRepository.requireUpdate(scope, beta.userSettingsId, {
+            mapStyle: 'planned-dark',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        await captureError(() =>
+          organizationSettingsRepository.requireUpdate(
+            scope,
+            beta.organizationSettingsId,
+            { mapStyle: 'planned-dark' },
+          ),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // The real write path — the one `saveAppearance` calls — reaches only the caller's own row.
+      await updateUserSettings(alpha.tenant.scope, {
+        mapStyle: 'planned-dark',
+      })
+
+      const betaUserRow = await userSettingsRepository.requireById(
+        beta.tenant.scope,
+        beta.userSettingsId,
+      )
+      expect(betaUserRow.mapStyle).toBeNull()
+      // Beta never chose one, so this is the workspace default — `auto` since
+      // `drizzle/0010_basemap_default.sql`. What the row proves is that alpha's write did not
+      // reach it, not which id the default happens to be.
+      expect((await getEffectiveSettings(beta.tenant.scope)).mapStyle).toBe(
+        'auto',
+      )
+    })
   })
 
   describe('aggregates and summaries', () => {

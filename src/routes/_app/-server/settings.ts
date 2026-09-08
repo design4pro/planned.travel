@@ -10,6 +10,9 @@ import { z } from 'zod'
 
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 import { resolveLocaleTag } from '#/lib/i18n/negotiate'
+// The catalogue module rather than the `#/lib/map` barrel, which would drag `style.ts`, `world.ts`
+// and the bundled world geometry into the server graph for one string array.
+import { BASEMAP_IDS } from '#/lib/map/basemap'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { getSession } from '#/server/auth/session'
 import {
@@ -271,6 +274,19 @@ export interface AppearancePayload {
   readonly maskConfirmationCodes: boolean
   readonly accentColour: string | null
   readonly mapStyle: string
+  /**
+   * The member's own `user_settings.map_style`, raw and unmerged — `null` when
+   * they follow the workspace.
+   *
+   * {@link AppearancePayload.mapStyle} beside it is the merged value, which is
+   * what the map is drawn with but cannot answer the question the picker asks:
+   * "did this person choose this, or are they inheriting it?" Comparing the
+   * merged value to {@link AppearancePayload.workspaceMapStyle} guesses at it and
+   * guesses wrong precisely when the two coincide — pick Paper on a workspace
+   * that is already Paper, reload, and the screen reports you follow the
+   * workspace. Only the raw column distinguishes them.
+   */
+  readonly mapStyleOverride: string | null
   readonly workspaceMapStyle: string
 }
 
@@ -288,30 +304,53 @@ export const loadAppearance = createServerFn({ method: 'GET' }).handler(
       maskConfirmationCodes: userRow.maskConfirmationCodes,
       accentColour: userRow.accentColour,
       mapStyle: userRow.mapStyle ?? orgRow.mapStyle,
+      mapStyleOverride: userRow.mapStyle,
       workspaceMapStyle: orgRow.mapStyle,
     }
   },
 )
 
+/** The four display preferences, exported so the boundary is testable without a session. */
+export const appearanceInput = z.object({
+  theme: z.enum(THEME_PREFERENCES).optional(),
+  reduceMotion: z.boolean().optional(),
+  maskConfirmationCodes: z.boolean().optional(),
+  /**
+   * The same two-state field the regional form's five `Workspace default` options are: `''`
+   * clears the override, anything else must be an id the catalogue ships. Absent means the
+   * patch does not touch the column at all.
+   *
+   * Piped from `z.string()` so the schema's *input* stays `string` — Radix hands
+   * {@link BasemapPicker} its value back as a bare `string`, so the screen would not type-check
+   * against a narrowed input. The parse is what narrows.
+   *
+   * The pipe carries no `.trim()`, and must not: `''` is the sentinel that clears the column, so
+   * trimming would turn `' '` into "follow the workspace" and silently drop a member's override
+   * instead of rejecting the payload. Without it the accepted set is exactly the spec's — and
+   * {@link localeOverride}'s — `z.union([z.literal(''), z.enum(...)])`.
+   */
+  mapStyle: z
+    .string()
+    .pipe(z.union([z.literal(''), z.enum(BASEMAP_IDS)]))
+    .optional(),
+})
+
 export const saveAppearance = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      theme: z.enum(THEME_PREFERENCES).optional(),
-      reduceMotion: z.boolean().optional(),
-      maskConfirmationCodes: z.boolean().optional(),
-      mapStyle: z.string().trim().max(64).optional(),
-    }),
-  )
+  .validator(appearanceInput)
   .handler(async ({ data }): Promise<{ readonly saved: true }> => {
     const scope = await appScope()
     await updateUserSettings(scope, {
       theme: data.theme,
       reduceMotion: data.reduceMotion,
       maskConfirmationCodes: data.maskConfirmationCodes,
+      // `undefined` is "leave the column alone" — {@link updateUserSettings} drops it in
+      // `definedOnly` — and `''` is the follow-the-workspace sentinel, cleared to `NULL` by the same
+      // {@link overrideOrNull} the language chip uses. This handler used to collapse both onto
+      // `undefined`, which left the UI no path back to `NULL`: picking "Follow the workspace" wrote
+      // nothing, so the member's row kept whatever id it already held and pinned a snapshot of the
+      // workspace value instead of following it.
       mapStyle:
-        data.mapStyle === undefined || data.mapStyle === ''
-          ? undefined
-          : data.mapStyle,
+        data.mapStyle === undefined ? undefined : overrideOrNull(data.mapStyle),
     })
     return { saved: true }
   })
