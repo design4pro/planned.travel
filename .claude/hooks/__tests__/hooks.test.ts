@@ -317,7 +317,7 @@ describe('guard-generated.sh', () => {
     'docs/agents/reference.md',
     'docs/agents/out-of-scope.md',
     '.ai/scripts/test-env-up.sh',
-    'scripts/agent/cez-lib.sh',
+    '.ai/scripts/__tests__/cezar-config.test.ts',
     '.npmrc',
     'pnpm-workspace.yaml',
   ])('agent mode blocks %s', (rel) => {

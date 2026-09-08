@@ -24,9 +24,9 @@
 #             database that lives and dies with the VM, basemap pulled from R2.
 #             Does not seed; docs/CLOUD.md §2 describes this profile.
 #
-# `scripts/agent/setup-e2e.sh` is the third profile and deliberately stays its own
-# script: it mirrors `.github/actions/e2e-env/action.yml` step for step and
-# gates the e2e suite in CI. See scripts/worktree/README.md.
+# `.ai/scripts/test-env-up.sh` is the third profile and deliberately stays its own
+# script: it starts the app for the validation gate's e2e step and takes this
+# script's work as a precondition. See scripts/worktree/README.md.
 
 set -euo pipefail
 

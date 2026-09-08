@@ -7,7 +7,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const config = JSON.parse(
-  readFileSync(resolve(__dirname, '../../../.ai/cezar/config.json'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../cezar/config.json'), 'utf8'),
 ) as { systemPrompt?: string; reviewGate?: boolean; skillsRepos?: unknown[] }
 
 describe('.ai/cezar/config.json', () => {

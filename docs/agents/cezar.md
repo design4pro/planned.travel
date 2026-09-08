@@ -40,7 +40,7 @@ the rules of `SDLC.md`.
 - Language: `systemPrompt` in `.ai/cezar/config.json` (Settings → Agents edits the same key) is
   appended to the system prompt of every agent step and tells the run to talk to the developer in
   Polish while everything that leaves the session (code, comments, commits, GitHub) stays English.
-  `scripts/agent/__tests__/cezar-config.test.ts` fails when the key is cleared.
+  `.ai/scripts/__tests__/cezar-config.test.ts` fails when the key is cleared.
 - Service environment: `CEZ_AUTOMATIONS=1`, `CEZ_AUTONOMOUS_DEFAULT=0`, `CEZ_SKILLS_AUTO_UPDATE=0`,
   `GH_CONFIG_DIR` (below), and never `GH_TOKEN`, `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
   builds the agent's env from an allowlist (`PATH`, `HOME`, toolchain prefixes such as
@@ -85,7 +85,8 @@ variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-
   `.e2e-tiles/`, cezar run state and `.ai/qa/test-env.env`.
 - `guard-generated.sh` also refuses edits under `.github/`, `.claude/`, `.husky/`, `.ai/cezar/`,
   `.ai/agentic.config.json`, `.ai/trackers/`, `.ai/browsers/`, `.ai/skills/`, `.ai/scripts/` (a run
-  must not rewrite its own validation gate), `scripts/agent/`, `.npmrc` and `pnpm-workspace.yaml`.
+  must not rewrite its own validation gate), `.npmrc`, `pnpm-workspace.yaml`,
+  `docs/agents/reference.md` and `docs/agents/out-of-scope.md`.
 
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The hooks,
@@ -121,10 +122,10 @@ Provisioning is `scripts/worktree/bootstrap.sh --profile worktree --no-seed` (de
 `validation.commands` in `.ai/agentic.config.json`; its e2e entry starts the app through
 `.ai/scripts/test-env-up.sh` on a free port from 3030-3040 (`om-prepare-test-env` contract).
 
-Three older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`) and the scripts in
-`scripts/agent/` they call stay in the tree until PR C deletes them; the automations that used to
-start them (`triage-opened`, `triage-relabel`, `implement`) are gone from the cockpit, so nothing
-does.
+The four older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`), the scripts in
+`scripts/agent/` they called and the four process skills built on them are gone (PR C, ADR 0018).
+The automations that used to start them (`triage-opened`, `triage-relabel`, `implement`) had
+already been removed from the cockpit.
 
 ## Automations (`docs/agents/cezar-automations.json`)
 
@@ -146,7 +147,7 @@ never enter the autopilot. Every filter excludes `in-progress`; `lookbackDays: 3
 `maxRecords` 5-10 bound a mistaken mass relabel to a handful of runs. The three command labels are
 the only things that start code-writing work, and no skill adds them (the overrides say so), so no
 run can start another.
-A review or autopilot run checks out the PR's head, hooks and `scripts/agent/` included: a branch
+A review or autopilot run checks out the PR's head, hooks and agent layer included: a branch
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
 
