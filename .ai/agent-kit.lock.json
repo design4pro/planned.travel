@@ -1,5 +1,5 @@
 {
-  "kitVersion": 3,
+  "kitVersion": 4,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -67,7 +67,7 @@
       "mode": "100644"
     },
     ".claude/hooks/__tests__/hooks.test.ts": {
-      "sha256": "706cd4c4e98ae6aefa08f1df399dcd7f266cf2d4ffb6c76d52bf24671802e3f0",
+      "sha256": "c744a900a6a3ea3b6baeea5d246b4e1770dd389fed7ba9ef2b63ac00075e73e9",
       "mode": "100644"
     },
     ".claude/hooks/format-file.sh": {
@@ -79,7 +79,7 @@
       "mode": "100755"
     },
     ".claude/hooks/guard-generated.sh": {
-      "sha256": "5a92438838b68b940e17ef6655732507794f2b229252d5610892f70b1c7dce22",
+      "sha256": "c7981319a7532d1254f78a4fcd50c4fb3e65fe702c6568e6b3fce2b117bd730a",
       "mode": "100755"
     },
     ".claude/hooks/guard-read.sh": {
