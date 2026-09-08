@@ -72,7 +72,9 @@ describe('git-guardrails.sh', () => {
   })
 
   it('leaves a force-push to a feature branch alone', () => {
-    expect(bash('git push --force-with-lease origin fix/issue-12-x').status).toBe(0)
+    expect(
+      bash('git push --force-with-lease origin fix/issue-12-x').status,
+    ).toBe(0)
   })
 
   it('leaves pnpm and env alone outside agent runs', () => {
@@ -102,7 +104,9 @@ describe('git-guardrails.sh', () => {
       expect(bash('pnpm exec wrangler secret list', env).status).toBe(2)
       expect(bash('wrangler d1 delete planned-travel-db', env).status).toBe(2)
       expect(bash('wrangler r2 bucket delete tiles', env).status).toBe(2)
-      expect(bash('wrangler kv namespace delete --namespace-id=1', env).status).toBe(2)
+      expect(
+        bash('wrangler kv namespace delete --namespace-id=1', env).status,
+      ).toBe(2)
       expect(bash('wrangler delete planned-travel', env).status).toBe(2)
     }
   })
@@ -135,15 +139,23 @@ describe('git-guardrails.sh', () => {
   it.each(SHIPPING)('blocks %s in an agent run', (command) => {
     expect(bash(command, AGENT).status).toBe(2)
   })
-  it.each(SHIPPING)('leaves %s to the prompt outside an agent run', (command) => {
-    expect(bash(command).status).toBe(0)
-  })
+  it.each(SHIPPING)(
+    'leaves %s to the prompt outside an agent run',
+    (command) => {
+      expect(bash(command).status).toBe(0)
+    },
+  )
 
   it('leaves the local database alone in both modes', () => {
     for (const env of [{}, AGENT]) {
       expect(bash('pnpm db:migrate:local', env).status).toBe(0)
-      expect(bash('wrangler d1 migrations apply planned-travel-db --local', env).status).toBe(0)
-      expect(bash('wrangler d1 migrations list planned-travel-db', env).status).toBe(0)
+      expect(
+        bash('wrangler d1 migrations apply planned-travel-db --local', env)
+          .status,
+      ).toBe(0)
+      expect(
+        bash('wrangler d1 migrations list planned-travel-db', env).status,
+      ).toBe(0)
     }
   })
 
@@ -155,12 +167,23 @@ describe('git-guardrails.sh', () => {
   // four bypasses the other direction produced.
   it('reads a quoted mention as text, not as an invocation', () => {
     expect(bash('grep -rn "wrangler secret" docs/').status).toBe(0)
-    expect(bash('git commit -m "docs: say why wrangler secret put is denied"').status).toBe(0)
-    expect(bash('git commit -m "chore: fix the pnpm deploy script"', AGENT).status).toBe(0)
-    expect(bash("git commit -F - <<'EOF'\nchore: document pnpm deploy\nEOF", AGENT).status).toBe(0)
+    expect(
+      bash('git commit -m "docs: say why wrangler secret put is denied"')
+        .status,
+    ).toBe(0)
+    expect(
+      bash('git commit -m "chore: fix the pnpm deploy script"', AGENT).status,
+    ).toBe(0)
+    expect(
+      bash("git commit -F - <<'EOF'\nchore: document pnpm deploy\nEOF", AGENT)
+        .status,
+    ).toBe(0)
     // A heredoc written to a file is text for the same reason a commit message is - `cat` runs
     // nothing. This is the case that keeps the fix above writable by the agent that writes it.
-    expect(bash("cat > docs/DEPLOY.md <<'EOF'\nnever run wrangler secret put\nEOF").status).toBe(0)
+    expect(
+      bash("cat > docs/DEPLOY.md <<'EOF'\nnever run wrangler secret put\nEOF")
+        .status,
+    ).toBe(0)
   })
 
   // The exemption used to be a denylist of ways to run a string - ` -c `, `eval `, `xargs`,
@@ -180,14 +203,18 @@ describe('git-guardrails.sh', () => {
     expect(bash("sh <<'EOF'\nwrangler secret put X\nEOF", AGENT).status).toBe(2)
     // `sed` and `awk` can execute a string as well - GNU `s///e` and `system()` - so neither is
     // on the prose list, even though a substitution pattern reads exactly like prose.
-    expect(bash(`sed -i '' 's/wrangler secret/x/' docs/DEPLOY.md`).status).toBe(2)
+    expect(bash(`sed -i '' 's/wrangler secret/x/' docs/DEPLOY.md`).status).toBe(
+      2,
+    )
   })
 
   // ...and the over-broad half of the same substring match: an unrelated flag, or a word in a
   // message, disabled the stripping and made the whole message match as a command.
   it('does not read an unrelated flag as a shell invocation', () => {
     expect(bash('grep -c "wrangler secret" docs/DEPLOY.md').status).toBe(0)
-    expect(bash('git commit -m "docs: -c flag and wrangler secret put"').status).toBe(0)
+    expect(
+      bash('git commit -m "docs: -c flag and wrangler secret put"').status,
+    ).toBe(0)
   })
 
   // Quoting is not commenting: the shell drops the quote and keeps the word, so a quoted verb is
@@ -211,7 +238,9 @@ describe('git-guardrails.sh', () => {
     expect(bash('gh pr \\review 12 --approve', ACTIONS).status).toBe(2)
     expect(bash('gh \\pr review 12 --approve', ACTIONS).status).toBe(2)
     // ...and the trade is deliberate: the same string is read as prose for a cezar run.
-    expect(bash('git commit -m "chore: mention wrangler secret put"', AGENT).status).toBe(0)
+    expect(
+      bash('git commit -m "chore: mention wrangler secret put"', AGENT).status,
+    ).toBe(0)
   })
 
   it.each([
@@ -423,26 +452,36 @@ describe('guard-read.sh', () => {
       expect(read({ file_path: '.dev.vars' }, env).status).toBe(2)
       expect(read({ file_path: '.env.local' }, env).status).toBe(2)
       expect(read({ file_path: '.ai/qa/test-env.env' }, env).status).toBe(2)
-      expect(read({ file_path: '.e2e-tiles/basemap.pmtiles' }, env).status).toBe(2)
+      expect(
+        read({ file_path: '.e2e-tiles/basemap.pmtiles' }, env).status,
+      ).toBe(2)
       // ...and the counter-cases, so the rule cannot quietly widen onto ordinary files.
-      expect(read({ file_path: join(root, '.dev.vars.example') }, env).status).toBe(0)
+      expect(
+        read({ file_path: join(root, '.dev.vars.example') }, env).status,
+      ).toBe(0)
       expect(read({ file_path: join(root, 'src/a.ts') }, env).status).toBe(0)
     }
   })
 
   // Grep's `pattern` searches file *contents* and is a regex; `process.env` is not a request to
   // read `.env`. Its `glob` input is the path filter, and that is what gets checked.
-  it.each(['process.env', 'import.meta.env', 'import.meta.env.VITE_APP_URL', 'c.env.DB'])(
-    'allows the Grep content regex %s in every session',
-    (pattern) => {
-      expect(read({ pattern }, {}, 'Grep').status).toBe(0)
-      expect(read({ pattern }, AGENT, 'Grep').status).toBe(0)
-    },
-  )
+  it.each([
+    'process.env',
+    'import.meta.env',
+    'import.meta.env.VITE_APP_URL',
+    'c.env.DB',
+  ])('allows the Grep content regex %s in every session', (pattern) => {
+    expect(read({ pattern }, {}, 'Grep').status).toBe(0)
+    expect(read({ pattern }, AGENT, 'Grep').status).toBe(0)
+  })
 
   it('checks the Grep glob filter, which is a path', () => {
-    expect(read({ pattern: 'SECRET', glob: '**/.dev.vars' }, {}, 'Grep').status).toBe(2)
-    expect(read({ pattern: 'SECRET', glob: '**/*.ts' }, {}, 'Grep').status).toBe(0)
+    expect(
+      read({ pattern: 'SECRET', glob: '**/.dev.vars' }, {}, 'Grep').status,
+    ).toBe(2)
+    expect(
+      read({ pattern: 'SECRET', glob: '**/*.ts' }, {}, 'Grep').status,
+    ).toBe(0)
   })
 
   // A harness that sends no `tool_name` leaves `pattern` ambiguous, so its shape decides: a
