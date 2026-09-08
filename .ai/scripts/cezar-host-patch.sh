@@ -22,14 +22,14 @@
 #    automation: without the flag the behaviour is byte-for-byte what it was, so `issue-regroom`,
 #    `issue-autofix` and `issue-spec` cannot start firing on PRs that happen to carry their label.
 #    Used by `pr-review-threads` (docs/agents/cezar-automations.json).
+#
+# The cockpit is one per host and shared with money-tracker.online. That repository's copy of
+# .ai/scripts/cezar-host-patch.sh is identical apart from this paragraph; both are idempotent and
+# check their own markers, so running either one is enough. This copy exists so a host that only
+# carries this checkout is still self-sufficient.
 set -euo pipefail
 
 VERSION="${CEZ_VERSION:-0.10.1}"
-#
-# The cockpit is one per host and shared with money-tracker.online, whose
-# .ai/scripts/cezar-host-patch.sh is identical apart from this paragraph. Both are idempotent and
-# check their own markers, so running either one is enough; this copy exists so a host that only
-# carries this checkout is still self-sufficient.
 PLIST="$HOME/Library/LaunchAgents/dev.cezar.cockpit.plist"
 # `|| true`: under pipefail a missing install makes grep exit non-zero and `set -e` would abort
 # here, before the message below.
