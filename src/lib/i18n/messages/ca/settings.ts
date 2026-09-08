@@ -162,8 +162,17 @@ const messages = {
   'appearance.map.hint':
     'El mapa base que fan servir el planificador i el mapa del món.',
   'appearance.map.workspace': 'Segueix l’espai de treball',
-  'appearance.map.light': 'Paper — clar',
-  'appearance.map.dark': 'Carbó — fosc',
+  'appearance.map.workspaceHint':
+    'El que hagi triat el propietari de l’espai de treball.',
+  'appearance.map.auto': 'Automàtic',
+  'appearance.map.autoHint': 'Segueix el teu tema clar o fosc.',
+  'appearance.map.paper': 'Paper',
+  'appearance.map.paperHint': 'Càlid i clar, siguis al tema que siguis.',
+  'appearance.map.charcoal': 'Carbó',
+  'appearance.map.charcoalHint': 'Càlid i fosc, siguis al tema que siguis.',
+  'appearance.map.quiet': 'Discret',
+  'appearance.map.quietHint':
+    'Sense noms de carrers, perquè els teus marcadors es llegeixin primer.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'En una pantalla compartida',
   'appearance.privacy.codesLabel':

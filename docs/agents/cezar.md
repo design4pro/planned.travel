@@ -107,6 +107,7 @@ drops `Edit`/`Write` for the ones that must not.
 | `implement-spec` | `/om-auto-implement-spec {{task}}`                                       | opus                 | a human, from the cockpit, after the spec PR merged                        |
 | `pr-autopilot`   | `/om-pr-autopilot {{task}}` (no `--allow-merge`)                         | opus                 | automation `pr-autopilot` (`pull_request.opened` by a human maintainer)    |
 | `pr-review`      | `/om-auto-review-pr {{task}} --autofix`                                  | opus                 | a human, from the cockpit, on a PR number                                  |
+| `pr-fix`         | `/om-auto-fix-pr {{task}}`                                               | opus                 | automation `pr-review-threads` (label `review-threads` on a PR)            |
 | `housekeeping`   | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50` | opus, sonnet, sonnet | launchd via `.ai/scripts/housekeeping.sh`, or a human                      |
 | `brainstorm`     | `/om-brainstorm {{task}}`, **Autonomous off**                            | opus                 | a human, from the cockpit, with the idea as the task                       |
 
@@ -131,11 +132,12 @@ Registered with the running cockpit by `.ai/scripts/cez-automations.sh` (idempot
 place or create enabled; it lists definitions the cockpit holds that the file no longer names, and
 `--prune` deletes them, so this file is the whole truth about what can start a run - it refuses to
 delete an enabled stray, which is somebody's deliberate act, not a leftover).
-Five definitions: `issue-groom` on `issue.opened` with `authors` naming the human maintainers;
+Six definitions: `issue-groom` on `issue.opened` with `authors` naming the human maintainers;
 `issue-regroom`, `issue-autofix`, `issue-spec` on `issue.labeled` with `changedLabels` `groom` /
-`autofix` / `spec`; `pr-autopilot` on `pull_request.opened`, again with `authors`. Every trigger
-is gated on who can produce it: the open events by author, the label events because only a
-collaborator can set a label. This matters because the agent step holds Bash with no allowlist and
+`autofix` / `spec`; `pr-autopilot` on `pull_request.opened`, again with `authors`; and
+`pr-review-threads` on `issue.labeled` with `changedLabels` `review-threads`, the one that reaches
+a pull request (next section). Every trigger is gated on who can produce it: the open events by
+author, the label events because only a collaborator can set a label. This matters because the agent step holds Bash with no allowlist and
 the issue body is its prompt: an issue anyone on GitHub can open must not start a run by itself,
 so an external report is groomed when a maintainer adds `groom`, and the Sentry sweep (which files
 as the Actions bot, a login the poller's author filter cannot express) files with `groom`
@@ -147,6 +149,43 @@ run can start another.
 A review or autopilot run checks out the PR's head, hooks and `scripts/agent/` included: a branch
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
+
+## Review threads that block a merge (`pr-review-threads`)
+
+The `develop` and `main` rulesets refuse a merge while a review thread is unresolved, and nothing
+resolves the threads the `claude-review` job opens. Until this automation a maintainer cleared them
+by running `om-auto-fix-pr` by hand on every PR the review job had commented on.
+
+It cannot be a webhook. Cezar 0.10.1 knows four automation events - `issue.opened`,
+`issue.labeled`, `issue.unlabeled`, `pull_request.opened` - and none of them is a review; worse, the
+poller scopes its label source to `is:issue` and then drops any hit carrying `pull_request`, so even
+a label on a PR is invisible to it. `pull_request.opened` is the only PR trigger there is, and it
+fires minutes before the review job posts anything. So the chain is:
+
+1. `.github/workflows/claude-code-review.yml` ends with `scripts/ci/review-threads-label.mjs`,
+   which applies `review-threads` when the PR has live threads opened by the review bot.
+2. Patch 4 in `.ai/scripts/cezar-host-patch.sh` teaches the poller to honour
+   `filters.includePullRequests` on both gates. It is opt-in per automation - the cockpit's filter
+   schema passes unknown keys through untouched - which is what keeps `issue-regroom`,
+   `issue-autofix` and `issue-spec` from starting to fire on PRs that happen to carry their label.
+   **Without the patch this automation never fires and says nothing**; re-run the script after the
+   npx cache is cleared.
+3. `pr-review-threads` runs the `pr-fix` workflow, and `om-auto-fix-pr` replies in every thread and
+   resolves the ones it settles.
+
+The loop is closed at the head, not at the thread. The run removes `review-threads` as its first
+mutation (`.ai/skills/om-auto-fix-pr/SKILL.md`), and the labelling script keeps one marker comment
+naming the head it last armed, so the same head is never armed twice. That matters because a thread
+the run **declines** stays open on purpose - a disagreement is a human's to settle - and without the
+marker the `reopened` and `ready_for_review` triggers would restart the same run to reach the same
+conclusion forever. `in-progress`, `blocked` and `do-not-merge` stand the script down, and the
+automation excludes them again.
+
+The gate is the same as for `groom` and `autofix`: only a collaborator or the Actions bot can set a
+label, so an outsider cannot start a run that holds an unrestricted Bash. A human's review thread is
+deliberately not a trigger - the script arms only on the review bot's threads, because a
+disagreement with a person is settled by talking. Rehearse the decision against any live PR with
+`GH_REPO=… PR_NUMBER=… HEAD_SHA=… node scripts/ci/review-threads-label.mjs --dry-run`.
 
 ## Prompt templates (`docs/agents/cezar-prompt-templates.json`)
 
@@ -203,7 +242,8 @@ must stop before `status:*` is stripped and the surviving labels renamed.
    commit both.
 4. `bash .ai/scripts/labels-cutover.sh` (dry run), read it, then `--apply`: holds move to
    `blocked`, `status:*` leaves every open issue, `run:*`, `type:*` and `agent-docs` move to their
-   SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels wait for PR C.
+   SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels waited for
+   PR C, and were deleted on 2026-09-08 (docs/agents/triage-labels.md).
 5. The cockpit service already runs 0.10.1 (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`);
    confirm `.ai/cezar/config.json` in the main checkout is the merged one, apply the host patches
    (`bash .ai/scripts/cezar-host-patch.sh`, which also restarts the service so it reloads the

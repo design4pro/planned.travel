@@ -163,8 +163,15 @@ const messages = {
   'appearance.map.label': 'Styl mapy',
   'appearance.map.hint': 'Podkladová mapa v plánovači a na mapě světa.',
   'appearance.map.workspace': 'Podle prostoru',
-  'appearance.map.light': 'Papír — světlá',
-  'appearance.map.dark': 'Grafit — tmavá',
+  'appearance.map.workspaceHint': 'To, co zvolil vlastník prostoru.',
+  'appearance.map.auto': 'Automatický',
+  'appearance.map.autoHint': 'Řídí se vaším světlým nebo tmavým motivem.',
+  'appearance.map.paper': 'Papír',
+  'appearance.map.paperHint': 'Teplá a světlá v každém motivu.',
+  'appearance.map.charcoal': 'Grafit',
+  'appearance.map.charcoalHint': 'Teplá a tmavá v každém motivu.',
+  'appearance.map.quiet': 'Tichý',
+  'appearance.map.quietHint': 'Bez názvů ulic, aby vaše špendlíky vynikly.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'Na sdílené obrazovce',
   'appearance.privacy.codesLabel':

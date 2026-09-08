@@ -52,6 +52,23 @@ const NAV_FILE = join(
  * it, the same way it reaches out for the nav.
  */
 const PLAN_COPY_FILE = join(process.cwd(), 'src', 'lib', 'plan-copy.ts')
+/**
+ * The basemap picker, which sits beside the nav in `_app/-ui/` for the same
+ * reason the nav does: it is mounted by a settings screen but is not a route.
+ *
+ * The gate follows it exactly as it follows the nav and the plan copy table.
+ * Without it the ten `settings.appearance.map.*` keys the picker reads look like
+ * dead copy to the orphan check below — which is how this entry got written, on
+ * the commit that moved the Map style row out of `appearance.tsx`.
+ */
+const BASEMAP_PICKER_FILE = join(
+  process.cwd(),
+  'src',
+  'routes',
+  '_app',
+  '-ui',
+  'basemap-picker.tsx',
+)
 
 interface Source {
   readonly path: string
@@ -79,6 +96,10 @@ function shippedSources(): ReadonlyArray<Source> {
 
   walk(SETTINGS_DIR)
   files.push({ path: NAV_FILE, text: readFileSync(NAV_FILE, 'utf8') })
+  files.push({
+    path: BASEMAP_PICKER_FILE,
+    text: readFileSync(BASEMAP_PICKER_FILE, 'utf8'),
+  })
   files.push({
     path: PLAN_COPY_FILE,
     text: readFileSync(PLAN_COPY_FILE, 'utf8'),
@@ -123,6 +144,7 @@ describe('the settings module ships no English literal', () => {
         'organization.tsx',
         'billing.tsx',
         'settings-nav.tsx',
+        'basemap-picker.tsx',
         'plan-copy.ts',
       ]),
     )

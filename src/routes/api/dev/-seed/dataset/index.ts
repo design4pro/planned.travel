@@ -85,7 +85,7 @@ export const organizationSettings = {
   weekStartsOn: 1,
   dateFormat: 'dd MMM yyyy',
   distanceUnit: 'metric',
-  mapStyle: 'planned-light',
+  mapStyle: 'auto',
 } as const
 
 /**

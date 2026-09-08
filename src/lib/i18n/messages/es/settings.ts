@@ -162,8 +162,17 @@ const messages = {
   'appearance.map.label': 'Estilo del mapa',
   'appearance.map.hint': 'El mapa base del planificador y del mapa del mundo.',
   'appearance.map.workspace': 'Seguir al espacio de trabajo',
-  'appearance.map.light': 'Papel — claro',
-  'appearance.map.dark': 'Carbón — oscuro',
+  'appearance.map.workspaceHint':
+    'Lo que haya elegido el propietario del espacio de trabajo.',
+  'appearance.map.auto': 'Automático',
+  'appearance.map.autoHint': 'Sigue tu tema claro u oscuro.',
+  'appearance.map.paper': 'Papel',
+  'appearance.map.paperHint': 'Cálido y claro, sea cual sea tu tema.',
+  'appearance.map.charcoal': 'Carbón',
+  'appearance.map.charcoalHint': 'Cálido y oscuro, sea cual sea tu tema.',
+  'appearance.map.quiet': 'Discreto',
+  'appearance.map.quietHint':
+    'Sin nombres de calles, para que tus chinchetas se lean primero.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'En una pantalla compartida',
   'appearance.privacy.codesLabel':

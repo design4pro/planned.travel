@@ -2604,7 +2604,16 @@ export const organizationSettings = sqliteTable(
     weekStartsOn: integer('week_starts_on').notNull().default(1),
     dateFormat: text('date_format').notNull().default('dd MMM yyyy'),
     distanceUnit: text('distance_unit').notNull().default('metric'),
-    mapStyle: text('map_style').notNull().default('planned-light'),
+    // The catalogue's neutral entry (`src/lib/map/basemap.ts`), spelled out because this file
+    // imports nothing outside the schema layer. It was `planned-light`, whose palette is the fixed
+    // literal `light` — so once the map started reading this column, every workspace that had never
+    // opened the appearance screen rendered a permanently paper map under a dark chrome. `auto` is
+    // the entry that follows the resolved theme, which is what the map did before it read anything
+    // here. Drizzle inlines a static default into every `INSERT` client-side, so a stale value here
+    // would keep writing pinned rows however the DDL reads.
+    // `drizzle/0010_basemap_default.sql` carries the matching column default and remaps the rows
+    // written under the old one.
+    mapStyle: text('map_style').notNull().default('auto'),
     features: text('features', { mode: 'json' }).$type<JsonRecord>(),
     onboardedAt: integer('onboarded_at', { mode: 'timestamp_ms' }),
     ...timestamps(),

@@ -163,8 +163,16 @@ const messages = {
   'appearance.map.label': 'Стиль карти',
   'appearance.map.hint': 'Основа карти в планувальнику та в атласі.',
   'appearance.map.workspace': 'Як у просторі',
-  'appearance.map.light': 'Папір — світла',
-  'appearance.map.dark': 'Графіт — темна',
+  'appearance.map.workspaceHint': 'Те, що вибрав власник простору.',
+  'appearance.map.auto': 'Автоматичний',
+  'appearance.map.autoHint': 'Слідує вашій світлій або темній темі.',
+  'appearance.map.paper': 'Папір',
+  'appearance.map.paperHint': 'Тепла та світла за будь-якої теми.',
+  'appearance.map.charcoal': 'Графіт',
+  'appearance.map.charcoalHint': 'Тепла та темна за будь-якої теми.',
+  'appearance.map.quiet': 'Спокійний',
+  'appearance.map.quietHint':
+    'Без назв вулиць, щоб ваші позначки читалися першими.',
   /* The shoulder-safety switch: the bookings desk and the transports tab both obey it. */
   'appearance.privacy.title': 'На спільному екрані',
   'appearance.privacy.codesLabel':
