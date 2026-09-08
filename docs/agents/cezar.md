@@ -88,6 +88,13 @@ variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-
   must not rewrite its own validation gate), `.npmrc`, `pnpm-workspace.yaml`,
   `docs/agents/reference.md` and `docs/agents/out-of-scope.md`.
 
+  One exception, and only in a cezar run: a guarded file **this branch already changes**. A
+  reviewer asking for a correction to a change a human proposed is not a run rewriting its own
+  rules, and refusing it is how a review thread stays open forever - the `develop` ruleset merges
+  nothing with one. Introducing a change to a guarded file the branch does not already carry is
+  still refused, and under `GITHUB_ACTIONS` the block is absolute, because there the diff is the
+  attacker's and "the branch already changes it" is the attacker's own claim.
+
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The hooks,
 the PAT scopes, one worktree per run and `maxParallel: 2` are the gate. After the first ten runs,
@@ -172,7 +179,10 @@ fires minutes before the review job posts anything. So the chain is:
    **Without the patch this automation never fires and says nothing**; re-run the script after the
    npx cache is cleared.
 3. `pr-review-threads` runs the `pr-fix` workflow, and `om-auto-fix-pr` replies in every thread and
-   resolves the ones it settles.
+   resolves the ones it settles. A finding it agrees with but cannot act on - a guarded file it is
+   still refused, a change that belongs upstream - is **not** a decline: it replies with the exact
+   edit as a diff block, leaves `changes-requested`, and resolves the thread anyway
+   (`.ai/skills/om-auto-review-pr/SKILL.md`). Only a disagreement leaves a thread open.
 
 The loop is closed at the head, not at the thread. The run removes `review-threads` as its first
 mutation (`.ai/skills/om-auto-fix-pr/SKILL.md`), and the labelling script keeps one marker comment
@@ -181,6 +191,17 @@ the run **declines** stays open on purpose - a disagreement is a human's to sett
 marker the `reopened` and `ready_for_review` triggers would restart the same run to reach the same
 conclusion forever. `in-progress`, `blocked` and `do-not-merge` stand the script down, and the
 automation excludes them again.
+
+**And the `in-progress` stand-down is why, for its first weeks, this chain never ran at all.**
+`pr-autopilot` fires on `pull_request.opened` and takes `in-progress` within a minute; the review
+job needs five to eight, so step 1 above was never once asked at a moment when the claim was
+absent - `not arming - the PR carries in-progress` on #320, #321 and #322, and zero `pr-fix` runs
+in the cockpit's recorded history. The stand-down is right (a run that owns the PR should not have
+a second one started beside it); what was missing is a second ask. The workflow now also listens
+for `pull_request.unlabeled`, and a separate job re-runs the same script when the label removed is
+`in-progress`. Same decision, same head-keyed marker - so a run that declines every thread and
+pushes nothing cannot re-arm itself when it drops its own claim - only asked at the first moment
+the answer can be anything but "held".
 
 The gate is the same as for `groom` and `autofix`: only a collaborator or the Actions bot can set a
 label, so an outsider cannot start a run that holds an unrestricted Bash. A human's review thread is
