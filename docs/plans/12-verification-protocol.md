@@ -94,9 +94,13 @@ server produces failures that look like product defects. When the port is in dou
 pass it explicitly rather than probing by hand:
 
 ```sh
-PORT=$(scripts/agent/cez-port.sh acquire)     # a port from the 3030-3040 automation pool
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test
+bash .ai/scripts/e2e.sh                       # takes a free port from the 3030-3040 pool
 ```
+
+That is the validation gate's own e2e step: it brings the environment up (or reuses a healthy
+one) through `.ai/scripts/test-env-up.sh`, reads `baseUrl` out of `.ai/qa/test-env.json` and
+passes it to the suite as `PLAYWRIGHT_BASE_URL`. Extra arguments go through to `pnpm e2e`.
+Tear down with `sh .ai/scripts/test-env-down.sh`.
 
 `PLAYWRIGHT_BASE_URL` is read by `playwright.config.ts` and suppresses the `webServer` block
 entirely. Without it the config waits on 3000 until the global timeout. Outside CI the config also

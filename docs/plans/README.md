@@ -1,9 +1,11 @@
 # planned.travel — implementation plans
 
 > **This directory is being retired** (docs/adr/0004): the backlog is migrating, area by area, to
-> GitHub Issues via `/plan-area` (spec and PRD in one run over a subagent panel, ADR 0017) or
-> `/plan-feature` (spec → prd → tickets with a human). Until an area migrates,
-> its plan file below remains the authority for that area.
+> GitHub Issues. An area migrates by opening an issue that names its plan file in the body and
+> adding the `spec` label: the `issue-spec` run writes the spec (`om-auto-write-spec`, ADR 0018).
+> The `/plan-area` and `/plan-feature` skills that used to do this were retired with the rest of
+> the repository-orchestrated pipeline. Until an area migrates, its plan file below remains the
+> authority for that area.
 >
 > **Areas migrated so far:** `01-trips-core.md` → PRD #104 · `03-reservations-and-transport.md` →
 > PRD #167. For those two the **tracker is the authority** and the plan file is frozen: it takes no

@@ -93,6 +93,16 @@ export default defineConfig({
             // watching Playwright spec, and nothing but a test holds that gate
             // shut. It sits at the repo root, so no `src/**` glob reaches it.
             'vite.config.test.ts',
+            // The Claude Code hooks. They are the only thing standing between the review job -
+            // which reads an attacker-authored diff under `--permission-mode bypassPermissions` -
+            // and the `gh` mutation surface, and their failure mode is silence: a hook that stops
+            // matching allows instead of erroring, and nothing anywhere says so.
+            '.claude/hooks/__tests__/*.test.ts',
+            // `.ai/cezar/config.json` is the run's own settings, and the cockpit's Settings
+            // panel writes the same keys: clearing a field there deletes it and the next run
+            // silently behaves differently. `.ai/` is a dot-directory, so no glob above reaches
+            // it - the path has to be named.
+            '.ai/scripts/__tests__/*.test.ts',
           ],
           restoreMocks: true,
         },
