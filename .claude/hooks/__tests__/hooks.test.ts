@@ -11,7 +11,7 @@ import { join, resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-const HOOKS = resolve(__dirname, '../../../.claude/hooks')
+const HOOKS = resolve(__dirname, '..')
 const AGENT = { CEZ_TASK_ID: '0123456789ab-test' }
 const ACTIONS = { GITHUB_ACTIONS: 'true' }
 
@@ -40,9 +40,33 @@ const bash = (command: string, env = {}) =>
 
 describe('git-guardrails.sh', () => {
   it('blocks destructive git for everyone', () => {
-    expect(bash('git reset --hard HEAD~1').status).toBe(2)
-    expect(bash('git checkout .').status).toBe(2)
-    expect(bash('git status').status).toBe(0)
+    // Every mode, because this tier is the one that has no audience: nothing a developer,
+    // a cezar run or the review job legitimately does needs any of it.
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash('git reset --hard HEAD~1', env).status).toBe(2)
+      expect(bash('git clean -fd', env).status).toBe(2)
+      expect(bash('git branch -D feature/x', env).status).toBe(2)
+      expect(bash('git checkout .', env).status).toBe(2)
+      expect(bash('git restore .', env).status).toBe(2)
+      expect(bash('git status', env).status).toBe(0)
+    }
+  })
+
+  // `develop` and `main` are staging and production; a force-push to either rewrites what
+  // somebody else has already pulled. A feature branch is the author's own and stays open.
+  it.each([
+    'git push --force origin develop',
+    'git push --force origin main',
+    'git push -f origin develop',
+    'git push -f origin main',
+  ])('blocks the force-push %s', (command) => {
+    const r = bash(command)
+    expect(r.status).toBe(2)
+    expect(r.stderr).toContain('force-push to develop/main')
+  })
+
+  it('leaves a force-push to a feature branch alone', () => {
+    expect(bash('git push --force-with-lease origin fix/issue-12-x').status).toBe(0)
   })
 
   it('leaves pnpm and env alone outside agent runs', () => {
@@ -85,6 +109,7 @@ describe('git-guardrails.sh', () => {
     'pnpm test',
     'pnpm lint',
     'pnpm install --frozen-lockfile',
+    'pnpm install-skills',
     'pnpm exec playwright test',
     'pnpm exec vite dev --port 3030 --strictPort --host 127.0.0.1',
     'npx -y skills@latest --version',
@@ -172,6 +197,11 @@ describe('guard-generated.sh', () => {
   it.each([
     '.github/workflows/ci.yml',
     '.claude/settings.json',
+    // The hooks and their tests. The tests live here rather than under scripts/ precisely so
+    // this rule covers them: a run that cannot edit a guard but can delete the case that pins
+    // its behaviour has only been slowed down, not stopped.
+    '.claude/hooks/git-guardrails.sh',
+    '.claude/hooks/__tests__/hooks.test.ts',
     '.husky/pre-commit',
     '.ai/cezar/config.json',
     '.ai/cezar/workflows/issue-autofix.yml',
@@ -198,7 +228,6 @@ describe('guard-generated.sh', () => {
     for (const rel of [
       'src/x.ts',
       'scripts/seed/seed.mjs',
-      'scripts/hooks/__tests__/hooks.test.ts',
       'docs/agents/cezar.md',
       'src/.npmrc-ish.ts',
       '.ai/runs/2026-09-06-rings/PLAN.md',
