@@ -388,6 +388,13 @@ Light and dark, 360 / 1280 / 2560. The judgement is the blind A/B pair (`scripts
 `docs/SPEC.md` §7 item 4), not a screenshot in a comment. No recorded baseline is affected because
 none exists: `e2e/__screenshots__/` is absent and ADR 0016 retired the pixel gate.
 
+Evidence in `assets/writable-day-note/`. Today, captured from the demo workspace:
+`current-01-planner-light.png`, `current-02-planner-dark.png`, `current-03-planner-mobile.png` — the
+flat note run this spec replaces. Proposed, as static illustrative HTML rendered to PNG (not app
+code, and not a pixel contract): `mockup-01-note-row.png` for the row and its disclosed detail, and
+`mockup-02-note-dialog.png` for the editor. The shipped surface takes its colour, spacing and radius
+from `src/styles/tokens.css`; the mockups only fix the layout and the affordances.
+
 ## 📝 Copy
 
 Namespace `trips` (`src/lib/i18n/messages/en/trips.ts`), addressed as `trips.plan.note.*`. Every key
