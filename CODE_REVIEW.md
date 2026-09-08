@@ -20,8 +20,8 @@ review, never instead of it.
 
 ## Blockers: the floor
 
-These are mechanical and admit no judgement. The pre-migration pipeline enforced them with
-`scripts/agent/floor-guard.mjs`; the review now does.
+These are mechanical and admit no judgement. The pre-migration pipeline enforced them with a
+floor guard script; the review now does.
 
 1. **No new suppressions.** Any added `@ts-ignore`, `@ts-expect-error`, `eslint-disable`,
    `eslint-disable-next-line` or `eslint-disable-line` is a blocker, whatever the comment says.

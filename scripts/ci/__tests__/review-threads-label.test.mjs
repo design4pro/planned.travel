@@ -71,6 +71,25 @@ describe('decide', () => {
     },
   )
 
+  // The hold above is why nothing was ever armed. `pr-autopilot` fires on `pull_request.opened`
+  // and claims within a minute; the review job needs five to eight, so its arming step has never
+  // once been asked at a moment when `in-progress` was absent - three for three on #320, #321 and
+  // #322, and zero `pr-fix` runs in the cockpit's whole history. The claim coming off is the
+  // first moment the answer can be anything else, and `pull_request.unlabeled` in
+  // claude-code-review.yml is what asks again then. This case is that second ask.
+  it('arms once the claim is released, which is what the re-arm job asks', () => {
+    expect(decide(input({ labels: ['in-progress'] })).act).toBe('skip')
+    expect(decide(input({ labels: ['changes-requested'] })).act).toBe('label')
+  })
+
+  // And it asks only once per head, so a run that declines every thread and pushes nothing cannot
+  // re-arm itself when it drops its own claim.
+  it("does not loop when the released claim was the autofix run's own", () => {
+    expect(
+      decide(input({ labels: ['changes-requested'], markerSha: HEAD })).act,
+    ).toBe('skip')
+  })
+
   it('does not re-apply a label a run has not taken yet', () => {
     expect(decide(input({ labels: [LABEL] })).act).toBe('skip')
   })

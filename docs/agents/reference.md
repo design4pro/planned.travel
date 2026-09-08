@@ -31,8 +31,8 @@ surfaces below. This file only routes you there and says which surface answers w
 
 ## Rules of engagement
 
-- **Reference study belongs to the planning phase** — the `/plan-feature` grilling, with a
-  human in the loop. Agent runs (cezar) never browse the reference;
+- **Reference study belongs to the planning phase** — a human writing or grooming the issue.
+  Agent runs (cezar) never browse the reference;
   everything they need must already be in the ticket. This keeps the clean-room boundary out of
   the hands of agents optimising for "make the test pass". One carve-out: the loop's neutral
   pixel-capture step photographs the public demo (surface 1) so the blind `pixel-critic` can
