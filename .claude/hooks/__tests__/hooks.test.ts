@@ -66,7 +66,9 @@ describe('git-guardrails.sh', () => {
   })
 
   it('leaves a force-push to a feature branch alone', () => {
-    expect(bash('git push --force-with-lease origin fix/issue-12-x').status).toBe(0)
+    expect(
+      bash('git push --force-with-lease origin fix/issue-12-x').status,
+    ).toBe(0)
   })
 
   it('leaves pnpm and env alone outside agent runs', () => {
