@@ -53,7 +53,7 @@
   "engine": {
     "loopStepThreshold": 20,
     "executorTier": "standard",
-    "stepReview": "checkpoint"
+    "stepReview": "final"
   },
   "paths": {
     "runs": ".ai/runs",
