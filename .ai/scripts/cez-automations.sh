@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Register docs/agents/cezar-automations.json with the running cezar through its API (never by
 # editing .ai/cezar/automations.json by hand). Idempotent: an automation with the same name is
-# updated in place and re-enabled, a new one is created enabled. Automations that exist on the
-# cockpit but not in the file are listed, never touched: disabling the old triage-*/implement
-# trio is the operator's step in the cutover sequence (docs/agents/cezar.md).
+# updated in place and re-enabled, a new one is created enabled. Automations the cockpit holds
+# that the file no longer names are listed; --prune deletes them, so the file is the whole truth.
 #
-#   .ai/scripts/cez-automations.sh [--dry-run]
+#   .ai/scripts/cez-automations.sh [--dry-run] [--prune]
+#
+# --prune refuses to delete an enabled stray: an automation somebody turned on by hand is not
+# retired, and losing it silently is the one mistake this script could make that the file cannot
+# undo. Disable it in the cockpit first, then prune.
 #
 # Needs the service started with CEZ_AUTOMATIONS=1; a 409 from the API says it was not.
 set -euo pipefail
@@ -13,7 +16,14 @@ set -euo pipefail
 API="${CEZ_API:-http://localhost:4321}/api/v1/p/${CEZ_PROJECT:-planned-travel}/automations"
 FILE="$(cd "$(dirname "$0")/../.." && pwd)/docs/agents/cezar-automations.json"
 DRY=0
-[ "${1:-}" = "--dry-run" ] && DRY=1
+PRUNE=0
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY=1 ;;
+    --prune) PRUNE=1 ;;
+    *) printf 'usage: %s [--dry-run] [--prune]\n' "$0" >&2; exit 2 ;;
+  esac
+done
 
 say() { printf '%s\n' "$*" >&2; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
@@ -48,6 +58,17 @@ done
 
 # Definitions the cockpit still holds that the file no longer names.
 known=$(jq -r '.[].name' "$FILE")
-jq -r '.automations[]? | "\(.name) \(.enabled)"' <<<"$LIST" | while read -r name enabled; do
-  grep -qx "$name" <<<"$known" || say "not in file: $name (enabled: $enabled) - disable it in the cockpit if it is retired"
+jq -r '.automations[]? | "\(.name) \(.enabled) \(.id)"' <<<"$LIST" | while read -r name enabled id; do
+  grep -qx "$name" <<<"$known" && continue
+  if [ "$PRUNE" -eq 0 ]; then
+    say "not in file: $name ($id, enabled: $enabled) - rerun with --prune to delete it"
+  elif [ "$enabled" != "false" ]; then
+    say "kept $name ($id): still enabled - disable it in the cockpit, then prune"
+  elif [ "$DRY" -eq 1 ]; then
+    say "would delete $name ($id)"
+  else
+    out=$(curl -sS -X DELETE "$API/$id" -w '\n%{http_code}')
+    [ "$(tail -1 <<<"$out")" = "204" ] || die "DELETE $name -> $(tail -1 <<<"$out"): $(sed '$d' <<<"$out")"
+    say "deleted $name ($id)"
+  fi
 done
