@@ -96,6 +96,9 @@ export default [
       // Cezar checks out one worktree per run under here; each is a whole second copy of the
       // repository, and linting it from the main checkout is both slow and wrong.
       '.ai/cezar/worktrees/**',
+      // Run scratch: transform caches and other artefacts a run writes while it is in flight, so
+      // the repo-wide lint goes red for whoever has a cezar run open. Gitignored like the above.
+      '.ai/cezar/tmp/**',
       'dist/**',
       'playwright-report/**',
       'blob-report/**',
