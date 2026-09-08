@@ -191,10 +191,11 @@ test.describe('MAP-05 — the basemap a member picks is the basemap they get', (
         )
       })
 
-      // The workspace is on Paper, so the ground the same camera framed as
-      // charcoal a moment ago is pale again. This is the observable consequence
-      // of the override having been cleared, rather than the click having
-      // happened.
+      // The workspace is on `auto` and this document is in the light theme, so
+      // the ground the same camera framed as charcoal a moment ago is pale
+      // again. This is the observable consequence of the override having been
+      // cleared, rather than the click having happened: an override still
+      // holding Charcoal would photograph dark here whatever the workspace says.
       await onRoute(context, ATLAS, async (page) => {
         await expectGround(page, 'light')
       })
