@@ -59,7 +59,7 @@ with the most reversible, smallest-scope answer. Override any of them on this PR
 | Q3  | On success, does the dialog navigate into the new trip or stay on the list?                                                        | Stay on `/trips`. Invalidate the list; the new tile appears in its copying state.                                                                                                                                          | Navigating into a planner whose days have not landed shows the reader an empty trip and calls it theirs. The tile is deliberately not a link while `copy_pending_at` is set, and navigating there anyway would contradict that in the same interaction.                                                            |
 | Q4  | Does the completion notification enumerate the modules that came across with no copier registered (budget lines, packing, to-dos)? | No. It carries the counts of what was copied and the dropped-note count.                                                                                                                                                   | What never comes across is told to the reader **before** they commit, in the dialog, where it can change their mind. A second inventory afterwards is a list that goes stale the moment plan `04` registers its copier.                                                                                            |
 | Q5  | Which of the source's own fields does the new trip inherit?                                                                        | `destination`, `summary`, `currency` and `country_codes` come across. `visibility` resets to `private` and the reminder offset resets to the column default.                                                               | Carrying `visibility = 'organization'` across would republish a trip to the whole workspace on the copier's behalf, as a side effect of an action whose subject is the plan. The conservative direction is the safe one here, so this is a default and not a `⚠`.                                                  |
-| Q6  | A cover object that fails to copy in R2 — transient (retry), permanent (delete the target), or tolerated?                          | Tolerated. Logged once with `serializeError`; the copy completes without a cover and the tile falls back to the shipped `CoverArt` placeholder.                                                                            | A missing cover is cosmetic. Deleting a fully copied trip over it, or retrying an entire inventory copy for it, are both larger harms than the loss. The two genuinely fatal classes — source gone, requester no longer a member, ceiling crossed — keep the permanent path the ticket's Definition of Done names. |
+| Q6  | A cover object that fails to copy in R2 — transient (retry), permanent (delete the target), or tolerated?                          | Tolerated. Logged once with `serializeError`; the copy completes without a cover and the tile falls back to the shipped `CoverArt` placeholder.                                                                            | A missing cover is cosmetic. Deleting a fully copied trip over it, or retrying an entire inventory copy for it, are both larger harms than the loss. The three genuinely fatal classes — source gone, requester no longer a member, ceiling crossed — keep the permanent path the ticket's Definition of Done names. |
 | Q7  | Where does `MAX_BOUND_PARAMETERS` live, given that the limit binds `insertMany` in `src/server/repos/base.ts`?                     | Top of `src/server/repos/trips.ts`, with the D1 limit cited beside it — the plan's placement.                                                                                                                              | `base.ts` is one of `README.md`'s six shared paths and this stage owns none of them. A constant there would also read as a promise that `insertMany` chunks, which it does not (`base.ts:219-237`) — the divisor belongs at the call site that applies it.                                                         |
 | Q8  | Does the copying tile poll for completion?                                                                                         | No. It clears on the route's next load; the trip list already revalidates on focus.                                                                                                                                        | A poll is a second source of truth about the same row and a request loop on a screen that may hold twenty tiles. The completion notification `00-S2`'s write path delivers is the active signal.                                                                                                                   |
 | Q9  | Can the reader change anything besides title and dates in the dialog?                                                              | No.                                                                                                                                                                                                                        | PRD #104 decision 4a fixes the field set at title and date range. Every other field is editable on the copy the moment it exists, through the edit sheet `01-S1a` already shipped.                                                                                                                                 |
@@ -83,7 +83,9 @@ count row by row, which is the property that lets it stay in a POST handler at a
 **The asynchronous half — `copyTripContents(scope, sourceTripId, targetTripId)`** — runs in a new
 `trip-copy` queue handler and duplicates the inventory in passes: the day run when the target has
 none, the day map, places, place tags, day assignments, day notes, then every registered copier in
-order, then the cover object, and `copy_pending_at` last.
+order, then the cover object. It does **not** clear `copy_pending_at`: that stamp is the
+handler's last write, after the statistics fan-out and the notification, so a null stamp means
+every downstream effect has landed and not merely that the rows are in.
 
 **The registry — `registerTripCopier(name, fn)`** — is the seam that keeps a table in one plan while
 the copy still reproduces the whole plan. This stage registers nothing; its own four passes are
@@ -115,13 +117,14 @@ TripCopyDialog ─POST──►  copyTripFn
                           ├─ enqueueTask  'trip-copy'  ──────►  handleTripCopy
                           ├─ travel-stats envelopes               ├─ rebuild scope from envelope
                           └─ { tripId, copyPending: true }        ├─ copyTripContents
-                                                                  │   days → places → tags
+                                                                  │   clear target inventory
+                                                                  │   → days → places → tags
                                                                   │   → assignments → notes
                                                                   │   → registered copiers
                                                                   │   → cover object
-                                                                  │   → clear copy_pending_at
                                                                   ├─ travel-stats envelopes
-                                                                  └─ notify(requester, counts)
+                                                                  ├─ notify(requester, counts)
+                                                                  └─ clear copy_pending_at
 ```
 
 ### `src/server/repos/trips.ts` — edit
@@ -178,6 +181,48 @@ runs is `tenantFilter()`-bound to that organization, so a forged envelope can on
 tenant already holds. `TaskBindings.DB` is `D1Database | undefined`
 (`src/server/queue/types.ts:398`); an absent binding is the same hard error `travel-stats` raises at
 `handlers/travel-stats.ts:211-215`.
+
+### Retrying a half-finished copy, and when the stamp may be cleared
+
+The queue delivers at least once and a Worker can die between any two statements, so two properties
+have to hold that the pass list alone does not give.
+
+**Each attempt copies the whole inventory, having first cleared what a previous attempt left.** The
+cheaper design — resume where the last attempt stopped, by re-reading the target's current row count
+before each chunk — does not work here, and the reason is `placeIds`. That map is built from the
+current attempt's insert results, and `places` has no natural key to rebuild it from: `dayIds` is
+correlated by `day_number` in both directions, but two places in one trip may share a name, a
+`sort_order` and every other copied column, and no migration is allowed here to add a correlation
+column. A resumed attempt would hold target ids only for the rows it inserted itself, so the
+`place_tags` and `day_assignments` passes would silently drop the tags and assignments of every place
+an earlier attempt wrote — a 5,000-place source that fails at 3,000 would come back missing 3,000
+places' tags, and still report success. So `copyTripContents` opens by deleting the target's `places`
+and `day_notes`, and its `days` when the target's run is one the copy itself inserted (the undated
+case), which cascades the tags and assignments with them; then it copies from scratch. Redoing three
+thousand rows costs one more pass. Losing three thousand places' tags costs the reader their plan,
+silently.
+
+Clearing the target is safe because the target belongs to the copy alone while `copy_pending_at` is
+set: `startTripCopy` left it with no inventory of its own, the tile is deliberately not a link, and
+no other write path touches a trip in that state. A registered copier is re-run against the new maps
+for the same reason, and is required to clear its own trip-scoped rows before writing them — the
+idempotence its docstring demands is idempotence against a target whose inventory was just rebuilt,
+not merely against its own second call.
+
+**The stamp is the handler's last write.** `copyTripContents` returns its counts without touching
+`copy_pending_at`; the handler clears it only after the `travel-stats` envelopes are enqueued and the
+completion notification is written. Clearing it earlier — as the copy's own last pass — makes a crash
+between the clear and the notification unrecoverable: the redelivery finds a null stamp, returns
+early, and the reader is never told the copy finished, while `tripCount`, `placeCount` and
+`cityCount` stay stale with nothing left to repair them. With the clear last, a null stamp means
+every downstream effect has landed, which is what the redelivery guard needs it to mean.
+
+The two effects a retry then repeats are both idempotent by construction. The `travel-stats`
+envelopes carry `00-S4`'s deterministic `(user, year)` ids, so repeats collapse in the queue. The
+completion notification is folded on the entity: `listForEntity(scope, 'trip', targetTripId)`
+(`src/server/repos/notifications.ts:216`, whose docstring is "Notifications about one entity — used
+to fold duplicates before sending a new one") is read first, and a copy-completed notification
+already there means this delivery writes none.
 
 ### `src/server/storage/objects.ts` — edit
 
@@ -277,6 +322,12 @@ export interface CopierReport {
   rows: number
 }
 
+/**
+ * Copies one module's rows for a trip. Called after the core passes, with the maps they built.
+ * Must be idempotent against a target whose inventory was just rebuilt by a retry — clear this
+ * module's own trip-scoped rows before writing them, because `maps` carries new ids on every
+ * attempt. See "Retrying a half-finished copy".
+ */
 export type TripCopier = (
   scope: TenantScope,
   sourceTripId: string,
@@ -296,6 +347,11 @@ export interface TripCopyResult {
   extras: ReadonlyArray<CopierReport>
 }
 
+/**
+ * Clears whatever a previous attempt wrote into the target, then copies the source's inventory.
+ * Does **not** clear `copy_pending_at` — that stamp is the handler's last write, after the
+ * statistics fan-out and the notification.
+ */
 export async function copyTripContents(
   scope: TenantScope,
   sourceTripId: string,
@@ -506,11 +562,12 @@ fragments.
 | Copying a workspace-visible trip the caller is not a member of | Succeeds. The copy is the caller's own and they own it, which is the point of `visibility = 'organization'`.                                                                                                                              |
 | The `trips` quota is already full                              | `startTripCopy` refuses before any insert — its first write-path statement, copying `createTrip`'s call at `trips.ts:613`. The dialog shows the refusal.                                                                                  |
 | The source's places would cross the `places` ceiling           | Refused synchronously on `<live tenant count> + <source count>`. Asserting current usage alone would admit a copy that crosses on its four-hundredth row, in a consumer, hours later.                                                     |
-| The ceiling is crossed by a **concurrent** write after enqueue | The handler re-asserts `places` with the live count before each chunk. Failing there is the permanent path: the target is deleted and the requester notified. Re-asserting per chunk rather than once is what makes a retried chunk safe. |
+| The ceiling is crossed by a **concurrent** write after enqueue | The handler re-asserts `places` with the live count before each chunk. Failing there is the permanent path: the target is deleted and the requester notified. Re-asserting per chunk rather than once keeps a long copy honest about a ceiling that moved under it. |
 | The source is deleted mid-copy                                 | Permanent. `deleteTrip` on the target (which cascades), then notify.                                                                                                                                                                      |
 | The requester is removed from the workspace mid-copy           | Permanent, at `getMembership`. Same cleanup.                                                                                                                                                                                              |
-| A D1 or network error mid-copy                                 | Transient. The handler throws, the queue retries, and the copy is idempotent per chunk because each chunk re-reads the target's current row count before it writes.                                                                       |
-| The message is redelivered after success                       | `copy_pending_at` is already null; `copyTripContents` returns without writing a second time. This is the assertion that proves the copy cannot double.                                                                                    |
+| A D1 or network error mid-copy                                 | Transient. The handler throws and the queue retries; the next attempt clears whatever the failed one wrote into the target and copies the inventory again, which is what keeps `placeIds` complete — see **Retrying a half-finished copy**. |
+| The message is redelivered after success                       | `copy_pending_at` is already null — and because the stamp is the handler's last write, null also means the notification and the statistics envelopes landed. The handler returns without writing a second time. This is the assertion that proves the copy cannot double. |
+| The worker dies after the copy but before the stamp is cleared | The stamp is still set, so the redelivery redoes the copy from clean, the `travel-stats` envelopes collapse on their deterministic ids, and `listForEntity` folds the completion notification to one. Exactly one notification reaches the requester, and the counts it carries are the retry's. |
 | The cover object fails to copy                                 | Tolerated (Q6). Logged once; the copy completes and the tile falls back to `CoverArt`.                                                                                                                                                    |
 | The source has no cover                                        | The pass is skipped. Not an error.                                                                                                                                                                                                        |
 | A registered copier throws                                     | Transient by default — the queue retries the whole handler, and each copier is required to be idempotent, which is stated in `TripCopier`'s docstring and is the price of registering one.                                                |
@@ -583,15 +640,18 @@ Each step leaves the application working and is verified by
 4. **The copier registry.** `registerTripCopier`, `TripCopier`, `CopierReport`, and the ordered list.
    → _Test:_ two fakes registered in a known order run in that order and both reports reach the
    result; re-registering a name replaces rather than appends.
-5. **`copyTripContents`.** The seven passes, in order, with the chunk loop and `runBatch` for the
-   assignment remap. → _Test:_ the copy is plan and not record — day, place, tag, assignment and note
-   counts equal the source's, and zero expenses, files, reservations and share links; the copy is
-   independent of its source, proved by deleting the source and re-reading the copy whole; the chunk
-   bound holds, asserted as an `insertMany` call count over a source with more rows than one chunk
-   carries; a five-day source into a three-day range gives three days with the overflow's places
-   unscheduled and its notes counted; an undated copy gets a numbered dateless run and a dated one
-   gets `syncTripDays`'s, asserted by the day rows' `date`; the stamp is cleared exactly once and a
-   re-run copies nothing.
+5. **`copyTripContents`.** The clearing pass and then the seven copy passes, in order, with the
+   chunk loop and `runBatch` for the assignment remap. → _Test:_ the copy is plan and not record —
+   day, place, tag, assignment and note counts equal the source's, and zero expenses, files,
+   reservations and share links; the copy is independent of its source, proved by deleting the
+   source and re-reading the copy whole; the chunk bound holds, asserted as an `insertMany` call
+   count over a source with more rows than one chunk carries; a five-day source into a three-day
+   range gives three days with the overflow's places unscheduled and its notes counted; an undated
+   copy gets a numbered dateless run and a dated one gets `syncTripDays`'s, asserted by the day
+   rows' `date`; **an attempt that throws after the places pass is redelivered and leaves the target
+   whole** — tag and assignment counts equal the source's rather than only the last attempt's share,
+   which is the regression test for the `placeIds` gap; and `copy_pending_at` is left untouched,
+   because clearing it is the handler's last write and not this function's.
 6. **The `trip-copy` kind and payload** in `src/server/queue/types.ts`, and the `case` **plus** the
    registry entry in `consumer.ts`. → _Test:_ **a new case in
    `src/server/queue/__tests__/consumer.test.ts` that walks `TASK_KINDS` and asserts every kind
@@ -600,15 +660,18 @@ Each step leaves the application working and is verified by
    a kind with no registered handler" (`:230`) — proves the _fallback_ works rather than that no kind
    needs it. That gap is how five of the ten declared kinds came to dead-letter every message they
    are sent (issue #304). Adding the walk here costs four lines and closes it for every future kind,
-   not only this one. It will fail on the six that are already broken, so it ships with an explicit
+   not only this one. It will fail on the five that are already broken, so it ships with an explicit
    allow-list naming those five and citing #304 — a red test nobody can merge past is the point, and a list
    that shrinks to empty when #304 lands is the receipt.
 7. **`src/server/queue/handlers/trip-copy.ts`.** Scope rebuilt from the envelope, the permanent and
-   transient classification, the cleanup, the notification, the travel-stats fan-out. → _Test:_ a
-   handled message copies the inventory, clears the stamp and writes one notification; a second
-   delivery finds the stamp null and returns without writing; a requester who is no longer a member
-   is permanent with the target gone; a crossed ceiling is permanent; a transient D1 error throws and
-   leaves the target in place; a cover failure is tolerated and the copy still completes.
+   transient classification, the cleanup, the travel-stats fan-out, the notification, and the
+   `copy_pending_at` clear last of all. → _Test:_ a handled message copies the inventory, clears the
+   stamp and writes one notification; a second delivery finds the stamp null and returns without
+   writing; a requester who is no longer a member is permanent with the target gone; a crossed
+   ceiling is permanent; **a delivery that throws after `copyTripContents` but before the clear is
+   redelivered and yields exactly one completion notification and a whole copy**, which is the
+   regression test for the stamp-ordering gap; a transient D1 error throws and leaves the target in
+   place; a cover failure is tolerated and the copy still completes.
 8. **`copyTripFn` and its Zod input.** Including the both-or-neither date refinement and the
    travel-stats envelopes. → _Test:_ a half-open range is refused by the schema; the fan-out chunks at
    `QUEUE_BATCH_MAX`, asserted with 250 envelopes and three calls; a queue failure is logged and the
