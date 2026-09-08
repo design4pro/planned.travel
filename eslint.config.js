@@ -99,6 +99,12 @@ export default [
       // Run scratch: transform caches and other artefacts a run writes while it is in flight, so
       // the repo-wide lint goes red for whoever has a cezar run open. Gitignored like the above.
       '.ai/cezar/tmp/**',
+      // Same thing one directory up: `om-auto-fix-pr` and friends stage a scratch copy of the
+      // repo under `.ai/tmp/<skill>/<run>/`, including a `prettier.config.js` that belongs to
+      // no tsconfig. It is gitignored, so it never reaches CI - it just turns `pnpm lint` red
+      // on the developer's machine until the directory is deleted, which is the gate failing
+      // for a reason that has nothing to do with the change under test.
+      '.ai/tmp/**',
       'dist/**',
       'playwright-report/**',
       'blob-report/**',

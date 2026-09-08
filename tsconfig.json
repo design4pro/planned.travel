@@ -4,7 +4,11 @@
     "**/*.tsx",
     "eslint.config.js",
     "prettier.config.js",
-    "vite.config.js"
+    "vite.config.js",
+    /* Named explicitly because `**` does not descend into a dot-directory: without this line
+       the hook tests compile in no project at all, and vitest transpiles each file on its own,
+       so a type error there is never reported by anything. */
+    ".claude/hooks/__tests__/**/*.ts"
   ],
 
   // Cezar's worktrees live under `.ai/cezar/worktrees/`, a dot-directory the wildcard
