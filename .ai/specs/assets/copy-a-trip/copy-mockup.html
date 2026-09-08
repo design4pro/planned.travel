@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Copy a trip — illustrative mockup</title>
+    <!--
+      Illustrative static mockup for `.ai/specs/2026-09-07-copy-a-trip.md`. Not app code, not a
+      component, not a visual baseline — ADR 0016 retired those and this file compares nothing.
+
+      Colours, radii and spacing are copied from `src/styles/tokens.css` so the contrast and the
+      proportions are honest. The type face is a system stack rather than Geist, the contour covers
+      are hand-drawn impressions rather than `CoverArt`'s generated paths, and the icons are inline
+      strokes rather than lucide's. Nothing here is imported from `src/`.
+    -->
+    <style>
+      :root {
+        --color-surface: #ffffff;
+        --color-surface-2: #f3f1ed;
+        --color-surface-inset: #edebe6;
+        --color-ink: #16150f;
+        --color-ink-2: #403e36;
+        --color-ink-3: #5b5951;
+        --color-ink-4: #6c6a61;
+        --color-brand: #256256;
+        --color-brand-hover: #1c4e45;
+        --color-brand-on: #ffffff;
+        --color-brand-subtle: #e3efeb;
+        --color-danger: #b22f22;
+        --color-border: rgb(22 21 15 / 10%);
+        --color-scrim: rgb(22 21 15 / 45%);
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-full: 9999px;
+        --shadow-panel:
+          0 12px 32px rgb(22 21 15 / 12%), 0 2px 6px rgb(22 21 15 / 8%);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --color-surface: #1a1a18;
+          --color-surface-2: #212120;
+          --color-surface-inset: #292926;
+          --color-ink: #f8f7f4;
+          --color-ink-2: #d8d6d0;
+          --color-ink-3: #adaba3;
+          --color-ink-4: #939188;
+          --color-brand: #5fbba0;
+          --color-brand-hover: #79cbb2;
+          --color-brand-on: #07130f;
+          --color-brand-subtle: #12261f;
+          --color-danger: #f0776a;
+          --color-border: rgb(248 247 244 / 12%);
+          --color-scrim: rgb(0 0 0 / 60%);
+          --shadow-panel:
+            0 12px 32px rgb(0 0 0 / 45%), 0 2px 6px rgb(0 0 0 / 30%);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--color-surface-2);
+        color: var(--color-ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-size: 15px;
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .frame {
+        padding: 28px 24px 40px;
+      }
+
+      /* The menus are absolutely positioned and hang below their card. */
+      .frame.with-menus {
+        padding-bottom: 250px;
+      }
+
+      .frame + .frame {
+        border-top: 1px solid var(--color-border);
+      }
+
+      .frame-label {
+        margin: 0 0 18px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--color-ink-4);
+      }
+
+      /* ------------------------------------------------------------ the grid */
+
+      .grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: 1fr;
+      }
+
+      @media (min-width: 900px) {
+        .grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      /*
+        `overflow` sits on the cover rather than on the card: the real menu is portalled out of the
+        tile by the DropdownMenu primitive, so clipping it to the card would misrepresent it.
+      */
+      .card {
+        position: relative;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface);
+      }
+
+      .cover {
+        position: relative;
+        height: 118px;
+        overflow: hidden;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        background: var(--color-surface-inset);
+      }
+
+      .cover svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .chip {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: var(--radius-full);
+        background: var(--color-surface);
+        color: var(--color-ink-2);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .chip.copying {
+        background: var(--color-brand-subtle);
+        color: var(--color-brand);
+      }
+
+      .spinner {
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: var(--radius-full);
+        opacity: 0.85;
+      }
+
+      .dots {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: var(--radius-full);
+        background: var(--color-surface);
+        color: var(--color-ink-3);
+        font-size: 15px;
+        letter-spacing: 1px;
+      }
+
+      .body {
+        padding: 14px 16px 16px;
+      }
+
+      .title {
+        margin: 0 0 4px;
+        font-size: 18px; /* --text-subtitle */
+        line-height: 1.4;
+        font-weight: 700;
+        letter-spacing: -0.012em;
+      }
+
+      .dest {
+        margin: 0 0 12px;
+        font-size: 14px;
+        color: var(--color-ink-3);
+      }
+
+      .meta {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 13px;
+        color: var(--color-ink-3);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* the skeletonised counts on a copying tile */
+      .skel {
+        display: block;
+        height: 11px;
+        border-radius: var(--radius-sm);
+        background: var(--color-surface-inset);
+      }
+
+      .skel.w-title {
+        height: 18px;
+        width: 62%;
+        margin-bottom: 9px;
+      }
+      .skel.w-dest {
+        width: 44%;
+        margin-bottom: 15px;
+      }
+      .skel.w-a {
+        width: 92px;
+      }
+      .skel.w-b {
+        width: 36px;
+      }
+      .skel.w-c {
+        width: 30px;
+      }
+
+      .cover.copying svg {
+        opacity: 0.35;
+      }
+
+      /* --------------------------------------------------------- the menu */
+
+      .menu {
+        position: absolute;
+        top: 46px;
+        right: 12px;
+        z-index: 3;
+        min-width: 208px;
+        padding: 6px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-panel);
+      }
+
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 9px 10px;
+        border-radius: var(--radius-sm);
+        font-size: 15px;
+        color: var(--color-ink);
+      }
+
+      .menu-item.is-new {
+        background: var(--color-brand-subtle);
+        color: var(--color-brand);
+        font-weight: 600;
+      }
+
+      .menu-item.is-danger {
+        color: var(--color-danger);
+      }
+
+      .menu-item.is-disabled {
+        color: var(--color-ink-4);
+        opacity: 0.55;
+      }
+
+      .menu-sep {
+        height: 1px;
+        margin: 5px 8px;
+        background: var(--color-border);
+      }
+
+      /*
+        At one column the two open menus stack and overlap each other's tile. Only the copying
+        tile's menu is the subject at this width; the new Copy item is shown at 1440.
+      */
+      @media (max-width: 899px) {
+        .with-menus .card:nth-child(2) .menu {
+          display: none;
+        }
+        .frame.with-menus {
+          padding-bottom: 40px;
+        }
+      }
+
+      .menu-note {
+        padding: 2px 10px 7px;
+        font-size: 12px;
+        color: var(--color-ink-4);
+      }
+
+      /* ------------------------------------------------------- the dialog */
+
+      .stage {
+        position: relative;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        /* Tall enough that the centred dialog is never clipped by the stage. */
+        min-height: 620px;
+      }
+
+      @media (max-width: 899px) {
+        .stage {
+          min-height: 760px;
+        }
+      }
+
+      .stage .grid {
+        align-content: start;
+      }
+
+      .scrim {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        background: var(--color-scrim);
+      }
+
+      .dialog {
+        position: absolute;
+        z-index: 3;
+        top: 50%;
+        left: 50%;
+        width: min(468px, calc(100% - 32px));
+        transform: translate(-50%, -50%);
+        padding: 22px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-panel);
+      }
+
+      .dialog h2 {
+        margin: 0 0 6px;
+        font-size: 26px; /* --text-title */
+        line-height: 1.2;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .dialog .standing {
+        margin: 0 0 18px;
+        font-size: 13px;
+        color: var(--color-ink-3);
+      }
+
+      .field {
+        margin-bottom: 14px;
+      }
+
+      .label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-ink-2);
+      }
+
+      .input {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        font-size: 15px;
+        color: var(--color-ink);
+      }
+
+      .input.focused {
+        border-color: var(--color-brand);
+        box-shadow: 0 0 0 3px var(--color-brand-subtle);
+      }
+
+      .input .caret {
+        width: 1px;
+        height: 17px;
+        background: var(--color-brand);
+      }
+
+      .clear {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--color-ink-2);
+      }
+
+      .box {
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--color-ink-4);
+        border-radius: var(--radius-sm);
+      }
+
+      .hint {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        font-size: 13px;
+        line-height: 1.4;
+        color: var(--color-ink-3);
+      }
+
+      .hint .bar {
+        flex: none;
+        width: 2px;
+        background: var(--color-ink-4);
+        opacity: 0.5;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .btn {
+        padding: 10px 17px;
+        border-radius: var(--radius-md);
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .btn.ghost {
+        color: var(--color-ink-2);
+        border: 1px solid var(--color-border);
+      }
+
+      .btn.primary {
+        background: var(--color-brand);
+        color: var(--color-brand-on);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ============================================ frame 1: the copy dialog -->
+    <section class="frame">
+      <p class="frame-label">Proposed — the copy dialog, range shortened</p>
+      <div class="stage">
+        <div class="grid">
+          <article class="card">
+            <div class="cover">
+              <svg
+                viewBox="0 0 320 118"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <g fill="none" stroke="#c9d3ea" stroke-width="1.4">
+                  <path d="M-10 96 C 60 74, 120 104, 190 80 S 300 58, 340 76" />
+                  <path d="M-10 76 C 66 54, 126 84, 196 60 S 300 40, 340 58" />
+                  <path d="M-10 56 C 72 36, 132 64, 202 42 S 300 24, 340 40" />
+                  <path d="M-10 36 C 78 18, 138 44, 208 24 S 300 8, 340 22" />
+                </g>
+              </svg>
+              <span class="chip">Draft</span>
+            </div>
+            <div class="body">
+              <h3 class="title">Patagonia traverse</h3>
+              <p class="dest">Chile and Argentina</p>
+              <div class="meta"><span>Dates to be set</span><span>0</span></div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="cover">
+              <svg
+                viewBox="0 0 320 118"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <g fill="none" stroke="#cfcdc5" stroke-width="1.4">
+                  <path d="M-10 90 C 70 68, 130 98, 200 74 S 300 52, 340 70" />
+                  <path d="M-10 68 C 76 48, 136 76, 206 54 S 300 34, 340 50" />
+                  <path d="M-10 46 C 84 28, 144 54, 214 34 S 300 16, 340 30" />
+                </g>
+              </svg>
+              <span class="chip">Completed</span>
+            </div>
+            <div class="body">
+              <h3 class="title">Dolomites, hut to hut</h3>
+              <p class="dest">South Tyrol, Italy</p>
+              <div class="meta">
+                <span>13 – 20 Jun 2026</span><span>7</span><span>8d</span>
+              </div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="cover">
+              <svg
+                viewBox="0 0 320 118"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <g fill="none" stroke="#e6c9c3" stroke-width="1.4">
+                  <path d="M-10 92 C 64 70, 124 100, 194 76 S 300 54, 340 72" />
+                  <path d="M-10 70 C 70 50, 130 78, 200 56 S 300 36, 340 52" />
+                  <path d="M-10 48 C 78 30, 138 56, 208 36 S 300 18, 340 32" />
+                </g>
+              </svg>
+              <span class="chip">Active</span>
+            </div>
+            <div class="body">
+              <h3 class="title">Lisbon, slowly</h3>
+              <p class="dest">Lisbon, Portugal</p>
+              <div class="meta">
+                <span>17 – 23 Aug 2026</span><span>8</span><span>7d</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="scrim"></div>
+
+        <div
+          class="dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Copy Lisbon, slowly"
+        >
+          <h2>Copy “Lisbon, slowly”</h2>
+          <p class="standing">
+            Days, places and notes come across. Bookings, money, files and
+            people do not.
+          </p>
+
+          <div class="field">
+            <span class="label">Name the copy</span>
+            <div class="input focused">
+              Lisbon, slowly<span class="caret"></span>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="label">Dates</span>
+            <div class="input">17 – 20 Aug 2026</div>
+            <span class="clear"
+              ><span class="box"></span>Copy without dates</span
+            >
+          </div>
+
+          <div class="hint">
+            <span class="bar"></span>
+            <span>
+              That is shorter than the original. The extra days’ places move to
+              ideas, and their notes are dropped.
+            </span>
+          </div>
+
+          <div class="actions">
+            <span class="btn ghost">Cancel</span>
+            <span class="btn primary">Copy trip</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================ frame 2: the copying tile and its menu -->
+    <section class="frame with-menus">
+      <p class="frame-label">
+        Proposed — a tile mid-copy, and the menu it offers
+      </p>
+      <div class="grid">
+        <article class="card">
+          <div class="cover copying">
+            <svg
+              viewBox="0 0 320 118"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <g fill="none" stroke="#e6c9c3" stroke-width="1.4">
+                <path d="M-10 92 C 64 70, 124 100, 194 76 S 300 54, 340 72" />
+                <path d="M-10 70 C 70 50, 130 78, 200 56 S 300 36, 340 52" />
+                <path d="M-10 48 C 78 30, 138 56, 208 36 S 300 18, 340 32" />
+              </g>
+            </svg>
+            <span class="chip copying"
+              ><span class="spinner"></span>Copying</span
+            >
+            <span class="dots">···</span>
+          </div>
+          <div class="body">
+            <span class="skel w-title"></span>
+            <span class="skel w-dest"></span>
+            <div class="meta">
+              <span class="skel w-a"></span><span class="skel w-b"></span
+              ><span class="skel w-c"></span>
+            </div>
+          </div>
+          <div class="menu">
+            <div class="menu-item is-disabled">Copy</div>
+            <div class="menu-item is-disabled">Favourite</div>
+            <div class="menu-item is-disabled">Edit</div>
+            <div class="menu-item is-disabled">Archive</div>
+            <div class="menu-note">Wait for the copy to finish.</div>
+            <div class="menu-sep"></div>
+            <div class="menu-item is-danger">Delete</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="cover">
+            <svg
+              viewBox="0 0 320 118"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <g fill="none" stroke="#e6c9c3" stroke-width="1.4">
+                <path d="M-10 92 C 64 70, 124 100, 194 76 S 300 54, 340 72" />
+                <path d="M-10 70 C 70 50, 130 78, 200 56 S 300 36, 340 52" />
+                <path d="M-10 48 C 78 30, 138 56, 208 36 S 300 18, 340 32" />
+              </g>
+            </svg>
+            <span class="chip">Active</span>
+            <span class="dots">···</span>
+          </div>
+          <div class="body">
+            <h3 class="title">Lisbon, slowly</h3>
+            <p class="dest">Lisbon, Portugal</p>
+            <div class="meta">
+              <span>17 – 23 Aug 2026</span><span>8</span><span>7d</span>
+            </div>
+          </div>
+          <div class="menu">
+            <div class="menu-item is-new">Copy</div>
+            <div class="menu-item">Favourite</div>
+            <div class="menu-item">Edit</div>
+            <div class="menu-item">Archive</div>
+            <div class="menu-sep"></div>
+            <div class="menu-item is-danger">Delete</div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </body>
+</html>
