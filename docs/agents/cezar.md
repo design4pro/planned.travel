@@ -122,13 +122,16 @@ Provisioning is `scripts/worktree/bootstrap.sh --profile worktree --no-seed` (de
 `.ai/scripts/test-env-up.sh` on a free port from 3030-3040 (`om-prepare-test-env` contract).
 
 Three older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`) and the scripts in
-`scripts/agent/` they call stay in the tree until PR C deletes them; their automations are disabled
-in the cutover below and nothing starts them.
+`scripts/agent/` they call stay in the tree until PR C deletes them; the automations that used to
+start them (`triage-opened`, `triage-relabel`, `implement`) are gone from the cockpit, so nothing
+does.
 
 ## Automations (`docs/agents/cezar-automations.json`)
 
 Registered with the running cockpit by `.ai/scripts/cez-automations.sh` (idempotent: update in
-place or create enabled; it lists definitions the cockpit holds that the file no longer names).
+place or create enabled; it lists definitions the cockpit holds that the file no longer names, and
+`--prune` deletes them, so this file is the whole truth about what can start a run - it refuses to
+delete an enabled stray, which is somebody's deliberate act, not a leftover).
 Six definitions: `issue-groom` on `issue.opened` with `authors` naming the human maintainers;
 `issue-regroom`, `issue-autofix`, `issue-spec` on `issue.labeled` with `changedLabels` `groom` /
 `autofix` / `spec`; `pr-autopilot` on `pull_request.opened`, again with `authors`; and
@@ -184,6 +187,28 @@ deliberately not a trigger - the script arms only on the review bot's threads, b
 disagreement with a person is settled by talking. Rehearse the decision against any live PR with
 `GH_REPO=… PR_NUMBER=… HEAD_SHA=… node scripts/ci/review-threads-label.mjs --dry-run`.
 
+## Prompt templates (`docs/agents/cezar-prompt-templates.json`)
+
+Installed into the cockpit by `.ai/scripts/cez-prompt-templates.sh` (`--dry-run` lists what it
+would write). One template per `om-*` skill, 37 of them: the task text with its argument
+placeholder, the flags, and the preconditions the skill's `SKILL.md` and its `.ai/skills/`
+override state, phrased as directives because the text is sent as the task. They replace cezar's
+five generic built-ins. The installer `PUT`s `promptTemplates` to
+`/api/v1/p/planned-travel/ui-state`, which merges shallowly at the top level, so it rewrites that
+one array and leaves every other preference alone; the store is `.ai/cezar/ui-state.json`, which
+is gitignored because it also accumulates per-developer state (`skillUsage`, `lastTask`,
+`appearance`). Edit the tracked JSON and re-run the script - never the ui-state file by hand.
+
+Cezar's normalizer truncates and drops silently, so the script checks the caps first: at most 50
+templates, `label` 80 characters, `text` 2000, ids unique and matching an installed skill.
+A template whose `skills` array names the skill selected in the composer is applied automatically,
+but only while the composer is still pristine. That is why only the 19 skills taking a free-text
+brief or no argument carry `skills`; the 18 that take an issue number, a PR number, a spec path or
+a URL carry none and are reached through "Insert a template". From the GitHub issue or PR panel an
+auto-applied template lands as `<number>` + the template text, and a second token there reads as a
+brief to `om-auto-fix-issue` - the same hazard the automations avoid by sending
+`{{github.number}}` alone.
+
 ## Housekeeping
 
 Cezar has no scheduler. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
@@ -207,8 +232,11 @@ must stop before `status:*` is stripped and the surviving labels renamed.
 
 1. Unload the sweeper: `launchctl bootout gui/$(id -u)/dev.planned-travel.sweeper` and delete
    `~/Library/LaunchAgents/dev.planned-travel.sweeper.plist`.
-2. In the cockpit (Automations) disable `triage-opened`, `triage-relabel` and `implement`. Leave
-   them disabled until PR C; do not delete yet.
+2. In the cockpit (Automations) disable `triage-opened`, `triage-relabel` and `implement`, then
+   delete them with `bash .ai/scripts/cez-automations.sh --dry-run --prune` and the same without
+   the flag. All three are superseded: `implement` by `issue-autofix`, and the triage pair by the
+   groom layer - a Sentry finding reaches it because the sweep files `groom` on creation and
+   GitHub records that as a `labeled` timeline event, which is what the poller reads.
 3. Snapshot: `gh label list --limit 200 --json name,color,description > docs/agents/migration/labels-$(date +%F).json`
    and `gh issue list --state open --limit 500 --json number,labels > docs/agents/migration/issues-$(date +%F).json`;
    commit both.
