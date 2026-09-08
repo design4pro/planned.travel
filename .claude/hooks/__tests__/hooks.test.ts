@@ -126,6 +126,8 @@ describe('git-guardrails.sh', () => {
     'pnpm deploy',
     'pnpm run deploy',
     'pnpm -s run deploy',
+    'pnpm -r deploy',
+    'pnpm --filter web deploy',
     'pnpm deploy:staging',
     'pnpm db:migrate:remote',
     'pnpm db:migrate:remote:staging',
@@ -289,6 +291,10 @@ describe('guard-generated.sh', () => {
   it('blocks generated files for everyone', () => {
     expect(edit(`${root}/src/routeTree.gen.ts`).status).toBe(2)
     expect(edit(`${root}/drizzle/0001_x.sql`).status).toBe(2)
+    // The journal, not only the SQL: a hand-edited snapshot is invisible to the drift check.
+    expect(edit(`${root}/drizzle/meta/0001_snapshot.json`).status).toBe(2)
+    // Generated from wrangler.jsonc by `pnpm cf-typegen`.
+    expect(edit(`${root}/worker-configuration.d.ts`).status).toBe(2)
     expect(edit(`${root}/src/x.ts`).status).toBe(0)
   })
 

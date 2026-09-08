@@ -120,7 +120,7 @@ echo "$scan" | grep -Eq 'wrangler\s+d1\s+(migrations\s+apply|execute)\b.*--remot
 # repo. A list copied from elsewhere would match nothing here and look protective while being
 # inert. Longest alternative first, and flags and a filter argument are skipped over, so
 # `pnpm -s run deploy` and `pnpm --filter web deploy` are the same deploy.
-echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+((-{1,2}[^[:space:]]+|run)\s+)*(deploy:staging|db:migrate:remote:staging|db:migrate:remote|deploy)(\s|$)' \
+echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+((-{1,2}[^[:space:]]+|[a-z]+)\s+)*(deploy:staging|db:migrate:remote:staging|db:migrate:remote|deploy)(\s|$)' \
   && agent_block 'pnpm deploy|remote migration' 'Deploys and remote migrations are a human decision; end the run as blocked.'
 
 # GitHub Actions only. .github/workflows/claude-code-review.yml runs on every pull_request
