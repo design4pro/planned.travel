@@ -20,10 +20,16 @@ function hook(
   toolInput: Record<string, string>,
   env: Record<string, string> = {},
   cwd?: string,
+  toolName?: string,
 ) {
   const { PATH, HOME } = process.env
   const r = spawnSync('bash', [join(HOOKS, name)], {
-    input: JSON.stringify({ tool_input: toolInput }),
+    // `tool_name` is omitted unless a case names it, so the hooks stay exercised on the shape
+    // they see when a harness does not send it: `pattern` is then read as a path, the safe read.
+    input: JSON.stringify({
+      ...(toolName ? { tool_name: toolName } : {}),
+      tool_input: toolInput,
+    }),
     encoding: 'utf8',
     env: {
       PATH: PATH ?? '',
@@ -75,6 +81,166 @@ describe('git-guardrails.sh', () => {
     for (const c of ['pnpm add left-pad', 'printenv', 'env']) {
       expect(bash(c).status).toBe(0)
     }
+  })
+
+  // The pre-commit hook is the fast gate; skipping it is how a red tree reaches a pull request.
+  it.each([
+    'git commit --no-verify -m "x"',
+    'git commit -m "x" --no-verify',
+    'git push --no-verify origin HEAD',
+    'git commit -n -m "x"',
+  ])('blocks %s for everyone', (command) => {
+    const r = bash(command)
+    expect(r.status).toBe(2)
+    expect(r.stderr).toContain('--no-verify')
+  })
+
+  // Tier one of the Cloudflare rules, refused in every session: a secret named on a command line
+  // is already in the transcript, and a deleted store does not come back - deleting the Worker
+  // takes its routes, its Durable Object bindings and the live deployment with it.
+  it('blocks secret writes and store deletion in every mode', () => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash('wrangler secret put BETTER_AUTH_SECRET', env).status).toBe(2)
+      expect(bash('pnpm exec wrangler secret list', env).status).toBe(2)
+      expect(bash('wrangler d1 delete planned-travel-db', env).status).toBe(2)
+      expect(bash('wrangler r2 bucket delete tiles', env).status).toBe(2)
+      expect(
+        bash('wrangler kv namespace delete --namespace-id=1', env).status,
+      ).toBe(2)
+      expect(bash('wrangler delete planned-travel', env).status).toBe(2)
+    }
+  })
+
+  // Tier two: shipping is undone by shipping again, so a developer keeps the ordinary approval
+  // prompt and only an unattended run - which has nobody to answer it - is refused.
+  //
+  // The package-script names are this repository's. money-tracker.online spells the remote
+  // migrations `db:migrate:prod` and `db:migrate:staging`; copying that list here would match
+  // nothing and leave `pnpm db:migrate:remote` unguarded while looking protected.
+  const SHIPPING = [
+    'wrangler deploy',
+    'npx wrangler deploy',
+    './node_modules/.bin/wrangler deploy',
+    'wrangler versions upload',
+    'wrangler versions deploy',
+    'wrangler triggers deploy',
+    'wrangler rollback',
+    'wrangler d1 execute planned-travel-db --remote --command "DROP TABLE trips"',
+    'wrangler d1 migrations apply planned-travel-db --remote',
+    'pnpm deploy',
+    'pnpm run deploy',
+    'pnpm -s run deploy',
+    'pnpm -r deploy',
+    'pnpm --filter web deploy',
+    'pnpm deploy:staging',
+    'pnpm db:migrate:remote',
+    'pnpm db:migrate:remote:staging',
+  ]
+  it.each(SHIPPING)('blocks %s in an agent run', (command) => {
+    expect(bash(command, AGENT).status).toBe(2)
+  })
+  it.each(SHIPPING)(
+    'leaves %s to the prompt outside an agent run',
+    (command) => {
+      expect(bash(command).status).toBe(0)
+    },
+  )
+
+  it('leaves the local database alone in both modes', () => {
+    for (const env of [{}, AGENT]) {
+      expect(bash('pnpm db:migrate:local', env).status).toBe(0)
+      expect(
+        bash('wrangler d1 migrations apply planned-travel-db --local', env)
+          .status,
+      ).toBe(0)
+      expect(
+        bash('wrangler d1 migrations list planned-travel-db', env).status,
+      ).toBe(0)
+    }
+  })
+
+  // A rule matches the command, not prose about it. This is not hypothetical: the commit that
+  // moved these tests was itself refused, because its message named a git command as text.
+  //
+  // Which commands get that reading is a closed list, and the list is of commands that *cannot*
+  // execute a string they are handed - not of the ones that can. See the two tests below for the
+  // four bypasses the other direction produced.
+  it('reads a quoted mention as text, not as an invocation', () => {
+    expect(bash('grep -rn "wrangler secret" docs/').status).toBe(0)
+    expect(
+      bash('git commit -m "docs: say why wrangler secret put is denied"')
+        .status,
+    ).toBe(0)
+    expect(
+      bash('git commit -m "chore: fix the pnpm deploy script"', AGENT).status,
+    ).toBe(0)
+    expect(
+      bash("git commit -F - <<'EOF'\nchore: document pnpm deploy\nEOF", AGENT)
+        .status,
+    ).toBe(0)
+    // A heredoc written to a file is text for the same reason a commit message is - `cat` runs
+    // nothing. This is the case that keeps the fix above writable by the agent that writes it.
+    expect(
+      bash("cat > docs/DEPLOY.md <<'EOF'\nnever run wrangler secret put\nEOF")
+        .status,
+    ).toBe(0)
+  })
+
+  // The exemption used to be a denylist of ways to run a string - ` -c `, `eval `, `xargs`,
+  // matched as raw substrings anywhere in the command. Every one of these got past it, and each
+  // was reported against this hook rather than theorised.
+  it('reads every string a shell will execute as the command, listed or not', () => {
+    expect(bash('bash -c "wrangler deploy"', AGENT).status).toBe(2)
+    expect(bash(`sh -c 'wrangler secret put X'`).status).toBe(2)
+    expect(bash(`eval "wrangler d1 delete planned-travel-db"`).status).toBe(2)
+    // Combined short options carry no ` -c ` substring, so the old check read them as prose.
+    expect(bash('bash -lc "wrangler deploy"', AGENT).status).toBe(2)
+    expect(bash(`sh -ec "wrangler secret put X"`).status).toBe(2)
+    expect(bash(`node -e 'run("wrangler deploy")'`, AGENT).status).toBe(2)
+    // A heredoc redirected into a shell is executed too, and the old shape deleted its body
+    // outright - so a tier-one rule, the tier that holds in every session, allowed this.
+    expect(bash("bash <<'EOF'\ngit reset --hard HEAD~5\nEOF").status).toBe(2)
+    expect(bash("sh <<'EOF'\nwrangler secret put X\nEOF", AGENT).status).toBe(2)
+    // `sed` and `awk` can execute a string as well - GNU `s///e` and `system()` - so neither is
+    // on the prose list, even though a substitution pattern reads exactly like prose.
+    expect(bash(`sed -i '' 's/wrangler secret/x/' docs/DEPLOY.md`).status).toBe(
+      2,
+    )
+  })
+
+  // ...and the over-broad half of the same substring match: an unrelated flag, or a word in a
+  // message, disabled the stripping and made the whole message match as a command.
+  it('does not read an unrelated flag as a shell invocation', () => {
+    expect(bash('grep -c "wrangler secret" docs/DEPLOY.md').status).toBe(0)
+    expect(
+      bash('git commit -m "docs: -c flag and wrangler secret put"').status,
+    ).toBe(0)
+  })
+
+  // Quoting is not commenting: the shell drops the quote and keeps the word, so a quoted verb is
+  // still the verb. Deleting quoted *content* meant the verb vanished with it, and the tier this
+  // file's header calls "everyone, every session, no exceptions" let all three of these through.
+  it('sees through a quoted verb in every session', () => {
+    expect(bash('wrangler "secret" put BETTER_AUTH_SECRET').status).toBe(2)
+    expect(bash('git "reset" --hard HEAD~5').status).toBe(2)
+    expect(bash('git push "--force" origin main').status).toBe(2)
+  })
+
+  // Under GitHub Actions nothing is discarded at all, not even a commit message: the input is an
+  // attacker-authored diff. A false positive there costs one unposted comment; a false negative
+  // costs an approval on a crafted pull request.
+  it('discards nothing under GitHub Actions', () => {
+    expect(bash('gh pr "review" 12 --approve', ACTIONS).status).toBe(2)
+    expect(bash('gh "pr" review 12 --approve', ACTIONS).status).toBe(2)
+    expect(bash('wrangler "secret" put X', ACTIONS).status).toBe(2)
+    // A backslash quotes exactly one character, and the shell drops it the same way - so
+    // deleting only the two quote marks left this running `gh pr review` unmatched.
+    expect(bash('gh pr \\review 12 --approve', ACTIONS).status).toBe(2)
+    expect(bash('gh \\pr review 12 --approve', ACTIONS).status).toBe(2)
+    // ...and the trade is deliberate: the same string is read as prose for a cezar run.
+    expect(
+      bash('git commit -m "chore: mention wrangler secret put"', AGENT).status,
+    ).toBe(0)
   })
 
   it.each([
@@ -193,6 +359,10 @@ describe('guard-generated.sh', () => {
   it('blocks generated files for everyone', () => {
     expect(edit(`${root}/src/routeTree.gen.ts`).status).toBe(2)
     expect(edit(`${root}/drizzle/0001_x.sql`).status).toBe(2)
+    // The journal, not only the SQL: a hand-edited snapshot is invisible to the drift check.
+    expect(edit(`${root}/drizzle/meta/0001_snapshot.json`).status).toBe(2)
+    // Generated from wrangler.jsonc by `pnpm cf-typegen`.
+    expect(edit(`${root}/worker-configuration.d.ts`).status).toBe(2)
     expect(edit(`${root}/src/x.ts`).status).toBe(0)
   })
 
@@ -212,6 +382,8 @@ describe('guard-generated.sh', () => {
     '.ai/browsers/playwright.md',
     '.ai/skills/om-fix/SKILL.md',
     '.ai/scripts/e2e.sh',
+    'docs/agents/reference.md',
+    'docs/agents/out-of-scope.md',
     '.ai/scripts/test-env-up.sh',
     'scripts/agent/cez-lib.sh',
     '.npmrc',
@@ -269,10 +441,72 @@ describe('guard-read.sh', () => {
   const read = (
     input: Record<string, string>,
     env: Record<string, string> = AGENT,
-  ) => hook('guard-read.sh', input, env, root)
+    toolName?: string,
+  ) => hook('guard-read.sh', input, env, root, toolName)
 
-  it('is inert outside agent runs', () => {
+  // Tier one. The secret files are refused to every caller, not only to a run: since
+  // `.claude/settings.json` became hooks-only this is the only thing enforcing that rule for the
+  // file-reading tools.
+  it('denies the secret files in every session', () => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(read({ file_path: '.dev.vars' }, env).status).toBe(2)
+      expect(read({ file_path: '.env.local' }, env).status).toBe(2)
+      expect(read({ file_path: '.ai/qa/test-env.env' }, env).status).toBe(2)
+      expect(
+        read({ file_path: '.e2e-tiles/basemap.pmtiles' }, env).status,
+      ).toBe(2)
+      // ...and the counter-cases, so the rule cannot quietly widen onto ordinary files.
+      expect(
+        read({ file_path: join(root, '.dev.vars.example') }, env).status,
+      ).toBe(0)
+      expect(read({ file_path: join(root, 'src/a.ts') }, env).status).toBe(0)
+    }
+  })
+
+  // Grep's `pattern` searches file *contents* and is a regex; `process.env` is not a request to
+  // read `.env`. Its `glob` input is the path filter, and that is what gets checked.
+  it.each([
+    'process.env',
+    'import.meta.env',
+    'import.meta.env.VITE_APP_URL',
+    'c.env.DB',
+  ])('allows the Grep content regex %s in every session', (pattern) => {
+    expect(read({ pattern }, {}, 'Grep').status).toBe(0)
+    expect(read({ pattern }, AGENT, 'Grep').status).toBe(0)
+  })
+
+  it('checks the Grep glob filter, which is a path', () => {
+    expect(
+      read({ pattern: 'SECRET', glob: '**/.dev.vars' }, {}, 'Grep').status,
+    ).toBe(2)
+    expect(
+      read({ pattern: 'SECRET', glob: '**/*.ts' }, {}, 'Grep').status,
+    ).toBe(0)
+  })
+
+  // A harness that sends no `tool_name` leaves `pattern` ambiguous, so its shape decides: a
+  // separator or a glob metacharacter makes it a path, and a bare regex stays a content search.
+  // Nothing is lost by the second half - the file itself is still refused when it is read.
+  it('reads an unlabelled path-shaped pattern as a path', () => {
+    expect(read({ path: root, pattern: '**/.dev.vars' }).status).toBe(2)
+    expect(read({ pattern: '../**/*.ts' }).status).toBe(2)
+    expect(read({ pattern: '*.env.local' }).status).toBe(2)
+  })
+
+  it('reads an unlabelled bare pattern as a content search', () => {
+    expect(read({ pattern: 'process.env' }).status).toBe(0)
+    expect(read({ pattern: 'import.meta.env' }).status).toBe(0)
+  })
+
+  // Tier two. Confinement is the agent-run tier: a developer legitimately reads outside the
+  // checkout, and another run's state is not this run's business.
+  it('confines a run to the worktree in agent runs only', () => {
     expect(read({ file_path: '/etc/passwd' }, {}).status).toBe(0)
+    expect(read({ file_path: '.git/config' }, {}).status).toBe(0)
+    expect(read({ file_path: '.ai/cezar/runs/x.json' }, {}).status).toBe(0)
+    expect(read({ file_path: '/etc/passwd' }, AGENT).status).toBe(2)
+    expect(read({ file_path: '.git/config' }, AGENT).status).toBe(2)
+    expect(read({ file_path: '/etc/passwd' }, ACTIONS).status).toBe(2)
   })
 
   it('allows reads inside the worktree, including files that do not exist yet', () => {

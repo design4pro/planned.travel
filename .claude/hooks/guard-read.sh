@@ -1,14 +1,45 @@
 #!/usr/bin/env bash
-# PreToolUse hook (Read|Glob|Grep), agent runs only (CEZ_TASK_ID or GITHUB_ACTIONS): an agent
-# reads inside its own worktree and never the files that hold secrets or other runs' state.
+# PreToolUse hook (Read|Glob|Grep). Two tiers.
+#
+# Tier one - the secret files, refused to every caller: .dev.vars*, .env*, .ai/qa/test-env.env and
+# the basemap cache. Since `.claude/settings.json` became hooks-only this hook is what carries that
+# rule for the file-reading tools. It guards those tools only: `cat .dev.vars` is a Bash call and
+# reaches git-guardrails.sh instead, which does not stop it - so this is a guard against the
+# obvious read, not a containment boundary.
+#
+# Tier two - agent runs only (CEZ_TASK_ID or GITHUB_ACTIONS): a run reads inside its own worktree
+# and never another run's state or git internals, while a developer at the keyboard legitimately
+# reads outside the checkout. .ai/runs, .ai/analysis, .ai/qa and .ai/tmp stay readable either way -
+# the om-* skills write their artefacts there; only the test-env credentials file under .ai/qa/ is
+# denied.
+#
 # Contract: exit 2 blocks the tool call and feeds stderr back to the model; exit 0 allows.
 set -euo pipefail
 
-[ -n "${CEZ_TASK_ID:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ] || exit 0
+agent_run() { [ -n "${CEZ_TASK_ID:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; }
 
 input=$(cat)
+tool=$(printf '%s' "$input" | jq -r '.tool_name // empty')
 target=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.path // empty')
 pattern=$(printf '%s' "$input" | jq -r '.tool_input.pattern // empty')
+glob=$(printf '%s' "$input" | jq -r '.tool_input.glob // empty')
+
+# Which input names a path depends on the tool. `Glob` matches its `pattern` against paths, but
+# `Grep` searches file *contents* with it and filters paths with `glob` - so `process.env` is a
+# search for that source expression, not a request to read `.env`.
+case "$tool" in
+  Grep) path_pattern="$glob" ;;
+  Glob) path_pattern="${pattern:-$glob}" ;;
+  *)
+    # No `tool_name` in the payload: `pattern` could be either, so it counts as a path only when
+    # it is shaped like one - a separator or a glob metacharacter. That keeps `**/.dev.vars`
+    # denied without reading a bare content regex as a request for the file it names.
+    case "$pattern" in
+      */* | *\** | *\?* | *\[*) path_pattern="$pattern" ;;
+      *) path_pattern="$glob" ;;
+    esac
+    ;;
+esac
 
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 root=$(cd "$root" && pwd -P)
@@ -27,38 +58,56 @@ resolve() {
 }
 
 deny() {
+  echo "BLOCKED: reading '$1' is not allowed ($2). The user has prevented you from doing this." >&2
+  exit 2
+}
+
+deny_agent() {
   echo "BLOCKED (agent run): reading '$1' is outside what a run may see ($2)." >&2
   exit 2
 }
 
 check() { # path
   local abs rel
-  # A `..` component cannot be resolved lexically when the directory does not exist, so
-  # it is refused outright; a run names files by their plain path.
-  case "$1" in ..|../*|*/..|*/../*) deny "$1" "outside the worktree" ;; esac
   abs=$(resolve "$1")
-  case "$abs" in
-    "$root"|"$root"/*) ;;
-    *) deny "$1" "outside the worktree" ;;
-  esac
+  # Outside the worktree `rel` stays absolute, so the patterns below still match a secret file
+  # sitting in some other checkout.
   rel="${abs#"$root"/}"
+
+  # Tier one: refused in every session.
   case "$rel" in
     .dev.vars*|*/.dev.vars*|.env|.env.*|*/.env|*/.env.*)
       case "$rel" in *.example) ;; *) deny "$1" "environment file" ;; esac ;;
   esac
   case "$rel" in
+    .ai/qa/test-env.env|*/.ai/qa/test-env.env) deny "$1" "test-env credential file" ;;
     .e2e-tiles|.e2e-tiles/*|*/.e2e-tiles|*/.e2e-tiles/*) deny "$1" "basemap cache" ;;
-    .ai/cezar/runs*|.ai/cezar/worktrees*|.ai/cezar/tmp*) deny "$1" "cezar run state" ;;
-    .ai/qa/test-env.env) deny "$1" "test-env credential file" ;;
-    .git/*) deny "$1" "git internals" ;;
+  esac
+
+  # Tier two: confinement, for agent runs only.
+  agent_run || return 0
+  # A `..` component cannot be resolved lexically when the directory does not exist, so
+  # it is refused outright; a run names files by their plain path.
+  case "$1" in ..|../*|*/..|*/../*) deny_agent "$1" "outside the worktree" ;; esac
+  case "$abs" in
+    "$root"|"$root"/*) ;;
+    *) deny_agent "$1" "outside the worktree" ;;
+  esac
+  case "$rel" in
+    .ai/cezar/runs*|.ai/cezar/worktrees*|.ai/cezar/tmp*) deny_agent "$1" "cezar run state" ;;
+    .git/*) deny_agent "$1" "git internals" ;;
   esac
 }
 
 [ -n "$target" ] && check "$target"
-# A Glob pattern that walks upwards or names a denied file is a read of it.
-case "$pattern" in
-  ../*|*/../*|/*) check "$pattern" ;;
-  *.dev.vars*|*.env|*.env.*|*.e2e-tiles*|*test-env.env*) deny "$pattern" "pattern names a protected file" ;;
+# A path pattern that walks upwards or names a denied file is a read of it.
+case "$path_pattern" in
+  '') ;;
+  ../*|*/../*|/*) check "$path_pattern" ;;
+esac
+case "$path_pattern" in
+  '') ;;
+  *.dev.vars*|*.env|*.env.*|*.e2e-tiles*|*test-env.env*) deny "$path_pattern" "pattern names a protected file" ;;
 esac
 
 exit 0
