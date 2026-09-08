@@ -1503,8 +1503,11 @@ describe('tenant isolation', () => {
         beta.userSettingsId,
       )
       expect(betaUserRow.mapStyle).toBeNull()
+      // Beta never chose one, so this is the workspace default — `auto` since
+      // `drizzle/0010_basemap_default.sql`. What the row proves is that alpha's write did not
+      // reach it, not which id the default happens to be.
       expect((await getEffectiveSettings(beta.tenant.scope)).mapStyle).toBe(
-        'planned-light',
+        'auto',
       )
     })
   })
