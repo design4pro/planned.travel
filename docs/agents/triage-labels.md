@@ -78,8 +78,7 @@ and nothing else. Deleting a label strips it from history too, so a closed issue
 that carried one now shows one label fewer; `docs/agents/migration/labels-2026-09-08.json` and
 `issues-2026-09-08.json` are the snapshot taken immediately before. The four superseded skills
 (`triage-ticket`, `plan-feature`, `plan-area`, `implement-ticket`) and their `.ai/cezar/workflows/`
-YAMLs still spell the old vocabulary; they are unregistered and dormant, and retiring them is the
-remaining part of PR C.
+YAMLs spelled the old vocabulary; PR C deleted them, so nothing in the tree reads a retired name.
 
 ## Sources of issues
 

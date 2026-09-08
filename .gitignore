@@ -105,8 +105,8 @@ src/impeccable/
 # because `upload-artifact` skips a dot-prefixed path as hidden.
 unit-blob-reports/
 
-# Per-run scratch of the cezar workflows (scripts/agent/): port pin, ladder verdicts and
-# digests, handoff. Never committed; the agent's PR carries what matters.
+# Per-run scratch of the retired repository-orchestrated workflows: port pin, ladder verdicts
+# and digests, handoff. Never committed; the agent's PR carries what matters.
 .agent/
 
 # The SQL the airport loader generates on its way to D1 (scripts/seed/airports.mjs

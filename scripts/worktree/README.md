@@ -47,14 +47,13 @@ Anything else is a hard error rather than a silently ignored typo.
 `.claude/settings.json` runs it from the `SessionStart` hook on startup and on resume, with a
 generous timeout because the first run in a fresh worktree installs dependencies.
 
-## Its relationship to `scripts/agent/setup-e2e.sh`
+## Its relationship to `.ai/scripts/test-env-up.sh`
 
-That script is the third profile and deliberately stays separate. It mirrors
-`.github/actions/e2e-env/action.yml` step for step, gates the e2e suite in CI, pins port 3030
-because `playwright.config.ts` insists on the reserved range, and writes a `.dev.vars` marked as
-a sandcastle throwaway so an accidental run on a real checkout aborts before touching anything.
-Folding it in here would couple the e2e gate to a convenience script. Use it for automated rounds,
-this one for working on the app.
+That script is the third profile and deliberately stays separate. It starts the app for the
+validation gate's e2e step, takes a port from 3030-3040 because `playwright.config.ts` insists on
+the reserved range outside CI, and treats provisioning as this script's job rather than repeating
+it. Folding it in here would couple the e2e gate to a convenience script. Use it for automated
+rounds, this one for working on the app.
 
 ## The port, and why not 3000
 

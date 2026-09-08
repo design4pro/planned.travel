@@ -125,7 +125,7 @@ perform no other operation on the account.
 
 Since ADR 0016 CI no longer pulls the basemap, so `E2E_TILES_KEY` and the token
 are needed here only by a session that wants real tiles in its own dev server -
-`scripts/agent/setup-e2e.sh`, or the `basemap` input of `.github/actions/e2e-env`
+`pnpm worktree:bootstrap`, or the `basemap` input of `.github/actions/e2e-env`
 switched on deliberately.
 
 Nothing from `.dev.vars.example` goes here. `BETTER_AUTH_SECRET` is generated
