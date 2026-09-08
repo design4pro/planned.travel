@@ -26,7 +26,11 @@ esac
 
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 rel="${file_path#"$root"/}"
-if printf '%s' "$rel" | grep -Eq '^(\.github/|\.claude/|\.husky/|\.ai/cezar/|\.ai/agentic\.config\.json$|\.ai/trackers/|\.ai/browsers/|\.ai/skills/|\.ai/scripts/|scripts/agent/|\.npmrc$|pnpm-workspace\.yaml$)'; then
+# docs/agents/reference.md and out-of-scope.md are in the list for a different reason than the
+# rest: they are not configuration, they are the boundary. reference.md carries the clean-room
+# rule and out-of-scope.md says what this product deliberately does not do, so a run that meets a
+# scope conflict must report it, not resolve it by editing the document that defines the scope.
+if printf '%s' "$rel" | grep -Eq '^(\.github/|\.claude/|\.husky/|\.ai/cezar/|\.ai/agentic\.config\.json$|\.ai/trackers/|\.ai/browsers/|\.ai/skills/|\.ai/scripts/|scripts/agent/|docs/agents/reference\.md$|docs/agents/out-of-scope\.md$|\.npmrc$|pnpm-workspace\.yaml$)'; then
   echo "BLOCKED (agent run): '$rel' configures the agent; a run never edits it. Note it under 'Noticed but not touching' and carry on." >&2
   exit 2
 fi
