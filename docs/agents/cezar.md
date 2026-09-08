@@ -242,7 +242,8 @@ must stop before `status:*` is stripped and the surviving labels renamed.
    commit both.
 4. `bash .ai/scripts/labels-cutover.sh` (dry run), read it, then `--apply`: holds move to
    `blocked`, `status:*` leaves every open issue, `run:*`, `type:*` and `agent-docs` move to their
-   SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels wait for PR C.
+   SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels waited for
+   PR C, and were deleted on 2026-09-08 (docs/agents/triage-labels.md).
 5. The cockpit service already runs 0.10.1 (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`);
    confirm `.ai/cezar/config.json` in the main checkout is the merged one, apply the host patches
    (`bash .ai/scripts/cezar-host-patch.sh`, which also restarts the service so it reloads the

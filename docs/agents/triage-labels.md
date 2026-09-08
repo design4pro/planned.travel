@@ -71,6 +71,16 @@ human: om-approve-merge-pr from the cockpit; needs-qa merges only with qa-approv
 The cutover script is `.ai/scripts/labels-cutover.sh` (dry-run by default); snapshots of the
 labels and open issues before it ran live under `docs/agents/migration/`.
 
+The retired names are gone from GitHub as of 2026-09-08: the eight `status: *` labels, `prd`,
+`auto-advance` and `agent-pr` were deleted once the live automations
+(docs/agents/cezar-automations.json) no longer read them, leaving the 32 labels of the table above
+and nothing else. Deleting a label strips it from history too, so a closed issue or a merged PR
+that carried one now shows one label fewer; `docs/agents/migration/labels-2026-09-08.json` and
+`issues-2026-09-08.json` are the snapshot taken immediately before. The four superseded skills
+(`triage-ticket`, `plan-feature`, `plan-area`, `implement-ticket`) and their `.ai/cezar/workflows/`
+YAMLs still spell the old vocabulary; they are unregistered and dormant, and retiring them is the
+remaining part of PR C.
+
 ## Sources of issues
 
 - **People**, through the issue forms (`.github/ISSUE_TEMPLATE/`); blank issues are off so every

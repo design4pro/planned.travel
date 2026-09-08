@@ -1,0 +1,197 @@
+[
+  {
+    "color": "1d76db",
+    "description": "A run holds this issue; only a claim script writes it",
+    "name": "status: in-progress"
+  },
+  {
+    "color": "fbca04",
+    "description": "Triage needs an answer from the reporter",
+    "name": "status: needs-info"
+  },
+  {
+    "color": "d4c5f9",
+    "description": "Ticket waiting on an open blocker",
+    "name": "status: queued"
+  },
+  {
+    "color": "5319e7",
+    "description": "An artefact (PR, spec, PRD, tickets) waits for a human",
+    "name": "status: review"
+  },
+  {
+    "color": "fef2c0",
+    "description": "New and untriaged; a triage run picks it up",
+    "name": "status: triage"
+  },
+  {
+    "color": "0E8A16",
+    "description": "Run the Playwright visual gate on this PR (ci.yml e2e escape hatch)",
+    "name": "needs-e2e"
+  },
+  {
+    "color": "ededed",
+    "description": "Idea or feature waiting for a plan or a decision",
+    "name": "status: backlog"
+  },
+  {
+    "color": "0e8a16",
+    "description": "Specified and unblocked; run: implement may claim it",
+    "name": "status: ready"
+  },
+  {
+    "color": "e11d21",
+    "description": "A workflow could not finish; a human decides what happens next",
+    "name": "status: needs-human"
+  },
+  {
+    "color": "8250df",
+    "description": "PRD only: the sweeper adds run: implement to each child as it unblocks",
+    "name": "auto-advance"
+  },
+  {
+    "color": "6f42c1",
+    "description": "Parent issue: title PRD:, body prd/v1, its sub-issues are the tickets",
+    "name": "prd"
+  },
+  {
+    "color": "0e8a16",
+    "description": "Draft PR opened by an implement run",
+    "name": "agent-pr"
+  },
+  {
+    "color": "0366d6",
+    "description": "Ready for code review",
+    "name": "review"
+  },
+  {
+    "color": "b60205",
+    "description": "Reviewer requested changes",
+    "name": "changes-requested"
+  },
+  { "color": "fbca04", "description": "Manual QA in progress", "name": "qa" },
+  { "color": "b60205", "description": "Manual QA failed", "name": "qa-failed" },
+  {
+    "color": "b60205",
+    "description": "Blocked by a dependency",
+    "name": "blocked"
+  },
+  {
+    "color": "0e8a16",
+    "description": "Approved, ready to merge",
+    "name": "merge-queue"
+  },
+  { "color": "d73a4a", "description": "Bug fix", "name": "bug" },
+  {
+    "color": "b60205",
+    "description": "Hard merge block",
+    "name": "do-not-merge"
+  },
+  { "color": "a2eeef", "description": "New capability", "name": "feature" },
+  {
+    "color": "cfd3d7",
+    "description": "No behavior change",
+    "name": "refactor"
+  },
+  {
+    "color": "b60205",
+    "description": "Security-relevant change",
+    "name": "security"
+  },
+  {
+    "color": "0366d6",
+    "description": "Dependency update",
+    "name": "dependencies"
+  },
+  { "color": "0075ca", "description": "Docs only", "name": "documentation" },
+  {
+    "color": "fbca04",
+    "description": "Requires manual QA before merge",
+    "name": "needs-qa"
+  },
+  {
+    "color": "0e8a16",
+    "description": "Low risk, QA not required",
+    "name": "skip-qa"
+  },
+  {
+    "color": "0e8a16",
+    "description": "Manual QA passed",
+    "name": "qa-approved"
+  },
+  {
+    "color": "c5def5",
+    "description": "Self-QA exception used",
+    "name": "qa-self-verified"
+  },
+  {
+    "color": "c5def5",
+    "description": "An automated skill is working on this",
+    "name": "in-progress"
+  },
+  {
+    "color": "d4c5f9",
+    "description": "Work complete and reported; agent is watching CI results",
+    "name": "ci-monitoring"
+  },
+  {
+    "color": "c5def5",
+    "description": "Humans only: never auto-close this issue",
+    "name": "do-not-close"
+  },
+  {
+    "color": "d93f0b",
+    "description": "Release-blocking",
+    "name": "priority-high"
+  },
+  {
+    "color": "e4e669",
+    "description": "Cosmetic or follow-up work",
+    "name": "priority-low"
+  },
+  {
+    "color": "fbca04",
+    "description": "Ordinary bug or feature",
+    "name": "priority-medium"
+  },
+  {
+    "color": "b60205",
+    "description": "Outage or security incident",
+    "name": "priority-extreme"
+  },
+  {
+    "color": "0e8a16",
+    "description": "Isolated, low blast radius",
+    "name": "risk-low"
+  },
+  {
+    "color": "b60205",
+    "description": "Wide blast radius, review deeply",
+    "name": "risk-high"
+  },
+  {
+    "color": "fbca04",
+    "description": "Ordinary change with tests",
+    "name": "risk-medium"
+  },
+  {
+    "color": "5319e7",
+    "description": "Human trigger: start om-auto-fix-issue on this issue (Cezar automation)",
+    "name": "autofix"
+  },
+  {
+    "color": "5319e7",
+    "description": "Human trigger: write a spec PR with om-auto-write-spec (Cezar automation)",
+    "name": "spec"
+  },
+  {
+    "color": "5319e7",
+    "description": "Human trigger: re-run om-auto-manage-issues on this issue (Cezar automation)",
+    "name": "groom"
+  },
+  {
+    "color": "5319e7",
+    "description": "Automated trigger: the review job left unresolved threads; starts om-auto-fix-pr (Cezar automation)",
+    "name": "review-threads"
+  }
+]
