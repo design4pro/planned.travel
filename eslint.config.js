@@ -87,7 +87,18 @@ export default [
     ignores: [
       'eslint.config.js',
       'prettier.config.js',
-      '.claude/**',
+      // Ignored one level at a time, and not with `'.claude/**'` plus a negation: these are
+      // gitignore semantics, so a path inside an excluded *directory* can never be re-included -
+      // the directory is pruned before the negation is read. Verified by observation; the
+      // shorter form silently ignores the tests below.
+      '.claude/*',
+      '!.claude/hooks',
+      '.claude/hooks/*',
+      // The hook tests are the carve-out. The rationale for the rest of this tree is that it is
+      // not written against the project's tsconfig - which stopped being true of them when they
+      // moved here, because `tsconfig.json` now names the path. Without this they left `pnpm
+      // lint` and Prettier on the way in, which their old location had them under.
+      '!.claude/hooks/__tests__',
       // Agent tooling that GitHub's own surfaces read - skills, agent definitions, hooks. Same
       // reason `.claude/**` is here: it is vendored configuration for tools around the project,
       // not application source, and it is not written against this project's tsconfig - so the
