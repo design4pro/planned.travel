@@ -14,6 +14,7 @@ import {
   desc,
   eq,
   exists,
+  getTableColumns,
   gte,
   inArray,
   isNull,
@@ -76,7 +77,7 @@ import {
 import type { SQL } from 'drizzle-orm'
 import type { ShareScopes } from '#/server/db/schema'
 import type { Day, ShareLink, Trip, TripMember } from '#/server/db/types'
-import type { ListOptions, TenantScope } from './base'
+import type { ListOptions, TenantScope, TenantTable } from './base'
 
 /*
  * The imports above close two cycles — `places.ts` and `itinerary.ts` both import this module for
@@ -771,36 +772,45 @@ function assertDateOrder(
  */
 export const MAX_BOUND_PARAMETERS = 100
 
-/**
- * How many rows of `columns` columns fit in one statement.
- *
- * `columns` is what the pass actually writes plus the tenant column `insertMany` stamps — not the
- * table's column count, because Drizzle binds only the keys present in the values object. Every
- * pass derives it from its own payload rather than from a literal, so adding a copied column
- * narrows the chunk instead of quietly crossing the ceiling.
- */
+/** How many rows of `columns` bound parameters each fit in one statement. */
 export function chunkFor(columns: number): number {
   return Math.max(1, Math.floor(MAX_BOUND_PARAMETERS / columns))
 }
 
 /**
- * Inserts `rows` through `insert`, in statements small enough for D1 to accept.
+ * How many parameters one inserted row of `table` binds.
+ *
+ * The table's whole column count, not the payload's key count — the payload is the number that
+ * looks right and is wrong. Drizzle's insert builder walks *every* column of the table for every
+ * row: a column the payload carries binds its value, and a column the payload omits binds its
+ * `$defaultFn`/`$onUpdateFn` result, which on these tables means `id`, `created_at` and `updated_at`
+ * bind a parameter each despite never appearing in a row object. `organization_id` is a column too,
+ * so counting the table also covers the one `insertMany` stamps on.
+ *
+ * It is an upper bound: the columns Drizzle renders as a literal `null` are counted and bind
+ * nothing. That only narrows a chunk, which is the safe direction to be wrong in.
+ */
+function boundParametersPerRow(table: TenantTable): number {
+  return Object.keys(getTableColumns(table)).length
+}
+
+/**
+ * Inserts `rows` into `table` through `insert`, in statements small enough for D1 to accept.
  *
  * `beforeChunk` runs immediately before each statement with the number of rows it carries. The
  * `places` pass uses it to re-assert the ceiling against the live count, because a copy long enough
  * to need several statements is long enough for another writer to cross that ceiling under it.
  */
 async function insertChunked<TRow extends object, TResult>(
+  table: TenantTable,
   rows: ReadonlyArray<TRow>,
   insert: (chunk: ReadonlyArray<TRow>) => Promise<Array<TResult>>,
   beforeChunk?: (rowsInChunk: number) => Promise<void>,
 ): Promise<Array<TResult>> {
-  const first = rows.at(0)
-  if (first === undefined) {
+  if (rows.length === 0) {
     return []
   }
-  // Every row a pass builds carries the same keys, so the first one measures the whole set.
-  const size = chunkFor(Object.keys(first).length + 1)
+  const size = chunkFor(boundParametersPerRow(table))
   const inserted: Array<TResult> = []
   for (let index = 0; index < rows.length; index += size) {
     const chunk = rows.slice(index, index + size)
@@ -1077,6 +1087,7 @@ async function clearTargetInventory(
 
   await daysRepository.removeWhere(scope, eq(days.tripId, target.id))
   const inserted = await insertChunked(
+    days,
     sourceDays.map((day) => ({
       tripId: target.id,
       dayNumber: day.dayNumber,
@@ -1108,6 +1119,7 @@ async function copyPlaces(
     orderBy: [asc(places.sortOrder), asc(places.id)],
   })
   const inserted = await insertChunked(
+    places,
     source.map((place) => ({
       tripId: targetTripId,
       categoryId: place.categoryId,
@@ -1156,10 +1168,24 @@ async function copyPlaces(
 }
 
 /**
+ * Ids per `IN (...)` list a copy pass hands a repository.
+ *
+ * A read binds one parameter per id, so this leaves {@link MAX_BOUND_PARAMETERS} room for the tenant
+ * predicate and whatever else the query compares. The same reasoning, and the same ninety, as
+ * `ID_FILTER_CHUNK_SIZE` in `src/server/notifications/dispatch.ts`.
+ */
+const ID_FILTER_CHUNK = 90
+
+/**
  * Re-hangs the source's tags on the copied places.
  *
  * `tag_id` is workspace-level, so it is re-used rather than duplicated: a copy is tagged with the
  * very same tags, which is what makes a tag filter find both trips.
+ *
+ * The read is chunked for the same reason the write is: `placeIds` holds *every* place in the source
+ * trip, and a trip is not capped at ninety of them, so a single `IN (...)` over the whole map is a
+ * statement D1 refuses. That refusal is neither `NotFoundError` nor `QuotaExceededError`, so the
+ * handler would read it as transient and redeliver the copy forever.
  */
 async function copyPlaceTags(
   scope: TenantScope,
@@ -1168,18 +1194,25 @@ async function copyPlaceTags(
   if (placeIds.size === 0) {
     return
   }
-  const source = await placeTagsAccess.findMany(scope, {
-    where: inIds(placeTags.placeId, [...placeIds.keys()]),
-  })
-
+  const sourceIds = [...placeIds.keys()]
   const rows: Array<{ placeId: string; tagId: string }> = []
-  for (const row of source) {
-    const placeId = placeIds.get(row.placeId)
-    if (placeId !== undefined) {
-      rows.push({ placeId, tagId: row.tagId })
+  for (let index = 0; index < sourceIds.length; index += ID_FILTER_CHUNK) {
+    const source = await placeTagsAccess.findMany(scope, {
+      where: inIds(
+        placeTags.placeId,
+        sourceIds.slice(index, index + ID_FILTER_CHUNK),
+      ),
+    })
+    for (const row of source) {
+      const placeId = placeIds.get(row.placeId)
+      if (placeId !== undefined) {
+        rows.push({ placeId, tagId: row.tagId })
+      }
     }
   }
-  await insertChunked(rows, (chunk) => placeTagsAccess.insertMany(scope, chunk))
+  await insertChunked(placeTags, rows, (chunk) =>
+    placeTagsAccess.insertMany(scope, chunk),
+  )
 }
 
 /**
@@ -1228,7 +1261,7 @@ async function copyAssignments(
     })
   }
 
-  await insertChunked(rows, (chunk) =>
+  await insertChunked(dayAssignments, rows, (chunk) =>
     dayAssignmentsRepository.insertMany(scope, chunk),
   )
   return { written: rows.length, unscheduled }
@@ -1271,7 +1304,7 @@ async function copyDayNotes(
     })
   }
 
-  await insertChunked(rows, (chunk) =>
+  await insertChunked(dayNotes, rows, (chunk) =>
     dayNotesRepository.insertMany(scope, chunk),
   )
   return { written: rows.length, dropped }

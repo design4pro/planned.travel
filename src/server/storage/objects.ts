@@ -101,15 +101,17 @@ export async function copyObject(
   sourceKey: string,
   targetKey: string,
 ): Promise<void> {
-  const { get, put } = store
-  if (!get || !put) {
+  // Called on `store` throughout, never through a detached reference. In production this is the
+  // native `R2Bucket` binding, whose methods are workerd prototype methods that check their
+  // receiver: `const { get } = store; get(key)` throws `TypeError: Illegal invocation`.
+  if (!store.get || !store.put) {
     throw new ObjectCopyError(
       'This object store does not read and write, so it cannot copy.',
       'unsupported-store',
     )
   }
 
-  const source = await get(sourceKey)
+  const source = await store.get(sourceKey)
   if (!source?.body) {
     throw new ObjectCopyError(
       `Object ${sourceKey} was not found.`,
@@ -118,7 +120,7 @@ export async function copyObject(
   }
 
   const contentType = source.httpMetadata?.contentType
-  await put(
+  await store.put(
     targetKey,
     source.body,
     contentType === undefined ? undefined : { httpMetadata: { contentType } },

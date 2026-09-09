@@ -695,7 +695,7 @@ describe('trip lifecycle', () => {
       expect(MAX_BOUND_PARAMETERS).toBe(100)
       expect(chunkFor(25)).toBe(4)
       expect(chunkFor(3)).toBe(33)
-      // A payload wider than the ceiling still sends one row rather than none.
+      // A row wider than the ceiling still sends one row rather than none.
       expect(chunkFor(200)).toBe(1)
     })
 
@@ -841,9 +841,40 @@ describe('trip lifecycle', () => {
       const sent = insertMany.mock.calls.map((call) => call[1].length)
       insertMany.mockRestore()
 
-      // Ten places at four rows a statement: the bound is held by the loop, not by a comment.
-      expect(sent).toEqual([4, 4, 2])
+      // Ten places at three rows a statement — three, because a `places` row binds 27 parameters
+      // and not the 24 its payload spells. The bound is held by the loop, not by a comment.
+      expect(sent).toEqual([3, 3, 3, 1])
       expect((await inventoryOf(targetId)).places).toBe(10)
+    })
+
+    it('chunks the tag read too, not only the tag write', async () => {
+      // The read binds one parameter per place id, and a trip is not capped at ninety places, so an
+      // `IN (...)` over the whole place map is a statement D1 refuses. It refuses it with neither
+      // `NotFoundError` nor `QuotaExceededError`, so the handler reads it as transient and
+      // redelivers the copy forever, leaving the target stuck with `copy_pending_at` set.
+      const source = await createTrip(tenant.scope, { title: 'Lisbon' })
+      const tag = await createTag(tenant.scope, { name: 'Viewpoint' })
+      const placeCount = 95
+      for (let index = 0; index < placeCount; index += 1) {
+        const place = await createPlace(tenant.scope, {
+          tripId: source.id,
+          name: `Miradouro ${index}`,
+        })
+        await setPlaceTags(tenant.scope, place.id, [tag.id])
+      }
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+      })
+
+      const findMany = vi.spyOn(placeTagsAccess, 'findMany')
+      await copyTripContents(tenant.scope, source.id, targetId)
+      const reads = findMany.mock.calls.length
+      findMany.mockRestore()
+
+      // Ninety-five ids at ninety a read: two statements, not one over the ceiling.
+      expect(reads).toBe(2)
+      // And the chunking lost nothing on the way — every tag came across.
+      expect((await inventoryOf(targetId)).tags).toBe(placeCount)
     })
 
     /* ------------------------------------------------- truncation and dates */
