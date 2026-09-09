@@ -83,9 +83,9 @@ Taken from the spec's Implementation Plan, unchanged in substance.
 
 ### Phase 2: the note
 
-- [ ] 2.1 The vocabulary — `DAY_NOTE_ICONS`, the icon enum and `detail`
-- [ ] 2.2 The sequencing, pure — `noteSlotOrder` and `nextNotePosition`
-- [ ] 2.3 The server functions — `writableTripDay`, the read and the four writes
+- [x] 2.1 The vocabulary — `DAY_NOTE_ICONS`, the icon enum and `detail` — e86bbe8d
+- [x] 2.2 The sequencing, pure — `noteSlotOrder` and `nextNotePosition` — e86bbe8d
+- [x] 2.3 The server functions — `writableTripDay`, the read and the four writes — e86bbe8d
 - [ ] 2.4 The loader and the model — `Promise.all` and `notesByDay`
 - [ ] 2.5 The copy — every key in all 23 locales
 - [ ] 2.6 The row — `note-row.tsx` and the day's note run
