@@ -14,6 +14,7 @@
 set -euo pipefail
 
 API="${CEZ_API:-http://localhost:4321}/api/v1/p/${CEZ_PROJECT:-planned-travel}/automations"
+# The checkout this script lives in, not the main one: the worktree that carries the definitions.
 FILE="$(cd "$(dirname "$0")/../.." && pwd)/docs/agents/cezar-automations.json"
 DRY=0
 PRUNE=0

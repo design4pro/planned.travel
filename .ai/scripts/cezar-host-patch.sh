@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
-# Host workarounds for the pinned @open-mercato/cezar@0.10.1, applied to the copy in the npx cache
-# that the cockpit service runs (a `.orig` is kept beside each patched file). Idempotent; rerun
-# after the npx cache is cleared. Drop each patch when the pinned version carries the fix.
+# Host workarounds for the pinned @open-mercato/cezar@0.10.1, applied to the copy the cockpit
+# service runs (a `.orig` is kept beside each patched file). Idempotent; rerun after an upgrade.
+# Drop each patch when the pinned version carries the fix.
+#
+# The global install is preferred over the npx cache, and that preference is the point rather than
+# a detail: `npx` resolves from a content-hashed cache npm may collect at any time, and a collected
+# cache takes these patches with it. Nothing reports that. Patch 4 is the one `pr-review-threads`
+# needs, so its loss shows up as pull requests sitting with unresolved threads and no error
+# anywhere. `npm i -g @open-mercato/cezar@0.10.1` removes the hazard; the npx path stays below as
+# a fallback for a host that has not cut over.
 #
 # 1. open-mercato/cezar#914 (fix in upstream PR #916, unreleased): the automations poller validates
 #    every /timeline row against a labeled|unlabeled schema, so one comment or cross-reference on
@@ -17,20 +24,38 @@
 # 4. Label events on pull requests: the poller scopes its label source to `is:issue` and then skips
 #    any search hit carrying `pull_request`, so `issue.labeled` can never fire on a PR and the only
 #    PR trigger cezar has is `pull_request.opened` - the wrong moment for anything a review job
-#    posts minutes later. The patch makes both gates honour a `filters.includePullRequests` flag,
+#    posts minutes later. The patch makes both gates honour a `filters.includePullRequests` flag -
+#    a second search source scoped to `is:pr`, and a widened pull_request check -
 #    which survives validation because `automationFiltersSchema` is `.passthrough()`. Opt-in per
 #    automation: without the flag the behaviour is byte-for-byte what it was, so `issue-regroom`,
 #    `issue-autofix` and `issue-spec` cannot start firing on PRs that happen to carry their label.
 #    Used by `pr-review-threads` (docs/agents/cezar-automations.json).
+#
+# The cockpit is one per host and shared with money-tracker.online. That repository's copy of
+# .ai/scripts/cezar-host-patch.sh is identical apart from this paragraph; both are idempotent and
+# check their own markers, so running either one is enough. This copy exists so a host that only
+# carries this checkout is still self-sufficient.
 set -euo pipefail
 
 VERSION="${CEZ_VERSION:-0.10.1}"
 PLIST="$HOME/Library/LaunchAgents/dev.cezar.cockpit.plist"
-# `|| true`: under pipefail a missing install makes grep exit non-zero and `set -e` would abort
-# here, before the message below.
-DIST=$(grep -lx "  \"version\": \"$VERSION\"," "$HOME"/.npm/_npx/*/node_modules/@open-mercato/cezar/package.json 2>/dev/null \
-  | head -1 | xargs -I{} dirname {} | sed 's|$|/dist|' || true)
-[ -n "$DIST" ] && [ -d "$DIST" ] || { echo "cezar $VERSION not found in the npx cache; start the cockpit once first" >&2; exit 1; }
+
+# Candidates, most stable first. The version is checked rather than assumed: the npx cache holds
+# several releases side by side, and patching the wrong one leaves the cockpit unpatched with every
+# patch reporting success.
+DIST=""
+for candidate in "$(npm root -g 2>/dev/null)/@open-mercato/cezar" \
+                 "$HOME"/.npm/_npx/*/node_modules/@open-mercato/cezar; do
+  [ -f "$candidate/package.json" ] || continue
+  grep -qx "  \"version\": \"$VERSION\"," "$candidate/package.json" || continue
+  DIST="$candidate/dist"
+  break
+done
+[ -n "$DIST" ] && [ -d "$DIST" ] || {
+  echo "cezar $VERSION not found. Install it: npm i -g @open-mercato/cezar@$VERSION" >&2
+  exit 1
+}
+echo "patching $DIST"
 
 # patch FILE MARKER FROM TO [COUNT]: replace exactly COUNT (default 1) occurrences unless MARKER is present.
 patch() {
@@ -49,18 +74,38 @@ JS
   echo "patched: $file"
 }
 
+# Supersedes the first form of patch 2, which asked for the 'mixed' family and so produced a
+# query /search/issues answers with HTTP 422. A host carrying it would otherwise be skipped by the
+# new marker and keep the broken line. Restoring the stock file is enough: every patch below
+# checks its own marker and re-applies.
+if grep -qF "includePullRequests ? 'mixed' : 'issues'" "$DIST/automations/github-poller.js"; then
+  cp "$DIST/automations/github-poller.js.orig" "$DIST/automations/github-poller.js"
+  echo "reverted the superseded 'mixed' label source"
+fi
+
 patch "$DIST/automations/github-poller.js" 'cezar#914' \
   '        return z.array(timelineEventSchema).parse(JSON.parse(raw));' \
   "        // host patch, open-mercato/cezar#914: validate only the label rows of the timeline.
         const rows = JSON.parse(raw).filter((entry) => entry?.event === 'labeled' || entry?.event === 'unlabeled');
         return z.array(timelineEventSchema).parse(rows);"
 
-patch "$DIST/automations/github-poller.js" 'host patch: includePullRequests (search scope)' \
+# The two markers below are fragments of the replacement code, not of its comment: both sites patch
+# the same file and the natural comment marker ("host patch: includePullRequests") is a prefix of
+# the other's, so a marker taken from a comment would either be absent after patching or match the
+# wrong site. Keep each marker a string the patched file holds exactly once and the stock file not
+# at all - `grep -c` on both is the check.
+patch "$DIST/automations/github-poller.js" 'if (definition.filters.includePullRequests)' \
   "            sources.push({ family: 'issues', activity: 'updated', opened: false, labels: true });" \
-  "            // host patch: includePullRequests widens the label source to PRs ('mixed' emits no is: qualifier).
-            sources.push({ family: definition.filters.includePullRequests ? 'mixed' : 'issues', activity: 'updated', opened: false, labels: true });"
+  "            // host patch: includePullRequests adds a second label source covering pull requests.
+            // Deliberately two sources rather than the 'mixed' family: 'mixed' emits no is:
+            // qualifier, and /search/issues rejects a query without one (HTTP 422, 'Query must
+            // include is:issue or is:pull-request'). That is not a narrower poll, it is no poll
+            // at all - every attempt errors and the automation backs off until it never runs.
+            sources.push({ family: 'issues', activity: 'updated', opened: false, labels: true });
+            if (definition.filters.includePullRequests)
+                sources.push({ family: 'prs', activity: 'updated', opened: false, labels: true });"
 
-patch "$DIST/automations/github-poller.js" 'host patch: includePullRequests (hit filter)' \
+patch "$DIST/automations/github-poller.js" 'definition.filters.includePullRequests || !item.pull_request' \
   "                if (source.labels && !item.pull_request) {" \
   "                if (source.labels && (definition.filters.includePullRequests || !item.pull_request)) { // host patch: includePullRequests"
 

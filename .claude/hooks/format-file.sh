@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# PostToolUse hook (Edit|Write): auto-formats the edited file so formatting
-# never consumes an agent turn or a CI run. Always exits 0 — formatting
-# failures must not block the edit that already happened.
+# PostToolUse hook (Edit|Write): auto-formats the edited file so formatting never consumes an
+# agent turn or a CI run - `pnpm check` is a rung in the gate, and losing a whole round trip to a
+# missing trailing comma is a waste of both.
+#
+# Always exits 0. The edit has already happened; a formatter that cannot run must not turn a good
+# edit into a failed tool call.
 set -uo pipefail
 
 input=$(cat)
