@@ -37,6 +37,12 @@ the rules of `SDLC.md`.
     shows as 400 deleted files in `git status`. `skillsAutoUpdate: false` (kept in
     `~/.cezar/config.json`) gates only the update; the patch makes `CEZ_SKILLS_AUTO_UPDATE=0` skip
     the check too. Recovery: remove the symlinks, `git checkout -- .claude/skills`, delete `.agents/`.
+  - Two runs forking their worktree in the same moment lose the `.git/config` lock: `git worktree
+add -b` writes the new branch's upstream into the shared config, git's config lock has no
+    retry, and the fork happens before cezar takes the repository-root lease, so `maxParallel`
+    does not order it. Every loser dies with `worktree creation failed` before its workflow runs -
+    three runs here, two of them 26ms apart. The patch retries onto the reattach form, which
+    writes no shared config.
 - Skills: `.claude/skills/om-*` are vendored files, byte-identical to
   `open-mercato/skills@91f11c63721b5f7e17a859940b3e9c55ece698ee` - this line is the pin, because
   `skills-lock.json` records only a per-skill `computedHash` and `.ai/cezar/config.json` no longer

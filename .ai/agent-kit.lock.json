@@ -1,5 +1,5 @@
 {
-  "kitVersion": 14,
+  "kitVersion": 16,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -55,7 +55,7 @@
       "mode": "100755"
     },
     ".ai/scripts/cezar-host-patch.sh": {
-      "sha256": "8de07f3005d30a27be52adcd68561b0f1fdf9bd1df53b474d1f92391583fde7f",
+      "sha256": "06d472df79d30e38e14617c7f73d044d28773869e7d0b2e49ac6fca0f3a66acb",
       "mode": "100755"
     },
     ".ai/scripts/housekeeping.sh": {
