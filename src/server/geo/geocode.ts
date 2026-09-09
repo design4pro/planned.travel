@@ -25,6 +25,10 @@
  *    it charges a workspace for nothing. Checking the adapter's declaration up front is strictly
  *    cheaper, and it also keeps the cache from ever holding an unstorable answer.
  * 6. **The meter before the vendor**, or the ceiling is advisory.
+ * 7. **The provider ledger around the vendor call**, so the operator's own view of the vendor — the
+ *    `provider_usage` tally and the `block` policy an operator can set on it — sees every call this
+ *    module makes. It sits inside the meter rather than outside it because the two count different
+ *    things: the meter is a workspace's monthly allowance, the ledger is this deployment's bill.
  *
  * ## The cache is shared across tenants, and unexpiring
  *
@@ -53,6 +57,7 @@
 import { z } from 'zod'
 
 import { LOCALE_TAGS } from '#/lib/i18n/locales'
+import { callProvider } from '#/server/metering/outbound'
 import { RateCeilingError, spendRateUnit } from '#/server/metering/rate'
 
 import type { Locale } from '#/lib/i18n/locales'
@@ -409,6 +414,36 @@ async function spend(runtime: GeocodeRuntime): Promise<number> {
   })
 }
 
+/**
+ * Position 7: the vendor call, with the provider ledger wrapped around it.
+ *
+ * The slug comes from `runtime.vendor` rather than from the provider, so the row a call is recorded
+ * under is the same one the cache key was built from — one vendor identity, read once. The operation
+ * distinguishes the two directions because they are separately interesting in the console: a spike
+ * in reverse lookups is a map being dragged, a spike in forward ones is a form being typed into.
+ *
+ * `callProvider` decides nothing about the answer here: a candidate list is not a `Response`, so its
+ * default failure check reads `false` and only a throw is an error — which is what a
+ * {@link GeoProviderError} already is.
+ *
+ * @throws {ProviderBlockedError} when an operator has set the provider's policy to `block`.
+ */
+async function ask(
+  runtime: GeocodeRuntime,
+  operation: 'geocode.forward' | 'geocode.reverse',
+  send: () => Promise<ReadonlyArray<GeocodeCandidate>>,
+): Promise<ReadonlyArray<GeocodeCandidate>> {
+  return callProvider(
+    runtime.outbound,
+    {
+      provider: runtime.vendor.slug,
+      operation,
+      organizationId: runtime.organizationId,
+    },
+    send,
+  )
+}
+
 function hit(
   runtime: GeocodeRuntime,
   candidates: ReadonlyArray<GeocodeCandidate>,
@@ -428,6 +463,7 @@ function hit(
  *
  * @throws {GeoProviderError} unconfigured, unstorable, unreachable, refused or malformed.
  * @throws {RateCeilingError} when the workspace has spent its monthly allowance.
+ * @throws {ProviderBlockedError} when an operator has stopped the provider deployment-wide.
  */
 export async function forwardGeocode(
   runtime: GeocodeRuntime,
@@ -453,7 +489,9 @@ export async function forwardGeocode(
   const provider = refuseBeforeTheMeter(runtime)
   const spent = await spend(runtime)
 
-  const candidates = await provider.forward(query)
+  const candidates = await ask(runtime, 'geocode.forward', () =>
+    provider.forward(query),
+  )
   await write(runtime, key, candidates)
 
   return {
@@ -470,6 +508,7 @@ export async function forwardGeocode(
  *
  * @throws {GeoProviderError} unconfigured, unstorable, unreachable, refused or malformed.
  * @throws {RateCeilingError} when the workspace has spent its monthly allowance.
+ * @throws {ProviderBlockedError} when an operator has stopped the provider deployment-wide.
  */
 export async function reverseGeocode(
   runtime: GeocodeRuntime,
@@ -496,7 +535,9 @@ export async function reverseGeocode(
   const provider = refuseBeforeTheMeter(runtime)
   const spent = await spend(runtime)
 
-  const candidates = await provider.reverse(query)
+  const candidates = await ask(runtime, 'geocode.reverse', () =>
+    provider.reverse(query),
+  )
   await write(runtime, key, candidates)
 
   return {
