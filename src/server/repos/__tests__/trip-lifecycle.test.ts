@@ -994,6 +994,38 @@ describe('trip lifecycle', () => {
       ])
     })
 
+    /**
+     * The headings are paired by day number, which a shorter run is the way to prove.
+     *
+     * The test above copies runs of the same length as the source's, where pairing by number and
+     * pairing by position give the same answer. A truncated copy is where they part: day 1 of the
+     * copy must carry day 1's heading and the days beyond the range must bring none of theirs
+     * across — an off-by-one here reads plausibly and is wrong.
+     */
+    it('gives a truncated copy the headings of the days it kept, and no others', async () => {
+      const source = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        startDate: '2026-04-10',
+        endDate: '2026-04-14',
+      })
+      for (const [index, day] of (
+        await listTripDays(tenant.scope, source.id)
+      ).entries()) {
+        await updateDay(tenant.scope, day.id, { title: `Stop ${index + 1}` })
+      }
+
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'A shorter Lisbon',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+      })
+      await copyTripContents(tenant.scope, source.id, targetId)
+
+      expect(
+        (await listTripDays(tenant.scope, targetId)).map((day) => day.title),
+      ).toEqual(['Stop 1', 'Stop 2'])
+    })
+
     it('pairs each copy with its source by the id it minted, not by RETURNING’s order', async () => {
       const source = await seedSource()
       const targetId = await startTripCopy(tenant.scope, source.id, {
