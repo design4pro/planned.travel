@@ -178,9 +178,15 @@ export default defineConfig({
     {
       name: 'mobile-safari',
       dependencies: ['setup'],
-      // Includes `defaultBrowserType: 'webkit'`, touch and a 393x659 viewport;
-      // its 393x852 is the device `screen`, which is never captured.
-      use: { ...devices['iPhone 15'], extraHTTPHeaders: clockPin },
+      use: {
+        ...devices['iPhone 15'],
+        // Pinned rather than inherited: journey 7's composition argument is measured
+        // against this exact geometry (`e2e/journeys.spec.ts`), so a playwright bump
+        // must not move it under the test. Everything else — WebKit, touch, the
+        // device scale and the user agent — still comes from the descriptor.
+        viewport: { width: 393, height: 659 },
+        extraHTTPHeaders: clockPin,
+      },
     },
   ],
 
