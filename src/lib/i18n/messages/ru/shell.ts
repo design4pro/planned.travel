@@ -152,6 +152,28 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Пора проверить список вещей и брони.',
+  'notification.trip.copied.title': '{tripTitle} готова',
+  'notification.trip.copied.body': {
+    one: 'Перенесён {days} день',
+    few: 'Перенесено {days} дня',
+    many: 'Перенесено {days} дней',
+    other: 'Перенесено {days} дня',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} место',
+    few: '{places} места',
+    many: '{places} мест',
+    other: '{places} места',
+  },
+  'notification.trip.copied.dropped': {
+    one: 'пропущена {dropped} заметка',
+    few: 'пропущено {dropped} заметки',
+    many: 'пропущено {dropped} заметок',
+    other: 'пропущено {dropped} заметки',
+  },
+  'notification.trip.copyFailed.title': 'Не удалось скопировать {tripTitle}',
+  'notification.trip.copyFailed.body':
+    'Ничего не потеряно. Попробуйте снова из оригинала.',
   'notification.reservation.reminder.title': '{title} уже скоро',
   'notification.reservation.reminder.body':
     'Проверьте время и код подтверждения в брони.',
@@ -464,6 +486,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Действия для «{title}»',
+  'tripActions.copy': 'Копировать',
   'tripActions.favourite': 'В избранное',
   'tripActions.unfavourite': 'Убрать из избранного',
   'tripActions.edit': 'Изменить',
@@ -528,6 +551,23 @@ const messages = {
     many: 'человек',
     other: 'человека',
   },
+  'copyTrip.title': 'Копировать «{title}»',
+  'copyTrip.nameLabel': 'Название копии',
+  'copyTrip.titleRequired': 'Дайте копии название.',
+  'copyTrip.datesLabel': 'Даты',
+  'copyTrip.datesTogether': 'Укажите обе даты или очистите обе.',
+  'copyTrip.clearDates': 'Копировать без дат',
+  'copyTrip.carries':
+    'Дни, места и заметки переносятся. Брони, деньги, файлы и люди — нет.',
+  'copyTrip.shorter':
+    'Это короче оригинала. Места лишних дней уйдут в идеи, а их заметки пропадут.',
+  'copyTrip.submit': 'Копировать поездку',
+  'copyTrip.copying': 'Копирование поездки',
+  'copyTrip.cancel': 'Отмена',
+  'copyTrip.started': 'Копируем «{title}»',
+  'copyTrip.errorTitle': 'Это не скопировалось',
+  'copyTrip.error':
+    'Не удалось скопировать поездку. Попробуйте ещё раз через мгновение.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Кто это увидит',
@@ -558,6 +598,9 @@ const messages = {
   'trips.card.noDates': 'Даты пока не выбраны',
   'trips.card.startsIn': 'через {days} д',
   'trips.card.days': '{days} д',
+  'trips.card.copying': 'Копируется',
+  'trips.card.copyingLabel': '{title} ещё копируется',
+  'trips.card.copyingReason': 'Дождитесь окончания копирования.',
   'metric.trips': 'Поездки',
   'metric.places': 'Места',
   'metric.members': 'Участники',

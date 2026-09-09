@@ -141,6 +141,23 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Ideje átnézni a csomaglistát és a foglalásokat.',
+  'notification.trip.copied.title': 'A(z) {tripTitle} kész',
+  'notification.trip.copied.body': {
+    one: 'Átkerült {days} nap',
+    other: 'Átkerült {days} nap',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} hely',
+    other: '{places} hely',
+  },
+  'notification.trip.copied.dropped': {
+    one: '{dropped} jegyzet kimaradt',
+    other: '{dropped} jegyzet kimaradt',
+  },
+  'notification.trip.copyFailed.title':
+    'A(z) {tripTitle} másolása nem sikerült',
+  'notification.trip.copyFailed.body':
+    'Semmi sem veszett el. Próbáld újra az eredetiből.',
   'notification.reservation.reminder.title': 'Hamarosan következik: {title}',
   'notification.reservation.reminder.body':
     'Az időpontot és a visszaigazoló kódot a foglalásnál találja.',
@@ -420,6 +437,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Műveletek: {title}',
+  'tripActions.copy': 'Másolás',
   'tripActions.favourite': 'Kedvencekhez adás',
   'tripActions.unfavourite': 'Eltávolítás a kedvencekből',
   'tripActions.edit': 'Szerkesztés',
@@ -475,6 +493,23 @@ const messages = {
     one: 'fő',
     other: 'fő',
   },
+  'copyTrip.title': '„{title}” másolása',
+  'copyTrip.nameLabel': 'A másolat neve',
+  'copyTrip.titleRequired': 'Adj nevet a másolatnak.',
+  'copyTrip.datesLabel': 'Dátumok',
+  'copyTrip.datesTogether': 'Add meg mindkét dátumot, vagy töröld mindkettőt.',
+  'copyTrip.clearDates': 'Másolás dátumok nélkül',
+  'copyTrip.carries':
+    'A napok, a helyek és a jegyzetek átkerülnek. A foglalások, a pénz, a fájlok és az emberek nem.',
+  'copyTrip.shorter':
+    'Ez rövidebb az eredetinél. A fölös napok helyei az ötletek közé kerülnek, a jegyzeteik pedig elvesznek.',
+  'copyTrip.submit': 'Utazás másolása',
+  'copyTrip.copying': 'Az utazás másolása folyamatban',
+  'copyTrip.cancel': 'Mégse',
+  'copyTrip.started': '„{title}” másolása folyamatban',
+  'copyTrip.errorTitle': 'Ez nem másolódott át',
+  'copyTrip.error':
+    'Az utazást nem sikerült lemásolni. Próbáld újra kis idő múlva.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Ki láthatja',
@@ -505,6 +540,9 @@ const messages = {
   'trips.card.noDates': 'Dátumok még nincsenek',
   'trips.card.startsIn': '{days} nap múlva',
   'trips.card.days': '{days} n',
+  'trips.card.copying': 'Másolás',
+  'trips.card.copyingLabel': 'A(z) {title} még másolás alatt áll',
+  'trips.card.copyingReason': 'Várd meg, amíg a másolás befejeződik.',
   'metric.trips': 'Utazások',
   'metric.places': 'Helyek',
   'metric.members': 'Tagok',

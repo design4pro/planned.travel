@@ -269,12 +269,12 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     await expect(
       menu.getByRole('menuitem', { name: /^(Favourite|Unfavourite)$/ }),
     ).toBeVisible()
-    // Copy arrives in the last `01-S1` slice; a menu that already carried it here would be a menu
-    // whose item has no server function behind it.
     await expect(
       menu.getByRole('menuitem', { name: /^Delete( permanently)?$/ }),
     ).toBeVisible()
-    await expect(menu.getByRole('menuitem')).toHaveCount(4)
+    // Five since `01-S1d` added Copy. The count is asserted rather than left implicit because a menu
+    // that grew a sixth item nobody named here is a menu whose contents drifted from this claim.
+    await expect(menu.getByRole('menuitem')).toHaveCount(5)
 
     await menu.getByRole('menuitem', { name: 'Edit' }).click()
 
@@ -403,5 +403,239 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     await expect(
       menu.getByRole('menuitem', { name: 'Unfavourite', exact: true }),
     ).toHaveCount(0)
+  })
+})
+
+test.describe('01-S1d — Copying a trip is asked for before it is started', () => {
+  /**
+   * This block's route table and its own selectors.
+   *
+   * Deliberately duplicated from `01-S1` rather than hoisted out of it: this file's contract is that
+   * a block declares what it reads and touches no other block's evidence, so that two stages of the
+   * same wave can append here without either editing the other's assertions.
+   */
+  const TRIPS: RouteCase = {
+    name: 'trips',
+    path: '/trips',
+    ready: 'main',
+  }
+
+  const TRIGGER = '[data-part="trip-actions-trigger"]'
+  const DIALOG = '[data-part="trip-copy-dialog"]'
+
+  /**
+   * What an undated trip prints where a dated one prints its run — `shell.trips.card.noDates`.
+   *
+   * This block walks a *dated* trip rather than whichever tile the index leads with, because the
+   * fixture holds one deliberate draft with no dates at all ("Patagonia traverse", a title and an
+   * intention). A copy of that one has no run to be shortened, so it would answer the two claims
+   * below by never reaching them — the silent kind of pass.
+   */
+  const NO_DATES = 'Dates to be set'
+
+  /**
+   * The boundary the dialog states before the reader commits, and the note a shortened range earns.
+   *
+   * Quoted from `src/lib/i18n/messages/en/shell.ts` rather than read back through the catalogue,
+   * because the claim under test is that a reader sees *these sentences* — a spec that asked the
+   * catalogue what the catalogue says would pass against a key that resolved to anything at all.
+   */
+  const CARRIES =
+    'Days, places and notes come across. Bookings, money, files and people do not.'
+  const SHORTER =
+    'That is shorter than the original. The extra days’ places move to ideas, and their notes are dropped.'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * The first tile on the index whose trip actually runs over dates, and the name it carries.
+   *
+   * The name is read from the tile's own heading rather than restated from the fixture, so the
+   * assertion that the dialog names the right trip is measured against the page.
+   */
+  async function datedTrip(page: Page): Promise<{
+    tile: ReturnType<Page['locator']>
+    title: string
+  }> {
+    const tile = page
+      .locator('[data-part="trip-tile"]')
+      .filter({ hasNotText: NO_DATES })
+      .first()
+    test.skip(
+      (await tile.count()) === 0,
+      'every trip in this workspace is undated, so there is no run for a copy to shorten',
+    )
+    // By role rather than by tag: which heading level a card takes is the surrounding outline's
+    // business, not this claim's.
+    const heading = tile.getByRole('heading')
+    await expect(heading).toHaveCount(1)
+    return { tile, title: (await heading.innerText()).trim() }
+  }
+
+  /**
+   * Open a tile's actions menu from the keyboard, and prove it opened.
+   *
+   * Deliberately not a click. The trigger sits on a card that lifts on hover, so a pointer press
+   * arrives while the element under it is still moving and the menu it opens is positioned over the
+   * trigger it came from — which makes "did that press open the menu, or open it and then land on
+   * its first item?" a question of timing rather than of behaviour. It cost one failure in a loaded
+   * full-suite run, where the ordering assertion below timed out against a page that had already
+   * advanced to the copy dialog. Focus and Enter carry no coordinates, so neither does the answer.
+   */
+  async function openMenu(page: Page, tile: ReturnType<Page['locator']>) {
+    await tile.locator(TRIGGER).focus()
+    await page.keyboard.press('Enter')
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+    return menu
+  }
+
+  /**
+   * Open that tile's menu and take the Copy item to the dialog it opens.
+   *
+   * **Nothing here submits.** The copy is an additive write against the workspace every other block
+   * and both browser projects share, and it is not undone by reloading: one run per project would
+   * leave two trips behind, and a later run would read one of them as its first tile — a copying
+   * tile, whose Edit item `01-S1` clicks and whose menu is frozen. The dialog is what this stage
+   * added to the browser, and the dialog is what is measured; that the write behind it does the
+   * right thing is `src/server/repos/__tests__/trip-lifecycle.test.ts`'s claim, not this file's.
+   */
+  async function openCopyDialog(page: Page): Promise<string> {
+    const { tile, title } = await datedTrip(page)
+    const menu = await openMenu(page, tile)
+    await menu.getByRole('menuitem', { name: 'Copy' }).click()
+    await expect(page.locator(DIALOG)).toBeVisible()
+    return title
+  }
+
+  /**
+   * Shorten the run to two days by taking the first two cells of the calendar.
+   *
+   * The grid renders whole weeks in chronological order and the dialog sets no `minDate`, so the
+   * first two buttons are two consecutive days whatever month the picker opened on — which is what
+   * makes this independent of which dated trip the index happens to lead with. Every dated trip in
+   * the demo fixture runs seven days or more (`src/routes/api/dev/-seed/dataset/trips.ts`), so two
+   * days is reliably shorter; a fixture that ever led with a one-day trip would fail this loudly
+   * rather than quietly stop exercising the branch.
+   */
+  async function shortenToTwoDays(page: Page): Promise<void> {
+    await page
+      .locator(DIALOG)
+      .getByRole('button', { name: 'Dates', exact: true })
+      .click()
+    const days = page.locator('table[role="grid"] button')
+    await days.nth(0).click()
+    await days.nth(1).click()
+  }
+
+  test('Copy leads the menu and opens a dialog rather than starting a write', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const { tile, title } = await datedTrip(page)
+    const menu = await openMenu(page, tile)
+
+    // Copy is the first of the two items every reader gets (PRD #104 decision 6), so its position is
+    // part of the claim: the star is what a viewer's menu ends with, not what it opens with.
+    await expect(menu.getByRole('menuitem').first()).toHaveAccessibleName(
+      'Copy',
+    )
+
+    await menu.getByRole('menuitem', { name: 'Copy' }).click()
+
+    const dialog = page.locator(DIALOG)
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('heading')).toContainText(title)
+    // The copy opens under the source's own name, which is the answer a reader is most likely to
+    // keep, and the source's own run — so the dates field is a correction rather than a blank.
+    await expect(dialog.getByLabel('Name the copy')).toHaveValue(title)
+
+    // Spec Q4: the boundary is standing text, told before the reader commits rather than enumerated
+    // afterwards in the completion notification.
+    await expect(dialog.getByText(CARRIES)).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the short-range note is earned by shortening the range, and withdrawn with it', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+    await openCopyDialog(page)
+
+    const dialog = page.locator(DIALOG)
+    // At rest the copy runs exactly as long as its source, so there is no consequence to state.
+    await expect(dialog.getByText(SHORTER)).toHaveCount(0)
+
+    await shortenToTwoDays(page)
+    await expect(dialog.getByText(SHORTER)).toBeVisible()
+
+    // An undated copy is a template: it has no run, so there is nothing for a run to be shorter than.
+    await dialog.getByRole('button', { name: 'Copy without dates' }).click()
+    await expect(dialog.getByText(SHORTER)).toHaveCount(0)
+    await expect(
+      dialog.getByRole('button', { name: 'Copy without dates' }),
+    ).toHaveCount(0)
+
+    /**
+     * Dismissed with Cancel rather than with Escape, unlike the case above.
+     *
+     * The picker's popover is a dismissable layer of its own, and it unmounts on an exit animation
+     * — so an Escape sent right after a range was picked lands on a layer that is closing rather
+     * than on the dialog underneath it, and whether it reaches the dialog is a race. Cancel is the
+     * control a reader actually reaches for, and it is not a race.
+     */
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The two ways the form refuses, both of which disarm the same button.
+   *
+   * A copy with no name and a range with one end are the only inputs `copyTripInputSchema` rejects,
+   * and a dialog that let either of them reach the server would turn a correctable mistake into a
+   * round trip that fails.
+   */
+  test('the submit is disarmed by an empty name and by a half-picked range', async ({
+    page,
+  }) => {
+    await visit(page, TRIPS, 'light')
+    await openCopyDialog(page)
+
+    const dialog = page.locator(DIALOG)
+    const submit = dialog.getByRole('button', { name: 'Copy trip' })
+    await expect(submit).toBeEnabled()
+
+    await dialog.getByLabel('Name the copy').fill('')
+    await expect(dialog.getByText('Give the copy a name.')).toBeVisible()
+    await expect(submit).toBeDisabled()
+
+    await dialog.getByLabel('Name the copy').fill('Lisbon, again')
+    await expect(submit).toBeEnabled()
+
+    // One end picked is the state the picker passes through mid-selection; the form says which of
+    // the two ways out to take rather than silently accepting half a range.
+    await dialog.getByRole('button', { name: 'Dates', exact: true }).click()
+    await page.locator('table[role="grid"] button').first().click()
+    await expect(
+      dialog.getByText('Set both dates, or clear them both.'),
+    ).toBeVisible()
+    await expect(submit).toBeDisabled()
   })
 })

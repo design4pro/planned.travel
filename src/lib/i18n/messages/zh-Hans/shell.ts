@@ -99,6 +99,18 @@ const messages = {
     other: '{tripTitle}还有 {days} 天出发',
   },
   'notification.trip.starting_soon.body': '该看看行李清单和预订了。',
+  'notification.trip.copied.title': '{tripTitle} 已就绪',
+  'notification.trip.copied.body': {
+    other: '已复制 {days} 天',
+  },
+  'notification.trip.copied.places': {
+    other: '{places} 个地点',
+  },
+  'notification.trip.copied.dropped': {
+    other: '舍弃了 {dropped} 条备注',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle} 复制失败',
+  'notification.trip.copyFailed.body': '没有丢失任何内容。请从原行程重试。',
   'notification.reservation.reminder.title': '{title}就快到了',
   'notification.reservation.reminder.body': '核对一下预订的时间和确认号。',
   'notification.reservation.confirmed.title': '{title}已确认',
@@ -316,6 +328,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 的操作',
+  'tripActions.copy': '复制',
   'tripActions.favourite': '添加到收藏',
   'tripActions.unfavourite': '取消收藏',
   'tripActions.edit': '编辑',
@@ -364,6 +377,22 @@ const messages = {
   'deleteTrip.carried.members': {
     other: '位成员',
   },
+  'copyTrip.title': '复制“{title}”',
+  'copyTrip.nameLabel': '副本名称',
+  'copyTrip.titleRequired': '请给副本起个名字。',
+  'copyTrip.datesLabel': '日期',
+  'copyTrip.datesTogether': '请同时填写两个日期，或者都清空。',
+  'copyTrip.clearDates': '不带日期复制',
+  'copyTrip.carries':
+    '天数、地点和备注会一起复制。预订、花费、文件和成员不会。',
+  'copyTrip.shorter':
+    '这比原行程更短。多出那几天的地点会移到想法里，它们的备注会被舍弃。',
+  'copyTrip.submit': '复制行程',
+  'copyTrip.copying': '正在复制行程',
+  'copyTrip.cancel': '取消',
+  'copyTrip.started': '正在复制“{title}”',
+  'copyTrip.errorTitle': '未能复制',
+  'copyTrip.error': '行程复制失败。请稍后重试。',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': '谁能看到',
@@ -393,6 +422,9 @@ const messages = {
   'trips.card.noDates': '日期待定',
   'trips.card.startsIn': '{days} 天后',
   'trips.card.days': '{days} 天',
+  'trips.card.copying': '复制中',
+  'trips.card.copyingLabel': '{title} 仍在复制中',
+  'trips.card.copyingReason': '请等复制完成。',
   'metric.trips': '行程',
   'metric.places': '地点',
   'metric.members': '成员',

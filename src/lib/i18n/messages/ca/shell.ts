@@ -145,6 +145,25 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Bon moment per repassar la llista d’equipatge i les reserves.',
+  'notification.trip.copied.title': '{tripTitle} ja està a punt',
+  'notification.trip.copied.body': {
+    one: 'S’ha copiat {days} dia',
+    many: 'S’han copiat {days} dies',
+    other: 'S’han copiat {days} dies',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} lloc',
+    many: '{places} llocs',
+    other: '{places} llocs',
+  },
+  'notification.trip.copied.dropped': {
+    one: '{dropped} nota descartada',
+    many: '{dropped} notes descartades',
+    other: '{dropped} notes descartades',
+  },
+  'notification.trip.copyFailed.title': 'No s’ha pogut copiar {tripTitle}',
+  'notification.trip.copyFailed.body':
+    'No s’ha perdut res. Torna-ho a provar des de l’original.',
   'notification.reservation.reminder.title': '{title} és a tocar',
   'notification.reservation.reminder.body':
     'Comprova l’hora i el codi de confirmació a la reserva.',
@@ -443,6 +462,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Accions per a {title}',
+  'tripActions.copy': 'Copia',
   'tripActions.favourite': 'Afegeix als preferits',
   'tripActions.unfavourite': 'Treu dels preferits',
   'tripActions.edit': 'Edita',
@@ -502,6 +522,23 @@ const messages = {
     many: 'persones',
     other: 'persones',
   },
+  'copyTrip.title': 'Copia «{title}»',
+  'copyTrip.nameLabel': 'Nom de la còpia',
+  'copyTrip.titleRequired': 'Posa un nom a la còpia.',
+  'copyTrip.datesLabel': 'Dates del viatge',
+  'copyTrip.datesTogether': 'Posa-hi les dues dates, o esborra-les totes dues.',
+  'copyTrip.clearDates': 'Copia sense dates',
+  'copyTrip.carries':
+    'Els dies, els llocs i les notes passen a la còpia. Les reserves, els diners, els fitxers i les persones no.',
+  'copyTrip.shorter':
+    'Això és més curt que l’original. Els llocs dels dies sobrants van a les idees i les seves notes es descarten.',
+  'copyTrip.submit': 'Copia el viatge',
+  'copyTrip.copying': 'S’està copiant el viatge',
+  'copyTrip.cancel': 'Cancel·la',
+  'copyTrip.started': 'S’està copiant «{title}»',
+  'copyTrip.errorTitle': 'Això no s’ha copiat',
+  'copyTrip.error':
+    'El viatge no s’ha pogut copiar. Torna-ho a provar d’aquí a un moment.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Qui ho pot veure',
@@ -532,6 +569,9 @@ const messages = {
   'trips.card.noDates': 'Dates per decidir',
   'trips.card.startsIn': 'en {days} d',
   'trips.card.days': '{days} d',
+  'trips.card.copying': 'S’està copiant',
+  'trips.card.copyingLabel': '{title} encara s’està copiant',
+  'trips.card.copyingReason': 'Espera que acabi la còpia.',
   'metric.trips': 'Viatges',
   'metric.places': 'Llocs',
   'metric.members': 'Membres',

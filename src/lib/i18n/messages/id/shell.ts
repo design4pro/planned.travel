@@ -140,6 +140,19 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Saatnya memeriksa daftar bawaan dan pemesanannya.',
+  'notification.trip.copied.title': '{tripTitle} sudah siap',
+  'notification.trip.copied.body': {
+    other: '{days} hari ikut tersalin',
+  },
+  'notification.trip.copied.places': {
+    other: '{places} tempat',
+  },
+  'notification.trip.copied.dropped': {
+    other: '{dropped} catatan dibuang',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle} tidak dapat disalin',
+  'notification.trip.copyFailed.body':
+    'Tidak ada yang hilang. Coba lagi dari aslinya.',
   'notification.reservation.reminder.title': '{title} sudah dekat',
   'notification.reservation.reminder.body':
     'Periksa jam dan kode konfirmasi pada pemesanannya.',
@@ -378,6 +391,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Tindakan untuk {title}',
+  'tripActions.copy': 'Salin',
   'tripActions.favourite': 'Tambahkan ke favorit',
   'tripActions.unfavourite': 'Hapus dari favorit',
   'tripActions.edit': 'Ubah',
@@ -426,6 +440,22 @@ const messages = {
   'deleteTrip.carried.members': {
     other: 'orang',
   },
+  'copyTrip.title': 'Salin “{title}”',
+  'copyTrip.nameLabel': 'Nama salinan',
+  'copyTrip.titleRequired': 'Beri nama untuk salinan.',
+  'copyTrip.datesLabel': 'Tanggal',
+  'copyTrip.datesTogether': 'Isi kedua tanggal, atau kosongkan keduanya.',
+  'copyTrip.clearDates': 'Salin tanpa tanggal',
+  'copyTrip.carries':
+    'Hari, tempat, dan catatan ikut tersalin. Reservasi, uang, berkas, dan orang tidak.',
+  'copyTrip.shorter':
+    'Ini lebih pendek dari aslinya. Tempat pada hari yang berlebih pindah ke ide, dan catatannya dibuang.',
+  'copyTrip.submit': 'Salin perjalanan',
+  'copyTrip.copying': 'Menyalin perjalanan',
+  'copyTrip.cancel': 'Batal',
+  'copyTrip.started': 'Menyalin “{title}”',
+  'copyTrip.errorTitle': 'Itu tidak tersalin',
+  'copyTrip.error': 'Perjalanan tidak dapat disalin. Coba lagi sebentar.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Siapa yang bisa melihat',
@@ -457,6 +487,9 @@ const messages = {
   'trips.card.noDates': 'Tanggal belum ditentukan',
   'trips.card.startsIn': '{days} hari lagi',
   'trips.card.days': '{days} hr',
+  'trips.card.copying': 'Menyalin',
+  'trips.card.copyingLabel': '{title} masih disalin',
+  'trips.card.copyingReason': 'Tunggu sampai penyalinan selesai.',
   'metric.trips': 'Perjalanan',
   'metric.places': 'Tempat',
   'metric.members': 'Anggota',

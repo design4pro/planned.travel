@@ -6,9 +6,9 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { consumeTaskBatch } from '../consumer'
+import { consumeTaskBatch, taskHandlers } from '../consumer'
 import { taskDeadKey, taskDoneKey } from '../jobs'
-import { TaskPermanentError, TaskRetryableError } from '../types'
+import { TASK_KINDS, TaskPermanentError, TaskRetryableError } from '../types'
 import { createLogger, createMemorySink } from '../../observability/logger'
 
 import type {
@@ -501,5 +501,29 @@ describe('the dead-letter record', () => {
       summary: { kind: 'email', attempts: 3 },
       object: { body: { id: 'task-exhausted' } },
     })
+  })
+})
+
+/**
+ * The kinds that are declared and have a `case` but no handler behind it — so every message sent to
+ * one dead-letters on first delivery. This is issue #304, not a property of the consumer, and the
+ * list is written out rather than derived so that a *new* kind cannot join it silently: adding one
+ * without its registry entry fails the test below, and closing #304 shrinks this array to empty.
+ */
+const UNREGISTERED_KINDS: ReadonlyArray<TaskKind> = [
+  'thumbnail',
+  'backup',
+  'billing.subscription.changed',
+  'billing.invoice.paid',
+  'billing.invoice.payment_failed',
+]
+
+describe('taskHandlers', () => {
+  it('registers a handler for every declared kind, bar the five #304 is open on', () => {
+    const missing = TASK_KINDS.filter((kind) => taskHandlers[kind] === undefined)
+
+    // Equality, not a subset: a kind that gains a handler has to leave the list above, and a kind
+    // that arrives without one has to be seen here rather than in production's dead-letter records.
+    expect(missing).toEqual(UNREGISTERED_KINDS)
   })
 })

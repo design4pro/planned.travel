@@ -28,7 +28,12 @@
  * session, a request or a browser.
  */
 
-import { paramsFrom, renderStored, storedKey } from '#/lib/notification-copy'
+import {
+  paramsFrom,
+  renderStored,
+  renderStoredBody,
+  storedKey,
+} from '#/lib/notification-copy'
 
 import type { Locale, Translate, TranslateStored } from '#/lib/i18n'
 import type { StoredParams } from '#/lib/notification-copy'
@@ -38,6 +43,7 @@ export {
   eventOf,
   paramsFrom,
   renderStored,
+  renderStoredBody,
   storedKey,
 } from '#/lib/notification-copy'
 export type { StoredParams } from '#/lib/notification-copy'
@@ -77,10 +83,11 @@ export function notificationCopy(
     storedKey(row.titleKey, 'title'),
     paramsFrom(row.titleParams ?? row.bodyParams, locale),
   )
-  const body = renderStored(
+  const body = renderStoredBody(
     tStored,
-    storedKey(row.bodyKey, 'body'),
-    paramsFrom(row.bodyParams ?? row.titleParams, locale),
+    row.bodyKey,
+    row.bodyParams ?? row.titleParams,
+    locale,
   )
 
   if (title === null) {

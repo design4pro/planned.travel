@@ -11,29 +11,41 @@
  * PRD #104 decisions 1, 2 and 6; ADR 0007.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { eq, inArray } from 'drizzle-orm'
 import {
   dayAssignments,
   dayNotes,
   days,
+  expenses,
+  placeTags,
   places,
+  reservations,
+  shareLinks,
   tripFavourites,
+  tripFiles,
+  tripMembers,
   trips,
 } from '#/server/db/schema'
 import { NotFoundError, RepositoryError } from '../context'
 import {
+  MAX_BOUND_PARAMETERS,
   addTripMember,
   archiveTrip,
   assertTripRole,
   canReadTrip,
+  chunkFor,
+  copyTripContents,
   countTripsByStatus,
+  createShareLink,
   createTrip,
   deleteTrip,
   listTrips,
   listTripsForUser,
+  registerTripCopier,
   requireTrip,
   restoreTrip,
+  startTripCopy,
   tripRolesFor,
   updateTrip,
   updateTripMember,
@@ -43,11 +55,22 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
-import { createDayNote, listTripDays } from '../days'
+import { createDayNote, listTripDays, updateDay } from '../days'
+import { createExpense } from '../expenses'
+import { recordFile } from '../files'
 import { createAssignment } from '../itinerary'
-import { createPlace } from '../places'
+import {
+  createPlace,
+  listUnscheduledPlaces,
+  placeTagsAccess,
+  placesRepository,
+  setPlaceTags,
+} from '../places'
+import { createReservation } from '../reservations'
+import { createTag } from '../tags'
 import { captureError, createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
+import type { Trip } from '#/server/db/types'
 import type { TenantScope } from '../base'
 
 describe('trip lifecycle', () => {
@@ -498,6 +521,659 @@ describe('trip lifecycle', () => {
       await setFavourite(outsider, trip.id, true)
       expect(await listFavouriteTripIds(outsider)).toEqual([trip.id])
       expect(await countFavourites(tenant.scope)).toBe(0)
+    })
+  })
+
+  /* ----------------------------------------------------------------- copying */
+
+  /**
+   * A copy reproduces the **plan** and never the **record** (PRD #104 decision 4b), and it is split
+   * on the bound: {@link startTripCopy} does only what is O(1) in the source's size, so the reader
+   * gets a trip id and a quota refusal inside one round trip, and {@link copyTripContents} does the
+   * rest in a queue consumer where an unbounded write belongs.
+   *
+   * Every count below is read past every repository, so the tables are the witness.
+   */
+  describe('copying', () => {
+    interface Inventory {
+      days: number
+      places: number
+      tags: number
+      assignments: number
+      notes: number
+      expenses: number
+      files: number
+      reservations: number
+      shareLinks: number
+      members: number
+    }
+
+    async function inventoryOf(tripId: string): Promise<Inventory> {
+      const placeIds = (
+        await harness.db
+          .select({ id: places.id })
+          .from(places)
+          .where(eq(places.tripId, tripId))
+      ).map((row) => row.id)
+      const tagRows =
+        placeIds.length === 0
+          ? []
+          : await harness.db
+              .select({ tagId: placeTags.tagId })
+              .from(placeTags)
+              .where(inArray(placeTags.placeId, placeIds))
+      const [
+        dayRows,
+        assignmentRows,
+        noteRows,
+        expenseRows,
+        fileRows,
+        reservationRows,
+        shareLinkRows,
+        memberRows,
+      ] = await Promise.all([
+        harness.db
+          .select({ id: days.id })
+          .from(days)
+          .where(eq(days.tripId, tripId)),
+        harness.db
+          .select({ id: dayAssignments.id })
+          .from(dayAssignments)
+          .where(eq(dayAssignments.tripId, tripId)),
+        harness.db
+          .select({ id: dayNotes.id })
+          .from(dayNotes)
+          .where(eq(dayNotes.tripId, tripId)),
+        harness.db
+          .select({ id: expenses.id })
+          .from(expenses)
+          .where(eq(expenses.tripId, tripId)),
+        harness.db
+          .select({ id: tripFiles.id })
+          .from(tripFiles)
+          .where(eq(tripFiles.tripId, tripId)),
+        harness.db
+          .select({ id: reservations.id })
+          .from(reservations)
+          .where(eq(reservations.tripId, tripId)),
+        harness.db
+          .select({ id: shareLinks.id })
+          .from(shareLinks)
+          .where(eq(shareLinks.tripId, tripId)),
+        harness.db
+          .select({ id: tripMembers.id })
+          .from(tripMembers)
+          .where(eq(tripMembers.tripId, tripId)),
+      ])
+      return {
+        days: dayRows.length,
+        places: placeIds.length,
+        tags: tagRows.length,
+        assignments: assignmentRows.length,
+        notes: noteRows.length,
+        expenses: expenseRows.length,
+        files: fileRows.length,
+        reservations: reservationRows.length,
+        shareLinks: shareLinkRows.length,
+        members: memberRows.length,
+      }
+    }
+
+    /**
+     * A three-day trip carrying one of everything: a place on each day with a tag, an assignment
+     * and a note per day, and one row in each of the four record tables the copy must leave behind.
+     */
+    async function seedSource(): Promise<Trip> {
+      const trip = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        destination: 'Lisbon, Portugal',
+        summary: 'Three days of miradouros.',
+        currency: 'EUR',
+        countryCodes: ['PT'],
+        startDate: '2026-04-10',
+        endDate: '2026-04-12',
+      })
+      const tag = await createTag(tenant.scope, { name: 'Viewpoint' })
+      const run = await listTripDays(tenant.scope, trip.id)
+
+      for (const [index, day] of run.entries()) {
+        const place = await createPlace(tenant.scope, {
+          tripId: trip.id,
+          name: `Miradouro ${index + 1}`,
+          city: 'Lisbon',
+          notes: 'Go at sunset.',
+        })
+        await setPlaceTags(tenant.scope, place.id, [tag.id])
+        await createAssignment(tenant.scope, {
+          tripId: trip.id,
+          dayId: day.id,
+          placeId: place.id,
+        })
+        await createDayNote(tenant.scope, {
+          tripId: trip.id,
+          dayId: day.id,
+          body: `Day ${index + 1}: buy the transit pass.`,
+        })
+      }
+
+      await createExpense(tenant.scope, {
+        tripId: trip.id,
+        title: 'Transit pass',
+        amountMinor: 640,
+        spentOn: '2026-04-10',
+      })
+      await createReservation(tenant.scope, {
+        tripId: trip.id,
+        title: 'Hotel do Chiado',
+      })
+      await recordFile(tenant.scope, {
+        tripId: trip.id,
+        storageKey: `trips/${tenant.organizationId}/${trip.id}/booking.pdf`,
+        filename: 'booking.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 1_024,
+      })
+      await createShareLink(tenant.scope, {
+        tripId: trip.id,
+        token: 'share-token-0123456789',
+        scopes: {
+          map: true,
+          itinerary: true,
+          reservations: false,
+          lists: false,
+          budget: false,
+          collab: false,
+          files: false,
+        },
+      })
+      return trip
+    }
+
+    /* ------------------------------------------------------------ the bound */
+
+    it('fits a statement inside D1’s bound-parameter ceiling', () => {
+      expect(MAX_BOUND_PARAMETERS).toBe(100)
+      expect(chunkFor(25)).toBe(4)
+      expect(chunkFor(3)).toBe(33)
+      // A row wider than the ceiling still sends one row rather than none.
+      expect(chunkFor(200)).toBe(1)
+    })
+
+    /* --------------------------------------------- the synchronous half */
+
+    it('writes the trip, its owner and the dated run — and nothing else', async () => {
+      const source = await seedSource()
+
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+
+      // This is the assertion that fails if anyone moves inventory work into the request path.
+      expect(await inventoryOf(targetId)).toEqual({
+        days: 3,
+        places: 0,
+        tags: 0,
+        assignments: 0,
+        notes: 0,
+        expenses: 0,
+        files: 0,
+        reservations: 0,
+        shareLinks: 0,
+        members: 1,
+      })
+
+      const target = await requireTrip(tenant.scope, targetId)
+      expect(target.copyPendingAt).not.toBeNull()
+      expect(target.slug).not.toBe(source.slug)
+      // Inherited (spec Q5) — and `visibility` deliberately is not.
+      expect(target.destination).toBe('Lisbon, Portugal')
+      expect(target.summary).toBe('Three days of miradouros.')
+      expect(target.currency).toBe('EUR')
+      expect(target.countryCodes).toEqual(['PT'])
+      expect(target.visibility).toBe('private')
+    })
+
+    it('is open to any reader: a viewer may copy a trip they may not change', async () => {
+      const source = await createTrip(tenant.scope, { title: 'Lisbon' })
+      await addTripMember(tenant.scope, {
+        tripId: source.id,
+        userId: outsiderId,
+        role: 'viewer',
+      })
+
+      const targetId = await startTripCopy(outsider, source.id, {
+        title: 'My own Lisbon',
+      })
+
+      // The copy is the viewer's, and they own it.
+      expect(
+        await tripRolesFor(outsider, [targetId]).then((roles) =>
+          roles.get(targetId),
+        ),
+      ).toBe('owner')
+    })
+
+    /* -------------------------------------------- the asynchronous half */
+
+    it('reproduces the plan and none of the record', async () => {
+      const source = await seedSource()
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+
+      const result = await copyTripContents(tenant.scope, source.id, targetId)
+
+      expect(await inventoryOf(targetId)).toEqual({
+        days: 3,
+        places: 3,
+        tags: 3,
+        assignments: 3,
+        notes: 3,
+        // The record stays behind, by design.
+        expenses: 0,
+        files: 0,
+        reservations: 0,
+        shareLinks: 0,
+        // The source's people do not come across either: the copier is the only member.
+        members: 1,
+      })
+      expect(result).toMatchObject({
+        days: 3,
+        places: 3,
+        assignments: 3,
+        unscheduled: 0,
+        notes: 3,
+        droppedNotes: 0,
+      })
+    })
+
+    it('leaves a copy that outlives its source', async () => {
+      const source = await seedSource()
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+      await copyTripContents(tenant.scope, source.id, targetId)
+
+      await deleteTrip(tenant.scope, source.id)
+
+      expect(await inventoryOf(targetId)).toMatchObject({
+        days: 3,
+        places: 3,
+        tags: 3,
+        assignments: 3,
+        notes: 3,
+      })
+    })
+
+    it('does not clear the pending stamp — that is the handler’s last write', async () => {
+      const source = await seedSource()
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+      })
+
+      await copyTripContents(tenant.scope, source.id, targetId)
+
+      expect(
+        (await requireTrip(tenant.scope, targetId)).copyPendingAt,
+      ).not.toBeNull()
+    })
+
+    it('chunks every insert inside D1’s bound-parameter ceiling', async () => {
+      const source = await createTrip(tenant.scope, { title: 'Lisbon' })
+      for (let index = 0; index < 10; index += 1) {
+        await createPlace(tenant.scope, {
+          tripId: source.id,
+          name: `Miradouro ${index}`,
+        })
+      }
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+      })
+
+      const insertMany = vi.spyOn(placesRepository, 'insertMany')
+      await copyTripContents(tenant.scope, source.id, targetId)
+      const sent = insertMany.mock.calls.map((call) => call[1].length)
+      insertMany.mockRestore()
+
+      // Ten places at three rows a statement — three, because a `places` row binds 27 parameters
+      // and not the 24 its payload spells. The bound is held by the loop, not by a comment.
+      expect(sent).toEqual([3, 3, 3, 1])
+      expect((await inventoryOf(targetId)).places).toBe(10)
+    })
+
+    it('chunks the tag read too, not only the tag write', async () => {
+      // The read binds one parameter per place id, and a trip is not capped at ninety places, so an
+      // `IN (...)` over the whole place map is a statement D1 refuses. It refuses it with neither
+      // `NotFoundError` nor `QuotaExceededError`, so the handler reads it as transient and
+      // redelivers the copy forever, leaving the target stuck with `copy_pending_at` set.
+      const source = await createTrip(tenant.scope, { title: 'Lisbon' })
+      const tag = await createTag(tenant.scope, { name: 'Viewpoint' })
+      const placeCount = 95
+      for (let index = 0; index < placeCount; index += 1) {
+        const place = await createPlace(tenant.scope, {
+          tripId: source.id,
+          name: `Miradouro ${index}`,
+        })
+        await setPlaceTags(tenant.scope, place.id, [tag.id])
+      }
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+      })
+
+      const findMany = vi.spyOn(placeTagsAccess, 'findMany')
+      await copyTripContents(tenant.scope, source.id, targetId)
+      const reads = findMany.mock.calls.length
+      findMany.mockRestore()
+
+      // Ninety-five ids at ninety a read: two statements, not one over the ceiling.
+      expect(reads).toBe(2)
+      // And the chunking lost nothing on the way — every tag came across.
+      expect((await inventoryOf(targetId)).tags).toBe(placeCount)
+    })
+
+    /* ------------------------------------------------- truncation and dates */
+
+    it('truncates a shorter range: the overflow lands in ideas, its notes are counted', async () => {
+      const source = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        startDate: '2026-04-10',
+        endDate: '2026-04-14',
+      })
+      const run = await listTripDays(tenant.scope, source.id)
+      expect(run).toHaveLength(5)
+      for (const [index, day] of run.entries()) {
+        const place = await createPlace(tenant.scope, {
+          tripId: source.id,
+          name: `Stop ${index + 1}`,
+        })
+        await createAssignment(tenant.scope, {
+          tripId: source.id,
+          dayId: day.id,
+          placeId: place.id,
+        })
+        await createDayNote(tenant.scope, {
+          tripId: source.id,
+          dayId: day.id,
+          body: `Day ${index + 1}`,
+        })
+      }
+
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'A shorter Lisbon',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+      const result = await copyTripContents(tenant.scope, source.id, targetId)
+
+      expect(result).toMatchObject({
+        days: 3,
+        places: 5,
+        assignments: 3,
+        unscheduled: 2,
+        notes: 3,
+        droppedNotes: 2,
+      })
+      // Every place came across; the two with nowhere to be sit in the ideas column.
+      expect(
+        (await listUnscheduledPlaces(tenant.scope, targetId)).map(
+          (place) => place.name,
+        ),
+      ).toEqual(['Stop 4', 'Stop 5'])
+    })
+
+    it('gives an undated copy a numbered, dateless run', async () => {
+      const source = await seedSource()
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Someday Lisbon',
+      })
+
+      await copyTripContents(tenant.scope, source.id, targetId)
+
+      const run = await listTripDays(tenant.scope, targetId)
+      expect(run.map((day) => day.dayNumber)).toEqual([1, 2, 3])
+      expect(run.every((day) => day.date === null)).toBe(true)
+      // The plan came across whole even without dates to hang it on.
+      expect(await inventoryOf(targetId)).toMatchObject({
+        assignments: 3,
+        notes: 3,
+      })
+    })
+
+    it('carries each day’s title and notes across, dated run or not', async () => {
+      const source = await seedSource()
+      for (const [index, day] of (
+        await listTripDays(tenant.scope, source.id)
+      ).entries()) {
+        await updateDay(tenant.scope, day.id, {
+          title: `Day ${index + 1}: the hills`,
+          notes: `Tram 28 goes at ${7 + index}.`,
+        })
+      }
+
+      // The dated branch keeps the run `startTripCopy` minted, and that run is blank. Without a
+      // pass over it the same source copied *with* dates would lose both columns while copied
+      // *without* dates kept them — silent, and on the more common of the two paths.
+      const dated = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+      await copyTripContents(tenant.scope, source.id, dated)
+
+      expect(
+        (await listTripDays(tenant.scope, dated)).map((day) => [
+          day.title,
+          day.notes,
+        ]),
+      ).toEqual([
+        ['Day 1: the hills', 'Tram 28 goes at 7.'],
+        ['Day 2: the hills', 'Tram 28 goes at 8.'],
+        ['Day 3: the hills', 'Tram 28 goes at 9.'],
+      ])
+
+      const undated = await startTripCopy(tenant.scope, source.id, {
+        title: 'Someday Lisbon',
+      })
+      await copyTripContents(tenant.scope, source.id, undated)
+
+      expect(
+        (await listTripDays(tenant.scope, undated)).map((day) => [
+          day.title,
+          day.notes,
+        ]),
+      ).toEqual([
+        ['Day 1: the hills', 'Tram 28 goes at 7.'],
+        ['Day 2: the hills', 'Tram 28 goes at 8.'],
+        ['Day 3: the hills', 'Tram 28 goes at 9.'],
+      ])
+    })
+
+    /**
+     * The headings are paired by day number, which a shorter run is the way to prove.
+     *
+     * The test above copies runs of the same length as the source's, where pairing by number and
+     * pairing by position give the same answer. A truncated copy is where they part: day 1 of the
+     * copy must carry day 1's heading and the days beyond the range must bring none of theirs
+     * across — an off-by-one here reads plausibly and is wrong.
+     */
+    it('gives a truncated copy the headings of the days it kept, and no others', async () => {
+      const source = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        startDate: '2026-04-10',
+        endDate: '2026-04-14',
+      })
+      for (const [index, day] of (
+        await listTripDays(tenant.scope, source.id)
+      ).entries()) {
+        await updateDay(tenant.scope, day.id, { title: `Stop ${index + 1}` })
+      }
+
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'A shorter Lisbon',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+      })
+      await copyTripContents(tenant.scope, source.id, targetId)
+
+      expect(
+        (await listTripDays(tenant.scope, targetId)).map((day) => day.title),
+      ).toEqual(['Stop 1', 'Stop 2'])
+    })
+
+    it('pairs each copy with its source by the id it minted, not by RETURNING’s order', async () => {
+      const source = await seedSource()
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+
+      // SQLite defines no row order for `RETURNING`, so handing the rows back reversed is a legal
+      // answer to the very same statement. Correlating by array index would silently hang every
+      // tag and assignment off the wrong place; nothing would throw and no count would move.
+      const real = placesRepository.insertMany.bind(placesRepository)
+      const insertMany = vi
+        .spyOn(placesRepository, 'insertMany')
+        .mockImplementation(async (scope, values) =>
+          [...(await real(scope, values))].reverse(),
+        )
+      await copyTripContents(tenant.scope, source.id, targetId)
+      insertMany.mockRestore()
+
+      const scheduled = await harness.db
+        .select({ place: places.name, dayNumber: days.dayNumber })
+        .from(dayAssignments)
+        .innerJoin(places, eq(places.id, dayAssignments.placeId))
+        .innerJoin(days, eq(days.id, dayAssignments.dayId))
+        .where(eq(dayAssignments.tripId, targetId))
+
+      expect([...scheduled].sort((a, b) => a.dayNumber - b.dayNumber)).toEqual([
+        { place: 'Miradouro 1', dayNumber: 1 },
+        { place: 'Miradouro 2', dayNumber: 2 },
+        { place: 'Miradouro 3', dayNumber: 3 },
+      ])
+    })
+
+    /**
+     * A copy reproduces the plan and never the record, and `is_visited` is the record.
+     *
+     * It says the reader has already been there, so carrying it onto a trip nobody has taken makes
+     * the copy tell them something untrue — the same reason `copyAssignments` leaves
+     * `reservation_status` to fall back to `none`. It is also what `atlas.ts` counts per country, so
+     * a carried flag inflates the visited tallies of a reader who has been nowhere new.
+     */
+    it('leaves a visited place unvisited in the copy, because that is the record', async () => {
+      const source = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        startDate: '2026-04-10',
+        endDate: '2026-04-11',
+      })
+      await createPlace(tenant.scope, {
+        tripId: source.id,
+        name: 'Miradouro da Graça',
+        countryCode: 'PT',
+        isVisited: true,
+      })
+
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+      })
+      await copyTripContents(tenant.scope, source.id, targetId)
+
+      const copied = await placesRepository.findMany(tenant.scope, {
+        where: eq(places.tripId, targetId),
+      })
+      expect(copied.map((place) => place.isVisited)).toEqual([false])
+      // The source keeps its own record — the drop is the copy's, not a mutation of what was read.
+      const original = await placesRepository.findMany(tenant.scope, {
+        where: eq(places.tripId, source.id),
+      })
+      expect(original.map((place) => place.isVisited)).toEqual([true])
+    })
+
+    /* ------------------------------------------------------------- retries */
+
+    it('rebuilds the target from clean when an attempt died part-way', async () => {
+      const source = await seedSource()
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+
+      // A delivery that dies after the places pass. The regression this guards is `placeIds`: an
+      // attempt that resumed instead of restarting would hold ids only for the places it inserted
+      // itself, and would silently drop every earlier place's tags and assignments.
+      const insertMany = vi
+        .spyOn(placeTagsAccess, 'insertMany')
+        .mockRejectedValueOnce(new Error('D1_ERROR: network'))
+      await expect(
+        copyTripContents(tenant.scope, source.id, targetId),
+      ).rejects.toThrow('D1_ERROR: network')
+      insertMany.mockRestore()
+
+      await copyTripContents(tenant.scope, source.id, targetId)
+
+      expect(await inventoryOf(targetId)).toMatchObject({
+        days: 3,
+        places: 3,
+        tags: 3,
+        assignments: 3,
+        notes: 3,
+      })
+    })
+
+    it('refuses to copy a trip into itself', async () => {
+      const trip = await seedSource()
+
+      const error = await captureError(() =>
+        copyTripContents(tenant.scope, trip.id, trip.id),
+      )
+
+      expect(error).toBeInstanceOf(RepositoryError)
+      // Nothing was cleared on the way to finding out.
+      expect(await inventoryOf(trip.id)).toMatchObject({ places: 3, notes: 3 })
+    })
+
+    /* ------------------------------------------------------------ the registry
+     *
+     * This block registers copiers into module state that has no un-register, so it stays **last**
+     * in the file: the fakes write no rows, but they would show up in every later `extras`.
+     */
+
+    it('runs every registered copier in order and reports what each did', async () => {
+      const ran: Array<string> = []
+      registerTripCopier('budget', async (_scope, _source, _target, maps) => {
+        ran.push('budget')
+        return { name: 'budget', rows: maps.placeIds.size }
+      })
+      registerTripCopier('packing', async () => {
+        ran.push('packing')
+        return { name: 'packing', rows: 7 }
+      })
+      // The same name again replaces rather than appends: a module imported twice must not double.
+      registerTripCopier('packing', async () => {
+        ran.push('packing')
+        return { name: 'packing', rows: 9 }
+      })
+
+      const source = await seedSource()
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+      })
+      const result = await copyTripContents(tenant.scope, source.id, targetId)
+
+      expect(ran).toEqual(['budget', 'packing'])
+      expect(result.extras).toEqual([
+        { name: 'budget', rows: 3 },
+        { name: 'packing', rows: 9 },
+      ])
     })
   })
 })
