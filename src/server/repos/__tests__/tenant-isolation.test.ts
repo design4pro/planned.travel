@@ -81,6 +81,7 @@ import {
   daysRepository,
   listDayNotes,
   listTripDays,
+  requireDayNote,
 } from '../days'
 import {
   budgetItemsRepository,
@@ -3748,6 +3749,16 @@ describe('tenant isolation', () => {
       ).toBeInstanceOf(NotFoundError)
 
       expect(await notesOf(beta.tenant.scope, beta.dayId)).toEqual(before)
+    })
+
+    it('refuses to resolve B’s note by id', async () => {
+      // The lookup every note write opens with: it is the row that names the trip and the day the
+      // guard then checks, so reaching a stranger's row here would hand the guard the wrong trip.
+      expect(
+        await captureError(() =>
+          requireDayNote(alpha.tenant.scope, beta.dayNoteId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
     })
   })
 })

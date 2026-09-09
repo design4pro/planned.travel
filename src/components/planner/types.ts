@@ -73,6 +73,66 @@ export interface PlannerDay {
   }>
 }
 
+/**
+ * A day note, as its row renders it.
+ *
+ * `icon` is a plain string and not a {@link DayNoteIcon}: the enum is a *write* constraint added by
+ * `01-S2b`, and no migration narrows what earlier rows already hold. The registry in `note-row.tsx`
+ * falls back for a name it does not know, exactly as the map's category icon does.
+ */
+export interface PlannerNote {
+  readonly id: string
+  readonly dayId: string
+  /** The one-line headline. Always present. */
+  readonly body: string
+  /** Markdown, rendered through `src/lib/markdown`. `null` when the note is one line. */
+  readonly detail: string | null
+  /** Already formatted, e.g. `18:30`. */
+  readonly time: string | null
+  /** As stored, e.g. `train-front`. */
+  readonly icon: string
+}
+
+/**
+ * The vocabulary a day note's icon is drawn from.
+ *
+ * It lives here rather than beside the note's repository because both ends need it and only one of
+ * them may hold it: the picker needs the *value*, and importing `src/server/repos/days.ts` into a
+ * dialog would pull Drizzle and the whole schema into the browser bundle. `days.ts` re-exports it
+ * for its Zod enum — the same seam `src/server/errors/public.ts` already crosses in this direction.
+ *
+ * The first ten names are the ones the flagship seed already writes through `createDayNote`; the
+ * rest are the picker's. Narrowing the list is therefore a breaking change for stored rows and for
+ * `pnpm worktree:bootstrap`, not a cosmetic edit. Every name resolves in the pinned `lucide-react`.
+ */
+export const DAY_NOTE_ICONS = [
+  'alarm-clock',
+  'clock',
+  'flashlight',
+  'footprints',
+  'info',
+  'luggage',
+  'package',
+  'ticket',
+  'train-front',
+  'wifi',
+  'sticky-note',
+  'utensils',
+  'bus',
+  'bed-double',
+  'camera',
+  'map-pin',
+  'wallet',
+  'umbrella',
+  'triangle-alert',
+] as const
+
+/** One of {@link DAY_NOTE_ICONS}. The type of what a picker sends, never of what a row holds. */
+export type DayNoteIcon = (typeof DAY_NOTE_ICONS)[number]
+
+/** The icon a note takes when none was chosen — `day_notes.icon`'s column default. */
+export const DEFAULT_DAY_NOTE_ICON: DayNoteIcon = 'sticky-note'
+
 /** True when a row can be pinned on the map. */
 export function isMapped(
   row: PlannerRow,

@@ -7,6 +7,7 @@
 
 import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { DAY_NOTE_ICONS } from '#/components/planner/types'
 import { dayNotes, days } from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
 import { NotFoundError } from './context'
@@ -50,9 +51,11 @@ export const createDayNoteInput = z.object({
   tripId: idSchema,
   dayId: idSchema,
   body: longTextSchema.min(1),
+  /** The long half of a note, rendered through `src/lib/markdown`. Blank means absent, so null it. */
+  detail: longTextSchema.nullish(),
   time: timeSchema.nullish(),
   /** `day_notes.icon` is `NOT NULL DEFAULT 'sticky-note'`: omit it, never null it. */
-  icon: shortTextSchema.min(1).optional(),
+  icon: z.enum(DAY_NOTE_ICONS).optional(),
   sortOrder: sortOrderSchema.optional(),
 })
 export type CreateDayNoteInput = z.infer<typeof createDayNoteInput>
@@ -61,6 +64,9 @@ export const updateDayNoteInput = createDayNoteInput
   .omit({ tripId: true, dayId: true })
   .partial()
 export type UpdateDayNoteInput = z.infer<typeof updateDayNoteInput>
+
+/** The icon vocabulary, re-exported so a caller of this module needs only this module. */
+export { DAY_NOTE_ICONS, type DayNoteIcon } from '#/components/planner/types'
 
 /* -------------------------------------------------------------------------------------------------
  * Date helpers
@@ -249,6 +255,19 @@ export async function listTripDayNotes(
     where: eq(dayNotes.tripId, tripId),
     orderBy: [asc(dayNotes.sortOrder), asc(dayNotes.id)],
   })
+}
+
+/**
+ * Resolves a note, or raises {@link NotFoundError}.
+ *
+ * The row is what a note write is guarded by: it names the trip and the day, so the client's ids
+ * address the note rather than choosing what is checked.
+ */
+export async function requireDayNote(
+  scope: TenantScope,
+  noteId: string,
+): Promise<DayNote> {
+  return dayNotesRepository.requireById(scope, noteId)
 }
 
 export async function createDayNote(
