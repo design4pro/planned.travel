@@ -1,5 +1,5 @@
 {
-  "kitVersion": 5,
+  "kitVersion": 9,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -43,7 +43,7 @@
       "mode": "100644"
     },
     ".ai/scripts/agent-kit-check.mjs": {
-      "sha256": "a1e9e172d4900c6bf14f3e1df02e3fd0340271a8f25097fd781abf360fd292a3",
+      "sha256": "02824937c793827a7c510a1d91852d028fbcfaa822f9862421457c2fe44446ad",
       "mode": "100755"
     },
     ".ai/scripts/cez-automations.sh": {
@@ -55,11 +55,11 @@
       "mode": "100755"
     },
     ".ai/scripts/cezar-host-patch.sh": {
-      "sha256": "ce968aeb27109421afc50452676b0303dadd5a98769b3abc5969073b4c6e547a",
+      "sha256": "4329a83ce69376c52ea5ccb3ade8d4fbd832d831ff00ea547338017eeaa79373",
       "mode": "100755"
     },
     ".ai/scripts/housekeeping.sh": {
-      "sha256": "ada590804e2ea2457c6b0e30652e81cd501fa1bad6cbedaba57c13d4fe69e446",
+      "sha256": "f6490cd576975bf29d228e3bd891351ff7c8a8c29df8cc6313d4b970988b7737",
       "mode": "100755"
     },
     ".ai/trackers/github.md": {

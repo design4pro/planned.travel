@@ -10,7 +10,13 @@ the rules of `SDLC.md`.
 
 ## Install and configure
 
-- Pinned version: `@open-mercato/cezar@0.10.1` (`npx -y @open-mercato/cezar@0.10.1 serve`). The
+- Pinned version: `@open-mercato/cezar@0.10.1`, installed globally
+  (`npm i -g @open-mercato/cezar@0.10.1`) and started by the cockpit plist as `cezar serve`. The
+  service deliberately does not go through `npx`: npx resolves from a content-hashed cache npm may
+  collect at any time, and the collection takes the host patches below with it, silently. The
+  cockpit plist is host-wide state and lives in `design4pro/agent-kit`
+  (`host/launchd/dev.cezar.cockpit.plist`, with the runbook in that repository's README), not here -
+  one service serves both projects. The
   project entry in `~/.cezar/config.json` points at the main checkout; the versioned part is
   `.ai/cezar/config.json` (`baseBranch: develop`, `worktreeRetention: 10`, `maxParallel: 2`,
   `reviewGate: false` so a successful non-autonomous run settles at `done` and the automations
@@ -18,9 +24,10 @@ the rules of `SDLC.md`.
   the only source and cezar must not clone the upstream repository at run time).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
   of git; `config.json` and `workflows/` are tracked.
-- Host patches: `bash .ai/scripts/cezar-host-patch.sh` patches the cached copy of 0.10.1 the
-  service runs, puts `CEZ_SKILLS_AUTO_UPDATE=0` in the service plist and restarts it. Rerun it
-  after the npx cache is cleared; drop each patch once the pinned version carries the fix.
+- Host patches: `bash .ai/scripts/cezar-host-patch.sh` patches the copy of 0.10.1 the service
+  runs - the global install first, the npx cache as a fallback for a host that has not cut over -
+  puts `CEZ_SKILLS_AUTO_UPDATE=0` in the service plist and restarts it. Rerun it after any
+  reinstall or upgrade of cezar; drop each patch once the pinned version carries the fix.
   - `issue.labeled` polls fail as soon as one recently updated issue has a comment or a
     cross-reference (open-mercato/cezar#914, fix in upstream PR #916, unreleased), so
     `issue-regroom`, `issue-autofix` and `issue-spec` never fire.
@@ -176,8 +183,8 @@ fires minutes before the review job posts anything. So the chain is:
    `filters.includePullRequests` on both gates. It is opt-in per automation - the cockpit's filter
    schema passes unknown keys through untouched - which is what keeps `issue-regroom`,
    `issue-autofix` and `issue-spec` from starting to fire on PRs that happen to carry their label.
-   **Without the patch this automation never fires and says nothing**; re-run the script after the
-   npx cache is cleared.
+   **Without the patch this automation never fires and says nothing**; re-run the script after any
+   reinstall or upgrade of cezar.
 3. `pr-review-threads` runs the `pr-fix` workflow, and `om-auto-fix-pr` replies in every thread and
    resolves the ones it settles. A finding it agrees with but cannot act on - a guarded file it is
    still refused, a change that belongs upstream - is **not** a decline: it replies with the exact
