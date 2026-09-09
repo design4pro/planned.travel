@@ -83,9 +83,9 @@ Turns it on: the menu item, the dialog, the copying state, the 23-locale copy, a
 
 ### Phase 2: the dialog and the tile
 
-- [ ] 2.1 The 23-locale copy
-- [ ] 2.2 `TripCopyDialog`
-- [ ] 2.3 The Copy menu item in `trip-actions.tsx`
-- [ ] 2.4 The copying tile state in `trip-card.tsx` (with `TripCard.copyPending` in `overview.ts`)
+- [x] 2.1 The 23-locale copy — 36254696
+- [x] 2.2 `TripCopyDialog` — 36254696
+- [x] 2.3 The Copy menu item in `trip-actions.tsx` — 36254696
+- [x] 2.4 The copying tile state in `trip-card.tsx` (with `TripCard.copyPending` in `overview.ts`) — 36254696
 - [ ] 2.5 The e2e block in `e2e/trips-core.spec.ts`
 - [ ] 2.6 The blind A/B pair for `/trips` and `/`
