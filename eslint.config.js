@@ -116,9 +116,12 @@ export default [
       // on the developer's machine until the directory is deleted, which is the gate failing
       // for a reason that has nothing to do with the change under test.
       '.ai/tmp/**',
-      // The UI QA rounds' own scratch: `om-auto-qa-pr` writes its throwaway browser specs and
-      // its config here by instruction (`.ai/browsers/playwright.md`), and they belong to no
-      // tsconfig. Gitignored like the two above, and red for the same non-reason.
+      // The UI QA rounds' own scratch, one per run: `om-auto-qa-pr` writes its throwaway browser
+      // specs there by instruction (`.ai/browsers/playwright.md`), along with the config driving
+      // them, and neither belongs to any tsconfig. Gitignored like the two above, and red for the
+      // same non-reason. Only the `artifacts_*` directories, so the shared
+      // `.ai/qa/playwright.config.ts` the same descriptor writes for a repo with no Playwright
+      // config of its own stays linted - this repo has one, in the root, so it is never written.
       '.ai/qa/artifacts_*/**',
       'dist/**',
       'playwright-report/**',
