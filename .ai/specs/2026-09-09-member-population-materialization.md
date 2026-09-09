@@ -51,11 +51,16 @@ Backend only. Nothing changes on screen, no copy, no migration, no code.
 | `tripIds` (`atlas.ts:944`)                          | `tripRows.map(row => row.id)`. For a year row this is the **year cohort**; for the all-time row (`yearFilter === undefined`) it is the **whole lifetime membership**.    |
 | Four cohort aggregates (`atlas.ts:968-1000`)        | `dayCount`, `placeCount`, `cityRows`, `spendRow`: `inArray(x.tripId, tripIds)`, each behind a `tripIds.length === 0` short-circuit. **One bound parameter per id.**      |
 | Distance (`atlas.ts:1001-1011`)                     | `sum(transports.distance_metres)` where `transportYearFilter` and `memberOfTrip(…, transports.tripId)`. **No bound parameter scales with trip count** — hence no guard.  |
+| `listVisitedCountries` (`atlas.ts:1012`)            | The sixth member of the `Promise.all`. Reads by `userId`, never through `tripIds`, so no guard and no trip-scaled parameter. Neither ticket touches it.                  |
 | `transportYearFilter` (`atlas.ts:958-964`)          | `transports.departure_date` within the year. Deliberately its own date column: a trip starting 30 December has January legs, and a year row sums legs by their own date. |
 | `exists`, `SQL`, `SQLiteColumn` (`:17`,`:55`,`:56`) | Used by `memberOfTrip` and nothing else — the other `SQL` occurrences (`:415`, `:475`) are the word in prose.                                                            |
 
-All six statements run in one `Promise.all` (`atlas.ts:966-1013`), so one rejected statement fails the
-whole recompute, not one figure.
+The function issues **seven** statements: the trip read is awaited first, because `tripIds` feeds
+what follows, and the other six run in one `Promise.all` (`atlas.ts:966-1013`) — the four cohort
+aggregates, the distance read and `listVisitedCountries`. One rejected statement inside that
+`Promise.all` fails the whole recompute, not one figure. (`memberOfTrip`, `yearFilter` and
+`transportYearFilter` are rows in the table above because they are the predicates under discussion;
+they are helpers, not statements.)
 
 ### What #133's merged spec already does to it
 
@@ -69,7 +74,7 @@ owed by its own implementation step 1 (its Q5).
 
 After #133 lands, `recomputeTravelStats` has **one definition** of the member population with two
 uses, five bound parameters on each of those two statements regardless of trip count, and the same
-six statements as today.
+seven statements as today.
 
 ### What is left of #136 once #133 is subtracted
 
@@ -98,7 +103,7 @@ that rejection.
 
 > "it adds zero queries"
 
-**Correct.** Six statements before, six after; the change adds none. It also subtracts one in the
+**Correct.** Seven statements before, seven after; the change adds none. It also subtracts one in the
 no-trip case, where #136's guard skips the distance read that today runs unguarded — three statements
 today against two after, not zero after: the trip read and `listVisitedCountries` run whatever
 `tripIds` holds. Round-trip count is not the objection here.
@@ -124,15 +129,16 @@ staying where it was.
 ### The honest weakening of that argument, and why it survives
 
 That same 400-trip traveller **already** has a permanently failing all-time recompute today: the four
-cohort aggregates bind 400 parameters at `statYear = 0`, and because all six statements share one
-`Promise.all`, the whole task fails. Every trip write enqueues an all-time recompute
+cohort aggregates bind 400 parameters at `statYear = 0`, and because they share a `Promise.all` with
+the distance read and `listVisitedCountries`, the whole task fails. Every trip write enqueues an all-time recompute
 (`trip-lifecycle.ts:275-286` always seeds `ALL_TIME_STAT_YEAR` into the fan-out; `:321-352` sends it
 to every member), so for this cohort the statistics panel is already frozen. #136's marginal damage
 today is to freeze the year row of a traveller whose all-time row is frozen anyway.
 
 The argument survives on **ordering**. That pre-existing cliff has an owner and a known fix: chunk
 the four cohort aggregates under `MAX_BOUND_PARAMETERS`, the convention this repository already
-applies twice (`trips.ts:774-779`, `notifications/dispatch.ts:88` and `:270`). When that fix lands,
+applies twice (`trips.ts:774-779`; `notifications/dispatch.ts:116-118` and `:141`, sized from
+`D1_MAX_BOUND_PARAMETERS` at `:88`). When that fix lands,
 the four aggregates stop breaching the ceiling — and a distance statement built on #136's id list
 would be a fifth statement needing the same treatment, on the one statement in this function that
 needs none today.
@@ -196,8 +202,16 @@ No code. The sequence is:
 No component, boundary or data flow changes. For the record, the shape this spec leaves in place is
 #133's, and the two properties that must survive any future revisit of this area are:
 
-- **The population is the stat row's `userId`, never `scope.ctx.userId`.** Cron and the queue
-  consumer recompute for someone other than themselves (`queue/handlers/travel-stats.ts:207-225`).
+- **The population is the stat row's `userId` argument, never `scope.ctx.userId`.** No caller
+  diverges today: the queue consumer builds its scope from the very id it then recomputes
+  (`scopeForTraveller(db, orgId, userId)` at `queue/handlers/travel-stats.ts:219-225`, and
+  `scopeForTraveller` passes that same `userId` to `createScope` at `:158` and `:166-167`), the dev
+  seed uses the owner's own scope (`routes/api/dev/-seed/apply.ts:624`), and there is no cron caller
+  at all — `worker.ts` dispatches `REMINDER_CRON`, `BACKUP_CRON` and `RETENTION_CRON`, none of which
+  reaches this function. The invariant is about the signature, not about a current divergence:
+  `recomputeTravelStats(scope, userId, statYear)` takes the traveller as an explicit argument, and a
+  refactor that reads the scope's own id instead would be correct on every caller that exists and
+  wrong on the first one that does not.
 - **The two populations are different sets.** "Every trip this person is a member of" (the trip read
   and the distance read) and "the subset of those that started in year Y" (the four cohort
   aggregates) are not two spellings of one concept, and a refactor that collapses them changes which
@@ -296,7 +310,9 @@ are the recommendation it makes, gated on work owned elsewhere, recorded so the 
   only explains why the competing plan was not adopted. Its step 1 files the Q5 follow-up
   (`recomputeTravelStats exceeds D1's 100-bound-parameter ceiling on a large year cohort`, `bug` +
   `priority-medium`, naming `atlas.ts:968-1000`, the ceiling, and `trips.ts:774-779` /
-  `notifications/dispatch.ts:88`, `:270` as the convention to apply). Its implementation PR is also
+  `notifications/dispatch.ts:116-118`, `:141` as the convention to apply — a chunk size _derived_
+  from `D1_MAX_BOUND_PARAMETERS` (`:88`), not the size-agnostic `chunk<T>` helper at `:270`, which
+  also serves the non-D1 `EMAIL_CHUNK_SIZE`). Its implementation PR is also
   the right place to correct the plan names noted under Architecture.
 - **Then, a human closes #136**, commenting with Q1's measurement and a link to this document. A
   human decision, not an automated one: this run declined a ticket its author filed deliberately, and
