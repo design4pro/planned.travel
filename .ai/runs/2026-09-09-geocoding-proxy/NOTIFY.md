@@ -44,3 +44,24 @@ no further gate.
   only fail under the full suite's parallel load. Detail in `checkpoint-1-checks.md`.
 - UI verification skipped, with reason: the spec's "Visual change expected: None" — no route,
   component or locale key is touched — and `--no-ui` was passed.
+
+## 2026-09-09T12:45:00Z — final gate (Steps 1.1..2.5)
+
+- Every Tasks row is `done`. The gate ran in `validation.commands` order: agent-kit, typecheck,
+  lint, build and `check-generated.sh` clean; `pnpm test` 5 656 passed / 1 failed; `e2e.sh` 29
+  passed / 1 skipped / 1 failed.
+- Both failures were re-run in isolation before being recorded. `hooks.test.ts` fails on clean
+  `develop` too (pre-existing, in a directory this change does not touch); the Playwright
+  click-surface journey passes alone on this branch in 14.2 s and timed out only under the full
+  run. The diff touches nothing under `src/routes`, `src/components` or `src/lib`, so there is no
+  client-side line in it for that journey to fail on.
+- Integration suite: the Playwright suite *is* this repository's integration layer and was run in
+  full. No new scenario is derived — `bindings.ts` ships with no caller by design, so there is no
+  door for a browser to reach this code through; the behaviour is covered by 42 unit cases, four of
+  them against real platform tables.
+- Design-system pass: not applicable. No component, style or user-facing string is touched; the
+  spec's own "Visual change expected" is None, and `pnpm lint` is the style gate that applies.
+- Decision recorded at Step 2.5: the directory-discipline case could not be copied from transit
+  whole. Transit proves its scan works by finding importers of its own proxy; this module has no
+  caller by design, so the control is `#/server/metering/rate` — a module three directories do
+  reach, found by the same walk over the same files.
