@@ -556,17 +556,24 @@ describe('ceilingsForPlan', () => {
  * The second kind of ceiling, and the reason it is a second kind.
  *
  * Every metric above bounds a *row* a workspace owns: the guard counts what is in the table and
- * `assertQuota()` refuses the next insert. Neither of the two below leaves a row. A transit search
+ * `assertQuota()` refuses the next insert. None of the three below leaves a row. A transit search
  * is a metered call to a routing provider; an extraction is a document turned into a draft booking
- * by our own model binding. Both are made on a tenant's behalf and billed to us, and a tenant that
- * makes either in a loop spends money every other tenant is paying for. So the numbers are resolved
- * here, beside the ones they must never contradict, and enforced by the per-organization tally over
- * KV that `03-S3` builds and `03-S7` reuses under the second name.
+ * by our own model binding; a geocoding lookup is an address turned into a point by Geoapify. All
+ * are made on a tenant's behalf and billed to us, and a tenant that makes one in a loop spends
+ * money every other tenant is paying for. So the numbers are resolved here, beside the ones they
+ * must never contradict, and enforced by the per-organization tally over KV that `03-S3` builds and
+ * that `src/server/metering/rate.ts` now holds for all three.
  *
- * The cases below are written over `RATE_METRICS` rather than over one metric, because everything
- * that is true of the first is true of the second by construction: they resolve through the same
- * step of the authority order, lapse with the same subscription and are refused the same escape
- * hatch. A case naming one metric would leave the other asserted by nothing.
+ * Most cases below are written over `RATE_METRICS` rather than over one metric, because what is
+ * true of one is true of the rest by construction: they resolve through the same step of the
+ * authority order, lapse with the same subscription and are refused the same escape hatch. A case
+ * naming one metric would leave the others asserted by nothing.
+ *
+ * **The exception is which plans get an allowance at all**, and it is the one property the three do
+ * not share. The two desk metrics are zero exactly where `reservations` is off; the geocoding
+ * metric is spent from the place form, which every plan has. Written as one loop over
+ * `RATE_METRICS`, that case asserted the desk rule of a metric the desk does not gate — so it is
+ * split in two below rather than weakened to whichever predicate happens to fit both.
  */
 describe('metered provider calls, ceilings on calls rather than on rows', () => {
   it('resolves the plan its row is entitled to, for every plan', () => {
@@ -616,19 +623,54 @@ describe('metered provider calls, ceilings on calls rather than on rows', () => 
     }
   })
 
-  it('gives an allowance to exactly the plans that can reach the desk', () => {
+  it('gives a desk allowance to exactly the plans that can reach the desk', () => {
     // Both calls are reached from the booking desk — the search from the add-transport dialog, the
     // extraction from the import beside New booking — and the desk is the `reservations` module. A
     // positive allowance on a plan that cannot open it would be a number nobody can spend; a zero
     // one on a plan that can would be a screen that is on and refuses every press.
+    const DESK_METRICS = [
+      'transit_searches_per_month',
+      'extraction_calls_per_month',
+    ] as const
+
     for (const planId of PLAN_IDS) {
       const resolved = resolveLimits({ planId, seats: 1, ceilings: null })
 
-      for (const metric of RATE_METRICS) {
+      for (const metric of DESK_METRICS) {
         expect(resolved.rates[metric] > 0, `${planId}.${metric}`).toBe(
           resolved.limits.reservations,
         )
       }
+    }
+  })
+
+  it('gives every plan a geocoding allowance, because every plan has the place form', () => {
+    // The one rate metric the booking desk does not gate. It is spent when a traveller types an
+    // address into the place form, and Free's own catalogue entry sells "a day-by-day itinerary and
+    // map" — so a zero here is not a plan boundary, it is the pricing page contradicted by a
+    // constant, and a screen the plan advertises refusing every press.
+    for (const planId of PLAN_IDS) {
+      const resolved = resolveLimits({ planId, seats: 1, ceilings: null })
+
+      expect(
+        resolved.rates.geocode_lookups_per_month,
+        `${planId}.geocode_lookups_per_month`,
+      ).toBeGreaterThan(0)
+    }
+  })
+
+  it('sizes the per-keystroke allowance above the two deliberate ones', () => {
+    // Stated as an ordering rather than as three literals, so the argument survives a re-sizing.
+    // A search and an extraction are deliberate acts; a lookup is spent while somebody is still
+    // typing, so its allowance is the loosest of the three on every plan that can spend the others.
+    for (const planId of PLAN_IDS) {
+      const rates = PLAN_RATE_CEILINGS[planId]
+      expect(rates.geocode_lookups_per_month, planId).toBeGreaterThan(
+        rates.transit_searches_per_month,
+      )
+      expect(rates.geocode_lookups_per_month, planId).toBeGreaterThan(
+        rates.extraction_calls_per_month,
+      )
     }
   })
 
