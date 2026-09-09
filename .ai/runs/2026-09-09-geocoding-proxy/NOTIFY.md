@@ -86,3 +86,18 @@ no further gate.
 
 - PR #363 flipped to ready, `Status: complete`, full label set applied, summary comment posted.
 - https://github.com/design4pro/planned.travel/pull/363
+
+## 2026-09-09T13:05:00Z — CI follow-up: a real failure, and a correction
+
+- CI failed `lint · typecheck · build` at its first step, `Check the agent layer`: this branch
+  carried **kit version 12** while `origin/develop` had moved to **13**. Not a code defect and not
+  something the local gate could see — `agent-kit-check.mjs` compares against the local
+  `origin/develop` ref, which was stale in this worktree, so it reported 12-matches-12 and passed.
+- Fixed exactly as the check's own message names: `git merge origin/develop`, clean, no conflicts.
+- **A correction to the final-gate record.** With the kit-13 hooks merged in, the full suite is
+  **5 660 passed, 0 failed** and the Playwright suite is **30 passed, 1 skipped, 0 failed**. Both
+  failures the final gate argued were "not this change's" are simply gone. The triage was right
+  about the cause and wrong about the remedy: the hooks case did not need its own issue, it needed
+  the base branch. No separate issue should be filed.
+- Whole gate re-run on the merged tree: agent-kit (v13), typecheck, lint, test, check-generated,
+  build and e2e — all clean.
