@@ -1423,9 +1423,16 @@ pnpm exec wrangler queues info planned-travel-tasks
 
 # Terminal job failures. This is the dead-letter signal, not the depth of
 # planned-travel-tasks-dlq: consumeTaskBatch records the failure in KV and R2 and then acks,
-# so the platform queue stays empty whether or not jobs are dying (ARCHITECTURE.md §2.4).
-# No output means no job has failed terminally in the last 14 days, which is the healthy case.
+# so the platform queue stays empty in normal operation whether or not jobs are dying
+# (ARCHITECTURE.md §2.4). No output means no job has failed terminally in the last 14 days,
+# which is the healthy case.
 pnpm exec wrangler kv key list --binding KV --prefix "task:dead:" --remote
+
+# The backstop, and the one failure this listing cannot show: if KV or R2 is down, the
+# dead-letter write throws before the ack, the message is never settled and it does end up in
+# the platform DLQ. Depth above zero means the recording itself failed — read `wrangler tail`
+# rather than the `task:dead:` prefix, because nothing was written there.
+pnpm exec wrangler queues info planned-travel-tasks-dlq
 
 # Then read one summary — id, kind, orgId, attempts, failedAt, serialized error. Take <id>
 # from the listing above rather than composing it: it is the task's envelope id, except for a
@@ -1434,7 +1441,10 @@ pnpm exec wrangler kv key list --binding KV --prefix "task:dead:" --remote
 pnpm exec wrangler kv key get --binding KV --remote --text "task:dead:<id>"
 
 # …and the full body the handler choked on. Its key carries the failure date, which is the
-# `failedAt` from the summary above.
+# `failedAt` from the summary above. Only the KV summary expires after 14 days; the R2 body
+# outlives it and nothing prunes `dead-letter/`. Past that window the summary is gone and there
+# is no `wrangler r2 object list`, so the body is reachable only by an operator who kept the
+# <id> — copy it out of the listing while investigating, or the object is effectively orphaned.
 pnpm exec wrangler r2 object get \
   "planned-travel-files/dead-letter/<YYYY-MM-DD>/<id>.json" --file ./dead-task.json --remote
 
@@ -1923,9 +1933,13 @@ or the last one; there is no third outcome.
 
 - [ ] All eight smoke checks pass, `wrangler tail` is clean, and §11's `task:dead:` listing is
       empty — the store the consumer actually writes to, because the depth of
-      `planned-travel-tasks-dlq` is empty by construction and would tick this box while jobs
-      were failing. None of the eight says anything about billing — that is the click-through
-      in the billing block above.
+      `planned-travel-tasks-dlq` stays empty in normal operation and would tick this box while
+      jobs were failing. None of the eight says anything about billing — that is the
+      click-through in the billing block above.
+- [ ] §11's `wrangler queues info planned-travel-tasks-dlq` still reports depth zero. The two
+      checks are not redundant: the `task:dead:` listing covers every ordinary terminal failure,
+      and this one covers the failure that leaves no record at all — a KV or R2 outage during
+      `deadLetter()`, which throws before the ack and sends the message to the DLQ instead.
 
 **Error reporting** (§17)
 
