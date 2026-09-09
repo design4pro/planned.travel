@@ -674,7 +674,7 @@ describe('metered provider calls, ceilings on calls rather than on rows', () => 
     }
   })
 
-  it('costs more per extraction than per lookup, and is sized accordingly', () => {
+  it('costs more per extraction than per transit search, and is sized accordingly', () => {
     // A transit search is one request to a timetable. An extraction converts a document to text and
     // then runs a model over it, so it is the dearer call of the two and its allowance is never the
     // looser one. Stated as an ordering rather than as two literals, so the argument survives the

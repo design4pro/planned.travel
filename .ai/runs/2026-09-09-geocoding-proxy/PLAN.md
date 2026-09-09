@@ -22,6 +22,7 @@
 | 2 | 2.3 | Write `src/server/geo/geoapify.ts` — the vendor adapter | inline | done | e305f1d7 |
 | 2 | 2.4 | Wire the provider ledger around the vendor call | inline | done | 1e6cbfbe |
 | 2 | 2.5 | Write the binding seam and declare `GEOAPIFY_API_KEY` | inline | done | 2b3bbdfa |
+| 2 | 2.5-review-fix | Restore the orphaned `day`-window rationale, disambiguate a test title | inline | done | — |
 
 Every Step is `inline` deliberately. The spec's prose standard is unusually high — each module
 carries a header that argues for its own existence — and the main session holds the spec, the four

@@ -454,7 +454,13 @@ export const PROVIDER_USAGE_GRAINS = ['hour', 'month'] as const
 /** What happens at a provider's ceiling: bill through it, or refuse the call. */
 export const PROVIDER_LIMIT_POLICIES = ['allow', 'block'] as const
 
-/** The windows a `provider_registry` ceiling can be expressed over. */
+/**
+ * The windows a `provider_registry` ceiling can be expressed over.
+ *
+ * `day` is here because a vendor's own term is, not because a shorter window seemed useful: ADR 0013
+ * buys geocoding from Geoapify with 3,000 credits included **a day**, and a ceiling expressed over a
+ * month could not be the term we agreed to. Every other agreed ceiling in this repository is monthly.
+ */
 export const PROVIDER_LIMIT_WINDOWS = ['day', 'month'] as const
 
 /**
