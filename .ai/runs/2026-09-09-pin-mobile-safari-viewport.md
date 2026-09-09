@@ -48,6 +48,14 @@ Byte-for-byte the pinned pair, so every journey runs at the geometry it already 
 (`.ai/agentic.config.json` → `validation.commands`, all seven in order) runs with
 `bash .ai/scripts/e2e.sh` green.
 
+**Blocker on the seventh gate step, recorded rather than worked around.** `bash .ai/scripts/e2e.sh`
+could not run on this host: `playwright.config.ts` accepts only ports 3030-3040 outside CI, and all
+eleven were held by concurrent checkouts (`ERROR: no free port in 3030-3040`; the two earlier
+attempts died as `ERROR: no answer on :3040 within 120s` under a load average above 120). Steps 1-6
+ran green locally. The e2e evidence therefore comes from CI, which is the stronger source here
+anyway: `.ai/scripts/e2e.sh` passes `--project=chromium` and never exercises `mobile-safari`, the
+one project this change touches, whereas the CI job runs both.
+
 ## Risks
 
 Low and bounded. No runtime code, no bundle, no migration, no locale key — `pnpm build`,
@@ -62,4 +70,4 @@ stays inherited) is accepted in the spec's Q2 and stated in the PR body.
 
 ### Phase 1: the geometry becomes code
 
-- [ ] 1.1 Pin the viewport and settle the prose
+- [x] 1.1 Pin the viewport and settle the prose — dea912dd
