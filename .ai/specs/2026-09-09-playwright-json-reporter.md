@@ -143,12 +143,12 @@ One concept, one owner (docs/SPEC.md §8): **the e2e reporter list is declared i
 command line for a stated reason.** That concept lives in one file after this change, which is why it
 is one work item and cannot be usefully split.
 
-| Surface                     | Today                                                           | After                                                               |
-| --------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `playwright.config.ts`      | `json` and `html` duplicated across a ternary; `json` unreached | `html` and `json` unconditional; only `github`/`list` behind `isCI` |
-| `ci.yml` shards / merge job | `--reporter=blob`, then `merge-reports --reporter html,github`  | unchanged — still replaces the list, still the right mechanism      |
-| `.ai/scripts/e2e.sh`        | no flag; gets `list` + `html`                                   | no flag; gets `list` + `html` + `json`                              |
-| `test-results/`             | already gitignored (`.gitignore:31`)                            | unchanged — the new file is never committed                         |
+| Surface                     | Today                                                                           | After                                                               |
+| --------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `playwright.config.ts`      | `html` duplicated across a ternary; `json` in the `isCI` branch only, unreached | `html` and `json` unconditional; only `github`/`list` behind `isCI` |
+| `ci.yml` shards / merge job | `--reporter=blob`, then `merge-reports --reporter html,github`                  | unchanged — still replaces the list, still the right mechanism      |
+| `.ai/scripts/e2e.sh`        | no flag; gets `list` + `html`                                                   | no flag; gets `list` + `html` + `json`                              |
+| `test-results/`             | already gitignored (`.gitignore:31`)                                            | unchanged — the new file is never committed                         |
 
 **No data model, API contract, server function, Zod schema, D1 migration or tenant-scoped path is
 involved, and nothing under `src/`, `server/`, `drizzle/` or the locale catalogue is touched.** The
@@ -178,7 +178,11 @@ English, never rendered to a user.
   aborts before the wipe, leaving the previous run's file in place. A reader must therefore check the
   file's mtime against the run it thinks produced it. This is the sharpest edge here: a week-old
   verdict read as today's is worse than no file at all.
-- **A run that dies before `onEnd`** — an OOM, a `globalTimeout` kill — writes no `results.json`. A
+- **A run that dies before `onEnd`** — an OOM, or a CI job-level `timeout-minutes` kill — writes no
+  `results.json`. A `globalTimeout` stop does not belong here: Playwright ends the run with
+  `FullResult.status === 'timedout'` and still calls `onEnd`, so the JSON is written and describes
+  whatever finished before the cutoff — which is exactly what `globalTimeout: isCI ? 15 * 60_000`
+  buys ("leaves a retry-heavy shard room to finish and report", `playwright.config.ts:126-132`). A
   reader must treat absence as "unknown", never as "no failures", which is the trap #97 fell into.
 - **A second Playwright run in the same worktree destroys the first one's file.** An ad-hoc
   `pnpm e2e -g "…"` started while the gate's suite is running wipes `outputDir`, taking
