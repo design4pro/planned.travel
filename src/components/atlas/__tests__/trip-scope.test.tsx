@@ -159,7 +159,7 @@ describe('the two trip figures on one atlas screen', () => {
    * The caption read "Finished trips only" before this ticket and kept the
    * claim through the rename, as "Finished trips you are on". Measured against
    * the query it labels, the claim is false: `recomputeTravelStats` filters
-   * `trips` by `memberOfTrip()` and — on a year row — by `start_date`, and
+   * `trips` by `memberTripIds()` and — on a year row — by `start_date`, and
    * by nothing else. Two trips dated 2099, one of them with no end date at all,
    * come back in the all-time row as `tripCount: 2`.
    *
