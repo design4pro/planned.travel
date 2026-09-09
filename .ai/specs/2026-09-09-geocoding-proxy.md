@@ -93,7 +93,7 @@ rather than reinvent:
   enters here.
 - **`geoapify.ts`** is the vendor, and nothing outside the directory imports it. It holds the
   endpoint, the wire schemas, the locale→language mapping, the declared retention right and the
-  attribution strings.
+  vendor credits.
 - **`bindings.ts`** is the single seam that touches `cloudflare:workers`, which is what lets the
   other two be tested with a fake `fetch` and maps for the stores.
 
@@ -163,12 +163,31 @@ Each position is load-bearing:
 /** What a vendor's licence permits us to do with a coordinate it returned. */
 export type GeocodeRetention = 'permanent' | 'ephemeral'
 
-/** The provider seam. `./geoapify` implements it; a test hands over a stub. */
-export interface GeocodeProvider {
+/**
+ * A credit the vendor's licence obliges us to carry. A proper noun and a link,
+ * never a sentence — see the Copy section for why the sentence around it is a
+ * catalogue key and this is not.
+ */
+export interface GeocodeCredit {
+  /** As the licence spells it: `'OpenStreetMap'`, `'Geoapify'`. */
+  readonly name: string
+  readonly url: string
+}
+
+/**
+ * Who answers, and on what terms. Known to the deployment whether or not a
+ * credential is set, because which adapter this build imports is a fact about
+ * the build and not about the key it was handed.
+ */
+export interface GeocodeVendor {
   readonly slug: MeteredProvider
   readonly retention: GeocodeRetention
   /** Travels with a stored coordinate — ADR 0013's condition on the storage right. */
-  readonly attribution: ReadonlyArray<string>
+  readonly attribution: ReadonlyArray<GeocodeCredit>
+}
+
+/** The provider seam. `./geoapify` implements it; a test hands over a stub. */
+export interface GeocodeProvider extends GeocodeVendor {
   forward: (query: ForwardQuery) => Promise<ReadonlyArray<GeocodeCandidate>>
   reverse: (query: ReverseQuery) => Promise<ReadonlyArray<GeocodeCandidate>>
 }
@@ -178,6 +197,8 @@ export interface GeocodeRuntime {
   readonly cache: GeoCache
   /** Where allowances are tallied — per workspace, on purpose. */
   readonly counters: RateCounterStore
+  /** Who this deployment speaks for. Present even when `provider` is `null`. */
+  readonly vendor: GeocodeVendor
   /** `null` on a deployment holding no credential; see the transit seam's header. */
   readonly provider: GeocodeProvider | null
   /** The provider ledger's runtime, so every vendor call is counted and blockable. */
@@ -200,6 +221,18 @@ export async function reverseGeocode(
 ): Promise<GeocodeResult>
 ```
 
+**Why `vendor` sits beside `provider` rather than inside it.** Position 4 of the order promises that
+a deployment whose credential was removed still serves what the cache already holds. That promise
+needs two facts a cache hit cannot get from a `null` provider: the **slug**, because it is in the
+cache key, and the **attribution**, because `GeocodeResult.attribution` is not optional and ADR 0013
+says a stored coordinate carries its credit. Both are properties of the adapter this build imports,
+not of the key it was given, so they live on `GeocodeVendor`, which `bindings.ts` always supplies —
+`geoapifyVendor` is a module-level constant in `geoapify.ts` and `createGeoapifyClient` is what
+returns `null` without a key. `GeocodeProvider extends GeocodeVendor`, so a configured deployment
+still has one object to hand a test and the adapter still declares its own slug, retention and
+credits in one place; the runtime just reads them from `runtime.vendor`, whose presence does not
+depend on the credential. Without the split, position 4 is unimplementable.
+
 Both answer the same envelope, because a reverse lookup is a forward lookup with a different
 question and returning a second shape would give every consumer two result types to narrow:
 
@@ -219,8 +252,8 @@ export interface GeocodeCandidate {
 export interface GeocodeResult {
   /** Ranked: the vendor's order, preserved. Empty is an answer, not a failure. */
   readonly candidates: ReadonlyArray<GeocodeCandidate>
-  /** The attribution that must be kept beside any coordinate taken from `candidates`. */
-  readonly attribution: ReadonlyArray<string>
+  /** The credits that must be kept beside any coordinate taken from `candidates`. */
+  readonly attribution: ReadonlyArray<GeocodeCredit>
   readonly cached: boolean
   /** Lookups spent this month after this one, or `null` when this one spent nothing. */
   readonly spent: number | null
@@ -229,9 +262,11 @@ export interface GeocodeResult {
 ```
 
 The attribution sits on the envelope rather than on each candidate because it is a property of the
-vendor that answered, not of a row: a caller stores one candidate out of one result and the string
+vendor that answered, not of a row: a caller stores one candidate out of one result and the credit
 it must keep is one field away either way. Repeating it five times would be five copies of one fact
-in a shape a consumer serialises to the browser.
+in a shape a consumer serialises to the browser. It is a `GeocodeCredit` and not a rendered string
+for the reason the Copy section gives: a name and a URL are the vendor's, a sentence is ours and
+belongs in the catalogue.
 
 **Normalisation and the cache key.** The query is folded for the key and sent to the vendor
 unfolded — the vendor should see what the traveller typed, and only the key needs two spellings of
@@ -270,7 +305,8 @@ Four decimal places is about eleven metres: the same doorway, whoever dropped th
 rounding `transitCacheKey` uses and for the same reason.
 
 The key carries **no tenant identifier**, which is ADR 0013's term and the property that makes an
-unexpiring shared cache legal. It carries the provider slug so that a second adapter, if one is ever
+unexpiring shared cache legal. It carries the provider slug — `runtime.vendor.slug`, so the key is
+still buildable on a deployment holding no credential — so that a second adapter, if one is ever
 adopted, cannot read answers the first one gave; and it carries the language because a geocoder
 answers _in_ a language, so the language is part of the question rather than a fact about who asked.
 
@@ -299,18 +335,23 @@ It owns four things nothing else may know:
   the three that are not (`pt-BR`, `zh-Hans`, `zh-Hant`) collapse to `pt` and `zh`. Two `zh` readers
   therefore receive the same script from the vendor, which is a quality loss owned by the vendor's
   parameter and not by this design; it is recorded here so the surface stages do not rediscover it.
-- **The declared retention right**: `retention: 'permanent'`, and `attribution` carrying the OSM
-  credit always and the Geoapify credit while we are on the free plan.
+- **The declared retention right**, as an exported `geoapifyVendor: GeocodeVendor` constant:
+  `slug: 'geoapify'`, `retention: 'permanent'`, and `attribution` carrying the OSM credit always and
+  the Geoapify credit while we are on the free plan — each a `GeocodeCredit`, a proper noun and a
+  URL, never a sentence.
 
+`geoapifyVendor` is a module-level constant precisely because it must outlive the credential:
 `createGeoapifyClient` refuses an empty key by throwing `GeoProviderError('unconfigured')`, so the
 binding seam can hand `null` to the proxy rather than a client that fails after the meter has run —
-the same arrangement, and the same reason, as `hereClient()`.
+the same arrangement, and the same reason, as `hereClient()`. The client it does return spreads
+`geoapifyVendor`, so a configured deployment satisfies `GeocodeProvider` from the one declaration.
 
 ### `src/server/geo/bindings.ts` and `cloudflare-env.d.ts` — new
 
 The seam. `cache` and `counters` are both `env.KV` in two roles that must not be confused; `outbound`
-is `requestOutboundRuntime()` from `src/server/metering/bindings.ts`; `provider` is the Geoapify
-client or `null`. `GEOAPIFY_API_KEY` is declared as an optional `Cloudflare.Env` member in a sibling
+is `requestOutboundRuntime()` from `src/server/metering/bindings.ts`; `vendor` is `geoapifyVendor`,
+handed over unconditionally; `provider` is the Geoapify client or `null`, and only that field depends
+on whether a key is set. `GEOAPIFY_API_KEY` is declared as an optional `Cloudflare.Env` member in a sibling
 `cloudflare-env.d.ts`, word for word the arrangement `src/server/transit/cloudflare-env.d.ts`
 documents, and added to `.dev.vars.example`.
 
@@ -525,31 +566,39 @@ Three near misses, recorded so a reviewer does not go looking:
 - `GeoProviderError`'s messages are developer-facing English on an error object, never rendered.
   The stage that renders a failed lookup mints its own keys against `reason`.
 - `RateCeilingError`'s message belongs to #220 and is not touched here.
-- The Geoapify and OSM attribution strings are **vendor credits, not translated copy** — they are
-  proper nouns and a URL, identical in every locale, and they live as constants in `geoapify.ts`.
-  Rendering them beside the map is the surface stages' obligation under ADR 0013 and is not done
-  here.
+- The Geoapify and OSM credits are **not an exception to the catalogue rule** — they are split along
+  the line this repository already draws for exactly this obligation. `geoapify.ts` holds only the
+  `GeocodeCredit` pairs: `{ name: 'OpenStreetMap', url: … }` and `{ name: 'Geoapify', url: … }`, a
+  proper noun and a link, with no word for a translator to touch. Every word around them is a
+  catalogue key the rendering stage adds, which is what `src/lib/i18n/messages/en/atlas.ts:67`
+  already does — `'map.attribution.label': 'Map data from'` is the copy, the credit beside it is the
+  proper noun. A stage that prefers one sentence to a label plus a pill writes a
+  `footer.attribution`-shaped key instead (`src/lib/i18n/messages/en/marketing.ts:332`, translated in
+  all 23 locales with the vendor names embedded and **not** on the parity test's `PROPER_NOUNS`
+  allow-list). Either way the sentence lives in the catalogue and this module ships zero copy —
+  which is why the earlier claim that these were "vendor credits, not translated copy" was the wrong
+  frame, and is retracted here rather than carried into `02-S4`.
 
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                               | Behaviour                                                                                                                                                                 |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Query shorter than 3 or longer than 160 characters                 | Zod refuses before KV is read. No allowance spent, no call.                                                                                                               |
-| `"  Plaza   Mayor "` versus `"plaza mayor"`                        | One question: trimmed, whitespace-collapsed, NFC-normalised and lower-cased into one key.                                                                                 |
-| Two workspaces, same query, same language                          | Identical key, so the second is a cache hit: `spent: null`, `cached: true`, no vendor call.                                                                               |
-| Same query, two languages                                          | Two keys, two calls, two entries. Accepted cost — up to 23 per query, and reuse only among readers of one language.                                                       |
-| Workspace at its ceiling                                           | `RateCeilingError` carrying `metric`, `ceiling` and `spent` (post-#220), thrown before the vendor is reached.                                                             |
-| Deployment with no `GEOAPIFY_API_KEY`                              | `provider` is `null`; cache hits still answer, a miss throws `GeoProviderError('unconfigured')` and spends nothing.                                                       |
-| Adapter declaring `retention: 'ephemeral'`                         | `GeoProviderError('unstorable')` before the meter. Unreachable with the shipped adapter; asserted with a stub, which is what makes criterion 7 a test rather than a note. |
-| Vendor times out / DNS fails                                       | `unreachable`. Counted as a call in the ledger, because a timeout usually reached the vendor and is billable.                                                             |
-| Vendor answers 401 / 429 / 5xx                                     | `refused`, with the status carried. Counted as a call and as an error.                                                                                                    |
-| Vendor answers 200 with an unexpected body                         | `malformed`. No bare `fetch` rejection or `ZodError` escapes the module.                                                                                                  |
-| Vendor answers zero features                                       | An empty `candidates` array — an answer, not a failure. Not written to the cache.                                                                                         |
-| Operator has set `policy: 'block'` and the vendor ceiling is spent | `callProvider` throws `ProviderBlockedError` before the vendor is reached, and records the attempt as `blocked`.                                                          |
-| KV read fails                                                      | Treated as a miss and logged, never as a failure — the answer is one call away. Inherited posture.                                                                        |
-| KV write fails                                                     | Logged and swallowed. The answer is already in hand and failing it over its own bookkeeping helps nobody.                                                                 |
-| Two lookups from one workspace in the same instant                 | Both may read `n` and write `n + 1`. Known, bounded and inherited: the loop a ceiling exists to catch is thousands of calls, not two.                                     |
-| Cache entry written by an older build                              | Fails the read-side schema parse and is treated as a miss.                                                                                                                |
+| Case                                                               | Behaviour                                                                                                                                                                       |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Query shorter than 3 or longer than 160 characters                 | Zod refuses before KV is read. No allowance spent, no call.                                                                                                                     |
+| `"  Plaza   Mayor "` versus `"plaza mayor"`                        | One question: trimmed, whitespace-collapsed, NFC-normalised and lower-cased into one key.                                                                                       |
+| Two workspaces, same query, same language                          | Identical key, so the second is a cache hit: `spent: null`, `cached: true`, no vendor call.                                                                                     |
+| Same query, two languages                                          | Two keys, two calls, two entries. Accepted cost — up to 23 per query, and reuse only among readers of one language.                                                             |
+| Workspace at its ceiling                                           | `RateCeilingError` carrying `metric`, `ceiling` and `spent` (post-#220), thrown before the vendor is reached.                                                                   |
+| Deployment with no `GEOAPIFY_API_KEY`                              | `provider` is `null` but `vendor` is not, so the key and the credits are still in hand: cache hits answer, a miss throws `GeoProviderError('unconfigured')` and spends nothing. |
+| Adapter declaring `retention: 'ephemeral'`                         | `GeoProviderError('unstorable')` before the meter. Unreachable with the shipped adapter; asserted with a stub, which is what makes criterion 7 a test rather than a note.       |
+| Vendor times out / DNS fails                                       | `unreachable`. Counted as a call in the ledger, because a timeout usually reached the vendor and is billable.                                                                   |
+| Vendor answers 401 / 429 / 5xx                                     | `refused`, with the status carried. Counted as a call and as an error.                                                                                                          |
+| Vendor answers 200 with an unexpected body                         | `malformed`. No bare `fetch` rejection or `ZodError` escapes the module.                                                                                                        |
+| Vendor answers zero features                                       | An empty `candidates` array — an answer, not a failure. Not written to the cache.                                                                                               |
+| Operator has set `policy: 'block'` and the vendor ceiling is spent | `callProvider` throws `ProviderBlockedError` before the vendor is reached, and records the attempt as `blocked`.                                                                |
+| KV read fails                                                      | Treated as a miss and logged, never as a failure — the answer is one call away. Inherited posture.                                                                              |
+| KV write fails                                                     | Logged and swallowed. The answer is already in hand and failing it over its own bookkeeping helps nobody.                                                                       |
+| Two lookups from one workspace in the same instant                 | Both may read `n` and write `n + 1`. Known, bounded and inherited: the loop a ceiling exists to catch is thousands of calls, not two.                                           |
+| Cache entry written by an older build                              | Fails the read-side schema parse and is treated as a miss.                                                                                                                      |
 
 **One ordering is imperfect and is accepted knowingly.** The workspace's unit is spent before
 `callProvider` consults the operator's block gate, so a call refused at our own gate has already
@@ -627,25 +676,31 @@ leaves the application working and is verified by the gate in `.ai/agentic.confi
 
 ### Phase 2 — the proxy, the adapter and the vendor slug
 
-4. **Write `src/server/geo/geocode.ts`** — vocabulary, `forwardQuerySchema` / `reverseQuerySchema`,
-   `GeocodeCandidate` / `GeocodeResult`, `GeoProviderError`, `normalizeGeocodeQuery`, the two cache
-   keys and the two orchestrators, driven by a stub provider and maps for the stores. Verify: a new
+4. **Adopt the vendor slug.** Move `geoapify` from `PLANNED_PROVIDERS` to `METERED_PROVIDERS` and
+   update the four doc comments and two fixtures enumerated above. This is the **first** step of the
+   phase and not a later one: `GeocodeVendor.slug` is typed `MeteredProvider`, so an adapter written
+   before the move cannot typecheck, and the invariant that every step leaves the gate green is what
+   makes the ordering load-bearing rather than tidy. Verify: the console suites green,
+   `pnpm db:generate` produces no migration, `pnpm typecheck` clean.
+5. **Write `src/server/geo/geocode.ts`** — vocabulary, `forwardQuerySchema` / `reverseQuerySchema`,
+   `GeocodeCredit` / `GeocodeVendor` / `GeocodeProvider`, `GeocodeCandidate` / `GeocodeResult`,
+   `GeoProviderError`, `normalizeGeocodeQuery`, the two cache keys and the two orchestrators, driven
+   by a stub provider and maps for the stores. Verify: a new
    `src/server/geo/__tests__/geocode.test.ts` covering the issue's success criteria 1–10 — the two
    workspaces producing one key, a hit spending nothing, a miss spending exactly one, the refusal
-   before the vendor, the unconfigured deployment still serving the cache, the length bounds, the
-   whitespace and case fold, the two languages not sharing an entry, and a stub declaring
-   `ephemeral` being refused.
-5. **Write `src/server/geo/geoapify.ts`** — endpoints, timeout, wire schemas, the candidate mapping,
-   the locale→language table, `retention: 'permanent'` and the attribution constants, with `fetch`
-   injected. Verify: fixtures for a populated answer, an empty answer and each of `unreachable`,
-   `refused` and `malformed`; a case asserting `pt-BR` → `pt` and both `zh-*` → `zh`; and a case
-   asserting the key is never present in a thrown message.
-6. **Adopt the vendor slug and wire the ledger.** Move `geoapify` from `PLANNED_PROVIDERS` to
-   `METERED_PROVIDERS`, update the four doc comments and two fixtures enumerated above, and wrap the
-   vendor call in `callProvider` with operations `geocode.forward` and `geocode.reverse`. Verify:
-   criterion 11 — a call is recorded in `provider_usage` under `geoapify` and a `block` policy stops
-   it; the console suites green; `pnpm db:generate` produces no migration.
-7. **Write `src/server/geo/bindings.ts` and `src/server/geo/cloudflare-env.d.ts`**, and add
+   before the vendor, the unconfigured deployment still serving the cache **from `runtime.vendor`
+   alone, with `provider: null`**, the length bounds, the whitespace and case fold, the two
+   languages not sharing an entry, and a stub declaring `ephemeral` being refused.
+6. **Write `src/server/geo/geoapify.ts`** — endpoints, timeout, wire schemas, the candidate mapping,
+   the locale→language table, and the exported `geoapifyVendor` constant (`slug: 'geoapify'`,
+   `retention: 'permanent'`, the two `GeocodeCredit` pairs), with `fetch` injected. Verify: fixtures
+   for a populated answer, an empty answer and each of `unreachable`, `refused` and `malformed`; a
+   case asserting `pt-BR` → `pt` and both `zh-*` → `zh`; and a case asserting the key is never
+   present in a thrown message.
+7. **Wire the ledger.** Wrap the vendor call in `callProvider` with operations `geocode.forward` and
+   `geocode.reverse`. Verify: criterion 11 — a call is recorded in `provider_usage` under `geoapify`
+   and a `block` policy stops it.
+8. **Write `src/server/geo/bindings.ts` and `src/server/geo/cloudflare-env.d.ts`**, and add
    `GEOAPIFY_API_KEY` to `.dev.vars.example`. Verify: `pnpm typecheck`, `pnpm build` and
    `bash .ai/scripts/check-generated.sh` clean.
 
