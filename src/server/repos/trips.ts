@@ -29,6 +29,11 @@ import {
   TRIP_MEMBER_ROLES,
   TRIP_STATUSES,
   TRIP_VISIBILITIES,
+  dayAssignments,
+  dayNotes,
+  days,
+  placeTags,
+  places,
   shareLinks,
   tripFavourites,
   tripMembers,
@@ -39,10 +44,18 @@ import {
   anyOf,
   assertQuota,
   createTenantRepository,
+  inIds,
   tenantFilter,
 } from './base'
 import { NotFoundError, RepositoryError } from './context'
-import { syncTripDays } from './days'
+import {
+  dayNotesRepository,
+  daysRepository,
+  listTripDays,
+  syncTripDays,
+} from './days'
+import { dayAssignmentsRepository } from './itinerary'
+import { placeTagsAccess, placesRepository } from './places'
 import {
   colourSchema,
   countryCodeSchema,
@@ -62,8 +75,18 @@ import {
 } from './validation'
 import type { SQL } from 'drizzle-orm'
 import type { ShareScopes } from '#/server/db/schema'
-import type { ShareLink, Trip, TripMember } from '#/server/db/types'
+import type { Day, ShareLink, Trip, TripMember } from '#/server/db/types'
 import type { ListOptions, TenantScope } from './base'
+
+/*
+ * The imports above close two cycles — `places.ts` and `itinerary.ts` both import this module for
+ * `requireTrip` — and both are safe, because neither side names the other at module scope. What
+ * those two evaluate on load is a repository handle and a set of Zod schemas; `requireTrip` and
+ * `assertTripRole` are reached from inside a function body, long after every module is initialised.
+ * The alternative — a second handle on `places` declared here — is the duplication `base.ts` exists
+ * to make unnecessary, and two handles on one table is a worse bargain than an import cycle no
+ * evaluation order can observe.
+ */
 
 /**
  * Every trip in the tenant, readable or not.
@@ -732,6 +755,501 @@ function assertDateOrder(
       'INVALID_DATE_RANGE',
     )
   }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Copying a trip (PRD #104 decisions 3, 4a, 4b, 6 and 9)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * D1 refuses a statement carrying more than this many bound parameters.
+ *
+ * Cloudflare's limit, not a preference. It binds here rather than in `base.ts` because
+ * `insertMany` does not chunk — measured, it is a single `.values(records).returning()` — so the
+ * divisor belongs at the call site that applies it, and a constant in `base.ts` would read as a
+ * promise that the primitive chunks on the caller's behalf.
+ */
+export const MAX_BOUND_PARAMETERS = 100
+
+/**
+ * How many rows of `columns` columns fit in one statement.
+ *
+ * `columns` is what the pass actually writes plus the tenant column `insertMany` stamps — not the
+ * table's column count, because Drizzle binds only the keys present in the values object. Every
+ * pass derives it from its own payload rather than from a literal, so adding a copied column
+ * narrows the chunk instead of quietly crossing the ceiling.
+ */
+export function chunkFor(columns: number): number {
+  return Math.max(1, Math.floor(MAX_BOUND_PARAMETERS / columns))
+}
+
+/** Inserts `rows` through `insert`, in statements small enough for D1 to accept. */
+async function insertChunked<TRow extends object, TResult>(
+  rows: ReadonlyArray<TRow>,
+  insert: (chunk: ReadonlyArray<TRow>) => Promise<Array<TResult>>,
+): Promise<Array<TResult>> {
+  const first = rows.at(0)
+  if (first === undefined) {
+    return []
+  }
+  // Every row a pass builds carries the same keys, so the first one measures the whole set.
+  const size = chunkFor(Object.keys(first).length + 1)
+  const inserted: Array<TResult> = []
+  for (let index = 0; index < rows.length; index += size) {
+    inserted.push(...(await insert(rows.slice(index, index + size))))
+  }
+  return inserted
+}
+
+export interface StartTripCopyInput {
+  readonly title: string
+  /** ISO date. Both dates present or both absent — a half-open range is a mistake, not a template. */
+  readonly startDate?: string
+  readonly endDate?: string
+}
+
+const startTripCopyInput = z
+  .object({
+    title: titleSchema,
+    startDate: dateSchema.optional(),
+    endDate: dateSchema.optional(),
+  })
+  // Both or neither. A half-open range would leave a trip with a start and no day run — an undated
+  // copy is a template, but a copy dated at one end is a mistake, and the queue consumer that reads
+  // this back is in no position to ask.
+  .refine(
+    (value) =>
+      (value.startDate === undefined) === (value.endDate === undefined),
+    {
+      error: 'Set both dates, or neither.',
+    },
+  )
+
+/**
+ * The synchronous half of a copy: mints the target trip and returns its id, inside one round trip.
+ *
+ * Everything here is O(1) in the source's size, which is the property that lets it stay in a POST
+ * handler at all — the inventory scales with the source and is {@link copyTripContents}'s job, in a
+ * queue consumer. What this writes is the trip row, the caller's `owner` membership and, when the
+ * copy is dated, the day run `createTrip` would have given a new trip; then it stamps
+ * `copy_pending_at`, which is what marks the trip as still being built.
+ *
+ * **Open to any reader** (PRD #104 decision 6): {@link requireTrip} is the whole check, and no
+ * {@link assertTripRole} follows it. A viewer may copy a plan they can see; the copy is their own
+ * and they own it.
+ *
+ * Both quotas are asserted here, before any insert, so a refusal lands where the reader is looking
+ * rather than in a consumer they cannot see. `places` is asserted against the live tenant count
+ * **plus the source's**: asserting current usage alone would admit a copy that crosses the ceiling
+ * on its four-hundredth row, hours later.
+ *
+ * The fields the target inherits are `destination`, `summary`, `currency` and `country_codes` and
+ * no others (spec Q5). `visibility` resets to the column's `private` and the reminder offset to its
+ * default: carrying `organization` across would republish a trip to the whole workspace as a side
+ * effect of an action whose subject is the plan.
+ */
+export async function startTripCopy(
+  scope: TenantScope,
+  tripId: string,
+  input: StartTripCopyInput,
+): Promise<string> {
+  const values = startTripCopyInput.parse(input)
+  assertDateOrder(values.startDate, values.endDate)
+
+  const source = await requireTrip(scope, tripId)
+
+  await assertQuota(scope, 'trips', await tripsRepository.count(scope))
+  await assertQuota(
+    scope,
+    'places',
+    await placesRepository.count(scope),
+    await placesRepository.count(scope, eq(places.tripId, tripId)),
+  )
+
+  const slug = await reserveTripSlug(scope, values.title)
+  const trip = await tripsRepository.insert(scope, {
+    title: values.title,
+    slug,
+    createdBy: scope.ctx.userId,
+    destination: source.destination,
+    summary: source.summary,
+    currency: source.currency,
+    countryCodes: source.countryCodes,
+    startDate: values.startDate ?? null,
+    endDate: values.endDate ?? null,
+    copyPendingAt: new Date(),
+  })
+
+  await tripMembersRepository.insert(scope, {
+    tripId: trip.id,
+    userId: scope.ctx.userId,
+    role: 'owner',
+    joinedAt: new Date(),
+  })
+
+  if (trip.startDate && trip.endDate) {
+    await syncTripDays(scope, trip.id, {
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+    })
+  }
+
+  return trip.id
+}
+
+/** The id maps the core passes build, for the copiers that run after them. */
+export interface CopierMaps {
+  readonly dayIds: ReadonlyMap<string, string>
+  readonly placeIds: ReadonlyMap<string, string>
+}
+
+/** What one copier did, for the completion notification and for the caller's own report. */
+export interface CopierReport {
+  readonly name: string
+  readonly rows: number
+}
+
+/**
+ * Copies one module's rows for a trip. Called after the core passes, with the maps they built.
+ *
+ * Must be idempotent against a target whose inventory was just rebuilt by a retry — clear this
+ * module's own trip-scoped rows before writing them, because `maps` carries new ids on every
+ * attempt. See "Retrying a half-finished copy" in `.ai/specs/2026-09-07-copy-a-trip.md`.
+ */
+export type TripCopier = (
+  scope: TenantScope,
+  sourceTripId: string,
+  targetTripId: string,
+  maps: CopierMaps,
+) => Promise<CopierReport>
+
+/**
+ * The registry, in registration order.
+ *
+ * A `Map` rather than an array so re-registering a name replaces the function instead of queueing a
+ * second pass: a module imported twice in one test run must not double-copy. Insertion order is
+ * iteration order, and because the handler imports the `src/server/repos/index.ts` barrel, every
+ * module has registered before the first copy reads this.
+ */
+const tripCopiers = new Map<string, TripCopier>()
+
+/**
+ * Registers a copier for one module's rows. Called at module top level by the repository that owns
+ * the table — the seam that keeps a table in one plan while a copy still reproduces the whole plan.
+ */
+export function registerTripCopier(name: string, fn: TripCopier): void {
+  tripCopiers.set(name, fn)
+}
+
+export interface TripCopyResult {
+  readonly days: number
+  readonly places: number
+  readonly assignments: number
+  /**
+   * Assignments whose source day had no target. No assignment row is written for them, which is
+   * exactly what "unscheduled" is — `listUnscheduledPlaces` fills the ideas column from the places
+   * that have none — so the place comes across and only its slot on a day is lost.
+   */
+  readonly unscheduled: number
+  readonly notes: number
+  /** Notes whose source day had no target. A note is bound to its day, so these are dropped. */
+  readonly droppedNotes: number
+  readonly extras: ReadonlyArray<CopierReport>
+}
+
+/**
+ * The asynchronous half: clears whatever a previous attempt wrote into the target, then copies the
+ * source's inventory into it.
+ *
+ * **Plan, not record.** Days, places, place tags, day assignments and day notes come across;
+ * reservations, transports, expenses, files, conversations, share links and people stay behind
+ * (PRD #104 decision 4b). Another area's rows arrive through {@link registerTripCopier} rather than
+ * by editing this function.
+ *
+ * **It does not clear `copy_pending_at`.** That stamp is the handler's last write, after the
+ * statistics fan-out and the completion notification, so a null stamp means every downstream effect
+ * has landed and not merely that the rows are in.
+ *
+ * **Each attempt starts from clean.** The queue delivers at least once, and a resumed attempt could
+ * not rebuild `placeIds`: two places in one trip may share a name, a `sort_order` and every other
+ * copied column, so there is no natural key to correlate the rows an earlier attempt inserted. It
+ * would hold target ids only for the rows it wrote itself and would silently drop the tags and
+ * assignments of every place the earlier attempt inserted. So the target's inventory is deleted
+ * first and the copy starts again. That is safe because while `copy_pending_at` is set the target
+ * belongs to this function alone: `startTripCopy` left it with no inventory, the tile is
+ * deliberately not a link, and no other write path touches a trip in that state.
+ *
+ * **Neither trip is role-checked.** {@link requireTrip} on both is the tenant and read boundary; by
+ * the time this runs the target is the caller's own trip and the source has been read-checked
+ * already, and re-checking a membership the acting member may have lost since would abandon a copy
+ * the product has already promised.
+ */
+export async function copyTripContents(
+  scope: TenantScope,
+  sourceTripId: string,
+  targetTripId: string,
+): Promise<TripCopyResult> {
+  if (sourceTripId === targetTripId) {
+    // Refused rather than made a no-op: the clearing pass below would delete the trip's own plan
+    // on the way to reproducing it.
+    throw new RepositoryError(
+      'A trip cannot be copied into itself.',
+      'INVALID_COPY_TARGET',
+    )
+  }
+  await requireTrip(scope, sourceTripId)
+  const target = await requireTrip(scope, targetTripId)
+
+  const sourceDays = await listTripDays(scope, sourceTripId)
+  const targetDays = await clearTargetInventory(scope, target, sourceDays)
+
+  // Day numbers are the correlation in both directions, so a shorter target run simply has no
+  // entry for the source's overflow — which is what truncation is.
+  const dayIds = new Map<string, string>()
+  for (const day of sourceDays) {
+    const targetDayId = targetDays.get(day.dayNumber)
+    if (targetDayId !== undefined) {
+      dayIds.set(day.id, targetDayId)
+    }
+  }
+
+  const placeIds = await copyPlaces(scope, sourceTripId, targetTripId)
+  await copyPlaceTags(scope, placeIds)
+  const assignments = await copyAssignments(
+    scope,
+    sourceTripId,
+    targetTripId,
+    dayIds,
+    placeIds,
+  )
+  const notes = await copyDayNotes(scope, sourceTripId, targetTripId, dayIds)
+
+  const maps: CopierMaps = { dayIds, placeIds }
+  const extras: Array<CopierReport> = []
+  for (const copier of tripCopiers.values()) {
+    extras.push(await copier(scope, sourceTripId, targetTripId, maps))
+  }
+
+  return {
+    days: targetDays.size,
+    places: placeIds.size,
+    assignments: assignments.written,
+    unscheduled: assignments.unscheduled,
+    notes: notes.written,
+    droppedNotes: notes.dropped,
+    extras,
+  }
+}
+
+/**
+ * Empties the target of anything a previous attempt left, and returns its day run keyed by day
+ * number.
+ *
+ * A **dated** target's run came from `startTripCopy` and is the reader's chosen range, so it is kept
+ * and re-used. An **undated** one has no run of its own — `syncTripDays` takes its
+ * `wanted.length === 0` branch and creates no days at all — so whatever is there was inserted by an
+ * earlier attempt, possibly only part of it, and the whole run is rebuilt rather than trusted.
+ *
+ * Deleting the places cascades their tags and assignments; the notes are deleted explicitly,
+ * because a dated target keeps its days and nothing would cascade to them.
+ */
+async function clearTargetInventory(
+  scope: TenantScope,
+  target: Trip,
+  sourceDays: ReadonlyArray<Day>,
+): Promise<Map<number, string>> {
+  await placesRepository.removeWhere(scope, eq(places.tripId, target.id))
+  await dayNotesRepository.removeWhere(scope, eq(dayNotes.tripId, target.id))
+
+  if (target.startDate && target.endDate) {
+    const existing = await listTripDays(scope, target.id)
+    return new Map(existing.map((day) => [day.dayNumber, day.id]))
+  }
+
+  await daysRepository.removeWhere(scope, eq(days.tripId, target.id))
+  const inserted = await insertChunked(
+    sourceDays.map((day) => ({
+      tripId: target.id,
+      dayNumber: day.dayNumber,
+      date: null,
+      title: day.title,
+      notes: day.notes,
+    })),
+    (chunk) => daysRepository.insertMany(scope, chunk),
+  )
+  return new Map(inserted.map((day) => [day.dayNumber, day.id]))
+}
+
+/** Copies the source's whole place inventory, and returns source place id → target place id. */
+async function copyPlaces(
+  scope: TenantScope,
+  sourceTripId: string,
+  targetTripId: string,
+): Promise<Map<string, string>> {
+  const source = await placesRepository.findMany(scope, {
+    where: eq(places.tripId, sourceTripId),
+    orderBy: [asc(places.sortOrder), asc(places.id)],
+  })
+  const inserted = await insertChunked(
+    source.map((place) => ({
+      tripId: targetTripId,
+      categoryId: place.categoryId,
+      name: place.name,
+      description: place.description,
+      notes: place.notes,
+      lat: place.lat,
+      lng: place.lng,
+      address: place.address,
+      city: place.city,
+      countryCode: place.countryCode,
+      website: place.website,
+      phone: place.phone,
+      imageUrl: place.imageUrl,
+      openingHours: place.openingHours,
+      priceMinor: place.priceMinor,
+      currency: place.currency,
+      rating: place.rating,
+      durationMinutes: place.durationMinutes,
+      transportMode: place.transportMode,
+      source: place.source,
+      externalId: place.externalId,
+      isVisited: place.isVisited,
+      sortOrder: place.sortOrder,
+    })),
+    (chunk) => placesRepository.insertMany(scope, chunk),
+  )
+
+  // `insertMany` returns rows in the order they were sent, so the two lists line up by index.
+  const ids = new Map<string, string>()
+  for (const [index, place] of source.entries()) {
+    const copied = inserted.at(index)
+    if (copied !== undefined) {
+      ids.set(place.id, copied.id)
+    }
+  }
+  return ids
+}
+
+/**
+ * Re-hangs the source's tags on the copied places.
+ *
+ * `tag_id` is workspace-level, so it is re-used rather than duplicated: a copy is tagged with the
+ * very same tags, which is what makes a tag filter find both trips.
+ */
+async function copyPlaceTags(
+  scope: TenantScope,
+  placeIds: ReadonlyMap<string, string>,
+): Promise<void> {
+  if (placeIds.size === 0) {
+    return
+  }
+  const source = await placeTagsAccess.findMany(scope, {
+    where: inIds(placeTags.placeId, [...placeIds.keys()]),
+  })
+
+  const rows: Array<{ placeId: string; tagId: string }> = []
+  for (const row of source) {
+    const placeId = placeIds.get(row.placeId)
+    if (placeId !== undefined) {
+      rows.push({ placeId, tagId: row.tagId })
+    }
+  }
+  await insertChunked(rows, (chunk) => placeTagsAccess.insertMany(scope, chunk))
+}
+
+/**
+ * Remaps the source's assignments onto the new days and the new places.
+ *
+ * An assignment whose source day has no target is **not written**: its place still came across, and
+ * a place with no assignment is what the ideas column is made of, so the plan's overflow lands
+ * somewhere the reader can see rather than being lost.
+ *
+ * `reservation_status` is deliberately **not** carried and falls back to the column's `none`. It
+ * says whether that stop is booked, which is the record and not the plan (PRD #104 decision 4b);
+ * copying `confirmed` onto a trip nobody has booked anything for would be the copy telling the
+ * reader something untrue.
+ */
+async function copyAssignments(
+  scope: TenantScope,
+  sourceTripId: string,
+  targetTripId: string,
+  dayIds: ReadonlyMap<string, string>,
+  placeIds: ReadonlyMap<string, string>,
+): Promise<{ written: number; unscheduled: number }> {
+  const source = await dayAssignmentsRepository.findMany(scope, {
+    where: eq(dayAssignments.tripId, sourceTripId),
+    orderBy: [asc(dayAssignments.orderIndex), asc(dayAssignments.id)],
+  })
+
+  const rows = []
+  let unscheduled = 0
+  for (const assignment of source) {
+    const dayId = dayIds.get(assignment.dayId)
+    const placeId = placeIds.get(assignment.placeId)
+    if (dayId === undefined || placeId === undefined) {
+      unscheduled += 1
+      continue
+    }
+    rows.push({
+      tripId: targetTripId,
+      dayId,
+      placeId,
+      orderIndex: assignment.orderIndex,
+      startTime: assignment.startTime,
+      endTime: assignment.endTime,
+      durationMinutes: assignment.durationMinutes,
+      transportMode: assignment.transportMode,
+      notes: assignment.notes,
+    })
+  }
+
+  await insertChunked(rows, (chunk) =>
+    dayAssignmentsRepository.insertMany(scope, chunk),
+  )
+  return { written: rows.length, unscheduled }
+}
+
+/**
+ * Remaps the source's day notes onto the new days.
+ *
+ * A note whose source day has no target has nowhere to go — a note is bound to its day — so it is
+ * dropped and **counted**, and the count reaches the reader in the completion notification.
+ */
+async function copyDayNotes(
+  scope: TenantScope,
+  sourceTripId: string,
+  targetTripId: string,
+  dayIds: ReadonlyMap<string, string>,
+): Promise<{ written: number; dropped: number }> {
+  const source = await dayNotesRepository.findMany(scope, {
+    where: eq(dayNotes.tripId, sourceTripId),
+    orderBy: [asc(dayNotes.sortOrder), asc(dayNotes.id)],
+  })
+
+  const rows = []
+  let dropped = 0
+  for (const note of source) {
+    const dayId = dayIds.get(note.dayId)
+    if (dayId === undefined) {
+      dropped += 1
+      continue
+    }
+    rows.push({
+      tripId: targetTripId,
+      dayId,
+      body: note.body,
+      detail: note.detail,
+      time: note.time,
+      icon: note.icon,
+      createdBy: scope.ctx.userId,
+      sortOrder: note.sortOrder,
+    })
+  }
+
+  await insertChunked(rows, (chunk) =>
+    dayNotesRepository.insertMany(scope, chunk),
+  )
+  return { written: rows.length, dropped }
 }
 
 /* -------------------------------------------------------------------------------------------------
