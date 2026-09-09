@@ -76,8 +76,8 @@ Turns it on: the menu item, the dialog, the copying state, the 23-locale copy, a
 - [x] 1.3 `startTripCopy` — e77391df
 - [x] 1.4 The copier registry — e77391df
 - [x] 1.5 `copyTripContents` — e77391df
-- [ ] 1.6 The `trip-copy` kind, the consumer `case` and its registry entry
-- [ ] 1.7 `src/server/queue/handlers/trip-copy.ts`
+- [x] 1.6 The `trip-copy` kind, the consumer `case` and its registry entry — 0688df4a
+- [x] 1.7 `src/server/queue/handlers/trip-copy.ts` — 0688df4a
 - [ ] 1.8 `copyTripFn` and its Zod input
 - [ ] 1.9 Tenant and member isolation tests
 
