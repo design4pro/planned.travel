@@ -33,6 +33,7 @@ import {
   dayAssignments,
   dayNotes,
   days,
+  newId,
   placeTags,
   places,
   shareLinks,
@@ -1071,6 +1072,11 @@ export async function copyTripContents(
  *
  * Deleting the places cascades their tags and assignments; the notes are deleted explicitly,
  * because a dated target keeps its days and nothing would cascade to them.
+ *
+ * A kept run still carries the source's day titles and notes across. `startTripCopy` mints the
+ * dated run blank, and nothing else in the copy writes to `days`, so without this pass the same
+ * source copied *with* dates would arrive with `title = null, notes = null` on every day while
+ * copied *without* dates kept both — an asymmetry nobody asked for and no error would report.
  */
 async function clearTargetInventory(
   scope: TenantScope,
@@ -1082,7 +1088,21 @@ async function clearTargetInventory(
 
   if (target.startDate && target.endDate) {
     const existing = await listTripDays(scope, target.id)
-    return new Map(existing.map((day) => [day.dayNumber, day.id]))
+    const kept = new Map(existing.map((day) => [day.dayNumber, day.id]))
+    // One statement per source day that has anything to say, which on an ordinary trip is a
+    // handful rather than the whole run; a day the reader's shorter range dropped has no
+    // counterpart to write to and is skipped with it.
+    for (const day of sourceDays) {
+      const id = kept.get(day.dayNumber)
+      if (id === undefined || (day.title === null && day.notes === null)) {
+        continue
+      }
+      await daysRepository.updateWhere(scope, eq(days.id, id), {
+        title: day.title,
+        notes: day.notes,
+      })
+    }
+    return kept
   }
 
   await daysRepository.removeWhere(scope, eq(days.tripId, target.id))
@@ -1118,33 +1138,44 @@ async function copyPlaces(
     where: eq(places.tripId, sourceTripId),
     orderBy: [asc(places.sortOrder), asc(places.id)],
   })
-  const inserted = await insertChunked(
+  /**
+   * The payload mints its own keys rather than leaving them to the column's `$defaultFn`.
+   *
+   * The map below has to pair every source place with its copy, and `RETURNING` has no defined row
+   * order in SQLite — the trap `lists.ts` avoids by re-reading and `expenses.ts` by re-keying. A
+   * mis-pairing here would be silent: `copyPlaceTags`, `copyAssignments` and every registered
+   * `tripCopier` would hang their rows off the wrong place and nothing would fail. Minting the id
+   * with the row makes the pairing a property of the payload, which no statement can reorder.
+   */
+  const records = source.map((place) => ({
+    id: newId(),
+    tripId: targetTripId,
+    categoryId: place.categoryId,
+    name: place.name,
+    description: place.description,
+    notes: place.notes,
+    lat: place.lat,
+    lng: place.lng,
+    address: place.address,
+    city: place.city,
+    countryCode: place.countryCode,
+    website: place.website,
+    phone: place.phone,
+    imageUrl: place.imageUrl,
+    openingHours: place.openingHours,
+    priceMinor: place.priceMinor,
+    currency: place.currency,
+    rating: place.rating,
+    durationMinutes: place.durationMinutes,
+    transportMode: place.transportMode,
+    source: place.source,
+    externalId: place.externalId,
+    isVisited: place.isVisited,
+    sortOrder: place.sortOrder,
+  }))
+  await insertChunked(
     places,
-    source.map((place) => ({
-      tripId: targetTripId,
-      categoryId: place.categoryId,
-      name: place.name,
-      description: place.description,
-      notes: place.notes,
-      lat: place.lat,
-      lng: place.lng,
-      address: place.address,
-      city: place.city,
-      countryCode: place.countryCode,
-      website: place.website,
-      phone: place.phone,
-      imageUrl: place.imageUrl,
-      openingHours: place.openingHours,
-      priceMinor: place.priceMinor,
-      currency: place.currency,
-      rating: place.rating,
-      durationMinutes: place.durationMinutes,
-      transportMode: place.transportMode,
-      source: place.source,
-      externalId: place.externalId,
-      isVisited: place.isVisited,
-      sortOrder: place.sortOrder,
-    })),
+    records,
     (chunk) => placesRepository.insertMany(scope, chunk),
     async (rowsInChunk) => {
       await assertQuota(
@@ -1156,10 +1187,9 @@ async function copyPlaces(
     },
   )
 
-  // `insertMany` returns rows in the order they were sent, so the two lists line up by index.
   const ids = new Map<string, string>()
   for (const [index, place] of source.entries()) {
-    const copied = inserted.at(index)
+    const copied = records.at(index)
     if (copied !== undefined) {
       ids.set(place.id, copied.id)
     }

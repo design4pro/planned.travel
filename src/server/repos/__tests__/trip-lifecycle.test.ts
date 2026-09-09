@@ -55,7 +55,7 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
-import { createDayNote, listTripDays } from '../days'
+import { createDayNote, listTripDays, updateDay } from '../days'
 import { createExpense } from '../expenses'
 import { recordFile } from '../files'
 import { createAssignment } from '../itinerary'
@@ -943,6 +943,89 @@ describe('trip lifecycle', () => {
         assignments: 3,
         notes: 3,
       })
+    })
+
+    it('carries each day’s title and notes across, dated run or not', async () => {
+      const source = await seedSource()
+      for (const [index, day] of (
+        await listTripDays(tenant.scope, source.id)
+      ).entries()) {
+        await updateDay(tenant.scope, day.id, {
+          title: `Day ${index + 1}: the hills`,
+          notes: `Tram 28 goes at ${7 + index}.`,
+        })
+      }
+
+      // The dated branch keeps the run `startTripCopy` minted, and that run is blank. Without a
+      // pass over it the same source copied *with* dates would lose both columns while copied
+      // *without* dates kept them — silent, and on the more common of the two paths.
+      const dated = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+      await copyTripContents(tenant.scope, source.id, dated)
+
+      expect(
+        (await listTripDays(tenant.scope, dated)).map((day) => [
+          day.title,
+          day.notes,
+        ]),
+      ).toEqual([
+        ['Day 1: the hills', 'Tram 28 goes at 7.'],
+        ['Day 2: the hills', 'Tram 28 goes at 8.'],
+        ['Day 3: the hills', 'Tram 28 goes at 9.'],
+      ])
+
+      const undated = await startTripCopy(tenant.scope, source.id, {
+        title: 'Someday Lisbon',
+      })
+      await copyTripContents(tenant.scope, source.id, undated)
+
+      expect(
+        (await listTripDays(tenant.scope, undated)).map((day) => [
+          day.title,
+          day.notes,
+        ]),
+      ).toEqual([
+        ['Day 1: the hills', 'Tram 28 goes at 7.'],
+        ['Day 2: the hills', 'Tram 28 goes at 8.'],
+        ['Day 3: the hills', 'Tram 28 goes at 9.'],
+      ])
+    })
+
+    it('pairs each copy with its source by the id it minted, not by RETURNING’s order', async () => {
+      const source = await seedSource()
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+      })
+
+      // SQLite defines no row order for `RETURNING`, so handing the rows back reversed is a legal
+      // answer to the very same statement. Correlating by array index would silently hang every
+      // tag and assignment off the wrong place; nothing would throw and no count would move.
+      const real = placesRepository.insertMany.bind(placesRepository)
+      const insertMany = vi
+        .spyOn(placesRepository, 'insertMany')
+        .mockImplementation(async (scope, values) =>
+          [...(await real(scope, values))].reverse(),
+        )
+      await copyTripContents(tenant.scope, source.id, targetId)
+      insertMany.mockRestore()
+
+      const scheduled = await harness.db
+        .select({ place: places.name, dayNumber: days.dayNumber })
+        .from(dayAssignments)
+        .innerJoin(places, eq(places.id, dayAssignments.placeId))
+        .innerJoin(days, eq(days.id, dayAssignments.dayId))
+        .where(eq(dayAssignments.tripId, targetId))
+
+      expect([...scheduled].sort((a, b) => a.dayNumber - b.dayNumber)).toEqual([
+        { place: 'Miradouro 1', dayNumber: 1 },
+        { place: 'Miradouro 2', dayNumber: 2 },
+        { place: 'Miradouro 3', dayNumber: 3 },
+      ])
     })
 
     /* ------------------------------------------------------------- retries */
