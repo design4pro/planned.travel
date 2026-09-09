@@ -642,10 +642,46 @@ describe('updateProviderLimit', () => {
 
   /**
    * The regression this pair exists for. A ceiling for a provider with no client is the whole reason
-   * the planned slugs are listed — ADR 0013 gives Geoapify 3,000 credits a day — and the path used
-   * to cast the slug to a metered one, which sent it into a `z.enum(METERED_PROVIDERS)` parse.
+   * the planned slugs are listed — an operator agrees the terms before we write the adapter — and
+   * the path used to cast the slug to a metered one, which sent it into a
+   * `z.enum(METERED_PROVIDERS)` parse.
+   *
+   * The pair was written against `geoapify`, which has since been adopted into
+   * {@link METERED_PROVIDERS} and would no longer exercise the cast at all. `here` is the planned
+   * slug that stands in its place; ADR 0011 gives it 30,000 requests a month.
    */
   it('accepts a ceiling for a provider that has no client yet', async () => {
+    const { after } = await updateProviderLimit(tables.db, operator('admin'), {
+      ...LIMIT_INPUT,
+      slug: 'here',
+      label: 'HERE',
+      limitWindow: 'month',
+      callLimit: 30_000,
+    })
+
+    expect(after).toMatchObject({
+      slug: 'here',
+      limitWindow: 'month',
+      callLimit: 30_000,
+    })
+  })
+
+  it('reads that ceiling back through the same door a metered one uses', async () => {
+    await updateProviderLimit(tables.db, operator('admin'), {
+      ...LIMIT_INPUT,
+      slug: 'here',
+      limitWindow: 'month',
+      callLimit: 30_000,
+    })
+
+    expect(await readProviderLimit(tables.db, 'here')).toMatchObject({
+      callLimit: 30_000,
+    })
+  })
+
+  it('keeps the day window an adopted provider agreed its ceiling under', async () => {
+    // ADR 0013 buys Geoapify on a daily allowance. Adopting the slug into METERED_PROVIDERS moves
+    // which door it comes through and must not move the window it is counted in.
     const { after } = await updateProviderLimit(tables.db, operator('admin'), {
       ...LIMIT_INPUT,
       slug: 'geoapify',
@@ -657,19 +693,6 @@ describe('updateProviderLimit', () => {
     expect(after).toMatchObject({
       slug: 'geoapify',
       limitWindow: 'day',
-      callLimit: 3000,
-    })
-  })
-
-  it('reads that ceiling back through the same door a metered one uses', async () => {
-    await updateProviderLimit(tables.db, operator('admin'), {
-      ...LIMIT_INPUT,
-      slug: 'geoapify',
-      limitWindow: 'day',
-      callLimit: 3000,
-    })
-
-    expect(await readProviderLimit(tables.db, 'geoapify')).toMatchObject({
       callLimit: 3000,
     })
   })

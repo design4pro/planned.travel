@@ -23,7 +23,7 @@
  * ## The ceiling is checked after the cache and before the call
  *
  * A cache hit spends nothing, because it costs nothing. A miss spends one unit of the workspace's
- * `transit_searches_per_month` allowance through `./meter`, and the ceiling itself is resolved by
+ * `transit_searches_per_month` allowance through `#/server/metering/rate`, and the ceiling itself is resolved by
  * the caller from `resolveLimits()` — the published number is the enforced number.
  *
  * ## Failure is typed
@@ -36,9 +36,9 @@
 import { z } from 'zod'
 
 import { TRANSPORT_MODES } from '#/server/db/schema'
-import { RateCeilingError, spendRateUnit } from './meter'
+import { RateCeilingError, spendRateUnit } from '#/server/metering/rate'
 
-import type { RateCounterStore } from './meter'
+import type { RateCounterStore } from '#/server/metering/rate'
 
 /* ---------------------------------------------------------------- vocabulary */
 

@@ -189,9 +189,10 @@ export async function readProviders(): Promise<ProvidersView> {
  *
  * An enum rather than the bare `z.string()` this used to carry, and that is the repair. The old
  * shape let any string through and the function then *cast* it to `MeteredProvider` to get at the
- * usage read — so a ceiling saved for `geoapify` would have reached a `z.enum(METERED_PROVIDERS)`
- * parse and thrown, on the first save anybody made for the very providers the planned list exists
- * to let them configure early.
+ * usage read — so a ceiling saved for a planned slug would have reached a
+ * `z.enum(METERED_PROVIDERS)` parse and thrown, on the first save anybody made for the very
+ * providers the planned list exists to let them configure early. `geoapify` was that example until
+ * it was adopted; `here` and `workers-ai` still are.
  */
 const configurableSlug = z.enum([...METERED_PROVIDERS, ...PLANNED_PROVIDERS])
 
