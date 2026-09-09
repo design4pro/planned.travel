@@ -65,3 +65,24 @@ no further gate.
   whole. Transit proves its scan works by finding importers of its own proxy; this module has no
   caller by design, so the control is `#/server/metering/rate` — a module three directories do
   reach, found by the same walk over the same files.
+
+## 2026-09-09T12:55:00Z — code-review pass
+
+- `om-auto-review-pr 363 --autofix` ran with the lock released for its duration and reclaimed on
+  return. Verdict: approve, with two minor findings, both fixed in `c41bcc2b` as Step
+  `2.5-review-fix`.
+- Finding 1: moving the `geoapify` bullet out of `PLANNED_PROVIDERS` took with it the only sentence
+  explaining why `PROVIDER_LIMIT_WINDOWS` contains `day`. The rationale now lives on the constant
+  it justifies.
+- Finding 2: `costs more per extraction than per lookup` meant a transit search by "lookup", which
+  stopped being unambiguous the moment `geocode_lookups_per_month` joined the same table.
+- Recorded and deliberately *not* raised as a finding: the tenant's unit is spent before
+  `callProvider`'s block gate runs. The spec accepts that ordering knowingly, lists inverting it as
+  a Non-goal, and hands it to #214 to decide once for both callers.
+- GitHub refuses an approving review on one's own PR, so the verdict is a comment. The PR therefore
+  carries no human approval yet and stays in `review` rather than `merge-queue`.
+
+## 2026-09-09T12:56:00Z — run ended
+
+- PR #363 flipped to ready, `Status: complete`, full label set applied, summary comment posted.
+- https://github.com/design4pro/planned.travel/pull/363

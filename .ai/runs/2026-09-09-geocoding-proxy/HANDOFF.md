@@ -3,8 +3,8 @@
 **Last updated:** 2026-09-09T12:45:00Z
 **Branch:** `feat/geocoding-proxy`
 **PR:** https://github.com/design4pro/planned.travel/pull/363
-**Current phase/step:** all Steps done — final gate passed, review loop next
-**Last commit:** `2b3bbdfa` — feat(geo): add the binding seam and declare GEOAPIFY_API_KEY
+**Current phase/step:** run complete — PR ready, awaiting a human reviewer
+**Last commit:** `c41bcc2b` — docs(db): restore the day-window rationale the slug move orphaned
 
 ## What just happened
 
@@ -17,10 +17,9 @@
 
 ## Next concrete action
 
-- Refresh the PR body from the template with `Status: complete`, apply the full label set through
-  the `apply_label` guard, then release the `in-progress` lock and run
-  `om-auto-review-pr 363 --autofix`. Reclaim the lock when it returns, post the summary comment,
-  and flip the PR to ready.
+- Nothing for an agent. The run is complete: PR #363 is ready, labelled, gated and summarised. What
+  remains is a **human** decision — review the diff, and settle the merge order against #220 before
+  merging. `om-auto-continue-pr-loop 363` is the entry point if a reviewer asks for changes.
 
 ## Blockers / open questions
 
