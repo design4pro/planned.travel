@@ -94,20 +94,24 @@ one `anonymous-only.mjs` vacates.
 This spec was written unattended. Each answer below is the most reversible reading of the issue;
 override any of them on the PR before merge.
 
-| #   | Question                                                                                 | Applied default                                                                                                                                                                                                       | Why                                                                                                                                                                                                                       |
-| --- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q1  | Delete the `--auth` refusal for `/login` and `/register`, or keep it beside the warning? | **Delete it**, as the issue asks — but only together with the quoting contract of premise 2.                                                                                                                          | The issue is the repository owner's stated direction. The refusal's value is not lost, it is generalised; conditioning the deletion on the contract is what keeps it a net gain.                                          |
-| Q2  | Delete the vitest project the issue names?                                               | **No** — delete only `scripts/visual/__tests__/anonymous-only.test.mjs`.                                                                                                                                              | Premise 1: the `tooling` project runs thirteen other test files. Deleting it would silently unrun them.                                                                                                                   |
-| Q3  | Warn only under `--auth`, or on every capture?                                           | **Every capture**, `--auth` or not.                                                                                                                                                                                   | The failure class is "the frame is not of the screen you named", which has nothing to do with the session. Restricting it would rebuild a special case.                                                                   |
-| Q4  | Which URL is compared — the shutter read, or the landing before `--hover` / `--click`?   | **The shutter read** (`files[].landedUrl`) by default; the post-`settle()` landing instead **only when `--click` was given**.                                                                                         | A redirect the app makes _after_ hydration is exactly what `capture.mjs:350-351` was written for, and a landing-only comparison would miss it. `--click` is the one navigation the caller intended.                       |
-| Q5  | One warning per frame, or one per distinct redirect?                                     | **One per distinct redirect**, deduplicated across the eight frames.                                                                                                                                                  | Eight identical sentences bury the other warnings. Deduplication is `warnings.includes(w)` — no new structure.                                                                                                            |
-| Q6  | Does a redirect set `captureValid: false`?                                               | **No.** `captureValid` stays the toolchain verdict it is today.                                                                                                                                                       | The frames are valid photographs — of the wrong screen. Conflating the two would make `captureValid` mean two things, and `exit 2` on a legitimate `/trips/<id>` redirect.                                                |
-| Q7  | Keep the stale-session hard error?                                                       | **Keep it, moved and narrowed:** evaluated on the same URL as the comparison but just _before_ the shutter, so it still refuses before any PNG exists, and only when the _requested_ pathname is not itself `/login`. | The issue says to keep it. Left where it is, a post-hydration bounce to `/login` would now degrade from a hard error to a warning; left unnarrowed, asking for `/login` with `--auth` would report a false stale session. |
-| Q8  | Where does "quote every `warnings` entry" live now?                                      | `.claude/skills/verifying-changes/SKILL.md`. The script's stderr **points at that file** rather than restating the rule.                                                                                              | It is the document that already owns how the pair is run and read (CLAUDE.md lists it as a project skill). Two copies of the rule would be one claim in two places (§8); a pointer is not a copy.                         |
+| #   | Question                                                                                 | Applied default                                                                                                                                         | Why                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Q1  | Delete the `--auth` refusal for `/login` and `/register`, or keep it beside the warning? | **Delete it**, as the issue asks — but only together with the quoting contract of premise 2.                                                            | The issue is the repository owner's stated direction. The refusal's value is not lost, it is generalised; conditioning the deletion on the contract is what keeps it a net gain.                                                                                                                                                                                                                       |
+| Q2  | Delete the vitest project the issue names?                                               | **No** — delete only `scripts/visual/__tests__/anonymous-only.test.mjs`.                                                                                | Premise 1: the `tooling` project runs thirteen other test files. Deleting it would silently unrun them.                                                                                                                                                                                                                                                                                                |
+| Q3  | Warn only under `--auth`, or on every capture?                                           | **Every capture**, `--auth` or not.                                                                                                                     | The failure class is "the frame is not of the screen you named", which has nothing to do with the session. Restricting it would rebuild a special case.                                                                                                                                                                                                                                                |
+| Q4  | Which URL is compared — the shutter read, or the landing before `--hover` / `--click`?   | **The shutter read** (`files[].landedUrl`) by default; the post-`settle()` landing instead **only when `--click` was given**.                           | A redirect the app makes _after_ hydration is exactly what `capture.mjs:350-351` was written for, and a landing-only comparison would miss it. `--click` is the one navigation the caller intended.                                                                                                                                                                                                    |
+| Q5  | One warning per frame, or one per distinct redirect?                                     | **One per distinct redirect**, deduplicated across the eight frames.                                                                                    | Eight identical sentences bury the other warnings. Deduplication is `warnings.includes(w)` — no new structure.                                                                                                                                                                                                                                                                                         |
+| Q6  | Does a redirect set `captureValid: false`?                                               | **No.** `captureValid` stays the toolchain verdict it is today.                                                                                         | The frames are valid photographs — of the wrong screen. Conflating the two would make `captureValid` mean two things, and `exit 2` on a legitimate `/trips/<id>` redirect.                                                                                                                                                                                                                             |
+| Q7  | Keep the stale-session hard error?                                                       | **Keep it where it is, add a second evaluation before the shutter, and narrow both** to the case where the _requested_ pathname is not itself `/login`. | The issue says to keep it. Kept only where it is, a post-hydration bounce to `/login` would degrade from a hard error to a warning; _moved_ instead of duplicated, a stale session under `--map` / `--hover` / `--click` would hang on `settle` and report a generic timeout instead of the actionable message; left unnarrowed, asking for `/login` with `--auth` would report a false stale session. |
+| Q8  | Where does "quote every `warnings` entry" live now?                                      | `.claude/skills/verifying-changes/SKILL.md`. The script's stderr **points at that file** rather than restating the rule.                                | It is the document that already owns how the pair is run and read (CLAUDE.md lists it as a project skill). Two copies of the rule would be one claim in two places (§8); a pointer is not a copy.                                                                                                                                                                                                      |
 
-None of these carries a security, tenancy, compatibility or product-decision risk: the change
-touches no runtime code, no D1 schema, no locale key and no protected surface in
-`BACKWARD_COMPATIBILITY.md`.
+None carries a security, tenancy or product-decision risk: the change touches no runtime code, no D1
+schema, no locale key and no protected surface in `BACKWARD_COMPATIBILITY.md`.
+
+**Two do carry a compatibility risk, and both are exit-code changes to a script other things shell
+out to.** Q1 turns `exit 2` into `exit 0` for `--auth` on `/login` and `/register`; Q7 turns `exit 0`
+into `exit 1` for a session that bounces to `/login` after hydration. Both are enumerated in **API
+Contracts** and carried into **Risks & Impact Review** rather than covered by a blanket claim here.
 
 ## 📝 Proposed Solution
 
@@ -136,9 +140,10 @@ One comparison, in one place, replacing a list of two special cases.
    its drift test are deleted, and the five prose sites are settled: four deleted or corrected in
    place, the fifth — `verifying-changes` — rewritten into the new contract.
 
-4. **The stale-session error moves to the shutter** — evaluated on the same URL the comparison
-   uses, but immediately before `page.screenshot`, so the invariant it was written under holds:
-   a refusal still comes before anything is created. It is narrowed per Q7.
+4. **The stale-session error is narrowed and evaluated twice** — once where it already is, straight
+   after `goto`, so a session that is stale at navigation still fails fast with its actionable
+   message; and once immediately before `page.screenshot`, which closes the post-hydration bounce
+   the first check misses while no PNG exists yet. One predicate, two points, per Q7.
 
 ### Alternatives considered
 
@@ -180,17 +185,39 @@ const pathnameOf = (u) => new URL(u).pathname.replace(/\/+$/, '') || '/'
 
 ### `scripts/visual/capture.mjs` — edited
 
-| Site                                             | Change                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Header comment, `:22-24`                         | Deleted — it exists only to point at the refusal list.                                                                                                                                                                                                                                                                                                                                             |
-| Usage comment, `:45-48`                          | Rewritten: every frame reports the URL it was taken on, and a frame taken on a pathname other than the requested one is a `warnings` entry — no list, no exceptions.                                                                                                                                                                                                                               |
-| `import … from './anonymous-only.mjs'` (`:55`)   | Deleted; `import { landedUrlWarning } from './landed-url.mjs'` added.                                                                                                                                                                                                                                                                                                                              |
-| The refusal block, `:207-214`                    | Deleted, its "Both refusals" comment with it. The two surviving pre-flight refusals (`--auth` with `--enter`; a missing `e2e/.auth/demo.json`) keep their own comments and are otherwise untouched.                                                                                                                                                                                                |
-| The stale-session throw, `:292-298`              | Moved down to the comparison point (below) and guarded by `pathnameOf(url) !== '/login'`.                                                                                                                                                                                                                                                                                                          |
-| After `settle(page, …)`                          | `const landing = page.url()` — read before `quiesce`, `--dismiss`, `--hover` and `--click`. Used only when `--click` was given.                                                                                                                                                                                                                                                                    |
-| Immediately **before** `page.screenshot`, `:334` | `const seen = typeof opt.click === 'string' ? landing : page.url()`. If `wantsAuth`, `pathnameOf(seen) === '/login'` and `pathnameOf(url) !== '/login'` → throw the stale-session error. This is the last point before the PNG exists, and `--click` / `--hover` / `--dismiss` have all already run, so `page.url()` here is the same value the filing point reads — nothing navigates in between. |
-| Where the frame is filed, `:352-360`             | Push `landedUrlWarning({ requestedUrl: url, landedUrl: seen })` when defined and not already present.                                                                                                                                                                                                                                                                                              |
-| After the JSON is printed                        | When `warnings.length`, one stderr line naming `.claude/skills/verifying-changes/SKILL.md` as the rule for what to do with them.                                                                                                                                                                                                                                                                   |
+| Site                                             | Change                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Header comment, `:22-24`                         | Deleted — it exists only to point at the refusal list.                                                                                                                                                                                                                                                                                                                                                                                             |
+| Usage comment, `:45-48`                          | Rewritten: every frame reports the URL it was taken on, and a frame taken on a pathname other than the requested one is a `warnings` entry — no list, no exceptions.                                                                                                                                                                                                                                                                               |
+| `import … from './anonymous-only.mjs'` (`:55`)   | Deleted; `import { landedUrlWarning } from './landed-url.mjs'` added.                                                                                                                                                                                                                                                                                                                                                                              |
+| The refusal block, `:207-214`                    | Deleted, its "Both refusals" comment with it. The two surviving pre-flight refusals (`--auth` with `--enter`; a missing `e2e/.auth/demo.json`) keep their own comments and are otherwise untouched.                                                                                                                                                                                                                                                |
+| The stale-session throw, `:292-298`              | **Stays where it is**, narrowed by `pathnameOf(url) !== '/login'` (Q7). It keeps firing straight after `goto`, before `settle`, `--hover` and `--click` — see **Why the throw is evaluated twice** below.                                                                                                                                                                                                                                          |
+| After `settle(page, …)`                          | `const landing = page.url()` — read before `quiesce`, `--dismiss`, `--hover` and `--click`. Used only when `--click` was given.                                                                                                                                                                                                                                                                                                                    |
+| Immediately **before** `page.screenshot`, `:334` | `const seen = typeof opt.click === 'string' ? landing : page.url()`. **A second** evaluation of the same guard: if `wantsAuth`, `pathnameOf(seen) === '/login'` and `pathnameOf(url) !== '/login'` → throw the same stale-session error. This is the last point before the PNG exists, and `--click` / `--hover` / `--dismiss` have all already run, so `page.url()` here is the same value the filing point reads — nothing navigates in between. |
+| Where the frame is filed, `:352-360`             | Push `landedUrlWarning({ requestedUrl: url, landedUrl: seen })` when defined and not already present.                                                                                                                                                                                                                                                                                                                                              |
+| After the JSON is printed                        | When `warnings.length`, one stderr line naming `.claude/skills/verifying-changes/SKILL.md` as the rule for what to do with them.                                                                                                                                                                                                                                                                                                                   |
+
+#### Why the throw is evaluated twice, not moved
+
+One predicate (`wantsAuth && pathnameOf(seen) === '/login' && pathnameOf(url) !== '/login'`) at two
+points, because each point closes a hole the other cannot.
+
+- **After `goto`** — the fast path, and the reason not to relocate. When the session is already
+  stale at navigation, this fires before `settle`, `--hover` and `--click` run, so the operator gets
+  the instant, actionable `playwright test --project=setup` message. Relocating it would put
+  `settle(page, { map: true })` first, which waits up to 25 s on `waitForFunction` for a
+  `[data-map-ready]` element `/login` never renders (`capture.mjs:184-198`), and `--hover` /
+  `--click` locators 15 s each (`:310-315`) — the capture would hang and then report a generic
+  Playwright timeout instead of the diagnostic the throw exists for, on exactly the captures where
+  it is most useful.
+- **Before the shutter** — closes the post-hydration bounce the early check misses, which is Q7's
+  whole point, and does so while no PNG exists yet.
+
+The residual case, stated rather than left to be found: a session that survives `goto` and bounces
+to `/login` **during** `settle` under `--map` still spends the 25 s timeout before any check sees
+it. That is a strictly better outcome than today (today it exits 0 and files a login frame under the
+requested screen's name), but it is not the fast diagnostic, and closing it would need a navigation
+listener rather than a point check — out of scope.
 
 `landedUrl` in each `files[]` entry keeps its current meaning — the shutter read — because it is the
 honest record of what the PNG shows. Under `--click` it is therefore the navigated URL while the
@@ -287,7 +314,8 @@ English (docs/SPEC.md §9 governs what the product renders, not what the toolcha
 | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--auth --url …/login`, session valid                                                                 | Lands `/dashboard`. Frame filed, warning names both pathnames. **Was**: `exit 2`, no frame. The whole trade of Q1.                                                                          |
 | `--auth --url …/login`, session stale                                                                 | Taken on `/login` — the requested screen. No warning, no error, frame filed. Q7's narrowing is what prevents a false "your session is stale".                                               |
-| `--auth --url …/dashboard`, session stale                                                             | Taken on `/login`. The stale-session throw still fires with its `playwright test --project=setup` fix — now also when the bounce happens _after_ hydration, which today it misses.          |
+| `--auth --url …/dashboard`, session stale at navigation                                               | Unchanged: the throw fires straight after `goto`, before `settle` / `--hover` / `--click`, with its `playwright test --project=setup` fix. Fast, and the message is the diagnostic.         |
+| `--auth --url …/dashboard`, session bounces to `/login` _after_ hydration                             | The second evaluation, before the shutter, throws — `exit 1` where today it exits 0 and files a login frame. Under `--map` this costs `settle`'s 25 s timeout first (see Architecture).     |
 | `--auth --url …/console`, `user`-role session                                                         | Taken on `/dashboard`. Warning. **Was**: silent — the case that motivated the issue.                                                                                                        |
 | A redirect the app makes after hydration, or one an overlay dismissal triggers, **without `--click`** | Warned: the comparison uses the shutter read, which is taken after `settle`, `quiesce` and `--dismiss` (Q4).                                                                                |
 | The same redirect **with `--click`** (a flag `--dismiss` may legally accompany)                       | **Not warned** — Q4 compares `landing`, read before `quiesce`, `--dismiss` and the click. The price of not reporting a caller's own navigation as a redirect; recorded in **Out of scope**. |
@@ -314,8 +342,19 @@ That is why premise 2's contract is a Step in the plan and not a footnote.
   the old refusal told you to do anyway.
 - **Warning fatigue.** `/trips/<id>` warns on every capture of a trip. If that proves noisy in
   practice the answer is to capture `/trips/<id>/plan` directly, not to add an allowlist.
-- **Compatibility.** `BACKWARD_COMPATIBILITY.md` protects no `scripts/**` surface, and the JSON
-  change is additive within an existing array. Nothing outside this repository consumes it.
+- **Compatibility — the exit codes, not the JSON.** `BACKWARD_COMPATIBILITY.md` protects no
+  `scripts/**` surface, and the JSON change is additive within an existing array, so nothing that
+  reads the output breaks. The real compatibility surface is the **exit status**, and it moves in
+  both directions: `2 → 0` for `--auth` on `/login` / `/register` (Q1), and `0 → 1` for a
+  post-hydration bounce to `/login` (Q7). The second is a **new failure mode** for anything that
+  shells out to `capture.mjs` and branches on its status. Bounded, not dismissed: every invocation
+  in this repository is a human or agent one — `.claude/skills/verifying-changes/SKILL.md`,
+  `.ai/skills/om-auto-qa-pr/SKILL.md` and the checklist line in `.github/pull_request_template.md`.
+  No workflow under `.github/workflows/`, no `package.json` script and no `e2e/**` helper runs it,
+  so nothing branches on its status unattended (verified with
+  `rg --hidden 'capture\.mjs' -g '!.ai/specs/**'`; re-run it at implementation time). A caller that
+  treats non-zero as "capture failed" is correct in both new
+  cases: nothing was filed in one, and what would have been filed was the wrong screen in the other.
 - **Rollback.** One revert. The deleted module and its test remain in git history, and no data or
   schema state has to be undone.
 
@@ -337,30 +376,34 @@ individually verifiable and each leaves the repository consistent, but they ship
    change, which also proves Q2's claim that the project was never anonymous-only's private home.
 
 2. **Wire it into `capture.mjs`.** The landing read, the `--click` selection, the deduplicated push,
-   the stderr pointer, the moved and narrowed stale-session guard, and the deleted import, refusal
-   block and header paragraph.
+   the stderr pointer, the stale-session guard narrowed and evaluated at both points, and the
+   deleted import, refusal block and header paragraph.
    _Verify:_ `pnpm typecheck`, `pnpm lint`, then four live captures against a running dev server —
    `/dashboard` with `--auth` (no warning), `/console` with a `user`-role session (warning naming
    `/dashboard`), `/login` with `--auth` (frame filed, warning, no `exit 2`), and `/trips/<id>`
    (warning naming the tab). Paste the four JSON objects into the PR: they are this item's evidence
    in place of a blind pair.
 
-3. **Delete `scripts/visual/anonymous-only.mjs` and `scripts/visual/__tests__/anonymous-only.test.mjs`,
+3. **Rewrite `.claude/skills/verifying-changes/SKILL.md`.** Line 62's refusal sentences become the
+   warning contract — the surviving refusals, the quoting obligation, and what a redirect warning
+   means — and "Reading the blind pair" gains the general legitimate-redirect sentence. This is the
+   last prose site that still names `anonymous-only.mjs`, which is why it comes **before** the
+   deletion rather than after: the module is already unimported after Step 2, so removing the last
+   reference to it while the file still exists leaves the repository consistent, whereas deleting
+   the file first would leave the skill pointing at a path that does not exist.
+   _Verify:_ a reader who has only this document can answer "what do I do when `warnings` is
+   non-empty?" without opening the script.
+
+4. **Delete `scripts/visual/anonymous-only.mjs` and `scripts/visual/__tests__/anonymous-only.test.mjs`,
    and correct the `tooling` doc comment in `vitest.config.ts`.**
    _Verify:_ `rg --hidden 'anonymous-only|anonymousOnly|ANONYMOUS_ONLY' -g '!.ai/specs/**' -g '!docs/agents/migration/**'`
-   returns nothing (the spec itself and the tracker-migration archive are the two intended
-   survivors); `pnpm lint` and `pnpm test` green. **`--hidden` is load-bearing:** without it
-   ripgrep skips every dot-directory, so the command can see neither
-   `.claude/skills/verifying-changes/SKILL.md` — which names `scripts/visual/anonymous-only.mjs`
-   today and is exactly what Step 4 cleans up — nor `.ai/`, which also makes the `!.ai/specs/**`
-   exclusion inert.
-
-4. **Rewrite `.claude/skills/verifying-changes/SKILL.md`.** Line 62's refusal sentences become the
-   warning contract — the surviving refusals, the quoting obligation, and what a redirect warning
-   means — and "Reading the blind pair" gains the general legitimate-redirect sentence.
-   _Verify:_ the skill names no file that does not exist (the `rg` from Step 3), and a reader who has
-   only this document can answer "what do I do when `warnings` is non-empty?" without opening the
-   script.
+   returns nothing — the spec itself and the tracker-migration archive are the two intended
+   survivors; `pnpm lint` and `pnpm test` green. **`--hidden` is load-bearing:** without it ripgrep
+   skips every dot-directory, so the command sees neither `.claude/` nor `.ai/`, which also makes
+   the `!.ai/specs/**` exclusion inert. **And the gate belongs here, not on Step 3:** the
+   `.claude/skills/verifying-changes/SKILL.md` reference is cleared by Step 3 and the two script
+   files by this step, so "returns nothing" is first satisfiable at this point. Asserting it a step
+   earlier — as an earlier draft did — made it unsatisfiable by construction.
 
 5. **Run the full gate.** `.ai/agentic.config.json` → `validation.commands`, in order.
    _Verify:_ all seven commands green.
