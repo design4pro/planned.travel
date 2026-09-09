@@ -1060,6 +1060,43 @@ describe('trip lifecycle', () => {
       ])
     })
 
+    /**
+     * A copy reproduces the plan and never the record, and `is_visited` is the record.
+     *
+     * It says the reader has already been there, so carrying it onto a trip nobody has taken makes
+     * the copy tell them something untrue — the same reason `copyAssignments` leaves
+     * `reservation_status` to fall back to `none`. It is also what `atlas.ts` counts per country, so
+     * a carried flag inflates the visited tallies of a reader who has been nowhere new.
+     */
+    it('leaves a visited place unvisited in the copy, because that is the record', async () => {
+      const source = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        startDate: '2026-04-10',
+        endDate: '2026-04-11',
+      })
+      await createPlace(tenant.scope, {
+        tripId: source.id,
+        name: 'Miradouro da Graça',
+        countryCode: 'PT',
+        isVisited: true,
+      })
+
+      const targetId = await startTripCopy(tenant.scope, source.id, {
+        title: 'Lisbon again',
+      })
+      await copyTripContents(tenant.scope, source.id, targetId)
+
+      const copied = await placesRepository.findMany(tenant.scope, {
+        where: eq(places.tripId, targetId),
+      })
+      expect(copied.map((place) => place.isVisited)).toEqual([false])
+      // The source keeps its own record — the drop is the copy's, not a mutation of what was read.
+      const original = await placesRepository.findMany(tenant.scope, {
+        where: eq(places.tripId, source.id),
+      })
+      expect(original.map((place) => place.isVisited)).toEqual([true])
+    })
+
     /* ------------------------------------------------------------- retries */
 
     it('rebuilds the target from clean when an attempt died part-way', async () => {

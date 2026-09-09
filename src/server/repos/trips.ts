@@ -1128,6 +1128,12 @@ async function clearTargetInventory(
  * twenty thousand places runs for minutes in a consumer, and a ceiling another writer crossed in the
  * meantime has to stop this one too. Failing here is the handler's permanent path: the half-built
  * target is deleted and the requester is told.
+ *
+ * `is_visited` is deliberately **not** carried and falls back to the column's `false`, for the same
+ * reason `copyAssignments` drops `reservation_status`: it says the reader has been there, which is
+ * the record and not the plan (PRD #104 decision 4b). It is also read by `atlas.ts`'s
+ * visited-country tallies, so carrying it would have a trip nobody has taken yet count towards the
+ * countries they have.
  */
 async function copyPlaces(
   scope: TenantScope,
@@ -1170,7 +1176,6 @@ async function copyPlaces(
     transportMode: place.transportMode,
     source: place.source,
     externalId: place.externalId,
-    isVisited: place.isVisited,
     sortOrder: place.sortOrder,
   }))
   await insertChunked(
