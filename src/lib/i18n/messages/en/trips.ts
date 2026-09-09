@@ -33,6 +33,81 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerary',
   'plan.places': 'Places',
+  /* ------------------------------------------------- a day's own notes */
+  /**
+   * The note affordances. `add` is the control's own label; `addForDay` is the
+   * dashed target inside a day, which says which day it writes to because a
+   * reader looking at a ten-day plan is looking at four of these at once.
+   */
+  'plan.note.add': 'Add a note',
+  'plan.note.addForDay': 'Add a note for this day',
+  /**
+   * The disclosure, which exists only on a note that carries a detail. Two
+   * messages rather than one with a state suffix: several of the twenty-three
+   * change more than a word between "more" and "less".
+   */
+  'plan.note.showMore': 'Show more',
+  'plan.note.showLess': 'Show less',
+  'plan.note.moveUp': 'Move up',
+  'plan.note.moveDown': 'Move down',
+  'plan.note.edit': 'Edit note',
+  'plan.note.delete': 'Delete note',
+  /* ------------------------------------------------------- the editor */
+  'plan.note.dialog.createTitle': 'Add a note',
+  'plan.note.dialog.editTitle': 'Edit note',
+  'plan.note.field.body': 'Note',
+  'plan.note.field.bodyHint': 'One line. This is what the day shows.',
+  'plan.note.field.detail': 'Details',
+  /**
+   * The markdown subset `01-S2a` ships, named as a list of what a writer can
+   * reach for rather than as the word "markdown", which is jargon in every
+   * locale including this one.
+   */
+  'plan.note.field.detailHint':
+    'Headings, lists, links, quotes, code and tables.',
+  'plan.note.field.time': 'Time',
+  'plan.note.field.timeHint': 'Optional, 24-hour.',
+  'plan.note.field.icon': 'Icon',
+  'plan.note.tab.write': 'Write',
+  'plan.note.tab.preview': 'Preview',
+  'plan.note.previewEmpty': 'Nothing to preview yet',
+  'plan.note.save': 'Save note',
+  'plan.note.cancel': 'Cancel',
+  'plan.note.confirmDelete': 'Delete this note?',
+  'plan.note.confirmDeleteBody':
+    'The note and its details are removed from this day.',
+  /* ------------------------------------------------------ what happened */
+  'plan.note.toast.created': 'Note added',
+  'plan.note.toast.updated': 'Note saved',
+  'plan.note.toast.deleted': 'Note deleted',
+  'plan.note.error.save': 'The note did not save',
+  'plan.note.error.delete': 'The note was not deleted',
+  'plan.note.error.move': 'That move did not save',
+  'plan.note.error.retry': 'Try it again in a moment.',
+  /**
+   * The icon vocabulary, as a reader hears it rather than as the picker stores
+   * it: `train-front` is a name in the icon set, "Train" is a word. Each is the
+   * accessible name of one radio in the picker, so it has to stand alone.
+   */
+  'plan.note.icon.alarmClock': 'Reminder',
+  'plan.note.icon.clock': 'Time',
+  'plan.note.icon.flashlight': 'Torch',
+  'plan.note.icon.footprints': 'Walk',
+  'plan.note.icon.info': 'Info',
+  'plan.note.icon.luggage': 'Luggage',
+  'plan.note.icon.package': 'Package',
+  'plan.note.icon.ticket': 'Tickets',
+  'plan.note.icon.trainFront': 'Train',
+  'plan.note.icon.wifi': 'Wi-Fi',
+  'plan.note.icon.stickyNote': 'Note',
+  'plan.note.icon.utensils': 'Food',
+  'plan.note.icon.bus': 'Transport',
+  'plan.note.icon.bedDouble': 'Stay',
+  'plan.note.icon.camera': 'Photo',
+  'plan.note.icon.mapPin': 'Place',
+  'plan.note.icon.wallet': 'Money',
+  'plan.note.icon.umbrella': 'Rain',
+  'plan.note.icon.triangleAlert': 'Warning',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Collab',
   'collab.empty': 'Nothing shared yet',
