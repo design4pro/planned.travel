@@ -14,6 +14,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
+  NotFoundError,
   QuotaExceededError,
   createAssignment,
   createDayNote,
@@ -21,6 +22,7 @@ import {
   createPlace,
   createTag,
   createTrip,
+  deleteTrip,
   getMembership,
   getTrip,
   listForEntity,
@@ -398,6 +400,50 @@ describe('handleTripCopy', () => {
     expect(
       (await getTrip(tenant.scope, targetId))?.copyPendingAt,
     ).not.toBeNull()
+  })
+
+  it('is transient when the *target* read fails for a database reason, not permanent', async () => {
+    const source = await seedSource()
+    const targetId = await startCopy(source)
+    // The read of the target sits outside the guarded `try`, and the same policy has to hold for
+    // it: only `NotFoundError`/`QuotaExceededError` are permanent. Converting every rejection
+    // would dead-letter this without consuming a retry and without clearing `copy_pending_at` —
+    // the reader would be left with a trip stuck on "Copying" that nothing ever comes back for.
+    harness.sqlite.exec('DROP TABLE trips')
+
+    const error = await copy(
+      {
+        sourceTripId: source.id,
+        targetTripId: targetId,
+        requestedBy: tenant.ownerUserId,
+      },
+      context(tenant.organizationId),
+    ).catch((cause: unknown) => cause)
+
+    expect(error).not.toBeInstanceOf(TaskPermanentError)
+  })
+
+  it('is permanent when the target is gone, and clears up after it', async () => {
+    const source = await seedSource()
+    const targetId = await startCopy(source)
+    // The reader deleted the half-built copy while the queue still held the job.
+    await deleteTrip(tenant.scope, targetId)
+
+    const error = await copy(
+      {
+        sourceTripId: source.id,
+        targetTripId: targetId,
+        requestedBy: tenant.ownerUserId,
+      },
+      context(tenant.organizationId),
+    ).catch((cause: unknown) => cause)
+
+    expect(error).toBeInstanceOf(TaskPermanentError)
+    expect((error as Error).cause).toBeInstanceOf(NotFoundError)
+    expect(await getTrip(tenant.scope, targetId)).toBeNull()
+    // No inbox row: the target's title went with it, and a notification naming nothing is worse
+    // than none — which is why `discardTarget` is called here with a null title.
+    expect(await listForEntity(tenant.scope, 'trip', targetId)).toEqual([])
   })
 
   it('copies the cover into the target’s own namespace', async () => {

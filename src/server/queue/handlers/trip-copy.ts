@@ -367,8 +367,17 @@ export function createTripCopyHandler(
     }
     const scope = scopeFor(db, context.orgId, requestedBy, membership.role)
 
+    // Read through the same classifier as everything else. A `NotFoundError` here means the target
+    // has gone since the copy was admitted, which is permanent and gets the cleanup every permanent
+    // path gets; a D1 hiccup is transient and has to rethrow untouched, so the queue redelivers.
+    // Converting it wholesale would dead-letter the job without consuming a retry and without
+    // clearing `copy_pending_at`, leaving the reader a trip stuck on "Copying" for good.
     const target = await requireTrip(scope, targetTripId).catch(
-      (cause: unknown) => {
+      async (cause: unknown) => {
+        if (!isPermanentCopyFailure(cause)) {
+          throw cause
+        }
+        await discardTarget(scope, context, targetTripId, requestedBy, null)
         throw new TaskPermanentError(
           `Trip ${targetTripId} is gone; there is nothing left to copy into`,
           { cause },
