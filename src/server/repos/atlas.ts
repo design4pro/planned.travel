@@ -14,7 +14,6 @@ import {
   count,
   desc,
   eq,
-  exists,
   getTableName,
   gte,
   inArray,
@@ -32,12 +31,12 @@ import {
   places,
   transports,
   travelStats,
-  tripMembers,
   trips,
   visitedCountries,
   visitedRegions,
 } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
+import { memberTripIds } from './trips'
 import {
   countryCodeSchema,
   dateSchema,
@@ -52,8 +51,6 @@ import {
   titleSchema,
   yearSchema,
 } from './validation'
-import type { SQL } from 'drizzle-orm'
-import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { ContinentCounts } from '#/server/db/schema'
 import type {
   BucketListItem,
@@ -853,53 +850,12 @@ export async function upsertTravelStats(
 }
 
 /**
- * "The trips this person is a member of" — the population every trip-derived figure on a stats row
- * is computed over.
- *
- * ADR 0007 makes a trip private to its members, and a figure that counts a trip the row's owner
- * cannot open states something they have no way to check: a place count that moves when a colleague
- * saves a restaurant on a trip that was never theirs, and a spend total they cannot reconcile
- * against anything on screen. So the population is the `trip_members` rows for the **stat row's**
- * `user_id` — never `scope.ctx.userId`, because cron and the queue consumer recompute for someone
- * other than themselves.
- *
- * Membership alone, not the readability predicate: an organization-visible trip is one a person
- * *may* open, not one they are travelling on, and "trips I am a member of" is also what a traveller
- * means by "my trips".
- *
- * One correlated `EXISTS`, tenant-filtered on both sides, so the whole predicate stays inside the
- * statement that is already reading the rows rather than becoming one membership query per trip.
- * The column to correlate against is a parameter because the two call sites join from different
- * tables — `trips.id` and `transports.trip_id` — and either correlation is an index probe rather
- * than a scan: `trip_members_trip_user_unq` covers exactly `(trip_id, user_id)`.
- */
-function memberOfTrip(
-  scope: TenantScope,
-  userId: string,
-  tripIdColumn: SQLiteColumn,
-): SQL {
-  return exists(
-    scope.db
-      .select({ member: sql`1` })
-      .from(tripMembers)
-      .where(
-        tenantFilter(
-          scope,
-          tripMembers,
-          eq(tripMembers.tripId, tripIdColumn),
-          eq(tripMembers.userId, userId),
-        ),
-      ),
-  )
-}
-
-/**
  * Rebuilds a traveller's stats row for one year (or all time, `statYear = 0`) from the trips they are
  * on: trip count, day count, place count, spend, distance, country and continent spread. Cron and the
  * queue consumer call this; nothing reads it live, because on a busy tenant it is six aggregate
  * queries.
  *
- * "The trips they are on" is literal, and {@link memberOfTrip} is where it is enforced: two members
+ * "The trips they are on" is literal, and {@link memberTripIds} is where it is enforced: two members
  * of one workspace who travel separately get two different rows.
  *
  * ## The one figure the rule does not reach
@@ -936,7 +892,7 @@ export async function recomputeTravelStats(
         scope,
         trips,
         yearFilter,
-        memberOfTrip(scope, userId, trips.id),
+        inArray(trips.id, memberTripIds(scope, userId)),
       ),
     )
     .orderBy(desc(trips.startDate))
@@ -949,7 +905,7 @@ export async function recomputeTravelStats(
    * A transport carries its own `departure_date`, and a trip that starts on 30 December has
    * transports in two calendar years; filtering them by the trip's `start_date` would file
    * January's flight under the previous year. So a year row sums the transports that departed in
-   * that year, over the same population the trip rows come from — {@link memberOfTrip} against
+   * that year, over the same population the trip rows come from — {@link memberTripIds} against
    * `transports.trip_id`, because the transport is reached by its own date rather than through
    * `tripIds`. A transport with no distance recorded
    * contributes nothing, and a year with no distances at all writes `0` rather than leaving the
@@ -1006,7 +962,7 @@ export async function recomputeTravelStats(
             scope,
             transports,
             transportYearFilter,
-            memberOfTrip(scope, userId, transports.tripId),
+            inArray(transports.tripId, memberTripIds(scope, userId)),
           ),
         ),
       listVisitedCountries(scope, userId),
