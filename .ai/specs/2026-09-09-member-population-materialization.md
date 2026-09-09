@@ -28,7 +28,7 @@ builds nothing and recommends closing #136. Three findings, each measured rather
    `inArray(transports.tripId, allMemberTripIds)` binds one parameter per **lifetime** member trip on
    a statement that today binds **none**.
 3. **CI cannot see it.** The repository suite drives drizzle through `sqlite-proxy` over
-   `node:sqlite` (`repos/__tests__/harness.ts:15`, `:19`, `:150`), which does not enforce D1's
+   `node:sqlite` (`repos/__tests__/harness.ts:15`, `:20`, `:150`), which does not enforce D1's
    ceiling. Every assertion stays green and the failure appears only against D1, inside a queue
    consumer.
 
@@ -98,8 +98,10 @@ that rejection.
 
 > "it adds zero queries"
 
-**Correct.** Six statements before, six after — and zero when the traveller is on no trip, because
-the new guard short-circuits. Round-trip count is not the objection here.
+**Correct.** Six statements before, six after; the change adds none. It also subtracts one in the
+no-trip case, where #136's guard skips the distance read that today runs unguarded — three statements
+today against two after, not zero after: the trip read and `listVisitedCountries` run whatever
+`tripIds` holds. Round-trip count is not the objection here.
 
 > "the all-time pass already reads exactly that set and already `inArray`s over it, so neither the
 > row-scan shape nor the SQLite variable-count exposure is new."
@@ -132,10 +134,17 @@ The argument survives on **ordering**. That pre-existing cliff has an owner and 
 the four cohort aggregates under `MAX_BOUND_PARAMETERS`, the convention this repository already
 applies twice (`trips.ts:774-779`, `notifications/dispatch.ts:88` and `:270`). When that fix lands,
 the four aggregates stop breaching the ceiling — and a distance statement built on #136's id list
-would **not** be covered by it, because chunking a `sum()` across statements is a different and
-harder problem than chunking a `count()`. #136 would therefore convert a solved cliff into an
-unsolved one. Landing it _before_ the cliff fix hides that; landing it _after_ makes it the last
-remaining breach in the function.
+would be a fifth statement needing the same treatment, on the one statement in this function that
+needs none today.
+
+The requirement it adds is **avoidable, not unsolvable**, and the distinction matters because the
+weaker claim is the true one: `spendRow` is already a `sum()` over an `inArray` id list inside the
+set this document calls covered, so a chunked fold generalizes from `count()` to `sum()` without a
+new technique. The objection is that the work would be gratuitous. #133's sub-select binds nothing
+per trip and needs no chunking at all, so #136 buys a chunking obligation for a statement that is
+structurally immune to trip count today, and buys nothing with it. Landing it _before_ the cliff fix
+hides that obligation inside a batch of statements already owed one; landing it _after_ makes it the
+one statement the just-finished fix has to be reopened to cover.
 
 ### What this is not
 
@@ -150,7 +159,7 @@ most reversible, smallest-scope answer. Override any of them on this PR before i
 
 | #   | Question                                                                                      | Resolution                                                                                                                                         | Why                                                                                                                                                                                                                                                                                                                                                                                                  |
 | --- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q1  | Adopt the ticket's `inArray(transports.tripId, allMemberTripIds)` for the distance aggregate? | **No.**                                                                                                                                            | It binds one D1 parameter per lifetime member trip on the one statement in this function that today binds none, against a ceiling codified twice in this repository and pinned by a unit test, on plans that sell unlimited trips. The pre-existing cliff on the four cohort aggregates has a known chunking fix; a chunked `sum()` does not. Doing nothing is the reversible option.                |
+| Q1  | Adopt the ticket's `inArray(transports.tripId, allMemberTripIds)` for the distance aggregate? | **No.**                                                                                                                                            | It binds one D1 parameter per lifetime member trip on the one statement in this function that today binds none, against a ceiling codified twice in this repository and pinned by a unit test, on plans that sell unlimited trips. It buys a chunking obligation the sub-select does not carry, for no gain. Doing nothing is the reversible option.                                                 |
 | Q2  | Is the duplication the ticket names still unowned?                                            | **No — FR #133's merged spec owns it**, and its `memberTripIds` sub-select performs both deletions #136 asks for.                                  | `.ai/specs/2026-09-09-member-trip-population.md` landed on `develop` at `1a28035d` (PR #368). `docs/SPEC.md` §8 asks for one concept with one owner; two specs proposing two owners for one concept is the same violation with extra steps. The later ticket yields to the merged design.                                                                                                            |
 | Q3  | Move the year window from SQL (`yearFilter`) into a TypeScript `filter`, independently of Q1? | **No.**                                                                                                                                            | It deletes no concept: `transportYearFilter` stays in SQL regardless, because legs are windowed on their own `departure_date`, so the function keeps two year expressions either way. It costs every year recompute the traveller's full lifetime trip list including the `country_codes` JSON — 400 rows where 12 were needed — on a fan-out path that runs for every member of every trip write.   |
 | Q4  | Then what does this spec build?                                                               | **Nothing under `src/`.** It is a decision record; the recommendation is that a human closes #136 once #133's implementation lands.                | `om-spec-writing`'s smallest-scope rule taken to its conclusion. The value is that the analysis is written down: without it the next deep-review pass re-derives the same suggestion and the same rebuttal has to be re-earned — exactly what #133's "recorded so it is not re-derived" section exists to prevent.                                                                                   |
@@ -174,13 +183,13 @@ No code. The sequence is:
 
 ### Alternatives considered
 
-| Option                                                                                   | Why not                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Implement #136 as written**                                                            | Q1. Puts an unbounded parameter list into the one statement that has none, on plans sold as unlimited, where no test can see it and where the known chunking fix does not reach.                                                                                                                                                            |
-| **Implement #136's TypeScript year window only, keeping #133's sub-select for distance** | Correct — no parameter grows — but pointless: Q3. It trades a five-parameter SQL predicate for a full-lifetime-list read on the fan-out path, and removes no concept, because `transportYearFilter` stays in SQL either way.                                                                                                                |
-| **Implement #136 with the id lists chunked under `MAX_BOUND_PARAMETERS`**                | Buys nothing #133 has not already bought, and the distance read is the hard case: chunking a `sum()` means summing the partial sums in TypeScript, which is a new correctness surface added to remove a sub-select that already works. Chunking belongs where an id list is genuinely unavoidable — the four cohort aggregates, Q5's issue. |
-| **Close #136 immediately as a duplicate of #133, with no spec**                          | Loses the analysis. #136 is not a duplicate: it proposes a different mechanism, it correctly distinguishes itself from the `acfeb1cb` rejection, and its central factual claim needs measurement rather than assertion to place. A one-line duplicate closure invites the same proposal a third time.                                       |
-| **Supersede #133's design with #136's**                                                  | The merged design is better on every axis measured here: fewer bound parameters, fewer rows read, the same statement count, one exported owner. There is no axis on which the id list wins.                                                                                                                                                 |
+| Option                                                                                   | Why not                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Implement #136 as written**                                                            | Q1. Puts an unbounded parameter list into the one statement that has none, on plans sold as unlimited, where no test can see it, and where the known chunking fix would have to be extended to reach it.                                                                                                                                                             |
+| **Implement #136's TypeScript year window only, keeping #133's sub-select for distance** | Correct — no parameter grows — but pointless: Q3. It trades a five-parameter SQL predicate for a full-lifetime-list read on the fan-out path, and removes no concept, because `transportYearFilter` stays in SQL either way.                                                                                                                                         |
+| **Implement #136 with the id lists chunked under `MAX_BOUND_PARAMETERS`**                | Buys nothing #133 has not already bought. Chunking the distance read is tractable — summing the partial sums in TypeScript, the same additive fold `spendRow` would need — but it is a new correctness surface added to remove a sub-select that already works. Chunking belongs where an id list is genuinely unavoidable — the four cohort aggregates, Q5's issue. |
+| **Close #136 immediately as a duplicate of #133, with no spec**                          | Loses the analysis. #136 is not a duplicate: it proposes a different mechanism, it correctly distinguishes itself from the `acfeb1cb` rejection, and its central factual claim needs measurement rather than assertion to place. A one-line duplicate closure invites the same proposal a third time.                                                                |
+| **Supersede #133's design with #136's**                                                  | The merged design is better on every axis that changes the verdict: fewer bound parameters, fewer rows read, the same statement count, one exported owner. The id list wins one axis, and it is not one of those: on a traveller with no trips its guard skips the distance read that the sub-select simply runs — one statement, binding nothing.                   |
 
 ## 📝 Architecture
 
@@ -201,12 +210,14 @@ anywhere else.
 
 ### One correction owed to a neighbouring document
 
-`.ai/specs/2026-09-09-member-trip-population.md:20` and `:59` name the unlimited-trip plans as
-`starter`, `pro` and `business`. This repository's plans are `free`, `solo` and `crew`
-(`plans.ts:28`), and the line numbers that spec cites for `trips: null` (`:311`, `:367`) are correct
-but belong to `solo` and `crew`. Its argument is unaffected — both paid plans do sell unlimited
-trips — but the names are wrong. Recorded here rather than fixed, because that document is merged and
-belongs to FR #133; its implementation PR is the right place to correct it.
+`.ai/specs/2026-09-09-member-trip-population.md:59` names the unlimited-trip plans as `starter`,
+`pro` and `business`. This repository's plans are `free`, `solo` and `crew` (`plans.ts:28`), and the
+line numbers that line cites for `trips: null` (`:311`, `:367`) are correct but belong to `solo` and
+`crew`. Line `:20` cites the same two line numbers and is fine as written — it says "the paid plans"
+without naming them, so `:59` is the only line to correct. Its argument is unaffected — both paid
+plans do sell unlimited trips — but the names are wrong. Recorded here rather than fixed, because
+that document is merged and belongs to FR #133; its implementation PR is the right place to correct
+it.
 
 ## 📝 Data Model
 
@@ -242,7 +253,7 @@ declining it.
 | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A `solo` traveller on 400 lifetime trips, 12 in 2026, recomputes 2026 | The distance statement binds 400 parameters and D1 rejects it; the shared `Promise.all` fails the whole task. Works today.                                                                                                    |
 | The same traveller recomputes all-time                                | Already failing today on the four cohort aggregates — Q5's issue, not this one's. #136 neither causes nor fixes it.                                                                                                           |
-| The same traveller, **after** Q5's chunking fix lands                 | The four aggregates are chunked and pass; the distance statement built on an id list is the only remaining breach, and chunking a `sum()` is not the same fix. This is the case that decides Q1.                              |
+| The same traveller, **after** Q5's chunking fix lands                 | The four aggregates are chunked and pass; the distance statement built on an id list is the only remaining breach, and the fix that just landed has to be reopened to cover it. This is the case that decides Q1.             |
 | A `free` traveller on 2 trips (`plans.ts:262`)                        | Works. The regression is invisible until a workspace grows, which is the worst shape for a defect to have.                                                                                                                    |
 | The whole repository test suite                                       | Green. `harness.ts:15` drives `sqlite-proxy` over `node:sqlite`, which does not enforce D1's 100. The refactor would ship looking verified.                                                                                   |
 | A leg departing 2 January on a trip that started 30 December          | Still lands on the departure year — `allMemberTripIds` is deliberately unfiltered, and #136 gets this right. #133's implementation step 3 puts the first test under this property, which nothing currently holds.             |
