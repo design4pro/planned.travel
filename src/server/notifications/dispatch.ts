@@ -39,7 +39,12 @@ import {
   loadCatalogue,
 } from '#/lib/i18n/catalogue'
 import { negotiate } from '#/lib/i18n/negotiate'
-import { paramsFrom, renderStored, storedKey } from '#/lib/notification-copy'
+import {
+  paramsFrom,
+  renderStored,
+  renderStoredBody,
+  storedKey,
+} from '#/lib/notification-copy'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import {
   NOTIFICATION_CHANNELS,
@@ -355,10 +360,6 @@ async function renderNotificationEmail(
     event.titleParams ?? event.bodyParams ?? null,
     locale,
   )
-  const bodyParams = paramsFrom(
-    event.bodyParams ?? event.titleParams ?? null,
-    locale,
-  )
   const title =
     renderStored(
       tStored,
@@ -366,10 +367,11 @@ async function renderNotificationEmail(
       titleParams,
     ) ?? t('shell.notification.fallback.title')
   const body =
-    renderStored(
+    renderStoredBody(
       tStored,
-      storedKey(event.bodyKey ?? event.kind, 'body'),
-      bodyParams,
+      event.bodyKey ?? event.kind,
+      event.bodyParams ?? event.titleParams ?? null,
+      locale,
     ) ?? t('shell.notification.fallback.body')
 
   const href = absoluteUrl(event.actionUrl, appUrl)

@@ -8,7 +8,7 @@ import type * as React from 'react'
 import { Link } from '@tanstack/react-router'
 import { CalendarDays, MapPin, Star } from 'lucide-react'
 
-import { Badge, Card } from '#/components/ui'
+import { Badge, Card, Skeleton, Spinner } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { CoverArt, seedFrom } from './cover-art'
@@ -118,65 +118,76 @@ export function TripTile({
   const range = formatDateRange(trip.startDate, trip.endDate, locale)
   const length = daysBetween(trip.startDate, trip.endDate)
   const startsIn = daysUntil(trip.startDate, today)
+  const copying = trip.copyPending
 
-  return (
-    /**
-     * The card is its own element and the link sits inside it, rather than the link *being* the card.
-     * The action menu is a button, and a button inside an anchor is neither valid HTML nor operable:
-     * the anchor swallows the click. Keeping the card as the outer element lets the two be siblings
-     * while the hover lift still belongs to the whole tile, so the menu does not sit still while the
-     * card underneath it moves.
-     */
-    <Card
-      interactive
-      padding="none"
-      className="group flex h-full flex-col overflow-hidden"
-      data-part="trip-tile"
-    >
-      <Link
-        to="/trips/$tripId/plan"
-        params={{ tripId: trip.id }}
-        className="flex h-full flex-col focus-ring"
-      >
-        <div className="relative h-28 shrink-0 overflow-hidden bg-surface-2">
-          {trip.coverImageUrl === null ? (
-            <CoverArt id={trip.id} wash={cover.wash} ink={cover.ink} />
+  /**
+   * The tile's third resting state: the `trip-copy` handler has not finished filling this trip in.
+   *
+   * The cover and the counts are behind a `Skeleton` because they are facts that have not landed
+   * yet — a copy shows `0 places` for as long as the handler runs, and a zero is a claim rather
+   * than an absence. The tile is deliberately *not* a link either: a trip whose days have not been
+   * written is a planner with an empty day list, and handing that to a reader is worse than making
+   * them wait for the list to revalidate.
+   */
+  const body = (
+    <>
+      <div className="relative h-28 shrink-0 overflow-hidden bg-surface-2">
+        {copying ? (
+          <Skeleton radius="sm" className="size-full rounded-none" />
+        ) : trip.coverImageUrl === null ? (
+          <CoverArt id={trip.id} wash={cover.wash} ink={cover.ink} />
+        ) : (
+          <img
+            src={trip.coverImageUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="size-full object-cover"
+          />
+        )}
+
+        <div className="absolute start-3 top-3 flex items-start gap-2">
+          {copying ? (
+            <Badge
+              tone="brand"
+              size="sm"
+              icon={<Spinner size="sm" label={null} />}
+              aria-label={t('shell.trips.card.copyingLabel', {
+                title: trip.title,
+              })}
+            >
+              {t('shell.trips.card.copying')}
+            </Badge>
           ) : (
-            <img
-              src={trip.coverImageUrl}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="size-full object-cover"
-            />
-          )}
-
-          <div className="absolute start-3 top-3 flex items-start gap-2">
             <Badge tone={toneFor(TRIP_STATUS_TONE, trip.status)} size="sm">
               {t(TRIP_STATUS_LABEL[trip.status] ?? 'shell.tripStatus.draft')}
             </Badge>
-          </div>
-
-          {trip.countryCodes.length === 0 ? null : (
-            <span
-              aria-hidden
-              className="absolute bottom-2.5 start-3 text-label"
-            >
-              {trip.countryCodes.slice(0, 5).map(countryFlag).join(' ')}
-            </span>
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
-          <Title className="truncate font-display text-subtitle font-bold tracking-tight text-ink">
-            {trip.title}
-          </Title>
-          <p className="truncate text-caption text-ink-3">
-            {trip.destination ??
-              trip.summary ??
-              t('shell.trips.card.noDestination')}
-          </p>
+        {copying || trip.countryCodes.length === 0 ? null : (
+          <span aria-hidden className="absolute bottom-2.5 start-3 text-label">
+            {trip.countryCodes.slice(0, 5).map(countryFlag).join(' ')}
+          </span>
+        )}
+      </div>
 
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
+        <Title className="truncate font-display text-subtitle font-bold tracking-tight text-ink">
+          {trip.title}
+        </Title>
+        <p className="truncate text-caption text-ink-3">
+          {trip.destination ??
+            trip.summary ??
+            t('shell.trips.card.noDestination')}
+        </p>
+
+        {copying ? (
+          <div className="mt-auto flex items-center gap-4 pt-2">
+            <Skeleton className="h-3.5 w-28" />
+            <Skeleton className="h-3.5 w-10" />
+          </div>
+        ) : (
           <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 text-caption text-ink-3">
             <span className="flex items-center gap-1.5">
               <CalendarDays aria-hidden className="size-3.5 text-ink-4" />
@@ -207,8 +218,37 @@ export function TripTile({
               </span>
             )}
           </div>
-        </div>
-      </Link>
+        )}
+      </div>
+    </>
+  )
+
+  return (
+    /**
+     * The card is its own element and the link sits inside it, rather than the link *being* the card.
+     * The action menu is a button, and a button inside an anchor is neither valid HTML nor operable:
+     * the anchor swallows the click. Keeping the card as the outer element lets the two be siblings
+     * while the hover lift still belongs to the whole tile, so the menu does not sit still while the
+     * card underneath it moves.
+     */
+    <Card
+      interactive={!copying}
+      padding="none"
+      className="group flex h-full flex-col overflow-hidden"
+      aria-busy={copying ? true : undefined}
+      data-part="trip-tile"
+    >
+      {copying ? (
+        <div className="flex h-full flex-col">{body}</div>
+      ) : (
+        <Link
+          to="/trips/$tripId/plan"
+          params={{ tripId: trip.id }}
+          className="flex h-full flex-col focus-ring"
+        >
+          {body}
+        </Link>
+      )}
 
       {/*
         The corner cluster: the favourite mark and the action menu, side by side and outside the

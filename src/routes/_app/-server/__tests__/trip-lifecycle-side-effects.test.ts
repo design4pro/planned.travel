@@ -44,6 +44,7 @@ import {
   taskEnvelopeSchema,
 } from '#/server/queue/types'
 import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
+import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 
 import type { z } from 'zod'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
@@ -69,7 +70,15 @@ const stubs = vi.hoisted(() => ({
  */
 vi.mock('#/server/auth/env', () => ({
   taskQueue: () => ({
-    send: async () => undefined,
+    // Recorded like a batch of one: a single-envelope producer — the `trip-copy` message — goes
+    // through `send`, and the assertions read every envelope the same way whichever verb sent it.
+    send: async (body: unknown) => {
+      if (stubs.queueRejects) {
+        throw new Error('TASKS binding is unreachable')
+      }
+      stubs.batches.push([body])
+      return undefined
+    },
     sendBatch: async (messages: Array<{ body: unknown }>) => {
       if (stubs.queueRejects) {
         throw new Error('TASKS binding is unreachable')
@@ -123,6 +132,8 @@ const {
   QUEUE_BATCH_MAX,
   archiveTripFn,
   archiveTripInputSchema,
+  copyTripFn,
+  copyTripInputSchema,
   createTripFn,
   createTripInputSchema,
   deleteTripFn,
@@ -194,6 +205,12 @@ const restoreTrip = async (data: unknown): Promise<void> => {
 const setTripFavourite = async (data: unknown): Promise<void> => {
   await startStorage.run(startContext(), () =>
     setTripFavouriteFn({ data: atBoundary(setTripFavouriteInputSchema, data) }),
+  )
+}
+
+const copyTrip = async (data: unknown): Promise<void> => {
+  await startStorage.run(startContext(), () =>
+    copyTripFn({ data: atBoundary(copyTripInputSchema, data) }),
   )
 }
 
@@ -884,5 +901,108 @@ describe('the pre-departure-notice obligation, which no longer exists', () => {
     ]) {
       expect(source).not.toContain(banned)
     }
+  })
+})
+
+/* ------------------------------------------------------------ the trip copy */
+
+/**
+ * What `copyTripFn` sends, and what it undoes when it cannot.
+ *
+ * The synchronous half's own behaviour — the quotas, the slug, the owner row, the day run — belongs
+ * to `startTripCopy` and is asserted in `src/server/repos/__tests__/trip-lifecycle.test.ts`. What is
+ * this boundary's is the envelope, the rollback, and the range rule the schema carries.
+ */
+describe('the trip copy', () => {
+  /** The `trip-copy` envelopes among a batch, narrowed so their payload can be read as itself. */
+  function tripCopies(): Array<TaskEnvelopeOf<'trip-copy'>> {
+    return sent().filter((envelope) => envelope.kind === 'trip-copy')
+  }
+
+  async function seedSource(): Promise<string> {
+    await createTrip({
+      title: 'Lisbon',
+      destination: 'Lisbon, Portugal',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'EUR',
+    })
+    const tripId = await newestTripId()
+    stubs.batches = []
+    return tripId
+  }
+
+  it('refuses a range with only one end, before anything is written', () => {
+    const half = copyTripInputSchema.safeParse({
+      tripId: 'trip-1',
+      title: 'Lisbon again',
+      startDate: '2026-06-01',
+    })
+    expect(half.success).toBe(false)
+
+    // Both ends, or neither: an undated copy is a template rather than a mistake.
+    for (const dates of [
+      {},
+      { startDate: '2026-06-01', endDate: '2026-06-03' },
+    ]) {
+      expect(
+        copyTripInputSchema.safeParse({
+          tripId: 'trip-1',
+          title: 'Lisbon again',
+          ...dates,
+        }).success,
+      ).toBe(true)
+    }
+  })
+
+  it('enqueues one envelope named on the target it just minted', async () => {
+    const sourceId = await seedSource()
+
+    await copyTrip({
+      tripId: sourceId,
+      title: 'Lisbon again',
+      startDate: '2026-06-01',
+      endDate: '2026-06-03',
+    })
+
+    const envelopes = tripCopies()
+    expect(envelopes).toHaveLength(1)
+    const envelope = envelopes[0]
+    const targetId = envelope.payload.targetTripId
+    expect(envelope.payload).toEqual({
+      sourceTripId: sourceId,
+      targetTripId: targetId,
+      requestedBy: tenant.ownerUserId,
+    })
+    // Deterministic on the target, which cannot repeat: a redelivery is one job, and a second Copy
+    // on the same source is a different trip and a different envelope.
+    expect(envelope.id).toBe(tripCopyTaskId(targetId))
+    expect(targetId).not.toBe(sourceId)
+
+    // The target exists, stamped, with the reader's own range rather than the source's.
+    const target = await requireTrip(tenant.scope, targetId)
+    expect(target.copyPendingAt).not.toBeNull()
+    expect(target.startDate).toBe('2026-06-01')
+
+    // And the copier's own statistics moved: the all-time roll-up and the year they are copying into.
+    expect(statYears(sent()).sort()).toEqual([ALL_TIME_STAT_YEAR, 2026])
+    // One recipient — the copier, sole member of a trip that is one minute old — and one envelope
+    // per year, which is what the two entries are.
+    expect(new Set(statsRecipients())).toEqual(new Set([tenant.ownerUserId]))
+  })
+
+  it('rolls the target back when the queue refuses the message', async () => {
+    const sourceId = await seedSource()
+    stubs.queueRejects = true
+
+    await expect(
+      copyTrip({ tripId: sourceId, title: 'Lisbon again' }),
+    ).rejects.toThrow()
+
+    // A stamped trip with no consumer to clear it is a tile stuck on "Copying" for good, so the
+    // half that did land is undone rather than left for a `wrangler d1 execute` to repair.
+    expect((await listTrips(tenant.scope)).map((row) => row.id)).toEqual([
+      sourceId,
+    ])
   })
 })

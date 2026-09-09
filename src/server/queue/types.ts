@@ -24,6 +24,10 @@ export const TASK_KINDS = [
   // D1 cascades, R2 does not, so the sweep is queued and the delete never waits
   // on it.
   'trip-purge',
+  // The second half of a trip copy: everything that scales with the source's
+  // inventory. `places` is unbounded on a paid tier, so duplicating one is an
+  // unbounded write and belongs nowhere near a request path.
+  'trip-copy',
   // Billing follow-ups. The provider webhook answers the provider immediately and
   // hands the slow part off here, so these travel the same queue as everything else.
   'billing.subscription.changed',
@@ -184,6 +188,30 @@ export const tripPurgePayloadSchema = z.strictObject({
 export type TripPurgePayload = z.infer<typeof tripPurgePayloadSchema>
 
 /**
+ * The two trips a copy runs between, and who asked for it (PRD #104 decision 4a).
+ *
+ * `strictObject` for the same reason the two above are: the envelope names the tenant, and the
+ * handler rebuilds its scope from that rather than carrying one across the queue, so every statement
+ * it then runs is `tenantFilter()`-bound to the organization on the envelope. A forged message can
+ * only copy rows its own tenant already holds.
+ *
+ * `requestedBy` is who receives the completion notification, and whose membership the handler
+ * re-reads — a requester who has left the workspace by the time the message lands is a permanent
+ * failure, not a copy made on their behalf.
+ *
+ * The envelope's own id is deterministic on the **target** id, which the producer has just minted
+ * and which cannot repeat: a redelivery is one job, and a second Copy on the same source is a
+ * different trip and a different envelope.
+ */
+export const tripCopyPayloadSchema = z.strictObject({
+  sourceTripId: z.string().min(1).max(64),
+  targetTripId: z.string().min(1).max(64),
+  requestedBy: z.string().min(1).max(64),
+})
+
+export type TripCopyPayload = z.infer<typeof tripCopyPayloadSchema>
+
+/**
  * Billing payloads mirror the `BillingTask` union in `../billing/types`. They
  * repeat their own `kind` because the webhook adapter enqueues the whole task
  * object as the payload, and `providerEventId` is what makes the envelope id
@@ -238,6 +266,7 @@ export interface TaskPayloadMap {
   backup: BackupPayload
   'travel-stats': TravelStatsPayload
   'trip-purge': TripPurgePayload
+  'trip-copy': TripCopyPayload
   'billing.subscription.changed': SubscriptionChangedPayload
   'billing.invoice.paid': InvoicePaidPayload
   'billing.invoice.payment_failed': InvoicePaymentFailedPayload
@@ -296,6 +325,11 @@ export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
     ...envelopeBase,
     kind: z.literal('trip-purge'),
     payload: tripPurgePayloadSchema,
+  }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('trip-copy'),
+    payload: tripCopyPayloadSchema,
   }),
   z.object({
     ...envelopeBase,

@@ -195,3 +195,72 @@ describe('a row the catalogue cannot render degrades, never to English', () => {
     expect(copy.body).toBeNull()
   })
 })
+
+/**
+ * The one event whose body carries tallies after it (`BODY_TALLIES` in
+ * `#/lib/notification-copy`).
+ *
+ * Neither the place count nor the dropped-note count can be a clause *inside* `copied.body`: a
+ * message carries one plural count and that one is spent on the days. So each is a message of its
+ * own joined as a list — which is what makes every count in the sentence pluralize correctly, the
+ * thing `'{days} days and {places} places came across.'` could not do — and these are the things
+ * that can go wrong with a join: a clause appears when it has nothing to say, one never appears at
+ * all, or a clause picks the body's plural branch instead of its own.
+ */
+const COPIED: StoredNotification = {
+  titleKey: 'trip.copied',
+  titleParams: { tripTitle: 'Lisbon in April' },
+  bodyKey: 'trip.copied',
+  bodyParams: { tripTitle: 'Lisbon in April', days: 4, places: 12, dropped: 0 },
+}
+
+describe('the tallies a copied-trip body carries', () => {
+  it('leaves off the tally whose count is zero', () => {
+    expect(render(COPIED, 'en', ENGLISH)).toEqual({
+      title: 'Lisbon in April is ready',
+      body: '4 days came across · 12 places',
+    })
+  })
+
+  it('joins the dropped notes when the shortened range dropped some', () => {
+    const copy = render(
+      { ...COPIED, bodyParams: { ...COPIED.bodyParams, dropped: 3 } },
+      'en',
+      ENGLISH,
+    )
+    expect(copy.body).toBe('4 days came across · 12 places · 3 notes dropped')
+  })
+
+  it('picks each tally’s own plural branch, not the body’s', () => {
+    const copy = render(
+      { ...COPIED, bodyParams: { ...COPIED.bodyParams, dropped: 1 } },
+      'en',
+      ENGLISH,
+    )
+    // `days` is 4 and would select `other`; the tally counts `dropped`.
+    expect(copy.body).toBe('4 days came across · 12 places · 1 note dropped')
+  })
+
+  /**
+   * The regression the split exists for. A one-day, one-place copy is an ordinary thing to do —
+   * a day trip with one booking — and the single flat sentence this replaced rendered it "1 days
+   * and 1 places came across.", in English and, by construction, in all twenty-two translations.
+   */
+  it('says “1 day” and “1 place”, not “1 days and 1 places”', () => {
+    const copy = render(
+      { ...COPIED, bodyParams: { ...COPIED.bodyParams, days: 1, places: 1 } },
+      'en',
+      ENGLISH,
+    )
+    expect(copy.body).toBe('1 day came across · 1 place')
+  })
+
+  it('says only the days when nothing else came across', () => {
+    const copy = render(
+      { ...COPIED, bodyParams: { ...COPIED.bodyParams, places: 0 } },
+      'en',
+      ENGLISH,
+    )
+    expect(copy.body).toBe('4 days came across')
+  })
+})

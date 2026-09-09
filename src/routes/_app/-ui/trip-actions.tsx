@@ -8,10 +8,12 @@
  * where an absent one simply is not part of their product. A viewer's menu is short, and a stale
  * payload costs a refused write rather than an unauthorised one.
  *
- * **The one item every reader gets is the star.** A favourite is a row of the reader's own
+ * **Two items every reader gets: the copy and the star.** A favourite is a row of the reader's own
  * (PRD #104 decision 5) — it changes nothing on the trip and nobody else can see it — so it is
  * offered to a viewer and to a colleague reading an organization-visible trip alike, and the menu
- * now renders for them where it used to render for nobody but the owner.
+ * now renders for them where it used to render for nobody but the owner. A copy writes a trip of
+ * the reader's own rather than touching this one (decision 6), so it sits above the star on the
+ * same footing.
  *
  * **Delete is the one item that asks before it acts, and how hard it asks is the server's call.**
  * `TripDeleteDialog` reads a summary of what the trip carries and renders whichever ceremony that
@@ -24,6 +26,7 @@ import { useRouter } from '@tanstack/react-router'
 import {
   Archive,
   ArchiveRestore,
+  Copy,
   MoreHorizontal,
   Pencil,
   Star,
@@ -45,6 +48,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Field,
@@ -74,6 +78,7 @@ import {
   tripDeleteSummaryFn,
   updateTripFn,
 } from '../-server/trip-lifecycle'
+import { TripCopyDialog } from './trip-copy-dialog'
 import { TripFormFields, tripFormPayload, useTripForm } from './trip-form'
 
 import type { TripCard } from '../-server/overview'
@@ -481,6 +486,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
   const t = useTranslate()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [copying, setCopying] = useState(false)
 
   /**
    * The star as the reader has just left it, held only until the loader catches up.
@@ -505,6 +511,20 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
 
   const starred = stars.get(trip.id) ?? trip.isFavourite
   const busy = favourite.pending || archive.pending || restore.pending
+
+  /**
+   * Everything but Delete is off while the `trip-copy` handler is still filling this trip in.
+   *
+   * A trip mid-copy is not yet the thing any of those items claim to act on: copying it would
+   * duplicate whatever has landed so far, and editing or archiving it races the handler's own
+   * writes. Delete stays, because abandoning a copy that is taking too long is the one thing a
+   * reader may legitimately want from this menu — `deleteTrip` clears the target outright, which is
+   * the same compensation the handler's own permanent path runs.
+   *
+   * Separate from {@link busy} because that one also spins the trigger, and a copy is not a write
+   * this menu started: a permanently spinning button would claim that it was.
+   */
+  const frozen = busy || trip.copyPending
 
   async function toggleFavourite(): Promise<void> {
     const next = !starred
@@ -534,10 +554,35 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent>
+          {/*
+            Why the items below are dimmed, said in words rather than left to be inferred from a
+            menu that has gone quiet. A label rather than a tooltip on each disabled item: a
+            disabled menu item is skipped by keyboard navigation, so a hint hung off it would only
+            ever reach a reader with a pointer.
+          */}
+          {trip.copyPending ? (
+            <DropdownMenuLabel>
+              {t('shell.trips.card.copyingReason')}
+            </DropdownMenuLabel>
+          ) : null}
+
+          {/*
+            Copy is first and is offered to every reader, because every reader may copy (PRD #104
+            decision 6) — so it is the first of a viewer's two items rather than an owner's
+            privilege.
+          */}
+          <DropdownMenuItem
+            icon={<Copy />}
+            onSelect={() => setCopying(true)}
+            disabled={frozen}
+          >
+            {t('shell.tripActions.copy')}
+          </DropdownMenuItem>
+
           <DropdownMenuItem
             icon={starred ? <StarOff /> : <Star />}
             onSelect={() => void toggleFavourite()}
-            disabled={busy}
+            disabled={frozen}
           >
             {starred
               ? t('shell.tripActions.unfavourite')
@@ -554,7 +599,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
               <DropdownMenuItem
                 icon={<Pencil />}
                 onSelect={() => setEditing(true)}
-                disabled={busy}
+                disabled={frozen}
               >
                 {t('shell.tripActions.edit')}
               </DropdownMenuItem>
@@ -564,7 +609,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
                   onSelect={() =>
                     void restore.run({ data: { tripId: trip.id } })
                   }
-                  disabled={busy}
+                  disabled={frozen}
                 >
                   {t('shell.tripActions.restore')}
                 </DropdownMenuItem>
@@ -574,7 +619,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
                   onSelect={() =>
                     void archive.run({ data: { tripId: trip.id } })
                   }
-                  disabled={busy}
+                  disabled={frozen}
                 >
                   {t('shell.tripActions.archive')}
                 </DropdownMenuItem>
@@ -601,6 +646,10 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {copying ? (
+        <TripCopyDialog trip={trip} open onOpenChange={setCopying} />
+      ) : null}
 
       {editing ? (
         <TripEditSheet trip={trip} open onOpenChange={setEditing} />

@@ -9,7 +9,14 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { R2_DELETE_MAX_KEYS, deleteObjects } from '../objects'
+import type { ObjectStore } from '../objects'
+import {
+  ObjectCopyError,
+  R2_DELETE_MAX_KEYS,
+  copyObject,
+  deleteObjects,
+} from '../objects'
+import type { FakeBucket, FakeObject } from './fake-bucket'
 import { fakeBucket } from './fake-bucket'
 
 describe('deleteObjects', () => {
@@ -58,3 +65,92 @@ describe('deleteObjects', () => {
     expect(bucket.calls).toEqual([['a', 'b']])
   })
 })
+
+describe('copyObject', () => {
+  it('writes a second object under the target key, leaving the source alone', async () => {
+    const bucket = fakeBucket({
+      'trips/org/source/cover.jpg': { body: 'jpeg', contentType: 'image/jpeg' },
+    })
+
+    await copyObject(
+      bucket,
+      'trips/org/source/cover.jpg',
+      'trips/org/target/cover.jpg',
+    )
+
+    expect(bucket.objects.get('trips/org/target/cover.jpg')).toEqual({
+      body: 'jpeg',
+      contentType: 'image/jpeg',
+    })
+    // Two keys, two objects: the copy has to survive `trip-purge` deleting the source's.
+    expect(bucket.objects.has('trips/org/source/cover.jpg')).toBe(true)
+    expect(bucket.objects.size).toBe(2)
+  })
+
+  it('carries no content type when the source has none', async () => {
+    const bucket = fakeBucket({ source: { body: 'bytes' } })
+
+    await copyObject(bucket, 'source', 'target')
+
+    expect(bucket.objects.get('target')).toEqual({ body: 'bytes' })
+  })
+
+  it('refuses a missing source rather than quietly copying nothing', async () => {
+    const bucket = fakeBucket(['elsewhere'])
+
+    await expect(copyObject(bucket, 'gone', 'target')).rejects.toMatchObject({
+      name: 'ObjectCopyError',
+      code: 'source-missing',
+    })
+    expect(bucket.objects.has('target')).toBe(false)
+  })
+
+  it('refuses a store that only deletes', async () => {
+    // The port a purge is happy with: `get` and `put` are optional, so this compiles.
+    const deleteOnly: ObjectStore = { delete: async () => {} }
+
+    await expect(
+      copyObject(deleteOnly, 'source', 'target'),
+    ).rejects.toBeInstanceOf(ObjectCopyError)
+    await expect(
+      copyObject(deleteOnly, 'source', 'target'),
+    ).rejects.toMatchObject({
+      code: 'unsupported-store',
+    })
+  })
+
+  it('calls the bucket’s methods on the bucket', async () => {
+    // `fakeBucket` is an object literal of arrow functions, which are `this`-insensitive and so
+    // cannot see the mistake this guards. The real binding can: `R2Bucket.get`/`.put` are workerd
+    // prototype methods that validate their receiver, and `const { get } = store; get(key)` throws
+    // `TypeError: Illegal invocation`. Because `copyCover` logs and continues past any error from
+    // here, that mistake does not fail a copy — it silently drops every copied trip's cover.
+    const receiverStrict = strictBucket({ source: { body: 'jpeg' } })
+
+    await copyObject(receiverStrict, 'source', 'target')
+
+    expect(receiverStrict.objects.get('target')).toEqual({ body: 'jpeg' })
+  })
+})
+
+/**
+ * A bucket whose `get`/`put` live on a prototype and refuse a foreign receiver — R2's own contract,
+ * which the plain-object fake cannot express.
+ */
+function strictBucket(
+  present: Readonly<Record<string, FakeObject>>,
+): FakeBucket {
+  const inner = fakeBucket(present)
+  const strict: FakeBucket = {
+    ...inner,
+    get(...args) {
+      if (this !== strict) throw new TypeError('Illegal invocation')
+      return inner.get(...args)
+    },
+    put(...args) {
+      if (this !== strict) throw new TypeError('Illegal invocation')
+      return inner.put(...args)
+    },
+  }
+  return strict
+}

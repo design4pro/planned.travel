@@ -26,6 +26,15 @@ export interface EnqueueInput<TKind extends TaskKind> {
 /** Marker used by jobs that are not tenant-scoped (backups, retention sweeps). */
 export const SYSTEM_ORG_ID = 'system'
 
+/**
+ * How many envelopes may go in one `sendBatch`.
+ *
+ * Cloudflare Queues accepts at most 100 messages per batch, and {@link enqueueTasks} maps every
+ * input into one `sendBatch` without chunking — so the bound has to be held by each producer, and
+ * it is declared here, beside the call it bounds, rather than once per producer.
+ */
+export const QUEUE_BATCH_MAX = 100
+
 /** Completed job markers live this long; longer than any realistic redelivery. */
 export const TASK_DONE_TTL_SECONDS = 24 * 60 * 60
 
@@ -71,7 +80,9 @@ export async function enqueueTask<TKind extends TaskKind>(
   const envelope = buildTaskEnvelope(input, now)
   await queue.send(
     envelope,
-    input.delaySeconds === undefined ? undefined : { delaySeconds: input.delaySeconds },
+    input.delaySeconds === undefined
+      ? undefined
+      : { delaySeconds: input.delaySeconds },
   )
   return envelope
 }
@@ -109,7 +120,10 @@ export interface BackoffOptions {
  * Jitter matters here: a queue batch of ten messages that all fail against the
  * same upstream would otherwise retry in lockstep and hammer it again.
  */
-export function retryDelaySeconds(attempt: number, options: BackoffOptions = {}): number {
+export function retryDelaySeconds(
+  attempt: number,
+  options: BackoffOptions = {},
+): number {
   const base = options.baseSeconds ?? 10
   const factor = options.factor ?? 2
   const max = options.maxSeconds ?? 900

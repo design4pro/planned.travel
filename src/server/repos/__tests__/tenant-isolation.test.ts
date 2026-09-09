@@ -199,6 +199,7 @@ import {
   addTripMember,
   archiveTrip,
   canReadTrip,
+  copyTripContents,
   countTripsByStatus,
   TripRoleError,
   createShareLink,
@@ -210,6 +211,7 @@ import {
   requireTrip,
   restoreTrip,
   shareLinksRepository,
+  startTripCopy,
   tripMembersRepository,
   tripRolesFor,
   tripsRepository,
@@ -236,6 +238,7 @@ import {
 import { dispatch } from '#/server/notifications/dispatch'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { sweepReminders } from '#/server/queue/reminders'
+import { createScope } from '../base'
 import { captureError, createHarness } from './harness'
 import type {
   KeyedTenantTable,
@@ -3287,6 +3290,96 @@ describe('tenant isolation', () => {
       const refusal = await captureError(() => deleteTrip(scope, alpha.tripId))
       expect((refusal as RepositoryError).code).toBe('FORBIDDEN')
       expect((await requireTrip(scope, alpha.tripId)).id).toBe(alpha.tripId)
+    })
+
+    /**
+     * The copy is the one write in this module whose second half runs in a queue consumer, so its
+     * scope is rebuilt from an envelope rather than resolved from a session. Every case below is
+     * therefore run twice: once with the request-shaped scope the harness hands out, and once with
+     * one built exactly as `src/server/queue/handlers/trip-copy.ts` builds it. The refusal has to
+     * come from the tenant filter itself, and not from a server function the consumer never calls.
+     */
+    describe('copying', () => {
+      /** The scope the `trip-copy` handler assembles for A's owner, from an envelope. */
+      function handlerScope(): TenantScope {
+        return createScope(harness.db, {
+          userId: alpha.tenant.ownerUserId,
+          organizationId: alpha.tenant.organizationId,
+          role: 'owner',
+        })
+      }
+
+      function bothScopes(): Array<TenantScope> {
+        return [alpha.tenant.scope, handlerScope()]
+      }
+
+      it('refuses to start a copy of B’s trip, whichever scope asks', async () => {
+        for (const scope of bothScopes()) {
+          expect(
+            await captureError(() =>
+              startTripCopy(scope, beta.tripId, { title: 'Hijacked' }),
+            ),
+          ).toBeInstanceOf(NotFoundError)
+        }
+        // Nothing was minted on the way to being refused.
+        expect((await listTrips(alpha.tenant.scope)).map((row) => row.id)).toEqual(
+          [alpha.tripId],
+        )
+      })
+
+      it('refuses B’s trip as the source and writes nothing into A’s target', async () => {
+        const targetId = await startTripCopy(alpha.tenant.scope, alpha.tripId, {
+          title: 'A copy of A’s own trip',
+        })
+
+        for (const scope of bothScopes()) {
+          expect(
+            await captureError(() =>
+              copyTripContents(scope, beta.tripId, targetId),
+            ),
+          ).toBeInstanceOf(NotFoundError)
+        }
+
+        // The target is still the empty shell `startTripCopy` left: the source is read-checked
+        // before the clearing pass, so a foreign source cannot even empty a trip it may not see.
+        expect(
+          await placesRepository.count(
+            alpha.tenant.scope,
+            eq(places.tripId, targetId),
+          ),
+        ).toBe(0)
+        expect(
+          await placesRepository.count(
+            beta.tenant.scope,
+            eq(places.tripId, beta.tripId),
+          ),
+        ).toBe(1)
+      })
+
+      it('refuses B’s trip as the target and leaves B’s inventory alone', async () => {
+        const before = await placesRepository.count(
+          beta.tenant.scope,
+          eq(places.tripId, beta.tripId),
+        )
+
+        for (const scope of bothScopes()) {
+          expect(
+            await captureError(() =>
+              copyTripContents(scope, alpha.tripId, beta.tripId),
+            ),
+          ).toBeInstanceOf(NotFoundError)
+        }
+
+        expect(
+          await placesRepository.count(
+            beta.tenant.scope,
+            eq(places.tripId, beta.tripId),
+          ),
+        ).toBe(before)
+        expect(
+          (await listTripDays(beta.tenant.scope, beta.tripId)).length,
+        ).toBeGreaterThan(0)
+      })
     })
 
     it('refuses a favourite on B’s trip and never lists B’s ids', async () => {

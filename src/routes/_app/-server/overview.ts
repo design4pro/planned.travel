@@ -84,6 +84,14 @@ export interface TripCard {
    */
   readonly isFavourite: boolean
   readonly isArchived: boolean
+  /**
+   * Whether the `trip-copy` handler is still filling this trip in (`trips.copy_pending_at`).
+   *
+   * The stamp itself is not carried: the tile only ever asks whether the copy is still running, and
+   * an instant on the payload would invite a screen to age it into "copying for 4 seconds" — a
+   * countdown against a queue whose pace nobody has promised.
+   */
+  readonly copyPending: boolean
   readonly placeCount: number
   readonly updatedAt: string
   /**
@@ -206,6 +214,7 @@ export function toTripCard(
     accentColour: trip.accentColour,
     isFavourite,
     isArchived: trip.isArchived,
+    copyPending: trip.copyPendingAt !== null,
     placeCount,
     updatedAt: isoOfRequired(trip.updatedAt),
     role,

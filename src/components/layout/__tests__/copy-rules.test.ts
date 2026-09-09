@@ -55,6 +55,7 @@ const APP_FILES = [
   join('-ui', 'new-trip-dialog.tsx'),
   join('-ui', 'trip-form.tsx'),
   join('-ui', 'trip-actions.tsx'),
+  join('-ui', 'trip-copy-dialog.tsx'),
   join('-ui', 'create-dialogs.tsx'),
   join('-server', 'shell.ts'),
   join('-server', 'context.ts'),
@@ -305,7 +306,20 @@ const STORED_EVENTS = [
   'organization.invited',
   'journey.published',
   'billing.plan_changed',
+  'trip.copied',
+  'trip.copyFailed',
 ]
+
+/**
+ * The tallies a body carries after it, spelled the way `BODY_TALLIES` in
+ * `src/lib/notification-copy.ts` spells them.
+ *
+ * Extra keys on one event rather than halves of a pair: `trip.copied` counts the places that came
+ * across and the notes a shortened range dropped, and neither can live inside `.body` because a
+ * message carries one plural count and that one is spent on the days. Listed rather than derived,
+ * so a further tally is a deliberate act with a line of its own.
+ */
+const STORED_TALLIES = ['trip.copied.places', 'trip.copied.dropped']
 
 describe('the catalogue and the shell agree', () => {
   const used = new Set<string>()
@@ -350,10 +364,13 @@ describe('the catalogue and the shell agree', () => {
   })
 
   it('carries both halves of every stored event, and nothing else', () => {
-    const expected = STORED_EVENTS.flatMap((event) => [
-      `${STORED_PREFIX}${event}.title`,
-      `${STORED_PREFIX}${event}.body`,
-    ]).sort()
+    const expected = [
+      ...STORED_EVENTS.flatMap((event) => [
+        `${STORED_PREFIX}${event}.title`,
+        `${STORED_PREFIX}${event}.body`,
+      ]),
+      ...STORED_TALLIES.map((tally) => `${STORED_PREFIX}${tally}`),
+    ].sort()
     const shipped = Object.keys(shell)
       .filter(
         (key) =>

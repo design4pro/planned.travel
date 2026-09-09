@@ -32,6 +32,7 @@ import {
   listUpcomingTrips,
   requireTrip,
   restoreTrip,
+  startTripCopy,
   updateTrip,
 } from '../trips'
 import {
@@ -151,6 +152,20 @@ describe('member isolation', () => {
       expect(trip.isArchived).toBe(false)
     })
 
+    it('refuses to be copied by a reader who cannot see it', async () => {
+      // The copy is open to every *reader* (PRD #104 decision 6), and this is what makes that a
+      // boundary rather than a hole: `requireTrip` is the whole check, so somebody who cannot read
+      // the trip cannot copy it either — and is told the same thing they are told about a trip in
+      // another workspace.
+      expect(
+        await captureError(() =>
+          startTripCopy(stranger, fixture.tripId, { title: 'Mine now' }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await listTrips(stranger)).toEqual([])
+    })
+
     it('refuses to be starred by a reader who cannot see it', async () => {
       // A bookmark is the mildest write in the product and still a write: it names a trip id. A
       // non-member who could star this one would learn it exists, which is the single thing
@@ -225,6 +240,23 @@ describe('member isolation', () => {
       expect(await listFavouriteTripIds(alpha.scope)).toEqual([])
       expect(await countFavourites(alpha.scope)).toBe(0)
       expect(await listTrips(alpha.scope, { favourite: true })).toEqual([])
+    })
+
+    it('and any reader may copy it, into a trip of their own', async () => {
+      const copyId = await startTripCopy(stranger, fixture.tripId, {
+        title: 'Lisbon, my way',
+      })
+
+      // Theirs, not a second view of the owner's: they own the copy, it is private again, and it is
+      // still being built.
+      const copy = await requireTrip(stranger, copyId)
+      expect(copy.visibility).toBe('private')
+      expect(copy.copyPendingAt).not.toBeNull()
+      expect(copy.createdBy).toBe(strangerId)
+      // And the owner's own trip is untouched by somebody else having copied it.
+      expect((await listTrips(alpha.scope)).map((row) => row.id)).toEqual([
+        fixture.tripId,
+      ])
     })
 
     it('and the day timeline is FORBIDDEN, because reading is not editing', async () => {

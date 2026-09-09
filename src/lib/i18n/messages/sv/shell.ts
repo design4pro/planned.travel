@@ -137,6 +137,22 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Dags att gå igenom packlistan och bokningarna.',
+  'notification.trip.copied.title': '{tripTitle} är klar',
+  'notification.trip.copied.body': {
+    one: 'Med följde {days} dag',
+    other: 'Med följde {days} dagar',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} plats',
+    other: '{places} platser',
+  },
+  'notification.trip.copied.dropped': {
+    one: '{dropped} anteckning föll bort',
+    other: '{dropped} anteckningar föll bort',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle} kunde inte kopieras',
+  'notification.trip.copyFailed.body':
+    'Ingenting gick förlorat. Försök igen från originalet.',
   'notification.reservation.reminder.title': '{title} närmar sig',
   'notification.reservation.reminder.body':
     'Se tid och bokningsnummer på själva bokningen.',
@@ -410,6 +426,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Åtgärder för {title}',
+  'tripActions.copy': 'Kopiera',
   'tripActions.favourite': 'Lägg till som favorit',
   'tripActions.unfavourite': 'Ta bort som favorit',
   'tripActions.edit': 'Redigera',
@@ -463,6 +480,22 @@ const messages = {
     one: 'person',
     other: 'personer',
   },
+  'copyTrip.title': 'Kopiera ”{title}”',
+  'copyTrip.nameLabel': 'Namn på kopian',
+  'copyTrip.titleRequired': 'Ge kopian ett namn.',
+  'copyTrip.datesLabel': 'Datum',
+  'copyTrip.datesTogether': 'Ange båda datumen, eller töm båda.',
+  'copyTrip.clearDates': 'Kopiera utan datum',
+  'copyTrip.carries':
+    'Dagar, platser och anteckningar följer med. Bokningar, pengar, filer och personer gör det inte.',
+  'copyTrip.shorter':
+    'Det är kortare än originalet. Platserna från de överblivna dagarna hamnar bland idéerna och deras anteckningar faller bort.',
+  'copyTrip.submit': 'Kopiera resan',
+  'copyTrip.copying': 'Kopierar resan',
+  'copyTrip.cancel': 'Avbryt',
+  'copyTrip.started': 'Kopierar ”{title}”',
+  'copyTrip.errorTitle': 'Det kopierades inte',
+  'copyTrip.error': 'Resan kunde inte kopieras. Försök igen om en stund.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Vem som kan se det',
@@ -493,6 +526,9 @@ const messages = {
   'trips.card.noDates': 'Datum inte satta än',
   'trips.card.startsIn': 'om {days} d',
   'trips.card.days': '{days} d',
+  'trips.card.copying': 'Kopieras',
+  'trips.card.copyingLabel': '{title} kopieras fortfarande',
+  'trips.card.copyingReason': 'Vänta tills kopian är klar.',
   'metric.trips': 'Resor',
   'metric.places': 'Platser',
   'metric.members': 'Medlemmar',

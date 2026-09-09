@@ -145,6 +145,19 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Đã đến lúc soát lại danh sách hành lý và các đặt chỗ.',
+  'notification.trip.copied.title': '{tripTitle} đã sẵn sàng',
+  'notification.trip.copied.body': {
+    other: 'Đã sao sang {days} ngày',
+  },
+  'notification.trip.copied.places': {
+    other: '{places} địa điểm',
+  },
+  'notification.trip.copied.dropped': {
+    other: 'bỏ {dropped} ghi chú',
+  },
+  'notification.trip.copyFailed.title': 'Không sao chép được {tripTitle}',
+  'notification.trip.copyFailed.body':
+    'Không mất gì cả. Hãy thử lại từ bản gốc.',
   'notification.reservation.reminder.title': '{title} sắp đến',
   'notification.reservation.reminder.body':
     'Xem lại giờ và mã xác nhận trong phần đặt chỗ.',
@@ -378,6 +391,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Thao tác cho {title}',
+  'tripActions.copy': 'Sao chép',
   'tripActions.favourite': 'Thêm vào yêu thích',
   'tripActions.unfavourite': 'Bỏ khỏi yêu thích',
   'tripActions.edit': 'Sửa',
@@ -426,6 +440,22 @@ const messages = {
   'deleteTrip.carried.members': {
     other: 'người',
   },
+  'copyTrip.title': 'Sao chép “{title}”',
+  'copyTrip.nameLabel': 'Tên bản sao',
+  'copyTrip.titleRequired': 'Hãy đặt tên cho bản sao.',
+  'copyTrip.datesLabel': 'Ngày',
+  'copyTrip.datesTogether': 'Hãy nhập cả hai ngày, hoặc xóa cả hai.',
+  'copyTrip.clearDates': 'Sao chép không kèm ngày',
+  'copyTrip.carries':
+    'Các ngày, địa điểm và ghi chú được sao sang. Đặt chỗ, tiền bạc, tệp và người thì không.',
+  'copyTrip.shorter':
+    'Khoảng này ngắn hơn bản gốc. Địa điểm của những ngày dôi ra sẽ chuyển vào ý tưởng, còn ghi chú của chúng bị bỏ.',
+  'copyTrip.submit': 'Sao chép chuyến đi',
+  'copyTrip.copying': 'Đang sao chép chuyến đi',
+  'copyTrip.cancel': 'Hủy',
+  'copyTrip.started': 'Đang sao chép “{title}”',
+  'copyTrip.errorTitle': 'Chưa sao chép được',
+  'copyTrip.error': 'Không sao chép được chuyến đi. Hãy thử lại sau giây lát.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Ai có thể xem',
@@ -456,6 +486,9 @@ const messages = {
   'trips.card.noDates': 'Chưa chọn ngày',
   'trips.card.startsIn': 'sau {days} ngày',
   'trips.card.days': '{days} ngày',
+  'trips.card.copying': 'Đang sao chép',
+  'trips.card.copyingLabel': '{title} vẫn đang được sao chép',
+  'trips.card.copyingReason': 'Hãy đợi sao chép xong.',
   'metric.trips': 'Chuyến đi',
   'metric.places': 'Địa điểm',
   'metric.members': 'Thành viên',

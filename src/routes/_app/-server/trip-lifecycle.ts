@@ -40,11 +40,13 @@ import {
   requireTrip,
   restoreTrip,
   setFavourite,
+  startTripCopy,
   summariseTripTransports,
   updateTrip,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
-import { enqueueTasks } from '#/server/queue/jobs'
+import { QUEUE_BATCH_MAX, enqueueTask, enqueueTasks } from '#/server/queue/jobs'
+import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
 import {
   recomputeDelaySeconds,
@@ -67,16 +69,15 @@ import type { TenantScope } from '#/server/repos'
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * How many envelopes may go in one `sendBatch`.
+ * How many envelopes may go in one `sendBatch`, re-exported from the module that owns the bound.
  *
- * Cloudflare Queues accepts at most 100 messages per batch, and `enqueueTasks`
- * (`src/server/queue/jobs.ts`) maps every input into one `sendBatch` without chunking — so the bound
- * has to be held by the producer. This producer scales with a trip's membership, which has no product
+ * It applies here because this producer scales with a trip's membership, which has no product
  * ceiling: the 100-member limit Better Auth's organization plugin is configured with is a
  * configuration value, not a guarantee, and a chunk loop that leaned on it would break the day an
- * operator raised it.
+ * operator raised it. It is declared beside `enqueueTasks` rather than here because the `trip-copy`
+ * handler fans the same envelopes out and two spellings of one limit is one too many.
  */
-export const QUEUE_BATCH_MAX = 100
+export { QUEUE_BATCH_MAX } from '#/server/queue/jobs'
 
 /**
  * Where the delete confirmation stops being a formality (PRD #104 decision 10).
@@ -222,6 +223,31 @@ export const setTripFavouriteInputSchema = z.strictObject({
   tripId: tripIdSchema,
   isFavourite: z.boolean(),
 })
+
+/**
+ * What the copy dialog may change: the name and the range, and nothing else (PRD #104 decision 4a).
+ *
+ * **Both dates or neither.** A half-open range is what a clear-dates control produces if it is
+ * allowed to clear one side, and the queue consumer that reads this back is in no position to ask
+ * which end was meant. An undated copy is a template; a copy dated at one end is a mistake.
+ *
+ * Absent rather than blank, unlike the two schemas above: those patch a trip that exists and need a
+ * spelling for "clear this column", whereas this describes a trip that does not exist yet, where
+ * "no dates" is simply the absence of them.
+ */
+export const copyTripInputSchema = z
+  .strictObject({
+    tripId: tripIdSchema,
+    title: titleSchema,
+    startDate: z.iso.date().optional(),
+    endDate: z.iso.date().optional(),
+  })
+  .refine(
+    (value) =>
+      (value.startDate === undefined) === (value.endDate === undefined),
+    { error: 'Set both dates, or clear them both.', path: ['endDate'] },
+  )
+  .refine(datesInOrder, datesOutOfOrder)
 
 /* -------------------------------------------------------------------------------------------------
  * Travel statistics — `00-S4`'s obligation on this stage
@@ -493,9 +519,105 @@ async function enqueueTripPurge(
   }
 }
 
+/**
+ * Hands the source's inventory to the `trip-copy` handler.
+ *
+ * **This is the one enqueue in this module that fails its write**, and it compensates before it
+ * does. Every other producer here is a follow-up to a record D1 already holds, so a queue that is
+ * unreachable costs a stale panel or some objects left in a bucket. This one *is* the other half:
+ * without the message the target keeps a `copy_pending_at` no consumer will ever clear, which is a
+ * tile stuck on "Copying" for good and a `wrangler d1 execute` to repair. Deleting the empty target
+ * and telling the reader the copy did not start is the smaller harm, and the only recoverable one.
+ *
+ * The envelope id is deterministic on the **target**, which {@link startTripCopy} has just minted and
+ * which cannot repeat: a redelivery is one job, and a second Copy on the same source is a different
+ * trip and a different envelope.
+ */
+async function enqueueTripCopy(
+  scope: TenantScope,
+  sourceTripId: string,
+  targetTripId: string,
+): Promise<void> {
+  try {
+    const { taskQueue } = await import('#/server/auth/env')
+    await enqueueTask(taskQueue(), {
+      kind: 'trip-copy',
+      orgId: scope.ctx.organizationId,
+      id: tripCopyTaskId(targetTripId),
+      payload: {
+        sourceTripId,
+        targetTripId,
+        requestedBy: scope.ctx.userId,
+      },
+    })
+  } catch (cause) {
+    log().error(
+      'a trip copy was not enqueued; the target was rolled back',
+      cause,
+      {
+        organizationId: scope.ctx.organizationId,
+        tripId: targetTripId,
+      },
+    )
+    // The compensation is guarded in turn: a failed rollback must not replace the reader's error
+    // with one about the rollback, and the trip it leaves behind is the state this branch is
+    // already reporting.
+    try {
+      await deleteTrip(scope, targetTripId)
+    } catch (rollback) {
+      log().error(
+        'the target of a copy that was never enqueued could not be removed',
+        rollback,
+        { tripId: targetTripId },
+      )
+    }
+    throw cause
+  }
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Server functions
  * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Copies a trip. Open to every reader (PRD #104 decision 6) — `requireTrip` inside
+ * {@link startTripCopy} is the whole check, and there is no role guard here or there.
+ *
+ * The write is split on the bound, not on the table. What is O(1) in the source's size happens
+ * inside this call, so the reader gets a trip id and a quota refusal in one round trip; what scales
+ * with the source's inventory is the `trip-copy` handler's, because `places` is `UNLIMITED` on every
+ * paid tier and duplicating one is an unbounded write.
+ *
+ * Three steps, and their order is the contract:
+ *
+ * 1. **Mint the target.** The trip row, the caller's `owner` membership, the day run when the copy
+ *    is dated, and the `copy_pending_at` stamp that marks it as still being built.
+ * 2. **Enqueue the inventory.** Unlike every other producer in this module, a refusal here fails the
+ *    call and rolls the target back — see {@link enqueueTripCopy}.
+ * 3. **Fan the statistics out.** The copier's own trip count has moved already, on a trip they are
+ *    the only member of; the handler fans them out again when the inventory lands, and the
+ *    deterministic ids collapse the pair.
+ */
+export const copyTripFn = createServerFn({ method: 'POST' })
+  .validator(copyTripInputSchema)
+  .handler(
+    async ({
+      data,
+    }): Promise<{ readonly tripId: string; readonly copyPending: true }> => {
+      const scope = await appScope()
+      const { tripId, ...input } = data
+
+      const targetTripId = await startTripCopy(scope, tripId, input)
+      await enqueueTripCopy(scope, tripId, targetTripId)
+      await enqueueTravelStats(
+        scope,
+        targetTripId,
+        affectedStatYears(input.startDate),
+      )
+
+      return { tripId: targetTripId, copyPending: true }
+    },
+  )
 
 /**
  * Creates a trip and hands back its id so the caller can navigate straight into the planner.

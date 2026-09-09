@@ -185,6 +185,34 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Time to check the packing list and the bookings.',
+  'notification.trip.copied.title': '{tripTitle} is ready',
+  /**
+   * Counts the days, and only the days. A message carries one plural count,
+   * so a sentence that counted the places too — `'{days} days and {places}
+   * places came across.'` — could never get both right: a one-day, one-place
+   * copy read "1 days and 1 places", in all twenty-three.
+   */
+  'notification.trip.copied.body': {
+    one: '{days} day came across',
+    other: '{days} days came across',
+  },
+  /**
+   * Fragments, not sentences of their own: the renderer hangs each off
+   * `copied.body` behind a middle dot, in this order, skipping any whose count
+   * is zero. They are separate messages because each counts something of its
+   * own and `copied.body` has already spent the one count a message carries.
+   */
+  'notification.trip.copied.places': {
+    one: '{places} place',
+    other: '{places} places',
+  },
+  'notification.trip.copied.dropped': {
+    one: '{dropped} note dropped',
+    other: '{dropped} notes dropped',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle} could not be copied',
+  'notification.trip.copyFailed.body':
+    'Nothing was left behind. Try again from the original.',
   'notification.reservation.reminder.title': '{title} is coming up',
   /**
    * No `{when}`. The reminder used to interpolate a date the *writer* had
@@ -480,6 +508,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Actions for {title}',
+  'tripActions.copy': 'Copy',
   'tripActions.favourite': 'Favourite',
   'tripActions.unfavourite': 'Unfavourite',
   'tripActions.edit': 'Edit',
@@ -533,6 +562,23 @@ const messages = {
     one: 'person',
     other: 'people',
   },
+  /* ------------------------------- the copy-a-trip dialog */
+  'copyTrip.title': 'Copy “{title}”',
+  'copyTrip.nameLabel': 'Name the copy',
+  'copyTrip.titleRequired': 'Give the copy a name.',
+  'copyTrip.datesLabel': 'Dates',
+  'copyTrip.datesTogether': 'Set both dates, or clear them both.',
+  'copyTrip.clearDates': 'Copy without dates',
+  'copyTrip.carries':
+    'Days, places and notes come across. Bookings, money, files and people do not.',
+  'copyTrip.shorter':
+    'That is shorter than the original. The extra days’ places move to ideas, and their notes are dropped.',
+  'copyTrip.submit': 'Copy trip',
+  'copyTrip.copying': 'Copying the trip',
+  'copyTrip.cancel': 'Cancel',
+  'copyTrip.started': 'Copying “{title}”',
+  'copyTrip.errorTitle': 'That did not copy',
+  'copyTrip.error': 'The trip could not be copied. Try again in a moment.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Who can see it',
@@ -563,6 +609,9 @@ const messages = {
   'trips.card.noDates': 'Dates to be set',
   'trips.card.startsIn': 'in {days}d',
   'trips.card.days': '{days}d',
+  'trips.card.copying': 'Copying',
+  'trips.card.copyingLabel': '{title} is still being copied',
+  'trips.card.copyingReason': 'Wait for the copy to finish.',
   'metric.trips': 'Trips',
   'metric.places': 'Places',
   'metric.members': 'Members',

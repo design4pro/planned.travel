@@ -99,6 +99,18 @@ const messages = {
     other: '{tripTitle}還有 {days} 天出發',
   },
   'notification.trip.starting_soon.body': '該看看行李清單和訂位了。',
+  'notification.trip.copied.title': '{tripTitle} 已就緒',
+  'notification.trip.copied.body': {
+    other: '已複製 {days} 天',
+  },
+  'notification.trip.copied.places': {
+    other: '{places} 個地點',
+  },
+  'notification.trip.copied.dropped': {
+    other: '捨棄了 {dropped} 則備註',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle} 複製失敗',
+  'notification.trip.copyFailed.body': '沒有遺失任何內容。請從原行程再試一次。',
   'notification.reservation.reminder.title': '{title}快到了',
   'notification.reservation.reminder.body': '核對一下訂位的時間和確認代碼。',
   'notification.reservation.confirmed.title': '{title}已確認',
@@ -318,6 +330,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 的操作',
+  'tripActions.copy': '複製',
   'tripActions.favourite': '加入收藏',
   'tripActions.unfavourite': '取消收藏',
   'tripActions.edit': '編輯',
@@ -366,6 +379,22 @@ const messages = {
   'deleteTrip.carried.members': {
     other: '位成員',
   },
+  'copyTrip.title': '複製「{title}」',
+  'copyTrip.nameLabel': '副本名稱',
+  'copyTrip.titleRequired': '請為副本取個名稱。',
+  'copyTrip.datesLabel': '日期',
+  'copyTrip.datesTogether': '請同時填寫兩個日期，或兩個都清空。',
+  'copyTrip.clearDates': '不帶日期複製',
+  'copyTrip.carries':
+    '天數、地點與備註會一起複製。訂位、花費、檔案與成員不會。',
+  'copyTrip.shorter':
+    '這比原行程更短。多出幾天的地點會移到想法，備註則會捨棄。',
+  'copyTrip.submit': '複製行程',
+  'copyTrip.copying': '正在複製行程',
+  'copyTrip.cancel': '取消',
+  'copyTrip.started': '正在複製「{title}」',
+  'copyTrip.errorTitle': '未能複製',
+  'copyTrip.error': '行程複製失敗。請稍後再試。',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': '誰能看到',
@@ -395,6 +424,9 @@ const messages = {
   'trips.card.noDates': '日期待定',
   'trips.card.startsIn': '{days} 天後',
   'trips.card.days': '{days} 天',
+  'trips.card.copying': '複製中',
+  'trips.card.copyingLabel': '{title} 仍在複製中',
+  'trips.card.copyingReason': '請等複製完成。',
   'metric.trips': '行程',
   'metric.places': '地點',
   'metric.members': '成員',

@@ -103,3 +103,62 @@ export function renderStored(
   // damage in a sentence. A row with a hole in it degrades to the fallback.
   return rendered === null || rendered.includes('{') ? null : rendered
 }
+
+/**
+ * The tallies an event's body may carry after it, and the params that count them, in order.
+ *
+ * `trip.copied` is the one event with any: the places that came across, and the notes a shortened
+ * range dropped. Neither can be a clause *inside* `.body`, because a message carries a single
+ * plural count and that one is spent on the days — a sentence with two counted nouns in it gets
+ * one of them wrong in every language, which is what `'{days} days and {places} places'` did.
+ * So each counted noun is its own message, and they are joined as a list rather than as grammar.
+ *
+ * A tally is rendered only when its count is above zero, so a copy that carried no places and
+ * dropped no notes says just the days rather than trailing two zeroes.
+ */
+const BODY_TALLIES: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
+  ['trip.copied', ['places', 'dropped']],
+])
+
+/** The middle dot `src/lib/i18n/messages/en/trips.ts` states for a list of tallies. */
+const TALLY_JOIN = ' · '
+
+/**
+ * The body half of a stored row, with any tally its event carries appended.
+ *
+ * Both surfaces render through this rather than through {@link renderStored} directly, because the
+ * inbox and the email that announces the same row have to say the same thing — the divergence this
+ * module exists to prevent.
+ */
+export function renderStoredBody(
+  tStored: TranslateStored,
+  key: string,
+  stored: StoredParams | null,
+  locale: Locale,
+): string | null {
+  const body = renderStored(
+    tStored,
+    storedKey(key, 'body'),
+    paramsFrom(stored, locale),
+  )
+  const event = eventOf(key)
+  const names = BODY_TALLIES.get(event)
+  if (body === null || names === undefined) {
+    return body
+  }
+  const clauses = [body]
+  for (const name of names) {
+    const count = Number(stored?.[name] ?? 0)
+    if (!Number.isFinite(count) || count <= 0) {
+      continue
+    }
+    const tally = renderStored(tStored, `${STORED_PREFIX}${event}.${name}`, {
+      count,
+      [name]: formatNumber(count, locale),
+    })
+    if (tally !== null) {
+      clauses.push(tally)
+    }
+  }
+  return clauses.join(TALLY_JOIN)
+}
