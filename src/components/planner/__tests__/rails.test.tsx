@@ -65,7 +65,14 @@ const DAY: PlannerDay = {
   dateLabel: 'Fri, 9 Oct',
   stays: ['Shinjuku Granbell Hotel'],
   notes: [
-    { id: 'n1', body: 'Buy the metro pass at the airport', time: '08:00' },
+    {
+      id: 'n1',
+      dayId: 'd1',
+      body: 'Buy the metro pass at the airport',
+      detail: null,
+      time: '08:00',
+      icon: 'sticky-note',
+    },
   ],
   rows: [
     row({

@@ -65,12 +65,7 @@ export interface PlannerDay {
   readonly rows: ReadonlyArray<PlannerRow>
   /** Accommodation names covering this day. */
   readonly stays: ReadonlyArray<string>
-  readonly notes: ReadonlyArray<{
-    readonly id: string
-    readonly body: string
-    /** Already formatted, e.g. `18:30`. */
-    readonly time: string | null
-  }>
+  readonly notes: ReadonlyArray<PlannerNote>
 }
 
 /**

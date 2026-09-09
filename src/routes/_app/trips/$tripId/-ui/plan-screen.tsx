@@ -96,6 +96,7 @@ import {
   formatMetres,
   mapCategories,
   mapPlacesOf,
+  notesByDay,
   orderFromPayload,
   planModel,
   routeDaysOf,
@@ -120,6 +121,7 @@ import type {
   PlanTarget,
   PlannerRow,
 } from '#/components/planner'
+import type { PlanNotesPayload } from '../-server/day-notes'
 import type { PlanBoardPayload } from '../-server/plan'
 import type { PlaceFormValues, TimingDraft } from './plan-actions'
 
@@ -327,11 +329,13 @@ type DialogState =
 
 export interface PlanScreenProps {
   readonly payload: PlanBoardPayload
+  /** The trip's notes and whether this reader may write them. Loaded beside the board. */
+  readonly notes: PlanNotesPayload
   /** Shown in the itinerary rail's footer, where a page header would have been. */
   readonly tripTitle: string
 }
 
-export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
+export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   const locale = useLocale()
   const router = useRouter()
   const wide = useIsWide()
@@ -377,9 +381,11 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
 
   /* ------------------------------------------------------------------ model */
 
+  const noteRuns = React.useMemo(() => notesByDay(notes), [notes])
+
   const model = React.useMemo(
-    () => planModel(payload, order, locale),
-    [payload, order, locale],
+    () => planModel(payload, order, locale, noteRuns),
+    [payload, order, locale, noteRuns],
   )
 
   const scheduledRows = React.useMemo(
