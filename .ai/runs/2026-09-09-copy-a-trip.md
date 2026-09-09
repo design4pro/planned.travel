@@ -78,8 +78,8 @@ Turns it on: the menu item, the dialog, the copying state, the 23-locale copy, a
 - [x] 1.5 `copyTripContents` — e77391df
 - [x] 1.6 The `trip-copy` kind, the consumer `case` and its registry entry — 0688df4a
 - [x] 1.7 `src/server/queue/handlers/trip-copy.ts` — 0688df4a
-- [ ] 1.8 `copyTripFn` and its Zod input
-- [ ] 1.9 Tenant and member isolation tests
+- [x] 1.8 `copyTripFn` and its Zod input — 48cd98a9
+- [x] 1.9 Tenant and member isolation tests — 5e18c217
 
 ### Phase 2: the dialog and the tile
 
