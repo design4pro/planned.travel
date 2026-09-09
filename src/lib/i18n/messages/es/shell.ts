@@ -145,6 +145,17 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Buen momento para repasar la lista de equipaje y las reservas.',
+  'notification.trip.copied.title': '{tripTitle} está listo',
+  'notification.trip.copied.body':
+    'Se copiaron {days} días y {places} lugares.',
+  'notification.trip.copied.dropped': {
+    one: '{dropped} nota descartada',
+    many: '{dropped} notas descartadas',
+    other: '{dropped} notas descartadas',
+  },
+  'notification.trip.copyFailed.title': 'No se pudo copiar {tripTitle}',
+  'notification.trip.copyFailed.body':
+    'No se perdió nada. Vuelve a intentarlo desde el original.',
   'notification.reservation.reminder.title': '{title} está al caer',
   'notification.reservation.reminder.body':
     'Comprueba la hora y el código de confirmación en la reserva.',
@@ -442,6 +453,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Acciones para {title}',
+  'tripActions.copy': 'Copiar',
   'tripActions.favourite': 'Añadir a favoritos',
   'tripActions.unfavourite': 'Quitar de favoritos',
   'tripActions.edit': 'Editar',
@@ -501,6 +513,23 @@ const messages = {
     many: 'personas',
     other: 'personas',
   },
+  'copyTrip.title': 'Copiar «{title}»',
+  'copyTrip.nameLabel': 'Nombre de la copia',
+  'copyTrip.titleRequired': 'Ponle un nombre a la copia.',
+  'copyTrip.datesLabel': 'Fechas',
+  'copyTrip.datesTogether': 'Pon las dos fechas o borra ambas.',
+  'copyTrip.clearDates': 'Copiar sin fechas',
+  'copyTrip.carries':
+    'Los días, los lugares y las notas pasan a la copia. Las reservas, el dinero, los archivos y las personas no.',
+  'copyTrip.shorter':
+    'Es más corto que el original. Los lugares de los días sobrantes pasan a ideas y sus notas se descartan.',
+  'copyTrip.submit': 'Copiar viaje',
+  'copyTrip.copying': 'Copiando el viaje',
+  'copyTrip.cancel': 'Cancelar',
+  'copyTrip.started': 'Copiando «{title}»',
+  'copyTrip.errorTitle': 'Eso no se copió',
+  'copyTrip.error':
+    'El viaje no se pudo copiar. Inténtalo de nuevo en un momento.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Quién puede verlo',
@@ -531,6 +560,9 @@ const messages = {
   'trips.card.noDates': 'Fechas por definir',
   'trips.card.startsIn': 'en {days} d',
   'trips.card.days': '{days} d',
+  'trips.card.copying': 'Copiando',
+  'trips.card.copyingLabel': '{title} todavía se está copiando',
+  'trips.card.copyingReason': 'Espera a que termine la copia.',
   'metric.trips': 'Viajes',
   'metric.places': 'Lugares',
   'metric.members': 'Miembros',

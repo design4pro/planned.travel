@@ -142,6 +142,17 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Tijd om de paklijst en de boekingen na te lopen.',
+  'notification.trip.copied.title': '{tripTitle} is klaar',
+  'notification.trip.copied.body':
+    'Meegekomen: {days} dagen en {places} plekken.',
+  'notification.trip.copied.dropped': {
+    one: '{dropped} notitie vervallen',
+    other: '{dropped} notities vervallen',
+  },
+  'notification.trip.copyFailed.title':
+    '{tripTitle} kon niet worden gekopieerd',
+  'notification.trip.copyFailed.body':
+    'Er is niets verloren gegaan. Probeer het opnieuw vanaf het origineel.',
   'notification.reservation.reminder.title': '{title} komt eraan',
   'notification.reservation.reminder.body':
     'Kijk bij de boeking zelf voor de tijd en de bevestigingscode.',
@@ -421,6 +432,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Acties voor {title}',
+  'tripActions.copy': 'Kopiëren',
   'tripActions.favourite': 'Toevoegen aan favorieten',
   'tripActions.unfavourite': 'Uit favorieten halen',
   'tripActions.edit': 'Bewerken',
@@ -475,6 +487,23 @@ const messages = {
     one: 'persoon',
     other: 'personen',
   },
+  'copyTrip.title': '“{title}” kopiëren',
+  'copyTrip.nameLabel': 'Naam van de kopie',
+  'copyTrip.titleRequired': 'Geef de kopie een naam.',
+  'copyTrip.datesLabel': 'Datums',
+  'copyTrip.datesTogether': 'Vul beide datums in of wis ze allebei.',
+  'copyTrip.clearDates': 'Kopiëren zonder datums',
+  'copyTrip.carries':
+    'Dagen, plekken en notities gaan mee. Boekingen, geld, bestanden en mensen niet.',
+  'copyTrip.shorter':
+    'Dat is korter dan het origineel. De plekken van de extra dagen gaan naar de ideeën en hun notities vervallen.',
+  'copyTrip.submit': 'Reis kopiëren',
+  'copyTrip.copying': 'De reis wordt gekopieerd',
+  'copyTrip.cancel': 'Annuleren',
+  'copyTrip.started': '“{title}” wordt gekopieerd',
+  'copyTrip.errorTitle': 'Dat is niet gekopieerd',
+  'copyTrip.error':
+    'De reis kon niet worden gekopieerd. Probeer het zo meteen opnieuw.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Wie het kan zien',
@@ -506,6 +535,9 @@ const messages = {
   'trips.card.noDates': 'Data nog niet gekozen',
   'trips.card.startsIn': 'over {days} d',
   'trips.card.days': '{days} d',
+  'trips.card.copying': 'Wordt gekopieerd',
+  'trips.card.copyingLabel': '{title} wordt nog gekopieerd',
+  'trips.card.copyingReason': 'Wacht tot de kopie klaar is.',
   'metric.trips': 'Reizen',
   'metric.places': 'Plekken',
   'metric.members': 'Leden',

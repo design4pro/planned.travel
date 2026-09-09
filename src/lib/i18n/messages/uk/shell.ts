@@ -147,6 +147,17 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Час перевірити список речей і броні.',
+  'notification.trip.copied.title': '{tripTitle} готова',
+  'notification.trip.copied.body': 'Перенесено: {days} днів і {places} місць.',
+  'notification.trip.copied.dropped': {
+    one: 'пропущено {dropped} нотатку',
+    few: 'пропущено {dropped} нотатки',
+    many: 'пропущено {dropped} нотаток',
+    other: 'пропущено {dropped} нотатки',
+  },
+  'notification.trip.copyFailed.title': 'Не вдалося скопіювати {tripTitle}',
+  'notification.trip.copyFailed.body':
+    'Нічого не втрачено. Спробуйте ще раз з оригіналу.',
   'notification.reservation.reminder.title': '{title} уже скоро',
   'notification.reservation.reminder.body':
     'Перевірте час і код підтвердження в броні.',
@@ -458,6 +469,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Дії для «{title}»',
+  'tripActions.copy': 'Копіювати',
   'tripActions.favourite': 'До обраного',
   'tripActions.unfavourite': 'Прибрати з обраного',
   'tripActions.edit': 'Змінити',
@@ -521,6 +533,22 @@ const messages = {
     many: 'осіб',
     other: 'особи',
   },
+  'copyTrip.title': 'Копіювати «{title}»',
+  'copyTrip.nameLabel': 'Назва копії',
+  'copyTrip.titleRequired': 'Дайте копії назву.',
+  'copyTrip.datesLabel': 'Дати',
+  'copyTrip.datesTogether': 'Вкажіть обидві дати або очистіть обидві.',
+  'copyTrip.clearDates': 'Копіювати без дат',
+  'copyTrip.carries':
+    'Дні, місця та нотатки переходять у копію. Бронювання, гроші, файли та люди — ні.',
+  'copyTrip.shorter':
+    'Це коротше за оригінал. Місця зайвих днів перейдуть до ідей, а їхні нотатки зникнуть.',
+  'copyTrip.submit': 'Копіювати поїздку',
+  'copyTrip.copying': 'Копіювання поїздки',
+  'copyTrip.cancel': 'Скасувати',
+  'copyTrip.started': 'Копіюємо «{title}»',
+  'copyTrip.errorTitle': 'Це не скопіювалося',
+  'copyTrip.error': 'Не вдалося скопіювати поїздку. Спробуйте ще раз за мить.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Хто це побачить',
@@ -550,6 +578,9 @@ const messages = {
   'trips.card.noDates': 'Дати поки не вибрано',
   'trips.card.startsIn': 'за {days} д',
   'trips.card.days': '{days} д',
+  'trips.card.copying': 'Копіюється',
+  'trips.card.copyingLabel': '{title} ще копіюється',
+  'trips.card.copyingReason': 'Зачекайте, доки копіювання завершиться.',
   'metric.trips': 'Поїздки',
   'metric.places': 'Місця',
   'metric.members': 'Учасники',

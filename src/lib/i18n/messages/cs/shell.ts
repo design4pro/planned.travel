@@ -150,6 +150,17 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Je čas zkontrolovat seznam věcí a rezervace.',
+  'notification.trip.copied.title': '{tripTitle} je připravená',
+  'notification.trip.copied.body': 'Přeneseno: {days} dní a {places} míst.',
+  'notification.trip.copied.dropped': {
+    one: '{dropped} poznámka vynechána',
+    few: '{dropped} poznámky vynechány',
+    many: '{dropped} poznámky vynechány',
+    other: '{dropped} poznámek vynecháno',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle} se nepodařilo zkopírovat',
+  'notification.trip.copyFailed.body':
+    'Nic se neztratilo. Zkuste to znovu z originálu.',
   'notification.reservation.reminder.title': '{title} se blíží',
   'notification.reservation.reminder.body':
     'Zkontrolujte čas a potvrzovací kód u rezervace.',
@@ -456,6 +467,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Akce pro {title}',
+  'tripActions.copy': 'Kopírovat',
   'tripActions.favourite': 'Přidat do oblíbených',
   'tripActions.unfavourite': 'Odebrat z oblíbených',
   'tripActions.edit': 'Upravit',
@@ -519,6 +531,23 @@ const messages = {
     many: 'osoby',
     other: 'osob',
   },
+  'copyTrip.title': 'Kopírovat „{title}“',
+  'copyTrip.nameLabel': 'Název kopie',
+  'copyTrip.titleRequired': 'Pojmenujte kopii.',
+  'copyTrip.datesLabel': 'Termín',
+  'copyTrip.datesTogether': 'Nastavte oba termíny, nebo je oba vymažte.',
+  'copyTrip.clearDates': 'Kopírovat bez termínu',
+  'copyTrip.carries':
+    'Dny, místa a poznámky se zkopírují. Rezervace, peníze, soubory a lidé ne.',
+  'copyTrip.shorter':
+    'To je kratší než originál. Místa z přebývajících dní se přesunou mezi nápady a jejich poznámky zmizí.',
+  'copyTrip.submit': 'Kopírovat cestu',
+  'copyTrip.copying': 'Kopírování cesty',
+  'copyTrip.cancel': 'Zrušit',
+  'copyTrip.started': 'Kopíruje se „{title}“',
+  'copyTrip.errorTitle': 'Nezkopírovalo se to',
+  'copyTrip.error':
+    'Cestu se nepodařilo zkopírovat. Zkuste to za chvíli znovu.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Kdo to uvidí',
@@ -549,6 +578,9 @@ const messages = {
   'trips.card.noDates': 'Data ještě nezvolena',
   'trips.card.startsIn': 'za {days} d',
   'trips.card.days': '{days} d',
+  'trips.card.copying': 'Kopíruje se',
+  'trips.card.copyingLabel': '{title} se ještě kopíruje',
+  'trips.card.copyingReason': 'Počkejte, až kopírování skončí.',
   'metric.trips': 'Cesty',
   'metric.places': 'Místa',
   'metric.members': 'Členové',

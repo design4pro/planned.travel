@@ -107,6 +107,15 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     '持ち物リストと予約を確かめるころあいです。',
+  'notification.trip.copied.title': '{tripTitle} の準備ができました',
+  'notification.trip.copied.body':
+    '{days} 日分と {places} 件の場所を引き継ぎました。',
+  'notification.trip.copied.dropped': {
+    other: 'メモ {dropped} 件は引き継がれませんでした',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle} を複製できませんでした',
+  'notification.trip.copyFailed.body':
+    '失われたものはありません。元の旅行からもう一度お試しください。',
   'notification.reservation.reminder.title': '{title}が近づいています',
   'notification.reservation.reminder.body':
     '予約の時間と確認番号を確かめてください。',
@@ -338,6 +347,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} の操作',
+  'tripActions.copy': '複製',
   'tripActions.favourite': 'お気に入りに追加',
   'tripActions.unfavourite': 'お気に入りから削除',
   'tripActions.edit': '編集',
@@ -387,6 +397,23 @@ const messages = {
   'deleteTrip.carried.members': {
     other: '人のメンバー',
   },
+  'copyTrip.title': '「{title}」を複製',
+  'copyTrip.nameLabel': '複製の名前',
+  'copyTrip.titleRequired': '複製に名前を付けてください。',
+  'copyTrip.datesLabel': '日程',
+  'copyTrip.datesTogether': '両方の日付を指定するか、両方を空にしてください。',
+  'copyTrip.clearDates': '日程なしで複製',
+  'copyTrip.carries':
+    '日程、場所、メモは引き継がれます。予約、費用、ファイル、メンバーは引き継がれません。',
+  'copyTrip.shorter':
+    '元の旅行より短い日程です。あふれた日の場所はアイデアに移り、そのメモは引き継がれません。',
+  'copyTrip.submit': '旅行を複製',
+  'copyTrip.copying': '旅行を複製しています',
+  'copyTrip.cancel': 'キャンセル',
+  'copyTrip.started': '「{title}」を複製しています',
+  'copyTrip.errorTitle': '複製できませんでした',
+  'copyTrip.error':
+    '旅行を複製できませんでした。少し経ってからもう一度お試しください。',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': '見られる人',
@@ -417,6 +444,9 @@ const messages = {
   'trips.card.noDates': '日程は未定',
   'trips.card.startsIn': 'あと{days}日',
   'trips.card.days': '{days}日',
+  'trips.card.copying': '複製中',
+  'trips.card.copyingLabel': '{title} はまだ複製中です',
+  'trips.card.copyingReason': '複製が終わるまでお待ちください。',
   'metric.trips': '旅',
   'metric.places': '場所',
   'metric.members': 'メンバー',

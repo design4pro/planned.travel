@@ -134,6 +134,16 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Ώρα να δείτε τη λίστα αποσκευών και τις κρατήσεις.',
+  'notification.trip.copied.title': 'Το {tripTitle} είναι έτοιμο',
+  'notification.trip.copied.body': 'Πέρασαν {days} ημέρες και {places} μέρη.',
+  'notification.trip.copied.dropped': {
+    one: '{dropped} σημείωση παραλείφθηκε',
+    other: '{dropped} σημειώσεις παραλείφθηκαν',
+  },
+  'notification.trip.copyFailed.title':
+    'Το {tripTitle} δεν μπόρεσε να αντιγραφεί',
+  'notification.trip.copyFailed.body':
+    'Δεν χάθηκε τίποτα. Δοκιμάστε ξανά από το αρχικό.',
   'notification.reservation.reminder.title': 'Το {title} πλησιάζει',
   'notification.reservation.reminder.body':
     'Δείτε την ώρα και τον κωδικό επιβεβαίωσης πάνω στην κράτηση.',
@@ -402,6 +412,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Ενέργειες για {title}',
+  'tripActions.copy': 'Αντιγραφή',
   'tripActions.favourite': 'Προσθήκη στα αγαπημένα',
   'tripActions.unfavourite': 'Αφαίρεση από τα αγαπημένα',
   'tripActions.edit': 'Επεξεργασία',
@@ -457,6 +468,23 @@ const messages = {
     one: 'άτομο',
     other: 'άτομα',
   },
+  'copyTrip.title': 'Αντιγραφή του «{title}»',
+  'copyTrip.nameLabel': 'Όνομα του αντιγράφου',
+  'copyTrip.titleRequired': 'Δώστε όνομα στο αντίγραφο.',
+  'copyTrip.datesLabel': 'Ημερομηνίες',
+  'copyTrip.datesTogether':
+    'Ορίστε και τις δύο ημερομηνίες ή σβήστε τις και τις δύο.',
+  'copyTrip.clearDates': 'Αντιγραφή χωρίς ημερομηνίες',
+  'copyTrip.carries':
+    'Οι ημέρες, τα μέρη και οι σημειώσεις περνούν. Οι κρατήσεις, τα χρήματα, τα αρχεία και τα άτομα όχι.',
+  'copyTrip.shorter':
+    'Αυτό είναι πιο σύντομο από το αρχικό. Τα μέρη των επιπλέον ημερών πάνε στις ιδέες και οι σημειώσεις τους χάνονται.',
+  'copyTrip.submit': 'Αντιγραφή ταξιδιού',
+  'copyTrip.copying': 'Αντιγραφή του ταξιδιού',
+  'copyTrip.cancel': 'Ακύρωση',
+  'copyTrip.started': 'Αντιγράφεται το «{title}»',
+  'copyTrip.errorTitle': 'Αυτό δεν αντιγράφηκε',
+  'copyTrip.error': 'Το ταξίδι δεν αντιγράφηκε. Δοκιμάστε ξανά σε λίγο.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Ποιος μπορεί να το δει',
@@ -487,6 +515,9 @@ const messages = {
   'trips.card.noDates': 'Ημερομηνίες χωρίς ορισμό',
   'trips.card.startsIn': 'σε {days} ημ',
   'trips.card.days': '{days} ημ',
+  'trips.card.copying': 'Αντιγράφεται',
+  'trips.card.copyingLabel': 'Το {title} αντιγράφεται ακόμη',
+  'trips.card.copyingReason': 'Περιμένετε να ολοκληρωθεί η αντιγραφή.',
   'metric.trips': 'Ταξίδια',
   'metric.places': 'Μέρη',
   'metric.members': 'Μέλη',

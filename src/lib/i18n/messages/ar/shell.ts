@@ -158,6 +158,18 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'حان وقت مراجعة قائمة الحزم والحجوزات.',
+  'notification.trip.copied.title': '{tripTitle} جاهزة',
+  'notification.trip.copied.body': 'انتقل {days} يومًا و{places} مكانًا.',
+  'notification.trip.copied.dropped': {
+    zero: 'لم تُسقَط أي ملاحظة',
+    one: 'أُسقطت ملاحظة واحدة',
+    two: 'أُسقطت ملاحظتان',
+    few: 'أُسقطت {dropped} ملاحظات',
+    many: 'أُسقطت {dropped} ملاحظة',
+    other: 'أُسقطت {dropped} ملاحظة',
+  },
+  'notification.trip.copyFailed.title': 'تعذّر نسخ {tripTitle}',
+  'notification.trip.copyFailed.body': 'لم يُفقَد شيء. حاول مرة أخرى من الأصل.',
   'notification.reservation.reminder.title': 'يقترب موعد {title}',
   'notification.reservation.reminder.body':
     'راجع الوقت ورمز التأكيد في الحجز نفسه.',
@@ -493,6 +505,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'إجراءات {title}',
+  'tripActions.copy': 'نسخ',
   'tripActions.favourite': 'إضافة إلى المفضّلة',
   'tripActions.unfavourite': 'إزالة من المفضّلة',
   'tripActions.edit': 'تعديل',
@@ -566,6 +579,22 @@ const messages = {
     many: 'شخصًا',
     other: 'شخص',
   },
+  'copyTrip.title': 'نسخ «{title}»',
+  'copyTrip.nameLabel': 'اسم النسخة',
+  'copyTrip.titleRequired': 'أعطِ النسخة اسمًا.',
+  'copyTrip.datesLabel': 'التواريخ',
+  'copyTrip.datesTogether': 'حدّد التاريخين معًا أو امسحهما معًا.',
+  'copyTrip.clearDates': 'نسخ بدون تواريخ',
+  'copyTrip.carries':
+    'الأيام والأماكن والملاحظات تنتقل إلى النسخة. أما الحجوزات والمصاريف والملفات والأشخاص فلا.',
+  'copyTrip.shorter':
+    'هذه المدة أقصر من الأصل. أماكن الأيام الزائدة تنتقل إلى الأفكار، وتُسقَط ملاحظاتها.',
+  'copyTrip.submit': 'نسخ الرحلة',
+  'copyTrip.copying': 'يجري نسخ الرحلة',
+  'copyTrip.cancel': 'إلغاء',
+  'copyTrip.started': 'يجري نسخ «{title}»',
+  'copyTrip.errorTitle': 'لم يُنسَخ ذلك',
+  'copyTrip.error': 'تعذّر نسخ الرحلة. حاول مرة أخرى بعد قليل.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'من يمكنه رؤيته',
@@ -595,6 +624,9 @@ const messages = {
   'trips.card.noDates': 'التواريخ غير محدَّدة بعد',
   'trips.card.startsIn': 'بعد {days} يوم',
   'trips.card.days': '{days} يوم',
+  'trips.card.copying': 'قيد النسخ',
+  'trips.card.copyingLabel': 'لا يزال {title} قيد النسخ',
+  'trips.card.copyingReason': 'انتظر حتى ينتهي النسخ.',
   'metric.trips': 'الرحلات',
   'metric.places': 'الأماكن',
   'metric.members': 'الأعضاء',

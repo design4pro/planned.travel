@@ -104,6 +104,14 @@ const messages = {
     other: '{tripTitle} 출발까지 {days}일',
   },
   'notification.trip.starting_soon.body': '준비물 목록과 예약을 확인할 때예요.',
+  'notification.trip.copied.title': '{tripTitle} 준비 완료',
+  'notification.trip.copied.body': '{days}일과 장소 {places}곳이 넘어왔습니다.',
+  'notification.trip.copied.dropped': {
+    other: '메모 {dropped}개는 빠졌습니다',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle}을(를) 복사하지 못했습니다',
+  'notification.trip.copyFailed.body':
+    '잃어버린 것은 없습니다. 원본에서 다시 시도해 주세요.',
   'notification.reservation.reminder.title': '{title} 일정이 다가와요',
   'notification.reservation.reminder.body':
     '예약의 시간과 확인 번호를 확인해 주세요.',
@@ -329,6 +337,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 작업',
+  'tripActions.copy': '복사',
   'tripActions.favourite': '즐겨찾기에 추가',
   'tripActions.unfavourite': '즐겨찾기에서 제거',
   'tripActions.edit': '편집',
@@ -377,6 +386,22 @@ const messages = {
   'deleteTrip.carried.members': {
     other: '명의 멤버',
   },
+  'copyTrip.title': '“{title}” 복사',
+  'copyTrip.nameLabel': '복사본 이름',
+  'copyTrip.titleRequired': '복사본에 이름을 지어 주세요.',
+  'copyTrip.datesLabel': '날짜',
+  'copyTrip.datesTogether': '두 날짜를 모두 정하거나 둘 다 비워 주세요.',
+  'copyTrip.clearDates': '날짜 없이 복사',
+  'copyTrip.carries':
+    '날짜, 장소, 메모는 함께 넘어갑니다. 예약, 비용, 파일, 사람은 넘어가지 않습니다.',
+  'copyTrip.shorter':
+    '원본보다 짧습니다. 남는 날의 장소는 아이디어로 옮겨지고 그 메모는 사라집니다.',
+  'copyTrip.submit': '여행 복사',
+  'copyTrip.copying': '여행을 복사하는 중',
+  'copyTrip.cancel': '취소',
+  'copyTrip.started': '“{title}”을(를) 복사하는 중',
+  'copyTrip.errorTitle': '복사되지 않았습니다',
+  'copyTrip.error': '여행을 복사하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': '볼 수 있는 사람',
@@ -407,6 +432,9 @@ const messages = {
   'trips.card.noDates': '날짜 미정',
   'trips.card.startsIn': '{days}일 후',
   'trips.card.days': '{days}일',
+  'trips.card.copying': '복사 중',
+  'trips.card.copyingLabel': '{title}은(는) 아직 복사 중입니다',
+  'trips.card.copyingReason': '복사가 끝날 때까지 기다려 주세요.',
   'metric.trips': '여행',
   'metric.places': '장소',
   'metric.members': '멤버',

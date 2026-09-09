@@ -103,3 +103,52 @@ export function renderStored(
   // damage in a sentence. A row with a hole in it degrades to the fallback.
   return rendered === null || rendered.includes('{') ? null : rendered
 }
+
+/**
+ * The tally an event's body may carry after it, and the param that counts it.
+ *
+ * `trip.copied` is the one event with one: the notes a shortened range dropped, which is worth a
+ * clause only when it is not zero. It cannot be a clause *inside* `.body`, because a message
+ * carries a single plural count and that one is already spent on the days — so it is a second
+ * message, and the two are joined as a list rather than as grammar.
+ */
+const BODY_TALLIES: ReadonlyMap<string, string> = new Map([
+  ['trip.copied', 'dropped'],
+])
+
+/** The middle dot `src/lib/i18n/messages/en/trips.ts` states for a list of tallies. */
+const TALLY_JOIN = ' · '
+
+/**
+ * The body half of a stored row, with any tally its event carries appended.
+ *
+ * Both surfaces render through this rather than through {@link renderStored} directly, because the
+ * inbox and the email that announces the same row have to say the same thing — the divergence this
+ * module exists to prevent.
+ */
+export function renderStoredBody(
+  tStored: TranslateStored,
+  key: string,
+  stored: StoredParams | null,
+  locale: Locale,
+): string | null {
+  const body = renderStored(
+    tStored,
+    storedKey(key, 'body'),
+    paramsFrom(stored, locale),
+  )
+  const name = BODY_TALLIES.get(eventOf(key))
+  if (body === null || name === undefined) {
+    return body
+  }
+  const count = Number(stored?.[name] ?? 0)
+  if (!Number.isFinite(count) || count <= 0) {
+    return body
+  }
+  const tally = renderStored(
+    tStored,
+    `${STORED_PREFIX}${eventOf(key)}.${name}`,
+    { count, [name]: formatNumber(count, locale) },
+  )
+  return tally === null ? body : `${body}${TALLY_JOIN}${tally}`
+}

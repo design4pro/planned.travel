@@ -141,6 +141,15 @@ const messages = {
   },
   'notification.trip.starting_soon.body':
     'Valiz listesine ve rezervasyonlara bakma vakti.',
+  'notification.trip.copied.title': '{tripTitle} hazır',
+  'notification.trip.copied.body': '{days} gün ve {places} yer geldi.',
+  'notification.trip.copied.dropped': {
+    one: '{dropped} not düştü',
+    other: '{dropped} not düştü',
+  },
+  'notification.trip.copyFailed.title': '{tripTitle} kopyalanamadı',
+  'notification.trip.copyFailed.body':
+    'Hiçbir şey kaybolmadı. Aslından yeniden deneyin.',
   'notification.reservation.reminder.title': '{title} yaklaşıyor',
   'notification.reservation.reminder.body':
     'Saati ve onay kodunu rezervasyonun üzerinde bulabilirsiniz.',
@@ -406,6 +415,7 @@ const messages = {
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} için işlemler',
+  'tripActions.copy': 'Kopyala',
   'tripActions.favourite': 'Favorilere ekle',
   'tripActions.unfavourite': 'Favorilerden çıkar',
   'tripActions.edit': 'Düzenle',
@@ -459,6 +469,22 @@ const messages = {
     one: 'kişi',
     other: 'kişi',
   },
+  'copyTrip.title': '“{title}” kopyala',
+  'copyTrip.nameLabel': 'Kopyanın adı',
+  'copyTrip.titleRequired': 'Kopyaya bir ad ver.',
+  'copyTrip.datesLabel': 'Tarihler',
+  'copyTrip.datesTogether': 'İki tarihi de gir ya da ikisini de temizle.',
+  'copyTrip.clearDates': 'Tarihsiz kopyala',
+  'copyTrip.carries':
+    'Günler, yerler ve notlar geliyor. Rezervasyonlar, para, dosyalar ve kişiler gelmiyor.',
+  'copyTrip.shorter':
+    'Bu, aslından kısa. Fazla günlerin yerleri fikirlere taşınır, notları ise düşer.',
+  'copyTrip.submit': 'Geziyi kopyala',
+  'copyTrip.copying': 'Gezi kopyalanıyor',
+  'copyTrip.cancel': 'Vazgeç',
+  'copyTrip.started': '“{title}” kopyalanıyor',
+  'copyTrip.errorTitle': 'Bu kopyalanmadı',
+  'copyTrip.error': 'Gezi kopyalanamadı. Birazdan yeniden deneyin.',
 
   /* ------------------------------------ who can see a thing */
   'visibility.label': 'Kim görebilir',
@@ -489,6 +515,9 @@ const messages = {
   'trips.card.noDates': 'Tarihler henüz belli değil',
   'trips.card.startsIn': '{days} gün sonra',
   'trips.card.days': '{days} g',
+  'trips.card.copying': 'Kopyalanıyor',
+  'trips.card.copyingLabel': '{title} hâlâ kopyalanıyor',
+  'trips.card.copyingReason': 'Kopyalama bitene kadar bekleyin.',
   'metric.trips': 'Geziler',
   'metric.places': 'Yerler',
   'metric.members': 'Üyeler',
