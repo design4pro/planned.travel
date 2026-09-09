@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
+import * as React from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render as mount, screen } from '@testing-library/react'
 import { DndContext, closestCenter } from '@dnd-kit/core'
 
+import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import { DaySection } from '../day-section'
 import { IdeasList } from '../ideas-list'
 import { IDEAS_CONTAINER, ideaItemId } from '../ordering'
@@ -25,6 +27,17 @@ import type { PlannerCategory, PlannerDay, PlannerRow } from '../types'
  * from rectangles, so {@link layout} stamps a believable vertical stack onto the
  * measured elements. Everything else is the production path.
  */
+
+/** `DaySection` reads the message layer for its note affordances. See `rails.test.tsx`. */
+const MESSAGES = await loadCatalogue('en')
+
+function render(ui: React.ReactElement) {
+  return mount(
+    <I18nProvider locale="en" messages={MESSAGES}>
+      {ui}
+    </I18nProvider>,
+  )
+}
 
 const CATEGORIES: ReadonlyArray<PlannerCategory> = [
   { id: 'c-food', name: 'Food', colour: '#b26b08', icon: 'utensils' },

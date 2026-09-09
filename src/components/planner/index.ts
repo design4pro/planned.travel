@@ -89,6 +89,13 @@ export { IdeasList } from './ideas-list'
 export type { IdeasListProps, PlacesScope } from './ideas-list'
 export { StopRow } from './stop-row'
 export type { StopRowProps } from './stop-row'
+export {
+  NoteRow,
+  dayNoteIcon,
+  dayNoteIconGlyph,
+  dayNoteIconLabel,
+} from './note-row'
+export type { NoteRowProps } from './note-row'
 export { PlaceThumb } from './place-thumb'
 export type { PlaceThumbProps, PlaceThumbSize } from './place-thumb'
 export { DragPreview } from './drag-preview'

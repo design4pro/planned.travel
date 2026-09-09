@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import * as React from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render as mount, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DndContext } from '@dnd-kit/core'
 
+import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import { DaySection } from '../day-section'
 import { DragPreview } from '../drag-preview'
 import { IdeasList } from '../ideas-list'
@@ -22,6 +23,30 @@ import type { PlannerCategory, PlannerDay, PlannerRow } from '../types'
  * the level the interesting failures live at: a missing droppable, a row that cannot
  * be reached by keyboard, a count that disagrees with its list.
  */
+
+/**
+ * `DaySection` translates the day's note affordances, and `useTranslate` throws rather
+ * than quietly rendering English, so every mount here sits under the real `en`
+ * catalogue — which also means these cases assert on the shipped words.
+ */
+const MESSAGES = await loadCatalogue('en')
+
+function render(ui: React.ReactElement) {
+  const view = mount(
+    <I18nProvider locale="en" messages={MESSAGES}>
+      {ui}
+    </I18nProvider>,
+  )
+  return {
+    ...view,
+    rerender: (next: React.ReactElement) =>
+      view.rerender(
+        <I18nProvider locale="en" messages={MESSAGES}>
+          {next}
+        </I18nProvider>,
+      ),
+  }
+}
 
 const CATEGORIES: ReadonlyArray<PlannerCategory> = [
   { id: 'c-shrine', name: 'Sights', colour: '#2f6f5e', icon: 'church' },
