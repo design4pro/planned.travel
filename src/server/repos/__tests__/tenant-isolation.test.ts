@@ -3702,4 +3702,52 @@ describe('tenant isolation', () => {
       ).toEqual(before)
     })
   })
+
+  /**
+   * `01-S2b`: a note is parented onto a day, and the day is the client's to name.
+   *
+   * The generic per-repository cases above prove that B's *note* is unreachable from A.
+   * They cannot reach this one: the insert stamps `organization_id` from A's own scope, so
+   * a note carrying B's `day_id` is written as a row A owns and B cannot see — corrupt for
+   * one tenant and invisible to the other. Only `requireTripDay` refuses it.
+   */
+  describe('day notes', () => {
+    /** Every note row of a day, keyed by id, for a byte-for-byte diff. */
+    async function notesOf(
+      scope: TenantScope,
+      dayId: string,
+    ): Promise<Record<string, unknown>> {
+      const notes = await listDayNotes(scope, dayId)
+      return Object.fromEntries(notes.map((note) => [note.id, note] as const))
+    }
+
+    it('refuses B’s day, named with B’s trip or with A’s own', async () => {
+      const scope = alpha.tenant.scope
+      const before = await notesOf(beta.tenant.scope, beta.dayId)
+
+      expect(
+        await captureError(() =>
+          createDayNote(scope, {
+            tripId: beta.tripId,
+            dayId: beta.dayId,
+            body: 'Written onto a stranger’s day.',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // A's own trip with B's day: the tenant filter alone lets this one through,
+      // because the row it would write is A's. `requireTripDay` is what refuses it.
+      expect(
+        await captureError(() =>
+          createDayNote(scope, {
+            tripId: alpha.tripId,
+            dayId: beta.dayId,
+            body: 'Written onto a stranger’s day, from a trip A owns.',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await notesOf(beta.tenant.scope, beta.dayId)).toEqual(before)
+    })
+  })
 })
