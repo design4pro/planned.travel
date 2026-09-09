@@ -93,6 +93,10 @@ export default defineConfig({
             // watching Playwright spec, and nothing but a test holds that gate
             // shut. It sits at the repo root, so no `src/**` glob reaches it.
             'vite.config.test.ts',
+            // And `eslint.config.js`, for a narrower version of the same reason: its ignore list
+            // is what keeps `pnpm lint` runnable while an agent run has scratch directories open,
+            // and a missing entry there is silent until the tool that writes one is exercised.
+            'eslint.config.test.ts',
             // The Claude Code hooks. They are the only thing standing between the review job -
             // which reads an attacker-authored diff under `--permission-mode bypassPermissions` -
             // and the `gh` mutation surface, and their failure mode is silence: a hook that stops
