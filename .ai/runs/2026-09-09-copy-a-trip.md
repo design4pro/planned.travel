@@ -71,11 +71,11 @@ Turns it on: the menu item, the dialog, the copying state, the 23-locale copy, a
 
 ### Phase 1: the two halves and the handler
 
-- [ ] 1.1 `copyObject` in `src/server/storage/objects.ts`
-- [ ] 1.2 `MAX_BOUND_PARAMETERS` and the chunk helper in `trips.ts`
-- [ ] 1.3 `startTripCopy`
-- [ ] 1.4 The copier registry
-- [ ] 1.5 `copyTripContents`
+- [x] 1.1 `copyObject` in `src/server/storage/objects.ts` — 8786a1a1
+- [x] 1.2 `MAX_BOUND_PARAMETERS` and the chunk helper in `trips.ts` — e77391df
+- [x] 1.3 `startTripCopy` — e77391df
+- [x] 1.4 The copier registry — e77391df
+- [x] 1.5 `copyTripContents` — e77391df
 - [ ] 1.6 The `trip-copy` kind, the consumer `case` and its registry entry
 - [ ] 1.7 `src/server/queue/handlers/trip-copy.ts`
 - [ ] 1.8 `copyTripFn` and its Zod input
