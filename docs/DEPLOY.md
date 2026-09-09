@@ -1427,12 +1427,16 @@ pnpm exec wrangler queues info planned-travel-tasks
 # No output means no job has failed terminally in the last 14 days, which is the healthy case.
 pnpm exec wrangler kv key list --binding KV --prefix "task:dead:" --remote
 
-# Then read one summary — id, kind, orgId, attempts, failedAt, serialized error:
-pnpm exec wrangler kv key get --binding KV --remote --text "task:dead:<task-id>"
+# Then read one summary — id, kind, orgId, attempts, failedAt, serialized error. Take <id>
+# from the listing above rather than composing it: it is the task's envelope id, except for a
+# body too malformed to parse, where the consumer has no envelope and falls back to the queue
+# message id.
+pnpm exec wrangler kv key get --binding KV --remote --text "task:dead:<id>"
 
-# …and the full body the handler choked on, whose key carries the failure date:
+# …and the full body the handler choked on. Its key carries the failure date, which is the
+# `failedAt` from the summary above.
 pnpm exec wrangler r2 object get \
-  "planned-travel-files/dead-letter/<YYYY-MM-DD>/<task-id>.json" --file ./dead-task.json --remote
+  "planned-travel-files/dead-letter/<YYYY-MM-DD>/<id>.json" --file ./dead-task.json --remote
 
 # Cron triggers actually registered on the Worker.
 curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \

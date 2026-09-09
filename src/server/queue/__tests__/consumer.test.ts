@@ -486,12 +486,20 @@ describe('the dead-letter record', () => {
     for (const msg of [unparseable, permanent, exhausted]) {
       expect(msg.settled).toEqual({ acked: 1, retried: [] })
     }
-    // An unparseable body has no envelope, so its record is keyed by the message id.
-    expect(deadRecord(env, 'msg-1').summary).toMatchObject({
-      kind: 'unknown',
-      orgId: 'unknown',
+    // Every terminal path writes both halves of the record, not just the KV summary the
+    // runbook lists first. An unparseable body has no envelope, so it is keyed by the
+    // message id and its kind is unknown.
+    expect(deadRecord(env, 'msg-1')).toMatchObject({
+      summary: { kind: 'unknown', orgId: 'unknown' },
+      object: { body: { payload: { to: 'not-an-array' } } },
     })
-    expect(deadRecord(env, 'task-permanent').summary).toBeDefined()
-    expect(deadRecord(env, 'task-exhausted').summary).toBeDefined()
+    expect(deadRecord(env, 'task-permanent')).toMatchObject({
+      summary: { kind: 'email', attempts: 1 },
+      object: { body: { payload: { subject: 'boom' } } },
+    })
+    expect(deadRecord(env, 'task-exhausted')).toMatchObject({
+      summary: { kind: 'email', attempts: 3 },
+      object: { body: { id: 'task-exhausted' } },
+    })
   })
 })
