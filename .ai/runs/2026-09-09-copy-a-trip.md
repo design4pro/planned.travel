@@ -88,4 +88,39 @@ Turns it on: the menu item, the dialog, the copying state, the 23-locale copy, a
 - [x] 2.3 The Copy menu item in `trip-actions.tsx` — 36254696
 - [x] 2.4 The copying tile state in `trip-card.tsx` (with `TripCard.copyPending` in `overview.ts`) — 36254696
 - [x] 2.5 The e2e block in `e2e/trips-core.spec.ts` — 2ce33bcf
-- [ ] 2.6 The blind A/B pair for `/trips` and `/`
+- [x] 2.6 The blind A/B pair for `/trips` and `/` — captured, not committed (frames are binaries and
+      ADR 0016 keeps no pixel in the repository)
+
+### The blind pair, as captured
+
+24 frames, three states × two viewports × two themes × two labels, in
+`.ai/cezar/tmp/fad65938-2f7a-4221-98ea-f4b1858a4d24/shots/` (outside the repository, per
+`scripts/visual/capture.mjs`). `captureValid: true` and an empty console on all twelve invocations,
+and every A/B pair verified to differ by checksum.
+
+| State           | Route        | A (base `0d938e1a`)        | B (this branch)                                       |
+| --------------- | ------------ | -------------------------- | ----------------------------------------------------- |
+| `trips-menu`    | `/trips`     | the four-item actions menu | the same menu with **Copy** added at the top          |
+| `trips-copying` | `/trips`     | an ordinary Dolomites tile | the **Copying** tile; the other three unchanged       |
+| `board-copying` | `/dashboard` | an ordinary Dolomites tile | the same copying state, through the shared `TripCard` |
+
+The fixture is one statement against the local D1 —
+`update trips set copy_pending_at = <ms> where id = 'demo-trip-03-dolomites-hut-to-hut'` — cleared
+again afterwards. Dolomites rather than the first tile, so the pair shows the copying state _beside_
+tiles that did not change; `demo-trip-04-marrakech-riad-week` was the first candidate and is not on
+`/trips` at all.
+
+Two rows of the spec's **Visual change expected** table are deliberately not in the pair:
+
+- **the copy dialog open.** Reaching it needs two presses (the trigger, then Copy) and
+  `capture.mjs` takes one `--click`; its `--enter` chain is refused alongside `--auth` by design. It
+  is also a surface with no "before", so a pair would compare a dialog against nothing. It is
+  photographed by `om-auto-qa-pr`, and asserted by seven component tests and the `01-S1d` e2e block.
+- **the menu as a viewer sees it.** The demo owner owns every trip in the fixture, so the two-item
+  menu is not reachable without inventing a second account's membership.
+  `trip-actions.test.tsx` asserts it is exactly `['Copy', 'Favourite']`.
+
+A first attempt produced twelve byte-identical A/B pairs: the Cloudflare vite plugin kept the
+already-loaded modules across a `git checkout`, so the "before" frames were of the branch. Restarting
+the dev server after each checkout is what makes the pair mean anything, and the checksum comparison
+is what caught it.
