@@ -9,7 +9,13 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { R2_DELETE_MAX_KEYS, deleteObjects } from '../objects'
+import type { ObjectStore } from '../objects'
+import {
+  ObjectCopyError,
+  R2_DELETE_MAX_KEYS,
+  copyObject,
+  deleteObjects,
+} from '../objects'
 import { fakeBucket } from './fake-bucket'
 
 describe('deleteObjects', () => {
@@ -56,5 +62,59 @@ describe('deleteObjects', () => {
 
     expect(await deleteObjects(bucket, ['a', 'a', 'b'])).toBe(2)
     expect(bucket.calls).toEqual([['a', 'b']])
+  })
+})
+
+describe('copyObject', () => {
+  it('writes a second object under the target key, leaving the source alone', async () => {
+    const bucket = fakeBucket({
+      'trips/org/source/cover.jpg': { body: 'jpeg', contentType: 'image/jpeg' },
+    })
+
+    await copyObject(
+      bucket,
+      'trips/org/source/cover.jpg',
+      'trips/org/target/cover.jpg',
+    )
+
+    expect(bucket.objects.get('trips/org/target/cover.jpg')).toEqual({
+      body: 'jpeg',
+      contentType: 'image/jpeg',
+    })
+    // Two keys, two objects: the copy has to survive `trip-purge` deleting the source's.
+    expect(bucket.objects.has('trips/org/source/cover.jpg')).toBe(true)
+    expect(bucket.objects.size).toBe(2)
+  })
+
+  it('carries no content type when the source has none', async () => {
+    const bucket = fakeBucket({ source: { body: 'bytes' } })
+
+    await copyObject(bucket, 'source', 'target')
+
+    expect(bucket.objects.get('target')).toEqual({ body: 'bytes' })
+  })
+
+  it('refuses a missing source rather than quietly copying nothing', async () => {
+    const bucket = fakeBucket(['elsewhere'])
+
+    await expect(copyObject(bucket, 'gone', 'target')).rejects.toMatchObject({
+      name: 'ObjectCopyError',
+      code: 'source-missing',
+    })
+    expect(bucket.objects.has('target')).toBe(false)
+  })
+
+  it('refuses a store that only deletes', async () => {
+    // The port a purge is happy with: `get` and `put` are optional, so this compiles.
+    const deleteOnly: ObjectStore = { delete: async () => {} }
+
+    await expect(
+      copyObject(deleteOnly, 'source', 'target'),
+    ).rejects.toBeInstanceOf(ObjectCopyError)
+    await expect(
+      copyObject(deleteOnly, 'source', 'target'),
+    ).rejects.toMatchObject({
+      code: 'unsupported-store',
+    })
   })
 })
