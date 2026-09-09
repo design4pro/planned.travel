@@ -1418,9 +1418,21 @@ other seven.
 Finally confirm the background paths:
 
 ```bash
-# Queue consumer and DLQ depth.
+# Queue consumer backlog.
 pnpm exec wrangler queues info planned-travel-tasks
-pnpm exec wrangler queues info planned-travel-tasks-dlq   # must stay empty
+
+# Terminal job failures. This is the dead-letter signal, not the depth of
+# planned-travel-tasks-dlq: consumeTaskBatch records the failure in KV and R2 and then acks,
+# so the platform queue stays empty whether or not jobs are dying (ARCHITECTURE.md §2.4).
+# No output means no job has failed terminally in the last 14 days, which is the healthy case.
+pnpm exec wrangler kv key list --binding KV --prefix "task:dead:" --remote
+
+# Then read one summary — id, kind, orgId, attempts, failedAt, serialized error:
+pnpm exec wrangler kv key get --binding KV --remote --text "task:dead:<task-id>"
+
+# …and the full body the handler choked on, whose key carries the failure date:
+pnpm exec wrangler r2 object get \
+  "planned-travel-files/dead-letter/<YYYY-MM-DD>/<task-id>.json" --file ./dead-task.json --remote
 
 # Cron triggers actually registered on the Worker.
 curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
@@ -1905,8 +1917,11 @@ or the last one; there is no third outcome.
 
 **Verification** (§11)
 
-- [ ] All eight smoke checks pass, `wrangler tail` is clean, and the DLQ is empty. None of the
-      eight says anything about billing — that is the click-through in the billing block above.
+- [ ] All eight smoke checks pass, `wrangler tail` is clean, and §11's `task:dead:` listing is
+      empty — the store the consumer actually writes to, because the depth of
+      `planned-travel-tasks-dlq` is empty by construction and would tick this box while jobs
+      were failing. None of the eight says anything about billing — that is the click-through
+      in the billing block above.
 
 **Error reporting** (§17)
 

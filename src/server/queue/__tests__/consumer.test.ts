@@ -11,7 +11,11 @@ import { taskDeadKey, taskDoneKey } from '../jobs'
 import { TaskPermanentError, TaskRetryableError } from '../types'
 import { createLogger, createMemorySink } from '../../observability/logger'
 
-import type { QueueBatchLike, QueueMessageLike, TaskHandlerRegistry } from '../consumer'
+import type {
+  QueueBatchLike,
+  QueueMessageLike,
+  TaskHandlerRegistry,
+} from '../consumer'
 import type { TaskBindings, TaskEnvelope, TaskKind } from '../types'
 
 type BillingTaskKind = Extract<TaskKind, `billing.${string}`>
@@ -63,7 +67,10 @@ interface Settled {
   retried: Array<number | undefined>
 }
 
-function message(body: unknown, attempts = 1): QueueMessageLike & { settled: Settled } {
+function message(
+  body: unknown,
+  attempts = 1,
+): QueueMessageLike & { settled: Settled } {
   const settled: Settled = { acked: 0, retried: [] }
   return {
     id: 'msg-1',
@@ -108,7 +115,10 @@ function billingTaskId(kind: BillingTaskKind): string {
   return `${PROVIDER_EVENT_ID}:${kind}`
 }
 
-function billingEnvelope(kind: BillingTaskKind, payload: Record<string, unknown>): unknown {
+function billingEnvelope(
+  kind: BillingTaskKind,
+  payload: Record<string, unknown>,
+): unknown {
   return {
     id: billingTaskId(kind),
     orgId: 'org-1',
@@ -137,7 +147,9 @@ describe('consumeTaskBatch', () => {
     }
     const msg = message(emailEnvelope())
 
-    const result = await consumeTaskBatch(batch([msg]), env, logger(), { registry })
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry,
+    })
 
     expect(seen).toEqual(['Your flight to Lisbon is tomorrow'])
     expect(msg.settled).toEqual({ acked: 1, retried: [] })
@@ -157,7 +169,9 @@ describe('consumeTaskBatch', () => {
     }
     const msg = message(emailEnvelope())
 
-    const result = await consumeTaskBatch(batch([msg]), env, logger(), { registry })
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry,
+    })
 
     expect(calls).toBe(0)
     expect(result.duplicates).toBe(1)
@@ -168,12 +182,16 @@ describe('consumeTaskBatch', () => {
     const env = fakeEnv()
     const msg = message({ kind: 'email', payload: { to: 'not-an-array' } })
 
-    const result = await consumeTaskBatch(batch([msg]), env, logger(), { registry: {} })
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry: {},
+    })
 
     expect(result.deadLettered).toBe(1)
     expect(msg.settled).toEqual({ acked: 1, retried: [] })
     // The full body is preserved in R2 so the job can be replayed.
-    expect([...env.FILES.puts.keys()].some((k) => k.startsWith('dead-letter/'))).toBe(true)
+    expect(
+      [...env.FILES.puts.keys()].some((k) => k.startsWith('dead-letter/')),
+    ).toBe(true)
   })
 
   it('dead-letters a permanent failure on the first attempt', async () => {
@@ -185,7 +203,9 @@ describe('consumeTaskBatch', () => {
     }
     const msg = message(emailEnvelope())
 
-    const result = await consumeTaskBatch(batch([msg]), env, logger(), { registry })
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry,
+    })
 
     expect(result.deadLettered).toBe(1)
     expect(result.retried).toBe(0)
@@ -199,12 +219,16 @@ describe('consumeTaskBatch', () => {
     const env = fakeEnv()
     const registry: TaskHandlerRegistry = {
       email: async () => {
-        throw new TaskRetryableError('provider rate limited', { retryAfterSeconds: 42 })
+        throw new TaskRetryableError('provider rate limited', {
+          retryAfterSeconds: 42,
+        })
       },
     }
     const msg = message(emailEnvelope())
 
-    const result = await consumeTaskBatch(batch([msg]), env, logger(), { registry })
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry,
+    })
 
     expect(result.retried).toBe(1)
     expect(msg.settled.retried).toEqual([42])
@@ -221,7 +245,9 @@ describe('consumeTaskBatch', () => {
     // TASK_MAX_ATTEMPTS is 3, so the third delivery is terminal.
     const msg = message(emailEnvelope(), 3)
 
-    const result = await consumeTaskBatch(batch([msg]), env, logger(), { registry })
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry,
+    })
 
     expect(result.deadLettered).toBe(1)
     expect(msg.settled).toEqual({ acked: 1, retried: [] })
@@ -231,7 +257,9 @@ describe('consumeTaskBatch', () => {
     const env = fakeEnv()
     const msg = message(emailEnvelope())
 
-    const result = await consumeTaskBatch(batch([msg]), env, logger(), { registry: {} })
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry: {},
+    })
 
     expect(result.deadLettered).toBe(1)
     expect(env.KV.store.has(taskDoneKey('task-1'))).toBe(false)
@@ -267,9 +295,14 @@ describe('consumeTaskBatch', () => {
       }),
     )
 
-    const result = await consumeTaskBatch(batch([changed, failed]), env, logger(), {
-      registry,
-    })
+    const result = await consumeTaskBatch(
+      batch([changed, failed]),
+      env,
+      logger(),
+      {
+        registry,
+      },
+    )
 
     expect(handled).toEqual(['crew', '7c0f0f4d-6a6f-4f7a-9b0a-2f2a4a6c1d33'])
     expect(result.acked).toBe(2)
@@ -285,9 +318,17 @@ describe('consumeTaskBatch', () => {
         return {}
       },
     }
-    const payload = { planId: 'crew', previousPlanId: 'free', status: 'active' } as const
-    const first = message(billingEnvelope('billing.subscription.changed', payload))
-    const second = message(billingEnvelope('billing.subscription.changed', payload))
+    const payload = {
+      planId: 'crew',
+      previousPlanId: 'free',
+      status: 'active',
+    } as const
+    const first = message(
+      billingEnvelope('billing.subscription.changed', payload),
+    )
+    const second = message(
+      billingEnvelope('billing.subscription.changed', payload),
+    )
 
     // The id is a pure function of the provider event id and the task kind, so a
     // redelivery lands on the marker the first delivery wrote instead of a fresh key.
@@ -299,9 +340,11 @@ describe('consumeTaskBatch', () => {
     expect(calls).toBe(1)
     expect(first.settled.acked).toBe(1)
     expect(second.settled.acked).toBe(1)
-    expect(env.KV.store.has(taskDoneKey(billingTaskId('billing.subscription.changed')))).toBe(
-      true,
-    )
+    expect(
+      env.KV.store.has(
+        taskDoneKey(billingTaskId('billing.subscription.changed')),
+      ),
+    ).toBe(true)
   })
 
   it('settles every message even when one of them explodes', async () => {
@@ -320,11 +363,135 @@ describe('consumeTaskBatch', () => {
       }),
     )
 
-    const result = await consumeTaskBatch(batch([good, bad]), env, logger(), { registry })
+    const result = await consumeTaskBatch(batch([good, bad]), env, logger(), {
+      registry,
+    })
 
     expect(good.settled.acked).toBe(1)
     expect(bad.settled.acked).toBe(1)
     expect(result.acked).toBe(2)
     expect(result.deadLettered).toBe(1)
+  })
+})
+
+/**
+ * The tests above pin *which* failures are terminal. These pin what a terminal failure
+ * leaves behind, because that record is now the dead-letter signal the operator alerts on
+ * (`docs/ARCHITECTURE.md` §9) and the runbook reads (`docs/DEPLOY.md` §11). The consumer
+ * settles every terminal failure itself, so `planned-travel-tasks-dlq` never sees one: if
+ * the KV summary or the R2 body stopped being written, a failing job would leave no trace
+ * anywhere and every configured signal would still read green.
+ */
+describe('the dead-letter record', () => {
+  const FAILED_AT = Date.parse('2026-03-14T08:30:00.000Z')
+  const at = () => FAILED_AT
+
+  function deadRecord(env: ReturnType<typeof fakeEnv>, taskId: string) {
+    const summary = env.KV.store.get(taskDeadKey(taskId))
+    // The R2 object is the KV summary plus a `body` holding the message as it arrived.
+    const object = env.FILES.puts.get(`dead-letter/2026-03-14/${taskId}.json`)
+    return {
+      summary: summary === undefined ? undefined : JSON.parse(summary),
+      object: object === undefined ? undefined : JSON.parse(object),
+    }
+  }
+
+  it('describes a permanent failure in KV and keeps the whole body in R2', async () => {
+    const env = fakeEnv()
+    const registry: TaskHandlerRegistry = {
+      email: async () => {
+        throw new TaskPermanentError('EMAIL_API_KEY is not set')
+      },
+    }
+    const msg = message(emailEnvelope())
+
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry,
+      now: at,
+    })
+
+    const { summary, object } = deadRecord(env, 'task-1')
+    expect(summary).toMatchObject({
+      id: 'task-1',
+      kind: 'email',
+      orgId: 'org-1',
+      attempts: 1,
+      failedAt: '2026-03-14T08:30:00.000Z',
+    })
+    // The serialized error is what tells an operator which failure they are looking at.
+    expect(JSON.stringify(summary.error)).toContain('EMAIL_API_KEY is not set')
+    // R2 carries the payload a replay would need; KV holds only the summary.
+    expect(object.body.payload.subject).toBe(
+      'Your flight to Lisbon is tomorrow',
+    )
+    // Settled here, not routed on: the platform dead-letter queue never sees this message.
+    expect(msg.settled).toEqual({ acked: 1, retried: [] })
+    expect(result.deadLettered).toBe(1)
+  })
+
+  it('writes the same record once the retry budget is exhausted', async () => {
+    const env = fakeEnv()
+    const registry: TaskHandlerRegistry = {
+      email: async () => {
+        throw new TaskRetryableError('still failing')
+      },
+    }
+    // fakeEnv sets TASK_MAX_ATTEMPTS to 3, so the third delivery is the terminal one.
+    const msg = message(emailEnvelope(), 3)
+
+    const result = await consumeTaskBatch(batch([msg]), env, logger(), {
+      registry,
+      now: at,
+    })
+
+    const { summary, object } = deadRecord(env, 'task-1')
+    expect(summary).toMatchObject({ id: 'task-1', kind: 'email', attempts: 3 })
+    expect(object.body.payload.subject).toBe(
+      'Your flight to Lisbon is tomorrow',
+    )
+    expect(msg.settled).toEqual({ acked: 1, retried: [] })
+    expect(result.deadLettered).toBe(1)
+  })
+
+  it('counts every terminal path in deadLettered and leaves nothing unsettled', async () => {
+    const env = fakeEnv()
+    const registry: TaskHandlerRegistry = {
+      email: async (payload) => {
+        if (payload.subject === 'boom') throw new TaskPermanentError('nope')
+        throw new TaskRetryableError('still failing')
+      },
+    }
+    const unparseable = message({
+      kind: 'email',
+      payload: { to: 'not-an-array' },
+    })
+    const permanent = message(
+      emailEnvelope({
+        id: 'task-permanent',
+        payload: { to: ['a@example.com'], subject: 'boom', html: '<p>x</p>' },
+      }),
+    )
+    const exhausted = message(emailEnvelope({ id: 'task-exhausted' }), 3)
+
+    const result = await consumeTaskBatch(
+      batch([unparseable, permanent, exhausted]),
+      env,
+      logger(),
+      { registry, now: at },
+    )
+
+    expect(result.deadLettered).toBe(3)
+    expect(result.acked).toBe(3)
+    expect(result.retried).toBe(0)
+    for (const msg of [unparseable, permanent, exhausted]) {
+      expect(msg.settled).toEqual({ acked: 1, retried: [] })
+    }
+    // An unparseable body has no envelope, so its record is keyed by the message id.
+    expect(deadRecord(env, 'msg-1').summary).toMatchObject({
+      kind: 'unknown',
+      orgId: 'unknown',
+    })
+    expect(deadRecord(env, 'task-permanent').summary).toBeDefined()
+    expect(deadRecord(env, 'task-exhausted').summary).toBeDefined()
   })
 })
