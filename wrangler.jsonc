@@ -156,6 +156,14 @@
         "max_retries": 5,
         "max_concurrency": 4,
         "retry_delay": 10,
+        // A platform backstop that stays empty in normal operation, and not the primary
+        // signal. `consumeTaskBatch` settles every message itself: a terminal failure is
+        // recorded in KV under `task:dead:` and in R2 under `dead-letter/` and then acked,
+        // so an ordinary poison message is never left unsettled for the platform to route
+        // here. Alert on that store instead — docs/ARCHITECTURE.md §9 and docs/DEPLOY.md
+        // §11 say how. The queue is kept for what the store cannot record: a Worker that
+        // crashed before settling a message, and a KV or R2 outage that makes the
+        // dead-letter write itself throw before the ack.
         "dead_letter_queue": "planned-travel-tasks-dlq",
       },
     ],
@@ -263,6 +271,8 @@
             "max_retries": 3,
             "max_concurrency": 2,
             "retry_delay": 10,
+            // Same backstop, same reason as production: empty by construction, never a
+            // signal. See the comment on the production consumer above.
             "dead_letter_queue": "planned-travel-tasks-staging-dlq",
           },
         ],

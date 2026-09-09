@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mockup — the note run in a day section</title>
+    <style>
+      /* Illustrative only. Inline, self-contained, no build step, no app code. */
+      :root {
+        --canvas: #f2efe9;
+        --surface: #fdfcfa;
+        --surface-2: #f7f4ef;
+        --inset: #edeae3;
+        --ink: #16181a;
+        --ink-2: #3d4145;
+        --ink-3: #6b7076;
+        --ink-4: #969ba1;
+        --edge: #e2ded6;
+        --edge-strong: #cdc7bc;
+        --brand: #12494a;
+        --brand-subtle: #dfeceb;
+        --radius: 12px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 28px;
+        background: var(--canvas);
+        color: var(--ink);
+        font:
+          15px/1.55 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      .rail {
+        width: 380px;
+        background: var(--surface);
+        border: 1px solid var(--edge);
+        border-radius: 20px;
+        padding: 10px;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+      }
+      .railhead {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+        padding: 4px 8px 10px;
+      }
+      .dayhead {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+      }
+      .daynum {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--brand-subtle);
+        color: var(--brand);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .daytitle {
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .daydate {
+        color: var(--ink-3);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .daymeta {
+        color: var(--ink-4);
+        font-size: 12px;
+      }
+      .stop {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 8px;
+        border-radius: 8px;
+        color: var(--ink-3);
+      }
+      .thumb {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: var(--inset);
+      }
+      .stopname {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .stoptime {
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+
+      /* ---------------------------------------------------- the note run */
+      .notes {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px 4px 4px;
+      }
+      .note {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 8px;
+        border-radius: 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--edge);
+      }
+      .note.open {
+        background: var(--surface);
+      }
+      .icontile {
+        width: 26px;
+        height: 26px;
+        flex: none;
+        border-radius: 8px;
+        background: var(--inset);
+        display: grid;
+        place-items: center;
+        color: var(--ink-2);
+      }
+      .notebody {
+        min-width: 0;
+        flex: 1;
+      }
+      .noteline {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+      }
+      .notetime {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--ink-2);
+        flex: none;
+      }
+      .notetext {
+        color: var(--ink);
+      }
+      .disclose {
+        margin-top: 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        color: var(--brand);
+        background: none;
+        border: 0;
+        padding: 2px 0;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .detail {
+        margin-top: 8px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--surface-2);
+        border: 1px solid var(--edge);
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .detail h4 {
+        margin: 0 0 6px;
+        font-size: 13px;
+        color: var(--ink);
+      }
+      .detail ul {
+        margin: 0 0 8px;
+        padding-left: 18px;
+      }
+      .detail blockquote {
+        margin: 0 0 8px;
+        padding-left: 10px;
+        border-left: 2px solid var(--edge-strong);
+        color: var(--ink-3);
+      }
+      .detail code {
+        background: var(--inset);
+        border-radius: 8px;
+        padding: 1px 5px;
+        font-size: 12px;
+      }
+      .detail a {
+        color: var(--brand);
+      }
+      .actions {
+        display: flex;
+        gap: 2px;
+        flex: none;
+        align-items: center;
+      }
+      .ib {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        border: 0;
+        background: transparent;
+        color: var(--ink-3);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+      }
+      .ib:hover {
+        background: var(--inset);
+        color: var(--ink);
+      }
+      .ib[disabled] {
+        color: var(--ink-4);
+        opacity: 0.4;
+        cursor: default;
+      }
+      .add {
+        margin: 6px 4px 2px;
+        padding: 10px;
+        border: 1px dashed var(--edge-strong);
+        border-radius: 12px;
+        color: var(--ink-3);
+        font-size: 12px;
+        text-align: center;
+        background: var(--surface-2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .caption {
+        width: 380px;
+        margin: 14px 2px 0;
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      svg {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="rail">
+      <div class="railhead">Itinerary</div>
+
+      <div class="dayhead">
+        <span class="daynum">1</span>
+        <span>
+          <span class="daytitle">Land in Tokyo</span>
+          <span class="daydate">Fri 9 Oct</span>
+          <div class="daymeta">3 stops · 3 notes</div>
+        </span>
+      </div>
+
+      <div class="stop">
+        <div class="thumb"></div>
+        <div>
+          <div class="stopname">Haneda Airport Terminal 3</div>
+          <div style="font-size: 12px">2-6-5 Hanedakuko, Ota City</div>
+        </div>
+        <div class="stoptime">09:35 – 10:30</div>
+      </div>
+
+      <div class="notes">
+        <!-- a note with a detail, disclosed -->
+        <div class="note open">
+          <span class="icontile" aria-hidden="true">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" />
+              <path d="M12 9v3l2 2" />
+              <path d="m5 3-2 2" />
+              <path d="m19 3 2 2" />
+            </svg>
+          </span>
+          <div class="notebody">
+            <div class="noteline">
+              <span class="notetime">09:45</span>
+              <span class="notetext"
+                >Collect the pocket wifi before customs</span
+              >
+            </div>
+            <button class="disclose" type="button">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="m18 15-6-6-6 6" />
+              </svg>
+              Show less
+            </button>
+            <div class="detail">
+              <h4>Terminal 3, post office counter</h4>
+              <ul>
+                <li>
+                  Reservation <code>NX-4471</code>, printed copy in the folder
+                </li>
+                <li>Deposit is refunded at the same counter on the way out</li>
+              </ul>
+              <blockquote>
+                Counter closes at 22:00 — the late flight would miss it.
+              </blockquote>
+              <a href="#">Rental terms</a>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="ib" type="button" disabled title="Move up">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="m18 15-6-6-6 6" />
+              </svg>
+            </button>
+            <button class="ib" type="button" title="Move down">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            <button class="ib" type="button" title="Edit note">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+            <button class="ib" type="button" title="Delete note">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="M6 6l1 14h10l1-14" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- a note with a detail, collapsed -->
+        <div class="note">
+          <span class="icontile" aria-hidden="true">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M6 20V10a6 6 0 1 1 12 0v10" />
+              <path d="M4 20h16" />
+              <path d="M10 10V6h4v4" />
+            </svg>
+          </span>
+          <div class="notebody">
+            <div class="noteline">
+              <span class="notetime">11:00</span>
+              <span class="notetext"
+                >Hotel check-in is 15:00, bags held from 11:00</span
+              >
+            </div>
+            <button class="disclose" type="button">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+              Show more
+            </button>
+          </div>
+          <div class="actions">
+            <button class="ib" type="button" title="Move up">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="m18 15-6-6-6 6" />
+              </svg>
+            </button>
+            <button class="ib" type="button" title="Move down">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            <button class="ib" type="button" title="Edit note">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+            <button class="ib" type="button" title="Delete note">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="M6 6l1 14h10l1-14" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- a note with no detail and no time: one line tall, no disclosure -->
+        <div class="note">
+          <span class="icontile" aria-hidden="true">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M4 4h13l3 3v13H4z" />
+              <path d="M14 20v-6h6" />
+            </svg>
+          </span>
+          <div class="notebody">
+            <div class="noteline">
+              <span class="notetext"
+                >Ask about the luggage forwarding service</span
+              >
+            </div>
+          </div>
+          <div class="actions">
+            <button class="ib" type="button" title="Move up">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="m18 15-6-6-6 6" />
+              </svg>
+            </button>
+            <button class="ib" type="button" disabled title="Move down">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            <button class="ib" type="button" title="Edit note">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+            <button class="ib" type="button" title="Delete note">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="M6 6l1 14h10l1-14" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="add">
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14" />
+          <path d="M5 12h14" />
+        </svg>
+        Add a note for this day
+      </div>
+    </div>
+
+    <p class="caption">
+      Proposed <code>NoteRow</code>: icon tile, headline, tabular time,
+      disclosure only where a detail exists, end controls disabled at the ends
+      of the run. The whole actions cluster and the add affordance are absent
+      when <code>canWrite</code> is false.
+    </p>
+  </body>
+</html>

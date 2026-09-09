@@ -112,21 +112,30 @@ export const SEAT_LIMIT_CEILING = 100_000
  *
  * The counting is not here either. It is a per-organization tally over KV, minted once by
  * the stage that makes the first search (`docs/plans/03-reservations-and-transport.md`,
- * `03-S3`) and reused under the second metric name by the stage that makes the first
- * extraction (`03-S7`); this module supplies the numbers that tally is measured against.
+ * `03-S3`), lifted to `src/server/metering/rate.ts` when it acquired its third caller, and
+ * reused under each further metric name by the stages that make the first extraction
+ * (`03-S7`) and the first geocoding lookup (`src/server/geo/geocode.ts`); this module
+ * supplies the numbers that tally is measured against.
  */
 export const RATE_METRICS = [
   'transit_searches_per_month',
   'extraction_calls_per_month',
+  'geocode_lookups_per_month',
 ] as const
 export type RateMetric = (typeof RATE_METRICS)[number]
 
 /**
  * How many metered calls of each kind a plan may make per calendar month.
  *
- * **Free is zero for both**, because Free cannot open the booking desk at all
- * (`reservations` is off in its catalogue entry) and neither call is reachable from
- * anywhere else. An allowance nobody can spend is a number that only ever misleads.
+ * **Free is zero for the two desk metrics and not for the third**, and the split is the
+ * rule rather than an exception to it: an allowance is zero exactly when the surface that
+ * spends it is off. `transit_searches_per_month` and `extraction_calls_per_month` are both
+ * reached from the booking desk, `reservations` is off in Free's catalogue entry, and an
+ * allowance nobody can open the screen for is a number that only ever misleads.
+ * `geocode_lookups_per_month` is spent by the place form, which is not off — Free's own
+ * entry sells "a day-by-day itinerary and map" and "a map of the places you want to see"
+ * (`src/lib/plans.ts:246,254`) — so a zero here would contradict a claim the pricing page
+ * makes, and would refuse every press on a screen the plan advertises.
  *
  * `transit_searches_per_month` — the paid figures are sized against the work rather than
  * the seats: a fortnight abroad with a dozen journeys, searched and searched again, is
@@ -146,16 +155,37 @@ export type RateMetric = (typeof RATE_METRICS)[number]
  * confirmation is imported once by whoever was sent it, so a workspace's volume grows
  * with the trips it has in flight and not with the people planning them.
  *
- * Both are far below the point where the bill for one workspace is worth noticing, and a
- * workspace that reaches either is asking for a conversation, which is what a ceiling is
- * for.
+ * `geocode_lookups_per_month` — an address turned into a point, bought from Geoapify
+ * under `docs/adr/0013-geoapify-for-geocoding.md` and proxied by `src/server/geo/`. Its
+ * figures are an order above the other two because it is the only one of the three spent
+ * *per keystroke* rather than per deliberate act: a trip of twenty places costs roughly a
+ * hundred settled lookups, so Free's 200 is two trips — the number its catalogue entry
+ * sells — and Crew keeps the four-times step Solo-to-Crew already has. The arithmetic
+ * assumes a debounced client and this module cannot enforce one; the server bounds the
+ * half it can see, which is the query's length.
+ *
+ * All three are far below the point where the bill for one workspace is worth noticing,
+ * and a workspace that reaches one is asking for a conversation, which is what a ceiling
+ * is for.
  */
 export const PLAN_RATE_CEILINGS: {
   readonly [K in PlanId]: Readonly<Record<RateMetric, number>>
 } = {
-  free: { transit_searches_per_month: 0, extraction_calls_per_month: 0 },
-  solo: { transit_searches_per_month: 250, extraction_calls_per_month: 100 },
-  crew: { transit_searches_per_month: 1_000, extraction_calls_per_month: 400 },
+  free: {
+    transit_searches_per_month: 0,
+    extraction_calls_per_month: 0,
+    geocode_lookups_per_month: 200,
+  },
+  solo: {
+    transit_searches_per_month: 250,
+    extraction_calls_per_month: 100,
+    geocode_lookups_per_month: 2_000,
+  },
+  crew: {
+    transit_searches_per_month: 1_000,
+    extraction_calls_per_month: 400,
+    geocode_lookups_per_month: 8_000,
+  },
 }
 
 export function tierOf(value: string | null | undefined): OrganizationPlan {

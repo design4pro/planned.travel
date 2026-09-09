@@ -24,12 +24,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createHereClient } from '../here'
-import {
-  RateCeilingError,
-  rateMeterKey,
-  rateWindowOf,
-  spendRateUnit,
-} from '../meter'
+import { RateCeilingError, rateMeterKey } from '#/server/metering/rate'
 import {
   TRANSIT_CACHE_TTL_SECONDS,
   TransitProviderError,
@@ -37,7 +32,7 @@ import {
   transitCacheKey,
 } from '../search'
 
-import type { RateCounterStore } from '../meter'
+import type { RateCounterStore } from '#/server/metering/rate'
 import type {
   TransitClient,
   TransitConnection,
@@ -193,90 +188,6 @@ describe('transitCacheKey', () => {
       origin: { ...QUERY.origin, name: 'x'.repeat(4000) },
     })
     expect(new TextEncoder().encode(key).length).toBeLessThanOrEqual(512)
-  })
-})
-
-/* --------------------------------------------------------------- the meter */
-
-describe('the rate meter', () => {
-  it('keys a tally by metric, workspace and calendar month', () => {
-    expect(rateWindowOf(new Date('2026-09-01T00:00:00Z'))).toBe('2026-09')
-    expect(rateWindowOf(new Date('2026-12-31T23:59:59Z'))).toBe('2026-12')
-    expect(
-      rateMeterKey('transit_searches_per_month', 'org-alpha', '2026-09'),
-    ).not.toBe(
-      rateMeterKey('transit_searches_per_month', 'org-beta', '2026-09'),
-    )
-    expect(
-      rateMeterKey('transit_searches_per_month', 'org-alpha', '2026-09'),
-    ).not.toBe(
-      rateMeterKey('extraction_calls_per_month', 'org-alpha', '2026-09'),
-    )
-  })
-
-  it('counts up to the ceiling and then refuses', async () => {
-    const store = memoryStore()
-    const spend = (): Promise<number> =>
-      spendRateUnit(store, {
-        metric: 'transit_searches_per_month',
-        organizationId: 'org-alpha',
-        ceiling: 2,
-        now: () => new Date('2026-09-01T10:00:00Z'),
-      })
-
-    expect(await spend()).toBe(1)
-    expect(await spend()).toBe(2)
-    await expect(spend()).rejects.toBeInstanceOf(RateCeilingError)
-  })
-
-  it('refuses a plan whose ceiling is zero without writing anything', async () => {
-    const store = memoryStore()
-    await expect(
-      spendRateUnit(store, {
-        metric: 'transit_searches_per_month',
-        organizationId: 'org-free',
-        ceiling: 0,
-        now: () => new Date('2026-09-01T10:00:00Z'),
-      }),
-    ).rejects.toBeInstanceOf(RateCeilingError)
-    expect(store.writes).toEqual([])
-  })
-
-  it('starts again in the next calendar month', async () => {
-    const store = memoryStore()
-    const spend = (at: string): Promise<number> =>
-      spendRateUnit(store, {
-        metric: 'transit_searches_per_month',
-        organizationId: 'org-alpha',
-        ceiling: 1,
-        now: () => new Date(at),
-      })
-
-    expect(await spend('2026-09-30T23:00:00Z')).toBe(1)
-    await expect(spend('2026-09-30T23:30:00Z')).rejects.toBeInstanceOf(
-      RateCeilingError,
-    )
-    expect(await spend('2026-10-01T00:30:00Z')).toBe(1)
-  })
-
-  /**
-   * The posture `src/server/metering/outbound.ts` states and this file inherits: a metering fault
-   * must not be able to take a feature down. Only a *successful* read saying the ceiling is spent
-   * closes the gate.
-   */
-  it('fails open when the counter cannot be read', async () => {
-    const broken: RateCounterStore = {
-      get: () => Promise.reject(new Error('KV unavailable')),
-      put: () => Promise.resolve(),
-    }
-    await expect(
-      spendRateUnit(broken, {
-        metric: 'transit_searches_per_month',
-        organizationId: 'org-alpha',
-        ceiling: 1,
-        now: () => new Date('2026-09-01T10:00:00Z'),
-      }),
-    ).resolves.toBe(1)
   })
 })
 
