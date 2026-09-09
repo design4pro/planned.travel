@@ -514,7 +514,7 @@ server validator messages into the catalogue is product-wide work and is not thi
 | `noteIds` with a repeated id                                           | Deduped; the day still names every row exactly once, so no position is left unassigned.                                                                                                                                                                                                                                       |
 | `noteIds` omitting one of the day's notes                              | The omitted note is spliced back directly behind the note it currently follows — at the front when it follows none — so an omission moves nothing.                                                                                                                                                                            |
 | A day whose notes all sit at the default `0`                           | The move still works: `reorderDayTimeline` rewrites the day densely, so the tie is gone after the first move and never returns.                                                                                                                                                                                               |
-| A day with one note                                                    | The sequence is unchanged; `reorderDayTimeline` writes the same positions back.                                                                                                                                                                                                                                               |
+| A day with one note                                                    | The order is unchanged and the call is the identity on it — but not a no-op on the values: `reorderDayTimeline` still rewrites the day's merged line densely, so a stored position may change although nothing moved.                                                                                                         |
 | A `reorderDayNotesFn` racing a concurrent drag through `reorderPlanFn` | Both go through `reorderDayTimeline`, which re-reads the day inside the call and writes one `runBatch` — one D1 transaction. Last write wins on a dense line; no day is left half-permuted and no tie can result. The loser's router invalidation shows them the winner's order.                                              |
 | `noteIds` longer than 200                                              | Rejected by the input bound, matching `reorderDayTimelineInput`.                                                                                                                                                                                                                                                              |
 | `detail` with `javascript:` or `data:` links, or raw `<script>`        | Literal text. `01-S2a`'s parser has no HTML path at all; there is nothing to sanitise.                                                                                                                                                                                                                                        |
@@ -571,8 +571,11 @@ Each step leaves the application working, and each is verifiable.
 **Step 1 — Red first.** Append the `describe('day notes')` block to
 `src/server/repos/__tests__/tenant-isolation.test.ts`: in A's scope, `createDayNote` with B's `tripId`
 and B's `dayId` raises `NotFoundError`; **`createDayNote` with A's own `tripId` and B's `dayId` raises
-`NotFoundError`** — the case that fails today; B's `day_notes` rows are byte-identical afterwards.
-_Verify:_ `pnpm test` — the second case fails.
+`NotFoundError`** — the case the tenant filter alone lets through; B's `day_notes` rows are
+byte-identical afterwards.
+_Verify:_ `pnpm test` — **both** new cases fail. `createDayNote` is a bare parse and insert today
+(`days.ts:229`) and resolves neither the trip nor the day, which `member-isolation.test.ts:189-196`
+already records, so neither assertion is green before Step 2.
 
 **Step 2 — Green.** `createDayNote` opens with
 `await requireTripDay(scope, values.tripId, values.dayId)`.
