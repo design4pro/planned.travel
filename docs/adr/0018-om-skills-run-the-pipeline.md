@@ -59,7 +59,14 @@ end to end (PR C).
   decomposition happens inside the spec and the run's `PLAN.md`, not in the tracker.
   Amended 2026-09-09: **the FR issue is the implementation ticket, and no second issue is filed for
   building what the spec describes.** The spec PR's `Refs #n` keeps it open on purpose; a duplicate
-  issue would put the `Closes #n` that `om-close-fixed-issues` reads on only one of the two. What
+  issue would put the `Closes #n` that `om-close-fixed-issues` reads on only one of the two.
+  `om-followup-issue-from-pr` would file exactly that duplicate on its own: design-doc mode opens
+  an `Implement:` issue for any PR adding a file under `.ai/specs/`, and its dedupe searches
+  `<slug> in:title,body` for an `Implement:` title or a body naming the spec path - an FR issue
+  that predates the spec has neither, because `om-auto-write-spec` leaves the spec path in a
+  comment on it, not in the body. A repo-local override
+  (`.ai/skills/om-followup-issue-from-pr/SKILL.md`) closes that path: it resolves the spec PR's
+  `Refs #n` and reports that issue as the tracking issue instead of opening a second one. What
   was missing is the signal that a merged spec is ready to build, and that is a label, not an issue:
   a human adds `autofix` to the FR once the spec PR merges, `om-auto-fix-issue` classifies it as a
   feature and its feature route resolves the merged spec and delegates to `om-auto-implement-spec` -
