@@ -74,6 +74,8 @@ Taken from the spec's Implementation Plan, unchanged in substance.
 
 ## Progress
 
+PR: #388
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: the guard
