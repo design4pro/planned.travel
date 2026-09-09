@@ -14,8 +14,8 @@
 
 | Phase | Step | Title                                                                     | Exec   | Status | Commit |
 | ----- | ---- | ------------------------------------------------------------------------- | ------ | ------ | ------ |
-| 1     | 1.1  | Move `src/server/transit/meter.ts` to `src/server/metering/rate.ts`       | inline | todo   | —      |
-| 1     | 1.2  | Move the meter's cases into `src/server/metering/__tests__/rate.test.ts`  | inline | todo   | —      |
+| 1 | 1.1 | Move `src/server/transit/meter.ts` to `src/server/metering/rate.ts` | inline | done | 4962ba4b |
+| 1 | 1.2 | Move the meter's cases into `src/server/metering/__tests__/rate.test.ts` | inline | done | bc17b309 |
 | 1     | 1.3  | Add `geocode_lookups_per_month` to the rate metrics and the plan ceilings | inline | todo   | —      |
 | 2     | 2.1  | Adopt the `geoapify` vendor slug into `METERED_PROVIDERS`                 | inline | todo   | —      |
 | 2     | 2.2  | Write `src/server/geo/geocode.ts` — the proxy                             | inline | todo   | —      |
