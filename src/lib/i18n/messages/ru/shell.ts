@@ -153,7 +153,18 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Пора проверить список вещей и брони.',
   'notification.trip.copied.title': '{tripTitle} готова',
-  'notification.trip.copied.body': 'Перенесено: {days} дней и {places} мест.',
+  'notification.trip.copied.body': {
+    one: 'Перенесён {days} день',
+    few: 'Перенесено {days} дня',
+    many: 'Перенесено {days} дней',
+    other: 'Перенесено {days} дня',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} место',
+    few: '{places} места',
+    many: '{places} мест',
+    other: '{places} места',
+  },
   'notification.trip.copied.dropped': {
     one: 'пропущена {dropped} заметка',
     few: 'пропущено {dropped} заметки',

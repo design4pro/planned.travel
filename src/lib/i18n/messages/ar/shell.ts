@@ -159,7 +159,22 @@ const messages = {
   'notification.trip.starting_soon.body':
     'حان وقت مراجعة قائمة الحزم والحجوزات.',
   'notification.trip.copied.title': '{tripTitle} جاهزة',
-  'notification.trip.copied.body': 'انتقل {days} يومًا و{places} مكانًا.',
+  'notification.trip.copied.body': {
+    zero: 'لم ينتقل أي يوم',
+    one: 'انتقل يوم واحد',
+    two: 'انتقل يومان',
+    few: 'انتقلت {days} أيام',
+    many: 'انتقل {days} يومًا',
+    other: 'انتقل {days} يوم',
+  },
+  'notification.trip.copied.places': {
+    zero: 'ولا مكان',
+    one: 'مكان واحد',
+    two: 'مكانان',
+    few: '{places} أماكن',
+    many: '{places} مكانًا',
+    other: '{places} مكان',
+  },
   'notification.trip.copied.dropped': {
     zero: 'لم تُسقَط أي ملاحظة',
     one: 'أُسقطت ملاحظة واحدة',

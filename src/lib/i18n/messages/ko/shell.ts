@@ -105,7 +105,12 @@ const messages = {
   },
   'notification.trip.starting_soon.body': '준비물 목록과 예약을 확인할 때예요.',
   'notification.trip.copied.title': '{tripTitle} 준비 완료',
-  'notification.trip.copied.body': '{days}일과 장소 {places}곳이 넘어왔습니다.',
+  'notification.trip.copied.body': {
+    other: '{days}일이 넘어왔습니다',
+  },
+  'notification.trip.copied.places': {
+    other: '장소 {places}곳',
+  },
   'notification.trip.copied.dropped': {
     other: '메모 {dropped}개는 빠졌습니다',
   },

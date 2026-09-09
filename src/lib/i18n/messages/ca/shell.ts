@@ -146,7 +146,16 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Bon moment per repassar la llista d’equipatge i les reserves.',
   'notification.trip.copied.title': '{tripTitle} ja està a punt',
-  'notification.trip.copied.body': 'S’han copiat {days} dies i {places} llocs.',
+  'notification.trip.copied.body': {
+    one: 'S’ha copiat {days} dia',
+    many: 'S’han copiat {days} dies',
+    other: 'S’han copiat {days} dies',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} lloc',
+    many: '{places} llocs',
+    other: '{places} llocs',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} nota descartada',
     many: '{dropped} notes descartades',

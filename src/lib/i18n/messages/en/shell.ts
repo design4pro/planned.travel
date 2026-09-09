@@ -186,14 +186,26 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Time to check the packing list and the bookings.',
   'notification.trip.copied.title': '{tripTitle} is ready',
-  'notification.trip.copied.body':
-    '{days} days and {places} places came across.',
   /**
-   * A fragment, not a sentence of its own: the renderer hangs it off
-   * `copied.body` behind a middle dot when the shortened range dropped notes.
-   * It is a second message because a message carries one plural count and
-   * `copied.body` has already spent its own.
+   * Counts the days, and only the days. A message carries one plural count,
+   * so a sentence that counted the places too — `'{days} days and {places}
+   * places came across.'` — could never get both right: a one-day, one-place
+   * copy read "1 days and 1 places", in all twenty-three.
    */
+  'notification.trip.copied.body': {
+    one: '{days} day came across',
+    other: '{days} days came across',
+  },
+  /**
+   * Fragments, not sentences of their own: the renderer hangs each off
+   * `copied.body` behind a middle dot, in this order, skipping any whose count
+   * is zero. They are separate messages because each counts something of its
+   * own and `copied.body` has already spent the one count a message carries.
+   */
+  'notification.trip.copied.places': {
+    one: '{places} place',
+    other: '{places} places',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} note dropped',
     other: '{dropped} notes dropped',

@@ -142,7 +142,14 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Ideje átnézni a csomaglistát és a foglalásokat.',
   'notification.trip.copied.title': 'A(z) {tripTitle} kész',
-  'notification.trip.copied.body': 'Átkerült {days} nap és {places} hely.',
+  'notification.trip.copied.body': {
+    one: 'Átkerült {days} nap',
+    other: 'Átkerült {days} nap',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} hely',
+    other: '{places} hely',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} jegyzet kimaradt',
     other: '{dropped} jegyzet kimaradt',

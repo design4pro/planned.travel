@@ -100,7 +100,12 @@ const messages = {
   },
   'notification.trip.starting_soon.body': '該看看行李清單和訂位了。',
   'notification.trip.copied.title': '{tripTitle} 已就緒',
-  'notification.trip.copied.body': '已複製 {days} 天與 {places} 個地點。',
+  'notification.trip.copied.body': {
+    other: '已複製 {days} 天',
+  },
+  'notification.trip.copied.places': {
+    other: '{places} 個地點',
+  },
   'notification.trip.copied.dropped': {
     other: '捨棄了 {dropped} 則備註',
   },

@@ -146,8 +146,12 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Đã đến lúc soát lại danh sách hành lý và các đặt chỗ.',
   'notification.trip.copied.title': '{tripTitle} đã sẵn sàng',
-  'notification.trip.copied.body':
-    'Đã sao sang {days} ngày và {places} địa điểm.',
+  'notification.trip.copied.body': {
+    other: 'Đã sao sang {days} ngày',
+  },
+  'notification.trip.copied.places': {
+    other: '{places} địa điểm',
+  },
   'notification.trip.copied.dropped': {
     other: 'bỏ {dropped} ghi chú',
   },

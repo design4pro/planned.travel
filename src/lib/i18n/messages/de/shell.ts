@@ -148,7 +148,14 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Zeit, Packliste und Buchungen durchzugehen.',
   'notification.trip.copied.title': '{tripTitle} ist fertig',
-  'notification.trip.copied.body': 'Übernommen: {days} Tage und {places} Orte.',
+  'notification.trip.copied.body': {
+    one: 'Übernommen: {days} Tag',
+    other: 'Übernommen: {days} Tage',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} Ort',
+    other: '{places} Orte',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} Notiz entfallen',
     other: '{dropped} Notizen entfallen',

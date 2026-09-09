@@ -143,8 +143,14 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Tijd om de paklijst en de boekingen na te lopen.',
   'notification.trip.copied.title': '{tripTitle} is klaar',
-  'notification.trip.copied.body':
-    'Meegekomen: {days} dagen en {places} plekken.',
+  'notification.trip.copied.body': {
+    one: 'Meegekomen: {days} dag',
+    other: 'Meegekomen: {days} dagen',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} plek',
+    other: '{places} plekken',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} notitie vervallen',
     other: '{dropped} notities vervallen',

@@ -108,8 +108,12 @@ const messages = {
   'notification.trip.starting_soon.body':
     '持ち物リストと予約を確かめるころあいです。',
   'notification.trip.copied.title': '{tripTitle} の準備ができました',
-  'notification.trip.copied.body':
-    '{days} 日分と {places} 件の場所を引き継ぎました。',
+  'notification.trip.copied.body': {
+    other: '{days} 日分を引き継ぎました',
+  },
+  'notification.trip.copied.places': {
+    other: '場所 {places} 件',
+  },
   'notification.trip.copied.dropped': {
     other: 'メモ {dropped} 件は引き継がれませんでした',
   },

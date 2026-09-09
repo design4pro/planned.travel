@@ -314,12 +314,12 @@ const STORED_EVENTS = [
  * The tallies a body carries after it, spelled the way `BODY_TALLIES` in
  * `src/lib/notification-copy.ts` spells them.
  *
- * A third key on one event rather than a half of a pair: `trip.copied` counts the notes a
- * shortened range dropped, which cannot live inside `.body` because a message carries one plural
- * count and that one is already spent on the days. Listed rather than derived, so a second tally is
- * a deliberate act with a line of its own.
+ * Extra keys on one event rather than halves of a pair: `trip.copied` counts the places that came
+ * across and the notes a shortened range dropped, and neither can live inside `.body` because a
+ * message carries one plural count and that one is spent on the days. Listed rather than derived,
+ * so a further tally is a deliberate act with a line of its own.
  */
-const STORED_TALLIES = ['trip.copied.dropped']
+const STORED_TALLIES = ['trip.copied.places', 'trip.copied.dropped']
 
 describe('the catalogue and the shell agree', () => {
   const used = new Set<string>()

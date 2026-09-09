@@ -142,7 +142,14 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Valiz listesine ve rezervasyonlara bakma vakti.',
   'notification.trip.copied.title': '{tripTitle} hazır',
-  'notification.trip.copied.body': '{days} gün ve {places} yer geldi.',
+  'notification.trip.copied.body': {
+    one: '{days} gün geldi',
+    other: '{days} gün geldi',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} yer',
+    other: '{places} yer',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} not düştü',
     other: '{dropped} not düştü',

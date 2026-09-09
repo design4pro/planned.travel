@@ -148,7 +148,18 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Час перевірити список речей і броні.',
   'notification.trip.copied.title': '{tripTitle} готова',
-  'notification.trip.copied.body': 'Перенесено: {days} днів і {places} місць.',
+  'notification.trip.copied.body': {
+    one: 'Перенесено {days} день',
+    few: 'Перенесено {days} дні',
+    many: 'Перенесено {days} днів',
+    other: 'Перенесено {days} дня',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} місце',
+    few: '{places} місця',
+    many: '{places} місць',
+    other: '{places} місця',
+  },
   'notification.trip.copied.dropped': {
     one: 'пропущено {dropped} нотатку',
     few: 'пропущено {dropped} нотатки',

@@ -141,8 +141,12 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Saatnya memeriksa daftar bawaan dan pemesanannya.',
   'notification.trip.copied.title': '{tripTitle} sudah siap',
-  'notification.trip.copied.body':
-    '{days} hari dan {places} tempat ikut tersalin.',
+  'notification.trip.copied.body': {
+    other: '{days} hari ikut tersalin',
+  },
+  'notification.trip.copied.places': {
+    other: '{places} tempat',
+  },
   'notification.trip.copied.dropped': {
     other: '{dropped} catatan dibuang',
   },

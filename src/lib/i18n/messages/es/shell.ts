@@ -146,8 +146,16 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Buen momento para repasar la lista de equipaje y las reservas.',
   'notification.trip.copied.title': '{tripTitle} está listo',
-  'notification.trip.copied.body':
-    'Se copiaron {days} días y {places} lugares.',
+  'notification.trip.copied.body': {
+    one: 'Se copió {days} día',
+    many: 'Se copiaron {days} días',
+    other: 'Se copiaron {days} días',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} lugar',
+    many: '{places} lugares',
+    other: '{places} lugares',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} nota descartada',
     many: '{dropped} notas descartadas',

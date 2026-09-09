@@ -154,8 +154,18 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Czas sprawdzić listę rzeczy i rezerwacje.',
   'notification.trip.copied.title': '{tripTitle} jest gotowy',
-  'notification.trip.copied.body':
-    'Przeniesione dni: {days}, miejsca: {places}.',
+  'notification.trip.copied.body': {
+    one: 'Przeniesiony {days} dzień',
+    few: 'Przeniesione {days} dni',
+    many: 'Przeniesionych {days} dni',
+    other: 'Przeniesione {days} dnia',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} miejsce',
+    few: '{places} miejsca',
+    many: '{places} miejsc',
+    other: '{places} miejsca',
+  },
   'notification.trip.copied.dropped': {
     one: 'pominięto {dropped} notatkę',
     few: 'pominięto {dropped} notatki',

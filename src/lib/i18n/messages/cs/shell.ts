@@ -151,7 +151,18 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Je čas zkontrolovat seznam věcí a rezervace.',
   'notification.trip.copied.title': '{tripTitle} je připravená',
-  'notification.trip.copied.body': 'Přeneseno: {days} dní a {places} míst.',
+  'notification.trip.copied.body': {
+    one: 'Přeneseno: {days} den',
+    few: 'Přeneseno: {days} dny',
+    many: 'Přeneseno: {days} dne',
+    other: 'Přeneseno: {days} dní',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} místo',
+    few: '{places} místa',
+    many: '{places} místa',
+    other: '{places} míst',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} poznámka vynechána',
     few: '{dropped} poznámky vynechány',

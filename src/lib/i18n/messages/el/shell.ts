@@ -135,7 +135,14 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Ώρα να δείτε τη λίστα αποσκευών και τις κρατήσεις.',
   'notification.trip.copied.title': 'Το {tripTitle} είναι έτοιμο',
-  'notification.trip.copied.body': 'Πέρασαν {days} ημέρες και {places} μέρη.',
+  'notification.trip.copied.body': {
+    one: 'Πέρασε {days} ημέρα',
+    other: 'Πέρασαν {days} ημέρες',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} μέρος',
+    other: '{places} μέρη',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} σημείωση παραλείφθηκε',
     other: '{dropped} σημειώσεις παραλείφθηκαν',

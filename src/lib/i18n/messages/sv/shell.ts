@@ -138,8 +138,14 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Dags att gå igenom packlistan och bokningarna.',
   'notification.trip.copied.title': '{tripTitle} är klar',
-  'notification.trip.copied.body':
-    'Med följde {days} dagar och {places} platser.',
+  'notification.trip.copied.body': {
+    one: 'Med följde {days} dag',
+    other: 'Med följde {days} dagar',
+  },
+  'notification.trip.copied.places': {
+    one: '{places} plats',
+    other: '{places} platser',
+  },
   'notification.trip.copied.dropped': {
     one: '{dropped} anteckning föll bort',
     other: '{dropped} anteckningar föll bort',
