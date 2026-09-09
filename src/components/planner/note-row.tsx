@@ -102,9 +102,17 @@ const ICON_LABEL: Readonly<Record<DayNoteIcon, MessageKey>> = {
   'triangle-alert': 'trips.plan.note.icon.triangleAlert',
 }
 
-/** The stored name, narrowed to one this build can draw. */
+/**
+ * The stored name, narrowed to one this build can draw.
+ *
+ * `Object.hasOwn` rather than `in`: the column took any short text until `01-S2b`, so a row can
+ * hold `constructor` or `toString`, and `in` answers yes for both — the registry would then hand
+ * back a function off `Object.prototype` and the day would render an exception instead of a note.
+ */
 export function dayNoteIcon(name: string): DayNoteIcon {
-  return name in ICONS ? (name as DayNoteIcon) : DEFAULT_DAY_NOTE_ICON
+  return Object.hasOwn(ICONS, name)
+    ? (name as DayNoteIcon)
+    : DEFAULT_DAY_NOTE_ICON
 }
 
 /** The glyph for a stored icon name. Always resolves. */

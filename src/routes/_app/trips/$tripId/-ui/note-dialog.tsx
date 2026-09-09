@@ -305,6 +305,10 @@ function IconPicker({ value, onValueChange }: IconPickerProps) {
   return (
     <TooltipProvider>
       <RadioGroup
+        // The `Field` above draws the word "Icon" but wires it to a control id no
+        // radio group carries, so the group needs the name itself — the same line
+        // `console/-ui/provider-limit-dialog.tsx` draws for its own group.
+        aria-label={t('trips.plan.note.field.icon')}
         value={value}
         onValueChange={(next) => onValueChange(next as DayNoteIcon)}
         className="grid-cols-7 gap-1.5 sm:grid-cols-8"

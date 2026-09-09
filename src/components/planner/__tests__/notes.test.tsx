@@ -112,6 +112,18 @@ describe('NoteRow', () => {
     expect(screen.getByRole('img', { name: 'Note' })).toBeDefined()
   })
 
+  /**
+   * The registry is a plain object, so `'constructor' in ICONS` is true and the lookup would
+   * hand back `Object` for React to render. The column took any short text until `01-S2b`.
+   */
+  it('falls back for a stored name that is an Object.prototype member', () => {
+    for (const icon of ['constructor', 'toString', '__proto__']) {
+      const { unmount } = renderRow({ note: note({ id: 'n1', icon }) })
+      expect(screen.getByRole('img', { name: 'Note' })).toBeDefined()
+      unmount()
+    }
+  })
+
   it('offers no disclosure on a note that carries no detail', () => {
     renderRow({ note: note({ id: 'n1', detail: null }) })
 
