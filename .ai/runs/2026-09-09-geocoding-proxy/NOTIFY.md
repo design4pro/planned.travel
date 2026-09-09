@@ -101,3 +101,12 @@ no further gate.
   the base branch. No separate issue should be filed.
 - Whole gate re-run on the merged tree: agent-kit (v13), typecheck, lint, test, check-generated,
   build and e2e — all clean.
+
+## 2026-09-09T13:20:00Z — CI green, run closed
+
+- CI succeeded in full on `7437ef7f` (run 34343457284): `lint · typecheck · build`, three unit-test
+  shards and two e2e shards, all green. The job that failed on the stale agent layer passes on the
+  merged head, so the base merge was the whole fix and no code changed.
+- The Playwright journey that timed out locally under full-suite load also passes in CI — a second
+  independent green, which is what turns "unproven flake" into contention rather than a defect.
+- `ci-monitoring` removed. Nothing is outstanding from the automation's side.
