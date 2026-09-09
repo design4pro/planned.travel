@@ -72,6 +72,15 @@ thing a human must confirm before this spec is implemented. They reach no render
 `EffectiveLimits.rates` has exactly one consumer, `src/server/fns/transports.ts:696`, and no pricing
 or billing screen reads it — so changing them later is a one-line edit with no copy to follow.
 
+**Q1's arithmetic assumes a debounced client, and this module cannot enforce one.** "A hundred
+lookups per trip" is a hundred _settled_ queries; an undebounced type-ahead spends one per
+keystroke and would exhaust Free's 200 inside two place names. Round 7 put debounce and
+cancel-on-supersede with the UI stages because the server can observe neither, so the figure is a
+number handed over together with an obligation: `02-S11` and `02-S13` must debounce before their
+first request, and a consumer that does not is not a consumer these figures were sized for. This is
+recorded as a contract rather than a hope, and it is the first thing to re-check if a workspace
+reaches the ceiling.
+
 ## 📝 Proposed Solution
 
 One directory, `src/server/geo/**`, arranged exactly as `src/server/transit/**` is, because that
@@ -552,15 +561,16 @@ the second caller with the same seam, and is the right place to decide it once f
 
 ## 📝 Risks & Impact Review
 
-| Risk                                              | Blast radius                                         | Mitigation                                                                                                                                         |
-| ------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Moving `meter.ts` breaks the transit tally        | Connection search stops metering or stops working    | The move is mechanical; `rateMeterKey` is unchanged and asserted so; the meter's existing cases move with it and their bodies are not edited       |
-| An unexpiring cache holds a wrong answer for ever | One query, in one language, permanently mis-resolved | Empty answers are never cached; entries are re-validated on read; `GEO_CACHE_VERSION` is the eviction lever and exists for exactly this            |
-| Free being non-zero opens a new abuse surface     | Vendor credits spent by workspaces paying nothing    | 200 a month is a small number, the cache is shared so repeated questions are free, and `provider_registry` + block policy is the operator backstop |
-| Provisional plan figures ship unreviewed          | One constant, invisible to any screen                | Q1 is marked ⚠ and gates the merge of this spec                                                                                                    |
-| Implemented before #220                           | A geocoding refusal reads as a transit refusal       | Stated as a precondition; the implementation PR should not open until #220 has merged                                                              |
-| `bindings.ts` ships with no caller                | A dead export until `02-S4`                          | Deliberate and documented in the file header; the same shape `src/server/transit/bindings.ts` shipped in                                           |
-| The vendor slug move touches console fixtures     | Two test files assert `geoapify` is _planned_        | Enumerated below and owned by this change under docs/SPEC.md §8                                                                                    |
+| Risk                                              | Blast radius                                         | Mitigation                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Moving `meter.ts` breaks the transit tally        | Connection search stops metering or stops working    | The move is mechanical; `rateMeterKey` is unchanged and asserted so; the meter's existing cases move with it and their bodies are not edited                                                                                                                                      |
+| An unexpiring cache holds a wrong answer for ever | One query, in one language, permanently mis-resolved | Empty answers are never cached; entries are re-validated on read; `GEO_CACHE_VERSION` is the eviction lever and exists for exactly this                                                                                                                                           |
+| Free being non-zero opens a new abuse surface     | Vendor credits spent by workspaces paying nothing    | 200 a month is a small number, the cache is shared so repeated questions are free, and `provider_registry` + block policy is the operator backstop                                                                                                                                |
+| Provisional plan figures ship unreviewed          | One constant, invisible to any screen                | Q1 is marked ⚠ and gates the merge of this spec                                                                                                                                                                                                                                   |
+| Implemented before #220                           | A geocoding refusal reads as a transit refusal       | Stated as a precondition; the implementation PR should not open until #220 has merged                                                                                                                                                                                             |
+| `bindings.ts` ships with no caller                | A dead export until `02-S4`                          | Deliberate and documented in the file header; the same shape `src/server/transit/bindings.ts` shipped in. If `02-S4` has not started by the time plan 02's PRD lands, the module is unexercised code with a maintenance cost and the schedule, not the design, is what to revisit |
+| An undebounced consumer blows through Free's 200  | A Free workspace refused mid-place-form              | The obligation is stated with the figures and handed to `02-S11` and `02-S13`; the server enforces query length, which is the only half it can see                                                                                                                                |
+| The vendor slug move touches console fixtures     | Two test files assert `geoapify` is _planned_        | Enumerated below and owned by this change under docs/SPEC.md §8                                                                                                                                                                                                                   |
 
 **Rollback.** Every part is additive or mechanical. Phase 2 reverts by deleting `src/server/geo/`
 and moving the slug back — no data has been written that a rollback strands, because
@@ -647,5 +657,6 @@ leaves the application working and is verified by the gate in `.ai/agentic.confi
 - A denormalised attribution column on `places` — `02-S4`'s call against its own rendering.
 - Splitting the operator block gate out of `callProvider` so a blocked call spends no tenant unit —
   #214's, once transit is the second caller.
-- Debounce, minimum-length-before-request and cancel-on-supersede in the client — `02-S11` and
+- Debounce, minimum-length-before-request and cancel-on-supersede in the client. Out of scope but
+  **load-bearing for Q1's figures**, per the note under the resolved assumptions — `02-S11` and
   `02-S13`.
