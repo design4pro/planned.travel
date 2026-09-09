@@ -17,6 +17,15 @@
         ],
         "createdAt": "2026-09-07T17:03:33.468Z",
         "reason": "agent decided: static spec mockup that must mirror the product's own type scale. src/styles/tokens.css sets --text-caption 12px, --text-label 13px, --text-body 15px, --text-subtitle 18px; those steps are deliberately below 1.25 and the mockup depicts them rather than proposing a new scale. Widening them here would misrepresent the screen being specified."
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          ".ai/specs/assets/writable-day-note/mockup-01-note-row.html"
+        ],
+        "createdAt": "2026-09-08T16:21:40.068Z",
+        "reason": "Mockup reproduces the DESIGN.md small-end type ramp verbatim - micro 11px / caption 12px / label 13px - whose documented steps are ~1.09 apart, below the rule's 1.25 target; hierarchy in the planner rail comes from weight and ink colour, not size. Off-token 14px base was fixed to the 15px body token instead of suppressed."
       }
     ]
   }
