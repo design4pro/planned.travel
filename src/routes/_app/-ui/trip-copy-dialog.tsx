@@ -57,14 +57,20 @@ function localDay(value: string | null): Date | null {
   return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
 }
 
-/** The source's own run, prefilled. `null` when the source is an undated template. */
+/**
+ * The source's own run, prefilled. `null` unless the source has **both** ends.
+ *
+ * A trip with a departure date and no return is an ordinary shape the trip form saves —
+ * `datesInOrder` only compares the two when both are there — and prefilling that half-open range
+ * would open the dialog already invalid: `halfOpen` below would be true before the reader touched
+ * anything, the Dates field would show its "set both" error and the Copy button would be disabled.
+ * A source with one end is treated as an undated template, which is the state the reader can act
+ * on rather than one they have to repair.
+ */
 function rangeOf(trip: TripCard): DateRange | null {
   const from = localDay(trip.startDate)
-  if (from === null) {
-    return null
-  }
   const to = localDay(trip.endDate)
-  return to === null ? { from } : { from, to }
+  return from === null || to === null ? null : { from, to }
 }
 
 export interface TripCopyDialogProps {

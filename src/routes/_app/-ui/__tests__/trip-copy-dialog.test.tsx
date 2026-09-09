@@ -55,10 +55,13 @@ function april(day: number): string {
   return format(new Date(2026, 3, day), 'EEEE d MMMM yyyy')
 }
 
-function open(onOpenChange: (open: boolean) => void = () => {}): void {
+function open(
+  onOpenChange: (open: boolean) => void = () => {},
+  trip = SOURCE,
+): void {
   render(
     <I18nProvider locale="en" messages={EN}>
-      <TripCopyDialog trip={SOURCE} open onOpenChange={onOpenChange} />
+      <TripCopyDialog trip={trip} open onOpenChange={onOpenChange} />
     </I18nProvider>,
   )
 }
@@ -127,6 +130,31 @@ describe('TripCopyDialog', () => {
     await pick(user, 1, 20)
 
     expect(screen.queryByText(HINT)).toBeNull()
+  })
+
+  it('opens ready to copy a source that has a departure date and no return', async () => {
+    copyTrip.mockResolvedValue({ tripId: 'trip-2', copyPending: true })
+    // A shape the trip form saves: `datesInOrder` only compares the two dates when both are there,
+    // so a departure with the return left blank is an ordinary trip. Seeding the picker with that
+    // half-open range opened the dialog already broken — the "set both" error showing and Copy
+    // disabled before the reader had touched anything.
+    open(() => {}, tripCard({ startDate: '2026-04-01', endDate: null }))
+
+    expect(screen.queryByText('Set both dates, or clear them both.')).toBeNull()
+    const copy = screen.getByRole('button', { name: 'Copy trip' })
+    expect((copy as HTMLButtonElement).disabled).toBe(false)
+    // With one end missing the source is an undated template, so there is no range to clear.
+    expect(
+      screen.queryByRole('button', { name: 'Copy without dates' }),
+    ).toBeNull()
+
+    submit()
+    await vi.waitFor(() => {
+      expect(copyTrip).toHaveBeenCalledTimes(1)
+    })
+    expect(copyTrip.mock.calls[0][0]).toEqual({
+      data: { tripId: 'trip-1', title: 'Lisbon in April' },
+    })
   })
 
   it('clears both ends at once, and copies the trip as an undated template', async () => {
