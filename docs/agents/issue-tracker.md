@@ -45,8 +45,12 @@ PR says `Refs #n`. `do-not-close` on the issue wins over both.
 A feature is specified before it is built. `om-auto-write-spec` (command label `spec`) writes
 `.ai/specs/<YYYY-MM-DD>-<slug>.md` on a design-only PR (`spec/<slug>`, `documentation`,
 `skip-qa`) that references the issue; the sections a spec must carry here are in
-`.ai/skills/om-auto-write-spec/SKILL.md` ("Visual change expected", "Copy"). A human merges the
-spec PR, then starts `implement-spec` from the cockpit with the spec path, its issue number or the
-spec-PR number; the implementation ships on its own PR with `Closes #n`. Interactive thinking
+`.ai/skills/om-auto-write-spec/SKILL.md` ("Visual change expected", "Copy"). That PR says
+`Refs #n`, never a closing keyword, so the issue stays open and **is** the implementation ticket -
+no second issue is filed for building what the spec describes (ADR 0018). A human merges the spec
+PR, then adds `autofix` to that same issue, and `om-auto-fix-issue`'s feature route resolves the
+merged spec and hands it to `om-auto-implement-spec`; starting `implement-spec` from the cockpit
+with the spec path, its issue number or the spec-PR number is that same skill by hand. Either way
+the implementation ships on its own PR with `Closes #n`. Interactive thinking
 before an issue exists is `brainstorm` (`om-brainstorm`), which ends by filing the issue through
 `om-prepare-issue`.
