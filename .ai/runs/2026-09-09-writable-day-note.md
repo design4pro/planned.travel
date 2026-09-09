@@ -88,6 +88,6 @@ Taken from the spec's Implementation Plan, unchanged in substance.
 - [x] 2.3 The server functions — `writableTripDay`, the read and the four writes — e86bbe8d
 - [x] 2.4 The loader and the model — `Promise.all` and `notesByDay` — 73a0e471
 - [x] 2.5 The copy — every key in all 23 locales — 17022918
-- [ ] 2.6 The row — `note-row.tsx` and the day's note run
+- [x] 2.6 The row — `note-row.tsx` and the day's note run — 047b9d82
 - [ ] 2.7 The editor — `note-dialog.tsx` and its wiring
 - [ ] 2.8 The gate and the evidence — the e2e block, the full gate, the A/B pair
