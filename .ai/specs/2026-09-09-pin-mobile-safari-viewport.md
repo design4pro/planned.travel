@@ -11,32 +11,37 @@ survive that check** — the harm is real, but it is a different one, and it is 
 
 `playwright.config.ts` pins the `chromium` project's viewport as code (`1440x900`, line 174) and
 lets the `mobile-safari` project inherit its geometry invisibly from `devices['iPhone 15']`, with a
-two-line comment restating what that geometry currently is. Both lines of that comment are already
-wrong about the repository. This spec deletes the comment, adds
-`viewport: { width: 393, height: 659 }` to the `mobile-safari` project's `use` after the descriptor
-spread, and writes one clause into journey 7 saying the phone geometry it measures against is
-pinned in the config. The pinned value equals today's descriptor byte-for-byte, so no test changes
-behaviour. Test configuration only: no route, no schema, no locale key, no user-facing pixel.
+two-line comment restating what that geometry currently is. Neither line earns its place: the first
+restates a value the code could simply hold, and the second is factually stale about the repository.
+This spec deletes the comment, adds `viewport: { width: 393, height: 659 }` to the `mobile-safari`
+project's `use` after the descriptor spread, and writes one clause into journey 7 saying the phone
+geometry it measures against is pinned in the config. The pinned value equals today's descriptor
+byte-for-byte, so no test changes behaviour. Test configuration only: no route, no schema, no locale
+key, no user-facing pixel.
 
 ## 📝 Problem Statement
 
 ### What is actually at risk
 
-`e2e/journeys.spec.ts:502-540` — journey 7, "a finger reaches the same facts on a phone" — is the
-only reason the `mobile-safari` project exists, and its assertions are **calibrated to a specific
-pixel geometry**, in numbers written into the test and its doc comment:
+`e2e/journeys.spec.ts:502-743` — journey 7, "a finger reaches the same facts on a phone", its doc
+comment at `:502-539` and its body at `:540-743` — is the only reason the `mobile-safari` project
+exists, and its assertions are **calibrated to a specific pixel geometry**, in numbers written into
+the test and its doc comment:
 
-| The number                       | Where                              | What it is                                                                                          |
-| -------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------- |
-| "a 393px handset"                | `e2e/journeys.spec.ts:507`, `:517` | The width the composition argument is made at                                                       |
-| "about 570 usable pixels of map" | `e2e/journeys.spec.ts:517-518`     | Viewport height minus the shell chrome — derived from 659, not from 852                             |
-| "wants five hundred and forty"   | `e2e/journeys.spec.ts:518-519`     | The panel height that does not fit in those 570, which is the whole point of the `squeezed` fitting |
-| "measured at 0,595 98x64"        | `e2e/journeys.spec.ts:533`         | The dev-toolbar badge over the "Trips" tab. **595 + 64 = 659** — its box bottom _is_ the viewport   |
-| `setViewportSize({ 360, 640 })`  | `e2e/journeys.spec.ts:691`         | A second, explicit width the same test drops to for the fold assertion                              |
+| The number                       | Where                              | What it is                                                                                                                                                                                                     |
+| -------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "a 393px handset"                | `e2e/journeys.spec.ts:507`, `:514` | The width the composition argument is made at                                                                                                                                                                  |
+| "about 570 usable pixels of map" | `e2e/journeys.spec.ts:514`         | Viewport height minus the shell chrome — derived from 659, not from 852                                                                                                                                        |
+| "wants five hundred and forty"   | `e2e/journeys.spec.ts:515-516`     | The panel's full height. It fits inside those 570, but consumes so much of them that no side of the country is left free — so the placement gives up height and takes an edge, which is the `squeezed` fitting |
+| "measured at 0,595 98x64"        | `e2e/journeys.spec.ts:532`         | The dev-toolbar badge over the "Trips" tab. **595 + 64 = 659** — its box bottom _is_ the viewport                                                                                                              |
+| `setViewportSize({ 360, 640 })`  | `e2e/journeys.spec.ts:691`         | A second, explicit width the same test drops to for the fold assertion                                                                                                                                         |
 
-The last row of that table is the proof: the badge measurement is only true at a viewport height of
-exactly 659. Nothing in the repository states 659. It is read at run time out of
-`playwright-core`'s `devices['iPhone 15']`, a table upstream regenerates — the descriptor's own
+The badge row is the proof: the badge measurement is only true at a viewport height of exactly 659.
+No code in this repository sets that number. It is named only in prose — the `mobile-safari` comment
+this spec deletes (`playwright.config.ts:181`), journey 7's file header (`e2e/journeys.spec.ts:34`),
+`e2e/helpers/settle.ts:195,352` and ADR 0016 — and prose cannot constrain a value. The geometry
+itself is read at run time out of `playwright-core`'s `devices['iPhone 15']`, a table upstream
+regenerates — the descriptor's own
 user-agent string on `1.62.1` reads `Version/26.5`, so these entries demonstrably track Safari
 releases rather than sitting frozen. `package.json` carries `"@playwright/test": "^1.62.1"` and
 dependabot opens a minor-and-patch bump against this repository routinely (#294 is open now).
@@ -95,15 +100,15 @@ clause pointing at it and nothing else.
 This spec was written unattended. Each answer below is the most reversible reading; override any of
 them on the PR before merge.
 
-| #   | Question                                                                                  | Applied default                                                                                                       | Why                                                                                                                                                                                                                                                                                                    |
-| --- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Q1  | Does the comment "collapse to nothing", as the issue directs, or is it replaced?          | **Replaced by one line** that names _why_ the number is pinned, never what the descriptor currently holds.            | The issue's objection is to prose that restates a value the code can hold — and that objection is fully honoured, because the replacement asserts nothing about `devices['iPhone 15']`. `659` is not a self-explaining number, and the reason it must not move is not derivable from the config alone. |
-| Q2  | Pin `screen` (`393x852`), `deviceScaleFactor` or the user-agent too?                      | **No.** Only `viewport`; everything else keeps coming from the spread.                                                | Viewport is what the layout, `100dvh` and every journey-7 measurement resolve against. Nothing in `e2e/**` or `src/**` reads `window.screen`, and pinning a user-agent would freeze the WebKit persona the project exists to exercise.                                                                 |
-| Q3  | Touch `e2e/journeys.spec.ts` at all?                                                      | **Yes — one clause**, in journey 7's existing doc comment, and no assertion or literal changes.                       | §8: the concept is true in both files. Without it the pin looks arbitrary from the config and the `393px handset` looks like a coincidence from the test. Bounded to a clause so it stays a surgical change.                                                                                           |
-| Q4  | Add a drift assertion — a test that `devices['iPhone 15'].viewport` still equals the pin? | **No.**                                                                                                               | It would re-couple exactly what the pin decouples, and go red on a legitimate upstream bump that changes nothing about this product. After the pin the descriptor's viewport is simply not consulted; a divergence is the pin working, not a defect.                                                   |
-| Q5  | Pin the `setup` project's `Desktop Chrome` viewport for symmetry?                         | **No.** Out of scope.                                                                                                 | `setup` signs in and writes storage state; it asserts no layout, so no number of its is load-bearing. Pinning it would be speculative symmetry.                                                                                                                                                        |
-| Q6  | Is a re-run or re-baselining of the suite required?                                       | **No re-baselining exists to do**; the gate runs the suite anyway.                                                    | Verified: `devices['iPhone 15'].viewport` on `playwright-core@1.62.1` is `{ width: 393, height: 659 }`, byte-for-byte the pinned value, so every journey runs at the identical geometry. And there is no stored pixel to re-record (ADR 0016).                                                         |
-| Q7  | The issue is labelled `feature`; is it one?                                               | **Recorded, not corrected here.** The spec PR carries `documentation`; the implementation PR should carry `refactor`. | It ships no capability — it moves a value from an upstream table into this repository. Relabelling someone else's issue is not this skill's mutation to make; naming it is enough for the human who grooms it.                                                                                         |
+| #   | Question                                                                                  | Applied default                                                                                                                                    | Why                                                                                                                                                                                                                                                                                                    |
+| --- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Q1  | Does the comment "collapse to nothing", as the issue directs, or is it replaced?          | **Replaced by the short comment block quoted in Architecture**, which names _why_ the number is pinned, never what the descriptor currently holds. | The issue's objection is to prose that restates a value the code can hold — and that objection is fully honoured, because the replacement asserts nothing about `devices['iPhone 15']`. `659` is not a self-explaining number, and the reason it must not move is not derivable from the config alone. |
+| Q2  | Pin `screen` (`393x852`), `deviceScaleFactor` or the user-agent too?                      | **No.** Only `viewport`; everything else keeps coming from the spread.                                                                             | Viewport is what the layout, `100dvh` and every journey-7 measurement resolve against. Nothing in `e2e/**` or `src/**` reads `window.screen`, and pinning a user-agent would freeze the WebKit persona the project exists to exercise.                                                                 |
+| Q3  | Touch `e2e/journeys.spec.ts` at all?                                                      | **Yes — one clause**, in journey 7's existing doc comment, and no assertion or literal changes.                                                    | §8: the concept is true in both files. Without it the pin looks arbitrary from the config and the `393px handset` looks like a coincidence from the test. Bounded to a clause so it stays a surgical change.                                                                                           |
+| Q4  | Add a drift assertion — a test that `devices['iPhone 15'].viewport` still equals the pin? | **No.**                                                                                                                                            | It would re-couple exactly what the pin decouples, and go red on a legitimate upstream bump that changes nothing about this product. After the pin the descriptor's viewport is simply not consulted; a divergence is the pin working, not a defect.                                                   |
+| Q5  | Pin the `setup` project's `Desktop Chrome` viewport for symmetry?                         | **No.** Out of scope.                                                                                                                              | `setup` signs in and writes storage state; it asserts no layout, so no number of its is load-bearing. Pinning it would be speculative symmetry.                                                                                                                                                        |
+| Q6  | Is a re-run or re-baselining of the suite required?                                       | **No re-baselining exists to do**; the gate runs the suite anyway.                                                                                 | Verified: `devices['iPhone 15'].viewport` on `playwright-core@1.62.1` is `{ width: 393, height: 659 }`, byte-for-byte the pinned value, so every journey runs at the identical geometry. And there is no stored pixel to re-record (ADR 0016).                                                         |
+| Q7  | The issue is labelled `feature`; is it one?                                               | **Recorded, not corrected here.** The spec PR carries `documentation`; the implementation PR should carry `refactor`.                              | It ships no capability — it moves a value from an upstream table into this repository. Relabelling someone else's issue is not this skill's mutation to make; naming it is enough for the human who grooms it.                                                                                         |
 
 None carries a security, tenancy or product-decision risk. The change touches no runtime code, no
 D1 schema, no locale key and no surface listed in `BACKWARD_COMPATIBILITY.md`.
@@ -113,10 +118,10 @@ D1 schema, no locale key and no surface listed in `BACKWARD_COMPATIBILITY.md`.
 Three edits, one commit.
 
 1. **Pin the viewport.** `viewport: { width: 393, height: 659 }` in the `mobile-safari` project's
-   `use`, after the `...devices['iPhone 15']` spread so it wins, exactly as `chromium` does four
-   lines above.
-2. **Delete the two-line comment** and put one line in its place saying the pin is deliberate and
-   what depends on it.
+   `use`, after the `...devices['iPhone 15']` spread so it wins, exactly as `chromium` does in the
+   project above it (`:174`).
+2. **Delete the two-line comment** and put in its place the short comment block quoted in
+   **Architecture**, saying the pin is deliberate and what depends on it.
 3. **One clause in journey 7's doc comment** pointing at the config as the owner of the 393px
    handset it argues about.
 
@@ -142,10 +147,10 @@ Three edits, one commit.
 
 ### `playwright.config.ts` — edited
 
-| Site                             | Change                                                                                                                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `:181-182`, the two-line comment | Deleted. Line 1 restates the descriptor; line 2 describes a capture mechanism ADR 0016 removed.                                                                                 |
-| `:183`, the `use` block          | Expanded to the multi-line form `chromium` already uses, gaining `viewport: { width: 393, height: 659 }` after the spread and before `extraHTTPHeaders`, with one comment line. |
+| Site                             | Change                                                                                                                                                                                        |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `:181-182`, the two-line comment | Deleted. Line 1 restates the descriptor; line 2 describes a capture mechanism ADR 0016 removed.                                                                                               |
+| `:183`, the `use` block          | Expanded to the multi-line form `chromium` already uses, gaining `viewport: { width: 393, height: 659 }` after the spread and before `extraHTTPHeaders`, with the comment block quoted below. |
 
 The resulting project, in full:
 
@@ -172,11 +177,13 @@ untouched.
 
 ### `e2e/journeys.spec.ts` — edited
 
-One clause, in the numbered item 2 of journey 7's doc comment where "A 393px handset" first appears
-(`:517`), recording that the geometry is pinned in `playwright.config.ts` and not inherited. No
-assertion, no locator, no literal and no `setViewportSize` call changes — the `360x640` fold
-assertion at `:691` and the `360x900` impersonation width at `:1445` are per-test overrides of a
-different kind and stay exactly as they are.
+One clause, in numbered item 2 of journey 7's doc comment, where the composition argument states its
+width — "A 393px handset leaves about 570 usable pixels of map" (`:514`) — recording that the
+geometry is pinned in `playwright.config.ts` and not inherited. The phrase also occurs earlier, in
+the block's opening paragraph (`:507`); item 2 is where the number is spent, so that is where the
+clause belongs. No assertion, no locator, no literal and no `setViewportSize` call changes — the
+`360x640` fold assertion at `:691` and the `360x900` impersonation width at `:1445` are per-test
+overrides of a different kind and stay exactly as they are.
 
 ### Files this spec does **not** touch
 
@@ -261,7 +268,7 @@ on a playwright bump" from either file.
 
 1. **Pin the viewport and settle the prose.** Delete `playwright.config.ts:181-182`, expand the
    `mobile-safari` `use` block to the multi-line form with
-   `viewport: { width: 393, height: 659 }` after the spread and the one-line comment from
+   `viewport: { width: 393, height: 659 }` after the spread and the comment block from
    **Architecture**; add the pointing clause to journey 7's doc comment in `e2e/journeys.spec.ts`.
    _Verify:_ the descriptor read above prints `{"width":393,"height":659}` (paste it in the PR);
    `rg 'never captured' playwright.config.ts` returns nothing; then the full gate —
