@@ -78,13 +78,15 @@ _Verify:_ all green. No screenshots — the spec's Visual change expected is "no
 
 ## Progress
 
+PR: #382
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: one owner, two call sites
 
-- [ ] 1.1 File the Q5 follow-up issue
-- [ ] 1.2 Add `memberTripIds` to `trips.ts`
-- [ ] 1.3 Write the year-boundary and tenant-isolation tests
-- [ ] 1.4 Rewire both call sites and delete `memberOfTrip`
-- [ ] 1.5 Correct the spec's Trip-quota row
-- [ ] 1.6 Run the full validation gate
+- [x] 1.1 File the Q5 follow-up issue — #381
+- [x] 1.2 Add `memberTripIds` to `trips.ts` — 02b4576c
+- [x] 1.3 Write the year-boundary and tenant-isolation tests — af8d41cb
+- [x] 1.4 Rewire both call sites and delete `memberOfTrip` — 74dcc534
+- [x] 1.5 Correct the spec's Trip-quota row — 19d2c522
+- [x] 1.6 Run the full validation gate — all seven commands green

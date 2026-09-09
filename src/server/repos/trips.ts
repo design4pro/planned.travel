@@ -340,8 +340,9 @@ export function favouritedTripFilter(scope: TenantScope): SQL {
  * A sub-select rather than a materialized `Array<string>` because D1 refuses a statement carrying
  * more than {@link MAX_BOUND_PARAMETERS} bound parameters and drizzle binds one per id, while the
  * paid plans sell unlimited trips: an id list would make the stat row of a traveller with a few
- * hundred lifetime trips fail where it succeeds today. Passed to `inArray`, this binds three — the
- * tenant and the user — however many trips the traveller is on.
+ * hundred lifetime trips fail where it succeeds today. This side binds two, the tenant and the user,
+ * however many trips the traveller is on — three for the whole statement once the consumer has bound
+ * its own tenant, against the one-per-id an `inArray` over a materialized list would have cost.
  *
  * Both sides are `tenantFilter()`-bound, so the membership half can no more cross an organization
  * boundary than the statement that consumes it can. The sub-select drives from
