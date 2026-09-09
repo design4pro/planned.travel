@@ -167,7 +167,7 @@ export function NoteRow({
       data-motion-transform=""
       style={{ animationDelay: staggerDelay(position) }}
       className={cn(
-        'group/note animate-rise flex flex-col rounded-lg px-1 py-1',
+        'group/note animate-rise relative flex flex-col rounded-lg px-1 py-1',
         transitionBase,
         pending && 'opacity-60',
       )}
@@ -229,10 +229,19 @@ export function NoteRow({
         </span>
 
         {canWrite ? (
+          // Over the row rather than beside it. Four controls beside the text would
+          // reserve roughly a third of a rail that is 340px wide on a 1280px screen,
+          // and the note — the thing being read — would wrap into a column barely
+          // wider than its own timestamp. So the cluster leaves the flow, and floats
+          // on its own surface when the row is hovered or holds focus.
           <span
             className={cn(
-              'flex shrink-0 items-center',
+              'absolute end-1 top-0.5 z-10 flex items-center rounded-lg',
+              'border border-edge bg-surface shadow-card',
               'opacity-0 group-hover/note:opacity-100 group-focus-within/note:opacity-100',
+              // An invisible layer over the headline would still take the pointer,
+              // and the reader would be selecting nothing where the words are.
+              'pointer-events-none group-hover/note:pointer-events-auto group-focus-within/note:pointer-events-auto',
               transitionBase,
             )}
           >
