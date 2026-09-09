@@ -187,7 +187,9 @@ current = [ ...stops  → { kind: 'stop', id, position: orderIndex },
           .sort(by position, then id)                        ← the sort reorderDayTimeline itself uses
 
 ordered = dedupe(noteIds ∩ ids(notes))                       ← foreign and repeated ids dropped
-        ++ (notes not named, in their current order)         ← an omission changes nothing
+for each note of current, in order, that ordered does not name:
+    splice it into ordered directly behind its predecessor
+    note in current, or at the front when it has none        ← an omission moves nothing
 
 items   = current.map(entry => entry.kind === 'stop' ? entry : ordered.shift())
 
@@ -195,7 +197,10 @@ reorderDayTimeline(scope, { tripId, dayId, items })
 ```
 
 Because `items` names every row of the day, `reorderDayTimeline`'s dedupe and splice branches are
-no-ops and it simply writes `position = index`. The consequences are the point:
+no-ops and it simply writes `position = index`. That is also why `ordered` splices the omitted notes
+back itself, with the rule `reorderDayTimeline` applies at `itinerary.ts:519-533`: appending them to
+the end would move every omitted note into the day's last note slots, and no downstream branch is
+left to rescue them. The consequences are the point:
 
 - **Stops never move.** Each stop keeps the slot index it held in `current`.
 - **Ties are resolved, permanently.** A day whose notes all sit at the default `0` comes out dense
@@ -203,14 +208,15 @@ no-ops and it simply writes `position = index`. The consequences are the point:
   notes already held would be a no-op on exactly that day — the common one.
 - **One owner.** The only code that writes the position line is still `reorderDayTimeline`.
 
-Worked example, day `d1` at `stop@0, note@0, stop@1, note@2`, reader moves `n2` above `n1`:
+Worked example, day `d1` holding `s1@0`, `n1@0`, `s2@1` and `n2@2` — a stop and a note tied at `0`,
+so the id breaks it — and the reader moves `n2` above `n1`:
 
 |                                    | before                   | after                    |
 | ---------------------------------- | ------------------------ | ------------------------ |
-| `current` (sorted by position, id) | `s1@0, n1@0, s2@1, n2@2` | —                        |
+| `current` (sorted by position, id) | `n1@0, s1@0, s2@1, n2@2` | —                        |
 | `ordered`                          | —                        | `[n2, n1]`               |
-| `items`                            | —                        | `s1, n2, s2, n1`         |
-| written positions                  | `0, 0, 1, 2`             | `s1=0, n2=1, s2=2, n1=3` |
+| `items`                            | —                        | `n2, s1, s2, n1`         |
+| written positions                  | `0, 0, 1, 2`             | `n2=0, s1=1, s2=2, n1=3` |
 
 The stops keep their relative order and their slots; the notes swap; nothing is left tied.
 
@@ -253,7 +259,8 @@ export interface PlanNote {
   readonly body: string
   readonly detail: string | null
   readonly time: string | null
-  readonly icon: DayNoteIcon
+  /** As stored. Narrow at the render boundary, never here — see below. */
+  readonly icon: string
   readonly sortOrder: number
 }
 
@@ -273,6 +280,13 @@ export interface PlanNotesPayload {
   onto a day of another trip, by a non-member, or by a viewer. `updateDayNoteFn` and
   `deleteDayNoteFn` resolve the note row first and guard the trip and day **that row names** — the
   client's `tripId` addresses the note, it never chooses what is guarded.
+- **`PlanNote.icon` is a `string`, not `DayNoteIcon`.** The enum is a **write** constraint: it lands
+  in Step 3 and no migration or `CHECK` narrows what is already stored, so every row written while
+  `icon` was `shortTextSchema.min(1).optional()` (`days.ts:55`) may hold any short string. Typing the
+  read as `DayNoteIcon` would make the loader lie about its own rows and force an unsound cast to
+  produce the case the Step 8 test names. The fallback belongs where it already lives in this
+  codebase — the render registry, exactly as `categoryIcon(name: string | null | undefined)` takes it
+  (`map/category-icon.tsx:86`). `DayNoteIcon` stays the type of what the picker sends.
 - **`reorderDayNotesFn`** additionally bounds its input at `z.array(idSchema).max(200)`, matching
   `reorderDayTimelineInput` (`itinerary.ts:123`), so one request cannot ask for an unbounded batch.
 - **Blank means "no value".** `detail` and `time` arrive as trimmed strings and are mapped through a
@@ -498,7 +512,7 @@ server validator messages into the catalogue is product-wide work and is not thi
 | An emptied `detail`                                                    | `blankToNull` at the route boundary makes it `null`, so the disclosure disappears rather than a `''` being stored.                                                                                                                                                                                                            |
 | `noteIds` with an id that is not the day's                             | Dropped by the intersection; the rest of the move still applies.                                                                                                                                                                                                                                                              |
 | `noteIds` with a repeated id                                           | Deduped; the day still names every row exactly once, so no position is left unassigned.                                                                                                                                                                                                                                       |
-| `noteIds` omitting one of the day's notes                              | The omitted note keeps its place in the note order, appended in its current relative position, so an omission moves nothing.                                                                                                                                                                                                  |
+| `noteIds` omitting one of the day's notes                              | The omitted note is spliced back directly behind the note it currently follows — at the front when it follows none — so an omission moves nothing.                                                                                                                                                                            |
 | A day whose notes all sit at the default `0`                           | The move still works: `reorderDayTimeline` rewrites the day densely, so the tie is gone after the first move and never returns.                                                                                                                                                                                               |
 | A day with one note                                                    | The sequence is unchanged; `reorderDayTimeline` writes the same positions back.                                                                                                                                                                                                                                               |
 | A `reorderDayNotesFn` racing a concurrent drag through `reorderPlanFn` | Both go through `reorderDayTimeline`, which re-reads the day inside the call and writes one `runBatch` — one D1 transaction. Last write wins on a dense line; no day is left half-permuted and no tie can result. The loser's router invalidation shows them the winner's order.                                              |
