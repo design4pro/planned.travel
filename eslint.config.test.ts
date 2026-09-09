@@ -48,7 +48,12 @@ beforeAll(async () => {
   for (const path of PATHS) ignored.set(path, await eslint.isPathIgnored(path))
 }, 60_000)
 
-/** Reads the collected answer, and fails loudly rather than silently on a path nobody asked for. */
+/**
+ * Reads a collected answer. A path missing from `PATHS` reads as `undefined`, which `toBe` -
+ * `Object.is` - refuses against both `true` and `false`, so it fails the case either way rather
+ * than passing one direction by accident. The parameter type refuses it a step earlier, at
+ * `pnpm typecheck`.
+ */
 const wasIgnored = (path: (typeof PATHS)[number]) => ignored.get(path)
 
 describe('eslint.config.js ignore list', () => {

@@ -122,6 +122,9 @@ export default [
       // same non-reason. Only the `artifacts_*` directories, so the shared
       // `.ai/qa/playwright.config.ts` the same descriptor writes for a repo with no Playwright
       // config of its own stays linted - this repo has one, in the root, so it is never written.
+      // `.ai/qa` is the default `paths.qa` and is spelled out here the way `.gitignore` spells it
+      // out: move it in `.ai/agentic.config.json` and this goes stale, but the gitignore entry
+      // goes stale first and louder, with the artefacts turning up in `git status`.
       '.ai/qa/artifacts_*/**',
       'dist/**',
       'playwright-report/**',
