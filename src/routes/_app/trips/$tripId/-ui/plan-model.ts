@@ -15,7 +15,11 @@
  */
 
 import { ideaItemId } from '#/components/planner'
-import { formatTime, formatTimeRange, formatWeekday } from '../../../-lib/format'
+import {
+  formatTime,
+  formatTimeRange,
+  formatWeekday,
+} from '../../../-lib/format'
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 
 import type { Locale } from '#/lib/i18n/locales'
