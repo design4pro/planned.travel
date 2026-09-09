@@ -291,7 +291,9 @@ export type PlannedProvider = (typeof PLANNED_PROVIDERS)[number]
  *
  * Conflating the two with a cast is not hypothetical: `saveProviderLimit` did exactly that, and the
  * cast let a planned slug reach a `z.enum(METERED_PROVIDERS)` parse that would have thrown on the
- * first ceiling anybody entered for Geoapify.
+ * first ceiling anybody entered for Geoapify — which was a planned slug when that repair was made
+ * and is a metered one now. The bug it fixed belongs to the *state*, not to the vendor: `here` and
+ * `workers-ai` are still waiting on the same door.
  */
 export type ProviderSlug = MeteredProvider | PlannedProvider
 export type ProviderUsageGrain = (typeof PROVIDER_USAGE_GRAINS)[number]

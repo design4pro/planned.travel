@@ -128,6 +128,18 @@ FIRECRAWL_WEBHOOK_SECRET=
 HERE_API_KEY=
 
 
+# ── Geocoding (optional; every lookup that misses the cache refuses) ─────────
+
+# https://myprojects.geoapify.com → project → API key. The geocoding proxy in
+# `src/server/geo/` reads it once per Worker; unset, a lookup that misses the
+# shared cache refuses with `unconfigured` and spends none of the workspace's
+# monthly allowance on it, while answers already cached are still served with
+# their attribution intact. The free plan's terms are the ones ADR 0013 read,
+# and the day ceiling they set is a `provider_registry` row rather than a value
+# in this file.
+GEOAPIFY_API_KEY=
+
+
 # ── MCP staff tokens (optional; the agent surface stays off without it) ──────
 
 # HMAC-SHA256 key over a staff token's raw UTF-8 bytes; the digest is stored

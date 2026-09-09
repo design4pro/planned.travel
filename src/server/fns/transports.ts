@@ -39,7 +39,7 @@ import {
 import { billingRuntime } from '#/server/billing/runtime.cloudflare'
 import { billingContext } from '#/server/billing/types'
 import { transitRuntime } from '#/server/transit/bindings'
-import { RateCeilingError } from '#/server/transit/meter'
+import { RateCeilingError } from '#/server/metering/rate'
 import {
   TransitProviderError,
   searchTransitConnections,

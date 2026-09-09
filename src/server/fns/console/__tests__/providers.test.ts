@@ -140,6 +140,32 @@ describe('saveProviderLimit', () => {
   })
 
   it('saves a ceiling for a provider that has no client, without reading usage it cannot have', async () => {
+    // `here` rather than `geoapify`, which used to stand here: geoapify was adopted into
+    // METERED_PROVIDERS when `src/server/geo/` was minted, so it now has a client and reads real
+    // counters. The property is about the *state*, not the vendor, and `here` is still in it.
+    const panel = await saveProviderLimit({
+      ...INPUT,
+      slug: 'here',
+      label: 'HERE',
+      callLimit: 30_000,
+    })
+
+    expect(panel).toMatchObject({
+      slug: 'here',
+      integrated: false,
+      limitWindow: 'month',
+      callLimit: 30_000,
+    })
+    // Structurally zero rather than measured, which is what `integrated: false` tells the screen.
+    expect(panel.series).toEqual([])
+    expect(panel.measuringSince).toBeNull()
+  })
+
+  it('saves a day-windowed ceiling for the adopted geocoding provider', async () => {
+    // ADR 0013 buys Geoapify on a **daily** allowance, which is why `limit_window` accepts `day`
+    // and not only `month`. The slug is metered now, so unlike the case above this one does read
+    // its counters — and the day window has to survive the adoption, since it is the term the
+    // ceiling was agreed under.
     const panel = await saveProviderLimit({
       ...INPUT,
       slug: 'geoapify',
@@ -150,13 +176,11 @@ describe('saveProviderLimit', () => {
 
     expect(panel).toMatchObject({
       slug: 'geoapify',
-      integrated: false,
+      integrated: true,
       limitWindow: 'day',
       callLimit: 3000,
+      monthToDate: 0,
     })
-    // Structurally zero rather than measured, which is what `integrated: false` tells the screen.
-    expect(panel.series).toEqual([])
-    expect(panel.measuringSince).toBeNull()
   })
 
   it('refuses a slug nobody has declared, rather than creating a row for a typo', async () => {
