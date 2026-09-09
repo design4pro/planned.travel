@@ -78,8 +78,8 @@ Taken from the spec's Implementation Plan, unchanged in substance.
 
 ### Phase 1: the guard
 
-- [ ] 1.1 Red first — the tenant-isolation cases for `createDayNote`
-- [ ] 1.2 Green — `requireTripDay` on `createDayNote`
+- [x] 1.1 Red first — the tenant-isolation cases for `createDayNote` — f879f6b6
+- [x] 1.2 Green — `requireTripDay` on `createDayNote` — f879f6b6
 
 ### Phase 2: the note
 
