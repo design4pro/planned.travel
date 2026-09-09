@@ -783,10 +783,17 @@ export function chunkFor(columns: number): number {
   return Math.max(1, Math.floor(MAX_BOUND_PARAMETERS / columns))
 }
 
-/** Inserts `rows` through `insert`, in statements small enough for D1 to accept. */
+/**
+ * Inserts `rows` through `insert`, in statements small enough for D1 to accept.
+ *
+ * `beforeChunk` runs immediately before each statement with the number of rows it carries. The
+ * `places` pass uses it to re-assert the ceiling against the live count, because a copy long enough
+ * to need several statements is long enough for another writer to cross that ceiling under it.
+ */
 async function insertChunked<TRow extends object, TResult>(
   rows: ReadonlyArray<TRow>,
   insert: (chunk: ReadonlyArray<TRow>) => Promise<Array<TResult>>,
+  beforeChunk?: (rowsInChunk: number) => Promise<void>,
 ): Promise<Array<TResult>> {
   const first = rows.at(0)
   if (first === undefined) {
@@ -796,7 +803,9 @@ async function insertChunked<TRow extends object, TResult>(
   const size = chunkFor(Object.keys(first).length + 1)
   const inserted: Array<TResult> = []
   for (let index = 0; index < rows.length; index += size) {
-    inserted.push(...(await insert(rows.slice(index, index + size))))
+    const chunk = rows.slice(index, index + size)
+    await beforeChunk?.(chunk.length)
+    inserted.push(...(await insert(chunk)))
   }
   return inserted
 }
@@ -1080,7 +1089,15 @@ async function clearTargetInventory(
   return new Map(inserted.map((day) => [day.dayNumber, day.id]))
 }
 
-/** Copies the source's whole place inventory, and returns source place id → target place id. */
+/**
+ * Copies the source's whole place inventory, and returns source place id → target place id.
+ *
+ * The `places` ceiling is re-asserted before **every** statement rather than once before the pass.
+ * `startTripCopy` already refused a copy that could not fit when the reader asked, but a copy of
+ * twenty thousand places runs for minutes in a consumer, and a ceiling another writer crossed in the
+ * meantime has to stop this one too. Failing here is the handler's permanent path: the half-built
+ * target is deleted and the requester is told.
+ */
 async function copyPlaces(
   scope: TenantScope,
   sourceTripId: string,
@@ -1117,6 +1134,14 @@ async function copyPlaces(
       sortOrder: place.sortOrder,
     })),
     (chunk) => placesRepository.insertMany(scope, chunk),
+    async (rowsInChunk) => {
+      await assertQuota(
+        scope,
+        'places',
+        await placesRepository.count(scope),
+        rowsInChunk,
+      )
+    },
   )
 
   // `insertMany` returns rows in the order they were sent, so the two lists line up by index.
@@ -1250,6 +1275,41 @@ async function copyDayNotes(
     dayNotesRepository.insertMany(scope, chunk),
   )
   return { written: rows.length, dropped }
+}
+
+/** The cover the handler duplicated in R2, recorded on the trip by {@link finishTripCopy}. */
+const finishTripCopyInput = z.object({
+  coverImageKey: shortTextSchema.nullish(),
+  coverImageUrl: urlSchema.nullish(),
+})
+export type FinishTripCopyInput = z.infer<typeof finishTripCopyInput>
+
+/**
+ * The copy handler's last write: clears `copy_pending_at` and records the cover, if any.
+ *
+ * Separate from {@link updateTrip} because `copy_pending_at` is not a field anyone patches — it is
+ * this one transition, and letting the general patch reach the column would let any editor declare a
+ * copy finished that is not.
+ *
+ * **Clearing the stamp is deliberately the very last thing a copy does**, after the statistics
+ * envelopes and the completion notification. Clearing it earlier would make a crash between the clear
+ * and the notification unrecoverable: the redelivery would find a null stamp, return early, and the
+ * reader would never be told the copy finished. With the clear last, a null stamp means every
+ * downstream effect has landed — which is what the redelivery guard needs it to mean.
+ *
+ * The cover rides along rather than taking a write of its own: it is the same moment and the same
+ * row, and one statement cannot leave the two disagreeing.
+ */
+export async function finishTripCopy(
+  scope: TenantScope,
+  tripId: string,
+  cover: FinishTripCopyInput = {},
+): Promise<Trip> {
+  await requireOwnedTrip(scope, tripId)
+  return tripsRepository.requireUpdate(scope, tripId, {
+    ...definedOnly(finishTripCopyInput.parse(cover)),
+    copyPendingAt: null,
+  })
 }
 
 /* -------------------------------------------------------------------------------------------------
