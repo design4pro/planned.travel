@@ -29,7 +29,7 @@ import {
   rateMeterKey,
   rateWindowOf,
   spendRateUnit,
-} from '../meter'
+} from '#/server/metering/rate'
 import {
   TRANSIT_CACHE_TTL_SECONDS,
   TransitProviderError,
@@ -37,7 +37,7 @@ import {
   transitCacheKey,
 } from '../search'
 
-import type { RateCounterStore } from '../meter'
+import type { RateCounterStore } from '#/server/metering/rate'
 import type {
   TransitClient,
   TransitConnection,

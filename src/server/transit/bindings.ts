@@ -7,8 +7,8 @@
  * the same arrangement `src/server/ai/bindings.ts` and `src/server/metering/bindings.ts` have and
  * for the same reason their headers give: `cloudflare:workers` cannot be imported in the `server`
  * Vitest project at all, so a module that reaches for a binding itself cannot be driven with a
- * fake one. Keeping the seam to one file is what lets `./search`, `./meter` and `./here` be tested
- * as themselves, against a store in memory and a `fetch` the test wrote.
+ * fake one. Keeping the seam to one file is what lets `./search` and `./here` be tested as
+ * themselves, against a store in memory and a `fetch` the test wrote.
  *
  * It is also what keeps the vendor behind the proxy. `./here` states that nothing outside this
  * directory imports it, and this is the file that makes that true: a caller asks for a runtime and
@@ -16,8 +16,9 @@
  * the server functions.
  *
  * Nothing here decides anything. It assembles ports; every rule about when a call is made, what it
- * may cost and what happens to the answer lives one module over in `./search` and `./meter`, and
- * the ceiling itself comes from `src/server/billing/limits.ts` through the caller.
+ * may cost and what happens to the answer lives one module over in `./search` and, for the tally
+ * three directories now share, in `#/server/metering/rate`; the ceiling itself comes from
+ * `src/server/billing/limits.ts` through the caller.
  */
 
 import { env } from 'cloudflare:workers'

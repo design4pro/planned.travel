@@ -1,5 +1,6 @@
 /**
- * The per-tenant ceiling on outbound calls — a counter, not a count.
+ * The per-tenant ceiling on metered calls — a counter, not a count, and the one implementation of
+ * it.
  *
  * Every other ceiling in this product bounds a row a workspace owns, which is why
  * `assertQuota()` can enforce it: the guard counts the table and refuses the next insert. A transit
@@ -12,9 +13,11 @@
  * ({@link PLAN_RATE_CEILINGS}), because the published number and the enforced number have to be
  * the same number; this module only measures against whatever it is handed.
  *
- * **Minted once, for two callers.** `03-S3` makes the first search and `03-S7` makes the first
- * extraction, and both are the same rule with a different metric name, so the metric is an
- * argument. A second implementation two waves later would be two implementations of one rule.
+ * **Minted once, for three callers.** `03-S3` makes the first search, `03-S7` makes the first
+ * extraction and `src/server/geo/geocode.ts` makes the first lookup; all three are the same rule
+ * with a different metric name, so the metric is an argument. A second implementation a wave later
+ * would be two implementations of one rule — which is also why this file sits here rather than
+ * inside any one of them.
  *
  * ## Two postures, inherited rather than invented
  *
