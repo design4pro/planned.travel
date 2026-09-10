@@ -781,3 +781,224 @@ test.describe('01-S2 — A day note you can write', () => {
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 })
+
+test.describe('01-S4b — The day is one sequence on screen', () => {
+  /** This block's route table. The trips list is the one screen that links a trip by id. */
+  const TRIPS: RouteCase = { name: 'trips', path: '/trips', ready: 'main' }
+
+  /** The planner mounts a live MapLibre canvas, so the walk has to declare one. */
+  const planRoute = (tripId: string): RouteCase => ({
+    name: 'trip-plan',
+    path: `/trips/${tripId}/plan`,
+    ready: TRIP_SECTIONS,
+    map: true,
+  })
+
+  const DIALOG = '[role="dialog"]'
+  const ADD_NOTE_NAME = /^Add a note for /
+  /** Distinctive enough that neither can match a seeded row. */
+  const EARLY = 'Sequence walk — the early note'
+  const LATE = 'Sequence walk — the late note'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /** Every trip the list links a planner for, in the order the cards sit in. */
+  async function plannedTripIds(page: Page): Promise<ReadonlyArray<string>> {
+    await visit(page, TRIPS, 'light')
+    return page.evaluate(() => {
+      const ids: string[] = []
+      for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
+        const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
+          anchor.getAttribute('href') ?? '',
+        )
+        if (match !== null && !ids.includes(match[1])) ids.push(match[1])
+      }
+      return ids
+    })
+  }
+
+  /**
+   * A trip whose planner has a day to write a note into — the first one that offers
+   * the add control, for the reason `01-S2`'s walk records: a trip with no dates has
+   * no day sections at all, so the first card is not it by default.
+   */
+  async function planTripToWalk(page: Page): Promise<string> {
+    const tripIds = await plannedTripIds(page)
+    test.skip(tripIds.length === 0, 'the workspace lists no trip to walk into')
+
+    for (const tripId of tripIds) {
+      await visit(page, planRoute(tripId), 'light')
+      const found = await page
+        .getByRole('button', { name: ADD_NOTE_NAME })
+        .first()
+        .waitFor({ state: 'visible', timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false)
+      if (found) return tripId
+    }
+
+    test.skip(
+      true,
+      'no trip in this workspace has both dates and a membership that may write, so no planner offers a day to note',
+    )
+    throw new Error('unreachable: the test was skipped')
+  }
+
+  /**
+   * Writes one note into the first day that will take one.
+   *
+   * The editor closes on the write, not on the reload that follows it, so the walk
+   * waits for the row itself — reading the day between the two would read it without
+   * the note that was just saved.
+   */
+  async function writeNote(page: Page, body: string, time: string) {
+    await page.getByRole('button', { name: ADD_NOTE_NAME }).first().click()
+    const editor = page.locator(DIALOG)
+    await expect(editor).toBeVisible()
+    await editor.getByRole('textbox', { name: 'Note', exact: true }).fill(body)
+    await editor.getByRole('textbox', { name: 'Time' }).fill(time)
+    await editor.getByRole('button', { name: 'Save note' }).click()
+    await expect(editor).toBeHidden()
+    await expect(rowOf(page, body)).toHaveCount(1)
+  }
+
+  /**
+   * The day's whole sequence, in the order it is on screen: a stop's item id and a
+   * note's `note:`-prefixed one, read off the single list they now share.
+   *
+   * One list is the assertion, not just the fixture — reading both kinds out of one
+   * `ul` is what proves the day stopped being a run of stops with notes bolted under it.
+   */
+  async function sequenceOf(page: Page, body: string): Promise<Array<string>> {
+    return page.evaluate((text) => {
+      const rows = [...document.querySelectorAll('li[data-planner-note]')]
+      const mine = rows.find((row) => row.textContent.includes(text))
+      const list = mine?.closest('ul')
+      if (list === null || list === undefined) return []
+      return [...list.children].flatMap((child) => {
+        const note = child.getAttribute('data-planner-note')
+        if (note !== null) return [`note:${note}`]
+        const stop = child.getAttribute('data-planner-item')
+        return stop === null ? [] : [stop]
+      })
+    }, body)
+  }
+
+  function rowOf(page: Page, body: string) {
+    return page.locator('li[data-planner-note]').filter({ hasText: body })
+  }
+
+  /**
+   * Deletes every note carrying this walk's marker, however many there are.
+   *
+   * A loop rather than a single delete because the demo workspace is a shared fixture
+   * and a run that died mid-walk left its two notes behind: the next run would then
+   * find two rows where it wrote one. Run before the walk as well as after it, so a
+   * crash costs the following run nothing.
+   */
+  async function sweep(page: Page, body: string) {
+    const rows = rowOf(page, body)
+    for (let left = await rows.count(); left > 0; left -= 1) {
+      // The action cluster floats over the headline and takes no pointer until the
+      // row is hovered, so a click aimed straight at it lands on the words instead.
+      await rows.first().hover()
+      await rows.first().getByRole('button', { name: 'Delete note' }).click()
+      const confirm = page.locator(DIALOG)
+      await expect(confirm).toBeVisible()
+      await confirm.getByRole('button', { name: 'Delete note' }).click()
+      await expect(rows).toHaveCount(left - 1)
+    }
+  }
+
+  /**
+   * The whole slice in one walk: one sequence, a note dragged in it, and the question
+   * a timed row asks before it is moved against its own clock.
+   *
+   * It sweeps away both notes at the end, because the demo workspace is a shared
+   * fixture and a retry has to find the day as it was left.
+   */
+  test('a note drags among the stops, and a timed drop asks first', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      isMobile,
+      'the itinerary lives in a sheet on a phone; this asserts the rail’s own composition',
+    )
+    // Several documents, each with a live map to finish drawing — `01-S2`'s walk
+    // records the same ceiling for the same reason, and this one pays that price
+    // before it starts: two writes, a keyboard drag and a dialog all follow the same
+    // trip discovery. A ceiling, not an expectation; a warm run finishes in under 20 s.
+    test.setTimeout(180_000)
+
+    const tripId = await planTripToWalk(page)
+    const route = planRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    await sweep(page, EARLY)
+    await sweep(page, LATE)
+
+    // Two late times rather than one at each end of the day: whatever the seeded
+    // stops carry, 23:45 and 23:50 sort last and in that order, so the two notes end
+    // up adjacent and the drag below is exactly one step — and one step against the
+    // clock, whichever day this workspace offered.
+    await writeNote(page, EARLY, '23:45')
+    await writeNote(page, LATE, '23:50')
+
+    const before = await sequenceOf(page, LATE)
+    const last = before.length - 1
+    // One list holding stops and notes alike, sorted by the clock rather than by
+    // arrival: the two notes are its final pair, in the order their times ask for.
+    expect(before.length).toBeGreaterThan(2)
+    expect(before[last]).toMatch(/^note:/)
+    expect(before[last - 1]).toMatch(/^note:/)
+    expect(before[last - 2]).not.toMatch(/^note:/)
+
+    // Lifted by its own handle and stepped over the note above it, which puts 23:50
+    // before 23:45 — the one thing the engine will not do without being asked.
+    //
+    // Each press waits for the live region to catch up rather than for a millisecond
+    // count: the sensor is not listening until the lift has been announced, and a
+    // walk that fires the arrow key before then drops it on the floor.
+    // The drag's own live region, told apart from the map's polite hint by the
+    // urgency it publishes rather than by the id `@dnd-kit` happens to generate.
+    const spoken = page.locator('[role="status"][aria-live="assertive"]')
+    await rowOf(page, LATE).hover()
+    await rowOf(page, LATE)
+      .getByRole('button', { name: 'Reorder note' })
+      .focus()
+    await page.keyboard.press('Space')
+    await expect(spoken).toContainText('Picked up')
+    // Pressed again until the region answers: `@dnd-kit` measures its droppables a
+    // frame after the lift, and an arrow key that arrives first is discarded with no
+    // trace. Retrying the press is the only signal there is that it was heard, and a
+    // press the sensor did hear only ever moves the note further from 23:45.
+    await expect(async () => {
+      await page.keyboard.press('ArrowUp')
+      await expect(spoken).toContainText('Now over', { timeout: 500 })
+    }).toPass({ timeout: 10_000 })
+    await page.keyboard.press('Space')
+
+    const question = page.locator(DIALOG)
+    await expect(question).toBeVisible()
+    await expect(question.getByText(/drop its 23:50\?$/)).toBeVisible()
+
+    // Declined: the day is exactly as it was, and nothing was written.
+    await question.getByRole('button', { name: 'Keep it where it is' }).click()
+    await expect(question).toBeHidden()
+    expect(await sequenceOf(page, LATE)).toEqual(before)
+
+    await sweep(page, LATE)
+    await sweep(page, EARLY)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})
