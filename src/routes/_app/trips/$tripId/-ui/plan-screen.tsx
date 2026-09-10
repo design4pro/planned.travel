@@ -76,13 +76,14 @@ import {
   PlannerRail,
   initialSelection,
   itemsIn,
-  movePlanItem,
+  noteItemId,
   selectionReducer,
   usePlanDnd,
 } from '#/components/planner'
 import { pluralise } from '../../../-lib/format'
 import {
   DeleteDialog,
+  DropTimeDialog,
   PlaceDialog,
   StopMenu,
   TimingDialog,
@@ -96,11 +97,13 @@ import {
   formatMetres,
   mapCategories,
   mapPlacesOf,
-  notesByDay,
+  notesByItem,
   orderFromPayload,
   planModel,
   routeDaysOf,
+  timeByItem,
 } from './plan-model'
+import { planMoveOutcome, refusalCopy, reorderPayload } from './plan-move'
 import {
   createPlanPlaceFn,
   deletePlanPlaceFn,
@@ -114,7 +117,6 @@ import {
 import {
   createDayNoteFn,
   deleteDayNoteFn,
-  reorderDayNotesFn,
   updateDayNoteFn,
 } from '../-server/day-notes'
 import {
@@ -173,6 +175,13 @@ function controlsInset(right: number): number {
 
 /** Zoom a "take me there" from the rail settles on, if the map is further out. */
 const FOCUS_ZOOM = 14.5
+
+/** Lowers the "drop its time?" dialog while leaving the question it asked readable. */
+function closed<T extends { readonly open: boolean }>(
+  current: T | null,
+): T | null {
+  return current === null ? null : { ...current, open: false }
+}
 
 /**
  * The frame a trip with nothing mapped opens on.
@@ -361,7 +370,10 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
 
   /* ------------------------------------------------------------------ state */
 
-  const serverOrder = React.useMemo(() => orderFromPayload(payload), [payload])
+  const serverOrder = React.useMemo(
+    () => orderFromPayload(payload, notes),
+    [notes, payload],
+  )
   const [order, setOrder] = React.useState<PlanOrder>(serverOrder)
 
   // The server's arrangement always wins. An optimistic order lives only for as long
@@ -385,6 +397,23 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   const [saving, setSaving] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [picking, setPicking] = React.useState<PlannerRow | null>(null)
+  /**
+   * The move a reader is being asked about: it lands only if its own time goes.
+   * The whole move is kept, not just the item, because confirming replays it —
+   * the drop happens by running the same move again with the time treated as gone.
+   *
+   * Answering lowers `open` rather than clearing the state, because the dialog stays
+   * mounted through its exit animation: dropping the name and the time here would
+   * leave it reading "Move  and drop its ?" on the way out, which is what a screen
+   * reader re-reading the closing dialog would hear.
+   */
+  const [dropTime, setDropTime] = React.useState<{
+    readonly open: boolean
+    readonly itemId: string
+    readonly target: PlanTarget
+    readonly name: string
+    readonly time: string
+  } | null>(null)
   const [sheet, setSheet] = React.useState<'itinerary' | 'places' | null>(null)
   const [coverageHidden, setCoverageHidden] = React.useState(false)
   /**
@@ -399,11 +428,11 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
 
   /* ------------------------------------------------------------------ model */
 
-  const noteRuns = React.useMemo(() => notesByDay(notes), [notes])
+  const noteIndex = React.useMemo(() => notesByItem(notes), [notes])
 
   const model = React.useMemo(
-    () => planModel(payload, order, locale, noteRuns),
-    [payload, order, locale, noteRuns],
+    () => planModel(payload, order, locale, noteIndex),
+    [payload, order, locale, noteIndex],
   )
 
   const scheduledRows = React.useMemo(
@@ -521,6 +550,21 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
     [model.rowsByItem],
   )
 
+  /**
+   * Times come from the payload rather than from `model`, because the merged
+   * sequence only ever shows a time — the clock rule needs the item that *owns*
+   * one, and an untimed row that merely sits under a timed one owns nothing.
+   */
+  const timeIndex = React.useMemo(
+    () => timeByItem(payload, notes),
+    [payload, notes],
+  )
+
+  const timeOfItem = React.useCallback(
+    (itemId: string) => timeIndex.get(itemId) ?? null,
+    [timeIndex],
+  )
+
   /* ------------------------------------------------------------------ camera */
 
   /** Where the control column is pinned in the current layout, in pixels. */
@@ -576,22 +620,11 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   )
 
   const applyChange = React.useCallback(
-    async (change: PlanChange): Promise<void> => {
+    async (change: PlanChange, clearTime: string | null): Promise<void> => {
       switch (change.kind) {
         case 'reorder':
           await reorderPlanFn({
-            data: {
-              tripId: payload.tripId,
-              // Every id the board can produce today is an assignment id; notes
-              // become draggable — and the second `kind` reachable — in `01-S4b`.
-              days: change.days.map((day) => ({
-                dayId: day.dayId,
-                items: day.assignmentIds.map((assignmentId) => ({
-                  kind: 'stop' as const,
-                  id: assignmentId,
-                })),
-              })),
-            },
+            data: reorderPayload(payload.tripId, change, clearTime),
           })
           return
         case 'schedule':
@@ -623,53 +656,94 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   )
 
   /**
+   * What an item is called in a sentence: a place by its name, a note by its
+   * headline. `null` for an id the board cannot resolve — which is also the only
+   * case in which the reader is told nothing, because an item the board does not
+   * have is one the engine refuses as `'unknown'` rather than as anything sayable.
+   */
+  const nameOfItem = React.useCallback(
+    (itemId: string): string | null =>
+      model.rowsByItem.get(itemId)?.name ?? noteIndex.get(itemId)?.body ?? null,
+    [model.rowsByItem, noteIndex],
+  )
+
+  /**
    * Applies a move optimistically, then writes it.
+   *
+   * Returns the sentence a screen reader should hear when nothing moved, so a
+   * refused keyboard drag is spoken rather than silent; `null` when the move went
+   * through. The decision itself lives in `plan-move.ts` — everything here is the
+   * optimistic swap, the write, and saying what happened.
+   *
+   * `drop` is the reader's answer to the dialog: run the same move again, this time
+   * with the item's own time treated as absent. The resulting write carries the item
+   * in `clearTime` as well as in `items`, so there is never a frame in which the row
+   * has a time and the wrong position.
    *
    * The rollback restores the arrangement the board had *before* this move rather
    * than recomputing an inverse, which is the only version that stays correct when
    * two drags overlap.
    */
-  const commitMove = React.useCallback(
-    (itemId: string, target: PlanTarget): void => {
-      if (!editable) return
+  const runMove = React.useCallback(
+    (itemId: string, target: PlanTarget, drop: boolean): string | null => {
+      if (!editable) return null
 
-      const result = movePlanItem(order, itemId, target, { placeOfItem })
-      if (!result.ok) {
-        if (result.reason === 'duplicate') {
-          const name = model.rowsByItem.get(itemId)?.name ?? 'That place'
-          toast.error(`${name} is already on that day`, {
-            description:
-              'A place can only appear once per day. Move it to another day instead.',
-          })
-        }
-        return
+      const outcome = planMoveOutcome(order, itemId, target, {
+        placeOfItem,
+        timeOfItem,
+        dropTime: drop,
+      })
+
+      if (outcome.kind === 'refused') {
+        const copy = refusalCopy(outcome.reason)
+        const name = nameOfItem(itemId)
+        if (copy === null || name === null) return null
+        toast.error(t(copy.title, { name }), { description: t(copy.body) })
+        return t(copy.spoken, { name })
+      }
+
+      if (outcome.kind === 'ask-drop-time') {
+        const name = nameOfItem(itemId)
+        if (name === null) return null
+        setDropTime({ open: true, itemId, target, name, time: outcome.time })
+        return t('trips.plan.move.spoken.timed', { name, time: outcome.time })
       }
 
       const previous = order
-      setOrder(result.order)
+      setOrder(outcome.order)
       markPending(itemId, true)
 
-      void applyChange(result.change)
+      void applyChange(outcome.change, drop ? itemId : null)
         .then(() => router.invalidate())
         .catch((cause: unknown) => {
           setOrder(previous)
-          toast.error('That move did not save', {
-            description: messageOf(cause, 'Try it again in a moment.'),
+          toast.error(t('trips.plan.move.error.save'), {
+            description: messageOf(cause, t('trips.plan.move.error.retry')),
           })
         })
         .finally(() => {
           markPending(itemId, false)
         })
+
+      return null
     },
     [
       applyChange,
       editable,
       markPending,
-      model.rowsByItem,
+      nameOfItem,
       order,
       placeOfItem,
       router,
+      t,
+      timeOfItem,
     ],
+  )
+
+  const commitMove = React.useCallback(
+    (itemId: string, target: PlanTarget): string | null =>
+      runMove(itemId, target, false),
+    [runMove],
   )
 
   /* ---------------------------------------------------------------- dragging */
@@ -684,12 +758,15 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   const dnd = usePlanDnd({
     order,
     rowsByItem: model.rowsByItem,
+    notesByItem: noteIndex,
     days: model.days,
     onMove: commitMove,
   })
 
   const draggingRow =
     dnd.draggingId === null ? undefined : model.rowsByItem.get(dnd.draggingId)
+  const draggingNote =
+    dnd.draggingId === null ? undefined : noteIndex.get(dnd.draggingId)
 
   /* -------------------------------------------------------------- selection */
 
@@ -986,38 +1063,23 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   /**
    * Moves a note one place within its day.
    *
-   * The whole day's note order goes to the server, not a pair of ids: `reorderDayTimeline`
-   * is the single writer of the day's position line, and it writes a line rather than a
-   * swap. There is no optimistic reorder to roll back here — unlike the board, the note
-   * run has no client-side copy to move ahead of the write, so the row stays where it is,
-   * marked pending, until the loader answers.
+   * The same move a drag makes, so a chevron walks the note past whatever is actually
+   * above or below it — a stop as readily as another note — and inherits the whole
+   * policy with it: the optimistic swap, the rollback, and the question a row asks
+   * before it is moved against its own clock.
    */
   const moveNote = React.useCallback(
     (note: PlannerNote, direction: -1 | 1): void => {
-      const run = noteRuns.get(note.dayId) ?? []
-      const index = run.findIndex((entry) => entry.id === note.id)
+      const items =
+        order.days.find((day) => day.dayId === note.dayId)?.itemIds ?? []
+      const itemId = noteItemId(note.id)
+      const index = items.indexOf(itemId)
       const target = index + direction
-      if (index === -1 || target < 0 || target >= run.length) return
+      if (index === -1 || target < 0 || target >= items.length) return
 
-      const noteIds = run.map((entry) => entry.id)
-      noteIds[index] = run[target].id
-      noteIds[target] = note.id
-
-      markPending(note.id, true)
-      void reorderDayNotesFn({
-        data: { tripId: payload.tripId, dayId: note.dayId, noteIds },
-      })
-        .then(() => router.invalidate())
-        .catch((cause: unknown) => {
-          toast.error(t('trips.plan.note.error.move'), {
-            description: messageOf(cause, t('trips.plan.note.error.retry')),
-          })
-        })
-        .finally(() => {
-          markPending(note.id, false)
-        })
+      commitMove(itemId, { container: note.dayId, index: target })
     },
-    [markPending, noteRuns, payload.tripId, router, t],
+    [commitMove, order.days],
   )
 
   const savePosition = React.useCallback(
@@ -1138,7 +1200,6 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
             onHoverRow={hoverRow}
             rowActions={rowActions}
             canWriteNotes={notes.canWrite}
-            pendingNoteIds={pending}
             onAddNote={() =>
               setDialog({ kind: 'note-create', dayId: day.dayId })
             }
@@ -1456,7 +1517,11 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       {/* ------------------------------------------------------- drag overlay */}
 
       <DragOverlay dropAnimation={null}>
-        {draggingRow === undefined ? null : (
+        {draggingRow === undefined ? (
+          draggingNote === undefined ? null : (
+            <DragPreview note={draggingNote} />
+          )
+        ) : (
           <DragPreview
             row={draggingRow}
             category={categoryFor(draggingRow.categoryId)}
@@ -1554,6 +1619,18 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
         saving={saving}
         error={formError}
         onConfirm={confirmDeleteNote}
+      />
+
+      <DropTimeDialog
+        open={dropTime?.open === true}
+        name={dropTime?.name ?? ''}
+        time={dropTime?.time ?? ''}
+        onDecline={() => setDropTime(closed)}
+        onConfirm={() => {
+          if (dropTime === null) return
+          setDropTime(closed)
+          runMove(dropTime.itemId, dropTime.target, true)
+        }}
       />
     </DndContext>
   )

@@ -1,5 +1,11 @@
+import { EventEmitter } from 'node:events'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TanStackDevtoolsViteConfig } from '@tanstack/devtools-vite'
+import type { Plugin, ViteDevServer } from 'vite'
 
 /**
  * The arguments `vite.config.ts` handed `devtools()` on its last evaluation.
@@ -43,6 +49,31 @@ async function devtoolsArgsWithE2E(e2e: string | undefined) {
   return devtoolsArgs[0]
 }
 
+/**
+ * The names of the plugins `vite.config.ts` produced with `E2E` set to `e2e`.
+ *
+ * Every mocked factory above returns `[]`, so what survives the flattening is exactly the plugins
+ * this file builds itself — which is the question the orphan-exit gate asks.
+ */
+async function pluginNamesWithE2E(e2e: string | undefined) {
+  vi.resetModules()
+  vi.stubEnv('E2E', e2e)
+  const { default: config } = await import('./vite.config')
+  const names: Array<string> = []
+  // Hand-rolled rather than `.flat()`: a plugin option nests arrays to an arbitrary depth, and
+  // asking the type checker to flatten that recursively is what TS2589 is for.
+  const collect = (option: unknown) => {
+    if (Array.isArray(option)) {
+      option.forEach(collect)
+      return
+    }
+    const name = (option as Plugin | undefined)?.name
+    if (name) names.push(name)
+  }
+  collect(config.plugins)
+  return names
+}
+
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.resetModules()
@@ -65,5 +96,133 @@ describe('the devtools console relay', () => {
   it('reads the flag exactly, not truthily', async () => {
     expect(await devtoolsArgsWithE2E('0')).toBeUndefined()
     expect(await devtoolsArgsWithE2E('true')).toBeUndefined()
+  })
+})
+
+/**
+ * Issue #327: eleven leaked `vite dev` processes had exhausted the 3030-3040 window on the cezar
+ * host, and seven of them were serving a worktree that had been deleted out from under them. The
+ * gate below is what stops that from accumulating again, and its failure mode is silence — the
+ * window narrows one port per orphan, and the first thing anyone sees is an unrelated PR's e2e
+ * step failing on a port number.
+ */
+describe('the dev server that outlives its checkout', () => {
+  /**
+   * A dev server with the three members the plugin touches, and the two seams to read back:
+   * a `warn` spy, and `closeHttpServer()` for the `'close'` a restart fires on the server being
+   * replaced.
+   */
+  function fakeServer(root: string) {
+    const warn = vi.fn()
+    const httpServer = new EventEmitter()
+    return {
+      warn,
+      closeHttpServer: () => httpServer.emit('close'),
+      server: {
+        config: { root, logger: { warn } },
+        httpServer,
+      } as unknown as ViteDevServer,
+    }
+  }
+
+  // `exists` left out means the factory's own default — `node:fs`'s `existsSync` — stays in place.
+  // A destructured default is not overridden by an explicit `undefined`, so this passes straight
+  // through.
+  async function startedPlugin(
+    root: string,
+    exists: ((path: string) => boolean) | undefined,
+    stop: () => void,
+  ) {
+    vi.resetModules()
+    const { stopWhenRootIsRemoved } = await import('./vite.config')
+    const plugin = stopWhenRootIsRemoved({ intervalMs: 1000, exists, stop })
+    const { server, warn, closeHttpServer } = fakeServer(root)
+    await (plugin.configureServer as (s: ViteDevServer) => void)(server)
+    return { warn, closeHttpServer }
+  }
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('stops itself once its root is gone, so the port goes back to the window', async () => {
+    vi.useFakeTimers()
+    const stop = vi.fn()
+    // Present on the first tick, removed by the second: the `git worktree remove` this exists for.
+    const exists = vi.fn().mockReturnValueOnce(true).mockReturnValue(false)
+
+    const { warn } = await startedPlugin('/tmp/worktree-327', exists, stop)
+
+    vi.advanceTimersByTime(1000)
+    expect(stop).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(1000)
+    expect(stop).toHaveBeenCalledTimes(1)
+    // Named, because the log line is the only explanation anyone gets for a server that vanished.
+    expect(warn.mock.calls[0]?.[0]).toContain('/tmp/worktree-327')
+
+    // And exactly once: the interval is cleared, not left firing at a corpse.
+    vi.advanceTimersByTime(10_000)
+    expect(stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves a server whose checkout is still there alone', async () => {
+    vi.useFakeTimers()
+    const stop = vi.fn()
+
+    await startedPlugin('/tmp/worktree-327', () => true, stop)
+
+    vi.advanceTimersByTime(60_000)
+    expect(stop).not.toHaveBeenCalled()
+  })
+
+  it('notices a real directory going away, not just an injected predicate', async () => {
+    // Created before the fake clock, because `mkdtemp`'s async form would never settle under it.
+    const root = mkdtempSync(join(tmpdir(), 'planned-travel-327-'))
+    vi.useFakeTimers()
+    const stop = vi.fn()
+
+    // No `exists` passed: the default is the real `existsSync`, and a seam nothing grades is a
+    // seam that can be pointed at the wrong path without a single test noticing.
+    const { warn } = await startedPlugin(root, undefined, stop)
+
+    vi.advanceTimersByTime(1000)
+    expect(stop).not.toHaveBeenCalled()
+
+    rmSync(root, { recursive: true, force: true })
+    vi.advanceTimersByTime(1000)
+    expect(stop).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.[0]).toContain(root)
+  })
+
+  it('goes down with the server that installed it, so restarts do not stack pollers', async () => {
+    vi.useFakeTimers()
+    const stop = vi.fn()
+
+    // A root that is already gone, so the only thing standing between this timer and a `stop()`
+    // is the clean-up under test.
+    const { closeHttpServer } = await startedPlugin(
+      '/tmp/worktree-327',
+      () => false,
+      stop,
+    )
+
+    // What Vite does to the outgoing server on `server.restart()`: it closes it, then stands a
+    // fresh plugin instance up beside it. An instance that survives its own server keeps polling
+    // the same root, and every survivor `SIGTERM`s the process independently — the second signal
+    // arriving after Vite's `process.once('SIGTERM')` handler is gone, which is a hard kill.
+    closeHttpServer()
+
+    vi.advanceTimersByTime(60_000)
+    expect(stop).not.toHaveBeenCalled()
+  })
+
+  it('is installed only under e2e, where a run holds one of the eleven ports', async () => {
+    expect(await pluginNamesWithE2E('1')).toContain(
+      'planned-travel:stop-when-root-is-removed',
+    )
+    expect(await pluginNamesWithE2E(undefined)).not.toContain(
+      'planned-travel:stop-when-root-is-removed',
+    )
   })
 })

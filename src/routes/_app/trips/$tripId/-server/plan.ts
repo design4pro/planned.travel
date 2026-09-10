@@ -130,6 +130,17 @@ export interface PlanBoardPlace {
 export interface PlanBoardStop {
   readonly assignmentId: string
   readonly placeId: string
+  /**
+   * `day_assignments.order_index`, as stored.
+   *
+   * Published rather than reconstructed from array index because the day is one
+   * number line shared with `day_notes.sort_order`, and the two tables are numbered
+   * independently until the day's first merged reorder — `nextOrderIndex` knows
+   * nothing about the note run's `sortOrder()` default. An index would therefore be
+   * a different quantity from the note's position, and merging the two would render
+   * an order the loader contradicts on the next invalidate.
+   */
+  readonly position: number
   readonly startTime: string | null
   readonly endTime: string | null
   readonly durationMinutes: number | null
@@ -145,11 +156,6 @@ export interface PlanBoardDay {
   readonly stops: ReadonlyArray<PlanBoardStop>
   /** Accommodation names covering this day. */
   readonly stays: ReadonlyArray<string>
-  readonly notes: ReadonlyArray<{
-    readonly id: string
-    readonly body: string
-    readonly time: string | null
-  }>
 }
 
 export interface PlanBoardCategory {
@@ -216,14 +222,10 @@ export const loadPlanBoard = createServerFn({ method: 'GET' })
         date: entry.day.date,
         title: entry.day.title,
         stays: entry.accommodations.map((stay) => stay.name),
-        notes: entry.notes.map((note) => ({
-          id: note.id,
-          body: note.body,
-          time: note.time,
-        })),
         stops: entry.stops.map((stop) => ({
           assignmentId: stop.assignment.id,
           placeId: stop.place.id,
+          position: stop.assignment.orderIndex,
           startTime: stop.assignment.startTime,
           endTime: stop.assignment.endTime,
           durationMinutes: stop.assignment.durationMinutes,

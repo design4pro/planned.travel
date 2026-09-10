@@ -140,7 +140,11 @@ Provisioning is `scripts/worktree/bootstrap.sh --profile worktree --no-seed` (de
 `.dev.vars`, local D1 with airports, basemap when cached; no server), or only `pnpm install` and
 `pnpm generate-routes` for the read-only workflows. The validation gate the skills run is
 `validation.commands` in `.ai/agentic.config.json`; its e2e entry starts the app through
-`.ai/scripts/test-env-up.sh` on a free port from 3030-3040 (`om-prepare-test-env` contract).
+`.ai/scripts/test-env-up.sh` on a free port from 3030-3040 (`om-prepare-test-env` contract). That
+server is deliberately left running for the rest of the run to reuse, so nothing else would ever
+stop it: under `E2E=1` `vite.config.ts` therefore has it watch for its own root disappearing and
+send itself `SIGTERM` when it does, which is what keeps a removed worktree from leaving a process
+holding one of the eleven ports for the life of the host (issue #327).
 
 The four older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`), the scripts in
 `scripts/agent/` they called and the four process skills built on them are gone (PR C, ADR 0018).

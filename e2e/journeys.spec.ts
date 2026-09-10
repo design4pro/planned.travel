@@ -231,6 +231,50 @@ test.describe('authenticated routes', () => {
    */
   const ATLAS = APP_ROUTES.find((candidate) => candidate.name === 'atlas')
 
+  /**
+   * What an atlas journey is allowed to take.
+   *
+   * These are the same shape as the walks above and not the shape Playwright's
+   * per-test default is sized for: an atlas journey settles one or two `/atlas`
+   * documents with a live WebGL map to finish drawing, and then flies the camera
+   * once per country it opens - each flight paid for with the 1.5 s of rest
+   * `chooseCountry()` takes so the boxes it probes have stopped moving.
+   * Playwright's 30 s is one document's budget, which is what `WALK_TIMEOUT_MS`
+   * above records for the walks and what `trips-core.spec.ts` records at its own
+   * `test.setTimeout(90_000)` for the same reason.
+   *
+   * Measured rather than guessed, at Playwright's default worker count on a
+   * loaded machine (half the cores, so eight here): 39.8 s for `the click
+   * surface never takes the reader's input`, 29.0 s for `the click surface
+   * survives its country leaving the map` and 27.1 s for `a country opens on the
+   * map and can be acted on`, against the 30 s they were all sharing. The first
+   * of those was already failing about one run in three at two workers with a
+   * bare `Test timeout of 30000ms exceeded` and no assertion behind it (issue
+   * #384); the other two passed with one and three seconds to spare, which is
+   * the same defect that has not been unlucky yet. At one worker they take
+   * 6.6-11.3 s, so what the budget absorbs is contention, not work.
+   *
+   * The phone journey below carries it too, on the argument and not on a
+   * measurement: the validation gate runs `--project=chromium`, so it is skipped
+   * there and only a full `pnpm e2e` reaches it - on WebKit, doing the same work
+   * on a slower engine. Giving it the block's budget is cheaper than waiting for
+   * it to be the one that fails.
+   *
+   * A ceiling, not an expectation - nothing here waits for this number, and a
+   * genuinely hung journey still fails, a minute later. Raised for the journeys
+   * that need it rather than for the suite, because a suite-wide raise would
+   * hide a slow-page regression on every other screen.
+   *
+   * What it costs, plainly: an `/atlas` that regressed from 11 s to a minute now
+   * passes here where the 30 s default would have failed it. That is the trade,
+   * and it is worth making only because the failure being traded away carried no
+   * information - a bare timeout on a page the snapshot shows fully rendered,
+   * indistinguishable from the machine being busy. A regression of that shape on
+   * this route is for a measurement to catch, not for a budget four journeys
+   * happen to share.
+   */
+  const ATLAS_JOURNEY_TIMEOUT_MS = 90_000
+
   /** Chooses a country by name, the way a reader with no mouse would. */
   async function chooseCountry(page: Page, name: string): Promise<void> {
     await page.getByRole('button', { name: 'Find a country' }).click()
@@ -289,6 +333,7 @@ test.describe('authenticated routes', () => {
       'the atlas route is what this asserts against',
     )
     if (ATLAS === undefined) return
+    test.setTimeout(ATLAS_JOURNEY_TIMEOUT_MS)
     const watched = watchConsole(page, ATLAS)
     await visit(page, ATLAS, 'dark')
     await chooseCountry(page, 'France')
@@ -553,6 +598,7 @@ test.describe('authenticated routes', () => {
       'this is the phone composition, and it needs a project with a touchscreen',
     )
     if (ATLAS === undefined) return
+    test.setTimeout(ATLAS_JOURNEY_TIMEOUT_MS)
     const watched = watchConsole(page, ATLAS)
     await visit(page, ATLAS, 'light')
     await chooseCountry(page, 'Spain')
@@ -764,6 +810,7 @@ test.describe('authenticated routes', () => {
       'the atlas route is what this asserts against',
     )
     if (ATLAS === undefined) return
+    test.setTimeout(ATLAS_JOURNEY_TIMEOUT_MS)
     const watched = watchConsole(page, ATLAS)
     await visit(page, ATLAS, 'light')
     // Spain rather than France, for the reason `chooseCountry` gives: a
@@ -913,6 +960,7 @@ test.describe('authenticated routes', () => {
       'the atlas route is what this asserts against',
     )
     if (ATLAS === undefined) return
+    test.setTimeout(ATLAS_JOURNEY_TIMEOUT_MS)
     const watched = watchConsole(page, ATLAS)
     await visit(page, ATLAS, 'light')
     await chooseCountry(page, 'Spain')

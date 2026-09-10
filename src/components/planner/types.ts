@@ -55,6 +55,24 @@ export interface PlannerRow {
   readonly dayNumber: number | null
 }
 
+/**
+ * One thing in a day's sequence.
+ *
+ * **This union is an extension point, and it is written as one.** A day is one number
+ * line (PRD #104 decision 9) and `mergeDayTimeline` reads only `{ id, position, time }`
+ * from whatever sits on it. A third kind — the transport row `BKG-10` brings from
+ * `03-reservations-and-transport.md` — is therefore *one variant here, one id prefix in
+ * `ordering.ts`, and one renderer under `DaySection`*. It needs no change to the merge,
+ * to the drag adapter, or to the repository's two-table batch beyond its own table.
+ *
+ * Anything that would make a third kind require reshaping this type — a boolean instead
+ * of `kind`, a shared bag of optional fields instead of two variants — is the design this
+ * comment exists to prevent.
+ */
+export type PlannerItem =
+  | { readonly kind: 'stop'; readonly row: PlannerRow }
+  | { readonly kind: 'note'; readonly note: PlannerNote }
+
 /** A day of the itinerary, with everything its rail section shows. */
 export interface PlannerDay {
   readonly dayId: string
@@ -62,10 +80,28 @@ export interface PlannerDay {
   readonly title: string
   /** Already formatted, e.g. `Tue 23 Jun`. `null` when the trip has no dates. */
   readonly dateLabel: string | null
+  /**
+   * The day's whole sequence, in the order a reader sees it.
+   *
+   * The one list `DaySection` renders. There is deliberately no second array holding
+   * the same notes: two projections of one record are how they start to disagree.
+   */
+  readonly items: ReadonlyArray<PlannerItem>
+  /**
+   * The day's stops only, in sequence order.
+   *
+   * Kept beside {@link items} because the map's per-day route line is drawn from stop
+   * coordinates and must never learn about notes — `routeDaysOf` and `mapPlacesOf` read
+   * this and nothing else.
+   */
   readonly rows: ReadonlyArray<PlannerRow>
   /** Accommodation names covering this day. */
   readonly stays: ReadonlyArray<string>
-  readonly notes: ReadonlyArray<PlannerNote>
+}
+
+/** The stops of a sequence, for a caller that wants only places. */
+export function stopsOf(items: ReadonlyArray<PlannerItem>): Array<PlannerRow> {
+  return items.filter((item) => item.kind === 'stop').map((item) => item.row)
 }
 
 /**
