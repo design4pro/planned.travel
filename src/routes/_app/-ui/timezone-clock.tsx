@@ -21,6 +21,7 @@ import { timeZoneOptions } from '#/lib/timezones'
 import { Panel, PanelRow } from './scaffold'
 
 import type { ZoneReading } from '#/lib/clock-zones'
+import type { ComboboxOption } from '#/components/ui'
 
 /**
  * The reference column's clock: one row per pinned zone, each carrying the
@@ -264,6 +265,29 @@ function ZoneRow({
   )
 }
 
+/**
+ * The picker's rows: the platform's own zone list, each described by its offset
+ * on the day being read.
+ *
+ * Memoised per day at module scope, because the list is not cheap and the
+ * dashboard is the screen every reader lands on. It costs one
+ * `Intl.DateTimeFormat` construction and one `formatToParts` per zone — 418 of
+ * them on the build machine, measured at ~67 ms with a cold formatter cache and
+ * ~0.7 ms with a warm one. Keyed by the day rather than kept forever because the
+ * offsets it prints are a function of the date; one entry, since a document
+ * renders one dashboard day.
+ */
+let zoneOptionsDay: string | null = null
+let zoneOptionsForDay: Array<ComboboxOption> = []
+
+function zoneOptions(today: string): Array<ComboboxOption> {
+  if (zoneOptionsDay !== today) {
+    zoneOptionsForDay = [...timeZoneOptions(today)]
+    zoneOptionsDay = today
+  }
+  return zoneOptionsForDay
+}
+
 function AddZone({
   today,
   onAdd,
@@ -272,9 +296,15 @@ function AddZone({
   onAdd: (zone: string) => void
 }) {
   const { t } = useI18n()
-  // The picker's rows are the platform's own zone list, described by their
-  // offset on the day being read. Computed once per day rather than per render.
-  const [options] = useState(() => [...timeZoneOptions(today)])
+  // Built after mount, not during render, so the Worker never pays for a list
+  // that is not in the document until the reader opens the picker — the popover
+  // mounts its listbox on open, and the closed trigger says nothing about its
+  // rows. It is ready long before a pointer can reach the control, and it also
+  // keeps an engine-specific zone list out of the hydrated markup entirely.
+  const [options, setOptions] = useState<Array<ComboboxOption>>([])
+  useEffect(() => {
+    setOptions(zoneOptions(today))
+  }, [today])
 
   return (
     <Combobox

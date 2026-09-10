@@ -743,13 +743,21 @@ function DashboardPending() {
           <Card variant="inset" padding="none">
             <RowsSkeleton rows={4} />
           </Card>
-          {/* The reference column's exact height: the clock's own rows plus the
-              three panels the column defaults to. A short block here is what
-              makes the page settle by growing, which is the layout shift the
-              gate measures. */}
-          <Card variant="inset" padding="none">
-            <RowsSkeleton rows={3} />
-          </Card>
+          {/* The reference column as it arrives by default: the clock, whose
+              first row is the reader's own zone and whose footer is the picker,
+              then the three panels beside it. One block for the whole column
+              would settle by growing a widget's worth of height, which is the
+              layout shift this state exists to avoid. The default is what is
+              reserved, because the pending frame is rendered before anything can
+              read the browser's preference without disagreeing with the server. */}
+          <div className="flex min-w-0 flex-col gap-6">
+            <Card variant="inset" padding="none">
+              <RowsSkeleton rows={2} />
+            </Card>
+            <Card variant="inset" padding="none">
+              <RowsSkeleton rows={3} />
+            </Card>
+          </div>
         </div>
       </AppSections>
     </AppFrame>
