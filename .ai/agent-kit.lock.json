@@ -1,5 +1,5 @@
 {
-  "kitVersion": 20,
+  "kitVersion": 21,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -99,7 +99,7 @@
       "mode": "100644"
     },
     "docs/agents/cezar-automations.json": {
-      "sha256": "a96371769489983703add3bee2ac07d7d8285f1b5a492f1587dfa646ba40cccd",
+      "sha256": "c4a4b15e2cf85585fee819a27c9d9979f891622d54446cf34f81c85c7c70587e",
       "mode": "100644"
     },
     "scripts/ci/__tests__/claude-review-ran.test.mjs": {
