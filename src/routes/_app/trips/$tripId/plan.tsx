@@ -6,6 +6,7 @@ import { GlassPanel, SectionLabel, Skeleton } from '#/components/ui'
 import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
+import { loadDayNotes } from './-server/day-notes'
 import { loadPlanBoard } from './-server/plan'
 import { PlanScreen } from './-ui/plan-screen'
 import { useTripHeader } from '../../-ui/trip-header'
@@ -20,7 +21,16 @@ import { useTripHeader } from '../../-ui/trip-header'
  * `PlanScreen`, which floats the itinerary, the places and the filters over the map.
  */
 export const Route = createFileRoute('/_app/trips/$tripId/plan')({
-  loader: ({ params }) => loadPlanBoard({ data: { tripId: params.tripId } }),
+  // Both reads are one indexed query for the same trip in the same request, so a failure of one is
+  // very nearly always a failure of both: `Promise.all` rejects and the route renders `PlanError`,
+  // rather than growing a second loading contract for a partial board.
+  loader: async ({ params }) => {
+    const [board, notes] = await Promise.all([
+      loadPlanBoard({ data: { tripId: params.tripId } }),
+      loadDayNotes({ data: { tripId: params.tripId } }),
+    ])
+    return { board, notes }
+  },
   pendingComponent: PlanPending,
   errorComponent: PlanError,
   component: PlanPage,
@@ -37,12 +47,12 @@ function PlanError({ error }: { error: Error }) {
 }
 
 function PlanPage() {
-  const payload = Route.useLoaderData()
+  const { board, notes } = Route.useLoaderData()
   const { trip } = useTripHeader()
 
   return (
     <AppFrame bleed>
-      <PlanScreen payload={payload} tripTitle={trip.title} />
+      <PlanScreen payload={board} notes={notes} tripTitle={trip.title} />
     </AppFrame>
   )
 }

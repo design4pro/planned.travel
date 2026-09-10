@@ -1,13 +1,20 @@
 import * as React from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { BedDouble, StickyNote } from 'lucide-react'
+import { BedDouble, Plus } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { focusRing, transitionBase } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
+import { NoteRow } from './note-row'
 import { StopRow } from './stop-row'
 
-import type { PlannerCategory, PlannerDay, PlannerRow } from './types'
+import type {
+  PlannerCategory,
+  PlannerDay,
+  PlannerNote,
+  PlannerRow,
+} from './types'
 
 export interface DaySectionProps {
   readonly day: PlannerDay
@@ -21,10 +28,22 @@ export interface DaySectionProps {
   /** Rows with a write in flight. */
   readonly pendingItemIds?: ReadonlySet<string>
   readonly draggable?: boolean
+  /**
+   * Whether this reader may write the day's notes — an owner or an editor on a trip
+   * that is not archived. `false` renders every note and offers no way to change one.
+   */
+  readonly canWriteNotes?: boolean
+  /** Notes with a write in flight. */
+  readonly pendingNoteIds?: ReadonlySet<string>
   readonly onFocusDay?: () => void
   readonly onSelectRow?: (row: PlannerRow) => void
   readonly onHoverRow?: (row: PlannerRow, hovering: boolean) => void
   readonly rowActions?: (row: PlannerRow) => React.ReactNode
+  readonly onAddNote?: () => void
+  readonly onEditNote?: (note: PlannerNote) => void
+  readonly onDeleteNote?: (note: PlannerNote) => void
+  /** `-1` is one place earlier in the day's note run, `1` one place later. */
+  readonly onMoveNote?: (note: PlannerNote, direction: -1 | 1) => void
 }
 
 /**
@@ -48,11 +67,18 @@ export function DaySection({
   hoveredPlaceId = null,
   pendingItemIds,
   draggable = true,
+  canWriteNotes = false,
+  pendingNoteIds,
   onFocusDay,
   onSelectRow,
   onHoverRow,
   rowActions,
+  onAddNote,
+  onEditNote,
+  onDeleteNote,
+  onMoveNote,
 }: DaySectionProps) {
+  const t = useTranslate()
   const itemIds = React.useMemo(
     () => day.rows.map((row) => row.itemId),
     [day.rows],
@@ -170,30 +196,45 @@ export function DaySection({
       </SortableContext>
 
       {day.notes.length === 0 ? null : (
-        <ul className="flex flex-col gap-1.5 px-3 pt-1.5 pb-2">
-          {day.notes.map((note) => (
-            <li
+        <ul className="flex flex-col gap-0.5 px-2 pt-1">
+          {day.notes.map((note, index) => (
+            <NoteRow
               key={note.id}
-              className="flex min-w-0 items-start gap-1.5 text-caption text-ink-3"
-            >
-              <StickyNote
-                size={11}
-                strokeWidth={2}
-                aria-hidden="true"
-                className="mt-1 shrink-0 text-ink-4"
-              />
-              <span className="min-w-0">
-                {note.time === null ? null : (
-                  <span className="me-1.5 font-semibold tabular-nums text-ink-2">
-                    {note.time}
-                  </span>
-                )}
-                {note.body}
-              </span>
-            </li>
+              note={note}
+              position={index}
+              count={day.notes.length}
+              canWrite={canWriteNotes}
+              pending={pendingNoteIds?.has(note.id) ?? false}
+              onMove={(direction) => onMoveNote?.(note, direction)}
+              onEdit={() => onEditNote?.(note)}
+              onDelete={() => onDeleteNote?.(note)}
+            />
           ))}
         </ul>
       )}
+
+      {canWriteNotes ? (
+        <div className="px-2 pt-1.5 pb-2">
+          <button
+            type="button"
+            onClick={onAddNote}
+            // Ten days on one screen means ten of these, so the name a screen reader
+            // hears says *which* day it writes to while the visible label stays short.
+            aria-label={t('trips.plan.note.addForDay')}
+            className={cn(
+              'flex w-full items-center justify-center gap-1.5 rounded-md',
+              'border border-dashed border-edge bg-surface-2 px-3 py-2',
+              'text-caption text-ink-3',
+              transitionBase,
+              focusRing,
+              'hover:border-edge-strong hover:bg-hover hover:text-ink-2',
+            )}
+          >
+            <Plus size={12} strokeWidth={2} aria-hidden="true" />
+            {t('trips.plan.note.add')}
+          </button>
+        </div>
+      ) : null}
     </section>
   )
 }
