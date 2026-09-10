@@ -53,6 +53,8 @@ Owned surface:
 
 ## Progress
 
+PR: #404
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: the day renders as one sequence
