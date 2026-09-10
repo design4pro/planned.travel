@@ -79,7 +79,7 @@ never as "no failures".
 
 ### Phase 1: the reporter list tells the truth
 
-- [ ] 1.1 Hoist `html` and `json` out of the ternary
-- [ ] 1.2 Prove the artifact appears on the gate's own path
+- [x] 1.1 Hoist `html` and `json` out of the ternary — eb9ca3a7
+- [x] 1.2 Prove the artifact appears on the gate's own path — eb9ca3a7
 - [ ] 1.3 Prove CI is untouched
 - [ ] 1.4 Run the full gate
