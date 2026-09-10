@@ -264,6 +264,14 @@ test.describe('authenticated routes', () => {
    * genuinely hung journey still fails, a minute later. Raised for the journeys
    * that need it rather than for the suite, because a suite-wide raise would
    * hide a slow-page regression on every other screen.
+   *
+   * What it costs, plainly: an `/atlas` that regressed from 11 s to a minute now
+   * passes here where the 30 s default would have failed it. That is the trade,
+   * and it is worth making only because the failure being traded away carried no
+   * information - a bare timeout on a page the snapshot shows fully rendered,
+   * indistinguishable from the machine being busy. A regression of that shape on
+   * this route is for a measurement to catch, not for a budget four journeys
+   * happen to share.
    */
   const ATLAS_JOURNEY_TIMEOUT_MS = 90_000
 
