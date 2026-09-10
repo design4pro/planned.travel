@@ -100,6 +100,8 @@ Step 1.3 reads.
 
 ## Progress
 
+PR: #395
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: the reporter list tells the truth
