@@ -1,5 +1,12 @@
 # Declare the JSON reporter unconditionally in playwright.config.ts
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #144        |
+| **Spec PR**        | #376        |
+| **Implementation** | #395        |
+
 Source issue: [#144](https://github.com/design4pro/planned.travel/issues/144) — "Declare the JSON
 reporter in playwright.config.ts and delete the `--reporter` flag entirely". Filed by the sandcastle
 deep-review (run 12177) while reviewing [#97](https://github.com/design4pro/planned.travel/issues/97).

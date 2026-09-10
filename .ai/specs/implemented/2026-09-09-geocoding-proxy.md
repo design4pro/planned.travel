@@ -1,5 +1,12 @@
 # One geocoding proxy behind a provider port
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #281        |
+| **Spec PR**        | #352        |
+| **Implementation** | #363        |
+
 Source issue: [#281](https://github.com/design4pro/planned.travel/issues/281) — "Location search when
 adding a place: one geocoding proxy behind a provider port". Decided in ADR
 `docs/adr/0013-geoapify-for-geocoding.md`; nine rounds of grilling on the issue closed every open

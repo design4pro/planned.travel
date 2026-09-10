@@ -1,5 +1,12 @@
 # Pin the mobile-safari viewport explicitly instead of describing it in prose
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #151        |
+| **Spec PR**        | #375        |
+| **Implementation** | #379        |
+
 Source issue: [#151](https://github.com/design4pro/planned.travel/issues/151) — "Pin the
 mobile-safari viewport explicitly instead of describing it in prose". Filed by the sandcastle
 deep-review (run 20260829-1) while reviewing #102. Every claim below was re-verified against

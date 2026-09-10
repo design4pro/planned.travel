@@ -968,7 +968,8 @@ export interface CopierReport {
  *
  * Must be idempotent against a target whose inventory was just rebuilt by a retry — clear this
  * module's own trip-scoped rows before writing them, because `maps` carries new ids on every
- * attempt. See "Retrying a half-finished copy" in `.ai/specs/2026-09-07-copy-a-trip.md`.
+ * attempt. See "Retrying a half-finished copy" in
+ * `.ai/specs/implemented/2026-09-07-copy-a-trip.md`.
  */
 export type TripCopier = (
   scope: TenantScope,

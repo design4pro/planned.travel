@@ -1,5 +1,12 @@
 # Basemap catalogue, and a map preference that is finally read
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | none        |
+| **Spec PR**        | #307        |
+| **Implementation** | #308        |
+
 Source plan: `docs/plans/02-places-and-maps.md`, stage `02-S2` — "A basemap catalogue, and a
 preference that is finally read". Reference row `MAP-05 partial → done`.
 

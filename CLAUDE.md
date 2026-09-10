@@ -11,6 +11,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 - `pnpm e2e` — Playwright critical journeys + i18n parity (needs local D1 migrations; no basemap, ADR 0016)
 - `pnpm generate-routes` — regenerate the route tree; `src/routeTree.gen.ts` is generated, never hand-edit
 - `pnpm db:generate` — generate Drizzle migrations; `drizzle/` is generated, never hand-edit
+- `pnpm generate-spec-index` — regenerate `.ai/specs/README.md` from the metadata table in each spec; generated, never hand-edit
 
 ## Rules
 
@@ -19,6 +20,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 - Validate every server-function input with Zod. Named exports only (route modules excepted).
 - Definition of done for any task: docs/SPEC.md §7. Decomposition rule ("one concept, one owner"): docs/SPEC.md §8.
 - User-facing copy is never hardcoded — it lives in the 23-locale catalogue, and a new key lands in every locale in the same change (the parity test enforces this; procedure: the `i18n-messages` skill, contract: docs/SPEC.md §9).
+- A spec's directory is its state — `.ai/specs/` waiting, `implemented/`, `archived/` — and the table under its `H1` names the issue and the pull requests behind it. Move with `git mv`, change `Status` in the same commit, regenerate the index. Rules: `.ai/specs/AGENTS.md`; the guard: `scripts/specs/__tests__/spec-registry.test.ts`.
 - Commits: Conventional Commits, in English.
 
 ## Domain

@@ -1,5 +1,12 @@
 # One owner for "the trips this person is on"
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #133        |
+| **Spec PR**        | #368        |
+| **Implementation** | #382, #385  |
+
 Tracker: FR #133, filed by the sandcastle deep-review (run 12177) while reviewing #107.
 Measured on `develop` at `0d938e1a`.
 

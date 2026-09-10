@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Validation-gate step: the committed generated files match their sources.
-# Mirrors the two drift checks in .github/workflows/ci.yml. Both files are
+# Mirrors the three drift checks in .github/workflows/ci.yml. All three files are
 # generated and committed; a hand edit or a forgotten regeneration is caught here
-# rather than as a mystery type error (route tree) or a query against a column
-# that does not exist (migrations).
+# rather than as a mystery type error (route tree), a query against a column that
+# does not exist (migrations), or a spec index that quietly stops matching the
+# directory it describes.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -23,4 +24,16 @@ if ! git diff --exit-code -- drizzle/; then
   echo "ERROR: the schema and drizzle/ disagree. Run 'pnpm db:generate' and commit the result." >&2
   exit 1
 fi
+echo "==> spec index"
+# .ai/specs/README.md is rendered from the metadata table in each spec. The
+# assertions those tables must satisfy are a test
+# (scripts/specs/__tests__/spec-registry.test.ts); this only catches an index
+# nobody regenerated after moving a spec or appending a pull request to one.
+pnpm generate-spec-index
+git add --intent-to-add -- .ai/specs/README.md
+if ! git diff --exit-code -- .ai/specs/README.md; then
+  echo "ERROR: .ai/specs/README.md is stale. Run 'pnpm generate-spec-index' and commit the result." >&2
+  exit 1
+fi
+
 echo "generated files are current"

@@ -109,6 +109,24 @@ jobs:
             exit 1
           fi
 
+      # `.ai/specs/README.md` is generated from the metadata table in each spec,
+      # and those tables are what say whether a designed change shipped, is
+      # waiting, or was dropped. The table is checked against the directory
+      # holding the file by scripts/specs/__tests__/spec-registry.test.ts; this
+      # step catches only the other half - an index nobody regenerated after
+      # moving a spec or appending a pull request to one.
+      - name: Generate the spec index
+        run: pnpm generate-spec-index
+
+      - name: Check the committed spec index is current
+        run: |
+          set -euo pipefail
+          git add --intent-to-add -- .ai/specs/README.md
+          if ! git diff --exit-code -- .ai/specs/README.md; then
+            echo "::error title=Stale spec index::.ai/specs/README.md no longer matches .ai/specs/. Run 'pnpm generate-spec-index' and commit the result."
+            exit 1
+          fi
+
       # ESLint spends its time building a typed program and then walking it, and
       # on a pull request almost none of that work is new. `--cache` skips a file
       # whose bytes have not changed since the last run: measured on this repo,
