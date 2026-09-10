@@ -298,6 +298,23 @@ const messages = {
   },
   'dashboard.storage.more': '¿Necesitas más sitio?',
   'dashboard.storage.plans': 'Ver los planes',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Referencia',
+  'dashboard.widgets.choose': 'Elegir widgets',
+  'dashboard.widgets.description':
+    'Los widgets que mantienes junto a tu panel.',
+  'dashboard.clock.label': 'Reloj mundial',
+  'dashboard.clock.add': 'Añadir una zona horaria',
+  'dashboard.clock.search': 'Buscar ciudades y regiones',
+  'dashboard.clock.noMatches': 'Ninguna zona horaria con ese nombre',
+  'dashboard.clock.remove': 'Quitar {zone}',
+  'dashboard.clock.offset': '{offset} respecto a tu hora',
+  'dashboard.clock.here': 'Tu propia hora',
+  'dashboard.clock.empty.title': 'No hay zonas horarias fijadas',
+  'dashboard.clock.empty.body': 'Fija un lugar y lee su reloj junto al tuyo.',
+  'dashboard.clock.unknown.title': 'Este dispositivo no conoce {zone}',
+  'dashboard.clock.unknown.body':
+    'Aquí no se puede leer su hora. Quita la fila para resolverlo.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'La consola de administración no se ha cargado',

@@ -269,6 +269,23 @@ const messages = {
   },
   'dashboard.storage.more': 'Daha fazla yer mi gerekiyor?',
   'dashboard.storage.plans': 'Paketlere bak',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Başvuru',
+  'dashboard.widgets.choose': 'Widget’ları seç',
+  'dashboard.widgets.description': 'Panonuzun yanında tuttuğunuz widget’lar.',
+  'dashboard.clock.label': 'Dünya saati',
+  'dashboard.clock.add': 'Saat dilimi ekle',
+  'dashboard.clock.search': 'Şehir ve bölge ara',
+  'dashboard.clock.noMatches': 'Bu adda bir saat dilimi yok',
+  'dashboard.clock.remove': '{zone} kaldır',
+  'dashboard.clock.offset': 'Kendi saatinize göre {offset}',
+  'dashboard.clock.here': 'Kendi saatiniz',
+  'dashboard.clock.empty.title': 'Sabitlenmiş saat dilimi yok',
+  'dashboard.clock.empty.body':
+    'Bir yeri sabitleyin, saatini kendi saatinizin yanında okuyun.',
+  'dashboard.clock.unknown.title': 'Bu cihaz {zone} dilimini tanımıyor',
+  'dashboard.clock.unknown.body':
+    'Saati burada okunamıyor. Satırı kaldırarak bunu giderin.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Yönetim konsolu yüklenmedi',

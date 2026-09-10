@@ -294,6 +294,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Besoin de plus de place\u00a0?',
   'dashboard.storage.plans': 'Voir les formules',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Référence',
+  'dashboard.widgets.choose': 'Choisir les widgets',
+  'dashboard.widgets.description':
+    'Les widgets que vous gardez à côté de votre tableau de bord.',
+  'dashboard.clock.label': 'Horloge mondiale',
+  'dashboard.clock.add': 'Ajouter un fuseau horaire',
+  'dashboard.clock.search': 'Rechercher des villes et des régions',
+  'dashboard.clock.noMatches': 'Aucun fuseau horaire de ce nom',
+  'dashboard.clock.remove': 'Retirer {zone}',
+  'dashboard.clock.offset': '{offset} par rapport à votre heure',
+  'dashboard.clock.here': 'Votre propre heure',
+  'dashboard.clock.empty.title': 'Aucun fuseau horaire épinglé',
+  'dashboard.clock.empty.body':
+    'Épinglez un lieu et lisez son heure à côté de la vôtre.',
+  'dashboard.clock.unknown.title': 'Cet appareil ne connaît pas {zone}',
+  'dashboard.clock.unknown.body':
+    'Son heure ne peut pas être lue ici. Retirez la ligne pour corriger cela.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'La console d’administration ne s’est pas chargée',

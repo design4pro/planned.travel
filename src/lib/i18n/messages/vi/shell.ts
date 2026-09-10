@@ -254,6 +254,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Cần thêm chỗ?',
   'dashboard.storage.plans': 'Xem các gói',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Tham chiếu',
+  'dashboard.widgets.choose': 'Chọn tiện ích',
+  'dashboard.widgets.description':
+    'Những tiện ích bạn giữ bên cạnh bảng điều khiển.',
+  'dashboard.clock.label': 'Đồng hồ thế giới',
+  'dashboard.clock.add': 'Thêm múi giờ',
+  'dashboard.clock.search': 'Tìm thành phố và khu vực',
+  'dashboard.clock.noMatches': 'Không có múi giờ nào tên như vậy',
+  'dashboard.clock.remove': 'Xóa {zone}',
+  'dashboard.clock.offset': '{offset} so với giờ của bạn',
+  'dashboard.clock.here': 'Giờ của chính bạn',
+  'dashboard.clock.empty.title': 'Chưa ghim múi giờ nào',
+  'dashboard.clock.empty.body':
+    'Ghim một nơi để đọc đồng hồ của nơi đó bên cạnh đồng hồ của bạn.',
+  'dashboard.clock.unknown.title': 'Thiết bị này không biết {zone}',
+  'dashboard.clock.unknown.body':
+    'Không thể đọc giờ của nó ở đây. Xóa hàng để khắc phục.',
 
   'admin.error': 'Bảng quản trị chưa tải được',
   'admin.denied.title': 'Chỉ quản trị viên mới mở được mục này',
