@@ -109,8 +109,8 @@ One `01-S5` block appended to `e2e/trips-core.spec.ts`, then the full gate.
 
 ### Phase 1: The pure module
 
-- [ ] 1.1 Write `src/lib/clock-zones.ts` — validation, label, offset, ordering, tick delay, preference declaration
-- [ ] 1.2 Write `src/lib/__tests__/clock-zones.test.ts` — mutation-resistant unit tests
+- [x] 1.1 Write `src/lib/clock-zones.ts` — validation, label, offset, ordering, tick delay, preference declaration — 1121ee77
+- [x] 1.2 Write `src/lib/__tests__/clock-zones.test.ts` — mutation-resistant unit tests — 1121ee77
 
 ### Phase 2: The copy
 
