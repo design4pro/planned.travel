@@ -75,10 +75,10 @@ Owned surface:
 
 ### Phase 3: the "drop its time?" dialog
 
-- [ ] 3.1 The dialog — `DropTimeDialog` in `plan-actions.tsx`
-- [ ] 3.2 The `'timed'` path, for stops as well as notes
-- [ ] 3.3 The chevrons join the merged path
-- [ ] 3.4 Phase 3 copy — five keys in 23 locales
+- [x] 3.1 The dialog — `DropTimeDialog` in `plan-actions.tsx` — 7f3db779
+- [x] 3.2 The `'timed'` path, for stops as well as notes — 7f3db779
+- [x] 3.3 The chevrons join the merged path — 7f3db779
+- [x] 3.4 Phase 3 copy — five keys in 23 locales — 7f3db779
 
 ### Phase 4: end to end
 
