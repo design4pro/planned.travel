@@ -1,5 +1,5 @@
 /**
- * The comparison that replaced the anonymous-only list.
+ * The comparison that replaced the hardcoded list of signed-out-only routes.
  *
  * There is no drift half to this test any more: the module makes no claim about `src/routes/`, so
  * there is nothing for a second model of the router to disagree with. What is asserted here is
