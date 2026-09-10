@@ -104,11 +104,6 @@ export function stopsOf(items: ReadonlyArray<PlannerItem>): Array<PlannerRow> {
   return items.filter((item) => item.kind === 'stop').map((item) => item.row)
 }
 
-/** The notes of a sequence, in sequence order. */
-export function notesOf(items: ReadonlyArray<PlannerItem>): Array<PlannerNote> {
-  return items.filter((item) => item.kind === 'note').map((item) => item.note)
-}
-
 /**
  * A day note, as its row renders it.
  *

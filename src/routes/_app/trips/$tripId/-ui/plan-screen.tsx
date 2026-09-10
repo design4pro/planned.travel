@@ -176,6 +176,13 @@ function controlsInset(right: number): number {
 /** Zoom a "take me there" from the rail settles on, if the map is further out. */
 const FOCUS_ZOOM = 14.5
 
+/** Lowers the "drop its time?" dialog while leaving the question it asked readable. */
+function closed<T extends { readonly open: boolean }>(
+  current: T | null,
+): T | null {
+  return current === null ? null : { ...current, open: false }
+}
+
 /**
  * The frame a trip with nothing mapped opens on.
  *
@@ -394,8 +401,14 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
    * The move a reader is being asked about: it lands only if its own time goes.
    * The whole move is kept, not just the item, because confirming replays it —
    * the drop happens by running the same move again with the time treated as gone.
+   *
+   * Answering lowers `open` rather than clearing the state, because the dialog stays
+   * mounted through its exit animation: dropping the name and the time here would
+   * leave it reading "Move  and drop its ?" on the way out, which is what a screen
+   * reader re-reading the closing dialog would hear.
    */
   const [dropTime, setDropTime] = React.useState<{
+    readonly open: boolean
     readonly itemId: string
     readonly target: PlanTarget
     readonly name: string
@@ -692,7 +705,7 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       if (outcome.kind === 'ask-drop-time') {
         const name = nameOfItem(itemId)
         if (name === null) return null
-        setDropTime({ itemId, target, name, time: outcome.time })
+        setDropTime({ open: true, itemId, target, name, time: outcome.time })
         return t('trips.plan.move.spoken.timed', { name, time: outcome.time })
       }
 
@@ -1609,13 +1622,13 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       />
 
       <DropTimeDialog
-        open={dropTime !== null}
+        open={dropTime?.open === true}
         name={dropTime?.name ?? ''}
         time={dropTime?.time ?? ''}
-        onDecline={() => setDropTime(null)}
+        onDecline={() => setDropTime(closed)}
         onConfirm={() => {
           if (dropTime === null) return
-          setDropTime(null)
+          setDropTime(closed)
           runMove(dropTime.itemId, dropTime.target, true)
         }}
       />

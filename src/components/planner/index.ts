@@ -75,7 +75,6 @@ export {
   DAY_NOTE_ICONS,
   DEFAULT_DAY_NOTE_ICON,
   isMapped,
-  notesOf,
   stopsOf,
 } from './types'
 export type {

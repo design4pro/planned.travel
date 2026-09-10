@@ -540,8 +540,12 @@ export async function reorderDayTimeline(
       return scope.db
         .update(dayAssignments)
         .set(
+          // Both columns, not just the start. A stop keeping its `end_time` renders
+          // as an open-start range — a row still visibly wearing the time the reader
+          // was just told it had lost — and `timeByItem` reads `start_time` alone, so
+          // from then on the clock rule cannot see it and never asks about it again.
           dropTime
-            ? { orderIndex: position, startTime: null }
+            ? { orderIndex: position, startTime: null, endTime: null }
             : { orderIndex: position },
         )
         .where(

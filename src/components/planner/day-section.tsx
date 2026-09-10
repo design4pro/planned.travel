@@ -44,7 +44,7 @@ export interface DaySectionProps {
   readonly onAddNote?: () => void
   readonly onEditNote?: (note: PlannerNote) => void
   readonly onDeleteNote?: (note: PlannerNote) => void
-  /** `-1` is one place earlier in the day's note run, `1` one place later. */
+  /** `-1` is one place earlier in the day's sequence, `1` one place later. */
   readonly onMoveNote?: (note: PlannerNote, direction: -1 | 1) => void
 }
 
@@ -208,7 +208,7 @@ export function DaySection({
                 const { note } = item
                 return (
                   <NoteRow
-                    key={note.id}
+                    key={noteItemId(note.id)}
                     note={note}
                     position={index}
                     count={day.items.length}

@@ -955,11 +955,13 @@ test.describe('01-S4b — The day is one sequence on screen', () => {
     const before = await sequenceOf(page, LATE)
     const last = before.length - 1
     // One list holding stops and notes alike, sorted by the clock rather than by
-    // arrival: the two notes are its final pair, in the order their times ask for.
-    expect(before.length).toBeGreaterThan(2)
+    // arrival: the two markers are its final pair, in the order their times ask for,
+    // and at least one stop shares the list with them. Asserted as membership rather
+    // than by absolute slot, because the seeded day's own shape is not this walk's to
+    // depend on — `01-S2`'s block writes into the same workspace.
+    expect(before.some((id) => !id.startsWith('note:'))).toBe(true)
     expect(before[last]).toMatch(/^note:/)
     expect(before[last - 1]).toMatch(/^note:/)
-    expect(before[last - 2]).not.toMatch(/^note:/)
 
     // Lifted by its own handle and stepped over the note above it, which puts 23:50
     // before 23:45 — the one thing the engine will not do without being asked.
