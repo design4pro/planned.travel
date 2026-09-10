@@ -40,6 +40,29 @@ const messages = {
    * list, and a target that only mentioned places would describe half of it.
    */
   'plan.day.empty': 'Nothing planned — drop a place or a note here',
+  /* ------------------------------------------------- a refused or questioned move */
+  /**
+   * Why a drag changed nothing, said twice over: a toast for a reader watching the
+   * rail, and a sentence for the live region a keyboard reader is listening to.
+   * Without the second one a refused keyboard drag is silence — the row simply
+   * stays where it was and nothing explains it.
+   *
+   * `{name}` is the place or the note's headline. The two `notInIdeas` /
+   * `notInAnotherDay` refusals are product statements rather than failures: the
+   * ideas rail is the trip's unscheduled *place* inventory, and a note belongs to
+   * the day it was written for.
+   */
+  'plan.move.refused.duplicate': '{name} is already on that day',
+  'plan.move.refused.duplicateBody': 'A place can only appear once per day. Move it to another day instead.',
+  'plan.move.refused.notInIdeas': 'A note stays in the day',
+  'plan.move.refused.notInIdeasBody': 'Ideas are places waiting for a day. A note belongs to the day it was written on.',
+  'plan.move.refused.notInAnotherDay': 'A note stays on its own day',
+  'plan.move.refused.notInAnotherDayBody': 'Notes cannot be moved between days yet. Edit the note, or write it on the other day.',
+  'plan.move.spoken.duplicate': '{name} was not moved. That day already has it.',
+  'plan.move.spoken.notInIdeas': '{name} was not moved. A note stays in the day.',
+  'plan.move.spoken.notInAnotherDay': '{name} was not moved. A note stays on its own day.',
+  'plan.move.error.save': 'That move did not save',
+  'plan.move.error.retry': 'Try it again in a moment.',
   /* ------------------------------------------------- a day's own notes */
   /**
    * The note affordances. `add` is the control's own label; `addForDay` is the
@@ -62,6 +85,12 @@ const messages = {
   'plan.note.showLess': 'Show less',
   'plan.note.moveUp': 'Move up',
   'plan.note.moveDown': 'Move down',
+  /**
+   * The note's drag handle, named as an action rather than a thing: it is the
+   * control's whole accessible name, and a screen reader that has just heard the
+   * note's text needs to know what pressing this does, not what it is called.
+   */
+  'plan.note.drag': 'Reorder note',
   'plan.note.edit': 'Edit note',
   'plan.note.delete': 'Delete note',
   /* ------------------------------------------------------- the editor */

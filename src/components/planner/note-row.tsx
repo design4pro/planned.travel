@@ -1,4 +1,6 @@
 import * as React from 'react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import {
   AlarmClock,
   BedDouble,
@@ -9,6 +11,7 @@ import {
   Clock,
   Flashlight,
   Footprints,
+  GripVertical,
   Info,
   Luggage,
   MapPin,
@@ -35,6 +38,7 @@ import {
 } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { Markdown } from '#/lib/markdown/render'
+import { noteItemId } from './ordering'
 import { DEFAULT_DAY_NOTE_ICON } from './types'
 
 import type { LucideIcon } from 'lucide-react'
@@ -135,6 +139,12 @@ export interface NoteRowProps {
   readonly canWrite: boolean
   /** Greys the row and puts a spinner in the icon's place while a write is in flight. */
   readonly pending?: boolean
+  /**
+   * `false` renders the note without a drag handle — a read-only trip, or a surface
+   * with no drag context above it. Opt-in rather than opt-out, unlike `StopRow`: the
+   * note run reached the screen without a drag at all until `01-S4b`.
+   */
+  readonly draggable?: boolean
   readonly onMove?: (direction: -1 | 1) => void
   readonly onEdit?: () => void
   readonly onDelete?: () => void
@@ -159,6 +169,7 @@ export function NoteRow({
   count,
   canWrite,
   pending = false,
+  draggable = false,
   onMove,
   onEdit,
   onDelete,
@@ -167,16 +178,39 @@ export function NoteRow({
   const [open, setOpen] = React.useState(false)
   const detailId = React.useId()
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: noteItemId(note.id),
+    disabled: !draggable || pending,
+  })
+
   const Glyph = dayNoteIconGlyph(note.icon)
   const hasDetail = note.detail !== null && note.detail.trim().length > 0
 
   return (
     <li
-      data-motion-transform=""
-      style={{ animationDelay: staggerDelay(position) }}
+      ref={setNodeRef}
+      // Only while no drag offset is in play. The attribute exists for the entrance
+      // animation, and reduced motion resets it with `transform: none !important` —
+      // which would also cancel the offset that makes the row follow the pointer, so
+      // a reader who asked for less motion would drag a row that never moves.
+      data-motion-transform={transform === null ? '' : undefined}
+      style={{
+        animationDelay: staggerDelay(position),
+        transform: CSS.Translate.toString(transform),
+        transition,
+      }}
       className={cn(
         'group/note animate-rise relative flex flex-col rounded-lg px-1 py-1',
         transitionBase,
+        isDragging && 'z-10 opacity-40',
         pending && 'opacity-60',
       )}
       data-planner-note={note.id}
@@ -253,6 +287,26 @@ export function NoteRow({
               transitionBase,
             )}
           >
+            {draggable ? (
+              // Inside the cluster rather than beside the text: the rail is 340px
+              // wide and a note is mostly words, so a sixth column would take the
+              // headline apart to save the cluster one hover.
+              //
+              // Not `disabled` while pending, for `StopRow`'s reason — a disabled
+              // button cannot hold focus, so a keyboard drop would drop the reader's
+              // focus with it. `@dnd-kit`'s own `aria-disabled` says as much, and its
+              // sensor refuses to lift a disabled sortable anyway.
+              <IconButton
+                ref={setActivatorNodeRef}
+                size="sm"
+                variant="ghost"
+                label={t('trips.plan.note.drag')}
+                icon={<GripVertical />}
+                className="cursor-grab active:cursor-grabbing aria-disabled:cursor-default"
+                {...attributes}
+                {...listeners}
+              />
+            ) : null}
             <IconButton
               size="sm"
               variant="ghost"

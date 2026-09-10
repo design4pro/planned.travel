@@ -231,6 +231,7 @@ export function DaySection({
                     position={noteRun.get(note.id) ?? 0}
                     count={noteRun.size}
                     canWrite={canWriteNotes}
+                    draggable={draggable && canWriteNotes}
                     pending={pendingItemIds?.has(noteItemId(note.id)) ?? false}
                     onMove={(direction) => onMoveNote?.(note, direction)}
                     onEdit={() => onEditNote?.(note)}

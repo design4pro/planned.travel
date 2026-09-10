@@ -76,7 +76,6 @@ import {
   PlannerRail,
   initialSelection,
   itemsIn,
-  movePlanItem,
   noteItemId,
   notesOf,
   selectionReducer,
@@ -103,6 +102,7 @@ import {
   planModel,
   routeDaysOf,
 } from './plan-model'
+import { planMoveOutcome, refusalCopy, reorderPayload } from './plan-move'
 import {
   createPlanPlaceFn,
   deletePlanPlaceFn,
@@ -584,18 +584,7 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
     async (change: PlanChange): Promise<void> => {
       switch (change.kind) {
         case 'reorder':
-          await reorderPlanFn({
-            data: {
-              tripId: payload.tripId,
-              days: change.days.map((day) => ({
-                dayId: day.dayId,
-                items: day.itemIds.map((itemId) => ({
-                  kind: 'stop' as const,
-                  id: itemId,
-                })),
-              })),
-            },
-          })
+          await reorderPlanFn({ data: reorderPayload(payload.tripId, change) })
           return
         case 'schedule':
           await schedulePlaceFn({
@@ -626,52 +615,74 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   )
 
   /**
+   * What an item is called in a sentence: a place by its name, a note by its
+   * headline. `null` for an id the board cannot resolve — which is also the only
+   * case in which the reader is told nothing, because an item the board does not
+   * have is one the engine refuses as `'unknown'` rather than as anything sayable.
+   */
+  const nameOfItem = React.useCallback(
+    (itemId: string): string | null =>
+      model.rowsByItem.get(itemId)?.name ?? noteIndex.get(itemId)?.body ?? null,
+    [model.rowsByItem, noteIndex],
+  )
+
+  /**
    * Applies a move optimistically, then writes it.
+   *
+   * Returns the sentence a screen reader should hear when nothing moved, so a
+   * refused keyboard drag is spoken rather than silent; `null` when the move went
+   * through. The decision itself lives in `plan-move.ts` — everything here is the
+   * optimistic swap, the write, and saying what happened.
    *
    * The rollback restores the arrangement the board had *before* this move rather
    * than recomputing an inverse, which is the only version that stays correct when
    * two drags overlap.
    */
   const commitMove = React.useCallback(
-    (itemId: string, target: PlanTarget): void => {
-      if (!editable) return
+    (itemId: string, target: PlanTarget): string | null => {
+      if (!editable) return null
 
-      const result = movePlanItem(order, itemId, target, { placeOfItem })
-      if (!result.ok) {
-        if (result.reason === 'duplicate') {
-          const name = model.rowsByItem.get(itemId)?.name ?? 'That place'
-          toast.error(`${name} is already on that day`, {
-            description:
-              'A place can only appear once per day. Move it to another day instead.',
-          })
-        }
-        return
+      const outcome = planMoveOutcome(order, itemId, target, { placeOfItem })
+
+      if (outcome.kind === 'refused') {
+        const copy = refusalCopy(outcome.reason)
+        const name = nameOfItem(itemId)
+        if (copy === null || name === null) return null
+        toast.error(t(copy.title, { name }), { description: t(copy.body) })
+        return t(copy.spoken, { name })
       }
 
+      // Unreachable until the screen supplies `timeOfItem`, which arms the clock
+      // rule and is what opens the "drop its time?" dialog — the change's next phase.
+      if (outcome.kind === 'ask-drop-time') return null
+
       const previous = order
-      setOrder(result.order)
+      setOrder(outcome.order)
       markPending(itemId, true)
 
-      void applyChange(result.change)
+      void applyChange(outcome.change)
         .then(() => router.invalidate())
         .catch((cause: unknown) => {
           setOrder(previous)
-          toast.error('That move did not save', {
-            description: messageOf(cause, 'Try it again in a moment.'),
+          toast.error(t('trips.plan.move.error.save'), {
+            description: messageOf(cause, t('trips.plan.move.error.retry')),
           })
         })
         .finally(() => {
           markPending(itemId, false)
         })
+
+      return null
     },
     [
       applyChange,
       editable,
       markPending,
-      model.rowsByItem,
+      nameOfItem,
       order,
       placeOfItem,
       router,
+      t,
     ],
   )
 
@@ -687,12 +698,15 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   const dnd = usePlanDnd({
     order,
     rowsByItem: model.rowsByItem,
+    notesByItem: noteIndex,
     days: model.days,
     onMove: commitMove,
   })
 
   const draggingRow =
     dnd.draggingId === null ? undefined : model.rowsByItem.get(dnd.draggingId)
+  const draggingNote =
+    dnd.draggingId === null ? undefined : noteIndex.get(dnd.draggingId)
 
   /* -------------------------------------------------------------- selection */
 
@@ -1462,7 +1476,11 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       {/* ------------------------------------------------------- drag overlay */}
 
       <DragOverlay dropAnimation={null}>
-        {draggingRow === undefined ? null : (
+        {draggingRow === undefined ? (
+          draggingNote === undefined ? null : (
+            <DragPreview note={draggingNote} />
+          )
+        ) : (
           <DragPreview
             row={draggingRow}
             category={categoryFor(draggingRow.categoryId)}

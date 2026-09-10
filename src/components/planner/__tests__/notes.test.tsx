@@ -7,6 +7,7 @@ import { DndContext } from '@dnd-kit/core'
 
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import { DaySection } from '../day-section'
+import { DragPreview } from '../drag-preview'
 import { NoteRow } from '../note-row'
 
 import type { PlannerDay, PlannerNote } from '../types'
@@ -57,7 +58,7 @@ function day(notes: ReadonlyArray<PlannerNote>): PlannerDay {
   }
 }
 
-/** One note, in the list element its row expects to sit in. */
+/** One note, in the list element and the drag context its row expects. */
 function renderRow(
   overrides: Partial<React.ComponentProps<typeof NoteRow>> = {},
 ) {
@@ -69,9 +70,11 @@ function renderRow(
     ...overrides,
   }
   return render(
-    <ul>
-      <NoteRow {...props} />
-    </ul>,
+    <DndContext>
+      <ul>
+        <NoteRow {...props} />
+      </ul>
+    </DndContext>,
   )
 }
 
@@ -205,6 +208,25 @@ describe('NoteRow', () => {
     expect(screen.getByRole('button', { name: 'Show more' })).toBeDefined()
   })
 
+  /**
+   * The handle is the whole of keyboard drag: `@dnd-kit`'s keyboard sensor lifts from
+   * the activator, so a row without one can be dragged by pointer and by nothing else.
+   */
+  it('offers a named drag handle only when the note can be dragged', () => {
+    const { unmount } = renderRow({ draggable: true })
+    expect(screen.getByRole('button', { name: 'Reorder note' })).toBeDefined()
+    unmount()
+
+    renderRow()
+    expect(screen.queryByRole('button', { name: 'Reorder note' })).toBeNull()
+  })
+
+  it('offers no drag handle to a reader who cannot write', () => {
+    renderRow({ canWrite: false, draggable: true })
+
+    expect(screen.queryByRole('button', { name: 'Reorder note' })).toBeNull()
+  })
+
   it('holds every control still while the row’s own write is in flight', () => {
     renderRow({ pending: true, position: 1, count: 3 })
 
@@ -266,5 +288,25 @@ describe('DaySection notes', () => {
     expect(
       screen.queryByRole('button', { name: /^Add a note for / }),
     ).toBeNull()
+  })
+})
+
+describe('DragPreview for a note', () => {
+  /**
+   * No thumbnail: there is no place to picture. What is left has to say which note is
+   * in the air, which is the headline and — when it has one — the time it is pinned to.
+   */
+  it('carries the headline and the time, and no place thumbnail', () => {
+    const { container } = render(
+      <DragPreview note={note({ id: 'n1', time: '18:30' })} />,
+    )
+
+    expect(screen.getByText('Buy the metro pass at the airport')).toBeDefined()
+    expect(screen.getByText('18:30')).toBeDefined()
+    expect(
+      container
+        .querySelector('[data-drag-preview]')
+        ?.getAttribute('data-drag-preview'),
+    ).toBe('note')
   })
 })

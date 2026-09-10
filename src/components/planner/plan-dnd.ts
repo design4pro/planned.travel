@@ -23,7 +23,7 @@ import type {
   SensorOptions,
 } from '@dnd-kit/core'
 import type { PlanOrder, PlanTarget } from './ordering'
-import type { PlannerDay, PlannerRow } from './types'
+import type { PlannerDay, PlannerNote, PlannerRow } from './types'
 
 /**
  * Six pixels: enough that a tap to select never starts a drag, small enough that a
@@ -58,10 +58,19 @@ export interface PlanDndOptions {
   /** The board as the reader currently sees it, optimistic moves included. */
   readonly order: PlanOrder
   readonly rowsByItem: ReadonlyMap<string, PlannerRow>
+  /** Notes by draggable id, so a note can be named out loud like a stop. */
+  readonly notesByItem?: ReadonlyMap<string, PlannerNote>
   /** Days, for naming a drop target out loud. */
   readonly days: ReadonlyArray<PlannerDay>
-  /** Called once a drag resolves to a real destination. */
-  readonly onMove: (itemId: string, target: PlanTarget) => void
+  /**
+   * Called once a drag resolves to a real destination.
+   *
+   * Returns the sentence to announce when the move was refused, or `null` when it
+   * was accepted. The refusal vocabulary — and the catalogue it is translated from —
+   * belongs to the screen; this hook only has to say what the screen decided, because
+   * otherwise a refused keyboard drag is silence and the reader is left guessing.
+   */
+  readonly onMove: (itemId: string, target: PlanTarget) => string | null
 }
 
 export interface PlanDnd {
@@ -91,6 +100,7 @@ export interface PlanDnd {
 export function usePlanDnd({
   order,
   rowsByItem,
+  notesByItem,
   days,
   onMove,
 }: PlanDndOptions): PlanDnd {
@@ -122,10 +132,19 @@ export function usePlanDnd({
     [order],
   )
 
-  /** Name of a row, for anything spoken rather than drawn. */
+  /**
+   * Name of an item, for anything spoken rather than drawn.
+   *
+   * A note has no name of its own, so its headline stands in — the same words the
+   * reader sees on the row, which is what makes "Moved Buy the metro pass to Day 2"
+   * comprehensible without a second lookup.
+   */
   const nameOfItem = React.useCallback(
-    (itemId: string): string => rowsByItem.get(itemId)?.name ?? 'the stop',
-    [rowsByItem],
+    (itemId: string): string =>
+      rowsByItem.get(itemId)?.name ??
+      notesByItem?.get(itemId)?.body ??
+      'the stop',
+    [notesByItem, rowsByItem],
   )
 
   /** Name of a container: a numbered, titled day, or the ideas column. */
@@ -170,7 +189,11 @@ export function usePlanDnd({
    * same `targetOf` the commit uses, is the only version that can agree with what
    * actually happened.
    */
-  const spokenRef = React.useRef({ from: 'the board', to: 'the board' })
+  const spokenRef = React.useRef<{
+    from: string
+    to: string
+    refusal: string | null
+  }>({ from: 'the board', to: 'the board', refusal: null })
 
   const onDragStart = React.useCallback(
     (event: DragStartEvent): void => {
@@ -179,6 +202,7 @@ export function usePlanDnd({
       spokenRef.current = {
         from: nameOfContainer(containerOf(order, id)),
         to: 'the board',
+        refusal: null,
       }
     },
     [nameOfContainer, order],
@@ -191,9 +215,10 @@ export function usePlanDnd({
       spokenRef.current = {
         ...spokenRef.current,
         to: target === null ? '' : nameOfContainer(target.container),
+        refusal: null,
       }
       if (target === null) return
-      onMove(String(event.active.id), target)
+      spokenRef.current.refusal = onMove(String(event.active.id), target)
     },
     [nameOfContainer, onMove, targetOf],
   )
@@ -226,10 +251,14 @@ export function usePlanDnd({
         over === null || over.id === active.id
           ? undefined
           : `Now over ${nameOfOver(String(over.id))}.`,
+      // A refused drop is the one outcome a sighted reader gets for free — the row
+      // visibly snaps back — and a keyboard reader gets nothing at all. So the
+      // screen's own sentence wins over the generic one whenever there is one.
       onDragEnd: ({ active }) =>
-        spokenRef.current.to === ''
+        spokenRef.current.refusal ??
+        (spokenRef.current.to === ''
           ? `${nameOfItem(String(active.id))} was left where it was.`
-          : `Moved ${nameOfItem(String(active.id))} to ${spokenRef.current.to}. Saving.`,
+          : `Moved ${nameOfItem(String(active.id))} to ${spokenRef.current.to}. Saving.`),
       onDragCancel: ({ active }) =>
         `Cancelled. ${nameOfItem(String(active.id))} is back on ${spokenRef.current.from}.`,
     }),
