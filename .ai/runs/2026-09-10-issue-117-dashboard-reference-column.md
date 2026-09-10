@@ -129,5 +129,5 @@ One `01-S5` block appended to `e2e/trips-core.spec.ts`, then the full gate.
 
 ### Phase 5: Verification
 
-- [ ] 5.1 Append the `01-S5` block to `e2e/trips-core.spec.ts`
-- [ ] 5.2 Run the full `validation.commands` gate and fix what it finds
+- [x] 5.1 Append the `01-S5` block to `e2e/trips-core.spec.ts` — d6ac1e4d
+- [x] 5.2 Run the full `validation.commands` gate and fix what it finds — d6ac1e4d
