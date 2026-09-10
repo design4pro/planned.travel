@@ -20,9 +20,6 @@
  *     whole style document through setStyle and the marker goes back to false;
  *   - entrance motion is stopped before the shutter, so text is never caught at 20% opacity.
  *
- * `--auth` is refused outright for a screen only a signed-out visitor can see, because the frame
- * would be of the wrong screen under the right filename — which screens and why: ./anonymous-only.mjs.
- *
  * The reference demo has no `--auth`: it is entered by pressing its own "Try the demo" control once
  * (`--enter`), and its welcome overlay is pressed away on every frame (`--dismiss`). Why two flags
  * and not one `--click`: ./click-through.mjs.
@@ -43,20 +40,25 @@
  *     [--enter 'selector'] [--dismiss 'selector']
  *
  * Prints one JSON object on stdout: { requestedUrl, files, console, warnings, captureValid }. Each
- * file records the URL the browser actually landed on, so a redirect the refusal list does not know
- * about — a role-gated route, a screen not yet written — is still visible to whoever reads this.
- * Copy it into your result.
+ * file records the URL the browser actually landed on, and a frame taken on a pathname other than
+ * the requested one is a `warnings` entry — no list, no exceptions, so a role-gated redirect and one
+ * nobody has written yet are as visible as a known one. Under `--click` the comparison uses the
+ * landing instead, so the caller's own navigation is not reported as a redirect, while
+ * `files[].landedUrl` still records where the shutter fired. Copy the JSON into your result.
  */
 
 import { mkdir, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { chromium } from '@playwright/test'
-import { anonymousOnlyRefusal } from './anonymous-only.mjs'
 import { dismissIfPresent, enterThrough } from './click-through.mjs'
+import { landedUrlWarning, pathnameOf } from './landed-url.mjs'
 
 const AUTH_STATE = 'e2e/.auth/demo.json'
 const DEV_TOOLBAR = '[data-testid="tanstack_devtools"]'
+
+/** Where the obligation to quote a `warnings` entry is written down. */
+const WARNINGS_CONTRACT = '.claude/skills/verifying-changes/SKILL.md'
 
 /**
  * Console output that is the toolchain talking, not the application.
@@ -201,17 +203,32 @@ async function settle(page, { map }) {
   await page.evaluate(() => window.scrollTo(0, 0))
 }
 
+/**
+ * The cached session has expired and this frame would be of the sign-in screen — or `undefined`.
+ *
+ * A stale session does not fail the navigation, it redirects, and the frame filed is `/login`. A
+ * critic handed that reports the product as having no content at all. This stays a hard error rather
+ * than joining the redirect warnings because its fix is one specific command.
+ *
+ * Narrowed by the REQUESTED pathname: `--auth --url .../login` is now a legitimate capture, and
+ * landing on `/login` when `/login` is what was asked for is the session working, not failing.
+ * Without the narrowing this change would have invented a new bug — a false "your session is stale"
+ * on every capture of the sign-in screen.
+ */
+function staleSession(seen, { wantsAuth }) {
+  if (!wantsAuth) return undefined
+  if (pathnameOf(seen) !== '/login' || pathnameOf(url) === '/login')
+    return undefined
+
+  return new Error(
+    `--auth was asked for but ${url} redirected to ${seen}. The cached session in ` +
+      `${AUTH_STATE} is stale or the workspace is unseeded. Refresh it with: ` +
+      `PLAYWRIGHT_BASE_URL=${new URL(url).origin} pnpm exec playwright test --project=setup`,
+  )
+}
+
 async function main() {
   const wantsAuth = flag('auth')
-
-  // Both refusals come before anything is created or launched: once a frame exists there is
-  // nothing left downstream to tell a redirect target apart from the product. Which screens are
-  // anonymous-only, and why that list is short: ./anonymous-only.mjs.
-  const refusal = wantsAuth ? anonymousOnlyRefusal(url) : undefined
-  if (refusal) {
-    console.error(`capture: ${refusal}`)
-    process.exit(2)
-  }
 
   // `--auth` is our cached session and `--enter` is how the reference makes one for itself. Both
   // on one URL means the caller has mixed the two sides up, and whichever won would file the
@@ -286,18 +303,19 @@ async function main() {
       await page.emulateMedia({ colorScheme: theme })
       await page.goto(url, { waitUntil: 'commit', timeout: 45_000 })
 
-      // A cached session that has expired does not fail — it redirects, and the frame filed is the
-      // login screen. A critic handed that reports the product as having no content at all. Refuse
-      // it here, where the fix is one command, rather than downstream where it is a wasted round.
-      if (wantsAuth && new URL(page.url()).pathname.startsWith('/login')) {
-        throw new Error(
-          `--auth was asked for but ${url} redirected to ${page.url()}. The cached session in ` +
-            `${AUTH_STATE} is stale or the workspace is unseeded. Refresh it with: ` +
-            `PLAYWRIGHT_BASE_URL=${new URL(url).origin} pnpm exec playwright test --project=setup`,
-        )
-      }
+      // The fast path, and the reason this check is not merely relocated to the shutter: firing
+      // here, before `settle`, `--hover` and `--click`, is what turns a stale session into an
+      // instant actionable message instead of a generic Playwright timeout. Under `--map`, `settle`
+      // waits 25 s for a `[data-map-ready]` element `/login` never renders.
+      const staleAtNavigation = staleSession(page.url(), { wantsAuth })
+      if (staleAtNavigation) throw staleAtNavigation
 
       await settle(page, { map: hasMap })
+
+      // Where the app itself put us, read before `quiesce`, `--dismiss`, `--hover` and `--click`.
+      // Used only under `--click`, where the shutter reads wherever the caller's own click went.
+      const landing = page.url()
+
       await quiesce(page)
 
       // Per frame, before any hover or click: an overlay that re-renders on every hard load would
@@ -329,6 +347,17 @@ async function main() {
         continue
       }
 
+      // The screen this frame is of. `--click` navigates on purpose, so there the landing is what
+      // the capture was about; otherwise it is the shutter read, which is what catches a redirect
+      // the app makes after hydration.
+      const seen = typeof opt.click === 'string' ? landing : page.url()
+
+      // The same predicate, evaluated a second time — the last point before a PNG exists. It closes
+      // the post-hydration bounce the check after `goto` cannot see, and `--hover`, `--dismiss` and
+      // `--click` have all already run, so nothing navigates between here and the shutter.
+      const staleAtShutter = staleSession(seen, { wantsAuth })
+      if (staleAtShutter) throw staleAtShutter
+
       const name = `${statePrefix}${vp.name}-${theme}-${label}.png`
       const path = `${outDir}/${name}`
       await page.screenshot({
@@ -347,6 +376,17 @@ async function main() {
             `suspiciously flat for a ${vp.w}px frame, likely shot before the page finished painting`,
         )
       }
+      // Deduplicated, because eight frames of one redirect are eight copies of one sentence, and
+      // the other warnings would drown in them. Pushed here rather than at the comparison so a
+      // frame the viewport gate rejected never contributes one: `warnings` describes frames that
+      // exist.
+      const redirected = landedUrlWarning({
+        requestedUrl: url,
+        landedUrl: seen,
+      })
+      if (redirected && !warnings.includes(redirected))
+        warnings.push(redirected)
+
       // Read back at the shutter rather than at the response, so a redirect the app makes after
       // hydration — and a `--click` that navigates — is the URL reported for this frame.
       files.push({
@@ -387,6 +427,15 @@ async function main() {
       2,
     ),
   )
+  // A pointer, not a second copy of the rule: what to do with a warning is one claim, and
+  // `verifying-changes` owns it.
+  if (warnings.length) {
+    console.error(
+      `capture: ${warnings.length} warning(s) — every one is quoted verbatim in whatever reports ` +
+        `this capture. Why, and what a redirect warning means: ${WARNINGS_CONTRACT}`,
+    )
+  }
+
   if (broken.length) {
     console.error(
       `capture: THESE FRAMES ARE INVALID — ${brokenReasons.join(' ')}`,

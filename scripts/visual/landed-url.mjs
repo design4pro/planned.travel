@@ -19,8 +19,11 @@
  * screen. Query, hash, host and port are deliberately ignored: `?redirect=` and `#top` do not change
  * which screen rendered, and ignoring the origin is what lets a local capture and the reference demo
  * compare as the same screen.
+ *
+ * Exported because `capture.mjs`'s stale-session guard asks the same question of the same URLs, and
+ * a second copy of this rule there would be one claim in two places (docs/SPEC.md §8).
  */
-const pathnameOf = (u) => new URL(u).pathname.replace(/\/+$/, '') || '/'
+export const pathnameOf = (u) => new URL(u).pathname.replace(/\/+$/, '') || '/'
 
 /**
  * Why the frame just filed is not of the screen that was asked for, or `undefined` when it is.
