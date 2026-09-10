@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Llocs',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Afegeix una nota',
-  'plan.note.addForDay': 'Afegeix una nota a aquest dia',
+  'plan.note.addForDay': 'Afegeix una nota, {day}',
   'plan.note.showMore': 'Mostra’n més',
   'plan.note.showLess': 'Mostra’n menys',
   'plan.note.moveUp': 'Mou amunt',

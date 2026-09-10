@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Τοποθεσίες',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Προσθήκη σημείωσης',
-  'plan.note.addForDay': 'Προσθήκη σημείωσης σε αυτήν την ημέρα',
+  'plan.note.addForDay': 'Προσθήκη σημείωσης, {day}',
   'plan.note.showMore': 'Περισσότερα',
   'plan.note.showLess': 'Λιγότερα',
   'plan.note.moveUp': 'Μετακίνηση πάνω',

@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Platser',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Lägg till en anteckning',
-  'plan.note.addForDay': 'Lägg till en anteckning för den här dagen',
+  'plan.note.addForDay': 'Lägg till en anteckning: {day}',
   'plan.note.showMore': 'Visa mer',
   'plan.note.showLess': 'Visa mindre',
   'plan.note.moveUp': 'Flytta upp',

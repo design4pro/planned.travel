@@ -654,6 +654,11 @@ test.describe('01-S2 — A day note you can write', () => {
 
   const DIALOG = '[role="dialog"]'
   const NOTE = 'li[data-planner-note]'
+  /**
+   * The add control's accessible name ends in the day's own title, which the seed
+   * decides, so the walk matches the stem and takes the first day it finds.
+   */
+  const ADD_NOTE_NAME = /^Add a note for /
   /** Distinctive enough that the sweep at the end cannot match a seeded note. */
   const BODY = 'A note this walk wrote'
   const DETAIL = 'Bring the paper tickets'
@@ -696,7 +701,7 @@ test.describe('01-S2 — A day note you can write', () => {
     for (const tripId of tripIds) {
       await visit(page, planRoute(tripId), 'light')
       const found = await page
-        .getByRole('button', { name: 'Add a note for this day' })
+        .getByRole('button', { name: ADD_NOTE_NAME })
         .first()
         .waitFor({ state: 'visible', timeout: 5_000 })
         .then(() => true)
@@ -739,10 +744,7 @@ test.describe('01-S2 — A day note you can write', () => {
     const report = watchConsole(page, route)
     await visit(page, route, 'light')
 
-    await page
-      .getByRole('button', { name: 'Add a note for this day' })
-      .first()
-      .click()
+    await page.getByRole('button', { name: ADD_NOTE_NAME }).first().click()
 
     const editor = page.locator(DIALOG)
     await expect(editor).toBeVisible()

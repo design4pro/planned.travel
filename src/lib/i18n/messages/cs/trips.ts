@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Místa',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Přidat poznámku',
-  'plan.note.addForDay': 'Přidat poznámku k tomuto dni',
+  'plan.note.addForDay': 'Přidat poznámku: {day}',
   'plan.note.showMore': 'Zobrazit více',
   'plan.note.showLess': 'Zobrazit méně',
   'plan.note.moveUp': 'Posunout nahoru',

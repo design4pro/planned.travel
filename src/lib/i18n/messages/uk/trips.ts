@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Місця',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Додати нотатку',
-  'plan.note.addForDay': 'Додати нотатку до цього дня',
+  'plan.note.addForDay': 'Додати нотатку, {day}',
   'plan.note.showMore': 'Показати більше',
   'plan.note.showLess': 'Показати менше',
   'plan.note.moveUp': 'Перемістити вгору',

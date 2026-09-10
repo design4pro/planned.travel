@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Địa điểm',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Thêm ghi chú',
-  'plan.note.addForDay': 'Thêm ghi chú cho ngày này',
+  'plan.note.addForDay': 'Thêm ghi chú, {day}',
   'plan.note.showMore': 'Xem thêm',
   'plan.note.showLess': 'Thu gọn',
   'plan.note.moveUp': 'Di chuyển lên',
