@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -106,13 +107,20 @@ describe('the devtools console relay', () => {
  * step failing on a port number.
  */
 describe('the dev server that outlives its checkout', () => {
-  /** A dev server with the two members the plugin touches, and a `warn` spy to read back. */
+  /**
+   * A dev server with the three members the plugin touches, and the two seams to read back:
+   * a `warn` spy, and `closeHttpServer()` for the `'close'` a restart fires on the server being
+   * replaced.
+   */
   function fakeServer(root: string) {
     const warn = vi.fn()
+    const httpServer = new EventEmitter()
     return {
       warn,
+      closeHttpServer: () => httpServer.emit('close'),
       server: {
         config: { root, logger: { warn } },
+        httpServer,
       } as unknown as ViteDevServer,
     }
   }
@@ -128,9 +136,9 @@ describe('the dev server that outlives its checkout', () => {
     vi.resetModules()
     const { stopWhenRootIsRemoved } = await import('./vite.config')
     const plugin = stopWhenRootIsRemoved({ intervalMs: 1000, exists, stop })
-    const { server, warn } = fakeServer(root)
+    const { server, warn, closeHttpServer } = fakeServer(root)
     await (plugin.configureServer as (s: ViteDevServer) => void)(server)
-    return { warn }
+    return { warn, closeHttpServer }
   }
 
   afterEach(() => {
@@ -185,6 +193,28 @@ describe('the dev server that outlives its checkout', () => {
     vi.advanceTimersByTime(1000)
     expect(stop).toHaveBeenCalledTimes(1)
     expect(warn.mock.calls[0]?.[0]).toContain(root)
+  })
+
+  it('goes down with the server that installed it, so restarts do not stack pollers', async () => {
+    vi.useFakeTimers()
+    const stop = vi.fn()
+
+    // A root that is already gone, so the only thing standing between this timer and a `stop()`
+    // is the clean-up under test.
+    const { closeHttpServer } = await startedPlugin(
+      '/tmp/worktree-327',
+      () => false,
+      stop,
+    )
+
+    // What Vite does to the outgoing server on `server.restart()`: it closes it, then stands a
+    // fresh plugin instance up beside it. An instance that survives its own server keeps polling
+    // the same root, and every survivor `SIGTERM`s the process independently — the second signal
+    // arriving after Vite's `process.once('SIGTERM')` handler is gone, which is a hard kill.
+    closeHttpServer()
+
+    vi.advanceTimersByTime(60_000)
+    expect(stop).not.toHaveBeenCalled()
   })
 
   it('is installed only under e2e, where a run holds one of the eleven ports', async () => {

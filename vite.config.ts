@@ -90,6 +90,15 @@ export function stopWhenRootIsRemoved({
       // The HTTP server keeps the loop alive on its own; this timer should never be the reason
       // the process lingers.
       timer.unref()
+      // A restart is not a new process: `configureServer` runs again, with a fresh plugin
+      // instance, every time Vite restarts in place — and `@cloudflare/vite-plugin` restarts on
+      // an edit to `wrangler.jsonc` or `.dev.vars`, both ordinary surface under automation. The
+      // timer belongs to the server that installed it, so a restart that leaves it running stacks
+      // one more poller on the same root; when that root then goes away they each `stop()`, and
+      // the second `SIGTERM` lands after Vite's own `process.once('SIGTERM')` handler has already
+      // torn itself down — killing the process outright and orphaning the workerd children this
+      // whole plugin exists to take down cleanly.
+      server.httpServer?.once('close', () => clearInterval(timer))
     },
   }
 }
