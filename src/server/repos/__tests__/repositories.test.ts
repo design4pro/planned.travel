@@ -684,6 +684,56 @@ describe('repositories', () => {
       )
       expect(allTime.countryCount).toBe(3)
     })
+
+    /**
+     * Distance is the one figure a year row does *not* read through that year's trips.
+     *
+     * A transport carries its own `departure_date`, and a trip that starts on 30 December has
+     * transports in two calendar years. Filing January's flight under the previous year — which is
+     * what filtering the legs by the trip's `start_date` would do — is the failure this asserts
+     * against, and it is the entire reason the distance read filters on the traveller's *whole*
+     * membership rather than on the year's trip ids.
+     */
+    it('files a leg under the year it departed in, not the year its trip started', async () => {
+      const trip = await createTrip(tenant.scope, {
+        title: 'New Year in Lisbon',
+        startDate: '2025-12-30',
+        endDate: '2026-01-05',
+        countryCodes: ['PT'],
+      })
+      await createTransport(tenant.scope, {
+        tripId: trip.id,
+        title: 'Flight home',
+        mode: 'flight',
+        distanceMetres: 3_000_000,
+        departureDate: '2026-01-02',
+      })
+
+      // 2026 has no trip of its own — the trip started in 2025 — and still carries the distance.
+      const departureYear = await recomputeTravelStats(
+        tenant.scope,
+        tenant.ownerUserId,
+        2026,
+      )
+      expect(departureYear.tripCount).toBe(0)
+      expect(departureYear.distanceMetres).toBe(3_000_000)
+
+      // 2025 owns the trip and none of the distance.
+      const startYear = await recomputeTravelStats(
+        tenant.scope,
+        tenant.ownerUserId,
+        2025,
+      )
+      expect(startYear.tripCount).toBe(1)
+      expect(startYear.distanceMetres).toBe(0)
+
+      // All time sums it once.
+      const allTime = await recomputeTravelStats(
+        tenant.scope,
+        tenant.ownerUserId,
+      )
+      expect(allTime.distanceMetres).toBe(3_000_000)
+    })
   })
 
   describe('vacay', () => {

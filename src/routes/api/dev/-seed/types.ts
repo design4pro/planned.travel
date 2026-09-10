@@ -29,6 +29,7 @@ import type {
   TRIP_VISIBILITIES,
   VACAY_ENTRY_KINDS,
 } from '#/server/db/schema'
+import type { DayNoteIcon } from '#/server/repos/days'
 
 /** The four demo travellers, referenced by key everywhere in the dataset. */
 export const PERSON_KEYS = ['rafal', 'mika', 'jonas', 'priya'] as const
@@ -106,7 +107,8 @@ export interface SeedDay {
   readonly pins?: ReadonlyArray<{
     readonly body: string
     readonly time?: string
-    readonly icon?: string
+    /** From the note vocabulary: `createDayNote` refuses anything else, so the fixture proves it. */
+    readonly icon?: DayNoteIcon
   }>
 }
 

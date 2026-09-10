@@ -7,6 +7,7 @@
 
 import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { DAY_NOTE_ICONS } from '#/components/planner/types'
 import { dayNotes, days } from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
 import { NotFoundError } from './context'
@@ -50,9 +51,11 @@ export const createDayNoteInput = z.object({
   tripId: idSchema,
   dayId: idSchema,
   body: longTextSchema.min(1),
+  /** The long half of a note, rendered through `src/lib/markdown`. Blank means absent, so null it. */
+  detail: longTextSchema.nullish(),
   time: timeSchema.nullish(),
   /** `day_notes.icon` is `NOT NULL DEFAULT 'sticky-note'`: omit it, never null it. */
-  icon: shortTextSchema.min(1).optional(),
+  icon: z.enum(DAY_NOTE_ICONS).optional(),
   sortOrder: sortOrderSchema.optional(),
 })
 export type CreateDayNoteInput = z.infer<typeof createDayNoteInput>
@@ -62,6 +65,9 @@ export const updateDayNoteInput = createDayNoteInput
   .partial()
 export type UpdateDayNoteInput = z.infer<typeof updateDayNoteInput>
 
+/** The icon vocabulary, re-exported so a caller of this module needs only this module. */
+export { DAY_NOTE_ICONS, type DayNoteIcon } from '#/components/planner/types'
+
 /* -------------------------------------------------------------------------------------------------
  * Date helpers
  * ---------------------------------------------------------------------------------------------- */
@@ -69,7 +75,10 @@ export type UpdateDayNoteInput = z.infer<typeof updateDayNoteInput>
 const MS_PER_DAY = 86_400_000
 
 /** Inclusive list of `YYYY-MM-DD` dates between two calendar dates. */
-export function datesBetween(startDate: string, endDate: string): Array<string> {
+export function datesBetween(
+  startDate: string,
+  endDate: string,
+): Array<string> {
   const start = Date.parse(`${startDate}T00:00:00.000Z`)
   const end = Date.parse(`${endDate}T00:00:00.000Z`)
   if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
@@ -86,14 +95,20 @@ export function datesBetween(startDate: string, endDate: string): Array<string> 
  * ---------------------------------------------------------------------------------------------- */
 
 /** Every day of a trip, in itinerary order. */
-export async function listTripDays(scope: TenantScope, tripId: string): Promise<Array<Day>> {
+export async function listTripDays(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<Day>> {
   return daysRepository.findMany(scope, {
     where: eq(days.tripId, tripId),
     orderBy: [asc(days.dayNumber)],
   })
 }
 
-export async function getDay(scope: TenantScope, dayId: string): Promise<Day | null> {
+export async function getDay(
+  scope: TenantScope,
+  dayId: string,
+): Promise<Day | null> {
   return daysRepository.findById(scope, dayId)
 }
 
@@ -113,7 +128,10 @@ export async function requireTripDay(
   return day
 }
 
-export async function createDay(scope: TenantScope, input: CreateDayInput): Promise<Day> {
+export async function createDay(
+  scope: TenantScope,
+  input: CreateDayInput,
+): Promise<Day> {
   const values = createDayInput.parse(input)
   return daysRepository.insert(scope, values)
 }
@@ -123,10 +141,17 @@ export async function updateDay(
   dayId: string,
   input: UpdateDayInput,
 ): Promise<Day> {
-  return daysRepository.requireUpdate(scope, dayId, definedOnly(updateDayInput.parse(input)))
+  return daysRepository.requireUpdate(
+    scope,
+    dayId,
+    definedOnly(updateDayInput.parse(input)),
+  )
 }
 
-export async function deleteDay(scope: TenantScope, dayId: string): Promise<void> {
+export async function deleteDay(
+  scope: TenantScope,
+  dayId: string,
+): Promise<void> {
   const day = await daysRepository.requireById(scope, dayId)
   await daysRepository.requireRemove(scope, dayId)
   // Close the gap so day numbers stay contiguous.
@@ -152,7 +177,10 @@ export async function syncTripDays(
   range: { startDate: string | null; endDate: string | null },
 ): Promise<Array<Day>> {
   const existing = await listTripDays(scope, tripId)
-  const wanted = range.startDate && range.endDate ? datesBetween(range.startDate, range.endDate) : []
+  const wanted =
+    range.startDate && range.endDate
+      ? datesBetween(range.startDate, range.endDate)
+      : []
 
   if (wanted.length === 0) {
     // No date range: keep whatever days exist but clear their stale dates.
@@ -209,7 +237,10 @@ export async function syncTripDays(
  * Day notes
  * ---------------------------------------------------------------------------------------------- */
 
-export async function listDayNotes(scope: TenantScope, dayId: string): Promise<Array<DayNote>> {
+export async function listDayNotes(
+  scope: TenantScope,
+  dayId: string,
+): Promise<Array<DayNote>> {
   return dayNotesRepository.findMany(scope, {
     where: eq(dayNotes.dayId, dayId),
     orderBy: [asc(dayNotes.sortOrder), asc(dayNotes.id)],
@@ -226,11 +257,28 @@ export async function listTripDayNotes(
   })
 }
 
+/**
+ * Resolves a note, or raises {@link NotFoundError}.
+ *
+ * The row is what a note write is guarded by: it names the trip and the day, so the client's ids
+ * address the note rather than choosing what is checked.
+ */
+export async function requireDayNote(
+  scope: TenantScope,
+  noteId: string,
+): Promise<DayNote> {
+  return dayNotesRepository.requireById(scope, noteId)
+}
+
 export async function createDayNote(
   scope: TenantScope,
   input: CreateDayNoteInput,
 ): Promise<DayNote> {
   const values = createDayNoteInput.parse(input)
+  // The insert stamps `organization_id` from the caller's own scope, so a foreign `dayId` would be
+  // written as a row this tenant owns and the other cannot see. The day check is what refuses it —
+  // including a day of another trip of the caller's own, which the tenant filter alone lets through.
+  await requireTripDay(scope, values.tripId, values.dayId)
   return dayNotesRepository.insert(scope, {
     ...values,
     createdBy: scope.ctx.userId,
@@ -249,6 +297,9 @@ export async function updateDayNote(
   )
 }
 
-export async function deleteDayNote(scope: TenantScope, noteId: string): Promise<void> {
+export async function deleteDayNote(
+  scope: TenantScope,
+  noteId: string,
+): Promise<void> {
   await dayNotesRepository.requireRemove(scope, noteId)
 }

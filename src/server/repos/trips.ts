@@ -322,6 +322,40 @@ export function favouritedTripFilter(scope: TenantScope): SQL {
 }
 
 /**
+ * The trips a given person is a member of, as a sub-select rather than as a list of ids.
+ *
+ * The population every trip-derived figure on a `travel_stats` row is computed over. ADR 0007 makes
+ * a trip private to its members, and a figure that counts a trip the row's owner cannot open states
+ * something they have no way to check: a place count that moves when a colleague saves a restaurant
+ * on a trip that was never theirs, and a spend total they cannot reconcile against anything on
+ * screen.
+ *
+ * `userId` is a parameter and is never `scope.ctx.userId`, because cron and the queue consumer
+ * recompute a row for someone other than themselves. That is the property most at risk from a
+ * careless "reuse {@link readableTripFilter}" simplification, and it is the second reason the two
+ * live side by side rather than merging: membership alone, not the readability predicate. An
+ * organization-visible trip is one a person *may* open, not one they are travelling on, and "trips I
+ * am a member of" is also what a traveller means by "my trips".
+ *
+ * A sub-select rather than a materialized `Array<string>` because D1 refuses a statement carrying
+ * more than {@link MAX_BOUND_PARAMETERS} bound parameters and drizzle binds one per id, while the
+ * paid plans sell unlimited trips: an id list would make the stat row of a traveller with a few
+ * hundred lifetime trips fail where it succeeds today. This side binds two, the tenant and the user,
+ * however many trips the traveller is on — three for the whole statement once the consumer has bound
+ * its own tenant, against the one-per-id an `inArray` over a materialized list would have cost.
+ *
+ * Both sides are `tenantFilter()`-bound, so the membership half can no more cross an organization
+ * boundary than the statement that consumes it can. The sub-select drives from
+ * `trip_members_org_user_idx (organization_id, user_id)`, with both columns constant.
+ */
+export function memberTripIds(scope: TenantScope, userId: string) {
+  return scope.db
+    .select({ id: tripMembers.tripId })
+    .from(tripMembers)
+    .where(tenantFilter(scope, tripMembers, eq(tripMembers.userId, userId)))
+}
+
+/**
  * Whether the acting user may see this trip at all. The question every trip-scoped reader asks
  * before it answers anything else; {@link requireTrip} is the same question with a throw on it.
  */

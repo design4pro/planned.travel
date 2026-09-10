@@ -23,8 +23,8 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  * component needs — the React plugin exists for Fast Refresh, which no test has.
  *
  * `tooling` carries real policy - the Sentry sweep's selection thresholds, dedup index and issue
- * body, the label invariants the sweeper enforces, which screens `capture.mjs` refuses to
- * photograph signed in - and its failure mode is silence: a parsing bug files a duplicate every
+ * body, the label invariants the sweeper enforces, how `capture.mjs` decides a frame was taken on
+ * the screen it was asked for - and its failure mode is silence: a parsing bug files a duplicate every
  * week, or stops filing anything, and says nothing either way. Its `.mjs` files are run by `node`
  * and sit in no tsconfig, so tests are the only gate that reaches all of it.
  */
@@ -93,6 +93,10 @@ export default defineConfig({
             // watching Playwright spec, and nothing but a test holds that gate
             // shut. It sits at the repo root, so no `src/**` glob reaches it.
             'vite.config.test.ts',
+            // And `eslint.config.js`, for a narrower version of the same reason: its ignore list
+            // is what keeps `pnpm lint` runnable while an agent run has scratch directories open,
+            // and a missing entry there is silent until the tool that writes one is exercised.
+            'eslint.config.test.ts',
             // The Claude Code hooks. They are the only thing standing between the review job -
             // which reads an attacker-authored diff under `--permission-mode bypassPermissions` -
             // and the `gh` mutation surface, and their failure mode is silence: a hook that stops

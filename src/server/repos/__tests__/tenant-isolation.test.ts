@@ -81,6 +81,7 @@ import {
   daysRepository,
   listDayNotes,
   listTripDays,
+  requireDayNote,
 } from '../days'
 import {
   budgetItemsRepository,
@@ -207,6 +208,7 @@ import {
   deleteTrip,
   listTripMembers,
   listTrips,
+  memberTripIds,
   removeTripMember,
   requireTrip,
   restoreTrip,
@@ -1800,6 +1802,42 @@ describe('tenant isolation', () => {
     })
   })
 
+  /**
+   * The membership expression the travel-stats blocks below read through, on its own.
+   *
+   * `memberTripIds` is exported, so a future caller can reach it without `recomputeTravelStats`
+   * around it, and the tenant filter on its inner side is the only thing standing between that
+   * caller and another organization's `trip_members` rows. The blocks below prove the figures; this
+   * one proves the seam they rest on, with the same `userId` read from both sides of the boundary.
+   */
+  describe('memberTripIds', () => {
+    const readIds = async (scope: TenantScope, userId: string) =>
+      (await memberTripIds(scope, userId)).map((row) => row.id)
+
+    it('answers only for the calling organization', async () => {
+      // `createTrip` writes the creator's own `trip_members` row, so A's owner is on A's trip.
+      expect(
+        await readIds(alpha.tenant.scope, alpha.tenant.ownerUserId),
+      ).toEqual([alpha.tripId])
+      expect(await readIds(beta.tenant.scope, beta.tenant.ownerUserId)).toEqual(
+        [beta.tripId],
+      )
+
+      // The same user id, read from the other side: B's owner is a member of nothing A can see,
+      // even though B's own scope finds their trip under it.
+      expect(
+        await readIds(alpha.tenant.scope, beta.tenant.ownerUserId),
+      ).toEqual([])
+      expect(
+        await readIds(beta.tenant.scope, alpha.tenant.ownerUserId),
+      ).toEqual([])
+
+      // Membership, not readability: A's second traveller belongs to the organization and to no
+      // trip in it, which is the distinction `readableTripFilter` would erase.
+      expect(await readIds(alpha.tenant.scope, alpha.secondUserId)).toEqual([])
+    })
+  })
+
   /** The calendar year both travel-stats blocks below seed into and recompute for. */
   const STAT_YEAR = 2026
 
@@ -3322,9 +3360,9 @@ describe('tenant isolation', () => {
           ).toBeInstanceOf(NotFoundError)
         }
         // Nothing was minted on the way to being refused.
-        expect((await listTrips(alpha.tenant.scope)).map((row) => row.id)).toEqual(
-          [alpha.tripId],
-        )
+        expect(
+          (await listTrips(alpha.tenant.scope)).map((row) => row.id),
+        ).toEqual([alpha.tripId])
       })
 
       it('refuses B’s trip as the source and writes nothing into A’s target', async () => {
@@ -3663,6 +3701,64 @@ describe('tenant isolation', () => {
           beta.assignmentId,
         ),
       ).toEqual(before)
+    })
+  })
+
+  /**
+   * `01-S2b`: a note is parented onto a day, and the day is the client's to name.
+   *
+   * The generic per-repository cases above prove that B's *note* is unreachable from A.
+   * They cannot reach this one: the insert stamps `organization_id` from A's own scope, so
+   * a note carrying B's `day_id` is written as a row A owns and B cannot see — corrupt for
+   * one tenant and invisible to the other. Only `requireTripDay` refuses it.
+   */
+  describe('day notes', () => {
+    /** Every note row of a day, keyed by id, for a byte-for-byte diff. */
+    async function notesOf(
+      scope: TenantScope,
+      dayId: string,
+    ): Promise<Record<string, unknown>> {
+      const notes = await listDayNotes(scope, dayId)
+      return Object.fromEntries(notes.map((note) => [note.id, note] as const))
+    }
+
+    it('refuses B’s day, named with B’s trip or with A’s own', async () => {
+      const scope = alpha.tenant.scope
+      const before = await notesOf(beta.tenant.scope, beta.dayId)
+
+      expect(
+        await captureError(() =>
+          createDayNote(scope, {
+            tripId: beta.tripId,
+            dayId: beta.dayId,
+            body: 'Written onto a stranger’s day.',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // A's own trip with B's day: the tenant filter alone lets this one through,
+      // because the row it would write is A's. `requireTripDay` is what refuses it.
+      expect(
+        await captureError(() =>
+          createDayNote(scope, {
+            tripId: alpha.tripId,
+            dayId: beta.dayId,
+            body: 'Written onto a stranger’s day, from a trip A owns.',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await notesOf(beta.tenant.scope, beta.dayId)).toEqual(before)
+    })
+
+    it('refuses to resolve B’s note by id', async () => {
+      // The lookup every note write opens with: it is the row that names the trip and the day the
+      // guard then checks, so reaching a stranger's row here would hand the guard the wrong trip.
+      expect(
+        await captureError(() =>
+          requireDayNote(alpha.tenant.scope, beta.dayNoteId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
     })
   })
 })

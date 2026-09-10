@@ -130,13 +130,17 @@ export default defineConfig({
   // what tells load from regression — and stays under ci.yml's own
   // `timeout-minutes: 20`, which must never be the one that fires first.
   globalTimeout: isCI ? 15 * 60_000 : undefined,
-  reporter: isCI
-    ? [
-        ['github'],
-        ['html', { open: 'never' }],
-        ['json', { outputFile: 'test-results/results.json' }],
-      ]
-    : [['list'], ['html', { open: 'never' }]],
+  reporter: [
+    // `github` writes GitHub annotations and is noise in a terminal; `list` is the
+    // progressive output a human or an agent reads while the suite runs. That is the
+    // only difference a CI run makes to the reporter list.
+    isCI ? ['github'] : ['list'],
+    ['html', { open: 'never' }],
+    // Written on every run that reaches it, so a red suite leaves a machine-readable
+    // verdict beside the HTML report. CI overrides the whole list with `--reporter=blob`
+    // and never gets here. Absent means "the run did not finish", never "nothing failed".
+    ['json', { outputFile: 'test-results/results.json' }],
+  ],
 
   expect: {
     timeout: 5_000,
@@ -178,9 +182,15 @@ export default defineConfig({
     {
       name: 'mobile-safari',
       dependencies: ['setup'],
-      // Includes `defaultBrowserType: 'webkit'`, touch and a 393x659 viewport;
-      // its 393x852 is the device `screen`, which is never captured.
-      use: { ...devices['iPhone 15'], extraHTTPHeaders: clockPin },
+      use: {
+        ...devices['iPhone 15'],
+        // Pinned rather than inherited: journey 7's composition argument is measured
+        // against this exact geometry (`e2e/journeys.spec.ts`), so a playwright bump
+        // must not move it under the test. Everything else — WebKit, touch, the
+        // device scale and the user agent — still comes from the descriptor.
+        viewport: { width: 393, height: 659 },
+        extraHTTPHeaders: clockPin,
+      },
     },
   ],
 

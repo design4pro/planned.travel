@@ -46,7 +46,8 @@ skill's repo-local override removes it first, so a command still present is a ru
 issue form ─► category;  Sentry sweep ─► bug + priority-high + groom
       ─(issue.opened by a maintainer, or the groom label)─► + priority, risk, Definition of Ready comment, implementation notes
 human: autofix ─► in-progress ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► human review
-human: spec (feature) ─► spec PR (documentation, skip-qa) ─► human merges ─► cockpit: implement-spec
+human: spec (feature) ─► spec PR (documentation, skip-qa, Refs #n) ─► human merges ─► the same issue is the implementation ticket
+      ─► human: autofix on it ─► om-auto-fix-issue's feature route ─► om-auto-implement-spec (cockpit: implement-spec is the same skill by hand)
 PR opened by a human ─(pull_request.opened: pr-autopilot)─► review / fix / QA, never merge
 claude-review leaves open threads ─► review-threads ─(pr-review-threads)─► om-auto-fix-pr replies and resolves
 housekeeping (07:00, 12:00, 17:00 weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues

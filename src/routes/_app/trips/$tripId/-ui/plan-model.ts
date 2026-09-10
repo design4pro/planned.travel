@@ -15,7 +15,11 @@
  */
 
 import { ideaItemId } from '#/components/planner'
-import { formatTimeRange, formatWeekday } from '../../../-lib/format'
+import {
+  formatTime,
+  formatTimeRange,
+  formatWeekday,
+} from '../../../-lib/format'
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 
 import type { Locale } from '#/lib/i18n/locales'
@@ -25,8 +29,10 @@ import type {
   PlanOrder,
   PlannerCategory,
   PlannerDay,
+  PlannerNote,
   PlannerRow,
 } from '#/components/planner'
+import type { PlanNotesPayload } from '../-server/day-notes'
 import type {
   PlanBoardDay,
   PlanBoardPayload,
@@ -47,6 +53,35 @@ export function formatMetres(metres: number): string {
   if (metres < 1000) return `${Math.round(metres / 10) * 10} m`
   const km = metres / 1000
   return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`
+}
+
+/**
+ * The trip's notes, grouped by day and ordered the way the day shows them.
+ *
+ * The board's own `{ id, body, time }` projection is not read any more: it carries no icon and no
+ * detail, and `01-S4b` deletes it. Pure, so the grouping is a test rather than an eyeball.
+ */
+export function notesByDay(
+  payload: PlanNotesPayload,
+): ReadonlyMap<string, ReadonlyArray<PlannerNote>> {
+  const ordered = [...payload.notes].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id),
+  )
+
+  const byDay = new Map<string, Array<PlannerNote>>()
+  for (const note of ordered) {
+    const run = byDay.get(note.dayId) ?? []
+    run.push({
+      id: note.id,
+      dayId: note.dayId,
+      body: note.body,
+      detail: note.detail,
+      time: formatTime(note.time),
+      icon: note.icon,
+    })
+    byDay.set(note.dayId, run)
+  }
+  return byDay
 }
 
 /** The arrangement the board starts from: the server's own order. */
@@ -158,6 +193,7 @@ export function planModel(
   payload: PlanBoardPayload,
   order: PlanOrder,
   locale: Locale = DEFAULT_LOCALE,
+  notes: ReadonlyMap<string, ReadonlyArray<PlannerNote>> = new Map(),
 ): PlanModel {
   const rowsByItem = rowIndexOf(payload)
   const dayMeta = new Map(payload.days.map((day) => [day.dayId, day]))
@@ -194,7 +230,7 @@ export function planModel(
       dateLabel: formatWeekday(meta.date, locale),
       rows,
       stays: meta.stays,
-      notes: meta.notes,
+      notes: notes.get(meta.dayId) ?? [],
     })
   }
 

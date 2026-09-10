@@ -101,6 +101,7 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
     'modules.files.kind.ticket',
     'modules.transports.mode.bus',
     'modules.transports.mode.taxi',
+    'trips.plan.note.icon.ticket',
   ],
   es: [
     'modules.transports.mode.metro',
@@ -122,6 +123,9 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
     'modules.transports.mode.train',
     'settings.billing.orders.document',
     'shell.newTrip.destination',
+    'trips.plan.note.field.body',
+    'trips.plan.note.icon.camera',
+    'trips.plan.note.icon.trainFront',
   ],
   hu: ['modules.transports.mode.taxi'],
   id: ['modules.transports.mode.bus'],

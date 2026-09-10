@@ -204,21 +204,43 @@ function parseBlocks(
   return blocks
 }
 
+/** The block forms the subset knows, and nothing about the block itself. */
+type BlockKind =
+  'fence' | 'thematicBreak' | 'heading' | 'quote' | 'list' | 'table'
+
 /**
- * Read the block the line at `start` opens, or `null` when it opens none.
+ * The kind of block the line at `index` opens, or `null` when it opens none.
  *
  * The order of the branches is the grammar, and it is stated once because two
- * callers ask the same question of it: {@link parseBlocks}, which keeps the
+ * callers ask the same question of it: {@link readBlockAt}, which then reads the
  * block, and {@link startsBlock}, which only needs to know that the paragraph or
  * list item running into this line has to stop short of it. A form added here is
  * therefore never one that parses but fails to end the paragraph above it.
  *
- * {@link startsBlock} pays for a block it then discards, and the shape of the
- * subset bounds that to a constant: a reader whose opening line does not match
- * returns before reading anything, one that does match ends the enclosing run at
- * once — so a run discards at most one block — and a quote is the only block
- * holding blocks, which caps the nesting at two. A block is read at most four
- * times, never once per line of it.
+ * Recognising costs the opening condition and nothing else — no reader runs, so
+ * no block is read to be thrown away.
+ *
+ * @param quotable - false inside a quote, which is what keeps `> > x` from
+ *   nesting: the inner `>` is read as text.
+ */
+function blockKindAt(
+  lines: ReadonlyArray<string>,
+  index: number,
+  quotable: boolean,
+): BlockKind | null {
+  const line = lines[index]
+
+  if (fenceAt(line) !== null) return 'fence'
+  if (THEMATIC_BREAK.test(line)) return 'thematicBreak'
+  if (headingAt(line) !== null) return 'heading'
+  if (quotable && QUOTE.test(line)) return 'quote'
+  if (BULLET.test(line) || ORDERED.test(line)) return 'list'
+  return tableShapeAt(lines, index) === null ? null : 'table'
+}
+
+/**
+ * Read the block the line at `start` opens, or `null` when it opens none, by
+ * dispatching to the reader for the kind {@link blockKindAt} named.
  *
  * @param quotable - false inside a quote, which is what keeps `> > x` from
  *   nesting: the inner `>` is read as text.
@@ -230,36 +252,75 @@ function readBlockAt(
 ): BlockRead | null {
   const line = lines[start]
 
-  const fence = FENCE.exec(line)
-  if (fence !== null && isValidInfo(fence[1], fence[2])) {
-    return readFence(lines, start, fence[1], fence[2])
-  }
-
-  if (THEMATIC_BREAK.test(line)) {
-    return { block: { type: 'thematicBreak' }, next: start + 1 }
-  }
-
-  const heading = HEADING.exec(line)
-  if (heading !== null) {
-    // A run of four or more hashes is outside the subset, and falls through to
-    // be read as whatever the rest of this function makes of it.
-    const level = headingLevel(heading[1])
-    if (level !== null) {
-      const text = heading[2].replace(CLOSING_HASHES, '').trim()
-      return {
-        block: { type: 'heading', level, children: parseInline(text, true) },
-        next: start + 1,
+  switch (blockKindAt(lines, start, quotable)) {
+    case 'fence': {
+      const fence = fenceAt(line)
+      if (fence !== null) {
+        return readFence(lines, start, fence.marker, fence.info)
       }
+      break
     }
+
+    case 'thematicBreak':
+      return { block: { type: 'thematicBreak' }, next: start + 1 }
+
+    case 'heading': {
+      const heading = headingAt(line)
+      if (heading !== null) {
+        return {
+          block: {
+            type: 'heading',
+            level: heading.level,
+            children: parseInline(heading.text, true),
+          },
+          next: start + 1,
+        }
+      }
+      break
+    }
+
+    case 'quote':
+      return readQuote(lines, start)
+
+    case 'list':
+      return readList(lines, start, quotable)
+
+    case 'table':
+      return readTable(lines, start)
+
+    case null:
+      break
   }
 
-  if (quotable && QUOTE.test(line)) return readQuote(lines, start)
-  if (BULLET.test(line) || ORDERED.test(line)) {
-    return readList(lines, start, quotable)
-  }
+  // Falling out of the switch is the `null` a line that opens no block already
+  // meant. The breaks in the `fence` and `heading` cases re-narrow what
+  // TypeScript cannot prove is already narrow: `fenceAt` and `headingAt` are
+  // pure functions of `line`, so the second call cannot disagree with the
+  // first, and neither branch is reachable.
+  return null
+}
 
-  // A table is the one form recognised only by reading it.
-  return readTable(lines, start)
+/** A fence's marker and info string, or `null` when the line opens no fence. */
+function fenceAt(line: string): { marker: string; info: string } | null {
+  const fence = FENCE.exec(line)
+  if (fence === null || !isValidInfo(fence[1], fence[2])) return null
+  return { marker: fence[1], info: fence[2] }
+}
+
+/**
+ * A heading's level and text, or `null` when the line opens no heading — which
+ * includes a run of four or more hashes, outside the subset, so that
+ * {@link blockKindAt} carries on to the branches below it and reads such a line
+ * as whatever they make of it.
+ */
+function headingAt(line: string): { level: 1 | 2 | 3; text: string } | null {
+  const heading = HEADING.exec(line)
+  if (heading === null) return null
+
+  const level = headingLevel(heading[1])
+  if (level === null) return null
+
+  return { level, text: heading[2].replace(CLOSING_HASHES, '').trim() }
 }
 
 /** The subset stops at three: a deeper run of hashes is literal text. */
@@ -366,21 +427,39 @@ function readList(
   }
 }
 
-function readTable(
+/**
+ * The header and delimiter cells of the table the line at `index` opens, or
+ * `null` when it opens none.
+ *
+ * Every way a table can fail to be one is here, ahead of the row scan, so
+ * recognising a table costs the two-line check and never the rows.
+ */
+function tableShapeAt(
   lines: ReadonlyArray<string>,
-  start: number,
-): BlockRead | null {
-  const header = lines[start]
+  index: number,
+): { headerCells: Array<string>; delimiterCells: Array<string> } | null {
+  const header = lines[index]
   if (!header.includes('|')) return null
 
-  if (start + 1 >= lines.length) return null
-  const delimiter = lines[start + 1]
+  if (index + 1 >= lines.length) return null
+  const delimiter = lines[index + 1]
   if (!delimiter.includes('-')) return null
 
   const headerCells = splitRow(header)
   const delimiterCells = splitRow(delimiter)
   if (delimiterCells.length !== headerCells.length) return null
   if (!delimiterCells.every((cell) => DELIMITER_CELL.test(cell))) return null
+
+  return { headerCells, delimiterCells }
+}
+
+function readTable(
+  lines: ReadonlyArray<string>,
+  start: number,
+): BlockRead | null {
+  const shape = tableShapeAt(lines, start)
+  if (shape === null) return null
+  const { headerCells, delimiterCells } = shape
 
   const rows: Array<MarkdownTableRow> = []
   let index = start + 2
@@ -480,7 +559,7 @@ function startsBlock(
   index: number,
   quotable: boolean,
 ): boolean {
-  return readBlockAt(lines, index, quotable) !== null
+  return blockKindAt(lines, index, quotable) !== null
 }
 
 /* -------------------------------------------------------------------- inline */

@@ -639,3 +639,145 @@ test.describe('01-S1d — Copying a trip is asked for before it is started', () 
     await expect(submit).toBeDisabled()
   })
 })
+
+test.describe('01-S2 — A day note you can write', () => {
+  /** This block's route table. The trips list is the one screen that links a trip by id. */
+  const TRIPS: RouteCase = { name: 'trips', path: '/trips', ready: 'main' }
+
+  /** The planner mounts a live MapLibre canvas, so the walk has to declare one. */
+  const planRoute = (tripId: string): RouteCase => ({
+    name: 'trip-plan',
+    path: `/trips/${tripId}/plan`,
+    ready: TRIP_SECTIONS,
+    map: true,
+  })
+
+  const DIALOG = '[role="dialog"]'
+  const NOTE = 'li[data-planner-note]'
+  /**
+   * The add control's accessible name ends in the day's own title, which the seed
+   * decides, so the walk matches the stem and takes the first day it finds.
+   */
+  const ADD_NOTE_NAME = /^Add a note for /
+  /** Distinctive enough that the sweep at the end cannot match a seeded note. */
+  const BODY = 'A note this walk wrote'
+  const DETAIL = 'Bring the paper tickets'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /** Every trip the list links a planner for, in the order the cards sit in. */
+  async function plannedTripIds(page: Page): Promise<ReadonlyArray<string>> {
+    await visit(page, TRIPS, 'light')
+    return page.evaluate(() => {
+      const ids: string[] = []
+      for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
+        const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
+          anchor.getAttribute('href') ?? '',
+        )
+        if (match !== null && !ids.includes(match[1])) ids.push(match[1])
+      }
+      return ids
+    })
+  }
+
+  /**
+   * A trip whose planner has a day to write a note into.
+   *
+   * The first card is not it by default: a trip with no departure and no return date
+   * has no day sections at all, and therefore no add control — the walk would time out
+   * on a screen that is behaving exactly as designed. So it asks each planner in turn
+   * and takes the first that offers the control this test is here to press.
+   */
+  async function planTripToWalk(page: Page): Promise<string> {
+    const tripIds = await plannedTripIds(page)
+    test.skip(tripIds.length === 0, 'the workspace lists no trip to walk into')
+
+    for (const tripId of tripIds) {
+      await visit(page, planRoute(tripId), 'light')
+      const found = await page
+        .getByRole('button', { name: ADD_NOTE_NAME })
+        .first()
+        .waitFor({ state: 'visible', timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false)
+      if (found) return tripId
+    }
+
+    test.skip(
+      true,
+      'no trip in this workspace has both dates and a membership that may write, so no planner offers a day to note',
+    )
+    throw new Error('unreachable: the test was skipped')
+  }
+
+  /**
+   * The whole slice in one walk: write, read, disclose, sweep away.
+   *
+   * It ends by deleting what it wrote, because the demo workspace is a shared fixture and
+   * a retry has to find the day as it was left — a walk that accumulated a note per run
+   * would eventually be asserting against its own litter.
+   */
+  test('a note is written with an icon and a detail, then swept away', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      isMobile,
+      'the itinerary lives in a sheet on a phone; this asserts the rail’s own composition',
+    )
+    // Several documents, not one: the trips list, a planner per candidate trip, and then
+    // the planner this walks — each with a live map to finish drawing. Playwright's 30 s
+    // is one document's budget, which is what `journeys.spec.ts` records at its own
+    // `WALK_TIMEOUT_MS`. A ceiling, not an expectation: a warm run finishes in under 20 s.
+    test.setTimeout(90_000)
+
+    const tripId = await planTripToWalk(page)
+    const route = planRoute(tripId)
+    // Watched from before the navigation: a hydration mismatch is reported while the
+    // document is being adopted, which is over before any assertion below could run.
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    await page.getByRole('button', { name: ADD_NOTE_NAME }).first().click()
+
+    const editor = page.locator(DIALOG)
+    await expect(editor).toBeVisible()
+    // By role rather than by label: the picker's sticky note is also called "Note",
+    // and the required marker on the field's label puts a `*` in its text.
+    await editor.getByRole('textbox', { name: 'Note', exact: true }).fill(BODY)
+    await editor
+      .getByRole('textbox', { name: 'Details', exact: true })
+      .fill(`## Packing\n\n- ${DETAIL}`)
+    // The picker is one radio group, so the vocabulary is reachable by name.
+    await editor.getByRole('radio', { name: 'Tickets' }).click()
+    await editor.getByRole('button', { name: 'Save note' }).click()
+    await expect(editor).toBeHidden()
+
+    const note = page.locator(NOTE).filter({ hasText: BODY })
+    await expect(note).toHaveCount(1)
+    await expect(note.getByRole('img', { name: 'Tickets' })).toBeVisible()
+
+    // The detail is behind the disclosure and nowhere else: a note is one line until a
+    // reader asks for more.
+    await expect(note.getByText(DETAIL)).toHaveCount(0)
+    await note.getByRole('button', { name: 'Show more' }).click()
+    await expect(note.getByText(DETAIL)).toBeVisible()
+    await note.getByRole('button', { name: 'Show less' }).click()
+    await expect(note.getByText(DETAIL)).toHaveCount(0)
+
+    await note.getByRole('button', { name: 'Delete note' }).click()
+    const confirm = page.locator(DIALOG)
+    await expect(confirm).toBeVisible()
+    await confirm.getByRole('button', { name: 'Delete note' }).click()
+    await expect(page.locator(NOTE).filter({ hasText: BODY })).toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})

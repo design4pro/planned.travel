@@ -511,13 +511,16 @@ test.describe('authenticated routes', () => {
    *    arrives *after* the tap - which is exactly how a hover pill ends up
    *    stranded behind the panel the tap opened. The overlay stands hover down for
    *    as long as the last thing to touch the map was a finger.
-   * 2. **The composition.** A 393px handset leaves about 570 usable pixels of map,
-   *    and a panel carrying the fact grid *and* both writes wants five hundred and
-   *    forty of them. At full height no side of the country fits, so the placement
-   *    used to fall through to being centred on the shape: four fifths of the map
-   *    covered, no tip, and the country the reader had just pressed underneath the
-   *    panel describing it. It gives up height instead - down to a floor that
-   *    still carries the whole card and the first write - and takes an edge.
+   * 2. **The composition.** A 393px handset - the geometry is pinned in
+   *    `playwright.config.ts` rather than inherited from the device descriptor, so
+   *    these numbers cannot move under a playwright bump - leaves about 570 usable
+   *    pixels of map, and a panel carrying the fact grid *and* both writes wants
+   *    five hundred and forty of them. At full height no side of the country fits,
+   *    so the placement used to fall through to being centred on the shape: four
+   *    fifths of the map covered, no tip, and the country the reader had just
+   *    pressed underneath the panel describing it. It gives up height instead -
+   *    down to a floor that still carries the whole card and the first write - and
+   *    takes an edge.
    * 3. **Squeezed means scrollable, and scrollable has to scroll.** A `max-height`
    *    alone leaves the surface indefinite, a percentage height inside an
    *    indefinite box resolves to `auto`, and the region grew to its content

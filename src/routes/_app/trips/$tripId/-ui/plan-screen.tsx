@@ -28,7 +28,7 @@ import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core'
 import { Crosshair, Layers, ListTree, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useLocale } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 import {
@@ -96,6 +96,7 @@ import {
   formatMetres,
   mapCategories,
   mapPlacesOf,
+  notesByDay,
   orderFromPayload,
   planModel,
   routeDaysOf,
@@ -110,6 +111,18 @@ import {
   updatePlanPlaceFn,
   updateStopFn,
 } from '../-server/plan'
+import {
+  createDayNoteFn,
+  deleteDayNoteFn,
+  reorderDayNotesFn,
+  updateDayNoteFn,
+} from '../-server/day-notes'
+import {
+  NoteDeleteDialog,
+  NoteDialog,
+  draftFromNote,
+  emptyNote,
+} from './note-dialog'
 
 import type { MapPlace } from '#/components/map'
 import type { LngLat, MapBounds } from '#/lib/map'
@@ -118,10 +131,13 @@ import type {
   PlanChange,
   PlanOrder,
   PlanTarget,
+  PlannerNote,
   PlannerRow,
 } from '#/components/planner'
+import type { PlanNotesPayload } from '../-server/day-notes'
 import type { PlanBoardPayload } from '../-server/plan'
 import type { PlaceFormValues, TimingDraft } from './plan-actions'
+import type { NoteDraft } from './note-dialog'
 
 /* -------------------------------------------------------------------------------------------------
  * Layout constants
@@ -323,16 +339,22 @@ type DialogState =
   | { readonly kind: 'edit'; readonly placeId: string }
   | { readonly kind: 'timing'; readonly itemId: string }
   | { readonly kind: 'delete'; readonly placeId: string }
+  | { readonly kind: 'note-create'; readonly dayId: string }
+  | { readonly kind: 'note-edit'; readonly noteId: string }
+  | { readonly kind: 'note-delete'; readonly noteId: string }
   | null
 
 export interface PlanScreenProps {
   readonly payload: PlanBoardPayload
+  /** The trip's notes and whether this reader may write them. Loaded beside the board. */
+  readonly notes: PlanNotesPayload
   /** Shown in the itinerary rail's footer, where a page header would have been. */
   readonly tripTitle: string
 }
 
-export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
+export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   const locale = useLocale()
+  const t = useTranslate()
   const router = useRouter()
   const wide = useIsWide()
   const editable = payload.editable
@@ -377,9 +399,11 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
 
   /* ------------------------------------------------------------------ model */
 
+  const noteRuns = React.useMemo(() => notesByDay(notes), [notes])
+
   const model = React.useMemo(
-    () => planModel(payload, order, locale),
-    [payload, order, locale],
+    () => planModel(payload, order, locale, noteRuns),
+    [payload, order, locale, noteRuns],
   )
 
   const scheduledRows = React.useMemo(
@@ -886,6 +910,116 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
     })
   }, [closeDialog, dialog, payload.tripId, runWrite])
 
+  /* ------------------------------------------------------------------ notes */
+
+  const noteById = React.useMemo(
+    () => new Map(notes.notes.map((note) => [note.id, note])),
+    [notes.notes],
+  )
+
+  const noteDraft = React.useMemo((): NoteDraft => {
+    if (dialog?.kind !== 'note-edit') return emptyNote
+    const note = noteById.get(dialog.noteId)
+    return note === undefined ? emptyNote : draftFromNote(note)
+  }, [dialog, noteById])
+
+  const submitNote = React.useCallback(
+    (values: NoteDraft): void => {
+      const state = dialog
+      if (state?.kind !== 'note-create' && state?.kind !== 'note-edit') return
+
+      void runWrite(
+        async () => {
+          if (state.kind === 'note-create') {
+            await createDayNoteFn({
+              data: {
+                tripId: payload.tripId,
+                dayId: state.dayId,
+                body: values.body,
+                detail: values.detail,
+                time: values.time,
+                icon: values.icon,
+              },
+            })
+            return
+          }
+          await updateDayNoteFn({
+            data: {
+              tripId: payload.tripId,
+              noteId: state.noteId,
+              body: values.body,
+              detail: values.detail,
+              time: values.time,
+              icon: values.icon,
+            },
+          })
+        },
+        {
+          fallback: t('trips.plan.note.error.retry'),
+          success:
+            state.kind === 'note-create'
+              ? t('trips.plan.note.toast.created')
+              : t('trips.plan.note.toast.updated'),
+        },
+      ).then((ok) => {
+        if (ok) closeDialog()
+      })
+    },
+    [closeDialog, dialog, payload.tripId, runWrite, t],
+  )
+
+  const confirmDeleteNote = React.useCallback((): void => {
+    if (dialog?.kind !== 'note-delete') return
+    const noteId = dialog.noteId
+
+    void runWrite(
+      () => deleteDayNoteFn({ data: { tripId: payload.tripId, noteId } }),
+      {
+        fallback: t('trips.plan.note.error.retry'),
+        success: t('trips.plan.note.toast.deleted'),
+      },
+    ).then((ok) => {
+      if (ok) closeDialog()
+    })
+  }, [closeDialog, dialog, payload.tripId, runWrite, t])
+
+  /**
+   * Moves a note one place within its day.
+   *
+   * The whole day's note order goes to the server, not a pair of ids: `reorderDayTimeline`
+   * is the single writer of the day's position line, and it writes a line rather than a
+   * swap. There is no optimistic reorder to roll back here — unlike the board, the note
+   * run has no client-side copy to move ahead of the write, so the row stays where it is,
+   * marked pending, until the loader answers.
+   */
+  const moveNote = React.useCallback(
+    (note: PlannerNote, direction: -1 | 1): void => {
+      const run = noteRuns.get(note.dayId) ?? []
+      const index = run.findIndex((entry) => entry.id === note.id)
+      const target = index + direction
+      if (index === -1 || target < 0 || target >= run.length) return
+
+      const noteIds = run.map((entry) => entry.id)
+      noteIds[index] = run[target].id
+      noteIds[target] = note.id
+
+      markPending(note.id, true)
+      void reorderDayNotesFn({
+        data: { tripId: payload.tripId, dayId: note.dayId, noteIds },
+      })
+        .then(() => router.invalidate())
+        .catch((cause: unknown) => {
+          toast.error(t('trips.plan.note.error.move'), {
+            description: messageOf(cause, t('trips.plan.note.error.retry')),
+          })
+        })
+        .finally(() => {
+          markPending(note.id, false)
+        })
+    },
+    [markPending, noteRuns, payload.tripId, router, t],
+  )
+
   const savePosition = React.useCallback(
     (position: LngLat): void => {
       const row = picking
@@ -1003,6 +1137,18 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
             onSelectRow={selectRow}
             onHoverRow={hoverRow}
             rowActions={rowActions}
+            canWriteNotes={notes.canWrite}
+            pendingNoteIds={pending}
+            onAddNote={() =>
+              setDialog({ kind: 'note-create', dayId: day.dayId })
+            }
+            onEditNote={(note) =>
+              setDialog({ kind: 'note-edit', noteId: note.id })
+            }
+            onDeleteNote={(note) =>
+              setDialog({ kind: 'note-delete', noteId: note.id })
+            }
+            onMoveNote={moveNote}
           />
         ))
       )}
@@ -1386,6 +1532,28 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
         saving={saving}
         error={formError}
         onConfirm={confirmDelete}
+      />
+
+      <NoteDialog
+        open={dialog?.kind === 'note-create' || dialog?.kind === 'note-edit'}
+        onOpenChange={(open) => {
+          if (!open) closeDialog()
+        }}
+        mode={dialog?.kind === 'note-edit' ? 'edit' : 'create'}
+        initial={noteDraft}
+        saving={saving}
+        error={formError}
+        onSubmit={submitNote}
+      />
+
+      <NoteDeleteDialog
+        open={dialog?.kind === 'note-delete'}
+        onOpenChange={(open) => {
+          if (!open) closeDialog()
+        }}
+        saving={saving}
+        error={formError}
+        onConfirm={confirmDeleteNote}
       />
     </DndContext>
   )

@@ -71,8 +71,14 @@ export { usePlanDnd } from './plan-dnd'
 export type { PlanDnd, PlanDndOptions } from './plan-dnd'
 
 /* ------------------------------------------------------------- data shapes */
-export { isMapped } from './types'
-export type { PlannerCategory, PlannerDay, PlannerRow } from './types'
+export { DAY_NOTE_ICONS, DEFAULT_DAY_NOTE_ICON, isMapped } from './types'
+export type {
+  DayNoteIcon,
+  PlannerCategory,
+  PlannerDay,
+  PlannerNote,
+  PlannerRow,
+} from './types'
 
 /* ---------------------------------------------------------------- surfaces */
 export { PlannerRail } from './rail'
@@ -83,6 +89,13 @@ export { IdeasList } from './ideas-list'
 export type { IdeasListProps, PlacesScope } from './ideas-list'
 export { StopRow } from './stop-row'
 export type { StopRowProps } from './stop-row'
+export {
+  NoteRow,
+  dayNoteIcon,
+  dayNoteIconGlyph,
+  dayNoteIconLabel,
+} from './note-row'
+export type { NoteRowProps } from './note-row'
 export { PlaceThumb } from './place-thumb'
 export type { PlaceThumbProps, PlaceThumbSize } from './place-thumb'
 export { DragPreview } from './drag-preview'
