@@ -58,8 +58,17 @@ shape, a redirect that `quiesce`/`--dismiss` triggers under `--click`, any chang
 
 ### Phase 1: one comparison replaces the list
 
-- [ ] 1.1 Add `scripts/visual/landed-url.mjs` and its unit test
-- [ ] 1.2 Wire the comparison into `capture.mjs`
+- [x] 1.1 Add `scripts/visual/landed-url.mjs` and its unit test — 79553d7a
+- [x] 1.2 Wire the comparison into `capture.mjs` — fa479b60
 - [ ] 1.3 Rewrite `.claude/skills/verifying-changes/SKILL.md` into the warning contract
-- [ ] 1.4 Delete `anonymous-only.mjs` and its test; correct the `vitest.config.ts` doc comment
+- [x] 1.4 Delete `anonymous-only.mjs` and its test; correct the `vitest.config.ts` doc comment — 840142e6
 - [ ] 1.5 Run the full validation gate
+
+### Step 1.3 is blocked by a repo guard
+
+`.claude/hooks/guard-generated.sh` refuses any agent-run edit under `.claude/` — the file
+configures the agent, and the guard's one exception (a path the branch already changes) cannot be
+reached by the run that would introduce the change. The spec calls this step "the load-bearing part
+of the change", because without it the two surviving prose sentences still describe a refusal
+`capture.mjs` no longer performs, and `capture.mjs`'s own stderr pointer names a document that
+contradicts it. A human has to apply it, or authorize a different home for the contract.
