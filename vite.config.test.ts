@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TanStackDevtoolsViteConfig } from '@tanstack/devtools-vite'
 import type { Plugin, ViteDevServer } from 'vite'
@@ -113,9 +117,12 @@ describe('the dev server that outlives its checkout', () => {
     }
   }
 
+  // `exists` left out means the factory's own default — `node:fs`'s `existsSync` — stays in place.
+  // A destructured default is not overridden by an explicit `undefined`, so this passes straight
+  // through.
   async function startedPlugin(
     root: string,
-    exists: (path: string) => boolean,
+    exists: ((path: string) => boolean) | undefined,
     stop: () => void,
   ) {
     vi.resetModules()
@@ -159,6 +166,25 @@ describe('the dev server that outlives its checkout', () => {
 
     vi.advanceTimersByTime(60_000)
     expect(stop).not.toHaveBeenCalled()
+  })
+
+  it('notices a real directory going away, not just an injected predicate', async () => {
+    // Created before the fake clock, because `mkdtemp`'s async form would never settle under it.
+    const root = mkdtempSync(join(tmpdir(), 'planned-travel-327-'))
+    vi.useFakeTimers()
+    const stop = vi.fn()
+
+    // No `exists` passed: the default is the real `existsSync`, and a seam nothing grades is a
+    // seam that can be pointed at the wrong path without a single test noticing.
+    const { warn } = await startedPlugin(root, undefined, stop)
+
+    vi.advanceTimersByTime(1000)
+    expect(stop).not.toHaveBeenCalled()
+
+    rmSync(root, { recursive: true, force: true })
+    vi.advanceTimersByTime(1000)
+    expect(stop).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.[0]).toContain(root)
   })
 
   it('is installed only under e2e, where a run holds one of the eleven ports', async () => {
