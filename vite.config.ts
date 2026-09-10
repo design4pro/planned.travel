@@ -1,4 +1,7 @@
+import { existsSync } from 'node:fs'
+
 import { defineConfig } from 'vite'
+import type { Plugin } from 'vite'
 import { devtools } from '@tanstack/devtools-vite'
 
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
@@ -39,6 +42,67 @@ const uploadsSourceMaps =
  */
 const isE2E = process.env.E2E === '1'
 
+/**
+ * An automated dev server outlives the checkout it was started for, and the port window is finite.
+ *
+ * `.ai/scripts/test-env-up.sh` starts this server with `nohup` on a port from 3030-3040 — the only
+ * range `playwright.config.ts` accepts outside CI — and deliberately leaves it running so the next
+ * step of the same run reuses it. Nothing then ties its lifetime to the checkout: when the run's
+ * worktree is removed (`git worktree remove`, or an `om-*` skill deleting its scratch directory),
+ * the process keeps its deleted working directory open and keeps the port for as long as the host
+ * is up. Eleven such orphans exhaust the window, and from then on every run's e2e gate on that
+ * host fails with "no free port in 3030-3040" whatever branch it is testing (issue #327).
+ *
+ * So the server watches for its own root disappearing and shuts itself down the way
+ * `test-env-down.sh` would: `SIGTERM` to itself, which is the signal Vite's CLI already handles by
+ * closing the server — and, through it, the workerd children the Cloudflare plugin spawned. A
+ * `process.exit()` here would leave those behind.
+ *
+ * Only under `E2E=1`, which is to say only for a server an automated run started: a human running
+ * `pnpm dev` sits on port 3000, exhausts nothing, and should not have their editor's file
+ * shuffling decide when their server stops.
+ *
+ * `exists` and `stop` are injected so the gate can be graded without deleting a directory or
+ * signalling the test runner; nothing but the test passes them.
+ */
+export function stopWhenRootIsRemoved({
+  intervalMs = 30_000,
+  exists = existsSync,
+  stop = () => process.kill(process.pid, 'SIGTERM'),
+}: {
+  intervalMs?: number
+  exists?: (path: string) => boolean
+  stop?: () => void
+} = {}): Plugin {
+  return {
+    name: 'planned-travel:stop-when-root-is-removed',
+    apply: 'serve',
+    configureServer(server) {
+      const root = server.config.root
+      const timer = setInterval(() => {
+        if (exists(root)) return
+        clearInterval(timer)
+        server.config.logger.warn(
+          `[stop-when-root-is-removed] ${root} no longer exists; stopping the dev server so it stops holding its port.`,
+        )
+        stop()
+      }, intervalMs)
+      // The HTTP server keeps the loop alive on its own; this timer should never be the reason
+      // the process lingers.
+      timer.unref()
+      // A restart is not a new process: `configureServer` runs again, with a fresh plugin
+      // instance, every time Vite restarts in place — and `@cloudflare/vite-plugin` restarts on
+      // an edit to `wrangler.jsonc` or `.dev.vars`, both ordinary surface under automation. The
+      // timer belongs to the server that installed it, so a restart that leaves it running stacks
+      // one more poller on the same root; when that root then goes away they each `stop()`, and
+      // the second `SIGTERM` lands after Vite's own `process.once('SIGTERM')` handler has already
+      // torn itself down — killing the process outright and orphaning the workerd children this
+      // whole plugin exists to take down cleanly.
+      server.httpServer?.once('close', () => clearInterval(timer))
+    },
+  }
+}
+
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   build: { sourcemap: uploadsSourceMaps ? 'hidden' : false },
@@ -63,6 +127,7 @@ const config = defineConfig({
   },
   plugins: [
     devtools(isE2E ? { consolePiping: { enabled: false } } : undefined),
+    ...(isE2E ? [stopWhenRootIsRemoved()] : []),
     /**
      * `remoteBindings: false` keeps `vite dev` credential-free, and that is a requirement
      * rather than a preference: `.github/actions/e2e-env` boots this very server on a runner
