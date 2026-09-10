@@ -57,13 +57,13 @@ Owned surface:
 
 ### Phase 1: the day renders as one sequence
 
-- [ ] 1.1 Publish the stop's position, delete the dead board projection
-- [ ] 1.2 The item union in `types.ts`
-- [ ] 1.3 The adapter merges in `plan-model.ts`
-- [ ] 1.4 `ordering.ts`'s two half-truths
-- [ ] 1.5 One list in the day section
-- [ ] 1.6 Phase 1 copy — `plan.day.empty` in 23 locales
-- [ ] 1.7 Wire the screen to the merged model
+- [x] 1.1 Publish the stop's position, delete the dead board projection — 3f4418b1
+- [x] 1.2 The item union in `types.ts` — 3f4418b1
+- [x] 1.3 The adapter merges in `plan-model.ts` — 3f4418b1
+- [x] 1.4 `ordering.ts`'s two half-truths — 3f4418b1
+- [x] 1.5 One list in the day section — 3f4418b1
+- [x] 1.6 Phase 1 copy — `plan.day.empty` in 23 locales — 3f4418b1
+- [x] 1.7 Wire the screen to the merged model — 3f4418b1
 
 ### Phase 2: the note becomes draggable
 
