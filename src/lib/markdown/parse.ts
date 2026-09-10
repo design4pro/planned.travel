@@ -208,7 +208,21 @@ function parseBlocks(
 type BlockKind =
   'fence' | 'thematicBreak' | 'heading' | 'quote' | 'list' | 'table'
 
-/** The kind of block the line at `index` opens, or `null` when it opens none. */
+/**
+ * The kind of block the line at `index` opens, or `null` when it opens none.
+ *
+ * The order of the branches is the grammar, and it is stated once because two
+ * callers ask the same question of it: {@link readBlockAt}, which then reads the
+ * block, and {@link startsBlock}, which only needs to know that the paragraph or
+ * list item running into this line has to stop short of it. A form added here is
+ * therefore never one that parses but fails to end the paragraph above it.
+ *
+ * Recognising costs the opening condition and nothing else — no reader runs, so
+ * no block is read to be thrown away.
+ *
+ * @param quotable - false inside a quote, which is what keeps `> > x` from
+ *   nesting: the inner `>` is read as text.
+ */
 function blockKindAt(
   lines: ReadonlyArray<string>,
   index: number,
@@ -225,20 +239,8 @@ function blockKindAt(
 }
 
 /**
- * Read the block the line at `start` opens, or `null` when it opens none.
- *
- * The order of the branches is the grammar, and it is stated once because two
- * callers ask the same question of it: {@link parseBlocks}, which keeps the
- * block, and {@link startsBlock}, which only needs to know that the paragraph or
- * list item running into this line has to stop short of it. A form added here is
- * therefore never one that parses but fails to end the paragraph above it.
- *
- * {@link startsBlock} pays for a block it then discards, and the shape of the
- * subset bounds that to a constant: a reader whose opening line does not match
- * returns before reading anything, one that does match ends the enclosing run at
- * once — so a run discards at most one block — and a quote is the only block
- * holding blocks, which caps the nesting at two. A block is read at most four
- * times, never once per line of it.
+ * Read the block the line at `start` opens, or `null` when it opens none, by
+ * dispatching to the reader for the kind {@link blockKindAt} named.
  *
  * @param quotable - false inside a quote, which is what keeps `> > x` from
  *   nesting: the inner `>` is read as text.

@@ -408,11 +408,11 @@ describe('parse — outside the subset', () => {
   })
 
   /**
-   * The lookahead that ends a paragraph reads the block that ends it and then
-   * throws it away, so a boundary block is read a constant number of times —
-   * not once per line of it. A body that alternates between the three readers
-   * consuming more than one line would blow the default timeout if that ever
-   * stopped holding.
+   * The lookahead that ends a paragraph recognises the block that ends it
+   * without reading it, so a boundary block is read exactly once — by the
+   * dispatcher that keeps it. A body alternating between the three readers that
+   * consume more than one line is where a lookahead reading blocks again would
+   * show up first.
    */
   it('reads a boundary block a bounded number of times', () => {
     const source = 'text before\n> quoted\n```\ncode\n```\n- item\n'.repeat(400)
