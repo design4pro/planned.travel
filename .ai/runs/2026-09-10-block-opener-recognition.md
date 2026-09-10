@@ -75,4 +75,15 @@ dependency.
 - [x] 1.2 Add `fenceAt`, `headingAt`, `blockKindAt`, `BlockKind` and wire both callers — 58ee8eba
 - [x] 1.3 Add the two four-hash fall-through tests — 5e93ee07
 - [x] 1.4 Delete the amortisation argument and rewrite the surviving doc comments — 99224a8c
-- [ ] 1.5 Run the full validation gate
+- [x] 1.5 Run the full validation gate — six of seven commands green; the e2e step is red for a cause measured on the base
+
+Gate result: `node .ai/scripts/agent-kit-check.mjs`, `pnpm typecheck`, `pnpm lint`,
+`bash .ai/scripts/check-generated.sh` and `pnpm build` green; `pnpm test` 5782 passed / 238 files.
+`bash .ai/scripts/e2e.sh` ends red with 12 failed / 21 passed, every failure a
+`page.waitForFunction: Timeout 10000ms exceeded` in `e2e/helpers/settle.ts:425` — the hydration
+wait, not an assertion. The same script run on `origin/develop` (`8d8a94a9`, detached, same
+worktree, same machine) fails **15** tests, and the branch's 12 are a strict subset of them: the
+base additionally fails `journeys.spec.ts:1185` (book tab), `:1439` and `:1472`. The redness is
+therefore load on the base, not this change — which is what the parser suite would be expected to
+show anyway, since `src/lib/markdown/parse.ts` renders no screen and the block tree it produces is
+unchanged for every input.
