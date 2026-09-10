@@ -363,6 +363,19 @@ describe('parse — outside the subset', () => {
     ])
   })
 
+  it('declines a backtick fence whose info string holds a backtick', () => {
+    expect(parse('```js `x`\nnot code')).toEqual([
+      {
+        type: 'paragraph',
+        children: [
+          text('```js '),
+          { type: 'codeSpan', value: 'x' },
+          text('\nnot code'),
+        ],
+      },
+    ])
+  })
+
   it('closes an unclosed fence at the end of the body', () => {
     expect(only('```\nstill open')).toEqual({
       type: 'code',

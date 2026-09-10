@@ -293,9 +293,10 @@ function readBlockAt(
   }
 
   // Falling out of the switch is the `null` a line that opens no block already
-  // meant. The two `break`s above re-narrow what TypeScript cannot prove is
-  // already narrow: `fenceAt` and `headingAt` are pure functions of `line`, so
-  // the second call cannot disagree with the first.
+  // meant. The breaks in the `fence` and `heading` cases re-narrow what
+  // TypeScript cannot prove is already narrow: `fenceAt` and `headingAt` are
+  // pure functions of `line`, so the second call cannot disagree with the
+  // first, and neither branch is reachable.
   return null
 }
 
