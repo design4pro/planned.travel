@@ -378,6 +378,10 @@ clone_basemap_from() {
 }
 
 pull_basemap_from_r2() {
+  # E2E_TILES_KEY names a *regional extract*, never the deployed TILES_ARCHIVE_KEY.
+  # The download below is unconditional and unbounded, and since 2026-09-10 the
+  # deployed key is the whole planet — about 137.9 GB (docs/DEPLOY.md §7.8). Syncing
+  # the two turns every cold bootstrap into a multi-hour download. docs/CLOUD.md §2.3.
   [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${E2E_TILES_KEY:-}" ] || return 1
   if [ ! -s .e2e-tiles/basemap.pmtiles ]; then
     say "pulling the basemap archive from R2 (${E2E_TILES_KEY})"
