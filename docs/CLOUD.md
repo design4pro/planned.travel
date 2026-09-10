@@ -128,6 +128,13 @@ Before changing it, confirm the object's real extent with §7.4's header read-ba
 bytes 102-117 carry the bounding box, and anything spanning the planet does not
 belong here.
 
+The value above is the previous production key, and §7.8 records its extent as
+**unverified** - nobody has read its header back. Sessions have bootstrapped from
+it at a few hundred megabytes, which is why it is believed to be the corridor
+extract under a planet's name, but "believed" is the honest word until someone
+runs that read-back. Do it the next time you are in the bucket, and if it turns
+out to be a real planet, repoint this at `basemaps/japan-<YYYYMMDD>.pmtiles`.
+
 **There is no secrets store.** Environment variables are readable by anyone who
 uses the environment, and the dialog says so. The token above is the only one
 that belongs here, and only because it can be scoped to `R2:read` on

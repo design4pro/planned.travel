@@ -469,6 +469,11 @@ pmtiles extract https://build.protomaps.com/20260818.pmtiles japan-20260818.pmti
 # → japan-20260818.pmtiles, 503,617,057 bytes, zoom 0–14
 ```
 
+The `20260818` above is the transcript of the run that produced the archive local dev still uses,
+kept because the numbers beside it are that run's. **It is not a command to copy** — that build
+404s today. A fresh extract starts at §7.1, takes whichever date currently answers `200`, and dates
+its output file to match.
+
 `--maxzoom=14` is deliberate, and it is the knob that decides whether an extract is 500 MB or
 several gigabytes: each extra level quadruples the number of tiles inside the bbox. Zoom 14 is
 about a city block. The map still zooms to 19 (`MAP_MAX_ZOOM`) — the style declares no `maxzoom`
