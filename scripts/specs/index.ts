@@ -61,10 +61,19 @@ const reference = (id: number): string => `[#${id}](${REPOSITORY}/issues/${id})`
 const list = (ids: ReadonlyArray<number>): string =>
   ids.length === 0 ? '—' : ids.map(reference).join(', ')
 
+/**
+ * A cell's own `|` escaped, so a title carrying one cannot add a column.
+ *
+ * Nothing constrains the `H1` a spec is written with, and GFM discards the cells past the header
+ * count: one `# Trips | places` would silently drop the last column from that row, and neither
+ * Prettier nor the staleness gate would notice - both only ever compare the generator to itself.
+ */
+const cell = (text: string): string => text.replaceAll('|', '\\|')
+
 const row = (spec: Spec): string => {
   const href = spec.path.slice(SPEC_ROOT.length + 1)
   const cells = [
-    `[${spec.title}](${href})`,
+    `[${cell(spec.title)}](${href})`,
     spec.date,
     spec.issue === null ? '—' : reference(spec.issue),
     spec.specPr === null ? '—' : reference(spec.specPr),

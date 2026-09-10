@@ -4,8 +4,9 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { renderIndex } from '../index.ts'
 import { auditSpecs } from '../registry.ts'
-import type { SpecDirectory } from '../registry.ts'
+import type { Spec, SpecDirectory } from '../registry.ts'
 
 /**
  * The spec-lifecycle guard: `.ai/specs/` says what became of every decision in it, and keeps saying
@@ -247,11 +248,61 @@ describe('auditSpecs', () => {
     ])
   })
 
+  it('ignores a link inside code, which is markdown being shown and not a reference', () => {
+    const root = tree({
+      '': {
+        '2026-01-01-a-spec.md': [
+          spec(),
+          '```markdown',
+          '[example](fenced/nowhere.md)',
+          '```',
+          '',
+          'An inline `[example](inline/nowhere.md)` too.',
+          '',
+        ].join('\n'),
+      },
+    })
+
+    expect(details(root)).toEqual([])
+  })
+
+  it('reads a table in a file with CRLF line endings, which a Windows checkout has', () => {
+    const root = tree({
+      '': { '2026-01-01-a-spec.md': spec().replaceAll('\n', '\r\n') },
+    })
+
+    expect(details(root)).toEqual([])
+    expect(auditSpecs(root).specs[0]?.issue).toBe(1)
+  })
+
   it('ignores README.md and AGENTS.md, which live beside the specs', () => {
     const root = tree({
       '': { 'README.md': '# Index\n', 'AGENTS.md': '# Rules\n' },
     })
 
     expect(auditSpecs(root)).toEqual({ specs: [], violations: [] })
+  })
+})
+
+describe('renderIndex', () => {
+  it('escapes a `|` in a title, which would otherwise silently drop a column', () => {
+    const rendered = renderIndex([
+      {
+        path: '.ai/specs/2026-01-01-a-spec.md',
+        directory: '',
+        title: 'Trips | places: one owner',
+        date: '2026-01-01',
+        status: 'ready',
+        issue: 1,
+        specPr: 2,
+        implementation: [],
+        supersededBy: [],
+      } satisfies Spec,
+    ])
+    const built = rendered.split('\n').find((line) => line.includes('#1')) ?? ''
+
+    expect(built).toContain('Trips \\| places: one owner')
+    // Split on unescaped pipes only: five cells under the five-cell header is the whole point.
+    expect(built.split(/(?<!\\)\|/).slice(1, -1)).toHaveLength(5)
   })
 })

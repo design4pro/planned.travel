@@ -105,6 +105,15 @@ const NOT_A_SPEC = new Set(['README.md', 'AGENTS.md', 'product-brief.md'])
 const REFERENCE = /^#(\d+)$/
 /** A markdown link target that is not a spec-relative path: absolute, anchor, or a mail address. */
 const NOT_RELATIVE = /^(?:[a-z][a-z0-9+.-]*:|#|\/)/i
+/**
+ * Code, which shows markdown syntax rather than linking anywhere.
+ *
+ * `.ai/specs/AGENTS.md` is the document most likely to quote a link as an example, and without this
+ * every such example would be resolved as if it were a real target - one fenced block demonstrating
+ * `[example](some/other-file.md)` would turn the whole gate red for a file that references nothing.
+ */
+const FENCED_CODE = /^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[^\n]*$/gm
+const INLINE_CODE = /(`+)[^\n]*?\1/g
 
 const isSpecDirectory = (name: string): name is SpecDirectory =>
   Object.hasOwn(STATUSES_BY_DIRECTORY, name)
@@ -191,7 +200,8 @@ const references = (value: string): Array<number> =>
  *    no way to reach it.
  * 7. Every relative markdown link resolves from the document's own directory. Moving a file between
  *    status directories is the operation this convention adds, and a silently broken link is what
- *    it costs when nobody re-checks.
+ *    it costs when nobody re-checks. Links inside code - fenced or inline - are syntax being shown
+ *    rather than a document being referenced, and are not checked.
  */
 export const auditSpecs = (
   root: string = SPEC_ROOT,
@@ -214,7 +224,10 @@ export const auditSpecs = (
     }
 
     const markdown = readFileSync(path, 'utf8')
-    const lines = markdown.split('\n')
+    // `\r?\n`, not `\n`: a Windows checkout with git's default `core.autocrlf` hands every line a
+    // trailing `\r`, and the row pattern below anchors on `|$`. Splitting on `\n` alone would leave
+    // every spec in such a clone reported as having no metadata table at all.
+    const lines = markdown.split(/\r?\n/)
     const rows = metadataRows(lines)
     const values = new Map(rows)
 
@@ -272,7 +285,8 @@ export const auditSpecs = (
       })
     }
 
-    for (const [, target] of markdown.matchAll(/\]\(([^)\s]+)\)/g)) {
+    const prose = markdown.replace(FENCED_CODE, '').replace(INLINE_CODE, '')
+    for (const [, target] of prose.matchAll(/\]\(([^)\s]+)\)/g)) {
       if (NOT_RELATIVE.test(target)) continue
       const [file] = target.split('#')
       if (file === '' || existsSync(resolve(dirname(path), file))) continue
