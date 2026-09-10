@@ -117,6 +117,17 @@ CLOUDFLARE_ACCOUNT_ID=…
 CLOUDFLARE_API_TOKEN=…
 ```
 
+**`E2E_TILES_KEY` is not `TILES_ARCHIVE_KEY`, and must never be synced to it.**
+Since 2026-09-10 the deployed key names the whole planet - about 137.9 GB
+(docs/DEPLOY.md §7.8). `pull_basemap_from_r2()` in `scripts/worktree/bootstrap.sh`
+downloads whatever this variable names _in full_ into `.e2e-tiles/`, so pointing
+it at the deployed key turns every cold session bootstrap into a 137.9 GB
+download over the session's own network. This variable names a **regional
+extract** - a few hundred megabytes - and stays on one whatever production does.
+Before changing it, confirm the object's real extent with §7.4's header read-back:
+bytes 102-117 carry the bounding box, and anything spanning the planet does not
+belong here.
+
 **There is no secrets store.** Environment variables are readable by anyone who
 uses the environment, and the dialog says so. The token above is the only one
 that belongs here, and only because it can be scoped to `R2:read` on

@@ -1,11 +1,13 @@
 /**
  * What the published archive actually contains.
  *
- * A `.pmtiles` archive is not necessarily the planet. Ours is a regional cut —
- * the Tokyo–Hakone–Kyoto–Osaka corridor — and a trip to Lisbon is simply not in
- * it. That is a normal, permanent condition of a tile archive, not a fault, and
- * the one thing a map must never do about it is show an empty rectangle and let
- * the reader work it out.
+ * A `.pmtiles` archive is not necessarily the planet. Production publishes the
+ * whole planet (docs/DEPLOY.md §7.3), but a local checkout runs on a regional cut
+ * — the Tokyo–Hakone–Kyoto–Osaka corridor — where a trip to Lisbon is simply not
+ * in it, and a regional fallback stays a legitimate answer to a storage bill. So
+ * a partial archive is a normal condition of this code, not a fault, and the one
+ * thing a map must never do about it is show an empty rectangle and let the
+ * reader work it out.
  *
  * So the extent is *read from the file* rather than guessed at: bytes 102–117 of
  * a v3 header carry the bounding box the archive was built with, in hundred-

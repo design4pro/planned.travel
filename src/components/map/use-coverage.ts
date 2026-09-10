@@ -1,11 +1,12 @@
 /**
  * Does the basemap actually cover *this* trip?
  *
- * The archive published for planned.travel is a regional cut, so the question has
- * a different answer for a trip to Kyoto and a trip to Lisbon. Answering it from
- * the archive's own header — rather than from a hardcoded bounding box that would
- * go stale the first time the archive is rebuilt — is what lets the map say
- * something true about itself.
+ * The answer belongs to the archive, not to the product: production publishes the
+ * whole planet, while a local checkout serves a regional cut where a trip to
+ * Kyoto and a trip to Lisbon get different answers. Reading it from the archive's
+ * own header — rather than from a hardcoded bounding box that would go stale the
+ * first time the archive is rebuilt — is what lets the map say something true
+ * about itself whichever archive it is pointed at.
  */
 
 import { coverageFor } from '#/lib/map/coverage'

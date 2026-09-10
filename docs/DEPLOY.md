@@ -406,8 +406,9 @@ This is the one asset the product cannot build for itself, and the one place whe
 deploy differs materially from local development:
 
 - **Local dev** uses a regional extract of the flagship trip's corridor — about 500 MB.
-- **Production** either carries the whole planet in R2, or a set of regional extracts. §7.3
-  states the trade-off in real numbers; pick one before the first deploy.
+- **Production carries the whole planet in R2.** §7.3 stated the trade-off in real numbers and
+  the choice has been taken: the planet, for about two dollars a month. §7.8 is the log of which
+  build is published.
 
 Nothing else has to be uploaded. The style declares neither `glyphs` nor `sprite` (see the
 header of `src/lib/map/style.ts`): labels are rasterised in the browser with TinySDF in the
@@ -418,17 +419,24 @@ publish today, and declaring one we cannot serve costs a failed request per glyp
 ### 7.1 Pin an upstream build
 
 Protomaps publishes dated planet builds at `https://build.protomaps.com/<YYYYMMDD>.pmtiles`.
-The dates rotate: only the last few builds stay up, and older dates 404. Verified on
-2026-08-19 — `20260818` and `20260811` answered `200`, `20260812` and `20260801` answered `404`.
+The dates rotate: only the last few builds stay up, and older dates 404.
 
-So: choose a build, record its date in the R2 object key and in this runbook's deploy log, and
-keep the artefact you produced. Re-fetching last month's build is not an option.
+- Verified on 2026-08-19 — `20260818` and `20260811` answered `200`, `20260812` and `20260801`
+  answered `404`.
+- Verified again on 2026-09-10 — `20260904` through `20260910` answered `200`, and everything
+  older, `20260818` included, answered `404`. **The window is about seven days**, not a few
+  weeks: a date pinned in this runbook or in `wrangler.jsonc` goes un-refetchable within a week
+  of being written down.
+
+So: choose a build, record its date in the R2 object key and in §7.8's deploy log, and
+keep the artefact you produced. Re-fetching last month's build is not an option — and neither,
+in practice, is re-fetching last week's.
 
 ```bash
 # Confirm the build exists and see how big it is before committing to it.
-curl -sI https://build.protomaps.com/20260818.pmtiles | grep -iE 'content-length|last-modified'
-# content-length: 137387555600      → 137.4 GB
-# last-modified: Tue, 18 Aug 2026 09:05:41 GMT
+curl -sI https://build.protomaps.com/20260910.pmtiles | grep -iE 'content-length|last-modified'
+# content-length: 137906248094      → 137.9 GB
+# last-modified: Thu, 10 Sep 2026 09:08:02 GMT
 ```
 
 The archive carries its own provenance, which is what a rollback argument is made of. After
@@ -472,22 +480,29 @@ detail that was never in the tile rather than sharpness.
 
 |               | Whole planet in R2                          | Regional extracts                               |
 | ------------- | ------------------------------------------- | ----------------------------------------------- |
-| Size          | 137.4 GB (`20260818`, measured above)       | ~0.5 GB per city-scale corridor at z14          |
-| R2 storage    | ≈ **$2.06 / month** at $0.015 / GB-month    | ≈ $0.008 / month per extract — inside free tier |
+| Size          | 137.9 GB (`20260910`, measured above)       | ~0.5 GB per city-scale corridor at z14          |
+| R2 storage    | ≈ **$2.07 / month** at $0.015 / GB-month    | ≈ $0.008 / month per extract — inside free tier |
 | Egress        | $0 — R2 never charges for egress            | $0                                              |
 | Coverage      | Every trip, everywhere, no thought required | Only inside each bbox                           |
 | Configuration | One `TILES_ARCHIVE_KEY`, set once           | One key per region, chosen per trip             |
 | Upload        | Multipart, hours of transfer                | Minutes                                         |
 
-Storage arithmetic, in full: 137.4 GB × $0.015 = $2.06 per month; the first 10 GB-month is free,
-so the invoice reads about **$1.91**. R2 rounds usage up to the next GB-month. Reads are Class B
+Storage arithmetic, in full: 137.9 GB rounds to 138 GB-month × $0.015 = $2.07 per month; the
+first 10 GB-month is free, so the invoice reads about **$1.92**. R2 rounds usage up to the next
+GB-month, and the planet grows by roughly 20 MB a day, so this number drifts upward slowly and
+is worth re-measuring at each refresh rather than quoting from here. Reads are Class B
 operations ($0.36 per million, first 10 million free): a warm archive mostly answers out of the
 Cloudflare cache in front of R2 — `/api/tiles/*` sets `s-maxage` for a year on a resolved key and
 reports `x-tiles-cache: hit` when it did — so tile traffic converts into R2 operations only on
 cache misses. Confirm both rates against <https://developers.cloudflare.com/r2/pricing/> before
 quoting them at anybody; this runbook was written against the August 2026 price list.
 
-**Recommendation: ship the planet.** Two dollars a month is cheaper than the alternative's only
+**Decision, taken 2026-09-10: ship the planet.** This is no longer a recommendation awaiting a
+first deploy — production and staging both resolve `TILES_ARCHIVE_KEY` to a dated planet key, and
+§7.8 records which build. Revisiting it means writing a new row there and a new reason here, not
+quietly repointing a var.
+
+Two dollars a month is cheaper than the alternative's only
 real cost, which is code: with regional archives, something has to decide _which_ archive a
 given trip needs. The route already serves any key explicitly
 (`/api/tiles/basemaps/japan-20260818.pmtiles`, immutable for a year), and `useArchiveCoverage()`
@@ -503,7 +518,7 @@ Keys are **versioned and never overwritten** — the endpoint serves a named key
 `immutable` caching for a year, so a rewritten key would be served stale for a year:
 
 ```
-basemaps/planet-20260818.pmtiles
+basemaps/planet-20260910.pmtiles
 basemaps/japan-20260818.pmtiles
 ```
 
@@ -532,8 +547,8 @@ pnpm exec wrangler r2 object put \
 Anything bigger — which includes both the 503 MB regional extract and the 137 GB planet — needs
 an S3-compatible client, because it needs **multipart**. R2's multipart rules: parts of 5 MiB to
 5 GiB, at most 10,000 parts, every part except the last exactly the same size, and an incomplete
-upload is aborted after 7 days. At 137,387,555,600 bytes the smallest legal part is
-137,387,555,600 ÷ 10,000 ≈ 13.1 MiB; 256 MiB parts give 512 of them, which is comfortable and
+upload is aborted after 7 days. At 137,906,248,094 bytes (`20260910`) the smallest legal part is
+137,906,248,094 ÷ 10,000 ≈ 13.2 MiB; 256 MiB parts give 514 of them, which is comfortable and
 resumable.
 
 Create an R2 API token (R2 → Manage API Tokens → Object Read & Write), then:
@@ -543,15 +558,15 @@ export AWS_ACCESS_KEY_ID=R2_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY=R2_SECRET_ACCESS_KEY
 export AWS_DEFAULT_REGION=auto
 
-# 8 MiB is the CLI's default part size: 137,387,555,600 / 8 MiB = 16,377.9, so 16,378
+# 8 MiB is the CLI's default part size: 137,906,248,094 / 8 MiB = 16,439.7, so 16,440
 # parts — over R2's 10,000-part limit. AWS CLI v2 would not fail on that; it silently
 # scales multipart_chunksize up until the count fits (~16 MiB here). Set it anyway, so
 # the part size is one you chose and can reason about when an upload has to resume.
 aws configure set default.s3.multipart_threshold 256MB
 aws configure set default.s3.multipart_chunksize 256MB
 
-aws s3 cp ./planet-20260818.pmtiles \
-  s3://planned-travel-tiles/basemaps/planet-20260818.pmtiles \
+aws s3 cp ./planet-20260910.pmtiles \
+  s3://planned-travel-tiles/basemaps/planet-20260910.pmtiles \
   --endpoint-url https://CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com \
   --content-type application/octet-stream \
   --cli-write-timeout 0 --cli-read-timeout 0
@@ -563,9 +578,14 @@ and resumes better on a flaky line. Verify what landed:
 
 ```bash
 pnpm exec wrangler r2 object get \
-  planned-travel-tiles/basemaps/planet-20260818.pmtiles --remote --pipe | head -c 127 | xxd | head -2
+  planned-travel-tiles/basemaps/planet-20260910.pmtiles --remote --pipe | head -c 127 | xxd | head -2
 # Expect the bytes to start with the ASCII magic `PMTiles` and version 3.
 ```
+
+Bytes 102–117 of that header carry the archive's bounding box in hundred-nanodegree integers —
+the offsets `src/lib/map/coverage.ts` reads — so the same 127 bytes also prove _what_ landed, not
+just that something did. A planet archive reads roughly `-180, -85, 180, 85`; anything narrower
+is an extract wearing a planet's name, and §7.8 is where that gets written down.
 
 ### 7.5 Point the alias — and roll back by flipping it
 
@@ -573,7 +593,7 @@ pnpm exec wrangler r2 object get \
 
 ```jsonc
 // wrangler.jsonc — production, then the `staging` env block
-"vars": { "TILES_ARCHIVE_KEY": "basemaps/planet-20260818.pmtiles" }
+"vars": { "TILES_ARCHIVE_KEY": "basemaps/planet-20260910.pmtiles" }
 ```
 
 ```bash
@@ -612,7 +632,7 @@ OpenStreetMap changes continuously; a Protomaps build is a snapshot, and its
   border. Roads and coastlines do not move on a sprint boundary, and every refresh is a
   multi-hour upload.
 - Each refresh is §7.1 → §7.4 → §7.5 with a new date, never an overwrite of the old key.
-- Record, next to the key: the upstream build date, the OSM replication time from
+- Record, next to the key **in §7.8**: the upstream build date, the OSM replication time from
   `pmtiles show`, the Protomaps schema version (`4.15.2` at the time of writing), and — for a
   regional archive — the bbox and `--maxzoom`. A basemap you cannot reproduce is a basemap you
   cannot fix.
@@ -632,6 +652,28 @@ that reads the style document directly.
 
 If a map surface is ever added, `MapAttribution` goes on it. There is no compliant configuration
 of this product without visible OSM credit.
+
+### 7.8 Deploy log — which archive is published
+
+§7.1 and §7.6 both say to record the build next to the key. This is that record, and it is the
+only place the answer lives. One row per published key, newest first; a row is written when the
+object is uploaded, **before** the alias flip in §7.5, and no row is ever deleted — a previous
+row is the rollback target.
+
+| Key                                | Upstream build                                                        | Size (bytes)    | OSM replication time | Schema           | Extent     | Published         | Notes                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------- | --------------- | -------------------- | ---------------- | ---------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `basemaps/planet-20260910.pmtiles` | `https://build.protomaps.com/20260910.pmtiles`                        | 137,906,248,094 | _pending upload_     | _pending upload_ | planet     | _pending upload_  | Production and staging alias                                                                                                                                                                                                                                                                                                 |
+| `basemaps/planet-20260818.pmtiles` | `https://build.protomaps.com/20260818.pmtiles` (404 as of 2026-09-10) | unrecorded      | unrecorded           | unrecorded       | unverified | before 2026-09-10 | Previous alias. Never logged when it was published, and its upstream build has rotated away, so it cannot be reproduced or audited — the reason this section exists. Keep the object as the rollback target until the new key has served a full day; verify its real extent with §7.4's read-back before trusting it as one. |
+
+The `_pending upload_` cells are filled by whoever runs §7.4, from `pmtiles show` on the artefact
+they uploaded. A row that still reads `_pending upload_` after the alias has been flipped means
+the flip went out unverified — that is a bug in the procedure, not a formatting detail.
+
+**If the pinned build has rotated out of §7.1's seven-day window before the upload happens**, do
+not substitute a neighbouring date silently: pick the newest build that answers `200`, and change
+the key in `wrangler.jsonc`, this table, and §7.4's commands together, in one change. The key,
+the object and this row are one fact in three places, and they drift the moment they are edited
+apart.
 
 ---
 
