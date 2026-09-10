@@ -77,6 +77,11 @@ dependency.
 - [x] 1.4 Delete the amortisation argument and rewrite the surviving doc comments — 99224a8c
 - [x] 1.5 Run the full validation gate — six of seven commands green; the e2e step is red for a cause measured on the base
 
+Review pass (`om-auto-review-pr 400 --autofix`) added one commit, `8ec23b8b`: the `readBlockAt`
+trailing comment said "the two `break`s above" where the switch has three, and `fenceAt`'s
+`!isValidInfo` branch — new code — had no test, so `declines a backtick fence whose info string
+holds a backtick` was added. It passes on `origin/develop` too, as the other new tests do.
+
 Gate result: `node .ai/scripts/agent-kit-check.mjs`, `pnpm typecheck`, `pnpm lint`,
 `bash .ai/scripts/check-generated.sh` and `pnpm build` green; `pnpm test` 5782 passed / 238 files.
 `bash .ai/scripts/e2e.sh` ends red with 12 failed / 21 passed, every failure a
