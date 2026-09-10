@@ -220,7 +220,7 @@ export function DaySection({
             onClick={onAddNote}
             // Ten days on one screen means ten of these, so the name a screen reader
             // hears says *which* day it writes to while the visible label stays short.
-            aria-label={t('trips.plan.note.addForDay')}
+            aria-label={t('trips.plan.note.addForDay', { day: day.title })}
             className={cn(
               'flex w-full items-center justify-center gap-1.5 rounded-md',
               'border border-dashed border-edge bg-surface-2 px-3 py-2',

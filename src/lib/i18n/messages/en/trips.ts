@@ -38,9 +38,14 @@ const messages = {
    * The note affordances. `add` is the control's own label; `addForDay` is the
    * dashed target inside a day, which says which day it writes to because a
    * reader looking at a ten-day plan is looking at four of these at once.
+   *
+   * `{day}` is that day's own title — a custom one, or `Day 3` — so the name is
+   * the one thing that differs between the four, and it is appended rather than
+   * declined: several of the twenty-three would need a case the title cannot
+   * supply, the same reason `atlas.actions.visit.add.name` appends.
    */
   'plan.note.add': 'Add a note',
-  'plan.note.addForDay': 'Add a note for this day',
+  'plan.note.addForDay': 'Add a note for {day}',
   /**
    * The disclosure, which exists only on a note that carries a detail. Two
    * messages rather than one with a state suffix: several of the twenty-three

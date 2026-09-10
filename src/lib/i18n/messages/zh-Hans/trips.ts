@@ -26,7 +26,7 @@ const messages = {
   'plan.places': '地点',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '添加备注',
-  'plan.note.addForDay': '为这一天添加备注',
+  'plan.note.addForDay': '添加备注——{day}',
   'plan.note.showMore': '展开',
   'plan.note.showLess': '收起',
   'plan.note.moveUp': '上移',

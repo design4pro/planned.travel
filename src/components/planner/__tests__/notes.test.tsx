@@ -248,7 +248,11 @@ describe('DaySection notes', () => {
     const onAddNote = vi.fn()
     renderDay([], { canWriteNotes: true, onAddNote })
 
-    const add = screen.getByRole('button', { name: 'Add a note for this day' })
+    // The day's own title, not a static "this day": ten of these sit on one screen,
+    // and a name that does not carry the title names all ten identically.
+    const add = screen.getByRole('button', {
+      name: 'Add a note for Asakusa and the river',
+    })
     expect(add.textContent).toContain('Add a note')
 
     await user.click(add)
@@ -260,7 +264,7 @@ describe('DaySection notes', () => {
 
     expect(screen.getByText('Ferry leaves at six')).toBeDefined()
     expect(
-      screen.queryByRole('button', { name: 'Add a note for this day' }),
+      screen.queryByRole('button', { name: /^Add a note for / }),
     ).toBeNull()
   })
 })

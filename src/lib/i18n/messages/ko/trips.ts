@@ -26,7 +26,7 @@ const messages = {
   'plan.places': '장소',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '메모 추가',
-  'plan.note.addForDay': '이 날짜에 메모 추가',
+  'plan.note.addForDay': '메모 추가 — {day}',
   'plan.note.showMore': '더 보기',
   'plan.note.showLess': '접기',
   'plan.note.moveUp': '위로 이동',

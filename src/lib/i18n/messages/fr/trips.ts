@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Lieux',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Ajouter une note',
-  'plan.note.addForDay': 'Ajouter une note à cette journée',
+  'plan.note.addForDay': 'Ajouter une note, {day}',
   'plan.note.showMore': 'Afficher plus',
   'plan.note.showLess': 'Afficher moins',
   'plan.note.moveUp': 'Monter',

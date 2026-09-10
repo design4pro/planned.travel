@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'الأماكن',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'إضافة ملاحظة',
-  'plan.note.addForDay': 'إضافة ملاحظة لهذا اليوم',
+  'plan.note.addForDay': 'إضافة ملاحظة، {day}',
   'plan.note.showMore': 'عرض المزيد',
   'plan.note.showLess': 'عرض أقل',
   'plan.note.moveUp': 'تحريك لأعلى',

@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Yerler',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Not ekle',
-  'plan.note.addForDay': 'Bu güne not ekle',
+  'plan.note.addForDay': 'Not ekle: {day}',
   'plan.note.showMore': 'Daha fazla göster',
   'plan.note.showLess': 'Daha az göster',
   'plan.note.moveUp': 'Yukarı taşı',

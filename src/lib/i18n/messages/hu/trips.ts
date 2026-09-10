@@ -26,7 +26,7 @@ const messages = {
   'plan.places': 'Helyek',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Jegyzet hozzáadása',
-  'plan.note.addForDay': 'Jegyzet hozzáadása ehhez a naphoz',
+  'plan.note.addForDay': 'Jegyzet hozzáadása: {day}',
   'plan.note.showMore': 'Több megjelenítése',
   'plan.note.showLess': 'Kevesebb megjelenítése',
   'plan.note.moveUp': 'Mozgatás felfelé',
