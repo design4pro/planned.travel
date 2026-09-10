@@ -583,8 +583,11 @@ and resumes better on a flaky line. Verify what landed:
 
 ```bash
 pnpm exec wrangler r2 object get \
-  planned-travel-tiles/basemaps/planet-20260910.pmtiles --remote --pipe | head -c 127 | xxd | head -2
+  planned-travel-tiles/basemaps/planet-20260910.pmtiles --remote --pipe | head -c 127 | xxd | head -8
 # Expect the bytes to start with the ASCII magic `PMTiles` and version 3.
+# `xxd` prints 16 bytes a line, so `head -8` is what shows the whole 127-byte
+# header — including the bounding box at 102-117, on the `00000060` and
+# `00000070` lines. A shorter count stops at byte 31 and proves only the magic.
 ```
 
 Bytes 102–117 of that header carry the archive's bounding box in hundred-nanodegree integers —
