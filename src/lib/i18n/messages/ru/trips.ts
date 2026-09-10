@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} не перемещён. В этом дне он уже есть.',
   'plan.move.spoken.notInIdeas': '{name} не перемещён. Заметка остаётся внутри дня.',
   'plan.move.spoken.notInAnotherDay': '{name} не перемещён. Заметка остаётся в своём дне.',
+  'plan.move.spoken.timed': 'У {name} стоит {time}. Спрашиваем, убрать ли время.',
   'plan.move.error.save': 'Перемещение не сохранилось',
   'plan.move.error.retry': 'Попробуйте ещё раз через минуту.',
+  'plan.move.dropTime.title': 'Переместить {name} и убрать {time}?',
+  'plan.move.dropTime.body': 'Это место противоречит указанному времени. Перенос сюда стирает время — новый порядок и стёртое время сохраняются вместе.',
+  'plan.move.dropTime.confirm': 'Переместить и убрать время',
+  'plan.move.dropTime.cancel': 'Оставить на месте',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Добавить заметку',
   'plan.note.addForDay': 'Добавить заметку, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Заметка удалена',
   'plan.note.error.save': 'Заметку не удалось сохранить',
   'plan.note.error.delete': 'Заметку не удалось удалить',
-  'plan.note.error.move': 'Перемещение не сохранилось',
   'plan.note.error.retry': 'Попробуйте ещё раз через минуту.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Напоминание',

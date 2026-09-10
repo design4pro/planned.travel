@@ -61,8 +61,24 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} was not moved. That day already has it.',
   'plan.move.spoken.notInIdeas': '{name} was not moved. A note stays in the day.',
   'plan.move.spoken.notInAnotherDay': '{name} was not moved. A note stays on its own day.',
+  'plan.move.spoken.timed': '{name} carries {time}. Asking whether to drop it.',
   'plan.move.error.save': 'That move did not save',
   'plan.move.error.retry': 'Try it again in a moment.',
+  /**
+   * The question a timed item asks before it moves against its own clock.
+   *
+   * A time outranks a position (PRD #104 decision 9), so the board will not quietly
+   * reorder a row that carries one — but refusing outright would make a legitimate
+   * "actually, this is not at 14:30 any more" impossible from the rail. So it asks,
+   * and agreeing clears the time in the very same write.
+   *
+   * The confirm names the consequence rather than saying "OK": the reader is losing
+   * a time, and that is the part a two-word button would hide.
+   */
+  'plan.move.dropTime.title': 'Move {name} and drop its {time}?',
+  'plan.move.dropTime.body': 'This position contradicts the time on it. Moving it here clears the time — the new order and the cleared time are saved together.',
+  'plan.move.dropTime.confirm': 'Move and drop the time',
+  'plan.move.dropTime.cancel': 'Keep it where it is',
   /* ------------------------------------------------- a day's own notes */
   /**
    * The note affordances. `add` is the control's own label; `addForDay` is the
@@ -123,7 +139,6 @@ const messages = {
   'plan.note.toast.deleted': 'Note deleted',
   'plan.note.error.save': 'The note did not save',
   'plan.note.error.delete': 'The note was not deleted',
-  'plan.note.error.move': 'That move did not save',
   'plan.note.error.retry': 'Try it again in a moment.',
   /**
    * The icon vocabulary, as a reader hears it rather than as the picker stores

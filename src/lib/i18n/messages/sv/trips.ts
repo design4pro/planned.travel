@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} flyttades inte. Den dagen har den redan.',
   'plan.move.spoken.notInIdeas': '{name} flyttades inte. En anteckning stannar i dagen.',
   'plan.move.spoken.notInAnotherDay': '{name} flyttades inte. En anteckning stannar på sin egen dag.',
+  'plan.move.spoken.timed': '{name} har tiden {time}. Vi frågar om den ska tas bort.',
   'plan.move.error.save': 'Flytten sparades inte',
   'plan.move.error.retry': 'Försök igen om en stund.',
+  'plan.move.dropTime.title': 'Flytta {name} och ta bort {time}?',
+  'plan.move.dropTime.body': 'Den här platsen motsäger tiden på den. Att flytta hit rensar tiden — den nya ordningen och den rensade tiden sparas tillsammans.',
+  'plan.move.dropTime.confirm': 'Flytta och ta bort tiden',
+  'plan.move.dropTime.cancel': 'Låt den vara',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Lägg till en anteckning',
   'plan.note.addForDay': 'Lägg till en anteckning: {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Anteckningen har tagits bort',
   'plan.note.error.save': 'Anteckningen sparades inte',
   'plan.note.error.delete': 'Anteckningen togs inte bort',
-  'plan.note.error.move': 'Flytten sparades inte',
   'plan.note.error.retry': 'Försök igen om en stund.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Påminnelse',

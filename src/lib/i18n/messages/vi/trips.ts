@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} chưa được chuyển. Ngày đó đã có rồi.',
   'plan.move.spoken.notInIdeas': '{name} chưa được chuyển. Ghi chú ở lại trong ngày.',
   'plan.move.spoken.notInAnotherDay': '{name} chưa được chuyển. Ghi chú ở lại ngày của nó.',
+  'plan.move.spoken.timed': '{name} có giờ {time}. Chúng tôi hỏi xem có bỏ giờ không.',
   'plan.move.error.save': 'Thay đổi thứ tự chưa được lưu',
   'plan.move.error.retry': 'Hãy thử lại sau giây lát.',
+  'plan.move.dropTime.title': 'Chuyển {name} và bỏ giờ {time}?',
+  'plan.move.dropTime.body': 'Vị trí này mâu thuẫn với giờ đã đặt. Chuyển đến đây sẽ xóa giờ — thứ tự mới và giờ đã xóa được lưu cùng nhau.',
+  'plan.move.dropTime.confirm': 'Chuyển và bỏ giờ',
+  'plan.move.dropTime.cancel': 'Giữ nguyên chỗ cũ',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Thêm ghi chú',
   'plan.note.addForDay': 'Thêm ghi chú, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Đã xóa ghi chú',
   'plan.note.error.save': 'Ghi chú chưa được lưu',
   'plan.note.error.delete': 'Ghi chú chưa được xóa',
-  'plan.note.error.move': 'Thay đổi thứ tự chưa được lưu',
   'plan.note.error.retry': 'Hãy thử lại sau giây lát.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Nhắc nhở',

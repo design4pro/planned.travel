@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} is niet verplaatst. Die dag heeft hem al.',
   'plan.move.spoken.notInIdeas': '{name} is niet verplaatst. Een notitie blijft in de dag.',
   'plan.move.spoken.notInAnotherDay': '{name} is niet verplaatst. Een notitie blijft op haar eigen dag.',
+  'plan.move.spoken.timed': '{name} heeft {time}. We vragen of die tijd mag vervallen.',
   'plan.move.error.save': 'Die verplaatsing is niet opgeslagen',
   'plan.move.error.retry': 'Probeer het zo meteen opnieuw.',
+  'plan.move.dropTime.title': '{name} verplaatsen en {time} laten vervallen?',
+  'plan.move.dropTime.body': 'Deze plek spreekt de tijd erop tegen. Hierheen verplaatsen wist de tijd — de nieuwe volgorde en de gewiste tijd worden samen opgeslagen.',
+  'plan.move.dropTime.confirm': 'Verplaatsen en tijd wissen',
+  'plan.move.dropTime.cancel': 'Laat staan waar het staat',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Notitie toevoegen',
   'plan.note.addForDay': 'Notitie toevoegen: {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Notitie verwijderd',
   'plan.note.error.save': 'De notitie is niet opgeslagen',
   'plan.note.error.delete': 'De notitie is niet verwijderd',
-  'plan.note.error.move': 'Die verplaatsing is niet opgeslagen',
   'plan.note.error.retry': 'Probeer het zo meteen opnieuw.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Herinnering',

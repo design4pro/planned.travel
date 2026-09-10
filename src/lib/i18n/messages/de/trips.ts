@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} wurde nicht verschoben. Dieser Tag hat den Ort schon.',
   'plan.move.spoken.notInIdeas': '{name} wurde nicht verschoben. Eine Notiz bleibt im Tag.',
   'plan.move.spoken.notInAnotherDay': '{name} wurde nicht verschoben. Eine Notiz bleibt an ihrem Tag.',
+  'plan.move.spoken.timed': '{name} trägt {time}. Wir fragen, ob die Zeit entfallen soll.',
   'plan.move.error.save': 'Das Verschieben wurde nicht gespeichert',
   'plan.move.error.retry': 'Versuch es gleich noch einmal.',
+  'plan.move.dropTime.title': '{name} verschieben und {time} entfernen?',
+  'plan.move.dropTime.body': 'Diese Position widerspricht der Zeit darauf. Ein Verschieben hierher löscht die Zeit — die neue Reihenfolge und die gelöschte Zeit werden zusammen gespeichert.',
+  'plan.move.dropTime.confirm': 'Verschieben und Zeit entfernen',
+  'plan.move.dropTime.cancel': 'So lassen',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Notiz hinzufügen',
   'plan.note.addForDay': 'Notiz hinzufügen: {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Notiz gelöscht',
   'plan.note.error.save': 'Die Notiz wurde nicht gespeichert',
   'plan.note.error.delete': 'Die Notiz wurde nicht gelöscht',
-  'plan.note.error.move': 'Das Verschieben wurde nicht gespeichert',
   'plan.note.error.retry': 'Versuch es gleich noch einmal.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Erinnerung',

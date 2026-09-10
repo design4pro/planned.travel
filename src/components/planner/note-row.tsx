@@ -131,9 +131,9 @@ export function dayNoteIconLabel(name: string): MessageKey {
 
 export interface NoteRowProps {
   readonly note: PlannerNote
-  /** Position in the day's run, 0-based: the ends disable their own chevron. */
+  /** Position in the day's sequence, 0-based: the ends disable their own chevron. */
   readonly position: number
-  /** How long the run is, for the same reason. */
+  /** How long the sequence is, for the same reason. */
   readonly count: number
   /** `false` renders the note with no actions at all — a viewer, or an archived trip. */
   readonly canWrite: boolean
@@ -159,7 +159,7 @@ export interface NoteRowProps {
  * present-and-disabled chevron on every second note would say "there is more here" about
  * a note that has nothing more.
  *
- * The two move controls are `disabled` at the ends of the run rather than hidden, so the
+ * The two move controls are `disabled` at the ends of the day's sequence rather than hidden, so the
  * cluster keeps its width and a reader moving a note down does not watch the controls
  * they are aiming at shift under the pointer.
  */

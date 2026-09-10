@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} no s’ha mogut. Aquell dia ja el té.',
   'plan.move.spoken.notInIdeas': '{name} no s’ha mogut. Una nota es queda dins del dia.',
   'plan.move.spoken.notInAnotherDay': '{name} no s’ha mogut. Una nota es queda al seu dia.',
+  'plan.move.spoken.timed': '{name} porta l’hora {time}. Us preguntem si voleu deixar-la anar.',
   'plan.move.error.save': 'Aquest moviment no s’ha desat',
   'plan.move.error.retry': 'Torneu-ho a provar d’aquí a un moment.',
+  'plan.move.dropTime.title': 'Voleu moure {name} i deixar anar les {time}?',
+  'plan.move.dropTime.body': 'Aquesta posició contradiu l’hora que té. Moure’l aquí esborra l’hora: el nou ordre i l’hora esborrada es desen alhora.',
+  'plan.move.dropTime.confirm': 'Mou-lo i esborra l’hora',
+  'plan.move.dropTime.cancel': 'Deixa’l on és',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Afegeix una nota',
   'plan.note.addForDay': 'Afegeix una nota, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Nota suprimida',
   'plan.note.error.save': 'La nota no s’ha desat',
   'plan.note.error.delete': 'La nota no s’ha suprimit',
-  'plan.note.error.move': 'Aquest moviment no s’ha desat',
   'plan.note.error.retry': 'Torneu-ho a provar d’aquí a un moment.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Recordatori',

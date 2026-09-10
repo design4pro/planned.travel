@@ -111,24 +111,6 @@ export function DaySection({
     return numbers
   }, [day.items])
 
-  /**
-   * The 0-based position of each note **within the day's note run**, and how long
-   * that run is — what the move chevrons disable their ends against.
-   *
-   * Still the run rather than the sequence, because the chevrons still walk notes
-   * among notes. They join the merged path with the drag, in the same change's third
-   * phase; until they do, disabling them against the sequence would grey out a
-   * control that still works.
-   */
-  const noteRun = React.useMemo(() => {
-    const positions = new Map<string, number>()
-    for (const item of day.items) {
-      if (item.kind !== 'note') continue
-      positions.set(item.note.id, positions.size)
-    }
-    return positions
-  }, [day.items])
-
   const { setNodeRef, isOver } = useDroppable({ id: day.dayId })
 
   const stops = day.rows.length === 1 ? '1 stop' : `${day.rows.length} stops`
@@ -221,15 +203,15 @@ export function DaySection({
               {t('trips.plan.day.empty')}
             </li>
           ) : (
-            day.items.map((item) => {
+            day.items.map((item, index) => {
               if (item.kind === 'note') {
                 const { note } = item
                 return (
                   <NoteRow
                     key={note.id}
                     note={note}
-                    position={noteRun.get(note.id) ?? 0}
-                    count={noteRun.size}
+                    position={index}
+                    count={day.items.length}
                     canWrite={canWriteNotes}
                     draggable={draggable && canWriteNotes}
                     pending={pendingItemIds?.has(noteItemId(note.id)) ?? false}

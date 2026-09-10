@@ -10,7 +10,7 @@ import { DaySection } from '../day-section'
 import { DragPreview } from '../drag-preview'
 import { NoteRow } from '../note-row'
 
-import type { PlannerDay, PlannerNote } from '../types'
+import type { PlannerDay, PlannerItem, PlannerNote, PlannerRow } from '../types'
 
 /**
  * The note run of a day, mounted for real.
@@ -46,16 +46,47 @@ function note(overrides: Partial<PlannerNote> & { id: string }): PlannerNote {
   }
 }
 
-function day(notes: ReadonlyArray<PlannerNote>): PlannerDay {
+/** A stop, for the days that need something other than a note in the sequence. */
+function stop(id: string, name: string): PlannerRow {
+  return {
+    itemId: id,
+    placeId: `p-${id}`,
+    assignmentId: id,
+    name,
+    location: null,
+    time: null,
+    duration: null,
+    categoryId: null,
+    imageUrl: null,
+    rating: null,
+    note: null,
+    reservationStatus: 'none',
+    lng: null,
+    lat: null,
+    visited: false,
+    dayNumber: 1,
+  }
+}
+
+function day(items: ReadonlyArray<PlannerItem>): PlannerDay {
   return {
     dayId: 'd1',
     dayNumber: 1,
     title: 'Asakusa and the river',
     dateLabel: 'Fri, 9 Oct',
     stays: [],
-    rows: [],
-    items: notes.map((entry) => ({ kind: 'note', note: entry })),
+    rows: items.flatMap((item) => (item.kind === 'stop' ? [item.row] : [])),
+    items,
   }
+}
+
+/** The two item kinds, as short as the fixtures that build days out of them. */
+function noteItem(entry: PlannerNote): PlannerItem {
+  return { kind: 'note', note: entry }
+}
+
+function stopItem(row: PlannerRow): PlannerItem {
+  return { kind: 'stop', row }
 }
 
 /** One note, in the list element and the drag context its row expects. */
@@ -80,13 +111,13 @@ function renderRow(
 
 /** A whole day section, with the drag context the stop list needs above it. */
 function renderDay(
-  notes: ReadonlyArray<PlannerNote>,
+  items: ReadonlyArray<PlannerItem>,
   overrides: Partial<React.ComponentProps<typeof DaySection>> = {},
 ) {
   return render(
     <DndContext>
       <DaySection
-        day={day(notes)}
+        day={day(items)}
         categoryFor={() => undefined}
         {...overrides}
       />
@@ -157,7 +188,7 @@ describe('NoteRow', () => {
     expect(screen.queryByRole('heading', { name: 'Before you go' })).toBeNull()
   })
 
-  it('disables the move a note at the end of the run cannot make', () => {
+  it('disables the move a note at the end of the sequence cannot make', () => {
     renderRow({ position: 0, count: 3 })
 
     expect(
@@ -241,7 +272,10 @@ describe('NoteRow', () => {
 describe('DaySection notes', () => {
   it('renders the day’s run in order, each knowing where it sits', () => {
     renderDay(
-      [note({ id: 'n1', body: 'First' }), note({ id: 'n2', body: 'Second' })],
+      [
+        noteItem(note({ id: 'n1', body: 'First' })),
+        noteItem(note({ id: 'n2', body: 'Second' })),
+      ],
       { canWriteNotes: true },
     )
 
@@ -265,6 +299,69 @@ describe('DaySection notes', () => {
     ).toBe(true)
   })
 
+  /**
+   * The chevrons walk the sequence, not the note run. A lone note above a stop had
+   * both of its chevrons greyed out until `01-S4b` — the run it was the whole of had
+   * nowhere to go — while the day plainly had somewhere to put it.
+   */
+  it('lets a note move past the stop below it', async () => {
+    const user = userEvent.setup()
+    const onMoveNote = vi.fn()
+    renderDay(
+      [
+        noteItem(note({ id: 'n1', body: 'Tickets are at the desk' })),
+        stopItem(stop('a1', 'Senso-ji')),
+      ],
+      { canWriteNotes: true, onMoveNote },
+    )
+
+    const row = screen
+      .getAllByRole('listitem')
+      .find((item) => item.hasAttribute('data-planner-note'))
+    expect(row).toBeDefined()
+    if (row === undefined) return
+
+    expect(
+      within(row)
+        .getByRole('button', { name: 'Move up' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+
+    const down = within(row).getByRole('button', { name: 'Move down' })
+    expect(down.hasAttribute('disabled')).toBe(false)
+
+    await user.click(down)
+    expect(onMoveNote.mock.calls).toHaveLength(1)
+    expect(onMoveNote.mock.calls[0][1]).toBe(1)
+  })
+
+  it('refuses the note that is last in the sequence its own way down', () => {
+    renderDay(
+      [
+        stopItem(stop('a1', 'Senso-ji')),
+        noteItem(note({ id: 'n1', body: 'Last train is at midnight' })),
+      ],
+      { canWriteNotes: true },
+    )
+
+    const row = screen
+      .getAllByRole('listitem')
+      .find((item) => item.hasAttribute('data-planner-note'))
+    expect(row).toBeDefined()
+    if (row === undefined) return
+
+    expect(
+      within(row)
+        .getByRole('button', { name: 'Move down' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    expect(
+      within(row)
+        .getByRole('button', { name: 'Move up' })
+        .hasAttribute('disabled'),
+    ).toBe(false)
+  })
+
   it('offers the add control with a name that says which day it writes to', async () => {
     const user = userEvent.setup()
     const onAddNote = vi.fn()
@@ -282,7 +379,7 @@ describe('DaySection notes', () => {
   })
 
   it('gives a viewer the notes and no way to add one', () => {
-    renderDay([note({ id: 'n1', body: 'Ferry leaves at six' })])
+    renderDay([noteItem(note({ id: 'n1', body: 'Ferry leaves at six' }))])
 
     expect(screen.getByText('Ferry leaves at six')).toBeDefined()
     expect(

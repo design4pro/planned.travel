@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} nem lett áthelyezve. Az a nap már tartalmazza.',
   'plan.move.spoken.notInIdeas': '{name} nem lett áthelyezve. A jegyzet a napon belül marad.',
   'plan.move.spoken.notInAnotherDay': '{name} nem lett áthelyezve. A jegyzet a saját napján marad.',
+  'plan.move.spoken.timed': '{name} időpontja {time}. Megkérdezzük, elhagyjuk-e.',
   'plan.move.error.save': 'A mozgatást nem sikerült menteni',
   'plan.move.error.retry': 'Próbálja meg újra egy pillanat múlva.',
+  'plan.move.dropTime.title': 'Áthelyezi ezt: {name}, és elhagyja a(z) {time} időpontot?',
+  'plan.move.dropTime.body': 'Ez a hely ellentmond a rajta lévő időpontnak. Az ide helyezés törli az időpontot — az új sorrend és a törölt időpont együtt mentődik.',
+  'plan.move.dropTime.confirm': 'Áthelyezés az időpont nélkül',
+  'plan.move.dropTime.cancel': 'Maradjon, ahol van',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Jegyzet hozzáadása',
   'plan.note.addForDay': 'Jegyzet hozzáadása: {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Jegyzet törölve',
   'plan.note.error.save': 'A jegyzetet nem sikerült menteni',
   'plan.note.error.delete': 'A jegyzetet nem sikerült törölni',
-  'plan.note.error.move': 'A mozgatást nem sikerült menteni',
   'plan.note.error.retry': 'Próbálja meg újra egy pillanat múlva.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Emlékeztető',

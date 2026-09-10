@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} 沒有移動。那一天已經有它了。',
   'plan.move.spoken.notInIdeas': '{name} 沒有移動。備註留在這一天裡。',
   'plan.move.spoken.notInAnotherDay': '{name} 沒有移動。備註留在自己的那一天。',
+  'plan.move.spoken.timed': '{name} 設定了 {time}。正在詢問是否放棄這個時間。',
   'plan.move.error.save': '這次移動未能儲存',
   'plan.move.error.retry': '請稍後再試一次。',
+  'plan.move.dropTime.title': '移動 {name} 並放棄 {time} 嗎？',
+  'plan.move.dropTime.body': '這個位置與它的時間互相矛盾。移到這裡會清除時間——新的順序和被清除的時間會一起儲存。',
+  'plan.move.dropTime.confirm': '移動並清除時間',
+  'plan.move.dropTime.cancel': '保持原位',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '新增備註',
   'plan.note.addForDay': '新增備註——{day}',
@@ -69,7 +74,6 @@ const messages = {
   'plan.note.toast.deleted': '已刪除備註',
   'plan.note.error.save': '備註未能儲存',
   'plan.note.error.delete': '備註未能刪除',
-  'plan.note.error.move': '這次移動未能儲存',
   'plan.note.error.retry': '請稍後再試一次。',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': '提醒',

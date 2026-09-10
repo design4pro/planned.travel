@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} taşınmadı. O günde zaten var.',
   'plan.move.spoken.notInIdeas': '{name} taşınmadı. Not günün içinde kalır.',
   'plan.move.spoken.notInAnotherDay': '{name} taşınmadı. Not kendi gününde kalır.',
+  'plan.move.spoken.timed': '{name} öğesinde {time} var. Saati bırakalım mı diye soruyoruz.',
   'plan.move.error.save': 'Bu taşıma kaydedilmedi',
   'plan.move.error.retry': 'Birazdan tekrar deneyin.',
+  'plan.move.dropTime.title': '{name} taşınsın ve {time} kaldırılsın mı?',
+  'plan.move.dropTime.body': 'Bu konum üzerindeki saatle çelişiyor. Buraya taşımak saati siler — yeni sıra ile silinen saat birlikte kaydedilir.',
+  'plan.move.dropTime.confirm': 'Taşı ve saati kaldır',
+  'plan.move.dropTime.cancel': 'Olduğu yerde kalsın',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Not ekle',
   'plan.note.addForDay': 'Not ekle: {day}',
@@ -70,7 +75,6 @@ const messages = {
   'plan.note.toast.deleted': 'Not silindi',
   'plan.note.error.save': 'Not kaydedilmedi',
   'plan.note.error.delete': 'Not silinemedi',
-  'plan.note.error.move': 'Bu taşıma kaydedilmedi',
   'plan.note.error.retry': 'Birazdan tekrar deneyin.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Hatırlatma',

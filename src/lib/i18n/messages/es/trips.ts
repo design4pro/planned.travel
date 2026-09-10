@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} no se ha movido. Ese día ya lo tiene.',
   'plan.move.spoken.notInIdeas': '{name} no se ha movido. Una nota se queda en el día.',
   'plan.move.spoken.notInAnotherDay': '{name} no se ha movido. Una nota se queda en su día.',
+  'plan.move.spoken.timed': '{name} tiene la hora {time}. Preguntamos si quitarla.',
   'plan.move.error.save': 'Ese movimiento no se ha guardado',
   'plan.move.error.retry': 'Inténtalo de nuevo en un momento.',
+  'plan.move.dropTime.title': '¿Mover {name} y quitar las {time}?',
+  'plan.move.dropTime.body': 'Esta posición contradice la hora que tiene. Moverlo aquí borra la hora: el nuevo orden y la hora borrada se guardan juntos.',
+  'plan.move.dropTime.confirm': 'Mover y quitar la hora',
+  'plan.move.dropTime.cancel': 'Dejarlo donde está',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Añadir una nota',
   'plan.note.addForDay': 'Añadir una nota, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Nota eliminada',
   'plan.note.error.save': 'La nota no se ha guardado',
   'plan.note.error.delete': 'La nota no se ha eliminado',
-  'plan.note.error.move': 'Ese movimiento no se ha guardado',
   'plan.note.error.retry': 'Inténtalo de nuevo en un momento.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Recordatorio',

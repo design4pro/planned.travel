@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name}은(는) 이동하지 않았습니다. 그날에는 이미 있습니다.',
   'plan.move.spoken.notInIdeas': '{name}은(는) 이동하지 않았습니다. 메모는 그날 안에 남습니다.',
   'plan.move.spoken.notInAnotherDay': '{name}은(는) 이동하지 않았습니다. 메모는 자기 날에 남습니다.',
+  'plan.move.spoken.timed': '{name}에는 {time}이(가) 있습니다. 시간을 지울지 묻습니다.',
   'plan.move.error.save': '이동을 저장하지 못했습니다',
   'plan.move.error.retry': '잠시 후 다시 시도해 주세요.',
+  'plan.move.dropTime.title': '{name}을(를) 옮기고 {time}을(를) 지울까요?',
+  'plan.move.dropTime.body': '이 자리는 지정된 시간과 맞지 않습니다. 여기로 옮기면 시간이 지워지고, 새 순서와 지워진 시간이 함께 저장됩니다.',
+  'plan.move.dropTime.confirm': '옮기고 시간 지우기',
+  'plan.move.dropTime.cancel': '그대로 두기',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '메모 추가',
   'plan.note.addForDay': '메모 추가 — {day}',
@@ -70,7 +75,6 @@ const messages = {
   'plan.note.toast.deleted': '메모를 삭제했습니다',
   'plan.note.error.save': '메모를 저장하지 못했습니다',
   'plan.note.error.delete': '메모를 삭제하지 못했습니다',
-  'plan.note.error.move': '이동을 저장하지 못했습니다',
   'plan.note.error.retry': '잠시 후 다시 시도해 주세요.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': '알림',

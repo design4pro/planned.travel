@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} nie został przeniesiony. Ten dzień już go ma.',
   'plan.move.spoken.notInIdeas': '{name} nie został przeniesiony. Notatka zostaje w dniu.',
   'plan.move.spoken.notInAnotherDay': '{name} nie został przeniesiony. Notatka zostaje w swoim dniu.',
+  'plan.move.spoken.timed': '{name} ma godzinę {time}. Pytamy, czy ją usunąć.',
   'plan.move.error.save': 'Nie udało się zapisać tego przeniesienia',
   'plan.move.error.retry': 'Spróbuj ponownie za chwilę.',
+  'plan.move.dropTime.title': 'Przenieść {name} i usunąć godzinę {time}?',
+  'plan.move.dropTime.body': 'To miejsce jest sprzeczne z ustawioną godziną. Przeniesienie tutaj usuwa godzinę - nowa kolejność i usunięta godzina zapisują się razem.',
+  'plan.move.dropTime.confirm': 'Przenieś i usuń godzinę',
+  'plan.move.dropTime.cancel': 'Zostaw na miejscu',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Dodaj notatkę',
   'plan.note.addForDay': 'Dodaj notatkę: {day}',
@@ -70,7 +75,6 @@ const messages = {
   'plan.note.toast.deleted': 'Notatka usunięta',
   'plan.note.error.save': 'Nie udało się zapisać notatki',
   'plan.note.error.delete': 'Nie udało się usunąć notatki',
-  'plan.note.error.move': 'Nie udało się zapisać tego przeniesienia',
   'plan.note.error.retry': 'Spróbuj ponownie za chwilę.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Przypomnienie',

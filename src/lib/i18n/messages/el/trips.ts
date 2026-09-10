@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': 'Το {name} δεν μετακινήθηκε. Εκείνη η ημέρα το έχει ήδη.',
   'plan.move.spoken.notInIdeas': 'Το {name} δεν μετακινήθηκε. Η σημείωση μένει μέσα στην ημέρα.',
   'plan.move.spoken.notInAnotherDay': 'Το {name} δεν μετακινήθηκε. Η σημείωση μένει στη δική της ημέρα.',
+  'plan.move.spoken.timed': 'Το {name} έχει ώρα {time}. Ρωτάμε αν θα την αφήσουμε.',
   'plan.move.error.save': 'Η μετακίνηση δεν αποθηκεύτηκε',
   'plan.move.error.retry': 'Δοκιμάστε ξανά σε λίγο.',
+  'plan.move.dropTime.title': 'Μετακίνηση του {name} και κατάργηση της ώρας {time};',
+  'plan.move.dropTime.body': 'Αυτή η θέση έρχεται σε αντίθεση με την ώρα που έχει. Η μετακίνηση εδώ σβήνει την ώρα — η νέα σειρά και η σβησμένη ώρα αποθηκεύονται μαζί.',
+  'plan.move.dropTime.confirm': 'Μετακίνηση και κατάργηση ώρας',
+  'plan.move.dropTime.cancel': 'Να μείνει όπου είναι',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Προσθήκη σημείωσης',
   'plan.note.addForDay': 'Προσθήκη σημείωσης, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Η σημείωση διαγράφηκε',
   'plan.note.error.save': 'Η σημείωση δεν αποθηκεύτηκε',
   'plan.note.error.delete': 'Η σημείωση δεν διαγράφηκε',
-  'plan.note.error.move': 'Η μετακίνηση δεν αποθηκεύτηκε',
   'plan.note.error.retry': 'Δοκιμάστε ξανά σε λίγο.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Υπενθύμιση',

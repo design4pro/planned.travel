@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} non è stato spostato. Quel giorno lo contiene già.',
   'plan.move.spoken.notInIdeas': '{name} non è stato spostato. Una nota resta nel giorno.',
   'plan.move.spoken.notInAnotherDay': '{name} non è stato spostato. Una nota resta nel suo giorno.',
+  'plan.move.spoken.timed': '{name} porta l’orario {time}. Chiediamo se lasciarlo andare.',
   'plan.move.error.save': 'Questo spostamento non è stato salvato',
   'plan.move.error.retry': 'Riprova tra un momento.',
+  'plan.move.dropTime.title': 'Spostare {name} e rimuovere le {time}?',
+  'plan.move.dropTime.body': 'Questa posizione contraddice l’orario che porta. Spostarlo qui cancella l’orario: il nuovo ordine e l’orario cancellato si salvano insieme.',
+  'plan.move.dropTime.confirm': 'Sposta e rimuovi l’orario',
+  'plan.move.dropTime.cancel': 'Lascialo dov’è',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Aggiungi una nota',
   'plan.note.addForDay': 'Aggiungi una nota, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Nota eliminata',
   'plan.note.error.save': 'La nota non è stata salvata',
   'plan.note.error.delete': 'La nota non è stata eliminata',
-  'plan.note.error.move': 'Questo spostamento non è stato salvato',
   'plan.note.error.retry': 'Riprova tra un momento.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Promemoria',

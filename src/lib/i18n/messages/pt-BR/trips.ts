@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} não foi movido. Esse dia já tem esse lugar.',
   'plan.move.spoken.notInIdeas': '{name} não foi movido. Uma nota fica no dia.',
   'plan.move.spoken.notInAnotherDay': '{name} não foi movido. Uma nota fica no dia dela.',
+  'plan.move.spoken.timed': '{name} tem o horário {time}. Perguntamos se deve ser removido.',
   'plan.move.error.save': 'Essa mudança de ordem não foi salva',
   'plan.move.error.retry': 'Tente de novo em instantes.',
+  'plan.move.dropTime.title': 'Mover {name} e remover o horário {time}?',
+  'plan.move.dropTime.body': 'Esta posição contradiz o horário definido. Movê-lo para cá apaga o horário — a nova ordem e o horário apagado são salvos juntos.',
+  'plan.move.dropTime.confirm': 'Mover e remover o horário',
+  'plan.move.dropTime.cancel': 'Deixar onde está',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Adicionar uma nota',
   'plan.note.addForDay': 'Adicionar uma nota, {day}',
@@ -70,7 +75,6 @@ const messages = {
   'plan.note.toast.deleted': 'Nota excluída',
   'plan.note.error.save': 'A nota não foi salva',
   'plan.note.error.delete': 'A nota não foi excluída',
-  'plan.note.error.move': 'Essa mudança de ordem não foi salva',
   'plan.note.error.retry': 'Tente de novo em instantes.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Lembrete',

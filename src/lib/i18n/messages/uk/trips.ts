@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} не переміщено. У цьому дні він уже є.',
   'plan.move.spoken.notInIdeas': '{name} не переміщено. Нотатка лишається в дні.',
   'plan.move.spoken.notInAnotherDay': '{name} не переміщено. Нотатка лишається у своєму дні.',
+  'plan.move.spoken.timed': 'У {name} стоїть {time}. Запитуємо, чи прибрати час.',
   'plan.move.error.save': 'Переміщення не збереглося',
   'plan.move.error.retry': 'Спробуйте ще раз за хвилину.',
+  'plan.move.dropTime.title': 'Перемістити {name} і прибрати {time}?',
+  'plan.move.dropTime.body': 'Це місце суперечить зазначеному часу. Перенесення сюди стирає час — новий порядок і стертий час зберігаються разом.',
+  'plan.move.dropTime.confirm': 'Перемістити й прибрати час',
+  'plan.move.dropTime.cancel': 'Залишити на місці',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Додати нотатку',
   'plan.note.addForDay': 'Додати нотатку, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Нотатку видалено',
   'plan.note.error.save': 'Нотатку не вдалося зберегти',
   'plan.note.error.delete': 'Нотатку не вдалося видалити',
-  'plan.note.error.move': 'Переміщення не збереглося',
   'plan.note.error.retry': 'Спробуйте ще раз за хвилину.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Нагадування',

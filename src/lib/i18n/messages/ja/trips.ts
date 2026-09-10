@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} は移動しませんでした。その日にはすでにあります。',
   'plan.move.spoken.notInIdeas': '{name} は移動しませんでした。メモは日の中にとどまります。',
   'plan.move.spoken.notInAnotherDay': '{name} は移動しませんでした。メモは自分の日にとどまります。',
+  'plan.move.spoken.timed': '{name} には {time} が設定されています。時刻を外すか確認します。',
   'plan.move.error.save': '移動を保存できませんでした',
   'plan.move.error.retry': '少し時間をおいてもう一度お試しください。',
+  'plan.move.dropTime.title': '{name} を移動して {time} を外しますか？',
+  'plan.move.dropTime.body': 'この位置は設定された時刻と矛盾します。ここへ移動すると時刻が消え、新しい順序と消えた時刻はまとめて保存されます。',
+  'plan.move.dropTime.confirm': '移動して時刻を外す',
+  'plan.move.dropTime.cancel': 'そのままにする',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'メモを追加',
   'plan.note.addForDay': 'メモを追加 — {day}',
@@ -70,7 +75,6 @@ const messages = {
   'plan.note.toast.deleted': 'メモを削除しました',
   'plan.note.error.save': 'メモを保存できませんでした',
   'plan.note.error.delete': 'メモを削除できませんでした',
-  'plan.note.error.move': '移動を保存できませんでした',
   'plan.note.error.retry': '少し時間をおいてもう一度お試しください。',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'リマインダー',

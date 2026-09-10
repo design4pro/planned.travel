@@ -33,6 +33,15 @@ const PLACES: Readonly<Record<string, string>> = {
 
 const placeOfItem = (itemId: string): string | null => PLACES[itemId] ?? null
 
+/** Every row of `d1` carries a time, in the order the day stores them. */
+const TIMES: Readonly<Record<string, string>> = {
+  a1: '09:00',
+  [N1]: '11:00',
+  a2: '14:00',
+}
+
+const timeOfItem = (itemId: string): string | null => TIMES[itemId] ?? null
+
 describe('planMoveOutcome', () => {
   it('refuses a note dropped on another day, without asking the engine', () => {
     const outcome = planMoveOutcome(
@@ -82,6 +91,69 @@ describe('planMoveOutcome', () => {
       days: [{ dayId: 'd1', itemIds: [N1, 'a1', 'a2'] }],
     })
   })
+
+  it('asks about the time of a note dropped against the clock', () => {
+    // 11:00 above 09:00.
+    const outcome = planMoveOutcome(
+      ORDER,
+      N1,
+      { container: 'd1', index: 0 },
+      { placeOfItem, timeOfItem },
+    )
+
+    expect(outcome).toEqual({
+      kind: 'ask-drop-time',
+      itemId: N1,
+      time: '11:00',
+    })
+  })
+
+  /**
+   * The behaviour this phase changes for a reader who never writes a note: before
+   * the merged day, a stop dragged against its own clock simply moved.
+   */
+  it('asks about the time of a stop dropped above an earlier stop', () => {
+    // 14:00 above 09:00.
+    const outcome = planMoveOutcome(
+      ORDER,
+      'a2',
+      { container: 'd1', index: 0 },
+      { placeOfItem, timeOfItem },
+    )
+
+    expect(outcome).toEqual({
+      kind: 'ask-drop-time',
+      itemId: 'a2',
+      time: '14:00',
+    })
+  })
+
+  it('never asks about a row that carries no time of its own', () => {
+    const outcome = planMoveOutcome(
+      ORDER,
+      N1,
+      { container: 'd1', index: 2 },
+      { placeOfItem, timeOfItem: (id) => (id === N1 ? null : timeOfItem(id)) },
+    )
+
+    expect(outcome.kind).toBe('commit')
+  })
+
+  it('commits the same move once the reader agrees to drop the time', () => {
+    const outcome = planMoveOutcome(
+      ORDER,
+      N1,
+      { container: 'd1', index: 0 },
+      { placeOfItem, timeOfItem, dropTime: true },
+    )
+
+    expect(outcome.kind).toBe('commit')
+    if (outcome.kind !== 'commit') return
+    expect(outcome.change).toEqual({
+      kind: 'reorder',
+      days: [{ dayId: 'd1', itemIds: [N1, 'a1', 'a2'] }],
+    })
+  })
 })
 
 describe('reorderPayload', () => {
@@ -104,6 +176,43 @@ describe('reorderPayload', () => {
         },
       ],
     })
+  })
+
+  /**
+   * One write, not two: the row is reordered and stripped of its time in the same
+   * call, so there is never a frame in which it has a time and the wrong position.
+   */
+  it('drops the time in the very write that moves the row', () => {
+    const payload = reorderPayload(
+      't1',
+      { kind: 'reorder', days: [{ dayId: 'd1', itemIds: [N1, 'a1', 'a2'] }] },
+      N1,
+    )
+
+    expect(payload.days).toHaveLength(1)
+    expect(payload.days[0].clearTime).toEqual([{ kind: 'note', id: 'n1' }])
+    expect(payload.days[0].items).toEqual([
+      { kind: 'note', id: 'n1' },
+      { kind: 'stop', id: 'a1' },
+      { kind: 'stop', id: 'a2' },
+    ])
+  })
+
+  it('leaves a day the dropped row does not sit in alone', () => {
+    const payload = reorderPayload(
+      't1',
+      {
+        kind: 'reorder',
+        days: [
+          { dayId: 'd1', itemIds: ['a1', 'a2'] },
+          { dayId: 'd2', itemIds: [N1, 'a3'] },
+        ],
+      },
+      N1,
+    )
+
+    expect(payload.days[0].clearTime).toBeUndefined()
+    expect(payload.days[1].clearTime).toEqual([{ kind: 'note', id: 'n1' }])
   })
 })
 

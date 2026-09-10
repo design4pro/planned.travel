@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} se nepřesunul. Ten den ho už má.',
   'plan.move.spoken.notInIdeas': '{name} se nepřesunul. Poznámka zůstává ve dni.',
   'plan.move.spoken.notInAnotherDay': '{name} se nepřesunul. Poznámka zůstává u svého dne.',
+  'plan.move.spoken.timed': '{name} má čas {time}. Ptáme se, jestli ho zahodit.',
   'plan.move.error.save': 'Přesunutí se nepodařilo uložit',
   'plan.move.error.retry': 'Zkuste to za chvíli znovu.',
+  'plan.move.dropTime.title': 'Přesunout {name} a zahodit čas {time}?',
+  'plan.move.dropTime.body': 'Tato pozice je v rozporu s časem, který má. Přesunutí sem čas smaže — nové pořadí i smazaný čas se uloží společně.',
+  'plan.move.dropTime.confirm': 'Přesunout a smazat čas',
+  'plan.move.dropTime.cancel': 'Nechat na místě',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Přidat poznámku',
   'plan.note.addForDay': 'Přidat poznámku: {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Poznámka smazána',
   'plan.note.error.save': 'Poznámku se nepodařilo uložit',
   'plan.note.error.delete': 'Poznámku se nepodařilo smazat',
-  'plan.note.error.move': 'Přesunutí se nepodařilo uložit',
   'plan.note.error.retry': 'Zkuste to za chvíli znovu.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Připomínka',

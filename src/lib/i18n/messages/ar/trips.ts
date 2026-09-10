@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': 'لم يُنقل {name}. ذلك اليوم يحتوي عليه بالفعل.',
   'plan.move.spoken.notInIdeas': 'لم يُنقل {name}. الملاحظة تبقى داخل اليوم.',
   'plan.move.spoken.notInAnotherDay': 'لم يُنقل {name}. الملاحظة تبقى في يومها.',
+  'plan.move.spoken.timed': '{name} يحمل الساعة {time}. نسأل هل نُسقطها.',
   'plan.move.error.save': 'لم يُحفظ هذا النقل',
   'plan.move.error.retry': 'حاول مرة أخرى بعد قليل.',
+  'plan.move.dropTime.title': 'هل ننقل {name} ونُسقط الساعة {time}؟',
+  'plan.move.dropTime.body': 'هذا الموضع يتعارض مع الوقت المسجَّل عليه. نقله هنا يمسح الوقت، ويُحفظ الترتيب الجديد والوقت الممسوح معًا.',
+  'plan.move.dropTime.confirm': 'انقل وأسقط الوقت',
+  'plan.move.dropTime.cancel': 'اتركه في مكانه',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'إضافة ملاحظة',
   'plan.note.addForDay': 'إضافة ملاحظة، {day}',
@@ -69,7 +74,6 @@ const messages = {
   'plan.note.toast.deleted': 'تم حذف الملاحظة',
   'plan.note.error.save': 'لم تُحفظ الملاحظة',
   'plan.note.error.delete': 'لم تُحذف الملاحظة',
-  'plan.note.error.move': 'لم يُحفظ هذا النقل',
   'plan.note.error.retry': 'حاول مرة أخرى بعد قليل.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'تذكير',

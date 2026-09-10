@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} tidak dipindahkan. Hari itu sudah memilikinya.',
   'plan.move.spoken.notInIdeas': '{name} tidak dipindahkan. Catatan tetap di dalam harinya.',
   'plan.move.spoken.notInAnotherDay': '{name} tidak dipindahkan. Catatan tetap di harinya sendiri.',
+  'plan.move.spoken.timed': '{name} punya waktu {time}. Kami tanya apakah waktunya dilepas.',
   'plan.move.error.save': 'Pemindahan itu gagal disimpan',
   'plan.move.error.retry': 'Coba lagi sebentar lagi.',
+  'plan.move.dropTime.title': 'Pindahkan {name} dan lepas waktu {time}?',
+  'plan.move.dropTime.body': 'Posisi ini bertentangan dengan waktu yang tertera. Memindahkannya ke sini menghapus waktu — urutan baru dan waktu yang dihapus disimpan bersamaan.',
+  'plan.move.dropTime.confirm': 'Pindahkan dan hapus waktunya',
+  'plan.move.dropTime.cancel': 'Biarkan di tempatnya',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Tambahkan catatan',
   'plan.note.addForDay': 'Tambahkan catatan, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Catatan dihapus',
   'plan.note.error.save': 'Catatan gagal disimpan',
   'plan.note.error.delete': 'Catatan gagal dihapus',
-  'plan.note.error.move': 'Pemindahan itu gagal disimpan',
   'plan.note.error.retry': 'Coba lagi sebentar lagi.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Pengingat',

@@ -34,8 +34,13 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} n’a pas été déplacé. Cette journée le contient déjà.',
   'plan.move.spoken.notInIdeas': '{name} n’a pas été déplacé. Une note reste dans la journée.',
   'plan.move.spoken.notInAnotherDay': '{name} n’a pas été déplacé. Une note reste dans sa journée.',
+  'plan.move.spoken.timed': '{name} porte {time}. Nous demandons s’il faut l’abandonner.',
   'plan.move.error.save': 'Ce déplacement n’a pas été enregistré',
   'plan.move.error.retry': 'Réessayez dans un instant.',
+  'plan.move.dropTime.title': 'Déplacer {name} et abandonner {time} ?',
+  'plan.move.dropTime.body': 'Cette position contredit l’heure qui y figure. Le déplacer ici efface l’heure : le nouvel ordre et l’heure effacée sont enregistrés ensemble.',
+  'plan.move.dropTime.confirm': 'Déplacer et effacer l’heure',
+  'plan.move.dropTime.cancel': 'Le laisser où il est',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Ajouter une note',
   'plan.note.addForDay': 'Ajouter une note, {day}',
@@ -71,7 +76,6 @@ const messages = {
   'plan.note.toast.deleted': 'Note supprimée',
   'plan.note.error.save': 'La note n’a pas été enregistrée',
   'plan.note.error.delete': 'La note n’a pas été supprimée',
-  'plan.note.error.move': 'Ce déplacement n’a pas été enregistré',
   'plan.note.error.retry': 'Réessayez dans un instant.',
   /* ------------------------------------------------- the icon vocabulary */
   'plan.note.icon.alarmClock': 'Rappel',
