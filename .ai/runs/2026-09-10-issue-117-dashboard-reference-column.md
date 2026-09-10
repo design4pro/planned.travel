@@ -119,13 +119,13 @@ One `01-S5` block appended to `e2e/trips-core.spec.ts`, then the full gate.
 
 ### Phase 3: The widgets
 
-- [ ] 3.1 Write `src/routes/_app/-ui/timezone-clock.tsx`
-- [ ] 3.2 Write `src/routes/_app/-ui/dashboard-widgets.tsx` — column, row, sheet, visibility menu
+- [x] 3.1 Write `src/routes/_app/-ui/timezone-clock.tsx` — b079fe50
+- [x] 3.2 Write `src/routes/_app/-ui/dashboard-widgets.tsx` — column, row, sheet, visibility menu — b079fe50
 
 ### Phase 4: The route
 
-- [ ] 4.1 Mount the column and the header control in `src/routes/_app/dashboard.tsx`
-- [ ] 4.2 Reserve the column's height in the route's pending component
+- [x] 4.1 Mount the column and the header control in `src/routes/_app/dashboard.tsx` — b079fe50
+- [x] 4.2 Reserve the column's height in the route's pending component — b079fe50
 
 ### Phase 5: Verification
 
