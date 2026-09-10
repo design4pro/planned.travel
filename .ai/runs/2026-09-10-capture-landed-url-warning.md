@@ -62,7 +62,18 @@ shape, a redirect that `quiesce`/`--dismiss` triggers under `--click`, any chang
 - [x] 1.2 Wire the comparison into `capture.mjs` — fa479b60
 - [ ] 1.3 Rewrite `.claude/skills/verifying-changes/SKILL.md` into the warning contract
 - [x] 1.4 Delete `anonymous-only.mjs` and its test; correct the `vitest.config.ts` doc comment — 840142e6
-- [ ] 1.5 Run the full validation gate
+- [x] 1.5 Run the full validation gate — six of seven commands green; the e2e step is red for a cause measured on the base
+
+Gate result: `agent-kit-check`, `pnpm typecheck`, `pnpm lint`, `check-generated` and `pnpm build`
+green; `pnpm test` 5780 passed / 238 files. `bash .ai/scripts/e2e.sh` ends red on
+`e2e/journeys.spec.ts:910 — the click surface never takes the reader's input`, a bare
+`Test timeout of 30000ms exceeded` with no assertion diff: 32.5 s under full-suite load against
+14.9 s run alone. Measured against the base rather than assumed — the same suite on a detached
+`origin/develop` (`c81a51c4`), same machine, same seeded environment, fails **eight** tests
+including that one, where this branch fails one. The branch diff reaches no file the application or
+the Playwright suite loads (`scripts/visual/**` is agent tooling; `vitest.config.ts` is not in the
+Playwright run), so the step is red for a cause that predates the branch. CI's sharded journeys are
+the adjudicating signal.
 
 ### Step 1.3 is blocked by a repo guard
 
