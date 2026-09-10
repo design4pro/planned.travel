@@ -12,6 +12,9 @@
  */
 import { describe, expect, it } from 'vitest'
 
+import { createTranslator } from '#/lib/i18n'
+import englishAtlas from '#/lib/i18n/messages/en/atlas'
+import polishAtlas from '#/lib/i18n/messages/pl/atlas'
 import {
   notesByItem,
   orderFromPayload,
@@ -19,6 +22,7 @@ import {
   timeByItem,
 } from '../plan-model'
 
+import type { Locale, NamespaceMessages, Translate } from '#/lib/i18n'
 import type { PlanNotesPayload } from '../../-server/day-notes'
 import type {
   PlanBoardDay,
@@ -26,6 +30,25 @@ import type {
   PlanBoardPlace,
   PlanBoardStop,
 } from '../../-server/plan'
+
+/**
+ * The shipped `atlas` catalogue of one locale, bound the way the screen binds it.
+ *
+ * Real translations rather than stubs: `atlas.map.pin.day` is the key an untitled
+ * day now renders through, and reading it out of `pl` is what proves the rail
+ * speaks the reader's language instead of the source one.
+ */
+function translator(locale: Locale, source: NamespaceMessages) {
+  return createTranslator(
+    locale,
+    Object.fromEntries(
+      Object.entries(source).map(([key, message]) => [`atlas.${key}`, message]),
+    ),
+  )
+}
+
+const en = translator('en', englishAtlas)
+const pl = translator('pl', polishAtlas)
 
 function notes(
   entries: PlanNotesPayload['notes'],
@@ -86,11 +109,12 @@ const day = (
   dayId: string,
   dayNumber: number,
   stops: ReadonlyArray<PlanBoardStop>,
+  title: string | null = `Day ${dayNumber}`,
 ): PlanBoardDay => ({
   dayId,
   dayNumber,
   date: null,
-  title: `Day ${dayNumber}`,
+  title,
   stops,
   stays: [],
 })
@@ -192,6 +216,7 @@ describe('planModel', () => {
     return planModel(
       PAYLOAD,
       orderFromPayload(PAYLOAD, NOTES),
+      en,
       undefined,
       notesByItem(NOTES),
     )
@@ -226,10 +251,39 @@ describe('planModel', () => {
     const day1 = planModel(
       PAYLOAD,
       orderFromPayload(PAYLOAD, NOTES),
+      en,
       undefined,
       notesByItem(notes([note('n2', 'd2', 0)])),
     ).days[0]
 
     expect(day1.items.map((item) => item.kind)).toEqual(['stop', 'stop'])
+  })
+
+  /**
+   * The rail header, the day section's `aria-label` and the add-note control all
+   * read `PlannerDay.title`, so an untitled day naming itself in English was one
+   * hardcoded template literal leaking into three accessible names at once.
+   */
+  describe('an untitled day', () => {
+    const EMPTY = notes([])
+
+    const renderedTitle = (
+      title: string | null,
+      t: Translate,
+      locale: Locale,
+    ): string => {
+      const payload = board([day('d1', 3, [], title)])
+      return planModel(payload, orderFromPayload(payload, EMPTY), t, locale)
+        .days[0].title
+    }
+
+    it('names itself from the catalogue, in the language on screen', () => {
+      expect(renderedTitle(null, en, 'en')).toBe('Day 3')
+      expect(renderedTitle(null, pl, 'pl')).toBe('Dzień 3')
+    })
+
+    it('never overrides the title a day carries of its own', () => {
+      expect(renderedTitle('Kyoto on foot', pl, 'pl')).toBe('Kyoto on foot')
+    })
   })
 })
