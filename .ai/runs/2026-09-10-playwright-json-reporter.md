@@ -98,6 +98,9 @@ rung fails on a tree byte-identical to `develop`, and fails _harder_ there. **CI
 this rung** — it runs one worker per shard at a 60s timeout with two retries — and it is what
 Step 1.3 reads.
 
+**Settled: CI run 34448695732 on head `2c1e32b0` is green**, both e2e shards included. The local
+failures were contention, as the baseline row predicted.
+
 ## Progress
 
 PR: #395
@@ -108,5 +111,6 @@ PR: #395
 
 - [x] 1.1 Hoist `html` and `json` out of the ternary — eb9ca3a7
 - [x] 1.2 Prove the artifact appears on the gate's own path — eb9ca3a7
-- [ ] 1.3 Prove CI is untouched
+- [x] 1.3 Prove CI is untouched — run 34448695732, green; both shards uploaded a blob, the merge job
+      produced the single `playwright-report` artifact, no `results.json` anywhere
 - [x] 1.4 Run the full gate — see **Gate record** above
