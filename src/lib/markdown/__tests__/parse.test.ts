@@ -42,6 +42,27 @@ describe('parse — blocks', () => {
     })
   })
 
+  it('reads a fourth level over a delimiter row as the table it falls through to', () => {
+    expect(only('#### a | b\n--- | ---\n1 | 2')).toEqual({
+      type: 'table',
+      align: [null, null],
+      header: [[text('#### a')], [text('b')]],
+      rows: [[[text('1')], [text('2')]]],
+    })
+  })
+
+  it('ends a paragraph at a fourth level that opens a table', () => {
+    expect(parse('intro\n#### a | b\n--- | ---\n1 | 2')).toEqual([
+      { type: 'paragraph', children: [text('intro')] },
+      {
+        type: 'table',
+        align: [null, null],
+        header: [[text('#### a')], [text('b')]],
+        rows: [[[text('1')], [text('2')]]],
+      },
+    ])
+  })
+
   it('reads an unordered list under any of the three bullets', () => {
     expect(only('- a\n* b\n+ c')).toEqual({
       type: 'list',
@@ -342,6 +363,19 @@ describe('parse — outside the subset', () => {
     ])
   })
 
+  it('declines a backtick fence whose info string holds a backtick', () => {
+    expect(parse('```js `x`\nnot code')).toEqual([
+      {
+        type: 'paragraph',
+        children: [
+          text('```js '),
+          { type: 'codeSpan', value: 'x' },
+          text('\nnot code'),
+        ],
+      },
+    ])
+  })
+
   it('closes an unclosed fence at the end of the body', () => {
     expect(only('```\nstill open')).toEqual({
       type: 'code',
@@ -387,11 +421,11 @@ describe('parse — outside the subset', () => {
   })
 
   /**
-   * The lookahead that ends a paragraph reads the block that ends it and then
-   * throws it away, so a boundary block is read a constant number of times —
-   * not once per line of it. A body that alternates between the three readers
-   * consuming more than one line would blow the default timeout if that ever
-   * stopped holding.
+   * The lookahead that ends a paragraph recognises the block that ends it
+   * without reading it, so a boundary block is read exactly once — by the
+   * dispatcher that keeps it. A body alternating between the three readers that
+   * consume more than one line is where a lookahead reading blocks again would
+   * show up first.
    */
   it('reads a boundary block a bounded number of times', () => {
     const source = 'text before\n> quoted\n```\ncode\n```\n- item\n'.repeat(400)
