@@ -366,21 +366,39 @@ function readList(
   }
 }
 
-function readTable(
+/**
+ * The header and delimiter cells of the table the line at `index` opens, or
+ * `null` when it opens none.
+ *
+ * Every way a table can fail to be one is here, ahead of the row scan, so
+ * recognising a table costs the two-line check and never the rows.
+ */
+function tableShapeAt(
   lines: ReadonlyArray<string>,
-  start: number,
-): BlockRead | null {
-  const header = lines[start]
+  index: number,
+): { headerCells: Array<string>; delimiterCells: Array<string> } | null {
+  const header = lines[index]
   if (!header.includes('|')) return null
 
-  if (start + 1 >= lines.length) return null
-  const delimiter = lines[start + 1]
+  if (index + 1 >= lines.length) return null
+  const delimiter = lines[index + 1]
   if (!delimiter.includes('-')) return null
 
   const headerCells = splitRow(header)
   const delimiterCells = splitRow(delimiter)
   if (delimiterCells.length !== headerCells.length) return null
   if (!delimiterCells.every((cell) => DELIMITER_CELL.test(cell))) return null
+
+  return { headerCells, delimiterCells }
+}
+
+function readTable(
+  lines: ReadonlyArray<string>,
+  start: number,
+): BlockRead | null {
+  const shape = tableShapeAt(lines, start)
+  if (shape === null) return null
+  const { headerCells, delimiterCells } = shape
 
   const rows: Array<MarkdownTableRow> = []
   let index = start + 2
