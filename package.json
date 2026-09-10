@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "generate-routes": "tsr generate",
+    "generate-spec-index": "tsx scripts/specs/index.ts",
     "build": "vite build && node scripts/check-server-fn-manifest.mjs",
     "preview": "vite preview",
     "lint": "eslint",

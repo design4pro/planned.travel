@@ -1,4 +1,4 @@
-# Assets for `.ai/specs/2026-09-07-basemap-catalogue.md`
+# Assets for `.ai/specs/implemented/2026-09-07-basemap-catalogue.md`
 
 Design evidence for the spec PR. Nothing here is app code, nothing imports from `src/`, and nothing
 is a visual baseline — ADR 0016 retired those, and these files compare nothing.

@@ -1,5 +1,12 @@
 # Report the landed URL instead of a list of anonymous-only routes
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #132        |
+| **Spec PR**        | #369        |
+| **Implementation** | #396        |
+
 Source issue: [#132](https://github.com/design4pro/planned.travel/issues/132) — "Report the landed
 URL instead of maintaining a list of anonymous-only routes". Filed by the sandcastle deep-review
 (run 12177) while reviewing #101; every claim below was re-verified against `develop` rather than

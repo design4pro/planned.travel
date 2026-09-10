@@ -1,5 +1,13 @@
 # One membership read, not one membership list
 
+| Field              | Value    |
+| ------------------ | -------- |
+| **Status**         | archived |
+| **Issue**          | #136     |
+| **Spec PR**        | #374     |
+| **Implementation** | none     |
+| **Superseded by**  | #382     |
+
 Tracker: FR #136, filed by the sandcastle deep-review (run 90519) while reviewing #107.
 Measured on `develop` at `944b4103`. Every code claim below was verified against the tree at that
 commit and against `node_modules/drizzle-orm` for the rendering claims.
