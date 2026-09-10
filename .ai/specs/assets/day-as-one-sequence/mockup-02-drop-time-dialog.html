@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mockup — the "drop its time?" dialog, and the two refusals</title>
+    <style>
+      /*
+        Illustrative only. Inline, self-contained, no build step, no app code.
+        Colours, radii and type steps copied verbatim from src/styles/tokens.css.
+      */
+      :root {
+        --canvas: #faf9f7;
+        --surface: #ffffff;
+        --surface-2: #f3f1ed;
+        --inset: #edebe6;
+        --ink: #16150f;
+        --ink-2: #403e36;
+        --ink-3: #5b5951;
+        --edge: #e3e0d8;
+        --edge-strong: #89877f;
+        --brand: #256256;
+        --brand-on: #ffffff;
+        --brand-subtle: #e3efeb;
+        --danger: #b22f22;
+        --danger-soft: #fbe7e4;
+        --ring: #256256;
+
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-full: 9999px;
+
+        --text-micro: 11px;
+        --text-caption: 12px;
+        --text-label: 13px;
+        --text-body: 15px;
+        --text-subtitle: 18px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 28px;
+        background: var(--canvas);
+        color: var(--ink);
+        font:
+          var(--text-body) / 1.55 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      .row {
+        display: flex;
+        width: max-content;
+        gap: 28px;
+        align-items: flex-start;
+      }
+      .caption {
+        font-size: var(--text-micro);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        padding: 0 4px 8px;
+      }
+
+      /* --------------------------------------------------- the scrim + dialog */
+      .scrim {
+        width: 520px;
+        border-radius: var(--radius-xl);
+        background: rgb(22 21 15 / 0.28);
+        padding: 46px 34px;
+      }
+      .dialog {
+        background: var(--surface);
+        border: 1px solid var(--edge);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        box-shadow:
+          0 2px 8px -2px rgb(22 21 15 / 0.1),
+          0 32px 72px -16px rgb(22 21 15 / 0.28);
+      }
+      .dialog h2 {
+        margin: 0 0 8px;
+        font-size: var(--text-subtitle);
+        font-weight: 600;
+        letter-spacing: -0.012em;
+      }
+      .dialog p {
+        margin: 0;
+        font-size: var(--text-label);
+        line-height: 1.5;
+        color: var(--ink-2);
+      }
+
+      /* the item the question is about, restated so the reader can check it */
+      .subject {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 14px 0 18px;
+        padding: 8px 10px;
+        border-radius: var(--radius-md);
+        background: var(--surface-2);
+      }
+      .thumb {
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius-md);
+        background: var(--brand-subtle);
+        flex: none;
+      }
+      .subjectname {
+        display: block;
+        font-size: var(--text-label);
+        font-weight: 600;
+      }
+      .subjecttime {
+        display: block;
+        font-size: var(--text-caption);
+        color: var(--ink-3);
+        font-variant-numeric: tabular-nums;
+      }
+      .strike {
+        text-decoration: line-through;
+        color: var(--danger);
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .btn {
+        height: 40px;
+        padding: 0 16px;
+        border-radius: var(--radius-md);
+        font-size: var(--text-label);
+        font-weight: 600;
+        border: 1px solid transparent;
+        cursor: pointer;
+      }
+      .btn-secondary {
+        border-color: var(--edge-strong);
+        background: var(--surface);
+        color: var(--ink);
+      }
+      .btn-primary {
+        background: var(--brand);
+        color: var(--brand-on);
+        /* Initial focus lands here, so the ring is drawn rather than described. */
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+      .focusnote {
+        margin-top: 12px;
+        font-size: var(--text-micro);
+        color: var(--ink-3);
+        text-align: right;
+      }
+
+      /* ------------------------------------------------------- the refusals */
+      .stack {
+        width: 360px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .toast {
+        display: flex;
+        gap: 10px;
+        padding: 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--edge);
+        background: var(--surface);
+        box-shadow:
+          0 1px 2px rgb(22 21 15 / 0.04),
+          0 1px 3px -1px rgb(22 21 15 / 0.05);
+      }
+      .toast .mark {
+        width: 22px;
+        height: 22px;
+        border-radius: var(--radius-full);
+        background: var(--danger-soft);
+        color: var(--danger);
+        display: grid;
+        place-items: center;
+        font-size: var(--text-caption);
+        font-weight: 700;
+        flex: none;
+      }
+      .toast b {
+        display: block;
+        font-size: var(--text-label);
+        font-weight: 600;
+      }
+      .toast span {
+        display: block;
+        font-size: var(--text-caption);
+        color: var(--ink-3);
+        line-height: 1.45;
+      }
+      .live {
+        border: 1px dashed var(--edge-strong);
+        border-radius: var(--radius-md);
+        background: var(--inset);
+        padding: 10px 12px;
+        font-size: var(--text-caption);
+        color: var(--ink-2);
+      }
+      .live em {
+        display: block;
+        font-style: normal;
+        font-size: var(--text-micro);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        margin-bottom: 5px;
+      }
+      .live p {
+        margin: 0 0 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <div>
+        <div class="caption">The “drop its time?” question</div>
+        <div class="scrim">
+          <div class="dialog" role="dialog" aria-modal="true">
+            <h2>Move Café Central and drop its 14:30?</h2>
+            <p>
+              This position contradicts the time on it. Moving it here clears
+              the time — the new order and the cleared time are saved together.
+            </p>
+
+            <div class="subject">
+              <span class="thumb"></span>
+              <span>
+                <span class="subjectname">Café Central</span>
+                <span class="subjecttime"
+                  >Herrengasse 14 ·
+                  <span class="strike">14:30 – 15:30</span></span
+                >
+              </span>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-secondary" type="button">
+                Keep it where it is
+              </button>
+              <button class="btn btn-primary" type="button">
+                Move and drop the time
+              </button>
+            </div>
+            <p class="focusnote">
+              Confirm takes initial focus · Escape declines
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="caption">The refusals that stay refusals</div>
+
+        <div class="toast">
+          <span class="mark">!</span>
+          <span>
+            <b>A note stays in the day</b>
+            <span
+              >Ideas are places waiting for a day. A note belongs to the day it
+              was written on.</span
+            >
+          </span>
+        </div>
+
+        <div class="toast">
+          <span class="mark">!</span>
+          <span>
+            <b>A note stays on its own day</b>
+            <span
+              >Notes cannot be moved between days yet. Edit the note, or write
+              it on the other day.</span
+            >
+          </span>
+        </div>
+
+        <div class="toast">
+          <span class="mark">!</span>
+          <span>
+            <b>Café Central is already on that day</b>
+            <span
+              >A place can only appear once per day. Move it to another day
+              instead.</span
+            >
+          </span>
+        </div>
+
+        <div class="live">
+          <em>Live region — what a keyboard reader hears</em>
+          <p>“Picked up Check out — leave bags at reception, on Day 3.”</p>
+          <p>“Now over Day 4 — Budapest.”</p>
+          <p>
+            “Check out — leave bags at reception was not moved. A note stays on
+            its own day.”
+          </p>
+          <p>“Café Central carries 14:30. Asking whether to drop it.”</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

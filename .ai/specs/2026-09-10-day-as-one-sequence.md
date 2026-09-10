@@ -103,6 +103,13 @@ days: Array<{
 
 ## 📝 UI/UX
 
+Two illustrative mockups, rendered from static HTML beside this spec. Every colour, radius and type step in them is copied from `src/styles/tokens.css`, so they depict the real screen rather than proposing a second design language.
+
+- **The merged day, against today's two lists, and the empty-day bug** — `assets/day-as-one-sequence/mockup-01-merged-day.png`
+- **The "drop its time?" dialog, the three refusal toasts, and what the live region says** — `assets/day-as-one-sequence/mockup-02-drop-time-dialog.png`
+
+Current-state screenshots of the running planner were **not** captured: every port in the 3030-3040 range `playwright.config.ts` permits was held by another checkout, and `test-env-up.sh` correctly refuses to photograph an app it did not start. The left-hand column of mockup 01 depicts today's layout instead.
+
 ### The merged day
 
 One `<ul>`, one `SortableContext` over `day.items`, `verticalListSortingStrategy` unchanged. A `StopRow` for a stop, a `NoteRow` for a note, in merged order.
