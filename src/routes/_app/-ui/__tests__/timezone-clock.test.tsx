@@ -150,6 +150,26 @@ describe('the reference column’s clock', () => {
     expect(onZonesChange).toHaveBeenCalledWith(['Europe/Paris'])
   })
 
+  /**
+   * The divider is asserted on the element rather than in pixels, because the
+   * bug it guards against is a selector one that no jsdom layout would show:
+   * `not-last:` compiles to `:not(:last-child)`, which resolves against the
+   * element's own parent. A row carrying the variant while sitting alone inside
+   * its own `<li>` is always that `<li>`'s last child, so the hairline never
+   * draws however many zones are pinned. What has to hold is that the variant
+   * sits on the list items the `<ul>` orders — including the unknown-zone one,
+   * which is a plain block rather than a `PanelRow`.
+   */
+  it('carries the hairline on the list items the ul orders, unknown zones included', () => {
+    mount({ zones: ['Asia/Tokyo', 'Europe/Paris', 'Mars/Olympus_Mons'] })
+
+    const items = [...document.querySelectorAll('ul > li')]
+    expect(items).toHaveLength(3)
+    for (const item of items) {
+      expect(item.className).toContain('not-last:border-b')
+    }
+  })
+
   it('moves on the minute boundary rather than a minute after the mount', () => {
     mount({ zones: ['Asia/Tokyo'] })
     expect(textOf('Asia/Tokyo')).toContain('6:30')

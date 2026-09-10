@@ -167,7 +167,17 @@ export function TimezoneClock({
       ) : (
         <ul>
           {rows.map((row) => (
-            <li key={row.zone}>
+            // The hairline lives on the `<li>`, not on the `PanelRow` inside it:
+            // `not-last:` resolves `:last-child` against the row's own parent, so
+            // a row wrapped in its own list item is always the last child of it
+            // and would never draw a border. Putting the variant on the sibling
+            // that the `<ul>` actually orders is the pattern the journey and
+            // vacay lists use, and it covers the unknown-zone row too, which is
+            // a plain block rather than a `PanelRow`.
+            <li
+              key={row.zone}
+              className="not-last:border-b not-last:border-edge-faint"
+            >
               <ZoneRow
                 row={row}
                 now={now}
