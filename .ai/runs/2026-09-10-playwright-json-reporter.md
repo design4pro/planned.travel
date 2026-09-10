@@ -73,6 +73,31 @@ at `playwright.config.ts:29-41`), because `outputDir` is wiped at the _start_ of
 check the file's mtime against the run it thinks produced it, and must treat absence as "unknown",
 never as "no failures".
 
+## Gate record — the e2e rung is red on this host, on `develop` too
+
+Six of the seven `validation.commands` are green on the change: `agent-kit-check`, `pnpm typecheck`,
+`pnpm lint`, `pnpm test` (238 files, 5778 tests), `check-generated.sh` and `pnpm build`.
+
+`bash .ai/scripts/e2e.sh` — the seventh — went red on three consecutive full runs, and the same rung
+is red on **unmodified `develop`**. The discriminator `verifying-changes` names is duration, not
+failure count:
+
+| Run                                           | Result                                                                                                   |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Full suite, this change, run 1                | 1 failed — `the click surface never takes the reader's input`, `Test timeout of 30000ms exceeded` (1.6m) |
+| Full suite, this change, run 2                | 2 failed — the same one plus `Copy leads the menu…` (`pageerror: Cannot clear timer…`) (1.3m)            |
+| Full suite, this change, run 3                | 1 failed — the same timeout (1.3m)                                                                       |
+| **Full suite, `develop`'s config, same host** | **2 failed** — the same timeout plus `a note is written with an icon and a detail…` (2.4m)               |
+| That timeout's spec, alone                    | **passes in 11.1s** against a 30s budget                                                                 |
+| `Copy leads the menu…`, alone, ×3             | **passes in 2.2s** each time                                                                             |
+
+`playwright.config.ts:117-119` already records this spec at 10.7s in chromium locally; 32.1s under
+full-suite load on a host also running other agent worktrees is contention for the one dev server and
+the one software renderer, exactly as `verifying-changes` describes. The baseline run settles it: the
+rung fails on a tree byte-identical to `develop`, and fails _harder_ there. **CI is the authority for
+this rung** — it runs one worker per shard at a 60s timeout with two retries — and it is what
+Step 1.3 reads.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -82,4 +107,4 @@ never as "no failures".
 - [x] 1.1 Hoist `html` and `json` out of the ternary — eb9ca3a7
 - [x] 1.2 Prove the artifact appears on the gate's own path — eb9ca3a7
 - [ ] 1.3 Prove CI is untouched
-- [ ] 1.4 Run the full gate
+- [x] 1.4 Run the full gate — see **Gate record** above
