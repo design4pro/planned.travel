@@ -12,7 +12,8 @@ issue, and **one of its two halves did not survive that check** — see **Proble
 inside the `isCI` branch — and no committed path reaches that branch, because both places that run
 the suite under CI replace the config's reporter list with `--reporter` on the command line. The file
 the config promises is written by nothing this repository runs. This spec hoists the JSON reporter out
-of the ternary so every run emits `test-results/results.json`, leaving only the one genuinely
+of the ternary so every run that reaches the config's reporter list — that is, every non-CI run,
+including the gate's — emits `test-results/results.json`, leaving only the one genuinely
 CI-shaped reporter (`github` versus `list`) behind the condition. Tooling only: one config field, no
 route, no schema, no locale key, no user-facing pixel.
 
