@@ -12,7 +12,15 @@ import { IdeasList } from '../ideas-list'
 import { PlannerRail } from '../rail'
 import { ideaItemId } from '../ordering'
 
-import type { PlannerCategory, PlannerDay, PlannerRow } from '../types'
+import { stopsOf } from '../types'
+
+import type {
+  PlannerCategory,
+  PlannerDay,
+  PlannerItem,
+  PlannerNote,
+  PlannerRow,
+} from '../types'
 
 /**
  * The rails, mounted for real.
@@ -83,47 +91,71 @@ function row(overrides: Partial<PlannerRow> & { placeId: string }): PlannerRow {
   }
 }
 
+/**
+ * The day's two lists, as the one sequence the section now renders.
+ *
+ * `rows` is derived rather than declared so a fixture cannot describe a day whose
+ * stop list and sequence disagree — the exact state `PlannerDay.items` exists to make
+ * unrepresentable.
+ */
+function sequence(
+  items: ReadonlyArray<PlannerItem>,
+): Pick<PlannerDay, 'items' | 'rows'> {
+  return { items, rows: stopsOf(items) }
+}
+
+const NOTE: PlannerNote = {
+  id: 'n1',
+  dayId: 'd1',
+  body: 'Buy the metro pass at the airport',
+  detail: null,
+  time: '08:00',
+  icon: 'sticky-note',
+}
+
 const DAY: PlannerDay = {
   dayId: 'd1',
   dayNumber: 1,
   title: 'Asakusa and the river',
   dateLabel: 'Fri, 9 Oct',
   stays: ['Shinjuku Granbell Hotel'],
-  notes: [
+  // An 08:00 note above a 09:00 stop: the merged order, which is what the day is
+  // handed and what it must render.
+  ...sequence([
+    { kind: 'note', note: NOTE },
     {
-      id: 'n1',
-      dayId: 'd1',
-      body: 'Buy the metro pass at the airport',
-      detail: null,
-      time: '08:00',
-      icon: 'sticky-note',
+      kind: 'stop',
+      row: row({
+        placeId: 'p-sensoji',
+        name: 'Sensō-ji',
+        time: '09:00 – 10:30',
+        duration: '1h 30m',
+        rating: 5,
+        reservationStatus: 'confirmed',
+      }),
     },
-  ],
-  rows: [
-    row({
-      placeId: 'p-sensoji',
-      name: 'Sensō-ji',
-      time: '09:00 – 10:30',
-      duration: '1h 30m',
-      rating: 5,
-      reservationStatus: 'confirmed',
-    }),
-    row({
-      placeId: 'p-skytree',
-      name: 'Tokyo Skytree',
-      categoryId: 'c-food',
-      time: '11:00',
-      note: 'Book the fast track — the queue is an hour at noon.',
-    }),
-    row({
-      placeId: 'p-unmapped',
-      name: 'That bar Yuki mentioned',
-      location: null,
-      lng: null,
-      lat: null,
-      categoryId: null,
-    }),
-  ],
+    {
+      kind: 'stop',
+      row: row({
+        placeId: 'p-skytree',
+        name: 'Tokyo Skytree',
+        categoryId: 'c-food',
+        time: '11:00',
+        note: 'Book the fast track — the queue is an hour at noon.',
+      }),
+    },
+    {
+      kind: 'stop',
+      row: row({
+        placeId: 'p-unmapped',
+        name: 'That bar Yuki mentioned',
+        location: null,
+        lng: null,
+        lat: null,
+        categoryId: null,
+      }),
+    },
+  ]),
 }
 
 const EMPTY_DAY: PlannerDay = {
@@ -132,8 +164,17 @@ const EMPTY_DAY: PlannerDay = {
   title: 'Day 2',
   dateLabel: 'Sat, 10 Oct',
   stays: [],
-  notes: [],
-  rows: [],
+  ...sequence([]),
+}
+
+/** A day holding notes and no stops — empty of places, but not an empty day. */
+const NOTES_ONLY_DAY: PlannerDay = {
+  dayId: 'd3',
+  dayNumber: 3,
+  title: 'Day 3',
+  dateLabel: 'Sun, 11 Oct',
+  stays: [],
+  ...sequence([{ kind: 'note', note: { ...NOTE, id: 'n2', dayId: 'd3' } }]),
 }
 
 const IDEAS: ReadonlyArray<PlannerRow> = [
@@ -278,9 +319,40 @@ describe('DaySection', () => {
       </Harness>,
     )
     expect(
-      screen.getByText('Nothing planned — drop a place here'),
+      screen.getByText('Nothing planned — drop a place or a note here'),
     ).toBeDefined()
     expect(screen.getByText('0 stops')).toBeDefined()
+  })
+
+  it('renders notes and stops as one list, in the order it is given', () => {
+    const { container } = render(
+      <Harness>
+        <DaySection day={DAY} categoryFor={categoryFor} />
+      </Harness>,
+    )
+
+    const list = container.querySelectorAll(
+      '[data-planner-note], [data-planner-item]',
+    )
+    expect(
+      [...list].map(
+        (entry) =>
+          entry.getAttribute('data-planner-note') ??
+          entry.getAttribute('data-planner-place'),
+      ),
+    ).toEqual(['n1', 'p-sensoji', 'p-skytree', 'p-unmapped'])
+  })
+
+  it('does not call a day of notes empty', () => {
+    render(
+      <Harness>
+        <DaySection day={NOTES_ONLY_DAY} categoryFor={categoryFor} />
+      </Harness>,
+    )
+    expect(
+      screen.queryByText('Nothing planned — drop a place or a note here'),
+    ).toBeNull()
+    expect(screen.getByText('Buy the metro pass at the airport')).toBeDefined()
   })
 
   it('marks the day header as a pressed toggle when the day is the one being read', async () => {

@@ -147,7 +147,7 @@ interface Fixture {
   readonly tripId: string
   readonly dayId: string
   readonly otherDayId: string
-  /** Two stops on the day; the first carries `09:00`, the second `17:00`. */
+  /** Two stops on the day; the first carries `09:00`, the second `17:00 – 19:30`. */
   readonly morningId: string
   readonly eveningId: string
   /** Two notes on the same day, neither timed. */
@@ -203,6 +203,7 @@ beforeEach(async () => {
     placeId: opera.id,
     orderIndex: 1,
     startTime: '17:00',
+    endTime: '19:30',
   })
   const firstNote = await createDayNote(scope, {
     tripId: trip.id,
@@ -353,6 +354,10 @@ describe('dropping a time as part of the move', () => {
     // which it has a time and the wrong position.
     expect(evening?.startTime).toBeNull()
     expect(evening?.orderIndex).toBe(0)
+    // And the end with it. A stop that kept its `end_time` would render as an
+    // open-start range — still wearing the time the reader agreed to drop — while
+    // being invisible to the clock rule, which reads the start alone.
+    expect(evening?.endTime).toBeNull()
     // The row that was not asked about keeps its own time.
     expect(morning?.startTime).toBe('09:00')
     expect(morning?.orderIndex).toBe(1)

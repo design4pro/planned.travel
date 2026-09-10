@@ -45,6 +45,7 @@ import {
   Switch,
   Textarea,
 } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 
 import type { PlannerCategory, PlannerRow } from '#/components/planner'
 import type {
@@ -828,6 +829,91 @@ export function DeleteDialog({
             onClick={onConfirm}
           >
             Delete place
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Dropping a time
+ * ---------------------------------------------------------------------------------------------- */
+
+export interface DropTimeDialogProps {
+  readonly open: boolean
+  /** The place's name, or the note's headline — whatever the item is called. */
+  readonly name: string
+  /** The `HH:MM` the item carries, and would lose. */
+  readonly time: string
+  readonly onConfirm: () => void
+  /** Escape, Cancel, the close button and the overlay all land here. */
+  readonly onDecline: () => void
+}
+
+/**
+ * "Move this and drop its 14:30?"
+ *
+ * A time outranks a position (PRD #104 decision 9), so a drag that contradicts one
+ * is neither applied nor refused — it is a question, and this is the question. The
+ * board is untouched while it is open: nothing moves until the reader agrees, and
+ * agreeing sends the new order and the cleared time as a single write.
+ *
+ * Confirm takes initial focus rather than Cancel, which is the opposite of
+ * `DeleteDialog`: nothing is destroyed here beyond a time the reader is already in
+ * the middle of contradicting, and the dialog exists to make the drag they just
+ * performed go through, not to talk them out of it. Escape still declines.
+ */
+export function DropTimeDialog({
+  open,
+  name,
+  time,
+  onConfirm,
+  onDecline,
+}: DropTimeDialogProps) {
+  const t = useTranslate()
+  const confirmRef = React.useRef<HTMLButtonElement>(null)
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onDecline()
+      }}
+    >
+      <DialogContent
+        size="sm"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          confirmRef.current?.focus()
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>
+            {t('trips.plan.move.dropTime.title', { name, time })}
+          </DialogTitle>
+          <DialogDescription>
+            {t('trips.plan.move.dropTime.body')}
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            shape="pill"
+            onClick={onDecline}
+          >
+            {t('trips.plan.move.dropTime.cancel')}
+          </Button>
+          <Button
+            ref={confirmRef}
+            type="button"
+            variant="primary"
+            shape="pill"
+            onClick={onConfirm}
+          >
+            {t('trips.plan.move.dropTime.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

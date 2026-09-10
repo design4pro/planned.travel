@@ -14,7 +14,12 @@
  * optimistic render never has to invent a row.
  */
 
-import { ideaItemId } from '#/components/planner'
+import {
+  ideaItemId,
+  isNoteItemId,
+  mergeDayTimeline,
+  noteItemId,
+} from '#/components/planner'
 import {
   formatTime,
   formatTimeRange,
@@ -29,6 +34,7 @@ import type {
   PlanOrder,
   PlannerCategory,
   PlannerDay,
+  PlannerItem,
   PlannerNote,
   PlannerRow,
 } from '#/components/planner'
@@ -56,22 +62,18 @@ export function formatMetres(metres: number): string {
 }
 
 /**
- * The trip's notes, grouped by day and ordered the way the day shows them.
+ * Every note the board can show, keyed by its **draggable** id.
  *
- * The board's own `{ id, body, time }` projection is not read any more: it carries no icon and no
- * detail, and `01-S4b` deletes it. Pure, so the grouping is a test rather than an eyeball.
+ * By item id rather than by day because after the merge a day is a list of ids and
+ * nothing else: resolving one costs a lookup, and grouping by day would only rebuild
+ * the second projection of the notes that `PlannerDay.items` exists to replace.
  */
-export function notesByDay(
+export function notesByItem(
   payload: PlanNotesPayload,
-): ReadonlyMap<string, ReadonlyArray<PlannerNote>> {
-  const ordered = [...payload.notes].sort(
-    (a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id),
-  )
-
-  const byDay = new Map<string, Array<PlannerNote>>()
-  for (const note of ordered) {
-    const run = byDay.get(note.dayId) ?? []
-    run.push({
+): ReadonlyMap<string, PlannerNote> {
+  const byItem = new Map<string, PlannerNote>()
+  for (const note of payload.notes) {
+    byItem.set(noteItemId(note.id), {
       id: note.id,
       dayId: note.dayId,
       body: note.body,
@@ -79,17 +81,76 @@ export function notesByDay(
       time: formatTime(note.time),
       icon: note.icon,
     })
-    byDay.set(note.dayId, run)
   }
-  return byDay
+  return byItem
 }
 
-/** The arrangement the board starts from: the server's own order. */
-export function orderFromPayload(payload: PlanBoardPayload): PlanOrder {
+/**
+ * The `HH:MM` each item carries, by draggable id — `movePlanItem`'s `timeOfItem`.
+ *
+ * Read from the payload rather than from the view models because a stop's rendered
+ * time is a *range* (`10:00 – 12:00`) and the clock rule compares single instants. A
+ * stop is at its start time; an item with no time is simply absent from the map.
+ */
+export function timeByItem(
+  payload: PlanBoardPayload,
+  notes: PlanNotesPayload,
+): ReadonlyMap<string, string> {
+  const byItem = new Map<string, string>()
+  for (const day of payload.days) {
+    for (const stop of day.stops) {
+      const time = formatTime(stop.startTime)
+      if (time !== null) byItem.set(stop.assignmentId, time)
+    }
+  }
+  for (const note of notes.notes) {
+    const time = formatTime(note.time)
+    if (time !== null) byItem.set(noteItemId(note.id), time)
+  }
+  return byItem
+}
+
+/**
+ * One day's items as the merge reads them: an id, a stored position, a time.
+ *
+ * The stop's position is `day_assignments.order_index` and the note's is
+ * `day_notes.sort_order` — one number line across two columns (PRD #104 decision 9).
+ */
+function timelineOf(
+  day: PlanBoardDay,
+  notes: PlanNotesPayload,
+): Array<{ id: string; position: number; time: string | null }> {
+  return [
+    ...day.stops.map((stop) => ({
+      id: stop.assignmentId,
+      position: stop.position,
+      time: formatTime(stop.startTime),
+    })),
+    ...notes.notes
+      .filter((note) => note.dayId === day.dayId)
+      .map((note) => ({
+        id: noteItemId(note.id),
+        position: note.sortOrder,
+        time: formatTime(note.time),
+      })),
+  ]
+}
+
+/**
+ * The arrangement the board starts from: the server's own order, merged.
+ *
+ * The one place the two sources meet. Everything downstream — the optimistic move, the
+ * render, the write — reads a single sequence per day and never learns that it came
+ * from two tables.
+ */
+export function orderFromPayload(
+  payload: PlanBoardPayload,
+  notes: PlanNotesPayload,
+): PlanOrder {
   return {
     days: payload.days.map((day) => ({
       dayId: day.dayId,
-      itemIds: day.stops.map((stop) => stop.assignmentId),
+      itemIds: mergeDayTimeline(timelineOf(day, notes)).map((item) => item.id),
     })),
     ideaIds: payload.unscheduledIds.map((placeId) => ideaItemId(placeId)),
   }
@@ -193,7 +254,7 @@ export function planModel(
   payload: PlanBoardPayload,
   order: PlanOrder,
   locale: Locale = DEFAULT_LOCALE,
-  notes: ReadonlyMap<string, ReadonlyArray<PlannerNote>> = new Map(),
+  notes: ReadonlyMap<string, PlannerNote> = new Map(),
 ): PlanModel {
   const rowsByItem = rowIndexOf(payload)
   const dayMeta = new Map(payload.days.map((day) => [day.dayId, day]))
@@ -207,13 +268,23 @@ export function planModel(
     const meta = dayMeta.get(entry.dayId)
     if (meta === undefined) continue
 
+    const items: Array<PlannerItem> = []
     const rows: Array<PlannerRow> = []
     for (const itemId of entry.itemIds) {
+      // An id the payload cannot resolve is skipped rather than invented: a delete one
+      // tab behind leaves exactly that, and the next invalidate reconciles it.
+      if (isNoteItemId(itemId)) {
+        const note = notes.get(itemId)
+        if (note !== undefined) items.push({ kind: 'note', note })
+        continue
+      }
+
       const row = rowsByItem.get(itemId)
       if (row === undefined) continue
       // The row's day is where the arrangement puts it, not where the payload
       // recorded it — the two differ for exactly as long as a write is in flight.
       const placed: PlannerRow = { ...row, dayNumber: meta.dayNumber }
+      items.push({ kind: 'stop', row: placed })
       rows.push(placed)
       rowsByPlace.set(row.placeId, placed)
       dayNumberByPlace.set(row.placeId, meta.dayNumber)
@@ -228,9 +299,9 @@ export function planModel(
       dayNumber: meta.dayNumber,
       title: titleOf(meta),
       dateLabel: formatWeekday(meta.date, locale),
+      items,
       rows,
       stays: meta.stays,
-      notes: notes.get(meta.dayId) ?? [],
     })
   }
 

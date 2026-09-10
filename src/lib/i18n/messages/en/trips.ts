@@ -33,6 +33,52 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerary',
   'plan.places': 'Places',
+  /* --------------------------------------------------- the day's sequence */
+  /**
+   * The dashed drop target a day shows when its **whole sequence** is empty — no
+   * places and no notes. It names both kinds because both land here: a day is one
+   * list, and a target that only mentioned places would describe half of it.
+   */
+  'plan.day.empty': 'Nothing planned — drop a place or a note here',
+  /* ------------------------------------------------- a refused or questioned move */
+  /**
+   * Why a drag changed nothing, said twice over: a toast for a reader watching the
+   * rail, and a sentence for the live region a keyboard reader is listening to.
+   * Without the second one a refused keyboard drag is silence — the row simply
+   * stays where it was and nothing explains it.
+   *
+   * `{name}` is the place or the note's headline. The two `notInIdeas` /
+   * `notInAnotherDay` refusals are product statements rather than failures: the
+   * ideas rail is the trip's unscheduled *place* inventory, and a note belongs to
+   * the day it was written for.
+   */
+  'plan.move.refused.duplicate': '{name} is already on that day',
+  'plan.move.refused.duplicateBody': 'A place can only appear once per day. Move it to another day instead.',
+  'plan.move.refused.notInIdeas': 'A note stays in the day',
+  'plan.move.refused.notInIdeasBody': 'Ideas are places waiting for a day. A note belongs to the day it was written on.',
+  'plan.move.refused.notInAnotherDay': 'A note stays on its own day',
+  'plan.move.refused.notInAnotherDayBody': 'Notes cannot be moved between days yet. Edit the note, or write it on the other day.',
+  'plan.move.spoken.duplicate': '{name} was not moved. That day already has it.',
+  'plan.move.spoken.notInIdeas': '{name} was not moved. A note stays in the day.',
+  'plan.move.spoken.notInAnotherDay': '{name} was not moved. A note stays on its own day.',
+  'plan.move.spoken.timed': '{name} carries {time}. Asking whether to drop it.',
+  'plan.move.error.save': 'That move did not save',
+  'plan.move.error.retry': 'Try it again in a moment.',
+  /**
+   * The question a timed item asks before it moves against its own clock.
+   *
+   * A time outranks a position (PRD #104 decision 9), so the board will not quietly
+   * reorder a row that carries one — but refusing outright would make a legitimate
+   * "actually, this is not at 14:30 any more" impossible from the rail. So it asks,
+   * and agreeing clears the time in the very same write.
+   *
+   * The confirm names the consequence rather than saying "OK": the reader is losing
+   * a time, and that is the part a two-word button would hide.
+   */
+  'plan.move.dropTime.title': 'Move {name} and drop its {time}?',
+  'plan.move.dropTime.body': 'This position contradicts the time on it. Moving it here clears the time — the new order and the cleared time are saved together.',
+  'plan.move.dropTime.confirm': 'Move and drop the time',
+  'plan.move.dropTime.cancel': 'Keep it where it is',
   /* ------------------------------------------------- a day's own notes */
   /**
    * The note affordances. `add` is the control's own label; `addForDay` is the
@@ -55,6 +101,12 @@ const messages = {
   'plan.note.showLess': 'Show less',
   'plan.note.moveUp': 'Move up',
   'plan.note.moveDown': 'Move down',
+  /**
+   * The note's drag handle, named as an action rather than a thing: it is the
+   * control's whole accessible name, and a screen reader that has just heard the
+   * note's text needs to know what pressing this does, not what it is called.
+   */
+  'plan.note.drag': 'Reorder note',
   'plan.note.edit': 'Edit note',
   'plan.note.delete': 'Delete note',
   /* ------------------------------------------------------- the editor */
@@ -87,7 +139,6 @@ const messages = {
   'plan.note.toast.deleted': 'Note deleted',
   'plan.note.error.save': 'The note did not save',
   'plan.note.error.delete': 'The note was not deleted',
-  'plan.note.error.move': 'That move did not save',
   'plan.note.error.retry': 'Try it again in a moment.',
   /**
    * The icon vocabulary, as a reader hears it rather than as the picker stores

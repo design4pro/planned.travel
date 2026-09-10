@@ -71,11 +71,17 @@ export { usePlanDnd } from './plan-dnd'
 export type { PlanDnd, PlanDndOptions } from './plan-dnd'
 
 /* ------------------------------------------------------------- data shapes */
-export { DAY_NOTE_ICONS, DEFAULT_DAY_NOTE_ICON, isMapped } from './types'
+export {
+  DAY_NOTE_ICONS,
+  DEFAULT_DAY_NOTE_ICON,
+  isMapped,
+  stopsOf,
+} from './types'
 export type {
   DayNoteIcon,
   PlannerCategory,
   PlannerDay,
+  PlannerItem,
   PlannerNote,
   PlannerRow,
 } from './types'

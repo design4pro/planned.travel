@@ -7,11 +7,26 @@ import { DndContext, closestCenter } from '@dnd-kit/core'
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import { DaySection } from '../day-section'
 import { IdeasList } from '../ideas-list'
-import { IDEAS_CONTAINER, ideaItemId } from '../ordering'
+import { IDEAS_CONTAINER, ideaItemId, noteItemId } from '../ordering'
 import { usePlanDnd } from '../plan-dnd'
 
+import { stopsOf } from '../types'
+
 import type { PlanOrder, PlanTarget } from '../ordering'
-import type { PlannerCategory, PlannerDay, PlannerRow } from '../types'
+import type {
+  PlannerCategory,
+  PlannerDay,
+  PlannerItem,
+  PlannerNote,
+  PlannerRow,
+} from '../types'
+
+/** A day's sequence, with `rows` derived so the two can never disagree. */
+function sequence(
+  items: ReadonlyArray<PlannerItem>,
+): Pick<PlannerDay, 'items' | 'rows'> {
+  return { items, rows: stopsOf(items) }
+}
 
 /**
  * Keyboard drag and drop, driven the way a reader drives it.
@@ -68,17 +83,26 @@ function row(overrides: Partial<PlannerRow> & { placeId: string }): PlannerRow {
   }
 }
 
+const NOTE: PlannerNote = {
+  id: 'n1',
+  dayId: 'd1',
+  body: 'Buy the metro pass',
+  detail: null,
+  time: null,
+  icon: 'sticky-note',
+}
+
 const DAY_ONE: PlannerDay = {
   dayId: 'd1',
   dayNumber: 1,
   title: 'Asakusa and the river',
   dateLabel: null,
   stays: [],
-  notes: [],
-  rows: [
-    row({ placeId: 'p1', name: 'Sensō-ji' }),
-    row({ placeId: 'p2', name: 'Tokyo Skytree' }),
-  ],
+  ...sequence([
+    { kind: 'stop', row: row({ placeId: 'p1', name: 'Sensō-ji' }) },
+    { kind: 'stop', row: row({ placeId: 'p2', name: 'Tokyo Skytree' }) },
+    { kind: 'note', note: NOTE },
+  ]),
 }
 
 const DAY_TWO: PlannerDay = {
@@ -87,8 +111,12 @@ const DAY_TWO: PlannerDay = {
   title: 'Kyoto by train',
   dateLabel: null,
   stays: [],
-  notes: [],
-  rows: [row({ placeId: 'p3', name: 'Fushimi Inari', dayNumber: 2 })],
+  ...sequence([
+    {
+      kind: 'stop',
+      row: row({ placeId: 'p3', name: 'Fushimi Inari', dayNumber: 2 }),
+    },
+  ]),
 }
 
 /** An empty day, the drop target a sortable list on its own gets wrong. */
@@ -98,8 +126,7 @@ const DAY_THREE: PlannerDay = {
   title: 'Nothing planned yet',
   dateLabel: null,
   stays: [],
-  notes: [],
-  rows: [],
+  ...sequence([]),
 }
 
 const IDEAS: ReadonlyArray<PlannerRow> = [
@@ -114,7 +141,7 @@ const IDEAS: ReadonlyArray<PlannerRow> = [
 
 const ORDER: PlanOrder = {
   days: [
-    { dayId: 'd1', itemIds: ['a-p1', 'a-p2'] },
+    { dayId: 'd1', itemIds: ['a-p1', 'a-p2', noteItemId(NOTE.id)] },
     { dayId: 'd2', itemIds: ['a-p3'] },
     { dayId: 'd3', itemIds: [] },
   ],
@@ -128,14 +155,27 @@ const ROWS_BY_ITEM: ReadonlyMap<string, PlannerRow> = new Map(
   ]),
 )
 
+const NOTES_BY_ITEM: ReadonlyMap<string, PlannerNote> = new Map([
+  [noteItemId(NOTE.id), NOTE],
+])
+
+/** An `onMove` spy typed as the hook sees it: the sentence to announce, or `null`. */
+function moveSpy(refusal: string | null = null) {
+  return vi.fn<(itemId: string, target: PlanTarget) => string | null>(
+    () => refusal,
+  )
+}
+
 interface BoardProps {
-  readonly onMove: (itemId: string, target: PlanTarget) => void
+  /** The refusal sentence to announce, or `null` when the move was accepted. */
+  readonly onMove: (itemId: string, target: PlanTarget) => string | null
 }
 
 function Board({ onMove }: BoardProps) {
   const dnd = usePlanDnd({
     order: ORDER,
     rowsByItem: ROWS_BY_ITEM,
+    notesByItem: NOTES_BY_ITEM,
     days: [DAY_ONE, DAY_TWO, DAY_THREE],
     onMove,
   })
@@ -154,9 +194,9 @@ function Board({ onMove }: BoardProps) {
       }}
     >
       <div data-testid="dragging">{dnd.draggingId ?? 'none'}</div>
-      <DaySection day={DAY_ONE} categoryFor={categoryFor} />
-      <DaySection day={DAY_TWO} categoryFor={categoryFor} />
-      <DaySection day={DAY_THREE} categoryFor={categoryFor} />
+      <DaySection day={DAY_ONE} categoryFor={categoryFor} canWriteNotes />
+      <DaySection day={DAY_TWO} categoryFor={categoryFor} canWriteNotes />
+      <DaySection day={DAY_THREE} categoryFor={categoryFor} canWriteNotes />
       <IdeasList
         rows={IDEAS}
         total={IDEAS.length}
@@ -269,7 +309,7 @@ function handleFor(name: string): HTMLElement {
 
 describe('keyboard drag', () => {
   it('lifts a stop, says so, and marks the handle pressed', async () => {
-    const onMove = vi.fn()
+    const onMove = moveSpy()
     const { container } = render(<Board onMove={onMove} />)
     layout(container)
     const said = record()
@@ -286,7 +326,7 @@ describe('keyboard drag', () => {
   })
 
   it('walks the arrow keys into the next day and drops there', async () => {
-    const onMove = vi.fn()
+    const onMove = moveSpy()
     const { container } = render(<Board onMove={onMove} />)
     layout(container)
     const said = record()
@@ -307,7 +347,7 @@ describe('keyboard drag', () => {
   })
 
   it('names an empty day rather than "the board" when the drag is over one', async () => {
-    const onMove = vi.fn()
+    const onMove = moveSpy()
     const { container } = render(<Board onMove={onMove} />)
     layout(container)
     const said = record()
@@ -323,7 +363,7 @@ describe('keyboard drag', () => {
   })
 
   it('drops a stop into the ideas column, which unschedules it', async () => {
-    const onMove = vi.fn()
+    const onMove = moveSpy()
     const { container } = render(<Board onMove={onMove} />)
     layout(container)
     const said = record()
@@ -339,7 +379,7 @@ describe('keyboard drag', () => {
   })
 
   it('puts the stop back on escape, and says where it went back to', async () => {
-    const onMove = vi.fn()
+    const onMove = moveSpy()
     const { container } = render(<Board onMove={onMove} />)
     layout(container)
     const said = record()
@@ -358,7 +398,7 @@ describe('keyboard drag', () => {
   })
 
   it('lifts on Enter as well as space', async () => {
-    const onMove = vi.fn()
+    const onMove = moveSpy()
     const { container } = render(<Board onMove={onMove} />)
     layout(container)
     const said = record()
@@ -380,7 +420,7 @@ describe('keyboard drag', () => {
    * every scripted or bridged keypress on the handle did nothing at all.
    */
   it('works for key events that carry no physical code', async () => {
-    const onMove = vi.fn()
+    const onMove = moveSpy()
     const { container } = render(<Board onMove={onMove} />)
     layout(container)
     const said = record()
@@ -409,5 +449,55 @@ describe('keyboard drag', () => {
     await tick()
 
     expect(onMove).toHaveBeenCalledWith('a-p1', { container: 'd2', index: 0 })
+  })
+
+  /**
+   * The note is the second kind of thing a day holds, and it reaches the keyboard
+   * through exactly the same handle. Its name in the live region is its headline —
+   * a note has no other name, and "Picked up the stop" would be a lie about the id.
+   */
+  it('lifts a note by its own handle and names it by its headline', async () => {
+    const onMove = moveSpy()
+    const { container } = render(<Board onMove={onMove} />)
+    layout(container)
+    const said = record()
+
+    const handle = screen.getByRole('button', { name: 'Reorder note' })
+    handle.focus()
+    await press(handle, ' ', 'Space')
+
+    expect(screen.getByTestId('dragging').textContent).toBe(noteItemId('n1'))
+    expect(said[0]).toContain('Picked up Buy the metro pass')
+
+    await press(document.body, 'ArrowUp', 'ArrowUp')
+    await press(document.body, ' ', 'Space')
+
+    expect(onMove).toHaveBeenCalledTimes(1)
+    expect(onMove.mock.calls[0][0]).toBe(noteItemId('n1'))
+    expect(onMove.mock.calls[0][1].container).toBe('d1')
+  })
+
+  /**
+   * A refused drop is free feedback for a sighted reader — the row snaps back — and
+   * nothing at all for a keyboard reader. So the screen's sentence has to reach the
+   * live region in place of the generic "Moved … Saving."
+   */
+  it('speaks the screen’s refusal instead of claiming the move saved', async () => {
+    const onMove = moveSpy(
+      'Buy the metro pass was not moved. A note stays on its own day.',
+    )
+    const { container } = render(<Board onMove={onMove} />)
+    layout(container)
+    const said = record()
+
+    const handle = screen.getByRole('button', { name: 'Reorder note' })
+    handle.focus()
+    await press(handle, ' ', 'Space')
+    await pressDownUntil(said, 'Day 2 — Kyoto by train')
+    await press(document.body, ' ', 'Space')
+
+    expect(said.at(-1)).toBe(
+      'Buy the metro pass was not moved. A note stays on its own day.',
+    )
   })
 })

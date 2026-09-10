@@ -119,7 +119,7 @@ describe('reordering inside one day', () => {
     )
     expect(change).toEqual({
       kind: 'reorder',
-      days: [{ dayId: 'd2', assignmentIds: ['a22', 'a21', 'a23'] }],
+      days: [{ dayId: 'd2', itemIds: ['a22', 'a21', 'a23'] }],
     })
   })
 
@@ -168,8 +168,8 @@ describe('moving between days', () => {
     expect(change).toEqual({
       kind: 'reorder',
       days: [
-        { dayId: 'd3', assignmentIds: ['a12'] },
-        { dayId: 'd1', assignmentIds: ['a11'] },
+        { dayId: 'd3', itemIds: ['a12'] },
+        { dayId: 'd1', itemIds: ['a11'] },
       ],
     })
   })
@@ -392,7 +392,7 @@ describe('a note in the merged day', () => {
       days: [
         {
           dayId: 'd1',
-          assignmentIds: [noteItemId('n2'), 'm11', noteItemId('n1'), 'm12'],
+          itemIds: [noteItemId('n2'), 'm11', noteItemId('n1'), 'm12'],
         },
       ],
     })
