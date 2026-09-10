@@ -2,7 +2,7 @@
 // scroll stubs jsdom does not implement.
 import '#/components/ui/__tests__/test-env'
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -10,7 +10,12 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
-import { DashboardWidgetsMenu, useDashboardWidgets } from '../dashboard-widgets'
+import {
+  DashboardWidgetsMenu,
+  WIDGETS_IN_SHEET_QUERY,
+  useDashboardWidgets,
+  useWidgetsInSheet,
+} from '../dashboard-widgets'
 
 import type { Catalogue } from '#/lib/i18n'
 
@@ -141,5 +146,67 @@ describe('the dashboard’s widget menu', () => {
     // still there, which is the only way anything comes back.
     expect(shown()).toBe('')
     expect(screen.getAllByRole('menuitemcheckbox')).toHaveLength(4)
+  })
+})
+
+/**
+ * Which surface the widgets are mounted on.
+ *
+ * The claim under test is that the JS query and the CSS variant name the *same*
+ * boundary. They are two halves of one decision — the sheet trigger renders
+ * below it, `md:block` reveals the column above it — and a mismatch is not a
+ * cosmetic seam: in the band between them nothing renders at all and the whole
+ * reference column, the widgets that predate this stage included, is gone. The
+ * mutation this is aimed at is the obvious one, `768px` for `48rem`, which is
+ * only correct at the default root font size and silently wrong for a reader who
+ * enlarged their browser text.
+ */
+describe('the surface the widgets are mounted on', () => {
+  /** jsdom has one viewport, so the boundary is told rather than resized into. */
+  function answer(matches: boolean): string[] {
+    const asked: string[] = []
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => {
+      asked.push(query)
+      return {
+        matches,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      } as unknown as MediaQueryList
+    })
+    return asked
+  }
+
+  function Probe() {
+    return <p data-part="in-sheet">{String(useWidgetsInSheet())}</p>
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('asks about the same boundary the column’s `md:` variant uses', () => {
+    const asked = answer(false)
+
+    render(<Probe />)
+
+    expect(asked).toEqual([WIDGETS_IN_SHEET_QUERY])
+    // Tailwind's `md` is `48rem` and this repo does not override it. A `px`
+    // query here would only agree at a 16px root font size.
+    expect(WIDGETS_IN_SHEET_QUERY).toContain('48rem')
+    expect(WIDGETS_IN_SHEET_QUERY).not.toContain('px')
+  })
+
+  it('puts the widgets in the sheet only below that boundary', () => {
+    answer(true)
+    const { container } = render(<Probe />)
+    expect(container.textContent).toBe('true')
+
+    cleanup()
+    answer(false)
+    const wide = render(<Probe />)
+    expect(wide.container.textContent).toBe('false')
   })
 })

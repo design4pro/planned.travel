@@ -162,6 +162,20 @@ export function DashboardWidgetsMenu({
 }
 
 /**
+ * The exact complement of the column's `md:` variant, in the same unit.
+ *
+ * Tailwind's `md` is `48rem` (theme default, unoverridden here), so this must be
+ * `48rem` too and not `768px`: the two agree only at a 16px root font size, and a
+ * reader who has enlarged their browser text moves `md` without moving a pixel
+ * query. At a 20px root the px form leaves a 768–960px band where the sheet
+ * trigger is not rendered *and* `md:block` has not applied yet, and the whole
+ * reference column — the pre-existing widgets included — becomes unreachable.
+ * The range form `width < 48rem` is what Tailwind's own `max-md` compiles to, so
+ * there is no rounding gap between the two either.
+ */
+export const WIDGETS_IN_SHEET_QUERY = '(width < 48rem)'
+
+/**
  * Whether the widgets belong in the sheet rather than in the column.
  *
  * A real media-query read rather than two CSS-hidden copies, for the reason
@@ -177,7 +191,7 @@ export function useWidgetsInSheet(): boolean {
   const [inSheet, setInSheet] = useState(false)
 
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 767px)')
+    const query = window.matchMedia(WIDGETS_IN_SHEET_QUERY)
     const read = (): void => {
       setInSheet(query.matches)
     }
