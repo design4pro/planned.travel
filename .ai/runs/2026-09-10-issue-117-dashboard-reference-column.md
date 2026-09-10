@@ -114,8 +114,8 @@ One `01-S5` block appended to `e2e/trips-core.spec.ts`, then the full gate.
 
 ### Phase 2: The copy
 
-- [ ] 2.1 Add the new `shell.dashboard.widgets.*` and `shell.dashboard.clock.*` keys to `en`
-- [ ] 2.2 Land the same keys in the other 22 locales
+- [x] 2.1 Add the new `shell.dashboard.widgets.*` and `shell.dashboard.clock.*` keys to `en` — 3e8cb93a
+- [x] 2.2 Land the same keys in the other 22 locales — 3e8cb93a
 
 ### Phase 3: The widgets
 
