@@ -71,8 +71,8 @@ dependency.
 
 ### Phase 1: recognition without reading
 
-- [ ] 1.1 Extract `tableShapeAt` from `readTable`
-- [ ] 1.2 Add `fenceAt`, `headingAt`, `blockKindAt`, `BlockKind` and wire both callers
-- [ ] 1.3 Add the two four-hash fall-through tests
-- [ ] 1.4 Delete the amortisation argument and rewrite the surviving doc comments
+- [x] 1.1 Extract `tableShapeAt` from `readTable` — d070eda0
+- [x] 1.2 Add `fenceAt`, `headingAt`, `blockKindAt`, `BlockKind` and wire both callers — 58ee8eba
+- [x] 1.3 Add the two four-hash fall-through tests — 5e93ee07
+- [x] 1.4 Delete the amortisation argument and rewrite the surviving doc comments — 99224a8c
 - [ ] 1.5 Run the full validation gate
