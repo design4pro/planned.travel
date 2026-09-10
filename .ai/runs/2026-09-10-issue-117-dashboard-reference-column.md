@@ -105,6 +105,10 @@ One `01-S5` block appended to `e2e/trips-core.spec.ts`, then the full gate.
 
 ## Progress
 
+PR: #422
+
+Review pass (`om-auto-review-pr 422 --autofix`) landed its own fixes in 1692f2a3: the picker's zone list moved off the render path, the pending column reserves the clock's block, and the two components gained 12 tests of their own.
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: The pure module
