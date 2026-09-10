@@ -82,4 +82,4 @@ Owned surface:
 
 ### Phase 4: end to end
 
-- [ ] 4.1 The appended journey in `e2e/trips-core.spec.ts`
+- [x] 4.1 The appended journey in `e2e/trips-core.spec.ts` — ff436784
