@@ -67,11 +67,11 @@ Owned surface:
 
 ### Phase 2: the note becomes draggable
 
-- [ ] 2.1 The drag decision, extracted and pure — `-ui/plan-move.ts`
-- [ ] 2.2 `NoteRow` becomes sortable
-- [ ] 2.3 The adapter speaks about notes — `plan-dnd.ts`
-- [ ] 2.4 A note's drag preview
-- [ ] 2.5 Phase 2 copy — eleven keys in 23 locales
+- [x] 2.1 The drag decision, extracted and pure — `-ui/plan-move.ts` — 4678f317
+- [x] 2.2 `NoteRow` becomes sortable — 4678f317
+- [x] 2.3 The adapter speaks about notes — `plan-dnd.ts` — 4678f317
+- [x] 2.4 A note's drag preview — 4678f317
+- [x] 2.5 Phase 2 copy — eleven keys in 23 locales — 4678f317
 
 ### Phase 3: the "drop its time?" dialog
 
