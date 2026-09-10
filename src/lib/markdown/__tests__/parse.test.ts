@@ -42,6 +42,27 @@ describe('parse — blocks', () => {
     })
   })
 
+  it('reads a fourth level over a delimiter row as the table it falls through to', () => {
+    expect(only('#### a | b\n--- | ---\n1 | 2')).toEqual({
+      type: 'table',
+      align: [null, null],
+      header: [[text('#### a')], [text('b')]],
+      rows: [[[text('1')], [text('2')]]],
+    })
+  })
+
+  it('ends a paragraph at a fourth level that opens a table', () => {
+    expect(parse('intro\n#### a | b\n--- | ---\n1 | 2')).toEqual([
+      { type: 'paragraph', children: [text('intro')] },
+      {
+        type: 'table',
+        align: [null, null],
+        header: [[text('#### a')], [text('b')]],
+        rows: [[[text('1')], [text('2')]]],
+      },
+    ])
+  })
+
   it('reads an unordered list under any of the three bullets', () => {
     expect(only('- a\n* b\n+ c')).toEqual({
       type: 'list',
