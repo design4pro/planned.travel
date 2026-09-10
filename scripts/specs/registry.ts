@@ -108,9 +108,10 @@ const NOT_RELATIVE = /^(?:[a-z][a-z0-9+.-]*:|#|\/)/i
 /**
  * Code, which shows markdown syntax rather than linking anywhere.
  *
- * `.ai/specs/AGENTS.md` is the document most likely to quote a link as an example, and without this
- * every such example would be resolved as if it were a real target - one fenced block demonstrating
- * `[example](some/other-file.md)` would turn the whole gate red for a file that references nothing.
+ * Specs in this repository quote markdown at each other - a skill file's rules, a document shape, an
+ * index row - and without this every such example is resolved as if it were a real target: one
+ * fenced block demonstrating `[example](some/other-file.md)` turns the whole gate red for a spec
+ * that references nothing.
  */
 const FENCED_CODE = /^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[^\n]*$/gm
 const INLINE_CODE = /(`+)[^\n]*?\1/g
