@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '行程',
   'plan.places': '地点',
+  'plan.day.empty': '还没有安排 — 把地点或备注拖到这里',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '添加备注',
   'plan.note.addForDay': '添加备注——{day}',

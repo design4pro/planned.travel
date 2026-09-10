@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Lịch trình',
   'plan.places': 'Địa điểm',
+  'plan.day.empty': 'Chưa có gì — kéo một địa điểm hoặc ghi chú vào đây',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Thêm ghi chú',
   'plan.note.addForDay': 'Thêm ghi chú, {day}',

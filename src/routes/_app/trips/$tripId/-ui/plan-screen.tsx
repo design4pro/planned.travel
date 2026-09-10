@@ -77,6 +77,8 @@ import {
   initialSelection,
   itemsIn,
   movePlanItem,
+  noteItemId,
+  notesOf,
   selectionReducer,
   usePlanDnd,
 } from '#/components/planner'
@@ -96,7 +98,7 @@ import {
   formatMetres,
   mapCategories,
   mapPlacesOf,
-  notesByDay,
+  notesByItem,
   orderFromPayload,
   planModel,
   routeDaysOf,
@@ -361,7 +363,10 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
 
   /* ------------------------------------------------------------------ state */
 
-  const serverOrder = React.useMemo(() => orderFromPayload(payload), [payload])
+  const serverOrder = React.useMemo(
+    () => orderFromPayload(payload, notes),
+    [notes, payload],
+  )
   const [order, setOrder] = React.useState<PlanOrder>(serverOrder)
 
   // The server's arrangement always wins. An optimistic order lives only for as long
@@ -399,11 +404,11 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
 
   /* ------------------------------------------------------------------ model */
 
-  const noteRuns = React.useMemo(() => notesByDay(notes), [notes])
+  const noteIndex = React.useMemo(() => notesByItem(notes), [notes])
 
   const model = React.useMemo(
-    () => planModel(payload, order, locale, noteRuns),
-    [payload, order, locale, noteRuns],
+    () => planModel(payload, order, locale, noteIndex),
+    [payload, order, locale, noteIndex],
   )
 
   const scheduledRows = React.useMemo(
@@ -582,13 +587,11 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
           await reorderPlanFn({
             data: {
               tripId: payload.tripId,
-              // Every id the board can produce today is an assignment id; notes
-              // become draggable — and the second `kind` reachable — in `01-S4b`.
               days: change.days.map((day) => ({
                 dayId: day.dayId,
-                items: day.assignmentIds.map((assignmentId) => ({
+                items: day.itemIds.map((itemId) => ({
                   kind: 'stop' as const,
-                  id: assignmentId,
+                  id: itemId,
                 })),
               })),
             },
@@ -994,7 +997,10 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
    */
   const moveNote = React.useCallback(
     (note: PlannerNote, direction: -1 | 1): void => {
-      const run = noteRuns.get(note.dayId) ?? []
+      // The run as the day renders it, so a chevron moves the note past the note the
+      // reader can see above or below it.
+      const day = model.days.find((entry) => entry.dayId === note.dayId)
+      const run = day === undefined ? [] : notesOf(day.items)
       const index = run.findIndex((entry) => entry.id === note.id)
       const target = index + direction
       if (index === -1 || target < 0 || target >= run.length) return
@@ -1003,7 +1009,8 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       noteIds[index] = run[target].id
       noteIds[target] = note.id
 
-      markPending(note.id, true)
+      const itemId = noteItemId(note.id)
+      markPending(itemId, true)
       void reorderDayNotesFn({
         data: { tripId: payload.tripId, dayId: note.dayId, noteIds },
       })
@@ -1014,10 +1021,10 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
           })
         })
         .finally(() => {
-          markPending(note.id, false)
+          markPending(itemId, false)
         })
     },
-    [markPending, noteRuns, payload.tripId, router, t],
+    [markPending, model.days, payload.tripId, router, t],
   )
 
   const savePosition = React.useCallback(
@@ -1138,7 +1145,6 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
             onHoverRow={hoverRow}
             rowActions={rowActions}
             canWriteNotes={notes.canWrite}
-            pendingNoteIds={pending}
             onAddNote={() =>
               setDialog({ kind: 'note-create', dayId: day.dayId })
             }

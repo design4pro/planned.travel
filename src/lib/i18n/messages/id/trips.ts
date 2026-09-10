@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Rencana perjalanan',
   'plan.places': 'Tempat',
+  'plan.day.empty': 'Belum ada rencana — seret tempat atau catatan ke sini',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Tambahkan catatan',
   'plan.note.addForDay': 'Tambahkan catatan, {day}',

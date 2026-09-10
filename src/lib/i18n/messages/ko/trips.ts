@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '일정',
   'plan.places': '장소',
+  'plan.day.empty': '아직 일정이 없습니다. 장소나 메모를 여기로 끌어다 놓으세요',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '메모 추가',
   'plan.note.addForDay': '메모 추가 — {day}',

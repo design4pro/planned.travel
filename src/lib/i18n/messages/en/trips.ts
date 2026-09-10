@@ -33,6 +33,13 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerary',
   'plan.places': 'Places',
+  /* --------------------------------------------------- the day's sequence */
+  /**
+   * The dashed drop target a day shows when its **whole sequence** is empty — no
+   * places and no notes. It names both kinds because both land here: a day is one
+   * list, and a target that only mentioned places would describe half of it.
+   */
+  'plan.day.empty': 'Nothing planned — drop a place or a note here',
   /* ------------------------------------------------- a day's own notes */
   /**
    * The note affordances. `add` is the control's own label; `addForDay` is the

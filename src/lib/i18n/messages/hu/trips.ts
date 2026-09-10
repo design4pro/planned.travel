@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Útiterv',
   'plan.places': 'Helyek',
+  'plan.day.empty': 'Még nincs terv – húzz ide egy helyet vagy egy jegyzetet',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Jegyzet hozzáadása',
   'plan.note.addForDay': 'Jegyzet hozzáadása: {day}',

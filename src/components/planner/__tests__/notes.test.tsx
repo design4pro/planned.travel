@@ -53,7 +53,7 @@ function day(notes: ReadonlyArray<PlannerNote>): PlannerDay {
     dateLabel: 'Fri, 9 Oct',
     stays: [],
     rows: [],
-    notes,
+    items: notes.map((entry) => ({ kind: 'note', note: entry })),
   }
 }
 

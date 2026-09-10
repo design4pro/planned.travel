@@ -107,15 +107,19 @@ export interface PlanTarget {
  */
 export type PlanChange =
   /**
-   * Assignments that changed day or position. Carries the *resulting* order of
-   * every affected day, so the server writes `0..n-1` and the indices are
-   * renormalised on every drag rather than drifting toward fractions.
+   * Items that changed day or position. Carries the *resulting* order of every
+   * affected day, so the server writes `0..n-1` and the indices are renormalised on
+   * every drag rather than drifting toward fractions.
+   *
+   * `itemIds`, not `assignmentIds`: a day is one number line holding stops and notes
+   * together, so this list carries both id spaces and the write path discriminates
+   * each entry with {@link isNoteItemId}.
    */
   | {
       readonly kind: 'reorder'
       readonly days: ReadonlyArray<{
         readonly dayId: string
-        readonly assignmentIds: ReadonlyArray<string>
+        readonly itemIds: ReadonlyArray<string>
       }>
     }
   /** An idea became a stop: create the assignment at this position. */
@@ -200,9 +204,19 @@ export function indexOf(order: PlanOrder, itemId: string): number {
   return itemsIn(order, container)?.indexOf(itemId) ?? -1
 }
 
-/** Total scheduled stops across every day. */
+/**
+ * Total scheduled **stops** across every day.
+ *
+ * Notes are skipped: a day's sequence holds both, and "12 places planned" is a count
+ * of places. Counting the sequence would quietly inflate it the first time a reader
+ * writes a note.
+ */
 export function scheduledCount(order: PlanOrder): number {
-  return order.days.reduce((total, day) => total + day.itemIds.length, 0)
+  return order.days.reduce(
+    (total, day) =>
+      total + day.itemIds.filter((itemId) => !isNoteItemId(itemId)).length,
+    0,
+  )
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -459,7 +473,7 @@ export function movePlanItem(
         kind: 'reorder',
         days: touched.map((dayId) => ({
           dayId,
-          assignmentIds: days.find((day) => day.dayId === dayId)?.itemIds ?? [],
+          itemIds: days.find((day) => day.dayId === dayId)?.itemIds ?? [],
         })),
       },
     }

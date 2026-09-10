@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Yerler',
+  'plan.day.empty': 'Henüz plan yok — buraya bir yer veya not sürükle',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Not ekle',
   'plan.note.addForDay': 'Not ekle: {day}',

@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Resplan',
   'plan.places': 'Platser',
+  'plan.day.empty': 'Inget planerat än – släpp en plats eller en anteckning här',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Lägg till en anteckning',
   'plan.note.addForDay': 'Lägg till en anteckning: {day}',

@@ -7,6 +7,7 @@ import { cn } from '#/lib/cn'
 import { focusRing, transitionBase } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { NoteRow } from './note-row'
+import { noteItemId } from './ordering'
 import { StopRow } from './stop-row'
 
 import type {
@@ -25,7 +26,10 @@ export interface DaySectionProps {
   readonly active?: boolean
   readonly selectedPlaceId?: string | null
   readonly hoveredPlaceId?: string | null
-  /** Rows with a write in flight. */
+  /**
+   * Items with a write in flight, by **draggable** id — an assignment id for a stop,
+   * `noteItemId(note.id)` for a note. One set, because the day is one sequence.
+   */
   readonly pendingItemIds?: ReadonlySet<string>
   readonly draggable?: boolean
   /**
@@ -33,8 +37,6 @@ export interface DaySectionProps {
    * that is not archived. `false` renders every note and offers no way to change one.
    */
   readonly canWriteNotes?: boolean
-  /** Notes with a write in flight. */
-  readonly pendingNoteIds?: ReadonlySet<string>
   readonly onFocusDay?: () => void
   readonly onSelectRow?: (row: PlannerRow) => void
   readonly onHoverRow?: (row: PlannerRow, hovering: boolean) => void
@@ -55,9 +57,14 @@ export interface DaySectionProps {
  * route lines on the map, which turns the rail into a filter for the map without
  * adding a control anywhere.
  *
- * The stop list is both a `SortableContext` and a droppable, so an *empty* day is
+ * The list is both a `SortableContext` and a droppable, so an *empty* day is
  * still a valid drop target — the case a sortable list alone gets wrong, and the
  * one that matters most, because an empty day is exactly what you drag onto.
+ *
+ * **One list, two renderers.** A day is one sequence of stops and notes (PRD #104
+ * decision 9), merged upstream by `mergeDayTimeline` and arriving here already in the
+ * order it is read. `StopRow` and `NoteRow` render the two kinds the union carries
+ * today; a third kind is a third branch of the same `switch` and nothing else.
  */
 export function DaySection({
   day,
@@ -68,7 +75,6 @@ export function DaySection({
   pendingItemIds,
   draggable = true,
   canWriteNotes = false,
-  pendingNoteIds,
   onFocusDay,
   onSelectRow,
   onHoverRow,
@@ -80,9 +86,48 @@ export function DaySection({
 }: DaySectionProps) {
   const t = useTranslate()
   const itemIds = React.useMemo(
-    () => day.rows.map((row) => row.itemId),
-    [day.rows],
+    () =>
+      day.items.map((item) =>
+        item.kind === 'stop' ? item.row.itemId : noteItemId(item.note.id),
+      ),
+    [day.items],
   )
+
+  /**
+   * The 1-based **place** numeral each stop wears, by item id.
+   *
+   * Counted over the stops alone rather than over the sequence: a note between the
+   * second and the third place does not make the next place "stop 4", and a reader
+   * hearing "stop 3" must be able to count three places on the day.
+   */
+  const stopNumbers = React.useMemo(() => {
+    const numbers = new Map<string, number>()
+    let seen = 0
+    for (const item of day.items) {
+      if (item.kind !== 'stop') continue
+      seen += 1
+      numbers.set(item.row.itemId, seen)
+    }
+    return numbers
+  }, [day.items])
+
+  /**
+   * The 0-based position of each note **within the day's note run**, and how long
+   * that run is — what the move chevrons disable their ends against.
+   *
+   * Still the run rather than the sequence, because the chevrons still walk notes
+   * among notes. They join the merged path with the drag, in the same change's third
+   * phase; until they do, disabling them against the sequence would grey out a
+   * control that still works.
+   */
+  const noteRun = React.useMemo(() => {
+    const positions = new Map<string, number>()
+    for (const item of day.items) {
+      if (item.kind !== 'note') continue
+      positions.set(item.note.id, positions.size)
+    }
+    return positions
+  }, [day.items])
 
   const { setNodeRef, isOver } = useDroppable({ id: day.dayId })
 
@@ -164,7 +209,7 @@ export function DaySection({
             isOver && 'bg-brand-subtle/60 ring-1 ring-brand/40 ring-inset',
           )}
         >
-          {day.rows.length === 0 ? (
+          {day.items.length === 0 ? (
             <li
               className={cn(
                 'rounded-md border border-dashed border-edge-strong/60 px-3 py-3',
@@ -173,45 +218,47 @@ export function DaySection({
                 isOver && 'border-brand/50 text-brand',
               )}
             >
-              Nothing planned — drop a place here
+              {t('trips.plan.day.empty')}
             </li>
           ) : (
-            day.rows.map((row, index) => (
-              <StopRow
-                key={row.itemId}
-                row={row}
-                category={categoryFor(row.categoryId)}
-                position={index + 1}
-                selected={row.placeId === selectedPlaceId}
-                hovered={row.placeId === hoveredPlaceId}
-                pending={pendingItemIds?.has(row.itemId) ?? false}
-                draggable={draggable}
-                onSelect={() => onSelectRow?.(row)}
-                onHoverChange={(hovering) => onHoverRow?.(row, hovering)}
-                actions={rowActions?.(row)}
-              />
-            ))
+            day.items.map((item) => {
+              if (item.kind === 'note') {
+                const { note } = item
+                return (
+                  <NoteRow
+                    key={note.id}
+                    note={note}
+                    position={noteRun.get(note.id) ?? 0}
+                    count={noteRun.size}
+                    canWrite={canWriteNotes}
+                    pending={pendingItemIds?.has(noteItemId(note.id)) ?? false}
+                    onMove={(direction) => onMoveNote?.(note, direction)}
+                    onEdit={() => onEditNote?.(note)}
+                    onDelete={() => onDeleteNote?.(note)}
+                  />
+                )
+              }
+
+              const { row } = item
+              return (
+                <StopRow
+                  key={row.itemId}
+                  row={row}
+                  category={categoryFor(row.categoryId)}
+                  position={stopNumbers.get(row.itemId) ?? null}
+                  selected={row.placeId === selectedPlaceId}
+                  hovered={row.placeId === hoveredPlaceId}
+                  pending={pendingItemIds?.has(row.itemId) ?? false}
+                  draggable={draggable}
+                  onSelect={() => onSelectRow?.(row)}
+                  onHoverChange={(hovering) => onHoverRow?.(row, hovering)}
+                  actions={rowActions?.(row)}
+                />
+              )
+            })
           )}
         </ul>
       </SortableContext>
-
-      {day.notes.length === 0 ? null : (
-        <ul className="flex flex-col gap-0.5 px-2 pt-1">
-          {day.notes.map((note, index) => (
-            <NoteRow
-              key={note.id}
-              note={note}
-              position={index}
-              count={day.notes.length}
-              canWrite={canWriteNotes}
-              pending={pendingNoteIds?.has(note.id) ?? false}
-              onMove={(direction) => onMoveNote?.(note, direction)}
-              onEdit={() => onEditNote?.(note)}
-              onDelete={() => onDeleteNote?.(note)}
-            />
-          ))}
-        </ul>
-      )}
 
       {canWriteNotes ? (
         <div className="px-2 pt-1.5 pb-2">

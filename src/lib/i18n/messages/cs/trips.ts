@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Místa',
+  'plan.day.empty': 'Nic naplánováno – přetáhni sem místo nebo poznámku',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Přidat poznámku',
   'plan.note.addForDay': 'Přidat poznámku: {day}',

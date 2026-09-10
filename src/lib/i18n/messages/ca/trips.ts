@@ -24,6 +24,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerari',
   'plan.places': 'Llocs',
+  'plan.day.empty': 'Res planificat: arrossega aquí un lloc o una nota',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Afegeix una nota',
   'plan.note.addForDay': 'Afegeix una nota, {day}',

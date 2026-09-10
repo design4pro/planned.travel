@@ -10,8 +10,22 @@ import { IdeasList } from '../ideas-list'
 import { IDEAS_CONTAINER, ideaItemId } from '../ordering'
 import { usePlanDnd } from '../plan-dnd'
 
+import { stopsOf } from '../types'
+
 import type { PlanOrder, PlanTarget } from '../ordering'
-import type { PlannerCategory, PlannerDay, PlannerRow } from '../types'
+import type {
+  PlannerCategory,
+  PlannerDay,
+  PlannerItem,
+  PlannerRow,
+} from '../types'
+
+/** A day's sequence, with `rows` derived so the two can never disagree. */
+function sequence(
+  items: ReadonlyArray<PlannerItem>,
+): Pick<PlannerDay, 'items' | 'rows'> {
+  return { items, rows: stopsOf(items) }
+}
 
 /**
  * Keyboard drag and drop, driven the way a reader drives it.
@@ -74,11 +88,10 @@ const DAY_ONE: PlannerDay = {
   title: 'Asakusa and the river',
   dateLabel: null,
   stays: [],
-  notes: [],
-  rows: [
-    row({ placeId: 'p1', name: 'Sensō-ji' }),
-    row({ placeId: 'p2', name: 'Tokyo Skytree' }),
-  ],
+  ...sequence([
+    { kind: 'stop', row: row({ placeId: 'p1', name: 'Sensō-ji' }) },
+    { kind: 'stop', row: row({ placeId: 'p2', name: 'Tokyo Skytree' }) },
+  ]),
 }
 
 const DAY_TWO: PlannerDay = {
@@ -87,8 +100,12 @@ const DAY_TWO: PlannerDay = {
   title: 'Kyoto by train',
   dateLabel: null,
   stays: [],
-  notes: [],
-  rows: [row({ placeId: 'p3', name: 'Fushimi Inari', dayNumber: 2 })],
+  ...sequence([
+    {
+      kind: 'stop',
+      row: row({ placeId: 'p3', name: 'Fushimi Inari', dayNumber: 2 }),
+    },
+  ]),
 }
 
 /** An empty day, the drop target a sortable list on its own gets wrong. */
@@ -98,8 +115,7 @@ const DAY_THREE: PlannerDay = {
   title: 'Nothing planned yet',
   dateLabel: null,
   stays: [],
-  notes: [],
-  rows: [],
+  ...sequence([]),
 }
 
 const IDEAS: ReadonlyArray<PlannerRow> = [
