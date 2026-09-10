@@ -122,6 +122,15 @@ export default defineConfig({
   // uniformly rather than per test, so the next atlas journey to sit near the
   // edge does not have to discover this again; `globalTimeout` still bounds the
   // shard, and a genuinely hung test still fails, one minute later.
+  //
+  // The uniform raise did not hold, and the reason is the one it hoped to avoid:
+  // the whole atlas block sits near the edge, not one journey in it. Measured at
+  // the local default worker count, 39.8 s, 29.0 s and 27.1 s against the 30 s
+  // here, the first of them red about one run in three (issue #384). They now
+  // carry `ATLAS_JOURNEY_TIMEOUT_MS` in `e2e/journeys.spec.ts` instead — a budget
+  // named where the cost is, which is what makes it reviewable. This stays the
+  // budget for every test that does not carry its own: raising it again would
+  // absorb a slow-page regression on every other screen rather than report it.
   timeout: isCI ? 60_000 : 30_000,
   // Per CI shard (ci.yml splits the suite two ways). Measured on the 2-vCPU
   // runner: 6m41s of journeys on shard 1 and over 8 min on shard 2, against the
