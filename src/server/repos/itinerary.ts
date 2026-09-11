@@ -3,8 +3,9 @@
  * sleeps.
  *
  * `days` owns the spine (see `./days`), `places` owns the inventory (see `./places`), and this module
- * owns the join between them. {@link getTripItinerary} is the single read behind the planner screen:
+ * owns the join between them. {@link getTripItinerary} is the planner screen's read of that join:
  * one query per table, assembled in memory, ordered day number then position — never N+1 per day.
+ * The screen's day notes are not part of it; `loadDayNotes` reads those.
  */
 
 import { and, asc, eq, inArray } from 'drizzle-orm'
