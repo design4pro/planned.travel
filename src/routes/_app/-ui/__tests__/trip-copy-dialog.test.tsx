@@ -78,16 +78,52 @@ function hand(): ReturnType<typeof userEvent.setup> {
   return userEvent.setup({ delay: null })
 }
 
-/** Picks a range in the shipped `DateRangePicker`: open it, click one end, click the other. */
+/**
+ * Picks a range in the shipped `DateRangePicker`: open it, click one end, click the other.
+ *
+ * **The two day cells are found by their label, not by role and accessible name.** With the picker
+ * open the document holds around eighty buttons — two rendered months — and
+ * `getByRole('button', { name })` computes an accessible name *and* an accessibility-visibility
+ * verdict for every one of them, the latter walking computed styles up the ancestor chain per
+ * button. Measured here, in one run: 187–220 ms for such a lookup, 13–72 ms for the same lookup
+ * with `hidden: true` — which is how much of it is the visibility walk alone — and 3–8 ms for the
+ * label query. Twice per pick, that halved the three cases inside a full parallel run, from
+ * 959–1008 ms to 371–532 ms (#389).
+ *
+ * Nothing the cases assert is weakened by the swap. `ui.calendar.day` is set as the cell's
+ * `aria-label`, so this matches the same string the role query matched, and the claim that a day
+ * cell is a `button` carrying exactly that name belongs to — and is made by —
+ * `src/components/ui/__tests__/calendar.test.tsx`, which owns the primitive. What these cases are
+ * about is the duration copy a picked range produces.
+ */
 async function pick(
   user: ReturnType<typeof userEvent.setup>,
   from: number,
   to: number,
 ): Promise<void> {
   await user.click(screen.getByRole('button', { name: 'Dates' }))
-  await user.click(screen.getByRole('button', { name: april(from) }))
-  await user.click(screen.getByRole('button', { name: april(to) }))
+  await user.click(screen.getByLabelText(april(from)))
+  await user.click(screen.getByLabelText(april(to)))
 }
+
+/**
+ * What a case that drives the range picker is allowed to cost — raised here, not globally.
+ *
+ * Even with the cheap day lookup above, a pick is real work: a dialog mount, a popover holding two
+ * rendered months, and three clicks that each re-render the grid. That measures ~100 ms on an idle
+ * machine and 371–532 ms inside a full parallel `pnpm test` — but it is CPU time, so it scales with
+ * however contended the worker is. Halving the work moved the ceiling without removing it: on a
+ * host at load average ~330, the first of these three still took 5125 ms, which is red on the
+ * default by a margin no amount of making the query cheaper would have covered. So the cases that
+ * pick a range say out loud what they cost, rather than borrowing a default sized for tests that do
+ * none of this — and rather than raising that default for the whole suite, which would hide the
+ * next slow test instead of describing this one.
+ *
+ * Thirty times the measured in-suite cost. A case that is genuinely stuck still fails — it just no
+ * longer fails because the machine was busy. Nothing outside these three cases is affected: the
+ * other five in the file, and every other test in the suite, keep the 5 s default.
+ */
+const PICKING_A_RANGE = 15_000
 
 /**
  * Submitted as an event rather than by clicking "Copy trip".
@@ -116,21 +152,29 @@ describe('TripCopyDialog', () => {
     ).not.toBeNull()
   })
 
-  it('names the consequence once the copy runs shorter than the original', async () => {
-    const user = hand()
-    open()
-    await pick(user, 5, 8)
+  it(
+    'names the consequence once the copy runs shorter than the original',
+    async () => {
+      const user = hand()
+      open()
+      await pick(user, 5, 8)
 
-    expect(screen.queryByText(HINT)).not.toBeNull()
-  })
+      expect(screen.queryByText(HINT)).not.toBeNull()
+    },
+    PICKING_A_RANGE,
+  )
 
-  it('stays quiet when the copy runs longer than the original', async () => {
-    const user = hand()
-    open()
-    await pick(user, 1, 20)
+  it(
+    'stays quiet when the copy runs longer than the original',
+    async () => {
+      const user = hand()
+      open()
+      await pick(user, 1, 20)
 
-    expect(screen.queryByText(HINT)).toBeNull()
-  })
+      expect(screen.queryByText(HINT)).toBeNull()
+    },
+    PICKING_A_RANGE,
+  )
 
   it('opens ready to copy a source that has a departure date and no return', async () => {
     copyTrip.mockResolvedValue({ tripId: 'trip-2', copyPending: true })
@@ -179,26 +223,30 @@ describe('TripCopyDialog', () => {
     })
   })
 
-  it('sends the range the reader chose, as calendar days', async () => {
-    const user = hand()
-    copyTrip.mockResolvedValue({ tripId: 'trip-2', copyPending: true })
-    open()
+  it(
+    'sends the range the reader chose, as calendar days',
+    async () => {
+      const user = hand()
+      copyTrip.mockResolvedValue({ tripId: 'trip-2', copyPending: true })
+      open()
 
-    await pick(user, 5, 8)
-    submit()
+      await pick(user, 5, 8)
+      submit()
 
-    await vi.waitFor(() => {
-      expect(copyTrip).toHaveBeenCalledTimes(1)
-    })
-    expect(copyTrip.mock.calls[0][0]).toEqual({
-      data: {
-        tripId: 'trip-1',
-        title: 'Lisbon in April',
-        startDate: '2026-04-05',
-        endDate: '2026-04-08',
-      },
-    })
-  })
+      await vi.waitFor(() => {
+        expect(copyTrip).toHaveBeenCalledTimes(1)
+      })
+      expect(copyTrip.mock.calls[0][0]).toEqual({
+        data: {
+          tripId: 'trip-1',
+          title: 'Lisbon in April',
+          startDate: '2026-04-05',
+          endDate: '2026-04-08',
+        },
+      })
+    },
+    PICKING_A_RANGE,
+  )
 
   it('cannot be dismissed while the copy is in flight', async () => {
     const user = hand()
