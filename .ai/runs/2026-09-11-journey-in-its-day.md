@@ -117,10 +117,10 @@ refusals and the browser evidence. The capability lands here.
 
 ### Phase 3: The board draws it
 
-- [ ] 3.1 `-ui/plan-transport-model.ts` — the route-local model and `journeyWrites`
-- [ ] 3.2 `plan.tsx` loads the third read
-- [ ] 3.3 `plan-screen.tsx` wires it
-- [ ] 3.4 `plan-move.ts` takes the refusals and their words
+- [x] 3.1 `-ui/plan-transport-model.ts` — the route-local model and `journeyWrites` — a9e134fa
+- [x] 3.2 `plan.tsx` loads the third read — 091fcbcb
+- [x] 3.3 `plan-screen.tsx` wires it — 091fcbcb
+- [x] 3.4 `plan-move.ts` takes the refusals and their words — 7e51030e
 - [ ] 3.5 The e2e block appended to `e2e/journeys.spec.ts`
 - [ ] 3.6 The blind A/B pair on the three declared states
 - [ ] 3.7 The full validation gate
