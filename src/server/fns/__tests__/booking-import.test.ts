@@ -1,0 +1,892 @@
+/**
+ * The confirmation import's three verbs, driven against real tables.
+ *
+ * The three exported plain functions are what these tests hold, rather than the `createServerFn`
+ * wrappers around them: outside a Start build a server function runs its handler and discards the
+ * return value, and every claim here is about what a verb *answers*. The wrappers add one line
+ * each — the scope, the queue and the store — and `../__tests__/atlas.test.ts` covers that shape
+ * where it has something to prove.
+ *
+ * Everything else is real: a migrated SQLite database from the Drizzle schema, two real tenants,
+ * real repositories, the real geocoding proxy over a stub vendor. Three modules are replaced
+ * because they read the Worker environment at module scope through `cloudflare:workers`, which
+ * does not resolve in the `server` project: `./context`, `#/server/auth/env` and
+ * `#/server/geo/bindings`.
+ */
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import {
+  NotFoundError,
+  countTripPlaces,
+  createPlace,
+  createTrip,
+  getFile,
+  getPlace,
+  getReservation,
+  listTripPlaces,
+  listTripReservations,
+  recordFile,
+} from '#/server/repos'
+import { createHarness, captureError } from '#/server/repos/__tests__/harness'
+import { stagedImportKey } from '#/server/queue/handlers/booking-import'
+
+import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
+import type {
+  StagedImport,
+  StagedReservation,
+} from '#/server/queue/handlers/booking-import'
+import type { TaskEnvelope, TaskQueue } from '#/server/queue/types'
+
+/* ------------------------------------------------------------------ mocking */
+
+/**
+ * State the module mocks read at call time. It lives in `vi.hoisted` because `vi.mock` factories
+ * are lifted above every import, so a plain `let` would still be in its temporal dead zone.
+ */
+const stubs = vi.hoisted(() => ({
+  /** When `false`, the deployment holds no geocoding credential. */
+  geocodingConfigured: true,
+  /** Every patch `mirrorToRoom` was handed. */
+  mirrored: [] as Array<unknown>,
+  /**
+   * The proxy's cache and its tallies, in memory.
+   *
+   * Cleared between tests on purpose: the proxy serves a cached answer even on a deployment
+   * holding no credential, which is the behaviour its own suite asserts — and an entry surviving
+   * into the next test here would make the refusal case pass for the wrong reason.
+   */
+  geoEntries: new Map<string, string>(),
+  candidate: {
+    id: 'osm:way:1',
+    name: 'Hotel Roma',
+    address: 'Via del Corso 1, Rome',
+    city: 'Rome',
+    countryCode: 'IT',
+    lat: 41.9028,
+    lng: 12.4964,
+  },
+}))
+
+/**
+ * The geocoding runtime, with both stores in memory and the vendor a stub.
+ *
+ * The proxy itself is **not** replaced: the pin path this module owns is the first production
+ * caller of `forwardGeocode`, and the property under test — a refused lookup leaves a place with
+ * no coordinates and does not fail the import — is only visible through the real one.
+ */
+vi.mock('#/server/geo/bindings', () => {
+  const entries = stubs.geoEntries
+  const store = {
+    get: (key: string) => Promise.resolve(entries.get(key) ?? null),
+    put: (key: string, value: string) => {
+      entries.set(key, value)
+      return Promise.resolve()
+    },
+  }
+  const vendor = {
+    slug: 'stub',
+    retention: 'permanent' as const,
+    attribution: [{ name: 'Stub', url: 'https://example.test/' }],
+  }
+  return {
+    geocodeRuntime: (options: {
+      organizationId: string
+      ceiling: number
+    }): unknown => ({
+      cache: store,
+      counters: store,
+      vendor,
+      provider: stubs.geocodingConfigured
+        ? {
+            ...vendor,
+            forward: () => Promise.resolve([stubs.candidate]),
+            reverse: () => Promise.resolve([]),
+          }
+        : null,
+      outbound: {
+        db: null,
+        waitUntil: () => undefined,
+        logger: {
+          debug: () => undefined,
+          info: () => undefined,
+          warn: () => undefined,
+          error: () => undefined,
+        },
+        now: () => new Date('2026-09-11T10:00:00Z'),
+      },
+      organizationId: options.organizationId,
+      ceiling: options.ceiling,
+      now: () => new Date('2026-09-11T10:00:00Z'),
+    }),
+  }
+})
+
+/**
+ * `./context` is the module that reads `TRIP_ROOM`, `FILES` and `KV`. Every test below hands the
+ * scope and the store in directly, so only the room mirror has behaviour worth keeping: it records
+ * what it was given, because "one patch for the batch" is a claim about a call count.
+ */
+vi.mock('../context', () => ({
+  appScope: () => {
+    throw new Error('appScope is not reached: these tests hand the scope in.')
+  },
+  importStore: () => {
+    throw new Error('importStore is not reached: these tests hand it in.')
+  },
+  mirrorToRoom: (
+    _scope: unknown,
+    _tripId: string,
+    patches: ReadonlyArray<unknown>,
+  ) => {
+    stubs.mirrored.push(...patches)
+    return Promise.resolve()
+  },
+  patch: (kind: string, id: string, fields: unknown) => ({
+    entity: { kind, id },
+    op: 'upsert',
+    fields,
+  }),
+}))
+
+/** Only the server-function wrappers reach for the queue binding, and none of them run here. */
+vi.mock('#/server/auth/env', () => ({
+  taskQueue: () => {
+    throw new Error('taskQueue is not reached: these tests hand the queue in.')
+  },
+}))
+
+const {
+  ImportFormatError,
+  bookingImportJobId,
+  bookingImportView,
+  confirmBookingImport,
+  confirmBookingImportInputSchema,
+  startBookingImport,
+  startBookingImportInputSchema,
+} = await import('../booking-import')
+
+/* -------------------------------------------------------------------- fakes */
+
+/** The `TASKS` binding, recording what it was sent. */
+function queueDouble(): TaskQueue & {
+  readonly sent: Array<{
+    readonly body: TaskEnvelope
+    readonly options?: { delaySeconds?: number }
+  }>
+} {
+  const sent: Array<{
+    body: TaskEnvelope
+    options?: { delaySeconds?: number }
+  }> = []
+  return {
+    sent,
+    send: (body, options) => {
+      sent.push(
+        options === undefined
+          ? { body: body as TaskEnvelope }
+          : { body: body as TaskEnvelope, options },
+      )
+      return Promise.resolve()
+    },
+    sendBatch: () => Promise.resolve(),
+  }
+}
+
+/** The slice of KV the staged record lives in, in memory. */
+function memoryStore(): {
+  readonly entries: Map<string, string>
+  get: (key: string) => Promise<string | null>
+  put: (key: string, value: string) => Promise<void>
+  delete: (key: string) => Promise<void>
+} {
+  const entries = new Map<string, string>()
+  return {
+    entries,
+    get: (key) => Promise.resolve(entries.get(key) ?? null),
+    put: (key, value) => {
+      entries.set(key, value)
+      return Promise.resolve()
+    },
+    delete: (key) => {
+      entries.delete(key)
+      return Promise.resolve()
+    },
+  }
+}
+
+/* ---------------------------------------------------------------- the world */
+
+const NOW = Date.parse('2026-09-11T10:00:00Z')
+
+/** A staged row the extractor could plausibly have produced. */
+function stagedRow(
+  overrides: Partial<StagedReservation> = {},
+): StagedReservation {
+  return {
+    externalId: null,
+    title: 'Hotel Roma',
+    kind: 'lodging',
+    startsAt: '2026-03-04T14:00:00Z',
+    endsAt: '2026-03-07T10:00:00Z',
+    allDay: false,
+    floating: false,
+    location: 'Via del Corso 1, Rome',
+    notes: null,
+    reference: 'ABC123',
+    ...overrides,
+  }
+}
+
+interface World {
+  readonly tenant: SeededTenant
+  readonly tripId: string
+  readonly fileId: string
+  readonly jobId: string
+}
+
+let harness: Harness
+let alpha: World
+let beta: World
+let store: ReturnType<typeof memoryStore>
+
+async function seedWorld(tenant: SeededTenant, label: string): Promise<World> {
+  const trip = await createTrip(tenant.scope, {
+    title: `Rome ${label}`,
+    // A zone that is neither UTC nor the runtime's, so a resolution that used the wrong one shows.
+    timezone: 'Asia/Tokyo',
+    startDate: '2026-03-01',
+    endDate: '2026-03-10',
+  })
+  const file = await recordFile(tenant.scope, {
+    tripId: trip.id,
+    storageKey: `files/${tenant.organizationId}/confirmation.pdf`,
+    filename: 'confirmation.pdf',
+    contentType: 'application/pdf',
+    sizeBytes: 20_480,
+  })
+  return {
+    tenant,
+    tripId: trip.id,
+    fileId: file.id,
+    jobId: bookingImportJobId(trip.id, file.id),
+  }
+}
+
+/** Writes a staged record the way the queue handler writes one. */
+async function stage(
+  world: World,
+  overrides: Partial<StagedImport> = {},
+): Promise<StagedImport> {
+  const reservations = overrides.reservations ?? [stagedRow()]
+  const staged: StagedImport = {
+    jobId: world.jobId,
+    tripId: world.tripId,
+    orgId: world.tenant.organizationId,
+    requestedBy: world.tenant.ownerUserId,
+    createdAt: NOW,
+    format: 'document',
+    count: reservations.length,
+    ...overrides,
+    reservations,
+  }
+  await store.put(stagedImportKey(staged.jobId), JSON.stringify(staged))
+  return staged
+}
+
+beforeEach(async () => {
+  harness = await createHarness()
+  alpha = await seedWorld(await harness.seedTenant('alpha'), 'alpha')
+  beta = await seedWorld(await harness.seedTenant('beta'), 'beta')
+  store = memoryStore()
+  stubs.geocodingConfigured = true
+  stubs.mirrored.length = 0
+  stubs.geoEntries.clear()
+})
+
+/* -------------------------------------------------------------------- start */
+
+describe('startBookingImport', () => {
+  it('enqueues one envelope whose id names the trip and the file', async () => {
+    const queue = queueDouble()
+
+    const started = await startBookingImport(alpha.tenant.scope, queue, {
+      tripId: alpha.tripId,
+      fileId: alpha.fileId,
+      index: 0,
+    })
+
+    expect(started.jobId).toBe(`booking-import:${alpha.tripId}:${alpha.fileId}`)
+    expect(started.jobId.length).toBeLessThanOrEqual(128)
+    expect(queue.sent).toHaveLength(1)
+    expect(queue.sent[0]?.body.id).toBe(started.jobId)
+    // Enqueued without a delay at all rather than with a delay of zero.
+    expect(queue.sent[0]?.options).toBeUndefined()
+  })
+
+  it('takes the storage key, the filename and the format off the stored row', async () => {
+    const queue = queueDouble()
+
+    await startBookingImport(alpha.tenant.scope, queue, {
+      tripId: alpha.tripId,
+      fileId: alpha.fileId,
+      index: 0,
+    })
+
+    expect(queue.sent[0]?.body.payload).toEqual({
+      tripId: alpha.tripId,
+      requestedBy: alpha.tenant.ownerUserId,
+      sourceKey: `files/${alpha.tenant.organizationId}/confirmation.pdf`,
+      sourceName: 'confirmation.pdf',
+      format: 'document',
+    })
+  })
+
+  /**
+   * The format decides which reader runs, so it is derived from the name the upload stored and
+   * never from anything a request carries. A `.ics` reported as a PDF is still read as a calendar.
+   */
+  it('reads the format from the stored filename and not from the reported media type', async () => {
+    const queue = queueDouble()
+    const file = await recordFile(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+      storageKey: `files/${alpha.tenant.organizationId}/booking.ics`,
+      filename: 'booking.ics',
+      contentType: 'application/pdf',
+      sizeBytes: 1_024,
+    })
+
+    await startBookingImport(alpha.tenant.scope, queue, {
+      tripId: alpha.tripId,
+      fileId: file.id,
+      index: 0,
+    })
+
+    expect(queue.sent[0]?.body.payload).toMatchObject({ format: 'ics' })
+  })
+
+  it('staggers the files of one drop by the extraction budget', async () => {
+    const queue = queueDouble()
+
+    await startBookingImport(alpha.tenant.scope, queue, {
+      tripId: alpha.tripId,
+      fileId: alpha.fileId,
+      index: 3,
+    })
+
+    expect(queue.sent[0]?.options).toEqual({ delaySeconds: 60 })
+  })
+
+  it('refuses a stored file no reader can read, and enqueues nothing', async () => {
+    const queue = queueDouble()
+    const file = await recordFile(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+      storageKey: `files/${alpha.tenant.organizationId}/voucher.pkpass`,
+      filename: 'voucher.pkpass',
+      contentType: 'application/vnd.apple.pkpass',
+      sizeBytes: 2_048,
+    })
+
+    expect(
+      await captureError(() =>
+        startBookingImport(alpha.tenant.scope, queue, {
+          tripId: alpha.tripId,
+          fileId: file.id,
+          index: 0,
+        }),
+      ),
+    ).toBeInstanceOf(ImportFormatError)
+    expect(queue.sent).toEqual([])
+  })
+
+  it('refuses another workspace’s file, and enqueues nothing', async () => {
+    const queue = queueDouble()
+
+    expect(
+      await captureError(() =>
+        startBookingImport(alpha.tenant.scope, queue, {
+          tripId: alpha.tripId,
+          fileId: beta.fileId,
+          index: 0,
+        }),
+      ),
+    ).toBeInstanceOf(NotFoundError)
+    expect(queue.sent).toEqual([])
+  })
+
+  it('refuses a file of this workspace that belongs to another trip', async () => {
+    const queue = queueDouble()
+    const other = await createTrip(alpha.tenant.scope, { title: 'Lisbon' })
+
+    expect(
+      await captureError(() =>
+        startBookingImport(alpha.tenant.scope, queue, {
+          tripId: other.id,
+          fileId: alpha.fileId,
+          index: 0,
+        }),
+      ),
+    ).toBeInstanceOf(NotFoundError)
+    expect(queue.sent).toEqual([])
+  })
+
+  it('accepts a request that names no position in the drop', () => {
+    expect(
+      startBookingImportInputSchema.parse({
+        tripId: alpha.tripId,
+        fileId: alpha.fileId,
+      }).index,
+    ).toBe(0)
+  })
+})
+
+/* ---------------------------------------------------------------------- get */
+
+describe('bookingImportView', () => {
+  it('answers `working` while nothing is staged', async () => {
+    expect(
+      await bookingImportView(alpha.tenant.scope, store, {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+      }),
+    ).toEqual({ status: 'working' })
+  })
+
+  /**
+   * The case a KV key being guessable makes real: the entry resolves, and the answer is the same
+   * one a caller gets for a job that does not exist. Telling the two apart would make a job id a
+   * probe for another workspace's imports.
+   */
+  it('answers `working` for a record staged by another workspace, though the key resolves', async () => {
+    const staged = await stage(beta)
+    expect(store.entries.has(stagedImportKey(staged.jobId))).toBe(true)
+
+    expect(
+      await bookingImportView(alpha.tenant.scope, store, {
+        tripId: alpha.tripId,
+        jobId: staged.jobId,
+      }),
+    ).toEqual({ status: 'working' })
+  })
+
+  it('answers `working` for a record of this workspace staged against another trip', async () => {
+    const other = await createTrip(alpha.tenant.scope, { title: 'Lisbon' })
+    const staged = await stage(alpha, { tripId: other.id })
+
+    expect(
+      await bookingImportView(alpha.tenant.scope, store, {
+        tripId: alpha.tripId,
+        jobId: staged.jobId,
+      }),
+    ).toEqual({ status: 'working' })
+  })
+
+  it('answers `working` for a record written in a shape it cannot read', async () => {
+    await store.put(stagedImportKey(alpha.jobId), '{"jobId":"only that"}')
+
+    expect(
+      await bookingImportView(alpha.tenant.scope, store, {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+      }),
+    ).toEqual({ status: 'working' })
+  })
+
+  it('answers a refusal as a code and a ceiling, and forwards no server sentence', async () => {
+    await stage(alpha, {
+      reservations: [],
+      count: 0,
+      refusal: { code: 'ceiling', ceiling: 100 },
+    })
+
+    const view = await bookingImportView(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+    })
+
+    expect(view).toEqual({
+      status: 'refused',
+      refusal: { code: 'ceiling', ceiling: 100 },
+    })
+    expect(JSON.stringify(view)).not.toContain('message')
+  })
+
+  it('maps a staged row to the booking the confirm would write, in the trip’s zone', async () => {
+    await stage(alpha, {
+      reservations: [
+        stagedRow({ priceMinor: 42_000, currency: 'EUR' }),
+        stagedRow({
+          title: 'Dinner',
+          kind: 'activity',
+          startsAt: '2026-03-05T19:30:00',
+          endsAt: null,
+          floating: true,
+          needsReview: true,
+        }),
+      ],
+    })
+
+    const view = await bookingImportView(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+    })
+
+    expect(view.status).toBe('ready')
+    expect(view.staged?.count).toBe(2)
+    expect(view.staged?.written).toEqual([])
+    // 14:00 UTC is 23:00 in Tokyo, which is the trip's zone and not the runtime's.
+    expect(view.staged?.drafts[0]).toEqual({
+      index: 0,
+      type: 'accommodation',
+      title: 'Hotel Roma',
+      location: 'Via del Corso 1, Rome',
+      reference: 'ABC123',
+      startDate: '2026-03-04',
+      startTime: '23:00',
+      endDate: '2026-03-07',
+      endTime: '19:00',
+      priceMinor: 42_000,
+      currency: 'EUR',
+      needsReview: false,
+    })
+    // A floating source already states the destination's wall clock, so it is not moved at all.
+    expect(view.staged?.drafts[1]).toMatchObject({
+      index: 1,
+      type: 'activity',
+      startDate: '2026-03-05',
+      startTime: '19:30',
+      priceMinor: null,
+      currency: null,
+      needsReview: true,
+    })
+  })
+
+  it('offers only the rows a previous confirm did not write', async () => {
+    await stage(alpha, {
+      reservations: [stagedRow(), stagedRow({ title: 'Dinner' })],
+      written: [{ index: 0, reservationId: 'res_written' }],
+    })
+
+    const view = await bookingImportView(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+    })
+
+    expect(view.staged?.written).toEqual([0])
+  })
+})
+
+/* ------------------------------------------------------------------ confirm */
+
+describe('confirmBookingImport', () => {
+  /** How many times the marker statement was sent — one for the whole batch, never per row. */
+  function markerStatements(): number {
+    return harness.statements.filter((sql) =>
+      /update "reservations" set "imported_at"/.test(sql),
+    ).length
+  }
+
+  it('writes every accepted row, marks them in one statement and deletes the record', async () => {
+    const rows = Array.from({ length: 7 }, (_unused, index) =>
+      stagedRow({ title: `Booking ${index}`, kind: 'activity' }),
+    )
+    await stage(alpha, { reservations: rows })
+    harness.statements.length = 0
+
+    const result = await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0, 1, 2, 3, 4, 5, 6],
+    })
+
+    expect(result).toEqual({ written: 7, failed: 0, remaining: 0 })
+    const written = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(written).toHaveLength(7)
+    expect(markerStatements()).toBe(1)
+    // ADR 0012's load-bearing consequence: every row a machine wrote says so.
+    expect(written.every((row) => row.importedAt instanceof Date)).toBe(true)
+    expect(store.entries.has(stagedImportKey(alpha.jobId))).toBe(false)
+    // One patch for the batch, not one per row.
+    expect(stubs.mirrored).toHaveLength(1)
+  })
+
+  it('links the confirmed booking to the file the import came from', async () => {
+    await stage(alpha)
+
+    await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0],
+    })
+
+    const [written] = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(
+      (await getFile(alpha.tenant.scope, alpha.fileId))?.reservationId,
+    ).toBe(written.id)
+  })
+
+  /**
+   * The partial confirm, which is the whole reason `written` exists. The failing row is a staged
+   * title the column refuses — the shape a record written by an older build can have — and what
+   * matters is what survives it: three bookings, three entries in `written`, and a retry that
+   * writes the four that are left and never a fourth copy of the first three.
+   */
+  it('stops at the first row it cannot write, and the retry writes only the rest', async () => {
+    const rows = [
+      stagedRow({ title: 'One', kind: 'activity' }),
+      stagedRow({ title: 'Two', kind: 'activity' }),
+      stagedRow({ title: 'Three', kind: 'activity' }),
+      stagedRow({ title: '', kind: 'activity' }),
+      stagedRow({ title: 'Five', kind: 'activity' }),
+      stagedRow({ title: 'Six', kind: 'activity' }),
+      stagedRow({ title: 'Seven', kind: 'activity' }),
+    ]
+    await stage(alpha, { reservations: rows })
+    const accept = [0, 1, 2, 3, 4, 5, 6]
+
+    const first = await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept,
+    })
+
+    expect(first).toEqual({ written: 3, failed: 1, remaining: 4 })
+    const held = store.entries.get(stagedImportKey(alpha.jobId))
+    expect(held).toBeDefined()
+    expect(JSON.parse(held ?? '{}')).toMatchObject({
+      written: [{ index: 0 }, { index: 1 }, { index: 2 }],
+    })
+
+    // The retry, with the same request the client already sent.
+    rows[3] = stagedRow({ title: 'Four', kind: 'activity' })
+    await stage(alpha, {
+      reservations: rows,
+      written: [0, 1, 2].map((index) => ({
+        index,
+        reservationId: `res_${index}`,
+      })),
+    })
+    const second = await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept,
+    })
+
+    expect(second).toEqual({ written: 4, failed: 0, remaining: 0 })
+    const titles = (
+      await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId })
+    ).map((row) => row.title)
+    expect(titles).toHaveLength(7)
+    expect(new Set(titles).size).toBe(7)
+  })
+
+  it('writes no price at all for a row whose price the extractor dropped', async () => {
+    await stage(alpha, {
+      reservations: [stagedRow({ needsReview: true, kind: 'activity' })],
+    })
+
+    await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0],
+    })
+
+    const [written] = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(written.priceMinor).toBeNull()
+    expect(written.currency).toBeNull()
+  })
+
+  it('pins a place it created for a stay, and points the booking at it', async () => {
+    await stage(alpha)
+
+    await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0],
+    })
+
+    const places = await listTripPlaces(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(places).toHaveLength(1)
+    expect(places[0]).toMatchObject({
+      name: 'Hotel Roma',
+      lat: stubs.candidate.lat,
+      lng: stubs.candidate.lng,
+      countryCode: 'IT',
+    })
+    const [written] = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(written.placeId).toBe(places[0]?.id)
+  })
+
+  it('writes the place without coordinates when the lookup is refused, and still imports', async () => {
+    stubs.geocodingConfigured = false
+    await stage(alpha)
+
+    const result = await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0],
+    })
+
+    expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
+    const [place] = await listTripPlaces(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(place).toMatchObject({ name: 'Hotel Roma', lat: null, lng: null })
+  })
+
+  it('creates no second place when the trip already holds one of that name', async () => {
+    const existing = await createPlace(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+      name: 'Hotel Roma',
+    })
+    await stage(alpha, { reservations: [stagedRow(), stagedRow()] })
+
+    await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0, 1],
+    })
+
+    expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(1)
+    const written = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(written.map((row) => row.placeId)).toEqual([
+      existing.id,
+      existing.id,
+    ])
+    // The place the reader already had is not re-pinned behind their back.
+    expect((await getPlace(alpha.tenant.scope, existing.id))?.lat).toBeNull()
+  })
+
+  it('writes nothing twice when the same confirm arrives again', async () => {
+    await stage(alpha, {
+      reservations: [stagedRow({ kind: 'activity' })],
+      written: [{ index: 0, reservationId: 'res_already' }],
+    })
+
+    const result = await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0],
+    })
+
+    expect(result).toEqual({ written: 0, failed: 0, remaining: 0 })
+    expect(
+      await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
+    ).toEqual([])
+    expect(stubs.mirrored).toEqual([])
+  })
+
+  it('refuses a job id staged by another workspace, and writes nothing', async () => {
+    const staged = await stage(beta)
+    const before = await listTripReservations(beta.tenant.scope, {
+      tripId: beta.tripId,
+    })
+
+    expect(
+      await captureError(() =>
+        confirmBookingImport(alpha.tenant.scope, store, {
+          tripId: alpha.tripId,
+          jobId: staged.jobId,
+          accept: [0],
+        }),
+      ),
+    ).toBeInstanceOf(NotFoundError)
+
+    expect(
+      await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
+    ).toEqual([])
+    expect(
+      await listTripReservations(beta.tenant.scope, { tripId: beta.tripId }),
+    ).toEqual(before)
+    // And the record it could not claim is still there for the workspace that owns it.
+    expect(store.entries.has(stagedImportKey(staged.jobId))).toBe(true)
+  })
+
+  it('ignores an index the staged record does not hold', async () => {
+    await stage(alpha, { reservations: [stagedRow({ kind: 'activity' })] })
+
+    const result = await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0, 0, 41],
+    })
+
+    expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
+    expect(
+      await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
+    ).toHaveLength(1)
+  })
+
+  it('refuses a request naming more rows than a record can hold', () => {
+    expect(() =>
+      confirmBookingImportInputSchema.parse({
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [500],
+      }),
+    ).toThrow()
+  })
+
+  it('writes a booking of every kind a confirm can be handed', async () => {
+    await stage(alpha, {
+      reservations: [
+        stagedRow({ kind: 'flight', title: 'LH123' }),
+        stagedRow({ kind: 'transport', title: 'Rome Termini' }),
+        stagedRow({ kind: 'activity', title: 'Borghese' }),
+        stagedRow({ kind: 'other', title: 'Something else' }),
+      ],
+    })
+
+    await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0, 1, 2, 3],
+    })
+
+    const written = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(written.map((row) => row.type).sort()).toEqual([
+      'activity',
+      'other',
+      'transport',
+      'transport',
+    ])
+    // Only a stay reaches the map; nothing else invents a place.
+    expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(0)
+  })
+
+  it('records the booking’s price as a cost line on the trip', async () => {
+    await stage(alpha, {
+      reservations: [
+        stagedRow({ kind: 'activity', priceMinor: 42_000, currency: 'EUR' }),
+      ],
+    })
+
+    await confirmBookingImport(alpha.tenant.scope, store, {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0],
+    })
+
+    const [written] = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(written.priceMinor).toBe(42_000)
+    expect(written.expenseId).not.toBeNull()
+    expect(
+      await getReservation(alpha.tenant.scope, written.id),
+    ).not.toBeNull()
+  })
+})
