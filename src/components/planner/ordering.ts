@@ -259,14 +259,17 @@ export function indexOf(order: PlanOrder, itemId: string): number {
 /**
  * Total scheduled **stops** across every day.
  *
- * Notes are skipped: a day's sequence holds both, and "12 places planned" is a count
- * of places. Counting the sequence would quietly inflate it the first time a reader
- * writes a note.
+ * Notes and journeys are skipped: a day's sequence holds all three, and "12 places
+ * planned" is a count of places. Counting the sequence would quietly inflate it the
+ * first time a reader writes a note or books a train.
  */
 export function scheduledCount(order: PlanOrder): number {
   return order.days.reduce(
     (total, day) =>
-      total + day.itemIds.filter((itemId) => !isNoteItemId(itemId)).length,
+      total +
+      day.itemIds.filter(
+        (itemId) => !isNoteItemId(itemId) && !isLegItemId(itemId),
+      ).length,
     0,
   )
 }
