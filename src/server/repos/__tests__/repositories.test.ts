@@ -41,7 +41,7 @@ import {
   listCollectionPlacesWithLabels,
   setCollectionPlaceLabels,
 } from '../collections'
-import { listTripDays, syncTripDays } from '../days'
+import { createDayNote, listTripDays, syncTripDays } from '../days'
 import {
   createExpense,
   createSettlement,
@@ -241,6 +241,37 @@ describe('repositories', () => {
         'Wine cellar',
         'Dom Luís bridge',
       ])
+    })
+
+    /**
+     * The planner reads its notes through `loadDayNotes`, so an itinerary that read them too made
+     * the page pay for `day_notes` twice and throw one answer away (#393). The assertion is on the
+     * SQL rather than on the returned shape because the shape alone cannot tell a removed
+     * projection from a removed read — and it is the read this ticket is about.
+     */
+    it('never touches day_notes, whose rows the planner reads for itself', async () => {
+      const trip = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        startDate: '2026-07-01',
+        endDate: '2026-07-02',
+      })
+      const firstDay = (await listTripDays(tenant.scope, trip.id)).at(0)
+      if (firstDay === undefined) {
+        throw new Error('The trip must have a first day.')
+      }
+      await createDayNote(tenant.scope, {
+        tripId: trip.id,
+        dayId: firstDay.id,
+        body: 'Book the tram',
+      })
+
+      harness.statements.length = 0
+      const itinerary = await getTripItinerary(tenant.scope, trip.id)
+
+      expect(itinerary).toHaveLength(2)
+      expect(
+        harness.statements.filter((sql) => sql.includes('day_notes')),
+      ).toEqual([])
     })
 
     it('reorders places in one batch and attaches resolved tags', async () => {
