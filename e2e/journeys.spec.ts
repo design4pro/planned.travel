@@ -1270,8 +1270,17 @@ test.describe('the trip sections behind a route parameter', () => {
    * cannot produce — a journey rendered into a list of its own, beside the day rather
    * than inside it, which is exactly what a reader would see if the model and the
    * arrangement ever disagreed about what a day contains.
+   *
+   * Run at both viewports, because the day list is one element rendered in two places:
+   * `plan-screen.tsx` puts `itinerary` in a `lg:` rail on a desktop and in the bottom
+   * sheet the "Days" button opens on a phone, and below `lg` the rail is not rendered at
+   * all. Opening the sheet is what makes the same assertion reachable on WebKit at 393px,
+   * rather than leaving the phone composition of this feature ungraded.
    */
-  test('a day draws its journeys inside its own sequence', async ({ page }) => {
+  test('a day draws its journeys inside its own sequence', async ({
+    page,
+    isMobile,
+  }) => {
     // The flagship trip, by the title a reader sees: it is the one the seed gives journeys
     // and notes on the same days, and the first card in the list carries neither.
     const tripId = await aTripToWalk(page, 'Tokyo & Kyoto')
@@ -1284,6 +1293,10 @@ test.describe('the trip sections behind a route parameter', () => {
 
     const report = watchConsole(page, route)
     await visit(page, route, 'light')
+
+    if (isMobile) {
+      await page.getByRole('button', { name: 'Days' }).click()
+    }
 
     const journeys = page.locator('[data-part="planner-transport-row"]')
     await expect(
