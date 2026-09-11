@@ -100,11 +100,11 @@ refusals and the browser evidence. The capability lands here.
 
 ### Phase 1: The day can be asked what it carries
 
-- [ ] 1.1 `listTripDayTransports` in `src/server/repos/transports.ts`
-- [ ] 1.2 `reorderDayTransports` — the gap-splitting writer
-- [ ] 1.3 `replaceTransportChain` carries `sort_order` forward by `position`
-- [ ] 1.4 The tenant-isolation and member-isolation blocks
-- [ ] 1.5 `-server/plan-transports.ts` — loader, reorder writer and validator
+- [x] 1.1 `listTripDayTransports` in `src/server/repos/transports.ts` — e1026be1
+- [x] 1.2 `reorderDayTransports` — the gap-splitting writer — e1026be1
+- [x] 1.3 `replaceTransportChain` carries `sort_order` forward by `position` — e1026be1
+- [x] 1.4 The tenant-isolation and member-isolation blocks — e1026be1
+- [x] 1.5 `-server/plan-transports.ts` — loader, reorder writer and validator — e1026be1
 
 ### Phase 2: The board has a shape for a journey
 
