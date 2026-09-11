@@ -18,6 +18,7 @@ import {
   getTravelStats,
   listTravelStats,
   markCountryVisited,
+  markRegionVisited,
   upsertTravelStats,
 } from '#/server/repos'
 import {
@@ -235,6 +236,86 @@ describe('handleTravelStats', () => {
 
     const rows = await figures(alpha, alpha.ownerUserId)
     expect(rows.map((row) => row.statYear)).toEqual([2026, 0])
+  })
+
+  /**
+   * `region_count` is the one column that belongs to no year, and the regression these two cases
+   * guard is that a year row ever printed a figure at all: until #139 the recompute wrote the
+   * traveller's lifetime `visited_regions` total onto every row, so 2026, 2025 and all-time all
+   * carried the same number — the shape `country_count` beside it is explicitly written to avoid.
+   *
+   * The regions below are dated in two different calendar years on purpose. That is the fixture
+   * under which the old code was indistinguishable from a correct year-scoped one, and it is also
+   * the fixture that shows why year-scoping is not on the table: `visited_regions` stores one row
+   * per region and a single `first_visited_on`, so the table cannot answer "which regions in 2026".
+   */
+  it('writes the lifetime region count on the all-time row and none on a year row', async () => {
+    await seedTravel(alpha)
+    await markRegionVisited(alpha.scope, {
+      userId: alpha.ownerUserId,
+      countryCode: 'PT',
+      regionCode: 'PT-11',
+      regionName: 'Lisboa',
+      visitedOn: '2026-04-10',
+    })
+    await markRegionVisited(alpha.scope, {
+      userId: alpha.ownerUserId,
+      countryCode: 'PT',
+      regionCode: 'PT-08',
+      regionName: 'Faro',
+      visitedOn: '2025-06-02',
+    })
+
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 0 },
+      context(alpha.organizationId),
+    )
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 2026 },
+      context(alpha.organizationId),
+    )
+
+    const rows = await figures(alpha, alpha.ownerUserId)
+    expect(
+      rows.map((row) => ({
+        statYear: row.statYear,
+        regionCount: row.regionCount,
+      })),
+    ).toEqual([
+      { statYear: 2026, regionCount: 0 },
+      { statYear: 0, regionCount: 2 },
+    ])
+  })
+
+  /**
+   * The field is written as an explicit `0` rather than omitted on year rows, and this is the case
+   * that pins the difference: `upsertTravelStats` patches through `definedOnly`, so an omitted
+   * field would leave the stale lifetime figure on every year row written before #139 and would
+   * need a backfill migration. The explicit `0` heals those rows on their next recompute.
+   */
+  it('clears a stale lifetime figure left on a year row by an earlier write', async () => {
+    await seedTravel(alpha)
+    await markRegionVisited(alpha.scope, {
+      userId: alpha.ownerUserId,
+      countryCode: 'PT',
+      regionCode: 'PT-11',
+      regionName: 'Lisboa',
+    })
+    // The row as the pre-#139 recompute left it: the lifetime total on a year row.
+    await upsertTravelStats(alpha.scope, {
+      userId: alpha.ownerUserId,
+      statYear: 2026,
+      regionCount: 1,
+    })
+
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 2026 },
+      context(alpha.organizationId),
+    )
+
+    expect(
+      (await getTravelStats(alpha.scope, alpha.ownerUserId, 2026))?.regionCount,
+    ).toBe(0)
   })
 
   it('leaves the same numbers when the same message is delivered twice', async () => {

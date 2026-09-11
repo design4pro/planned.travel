@@ -858,13 +858,22 @@ export async function upsertTravelStats(
  * "The trips they are on" is literal, and {@link memberTripIds} is where it is enforced: two members
  * of one workspace who travel separately get two different rows.
  *
- * ## The one figure the rule does not reach
+ * ## The one figure that belongs to no year
  *
- * `regionCount` is not trip-derived. It is a lifetime count of this traveller's `visited_regions`,
- * written unchanged onto every year row, so 2026, 2025 and all-time all print the same number — the
- * shape the `yearCodes` comment below rejects for countries. It is already per-traveller, so the
- * `00-S4` amendment leaves it alone; year-scoping it through `visited_regions.first_visited_on` moves
- * a figure this amendment did not set out to move, and is a ticket of its own.
+ * `regionCount` is not trip-derived, and it is not year-scoped either: it is this traveller's
+ * lifetime `visited_regions` total, and it is written onto the all-time row only. A year row carries
+ * `0`, because "regions in 2026" is a number this repository does not compute — `visited_regions`
+ * keeps one row per region with a single, nullable `first_visited_on`, and {@link markRegionVisited}
+ * is idempotent, so the table cannot say which of a region's visits fell in which year. A figure
+ * derived from it would be a guess that does not even sum to the lifetime one, because an undated
+ * region falls into no year at all. Writing the lifetime total onto every year row instead — which is
+ * what this did until #139 — printed "2026: 9 regions, 2025: 9 regions, 9 all time", the exact shape
+ * the `yearCodes` comment below rejects for countries.
+ *
+ * The `0` is written explicitly rather than the field being omitted on year rows. `upsertTravelStats`
+ * patches through `definedOnly`, so an omitted field keeps whatever is stored; year rows written
+ * before #139 carry a stale lifetime figure, and an explicit `0` heals them on the next recompute
+ * without a backfill migration.
  */
 export async function recomputeTravelStats(
   scope: TenantScope,
@@ -1010,10 +1019,13 @@ export async function recomputeTravelStats(
     placeCount,
     cityCount: cityRows.filter((row) => row.city !== null).length,
     countryCount: yearCodes === null ? countries.length : yearCodes.size,
-    regionCount: await visitedRegionsRepository.count(
-      scope,
-      eq(visitedRegions.userId, userId),
-    ),
+    regionCount:
+      statYear === 0
+        ? await visitedRegionsRepository.count(
+            scope,
+            eq(visitedRegions.userId, userId),
+          )
+        : 0,
     spendMinor: Number(spendRow[0]?.value ?? 0),
     distanceMetres: Number(distanceRow[0]?.value ?? 0),
     currency: tripRows[0]?.currency,
