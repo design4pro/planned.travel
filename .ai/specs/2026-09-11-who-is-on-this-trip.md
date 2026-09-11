@@ -4,7 +4,7 @@
 | ------------------ | ----- |
 | **Status**         | draft |
 | **Issue**          | #118  |
-| **Spec PR**        | none  |
+| **Spec PR**        | #436  |
 | **Implementation** | none  |
 
 `01-S6a` · FR #118 · Parent PRD #104 · Stage `01-S6` of `docs/plans/01-trips-core.md` (frozen), its **first slice**; PRD decisions 1b, 6, 11 and 16.
