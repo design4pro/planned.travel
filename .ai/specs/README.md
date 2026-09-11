@@ -6,11 +6,12 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (1)
+## Draft — being written (2)
 
-| Spec                                                                                                      | Date       | Issue                                                           | Spec PR | Implementation |
-| --------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ------- | -------------- |
-| [The journey in its day: a transport row in the planner's one sequence](2026-09-11-journey-in-its-day.md) | 2026-09-11 | [#175](https://github.com/design4pro/planned.travel/issues/175) | —       | —              |
+| Spec                                                                                                                         | Date       | Issue                                                           | Spec PR                                                         | Implementation |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [Who is on this trip: the people route, the membership guards, and the visibility switch](2026-09-11-who-is-on-this-trip.md) | 2026-09-11 | [#118](https://github.com/design4pro/planned.travel/issues/118) | [#436](https://github.com/design4pro/planned.travel/issues/436) | —              |
+| [The journey in its day: a transport row in the planner's one sequence](2026-09-11-journey-in-its-day.md)                    | 2026-09-11 | [#175](https://github.com/design4pro/planned.travel/issues/175) | —                                                               | —              |
 
 ## In progress — a build is open (1)
 
