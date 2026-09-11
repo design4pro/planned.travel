@@ -96,6 +96,8 @@ refusals and the browser evidence. The capability lands here.
 
 ## Progress
 
+PR: #438
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: The day can be asked what it carries
@@ -122,5 +124,5 @@ refusals and the browser evidence. The capability lands here.
 - [x] 3.3 `plan-screen.tsx` wires it — 091fcbcb
 - [x] 3.4 `plan-move.ts` takes the refusals and their words — 7e51030e
 - [x] 3.5 The e2e block appended to `e2e/journeys.spec.ts` — 35b71fd1
-- [ ] 3.6 The blind A/B pair on the three declared states
+- [x] 3.6 The blind A/B pair on the three declared states — d1acdca3
 - [ ] 3.7 The full validation gate
