@@ -23,23 +23,23 @@ It is a route, not an eighth tab: `TRIP_TABS` stays at seven. A membership chang
 
 **The evidence, measured in the tree at `e53d97c3`:**
 
-- `src/routes/_app/trips/$tripId/` holds ten route files (`plan`, `costs`, `collab`, `book`, `files`, `lists`, `transports`, `index`, `route`, `-costs`). None of them is a people surface.
+- `src/routes/_app/trips/$tripId/` holds nine route files (`index`, `route`, `plan`, `costs`, `collab`, `book`, `files`, `lists`, `transports`). None of them is a people surface.
 - `listTripParticipants` does not exist: zero matches across `src/` and `e2e/`.
 - `addTripMember` (`src/server/repos/trips.ts:1459`) parses its input, calls `requireTrip`, and inserts. It never checks that `values.userId` belongs to the caller's organization, so a well-formed id for _any_ account in the database becomes a membership row.
 - `removeTripMember` (`:1483`) is a bare `tripMembersRepository.requireRemove`. Removing a trip's last `owner` leaves a trip on which `assertTripRole(scope, tripId, ['owner'])` refuses every write for ever — `updateTrip`, `archiveTrip`, `deleteTrip` and this spec's own visibility switch all route through `requireOwnedTrip`.
-- `updateTripMember` (`:1471`) is a bare `requireUpdate`: no `requireTrip`, no role assert. An editor can promote themselves.
+- `updateTripMember` (`:1471`) is a bare `requireUpdate`: no `requireTrip`, no role assert. An editor can promote themselves, and **demoting a sole owner reaches the same unownable trip the removal guard exists to prevent** — by a different verb.
 - None of the three calls `assertTripRole`, the guard `01-S1` added at `:433` and which `transports.ts`, `itinerary.ts` and the lifecycle handlers all use.
 - `listTripMembers` (`:1422`) orders by `asc(tripMembers.createdAt)` alone. `created_at` is a millisecond timestamp, so an owner and a member created inside one request tie, and SQLite may return tied rows in either order.
-- `src/components/layout/trip-sub-nav.tsx:148` — the Share button is a `Link to="/trips/$tripId/collab"`, the conversation tab, which is not a people surface and not a sharing surface either.
+- `src/components/layout/trip-sub-nav.tsx:161` — the Share button is a `Link to="/trips/$tripId/collab"`, the conversation tab, which is not a people surface and not a sharing surface either.
 - The one existing caller of the three writers outside tests is `src/routes/api/dev/-seed/apply-trip.ts` (`:158`, `:165`), which calls them with an `owner`-scoped seed principal.
 
-**What it costs.** Two different things, and they deserve separating. The missing screen is a product hole: a collaborative trip planner cannot say who is on the trip. The missing guards are an integrity hole that is worse than it looks, because `01-S8`'s initial-members picker and `01-S9`'s participant vocabulary are both scheduled to call these same writers — a guard added at one call site would be a guard the next call site does not have. That is precisely the failure `docs/SPEC.md` §8 is written against.
+**What it costs.** Two different things, and they deserve separating. The missing screen is a product hole: a collaborative trip planner cannot say who is on the trip. The missing guards are an integrity hole that is worse than it looks, because `01-S8`'s initial-members picker and `01-S9`'s participant vocabulary are both scheduled to call these same writers — a guard added at one call site would be a guard the next call site does not have. That is precisely the failure `docs/SPEC.md` §8 is written against, and it is why the guards ship on their own pull request ahead of the screen.
 
 ## 📝 Proposed Solution
 
 Four moves, in dependency order, and nothing wider.
 
-1. **The guards go inside the writers** (`src/server/repos/trips.ts`). `addTripMember` resolves the target through `getMembership` (`src/server/repos/members.ts:144`) and refuses a user who is not in the caller's workspace. `removeTripMember` refuses the trip's last `owner`. All three call `assertTripRole(scope, tripId, ['owner'])`, with one documented exception — the **self-removal** path, where the membership row being removed is the acting user's own. The exception lives inside `removeTripMember`, not beside it, so there is no second path around the guard.
+1. **The guards go inside the writers** (`src/server/repos/trips.ts`). `addTripMember` resolves the target through `getMembership` (`src/server/repos/members.ts:144`) and refuses a user who is not in the caller's workspace. `removeTripMember` refuses the trip's last `owner`, and `updateTripMember` refuses to demote them — one trip invariant, two verbs that reach it. All three call `assertTripRole(scope, tripId, ['owner'])`, with one documented exception: the **self-removal** path, where the membership row being removed is the acting user's own. The exception lives inside `removeTripMember`, not beside it, so there is no second path around the guard.
 
 2. **`listTripParticipants(scope, tripId)` becomes the one read model.** It calls `requireTrip` **first** — the specific trap being that `listTripMembers` answers a foreign trip id with `[]` through the tenant filter rather than raising, so a reader that skips `requireTrip` reports "a trip with no people" instead of refusing. It returns one array of a discriminated union whose `guest` variant is **declared and never produced** until `01-S6b`, which is what makes every later picker exhaustive over `kind` from this slice on.
 
@@ -50,14 +50,14 @@ Four moves, in dependency order, and nothing wider.
 **Alternatives considered.**
 
 - _A modal on the trip index, instead of a route._ Rejected, and the plan's argument stands measurement: a route buys a shareable address, a mobile layout that is a full page rather than a squeezed sheet, and a URL the e2e block can visit. A modal buys one fewer file.
-- _Guards at the server-function layer._ Rejected: it is the shape the bug already has. `apply-trip.ts` calls these writers today and `01-S8`/`01-S9` will tomorrow; a handler-level guard is one that every non-handler caller silently lacks.
+- _Guards at the server-function layer._ Rejected: it is the shape the bug already has. `apply-trip.ts` calls these writers today and `01-S8`/`01-S9` will tomorrow; a handler-level guard is one that every non-handler caller silently lacks. This rejection is why the demotion guard in move 1 is in `updateTripMember` rather than in `setTripRoleFn`, at the cost of two edited test cases (Resolved assumption A4).
 - _A new `trip-participants.ts` repository module._ Rejected for this slice — see Resolved assumption A1.
 
 ## 📝 Architecture
 
 | Layer        | File                                                        | What it owns                                                                                   |
 | ------------ | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Repository   | `src/server/repos/trips.ts` (edit)                          | The three guards, the total order on `listTripMembers`, and `listTripParticipants`             |
+| Repository   | `src/server/repos/trips.ts` (edit)                          | The four guards, the total order on `listTripMembers`, and `listTripParticipants`              |
 | Route server | `src/routes/_app/trips/$tripId/-server/people.ts` (new)     | Tenant scope, Zod validators, the payload shape, the notification, the statistics fan-out call |
 | Route server | `src/routes/_app/-server/trip-lifecycle.ts` (edit)          | Unchanged behaviour; exports one narrow helper so the fan-out keeps a single owner             |
 | Route        | `src/routes/_app/trips/$tripId/people.tsx` (new)            | Loader wiring, `pendingComponent`, `errorComponent`                                            |
@@ -66,7 +66,7 @@ Four moves, in dependency order, and nothing wider.
 
 **Authorisation, said once.** Who may _see_ the trip is `requireTrip`, whose refusal is `NotFoundError` and is indistinguishable from a foreign tenant's (ADR 0007). Who may _change_ it is `assertTripRole`, whose refusal is `FORBIDDEN` and is safe precisely because it is reached only after `requireTrip`. Reading the people list requires membership **or** `visibility = 'organization'`, which `requireTrip` establishes inside the caller's scope. `beforeLoad` on the new route is UX — it makes the page fail gracefully — and is never the boundary.
 
-**The statistics fan-out keeps one owner.** `enqueueTravelStats` and `affectedStatYears` are module-private in `src/routes/_app/-server/trip-lifecycle.ts:298` and `:275`, and they carry three decisions in their doc comment that must not be re-derived: the recipient set is the trip's members and not the workspace, the envelope ids are `00-S4`'s so a burst collapses onto one recompute per `(user, year)`, and a queue refusal is caught and logged rather than failing the write. This spec adds **one exported wrapper** to that module —
+**The statistics fan-out keeps one owner.** `enqueueTravelStats` (`src/routes/_app/-server/trip-lifecycle.ts:321`) and `affectedStatYears` (`:275`) are module-private, and they carry three decisions in their doc comment that must not be re-derived: the recipient set is the trip's members and not the workspace, the envelope ids are `00-S4`'s so a burst collapses onto one recompute per `(user, year)`, and a queue refusal is caught and logged rather than failing the write. This spec adds **one exported wrapper** to that module —
 
 ```ts
 export async function enqueueTripStatsFor(
@@ -94,7 +94,7 @@ export async function enqueueTripStatsFor(
 
 ## 📝 API Contracts
 
-All in `src/routes/_app/trips/$tripId/-server/people.ts`. Zod v4, `z.strictObject()` with the `error` parameter, and `z.enum(TRIP_MEMBER_ROLES)` reading the tuple `src/server/db/schema.ts:157` already exports rather than restating it.
+All in `src/routes/_app/trips/$tripId/-server/people.ts`. Zod v4, `z.strictObject()` with the `error` parameter, and `z.enum(TRIP_MEMBER_ROLES)` reading the tuple `src/server/db/schema.ts:263` already exports rather than restating it.
 
 | Function              | Method | Input                        | Returns                  |
 | --------------------- | ------ | ---------------------------- | ------------------------ |
@@ -140,6 +140,8 @@ export interface TripPeoplePayload {
 }
 ```
 
+**`colour` is in the union and is not rendered by this screen.** `trip_members.colour` (`schema.ts:772`) is the per-trip tint the participant surfaces use — the expense-split rows in `04-*`, the planner's participant chips in `01-S9`. It belongs to the read model those surfaces consume, which is what `listTripParticipants` is for; the people list identifies people by avatar and name and has nothing to tint. Carrying it costs one column of one query and saves every later picker a second read.
+
 **`loadTripPeople` sends an answer, not a directory.** `invitable` is the workspace's members (`listMemberProfiles`) minus everybody already on the trip, computed on the server, so the client never receives a list it then has to subtract from. For a non-owner it is `[]` — a reader who cannot invite is not handed the workspace roster.
 
 **`viewerRole` is `null` for an organization-visible trip the caller holds no membership on.** That is a real state after ADR 0007, and it is what makes the screen read-only rather than broken.
@@ -161,33 +163,32 @@ export async function listTripParticipants(
 
 ## 📝 UI/UX
 
-**Route.** `src/routes/_app/trips/$tripId/people.tsx`, default SSR, the same loader/pending/error shape every sibling route uses (`collab.tsx:23-27` is the pattern). `pnpm generate-routes` runs after the file lands; `src/routeTree.gen.ts` is generated, travels in the diff, and is never hand-edited.
+**Route.** `src/routes/_app/trips/$tripId/people.tsx`, default SSR, the same loader/pending/error shape every sibling route uses (`collab.tsx:23-27` is the pattern).
 
-**It is a route, not an eighth tab.** `TRIP_TABS` (`src/components/layout/nav-model.ts`) stays at seven, which `01-S3`'s test asserts. The screen is reached from the sub-navigation's existing Share button, whose `Link` destination moves from `/trips/$tripId/collab` to `/trips/$tripId/people` — a one-line change at `trip-sub-nav.tsx:148`. The button's words do not change: the screen holds the visibility switch now and will hold link sharing when `COL-10`/`COL-11` land, so "Share" stays honest.
+**It is a route, not an eighth tab.** `TRIP_TABS` (`src/components/layout/nav-model.ts`) stays at seven, which `src/lib/__tests__/trip-tab.test.ts:26` asserts with a literal `toHaveLength(7)`. The screen is reached from the sub-navigation's existing Share button, whose `Link` destination moves from `/trips/$tripId/collab` to `/trips/$tripId/people` — a one-line change at `trip-sub-nav.tsx:161`. The button's words do not change: the screen holds the visibility switch now and will hold link sharing when `COL-10`/`COL-11` land, so "Share" stays honest.
 
 **Layout.** Above `lg`, two columns. Left: the members list. Right: the invite control, then the visibility card, then the space the link-sharing card will occupy. Below `lg` the columns stack **invite first**, because on a phone the reason you opened this page is to add somebody.
 
-**The reserved link-sharing card renders nothing.** `docs/SPEC.md` §7 bans placeholder copy, and a card announcing a feature that does not exist is exactly that. What this slice ships is the column that reserves the space, and a comment in the aside naming the tickets that fill it.
+**The reserved link-sharing card renders nothing.** `docs/SPEC.md` §7 bans placeholder copy, and a card announcing a feature that does not exist is exactly that. What this slice ships is the column that reserves the space, and a comment in the aside naming `COL-10` and `COL-11` (`docs/plans/07-collaboration-and-sharing.md`) as the tickets that fill it.
 
-**The member row.** `Avatar`, the person's name, a role `Badge`, an owner marking, and a `Badge` reading "You" on the caller's own row. A non-owner row carries a remove `IconButton`; the caller's own row carries a **leave** affordance instead — a different verb, a different icon, and a different consequence, because leaving redirects to `/trips` and removing does not move you anywhere. The role control is a `Select` on each row, owner-only, and it is **absent from the row of a trip's sole owner** (see Resolved assumption A4).
+**The member row.** `Avatar`, the person's name, a role `Badge`, an owner marking, and a `Badge` reading "You" on the caller's own row. A non-owner row carries a remove `IconButton`; the caller's own row carries a **leave** affordance instead — a different verb, a different icon, and a different consequence, because leaving redirects to `/trips` and removing does not move you anywhere. The role control is a `Select` on each row, owner-only, and it is **absent from the row of a trip's sole owner**, because the only role change available there is the demotion `updateTripMember` now refuses.
 
 **There is no handle on the row.** The ticket's Desired behaviour names one; `user` has `name`, `email` and `image` and nothing else identity-shaped, so a handle can only be derived from the address. Resolved assumption A3 records the decision and its reasoning.
 
 **The visibility card.** A `Card` with one `Switch` reading "Visible to everyone in the workspace" and its current state in words beneath it. Rendered interactive for the `owner`; rendered as the sentence alone, with no control, for everybody else. Flipping it is a plain toggle rather than a dialog — it is reversible — but the sentence changes with it so the consequence is read rather than inferred.
 
-**Components reused, not rebuilt.** `Card`, `SectionLabel`, `Avatar`, `Badge`, `Button`, `IconButton`, `Combobox`, `Select`, `Switch`, `Dialog`, `Alert`, `EmptyState`, `Skeleton`, `Separator`, `Tooltip` — every one already exported from `src/components/ui/index.ts`. No new primitive is required and none is proposed. `components/ui` is not touched.
+**No new primitive.** Everything on the screen comes from `src/components/ui`; `components/ui` itself is not touched and nothing is added to it.
 
 **States.**
 
-- _Empty._ A trip with one member is the common first state and is not an error. The members list always has at least the owner, so it has no empty state; the **invite** control does — a workspace whose every member is already on the trip shows a resolved empty state pointing at workspace invitations rather than an endlessly empty dropdown.
+- _Empty._ The members list always has at least the owner, so it has no empty state. The **invite** control does: a workspace whose every member is already on the trip shows a resolved empty state pointing at workspace invitations rather than an endlessly empty dropdown.
 - _Skeleton._ The route's `pendingComponent` renders two column skeletons of the loaded lists' height, reusing `RowsSkeleton` from `src/routes/_app/-ui/scaffold.tsx`.
 - _Error._ The route's `errorComponent` uses the shipped `ErrorPanel`, as every other trip route does. A failed write leaves its own row in an error state carrying the server's message and a Retry, and never clears the list.
 - _Destructive confirmation._ Removing somebody states that they lose access and that what they added stays; leaving states that you lose access until somebody adds you back. Both are `Dialog`s with a `loading` button, never a browser `confirm`.
-- _Every control._ Rest, hover, focus-visible, active, disabled and loading — including the invite button, disabled until a person is chosen and `loading` while the write is in flight.
 
-**Accessibility.** The members list is a `ul` with an accessible name from its `SectionLabel`. The `Switch` is labelled by the sentence it governs and announces its state through the primitive's own `role="switch"`/`aria-checked`. The remove and leave controls are `IconButton`s with accessible names that include the person's name, so a screen-reader user never meets three identically-named buttons. Focus after a removal moves to the list heading rather than being dropped on a detached node. WCAG 2.2 AA contrast in both themes, keyboard navigable end to end.
+**Accessibility, where this screen is not the house default.** The remove and leave controls are `IconButton`s whose accessible names include the person's name, so a screen-reader user never meets three identically-named buttons. Focus after a removal moves to the list heading rather than being dropped on a detached node. The `Switch` is labelled by the sentence it governs and announces its state through the primitive's own `role="switch"`/`aria-checked`. Everything else — contrast, keyboard order, the five interaction states — is `docs/SPEC.md` §2, which applies without being restated.
 
-**Motion.** Rows enter with opacity and a 4px lift over 220ms on `--ease-out-quint`, staggered 24ms and capped at eight. A removed row leaves in 150ms. `prefers-reduced-motion: reduce` collapses both to opacity.
+**Motion.** Rows enter on opacity and a small lift, staggered and capped, within the §2 duration and easing tokens; a removed row leaves on opacity. `prefers-reduced-motion: reduce` collapses both to opacity.
 
 ## 📝 Visual change expected
 
@@ -204,7 +205,7 @@ No existing screen changes visually. The sub-navigation change is a destination,
 
 ## 📝 Copy
 
-Thirty-one new keys. All land in the existing `trips` namespace, in **all 23 locales in this same change**, per `docs/SPEC.md` §9 and the `i18n-messages` skill; the parity test enforces it. `error.people` joins the namespace's existing per-tab failure-title block (`error.trip`, `error.plan`, `error.costs`, `error.collab`); everything else is prefixed `people.`.
+Thirty-one new keys. All land in the existing `trips` namespace, in **all 23 locales in this same change**, per `docs/SPEC.md` §9 and the `i18n-messages` skill; the parity test enforces it. `error.people` joins the namespace's existing per-tab failure-title block (`error.trip`, `error.plan`, `error.costs`, `error.collab`, `error.book`, `error.transports`, `src/lib/i18n/messages/en/trips.ts:27-32`); everything else is prefixed `people.`.
 
 | Key (`trips` namespace)          | `en` text                                                                      |
 | -------------------------------- | ------------------------------------------------------------------------------ |
@@ -240,6 +241,8 @@ Thirty-one new keys. All land in the existing `trips` namespace, in **all 23 loc
 | `people.error.lastOwner`         | A trip keeps at least one owner. Make somebody else an owner first.            |
 | `people.error.notInWorkspace`    | That person is not in this workspace                                           |
 
+**`people.error.lastOwner` answers both verbs.** It is what the screen shows whether the refusal came from removing the last owner or from demoting them, because from the reader's side it is one rule.
+
 **`people.cancel` is namespace-local on purpose.** The catalogue has no shared action namespace — `modules.action.cancel` and `console.dialog.cancel` are each their own — and inventing one is a cross-cutting change this slice does not own.
 
 **The notification needs no new key.** `addTripMemberFn` writes `titleKey: 'shell.notification.trip.invited.title'` and `bodyKey: 'shell.notification.trip.invited.body'`, both already in the catalogue (`src/lib/i18n/messages/en/shell.ts:172-173`), with `{ tripTitle }` and `{ actorName }` as params, the trip's own URL as `actionUrl` and the trip id as the entity. One notification per invitation, so no fan-out and no chunking question — `notifyMany` is not used and the queue is not touched by the notification.
@@ -253,6 +256,7 @@ Thirty-one new keys. All land in the existing `trips` namespace, in **all 23 loc
 | Adding a user id from another organization                     | `getMembership` answers `null`; `addTripMember` raises. The screen shows `people.error.notInWorkspace`. The picker cannot produce such an id — the guard is for every other caller.         |
 | Adding somebody already on the trip                            | They are not in `invitable`, so the picker cannot offer them. A direct call inserts a second row; the unique constraint on `trip_members` is the backstop, and the screen never reaches it. |
 | Removing the trip's last owner                                 | Refused in `removeTripMember`. The screen shows `people.error.lastOwner` and the row stays.                                                                                                 |
+| Demoting the trip's last owner                                 | Refused in `updateTripMember`, with the same message. The screen does not offer a role control on a sole owner's row, so the guard is for every other caller.                               |
 | The sole owner tries to leave                                  | Same refusal, same message: leaving _is_ self-removal, and the last-owner guard runs before the self-removal exemption.                                                                     |
 | An editor tries any membership write                           | `assertTripRole` raises `FORBIDDEN`. The screen never offers the control; the guard is for everybody else.                                                                                  |
 | A non-member opens a private trip's people route               | `requireTrip` raises `NotFoundError`. The route's `errorComponent` renders `ErrorPanel`; the reader learns nothing about whether the trip exists.                                           |
@@ -267,17 +271,20 @@ Thirty-one new keys. All land in the existing `trips` namespace, in **all 23 loc
 
 **Blast radius: three existing repository writers tighten.** Their signatures do not change, so nothing fails to compile; their _refusals_ change, so a caller relying on the unguarded path breaks at runtime. A repo-wide scan finds exactly one non-test caller — `src/routes/api/dev/-seed/apply-trip.ts:158,165` — which calls them with an `owner`-scoped seed principal and is therefore unaffected by the role assert. It seeds within one organization, so the workspace guard passes too. The seed is exercised by `pnpm worktree:bootstrap` and by the e2e fixtures, so a mistake here fails loudly rather than quietly.
 
-**Tests that build an ownerless or memberless trip through `removeTripMember` will go red**, because the last-owner guard makes that state unreachable through the repository. `src/server/queue/__tests__/reminders.test.ts` is the known case: two of its fixtures build exactly that state to assert what the reminder sweep does when it meets one. That assertion is still worth having — the state is unreachable through the product but not unreachable in the table, for rows predating the guard or a member whose account has left the workspace — so those fixtures delete the row through the harness database instead, with the reason written down beside them. That file is a declared owned path of this spec, and the change is test-only.
+**Two test fixtures depend on the states the guards make unreachable, and both are declared work.**
+
+- `src/server/queue/__tests__/reminders.test.ts:257` — the `dropTripMember` helper builds an ownerless or memberless trip through `removeTripMember`, for the two cases at `:742` and `:755` that assert what the reminder sweep does when it meets one. That assertion is still worth having: the state is unreachable through the product but not unreachable in the table, for rows predating the guard or a member whose account has left the workspace. The helper deletes the row through the harness database instead, with the reason written down beside it. Test-only, and it lands **before** the guard so the suite is never red between two steps.
+- `src/server/repos/__tests__/tenant-isolation.test.ts:3311` and `:3341` — both demote a sole owner through `updateTripMember` on the way to asserting something else entirely (that a demoted owner gets `FORBIDDEN` rather than `NOT_FOUND`, and that a delete refused to a demoted owner leaves the trip intact). Each gains a second owner before the demotion; what they assert is unchanged. Two lines in two cases, in a file this spec already owns.
 
 **`BACKWARD_COMPATIBILITY.md`.** Nothing on its protected list is broken. The new route is additive; the new server functions are additive; `listTripParticipants` is a new read rather than a changed one; no migration runs; no exported signature changes. The tightening of three writers is a behaviour change to an internal repository surface with one in-repo caller, not to a published contract.
 
 **PRD decision 11 versus the frozen plan.** The plan's `01-S6` server section says "nothing slow, nothing enqueued". FR #118's Definition of Done requires that a membership change enqueue a `travel-stats` task, citing decision 11. The ticket is the execution surface and it wins; the enqueue is implemented through the existing fan-out so the plan's real concern — not inventing a second queue mechanism — is honoured. Recorded here so a reviewer reading the frozen plan beside this spec does not read the difference as drift.
 
-**Reversibility.** Every state change on this screen is undone by its opposite on the same screen: a removal by an invitation, a role change by a role change, a visibility flip by the flip back. Leaving is the one exception — a member who leaves cannot re-add themselves, which is why it is a dialog and why its copy says so. No migration means no rollback story: reverting the PR restores the previous behaviour exactly.
+**Reversibility.** Every state change on this screen is undone by its opposite on the same screen: a removal by an invitation, a role change by a role change, a visibility flip by the flip back. Leaving is the one exception — a member who leaves cannot re-add themselves, which is why it is a dialog and why its copy says so. No migration means no rollback story: reverting a phase's pull request restores the previous behaviour exactly.
 
-**Review focus.** `risk-high` is right on the ticket. A reviewer should spend their attention on three things and nothing else: that the guards are in the writers rather than in the handlers, that `listTripParticipants` calls `requireTrip` before it calls anything that would answer `[]`, and that no email reaches the payload.
+**Review focus.** `risk-high` is right on the ticket. A reviewer should spend their attention on three things: that the guards are in the writers rather than in the handlers, that `listTripParticipants` calls `requireTrip` before it calls anything that would answer `[]`, and that no email reaches the payload.
 
-## 📝 Owned paths, and the twenty-six this spec adds
+## 📝 Owned paths, and the twenty-seven this spec adds
 
 FR #118's Owned paths, unchanged:
 
@@ -286,7 +293,7 @@ FR #118's Owned paths, unchanged:
 - `src/routes/_app/trips/$tripId/people.tsx` — new.
 - `src/routes/_app/trips/$tripId/-ui/people-screen.tsx` — new.
 - `src/components/layout/trip-sub-nav.tsx` — edit.
-- `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append, **plus two existing cases edited** (`:3311`, `:3341`; see Risks and A4).
 - `src/server/repos/__tests__/member-isolation.test.ts` — append.
 - `e2e/trips-core.spec.ts` — append.
 
@@ -294,62 +301,74 @@ Added by this spec, each with the reason it could not be avoided:
 
 - `src/lib/i18n/messages/{23 locales}/trips.ts` — edit, **23 files**. `docs/SPEC.md` §9 and `CLAUDE.md` require a new key in every locale in the same change, and the parity test enforces it. The ticket named the obligation without naming the files.
 - `src/routes/_app/-server/trip-lifecycle.ts` — edit. One exported wrapper over the module's own private fan-out. The alternative is a second implementation of a fan-out whose doc comment holds three decisions, which `docs/SPEC.md` §8 forbids.
-- `src/server/repos/__tests__/trip-people.test.ts` — new. The ticket names unit invariants (last owner, workspace guard, role guards, self-removal, participants owner-first, the `requireTrip`-before-answering trap) and no unit-test path to hold them.
+- `src/server/repos/__tests__/trip-people.test.ts` — new. The ticket names unit invariants (last owner by both verbs, the workspace guard, the role guards, self-removal, participants owner-first, the `requireTrip`-before-answering trap, the millisecond tie) and no unit-test path to hold them.
 - `src/routes/_app/trips/$tripId/-server/__tests__/people.test.ts` — new. The seam invariants: the invitable subtraction, a person who has left the workspace, the notification's keys and params, the per-person `travel-stats` envelope, no email on the wire, `'public'` refused.
-- `src/server/queue/__tests__/reminders.test.ts` — edit, test-only. Two fixtures build an ownerless or memberless trip through `removeTripMember`, which the new guard refuses. See Risks.
+- `src/server/queue/__tests__/reminders.test.ts` — edit, test-only. See Risks.
 
-`src/routeTree.gen.ts` is **not** an owned path and is never hand-edited. `pnpm generate-routes` is a step of this work and the regenerated tree travels in the diff — the one mechanical exception the plan grants a stage that adds a route file. `.ai/specs/README.md` is regenerated by `pnpm generate-spec-index` and travels with this spec.
+That is 23 + 4 = **27**. `src/routeTree.gen.ts` is **not** an owned path and is never hand-edited: `pnpm generate-routes` is a step of Phase 2 and the regenerated tree travels in the diff, which is the one mechanical exception the plan grants a stage that adds a route file. `.ai/specs/README.md` is regenerated by `pnpm generate-spec-index` and travels with this spec.
 
 ## 📝 Resolved assumptions (autonomous defaults)
 
-Six Open Questions, resolved under `om-spec-writing --autonomous`. Each is the most reversible answer that still ships something working, and each is here to be overruled before merge.
+Six Open Questions, resolved under `om-spec-writing --autonomous`. Each is here to be overruled before merge.
 
 **A1 — `listTripParticipants` lives in `src/server/repos/trips.ts`, not in a new module.** The frozen plan puts it in `src/server/repos/trip-guests.ts`, a file `01-S6b` creates. This slice has no guests module and FR #118's Owned paths name no new repository file. Putting it beside `listTripMembers`, whose result it shapes, adds no file, no barrel export line and no import cycle. `01-S6b` may move it to `trip-guests.ts` when it fills the guest variant; at that point it has exactly one consumer, so the move is cheap. The **union type and its discriminant are the contract** and do not change either way — that is what later pickers depend on. _Rationale: least new surface; the plan's placement is driven by a file this slice does not create._
 
-**A2 — the statistics fan-out is reached by exporting one wrapper from `trip-lifecycle.ts`.** The alternatives were re-implementing the envelope arithmetic inside `people.ts`, which duplicates a concept that carries three decisions in its doc comment, or dropping the requirement, which contradicts the ticket's Definition of Done. The export is additive and changes no existing behaviour. _Rationale: `docs/SPEC.md` §8, one concept one owner; the added owned path is one file and one line of public surface._
+**A2 — the statistics fan-out is reached by exporting one wrapper from `trip-lifecycle.ts`.** The alternatives were re-implementing the envelope arithmetic inside `people.ts`, which duplicates a concept carrying three decisions in its doc comment, or dropping the requirement, which contradicts the ticket's Definition of Done. The export is additive and changes no existing behaviour. _Rationale: `docs/SPEC.md` §8, one concept one owner; the added owned path is one file and one line of public surface._
 
-**A3 — the member row shows no handle.** FR #118's Desired behaviour names "avatar, name, handle, role badge"; the `user` table has `name`, `email` and `image` and nothing else identity-shaped, so a handle in this slice can only be the local part of an email address. That contradicts the same ticket's "no email appears anywhere" more than it honours the row description, and it would put a fragment of an address in front of every trip member when today the full address is rendered only on the admin-gated workspace screen (`src/routes/_app/admin.tsx:388`). The row ships as avatar, name, role badge, owner marking and the "You" badge. A real handle is a `user` column and belongs to the account area. _Rationale: does not weaken what the workspace already exposes; reversible — a handle is additive once a column exists. Overrule this if a derived `@local-part` is wanted on the row._
+**A3 — the member row shows no handle.** FR #118's Desired behaviour names "avatar, name, handle, role badge"; the `user` table has `name`, `email` and `image` and nothing else identity-shaped, so a handle in this slice can only be the local part of an email address. That contradicts the same ticket's "no email appears anywhere" more than it honours the row description, and it would put a fragment of an address in front of every trip member when today the full address is rendered only on the admin-gated workspace screen (`src/routes/_app/admin.tsx:388`). The row ships as avatar, name, role badge, owner marking and the "You" badge. A real handle is a `user` column and belongs to the account area. _Rationale: does not widen what the workspace already exposes; reversible — a handle is additive once a column exists. Overrule this if a derived `@local-part` is wanted on the row._
 
-**A4 — demoting a trip's sole owner is refused at the server function, and the writer-level guard is filed as a follow-up.** FR #118 names three guards and demotion is not among them, but this slice is what makes demotion **reachable**: before it, nothing in the product changed a role. Guarding `updateTripMember` itself is the correct place and is what a later reader will expect — but two existing cases in `tenant-isolation.test.ts` (`:3311` "answers a demoted owner with FORBIDDEN, not NOT_FOUND" and `:3341` "refuses a delete to a demoted owner") demote a sole owner on purpose, inside `01-S1`'s `describe` block, in a file this slice's disposition is _append_. Closing the hole properly means editing those two cases to seed a second owner first, which is `01-S1`'s change to make. So: `setTripRoleFn` refuses to demote the last owner, the screen omits the role control on a sole owner's row, and the writer-level guard is filed as a follow-up issue against `01-S1`'s owner. ⚠ **NEEDS HUMAN CONFIRMATION** — the alternative is to widen this slice by two test-case edits and put the guard where it belongs.
+**A4 — demoting a trip's sole owner is refused in `updateTripMember`, not in the server function, and two existing test cases are edited to make room for it.** FR #118 names three guards and demotion is not among them — but this slice is what makes demotion **reachable**, because before it nothing in the product changed a role, and a demoted sole owner leaves exactly the unownable trip the removal guard exists to prevent. Guarding it in the handler instead was considered and rejected: it is the shape this spec's own Proposed Solution rejects, and `01-S8` and `01-S9` will call `updateTripMember` without going through `setTripRoleFn`. The cost is two lines in two existing cases in `tenant-isolation.test.ts` (`:3311`, `:3341`), both of which demote a sole owner incidentally on the way to asserting something else; each gains a second owner first and its assertion is untouched. The file is already this slice's, with disposition _append_ — editing two cases inside it is the one place this spec steps past that disposition, and it does so deliberately rather than leaving a reachable way to make a trip unownable. _Overrule this if the demotion guard should instead be a separate ticket against `01-S1`, in which case the role control must stay off a sole owner's row regardless._
 
 **A5 — the Share button keeps its words.** Its destination moves from the conversation tab to the people route; the label stays `shell.trip.nav.share`. The screen holds the visibility switch today and the link-sharing card when `COL-10`/`COL-11` land, so "Share" is not a lie, and renaming a shell key is a 23-locale change for a word this slice was not asked to change. _Rationale: smallest scope; trivially reversible._
 
-**A6 — the e2e evidence is one behavioural block in `e2e/trips-core.spec.ts`, with no screenshots.** The frozen plan specifies `e2e/trips-core.visual.spec.ts` and a capture ritual; ADR 0016 retired the visual gate and FR #118 names the behavioural file. The ticket and the ADR agree with each other and disagree with the frozen plan, and they win. Browser evidence for the PR comes from `om-auto-qa-pr` instead, which is what `needs-qa` on the implementation PR is for. _Rationale: follows the current ADR; no baselines are recorded or moved._
+**A6 — the e2e evidence is one behavioural block in `e2e/trips-core.spec.ts`, with no screenshots.** The frozen plan specifies `e2e/trips-core.visual.spec.ts` and a capture ritual; ADR 0016 retired the visual gate and FR #118 names the behavioural file. The ticket and the ADR agree with each other and disagree with the frozen plan, and they win. Browser evidence for the screen comes from `om-auto-qa-pr` on Phase 2's pull request, which is what `needs-qa` is for. _Rationale: follows the current ADR; no baselines are recorded or moved._
 
 ## 📋 Phasing
 
-One phase. The three parts are not independently shippable in any useful sense — guards with no screen are invisible, and a screen calling unguarded writers is the defect this slice exists to close — and the whole is an afternoon of work rather than a programme. Splitting it would buy nothing and would leave `develop` carrying a people route whose writers do not hold.
+**Two phases, two pull requests, in this order.** They are independently deployable and the first is independently valuable: `01-S8`'s initial-members picker and `01-S9`'s participant vocabulary need the guards and the read model, not the screen, and shipping a `risk-high` authorisation change on its own pull request is what gives a reviewer a diff they can actually hold in their head.
 
-**Phase 1 — the people route and its guards.** Every step below, shipped on one implementation PR carrying `Closes #118`.
+- **Phase 1 — the membership writers hold, and there is one read model.** Steps 1-7. No user-visible change: no route, no copy, no screen. Its pull request carries `Refs #118` and `skip-qa`.
+- **Phase 2 — the people route.** Steps 8-13, on top of Phase 1. Its pull request carries `Closes #118` and `needs-qa`.
+
+**The visibility switch stays in Phase 2 rather than becoming a third phase.** It is a different column, a different PRD decision and a different repository function from the membership writers, and on those grounds it is separable — but it is on the same route, in the same loader payload, and a people screen that cannot say who can find the trip answers half of the question the ticket asks. Splitting it would buy a smaller diff and cost a coherent screen.
 
 ## 📋 Implementation Plan
 
-Each step leaves the application working and is verified by the assertion named with it. The gate is `.ai/agentic.config.json`'s `validation.commands`, run in full at the end; individual steps run the targeted subset.
+Each step leaves the application working — including the test suite, which is why Step 1 precedes the guard it exists to make room for. The gate is `.ai/agentic.config.json`'s `validation.commands`; individual steps run the targeted subset, and the full gate runs at the end of each phase.
 
-**Step 1 — the total order on `listTripMembers`.** Add `asc(tripMembers.id)` after `asc(tripMembers.createdAt)` in `src/server/repos/trips.ts:1428`, with a comment naming the millisecond tie. _Verified by:_ `pnpm test src/server/repos` stays green — this makes an arbitrary order deterministic and changes no asserted behaviour.
+### Phase 1 — the membership writers hold
 
-**Step 2 — the workspace guard on `addTripMember`.** Resolve `values.userId` through `getMembership` and raise when it is absent. _Verified by:_ a new case in `src/server/repos/__tests__/trip-people.test.ts` — a user id from a second organization raises and writes no row; and the appended `tenant-isolation.test.ts` block — `addTripMember` with a user id from B's organization raises in A's scope.
+**Step 1 — free the reminder fixtures from `removeTripMember`.** `dropTripMember` (`src/server/queue/__tests__/reminders.test.ts:257`) deletes the membership row through the harness database rather than through the repository, with the reason written beside it: the sweep's behaviour on an ownerless trip is still worth asserting because the row can exist even once the writer refuses to create one. _Verified by:_ `pnpm test src/server/queue` green, with the cases at `:742` and `:755` unchanged in what they assert.
 
-**Step 3 — the last-owner guard on `removeTripMember`.** Count the trip's `owner` rows before removing; refuse when the target is the last one. _Verified by:_ `trip-people.test.ts` — removing the sole owner raises and the row survives; removing an owner with a second owner present succeeds.
+**Step 2 — give the two demotion cases a second owner.** `tenant-isolation.test.ts:3311` and `:3341` add a second `owner` membership before demoting the first. _Verified by:_ `pnpm test src/server/repos` green; both cases still assert `FORBIDDEN` on `archiveTrip` and on `deleteTrip` respectively.
 
-**Step 4 — the owner assert on all three writers, with the self-removal exemption.** `addTripMember`, `updateTripMember` and `removeTripMember` call `assertTripRole(scope, tripId, ['owner'])`; `updateTripMember` and `removeTripMember` gain the `requireTrip` that resolves the trip id from the membership row first. `removeTripMember` skips the assert — and only the assert — when the target row's `userId` is `scope.ctx.userId`. _Verified by:_ `trip-people.test.ts` — an editor is refused `FORBIDDEN` on all three; a viewer removes their own membership successfully; a viewer is refused removing somebody else's. Plus the appended `member-isolation.test.ts` block.
+**Step 3 — the total order on `listTripMembers`.** Add `asc(tripMembers.id)` after `asc(tripMembers.createdAt)` (`src/server/repos/trips.ts:1428`), with a comment naming the millisecond tie. _Verified by:_ a new case in `src/server/repos/__tests__/trip-people.test.ts` that inserts two memberships with an **identical `created_at` and ids in the opposite order to their insertion**, and asserts the read returns them in id order. The case must be shown to fail with the tie-break removed — an ordering test that passes either way is asserting the engine's rowid order, not the query's promise.
 
-**Step 5 — fix the two reminder fixtures.** `src/server/queue/__tests__/reminders.test.ts` builds its ownerless and memberless trips through the harness database rather than through `removeTripMember`, with the reason written down. _Verified by:_ `pnpm test src/server/queue` green.
+**Step 4 — the workspace guard on `addTripMember`.** Resolve `values.userId` through `getMembership` and raise when it is absent. _Verified by:_ `trip-people.test.ts` — a user id from a second organization raises and writes no row; and the appended `tenant-isolation.test.ts` block — `addTripMember` with a user id from B's organization raises in A's scope.
 
-**Step 6 — `listTripParticipants`.** `requireTrip` first, then `listTripMembers`, then `listUserProfiles` for the member ids, projected to `{ name, image }` and ordered owner-first over the total order from Step 1. The `guest` variant is declared in the union and never produced. _Verified by:_ `trip-people.test.ts` — participants come back owner-first with the discriminant intact, a member missing a profile is dropped rather than rendered nameless; and `tenant-isolation.test.ts` — B's trip id raises `NotFoundError` rather than returning `[]`, which is the trap the ordering of `requireTrip` exists to close.
+**Step 5 — the last-owner guard on both verbs.** `removeTripMember` counts the trip's `owner` rows and refuses when the target is the last one; `updateTripMember` refuses a patch that moves the last `owner` off the `owner` role. _Verified by:_ `trip-people.test.ts` — removing the sole owner raises and the row survives; demoting the sole owner raises and the role is unchanged; both succeed once a second owner exists.
 
-**Step 7 — `enqueueTripStatsFor` exported from `trip-lifecycle.ts`.** A wrapper over the module's existing private helpers; no behaviour changes inside the module. _Verified by:_ `pnpm test src/routes/_app/-server` green, including `trip-lifecycle-side-effects.test.ts`, which asserts the module's side effects structurally.
+**Step 6 — the owner assert on all three writers, with the self-removal exemption.** `addTripMember`, `updateTripMember` and `removeTripMember` call `assertTripRole(scope, tripId, ['owner'])`; `updateTripMember` and `removeTripMember` gain the `requireTrip` that resolves the trip id from the membership row first. `removeTripMember` skips the assert — and only the assert — when the target row's `userId` is `scope.ctx.userId`. _Verified by:_ `trip-people.test.ts` — an editor is refused `FORBIDDEN` on all three; a viewer removes their own membership successfully; a viewer is refused removing somebody else's. Plus the appended `member-isolation.test.ts` block: a non-member of a private trip gets `NotFoundError`, an editor gets `FORBIDDEN` from every membership write and from the visibility write, and organization visibility makes the read available without enabling any write.
 
-**Step 8 — the server module.** `src/routes/_app/trips/$tripId/-server/people.ts`: the six functions, the Zod validators, `readTripPeople` holding the loader's decisions, the invitation notification, and the per-person statistics enqueue after an add and after a remove. _Verified by:_ `src/routes/_app/trips/$tripId/-server/__tests__/people.test.ts` — the invitable list subtracts the trip's members, a person who has left the workspace appears in neither list, the notification carries `shell.notification.trip.invited.*` with `{ tripTitle, actorName }`, a membership change produces exactly one `travel-stats` envelope for that person, no email appears anywhere in the payload, and `'public'` is refused by the validator.
+**Step 7 — `listTripParticipants`, and the fan-out wrapper.** `requireTrip` first, then `listTripMembers`, then `listUserProfiles` for the member ids, projected to `{ name, image }` and ordered owner-first over Step 3's total order; the `guest` variant declared and never produced. Alongside it, `enqueueTripStatsFor` exported from `trip-lifecycle.ts`. _Verified by:_ `trip-people.test.ts` — participants come back owner-first with the discriminant intact, no `email` field appears on any element, and a member with no workspace profile is dropped rather than rendered nameless; `tenant-isolation.test.ts` — B's trip id raises `NotFoundError` rather than returning `[]`, which is the trap the ordering of `requireTrip` exists to close; and `trip-lifecycle-side-effects.test.ts` unchanged and green, which is what proves the wrapper changed no behaviour in the module it was added to. The wrapper's own behaviour is asserted in Step 9, at its first caller.
 
-**Step 9 — the copy.** Thirty-one keys into `src/lib/i18n/messages/en/trips.ts` and all 22 other locales, per the `i18n-messages` skill. _Verified by:_ `pnpm test` — the i18n parity test.
+**Step 8 — Phase 1's gate.** Every command in `validation.commands`, in order. Phase 1's pull request opens here.
 
-**Step 10 — the screen and the route.** `-ui/people-screen.tsx` and `people.tsx`, then `pnpm generate-routes`. _Verified by:_ `pnpm typecheck` — a route file missing from the generated tree fails here rather than in the browser — and `pnpm lint`.
+### Phase 2 — the people route
 
-**Step 11 — the sub-navigation destination.** One line in `src/components/layout/trip-sub-nav.tsx`. _Verified by:_ `pnpm typecheck`; the route must exist by now for the typed `Link` to resolve.
+**Step 9 — the server module.** `src/routes/_app/trips/$tripId/-server/people.ts`: the six functions, the Zod validators, `readTripPeople` holding the loader's decisions, the invitation notification, and the per-person statistics enqueue after an add and after a remove. _Verified by:_ `src/routes/_app/trips/$tripId/-server/__tests__/people.test.ts` — the invitable list subtracts the trip's members and is `[]` for a non-owner, a person who has left the workspace appears in neither list, the notification carries `shell.notification.trip.invited.*` with `{ tripTitle, actorName }`, an add and a remove each produce exactly one `travel-stats` envelope naming that one person, the serialised payload contains no seeded email address, and `'public'` is refused by the validator before any repository call.
 
-**Step 12 — the e2e block.** One `test.describe('01-S6a — …')` appended to `e2e/trips-core.spec.ts`, declaring its own route table: the people route renders the members list and the visibility card, the Share button reaches it, and the invite control opens. `watchConsole` attached and `fatal` empty. _Verified by:_ `bash .ai/scripts/e2e.sh`.
+**Step 10 — the copy.** Thirty-one keys into `src/lib/i18n/messages/en/trips.ts` and all 22 other locales, per the `i18n-messages` skill. _Verified by:_ the i18n parity test in `pnpm test`.
 
-**Step 13 — the full gate.** Every command in `validation.commands`, in order. _Verified by:_ all green, with `bash .ai/scripts/check-generated.sh` confirming the route tree and the spec index are the generated output rather than a hand-edit.
+**Step 11 — the screen, the route and the sub-navigation.** `-ui/people-screen.tsx`, `people.tsx`, then `pnpm generate-routes`; then the one-line destination change at `trip-sub-nav.tsx:161`, which needs the route to exist for the typed `Link` to resolve. _Verified by:_ `pnpm typecheck` — a route file missing from the generated tree fails here rather than in the browser — and `pnpm lint`.
 
-**Step 14 — the follow-up.** File the issue A4 names: the last-owner guard belongs in `updateTripMember`, and the two `01-S1` cases that demote a sole owner need a second owner seeded first.
+**Step 12 — the e2e block.** One `test.describe('01-S6a — Who is on this trip')` appended to `e2e/trips-core.spec.ts`, declaring its own route table, with `watchConsole` attached and `fatal` empty:
+
+1. The Share button in the sub-navigation reaches `/trips/$tripId/people`.
+2. The route renders the members list with the owner's row and the visibility card.
+3. The invite control opens and offers a workspace member who is not on the trip.
+4. A non-owner reader sees no role control, no remove control, no invite control, and the visibility state as a sentence with no switch.
+
+Case 4 is the one that carries the role-dependent rendering the unit tests cannot reach. _Verified by:_ `bash .ai/scripts/e2e.sh`.
+
+**Step 13 — Phase 2's gate and its evidence.** Every command in `validation.commands`, in order, with `bash .ai/scripts/check-generated.sh` confirming the route tree and the spec index are generated output rather than a hand-edit. The screen's visual and accessibility commitments — both themes, three viewports, the stacked layout, focus after a removal — are evidenced by `om-auto-qa-pr` on this phase's pull request, which is what its `needs-qa` label is for.
