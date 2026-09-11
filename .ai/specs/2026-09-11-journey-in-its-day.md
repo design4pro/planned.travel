@@ -201,6 +201,12 @@ One more entry in the loader's existing `Promise.all`, so the third read costs n
 
 ## 📝 UI/UX
 
+![A day that interleaves a stop, a note and a journey row, light and dark](assets/journey-in-its-day/mockup-01-day-sequence.png)
+
+![One journey across three days, each labelled by the part that day sees](assets/journey-in-its-day/mockup-02-multi-day-journey.png)
+
+Both are illustrative statics rendered from `assets/journey-in-its-day/*.html`, not app code; their colour and type values are copied from `src/styles/tokens.css` so the proportions are honest. Current-state screenshots of `/trips/$tripId/plan` could not be taken — see the note under Visual change expected.
+
 **The row.** Glyph (the mode's, from the shipped registry), the two endpoints, the time or time range, the service number when there is one, and the status as the pill vocabulary the transports tab already uses. On a multi-day journey a `--text-micro` / `--tracking-label` phase label in `--color-ink-3` sits above the endpoints; on a single-day journey there is none.
 
 **Phases.** A journey covering days _d₁ … dₙ_ renders on each, with `departing` on _d₁_, `arriving` on _dₙ_ and `travelling` on everything between. `n = 1` means no label. The triple is chosen by mode and is total by construction.
@@ -238,6 +244,8 @@ Three refusals for the departing row, all reusing rules that exist:
 | `/trips/$tripId/plan` | A multi-day journey, the phase label on each of its days          | light + dark | 1280              |
 
 Judged by the blind A/B pair (`scripts/visual/capture.mjs`), which docs/SPEC.md §7.4 makes the whole of the visual judgement since ADR 0016. The declared state is the first row — an interleaved day is the point of the change and is not visible at rest. No other route changes.
+
+**Current-state screenshots were not captured, and the reason is environmental rather than a judgement.** `.ai/scripts/test-env-up.sh` binds a port from 3030-3040 only, because `playwright.config.ts` refuses anything else outside CI so an automated run can never photograph another checkout's app; at the time of writing all eleven ports were held by other worktrees' dev servers, and killing another session's server is not this run's to do. The two mockups above are therefore the whole of this spec's visual evidence. Nothing about the design depends on that gap: the "before" is a planner rail with no journey row in it, which is exactly the Problem Statement.
 
 ## 📝 Copy
 
