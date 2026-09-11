@@ -22,6 +22,7 @@ import {
   listPolls,
   listReactions,
   listSettlements,
+  listTripDayNotes,
   listTripDays,
   listTripExpenses,
   listTripFiles,
@@ -41,6 +42,7 @@ import { appScope } from './context'
 import { isoOf, isoOfRequired } from './serialise'
 
 import type { TenantScope } from '#/server/repos'
+import type { DayNote } from '#/server/db/types'
 import type { PollOption } from '#/server/db/schema'
 import { resolveTimeZone } from '#/lib/time'
 
@@ -219,12 +221,16 @@ export const loadTripPlan = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
 
-    const [itinerary, unscheduled, inventory, categories] = await Promise.all([
-      getTripItinerary(scope, trip.id),
-      listUnscheduledPlaces(scope, trip.id),
-      listTripPlacesWithTags(scope, trip.id),
-      listCategories(scope),
-    ])
+    // The notes come from their own read rather than from the itinerary: this is the only handler
+    // that renders them, and `getTripItinerary`'s other two callers discard them (#393).
+    const [itinerary, notes, unscheduled, inventory, categories] =
+      await Promise.all([
+        getTripItinerary(scope, trip.id),
+        listTripDayNotes(scope, trip.id),
+        listUnscheduledPlaces(scope, trip.id),
+        listTripPlacesWithTags(scope, trip.id),
+        listCategories(scope),
+      ])
 
     const tagsByPlace = new Map(
       inventory.map((place) => [
@@ -232,6 +238,16 @@ export const loadTripPlan = createServerFn({ method: 'GET' })
         place.tags.map((tag) => ({ id: tag.id, name: tag.name })),
       ]),
     )
+
+    const notesByDay = new Map<string, Array<DayNote>>()
+    for (const note of notes) {
+      const bucket = notesByDay.get(note.dayId)
+      if (bucket) {
+        bucket.push(note)
+      } else {
+        notesByDay.set(note.dayId, [note])
+      }
+    }
 
     const days: Array<PlanDay> = itinerary.map((entry) => ({
       dayId: entry.day.id,
@@ -253,7 +269,7 @@ export const loadTripPlan = createServerFn({ method: 'GET' })
         notes: stop.assignment.notes,
         participantUserIds: stop.participantUserIds,
       })),
-      notes: entry.notes.map((note) => ({
+      notes: (notesByDay.get(entry.day.id) ?? []).map((note) => ({
         id: note.id,
         body: note.body,
         time: note.time,

@@ -112,6 +112,12 @@ export interface SeededTenant {
 export interface Harness {
   readonly db: Database
   readonly sqlite: DatabaseSync
+  /**
+   * Every SQL statement Drizzle has sent, in order — the DDL excluded, since that runs straight
+   * against `sqlite`. A test that cares which tables a read touches truncates it, runs the call,
+   * and inspects what came back; nothing else reads it.
+   */
+  readonly statements: Array<string>
   seedTenant: (label: string) => Promise<SeededTenant>
   /** Table names present in the generated schema — used by the smoke test. */
   tableNames: () => Array<string>
@@ -147,13 +153,18 @@ export async function createHarness(
     }
   }
 
+  const statements: Array<string> = []
+
   const db: Database = drizzle(
-    async (query, params, method) =>
-      runStatement(sqlite, query, params, method),
+    async (query, params, method) => {
+      statements.push(query)
+      return runStatement(sqlite, query, params, method)
+    },
     async (queries) =>
-      queries.map((entry) =>
-        runStatement(sqlite, entry.sql, entry.params, entry.method),
-      ),
+      queries.map((entry) => {
+        statements.push(entry.sql)
+        return runStatement(sqlite, entry.sql, entry.params, entry.method)
+      }),
   )
 
   async function insertUser(name: string): Promise<string> {
@@ -221,6 +232,7 @@ export async function createHarness(
   return {
     db,
     sqlite,
+    statements,
     seedTenant,
     tableNames() {
       const statement = sqlite.prepare(
