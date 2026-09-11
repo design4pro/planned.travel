@@ -219,6 +219,24 @@ const messages = {
   },
   'dashboard.storage.more': 'もっと容量が必要ですか？',
   'dashboard.storage.plans': 'プランを見る',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'リファレンス',
+  'dashboard.widgets.choose': 'ウィジェットを選ぶ',
+  'dashboard.widgets.description':
+    'ダッシュボードの横に置いておくウィジェットです。',
+  'dashboard.clock.label': '世界時計',
+  'dashboard.clock.add': 'タイムゾーンを追加',
+  'dashboard.clock.search': '都市や地域を検索',
+  'dashboard.clock.noMatches': 'その名前のタイムゾーンはありません',
+  'dashboard.clock.remove': '{zone} を削除',
+  'dashboard.clock.offset': '自分の時刻との差 {offset}',
+  'dashboard.clock.here': '自分の時刻',
+  'dashboard.clock.empty.title': 'ピン留めされたタイムゾーンはありません',
+  'dashboard.clock.empty.body':
+    '場所をピン留めすると、自分の時計の横にその時計が並びます。',
+  'dashboard.clock.unknown.title': 'このデバイスは {zone} を認識しません',
+  'dashboard.clock.unknown.body':
+    'ここでは時刻を読み取れません。行を削除すると解消します。',
   'admin.error': '管理コンソールを読み込めませんでした',
   'admin.denied.title': 'ここを開けるのはワークスペースの管理者だけです',
   'admin.denied.body':

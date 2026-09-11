@@ -279,6 +279,25 @@ const messages = {
   },
   'dashboard.storage.more': 'Több helyre van szüksége?',
   'dashboard.storage.plans': 'Csomagok megtekintése',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Referencia',
+  'dashboard.widgets.choose': 'Widgetek kiválasztása',
+  'dashboard.widgets.description':
+    'A widgetek, amelyeket az irányítópultja mellett tart.',
+  'dashboard.clock.label': 'Világóra',
+  'dashboard.clock.add': 'Időzóna hozzáadása',
+  'dashboard.clock.search': 'Városok és régiók keresése',
+  'dashboard.clock.noMatches': 'Nincs ilyen nevű időzóna',
+  'dashboard.clock.remove': '{zone} eltávolítása',
+  'dashboard.clock.offset': '{offset} a saját idejéhez képest',
+  'dashboard.clock.here': 'A saját ideje',
+  'dashboard.clock.empty.title': 'Nincs rögzített időzóna',
+  'dashboard.clock.empty.body':
+    'Rögzítsen egy helyet, és olvassa az óráját a sajátja mellett.',
+  'dashboard.clock.unknown.title':
+    'Ez az eszköz nem ismeri a következőt: {zone}',
+  'dashboard.clock.unknown.body':
+    'Az ideje itt nem olvasható. Távolítsa el a sort a hiba megszüntetéséhez.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Az admin konzol nem töltődött be',

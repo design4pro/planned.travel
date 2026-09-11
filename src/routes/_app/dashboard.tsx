@@ -21,8 +21,10 @@ import {
   EmptyState,
   Progress,
   Separator,
+  Skeleton,
   StatCard,
 } from '#/components/ui'
+import { cn } from '#/lib/cn'
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
 import {
@@ -36,14 +38,24 @@ import {
 } from './-lib/format'
 import { RESERVATION_STATUS_TONE, TRIP_STATUS_TONE, toneFor } from './-lib/tone'
 import {
+  DashboardWidgetsColumn,
+  DashboardWidgetsMenu,
+  DashboardWidgetsSheet,
+  useDashboardWidgets,
+  useWidgetsInSheet,
+} from './-ui/dashboard-widgets'
+import {
   HeaderSkeleton,
   Panel,
   PanelRow,
   RowsSkeleton,
   StatsSkeleton,
 } from './-ui/scaffold'
+import { TimezoneClock } from './-ui/timezone-clock'
 import { TripGrid } from './-ui/trip-card'
 
+import type { ReactNode } from 'react'
+import type { DashboardWidgetId } from '#/lib/clock-zones'
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type {
   DashboardPayload,
@@ -114,6 +126,35 @@ function DashboardError({ error }: { error: unknown }) {
 
 function DashboardPage() {
   const data = Route.useLoaderData()
+  const widgets = useDashboardWidgets()
+  const inSheet = useWidgetsInSheet()
+
+  /**
+   * What each widget draws. Built as a table rather than as a chain of
+   * conditions so the reference column's order lives in one place — the widget
+   * list itself — and adding the deferred converter later is one row here.
+   *
+   * These are element *descriptions*; only the ones the reader kept, in the one
+   * surface the breakpoint chose, are ever mounted.
+   */
+  const bodies: Record<DashboardWidgetId, ReactNode> = {
+    clock: (
+      <TimezoneClock
+        zones={widgets.zones}
+        onZonesChange={widgets.setZones}
+        today={data.today}
+      />
+    ),
+    bookings: <NextBookings reservations={data.reservations} />,
+    tripMix: <TripMix data={data} />,
+    storage: <StorageMeter data={data} />,
+  }
+
+  const shown = widgets.shown.map((id) => (
+    <div key={id} data-part={`dashboard-widget-${id}`}>
+      {bodies[id]}
+    </div>
+  ))
 
   return (
     <AppFrame>
@@ -121,15 +162,31 @@ function DashboardPage() {
         <UpNext data={data} />
         <StatRow data={data} />
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8">
+        {/* The column's own controls, deliberately outside it: the menu can
+            empty the column, and a control that went with the last widget would
+            leave the reader no way of bringing anything back. */}
+        <div className="flex min-h-9 flex-wrap items-center justify-end gap-2">
+          <DashboardWidgetsMenu widgets={widgets} />
+          {inSheet && shown.length > 0 ? (
+            <DashboardWidgetsSheet>{shown}</DashboardWidgetsSheet>
+          ) : null}
+        </div>
+
+        <div
+          className={cn(
+            'grid gap-6',
+            // Every widget switched off collapses the column outright rather
+            // than leaving an empty rail beside the content — the failure mode a
+            // per-widget `display: none` produces.
+            shown.length > 0 && 'xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8',
+          )}
+        >
           <div className="flex min-w-0 flex-col gap-6">
             <YourTrips data={data} />
           </div>
-          <aside className="flex min-w-0 flex-col gap-6">
-            <NextBookings reservations={data.reservations} />
-            <TripMix data={data} />
-            <StorageMeter data={data} />
-          </aside>
+          {inSheet || shown.length === 0 ? null : (
+            <DashboardWidgetsColumn>{shown}</DashboardWidgetsColumn>
+          )}
         </div>
       </AppSections>
     </AppFrame>
@@ -676,13 +733,31 @@ function DashboardPending() {
       <AppSections>
         <HeaderSkeleton />
         <StatsSkeleton />
+        {/* The widget controls' own row, reserved at the height the live header
+            occupies — `min-h-9` on a row of `sm` pills — so the grid below it
+            starts where it will start once the payload lands. */}
+        <div className="flex min-h-9 items-center justify-end">
+          <Skeleton className="h-8 w-36 rounded-full" />
+        </div>
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8">
           <Card variant="inset" padding="none">
             <RowsSkeleton rows={4} />
           </Card>
-          <Card variant="inset" padding="none">
-            <RowsSkeleton rows={3} />
-          </Card>
+          {/* The reference column as it arrives by default: the clock, whose
+              first row is the reader's own zone and whose footer is the picker,
+              then the three panels beside it. One block for the whole column
+              would settle by growing a widget's worth of height, which is the
+              layout shift this state exists to avoid. The default is what is
+              reserved, because the pending frame is rendered before anything can
+              read the browser's preference without disagreeing with the server. */}
+          <div className="flex min-w-0 flex-col gap-6">
+            <Card variant="inset" padding="none">
+              <RowsSkeleton rows={2} />
+            </Card>
+            <Card variant="inset" padding="none">
+              <RowsSkeleton rows={3} />
+            </Card>
+          </div>
         </div>
       </AppSections>
     </AppFrame>

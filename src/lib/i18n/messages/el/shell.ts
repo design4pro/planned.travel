@@ -264,6 +264,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Χρειάζεστε περισσότερο χώρο;',
   'dashboard.storage.plans': 'Δείτε τα πλάνα',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Αναφορά',
+  'dashboard.widgets.choose': 'Επιλογή widget',
+  'dashboard.widgets.description':
+    'Τα widget που κρατάτε δίπλα στον πίνακά σας.',
+  'dashboard.clock.label': 'Παγκόσμιο ρολόι',
+  'dashboard.clock.add': 'Προσθήκη ζώνης ώρας',
+  'dashboard.clock.search': 'Αναζήτηση πόλεων και περιοχών',
+  'dashboard.clock.noMatches': 'Καμία ζώνη ώρας με αυτό το όνομα',
+  'dashboard.clock.remove': 'Κατάργηση {zone}',
+  'dashboard.clock.offset': '{offset} από τη δική σας ώρα',
+  'dashboard.clock.here': 'Η δική σας ώρα',
+  'dashboard.clock.empty.title': 'Καμία καρφιτσωμένη ζώνη ώρας',
+  'dashboard.clock.empty.body':
+    'Καρφιτσώστε ένα μέρος και διαβάστε την ώρα του δίπλα στη δική σας.',
+  'dashboard.clock.unknown.title': 'Αυτή η συσκευή δεν γνωρίζει τη ζώνη {zone}',
+  'dashboard.clock.unknown.body':
+    'Η ώρα της δεν μπορεί να διαβαστεί εδώ. Καταργήστε τη γραμμή για να το διορθώσετε.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Η κονσόλα διαχείρισης δεν φόρτωσε',

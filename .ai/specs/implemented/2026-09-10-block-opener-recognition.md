@@ -1,5 +1,12 @@
 # Recognise a block opener without reading the block
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #141        |
+| **Spec PR**        | #397        |
+| **Implementation** | #400        |
+
 Refs: `design4pro/planned.travel#141`.
 
 ## 📝 TLDR

@@ -66,7 +66,7 @@
     // a named key is cached `immutable` for a year, and rolling back is flipping this
     // one var to the previous key (docs/DEPLOY.md §7.4, §7.5). Local dev overrides it
     // in .dev.vars to name whatever object its own miniflare bucket holds.
-    "TILES_ARCHIVE_KEY": "basemaps/planet-20260818.pmtiles",
+    "TILES_ARCHIVE_KEY": "basemaps/planet-20260910.pmtiles",
     // Public base for R2 `FILES` objects, used by the thumbnail pipeline.
     "FILES_PUBLIC_BASE": "https://files.planned.travel",
     "EMAIL_FROM": "planned.travel <no-reply@planned.travel>",
@@ -214,7 +214,7 @@
         "APP_URL": "https://staging.planned.travel",
         "LOG_LEVEL": "debug",
         // Same archive as production, and versioned for the same reason.
-        "TILES_ARCHIVE_KEY": "basemaps/planet-20260818.pmtiles",
+        "TILES_ARCHIVE_KEY": "basemaps/planet-20260910.pmtiles",
         "FILES_PUBLIC_BASE": "https://files-staging.planned.travel",
         "EMAIL_FROM": "planned.travel staging <no-reply@staging.planned.travel>",
         "EMAIL_API_URL": "https://api.resend.com/emails",

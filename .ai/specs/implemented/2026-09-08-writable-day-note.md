@@ -1,5 +1,12 @@
 # A day note you can write: the guard, the detail, the icon and the editor
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #113        |
+| **Spec PR**        | #336        |
+| **Implementation** | #388        |
+
 Source plan: `docs/plans/01-trips-core.md`, stage `01-S2b` — the second and last slice of `01-S2`.
 Tracker: FR #113, parent PRD #104, decisions 6, 9 and 10. Reference row `TRP-09`.
 Measured on `develop` at `3ec86e74`.

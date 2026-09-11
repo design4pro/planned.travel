@@ -311,6 +311,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Potřebujete víc místa?',
   'dashboard.storage.plans': 'Zobrazit tarify',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Přehled',
+  'dashboard.widgets.choose': 'Vybrat widgety',
+  'dashboard.widgets.description':
+    'Widgety, které si necháváte vedle nástěnky.',
+  'dashboard.clock.label': 'Světový čas',
+  'dashboard.clock.add': 'Přidat časové pásmo',
+  'dashboard.clock.search': 'Hledat města a oblasti',
+  'dashboard.clock.noMatches': 'Žádné časové pásmo s tímto názvem',
+  'dashboard.clock.remove': 'Odebrat {zone}',
+  'dashboard.clock.offset': '{offset} oproti vašemu času',
+  'dashboard.clock.here': 'Váš vlastní čas',
+  'dashboard.clock.empty.title': 'Žádná připnutá časová pásma',
+  'dashboard.clock.empty.body':
+    'Připněte si místo a čtěte jeho čas vedle svého.',
+  'dashboard.clock.unknown.title': 'Toto zařízení nezná {zone}',
+  'dashboard.clock.unknown.body':
+    'Jeho čas zde nelze načíst. Odeberte řádek a tím to vyřešíte.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Konzole správce se nenačetla',

@@ -312,6 +312,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Нужно больше места?',
   'dashboard.storage.plans': 'Посмотреть тарифы',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Ориентиры',
+  'dashboard.widgets.choose': 'Выбрать виджеты',
+  'dashboard.widgets.description':
+    'Виджеты, которые вы держите рядом с панелью.',
+  'dashboard.clock.label': 'Мировые часы',
+  'dashboard.clock.add': 'Добавить часовой пояс',
+  'dashboard.clock.search': 'Поиск городов и регионов',
+  'dashboard.clock.noMatches': 'Часового пояса с таким названием нет',
+  'dashboard.clock.remove': 'Убрать {zone}',
+  'dashboard.clock.offset': '{offset} от вашего времени',
+  'dashboard.clock.here': 'Ваше собственное время',
+  'dashboard.clock.empty.title': 'Часовые пояса не закреплены',
+  'dashboard.clock.empty.body':
+    'Закрепите место и читайте его часы рядом со своими.',
+  'dashboard.clock.unknown.title': 'Это устройство не знает пояс {zone}',
+  'dashboard.clock.unknown.body':
+    'Его время здесь не прочитать. Уберите строку, чтобы это исправить.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Консоль администратора не загрузилась',

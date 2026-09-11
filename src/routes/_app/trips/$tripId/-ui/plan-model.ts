@@ -21,6 +21,7 @@ import {
   noteItemId,
 } from '#/components/planner'
 import {
+  formatNumber,
   formatTime,
   formatTimeRange,
   formatWeekday,
@@ -28,6 +29,7 @@ import {
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 
 import type { Locale } from '#/lib/i18n/locales'
+import type { Translate } from '#/lib/i18n'
 
 import type { MapCategory, MapPlace } from '#/components/map'
 import type {
@@ -156,8 +158,21 @@ export function orderFromPayload(
   }
 }
 
-function titleOf(day: PlanBoardDay): string {
-  return day.title ?? `Day ${day.dayNumber}`
+/**
+ * A day's name, or the ordinal the map pin already says when it has none.
+ *
+ * `atlas.map.pin.day` rather than a key of its own: the rail header, the day
+ * section's `aria-label` and the pin over that day's stops all name the same day,
+ * and one sentence in the catalogue is what keeps them from drifting apart per
+ * locale. The numeral is formatted the way `DayPin` formats it for the same key —
+ * identical output today, since `src/lib/format-tables.ts` pins every locale to
+ * `-u-nu-latn`, and identical still if a row there ever stops being pinned.
+ */
+function titleOf(day: PlanBoardDay, t: Translate, locale: Locale): string {
+  return (
+    day.title ??
+    t('atlas.map.pin.day', { day: formatNumber(day.dayNumber, locale) })
+  )
 }
 
 /**
@@ -253,6 +268,7 @@ export interface PlanModel {
 export function planModel(
   payload: PlanBoardPayload,
   order: PlanOrder,
+  t: Translate,
   locale: Locale = DEFAULT_LOCALE,
   notes: ReadonlyMap<string, PlannerNote> = new Map(),
 ): PlanModel {
@@ -297,7 +313,7 @@ export function planModel(
     days.push({
       dayId: meta.dayId,
       dayNumber: meta.dayNumber,
-      title: titleOf(meta),
+      title: titleOf(meta, t, locale),
       dateLabel: formatWeekday(meta.date, locale),
       items,
       rows,

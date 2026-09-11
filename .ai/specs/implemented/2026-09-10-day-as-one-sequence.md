@@ -1,5 +1,12 @@
 # The day as one sequence on screen: `PlannerItem`, draggable notes, the "drop its time?" dialog
 
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #116        |
+| **Spec PR**        | #403        |
+| **Implementation** | #404        |
+
 `01-S4b` · FR #116 · Parent PRD #104 · Stage `01-S4` of `docs/plans/01-trips-core.md` (frozen), second slice. `01-S4a` (#115) landed the engine and the write path; this is the screen over them.
 
 ## 📝 TLDR

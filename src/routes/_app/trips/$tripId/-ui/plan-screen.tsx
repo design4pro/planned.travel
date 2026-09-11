@@ -431,8 +431,8 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   const noteIndex = React.useMemo(() => notesByItem(notes), [notes])
 
   const model = React.useMemo(
-    () => planModel(payload, order, locale, noteIndex),
-    [payload, order, locale, noteIndex],
+    () => planModel(payload, order, t, locale, noteIndex),
+    [payload, order, t, locale, noteIndex],
   )
 
   const scheduledRows = React.useMemo(

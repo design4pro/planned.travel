@@ -86,7 +86,7 @@ export function timeZoneRegion(zone: string): string {
 }
 
 /** The city part, with the underscores a person does not read spelled out. */
-function timeZoneCity(zone: string): string {
+export function timeZoneCity(zone: string): string {
   const slash = zone.indexOf('/')
   return (slash === -1 ? zone : zone.slice(slash + 1)).replaceAll('_', ' ')
 }
