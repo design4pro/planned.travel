@@ -141,6 +141,83 @@ const messages = {
   'book.import.badge': 'Importação não conferida',
   'book.import.hint':
     'Importado de uma confirmação. Abra e salve para marcá-lo como conferido.',
+  'book.import.action': 'Importar',
+  'book.import.title': 'Importar reservas de um arquivo',
+  'book.import.description':
+    'Solte uma confirmação e nós a leremos. Nada entra na viagem antes de você ver.',
+  'book.import.drop.idle': 'Solte os arquivos aqui, ou procure',
+  'book.import.drop.active': 'Solte para adicionar',
+  'book.import.drop.formats':
+    'PDF, e-mail salvo, página web, foto, Word, Excel, arquivo de calendário ou exportação JSON.',
+  'book.import.drop.limits':
+    'Até {files} arquivos por vez, cada um até {size}.',
+  'book.import.drop.browse': 'Procurar arquivos',
+  'book.import.refused.format':
+    '“{filename}” não é um arquivo que esta importação saiba ler. Ela lê um PDF, um e-mail salvo, uma página web, uma foto, um documento do Word ou do Excel, um arquivo de calendário ou uma exportação JSON.',
+  'book.import.refused.tooMany':
+    'Só {files} arquivos por vez. O resto não entrou.',
+  'book.import.refused.tooLarge':
+    '“{filename}” tem {size}. Uma importação lê arquivos de até {limit}.',
+  'book.import.refused.empty':
+    '“{filename}” está vazio, então não há nada para ler.',
+  'book.import.ceiling.title':
+    'Este espaço já leu todas as confirmações deste mês',
+  'book.import.ceiling.body':
+    'O plano inclui {ceiling} leituras de arquivo por mês, e a cota renova no dia primeiro. Você ainda pode adicionar uma reserva à mão.',
+  'book.import.ceiling.none':
+    'Ler um arquivo de confirmação não faz parte do plano deste espaço',
+  'book.import.ceiling.noneBody':
+    'Mude de plano para ter uma confirmação lida para você. Adicionar uma reserva à mão está sempre disponível.',
+  'book.import.widget.title': 'Lendo confirmações',
+  'book.import.widget.working': '{done} de {total} lidos',
+  'book.import.widget.file': 'Lendo “{filename}”',
+  'book.import.widget.done': {
+    one: 'Uma reserva pronta para conferir',
+    many: '{count} reservas prontas para conferir',
+    other: '{count} reservas prontas para conferir',
+  },
+  'book.import.widget.review': 'Conferir',
+  'book.import.widget.failed': '“{filename}” não pôde ser lido',
+  'book.import.widget.stalled': 'Isto está levando mais do que o previsto',
+  'book.import.widget.check': 'Olhar de novo',
+  'book.import.widget.dismiss': 'Dispensar',
+  'book.import.review.title': 'O que lemos',
+  'book.import.review.from': 'De “{filename}”',
+  'book.import.review.selectAll': 'Selecionar tudo',
+  'book.import.review.selectNone': 'Não selecionar nada',
+  'book.import.review.confirm': {
+    one: 'Adicionar {count} reserva',
+    many: 'Adicionar {count} reservas',
+    other: 'Adicionar {count} reservas',
+  },
+  'book.import.review.confirmNone': 'Selecione uma reserva para adicionar',
+  'book.import.review.cancel': 'Cancelar',
+  'book.import.review.needsReview': 'Vale olhar',
+  'book.import.review.needsReviewHint':
+    'Alguns campos não estavam no documento. Abra a reserva depois de adicioná-la.',
+  'book.import.review.noPrice': 'Nenhum preço lido',
+  'book.import.review.noPriceHint':
+    'O documento não dizia nenhum com clareza, então ficou vazio em vez de adivinhado.',
+  'book.import.review.untitled': 'Reserva sem título',
+  'book.import.empty.title': 'Não encontramos nenhuma reserva nesse arquivo',
+  'book.import.empty.body':
+    '“{filename}” não tinha nada que pareça uma confirmação. Tente outro arquivo, ou adicione a reserva à mão.',
+  'book.import.failed.title': '“{filename}” não pôde ser lido',
+  'book.import.failed.body':
+    'O arquivo abriu, mas não deu para tirar nada dele. Tente outro arquivo, ou adicione a reserva à mão.',
+  'book.import.failed.retry': 'Tentar outro arquivo',
+  'book.import.uploadFailed': '“{filename}” não subiu',
+  'book.import.uploadRetry': 'Tentar de novo',
+  'book.import.toast.added': {
+    one: 'Uma reserva adicionada',
+    many: '{count} reservas adicionadas',
+    other: '{count} reservas adicionadas',
+  },
+  'book.import.partial.title':
+    '{written} de {total} reservas foram adicionadas',
+  'book.import.partial.body':
+    'O resto continua selecionado. Adicionar de novo grava só essas.',
+  'book.import.partial.retry': 'Adicionar o resto',
   'book.journeyLink': 'Na aba de transportes',
   'filter.all': 'Tudo',
   'book.remove.body':

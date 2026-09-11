@@ -1,10 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { CalendarClock, Ticket } from 'lucide-react'
+import { z } from 'zod'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
-import { BookingsTimeline, NewBookingAction } from '#/components/modules/book'
+import {
+  BookingsTimeline,
+  ImportBookingsAction,
+  ImportBookingsDialog,
+  NewBookingAction,
+} from '#/components/modules/book'
 import { Card, ProgressRing, StatCard } from '#/components/ui'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadBookingDeskFn } from '#/server/fns/reservations'
@@ -14,6 +20,15 @@ import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/book')({
+  /*
+   * `?import=<jobId>` is how the global widget's Review lands on the desk with the review list
+   * already open. A search parameter rather than client state, because the widget is mounted in
+   * the shell and the dialog is on this route: a link is the only thing they both understand, and
+   * it survives a reload the way the register it names does.
+   */
+  validateSearch: z.object({
+    import: z.string().trim().min(1).max(128).optional(),
+  }),
   /*
    * Two reads, one round trip. The reader's display preference is not part of
    * the desk payload — the transports tab needs the same boolean and a flag on
@@ -48,7 +63,20 @@ function BookPage() {
   const t = useTranslate()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
   const [newBookingOpen, setNewBookingOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(search.import !== undefined)
+
+  // The parameter is an instruction, not state: it opens the dialog once and is then dropped, so
+  // closing the dialog and reopening it is not fought by a URL that still says "open".
+  useEffect(() => {
+    if (search.import === undefined) {
+      return
+    }
+    setImportOpen(true)
+    void navigate({ search: {}, replace: true })
+  }, [navigate, search.import])
 
   const countFor = (status: string): number =>
     data.byStatus.find((row) => row.status === status)?.value ?? 0
@@ -76,7 +104,18 @@ function BookPage() {
                   }),
                 ].join(' · ')
           }
-          actions={<NewBookingAction onClick={() => setNewBookingOpen(true)} />}
+          actions={
+            <>
+              <ImportBookingsAction onClick={() => setImportOpen(true)} />
+              <NewBookingAction onClick={() => setNewBookingOpen(true)} />
+            </>
+          }
+        />
+
+        <ImportBookingsDialog
+          tripId={tripId}
+          open={importOpen}
+          onOpenChange={setImportOpen}
         />
 
         {total === 0 ? null : (

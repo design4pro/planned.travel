@@ -1,0 +1,350 @@
+// The dialog mounts Radix-backed primitives, which need the pointer-capture and
+// scroll stubs jsdom does not implement.
+import '#/components/ui/__tests__/test-env'
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+
+import { I18nProvider } from '#/lib/i18n'
+import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import Modules from '#/lib/i18n/messages/en/modules'
+import Shell from '#/lib/i18n/messages/en/shell'
+import Ui from '#/lib/i18n/messages/en/ui'
+import { BOOK_IMPORTS_KEY } from '../import-widget'
+import { ImportBookingsDialog } from '../import-dialog'
+
+import type { Catalogue } from '#/lib/i18n'
+import type { BookingImportView } from '#/server/fns/booking-import'
+
+/**
+ * The three refusals this feature designed rather than surfaced are the three things worth
+ * rendering: a format the import cannot read is named *at the boundary* with the list that works,
+ * a confirm with nothing selected says why it is disabled instead of just being grey, and the drop
+ * target is reachable without a mouse.
+ *
+ * The catalogue is the shipped English one. Stubbing it would defeat the point twice over: an
+ * unresolved key and an un-interpolated placeholder both look like a pass when every message is
+ * its own key.
+ */
+const EN: Catalogue = {
+  ...namespaceCatalogue('modules', Modules),
+  ...namespaceCatalogue('shell', Shell),
+  ...namespaceCatalogue('ui', Ui),
+}
+
+const stubs = vi.hoisted(() => ({
+  view: vi.fn(),
+  start: vi.fn(),
+  confirm: vi.fn(),
+  upload: vi.fn(),
+  router: { invalidate: vi.fn() },
+}))
+
+/** The real module reads the Worker environment through the request scope, which jsdom has none of. */
+vi.mock('#/server/fns/booking-import', () => ({
+  getBookingImportFn: stubs.view,
+  startBookingImportFn: stubs.start,
+  confirmBookingImportFn: stubs.confirm,
+}))
+vi.mock('../../files/upload', () => ({ uploadFile: stubs.upload }))
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => stubs.router,
+  useNavigate: () => vi.fn(),
+}))
+
+function open(): void {
+  render(
+    <I18nProvider locale="en" messages={EN}>
+      <ImportBookingsDialog tripId="trip-1" open onOpenChange={() => {}} />
+    </I18nProvider>,
+  )
+}
+
+function dropTarget(): HTMLElement {
+  const target = document.querySelector('[data-part="import-drop"]')
+  if (!(target instanceof HTMLElement)) {
+    throw new Error('the import dialog rendered no drop target')
+  }
+  return target
+}
+
+function drop(...files: ReadonlyArray<File>): void {
+  fireEvent.drop(dropTarget(), { dataTransfer: { files } })
+}
+
+beforeEach(() => {
+  window.localStorage.clear()
+  stubs.view.mockReset()
+  stubs.start.mockReset()
+  stubs.confirm.mockReset()
+  stubs.upload.mockReset()
+  stubs.view.mockResolvedValue({
+    status: 'working',
+  } satisfies BookingImportView)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+describe('the import dialog at its boundary', () => {
+  it('names the file it cannot read and lists the formats it can', () => {
+    open()
+
+    drop(
+      new File(['x'], 'voucher.pkpass', { type: 'application/octet-stream' }),
+    )
+
+    const refusal = screen.getByText(/voucher\.pkpass/)
+    expect(refusal.textContent).toContain('is not a file this import can read')
+    expect(refusal.textContent).toContain('JSON export')
+    // Refused at the boundary means refused before a byte leaves the machine.
+    expect(stubs.upload).not.toHaveBeenCalled()
+    expect(stubs.start).not.toHaveBeenCalled()
+  })
+
+  it('names the size of a file too large to read, and the limit', () => {
+    open()
+
+    const big = new File(['x'], 'scan.pdf', { type: 'application/pdf' })
+    Object.defineProperty(big, 'size', { value: 9 * 1024 * 1024 })
+    drop(big)
+
+    expect(screen.getByText(/scan\.pdf/).textContent).toContain(
+      'An import reads files up to 5 MB',
+    )
+    expect(stubs.upload).not.toHaveBeenCalled()
+  })
+
+  it('refuses a file with no bytes in it rather than reading nothing', () => {
+    open()
+
+    drop(new File([], 'empty.ics', { type: 'text/calendar' }))
+
+    expect(screen.getByText(/empty\.ics/).textContent).toContain(
+      'is empty, so there is nothing to read',
+    )
+    expect(stubs.upload).not.toHaveBeenCalled()
+  })
+
+  it('says only five at a time and keeps the first five', async () => {
+    stubs.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })
+    stubs.start.mockResolvedValue({ jobId: 'booking-import:trip-1:file-1' })
+    open()
+
+    drop(
+      ...Array.from(
+        { length: 6 },
+        (_, index) =>
+          new File(['x'], `booking-${index}.ics`, { type: 'text/calendar' }),
+      ),
+    )
+
+    expect(
+      screen.getByText('Only 5 files at a time. The rest were not added.'),
+    ).toBeTruthy()
+    await vi.waitFor(() => {
+      expect(stubs.upload).toHaveBeenCalledTimes(5)
+    })
+  })
+})
+
+describe('the import dialog’s controls', () => {
+  it('disables the confirm with a reason while nothing is selected', () => {
+    open()
+
+    const confirm = screen.getByRole('button', {
+      name: 'Select a booking to add',
+    })
+    expect(confirm).toHaveProperty('disabled', true)
+    expect(confirm.getAttribute('title')).toBe('Select a booking to add')
+  })
+
+  it('makes the drop target a real button that opens the file input', () => {
+    open()
+
+    const target = dropTarget()
+    expect(target.tagName).toBe('BUTTON')
+    // Not `tabIndex="-1"`: the whole point of the button is that a reader who cannot drag can
+    // still reach it, and Enter and Space on a button dispatch the click fired below.
+    expect(target.getAttribute('tabindex')).toBeNull()
+
+    const input = document.querySelector('input[type="file"]')
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('the import dialog rendered no file input')
+    }
+    expect(input.accept).toContain('.pdf')
+    expect(input.multiple).toBe(true)
+
+    const clicked = vi.spyOn(input, 'click')
+    fireEvent.click(target)
+    expect(clicked).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the import dialog on a staged answer', () => {
+  const READY: BookingImportView = {
+    status: 'ready',
+    staged: {
+      format: 'document',
+      count: 2,
+      written: [],
+      drafts: [
+        {
+          index: 0,
+          type: 'accommodation',
+          title: 'Hotel Okura',
+          location: 'Tokyo',
+          reference: 'ABC123',
+          startDate: '2026-04-02',
+          startTime: '15:00',
+          endDate: '2026-04-05',
+          endTime: '11:00',
+          priceMinor: 48_000,
+          currency: 'JPY',
+          needsReview: false,
+        },
+        {
+          index: 1,
+          type: 'transport',
+          title: '',
+          location: null,
+          reference: null,
+          startDate: '2026-04-02',
+          startTime: null,
+          endDate: null,
+          endTime: null,
+          priceMinor: null,
+          currency: null,
+          needsReview: true,
+        },
+      ],
+    },
+  }
+
+  beforeEach(() => {
+    window.localStorage.setItem(
+      BOOK_IMPORTS_KEY,
+      JSON.stringify([
+        {
+          jobId: 'booking-import:trip-1:file-1',
+          tripId: 'trip-1',
+          filename: 'confirmation.pdf',
+        },
+      ]),
+    )
+    stubs.view.mockResolvedValue(READY)
+  })
+
+  it('offers every row selected, counted in the confirm', async () => {
+    open()
+
+    const confirm = await screen.findByRole('button', {
+      name: 'Add 2 bookings',
+    })
+    expect(confirm).toHaveProperty('disabled', false)
+  })
+
+  it('takes a deselected row out of the count and nothing else out', async () => {
+    open()
+    await screen.findByRole('button', { name: 'Add 2 bookings' })
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Hotel Okura/ }))
+
+    expect(
+      await screen.findByRole('button', { name: 'Add 1 booking' }),
+    ).toBeTruthy()
+    expect(screen.getByText('Untitled booking')).toBeTruthy()
+  })
+
+  it('marks a partially read row and a row with no price before it is written', async () => {
+    open()
+    await screen.findByRole('button', { name: 'Add 2 bookings' })
+
+    expect(screen.getByText('Needs a look')).toBeTruthy()
+    expect(screen.getByText('No price read')).toBeTruthy()
+  })
+
+  it('names the row the document left untitled rather than rendering a gap', async () => {
+    open()
+
+    expect(await screen.findByText('Untitled booking')).toBeTruthy()
+  })
+})
+
+describe('the import dialog on a refusal', () => {
+  beforeEach(() => {
+    window.localStorage.setItem(
+      BOOK_IMPORTS_KEY,
+      JSON.stringify([
+        {
+          jobId: 'booking-import:trip-1:file-1',
+          tripId: 'trip-1',
+          filename: 'confirmation.pdf',
+        },
+      ]),
+    )
+  })
+
+  it('words the ceiling as a spent allowance, with the number in the plan', async () => {
+    stubs.view.mockResolvedValue({
+      status: 'refused',
+      refusal: { code: 'ceiling', ceiling: 200 },
+    } satisfies BookingImportView)
+    open()
+
+    expect(
+      await screen.findByText(
+        'This workspace has read all its confirmations this month',
+      ),
+    ).toBeTruthy()
+    expect(screen.getByText(/200 file readings a month/)).toBeTruthy()
+  })
+
+  it('words a plan with no allowance at all as a different thing', async () => {
+    stubs.view.mockResolvedValue({
+      status: 'refused',
+      refusal: { code: 'ceiling', ceiling: 0 },
+    } satisfies BookingImportView)
+    open()
+
+    expect(
+      await screen.findByText(
+        'Reading a confirmation file is not part of this workspace’s plan',
+      ),
+    ).toBeTruthy()
+  })
+
+  it('names the file a parse found nothing in, and offers another', async () => {
+    stubs.view.mockResolvedValue({
+      status: 'refused',
+      refusal: { code: 'empty' },
+    } satisfies BookingImportView)
+    open()
+
+    expect(
+      await screen.findByText('We could not find a booking in that file'),
+    ).toBeTruthy()
+    expect(screen.getByText(/confirmation\.pdf/)).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Try another file' }),
+    ).toBeTruthy()
+  })
+
+  it('never forwards a server sentence for a file it could not read', async () => {
+    stubs.view.mockResolvedValue({
+      status: 'refused',
+      refusal: { code: 'unreadable' },
+    } satisfies BookingImportView)
+    open()
+
+    expect(
+      await screen.findByText(/confirmation\.pdf” could not be read/),
+    ).toBeTruthy()
+    expect(
+      screen.getByText(
+        'The file opened but nothing could be made of it. Try another file, or add the booking by hand.',
+      ),
+    ).toBeTruthy()
+  })
+})

@@ -144,6 +144,82 @@ const messages = {
   'book.import.badge': 'Importació sense revisar',
   'book.import.hint':
     'Importat d’una confirmació. Obre’l i desa’l per marcar-lo com a revisat.',
+  'book.import.action': 'Importa',
+  'book.import.title': 'Importa reserves des d’un fitxer',
+  'book.import.description':
+    'Deixa-hi una confirmació i la llegirem. No s’afegeix res al viatge fins que no ho hagis vist.',
+  'book.import.drop.idle': 'Deixa els fitxers aquí, o cerca’ls',
+  'book.import.drop.active': 'Deixa anar per afegir',
+  'book.import.drop.formats':
+    'PDF, correu desat, pàgina web, foto, Word, Excel, fitxer de calendari o exportació JSON.',
+  'book.import.drop.limits':
+    'Fins a {files} fitxers alhora, cadascun fins a {size}.',
+  'book.import.drop.browse': 'Cerca fitxers',
+  'book.import.refused.format':
+    '«{filename}» no és un fitxer que aquesta importació pugui llegir. Llegeix un PDF, un correu desat, una pàgina web, una foto, un document de Word o d’Excel, un fitxer de calendari o una exportació JSON.',
+  'book.import.refused.tooMany':
+    'Només {files} fitxers alhora. La resta no s’han afegit.',
+  'book.import.refused.tooLarge':
+    '«{filename}» fa {size}. Una importació llegeix fitxers de fins a {limit}.',
+  'book.import.refused.empty':
+    '«{filename}» és buit, així que no hi ha res a llegir.',
+  'book.import.ceiling.title':
+    'Aquest espai ja ha llegit totes les confirmacions d’aquest mes',
+  'book.import.ceiling.body':
+    'El pla inclou {ceiling} lectures de fitxer al mes i la quota es renova l’u. Encara pots afegir una reserva a mà.',
+  'book.import.ceiling.none':
+    'Llegir un fitxer de confirmació no forma part del pla d’aquest espai',
+  'book.import.ceiling.noneBody':
+    'Millora el pla per fer que et llegeixin una confirmació. Afegir una reserva a mà sempre hi és.',
+  'book.import.widget.title': 'Llegint confirmacions',
+  'book.import.widget.working': '{done} de {total} llegits',
+  'book.import.widget.file': 'Llegint «{filename}»',
+  'book.import.widget.done': {
+    one: 'Una reserva a punt de revisar',
+    many: '{count} reserves a punt de revisar',
+    other: '{count} reserves a punt de revisar',
+  },
+  'book.import.widget.review': 'Revisa',
+  'book.import.widget.failed': 'No s’ha pogut llegir «{filename}»',
+  'book.import.widget.stalled': 'Això triga més del que esperàvem',
+  'book.import.widget.check': 'Torna-ho a comprovar',
+  'book.import.widget.dismiss': 'Descarta',
+  'book.import.review.title': 'Què hem llegit',
+  'book.import.review.from': 'De «{filename}»',
+  'book.import.review.selectAll': 'Selecciona-ho tot',
+  'book.import.review.selectNone': 'No seleccionis res',
+  'book.import.review.confirm': {
+    one: 'Afegeix {count} reserva',
+    many: 'Afegeix {count} reserves',
+    other: 'Afegeix {count} reserves',
+  },
+  'book.import.review.confirmNone': 'Selecciona una reserva per afegir-la',
+  'book.import.review.cancel': 'Cancel·la',
+  'book.import.review.needsReview': 'Cal mirar-ho',
+  'book.import.review.needsReviewHint':
+    'Alguns camps no eren al document. Obre la reserva després d’afegir-la.',
+  'book.import.review.noPrice': 'Cap preu llegit',
+  'book.import.review.noPriceHint':
+    'El document no en deia cap amb claredat, així que s’ha deixat buit en lloc d’endevinar-lo.',
+  'book.import.review.untitled': 'Reserva sense títol',
+  'book.import.empty.title': 'No hem trobat cap reserva en aquest fitxer',
+  'book.import.empty.body':
+    '«{filename}» no tenia res que sembli una confirmació. Prova un altre fitxer, o afegeix la reserva a mà.',
+  'book.import.failed.title': 'No s’ha pogut llegir «{filename}»',
+  'book.import.failed.body':
+    'El fitxer s’ha obert però no se n’ha pogut treure res. Prova un altre fitxer, o afegeix la reserva a mà.',
+  'book.import.failed.retry': 'Prova un altre fitxer',
+  'book.import.uploadFailed': '«{filename}» no s’ha pujat',
+  'book.import.uploadRetry': 'Torna-ho a provar',
+  'book.import.toast.added': {
+    one: 'Una reserva afegida',
+    many: '{count} reserves afegides',
+    other: '{count} reserves afegides',
+  },
+  'book.import.partial.title': 'S’han afegit {written} de {total} reserves',
+  'book.import.partial.body':
+    'La resta continuen seleccionades. Tornar-hi només escriu aquestes.',
+  'book.import.partial.retry': 'Afegeix la resta',
   'book.journeyLink': 'A la pestanya de transports',
   'filter.all': 'Tot',
   'book.remove.body':

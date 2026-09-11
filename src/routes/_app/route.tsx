@@ -8,6 +8,7 @@ import { ImpersonationBar } from '#/components/layout/impersonation-bar'
 import { MobileNav } from '#/components/layout/mobile-nav'
 import { NotFoundPanel } from '#/components/layout/not-found'
 import { TopNav } from '#/components/layout/top-nav'
+import { BookImportWidget } from '#/components/modules/book'
 import { loadShell } from './-server/shell'
 
 /**
@@ -111,6 +112,14 @@ function AppShell() {
       />
       <Outlet />
       <MobileNav />
+      {/*
+       * Mounted here because a confirmation import outlives the desk that started it: the reader
+       * closes the dialog, walks to another trip, reloads, and the reading is still running and
+       * still visible. Last in the subtree rather than beside the impersonation bar, so the End
+       * impersonation button keeps the shell's first tab stop; it renders nothing at all until a
+       * job is in the register.
+       */}
+      <BookImportWidget />
     </div>
   )
 }

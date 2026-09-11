@@ -144,6 +144,84 @@ const messages = {
   'book.import.badge': 'Importazione non controllata',
   'book.import.hint':
     'Importato da una conferma. Aprilo e salvalo per segnarlo come controllato.',
+  'book.import.action': 'Importa',
+  'book.import.title': 'Importa prenotazioni da un file',
+  'book.import.description':
+    'Lascia qui una conferma e la leggiamo noi. Niente entra nel viaggio prima che tu l’abbia vista.',
+  'book.import.drop.idle': 'Lascia i file qui, oppure scegli',
+  'book.import.drop.active': 'Rilascia per aggiungere',
+  'book.import.drop.formats':
+    'PDF, email salvata, pagina web, foto, Word, Excel, file di calendario o export JSON.',
+  'book.import.drop.limits':
+    'Fino a {files} file per volta, ciascuno fino a {size}.',
+  'book.import.drop.browse': 'Scegli i file',
+  'book.import.refused.format':
+    '«{filename}» non è un file che questa importazione sa leggere. Legge un PDF, un’email salvata, una pagina web, una foto, un documento Word o Excel, un file di calendario o un export JSON.',
+  'book.import.refused.tooMany':
+    'Solo {files} file per volta. Il resto non è stato aggiunto.',
+  'book.import.refused.tooLarge':
+    '«{filename}» pesa {size}. Un’importazione legge file fino a {limit}.',
+  'book.import.refused.empty':
+    '«{filename}» è vuoto, quindi non c’è niente da leggere.',
+  'book.import.ceiling.title':
+    'Questo spazio ha letto tutte le sue conferme per questo mese',
+  'book.import.ceiling.body':
+    'Il piano include {ceiling} letture di file al mese e il credito si rinnova il primo. Una prenotazione a mano la puoi sempre aggiungere.',
+  'book.import.ceiling.none':
+    'Leggere un file di conferma non fa parte del piano di questo spazio',
+  'book.import.ceiling.noneBody':
+    'Passa a un piano superiore per farti leggere una conferma. Aggiungere una prenotazione a mano c’è sempre.',
+  'book.import.widget.title': 'Stiamo leggendo le conferme',
+  'book.import.widget.working': '{done} di {total} letti',
+  'book.import.widget.file': 'Sto leggendo «{filename}»',
+  'book.import.widget.done': {
+    one: 'Una prenotazione pronta da controllare',
+    many: '{count} prenotazioni pronte da controllare',
+    other: '{count} prenotazioni pronte da controllare',
+  },
+  'book.import.widget.review': 'Controlla',
+  'book.import.widget.failed': '«{filename}» non si è potuto leggere',
+  'book.import.widget.stalled': 'Ci sta mettendo più del previsto',
+  'book.import.widget.check': 'Guarda di nuovo',
+  'book.import.widget.dismiss': 'Chiudi',
+  'book.import.review.title': 'Cosa abbiamo letto',
+  'book.import.review.from': 'Da «{filename}»',
+  'book.import.review.selectAll': 'Seleziona tutto',
+  'book.import.review.selectNone': 'Non selezionare niente',
+  'book.import.review.confirm': {
+    one: 'Aggiungi {count} prenotazione',
+    many: 'Aggiungi {count} prenotazioni',
+    other: 'Aggiungi {count} prenotazioni',
+  },
+  'book.import.review.confirmNone': 'Seleziona una prenotazione da aggiungere',
+  'book.import.review.cancel': 'Annulla',
+  'book.import.review.needsReview': 'Da guardare',
+  'book.import.review.needsReviewHint':
+    'Alcuni campi non erano nel documento. Apri la prenotazione dopo averla aggiunta.',
+  'book.import.review.noPrice': 'Nessun prezzo letto',
+  'book.import.review.noPriceHint':
+    'Il documento non ne indicava uno chiaro, quindi è rimasto vuoto invece di essere indovinato.',
+  'book.import.review.untitled': 'Prenotazione senza titolo',
+  'book.import.empty.title':
+    'In quel file non abbiamo trovato nessuna prenotazione',
+  'book.import.empty.body':
+    '«{filename}» non conteneva niente che somigli a una conferma. Prova un altro file, o aggiungi la prenotazione a mano.',
+  'book.import.failed.title': '«{filename}» non si è potuto leggere',
+  'book.import.failed.body':
+    'Il file si è aperto ma non se n’è ricavato niente. Prova un altro file, o aggiungi la prenotazione a mano.',
+  'book.import.failed.retry': 'Prova un altro file',
+  'book.import.uploadFailed': '«{filename}» non è stato caricato',
+  'book.import.uploadRetry': 'Riprova',
+  'book.import.toast.added': {
+    one: 'Una prenotazione aggiunta',
+    many: '{count} prenotazioni aggiunte',
+    other: '{count} prenotazioni aggiunte',
+  },
+  'book.import.partial.title':
+    'Sono state aggiunte {written} prenotazioni su {total}',
+  'book.import.partial.body':
+    'Le altre restano selezionate. Aggiungendo di nuovo si scrivono solo quelle.',
+  'book.import.partial.retry': 'Aggiungi le altre',
   'book.journeyLink': 'Nella scheda trasporti',
   'filter.all': 'Tutto',
   'book.remove.body':
