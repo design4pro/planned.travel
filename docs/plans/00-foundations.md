@@ -1106,9 +1106,12 @@ rows are unchanged — that is the isolation claim, and it is asserted whole. Th
 asserted in three parts, because a blanket "zero counts" assertion is unsatisfiable and would fail on
 its first run, and because the per-traveller set is not the same on the two row kinds:
 
-- per-traveller on **both** row kinds — `regionCount` is zero and `byContinent` is empty, because
-  `visited_countries` and `visited_regions` are filtered by organization **and** user, so B's rows
-  are invisible from A's scope;
+- per-traveller on **both** row kinds — `byContinent` is empty, and `regionCount` is zero on the
+  all-time row, because `visited_countries` and `visited_regions` are filtered by organization
+  **and** user, so B's rows are invisible from A's scope. _Amended by #139:_ the year row's
+  `regionCount` is zero too, but it is no longer evidence of isolation — a year row carries a
+  constant `0` whatever the traveller visited — so that one assertion is kept as a statement of the
+  year-scoping rule and labelled as such in the test, not counted toward the isolation claim;
 - `countryCount` is asserted **per row kind**, and this is the assertion the intuitive reading gets
   wrong. On the all-time row it is zero, because it is `countries.length` over B's invisible visited
   list. On the year row it equals the number of distinct upper-cased codes across A's own trips that
