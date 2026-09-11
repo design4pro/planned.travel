@@ -256,6 +256,35 @@ describe('withTransports', () => {
     ).toEqual(['a1', 'c1', 'a2', leg('j1')])
   })
 
+  /**
+   * The other direction off `0..n-1`, and the one an ordinal can never express: a stored position
+   * below zero.
+   *
+   * `indexBetween` in `-server/plan.ts` gives a front insert `after − 1`, so scheduling a place
+   * ahead of a day numbered `0, 1` stores it at `−1` rather than renumbering the day. The rows then
+   * read `−1, 0, 1` while their ordinals read `0, 1, 2`, and a journey stored at `0.5` belongs
+   * between the second and the third — where the ordinals would put it after all three.
+   */
+  it('reads a position the server wrote below zero', () => {
+    const itemIds = ['c1', 'a1', 'a2']
+    const rows = transportRowsOf(
+      payload([journey('j1', { position: 0.5 })]),
+      DAY_IDS,
+    )
+    const positions = positionsOf(
+      itemIds,
+      new Map([
+        ['c1', -1],
+        ['a1', 0],
+        ['a2', 1],
+      ]),
+    )
+
+    expect(
+      readDay(withTransports(order({ d1: itemIds }), rows, positions), 'd1'),
+    ).toEqual(['c1', 'a1', leg('j1'), 'a2'])
+  })
+
   describe('a journey that spans the days between its ends', () => {
     const SPAN = payload([
       journey('j1', {
