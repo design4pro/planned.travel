@@ -88,12 +88,12 @@ and the e2e block. The capability lands here.
 
 ### Phase 4: The reader can see it
 
-- [ ] 4.1 `src/components/modules/book/import-drafts.ts` and its tests
-- [ ] 4.2 The forty-one locale keys, `en` first and then all 23
-- [ ] 4.3 `src/components/modules/book/import-dialog.tsx`
-- [ ] 4.4 `src/components/modules/book/import-widget.tsx`
-- [ ] 4.5 `src/routes/_app/route.tsx` mounts the widget
-- [ ] 4.6 `src/routes/_app/trips/$tripId/book.tsx` mounts the action and the dialog; `index.ts` gains the exports
+- [x] 4.1 `src/components/modules/book/import-drafts.ts` and its tests — b9c22e96
+- [x] 4.2 The forty-one locale keys, `en` first and then all 23 — d6ff14de (48 keys, per the spec's own tables)
+- [x] 4.3 `src/components/modules/book/import-dialog.tsx` — d6ff14de
+- [x] 4.4 `src/components/modules/book/import-widget.tsx` — d6ff14de
+- [x] 4.5 `src/routes/_app/route.tsx` mounts the widget — d6ff14de
+- [x] 4.6 `src/routes/_app/trips/$tripId/book.tsx` mounts the action and the dialog; `index.ts` gains the exports — d6ff14de
 - [ ] 4.7 The e2e block appended to `e2e/journeys.spec.ts`
 - [ ] 4.8 The blind A/B pair on the five declared states
 - [ ] 4.9 The full validation gate, in order
