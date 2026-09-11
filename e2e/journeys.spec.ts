@@ -1735,3 +1735,288 @@ test.describe('the harness itself', () => {
     ).toContain('does not declare `map: true`')
   })
 })
+
+/**
+ * Whether a request calls the named server function.
+ *
+ * The segment after `/_serverFn/` is the function's id, base64-encoded, and the
+ * export's name is inside it. The id as a whole is a build artefact; the name is
+ * the one handle on a call that survives a rebuild.
+ */
+function callsServerFn(url: URL, name: string): boolean {
+  const id = url.pathname.split('/_serverFn/').at(1)
+  if (id === undefined) return false
+  return Buffer.from(decodeURIComponent(id), 'base64')
+    .toString('utf8')
+    .includes(name)
+}
+
+/**
+ * 03-S7 — a confirmation file read into the booking desk.
+ *
+ * The one walk here that writes, and it goes through every seam a unit test
+ * stubs: the real `uploadFile` over `XMLHttpRequest`, the local queue consumer
+ * draining a real envelope into KV, the bounded poll, and the confirm writing
+ * into D1. It ends on the desk, because "the rows arrived carrying the
+ * unchecked-import marker" is a statement about the screen, not about a
+ * function's return value.
+ *
+ * The demo workspace is a shared fixture, so every booking this block writes
+ * carries {@link IMPORT_MARKER} in its title and is swept away before the walk
+ * and after it: a run that died half way costs the next run nothing.
+ */
+test.describe('a confirmation file read into the booking desk', () => {
+  /** In every title the fixture calendar carries, and in nothing the seed writes. */
+  const IMPORT_MARKER = 'Import walk'
+
+  /** None reads as a lodging: a lodging row would reach the geocoder on confirm. */
+  const EVENTS = [
+    {
+      uid: 'harbour-tour',
+      title: `${IMPORT_MARKER}: harbour tour`,
+      start: '20260304T090000Z',
+      end: '20260304T110000Z',
+    },
+    {
+      uid: 'cooking-class',
+      title: `${IMPORT_MARKER}: cooking class`,
+      start: '20260305T170000Z',
+      end: '20260305T200000Z',
+    },
+    {
+      uid: 'museum-entry',
+      title: `${IMPORT_MARKER}: museum entry`,
+      start: '20260306T100000Z',
+      end: '20260306T120000Z',
+    },
+  ] as const
+
+  /** The row the walk unticks before confirming. */
+  const PRUNED = EVENTS[1]
+
+  const CALENDAR = Buffer.from(
+    [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//planned.travel//e2e//EN',
+      ...EVENTS.flatMap((event) => [
+        'BEGIN:VEVENT',
+        `UID:${event.uid}@e2e.planned.travel`,
+        `SUMMARY:${event.title}`,
+        `DTSTART:${event.start}`,
+        `DTEND:${event.end}`,
+        'END:VEVENT',
+      ]),
+      'END:VCALENDAR',
+    ].join('\r\n'),
+  )
+
+  const bookRoute = (tripId: string): RouteCase => ({
+    name: 'trip-book-import',
+    path: `/trips/${tripId}/book`,
+    ready: TRIP_SECTIONS,
+  })
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  async function openImport(page: Page) {
+    await page.locator('[data-part="import-bookings"]').click()
+    const dialog = page.getByRole('dialog', {
+      name: 'Import bookings from a file',
+    })
+    await expect(dialog).toBeVisible()
+    return dialog
+  }
+
+  function importedCards(page: Page) {
+    return page
+      .locator('article')
+      .filter({ has: page.locator('h4', { hasText: IMPORT_MARKER }) })
+  }
+
+  /**
+   * Removes every booking carrying the marker, however many there are.
+   *
+   * Addressed through the first card each time rather than by title, because a
+   * run that died after confirming leaves two cards of the same name behind.
+   */
+  async function sweep(page: Page): Promise<void> {
+    const cards = importedCards(page)
+    for (let left = await cards.count(); left > 0; left -= 1) {
+      await cards
+        .first()
+        .getByRole('button', { name: /^Actions for / })
+        .click()
+      await page.getByRole('menuitem', { name: 'Remove booking' }).click()
+      await page
+        .getByRole('dialog', { name: /^Remove / })
+        .getByRole('button', { name: 'Remove booking' })
+        .click()
+      await expect(cards).toHaveCount(left - 1)
+    }
+  }
+
+  test('a calendar is read, pruned and written to the desk as unchecked imports', async ({
+    page,
+  }) => {
+    // An upload, a queue batch, a poll, a write and two sweeps, against a dev
+    // server. A ceiling, not an expectation.
+    test.setTimeout(120_000)
+
+    const tripId = await aTripToWalk(page)
+    const route = bookRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+    await sweep(page)
+
+    const dialog = await openImport(page)
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'import-walk.ics',
+      mimeType: 'text/calendar',
+      buffer: CALENDAR,
+    })
+
+    // The consumer batches for up to five seconds and the poll asks every two,
+    // so the list is well inside the poll's own twenty-second budget.
+    const review = dialog.getByRole('group', { name: 'What we read' })
+    await expect(review.getByRole('checkbox')).toHaveCount(EVENTS.length, {
+      timeout: 30_000,
+    })
+    await expect(
+      dialog.getByRole('button', { name: `Add ${EVENTS.length} bookings` }),
+      'freshly read rows arrive selected',
+    ).toBeEnabled()
+
+    await review.getByRole('checkbox', { name: PRUNED.title }).click()
+    const confirm = dialog.getByRole('button', {
+      name: `Add ${EVENTS.length - 1} bookings`,
+    })
+    await expect(confirm).toBeEnabled()
+    await confirm.click()
+
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText(`${EVENTS.length - 1} bookings added`),
+    ).toBeVisible()
+
+    const cards = importedCards(page)
+    await expect(cards).toHaveCount(EVENTS.length - 1)
+    await expect(
+      cards.filter({ hasText: PRUNED.title }),
+      'an unticked row must not reach the desk',
+    ).toHaveCount(0)
+    for (const card of await cards.all()) {
+      await expect(card.locator('[data-part="import-marker"]')).toHaveText(
+        'Unchecked import',
+      )
+    }
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+
+    await sweep(page)
+  })
+
+  test('a file the import cannot read is refused by name, and nothing uploads', async ({
+    page,
+  }) => {
+    const tripId = await aTripToWalk(page)
+    const route = bookRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    const sent: Array<string> = []
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (
+        callsServerFn(url, 'uploadTripFileFn') ||
+        callsServerFn(url, 'startBookingImportFn')
+      ) {
+        sent.push(url.pathname)
+      }
+    })
+
+    const dialog = await openImport(page)
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'voucher.pkpass',
+      mimeType: 'application/vnd.apple.pkpass',
+      buffer: Buffer.from('PK'),
+    })
+
+    await expect(
+      dialog.getByText('“voucher.pkpass” is not a file this import can read', {
+        exact: false,
+      }),
+    ).toBeVisible()
+    await expect(
+      dialog.locator('[data-part="import-drop"]'),
+      'a refusal leaves the drop target ready for another file',
+    ).toBeEnabled()
+    expect(sent, 'a refused file must never leave the machine').toEqual([])
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The ceiling, reached through a real refusal with only its code changed.
+   *
+   * The demo workspace is on a plan with an allowance and nothing can spend it
+   * from a browser, so the refusal is not waited for — it is made. A document
+   * job runs for real: upload, envelope, the meter spent, and the local
+   * consumer refusing it, because `vite dev` has no model binding and a job
+   * that cannot reach one stages a refusal. The poll's answer is then fetched
+   * from the server as it is and fulfilled with the refusal's code read as
+   * `ceiling`. Nothing about the payload's shape is written by hand: seroval
+   * frames are not a format to forge, and a fabricated one deserialises to
+   * `undefined` rather than failing.
+   */
+  test('a workspace past its reading allowance is told so in its own words', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+
+    await page.route(
+      (url) => callsServerFn(url, 'getBookingImportFn'),
+      async (intercepted) => {
+        const response = await intercepted.fetch()
+        const body = (await response.text()).replace(
+          /"(?:unknown|unreadable)"/gu,
+          '"ceiling"',
+        )
+        await intercepted.fulfill({ response, body })
+      },
+    )
+
+    const tripId = await aTripToWalk(page)
+    const route = bookRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    const dialog = await openImport(page)
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'import-walk.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from(`${EVENTS[0].title}, 4 March 2026 at 09:00.`),
+    })
+
+    await expect(
+      dialog.getByText(
+        'Reading a confirmation file is not part of this workspace’s plan',
+      ),
+    ).toBeVisible({ timeout: 30_000 })
+    await expect(
+      dialog.getByRole('group', { name: 'What we read' }),
+      'a refused job has nothing to review',
+    ).toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})
