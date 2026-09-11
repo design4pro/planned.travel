@@ -250,6 +250,23 @@ const messages = {
   },
   'dashboard.storage.more': 'Butuh ruang lagi?',
   'dashboard.storage.plans': 'Lihat paket',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Referensi',
+  'dashboard.widgets.choose': 'Pilih widget',
+  'dashboard.widgets.description': 'Widget yang Anda simpan di samping dasbor.',
+  'dashboard.clock.label': 'Jam dunia',
+  'dashboard.clock.add': 'Tambahkan zona waktu',
+  'dashboard.clock.search': 'Cari kota dan wilayah',
+  'dashboard.clock.noMatches': 'Tidak ada zona waktu dengan nama itu',
+  'dashboard.clock.remove': 'Hapus {zone}',
+  'dashboard.clock.offset': '{offset} dari waktu Anda sendiri',
+  'dashboard.clock.here': 'Waktu Anda sendiri',
+  'dashboard.clock.empty.title': 'Belum ada zona waktu yang disematkan',
+  'dashboard.clock.empty.body':
+    'Sematkan sebuah tempat dan baca jamnya di samping jam Anda.',
+  'dashboard.clock.unknown.title': 'Perangkat ini tidak mengenal {zone}',
+  'dashboard.clock.unknown.body':
+    'Waktunya tidak dapat dibaca di sini. Hapus barisnya untuk mengatasi ini.',
 
   'admin.error': 'Konsol admin gagal dimuat',
   'admin.denied.title': 'Hanya admin ruang kerja yang bisa membuka ini',

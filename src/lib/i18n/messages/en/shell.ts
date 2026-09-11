@@ -347,6 +347,29 @@ const messages = {
   'dashboard.storage.more': 'Need more room?',
   'dashboard.storage.plans': 'See plans',
 
+  'dashboard.widgets.label': 'Reference',
+  'dashboard.widgets.choose': 'Choose widgets',
+  'dashboard.widgets.description':
+    'The widgets you keep beside your dashboard.',
+
+  'dashboard.clock.label': 'World clock',
+  'dashboard.clock.add': 'Add a time zone',
+  'dashboard.clock.search': 'Search cities and regions',
+  'dashboard.clock.noMatches': 'No time zone by that name',
+  'dashboard.clock.remove': 'Remove {zone}',
+  /* The offset is a figure beside a clock, so it says what it is a figure of. */
+  'dashboard.clock.offset': '{offset} from your own time',
+  'dashboard.clock.here': 'Your own time',
+  'dashboard.clock.empty.title': 'No time zones pinned',
+  'dashboard.clock.empty.body':
+    'Pin a place and read its clock beside your own.',
+  /* A zone identifier is a stored value that outlived the runtime that knew it,
+     so the reader is told which one and offered the way out rather than shown a
+     row that cannot draw. */
+  'dashboard.clock.unknown.title': 'This device does not know {zone}',
+  'dashboard.clock.unknown.body':
+    'Its time cannot be read here. Remove the row to clear this.',
+
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'The admin console did not load',
   'admin.denied.title': 'Only workspace admins can open this',

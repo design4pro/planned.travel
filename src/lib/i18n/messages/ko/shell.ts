@@ -213,6 +213,23 @@ const messages = {
   },
   'dashboard.storage.more': '공간이 더 필요하신가요?',
   'dashboard.storage.plans': '플랜 보기',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': '참고',
+  'dashboard.widgets.choose': '위젯 선택',
+  'dashboard.widgets.description': '대시보드 옆에 두는 위젯입니다.',
+  'dashboard.clock.label': '세계 시계',
+  'dashboard.clock.add': '시간대 추가',
+  'dashboard.clock.search': '도시 및 지역 검색',
+  'dashboard.clock.noMatches': '그런 이름의 시간대가 없습니다',
+  'dashboard.clock.remove': '{zone} 제거',
+  'dashboard.clock.offset': '내 시간과 {offset}',
+  'dashboard.clock.here': '내 시간',
+  'dashboard.clock.empty.title': '고정된 시간대가 없습니다',
+  'dashboard.clock.empty.body':
+    '장소를 고정하면 내 시계 옆에서 그곳의 시간을 볼 수 있습니다.',
+  'dashboard.clock.unknown.title': '이 기기는 {zone}을(를) 알지 못합니다',
+  'dashboard.clock.unknown.body':
+    '여기서는 시간을 읽을 수 없습니다. 행을 제거하면 해결됩니다.',
   'admin.error': '관리 콘솔을 불러오지 못했어요',
   'admin.denied.title': '여기는 워크스페이스 관리자만 열 수 있어요',
   'admin.denied.body':

@@ -286,6 +286,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Mehr Platz nötig?',
   'dashboard.storage.plans': 'Tarife ansehen',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Referenz',
+  'dashboard.widgets.choose': 'Widgets auswählen',
+  'dashboard.widgets.description':
+    'Die Widgets, die Sie neben Ihrem Dashboard behalten.',
+  'dashboard.clock.label': 'Weltzeituhr',
+  'dashboard.clock.add': 'Zeitzone hinzufügen',
+  'dashboard.clock.search': 'Städte und Regionen suchen',
+  'dashboard.clock.noMatches': 'Keine Zeitzone mit diesem Namen',
+  'dashboard.clock.remove': '{zone} entfernen',
+  'dashboard.clock.offset': '{offset} zu Ihrer eigenen Zeit',
+  'dashboard.clock.here': 'Ihre eigene Zeit',
+  'dashboard.clock.empty.title': 'Keine Zeitzonen angeheftet',
+  'dashboard.clock.empty.body':
+    'Heften Sie einen Ort an und lesen Sie seine Uhr neben Ihrer eigenen.',
+  'dashboard.clock.unknown.title': 'Dieses Gerät kennt {zone} nicht',
+  'dashboard.clock.unknown.body':
+    'Seine Zeit lässt sich hier nicht lesen. Entfernen Sie die Zeile, um das zu beheben.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Die Verwaltung wurde nicht geladen',

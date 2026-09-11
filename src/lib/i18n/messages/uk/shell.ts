@@ -307,6 +307,23 @@ const messages = {
   },
   'dashboard.storage.more': 'Потрібно більше місця?',
   'dashboard.storage.plans': 'Переглянути тарифи',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Орієнтири',
+  'dashboard.widgets.choose': 'Вибрати віджети',
+  'dashboard.widgets.description': 'Віджети, які ви тримаєте поруч із панеллю.',
+  'dashboard.clock.label': 'Світовий годинник',
+  'dashboard.clock.add': 'Додати часовий пояс',
+  'dashboard.clock.search': 'Пошук міст і регіонів',
+  'dashboard.clock.noMatches': 'Часового поясу з такою назвою немає',
+  'dashboard.clock.remove': 'Прибрати {zone}',
+  'dashboard.clock.offset': '{offset} від вашого часу',
+  'dashboard.clock.here': 'Ваш власний час',
+  'dashboard.clock.empty.title': 'Часові пояси не закріплені',
+  'dashboard.clock.empty.body':
+    'Закріпіть місце й читайте його годинник поруч зі своїм.',
+  'dashboard.clock.unknown.title': 'Цей пристрій не знає поясу {zone}',
+  'dashboard.clock.unknown.body':
+    'Його час тут не прочитати. Приберіть рядок, щоб це виправити.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Консоль адміністратора не завантажилася',

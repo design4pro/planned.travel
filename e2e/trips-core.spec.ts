@@ -1004,3 +1004,136 @@ test.describe('01-S4b — The day is one sequence on screen', () => {
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 })
+
+test.describe('01-S5 — The dashboard’s reference column, and the clock in it', () => {
+  /**
+   * This block's route table. One route, because the column, its menu and its
+   * clock are all properties of `/dashboard` and of nothing else — the stage
+   * adds no server work and no second screen to walk to.
+   */
+  const DASHBOARD: RouteCase = {
+    name: 'dashboard',
+    path: '/dashboard',
+    ready: 'main',
+  }
+
+  const COLUMN = '[data-part="dashboard-widgets-column"]'
+  const SHEET_TRIGGER = '[data-part="dashboard-widgets-trigger"]'
+  const SHEET = '[data-part="dashboard-widgets-sheet"]'
+  const MENU_TRIGGER = '[data-part="dashboard-widgets-menu"]'
+  const CLOCK_ROW = '[data-part="clock-row"]'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * The phone's half of the layout, and the clock read against a clock that
+   * cannot move.
+   *
+   * Both halves of the suite's time pinning meet on this widget: the context runs
+   * in `UTC`, so the zone the browser reports as the reader's own is `UTC`, and
+   * `visit()` fixes the in-page `Date` at `FROZEN_NOW` — midday. A reader who has
+   * never picked a zone gets exactly one row, their own, and that row has to read
+   * the pinned minute. Asserted as a substring rather than as the whole cell
+   * because whether the catalogue's locale prints a meridiem is the formatter's
+   * business, not this claim's.
+   *
+   * Below `md` the column is not hidden but unmounted, which is the property that
+   * keeps one clock timer in the document rather than two.
+   */
+  test('the phone opens the widgets in a sheet, and the clock reads the pinned minute', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      !isMobile,
+      'the sheet is the phone’s way in; a wide viewport mounts the column instead',
+    )
+    const report = watchConsole(page, DASHBOARD)
+    await visit(page, DASHBOARD, 'light')
+
+    await expect(page.locator(COLUMN)).toHaveCount(0)
+    await expect(page.locator(CLOCK_ROW)).toHaveCount(0)
+
+    await page.locator(SHEET_TRIGGER).click()
+    const sheet = page.locator(SHEET)
+    await expect(sheet).toBeVisible()
+
+    const rows = sheet.locator(CLOCK_ROW)
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toHaveAttribute('data-zone', 'UTC')
+    await expect(rows.first()).toContainText('12:00')
+
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The wide half, and the one behaviour the stage is named for: the column is
+   * the reader's to dismiss, and dismissing all of it takes the column with it.
+   *
+   * The menu is asserted to survive that, because it is the only way back. It
+   * lives in the dashboard header rather than in the column for exactly this
+   * reason, and a menu that had been mounted inside the widgets would leave a
+   * reader who switched the last one off with a dashboard they could not undo.
+   */
+  test('the reference column stands beside the trips, and folds away when every widget is off', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      isMobile,
+      'the phone has no column to fold; its half of the layout is the sheet above',
+    )
+    const report = watchConsole(page, DASHBOARD)
+    await visit(page, DASHBOARD, 'light')
+
+    const column = page.locator(COLUMN)
+    await expect(column).toBeVisible()
+    await expect(column.locator(CLOCK_ROW)).toHaveCount(1)
+    // The sheet's trigger belongs to the phone alone: one surface is mounted at a
+    // time, so a wide document that also carried it would be drawing the widgets
+    // twice.
+    await expect(page.locator(SHEET_TRIGGER)).toHaveCount(0)
+
+    await page.locator(MENU_TRIGGER).click()
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+
+    // Four, because the clock joined the three panels the rail already carried.
+    // A menu that governed only the clock could not honour the claim below.
+    const items = menu.getByRole('menuitemcheckbox')
+    await expect(items).toHaveCount(4)
+
+    const count = await items.count()
+    for (let index = 0; index < count; index += 1) {
+      // Ticking an item does not close the menu — deciding what the column holds
+      // is several decisions, not one — so the next click lands without
+      // reopening anything.
+      await items.nth(index).click()
+    }
+
+    await expect(column).toHaveCount(0)
+    await expect(menu).toBeVisible()
+
+    // And back: the widget returns to the column, which is what makes the fold a
+    // preference rather than a loss.
+    await items.first().click()
+    await expect(column).toBeVisible()
+    await expect(column.locator(CLOCK_ROW)).toHaveCount(1)
+
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})

@@ -280,6 +280,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Meer ruimte nodig?',
   'dashboard.storage.plans': 'Bekijk de abonnementen',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Referentie',
+  'dashboard.widgets.choose': 'Widgets kiezen',
+  'dashboard.widgets.description':
+    'De widgets die je naast je dashboard houdt.',
+  'dashboard.clock.label': 'Wereldklok',
+  'dashboard.clock.add': 'Tijdzone toevoegen',
+  'dashboard.clock.search': 'Zoek steden en regio’s',
+  'dashboard.clock.noMatches': 'Geen tijdzone met die naam',
+  'dashboard.clock.remove': '{zone} verwijderen',
+  'dashboard.clock.offset': '{offset} ten opzichte van je eigen tijd',
+  'dashboard.clock.here': 'Je eigen tijd',
+  'dashboard.clock.empty.title': 'Geen tijdzones vastgezet',
+  'dashboard.clock.empty.body':
+    'Zet een plaats vast en lees de klok ervan naast die van jou.',
+  'dashboard.clock.unknown.title': 'Dit apparaat kent {zone} niet',
+  'dashboard.clock.unknown.body':
+    'De tijd ervan is hier niet te lezen. Verwijder de rij om dit op te lossen.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Het beheer is niet geladen',

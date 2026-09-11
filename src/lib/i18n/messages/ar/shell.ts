@@ -339,6 +339,22 @@ const messages = {
   },
   'dashboard.storage.more': 'تحتاج مساحة أكبر؟',
   'dashboard.storage.plans': 'اطّلع على الخطط',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'مرجع',
+  'dashboard.widgets.choose': 'اختر الأدوات',
+  'dashboard.widgets.description': 'الأدوات التي تبقيها بجانب لوحتك.',
+  'dashboard.clock.label': 'ساعة عالمية',
+  'dashboard.clock.add': 'أضف منطقة زمنية',
+  'dashboard.clock.search': 'ابحث عن المدن والمناطق',
+  'dashboard.clock.noMatches': 'لا توجد منطقة زمنية بهذا الاسم',
+  'dashboard.clock.remove': 'إزالة {zone}',
+  'dashboard.clock.offset': '{offset} عن توقيتك',
+  'dashboard.clock.here': 'توقيتك أنت',
+  'dashboard.clock.empty.title': 'لا توجد مناطق زمنية مثبّتة',
+  'dashboard.clock.empty.body': 'ثبّت مكانًا واقرأ ساعته بجانب ساعتك.',
+  'dashboard.clock.unknown.title': 'هذا الجهاز لا يعرف {zone}',
+  'dashboard.clock.unknown.body':
+    'لا يمكن قراءة توقيتها هنا. أزل الصف لتصحيح ذلك.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'لم تُحمّل لوحة الإدارة',

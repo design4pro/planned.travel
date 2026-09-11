@@ -294,6 +294,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Precisa de mais espaço?',
   'dashboard.storage.plans': 'Ver os planos',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Referência',
+  'dashboard.widgets.choose': 'Escolher widgets',
+  'dashboard.widgets.description':
+    'Os widgets que você mantém ao lado do painel.',
+  'dashboard.clock.label': 'Relógio mundial',
+  'dashboard.clock.add': 'Adicionar um fuso horário',
+  'dashboard.clock.search': 'Buscar cidades e regiões',
+  'dashboard.clock.noMatches': 'Nenhum fuso horário com esse nome',
+  'dashboard.clock.remove': 'Remover {zone}',
+  'dashboard.clock.offset': '{offset} em relação ao seu horário',
+  'dashboard.clock.here': 'Seu próprio horário',
+  'dashboard.clock.empty.title': 'Nenhum fuso horário fixado',
+  'dashboard.clock.empty.body':
+    'Fixe um lugar e leia o relógio dele ao lado do seu.',
+  'dashboard.clock.unknown.title': 'Este dispositivo não conhece {zone}',
+  'dashboard.clock.unknown.body':
+    'O horário dele não pode ser lido aqui. Remova a linha para resolver.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'O console de administração não carregou',

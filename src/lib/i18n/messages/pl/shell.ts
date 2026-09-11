@@ -316,6 +316,23 @@ const messages = {
   },
   'dashboard.storage.more': 'Mało miejsca?',
   'dashboard.storage.plans': 'Zobacz plany',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Podręczne',
+  'dashboard.widgets.choose': 'Wybierz widżety',
+  'dashboard.widgets.description': 'Widżety, które trzymasz obok pulpitu.',
+  'dashboard.clock.label': 'Zegar światowy',
+  'dashboard.clock.add': 'Dodaj strefę czasową',
+  'dashboard.clock.search': 'Szukaj miast i regionów',
+  'dashboard.clock.noMatches': 'Brak strefy czasowej o tej nazwie',
+  'dashboard.clock.remove': 'Usuń {zone}',
+  'dashboard.clock.offset': '{offset} względem twojego czasu',
+  'dashboard.clock.here': 'Twój własny czas',
+  'dashboard.clock.empty.title': 'Nie przypięto żadnej strefy czasowej',
+  'dashboard.clock.empty.body':
+    'Przypnij miejsce i czytaj jego zegar obok swojego.',
+  'dashboard.clock.unknown.title': 'To urządzenie nie zna strefy {zone}',
+  'dashboard.clock.unknown.body':
+    'Nie da się tu odczytać jej czasu. Usuń wiersz, aby to naprawić.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Konsola administratora się nie wczytała',

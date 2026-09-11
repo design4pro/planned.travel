@@ -269,6 +269,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Behöver du mer plats?',
   'dashboard.storage.plans': 'Se abonnemangen',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Referens',
+  'dashboard.widgets.choose': 'Välj widgetar',
+  'dashboard.widgets.description':
+    'De widgetar du har bredvid din instrumentpanel.',
+  'dashboard.clock.label': 'Världsklocka',
+  'dashboard.clock.add': 'Lägg till en tidszon',
+  'dashboard.clock.search': 'Sök städer och regioner',
+  'dashboard.clock.noMatches': 'Ingen tidszon med det namnet',
+  'dashboard.clock.remove': 'Ta bort {zone}',
+  'dashboard.clock.offset': '{offset} mot din egen tid',
+  'dashboard.clock.here': 'Din egen tid',
+  'dashboard.clock.empty.title': 'Inga tidszoner fästa',
+  'dashboard.clock.empty.body':
+    'Fäst en plats och läs dess klocka bredvid din egen.',
+  'dashboard.clock.unknown.title': 'Den här enheten känner inte till {zone}',
+  'dashboard.clock.unknown.body':
+    'Dess tid går inte att läsa här. Ta bort raden för att lösa det.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'Administrationen lästes inte in',

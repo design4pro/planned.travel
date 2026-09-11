@@ -298,6 +298,24 @@ const messages = {
   },
   'dashboard.storage.more': 'Necessites més espai?',
   'dashboard.storage.plans': 'Mira els plans',
+  /* 01-S5 — the reference column and its clock */
+  'dashboard.widgets.label': 'Referència',
+  'dashboard.widgets.choose': 'Tria els ginys',
+  'dashboard.widgets.description':
+    'Els ginys que mantens al costat del tauler.',
+  'dashboard.clock.label': 'Rellotge mundial',
+  'dashboard.clock.add': 'Afegeix un fus horari',
+  'dashboard.clock.search': 'Cerca ciutats i regions',
+  'dashboard.clock.noMatches': 'Cap fus horari amb aquest nom',
+  'dashboard.clock.remove': 'Elimina {zone}',
+  'dashboard.clock.offset': '{offset} respecte a la teva hora',
+  'dashboard.clock.here': 'La teva hora',
+  'dashboard.clock.empty.title': 'Cap fus horari fixat',
+  'dashboard.clock.empty.body':
+    'Fixa un lloc i llegeix-ne el rellotge al costat del teu.',
+  'dashboard.clock.unknown.title': 'Aquest dispositiu no coneix {zone}',
+  'dashboard.clock.unknown.body':
+    'Aquí no se’n pot llegir l’hora. Elimina la fila per resoldre-ho.',
 
   /* ----------------------------------------------------------------- admin */
   'admin.error': 'La consola d’administració no s’ha carregat',
