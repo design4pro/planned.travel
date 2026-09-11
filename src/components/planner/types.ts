@@ -10,6 +10,8 @@
  * and one adapter at the route boundary produces both.
  */
 
+import type { MessageKey } from '#/lib/i18n'
+
 /** A tenant's own taxonomy entry, as the rail needs it. */
 export interface PlannerCategory {
   readonly id: string
@@ -58,20 +60,22 @@ export interface PlannerRow {
 /**
  * One thing in a day's sequence.
  *
- * **This union is an extension point, and it is written as one.** A day is one number
+ * **This union is an extension point, and it was used as one.** A day is one number
  * line (PRD #104 decision 9) and `mergeDayTimeline` reads only `{ id, position, time }`
- * from whatever sits on it. A third kind — the transport row `BKG-10` brings from
- * `03-reservations-and-transport.md` — is therefore *one variant here, one id prefix in
- * `ordering.ts`, and one renderer under `DaySection`*. It needs no change to the merge,
- * to the drag adapter, or to the repository's two-table batch beyond its own table.
+ * from whatever sits on it. The third kind — the transport row `BKG-10` brings from
+ * `03-reservations-and-transport.md` — landed in `03-S5` as exactly what this comment
+ * predicted: *one variant here, one id prefix in `ordering.ts`, and one renderer under
+ * `DaySection`*, with no change to the merge, to the drag adapter's contract, or to the
+ * repository's two-table batch beyond its own table.
  *
- * Anything that would make a third kind require reshaping this type — a boolean instead
- * of `kind`, a shared bag of optional fields instead of two variants — is the design this
+ * Anything that would make a fourth kind require reshaping this type — a boolean instead
+ * of `kind`, a shared bag of optional fields instead of variants — is the design this
  * comment exists to prevent.
  */
 export type PlannerItem =
   | { readonly kind: 'stop'; readonly row: PlannerRow }
   | { readonly kind: 'note'; readonly note: PlannerNote }
+  | { readonly kind: 'transport'; readonly transport: PlannerTransport }
 
 /** A day of the itinerary, with everything its rail section shows. */
 export interface PlannerDay {
@@ -122,6 +126,64 @@ export interface PlannerNote {
   readonly time: string | null
   /** As stored, e.g. `train-front`. */
   readonly icon: string
+}
+
+/**
+ * Which part of a journey one day sees.
+ *
+ * A journey covering days *d₁ … dₙ* is `departing` on *d₁*, `arriving` on *dₙ* and
+ * `travelling` on everything between. It is the part rather than the label, because the
+ * label is absent on a one-day journey and the placement rules still need to tell the
+ * three apart.
+ */
+export type JourneyPart = 'departing' | 'travelling' | 'arriving'
+
+/**
+ * One journey, as one of its days renders it.
+ *
+ * A view model in the same idiom as {@link PlannerRow} and {@link PlannerNote}: the time and the
+ * fare arrive already formatted, and `mode` and `status` arrive exactly as stored — both columns
+ * carry a `CHECK` constraint, but no migration narrows the rows written before one, so the row's
+ * registries fall back for a name they do not know rather than the payload claiming a guarantee it
+ * does not have.
+ *
+ * A journey covering three days is three of these, sharing one `id` and differing in `dayId`,
+ * `part` and `time`. `itemId` is therefore day-qualified — `@dnd-kit` needs three distinct
+ * draggable ids for three rows — and only the `departing` one is draggable at all: a journey has
+ * one `sort_order`, and a number on a day's line has one ruler.
+ */
+export interface PlannerTransport {
+  /** The day-qualified draggable identity, from `ordering.legItemId`. */
+  readonly itemId: string
+  /** Which table the row came from: a whole record, or one leg of a chain. */
+  readonly kind: 'transport' | 'leg'
+  /** The `transports` or `transport_legs` row id, shared by every day the journey covers. */
+  readonly id: string
+  readonly dayId: string
+  readonly part: JourneyPart
+  /**
+   * What this day's part is called, or `null` when the journey covers one day — naming a part only
+   * makes sense when there is more than one.
+   */
+  readonly phase: MessageKey | null
+  /** As stored, e.g. `flight`. The renderer's glyph registry falls back. */
+  readonly mode: string
+  /** As stored, e.g. `confirmed`. The status pill's vocabulary falls back. */
+  readonly status: string
+  readonly serviceNumber: string | null
+  readonly fromName: string | null
+  readonly toName: string | null
+  /** Already formatted — the departure, the arrival, or the range on a one-day journey. */
+  readonly time: string | null
+  /** Already formatted, e.g. `¥13,320`. `null` when the journey carries no fare of its own. */
+  readonly price: string | null
+  /**
+   * `sort_order` as stored — the fractional position among the departure day's stops and notes.
+   *
+   * Meaningful on the `departing` row and on no other: the rows a journey shows on the days it
+   * merely crosses are placed on the client and never stored.
+   */
+  readonly position: number
 }
 
 /**
