@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { MEDIA_LG_UP } from '#/lib/breakpoints'
 import { cn } from '#/lib/cn'
 import { AtlasPanel, AtlasPanelSkeleton } from '../atlas-panel'
 
@@ -142,23 +143,29 @@ function panel(overrides: Partial<AtlasPanelProps> = {}) {
 }
 
 /**
- * Answers the panel's `(min-width: 1024px)` query with a stated verdict.
+ * Answers the panel's `lg` query with a stated verdict, and collects what it was
+ * asked.
  *
  * jsdom has one viewport and no `lg`, so the breakpoint has to be told rather
- * than resized into. `restoreMocks` puts the real one back after each test.
+ * than resized into. `restoreMocks` puts the real one back after each test. The
+ * verdict is keyed on whole-string equality with `MEDIA_LG_UP` rather than on a
+ * substring: a panel that went back to naming the boundary in `px` would then
+ * read as narrow here and take every `lg` case below down with it.
  */
-function matchWidth(wide: boolean): void {
-  vi.spyOn(window, 'matchMedia').mockImplementation(
-    (query: string) =>
-      ({
-        matches: query.includes('min-width: 1024px') ? wide : false,
-        media: query,
-        onchange: null,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        dispatchEvent: () => false,
-      }) as unknown as MediaQueryList,
-  )
+function matchWidth(wide: boolean): Array<string> {
+  const asked: Array<string> = []
+  vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => {
+    asked.push(query)
+    return {
+      matches: query === MEDIA_LG_UP ? wide : false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    } as unknown as MediaQueryList
+  })
+  return asked
 }
 
 const coverage = (root: HTMLElement): string =>
@@ -212,6 +219,25 @@ describe('sections', () => {
     const body = container.querySelector('[role=tabpanel]')?.parentElement
     expect(body?.className).toContain('hidden')
     expect(body?.className).toContain('lg:flex')
+  })
+
+  /**
+   * The query and the variant above are two halves of one decision: `lg:flex`
+   * reveals the body, and the query decides what the toggle says about it. They
+   * have to name the same boundary in the same unit — `lg` is `64rem`, and the
+   * `1024px` this used to ask for agrees with that only at the default 16px font
+   * size. A reader who has raised their browser's font-size preference was told
+   * the shelf was shut while the stylesheet had already opened it.
+   *
+   * That the constant is `rem` is `breakpoints.test.ts`'s subject; what only this
+   * test can see is that the panel asks about `lg` at all.
+   */
+  it('asks about the same boundary the body’s `lg:` variant uses', () => {
+    const asked = matchWidth(true)
+
+    panel({ expanded: null })
+
+    expect(asked).toContain(MEDIA_LG_UP)
   })
 
   it('opens the drawer when a collapsed panel has a tab chosen', async () => {

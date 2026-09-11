@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
+import { MEDIA_LG_UP } from '#/lib/breakpoints'
 import { cn } from '#/lib/cn'
 import {
   Button,
@@ -223,6 +224,15 @@ const PLAN_VARS: PlanVars = {
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * The complement of the rails' `lg:` variant, in the same unit.
+ *
+ * The two halves of this decision are this query and `hidden lg:flex` / `lg:hidden`
+ * on the surfaces below. A `px` query would agree with `lg` only at a 16px root
+ * font size, which is why the figure comes from `#/lib/breakpoints`.
+ */
+const RAILS_VISIBLE_QUERY = MEDIA_LG_UP
+
+/**
  * True on a viewport wide enough for two floating rails.
  *
  * The rails and the mobile sheet render the *same* rows, and `@dnd-kit` keys its
@@ -237,7 +247,7 @@ function useIsWide(): boolean {
   const [wide, setWide] = React.useState(true)
 
   React.useEffect(() => {
-    const query = window.matchMedia('(min-width: 1024px)')
+    const query = window.matchMedia(RAILS_VISIBLE_QUERY)
     const read = (): void => setWide(query.matches)
     read()
     query.addEventListener('change', read)

@@ -17,6 +17,7 @@ Distilled from docs/SPEC.md §6–§7. The repo overrides this file where they d
 - TypeScript strict. No `any`, no non-null `!` on values that can genuinely be null.
 - Named exports, no default exports (route modules excepted — TanStack requires them).
 - `cn()` for class merging.
+- A viewport media query that complements a Tailwind variant — in JS or in `styles.css` — uses a `MEDIA_*` constant from `src/lib/breakpoints.ts`, never a literal and never `px`. The two halves of the decision must name the same boundary in the same unit: `px` agrees with a `rem` breakpoint only at the default 16px font size, and a reader who has raised their browser's font-size preference moves the variant without moving the query, leaving a band that renders neither half (WCAG 2.2 §1.4.4). That preference is not the root font size — Media Queries Level 4 §1.3 resolves a relative unit in a media query against the _initial_ value, so `html { font-size }` moves nothing. The call site names the variant it pairs with; a query that pairs with none is an independent boundary and says so. `src/lib/__tests__/breakpoints.test.ts` enforces both halves: the unit, and that a file reaching for a constant carries that constant's variant.
 - No nested ternaries — prefer switch or if/else chains. Clarity over brevity.
 - No TODOs, placeholder copy, `console.log`, or commented-out code left behind.
 
