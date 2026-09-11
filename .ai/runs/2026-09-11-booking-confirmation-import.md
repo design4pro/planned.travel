@@ -66,6 +66,8 @@ and the e2e block. The capability lands here.
 
 ## Progress
 
+PR: #435
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Bytes become text, and text becomes bookings
@@ -117,3 +119,10 @@ and the e2e block. The capability lands here.
       in a full single-worker run of its own file
 - [x] 5.5 The APPROVED re-review posted, `review` → `merge-queue` with `needs-qa` kept, the label
       rationale updated in place, and the PR flipped to ready
+- [x] 5.6 `om-auto-qa-pr 435` — evidence only, PASS on ten steps with ten screenshots on the PR: the
+      refusal by name with nothing on the wire, three rows read and pruned to two, the confirm writing
+      only the ticked rows as unchecked imports, the phone viewport, and the card following the job
+      onto `/dashboard` and leading back through `?import=`. No label changed
+- [x] 5.7 The run summary comment, and three follow-ups filed rather than fixed here: #443 (the
+      binary `upload-policy.test.ts` on develop), #444 (the `stageRefusal` ics/json asymmetry) and a
+      second data point on the existing flake issue #317
