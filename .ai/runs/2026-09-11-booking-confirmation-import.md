@@ -70,14 +70,14 @@ and the e2e block. The capability lands here.
 
 ### Phase 1: Bytes become text, and text becomes bookings
 
-- [ ] 1.1 `src/server/extract/document.ts` — `DocumentConverter`, `IMPORT_TEXT_MAX_CHARS`, `documentToText`, plus its tests
-- [ ] 1.2 `src/server/extract/booking.ts` — `BookingModel`, `EXTRACTION_MODEL`, the answer schema and `textToReservations`, plus its tests
+- [x] 1.1 `src/server/extract/document.ts` — `DocumentConverter`, `IMPORT_TEXT_MAX_CHARS`, `documentToText`, plus its tests — 0307e306
+- [x] 1.2 `src/server/extract/booking.ts` — `BookingModel`, `EXTRACTION_MODEL`, the answer schema and `textToReservations`, plus its tests — 0307e306
 
 ### Phase 2: The engine reads a document
 
-- [ ] 2.1 `src/server/queue/types.ts` — `format` gains `'document'`, the payload gains `sourceName`
-- [ ] 2.2 `src/server/queue/handlers/booking-import.ts` — `extractFromDocument`, the meter spend and the branch in front of the parse
-- [ ] 2.3 `src/server/fns/file-policy.ts` — `IMPORT_ACCEPT_ATTRIBUTE`, `MAX_IMPORT_FILES`, `importFormatFor`, `text/html` and `message/rfc822`
+- [x] 2.1 `src/server/queue/types.ts` — `format` gains `'document'`, the payload gains `sourceName` — b9310ec8
+- [x] 2.2 `src/server/queue/handlers/booking-import.ts` — `extractFromDocument`, the meter spend and the branch in front of the parse — b9310ec8
+- [x] 2.3 `src/server/fns/file-policy.ts` — `IMPORT_ACCEPT_ATTRIBUTE`, `MAX_IMPORT_FILES`, `importFormatFor`, `text/html` and `message/rfc822` — b9310ec8
 
 ### Phase 3: The three verbs
 
