@@ -304,11 +304,12 @@ export function ImportBookingsDialog({
 
         <DialogBody>
           <div className="flex min-w-0 flex-col gap-5">
+            {/*
+             * No title: each line already names its file and says what is wrong with it, and the
+             * only heading the catalogue could lend this list is one written for something else.
+             */}
             {refusals.length === 0 ? null : (
-              <Alert
-                tone="warning"
-                title={t('modules.book.import.review.needsReview')}
-              >
+              <Alert tone="warning">
                 <ul className="flex flex-col gap-1">
                   {refusals.map((line) => (
                     <li key={line}>{line}</li>

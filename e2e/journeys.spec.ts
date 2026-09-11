@@ -1166,12 +1166,36 @@ test.describe('authenticated routes', () => {
  * which is exactly how five raw keys reached the colour picker earlier in the
  * same migration.
  */
+const TRIP_SECTIONS = 'nav[aria-label="Trip sections"]'
+
+/** The trips list, which is the one screen that links to a trip by its id. */
+const TRIPS = APP_ROUTES.find((candidate) => candidate.name === 'trips')
+
+/**
+ * The id behind the first trip card, or a skip.
+ *
+ * Read off the card's own link rather than from a fixture, so the walk follows
+ * the same address a reader would. A workspace with no trips leaves this block
+ * nothing to render and says so.
+ */
+async function aTripToWalk(page: Page): Promise<string> {
+  if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
+  await visit(page, TRIPS, 'light')
+  const tripId = await page.evaluate(() => {
+    for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
+      const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
+        anchor.getAttribute('href') ?? '',
+      )
+      if (match !== null) return match[1]
+    }
+    return null
+  })
+  test.skip(tripId === null, 'the workspace lists no trip to walk into')
+  if (tripId === null) throw new Error('unreachable: the test was skipped')
+  return tripId
+}
+
 test.describe('the trip sections behind a route parameter', () => {
-  const TRIP_SECTIONS = 'nav[aria-label="Trip sections"]'
-
-  /** The trips list, which is the one screen that links to a trip by its id. */
-  const TRIPS = APP_ROUTES.find((candidate) => candidate.name === 'trips')
-
   test.beforeEach(async ({ context, page, baseURL }) => {
     await useSession(context, page, baseURL)
     test.skip(
@@ -1179,30 +1203,6 @@ test.describe('the trip sections behind a route parameter', () => {
       `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
     )
   })
-
-  /**
-   * The id behind the first trip card, or a skip.
-   *
-   * Read off the card's own link rather than from a fixture, so the walk follows
-   * the same address a reader would. A workspace with no trips leaves this block
-   * nothing to render and says so.
-   */
-  async function aTripToWalk(page: Page): Promise<string> {
-    if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
-    await visit(page, TRIPS, 'light')
-    const tripId = await page.evaluate(() => {
-      for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
-        const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
-          anchor.getAttribute('href') ?? '',
-        )
-        if (match !== null) return match[1]
-      }
-      return null
-    })
-    test.skip(tripId === null, 'the workspace lists no trip to walk into')
-    if (tripId === null) throw new Error('unreachable: the test was skipped')
-    return tripId
-  }
 
   /**
    * Every message key the shipped catalogue can produce, as it would look if it
