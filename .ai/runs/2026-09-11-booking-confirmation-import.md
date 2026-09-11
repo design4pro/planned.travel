@@ -81,10 +81,10 @@ and the e2e block. The capability lands here.
 
 ### Phase 3: The three verbs
 
-- [ ] 3.1 `startBookingImportFn` — the only enqueue site, with the deterministic id and the stagger
-- [ ] 3.2 `getBookingImportFn` — the KV read, the scope re-check and the typed refusal codes
-- [ ] 3.3 `confirmBookingImportFn` — the per-row write chain, the marker, `written` and the delete only on full success
-- [ ] 3.4 The tenant-isolation block appended to `src/server/repos/__tests__/tenant-isolation.test.ts`
+- [x] 3.1 `startBookingImportFn` — the only enqueue site, with the deterministic id and the stagger — d05384dd
+- [x] 3.2 `getBookingImportFn` — the KV read, the scope re-check and the typed refusal codes — d05384dd
+- [x] 3.3 `confirmBookingImportFn` — the per-row write chain, the marker, `written` and the delete only on full success — d05384dd
+- [x] 3.4 The tenant-isolation block appended to `src/server/repos/__tests__/tenant-isolation.test.ts` — d05384dd
 
 ### Phase 4: The reader can see it
 
