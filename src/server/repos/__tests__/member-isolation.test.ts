@@ -40,6 +40,7 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
+import { listTripDayTransports, reorderDayTransports } from '../transports'
 import { captureError, createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
 import type { TenantScope } from '../base'
@@ -183,6 +184,27 @@ describe('member isolation', () => {
       expect(
         await captureError(() =>
           reorderDayTimeline(stranger, {
+            tripId: fixture.tripId,
+            dayId: fixture.dayId,
+            items: [{ kind: 'note', id: fixture.noteId }],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('refuses to list or reorder its day journeys (03-S5)', async () => {
+      // A private trip's journeys are endpoints, times, service numbers and fares, so the read
+      // resolves the trip before it reads a row — the guard is in the repository function rather
+      // than in the planner's loader, where a later caller could forget it.
+      expect(
+        await captureError(() =>
+          listTripDayTransports(stranger, fixture.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        await captureError(() =>
+          reorderDayTransports(stranger, {
             tripId: fixture.tripId,
             dayId: fixture.dayId,
             items: [{ kind: 'note', id: fixture.noteId }],
