@@ -3,8 +3,9 @@
  * sleeps.
  *
  * `days` owns the spine (see `./days`), `places` owns the inventory (see `./places`), and this module
- * owns the join between them. {@link getTripItinerary} is the single read behind the planner screen:
+ * owns the join between them. {@link getTripItinerary} is the planner screen's read of that join:
  * one query per table, assembled in memory, ordered day number then position — never N+1 per day.
+ * The screen's day notes are not part of it; `loadDayNotes` reads those.
  */
 
 import { and, asc, eq, inArray } from 'drizzle-orm'
@@ -24,12 +25,7 @@ import {
 } from './base'
 import { runBatch } from './batch'
 import { NotFoundError } from './context'
-import {
-  listDayNotes,
-  listTripDayNotes,
-  listTripDays,
-  requireTripDay,
-} from './days'
+import { listDayNotes, listTripDays, requireTripDay } from './days'
 import { placesRepository } from './places'
 import { assertTripRole, requireTrip } from './trips'
 import {
@@ -48,7 +44,6 @@ import type {
   Day,
   DayAccommodation,
   DayAssignment,
-  DayNote,
   Place,
 } from '#/server/db/types'
 import type { TenantScope } from './base'
@@ -220,16 +215,21 @@ export interface ItineraryStop {
   readonly participantUserIds: ReadonlyArray<string>
 }
 
-/** A day of the itinerary with everything the planner renders inside it. */
+/**
+ * A day of the itinerary with everything the planner renders inside it.
+ *
+ * Day notes are deliberately absent: the planner reads them through `loadDayNotes`, which carries
+ * the icon, the detail and the sort order this shape never did. A caller that needs them asks
+ * `listTripDayNotes` for them, so the two callers that do not never pay for the query.
+ */
 export interface ItineraryDay {
   readonly day: Day
   readonly stops: ReadonlyArray<ItineraryStop>
-  readonly notes: ReadonlyArray<DayNote>
   readonly accommodations: ReadonlyArray<DayAccommodation>
 }
 
 /**
- * The whole itinerary in five scoped queries: days, assignments, places, participants and notes.
+ * The whole itinerary in four scoped queries: days, assignments, places and participants.
  * Stops are ordered by `order_index` then id, so ties from a fractional reorder stay stable.
  */
 export async function getTripItinerary(
@@ -238,10 +238,9 @@ export async function getTripItinerary(
 ): Promise<Array<ItineraryDay>> {
   await requireTrip(scope, tripId)
 
-  const [days, assignments, notes, accommodations] = await Promise.all([
+  const [days, assignments, accommodations] = await Promise.all([
     listTripDays(scope, tripId),
     listTripAssignments(scope, tripId),
-    listTripDayNotes(scope, tripId),
     listTripAccommodations(scope, tripId),
   ])
 
@@ -268,16 +267,6 @@ export async function getTripItinerary(
     }
   }
 
-  const notesByDay = new Map<string, Array<DayNote>>()
-  for (const note of notes) {
-    const bucket = notesByDay.get(note.dayId)
-    if (bucket) {
-      bucket.push(note)
-    } else {
-      notesByDay.set(note.dayId, [note])
-    }
-  }
-
   const dayNumbers = new Map(days.map((day) => [day.id, day.dayNumber]))
   const stopsByDay = new Map<string, Array<ItineraryStop>>()
   for (const assignment of assignments) {
@@ -301,7 +290,6 @@ export async function getTripItinerary(
   return days.map((day) => ({
     day,
     stops: stopsByDay.get(day.id) ?? [],
-    notes: notesByDay.get(day.id) ?? [],
     accommodations: accommodations.filter((stay) => {
       const from = dayNumbers.get(stay.startDayId)
       const to = dayNumbers.get(stay.endDayId)

@@ -1,5 +1,5 @@
 {
-  "kitVersion": 22,
+  "kitVersion": 24,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -55,7 +55,7 @@
       "mode": "100755"
     },
     ".ai/scripts/cezar-host-patch.sh": {
-      "sha256": "06d472df79d30e38e14617c7f73d044d28773869e7d0b2e49ac6fca0f3a66acb",
+      "sha256": "3dcb8784bb045eb0eb9c343d16037ae63b678d6500fb05d8454dcfe48f0c04cf",
       "mode": "100755"
     },
     ".ai/scripts/housekeeping.sh": {
@@ -95,11 +95,15 @@
       "mode": "100644"
     },
     ".github/workflows/claude.yml": {
-      "sha256": "6cab0d90856c11aca68002de31de2e52d6da9596968a70522701b855496ad6ae",
+      "sha256": "8ee26b7faa0c9fbc2549f5289b055a41029ec18eb39d8717e10368f48d841ffa",
       "mode": "100644"
     },
     "docs/agents/cezar-automations.json": {
       "sha256": "663ad8925055361c5daf4f20134261f0fc44784ce88af65c133b3800a5eec5dc",
+      "mode": "100644"
+    },
+    "scripts/ci/__tests__/claude-credential-gate.test.ts": {
+      "sha256": "9599bc3944ce12e1bb5e84e918ae6552f05e7b82a9c16448d09c8b731f73722a",
       "mode": "100644"
     },
     "scripts/ci/__tests__/claude-review-ran.test.mjs": {

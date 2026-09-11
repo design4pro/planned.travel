@@ -1940,9 +1940,12 @@ backfill, no index.
     traveller's own visited list, and on a year row it is the workspace's distinct countries for that
     year, derived from `trips.country_codes`. Only the all-time figure may say "countries you have
     visited"; a year row's is labelled the workspace's, exactly like the seven above.
-  - `region_count` is per-traveller on both kinds and takes **no year predicate**, so it is a lifetime
-    figure repeated on every year row. It is printed once, on the all-time row, and is omitted from
-    year rows rather than being printed there with a qualifier nobody reads.
+  - `region_count` is per-traveller and takes **no year predicate**, so it is a lifetime figure and
+    nothing else. It is printed once, on the all-time row, and is omitted from year rows rather than
+    being printed there with a qualifier nobody reads. _Amended by #139:_ this stage measured the
+    lifetime figure as repeated on every year row; the recompute now writes it onto the all-time row
+    only and leaves an explicit `0` on year rows, so the stored column agrees with the copy rule
+    above instead of merely being hidden by it.
   - `by_continent` is per-traveller on both kinds and is labelled as the traveller's.
   - `distance_metres` is **omitted entirely**. No transport leg records a distance, so nothing can
     derive it and the seeder is the only thing that has ever filled it; a panel printing a permanent

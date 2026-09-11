@@ -80,6 +80,7 @@ import {
   dayNotesRepository,
   daysRepository,
   listDayNotes,
+  listTripDayNotes,
   listTripDays,
   requireDayNote,
 } from '../days'
@@ -1618,10 +1619,25 @@ describe('tenant isolation', () => {
       expect(itinerary).toHaveLength(3)
       expect(itinerary[0]?.stops).toHaveLength(1)
       expect(itinerary[0]?.stops[0]?.place.id).toBe(alpha.placeId)
-      expect(itinerary[0]?.notes).toHaveLength(1)
       expect(itinerary[0]?.accommodations).toHaveLength(1)
       expect(itinerary[2]?.accommodations).toHaveLength(1)
       expect(itinerary[0]?.stops[0]?.participantUserIds).toHaveLength(2)
+    })
+
+    // The itinerary carried the day notes until #393; the isolation it proved moves here, to the
+    // read that now serves them, rather than being dropped with the projection.
+    it('keeps the trip day notes inside the tenant', async () => {
+      expect(
+        await listTripDayNotes(alpha.tenant.scope, alpha.tripId),
+      ).toHaveLength(1)
+      expect(await listTripDayNotes(alpha.tenant.scope, beta.tripId)).toEqual(
+        [],
+      )
+      expect(
+        (await listTripDayNotes(beta.tenant.scope, beta.tripId)).map(
+          (note) => note.id,
+        ),
+      ).toEqual([beta.dayNoteId])
     })
 
     it('pages trip chat within the tenant', async () => {
@@ -1930,9 +1946,16 @@ describe('tenant isolation', () => {
 
       // `visited_countries` and `visited_regions` are filtered by organization *and* user.
       expect(allTime.regionCount).toBe(0)
-      expect(yearRow.regionCount).toBe(0)
       expect(allTime.byContinent).toEqual({})
       expect(yearRow.byContinent).toEqual({})
+
+      // The year row's region figure is *not* evidence of isolation and is not read as such:
+      // since #139 a year row carries a constant `0` whatever the traveller has visited, so this
+      // asserts the year-scoping rule rather than the tenant boundary. What proves the boundary
+      // for regions is the all-time assertion above, and the year-scoping rule itself is covered
+      // against a traveller who does have regions in
+      // `src/server/queue/handlers/__tests__/travel-stats.test.ts`.
+      expect(yearRow.regionCount).toBe(0)
     })
 
     it('counts no countries on either row kind', async () => {
