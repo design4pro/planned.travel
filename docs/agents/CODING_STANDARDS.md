@@ -17,6 +17,7 @@ Distilled from docs/SPEC.md §6–§7. The repo overrides this file where they d
 - TypeScript strict. No `any`, no non-null `!` on values that can genuinely be null.
 - Named exports, no default exports (route modules excepted — TanStack requires them).
 - `cn()` for class merging.
+- A `matchMedia` query that complements a Tailwind variant uses a `MEDIA_*` constant from `src/lib/breakpoints.ts`, never a literal and never `px` — the two halves of the decision must name the same boundary in the same unit, and `px` agrees with a `rem` breakpoint only at a 16px root font size (WCAG 2.2 §1.4.4). The call site names the variant it pairs with; a query that pairs with none says so. `src/lib/__tests__/breakpoints.test.ts` enforces it.
 - No nested ternaries — prefer switch or if/else chains. Clarity over brevity.
 - No TODOs, placeholder copy, `console.log`, or commented-out code left behind.
 

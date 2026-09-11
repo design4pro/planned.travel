@@ -19,6 +19,7 @@ import {
   useMapContext,
 } from '#/components/map'
 import { useI18n, useTranslate } from '#/lib/i18n'
+import { MEDIA_LG_UP } from '#/lib/breakpoints'
 import { formatNumber } from '#/lib/format'
 import {
   SHELF_CLASS,
@@ -483,7 +484,17 @@ function useMeasuredBox(): [
   return [ref, box]
 }
 
-const WIDE_QUERY = '(min-width: 1024px)'
+/**
+ * The complement of the chrome's `lg:` variants, in the same unit.
+ *
+ * The two halves of this decision are this query and the `lg:` classes on the
+ * slice, the shelf and the zoom cluster: `ShelfGeometry.wide`, which the camera's
+ * padding is derived from, is documented as "true from `lg` up". A `px` query
+ * agrees with that only at a 16px root font size; above it the camera reserves the
+ * phone composition's insets for chrome CSS has already moved, which is why the
+ * figure comes from `#/lib/breakpoints`.
+ */
+const WIDE_QUERY = MEDIA_LG_UP
 
 /**
  * True on a viewport wide enough for the desktop composition.
