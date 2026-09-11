@@ -21,6 +21,7 @@
 import * as React from 'react'
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui'
 
+import { MEDIA_SM_UP } from '#/lib/breakpoints'
 import { cn } from '#/lib/cn'
 import {
   Alert,
@@ -99,6 +100,17 @@ export interface NoteDialogProps {
 }
 
 /**
+ * The complement of the two-pane grid's `sm:` variant, in the same unit.
+ *
+ * The two halves of this decision are this query and `sm:grid-cols-2`. A `px` query
+ * would agree with `sm` only at the default 16px font size — above it the side-by-side
+ * layout mounts into a grid that is still one column wide, so the writer gets the
+ * preview stacked under a full-width textarea instead of the tabs the narrow
+ * layout would have given them. Hence `#/lib/breakpoints`.
+ */
+const TWO_PANE_QUERY = MEDIA_SM_UP
+
+/**
  * True where the write pane and the preview both fit.
  *
  * A real media-query read rather than two CSS-hidden copies: the tabbed layout owns a
@@ -109,7 +121,7 @@ function useTwoPane(): boolean {
   const [wide, setWide] = React.useState(true)
 
   React.useEffect(() => {
-    const query = window.matchMedia('(min-width: 640px)')
+    const query = window.matchMedia(TWO_PANE_QUERY)
     const read = (): void => setWide(query.matches)
     read()
     query.addEventListener('change', read)

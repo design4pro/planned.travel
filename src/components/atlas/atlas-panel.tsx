@@ -32,6 +32,7 @@ import {
   TabsTrigger,
 } from '#/components/ui'
 import { useAtlasCopy, useAtlasI18n } from '#/components/map'
+import { MEDIA_LG_UP } from '#/lib/breakpoints'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
 import {
@@ -129,10 +130,15 @@ function asTab(value: string): AtlasPanelTab | null {
 /* ----------------------------------------------------------------- viewport */
 
 /**
- * Tailwind's `lg`, as a query — the same 1024px the body's `hidden lg:flex`
- * turns on, written once so the markup and the announcement cannot disagree.
+ * The complement of the body's `hidden lg:flex`, in the same unit, so the markup
+ * and the announcement cannot disagree.
+ *
+ * It has to be `lg`'s `rem` figure and not `1024px`: the two agree only at the
+ * default 16px font size, and for a reader who has raised their browser's
+ * font-size preference the band between them tells a screen reader the shelf is
+ * shut while CSS has already opened it. Hence `#/lib/breakpoints`.
  */
-const SHELF_OPEN_QUERY = '(min-width: 1024px)'
+const SHELF_OPEN_QUERY = MEDIA_LG_UP
 
 /** True where `window.matchMedia` exists to be asked. */
 function canMatchMedia(): boolean {

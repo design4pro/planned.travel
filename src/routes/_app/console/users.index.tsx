@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui'
+import { MEDIA_MD_UP } from '#/lib/breakpoints'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import {
@@ -122,11 +123,11 @@ function options(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Tailwind's `md`, the width at which the table replaces the cards. Kept beside the classes that use
- * it, because the two must agree: a query that disagreed with the breakpoint would unmount the
- * layout that is on screen.
+ * Tailwind's `md`, the width at which the table replaces the cards. The two must agree — a query
+ * that disagreed with the breakpoint would unmount the layout that is on screen — so the figure
+ * comes from `#/lib/breakpoints` rather than being written here.
  */
-const WIDE_QUERY = '(min-width: 48rem)'
+const WIDE_QUERY = MEDIA_MD_UP
 
 /**
  * `both` is the server's answer and the first client frame's; after that exactly one is mounted.
