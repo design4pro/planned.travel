@@ -15,7 +15,7 @@
  * this file reads the same register, so reopening the dialog (or arriving from the widget's Review)
  * finds the job again.
  */
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useId, useReducer, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { CloudUpload, FileUp } from 'lucide-react'
 
@@ -123,12 +123,18 @@ export function ImportBookingsDialog({
   const registered = useBookImports().filter((job) => job.tripId === tripId)
   const { progress, views, recheck } = useBookImportPoll(open ? registered : [])
 
+  /*
+   * The toast titles are the catalogue's generic one, because both of these failures already have a
+   * surface of their own in the dialog — the upload-failed alert names the file, the partial alert
+   * counts the rows. Wording them from the import's own copy meant interpolating values nobody
+   * had: `“” could not be read`, and `0 of 0 bookings were added`.
+   */
   const start = useAction(startBookingImportFn, {
-    failure: t('modules.book.import.failed.title', { filename: '' }).trim(),
+    failure: t('modules.form.saveError'),
   })
   const confirm = useAction(confirmBookingImportFn, {
     invalidate: false,
-    failure: t('modules.book.import.partial.title', { written: 0, total: 0 }),
+    failure: t('modules.form.saveError'),
   })
 
   /*
@@ -178,10 +184,21 @@ export function ImportBookingsDialog({
 
   const selected = importSelectionCount(selection)
 
+  /**
+   * Back to the drop target, keeping whatever is still being read.
+   *
+   * Only the jobs that have stopped are forgotten. A reader who takes one file's refusal away has
+   * said nothing about the other four still in the queue, and dropping those from the register
+   * would make readings the workspace has already paid for unreachable.
+   */
   const reset = (): void => {
     setStage({ kind: 'idle' })
     setRefusals([])
-    forgetBookImports(registered.map((job) => job.jobId))
+    forgetBookImports(
+      registered
+        .filter((job) => (progress.get(job.jobId) ?? 'working') !== 'working')
+        .map((job) => job.jobId),
+    )
     dispatch({ kind: 'none' })
   }
 
@@ -254,9 +271,12 @@ export function ImportBookingsDialog({
         setStage({ kind: 'uploadFailed', filename: file.name })
         return
       }
+      // Registered as each one starts, not after the loop: a file that fails to upload returns
+      // early, and the jobs already enqueued have spent the workspace's reading allowance. A
+      // register written only on the way out would leave them running and invisible.
       started.push({ jobId: job.jobId, tripId, filename: file.name })
+      registerBookImports(started)
     }
-    registerBookImports(started)
     setStage({ kind: 'reviewing' })
   }
 
@@ -688,7 +708,10 @@ function ReviewRow({
   readonly onChange: () => void
 }) {
   const t = useTranslate()
-  const id = `import-row-${draft.index}`
+  // `useId` and not the row's index: a reader can drop five files at once, and every file's rows
+  // are numbered from zero — so an index-based id repeats across groups, and a `<label for>` then
+  // ticks the first row that answers to it rather than the one beside the pointer.
+  const id = useId()
   const facts = [
     draft.startDate,
     draft.startTime,

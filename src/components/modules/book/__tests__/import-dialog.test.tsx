@@ -10,7 +10,7 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
-import { BOOK_IMPORTS_KEY } from '../import-widget'
+import { BOOK_IMPORTS_KEY, readBookImports } from '../import-widget'
 import { ImportBookingsDialog } from '../import-dialog'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -147,6 +147,30 @@ describe('the import dialog at its boundary', () => {
       expect(stubs.upload).toHaveBeenCalledTimes(5)
     })
   })
+
+  it('keeps the jobs it already started when a later file fails to upload', async () => {
+    stubs.upload
+      .mockResolvedValueOnce({ ok: true, file: { id: 'file-1' } })
+      .mockResolvedValueOnce({ ok: false })
+    stubs.start.mockResolvedValue({ jobId: 'booking-import:trip-1:file-1' })
+    open()
+
+    drop(
+      new File(['x'], 'first.ics', { type: 'text/calendar' }),
+      new File(['x'], 'second.ics', { type: 'text/calendar' }),
+    )
+
+    expect(await screen.findByText('“second.ics” did not upload')).toBeTruthy()
+    // The first file's reading is already enqueued and has spent the workspace's allowance. A
+    // register written only after the whole drop succeeded would leave it running and unreachable.
+    expect(readBookImports()).toEqual([
+      {
+        jobId: 'booking-import:trip-1:file-1',
+        tripId: 'trip-1',
+        filename: 'first.ics',
+      },
+    ])
+  })
 })
 
 describe('the import dialog’s controls', () => {
@@ -269,6 +293,40 @@ describe('the import dialog on a staged answer', () => {
     open()
 
     expect(await screen.findByText('Untitled booking')).toBeTruthy()
+  })
+
+  it('gives every row of every file its own control, so one label ticks one row', async () => {
+    window.localStorage.setItem(
+      BOOK_IMPORTS_KEY,
+      JSON.stringify([
+        {
+          jobId: 'booking-import:trip-1:file-1',
+          tripId: 'trip-1',
+          filename: 'first.pdf',
+        },
+        {
+          jobId: 'booking-import:trip-1:file-2',
+          tripId: 'trip-1',
+          filename: 'second.pdf',
+        },
+      ]),
+    )
+    open()
+    await screen.findByRole('button', { name: 'Add 4 bookings' })
+
+    // A reader can drop five files at once and every file numbers its rows from zero, so an id
+    // built from the index alone repeats — and a `<label for>` then ticks the first row that
+    // answers to it rather than the one under the pointer.
+    const ids = [...document.querySelectorAll('[role="checkbox"]')].map(
+      (control) => control.id,
+    )
+    expect(ids).toHaveLength(4)
+    expect(new Set(ids).size).toBe(4)
+
+    const labels = [...document.querySelectorAll('label[for]')].map((label) =>
+      label.getAttribute('for'),
+    )
+    expect(new Set(labels)).toEqual(new Set(ids))
   })
 })
 

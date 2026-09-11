@@ -888,6 +888,27 @@ describe('confirmBookingImport', () => {
     ).toHaveLength(1)
   })
 
+  it('keeps the record when a confirm accepts nothing, so no row is silently dropped', async () => {
+    const staged = await stage(alpha, {
+      reservations: [stagedRow({ kind: 'activity' }), stagedRow()],
+    })
+
+    const result = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      { tripId: alpha.tripId, jobId: alpha.jobId, accept: [] },
+      ports,
+    )
+
+    expect(result).toEqual({ written: 0, failed: 0, remaining: 0 })
+    // Two rows nobody has decided about are still reviewable: "nothing outstanding" is not the
+    // same claim as "everything written", and only the second one may delete the record.
+    expect(store.entries.has(stagedImportKey(staged.jobId))).toBe(true)
+    expect(
+      await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
+    ).toEqual([])
+  })
+
   it('refuses a request naming more rows than a record can hold', () => {
     expect(() =>
       confirmBookingImportInputSchema.parse({

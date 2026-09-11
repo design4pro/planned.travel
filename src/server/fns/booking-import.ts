@@ -543,12 +543,12 @@ function fileIdOf(id: string): string {
 async function pin(
   scope: TenantScope,
   geocoding: ConfirmBookingImportPorts['geocoding'],
+  ceilingFor: () => Promise<number>,
   placeId: string,
   query: string,
 ): Promise<void> {
   try {
-    const row = await getSubscription(scope)
-    const ceiling = resolveLimitsFromRow(row).rates.geocode_lookups_per_month
+    const ceiling = await ceilingFor()
     const result = await forwardGeocode(
       geocoding({ organizationId: scope.ctx.organizationId, ceiling }),
       // `en` and not the reader's locale: the only fields taken from the answer are the
@@ -588,6 +588,15 @@ function placeResolver(
   forTrip: string,
 ): (row: StagedReservation) => Promise<string | null> {
   let byName: Map<string, string> | null = null
+  // Read once per confirm, beside the trip's places and for the same reason: the workspace's
+  // geocoding allowance is a plan row, and five hundred rows must not be five hundred reads of it.
+  let ceiling: Promise<number> | null = null
+  const ceilingFor = (): Promise<number> => {
+    ceiling ??= getSubscription(scope).then(
+      (row) => resolveLimitsFromRow(row).rates.geocode_lookups_per_month,
+    )
+    return ceiling
+  }
 
   return async (row) => {
     const name = row.title.trim().slice(0, 200)
@@ -610,7 +619,7 @@ function placeResolver(
         source: 'import',
       })
       byName.set(name.toLowerCase(), place.id)
-      await pin(scope, geocoding, place.id, address ?? name)
+      await pin(scope, geocoding, ceilingFor, place.id, address ?? name)
       return place.id
     } catch (cause) {
       log().warn('booking import place not created', {
@@ -726,7 +735,10 @@ export async function confirmBookingImport(
 
   const fresh = written.slice(already.length)
   await stamp(scope, fresh)
-  await persist(store, staged, written, pending.length - fresh.length)
+  await persist(store, staged, written, {
+    asked: pending.length,
+    remaining: pending.length - fresh.length,
+  })
 
   if (fresh.length > 0) {
     // One patch for the batch: five hundred rows must refresh another tab once, not five hundred
@@ -778,7 +790,15 @@ async function stamp(
   }
 }
 
-/** The staged record after a confirm: gone on a full one, extended on a partial one. */
+/**
+ * The staged record after a confirm: gone on a full one, extended on a partial one.
+ *
+ * "Full" means every row this caller asked for, which is why `asked` is in the condition and not
+ * only `remaining`: a confirm that accepted nothing leaves nothing outstanding either, and deleting
+ * the record then would throw away the rows the reader has not decided about yet. The dialog cannot
+ * send an empty acceptance — the button is disabled at none — which is exactly why the write path
+ * must not depend on that.
+ */
 async function persist(
   store: ImportStore,
   staged: StagedImport,
@@ -786,10 +806,10 @@ async function persist(
     readonly index: number
     readonly reservationId: string
   }>,
-  remaining: number,
+  counts: { readonly asked: number; readonly remaining: number },
 ): Promise<void> {
   const key = stagedImportKey(staged.jobId)
-  if (remaining === 0) {
+  if (counts.asked > 0 && counts.remaining === 0) {
     await store.delete(key)
     return
   }

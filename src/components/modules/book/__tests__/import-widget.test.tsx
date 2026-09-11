@@ -131,6 +131,26 @@ describe('the global import widget', () => {
     expect(stubs.view.mock.calls.length).toBe(asked)
   })
 
+  it('lets a reader take a job that never answered out of the register', async () => {
+    stubs.view.mockResolvedValue({
+      status: 'working',
+    } satisfies BookingImportView)
+    registerOne()
+
+    mount()
+    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
+
+    // Without this the card is permanent: only a dismissal or a confirm empties the register, and
+    // a job whose staged record expired answers `working` for as long as anyone asks.
+    screen.getByRole('button', { name: 'Dismiss' }).click()
+    await tick(POLL_INTERVAL_MS)
+
+    expect(readBookImports()).toHaveLength(0)
+    expect(
+      document.querySelector('[data-part="book-import-widget"]'),
+    ).toBeNull()
+  })
+
   it('offers the review with a count once a job is ready, then takes itself away', async () => {
     stubs.view.mockResolvedValue({
       status: 'ready',
