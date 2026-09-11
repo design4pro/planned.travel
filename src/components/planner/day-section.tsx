@@ -9,6 +9,7 @@ import { useTranslate } from '#/lib/i18n'
 import { NoteRow } from './note-row'
 import { noteItemId } from './ordering'
 import { StopRow } from './stop-row'
+import { TransportRow } from './transport-row'
 
 import type {
   PlannerCategory,
@@ -28,7 +29,8 @@ export interface DaySectionProps {
   readonly hoveredPlaceId?: string | null
   /**
    * Items with a write in flight, by **draggable** id — an assignment id for a stop,
-   * `noteItemId(note.id)` for a note. One set, because the day is one sequence.
+   * `noteItemId(note.id)` for a note, `legItemId(…)` for a journey. One set, because
+   * the day is one sequence.
    */
   readonly pendingItemIds?: ReadonlySet<string>
   readonly draggable?: boolean
@@ -61,10 +63,10 @@ export interface DaySectionProps {
  * still a valid drop target — the case a sortable list alone gets wrong, and the
  * one that matters most, because an empty day is exactly what you drag onto.
  *
- * **One list, two renderers.** A day is one sequence of stops and notes (PRD #104
- * decision 9), merged upstream by `mergeDayTimeline` and arriving here already in the
- * order it is read. `StopRow` and `NoteRow` render the two kinds the union carries
- * today; a third kind is a third branch of the same `switch` and nothing else.
+ * **One list, three renderers.** A day is one sequence (PRD #104 decision 9), merged
+ * upstream by `mergeDayTimeline` and arriving here already in the order it is read.
+ * `StopRow`, `NoteRow` and — since `03-S5` — `TransportRow` render the three kinds the
+ * union carries; a fourth kind is a fourth branch of the same `switch` and nothing else.
  */
 export function DaySection({
   day,
@@ -87,9 +89,11 @@ export function DaySection({
   const t = useTranslate()
   const itemIds = React.useMemo(
     () =>
-      day.items.map((item) =>
-        item.kind === 'stop' ? item.row.itemId : noteItemId(item.note.id),
-      ),
+      day.items.map((item) => {
+        if (item.kind === 'stop') return item.row.itemId
+        if (item.kind === 'transport') return item.transport.itemId
+        return noteItemId(item.note.id)
+      }),
     [day.items],
   )
 
@@ -218,6 +222,19 @@ export function DaySection({
                     onMove={(direction) => onMoveNote?.(note, direction)}
                     onEdit={() => onEditNote?.(note)}
                     onDelete={() => onDeleteNote?.(note)}
+                  />
+                )
+              }
+
+              if (item.kind === 'transport') {
+                const { transport } = item
+                return (
+                  <TransportRow
+                    key={transport.itemId}
+                    transport={transport}
+                    position={index}
+                    draggable={draggable}
+                    pending={pendingItemIds?.has(transport.itemId) ?? false}
                   />
                 )
               }

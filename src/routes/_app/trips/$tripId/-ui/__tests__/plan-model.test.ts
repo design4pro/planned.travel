@@ -225,9 +225,11 @@ describe('planModel', () => {
   it('renders each day as one sequence of stops and notes', () => {
     expect(
       model().days.map((entry) =>
-        entry.items.map((item) =>
-          item.kind === 'note' ? item.note.id : item.row.itemId,
-        ),
+        entry.items.map((item) => {
+          if (item.kind === 'note') return item.note.id
+          if (item.kind === 'transport') return item.transport.itemId
+          return item.row.itemId
+        }),
       ),
     ).toEqual([['a1', 'n1', 'a2'], ['n2']])
   })
