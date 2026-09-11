@@ -1185,20 +1185,22 @@ test.describe('the trip sections behind a route parameter', () => {
    *
    * Read off the card's own link rather than from a fixture, so the walk follows
    * the same address a reader would. A workspace with no trips leaves this block
-   * nothing to render and says so.
+   * nothing to render and says so. `titled` narrows it to the card carrying that title,
+   * for a walk that needs one trip's content rather than any trip's chrome.
    */
-  async function aTripToWalk(page: Page): Promise<string> {
+  async function aTripToWalk(page: Page, titled?: string): Promise<string> {
     if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
     await visit(page, TRIPS, 'light')
-    const tripId = await page.evaluate(() => {
+    const tripId = await page.evaluate((title) => {
       for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
+        if (title !== undefined && !anchor.textContent.includes(title)) continue
         const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
           anchor.getAttribute('href') ?? '',
         )
         if (match !== null) return match[1]
       }
       return null
-    })
+    }, titled)
     test.skip(tripId === null, 'the workspace lists no trip to walk into')
     if (tripId === null) throw new Error('unreachable: the test was skipped')
     return tripId
@@ -1270,7 +1272,9 @@ test.describe('the trip sections behind a route parameter', () => {
    * arrangement ever disagreed about what a day contains.
    */
   test('a day draws its journeys inside its own sequence', async ({ page }) => {
-    const tripId = await aTripToWalk(page)
+    // The flagship trip, by the title a reader sees: it is the one the seed gives journeys
+    // and notes on the same days, and the first card in the list carries neither.
+    const tripId = await aTripToWalk(page, 'Tokyo & Kyoto')
     const route: RouteCase = {
       name: 'trip-plan',
       path: `/trips/${tripId}/plan`,
@@ -1282,28 +1286,39 @@ test.describe('the trip sections behind a route parameter', () => {
     await visit(page, route, 'light')
 
     const journeys = page.locator('[data-part="planner-transport-row"]')
-    const drawn = await journeys.count()
-    test.skip(drawn === 0, 'this trip has no journey covering one of its days')
+    await expect(
+      journeys.first(),
+      'the flagship trip draws no journey on any of its days',
+    ).toBeVisible()
 
     // Siblings of the day's stops and notes, under the one list the day renders — the
     // board would be lying about "one day, one number line" if they sat anywhere else.
-    const first = journeys.first()
-    const day = await first.evaluate((row) => {
-      const list = row.parentElement
-      if (list === null) return null
-      return [...list.children].map((child) => ({
-        tag: child.tagName,
-        itemId: child.getAttribute('data-planner-item'),
-      }))
-    })
-    expect(day, 'a journey row has no list around it').not.toBeNull()
-    expect(day?.every((child) => child.tag === 'LI')).toBe(true)
+    // The seeded trips give at least one day all three kinds, which is the case under test.
+    const days = await journeys.evaluateAll((rows) =>
+      rows.map((row) => {
+        const siblings = [...(row.parentElement?.children ?? [])]
+        return {
+          listed: siblings.every((child) => child.tagName === 'LI'),
+          stop: siblings.some((child) => {
+            const itemId = child.getAttribute('data-planner-item')
+            return itemId !== null && !itemId.startsWith('leg:')
+          }),
+          note: siblings.some((child) =>
+            child.hasAttribute('data-planner-note'),
+          ),
+        }
+      }),
+    )
     expect(
-      day?.some(
-        (child) => child.itemId !== null && !child.itemId.startsWith('leg:'),
-      ),
-      'the journey was drawn into a list of its own',
+      days.every((day) => day.listed),
+      'a journey row was drawn outside a day list',
     ).toBe(true)
+    const full = days.findIndex((day) => day.stop && day.note)
+    expect(
+      full,
+      'no day holds a stop, a note and a journey in its one sequence',
+    ).toBeGreaterThanOrEqual(0)
+    const first = journeys.nth(full)
 
     // Said in words, because the grip is the whole of a journey's keyboard affordance
     // and an unnamed one is a handle a screen reader announces as nothing at all.
