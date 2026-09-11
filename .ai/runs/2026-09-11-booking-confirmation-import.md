@@ -101,3 +101,19 @@ and the e2e block. The capability lands here.
       `trips-core.spec.ts` "the delete dialog asks as hard as the server says it must", which this
       branch cannot reach: it touches neither `src/routes/_app/-ui/trip-actions.tsx` (whose
       `typed.trim() === summary.title` arms the button the spec expects disarmed) nor the spec
+
+### Phase 5: The pull request
+
+- [x] 5.1 Spec bookkeeping — `Status: in-progress`, `Spec PR #433`, `Implementation #435`, and a
+      19-entry `## Amendment` recording every divergence — bb070dfc
+- [x] 5.2 PR body refreshed to `Status: complete`, full label set applied, one label-rationale
+      comment
+- [x] 5.3 `om-auto-review-pr 435 --autofix` — the conflicted head resolved (9711dc58), one blocker,
+      three majors and four minors found and all eight fixed with four new tests — 3c18b4b1
+- [x] 5.4 The re-run gate on 3c18b4b1 — typecheck, lint, test (6042), check-generated, build all green;
+      `e2e.sh --workers=2` 37 passed / 2 failed, and both failures classified as outside this diff:
+      `trips-core.spec.ts:341` pre-existing as in 4.9, and `:572` flaky — it fails on a `pageerror`
+      naming `requestIdleCallback`, a word `src/` does not contain, and passes both in isolation and
+      in a full single-worker run of its own file
+- [x] 5.5 The APPROVED re-review posted, `review` → `merge-queue` with `needs-qa` kept, the label
+      rationale updated in place, and the PR flipped to ready
