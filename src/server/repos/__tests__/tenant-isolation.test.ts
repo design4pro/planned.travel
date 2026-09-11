@@ -1946,9 +1946,16 @@ describe('tenant isolation', () => {
 
       // `visited_countries` and `visited_regions` are filtered by organization *and* user.
       expect(allTime.regionCount).toBe(0)
-      expect(yearRow.regionCount).toBe(0)
       expect(allTime.byContinent).toEqual({})
       expect(yearRow.byContinent).toEqual({})
+
+      // The year row's region figure is *not* evidence of isolation and is not read as such:
+      // since #139 a year row carries a constant `0` whatever the traveller has visited, so this
+      // asserts the year-scoping rule rather than the tenant boundary. What proves the boundary
+      // for regions is the all-time assertion above, and the year-scoping rule itself is covered
+      // against a traveller who does have regions in
+      // `src/server/queue/handlers/__tests__/travel-stats.test.ts`.
+      expect(yearRow.regionCount).toBe(0)
     })
 
     it('counts no countries on either row kind', async () => {
