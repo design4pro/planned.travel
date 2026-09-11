@@ -1257,6 +1257,70 @@ test.describe('the trip sections behind a route parameter', () => {
       expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
     })
   }
+
+  /**
+   * The planner's day is one sequence, and a journey is the third thing in it.
+   *
+   * Graded in a browser because this is the only layer where the whole path is real:
+   * three server functions inside one loader, the arrangement merged on the client, and
+   * a `SortableContext` deciding which `<li>` a day's list actually holds. The
+   * arithmetic is graded by unit tests, and the failure left for here is the one they
+   * cannot produce — a journey rendered into a list of its own, beside the day rather
+   * than inside it, which is exactly what a reader would see if the model and the
+   * arrangement ever disagreed about what a day contains.
+   */
+  test('a day draws its journeys inside its own sequence', async ({ page }) => {
+    const tripId = await aTripToWalk(page)
+    const route: RouteCase = {
+      name: 'trip-plan',
+      path: `/trips/${tripId}/plan`,
+      ready: TRIP_SECTIONS,
+      map: true,
+    }
+
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    const journeys = page.locator('[data-part="planner-transport-row"]')
+    const drawn = await journeys.count()
+    test.skip(drawn === 0, 'this trip has no journey covering one of its days')
+
+    // Siblings of the day's stops and notes, under the one list the day renders — the
+    // board would be lying about "one day, one number line" if they sat anywhere else.
+    const first = journeys.first()
+    const day = await first.evaluate((row) => {
+      const list = row.parentElement
+      if (list === null) return null
+      return [...list.children].map((child) => ({
+        tag: child.tagName,
+        itemId: child.getAttribute('data-planner-item'),
+      }))
+    })
+    expect(day, 'a journey row has no list around it').not.toBeNull()
+    expect(day?.every((child) => child.tag === 'LI')).toBe(true)
+    expect(
+      day?.some(
+        (child) => child.itemId !== null && !child.itemId.startsWith('leg:'),
+      ),
+      'the journey was drawn into a list of its own',
+    ).toBe(true)
+
+    // Said in words, because the grip is the whole of a journey's keyboard affordance
+    // and an unnamed one is a handle a screen reader announces as nothing at all.
+    const named = first.locator('button[aria-label], [role="img"][aria-label]')
+    expect(await named.count()).toBeGreaterThan(0)
+    for (const label of await named.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('aria-label') ?? ''),
+    )) {
+      expect(label.trim(), 'a journey row carries an empty name').not.toBe('')
+    }
+
+    const keys = await rawMessageKeys(page)
+    expect(keys, `unresolved message keys on ${route.path}`).toEqual([])
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
 })
 
 /**
