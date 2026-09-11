@@ -94,6 +94,6 @@ and the e2e block. The capability lands here.
 - [x] 4.4 `src/components/modules/book/import-widget.tsx` — d6ff14de
 - [x] 4.5 `src/routes/_app/route.tsx` mounts the widget — d6ff14de
 - [x] 4.6 `src/routes/_app/trips/$tripId/book.tsx` mounts the action and the dialog; `index.ts` gains the exports — d6ff14de
-- [ ] 4.7 The e2e block appended to `e2e/journeys.spec.ts`
+- [x] 4.7 The e2e block appended to `e2e/journeys.spec.ts` — 3748c8f5 (build fix it needed: 4e04b7ab)
 - [ ] 4.8 The blind A/B pair on the five declared states
 - [ ] 4.9 The full validation gate, in order
