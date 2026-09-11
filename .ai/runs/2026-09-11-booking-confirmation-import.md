@@ -96,4 +96,8 @@ and the e2e block. The capability lands here.
 - [x] 4.6 `src/routes/_app/trips/$tripId/book.tsx` mounts the action and the dialog; `index.ts` gains the exports — d6ff14de
 - [x] 4.7 The e2e block appended to `e2e/journeys.spec.ts` — 3748c8f5 (build fix it needed: 4e04b7ab)
 - [x] 4.8 The blind A/B pair on the five declared states — verdict on the PR; one defect found and fixed in 2900ff9e
-- [ ] 4.9 The full validation gate, in order
+- [x] 4.9 The full validation gate, in order — agent-kit-check, typecheck, lint, test (6038/6038),
+      check-generated, build (138 server fns) all green; `e2e.sh --workers=2` 38 passed, 1 failed —
+      `trips-core.spec.ts` "the delete dialog asks as hard as the server says it must", which this
+      branch cannot reach: it touches neither `src/routes/_app/-ui/trip-actions.tsx` (whose
+      `typed.trim() === summary.title` arms the button the spec expects disarmed) nor the spec
