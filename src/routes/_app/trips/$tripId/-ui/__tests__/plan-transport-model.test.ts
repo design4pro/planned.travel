@@ -110,6 +110,23 @@ describe('transportRowsOf', () => {
     // A leg of a chain carries no fare of its own, and neither does a journey priced nowhere.
     expect(rows[1].price).toBeNull()
   })
+
+  /**
+   * The overnight flight into a trip's first day, which is how the flagship trip opens: the
+   * journey is drawn on the day it leaves from, and printing its arrival clock after its
+   * departure clock would read as a flight that lands before it takes off.
+   */
+  it('shows the departure alone rather than a range that runs backwards', () => {
+    const rows = transportRowsOf(
+      payload([
+        journey('j1', { departureTime: '13:20', arrivalTime: '09:35' }),
+        journey('j2', { departureTime: '09:00', arrivalTime: '09:00' }),
+      ]),
+      DAY_IDS,
+    )
+
+    expect(rows.map((row) => row.time)).toEqual(['13:20', '09:00'])
+  })
 })
 
 describe('timeOfTransports', () => {

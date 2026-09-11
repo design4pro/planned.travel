@@ -67,13 +67,30 @@ export function transportRowsOf(
         toName: row.toName,
         departureLabel: formatTime(row.departureTime),
         arrivalLabel: formatTime(row.arrivalTime),
-        rangeLabel: formatTimeRange(row.departureTime, row.arrivalTime, locale),
+        rangeLabel: rangeOf(row, locale),
         price: priceOf(row, locale),
         position: row.position,
       },
       dayIds,
     ),
   )
+}
+
+/**
+ * What a journey drawn on one day shows on its clock.
+ *
+ * The range, unless the range would run backwards. A journey whose arrival clock is not after
+ * its departure clock lands on a day this board does not draw it on — the overnight flight into
+ * a trip's first day is the ordinary case — and `13:20 – 09:35` reads as a journey that ends
+ * before it starts. The departure alone is the end of it this day actually sees.
+ */
+function rangeOf(row: PlanTransport, locale: Locale): string | null {
+  const departure = formatTime(row.departureTime)
+  const arrival = formatTime(row.arrivalTime)
+  if (departure !== null && arrival !== null && arrival <= departure) {
+    return departure
+  }
+  return formatTimeRange(row.departureTime, row.arrivalTime, locale)
 }
 
 /** A fare is a fare only when both halves of it are on the row. */
