@@ -92,8 +92,9 @@ function hand(): ReturnType<typeof userEvent.setup> {
  *
  * Nothing the cases assert is weakened by the swap. `ui.calendar.day` is set as the cell's
  * `aria-label`, so this matches the same string the role query matched, and the claim that a day
- * cell is a `button` carrying exactly that name belongs to — and is made by —
- * `src/components/ui/__tests__/calendar.test.tsx`, which owns the primitive. What these cases are
+ * cell is a `button` carrying exactly that name belongs to — and is made by — the two files that
+ * own the primitives: `ui/__tests__/calendar.test.tsx` for the grid and
+ * `ui/__tests__/date-picker.test.tsx` for the range picker this dialog mounts. What these cases are
  * about is the duration copy a picked range produces.
  */
 async function pick(
@@ -123,7 +124,7 @@ async function pick(
  * longer fails because the machine was busy. Nothing outside these three cases is affected: the
  * other five in the file, and every other test in the suite, keep the 5 s default.
  */
-const PICKING_A_RANGE = 15_000
+const RANGE_PICK_BUDGET = 15_000
 
 /**
  * Submitted as an event rather than by clicking "Copy trip".
@@ -161,7 +162,7 @@ describe('TripCopyDialog', () => {
 
       expect(screen.queryByText(HINT)).not.toBeNull()
     },
-    PICKING_A_RANGE,
+    RANGE_PICK_BUDGET,
   )
 
   it(
@@ -173,7 +174,7 @@ describe('TripCopyDialog', () => {
 
       expect(screen.queryByText(HINT)).toBeNull()
     },
-    PICKING_A_RANGE,
+    RANGE_PICK_BUDGET,
   )
 
   it('opens ready to copy a source that has a departure date and no return', async () => {
@@ -245,7 +246,7 @@ describe('TripCopyDialog', () => {
         },
       })
     },
-    PICKING_A_RANGE,
+    RANGE_PICK_BUDGET,
   )
 
   it('cannot be dismissed while the copy is in flight', async () => {
