@@ -24,6 +24,8 @@
         --color-accent: #16150f;
         --color-accent-on: #ffffff;
         --color-brand: #256256;
+        --color-success-soft: #e2f1e8;
+        --color-success: #136b45;
         --text-micro: 0.6875rem;
         --text-caption: 0.75rem;
         --text-label: 0.8125rem;
@@ -47,6 +49,8 @@
         --color-accent: #f8f7f4;
         --color-accent-on: #16150f;
         --color-brand: #5fbba0;
+        --color-success-soft: #11251c;
+        --color-success: #4cc38a;
       }
 
       * {
@@ -257,13 +261,8 @@
       }
 
       .badge.ok {
-        background: #e2f1e8;
-        color: #136b45;
-      }
-
-      [data-theme='dark'] .badge.ok {
-        background: #11251c;
-        color: #4cc38a;
+        background: var(--color-success-soft);
+        color: var(--color-success);
       }
 
       /* A note: the small icon tile, no thumbnail. */
