@@ -108,8 +108,8 @@ refusals and the browser evidence. The capability lands here.
 
 ### Phase 2: The board has a shape for a journey
 
-- [ ] 2.1 `PlannerTransport` and the third `PlannerItem` variant
-- [ ] 2.2 The `leg:` id space and the widened `'not-in-ideas'` clause
+- [x] 2.1 `PlannerTransport` and the third `PlannerItem` variant — 4fc80a80
+- [x] 2.2 The `leg:` id space and the widened `'not-in-ideas'` clause — 4fc80a80
 - [ ] 2.3 `transport-rows.ts` — `transportPhases` and `expandJourneyRows`
 - [ ] 2.4 `transport-row.tsx` — the renderer
 - [ ] 2.5 The nineteen locale keys, in all 23 locales
