@@ -58,6 +58,10 @@ describe('the geo directory keeps its bindings in one file', () => {
 
   it('is reached from the one module outside itself that has a door', () => {
     const importers = outsideThisDirectory()
+      // Shipped modules only. A test that names `bindings.ts` names it in order to replace it —
+      // the `server` project cannot load `cloudflare:workers` at all — so counting one as a door
+      // into the seam is counting the opposite of what it is.
+      .filter((file) => !file.includes(`${sep}__tests__${sep}`))
       .filter((file) => /from '#\/server\/geo\//.test(codeOf(file)))
       .map((file) => file.slice(SRC.length))
     // The proxy acquired its first door: a confirmation import geocodes the place it writes out of
