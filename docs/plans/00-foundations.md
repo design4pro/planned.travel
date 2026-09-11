@@ -983,12 +983,16 @@ added or removed.
   country count is the workspace's distinct countries for that year and is byte-identical for every
   member. `byContinent` is per-traveller on both kinds: it is built at `:869-880` from
   `scopedCountries`, which is the traveller's visited list, intersected with `yearCodes` on a year
-  row. `regionCount` (`:890`) is per-traveller on both kinds and carries a second property worth
-  stating, because the panel will otherwise print it as a yearly figure: it takes no year predicate
-  at all, so the traveller's lifetime region count is repeated unchanged on every year row.
+  row. `regionCount` (`:890`) is per-traveller on the all-time row and belongs to no year at all,
+  which is the property worth stating because the panel will otherwise print it as a yearly figure.
+  _Amended by #139:_ this stage measured it as a lifetime figure repeated unchanged on every year
+  row, and the recompute now writes it onto the all-time row only — a year row carries an explicit
+  `0`. The reading `ADD-06` is bound to is unchanged; what changed is that the stored column no
+  longer contradicts it.
 - **What that leaves, and what it binds `ADD-06` to.** The per-traveller set is
-  `{countryCount, regionCount, byContinent}` on the all-time row and `{regionCount, byContinent}` on
-  a year row. The switch is deliberate and the repository argues it in place at `atlas.ts:848-859`:
+  `{countryCount, regionCount, byContinent}` on the all-time row and `{byContinent}` on a year row —
+  `regionCount` left that set with #139 and is a constant `0` on a year row. The switch is
+  deliberate and the repository argues it in place at `atlas.ts:848-859`:
   reading the lifetime visited list for a year row printed the same total on every year — "2026: 12
   countries, 2025: 12 countries, 12 all time" — which reads as a broken aggregate rather than as a
   history, and the year's own trips already name their countries. `atlas.ts:366-370` makes the
