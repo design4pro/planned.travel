@@ -299,6 +299,16 @@ const { confirmBookingImport, startBookingImport } =
 const { stagedImportKey } =
   await import('#/server/queue/handlers/booking-import')
 
+/** The confirm's ports, stubbed to throw for the same reason: a refused confirm reaches neither. */
+const unreachedPorts: Parameters<typeof confirmBookingImport>[3] = {
+  announce: () => {
+    throw new Error('announce is not reached: nothing here is written.')
+  },
+  geocoding: () => {
+    throw new Error('geocoding is not reached: no place is written here.')
+  },
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Fixtures
  * ---------------------------------------------------------------------------------------------- */
@@ -3981,11 +3991,16 @@ describe('tenant isolation', () => {
 
       expect(
         await captureError(() =>
-          confirmBookingImport(alpha.tenant.scope, store, {
-            tripId: alpha.tripId,
-            jobId: staged.jobId,
-            accept: [0],
-          }),
+          confirmBookingImport(
+            alpha.tenant.scope,
+            store,
+            {
+              tripId: alpha.tripId,
+              jobId: staged.jobId,
+              accept: [0],
+            },
+            unreachedPorts,
+          ),
         ),
       ).toBeInstanceOf(NotFoundError)
 
@@ -4016,11 +4031,16 @@ describe('tenant isolation', () => {
 
       expect(
         await captureError(() =>
-          confirmBookingImport(alpha.tenant.scope, store, {
-            tripId: alpha.tripId,
-            jobId: staged.jobId,
-            accept: [0],
-          }),
+          confirmBookingImport(
+            alpha.tenant.scope,
+            store,
+            {
+              tripId: alpha.tripId,
+              jobId: staged.jobId,
+              accept: [0],
+            },
+            unreachedPorts,
+          ),
         ),
       ).toBeInstanceOf(NotFoundError)
 

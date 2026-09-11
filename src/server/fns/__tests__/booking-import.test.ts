@@ -27,6 +27,7 @@ import {
   listTripReservations,
   recordFile,
 } from '#/server/repos'
+import { geocodeRuntime } from '#/server/geo/bindings'
 import { createHarness, captureError } from '#/server/repos/__tests__/harness'
 import { stagedImportKey } from '#/server/queue/handlers/booking-import'
 
@@ -36,6 +37,7 @@ import type {
   StagedReservation,
 } from '#/server/queue/handlers/booking-import'
 import type { TaskEnvelope, TaskQueue } from '#/server/queue/types'
+import type { ConfirmBookingImportPorts } from '../booking-import'
 
 /* ------------------------------------------------------------------ mocking */
 
@@ -46,7 +48,7 @@ import type { TaskEnvelope, TaskQueue } from '#/server/queue/types'
 const stubs = vi.hoisted(() => ({
   /** When `false`, the deployment holds no geocoding credential. */
   geocodingConfigured: true,
-  /** Every patch `mirrorToRoom` was handed. */
+  /** Every patch the confirm's `announce` port was handed. */
   mirrored: [] as Array<unknown>,
   /**
    * The proxy's cache and its tallies, in memory.
@@ -123,8 +125,7 @@ vi.mock('#/server/geo/bindings', () => {
 
 /**
  * `./context` is the module that reads `TRIP_ROOM`, `FILES` and `KV`. Every test below hands the
- * scope and the store in directly, so only the room mirror has behaviour worth keeping: it records
- * what it was given, because "one patch for the batch" is a claim about a call count.
+ * scope, the store and the confirm's ports in directly, so nothing here is reached.
  */
 vi.mock('../context', () => ({
   appScope: () => {
@@ -133,19 +134,6 @@ vi.mock('../context', () => ({
   importStore: () => {
     throw new Error('importStore is not reached: these tests hand it in.')
   },
-  mirrorToRoom: (
-    _scope: unknown,
-    _tripId: string,
-    patches: ReadonlyArray<unknown>,
-  ) => {
-    stubs.mirrored.push(...patches)
-    return Promise.resolve()
-  },
-  patch: (kind: string, id: string, fields: unknown) => ({
-    entity: { kind, id },
-    op: 'upsert',
-    fields,
-  }),
 }))
 
 /** Only the server-function wrappers reach for the queue binding, and none of them run here. */
@@ -164,6 +152,23 @@ const {
   startBookingImport,
   startBookingImportInputSchema,
 } = await import('../booking-import')
+
+/**
+ * The confirm's two ports. The room mirror records what it was given, because "one patch for the
+ * batch" is a claim about a call count; the geocoding runtime is the mocked one above, over the
+ * real proxy.
+ */
+const ports: ConfirmBookingImportPorts = {
+  announce: (tripId, fields) => {
+    stubs.mirrored.push({
+      entity: { kind: 'trip', id: tripId },
+      op: 'upsert',
+      fields,
+    })
+    return Promise.resolve()
+  },
+  geocoding: geocodeRuntime,
+}
 
 /* -------------------------------------------------------------------- fakes */
 
@@ -592,11 +597,16 @@ describe('confirmBookingImport', () => {
     await stage(alpha, { reservations: rows })
     harness.statements.length = 0
 
-    const result = await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0, 1, 2, 3, 4, 5, 6],
-    })
+    const result = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0, 1, 2, 3, 4, 5, 6],
+      },
+      ports,
+    )
 
     expect(result).toEqual({ written: 7, failed: 0, remaining: 0 })
     const written = await listTripReservations(alpha.tenant.scope, {
@@ -614,11 +624,16 @@ describe('confirmBookingImport', () => {
   it('links the confirmed booking to the file the import came from', async () => {
     await stage(alpha)
 
-    await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0],
-    })
+    await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0],
+      },
+      ports,
+    )
 
     const [written] = await listTripReservations(alpha.tenant.scope, {
       tripId: alpha.tripId,
@@ -647,11 +662,16 @@ describe('confirmBookingImport', () => {
     await stage(alpha, { reservations: rows })
     const accept = [0, 1, 2, 3, 4, 5, 6]
 
-    const first = await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept,
-    })
+    const first = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept,
+      },
+      ports,
+    )
 
     expect(first).toEqual({ written: 3, failed: 1, remaining: 4 })
     const held = store.entries.get(stagedImportKey(alpha.jobId))
@@ -669,11 +689,16 @@ describe('confirmBookingImport', () => {
         reservationId: `res_${index}`,
       })),
     })
-    const second = await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept,
-    })
+    const second = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept,
+      },
+      ports,
+    )
 
     expect(second).toEqual({ written: 4, failed: 0, remaining: 0 })
     const titles = (
@@ -688,11 +713,16 @@ describe('confirmBookingImport', () => {
       reservations: [stagedRow({ needsReview: true, kind: 'activity' })],
     })
 
-    await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0],
-    })
+    await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0],
+      },
+      ports,
+    )
 
     const [written] = await listTripReservations(alpha.tenant.scope, {
       tripId: alpha.tripId,
@@ -704,11 +734,16 @@ describe('confirmBookingImport', () => {
   it('pins a place it created for a stay, and points the booking at it', async () => {
     await stage(alpha)
 
-    await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0],
-    })
+    await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0],
+      },
+      ports,
+    )
 
     const places = await listTripPlaces(alpha.tenant.scope, {
       tripId: alpha.tripId,
@@ -730,11 +765,16 @@ describe('confirmBookingImport', () => {
     stubs.geocodingConfigured = false
     await stage(alpha)
 
-    const result = await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0],
-    })
+    const result = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0],
+      },
+      ports,
+    )
 
     expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
     const [place] = await listTripPlaces(alpha.tenant.scope, {
@@ -750,11 +790,16 @@ describe('confirmBookingImport', () => {
     })
     await stage(alpha, { reservations: [stagedRow(), stagedRow()] })
 
-    await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0, 1],
-    })
+    await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0, 1],
+      },
+      ports,
+    )
 
     expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(1)
     const written = await listTripReservations(alpha.tenant.scope, {
@@ -774,11 +819,16 @@ describe('confirmBookingImport', () => {
       written: [{ index: 0, reservationId: 'res_already' }],
     })
 
-    const result = await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0],
-    })
+    const result = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0],
+      },
+      ports,
+    )
 
     expect(result).toEqual({ written: 0, failed: 0, remaining: 0 })
     expect(
@@ -795,11 +845,16 @@ describe('confirmBookingImport', () => {
 
     expect(
       await captureError(() =>
-        confirmBookingImport(alpha.tenant.scope, store, {
-          tripId: alpha.tripId,
-          jobId: staged.jobId,
-          accept: [0],
-        }),
+        confirmBookingImport(
+          alpha.tenant.scope,
+          store,
+          {
+            tripId: alpha.tripId,
+            jobId: staged.jobId,
+            accept: [0],
+          },
+          ports,
+        ),
       ),
     ).toBeInstanceOf(NotFoundError)
 
@@ -816,11 +871,16 @@ describe('confirmBookingImport', () => {
   it('ignores an index the staged record does not hold', async () => {
     await stage(alpha, { reservations: [stagedRow({ kind: 'activity' })] })
 
-    const result = await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0, 0, 41],
-    })
+    const result = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0, 0, 41],
+      },
+      ports,
+    )
 
     expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
     expect(
@@ -848,11 +908,16 @@ describe('confirmBookingImport', () => {
       ],
     })
 
-    await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0, 1, 2, 3],
-    })
+    await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0, 1, 2, 3],
+      },
+      ports,
+    )
 
     const written = await listTripReservations(alpha.tenant.scope, {
       tripId: alpha.tripId,
@@ -874,19 +939,22 @@ describe('confirmBookingImport', () => {
       ],
     })
 
-    await confirmBookingImport(alpha.tenant.scope, store, {
-      tripId: alpha.tripId,
-      jobId: alpha.jobId,
-      accept: [0],
-    })
+    await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      {
+        tripId: alpha.tripId,
+        jobId: alpha.jobId,
+        accept: [0],
+      },
+      ports,
+    )
 
     const [written] = await listTripReservations(alpha.tenant.scope, {
       tripId: alpha.tripId,
     })
     expect(written.priceMinor).toBe(42_000)
     expect(written.expenseId).not.toBeNull()
-    expect(
-      await getReservation(alpha.tenant.scope, written.id),
-    ).not.toBeNull()
+    expect(await getReservation(alpha.tenant.scope, written.id)).not.toBeNull()
   })
 })

@@ -55,7 +55,10 @@ import { syncReservationExpense } from './reservations'
 
 import type { RESERVATION_TYPES } from '#/server/db/schema'
 import type { Reservation, Trip } from '#/server/db/types'
+import type { TripPatch } from '#/server/do'
 import type { ImportRefusalCode } from '#/server/extract/document'
+import type { GeocodeRuntimeOptions } from '#/server/geo/bindings'
+import type { GeocodeRuntime } from '#/server/geo/geocode'
 import type {
   ReservationKind,
   StagedImport,
@@ -192,6 +195,24 @@ export interface ConfirmedBookingImport {
   readonly failed: number
   /** Accepted rows still to write, the failed one included, so a retry is exact. */
   readonly remaining: number
+}
+
+/**
+ * What a confirm needs from the Worker environment, handed in by its server function.
+ *
+ * Ports rather than imports, and that is a build constraint before it is a testing one: the client
+ * bundle imports this module for its server-function stubs, and the compiler strips a handler's
+ * body but not an exported function's. An exported function that named `./context` or
+ * `#/server/geo/bindings` itself would pull `cloudflare:workers` into the browser build.
+ */
+export interface ConfirmBookingImportPorts {
+  /** Mirrors one `trip` patch into the room. Never throws: the rows are already written. */
+  readonly announce: (
+    tripId: string,
+    fields: TripPatch['fields'],
+  ) => Promise<void>
+  /** The runtime a pin is looked up through. */
+  readonly geocoding: (options: GeocodeRuntimeOptions) => GeocodeRuntime
 }
 
 /* ------------------------------------------------------------------- staging */
@@ -521,6 +542,7 @@ function fileIdOf(id: string): string {
  */
 async function pin(
   scope: TenantScope,
+  geocoding: ConfirmBookingImportPorts['geocoding'],
   placeId: string,
   query: string,
 ): Promise<void> {
@@ -528,7 +550,7 @@ async function pin(
     const row = await getSubscription(scope)
     const ceiling = resolveLimitsFromRow(row).rates.geocode_lookups_per_month
     const result = await forwardGeocode(
-      geocodeRuntime({ organizationId: scope.ctx.organizationId, ceiling }),
+      geocoding({ organizationId: scope.ctx.organizationId, ceiling }),
       // `en` and not the reader's locale: the only fields taken from the answer are the
       // coordinates and the country code, and the language decides the names this discards —
       // while it is also part of the shared cache key, so one language is one cached answer.
@@ -562,6 +584,7 @@ async function pin(
  */
 function placeResolver(
   scope: TenantScope,
+  geocoding: ConfirmBookingImportPorts['geocoding'],
   forTrip: string,
 ): (row: StagedReservation) => Promise<string | null> {
   let byName: Map<string, string> | null = null
@@ -587,7 +610,7 @@ function placeResolver(
         source: 'import',
       })
       byName.set(name.toLowerCase(), place.id)
-      await pin(scope, place.id, address ?? name)
+      await pin(scope, geocoding, place.id, address ?? name)
       return place.id
     } catch (cause) {
       log().warn('booking import place not created', {
@@ -639,6 +662,7 @@ export async function confirmBookingImport(
   scope: TenantScope,
   store: ImportStore,
   input: ConfirmBookingImportInput,
+  ports: ConfirmBookingImportPorts,
 ): Promise<ConfirmedBookingImport> {
   const trip = await requireTrip(scope, input.tripId)
   const staged = await readStaged(scope, store, input)
@@ -652,12 +676,13 @@ export async function confirmBookingImport(
     .filter(
       // `.at` rather than `[index]`, which the element type says can never be `undefined` — and
       // an index from a request can name a row a record does not hold.
-      (index) => !done.has(index) && staged.reservations.at(index) !== undefined,
+      (index) =>
+        !done.has(index) && staged.reservations.at(index) !== undefined,
     )
     .sort((left, right) => left - right)
 
   const timeZone = resolveTimeZone(trip.timezone)
-  const placeFor = placeResolver(scope, trip.id)
+  const placeFor = placeResolver(scope, ports.geocoding, trip.id)
   const fileId = fileIdOf(staged.jobId)
   const written = [...already]
   let failed = 0
@@ -706,13 +731,11 @@ export async function confirmBookingImport(
   if (fresh.length > 0) {
     // One patch for the batch: five hundred rows must refresh another tab once, not five hundred
     // times. The desk re-reads its own list from the invalidation this triggers.
-    await mirrorToRoom(scope, trip.id, [
-      patch('trip', trip.id, {
-        importJobId: staged.jobId,
-        importWritten: fresh.length,
-        importConfirmedAt: Date.now(),
-      }),
-    ])
+    await ports.announce(trip.id, {
+      importJobId: staged.jobId,
+      importWritten: fresh.length,
+      importConfirmedAt: Date.now(),
+    })
   }
 
   return {
@@ -791,6 +814,11 @@ export const getBookingImportFn = createServerFn({ method: 'GET' })
 
 export const confirmBookingImportFn = createServerFn({ method: 'POST' })
   .validator(confirmBookingImportInputSchema)
-  .handler(async ({ data }): Promise<ConfirmedBookingImport> =>
-    confirmBookingImport(await appScope(), importStore(), data),
-  )
+  .handler(async ({ data }): Promise<ConfirmedBookingImport> => {
+    const scope = await appScope()
+    return confirmBookingImport(scope, importStore(), data, {
+      announce: (trip, fields) =>
+        mirrorToRoom(scope, trip, [patch('trip', trip, fields)]),
+      geocoding: geocodeRuntime,
+    })
+  })
