@@ -35,6 +35,8 @@ import type {
   PlannerTransport,
   TimeOfItem,
 } from '#/components/planner'
+import type { PlanNotesPayload } from '../-server/day-notes'
+import type { PlanBoardPayload } from '../-server/plan'
 import type {
   PlanTransport,
   PlanTransportsPayload,
@@ -130,6 +132,34 @@ export function timeOfTransports(
 }
 
 /**
+ * The stored position each stop and note sits at, by draggable id — the journey's ruler.
+ *
+ * A journey's `sort_order` was measured against `day_assignments.order_index` and
+ * `day_notes.sort_order`, and those are `REAL`s that read `0..n-1` only straight after
+ * `reorderPlanFn` renumbers a day: `schedulePlaceFn` inserts a stop at the midpoint of its
+ * neighbours, a front insert takes `after − 1`, and unscheduling deletes without renumbering. A
+ * day can therefore stand at `−1, 0, 0.5, 2` for as long as nobody drags it, and merging a journey
+ * against a row's *ordinal* would place it by a number the server never wrote — the mistake
+ * `splitGap` is documented not to make.
+ *
+ * Read from the payloads for {@link timeOfTransports}' reason: the rendered rows no longer carry
+ * the number, and this is the same pair of columns `plan-model.ts` builds the day's sequence from.
+ */
+export function positionByItem(
+  payload: PlanBoardPayload,
+  notes: PlanNotesPayload,
+): ReadonlyMap<string, number> {
+  const byItem = new Map<string, number>()
+  for (const day of payload.days) {
+    for (const stop of day.stops) byItem.set(stop.assignmentId, stop.position)
+  }
+  for (const note of notes.notes) {
+    byItem.set(noteItemId(note.id), note.sortOrder)
+  }
+  return byItem
+}
+
+/**
  * Where a journey row sits on the day it is drawn on.
  *
  * Only the `departing` row has a stored answer, because only it has a ruler: a journey has one
@@ -149,10 +179,14 @@ function placementOf(transport: PlannerTransport, time: string | null): number {
 /**
  * The arrangement with every journey threaded into the day it is drawn on.
  *
- * Each day's existing ids are already in reading order, so their index *is* their position, and
- * re-merging a merged day is a fixed point (`mergeDayTimeline` is idempotent and stable) — which
- * is what lets the journeys be dropped in beside them and the whole day re-sorted once, without
- * the caller having to know which rule placed which row.
+ * `positions` is {@link positionByItem}: the day is re-merged on the one number line the server
+ * writes, so a journey's stored `sort_order` is compared with the very values its gap was split
+ * between. An id the payloads did not produce cannot reach here — every id in a day comes from
+ * those two tables — and falls back to its ordinal only so the lookup is total.
+ *
+ * Re-merging a merged day is a fixed point (`mergeDayTimeline` is idempotent and stable), which is
+ * what lets the journeys be dropped in beside the day's own rows and the whole day re-sorted once,
+ * without the caller having to know which rule placed which row.
  *
  * A tie puts the journey after the row it ties with, because `mergeDayTimeline`'s sort is stable
  * and the day's own rows are listed first. That is the resting state of every journey on disk
@@ -162,6 +196,7 @@ function placementOf(transport: PlannerTransport, time: string | null): number {
 export function withTransports(
   order: PlanOrder,
   rows: ReadonlyArray<PlannerTransport>,
+  positions: ReadonlyMap<string, number>,
   timeOfItem: TimeOfItem = () => null,
 ): PlanOrder {
   if (rows.length === 0) return order
@@ -182,7 +217,7 @@ export function withTransports(
       const merged = mergeDayTimeline([
         ...day.itemIds.map((id, index) => ({
           id,
-          position: index,
+          position: positions.get(id) ?? index,
           time: timeOfItem(id),
         })),
         ...journeys.map((transport) => {

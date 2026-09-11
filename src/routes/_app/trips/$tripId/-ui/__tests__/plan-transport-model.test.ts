@@ -62,6 +62,19 @@ const order = (days: Record<string, ReadonlyArray<string>>): PlanOrder => ({
   ideaIds: [],
 })
 
+/**
+ * The stored positions the board's rows stand at.
+ *
+ * `0..n-1` is the day straight after a reorder renumbered it — the common case, and the one every
+ * assertion here that says nothing about positions relies on. `stored` names the rows that have
+ * drifted off it, which is what a scheduled stop or a deleted one leaves behind.
+ */
+const positionsOf = (
+  itemIds: ReadonlyArray<string>,
+  stored: ReadonlyMap<string, number> = new Map(),
+): ReadonlyMap<string, number> =>
+  new Map(itemIds.map((id, index) => [id, stored.get(id) ?? index]))
+
 /** The ids of one day, after the journeys have been threaded in. */
 function readDay(next: PlanOrder, dayId: string): ReadonlyArray<string> {
   return next.days.find((day) => day.dayId === dayId)?.itemIds ?? []
@@ -75,7 +88,10 @@ function threaded(
   const rows = transportRowsOf(payload(transports), DAY_IDS)
   return {
     rows,
-    itemIds: readDay(withTransports(order({ d1: itemIds }), rows), 'd1'),
+    itemIds: readDay(
+      withTransports(order({ d1: itemIds }), rows, positionsOf(itemIds)),
+      'd1',
+    ),
   }
 }
 
@@ -204,9 +220,40 @@ describe('withTransports', () => {
     const before = order({ d1: ['a1', 'a2'], d2: ['a3'] })
     const rows = transportRowsOf(payload([journey('j1')]), DAY_IDS)
 
-    expect(readDay(withTransports(before, rows), 'd2')).toEqual(['a3'])
+    const positions = positionsOf(['a1', 'a2', 'a3'])
+
+    expect(readDay(withTransports(before, rows, positions), 'd2')).toEqual([
+      'a3',
+    ])
     // Nothing to thread anywhere is the same board, not a rebuilt one.
-    expect(withTransports(before, [])).toBe(before)
+    expect(withTransports(before, [], positions)).toBe(before)
+  })
+
+  /**
+   * The day's rows are not numbered `0..n-1` between reorders, and the journey's fraction was
+   * measured against the numbers the server actually wrote.
+   *
+   * `schedulePlaceFn` puts a new stop at the midpoint of its neighbours without renumbering the
+   * day, so a day of `0, 1` becomes `0, 0.5, 1`. A journey stored at `1.5` belongs behind all
+   * three; read against the rows' *ordinals* it would land between the second and the third.
+   */
+  it('reads the positions the server wrote, not the row ordinals', () => {
+    const itemIds = ['a1', 'c1', 'a2']
+    const rows = transportRowsOf(
+      payload([journey('j1', { position: 1.5 })]),
+      DAY_IDS,
+    )
+    const positions = positionsOf(
+      itemIds,
+      new Map([
+        ['c1', 0.5],
+        ['a2', 1],
+      ]),
+    )
+
+    expect(
+      readDay(withTransports(order({ d1: itemIds }), rows, positions), 'd1'),
+    ).toEqual(['a1', 'c1', 'a2', leg('j1')])
   })
 
   describe('a journey that spans the days between its ends', () => {
@@ -230,6 +277,7 @@ describe('withTransports', () => {
     const next = withTransports(
       order({ d1: ['a1', 'a2'], d2: ['b1'], d3: ['a3', 'a4'] }),
       rows,
+      positionsOf(['a1', 'a2', 'b1', 'a3', 'a4']),
       timeOfItem,
     )
 
@@ -296,7 +344,11 @@ describe('withTransportItems', () => {
   )
   const next = withTransportItems(
     model(['a1', 'a2']),
-    withTransports(order({ d1: ['a1', 'a2'] }), rows),
+    withTransports(
+      order({ d1: ['a1', 'a2'] }),
+      rows,
+      positionsOf(['a1', 'a2']),
+    ),
     rows,
   )
 
@@ -322,6 +374,7 @@ describe('journeyWrites', () => {
   const board = withTransports(
     order({ d1: ['a1', 'a2'], d2: ['b1'], d3: ['c1'] }),
     rows,
+    positionsOf(['a1', 'a2', 'b1', 'c1']),
   )
 
   it('writes the day a journey departs from and no other day it covers', () => {
@@ -341,6 +394,7 @@ describe('journeyWrites', () => {
     const withNote = withTransports(
       order({ d1: ['a1', 'note:n1'] }),
       transportRowsOf(payload([journey('j1', { position: 9 })]), DAY_IDS),
+      positionsOf(['a1', 'note:n1']),
     )
 
     expect(
@@ -372,6 +426,7 @@ describe('journeyWrites', () => {
     const before = withTransports(
       order({ d1: ['a1', 'a2', 'a3'] }),
       transportRowsOf(payload([journey('j1', { position: 1.5 })]), DAY_IDS),
+      positionsOf(['a1', 'a2', 'a3']),
     )
     expect(readDay(before, 'd1')).toEqual(['a1', 'a2', leg('j1'), 'a3'])
 

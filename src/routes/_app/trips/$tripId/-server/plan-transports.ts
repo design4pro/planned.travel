@@ -238,11 +238,10 @@ export const reorderDayTransportsFn = createServerFn({ method: 'POST' })
     const scope = await appScope()
     await writableTrip(scope, data.tripId)
 
-    await reorderDayTransports(scope, data)
-
-    const journeys = data.items.filter(
-      (item) => item.kind === 'transport' || item.kind === 'leg',
-    )
+    // The run as written, not as asked for: the repository drops an id it does not know and puts
+    // back a known one the payload left out, so the request and the day on disk can differ — and
+    // the room, like the count, has to hear the disk.
+    const journeys = await reorderDayTransports(scope, data)
     await mirrorDayJourneys(scope, data.tripId, data.dayId, journeys)
 
     return { placed: journeys.length }

@@ -10,11 +10,23 @@
 import { describe, expect, it } from 'vitest'
 
 import { IDEAS_CONTAINER, legItemId, noteItemId } from '#/components/planner'
+import trips from '#/lib/i18n/messages/en/trips'
 import { planMoveOutcome, refusalCopy, reorderPayload } from '../plan-move'
 
 import type { PlanOrder } from '#/components/planner'
+import type { PlanMoveReason } from '../plan-move'
 
 const N1 = noteItemId('n1')
+
+/** Every reason a move can be refused for, so the copy check cannot miss a new one. */
+const REASONS: ReadonlyArray<PlanMoveReason> = [
+  'unknown',
+  'unchanged',
+  'duplicate',
+  'not-in-ideas',
+  'not-in-another-day',
+  'timed',
+]
 
 /** Two days: one holding a stop, a note and a stop; one holding a single stop. */
 const ORDER: PlanOrder = {
@@ -234,6 +246,36 @@ describe('refusalCopy', () => {
     expect(refusalCopy('unchanged', 'a1')).toBeNull()
     expect(refusalCopy('unknown', 'a1')).toBeNull()
   })
+
+  /**
+   * A refusal names only the values its one call site builds.
+   *
+   * `interpolate` leaves a token it was not given exactly as written, so a sentence that
+   * asks for a third value reaches the reader as `{that}` — in all 23 locales, since the
+   * parity test holds every catalogue to English's token set. The refusal branch in
+   * `plan-screen.tsx` supplies the row's name and, when it has one, its time.
+   */
+  it('asks for no value beyond the name and the time', () => {
+    const said = new Set(['name', 'time'])
+    const keys = REASONS.flatMap((reason) => [
+      refusalCopy(reason, 'a1'),
+      refusalCopy(reason, N1),
+      refusalCopy(reason, legItemId('transport', 'd1', 't1')),
+    ])
+      .filter((copy) => copy !== null)
+      .flatMap((copy) => [copy.title, copy.body, copy.spoken])
+
+    expect(keys.length).toBeGreaterThan(0)
+    for (const key of new Set(keys)) {
+      const message = trips[key.replace('trips.', '') as keyof typeof trips]
+      expect(typeof message, key).toBe('string')
+      for (const [, token] of String(message).matchAll(
+        /\{([A-Za-z0-9_]+)\}/g,
+      )) {
+        expect(said, `${key} names {${token}}`).toContain(token)
+      }
+    }
+  })
 })
 
 describe('a journey on the board', () => {
@@ -267,7 +309,9 @@ describe('a journey on the board', () => {
       ORDER_WITH_JOURNEY,
       J1,
       { container: 'd1', index: 0 },
-      { timeOfItem: (itemId) => (itemId === J1 ? '12:00' : timeOfItem(itemId)) },
+      {
+        timeOfItem: (itemId) => (itemId === J1 ? '12:00' : timeOfItem(itemId)),
+      },
     )
 
     expect(outcome).toEqual({ kind: 'refused', reason: 'timed' })

@@ -722,7 +722,7 @@ describe('a journey between the stops and notes of its day', () => {
 
     // A second journey arrives and is dragged in ahead of it, naming only itself.
     const named = await journeyOn(days[0].id)
-    await reorderDayTransports(tenant.scope, {
+    const written = await reorderDayTransports(tenant.scope, {
       tripId,
       dayId: days[0].id,
       items: [
@@ -735,6 +735,11 @@ describe('a journey between the stops and notes of its day', () => {
     // Both are rewritten together, so the named one cannot land on the omitted one's value.
     expect(await sortOrderOf(named)).toBeCloseTo(1 / 3, 10)
     expect(await sortOrderOf(omitted)).toBeCloseTo(2 / 3, 10)
+    // And what comes back is the day as written — the omitted journey included, in its place.
+    expect(written).toEqual([
+      { kind: 'transport', id: named },
+      { kind: 'transport', id: omitted },
+    ])
   })
 
   it('rebuilds a journey tied with a note after that note', async () => {
@@ -778,7 +783,7 @@ describe('a journey between the stops and notes of its day', () => {
     const elsewhere = await journeyOn(days[1].id)
     const here = await journeyOn(days[0].id)
 
-    await reorderDayTransports(tenant.scope, {
+    const written = await reorderDayTransports(tenant.scope, {
       tripId,
       dayId: days[0].id,
       items: [
@@ -790,6 +795,8 @@ describe('a journey between the stops and notes of its day', () => {
 
     expect(await sortOrderOf(elsewhere)).toBe(0)
     expect(await sortOrderOf(here)).toBe(0.5)
+    // The dropped id is absent from what comes back, so nothing mirrors it to the room either.
+    expect(written).toEqual([{ kind: 'transport', id: here }])
   })
 
   it('refuses a day belonging to another trip', async () => {

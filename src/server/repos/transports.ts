@@ -512,11 +512,15 @@ function splitGap(
  * - **The stops and notes are the ruler and are never written.** Only `transports.sort_order` and
  *   `transport_legs.sort_order` are, and all of them in one {@link runBatch} — one transaction on
  *   D1, because half a day's journeys re-placed is not a state anything can render honestly.
+ *
+ * Returns the journeys as written, in the order they were written, which is what the caller mirrors
+ * to the trip room — `reorderDayTimeline`'s contract, for its reason: a dropped id and a re-inserted
+ * one both make the request a different day from the one on disk, and the room must hear the disk.
  */
 export async function reorderDayTransports(
   scope: TenantScope,
   input: ReorderDayTransportsInput,
-): Promise<void> {
+): Promise<Array<DayRunItemInput>> {
   const values = reorderDayTransportsInput.parse(input)
 
   // Trip, then role, then day — the order `reorderDayTimeline` records: a caller who may not see
@@ -623,6 +627,8 @@ export async function reorderDayTransports(
             ),
     ),
   )
+
+  return written.map(({ ref }) => ref)
 }
 
 /* -------------------------------------------------------------------------------------------------

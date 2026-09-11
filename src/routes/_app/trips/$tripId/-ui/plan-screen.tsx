@@ -111,6 +111,7 @@ import {
 } from './plan-model'
 import {
   journeyWrites,
+  positionByItem,
   timeOfTransports,
   transportRowsOf,
   withTransportItems,
@@ -433,14 +434,21 @@ export function PlanScreen({
     [timeIndex],
   )
 
+  /** The stored positions a journey's `sort_order` was measured against. */
+  const positionIndex = React.useMemo(
+    () => positionByItem(payload, notes),
+    [payload, notes],
+  )
+
   const serverOrder = React.useMemo(
     () =>
       withTransports(
         orderFromPayload(payload, notes),
         transportRows,
+        positionIndex,
         timeOfItem,
       ),
-    [notes, payload, transportRows, timeOfItem],
+    [notes, payload, positionIndex, transportRows, timeOfItem],
   )
   const [order, setOrder] = React.useState<PlanOrder>(serverOrder)
 
@@ -829,8 +837,13 @@ export function PlanScreen({
         const copy = refusalCopy(outcome.reason, itemId)
         const name = nameOfItem(itemId)
         if (copy === null || name === null) return null
-        toast.error(t(copy.title, { name }), { description: t(copy.body) })
-        return t(copy.spoken, { name })
+        // A journey refused against its own clock names that clock, and `interpolate`
+        // leaves a token it was not given exactly as written — so the time travels with
+        // the name. The other refusals do not mention it, and an extra value is ignored.
+        const time = timeOfItem(itemId)
+        const said = time === null ? { name } : { name, time }
+        toast.error(t(copy.title, said), { description: t(copy.body) })
+        return t(copy.spoken, said)
       }
 
       if (outcome.kind === 'ask-drop-time') {
