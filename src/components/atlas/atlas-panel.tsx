@@ -133,9 +133,10 @@ function asTab(value: string): AtlasPanelTab | null {
  * The complement of the body's `hidden lg:flex`, in the same unit, so the markup
  * and the announcement cannot disagree.
  *
- * It has to be `lg`'s `rem` figure and not `1024px`: the two agree only at a 16px
- * root font size, and above it the band between them tells a screen reader the
- * shelf is shut while CSS has already opened it. Hence `#/lib/breakpoints`.
+ * It has to be `lg`'s `rem` figure and not `1024px`: the two agree only at the
+ * default 16px font size, and for a reader who has raised their browser's
+ * font-size preference the band between them tells a screen reader the shelf is
+ * shut while CSS has already opened it. Hence `#/lib/breakpoints`.
  */
 const SHELF_OPEN_QUERY = MEDIA_LG_UP
 

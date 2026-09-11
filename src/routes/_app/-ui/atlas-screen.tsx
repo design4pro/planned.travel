@@ -490,7 +490,7 @@ function useMeasuredBox(): [
  * The two halves of this decision are this query and the `lg:` classes on the
  * slice, the shelf and the zoom cluster: `ShelfGeometry.wide`, which the camera's
  * padding is derived from, is documented as "true from `lg` up". A `px` query
- * agrees with that only at a 16px root font size; above it the camera reserves the
+ * agrees with that only at the default 16px font size; above it the camera reserves the
  * phone composition's insets for chrome CSS has already moved, which is why the
  * figure comes from `#/lib/breakpoints`.
  */

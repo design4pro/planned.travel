@@ -5,12 +5,18 @@
  * A JS media query paired with a Tailwind variant is a single decision with two
  * halves: one half mounts a component, the other reveals or hides it. The halves
  * have to name the same boundary in the same unit. Tailwind's breakpoints are
- * `rem`, so a `px` query agrees with its variant only at a 16px root font size —
- * a reader who enlarges their browser text moves the variant without moving the
- * query, and the viewport band between the two renders *neither* half. That is a
- * WCAG 2.2 §1.4.4 (Resize Text) failure rather than a cosmetic seam: the same
- * mismatch hid the dashboard's entire reference column, which is what sent the
- * figure here instead of leaving it at each call site.
+ * `rem`, so a `px` query agrees with its variant only at the default 16px font
+ * size — a reader who has raised their browser's font-size preference moves the
+ * variant without moving the query, and the viewport band between the two renders
+ * *neither* half. That is a WCAG 2.2 §1.4.4 (Resize Text) failure rather than a
+ * cosmetic seam: the same mismatch hid the dashboard's entire reference column,
+ * which is what sent the figure here instead of leaving it at each call site.
+ *
+ * The preference is the whole mechanism, and it is not the same thing as the root
+ * font size: Media Queries Level 4 §1.3 resolves a relative unit in a media query
+ * against the *initial* value, never against a declaration, so `html { font-size }`
+ * moves nothing here. Only the reader's own default moves `rem` — which is exactly
+ * why no amount of testing at the authored size finds this class of bug.
  *
  * **The idiom, stated once.** A `matchMedia` query that complements a Tailwind
  * variant is one of the constants below — never a literal at the call site, never
@@ -22,7 +28,11 @@
  *
  * The range syntax (`width >= …`) is deliberate: it is what Tailwind v4's own
  * variants compile to, so the two halves meet exactly, with none of the 0.02px
- * gap a `min-width`/`max-width` pair leaves between them.
+ * gap a `min-width`/`max-width` pair leaves between them. It is not free — an
+ * engine that cannot parse it evaluates the query to `not all` and answers `false`
+ * forever, which on a desktop means neither half renders — but the floor it sets
+ * (Chrome 104, Firefox 102, Safari 16.4) sits under Tailwind v4's own, so the
+ * stylesheet has already stopped working by the time this does.
  *
  * The values are Tailwind's defaults. This theme leaves them alone —
  * `src/styles/styles.css` declares no `--breakpoint-*` — so changing one means

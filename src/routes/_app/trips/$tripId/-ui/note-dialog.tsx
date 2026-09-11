@@ -103,7 +103,7 @@ export interface NoteDialogProps {
  * The complement of the two-pane grid's `sm:` variant, in the same unit.
  *
  * The two halves of this decision are this query and `sm:grid-cols-2`. A `px` query
- * would agree with `sm` only at a 16px root font size — above it the side-by-side
+ * would agree with `sm` only at the default 16px font size — above it the side-by-side
  * layout mounts into a grid that is still one column wide, so the writer gets the
  * preview stacked under a full-width textarea instead of the tabs the narrow
  * layout would have given them. Hence `#/lib/breakpoints`.

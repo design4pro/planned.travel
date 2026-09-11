@@ -165,12 +165,13 @@ export function DashboardWidgetsMenu({
 /**
  * The exact complement of the column's `md:` variant, in the same unit.
  *
- * It has to be `md`'s `rem` figure and not `768px`: the two agree only at a 16px
- * root font size, and a reader who has enlarged their browser text moves `md`
- * without moving a pixel query. At a 20px root the px form left a 768–960px band
- * where the sheet trigger is not rendered *and* `md:block` has not applied yet,
- * and the whole reference column — the pre-existing widgets included — became
- * unreachable. `#/lib/breakpoints` holds the figure and the rule behind it.
+ * It has to be `md`'s `rem` figure and not `768px`: the two agree only at the
+ * default 16px font size, and a reader who has raised their browser's font-size
+ * preference moves `md` without moving a pixel query. At a 20px default the px
+ * form left a 768–960px band where the sheet trigger is not rendered *and*
+ * `md:block` has not applied yet, and the whole reference column — the
+ * pre-existing widgets included — became unreachable. `#/lib/breakpoints` holds
+ * the figure and the rule behind it.
  */
 export const WIDGETS_IN_SHEET_QUERY = MEDIA_MD_DOWN
 

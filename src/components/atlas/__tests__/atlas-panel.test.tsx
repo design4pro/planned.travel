@@ -225,9 +225,12 @@ describe('sections', () => {
    * The query and the variant above are two halves of one decision: `lg:flex`
    * reveals the body, and the query decides what the toggle says about it. They
    * have to name the same boundary in the same unit — `lg` is `64rem`, and the
-   * `1024px` this used to ask for agrees with that only at a 16px root font size.
-   * Above it a reader who enlarged their browser text was told the shelf was shut
-   * while the stylesheet had already opened it.
+   * `1024px` this used to ask for agrees with that only at the default 16px font
+   * size. A reader who has raised their browser's font-size preference was told
+   * the shelf was shut while the stylesheet had already opened it.
+   *
+   * That the constant is `rem` is `breakpoints.test.ts`'s subject; what only this
+   * test can see is that the panel asks about `lg` at all.
    */
   it('asks about the same boundary the body’s `lg:` variant uses', () => {
     const asked = matchWidth(true)
@@ -235,12 +238,6 @@ describe('sections', () => {
     panel({ expanded: null })
 
     expect(asked).toContain(MEDIA_LG_UP)
-    for (const query of asked) {
-      expect(
-        query,
-        'a viewport query must not be measured in px',
-      ).not.toContain('px')
-    }
   })
 
   it('opens the drawer when a collapsed panel has a tab chosen', async () => {
