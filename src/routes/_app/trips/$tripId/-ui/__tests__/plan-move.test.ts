@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { IDEAS_CONTAINER, noteItemId } from '#/components/planner'
+import { IDEAS_CONTAINER, legItemId, noteItemId } from '#/components/planner'
 import { planMoveOutcome, refusalCopy, reorderPayload } from '../plan-move'
 
 import type { PlanOrder } from '#/components/planner'
@@ -221,7 +221,7 @@ describe('refusalCopy', () => {
     const spoken = (
       ['duplicate', 'not-in-ideas', 'not-in-another-day'] as const
     )
-      .map((reason) => refusalCopy(reason))
+      .map((reason) => refusalCopy(reason, 'a1'))
       .map((copy) => [copy?.title, copy?.body, copy?.spoken].join('|'))
 
     expect(spoken).toHaveLength(3)
@@ -231,7 +231,76 @@ describe('refusalCopy', () => {
 
   /** A row put back where it was is not an error, and neither is a drag onto nothing. */
   it('says nothing about a refusal the reader caused on purpose', () => {
-    expect(refusalCopy('unchanged')).toBeNull()
-    expect(refusalCopy('unknown')).toBeNull()
+    expect(refusalCopy('unchanged', 'a1')).toBeNull()
+    expect(refusalCopy('unknown', 'a1')).toBeNull()
+  })
+})
+
+describe('a journey on the board', () => {
+  const J1 = legItemId('transport', 'd1', 't1')
+
+  /** `d1` gains a journey between its two stops; `d2` is unchanged. */
+  const ORDER_WITH_JOURNEY: PlanOrder = {
+    days: [
+      { dayId: 'd1', itemIds: ['a1', N1, J1, 'a2'] },
+      { dayId: 'd2', itemIds: ['a3'] },
+    ],
+    ideaIds: [],
+  }
+
+  it('is refused into another day and into the ideas rail', () => {
+    expect(
+      planMoveOutcome(ORDER_WITH_JOURNEY, J1, { container: 'd2', index: 0 }),
+    ).toEqual({ kind: 'refused', reason: 'not-in-another-day' })
+
+    expect(
+      planMoveOutcome(ORDER_WITH_JOURNEY, J1, {
+        container: IDEAS_CONTAINER,
+        index: 0,
+      }),
+    ).toEqual({ kind: 'refused', reason: 'not-in-ideas' })
+  })
+
+  it('is refused rather than asked when it would move against its own clock', () => {
+    // 12:00 dropped above the 09:00 that opens the day.
+    const outcome = planMoveOutcome(
+      ORDER_WITH_JOURNEY,
+      J1,
+      { container: 'd1', index: 0 },
+      { timeOfItem: (itemId) => (itemId === J1 ? '12:00' : timeOfItem(itemId)) },
+    )
+
+    expect(outcome).toEqual({ kind: 'refused', reason: 'timed' })
+  })
+
+  it('answers in its own words, and leaves the note’s untouched', () => {
+    const journey = (['not-in-ideas', 'not-in-another-day', 'timed'] as const)
+      .map((reason) => refusalCopy(reason, J1))
+      .map((copy) => [copy?.title, copy?.body, copy?.spoken].join('|'))
+
+    expect(new Set(journey).size).toBe(3)
+    for (const keys of journey) {
+      expect(keys).not.toContain('undefined')
+      expect(keys).toContain('journey')
+    }
+    // The same reason, asked about a note, still says what it always said.
+    expect(refusalCopy('not-in-another-day', N1)?.title).toBe(
+      'trips.plan.move.refused.notInAnotherDay',
+    )
+    // And a stop's `'timed'` is still the dialog's, not a refusal with words.
+    expect(refusalCopy('timed', 'a1')).toBeNull()
+  })
+
+  it('is left out of the reorder the stops and notes are written with', () => {
+    const payload = reorderPayload('trip-1', {
+      kind: 'reorder',
+      days: [{ dayId: 'd1', itemIds: ['a1', N1, J1, 'a2'] }],
+    })
+
+    expect(payload.days[0].items).toEqual([
+      { kind: 'stop', id: 'a1' },
+      { kind: 'note', id: 'n1' },
+      { kind: 'stop', id: 'a2' },
+    ])
   })
 })

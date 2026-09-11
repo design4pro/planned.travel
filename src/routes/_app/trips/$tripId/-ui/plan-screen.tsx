@@ -705,7 +705,7 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       })
 
       if (outcome.kind === 'refused') {
-        const copy = refusalCopy(outcome.reason)
+        const copy = refusalCopy(outcome.reason, itemId)
         const name = nameOfItem(itemId)
         if (copy === null || name === null) return null
         toast.error(t(copy.title, { name }), { description: t(copy.body) })
