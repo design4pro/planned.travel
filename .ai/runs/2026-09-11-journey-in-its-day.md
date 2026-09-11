@@ -125,4 +125,4 @@ PR: #438
 - [x] 3.4 `plan-move.ts` takes the refusals and their words — 7e51030e
 - [x] 3.5 The e2e block appended to `e2e/journeys.spec.ts` — 35b71fd1
 - [x] 3.6 The blind A/B pair on the three declared states — d1acdca3
-- [ ] 3.7 The full validation gate
+- [x] 3.7 The full validation gate — e75142f9
