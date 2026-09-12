@@ -64,19 +64,20 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
   }
 
   /**
-   * Open the journal and take the trip this block walks, or skip — a workspace
-   * whose journal links to no trip address leaves this block nothing to measure.
+   * Open the journal and take the trip this block walks. Behind the session
+   * gate a journal that links to no trip address can only mean its markup or the
+   * seed changed, so the block fails on it rather than skipping into green.
    */
   async function journalTripToWalk(page: Page): Promise<string> {
     await visit(page, JOURNAL, 'light')
     const tripId = await linkedTripId(page)
-    test.skip(
-      tripId === null,
-      'the journal lists no trip of its own, so there is no link to a trip address to walk',
-    )
-    // `test.skip()` above ends the test when the id is missing; this only keeps
-    // the type honest for the callers.
-    if (tripId === null) throw new Error('unreachable: the test was skipped')
+    expect(
+      tripId,
+      'the "Waiting for a story" list on the journal has to offer a demo trip with no journey attached — run `node scripts/seed/seed.mjs` to restore the fixture',
+    ).not.toBeNull()
+    // The assertion above has already thrown when the id is missing; this only
+    // keeps the type honest for the callers.
+    if (tripId === null) throw new Error('unreachable: the assertion failed')
     return tripId
   }
 
