@@ -116,7 +116,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'På väg',
   'plan.transport.phase.journey.arriving': 'Slut',
   'plan.transport.label': 'Från {from} till {to}',
-  'plan.transport.drag': 'Ändra ordning på {journey}',
+  'plan.transport.drag': 'Ändra ordning: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Tillsammans',
   'collab.empty': 'Inget delat än',

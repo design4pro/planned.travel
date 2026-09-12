@@ -116,7 +116,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'En route',
   'plan.transport.phase.journey.arriving': 'Fin',
   'plan.transport.label': 'De {from} à {to}',
-  'plan.transport.drag': 'Réorganiser {journey}',
+  'plan.transport.drag': 'Réorganiser, {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Ensemble',
   'collab.empty': 'Rien de partagé pour l’instant',

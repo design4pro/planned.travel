@@ -115,7 +115,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': '移動中',
   'plan.transport.phase.journey.arriving': '終了',
   'plan.transport.label': '{from} から {to} へ',
-  'plan.transport.drag': '{journey} を並べ替える',
+  'plan.transport.drag': '並べ替え — {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'みんなで',
   'collab.empty': 'まだ何も共有されていません',

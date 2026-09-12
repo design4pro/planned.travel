@@ -50,7 +50,7 @@ describe('a journey row', () => {
     render(<TransportRow transport={departing} position={0} draggable />)
 
     expect(
-      screen.getByRole('button', { name: 'Reorder Tokyo to Kyoto' }),
+      screen.getByRole('button', { name: 'Reorder, Tokyo to Kyoto' }),
     ).toBeTruthy()
     // The regression this pins: naming the handle after the journey alone made it
     // indistinguishable from the row's own text, which says exactly that.
@@ -113,7 +113,7 @@ describe('a journey row', () => {
         draggable
       />,
     )
-    expect(screen.getByRole('button', { name: 'Reorder Tokyo' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reorder, Tokyo' })).toBeTruthy()
     unmount()
 
     render(
@@ -123,7 +123,7 @@ describe('a journey row', () => {
         draggable
       />,
     )
-    expect(screen.getByRole('button', { name: 'Reorder Flight' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reorder, Flight' })).toBeTruthy()
   })
 
   it('marks itself for the screen and for the board', () => {

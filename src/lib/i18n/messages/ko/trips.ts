@@ -115,7 +115,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': '이동 중',
   'plan.transport.phase.journey.arriving': '종료',
   'plan.transport.label': '{from}에서 {to}까지',
-  'plan.transport.drag': '{journey} 순서 바꾸기',
+  'plan.transport.drag': '순서 바꾸기 — {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': '함께',
   'collab.empty': '아직 공유된 것이 없습니다',

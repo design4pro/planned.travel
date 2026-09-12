@@ -114,7 +114,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'في الطريق',
   'plan.transport.phase.journey.arriving': 'النهاية',
   'plan.transport.label': 'من {from} إلى {to}',
-  'plan.transport.drag': 'إعادة ترتيب {journey}',
+  'plan.transport.drag': 'إعادة ترتيب، {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'معًا',
   'collab.empty': 'لم تتم مشاركة أي شيء بعد',

@@ -745,7 +745,7 @@ describe('a day that carries a journey', () => {
       </DndContext>,
     )
     expect(
-      screen.getByRole('button', { name: 'Reorder Tokyo to Kyoto' }),
+      screen.getByRole('button', { name: 'Reorder, Tokyo to Kyoto' }),
     ).toBeDefined()
   })
 
@@ -771,7 +771,7 @@ describe('a day that carries a journey', () => {
       </DndContext>,
     )
     expect(
-      screen.queryByRole('button', { name: 'Reorder Tokyo to Kyoto' }),
+      screen.queryByRole('button', { name: 'Reorder, Tokyo to Kyoto' }),
     ).toBeNull()
     expect(screen.getByText('Under way')).toBeDefined()
   })
