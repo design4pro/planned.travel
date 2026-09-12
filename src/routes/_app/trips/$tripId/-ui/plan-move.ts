@@ -15,6 +15,7 @@
 import {
   IDEAS_CONTAINER,
   containerOf,
+  isLegItemId,
   isNoteItemId,
   movePlanItem,
   noteIdOfNoteItem,
@@ -39,6 +40,10 @@ import type { reorderPlanInputSchema } from '../-server/plan'
  * is written by the editor, never by a drag. The engine does not know that, and should
  * not — it is a gap in the write path, not a rule about ordering — so the screen refuses
  * it before delegating rather than letting the board claim a move the write would drop.
+ *
+ * A journey cannot change day for a different reason with the same shape: its day comes
+ * from its departure and arrival dates, which are the Transports tab's to change. Same
+ * refusal, different sentence — see {@link refusalCopy}.
  */
 export type PlanMoveReason = PlanMoveRefusal | 'not-in-another-day'
 
@@ -87,7 +92,7 @@ export function planMoveOutcome(
 ): PlanMoveOutcome {
   const from = containerOf(order, itemId)
   if (
-    isNoteItemId(itemId) &&
+    (isNoteItemId(itemId) || isLegItemId(itemId)) &&
     from !== null &&
     target.container !== IDEAS_CONTAINER &&
     target.container !== from
@@ -109,7 +114,9 @@ export function planMoveOutcome(
     return { kind: 'commit', order: result.order, change: result.change }
   }
 
-  if (result.reason === 'timed') {
+  // A journey is never asked the question: a departure time belongs to a timetable and
+  // not to the board, so there is nothing a reader could agree to drop.
+  if (result.reason === 'timed' && !isLegItemId(itemId)) {
     const time = options.timeOfItem?.(itemId) ?? null
     // The engine only refuses `'timed'` for an item that carries one, so this is a
     // narrowing rather than a fallback — but a refusal with no time to name is one the
@@ -150,7 +157,13 @@ export function reorderPayload(
   return {
     tripId,
     days: change.days.map((day) => {
-      const items = day.itemIds.map((itemId) => timelineItem(itemId))
+      // A `leg:` id is `reorderDayTransportsFn`'s, and this payload is the stops and
+      // notes'. Sent here a chained leg's id is dropped as a stop the day does not hold,
+      // and a leg-less record's — 65 characters — fails `id.max(64)` for the whole
+      // payload, refusing every drag on that day.
+      const items = day.itemIds
+        .filter((itemId) => !isLegItemId(itemId))
+        .map((itemId) => timelineItem(itemId))
       if (clearTime === null || !day.itemIds.includes(clearTime)) {
         return { dayId: day.dayId, items }
       }
@@ -174,10 +187,19 @@ export interface RefusalCopy {
  * What a reader is told about a refusal, or `null` when they are told nothing.
  *
  * `'unchanged'` and `'unknown'` are silent by design — a row put back exactly where it
- * was is not an error, and neither is a drag that resolved to nothing. `'timed'` is
- * absent because it is never a refusal a reader sees: it becomes the dialog.
+ * was is not an error, and neither is a drag that resolved to nothing.
+ *
+ * `itemId` is **required** rather than optional so that no caller can forget it and show
+ * a note's sentence to somebody who dragged a Shinkansen: "notes cannot be moved between
+ * days yet" is true of a note and simply wrong about a train. A journey answers from its
+ * own three sentences, and `'timed'` has copy at all only because of it — until now
+ * `'timed'` was never a refusal a reader saw, because it became the dialog.
  */
-export function refusalCopy(reason: PlanMoveReason): RefusalCopy | null {
+export function refusalCopy(
+  reason: PlanMoveReason,
+  itemId: string,
+): RefusalCopy | null {
+  if (isLegItemId(itemId)) return journeyRefusalCopy(reason)
   switch (reason) {
     case 'duplicate':
       return {
@@ -196,6 +218,32 @@ export function refusalCopy(reason: PlanMoveReason): RefusalCopy | null {
         title: 'trips.plan.move.refused.notInAnotherDay',
         body: 'trips.plan.move.refused.notInAnotherDayBody',
         spoken: 'trips.plan.move.spoken.notInAnotherDay',
+      }
+    default:
+      return null
+  }
+}
+
+/** The same refusals, said about a journey. */
+function journeyRefusalCopy(reason: PlanMoveReason): RefusalCopy | null {
+  switch (reason) {
+    case 'not-in-ideas':
+      return {
+        title: 'trips.plan.move.refused.journeyNotInIdeas',
+        body: 'trips.plan.move.refused.journeyNotInIdeasBody',
+        spoken: 'trips.plan.move.spoken.journeyNotInIdeas',
+      }
+    case 'not-in-another-day':
+      return {
+        title: 'trips.plan.move.refused.journeyNotInAnotherDay',
+        body: 'trips.plan.move.refused.journeyNotInAnotherDayBody',
+        spoken: 'trips.plan.move.spoken.journeyNotInAnotherDay',
+      }
+    case 'timed':
+      return {
+        title: 'trips.plan.move.refused.journeyTimed',
+        body: 'trips.plan.move.refused.journeyTimedBody',
+        spoken: 'trips.plan.move.spoken.journeyTimed',
       }
     default:
       return null

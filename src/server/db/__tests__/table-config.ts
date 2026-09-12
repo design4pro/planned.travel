@@ -46,6 +46,16 @@ export function indexColumns(table: SQLiteTable, name: string): Array<string> {
   )
 }
 
+/**
+ * The columns `table`'s composite `primaryKey()` covers, in the order it covers them, or `[]` for a
+ * table keyed by a single column — `getTableConfig().primaryKeys` holds only the composite kind.
+ */
+export function primaryKeyColumns(table: SQLiteTable): Array<string> {
+  return getTableConfig(table).primaryKeys.flatMap((key) =>
+    key.columns.map((entry) => entry.name),
+  )
+}
+
 /** The check-constraint names `table` declares, in declaration order. */
 export function checkNames(table: SQLiteTable): Array<string> {
   return getTableConfig(table).checks.map((entry) => entry.name)

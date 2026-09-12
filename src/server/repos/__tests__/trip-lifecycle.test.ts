@@ -453,7 +453,7 @@ describe('trip lifecycle', () => {
       const trip = await createTrip(tenant.scope, { title: 'Lisbon' })
 
       // A double click is two requests, and started together they interleave at every `await`:
-      // both read no row, then both insert. The read cannot answer that one - the unique index on
+      // both read no row, then both insert. The read cannot answer that one - the primary key on
       // `(trip_id, user_id)` does, and the loser has nothing left to do because the row it wanted
       // is the row that is now there.
       await Promise.all([

@@ -21,9 +21,11 @@
  * does not take the tick down with it.
  */
 
+import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createStoredTranslator, loadCatalogue } from '#/lib/i18n/catalogue'
+import { tripMembers } from '#/server/db/schema'
 import { paramsFrom, renderStored, storedKey } from '#/lib/notification-copy'
 import {
   DAY_MS,
@@ -253,16 +255,19 @@ async function seedTrip(
   return trip.id
 }
 
-/** Drops one user's membership of a trip, by the row id the repository addresses it with. */
-async function dropTripMember(
-  world: World,
-  tripId: string,
-  userId: string,
-): Promise<void> {
-  const { listTripMembers, removeTripMember } = await import('#/server/repos')
-  const members = await listTripMembers(world.tenant.scope, tripId)
-  const row = members.find((member) => member.userId === userId)
-  await removeTripMember(world.tenant.scope, row?.id ?? '')
+/**
+ * Drops one user's membership of a trip, straight through the harness database.
+ *
+ * Deliberately not `removeTripMember`: since `01-S6a` that writer refuses to remove a trip's last
+ * owner, and the two cases below exist precisely to assert what the sweep does when it meets an
+ * ownerless or memberless trip. That state is unreachable through the product and still reachable in
+ * the table — a row predating the guard, or a member whose workspace account has gone — so the
+ * assertion is worth keeping and the fixture has to build the state the writer now refuses to.
+ */
+async function dropTripMember(tripId: string, userId: string): Promise<void> {
+  await harness.db
+    .delete(tripMembers)
+    .where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, userId)))
 }
 
 /** The in-app half of a reminder: the rows one member can see in their own inbox. */
@@ -739,7 +744,7 @@ describe('sweepReminders', () => {
     const members = await listMembers(alpha.tenant.scope)
     const second = members.find((row) => row.userId === alpha.otherId)
     await changeMemberRole(alpha.tenant.scope, second?.id ?? '', 'admin')
-    await dropTripMember(alpha, tripId, alpha.ownerId)
+    await dropTripMember(tripId, alpha.ownerId)
 
     const { result } = await sweep(memoryKv(), recordingQueue())
 
@@ -752,7 +757,7 @@ describe('sweepReminders', () => {
 
   it('skips a due trip with no members and leaves no marker behind', async () => {
     const tripId = await seedTrip(alpha)
-    await dropTripMember(alpha, tripId, alpha.ownerId)
+    await dropTripMember(tripId, alpha.ownerId)
     const kv = memoryKv()
 
     const { result } = await sweep(kv, recordingQueue())

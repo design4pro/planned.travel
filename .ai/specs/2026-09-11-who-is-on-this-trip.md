@@ -2,7 +2,7 @@
 
 | Field              | Value |
 | ------------------ | ----- |
-| **Status**         | draft |
+| **Status**         | in-progress |
 | **Issue**          | #118  |
 | **Spec PR**        | #436  |
 | **Implementation** | none  |
@@ -384,3 +384,43 @@ Each step leaves the application working — including the test suite, which is 
 Cases 4 and 5 carry the role-dependent rendering the unit tests cannot reach. _Verified by:_ `bash .ai/scripts/e2e.sh`.
 
 **Step 13 — Phase 2's gate and its evidence.** Every command in `validation.commands`, in order, with `bash .ai/scripts/check-generated.sh` confirming the route tree and the spec index are generated output rather than a hand-edit. The screen's visual and accessibility commitments — both themes, three viewports, the stacked layout, focus after a removal — are evidenced by `om-auto-qa-pr` on this phase's pull request, which is what its `needs-qa` label is for.
+
+## 🔧 Amendment
+
+**A2 was not buildable as designed — the fan-out moved instead of being re-exported (PR #453).**
+
+A2 said the statistics fan-out would be reached "by exporting one wrapper from `trip-lifecycle.ts`".
+It was written, it type-checked, it passed every test — and it broke `pnpm build`:
+
+```
+[vite]: Rolldown failed to resolve import "cloudflare:workers" from "src/server/auth/env.ts".
+```
+
+`src/routes/_app/-server/trip-lifecycle.ts` is under `src/routes` and so is in the **client** graph.
+Start strips a server function's body from the client build, and tree-shaking then drops the private
+helpers only that body reached — which is why a fan-out that has always done
+`await import('#/server/auth/env')` was harmless while it stayed private. An `export` is reachable by
+definition, so the moment the wrapper was exported the browser bundle had to resolve
+`cloudflare:workers`, a specifier that exists only inside workerd.
+
+Deferring the wrapper was not an option either: Phase 2's `people.ts` is itself a route `-server`
+module, so it would have hit the same wall.
+
+**What shipped instead.** The fan-out left the route tree:
+
+- `src/server/queue/travel-stats-fanout.ts` (new) owns `affectedStatYears`, `enqueueTravelStats` and
+  `enqueueTripStatsFor`. Behaviour is unchanged — same envelopes, same recipients, same collapsing
+  ids, same "a queue refusal never fails the write" — and the existing end-to-end assertions in
+  `src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts` still hold it, unedited.
+- `tripMemberUserIds` moved the other way, into `src/server/repos/trips.ts`. It was shared by the
+  fan-out and by `readTripForDelete`, and `readTripForDelete` is **exported** from
+  `trip-lifecycle.ts` — leaving the projection in the queue module simply moved the same build
+  failure one import along. The projection is a repository read and now lives with the query it
+  projects.
+- `trip-lifecycle.ts` imports the two functions it still uses. It is 145 lines lighter and its
+  behaviour is identical.
+
+A2's *reasoning* stands and is what the outcome honours: one concept, one owner (`docs/SPEC.md` §8),
+no second copy of the envelope arithmetic. Only its placement was wrong, and the constraint that
+made it wrong is worth stating plainly for the next spec that reaches for a route `-server` module:
+**anything exported from `src/routes/**` must be resolvable in the browser bundle, transitively.**

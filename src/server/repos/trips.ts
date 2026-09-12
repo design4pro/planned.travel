@@ -50,6 +50,7 @@ import {
   tenantFilter,
 } from './base'
 import { NotFoundError, RepositoryError } from './context'
+import { getMembership, listUserProfiles } from './members'
 import {
   dayNotesRepository,
   daysRepository,
@@ -238,8 +239,8 @@ export type CreateShareLinkInput = z.infer<typeof createShareLinkInput>
  * more cross an organization boundary than the trip half can.
  *
  * Exported for {@link readableTrips}, which is how a reader should reach it; a query that needs the
- * bare `SQL` — one grouped aggregate here, and the two `journey.ts` readers that do not carry it yet
- * — takes it directly and is visibly doing something the handle could not do for it.
+ * bare `SQL` — one grouped aggregate here, and nothing else in the codebase — takes it directly and
+ * is visibly doing something the handle could not do for it.
  */
 export function readableTripFilter(scope: TenantScope): SQL {
   const isMember = exists(
@@ -273,11 +274,11 @@ export interface ReadableTrips {
  * same weight and deserves the same treatment. `tripsRepository` answers for *every* trip in the
  * tenant, which is right for the quota count in {@link createTrip}, for the slug reservation, and for
  * the plan-usage figure in `billing/runtime.cloudflare.ts`, and wrong for every reader. While both
- * were spelled `tripsRepository.findMany`, nothing but memory told them apart, and memory has already
- * missed two: `listTripsWithoutJourney` and `journalCoverage` in `journey.ts` still offer a workspace
- * member the titles and counts of private trips they cannot open. Fixing those is a ticket of its own
- * — `journey.ts` is not this slice's to edit — but the seam they will be fixed against is this one,
- * and it belongs on the branch that created the two-tier world.
+ * were spelled `tripsRepository.findMany`, nothing but memory told them apart, and memory had already
+ * missed two: `listTripsWithoutJourney` and `journalCoverage` in `journey.ts` offered a workspace
+ * member the titles and counts of private trips they cannot open until #196 routed them through here.
+ * That is the argument for the handle: the miss was invisible at the call site, and the only thing
+ * that makes the next one visible is that a reader has to name `tripsRepository` to get past it.
  */
 export function readableTrips(scope: TenantScope): ReadableTrips {
   const readable = readableTripFilter(scope)
@@ -1425,8 +1426,29 @@ export async function listTripMembers(
 ): Promise<Array<TripMember>> {
   return tripMembersRepository.findMany(scope, {
     where: eq(tripMembers.tripId, tripId),
-    orderBy: [asc(tripMembers.createdAt)],
+    // `created_at` is a millisecond timestamp, so an owner and a member created inside one request
+    // tie on it and SQLite may answer a tie in either order. `id` is `newId()` and time-sortable,
+    // which makes the order total — and "owner first" in `listTripParticipants` stable rather than
+    // dependent on whatever rowid order the engine happened to produce.
+    orderBy: [asc(tripMembers.createdAt), asc(tripMembers.id)],
   })
+}
+
+/**
+ * Who is on a trip, deduplicated — the user ids alone, in {@link listTripMembers}'s order.
+ *
+ * The recipient set of anything addressed to a trip's people: the `travel-stats` fan-out sends to
+ * exactly these, and `readTripForDelete` takes them while the `trip_members` rows still exist,
+ * because the delete cascade removes them. One owner for the projection rather than one per caller
+ * (`docs/SPEC.md` §8) — and it lives here, with the query it projects, so a caller in the client
+ * graph can reach it without reaching the queue binding.
+ */
+export async function tripMemberUserIds(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<string>> {
+  const members = await listTripMembers(scope, tripId)
+  return [...new Set(members.map((row) => row.userId))]
 }
 
 /**
@@ -1456,35 +1478,279 @@ export async function listTripsForUser(
   )
 }
 
+/**
+ * Thrown when a membership write would leave a trip without an owner.
+ *
+ * One class for two verbs — removing a trip's last owner and demoting them — because from the
+ * reader's side it is one rule, and a trip with no owner is a trip on which
+ * {@link assertTripRole} refuses every write for ever: `updateTrip`, `archiveTrip`, `deleteTrip`
+ * and the visibility switch all route through {@link requireOwnedTrip}.
+ */
+export class TripLastOwnerError extends RepositoryError {
+  constructor() {
+    super('A trip keeps at least one owner.', 'TRIP_LAST_OWNER')
+  }
+}
+
+/**
+ * Thrown when a trip membership is asked for a user who is not in the caller's workspace.
+ *
+ * The picker on the people screen cannot produce such an id — it offers workspace members. The
+ * guard is for every other caller: a seed script, a queue consumer, `01-S8`'s initial-members
+ * picker, or a well-formed id for any account in the database arriving on the wire.
+ */
+export class TripMemberNotInWorkspaceError extends RepositoryError {
+  constructor(readonly userId: string) {
+    super(
+      'That person is not a member of this workspace.',
+      'TRIP_MEMBER_NOT_IN_WORKSPACE',
+    )
+  }
+}
+
+/**
+ * "This trip has an `owner` other than this membership row", as a predicate rather than as a count.
+ *
+ * The last-owner guard has to check **and** act in one statement, and this is the half that makes
+ * that possible. A `count()` followed by a write is check-then-act: two owners leaving the same trip
+ * in the same instant each read the other, each proceeds, and the trip is left with nobody who may
+ * write to it — precisely the state {@link TripLastOwnerError} exists to prevent, reached by racing
+ * the code that raises it, and not self-healing: `assertTripRole(scope, tripId, ['owner'])` then
+ * refuses `updateTrip`, `archiveTrip`, `deleteTrip` and the visibility switch for ever.
+ *
+ * D1 has no interactive transaction to hold a count across a write, so the count moves *into* the
+ * write's `WHERE`, where SQLite evaluates it inside the statement's own implicit transaction. Zero
+ * rows affected is then the refusal, and the two callers below are serialised by the engine rather
+ * than by hope.
+ *
+ * The sub-select reads `trip_members` while the statement around it writes `trip_members`. That is
+ * safe because nothing here correlates to the outer row — both arguments are values the caller has
+ * already read — so the inner `FROM` shadowing the outer table changes no meaning. Both halves are
+ * `tenantFilter()`-bound, as in {@link readableTripFilter}.
+ */
+function anotherOwnerExists(
+  scope: TenantScope,
+  tripId: string,
+  exceptMemberId: string,
+): SQL {
+  return exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(tripMembers)
+      .where(
+        tenantFilter(
+          scope,
+          tripMembers,
+          eq(tripMembers.tripId, tripId),
+          eq(tripMembers.role, 'owner'),
+          ne(tripMembers.id, exceptMemberId),
+        ),
+      ),
+  )
+}
+
+/**
+ * Adds somebody to a trip.
+ *
+ * Three guards, in the order the boundary needs them. {@link requireTrip} first, so a trip the
+ * caller may not see is a {@link NotFoundError} that discloses nothing. Then the owner assert,
+ * because inviting is an owner's verb (PRD #104 decision 6) — and it comes before the workspace
+ * lookup so a non-owner learns nothing about who is in the workspace. Then the target has to be a
+ * member of that workspace: without this, a well-formed id for *any* account in the database became
+ * a membership row, which is the tenant boundary crossed by the one column nothing was checking.
+ */
 export async function addTripMember(
   scope: TenantScope,
   input: AddTripMemberInput,
 ): Promise<TripMember> {
   const values = addTripMemberInput.parse(input)
   await requireTrip(scope, values.tripId)
+  await assertTripRole(scope, values.tripId, ['owner'])
+  if ((await getMembership(scope, values.userId)) === null) {
+    throw new TripMemberNotInWorkspaceError(values.userId)
+  }
   return tripMembersRepository.insert(scope, {
     ...values,
     invitedBy: scope.ctx.userId,
   })
 }
 
+/**
+ * Changes somebody's standing on a trip.
+ *
+ * The membership row is resolved first because the caller addresses it by its own id and the trip
+ * it belongs to is what the guards are about: {@link requireTrip} on that trip, then the owner
+ * assert. Demoting the trip's last owner is refused for the same reason removing them is — it
+ * reaches the same unownable trip by a different verb, and this slice is what makes a role change
+ * reachable at all.
+ */
 export async function updateTripMember(
   scope: TenantScope,
   memberId: string,
   input: UpdateTripMemberInput,
 ): Promise<TripMember> {
-  return tripMembersRepository.requireUpdate(
+  const row = await tripMembersRepository.requireById(scope, memberId)
+  await requireTrip(scope, row.tripId)
+  await assertTripRole(scope, row.tripId, ['owner'])
+
+  const patch = definedOnly(updateTripMemberInput.parse(input))
+  const demotesAnOwner =
+    row.role === 'owner' && patch.role !== undefined && patch.role !== 'owner'
+  if (!demotesAnOwner) {
+    return tripMembersRepository.requireUpdate(scope, memberId, patch)
+  }
+
+  // The guard travels with the write rather than ahead of it — see `anotherOwnerExists`. `patch`
+  // carries `role`, so it is never empty and `updateWhere` never degrades into a read.
+  const updated = await tripMembersRepository.updateWhere(
     scope,
-    memberId,
-    definedOnly(updateTripMemberInput.parse(input)),
+    allOf(
+      eq(tripMembers.id, memberId),
+      anotherOwnerExists(scope, row.tripId, row.id),
+    ),
+    patch,
   )
+  if (updated.length === 0) {
+    throw new TripLastOwnerError()
+  }
+  return updated[0]
 }
 
+/**
+ * Takes somebody off a trip — or takes the caller off it themselves, which is the same row.
+ *
+ * The owner assert is skipped, **and only the owner assert**, when the row being removed is the
+ * acting user's own: leaving a trip is not an administrative act and a viewer may do it. The
+ * exemption lives inside this function rather than beside it, so there is no second path around the
+ * guard for `01-S8` or `01-S9` to find.
+ *
+ * The last-owner guard is not exempted, which is what makes a sole owner's *leave* a refusal too:
+ * leaving is self-removal, and a trip nobody owns is the state both verbs exist to prevent.
+ */
 export async function removeTripMember(
   scope: TenantScope,
   memberId: string,
 ): Promise<void> {
-  await tripMembersRepository.requireRemove(scope, memberId)
+  const row = await tripMembersRepository.requireById(scope, memberId)
+  await requireTrip(scope, row.tripId)
+  if (row.userId !== scope.ctx.userId) {
+    await assertTripRole(scope, row.tripId, ['owner'])
+  }
+  if (row.role !== 'owner') {
+    await tripMembersRepository.requireRemove(scope, memberId)
+    return
+  }
+
+  // As in `updateTripMember`: the condition is part of the delete, so the last owner cannot be
+  // removed by two requests that each saw the other.
+  const removed = await tripMembersRepository.removeWhere(
+    scope,
+    allOf(
+      eq(tripMembers.id, memberId),
+      anotherOwnerExists(scope, row.tripId, row.id),
+    ),
+  )
+  if (removed === 0) {
+    throw new TripLastOwnerError()
+  }
+}
+
+/**
+ * One person on a trip, whichever kind of person they are.
+ *
+ * The discriminated union every later participant surface reads — `01-S8`'s initial-members picker,
+ * `01-S9`'s participant vocabulary, the expense-split rows in `04-*`. The `guest` variant is
+ * **declared here and never produced** until `01-S6b` (#119) fills it: no column, no query, no row.
+ * That is deliberate. Every `kind` switch written from this slice on is exhaustive, so the guests
+ * land as data rather than as a new shape every picker has to learn.
+ *
+ * `colour` is `trip_members.colour`, the per-trip tint those surfaces use. It is carried here and
+ * rendered by none of them yet, because it belongs to the read model they consume and costs one
+ * column of one query rather than a second read each.
+ */
+export type TripParticipant =
+  | {
+      readonly kind: 'member'
+      readonly memberId: string
+      readonly userId: string
+      readonly role: TripRole
+      readonly colour: string | null
+      readonly name: string
+      readonly image: string | null
+    }
+  | {
+      readonly kind: 'guest'
+      readonly guestId: string
+      readonly displayName: string
+      readonly colour: string | null
+    }
+
+/**
+ * Who is on a trip, owner first — the one participant read model.
+ *
+ * {@link requireTrip} runs **first**, and the ordering is the whole point: {@link listTripMembers}
+ * is tenant-filtered, so a trip id from another organization answers `[]` rather than raising, and a
+ * reader that skipped the guard would report "a trip with nobody on it" instead of refusing. The
+ * refusal has to come before the answer, not from it.
+ *
+ * A member whose workspace account has gone has no profile row, so {@link listUserProfiles} returns
+ * nothing for them and they are dropped rather than rendered nameless. That is why this can answer
+ * an empty array for a trip that still holds membership rows.
+ *
+ * No email reaches the result. `MemberProfile` carries one; the projection takes `name` and `image`
+ * and leaves the address in the repository.
+ */
+export async function listTripParticipants(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<TripParticipant>> {
+  await requireTrip(scope, tripId)
+
+  const members = await listTripMembers(scope, tripId)
+  if (members.length === 0) {
+    return []
+  }
+  const profiles = new Map(
+    (
+      await listUserProfiles(
+        scope,
+        members.map((row) => row.userId),
+      )
+    ).map((profile) => [profile.userId, profile]),
+  )
+
+  const participants: Array<TripParticipant> = []
+  for (const row of members) {
+    const profile = profiles.get(row.userId)
+    if (profile === undefined) {
+      continue
+    }
+    participants.push({
+      kind: 'member',
+      memberId: row.id,
+      userId: row.userId,
+      // The column is plain `text` behind a `CHECK`, so what comes back is a string. A value the
+      // enum does not carry reads as the least-privileged role — the same posture
+      // `listMemberProfiles` takes with an organization role. It cannot widen anything: this field
+      // renders a badge, and every write is still guarded by `assertTripRole`, which re-reads the
+      // stored value and refuses a role it does not recognise.
+      role: tripMemberRoleSchema.catch('viewer').parse(row.role),
+      colour: row.colour,
+      name: profile.name,
+      image: profile.image,
+    })
+  }
+
+  // Owner first, and everybody else in the membership order `listTripMembers` already totalled.
+  // A stable partition rather than a sort, so two owners keep that order between them.
+  return [
+    ...participants.filter(
+      (row) => row.kind === 'member' && row.role === 'owner',
+    ),
+    ...participants.filter(
+      (row) => !(row.kind === 'member' && row.role === 'owner'),
+    ),
+  ]
 }
 
 /**

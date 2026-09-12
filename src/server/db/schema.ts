@@ -810,19 +810,20 @@ export const days = sqliteTable(
  * unfavouriting is a delete and there is no column a writer could ever update — hence `createdAt()`
  * alone, as `place_tags` and the other immutable join rows in this file do, and not `timestamps()`.
  *
- * Keyed by `id`, with the person's choice held unique on `(trip_id, user_id)` exactly as
- * `trip_members` — the other per-person trip row — holds it, rather than keyless on a composite
- * `primaryKey()` like `place_tags`. The two per-person trip rows are then reached the same way,
- * through the keyed tenant repository.
+ * Keyless, on the composite `primaryKey()` of `(trip_id, user_id)` like `place_tags` and the other
+ * immutable join rows here, and not on a surrogate `id` with the same pair re-imposed as a unique
+ * index. `(trip_id, user_id)` *is* the identity of a favourite — a second row for the same pair is
+ * not a second favourite, it is the same one — so the key that says so is the one the table should
+ * carry. `src/server/repos/base.ts` splits the two shapes at the type level, and keeping this one
+ * keyless is what makes `createTenantTableAccess`, not the keyed repository, the access flavour its
+ * three verbs reach for.
  *
- * Its reader and writer are `src/server/repos/trip-favourites.ts`, which lands with `01-S1`
- * (`docs/plans/01-trips-core.md`); the table ships ahead of it. Nothing was backfilled from the
+ * Its reader and writer are `src/server/repos/trip-favourites.ts`. Nothing was backfilled from the
  * deprecated {@link trips.isFavourite}, which holds no person's choice to copy.
  */
 export const tripFavourites = sqliteTable(
   'trip_favourites',
   {
-    id: pk(),
     organizationId: orgRef(),
     tripId: text('trip_id')
       .notNull()
@@ -831,7 +832,7 @@ export const tripFavourites = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('trip_favourites_trip_user_unq').on(t.tripId, t.userId),
+    primaryKey({ columns: [t.tripId, t.userId] }),
     index('trip_favourites_org_user_idx').on(t.organizationId, t.userId),
   ],
 )
@@ -1156,6 +1157,17 @@ export const transports = sqliteTable(
       t.organizationId,
       t.arrivalDayId,
     ),
+    // "What departs from this day", the departure half of the same question, and the same reason
+    // for the same column order. `transports_day_idx` above is the bare form and cannot serve a
+    // tenant-scoped read: with `organization_id` always in the WHERE clause, SQLite prefers an
+    // index that can match it, so a day-scoped read landed on `transports_org_trip_idx` and
+    // visited every transport of the trip. `trip_id` is carried between the two so the three
+    // equality columns beat that index outright rather than tying with it.
+    index('transports_org_trip_day_idx').on(
+      t.organizationId,
+      t.tripId,
+      t.dayId,
+    ),
     enumCheck('transports_mode_chk', t.mode, TRANSPORT_MODES),
     enumCheck('transports_status_chk', t.status, TRANSPORT_STATUSES),
     nonNegativeCheck('transports_price_chk', t.priceMinor),
@@ -1242,6 +1254,20 @@ export const transportLegs = sqliteTable(
     ),
     index('transport_legs_departure_day_idx').on(t.departureDayId),
     index('transport_legs_arrival_day_idx').on(t.arrivalDayId),
+    // The two tenant-led forms the day's own read needs, for `transports_org_trip_day_idx`'s
+    // reason: the bare day index above cannot be chosen while `organization_id` is in every
+    // WHERE clause, so without these a read of one day's legs walked every leg of the trip.
+    // The first answers "which legs depart from this day"; the second answers "which of these
+    // records has legs at all", which is what keeps a chained journey from being drawn whole.
+    index('transport_legs_org_trip_departure_day_idx').on(
+      t.organizationId,
+      t.tripId,
+      t.departureDayId,
+    ),
+    index('transport_legs_org_transport_idx').on(
+      t.organizationId,
+      t.transportId,
+    ),
     nonNegativeCheck('transport_legs_position_chk', t.position),
     ...latLngChecks('transport_legs_from_lat_chk', t.fromLat, t.fromLng),
     ...latLngChecks('transport_legs_to_lat_chk', t.toLat, t.toLng),
