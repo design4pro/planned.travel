@@ -105,8 +105,22 @@ authorisation decision of its own.
 
 ### Phase 4: the e2e block
 
-- [ ] 4.1 `01-S6a — Who is on this trip` in `e2e/trips-core.spec.ts`
+- [x] 4.1 `01-S6a — Who is on this trip` in `e2e/trips-core.spec.ts` — 31221c5e
+
+> Walking the route by hand afterwards found three defects no test covered — the invite trigger's
+> placeholder, a member's name squeezed to nothing at 390px, and focus dropped on `<body>` after a
+> removal. Fixed in 5f4c71bd, the focus behaviour measured in a browser rather than assumed.
 
 ### Phase 5: the gate
 
-- [ ] 5.1 every command in `validation.commands`, in order
+- [x] 5.1 every command in `validation.commands`, in order
+
+> `agent-kit-check` 34 files at kit 24 · `typecheck` clean · `lint` clean · `test` 257 files /
+> 6042 tests · `check-generated` current · `build` 143 server functions, every reference resolves ·
+> `e2e` 42 passed, 2 skipped.
+>
+> Two notes on the local machine, neither of them the branch's: `tsx` cannot open its IPC socket
+> under this worktree's `TMPDIR` (the path exceeds the unix-socket limit), so `check-generated`,
+> `build` and `e2e` were run with `TMPDIR=/tmp`; and a suite run against a database a hands-on QA
+> walk had already written to fails on seeded expectations — reseed (`test-env-up.sh --force`)
+> before reading a verdict from it.
