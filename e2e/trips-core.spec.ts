@@ -1364,6 +1364,9 @@ test.describe('01-S6a — Who is on this trip', () => {
       page.getByRole('button', { name: REMOVE_CONTROL }),
     ).toHaveCount(0)
     await expect(page.getByRole('button', { name: INVITE })).toHaveCount(0)
+    // Nor the last-owner hint: it explains a control this reader was never
+    // offered, and about somebody else's standing on the trip at that.
+    await expect(page.getByText(OWNER_HINT)).toHaveCount(0)
 
     // The visibility card is still read, and read as a sentence: a switch here
     // would be a control whose write `updateTrip` refuses.

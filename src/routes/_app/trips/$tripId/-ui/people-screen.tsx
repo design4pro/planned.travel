@@ -598,7 +598,9 @@ function MemberRow({
             </Badge>
           )}
 
-          {isSoleOwner ? (
+          {/* The hint answers a control that is missing, so it is owed only to a reader who would
+              otherwise have had it. To everybody else this rule is not news about their own trip. */}
+          {isSoleOwner && canManage ? (
             <span className="min-w-0 text-caption text-ink-3">
               {t('trips.people.owner.hint')}
             </span>
