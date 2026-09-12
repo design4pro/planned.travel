@@ -108,8 +108,19 @@ Both land **before** the guard they make room for, so the suite is never red bet
 ### Phase 3: the read model and the fan-out wrapper
 
 - [x] 3.1 `listTripParticipants` and the `TripParticipant` union — d97569aa
-- [x] 3.2 `enqueueTripStatsFor` exported from `trip-lifecycle.ts` — d97569aa
+- [x] 3.2 `enqueueTripStatsFor` exported from `trip-lifecycle.ts` — d97569aa, 9ead69d6
+
+> 3.2 as the spec designed it (assumption A2) does not build: an export from a `src/routes` module
+> must be resolvable in the browser bundle, and this one reaches `cloudflare:workers`. The fan-out
+> moved to `src/server/queue/travel-stats-fanout.ts` instead, `tripMemberUserIds` moved to
+> `src/server/repos/trips.ts`, and the divergence is recorded as the spec's `## Amendment`.
 
 ### Phase 4: the gate
 
-- [ ] 4.1 every command in `validation.commands`, in order
+- [x] 4.1 every command in `validation.commands`, in order — 9ead69d6
+
+> `bash .ai/scripts/e2e.sh`: 35 passed, 2 skipped, 2 failed — `01-S1d › the submit is disarmed by an
+> empty name and by a half-picked range` (#402, which documents this journey's two flakes) and
+> `01-S4b › a note drags among the stops` (a `settleMutations` timeout under parallel worker load,
+> #313 / #335). Both green on `-g "01-S1d|01-S4b"`. Neither reaches a membership writer or the
+> queue, and this phase changes no route, component or copy key.
