@@ -10,13 +10,14 @@ import {
   and,
   asc,
   count,
-  countDistinct,
   desc,
   eq,
+  exists,
   inArray,
   isNull,
   ne,
   notInArray,
+  sql,
 } from 'drizzle-orm'
 import { z } from 'zod'
 import {
@@ -33,7 +34,7 @@ import { assertQuota, createTenantRepository, tenantFilter } from './base'
 import { NotFoundError } from './context'
 import { checkInsRepository } from './collab'
 import { placesRepository } from './places'
-import { readableTripFilter, readableTrips, requireTrip } from './trips'
+import { readableTrips, requireTrip } from './trips'
 import {
   colourSchema,
   dateSchema,
@@ -455,33 +456,35 @@ export async function listTripsWithoutJourney(
  * app — are deliberately not counted as coverage; they cannot be, there is nothing
  * for them to cover.
  *
- * The denominator is the trips the reader may open (ADR 0007), not every trip in the
- * workspace: a figure counting trips they cannot see states something they have no way
- * to check. The numerator stays on the bare tenant filter because a journey's own
- * visibility is not a trip's — the whole journal surface reads journeys workspace-wide
- * — so on a workspace holding private trips that have been written up, `written` can
- * exceed `trips`. That is the honest shape of two differently-scoped populations, and
- * narrowing the numerator would be a journey-visibility decision this function does not
- * get to make.
+ * Both numbers count *trips*, so both are the reader's own (ADR 0007): a figure counting
+ * trips they cannot open states something they have no way to check. The numerator is the
+ * half that is easy to get wrong, because it is reached through `journeys` — "how many
+ * trips have been written up" is a question about trips whichever table you start from, so
+ * counting distinct `journeys.trip_id` under the bare tenant filter counted private trips
+ * just as surely as the denominator did. Asking both of `readableTrips` instead makes
+ * `written <= trips` structural rather than something a caller has to clamp.
+ *
+ * This says nothing about whether the *journey* on an unreadable trip should be listed;
+ * that is a journey-visibility question, and the rest of this module still answers it
+ * workspace-wide.
  */
 export async function journalCoverage(
   scope: TenantScope,
 ): Promise<{ readonly trips: number; readonly written: number }> {
-  const [tripRows, writtenRows] = await Promise.all([
+  /** Written up: one correlated row in `journeys` is enough, however many there are. */
+  const writtenUp = exists(
     scope.db
-      .select({ value: count() })
-      .from(trips)
-      .where(tenantFilter(scope, trips, readableTripFilter(scope))),
-    scope.db
-      .select({ value: countDistinct(journeys.tripId) })
+      .select({ present: sql`1` })
       .from(journeys)
-      .where(tenantFilter(scope, journeys)),
+      .where(tenantFilter(scope, journeys, eq(journeys.tripId, trips.id))),
+  )
+
+  const [readable, written] = await Promise.all([
+    readableTrips(scope).count(),
+    readableTrips(scope).count(writtenUp),
   ])
 
-  return {
-    trips: tripRows[0]?.value ?? 0,
-    written: writtenRows[0]?.value ?? 0,
-  }
+  return { trips: readable, written }
 }
 
 /** Photos not attached to an entry yet — the journey's media library. */

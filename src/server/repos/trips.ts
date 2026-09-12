@@ -238,8 +238,8 @@ export type CreateShareLinkInput = z.infer<typeof createShareLinkInput>
  * more cross an organization boundary than the trip half can.
  *
  * Exported for {@link readableTrips}, which is how a reader should reach it; a query that needs the
- * bare `SQL` — the grouped aggregate here, and `journalCoverage`'s trip count in `journey.ts` —
- * takes it directly and is visibly doing something the handle could not do for it.
+ * bare `SQL` — one grouped aggregate here, and nothing else in the codebase — takes it directly and
+ * is visibly doing something the handle could not do for it.
  */
 export function readableTripFilter(scope: TenantScope): SQL {
   const isMember = exists(

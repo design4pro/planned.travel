@@ -17,7 +17,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { NotFoundError, RepositoryError } from '../context'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
 import { createAssignment, reorderDayTimeline } from '../itinerary'
-import { journalCoverage, listTripsWithoutJourney } from '../journey'
+import {
+  createJourney,
+  journalCoverage,
+  listTripsWithoutJourney,
+} from '../journey'
 import { createPlace } from '../places'
 import {
   addTripMember,
@@ -153,6 +157,48 @@ describe('member isolation', () => {
         ).map((row) => row.id),
       ).toEqual([fixture.tripId])
       expect((await journalCoverage(alpha.scope)).trips).toBe(1)
+
+      // A trip of the stranger's own, so the predicate is asked to tell two rows apart rather than
+      // to refuse the whole table. A membership `EXISTS` correlated on the wrong row — or on none,
+      // asking only "does this person hold any membership at all" — satisfies every assertion above
+      // and fails here.
+      const own = await createTrip(stranger, {
+        title: 'Porto on my own',
+        slug: 'porto-on-my-own',
+        startDate: '2026-05-01',
+        endDate: '2026-05-04',
+      })
+      expect(
+        (await listTripsWithoutJourney(stranger, { today: '2026-04-01' })).map(
+          (row) => row.id,
+        ),
+      ).toEqual([own.id])
+      expect(await journalCoverage(stranger)).toEqual({ trips: 1, written: 0 })
+
+      // Writing the private trip up moves the owner's two numbers and neither of the stranger's.
+      // Coverage reaches trips through `journeys`, which makes its numerator a trip count as much
+      // as its denominator is one: counted workspace-wide it would report a trip the stranger
+      // cannot open, and report it as written up out of a backlog that never mentions it.
+      await createJourney(alpha.scope, {
+        tripId: fixture.tripId,
+        title: 'Lisbon, written up',
+      })
+      expect(await journalCoverage(stranger)).toEqual({ trips: 1, written: 0 })
+      expect(
+        (await listTripsWithoutJourney(stranger, { today: '2026-04-01' })).map(
+          (row) => row.id,
+        ),
+      ).toEqual([own.id])
+
+      // The owner's own reading of the same two facts: the trip leaves the backlog it was in —
+      // the `notInArray` half of the list, composed with the read predicate — and enters coverage.
+      expect(
+        await listTripsWithoutJourney(alpha.scope, { today: '2026-04-01' }),
+      ).toEqual([])
+      expect(await journalCoverage(alpha.scope)).toEqual({
+        trips: 1,
+        written: 1,
+      })
     })
 
     it('refuses every write with NOT_FOUND rather than FORBIDDEN', async () => {
