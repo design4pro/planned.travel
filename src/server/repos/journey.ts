@@ -33,7 +33,7 @@ import { assertQuota, createTenantRepository, tenantFilter } from './base'
 import { NotFoundError } from './context'
 import { checkInsRepository } from './collab'
 import { placesRepository } from './places'
-import { requireTrip, tripsRepository } from './trips'
+import { readableTripFilter, readableTrips, requireTrip } from './trips'
 import {
   colourSchema,
   dateSchema,
@@ -410,7 +410,7 @@ export async function listTripsWithoutJourney(
 
   const taken = written.flatMap((row) => (row.tripId === null ? [] : [row.tripId]))
 
-  const candidates = await tripsRepository.findMany(scope, {
+  const candidates = await readableTrips(scope).findMany({
     where: taken.length === 0 ? undefined : notInArray(trips.id, taken),
     orderBy: [desc(trips.endDate), desc(trips.startDate)],
     limit: Math.max(limit * 8, 32),
@@ -454,6 +454,15 @@ export async function listTripsWithoutJourney(
  * Journeys not tied to a trip — a walk, a weekend, something never planned in the
  * app — are deliberately not counted as coverage; they cannot be, there is nothing
  * for them to cover.
+ *
+ * The denominator is the trips the reader may open (ADR 0007), not every trip in the
+ * workspace: a figure counting trips they cannot see states something they have no way
+ * to check. The numerator stays on the bare tenant filter because a journey's own
+ * visibility is not a trip's — the whole journal surface reads journeys workspace-wide
+ * — so on a workspace holding private trips that have been written up, `written` can
+ * exceed `trips`. That is the honest shape of two differently-scoped populations, and
+ * narrowing the numerator would be a journey-visibility decision this function does not
+ * get to make.
  */
 export async function journalCoverage(
   scope: TenantScope,
@@ -462,7 +471,7 @@ export async function journalCoverage(
     scope.db
       .select({ value: count() })
       .from(trips)
-      .where(tenantFilter(scope, trips)),
+      .where(tenantFilter(scope, trips, readableTripFilter(scope))),
     scope.db
       .select({ value: countDistinct(journeys.tripId) })
       .from(journeys)

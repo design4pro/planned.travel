@@ -17,6 +17,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { NotFoundError, RepositoryError } from '../context'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
 import { createAssignment, reorderDayTimeline } from '../itinerary'
+import { journalCoverage, listTripsWithoutJourney } from '../journey'
 import { createPlace } from '../places'
 import {
   addTripMember,
@@ -134,6 +135,24 @@ describe('member isolation', () => {
       expect(
         Object.values(counts.byStatus).filter((value) => value > 0),
       ).toEqual([])
+    })
+
+    it('is neither offered to write up nor counted in journal coverage (#196)', async () => {
+      // The journal's own two trip readers, which reached `trips` without the read predicate until
+      // #196. "Waiting for a story" prints titles, so the leak was a private trip's name; the
+      // coverage denominator leaks the same trip as a number, which is no better for being smaller.
+      expect(
+        await listTripsWithoutJourney(stranger, { today: '2026-04-01' }),
+      ).toEqual([])
+      expect(await journalCoverage(stranger)).toEqual({ trips: 0, written: 0 })
+
+      // And the owner still sees their own backlog — the predicate narrowed the reader, not the read.
+      expect(
+        (
+          await listTripsWithoutJourney(alpha.scope, { today: '2026-04-01' })
+        ).map((row) => row.id),
+      ).toEqual([fixture.tripId])
+      expect((await journalCoverage(alpha.scope)).trips).toBe(1)
     })
 
     it('refuses every write with NOT_FOUND rather than FORBIDDEN', async () => {
@@ -280,6 +299,15 @@ describe('member isolation', () => {
         fixture.tripId,
       ])
       expect((await countTripsByStatus(stranger)).total).toBe(1)
+    })
+
+    it('and the journal offers it to write up, and counts it (#196)', async () => {
+      expect(
+        (await listTripsWithoutJourney(stranger, { today: '2026-04-01' })).map(
+          (row) => row.id,
+        ),
+      ).toEqual([fixture.tripId])
+      expect((await journalCoverage(stranger)).trips).toBe(1)
     })
 
     it('and any reader may star it, privately to themselves', async () => {
