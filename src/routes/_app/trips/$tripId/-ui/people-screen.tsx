@@ -159,6 +159,20 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
 
   /** Where focus goes after a removal, so it is never dropped on the detached row. */
   const membersHeading = useRef<HTMLHeadingElement>(null)
+  /**
+   * Whether the removal dialog is closing on a write that succeeded.
+   *
+   * A dialog restores focus to whatever opened it, which is right for Cancel and impossible after a
+   * removal — the control that opened it left with the row, and the fallback is `<body>`, which
+   * sends a keyboard reader back to the top of the page. So the *successful* close, and only that
+   * one, hands focus to the heading of the list that just changed.
+   *
+   * Cleared when the dialog opens rather than when it is read: the close handler can run more than
+   * once for a single close, and a flag cleared on the first run leaves the second unguarded — which
+   * is how a measured attempt ended on `<body>` anyway, the second run restoring focus to the
+   * departing row's button a frame before that row left the page.
+   */
+  const removed = useRef(false)
 
   const members = data.participants.filter(
     (person): person is TripMemberParticipant => person.kind === 'member',
@@ -211,8 +225,8 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         setPicked(null)
         return
       case 'remove':
+        removed.current = true
         setRemoving(null)
-        membersHeading.current?.focus()
         return
       case 'leave':
         // Leaving is the one write whose answer is a page the reader can no longer read.
@@ -319,6 +333,10 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
                       value={picked}
                       onChange={setPicked}
                       clearable
+                      // On the trigger as well as in the search box: the
+                      // primitive's own "Select…" says nothing about who is
+                      // being picked, and this key is the sentence that does.
+                      placeholder={t('trips.people.invite.placeholder')}
                       searchPlaceholder={t('trips.people.invite.placeholder')}
                       ariaLabel={t('trips.people.invite.title')}
                     />
@@ -424,6 +442,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
                       }
                       onRemove={() => {
                         setFailure(null)
+                        removed.current = false
                         setRemoving(person)
                       }}
                       onLeave={() => {
@@ -455,6 +474,14 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         onConfirm={() => {
           if (removing === null) return
           void run({ kind: 'remove', memberId: removing.memberId })
+        }}
+        // The panel's own restoration aims at the control that opened it, which after a removal is
+        // the row that has just gone. Refused here, and the heading claimed in the same synchronous
+        // handler: deferring the focus by a frame hands the window back to that restoration.
+        onCloseAutoFocus={(event) => {
+          if (!removed.current) return
+          event.preventDefault()
+          membersHeading.current?.focus()
         }}
       />
 
@@ -529,52 +556,70 @@ function MemberRow({
         pending && 'opacity-60',
       )}
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <Avatar src={person.image} name={person.name} size="sm" />
-        <span className="min-w-0 flex-1 truncate text-label font-medium text-ink">
-          {person.name}
-        </span>
-        {isSelf ? <Badge tone="neutral">{t('trips.people.you')}</Badge> : null}
-
-        {canManage && !isSoleOwner ? (
-          <SimpleSelect
-            size="sm"
-            className="w-36"
-            options={roleOptions}
-            value={person.role}
-            disabled={pending}
-            onValueChange={(value) => onRoleChange(asRole(value, person.role))}
-            // A list, not grammar: the control's own label beside the person it belongs to, so a
-            // reader never meets several identically-named selects.
-            ariaLabel={[t('trips.people.role.label'), person.name].join(' · ')}
-          />
-        ) : (
-          <Badge tone={person.role === 'owner' ? 'brand' : 'neutral'}>
-            {t(ROLE_COPY[person.role])}
-          </Badge>
-        )}
-
-        {isSoleOwner ? (
-          <span className="text-caption text-ink-3">
-            {t('trips.people.owner.hint')}
+      {/* Two groups that wrap rather than one row that truncates: the person is who the row is
+          about, so on a narrow viewport the controls drop to their own line instead of squeezing
+          the name — which, unwrapped, is the part that disappears first. */}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-1 basis-44 items-center gap-3">
+          <Avatar src={person.image} name={person.name} size="sm" />
+          <span className="min-w-0 truncate text-label font-medium text-ink">
+            {person.name}
           </span>
-        ) : isSelf ? (
-          <IconButton
-            size="sm"
-            variant="ghost"
-            icon={<LogOut aria-hidden />}
-            label={t('trips.people.leave.action')}
-            onClick={onLeave}
-          />
-        ) : canManage ? (
-          <IconButton
-            size="sm"
-            variant="ghost"
-            icon={<UserMinus aria-hidden />}
-            label={t('trips.people.remove.action', { name: person.name })}
-            onClick={onRemove}
-          />
-        ) : null}
+          {isSelf ? (
+            <Badge tone="neutral" className="shrink-0">
+              {t('trips.people.you')}
+            </Badge>
+          ) : null}
+        </div>
+
+        <div className="ms-auto flex min-w-0 items-center gap-2">
+          {canManage && !isSoleOwner ? (
+            <SimpleSelect
+              size="sm"
+              className="w-36 shrink-0"
+              options={roleOptions}
+              value={person.role}
+              disabled={pending}
+              onValueChange={(value) =>
+                onRoleChange(asRole(value, person.role))
+              }
+              // A list, not grammar: the control's own label beside the person it belongs to, so a
+              // reader never meets several identically-named selects.
+              ariaLabel={[t('trips.people.role.label'), person.name].join(
+                ' · ',
+              )}
+            />
+          ) : (
+            <Badge
+              className="shrink-0"
+              tone={person.role === 'owner' ? 'brand' : 'neutral'}
+            >
+              {t(ROLE_COPY[person.role])}
+            </Badge>
+          )}
+
+          {isSoleOwner ? (
+            <span className="min-w-0 text-caption text-ink-3">
+              {t('trips.people.owner.hint')}
+            </span>
+          ) : isSelf ? (
+            <IconButton
+              size="sm"
+              variant="ghost"
+              icon={<LogOut aria-hidden />}
+              label={t('trips.people.leave.action')}
+              onClick={onLeave}
+            />
+          ) : canManage ? (
+            <IconButton
+              size="sm"
+              variant="ghost"
+              icon={<UserMinus aria-hidden />}
+              label={t('trips.people.remove.action', { name: person.name })}
+              onClick={onRemove}
+            />
+          ) : null}
+        </div>
       </div>
       {failure}
     </li>
@@ -591,6 +636,8 @@ interface ConfirmDialogProps {
   readonly busy: boolean
   readonly failure: React.ReactNode
   readonly onConfirm: () => void
+  /** Overrides where focus lands on close. Left out, the dialog restores it to whatever opened it. */
+  readonly onCloseAutoFocus?: (event: Event) => void
 }
 
 /** Both destructive confirmations, which differ only in their words and in where they leave you. */
@@ -604,10 +651,11 @@ function ConfirmDialog({
   busy,
   failure,
   onConfirm,
+  onCloseAutoFocus,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="sm">
+      <DialogContent size="sm" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{body}</DialogDescription>
