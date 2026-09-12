@@ -35,28 +35,24 @@ import {
   createTrip,
   deleteTrip,
   getTripSpendSummary,
-  listTripMembers,
   listTripStorageKeys,
   requireTrip,
   restoreTrip,
   setFavourite,
   startTripCopy,
   summariseTripTransports,
+  tripMemberUserIds,
   updateTrip,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
 import { QUEUE_BATCH_MAX, enqueueTask, enqueueTasks } from '#/server/queue/jobs'
+import {
+  affectedStatYears,
+  enqueueTravelStats,
+} from '#/server/queue/travel-stats-fanout'
 import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
-import {
-  recomputeDelaySeconds,
-  travelStatsTaskId,
-} from '#/server/queue/handlers/travel-stats'
-import {
-  ALL_TIME_STAT_YEAR,
-  MAX_PURGE_KEYS,
-  isCalendarStatYear,
-} from '#/server/queue/types'
+import { MAX_PURGE_KEYS } from '#/server/queue/types'
 import { appScope } from './context'
 
 import type { Logger } from '#/server/observability'
@@ -71,11 +67,11 @@ import type { TenantScope } from '#/server/repos'
 /**
  * How many envelopes may go in one `sendBatch`, re-exported from the module that owns the bound.
  *
- * It applies here because this producer scales with a trip's membership, which has no product
- * ceiling: the 100-member limit Better Auth's organization plugin is configured with is a
- * configuration value, not a guarantee, and a chunk loop that leaned on it would break the day an
- * operator raised it. It is declared beside `enqueueTasks` rather than here because the `trip-copy`
- * handler fans the same envelopes out and two spellings of one limit is one too many.
+ * It applies here because {@link enqueueTripPurge} scales with the objects a trip owns, which has no
+ * product ceiling: `files` is `UNLIMITED` on the business tier, and a chunk loop that leaned on a
+ * plan's number would break the day an operator raised it. It is declared beside `enqueueTasks`
+ * rather than here because the `trip-copy` handler and the statistics fan-out chunk the same way and
+ * three spellings of one limit is two too many.
  */
 export { QUEUE_BATCH_MAX } from '#/server/queue/jobs'
 
@@ -249,114 +245,12 @@ export const copyTripInputSchema = z
   )
   .refine(datesInOrder, datesOutOfOrder)
 
-/* -------------------------------------------------------------------------------------------------
- * Travel statistics — `00-S4`'s obligation on this stage
- * ---------------------------------------------------------------------------------------------- */
-
 /** Memoised per isolate: the logger holds no request state. */
 let logger: Logger | undefined
 
 function log(): Logger {
   logger ??= createLogger({ context: { component: 'trip-lifecycle' } })
   return logger
-}
-
-/** `null`/`undefined`, or a date whose year the payload schema would refuse, contributes no year. */
-function yearOf(date: string | null | undefined): number | null {
-  const year = typeof date === 'string' ? Number(date.slice(0, 4)) : Number.NaN
-  return isCalendarStatYear(year) ? year : null
-}
-
-/**
- * The stat years one trip write can have moved: the all-time roll-up always, the year the trip starts
- * in when it has one, and — on an edit that moved the range — the year it *used* to start in, whose
- * row would otherwise keep counting a trip that has left it.
- */
-function affectedStatYears(
-  startDate: string | null | undefined,
-  previousStartDate?: string | null,
-): Array<number> {
-  const years = new Set<number>([ALL_TIME_STAT_YEAR])
-  for (const candidate of [yearOf(startDate), yearOf(previousStartDate)]) {
-    if (candidate !== null) {
-      years.add(candidate)
-    }
-  }
-  return [...years]
-}
-
-/** Who is on a trip, deduplicated — the recipient set for a statistics fan-out. */
-async function tripMemberIds(
-  scope: TenantScope,
-  tripId: string,
-): Promise<Array<string>> {
-  const members = await listTripMembers(scope, tripId)
-  return [...new Set(members.map((member) => member.userId))]
-}
-
-/**
- * Fans `travel-stats` envelopes out to **the trip's members** for each year the write moved.
- *
- * Three properties, and each is a decision rather than an implementation detail:
- *
- * - **The recipient set is the trip's members, not the workspace** (PRD #104 decision 9). After
- *   ADR 0007 a private trip is invisible to a non-member, so its statistics must be too; `00-S4` was
- *   amended in the same PRD to count a person's trips by membership, and this only sends to the
- *   people that count applies to.
- * - **The ids are `00-S4`'s**, so a burst of writes inside one collapse window folds onto one
- *   recompute per `(user, year)` instead of one per write.
- * - **A queue refusal never fails the write.** D1 is the durable record and has already been written
- *   by the time this runs; a stale statistics panel is a much smaller harm than a save that appears
- *   to have failed. Caught, logged once, and returned from — the same posture `mirrorToRoom` takes.
- *
- * `recipients` exists for the one write that destroys its own recipient list: after `deleteTrip` the
- * `trip_members` rows have gone with the cascade, so the delete reads them first and hands them in.
- * Every other caller lets this read them. Either way the ids arrive deduplicated — both come from
- * {@link tripMemberIds}.
- *
- * The binding is reached inside the function rather than at module scope: `#/server/auth/env` imports
- * `cloudflare:workers`, a specifier that does not resolve outside workerd, and this module is
- * imported by a suite that runs in plain Node.
- */
-async function enqueueTravelStats(
-  scope: TenantScope,
-  tripId: string,
-  years: ReadonlyArray<number>,
-  recipients?: ReadonlyArray<string>,
-): Promise<void> {
-  const orgId = scope.ctx.organizationId
-  const at = Date.now()
-
-  try {
-    const userIds = recipients ?? (await tripMemberIds(scope, tripId))
-    const envelopes: Array<EnqueueInput<'travel-stats'>> = []
-    for (const userId of userIds) {
-      for (const statYear of years) {
-        envelopes.push({
-          kind: 'travel-stats',
-          orgId,
-          id: travelStatsTaskId(orgId, userId, statYear, at),
-          payload: { userId, statYear },
-          delaySeconds: recomputeDelaySeconds(at),
-        })
-      }
-    }
-    if (envelopes.length === 0) {
-      return
-    }
-
-    const { taskQueue } = await import('#/server/auth/env')
-    const queue = taskQueue()
-    for (let index = 0; index < envelopes.length; index += QUEUE_BATCH_MAX) {
-      await enqueueTasks(queue, envelopes.slice(index, index + QUEUE_BATCH_MAX))
-    }
-  } catch (cause) {
-    log().warn('travel statistics were not enqueued for a trip write', {
-      organizationId: orgId,
-      tripId,
-      ...serializeError(cause),
-    })
-  }
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -415,7 +309,7 @@ export async function readTripForDelete(
     summariseTripTransports(scope, tripId),
     getTripSpendSummary(scope, tripId),
     listTripStorageKeys(scope, tripId),
-    tripMemberIds(scope, tripId),
+    tripMemberUserIds(scope, tripId),
   ])
 
   const reservations = bookings.reduce((total, row) => total + row.value, 0)

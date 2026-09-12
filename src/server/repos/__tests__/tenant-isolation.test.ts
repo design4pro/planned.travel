@@ -210,6 +210,7 @@ import {
   createTrip,
   deleteTrip,
   listTripMembers,
+  listTripParticipants,
   listTrips,
   memberTripIds,
   removeTripMember,
@@ -218,6 +219,7 @@ import {
   shareLinksRepository,
   startTripCopy,
   tripMembersRepository,
+  tripMemberUserIds,
   tripRolesFor,
   tripsRepository,
   updateTrip,
@@ -3312,6 +3314,13 @@ describe('tenant isolation', () => {
 
     it('answers a demoted owner with FORBIDDEN, not NOT_FOUND', async () => {
       const scope = alpha.tenant.scope
+      // A second owner first: since `01-S6a` `updateTripMember` refuses to demote a trip's last
+      // one, and the demotion here is only the setup for the refusal this case is about.
+      await addTripMember(scope, {
+        tripId: alpha.tripId,
+        userId: await alpha.tenant.addUser('Co-owner of A'),
+        role: 'owner',
+      })
       const membership = (await listTripMembers(scope, alpha.tripId)).find(
         (row) => row.userId === alpha.tenant.ownerUserId,
       )
@@ -3342,6 +3351,12 @@ describe('tenant isolation', () => {
 
     it('refuses a delete to a demoted owner, and the trip survives it', async () => {
       const scope = alpha.tenant.scope
+      // As above: the last-owner guard would refuse the demotion, which is not what is on trial.
+      await addTripMember(scope, {
+        tripId: alpha.tripId,
+        userId: await alpha.tenant.addUser('Co-owner of A'),
+        role: 'owner',
+      })
       const membership = (await listTripMembers(scope, alpha.tripId)).find(
         (row) => row.userId === alpha.tenant.ownerUserId,
       )
@@ -3353,6 +3368,78 @@ describe('tenant isolation', () => {
       const refusal = await captureError(() => deleteTrip(scope, alpha.tripId))
       expect((refusal as RepositoryError).code).toBe('FORBIDDEN')
       expect((await requireTrip(scope, alpha.tripId)).id).toBe(alpha.tripId)
+    })
+
+    /** `01-S6a` — the trip's people, read and written across the tenant boundary. */
+    describe('a trip’s people', () => {
+      it('refuses a foreign trip’s participants rather than reporting it has none', async () => {
+        // The trap this closes: `listTripMembers` is tenant-filtered, so B's trip id answers `[]`
+        // through it. `listTripParticipants` resolves the trip *first*, so the answer is a refusal
+        // and not the far more convincing lie that the trip exists and is empty.
+        expect(
+          await captureError(() =>
+            listTripParticipants(alpha.tenant.scope, beta.tripId),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      })
+
+      it('refuses to seat a user from another organization on its own trip', async () => {
+        const before = await listTripMembers(alpha.tenant.scope, alpha.tripId)
+
+        const refusal = await captureError(() =>
+          addTripMember(alpha.tenant.scope, {
+            tripId: alpha.tripId,
+            userId: beta.tenant.ownerUserId,
+            role: 'editor',
+          }),
+        )
+
+        expect(refusal).toBeInstanceOf(RepositoryError)
+        expect((refusal as RepositoryError).code).toBe(
+          'TRIP_MEMBER_NOT_IN_WORKSPACE',
+        )
+        // The tenant column on `trip_members` would have made the row invisible either way; what
+        // matters is that the row was never written, so B's owner never becomes A's collaborator.
+        expect(await listTripMembers(alpha.tenant.scope, alpha.tripId)).toEqual(
+          before,
+        )
+      })
+
+      it('counts none of a foreign trip’s people through tripMemberUserIds', async () => {
+        // The projection `readTripForDelete` reads the delete dialog's member count off. An
+        // unscoped one would hand A both how many people are on B's trip and who they are.
+        expect(await tripMemberUserIds(alpha.tenant.scope, beta.tripId)).toEqual(
+          [],
+        )
+      })
+
+      it('refuses both membership writes on a foreign membership row, and leaves it standing', async () => {
+        // Each verb resolves its trip from the membership row rather than from an argument, so the
+        // tenant filter has to hold on `requireById` — before `requireTrip`, before the role assert
+        // and before the last-owner guard, none of which would ever be reached with B's row.
+        const betaMembership = (
+          await listTripMembers(beta.tenant.scope, beta.tripId)
+        )[0]
+        expect(betaMembership).toBeDefined()
+
+        for (const attempt of [
+          () =>
+            updateTripMember(alpha.tenant.scope, betaMembership.id, {
+              role: 'viewer',
+            }),
+          () => removeTripMember(alpha.tenant.scope, betaMembership.id),
+        ]) {
+          // A `NotFoundError` and not a `FORBIDDEN`: a row of another tenant is indistinguishable
+          // from a row that does not exist (ADR 0007), so neither verb confirms the id is real.
+          expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+        }
+
+        const after = await listTripMembers(beta.tenant.scope, beta.tripId)
+        expect(after.map((row) => row.id)).toContain(betaMembership.id)
+        expect(after.find((row) => row.id === betaMembership.id)?.role).toBe(
+          betaMembership.role,
+        )
+      })
     })
 
     /**

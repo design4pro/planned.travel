@@ -29,6 +29,7 @@ import { upsertSubscription } from '../billing'
 import type { PlanId } from '#/lib/plans'
 import type { Database, OrganizationRole } from '#/server/db/types'
 import type { TenantScope } from '../base'
+import type { TripParticipant } from '../trips'
 
 /** The value types `node:sqlite` accepts as a bound parameter. */
 type SqliteValue = null | number | bigint | string | Uint8Array
@@ -263,6 +264,22 @@ export async function subscribeTenant(
     status: 'active',
     seats,
   })
+}
+
+/**
+ * The user ids of a participant list's `member` variants, in order.
+ *
+ * `TripParticipant` is a discriminated union whose `guest` variant is declared and never produced
+ * until `01-S6b`, so `userId` is not reachable without narrowing on `kind` — which is the whole
+ * point of shipping the union now. This is the narrowing, written once rather than in every case
+ * that wants to name who came back.
+ */
+export function memberUserIds(
+  participants: ReadonlyArray<TripParticipant>,
+): Array<string> {
+  return participants
+    .filter((row) => row.kind === 'member')
+    .map((row) => row.userId)
 }
 
 /** Asserts that `run` rejects, and returns the error so the caller can check its `code`. */
