@@ -78,6 +78,13 @@
       "when": 1788848619879,
       "tag": "0010_basemap_default",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1789233625022,
+      "tag": "0011_left_lily_hollister",
+      "breakpoints": true
     }
   ]
 }

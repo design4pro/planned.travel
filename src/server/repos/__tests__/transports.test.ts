@@ -907,3 +907,81 @@ describe('a journey between the stops and notes of its day', () => {
     )
   })
 })
+
+/**
+ * What the day's read costs, measured the only way that means anything: the query plan.
+ *
+ * A `WHERE` clause that names the day proves nothing on its own. `tenantFilter()` puts
+ * `organization_id` in every statement this layer sends, and with no `sqlite_stat1` — nothing in
+ * this repository runs `ANALYZE` — SQLite picks the index that can match the most equality terms.
+ * A bare `(day_id)` index therefore loses to `(organization_id, trip_id)`, and a read written as
+ * one day's is answered by walking the whole trip's rows. D1 bills rows read, not rows returned,
+ * so that difference is the entire point of reading the day rather than the trip.
+ *
+ * Built from `drizzle/*.sql` rather than from `schema.ts`, because the subject is which indexes
+ * exist on the database D1 is actually running.
+ */
+describe('the plan behind one day’s journey read', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+  let tripId: string
+  let days: Array<Day>
+
+  beforeEach(async () => {
+    harness = await createHarness({ ddl: 'migrations' })
+    tenant = await harness.seedTenant('query-plan')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Kansai run',
+      startDate: '2026-04-10',
+      endDate: '2026-04-13',
+    })
+    tripId = trip.id
+    days = await listTripDays(tenant.scope, trip.id)
+  })
+
+  it('seeks an index for every row it reads, and scans nothing', async () => {
+    const chained = await createTransport(tenant.scope, {
+      tripId,
+      title: 'The 14:05',
+      mode: 'train',
+      dayId: days[0].id,
+    })
+    await replaceTransportChain(tenant.scope, chained.id, {
+      stations: [{ name: 'Kyoto' }, { name: 'Tokyo' }],
+      legs: [{ departureDayId: days[1].id }],
+    })
+
+    harness.statements.length = 0
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [],
+    })
+
+    // The three reads the day costs, by the table each one drives on.
+    const reads = harness.statements.filter(
+      (sql) =>
+        sql.startsWith('select') &&
+        (sql.includes('from "transports" where') ||
+          sql.includes('from "transport_legs" where')),
+    )
+    expect(reads).toHaveLength(3)
+
+    for (const sql of reads) {
+      const statement = harness.sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      statement.setReturnArrays(true)
+      const plan = (statement.all() as unknown as Array<Array<unknown>>)
+        .map((row) => String(row[3]))
+        .join('\n')
+
+      // Never a scan, and never the trip-wide index: those are the two shapes that read every
+      // journey of the trip to place one day of it.
+      expect(plan, sql).not.toMatch(/\bSCAN\b/)
+      expect(plan, sql).toContain('USING INDEX')
+      expect(plan, sql).not.toContain('transports_org_trip_idx (organization_id=? AND trip_id=?)')
+      expect(plan, sql).not.toContain(
+        'transport_legs_org_trip_idx (organization_id=? AND trip_id=?)',
+      )
+    }
+  })
+})

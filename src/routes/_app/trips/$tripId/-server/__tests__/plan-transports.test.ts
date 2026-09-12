@@ -333,10 +333,17 @@ describe('placing a journey on the day', () => {
 })
 
 describe('what one placement costs', () => {
-  /** The statements Drizzle sent, narrowed to the reads of one table. */
+  /**
+   * The statements Drizzle sent, narrowed to the reads this table *drives*.
+   *
+   * Matched on the `FROM` of the outermost `SELECT` — everything before the first `WHERE` — so a
+   * table named only inside a subquery counts towards the read that owns it and not towards two.
+   */
   const readsOf = (table: string): Array<string> =>
     harness.statements.filter(
-      (sql) => sql.startsWith('select') && sql.includes(`from "${table}"`),
+      (sql) =>
+        sql.startsWith('select') &&
+        sql.split(' where ')[0].endsWith(`from "${table}"`),
     )
 
   it('resolves the trip once and reads only the day it places', async () => {
@@ -366,13 +373,14 @@ describe('what one placement costs', () => {
     // whose own guard reads it again only for a caller that hands it nothing.
     expect(readsOf('trips')).toHaveLength(1)
 
-    // And every journey read names the day, never the trip alone.
+    // And the journeys were read as the day: three questions, none of them the trip's whole set.
+    // *Which* rows each one reaches is the query plan's answer, not this file's — the assertion
+    // that a `day_id` in the `WHERE` clause is worth anything lives in `transports.test.ts`.
     const journeyReads = [
       ...readsOf('transports'),
       ...readsOf('transport_legs'),
     ]
-    expect(journeyReads.length).toBeGreaterThan(0)
-    expect(journeyReads.every((sql) => sql.includes('"day_id"'))).toBe(true)
+    expect(journeyReads).toHaveLength(3)
 
     // The other day's journey was neither drawn in nor rewritten.
     const payload = await readPlanTransports(scope, fixture.tripId)
