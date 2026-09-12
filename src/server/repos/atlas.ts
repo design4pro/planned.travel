@@ -888,6 +888,33 @@ export async function recomputeTravelStats(
           lte(trips.startDate, `${statYear}-12-31`),
         )
 
+  /**
+   * The trips this row is about: the traveller's member trips, narrowed to the stat year.
+   *
+   * A predicate built fresh per query rather than the `Array<string>` of ids the aggregates below
+   * used to read through, and the reason is {@link memberTripIds}' own, one level up: drizzle binds
+   * one parameter per id, D1 refuses a statement carrying more than a hundred of them, and the paid
+   * plans sell unlimited trips. A traveller with a hundred trips in one calendar year therefore made
+   * the four `IN (...)` reads below fail against D1 while passing every test here — cron and the
+   * queue consumer are the only callers, and the `sqlite-proxy` harness the suite drives enforces no
+   * such ceiling (#381). As a sub-select it binds five parameters whatever the cohort size: this
+   * organization, the two year bounds, and the organization and user of the membership half.
+   *
+   * Both are functions rather than values because each consumer gets its own sub-select: drizzle's
+   * query builders are stateful and thenable, so sharing one across five queries would be passing
+   * around a half-consumed object rather than a predicate.
+   */
+  const cohortFilter = () =>
+    tenantFilter(
+      scope,
+      trips,
+      yearFilter,
+      inArray(trips.id, memberTripIds(scope, userId)),
+    )
+
+  const cohortTripIds = () =>
+    scope.db.select({ id: trips.id }).from(trips).where(cohortFilter())
+
   const tripRows = await scope.db
     .select({
       id: trips.id,
@@ -896,27 +923,18 @@ export async function recomputeTravelStats(
       countryCodes: trips.countryCodes,
     })
     .from(trips)
-    .where(
-      tenantFilter(
-        scope,
-        trips,
-        yearFilter,
-        inArray(trips.id, memberTripIds(scope, userId)),
-      ),
-    )
+    .where(cohortFilter())
     .orderBy(desc(trips.startDate))
 
-  const tripIds = tripRows.map((row) => row.id)
-
   /**
-   * Distance is the one aggregate that is *not* read through `tripIds`.
+   * Distance is the one aggregate that is *not* read through {@link cohortTripIds}.
    *
    * A transport carries its own `departure_date`, and a trip that starts on 30 December has
    * transports in two calendar years; filtering them by the trip's `start_date` would file
    * January's flight under the previous year. So a year row sums the transports that departed in
    * that year, over the same population the trip rows come from — {@link memberTripIds} against
-   * `transports.trip_id`, because the transport is reached by its own date rather than through
-   * `tripIds`. A transport with no distance recorded
+   * `transports.trip_id`, because the transport is reached by its own date rather than through the
+   * year's trips. A transport with no distance recorded
    * contributes nothing, and a year with no distances at all writes `0` rather than leaving the
    * column at whatever a fixture put there.
    */
@@ -930,38 +948,58 @@ export async function recomputeTravelStats(
 
   const [dayCount, placeCount, cityRows, spendRow, distanceRow, countries] =
     await Promise.all([
-      tripIds.length === 0
+      tripRows.length === 0
         ? Promise.resolve(0)
         : countRows(
             scope.db
               .select({ value: count() })
               .from(days)
-              .where(tenantFilter(scope, days, inArray(days.tripId, tripIds))),
+              .where(
+                tenantFilter(
+                  scope,
+                  days,
+                  inArray(days.tripId, cohortTripIds()),
+                ),
+              ),
           ),
-      tripIds.length === 0
+      tripRows.length === 0
         ? Promise.resolve(0)
         : countRows(
             scope.db
               .select({ value: count() })
               .from(places)
               .where(
-                tenantFilter(scope, places, inArray(places.tripId, tripIds)),
+                tenantFilter(
+                  scope,
+                  places,
+                  inArray(places.tripId, cohortTripIds()),
+                ),
               ),
           ),
-      tripIds.length === 0
+      tripRows.length === 0
         ? Promise.resolve([])
         : scope.db
             .select({ city: places.city })
             .from(places)
-            .where(tenantFilter(scope, places, inArray(places.tripId, tripIds)))
+            .where(
+              tenantFilter(
+                scope,
+                places,
+                inArray(places.tripId, cohortTripIds()),
+              ),
+            )
             .groupBy(places.city),
-      tripIds.length === 0
+      tripRows.length === 0
         ? Promise.resolve([{ value: null }])
         : scope.db
             .select({ value: sum(expenses.amountMinor) })
             .from(expenses)
             .where(
-              tenantFilter(scope, expenses, inArray(expenses.tripId, tripIds)),
+              tenantFilter(
+                scope,
+                expenses,
+                inArray(expenses.tripId, cohortTripIds()),
+              ),
             ),
       scope.db
         .select({ value: sum(transports.distanceMetres) })

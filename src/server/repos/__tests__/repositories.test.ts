@@ -98,7 +98,13 @@ import {
   summariseTripTransports,
   totalTripDistanceMetres,
 } from '../transports'
-import { createTrip, getTripBySlug, listTrips, updateTrip } from '../trips'
+import {
+  MAX_BOUND_PARAMETERS,
+  createTrip,
+  getTripBySlug,
+  listTrips,
+  updateTrip,
+} from '../trips'
 import {
   countUsedDays,
   ensurePlan,
@@ -764,6 +770,70 @@ describe('repositories', () => {
         tenant.ownerUserId,
       )
       expect(allTime.distanceMetres).toBe(3_000_000)
+    })
+
+    /**
+     * D1 refuses a statement carrying more than {@link MAX_BOUND_PARAMETERS} bound parameters and
+     * drizzle binds one per id, so the aggregates behind a stat row cannot filter on a materialized
+     * list of the cohort's trip ids: the paid plans sell unlimited trips, so nothing caps that list
+     * (#381).
+     *
+     * The assertion is on the SQL rather than on a rejection, because nothing here rejects —
+     * `node:sqlite` accepts the statement D1 would refuse, which is exactly why those four reads
+     * looked verified while failing in the cron trigger and the queue consumer, where nobody is
+     * watching. Counting placeholders is the ceiling this harness can see. The figures are asserted
+     * beside it, because a read that stops binding ids is only a fix while it still counts the same
+     * rows.
+     */
+    it('keeps every statement under D1’s parameter ceiling on a year cohort that exceeds it', async () => {
+      // The default tier caps trips long before the ceiling; `solo` is one of the plans that sells
+      // the unlimited cohort this test is about.
+      await subscribeTenant(tenant.scope, 'solo')
+
+      const cohort = MAX_BOUND_PARAMETERS + 1
+      for (let index = 0; index < cohort; index += 1) {
+        const trip = await createTrip(tenant.scope, {
+          title: `Hop ${index}`,
+          startDate: '2026-04-01',
+          endDate: '2026-04-01',
+        })
+        // Three cities across the whole cohort, so the distinct count cannot be read off the trip
+        // count, and a city that recurs at both ends of the list has to be merged rather than
+        // counted twice.
+        await createPlace(tenant.scope, {
+          tripId: trip.id,
+          name: `Stop ${index}`,
+          city: `City ${index % 3}`,
+        })
+        // One expense at each end: enough to prove the sum spans the cohort without seeding a
+        // hundred rows that assert nothing extra.
+        if (index === 0 || index === cohort - 1) {
+          await createExpense(tenant.scope, {
+            tripId: trip.id,
+            title: 'Coffee',
+            amountMinor: 450,
+            spentOn: '2026-04-01',
+          })
+        }
+      }
+
+      harness.statements.length = 0
+      const stats = await recomputeTravelStats(
+        tenant.scope,
+        tenant.ownerUserId,
+        2026,
+      )
+
+      const widest = Math.max(
+        ...harness.statements.map((sql) => (sql.match(/\?/g) ?? []).length),
+      )
+      expect(widest).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+
+      expect(stats.tripCount).toBe(cohort)
+      expect(stats.dayCount).toBe(cohort)
+      expect(stats.placeCount).toBe(cohort)
+      expect(stats.cityCount).toBe(3)
+      expect(stats.spendMinor).toBe(900)
     })
   })
 
