@@ -102,9 +102,8 @@ function startContext(): StartContext {
   }
 }
 
-const { readPlanTransports, reorderDayTransportsFn } = await import(
-  '../plan-transports'
-)
+const { readPlanTransports, reorderDayTransportsFn } =
+  await import('../plan-transports')
 const { reorderDayTransportsInput } = await import('#/server/repos')
 
 /** The boundary validator, then the handler, inside a request context. */
@@ -190,11 +189,7 @@ describe('the journeys a day can draw', () => {
       status: 'confirmed',
     })
     await replaceTransportChain(scope, chained.id, {
-      stations: [
-        { name: 'Shin-Osaka' },
-        { name: 'Nagoya' },
-        { name: 'Tokyo' },
-      ],
+      stations: [{ name: 'Shin-Osaka' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
       legs: [
         { departureDayId: fixture.dayId, departureTime: '09:00' },
         { departureDayId: fixture.secondDayId },
@@ -334,5 +329,63 @@ describe('placing a journey on the day', () => {
     expect(
       payload.transports.find((row) => row.id === fixture.flightId)?.position,
     ).toBe(0.5)
+  })
+})
+
+describe('what one placement costs', () => {
+  /**
+   * The statements Drizzle sent, narrowed to the reads this table *drives*.
+   *
+   * Matched on the `FROM` of the outermost `SELECT` — everything before the first `WHERE` — so a
+   * table named only inside a subquery counts towards the read that owns it and not towards two.
+   */
+  const readsOf = (table: string): Array<string> =>
+    harness.statements.filter(
+      (sql) =>
+        sql.startsWith('select') &&
+        sql.split(' where ')[0].endsWith(`from "${table}"`),
+    )
+
+  it('resolves the trip once and reads only the day it places', async () => {
+    const scope = tenant.scope
+    // A journey on another day of the same trip. The planner issues one placement per day a drag
+    // touches, in parallel, so a read that took the trip to place a day would grow with the
+    // itinerary and be answered mostly by rows the placement then throws away.
+    const elsewhere = await createTransport(scope, {
+      tripId: fixture.tripId,
+      dayId: fixture.secondDayId,
+      title: 'Itami to Haneda',
+      mode: 'flight',
+    })
+
+    harness.statements.length = 0
+    await reorderJourneys({
+      tripId: fixture.tripId,
+      dayId: fixture.dayId,
+      items: [
+        { kind: 'stop', id: fixture.assignmentId },
+        { kind: 'transport', id: fixture.flightId },
+        { kind: 'note', id: fixture.noteId },
+      ],
+    })
+
+    // Once: the handler proves the trip is writable and hands that same row to the repository,
+    // whose own guard reads it again only for a caller that hands it nothing.
+    expect(readsOf('trips')).toHaveLength(1)
+
+    // And the journeys were read as the day: three questions, none of them the trip's whole set.
+    // *Which* rows each one reaches is the query plan's answer, not this file's — the assertion
+    // that a `day_id` in the `WHERE` clause is worth anything lives in `transports.test.ts`.
+    const journeyReads = [
+      ...readsOf('transports'),
+      ...readsOf('transport_legs'),
+    ]
+    expect(journeyReads).toHaveLength(3)
+
+    // The other day's journey was neither drawn in nor rewritten.
+    const payload = await readPlanTransports(scope, fixture.tripId)
+    expect(
+      payload.transports.find((row) => row.id === elsewhere.id)?.position,
+    ).toBe(elsewhere.sortOrder)
   })
 })

@@ -33,6 +33,7 @@ import {
   requireTrip,
   restoreTrip,
   startTripCopy,
+  TripRoleError,
   updateTrip,
 } from '../trips'
 import {
@@ -211,6 +212,35 @@ describe('member isolation', () => {
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('refuses the same reorder when the trip is handed in already resolved', async () => {
+      // `reorderDayTransports` takes an optional third argument — the trip its caller has already
+      // resolved — so that the planner's handler, which resolves it to refuse an archived trip,
+      // does not pay for the row twice. A `Trip` is a row and not a proof, so this asserts what
+      // happens when the proof is false: the row read in the owner's scope, handed in by somebody
+      // who may not see the trip at all.
+      const asTheOwnerSeesIt = await requireTrip(alpha.scope, fixture.tripId)
+
+      // Still refused. The visibility guard is skipped, so the refusal comes from the role
+      // assertion behind it and says `FORBIDDEN` rather than `NotFoundError` — the one thing this
+      // argument costs, and the reason it is for a caller that has run `requireTrip` and no other.
+      expect(
+        await captureError(() =>
+          reorderDayTransports(
+            stranger,
+            {
+              tripId: fixture.tripId,
+              dayId: fixture.dayId,
+              items: [{ kind: 'note', id: fixture.noteId }],
+            },
+            asTheOwnerSeesIt,
+          ),
+        ),
+      ).toBeInstanceOf(TripRoleError)
+
+      // A trip of another workspace is refused by the tenant filter whatever is handed in.
+      expect(await listTrips(stranger)).toEqual([])
     })
 
     it('refuses a child write parented onto it', async () => {

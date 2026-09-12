@@ -1157,6 +1157,17 @@ export const transports = sqliteTable(
       t.organizationId,
       t.arrivalDayId,
     ),
+    // "What departs from this day", the departure half of the same question, and the same reason
+    // for the same column order. `transports_day_idx` above is the bare form and cannot serve a
+    // tenant-scoped read: with `organization_id` always in the WHERE clause, SQLite prefers an
+    // index that can match it, so a day-scoped read landed on `transports_org_trip_idx` and
+    // visited every transport of the trip. `trip_id` is carried between the two so the three
+    // equality columns beat that index outright rather than tying with it.
+    index('transports_org_trip_day_idx').on(
+      t.organizationId,
+      t.tripId,
+      t.dayId,
+    ),
     enumCheck('transports_mode_chk', t.mode, TRANSPORT_MODES),
     enumCheck('transports_status_chk', t.status, TRANSPORT_STATUSES),
     nonNegativeCheck('transports_price_chk', t.priceMinor),
@@ -1243,6 +1254,20 @@ export const transportLegs = sqliteTable(
     ),
     index('transport_legs_departure_day_idx').on(t.departureDayId),
     index('transport_legs_arrival_day_idx').on(t.arrivalDayId),
+    // The two tenant-led forms the day's own read needs, for `transports_org_trip_day_idx`'s
+    // reason: the bare day index above cannot be chosen while `organization_id` is in every
+    // WHERE clause, so without these a read of one day's legs walked every leg of the trip.
+    // The first answers "which legs depart from this day"; the second answers "which of these
+    // records has legs at all", which is what keeps a chained journey from being drawn whole.
+    index('transport_legs_org_trip_departure_day_idx').on(
+      t.organizationId,
+      t.tripId,
+      t.departureDayId,
+    ),
+    index('transport_legs_org_transport_idx').on(
+      t.organizationId,
+      t.transportId,
+    ),
     nonNegativeCheck('transport_legs_position_chk', t.position),
     ...latLngChecks('transport_legs_from_lat_chk', t.fromLat, t.fromLng),
     ...latLngChecks('transport_legs_to_lat_chk', t.toLat, t.toLng),

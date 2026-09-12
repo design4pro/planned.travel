@@ -67,6 +67,19 @@ describe('the transport chain and airport catalogue schema', () => {
         indexColumns(transports, 'transports_org_arrival_day_idx'),
       ).toEqual(['organization_id', 'arrival_day_id'])
     })
+
+    it('indexes the departure day behind the tenant and the trip', () => {
+      // The same need on the other day reference, with `trip_id` carried between the two: a read
+      // of one day names its trip as well, and three equality columns beat `transports_org_trip_idx`
+      // outright rather than tying with it — a tie SQLite breaks for the trip, because nothing here
+      // runs `ANALYZE`, and the day's read then walks every transport of the trip.
+      expect(indexNames(transports)).toContain('transports_org_trip_day_idx')
+      expect(indexColumns(transports, 'transports_org_trip_day_idx')).toEqual([
+        'organization_id',
+        'trip_id',
+        'day_id',
+      ])
+    })
   })
 
   describe('transport_legs', () => {
@@ -116,6 +129,8 @@ describe('the transport chain and airport catalogue schema', () => {
       expect(indexNames(transportLegs).sort()).toEqual([
         'transport_legs_arrival_day_idx',
         'transport_legs_departure_day_idx',
+        'transport_legs_org_transport_idx',
+        'transport_legs_org_trip_departure_day_idx',
         'transport_legs_org_trip_idx',
         'transport_legs_transport_position_idx',
       ])
@@ -125,6 +140,19 @@ describe('the transport chain and airport catalogue schema', () => {
       expect(
         indexColumns(transportLegs, 'transport_legs_transport_position_idx'),
       ).toEqual(['transport_id', 'position'])
+      // The tenant column leads both of these, because `tenantFilter()` puts it in the WHERE
+      // clause of every statement and SQLite will not pick an index that cannot match it — which
+      // is what left the bare `departure_day_id` and `transport_id` forms above unused by the
+      // repository, and one day's read walking the whole trip.
+      expect(
+        indexColumns(
+          transportLegs,
+          'transport_legs_org_trip_departure_day_idx',
+        ),
+      ).toEqual(['organization_id', 'trip_id', 'departure_day_id'])
+      expect(
+        indexColumns(transportLegs, 'transport_legs_org_transport_idx'),
+      ).toEqual(['organization_id', 'transport_id'])
     })
 
     it('constrains the chain index and both coordinate pairs', () => {
