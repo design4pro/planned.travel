@@ -12,7 +12,7 @@ import { Badge, Card, Skeleton, Spinner } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { CoverArt, seedFrom } from './cover-art'
-import { TripActionsMenu } from './trip-actions'
+import { TripActionsMenu, useTripFavourite } from './trip-actions'
 import {
   countryFlag,
   daysBetween,
@@ -115,6 +115,11 @@ export function TripTile({
 }) {
   const locale = useLocale()
   const t = useTranslate()
+  /**
+   * The tile owns the star, because the tile is what renders both of the things that read it: the
+   * corner mark below and the menu item that flips it. Held here, a press paints both at once.
+   */
+  const favourite = useTripFavourite(trip)
   const range = formatDateRange(trip.startDate, trip.endDate, locale)
   const length = daysBetween(trip.startDate, trip.endDate)
   const startsIn = daysUntil(trip.startDate, today)
@@ -257,7 +262,7 @@ export function TripTile({
         live here so the trip's own chrome is one row that can never overlap itself.
       */}
       <div className="absolute end-3 top-3 z-10 flex items-start gap-1.5">
-        {trip.isFavourite ? (
+        {favourite.starred ? (
           <span
             aria-label={t('shell.trips.card.favourite')}
             className="flex size-6 items-center justify-center rounded-full bg-surface/85 text-warning backdrop-blur-sm"
@@ -265,7 +270,7 @@ export function TripTile({
             <Star aria-hidden className="size-3.5 fill-current" />
           </span>
         ) : null}
-        <TripActionsMenu trip={trip} />
+        <TripActionsMenu trip={trip} favourite={favourite} />
       </div>
     </Card>
   )
