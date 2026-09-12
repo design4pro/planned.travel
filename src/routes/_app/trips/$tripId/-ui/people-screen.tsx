@@ -138,6 +138,8 @@ interface Failure {
   readonly message: string
   /** A named refusal answers the same way every time; only an unnamed failure is worth repeating. */
   readonly repeatable: boolean
+  /** What Retry sends again, so the word means here what it means in `ErrorPanel`. */
+  readonly write: Write
 }
 
 /** Only members are rendered: the `guest` variant is `01-S6b`'s and nothing produces one yet. */
@@ -245,7 +247,12 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
     try {
       const refused = await send(write)
       if (refused !== null) {
-        setFailure({ at, message: t(REFUSAL_COPY[refused]), repeatable: false })
+        setFailure({
+          at,
+          message: t(REFUSAL_COPY[refused]),
+          repeatable: false,
+          write,
+        })
         return
       }
       await router.invalidate()
@@ -256,6 +263,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         at,
         message: failed.message ?? t('shell.error.body'),
         repeatable: true,
+        write,
       })
     } finally {
       setBusy(null)
@@ -279,7 +287,9 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
               variant="ghost"
               size="sm"
               shape="pill"
-              onClick={() => setFailure(null)}
+              // Sends the same write again, which is what this word means in
+              // `ErrorPanel` and so what a reader who has met it there expects.
+              onClick={() => void run(failure.write)}
             >
               {t('shell.error.retry')}
             </Button>
