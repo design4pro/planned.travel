@@ -1435,6 +1435,23 @@ export async function listTripMembers(
 }
 
 /**
+ * Who is on a trip, deduplicated — the user ids alone, in {@link listTripMembers}'s order.
+ *
+ * The recipient set of anything addressed to a trip's people: the `travel-stats` fan-out sends to
+ * exactly these, and `readTripForDelete` takes them while the `trip_members` rows still exist,
+ * because the delete cascade removes them. One owner for the projection rather than one per caller
+ * (`docs/SPEC.md` §8) — and it lives here, with the query it projects, so a caller in the client
+ * graph can reach it without reaching the queue binding.
+ */
+export async function tripMemberUserIds(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<string>> {
+  const members = await listTripMembers(scope, tripId)
+  return [...new Set(members.map((row) => row.userId))]
+}
+
+/**
  * The trips on a user's own dashboard, newest first — since ADR 0007 a thin alias for
  * {@link listTrips}.
  *
