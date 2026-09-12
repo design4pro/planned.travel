@@ -92,12 +92,16 @@ authorisation decision of its own.
 
 ### Phase 2: the copy
 
-- [ ] 2.1 33 keys in all 23 locales
+- [x] 2.1 33 keys in all 23 locales — e530e345
 
 ### Phase 3: the screen
 
-- [ ] 3.1 `people-screen.tsx`
-- [ ] 3.2 `people.tsx`, the generated route tree, the sub-navigation destination
+- [x] 3.1 `people-screen.tsx` — e530e345
+- [x] 3.2 `people.tsx`, the generated route tree, the sub-navigation destination — e530e345
+
+> 2.1 and Phase 3 land in one commit. `src/lib/i18n/__tests__/coverage.test.ts` holds a catalogued
+> key with no reader in the source to be debt and fails on the count, so the copy cannot be green
+> without the screen that renders it.
 
 ### Phase 4: the e2e block
 

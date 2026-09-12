@@ -2,7 +2,12 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
 import type { RouteCase } from './helpers/routes.ts'
-import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
+import {
+  DEMO_EMAIL,
+  DEMO_PASSWORD,
+  hasSession,
+  useSession,
+} from './helpers/session.ts'
 
 /**
  * The trips-core plan's own end-to-end gate (`docs/plans/01-trips-core.md`).
@@ -1133,6 +1138,262 @@ test.describe('01-S5 — The dashboard’s reference column, and the clock in it
 
     await page.keyboard.press('Escape')
     await expect(menu).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})
+
+test.describe('01-S6a — Who is on this trip', () => {
+  /**
+   * This block's route table. The trips index is the one screen that links a
+   * trip by id; the bookings tab is a section with no live map, which makes it
+   * the cheapest place to find the sub-navigation the first case walks from.
+   */
+  const TRIPS: RouteCase = { name: 'trips', path: '/trips', ready: 'main' }
+
+  const bookRoute = (tripId: string): RouteCase => ({
+    name: 'trip-book',
+    path: `/trips/${tripId}/book`,
+    ready: TRIP_SECTIONS,
+  })
+
+  const peopleRoute = (tripId: string): RouteCase => ({
+    name: 'trip-people',
+    path: `/trips/${tripId}/people`,
+    ready: TRIP_SECTIONS,
+  })
+
+  const MEMBERS_HEADING = 'On this trip'
+  const VISIBILITY_HEADING = 'Who can find this trip'
+  const INVITE = 'Add somebody'
+  const OWNER_HINT = 'A trip always keeps at least one owner'
+  /** Every role control on the screen: the label joined to the person it belongs to. */
+  const ROLE_CONTROL = /^Role · /
+  const REMOVE_CONTROL = / from this trip$/
+
+  /**
+   * The account the fixture puts on trips as an `editor` and never as an owner,
+   * which is the only way to observe the non-owner rendering: the demo owner
+   * owns every trip in the workspace, so signing in as them can never produce
+   * the screen case 4 is about. All four fixture accounts share the one
+   * password (`scripts/seed/seed.mjs`).
+   */
+  const EDITOR_EMAIL = 'mika@planned.travel'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /** Every trip the index links a planner for, in the order the cards sit in. */
+  async function listedTripIds(page: Page): Promise<ReadonlyArray<string>> {
+    await visit(page, TRIPS, 'light')
+    return page.evaluate(() => {
+      const ids: string[] = []
+      for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
+        const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
+          anchor.getAttribute('href') ?? '',
+        )
+        if (match !== null && !ids.includes(match[1])) ids.push(match[1])
+      }
+      return ids
+    })
+  }
+
+  /** The first trip the index links, or a skip — there is nothing to walk without one. */
+  async function aTripToWalk(page: Page): Promise<string> {
+    const ids = await listedTripIds(page)
+    test.skip(
+      ids.length === 0,
+      'the workspace lists no trip to open the people route on',
+    )
+    if (ids.length === 0) throw new Error('unreachable: the test was skipped')
+    return ids[0]
+  }
+
+  /**
+   * The caller's own row, found by the badge that marks it rather than by a
+   * name this spec would otherwise restate from the fixture.
+   */
+  function ownRow(page: Page) {
+    return page.locator('li').filter({ hasText: 'You' }).first()
+  }
+
+  test('the Share button in the sub-navigation opens the people route', async ({
+    page,
+  }) => {
+    const tripId = await aTripToWalk(page)
+    const route = bookRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    // Two are in the document at every width — one for the narrow bar, one for
+    // the wide one — and exactly one of them is the reader's.
+    const share = page
+      .getByRole('link', { name: 'Share this trip' })
+      .filter({ visible: true })
+    await expect(share).toHaveCount(1)
+    await share.click()
+
+    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/people(\\?|$)`))
+    await expect(
+      page.getByRole('heading', { name: MEMBERS_HEADING }),
+    ).toBeVisible()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the route lists the trip’s people and says who can find it', async ({
+    page,
+  }) => {
+    const tripId = await aTripToWalk(page)
+    const route = peopleRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    await expect(
+      page.getByRole('heading', { name: MEMBERS_HEADING }),
+    ).toBeVisible()
+    // The reader is on the trip they are reading — every seeded trip carries the
+    // demo owner, and a members list that answered without their row would mean
+    // the participant read never reached the payload.
+    await expect(ownRow(page)).toBeVisible()
+
+    await expect(
+      page.getByRole('heading', { name: VISIBILITY_HEADING }),
+    ).toBeVisible()
+    // The card always says the stored state in words. Which of the three it is
+    // belongs to the fixture, so the claim is that one of them is said — not
+    // which — and that the sentence is never absent.
+    await expect(
+      page.getByText(
+        /(Only the people listed here can see this trip|Anyone in this workspace can open this trip|This trip is shared with a public link)/,
+      ),
+    ).toBeVisible()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the invite control offers somebody in the workspace who is not on the trip', async ({
+    page,
+  }) => {
+    const ids = await listedTripIds(page)
+    test.skip(
+      ids.length === 0,
+      'the workspace lists no trip to open the people route on',
+    )
+
+    /*
+     * Not the first trip by default: the invite control resolves to an empty
+     * state on a trip that already holds everybody in the workspace, which is
+     * the screen behaving exactly as designed and nothing for this case to
+     * press. So each trip is asked in turn for the picker this test is here to
+     * open.
+     */
+    let opened: string | null = null
+    for (const tripId of ids) {
+      await visit(page, peopleRoute(tripId), 'light')
+      if ((await page.getByRole('button', { name: INVITE }).count()) > 0) {
+        opened = tripId
+        break
+      }
+    }
+    test.skip(
+      opened === null,
+      'every trip in the workspace already holds every one of its members, so no picker is offered',
+    )
+
+    const report = watchConsole(page, peopleRoute(opened ?? ''))
+    await page.getByRole('button', { name: INVITE }).click()
+
+    const options = page.getByRole('listbox').getByRole('option')
+    await expect(options.first()).toBeVisible()
+    // Somebody the workspace has and the trip does not: the subtraction happens
+    // on the server, so an empty list here would mean it did not.
+    expect(await options.count()).toBeGreaterThan(0)
+
+    await page.keyboard.press('Escape')
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('a reader who is not the owner is offered no control at all', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    // A second account for one case, because the rendering under test is a
+    // property of the *reader's* trip role and the cached session has only ever
+    // been an owner. One extra sign-in a run stays well inside the endpoint's
+    // ten-a-minute budget.
+    await context.clearCookies()
+    const signedIn = await page.request.post('/api/auth/sign-in/email', {
+      headers: { origin: baseURL ?? 'http://localhost:3000' },
+      data: { email: EDITOR_EMAIL, password: DEMO_PASSWORD },
+      failOnStatusCode: false,
+    })
+    test.skip(
+      !signedIn.ok(),
+      `${EDITOR_EMAIL} has no account — run \`node scripts/seed/seed.mjs\` to provision the fixture`,
+    )
+
+    const ids = await listedTripIds(page)
+    test.skip(
+      ids.length === 0,
+      'the editor is on no trip, so there is no non-owner screen to read',
+    )
+
+    const route = peopleRoute(ids[0])
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    await expect(
+      page.getByRole('heading', { name: MEMBERS_HEADING }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('combobox', { name: ROLE_CONTROL }),
+    ).toHaveCount(0)
+    await expect(
+      page.getByRole('button', { name: REMOVE_CONTROL }),
+    ).toHaveCount(0)
+    await expect(page.getByRole('button', { name: INVITE })).toHaveCount(0)
+
+    // The visibility card is still read, and read as a sentence: a switch here
+    // would be a control whose write `updateTrip` refuses.
+    await expect(
+      page.getByRole('heading', { name: VISIBILITY_HEADING }),
+    ).toBeVisible()
+    await expect(page.getByRole('switch')).toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('a trip’s sole owner is offered neither verb, and is told why', async ({
+    page,
+  }) => {
+    const tripId = await aTripToWalk(page)
+    const route = peopleRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    const own = ownRow(page)
+    await expect(own).toBeVisible()
+    // Every seeded trip has exactly one owner, and it is the demo account. Both
+    // controls that row would otherwise carry end in the last-owner refusal, so
+    // the row says why instead of going quiet.
+    await expect(own).toContainText(OWNER_HINT)
+    await expect(own.getByRole('combobox')).toHaveCount(0)
+    await expect(
+      page.getByRole('button', { name: 'Leave this trip' }),
+    ).toHaveCount(0)
 
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
