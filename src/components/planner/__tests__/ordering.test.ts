@@ -7,8 +7,11 @@ import {
   ideaItemId,
   indexOf,
   isIdeaItemId,
+  isLegItemId,
   isNoteItemId,
   itemsIn,
+  legItemId,
+  legRefOfLegItem,
   movePlanItem,
   movePlanItemToDay,
   noteIdOfNoteItem,
@@ -519,5 +522,67 @@ describe('a timed row dragged against its own clock', () => {
     expect(
       movePlanItem(board2, 'm11', { container: 'd2', index: 1 }, sameLookups),
     ).toEqual({ ok: false, reason: 'duplicate' })
+  })
+})
+
+describe('a journey on the board', () => {
+  const departing = legItemId('transport', 'd1', 't1')
+  const travelling = legItemId('leg', 'd2', 'l7')
+
+  /** A day that opens with a journey it merely crosses, then two stops. */
+  const withJourneys: PlanOrder = {
+    days: [
+      { dayId: 'd1', itemIds: ['a11', departing, 'a12'] },
+      { dayId: 'd2', itemIds: [travelling, 'a21', 'a22'] },
+    ],
+    ideaIds: [ideaItemId('px')],
+  }
+
+  it('keeps journeys in a fourth id space, both kinds, and reads them back', () => {
+    expect(isLegItemId(departing)).toBe(true)
+    expect(isLegItemId(noteItemId('n1'))).toBe(false)
+    expect(isLegItemId(ideaItemId('px'))).toBe(false)
+    expect(isNoteItemId(departing)).toBe(false)
+    expect(isIdeaItemId(departing)).toBe(false)
+
+    expect(legRefOfLegItem(departing)).toEqual({
+      kind: 'transport',
+      dayId: 'd1',
+      id: 't1',
+    })
+    expect(legRefOfLegItem(travelling)).toEqual({
+      kind: 'leg',
+      dayId: 'd2',
+      id: 'l7',
+    })
+    // The row id is the remainder, so a colon inside it is carried rather than cut.
+    expect(legRefOfLegItem(legItemId('leg', 'd2', 'l:7'))?.id).toBe('l:7')
+    expect(legRefOfLegItem('leg:nonsense')).toBeNull()
+    expect(legRefOfLegItem(noteItemId('n1'))).toBeNull()
+  })
+
+  it('refuses to be dragged into the ideas column', () => {
+    expect(
+      movePlanItem(withJourneys, departing, {
+        container: IDEAS_CONTAINER,
+        index: 0,
+      }),
+    ).toEqual({ ok: false, reason: 'not-in-ideas' })
+  })
+
+  it('does not count towards the index a scheduled place is given', () => {
+    // Dropped between the day's two stops, below the `travelling` row that opens it.
+    const { change } = succeed(
+      movePlanItem(withJourneys, ideaItemId('px'), {
+        container: 'd2',
+        index: 2,
+      }),
+    )
+    expect(change).toEqual({
+      kind: 'schedule',
+      placeId: 'px',
+      dayId: 'd2',
+      index: 1,
+    })
   })
 })

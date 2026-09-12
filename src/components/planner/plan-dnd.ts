@@ -60,6 +60,13 @@ export interface PlanDndOptions {
   readonly rowsByItem: ReadonlyMap<string, PlannerRow>
   /** Notes by draggable id, so a note can be named out loud like a stop. */
   readonly notesByItem?: ReadonlyMap<string, PlannerNote>
+  /**
+   * Journey names by draggable id — "Tokyo to Kyoto".
+   *
+   * Already composed rather than a row to compose from: naming a journey needs the
+   * message catalogue, and this hook has no business reaching for one.
+   */
+  readonly journeyNamesByItem?: ReadonlyMap<string, string>
   /** Days, for naming a drop target out loud. */
   readonly days: ReadonlyArray<PlannerDay>
   /**
@@ -101,6 +108,7 @@ export function usePlanDnd({
   order,
   rowsByItem,
   notesByItem,
+  journeyNamesByItem,
   days,
   onMove,
 }: PlanDndOptions): PlanDnd {
@@ -137,14 +145,16 @@ export function usePlanDnd({
    *
    * A note has no name of its own, so its headline stands in — the same words the
    * reader sees on the row, which is what makes "Moved Buy the metro pass to Day 2"
-   * comprehensible without a second lookup.
+   * comprehensible without a second lookup. A journey is named by where it goes, for
+   * the same reason and from the same words its row shows.
    */
   const nameOfItem = React.useCallback(
     (itemId: string): string =>
       rowsByItem.get(itemId)?.name ??
       notesByItem?.get(itemId)?.body ??
+      journeyNamesByItem?.get(itemId) ??
       'the stop',
-    [notesByItem, rowsByItem],
+    [journeyNamesByItem, notesByItem, rowsByItem],
   )
 
   /** Name of a container: a numbered, titled day, or the ideas column. */

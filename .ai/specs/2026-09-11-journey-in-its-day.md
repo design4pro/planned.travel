@@ -1,11 +1,11 @@
 # The journey in its day: a transport row in the planner's one sequence
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | draft |
-| **Issue**          | #175  |
-| **Spec PR**        | none  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | in-progress |
+| **Issue**          | #175        |
+| **Spec PR**        | none        |
+| **Implementation** | none        |
 
 `03-S5` · FR #175 · Parent PRD #167 · Stage `03-S5` of `docs/plans/03-reservations-and-transport.md` (frozen), row `BKG-10`.
 

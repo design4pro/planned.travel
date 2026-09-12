@@ -10,7 +10,7 @@ import { DaySection } from '../day-section'
 import { DragPreview } from '../drag-preview'
 import { IdeasList } from '../ideas-list'
 import { PlannerRail } from '../rail'
-import { ideaItemId } from '../ordering'
+import { ideaItemId, legItemId } from '../ordering'
 
 import { stopsOf } from '../types'
 
@@ -20,6 +20,7 @@ import type {
   PlannerItem,
   PlannerNote,
   PlannerRow,
+  PlannerTransport,
 } from '../types'
 
 /**
@@ -688,5 +689,96 @@ describe('DragPreview', () => {
       />,
     )
     expect(screen.getByText('Food')).toBeDefined()
+  })
+})
+
+describe('a day that carries a journey', () => {
+  const DEPARTING: PlannerTransport = {
+    itemId: legItemId('transport', 'd1', 't1'),
+    kind: 'transport',
+    id: 't1',
+    dayId: 'd1',
+    part: 'departing',
+    phase: null,
+    mode: 'train',
+    status: 'confirmed',
+    serviceNumber: 'Nozomi 21',
+    fromName: 'Tokyo',
+    toName: 'Kyoto',
+    time: '09:00 – 12:30',
+    price: null,
+    position: 0.5,
+  }
+
+  /** A stop, then the journey, then a note — the three kinds in one sequence. */
+  const day: PlannerDay = {
+    ...DAY,
+    ...sequence([
+      { kind: 'stop', row: row({ placeId: 'p-sensoji' }) },
+      { kind: 'transport', transport: DEPARTING },
+      { kind: 'note', note: NOTE },
+    ]),
+  }
+
+  it('renders it between the stop and the note, and leaves the stop count alone', () => {
+    const { container } = render(
+      <DndContext>
+        <DaySection day={day} categoryFor={categoryFor} />
+      </DndContext>,
+    )
+
+    const items = Array.from(
+      container.querySelectorAll('li[data-planner-item]'),
+    )
+    expect(items.map((item) => item.getAttribute('data-planner-item'))).toEqual(
+      ['a-p-sensoji', DEPARTING.itemId],
+    )
+    expect(items[1].getAttribute('data-part')).toBe('planner-transport-row')
+    // One stop on the day, whatever else shares the sequence with it.
+    expect(day.rows).toHaveLength(1)
+  })
+
+  it('offers the departing row a handle', () => {
+    render(
+      <DndContext>
+        <DaySection day={day} categoryFor={categoryFor} />
+      </DndContext>,
+    )
+    expect(screen.getByRole('button', { name: 'Tokyo to Kyoto' })).toBeDefined()
+  })
+
+  it('offers the travelling row none, and says which part of the journey it is', () => {
+    const crossing: PlannerDay = {
+      ...DAY,
+      ...sequence([
+        {
+          kind: 'transport',
+          transport: {
+            ...DEPARTING,
+            itemId: legItemId('transport', 'd2', 't1'),
+            part: 'travelling',
+            phase: 'trips.plan.transport.phase.journey.travelling',
+            time: null,
+          },
+        },
+      ]),
+    }
+    render(
+      <DndContext>
+        <DaySection day={crossing} categoryFor={categoryFor} />
+      </DndContext>,
+    )
+    expect(screen.queryByRole('button', { name: 'Tokyo to Kyoto' })).toBeNull()
+    expect(screen.getByText('Under way')).toBeDefined()
+  })
+
+  it('follows the pointer as a journey, not as a place', () => {
+    const { container } = render(<DragPreview transport={DEPARTING} />)
+
+    expect(container.firstElementChild?.getAttribute('data-drag-preview')).toBe(
+      'transport',
+    )
+    expect(screen.getByText('Tokyo → Kyoto')).toBeDefined()
+    expect(screen.getByText('09:00 – 12:30')).toBeDefined()
   })
 })

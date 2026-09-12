@@ -1,15 +1,22 @@
 import { cn } from '#/lib/cn'
+import { modeIcon } from '#/components/modules/transports/mode-icon'
 import { dayNoteIconGlyph } from './note-row'
 import { PlaceThumb } from './place-thumb'
 
-import type { PlannerCategory, PlannerNote, PlannerRow } from './types'
+import type {
+  PlannerCategory,
+  PlannerNote,
+  PlannerRow,
+  PlannerTransport,
+} from './types'
 
 /**
  * The subject of a drag: one of the kinds a day's sequence holds.
  *
- * A union rather than a row with optional fields, because the two previews share no
- * content at all — a note has no photograph, no address and no category — and an
- * optional-everything shape would let a caller build a card that draws neither.
+ * A union rather than a row with optional fields, because the previews share no content
+ * at all — a note has no photograph, no address and no category, and a journey has two
+ * endpoints instead of one name — and an optional-everything shape would let a caller
+ * build a card that draws none of them.
  */
 export type DragPreviewProps =
   | {
@@ -18,6 +25,7 @@ export type DragPreviewProps =
       readonly className?: string
     }
   | { readonly note: PlannerNote; readonly className?: string }
+  | { readonly transport: PlannerTransport; readonly className?: string }
 
 const SHELL = [
   'flex w-64 max-w-[80vw] items-center gap-2.5 rounded-lg',
@@ -59,6 +67,35 @@ export function DragPreview(props: DragPreviewProps) {
           {note.time === null ? null : (
             <p className="truncate text-caption tabular-nums text-ink-3">
               {note.time}
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if ('transport' in props) {
+    const { transport, className } = props
+    const Glyph = modeIcon(transport.mode)
+    // The endpoints joined by an arrow rather than by a word: the card is `aria-hidden`,
+    // so nothing here is read out, and an arrow is the same symbol in all 23 locales.
+    const route = [transport.fromName, transport.toName]
+      .filter((end) => end !== null)
+      .join(' → ')
+    return (
+      <div
+        aria-hidden="true"
+        data-drag-preview="transport"
+        className={cn(SHELL, className)}
+      >
+        <span className="grid size-8 shrink-0 place-items-center rounded-md bg-surface-inset text-ink-3">
+          <Glyph size={14} strokeWidth={2} aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-label font-semibold text-ink">{route}</p>
+          {transport.time === null ? null : (
+            <p className="truncate text-caption tabular-nums text-ink-3">
+              {transport.time}
             </p>
           )}
         </div>

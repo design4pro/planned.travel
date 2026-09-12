@@ -134,13 +134,15 @@ const INLINE_TRANSFORM =
  * dnd-kit hands back a composed `translate3d(…) scaleX(…)` string from
  * `CSS.Transform.toString()`, and a drag offset is a position rather than
  * decoration: it must survive reduce-motion, so the reset must not reach it. The
- * first two carry no `data-motion-transform` at all; `note-row.tsx` needs it for its
- * entrance animation and drops it for exactly as long as a drag offset is in play.
+ * first two carry no `data-motion-transform` at all; `note-row.tsx` and
+ * `transport-row.tsx` need it for their entrance animation and drop it for exactly as
+ * long as a drag offset is in play.
  */
 const DRAG_OWNED: ReadonlySet<string> = new Set([
   'src/components/modules/lists/lists-board.tsx',
   'src/components/planner/note-row.tsx',
   'src/components/planner/stop-row.tsx',
+  'src/components/planner/transport-row.tsx',
 ])
 
 interface Source {
