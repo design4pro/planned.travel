@@ -180,9 +180,11 @@ import {
   getTransport,
   listDayTransports,
   listTransportLegs,
+  listTripDayTransports,
   listTripLegs,
   listTripTransports,
   nextDeparture,
+  reorderDayTransports,
   replaceTransportChain,
   saveSearchedConnection,
   setTransportStatus,
@@ -3782,6 +3784,102 @@ describe('tenant isolation', () => {
           requireDayNote(alpha.tenant.scope, beta.dayNoteId),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+
+  /**
+   * `03-S5`: the board's read of a trip's journeys, and the reorder that places them.
+   *
+   * The read is ordinary and is asserted for completeness. The **reorder** is the case this block
+   * genuinely adds, because it is the one write in this file shaped like a bulk update over ids the
+   * client chose: it takes a whole day's run and writes `sort_order` on two tables from it. A
+   * forged id must therefore be *dropped*, not merely refused at the end — and the only honest
+   * proof of that is B's stored values, re-read on both tables afterwards and byte-for-byte
+   * identical.
+   */
+  describe('a day’s journeys and the run that places them', () => {
+    /** Every `sort_order` B holds, on both tables, keyed by row id. */
+    async function positionsOf(world: World): Promise<Record<string, number>> {
+      const [records, legs] = await Promise.all([
+        listTripTransports(world.tenant.scope, world.tripId),
+        listTripLegs(world.tenant.scope, world.tripId),
+      ])
+      return Object.fromEntries([
+        ...records.map((row) => [row.id, row.sortOrder] as const),
+        ...legs.map((row) => [row.id, row.sortOrder] as const),
+      ])
+    }
+
+    beforeEach(async () => {
+      // B's journey is a chain, so both tables carry a row the reorder could write.
+      await replaceTransportChain(beta.tenant.scope, beta.transportId, {
+        stations: [{ name: 'Shin-Osaka' }, { name: 'Tokyo' }],
+        legs: [{ departureDayId: beta.dayId, sortOrder: 3.25 }],
+      })
+    })
+
+    it('answers nothing when asked, from A, for B’s journeys', async () => {
+      expect(
+        await captureError(() =>
+          listTripDayTransports(alpha.tenant.scope, beta.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // The same trip id resolves for its own tenant, so it is scoping that hid it.
+      const own = await listTripDayTransports(beta.tenant.scope, beta.tripId)
+      expect(own.records).toHaveLength(1)
+      expect(own.legs).toHaveLength(1)
+    })
+
+    it('refuses to reorder a day of B’s trip, named with B’s trip or with A’s own', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          reorderDayTransports(scope, {
+            tripId: beta.tripId,
+            dayId: beta.dayId,
+            items: [{ kind: 'transport', id: beta.transportId }],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // A's own trip with B's day: the tenant filter alone lets this one through,
+      // because every row it would write is A's. `requireTripDay` is what refuses it.
+      expect(
+        await captureError(() =>
+          reorderDayTransports(scope, {
+            tripId: alpha.tripId,
+            dayId: beta.dayId,
+            items: [{ kind: 'transport', id: beta.transportId }],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('drops B’s transport and leg ids inside a reorder of A’s own day', async () => {
+      const before = await positionsOf(beta)
+      const betaLegs = await listTripLegs(beta.tenant.scope, beta.tripId)
+
+      await reorderDayTransports(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        dayId: alpha.dayId,
+        items: [
+          { kind: 'stop', id: alpha.assignmentId },
+          { kind: 'transport', id: beta.transportId },
+          { kind: 'leg', id: betaLegs[0].id },
+          { kind: 'note', id: beta.dayNoteId },
+        ],
+      })
+
+      // Not one number of B's moved — on either table.
+      expect(await positionsOf(beta)).toEqual(before)
+      // A's own journey was placed, so the call did do its work rather than failing silently.
+      const alphaRecords = await listTripTransports(
+        alpha.tenant.scope,
+        alpha.tripId,
+      )
+      expect(alphaRecords[0].sortOrder).toBe(0.5)
     })
   })
 })

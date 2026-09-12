@@ -17,7 +17,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { NotFoundError, RepositoryError } from '../context'
-import { createDay, listTripDays } from '../days'
+import { createDay, createDayNote, listTripDays } from '../days'
+import { createAssignment } from '../itinerary'
+import { createPlace } from '../places'
 import { TripRoleError, addTripMember, createTrip } from '../trips'
 import {
   CHAIN_MAX_LEGS,
@@ -26,7 +28,9 @@ import {
   getTransport,
   listDayTransports,
   listTransportLegs,
+  listTripDayTransports,
   listTripLegs,
+  reorderDayTransports,
   replaceTransportChain,
   setTransportStatus,
   updateTransport,
@@ -494,6 +498,385 @@ describe('a journey with more than two stations', () => {
 
     expect((await getTransport(viewer, transportId))?.title).toBe(
       'Osaka to Tokyo',
+    )
+  })
+})
+
+/**
+ * A day is one number line, and a journey's place on it.
+ *
+ * The writer that renumbers a day's stops and notes — `reorderDayTimeline` — belongs to another
+ * module, so a journey cannot be inside that renumbering and expresses where it sits *between* two
+ * of its positions instead, through the fractional key `sort_order` was declared to be. These cases
+ * are about that arithmetic and about the three rules the payload is read under; the client half
+ * that decides *which* gap a drag names is asserted in `-ui/__tests__/plan-transport-model.test.ts`.
+ */
+describe('a journey between the stops and notes of its day', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+  let tripId: string
+  let days: Array<Day>
+
+  /** A stop at an explicit stored position, so a case can name the day's numbering exactly. */
+  async function stopAt(dayId: string, orderIndex: number): Promise<string> {
+    const place = await createPlace(tenant.scope, {
+      tripId,
+      name: `Place ${orderIndex}`,
+    })
+    const assignment = await createAssignment(tenant.scope, {
+      tripId,
+      dayId,
+      placeId: place.id,
+      orderIndex,
+    })
+    return assignment.id
+  }
+
+  async function noteAt(dayId: string, sortOrder: number): Promise<string> {
+    const note = await createDayNote(tenant.scope, {
+      tripId,
+      dayId,
+      body: `Note ${sortOrder}`,
+      sortOrder,
+    })
+    return note.id
+  }
+
+  async function journeyOn(
+    dayId: string | null,
+    extra: { readonly arrivalDayId?: string } = {},
+  ): Promise<string> {
+    const created = await createTransport(tenant.scope, {
+      tripId,
+      title: 'The 14:05',
+      mode: 'train',
+      dayId,
+      ...extra,
+    })
+    return created.id
+  }
+
+  async function sortOrderOf(transportId: string): Promise<number> {
+    const row = await getTransport(tenant.scope, transportId)
+    if (row === null) throw new Error('the journey went missing')
+    return row.sortOrder
+  }
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('number-line')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Kansai run',
+      startDate: '2026-04-10',
+      endDate: '2026-04-13',
+      currency: 'JPY',
+    })
+    tripId = trip.id
+    days = await listTripDays(tenant.scope, trip.id)
+  })
+
+  it('answers every journey of the trip, including a chained record that names no day', async () => {
+    const chained = await journeyOn(null)
+    await replaceTransportChain(tenant.scope, chained, {
+      stations: [{ name: 'Shin-Osaka' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
+      legs: [{ departureDayId: days[0].id }, { departureDayId: days[1].id }],
+    })
+    const whole = await journeyOn(days[0].id)
+
+    const { records, legs } = await listTripDayTransports(tenant.scope, tripId)
+
+    // The record is returned even though it names no day: its legs carry the day
+    // references, and the mode, the status and the title live only on the parent.
+    expect(records.map((row) => row.id).sort()).toEqual([chained, whole].sort())
+    expect(legs).toHaveLength(2)
+    expect(legs.map((leg) => leg.position)).toEqual([0, 1])
+  })
+
+  it('places a journey strictly between the stored positions of its neighbours', async () => {
+    const first = await stopAt(days[0].id, 0)
+    const second = await stopAt(days[0].id, 1)
+    const journey = await journeyOn(days[0].id)
+
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'stop', id: first },
+        { kind: 'transport', id: journey },
+        { kind: 'stop', id: second },
+      ],
+    })
+
+    expect(await sortOrderOf(journey)).toBe(0.5)
+  })
+
+  it('takes an open end one unit wide, at either end and on an empty day', async () => {
+    const only = await stopAt(days[0].id, 0)
+    const ahead = await journeyOn(days[0].id)
+    const behind = await journeyOn(days[0].id)
+
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'transport', id: ahead },
+        { kind: 'stop', id: only },
+        { kind: 'transport', id: behind },
+      ],
+    })
+
+    expect(await sortOrderOf(ahead)).toBe(-0.5)
+    expect(await sortOrderOf(behind)).toBe(0.5)
+
+    const alone = await journeyOn(days[1].id)
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[1].id,
+      items: [{ kind: 'transport', id: alone }],
+    })
+    expect(await sortOrderOf(alone)).toBe(0.5)
+  })
+
+  it('splits one gap between two journeys, in the order the client sent', async () => {
+    const first = await stopAt(days[0].id, 0)
+    const second = await stopAt(days[0].id, 1)
+    const early = await journeyOn(days[0].id)
+    const late = await journeyOn(days[0].id)
+
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'stop', id: first },
+        { kind: 'transport', id: late },
+        { kind: 'transport', id: early },
+        { kind: 'stop', id: second },
+      ],
+    })
+
+    const lateOrder = await sortOrderOf(late)
+    const earlyOrder = await sortOrderOf(early)
+    expect(lateOrder).toBeCloseTo(1 / 3, 10)
+    expect(earlyOrder).toBeCloseTo(2 / 3, 10)
+    // Neither can collide with a stop, which is the property the gap split exists for.
+    expect(lateOrder).toBeGreaterThan(0)
+    expect(earlyOrder).toBeLessThan(1)
+  })
+
+  it('names the gap from stored positions, not from a count of entries', async () => {
+    // The day `unschedulePlaceFn` leaves behind: stops at 0 and 2, with nothing at 1.
+    const first = await stopAt(days[0].id, 0)
+    const second = await stopAt(days[0].id, 2)
+    const journey = await journeyOn(days[0].id)
+
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'stop', id: first },
+        { kind: 'stop', id: second },
+        { kind: 'transport', id: journey },
+      ],
+    })
+
+    // An index formula would write 1.5 — ahead of the second stop it was dropped behind.
+    expect(await sortOrderOf(journey)).toBe(2.5)
+  })
+
+  it('places a journey behind a stop scheduled at a midpoint', async () => {
+    const first = await stopAt(days[0].id, 0)
+    const middle = await stopAt(days[0].id, 0.5)
+    const last = await stopAt(days[0].id, 1)
+    const journey = await journeyOn(days[0].id)
+
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'stop', id: first },
+        { kind: 'stop', id: middle },
+        { kind: 'transport', id: journey },
+        { kind: 'stop', id: last },
+      ],
+    })
+
+    expect(await sortOrderOf(journey)).toBe(0.75)
+  })
+
+  it('counts a journey the payload omitted among the journeys sharing its gap', async () => {
+    const first = await stopAt(days[0].id, 0)
+    const second = await stopAt(days[0].id, 1)
+    const omitted = await journeyOn(days[0].id)
+
+    // Give the omitted one a stored place first, so the splice has something to follow.
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'stop', id: first },
+        { kind: 'transport', id: omitted },
+        { kind: 'stop', id: second },
+      ],
+    })
+    expect(await sortOrderOf(omitted)).toBe(0.5)
+
+    // A second journey arrives and is dragged in ahead of it, naming only itself.
+    const named = await journeyOn(days[0].id)
+    const written = await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'stop', id: first },
+        { kind: 'transport', id: named },
+        { kind: 'stop', id: second },
+      ],
+    })
+
+    // Both are rewritten together, so the named one cannot land on the omitted one's value.
+    expect(await sortOrderOf(named)).toBeCloseTo(1 / 3, 10)
+    expect(await sortOrderOf(omitted)).toBeCloseTo(2 / 3, 10)
+    // And what comes back is the day as written — the omitted journey included, in its place.
+    expect(written).toEqual([
+      { kind: 'transport', id: named },
+      { kind: 'transport', id: omitted },
+    ])
+  })
+
+  it('rebuilds a journey tied with a note after that note', async () => {
+    const note = await noteAt(days[0].id, 0)
+    const stop = await stopAt(days[0].id, 1)
+    // `sortOrder` defaults to 0 — the value every journey on disk today holds.
+    const journey = await journeyOn(days[0].id)
+
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      // The client omits the journey entirely, so only the stored run decides.
+      items: [
+        { kind: 'note', id: note },
+        { kind: 'stop', id: stop },
+      ],
+    })
+
+    expect(await sortOrderOf(journey)).toBe(0.5)
+  })
+
+  it('writes nothing for a journey that only arrives on the day', async () => {
+    const stop = await stopAt(days[1].id, 0)
+    const journey = await journeyOn(days[0].id, { arrivalDayId: days[1].id })
+
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[1].id,
+      items: [
+        { kind: 'stop', id: stop },
+        { kind: 'transport', id: journey },
+      ],
+    })
+
+    // Its `sort_order` belongs to day 1's ruler; day 2 measures against a different one.
+    expect(await sortOrderOf(journey)).toBe(0)
+  })
+
+  it('drops an id the day does not hold, and moves nothing for it', async () => {
+    const stop = await stopAt(days[0].id, 0)
+    const elsewhere = await journeyOn(days[1].id)
+    const here = await journeyOn(days[0].id)
+
+    const written = await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'transport', id: elsewhere },
+        { kind: 'stop', id: stop },
+        { kind: 'transport', id: here },
+      ],
+    })
+
+    expect(await sortOrderOf(elsewhere)).toBe(0)
+    expect(await sortOrderOf(here)).toBe(0.5)
+    // The dropped id is absent from what comes back, so nothing mirrors it to the room either.
+    expect(written).toEqual([{ kind: 'transport', id: here }])
+  })
+
+  it('refuses a day belonging to another trip', async () => {
+    const other = await createTrip(tenant.scope, { title: 'Osaka weekend' })
+    const foreignDay = await createDay(tenant.scope, {
+      tripId: other.id,
+      dayNumber: 1,
+    })
+
+    expect(
+      await captureError(() =>
+        reorderDayTransports(tenant.scope, {
+          tripId,
+          dayId: foreignDay.id,
+          items: [],
+        }),
+      ),
+    ).toBeInstanceOf(NotFoundError)
+  })
+
+  it('keeps a leg on its day when the chain is rewritten around it', async () => {
+    const chained = await journeyOn(null)
+    await replaceTransportChain(tenant.scope, chained, {
+      stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
+      legs: [{ departureDayId: days[0].id }, { departureDayId: days[1].id }],
+    })
+
+    const stop = await stopAt(days[0].id, 0)
+    const [firstLeg] = await listTransportLegs(tenant.scope, chained)
+    await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'stop', id: stop },
+        { kind: 'leg', id: firstLeg.id },
+      ],
+    })
+    const placed = (await listTransportLegs(tenant.scope, chained))[0].sortOrder
+    expect(placed).toBe(0.5)
+
+    // A service number is renamed: without the carry-forward this leg would go to
+    // the head of its day, because the chain writer would hand it its chain index.
+    await replaceTransportChain(tenant.scope, chained, {
+      stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
+      legs: [
+        { departureDayId: days[0].id, serviceNumber: 'Hikari 501' },
+        { departureDayId: days[1].id },
+      ],
+    })
+    const after = await listTransportLegs(tenant.scope, chained)
+    expect(after[0].sortOrder).toBe(placed)
+    expect(after[0].serviceNumber).toBe('Hikari 501')
+  })
+
+  it('hands a leg its chain index when it now departs from another day, and lets an explicit value win', async () => {
+    const chained = await journeyOn(null)
+    await replaceTransportChain(tenant.scope, chained, {
+      stations: [{ name: 'Kyoto' }, { name: 'Tokyo' }],
+      legs: [{ departureDayId: days[0].id, sortOrder: 4.25 }],
+    })
+    expect((await listTransportLegs(tenant.scope, chained))[0].sortOrder).toBe(
+      4.25,
+    )
+
+    // The day changed, so the fraction was measured against a ruler this leg has left.
+    await replaceTransportChain(tenant.scope, chained, {
+      stations: [{ name: 'Kyoto' }, { name: 'Tokyo' }],
+      legs: [{ departureDayId: days[2].id }],
+    })
+    expect((await listTransportLegs(tenant.scope, chained))[0].sortOrder).toBe(
+      0,
+    )
+
+    // And an explicit value always wins over the carry-forward.
+    await replaceTransportChain(tenant.scope, chained, {
+      stations: [{ name: 'Kyoto' }, { name: 'Tokyo' }],
+      legs: [{ departureDayId: days[2].id, sortOrder: 9.5 }],
+    })
+    expect((await listTransportLegs(tenant.scope, chained))[0].sortOrder).toBe(
+      9.5,
     )
   })
 })

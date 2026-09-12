@@ -19,13 +19,18 @@
 
 import { eq } from 'drizzle-orm'
 import { tripFavourites } from '#/server/db/schema'
-import { allOf, createTenantRepository } from './base'
+import { allOf, createTenantTableAccess } from './base'
 import { isUniqueConstraintViolation } from './context'
 import { favouritedTripFilter, readableTrips, requireTrip } from './trips'
 import type { SQL } from 'drizzle-orm'
 import type { TenantScope } from './base'
 
-export const tripFavouritesRepository = createTenantRepository(
+/**
+ * Keyless access, because the table is keyless: `(trip_id, user_id)` is its primary key, and there
+ * is no `id` for `createTenantRepository`'s `findById` / `update` / `delete` to name. The three
+ * verbs below want none of them — the row is found by the pair, or deleted by it.
+ */
+export const tripFavouritesRepository = createTenantTableAccess(
   tripFavourites,
   'trip favourite',
 )
@@ -55,7 +60,7 @@ function ownRow(scope: TenantScope, tripId: string): SQL {
  * set is a no-op rather than a missing-row error, and setting twice leaves one row.
  *
  * The read before the insert answers the ordinary second click without a refusal in the log; the
- * unique index on `(trip_id, user_id)` answers the one the read cannot see, where a second request
+ * primary key on `(trip_id, user_id)` answers the one the read cannot see, where a second request
  * commits between this one's read and its write. A double click is two requests, so that window is
  * exactly the case this verb exists to survive - and the loser of that race has nothing to do,
  * because the row it wanted is the row that is now there. Only *that* refusal is swallowed: any

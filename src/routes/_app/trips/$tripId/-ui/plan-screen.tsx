@@ -75,9 +75,14 @@ import {
   IDEAS_CONTAINER,
   IdeasList,
   PlannerRail,
+  containerOf,
+  ideaItemId,
   initialSelection,
+  isLegItemId,
   itemsIn,
+  journeyName,
   noteItemId,
+  removePlanItem,
   selectionReducer,
   usePlanDnd,
 } from '#/components/planner'
@@ -104,6 +109,14 @@ import {
   routeDaysOf,
   timeByItem,
 } from './plan-model'
+import {
+  journeyWrites,
+  positionByItem,
+  timeOfTransports,
+  transportRowsOf,
+  withTransportItems,
+  withTransports,
+} from './plan-transport-model'
 import { planMoveOutcome, refusalCopy, reorderPayload } from './plan-move'
 import {
   createPlanPlaceFn,
@@ -120,6 +133,7 @@ import {
   deleteDayNoteFn,
   updateDayNoteFn,
 } from '../-server/day-notes'
+import { reorderDayTransportsFn } from '../-server/plan-transports'
 import {
   NoteDeleteDialog,
   NoteDialog,
@@ -139,6 +153,7 @@ import type {
 } from '#/components/planner'
 import type { PlanNotesPayload } from '../-server/day-notes'
 import type { PlanBoardPayload } from '../-server/plan'
+import type { PlanTransportsPayload } from '../-server/plan-transports'
 import type { PlaceFormValues, TimingDraft } from './plan-actions'
 import type { NoteDraft } from './note-dialog'
 
@@ -367,11 +382,18 @@ export interface PlanScreenProps {
   readonly payload: PlanBoardPayload
   /** The trip's notes and whether this reader may write them. Loaded beside the board. */
   readonly notes: PlanNotesPayload
+  /** The trip's journeys, loaded beside the board — `03-S5`'s third read. */
+  readonly transports: PlanTransportsPayload
   /** Shown in the itinerary rail's footer, where a page header would have been. */
   readonly tripTitle: string
 }
 
-export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
+export function PlanScreen({
+  payload,
+  notes,
+  transports,
+  tripTitle,
+}: PlanScreenProps) {
   const locale = useLocale()
   const t = useTranslate()
   const router = useRouter()
@@ -380,9 +402,53 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
 
   /* ------------------------------------------------------------------ state */
 
+  /** The trip's days in order — the ruler a journey's range is expanded against. */
+  const dayIds = React.useMemo(
+    () => payload.days.map((day) => day.dayId),
+    [payload.days],
+  )
+
+  /** Every journey row the board can draw, one per day each journey covers. */
+  const transportRows = React.useMemo(
+    () => transportRowsOf(transports, dayIds, locale),
+    [transports, dayIds, locale],
+  )
+
+  /**
+   * Times come from the payloads rather than from `model`, because the merged
+   * sequence only ever shows a time — the clock rule needs the item that *owns*
+   * one, and an untimed row that merely sits under a timed one owns nothing. A
+   * journey's ends are read the same way: the row renders a range on a one-day
+   * journey, and a range is not an instant.
+   */
+  const timeIndex = React.useMemo(() => {
+    const byItem = new Map(timeByItem(payload, notes))
+    for (const [itemId, time] of timeOfTransports(transports)) {
+      byItem.set(itemId, time)
+    }
+    return byItem
+  }, [payload, notes, transports])
+
+  const timeOfItem = React.useCallback(
+    (itemId: string) => timeIndex.get(itemId) ?? null,
+    [timeIndex],
+  )
+
+  /** The stored positions a journey's `sort_order` was measured against. */
+  const positionIndex = React.useMemo(
+    () => positionByItem(payload, notes),
+    [payload, notes],
+  )
+
   const serverOrder = React.useMemo(
-    () => orderFromPayload(payload, notes),
-    [notes, payload],
+    () =>
+      withTransports(
+        orderFromPayload(payload, notes),
+        transportRows,
+        positionIndex,
+        timeOfItem,
+      ),
+    [notes, payload, positionIndex, transportRows, timeOfItem],
   )
   const [order, setOrder] = React.useState<PlanOrder>(serverOrder)
 
@@ -441,8 +507,31 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   const noteIndex = React.useMemo(() => notesByItem(notes), [notes])
 
   const model = React.useMemo(
-    () => planModel(payload, order, t, locale, noteIndex),
-    [payload, order, t, locale, noteIndex],
+    () =>
+      withTransportItems(
+        planModel(payload, order, t, locale, noteIndex),
+        order,
+        transportRows,
+      ),
+    [payload, order, t, locale, noteIndex, transportRows],
+  )
+
+  /** Journeys by draggable id, for the drag overlay. */
+  const journeyIndex = React.useMemo(
+    () => new Map(transportRows.map((row) => [row.itemId, row])),
+    [transportRows],
+  )
+
+  /**
+   * What each journey row is called in a sentence — "Tokyo to Kyoto".
+   *
+   * Composed here because naming a journey needs the catalogue, and neither the drag
+   * announcements nor the refusal toasts may reach for one of their own.
+   */
+  const journeyNames = React.useMemo(
+    () =>
+      new Map(transportRows.map((row) => [row.itemId, journeyName(t, row)])),
+    [transportRows, t],
   )
 
   const scheduledRows = React.useMemo(
@@ -560,21 +649,6 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
     [model.rowsByItem],
   )
 
-  /**
-   * Times come from the payload rather than from `model`, because the merged
-   * sequence only ever shows a time — the clock rule needs the item that *owns*
-   * one, and an untimed row that merely sits under a timed one owns nothing.
-   */
-  const timeIndex = React.useMemo(
-    () => timeByItem(payload, notes),
-    [payload, notes],
-  )
-
-  const timeOfItem = React.useCallback(
-    (itemId: string) => timeIndex.get(itemId) ?? null,
-    [timeIndex],
-  )
-
   /* ------------------------------------------------------------------ camera */
 
   /** Where the control column is pinned in the current layout, in pixels. */
@@ -629,16 +703,58 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
     [],
   )
 
+  /**
+   * Restates the journeys departing from these days, against the board as it now reads.
+   *
+   * A journey's `sort_order` is a *relation* to the day's stops and notes, and
+   * `reorderPlanFn` renumbers those without ever consulting a journey — so any write that
+   * touches a day has to say again where that day's journeys sit. One rule, two call
+   * sites: here, behind every primary write, and the delete handler.
+   *
+   * Awaited by the caller, so a failure rolls the optimistic order back together with the
+   * write it followed. The days are written in parallel because each is a separate run and
+   * no day's fractions are measured against another's.
+   */
+  const restateJourneys = React.useCallback(
+    async (next: PlanOrder, days: ReadonlyArray<string>): Promise<void> => {
+      await Promise.all(
+        journeyWrites(next, days, transportRows).map((write) =>
+          reorderDayTransportsFn({
+            data: {
+              tripId: payload.tripId,
+              dayId: write.dayId,
+              items: [...write.items],
+            },
+          }),
+        ),
+      )
+    },
+    [payload.tripId, transportRows],
+  )
+
   const applyChange = React.useCallback(
-    async (change: PlanChange, clearTime: string | null): Promise<void> => {
+    async (
+      change: PlanChange,
+      next: PlanOrder,
+      itemId: string,
+      clearTime: string | null,
+    ): Promise<void> => {
       switch (change.kind) {
         case 'reorder':
-          await reorderPlanFn({
-            data: reorderPayload(payload.tripId, change, clearTime),
-          })
+          // A journey carries no `order_index` of its own, so moving one leaves every stop
+          // and note of the day exactly where it was. Its day run *is* the whole write.
+          if (!isLegItemId(itemId)) {
+            await reorderPlanFn({
+              data: reorderPayload(payload.tripId, change, clearTime),
+            })
+          }
+          await restateJourneys(
+            next,
+            change.days.map((day) => day.dayId),
+          )
           return
-        case 'schedule':
-          await schedulePlaceFn({
+        case 'schedule': {
+          const { assignmentId } = await schedulePlaceFn({
             data: {
               tripId: payload.tripId,
               placeId: change.placeId,
@@ -646,7 +762,15 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
               index: change.index,
             },
           })
+          // The arrangement a schedule returns still names the new stop by its `idea:` id,
+          // which the day run would drop as a row the day does not hold — and the journey
+          // would then be measured against the gap the stop was supposed to fill.
+          await restateJourneys(
+            renameItem(next, ideaItemId(change.placeId), assignmentId),
+            [change.dayId],
+          )
           return
+        }
         case 'unschedule':
           await unschedulePlaceFn({
             data: {
@@ -654,6 +778,7 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
               assignmentId: change.assignmentId,
             },
           })
+          await restateJourneys(next, dayOfItem(order, itemId))
           return
         case 'rank-ideas':
           await rankIdeasFn({
@@ -662,19 +787,23 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
           return
       }
     },
-    [payload.tripId],
+    [order, payload.tripId, restateJourneys],
   )
 
   /**
    * What an item is called in a sentence: a place by its name, a note by its
-   * headline. `null` for an id the board cannot resolve — which is also the only
+   * headline, a journey by where it goes. `null` for an id the board cannot
+   * resolve — which is also the only
    * case in which the reader is told nothing, because an item the board does not
    * have is one the engine refuses as `'unknown'` rather than as anything sayable.
    */
   const nameOfItem = React.useCallback(
     (itemId: string): string | null =>
-      model.rowsByItem.get(itemId)?.name ?? noteIndex.get(itemId)?.body ?? null,
-    [model.rowsByItem, noteIndex],
+      model.rowsByItem.get(itemId)?.name ??
+      noteIndex.get(itemId)?.body ??
+      journeyNames.get(itemId) ??
+      null,
+    [journeyNames, model.rowsByItem, noteIndex],
   )
 
   /**
@@ -705,11 +834,16 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       })
 
       if (outcome.kind === 'refused') {
-        const copy = refusalCopy(outcome.reason)
+        const copy = refusalCopy(outcome.reason, itemId)
         const name = nameOfItem(itemId)
         if (copy === null || name === null) return null
-        toast.error(t(copy.title, { name }), { description: t(copy.body) })
-        return t(copy.spoken, { name })
+        // A journey refused against its own clock names that clock, and `interpolate`
+        // leaves a token it was not given exactly as written — so the time travels with
+        // the name. The other refusals do not mention it, and an extra value is ignored.
+        const time = timeOfItem(itemId)
+        const said = time === null ? { name } : { name, time }
+        toast.error(t(copy.title, said), { description: t(copy.body) })
+        return t(copy.spoken, said)
       }
 
       if (outcome.kind === 'ask-drop-time') {
@@ -723,7 +857,12 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       setOrder(outcome.order)
       markPending(itemId, true)
 
-      void applyChange(outcome.change, drop ? itemId : null)
+      void applyChange(
+        outcome.change,
+        outcome.order,
+        itemId,
+        drop ? itemId : null,
+      )
         .then(() => router.invalidate())
         .catch((cause: unknown) => {
           setOrder(previous)
@@ -769,6 +908,7 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
     order,
     rowsByItem: model.rowsByItem,
     notesByItem: noteIndex,
+    journeyNamesByItem: journeyNames,
     days: model.days,
     onMove: commitMove,
   })
@@ -777,6 +917,25 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
     dnd.draggingId === null ? undefined : model.rowsByItem.get(dnd.draggingId)
   const draggingNote =
     dnd.draggingId === null ? undefined : noteIndex.get(dnd.draggingId)
+  const draggingJourney =
+    dnd.draggingId === null ? undefined : journeyIndex.get(dnd.draggingId)
+
+  /** What the overlay carries: whichever of the three kinds was picked up. */
+  const dragPreview = (): React.ReactNode => {
+    if (draggingRow !== undefined) {
+      return (
+        <DragPreview
+          row={draggingRow}
+          category={categoryFor(draggingRow.categoryId)}
+        />
+      )
+    }
+    if (draggingNote !== undefined) return <DragPreview note={draggingNote} />
+    if (draggingJourney !== undefined) {
+      return <DragPreview transport={draggingJourney} />
+    }
+    return null
+  }
 
   /* -------------------------------------------------------------- selection */
 
@@ -982,9 +1141,21 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
   const confirmDelete = React.useCallback((): void => {
     if (dialog?.kind !== 'delete') return
     const placeId = dialog.placeId
+    const itemId = model.rowsByPlace.get(placeId)?.itemId ?? null
 
     void runWrite(
-      () => deletePlanPlaceFn({ data: { tripId: payload.tripId, placeId } }),
+      async () => {
+        await deletePlanPlaceFn({ data: { tripId: payload.tripId, placeId } })
+        // Deleting a stop renumbers its day, so the journeys placed against those
+        // numbers are restated against the day the delete leaves behind — the second
+        // of the rule's two call sites.
+        if (itemId !== null) {
+          await restateJourneys(
+            removePlanItem(order, itemId),
+            dayOfItem(order, itemId),
+          )
+        }
+      },
       {
         fallback: 'The place could not be deleted. Try again in a moment.',
         success: 'Place deleted',
@@ -995,7 +1166,15 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
         closeDialog()
       }
     })
-  }, [closeDialog, dialog, payload.tripId, runWrite])
+  }, [
+    closeDialog,
+    dialog,
+    model.rowsByPlace,
+    order,
+    payload.tripId,
+    restateJourneys,
+    runWrite,
+  ])
 
   /* ------------------------------------------------------------------ notes */
 
@@ -1526,18 +1705,7 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
 
       {/* ------------------------------------------------------- drag overlay */}
 
-      <DragOverlay dropAnimation={null}>
-        {draggingRow === undefined ? (
-          draggingNote === undefined ? null : (
-            <DragPreview note={draggingNote} />
-          )
-        ) : (
-          <DragPreview
-            row={draggingRow}
-            category={categoryFor(draggingRow.categoryId)}
-          />
-        )}
-      </DragOverlay>
+      <DragOverlay dropAnimation={null}>{dragPreview()}</DragOverlay>
 
       {/* ------------------------------------------------------------ dialogs */}
 
@@ -1644,6 +1812,32 @@ export function PlanScreen({ payload, notes, tripTitle }: PlanScreenProps) {
       />
     </DndContext>
   )
+}
+
+/**
+ * The day holding an item, as the one-element list {@link journeyWrites} takes — or
+ * nothing at all when the item is in the ideas column, which holds no journeys.
+ */
+function dayOfItem(order: PlanOrder, itemId: string): Array<string> {
+  const container = containerOf(order, itemId)
+  return container === null || container === IDEAS_CONTAINER ? [] : [container]
+}
+
+/**
+ * The same arrangement with one draggable id renamed.
+ *
+ * Exists for a single case: a schedule's board still calls the new stop by its `idea:`
+ * id, and the journey beside it has to be restated against the assignment the write
+ * actually created.
+ */
+function renameItem(order: PlanOrder, from: string, to: string): PlanOrder {
+  return {
+    ideaIds: order.ideaIds,
+    days: order.days.map((day) => ({
+      dayId: day.dayId,
+      itemIds: day.itemIds.map((itemId) => (itemId === from ? to : itemId)),
+    })),
+  }
 }
 
 /** The stored timing of one stop, for the dialog to open on. */

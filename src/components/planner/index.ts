@@ -36,8 +36,11 @@ export {
   ideaItemId,
   indexOf,
   isIdeaItemId,
+  isLegItemId,
   isNoteItemId,
   itemsIn,
+  legItemId,
+  legRefOfLegItem,
   mergeDayTimeline,
   movePlanItem,
   movePlanItemToDay,
@@ -49,6 +52,8 @@ export {
 } from './ordering'
 export type {
   DayOrder,
+  LegKind,
+  LegRef,
   MoveOptions,
   PlaceOfItem,
   PlanChange,
@@ -79,12 +84,17 @@ export {
 } from './types'
 export type {
   DayNoteIcon,
+  JourneyPart,
   PlannerCategory,
   PlannerDay,
   PlannerItem,
   PlannerNote,
   PlannerRow,
+  PlannerTransport,
 } from './types'
+
+export { expandJourneyRows, transportPhases } from './transport-rows'
+export type { Journey, JourneyPhases } from './transport-rows'
 
 /* ---------------------------------------------------------------- surfaces */
 export { PlannerRail } from './rail'
@@ -102,6 +112,8 @@ export {
   dayNoteIconLabel,
 } from './note-row'
 export type { NoteRowProps } from './note-row'
+export { TransportRow, journeyName } from './transport-row'
+export type { TransportRowProps } from './transport-row'
 export { PlaceThumb } from './place-thumb'
 export type { PlaceThumbProps, PlaceThumbSize } from './place-thumb'
 export { DragPreview } from './drag-preview'

@@ -8,6 +8,7 @@ import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { loadDayNotes } from './-server/day-notes'
 import { loadPlanBoard } from './-server/plan'
+import { loadPlanTransports } from './-server/plan-transports'
 import { PlanScreen } from './-ui/plan-screen'
 import { useTripHeader } from '../../-ui/trip-header'
 
@@ -21,15 +22,16 @@ import { useTripHeader } from '../../-ui/trip-header'
  * `PlanScreen`, which floats the itinerary, the places and the filters over the map.
  */
 export const Route = createFileRoute('/_app/trips/$tripId/plan')({
-  // Both reads are one indexed query for the same trip in the same request, so a failure of one is
-  // very nearly always a failure of both: `Promise.all` rejects and the route renders `PlanError`,
-  // rather than growing a second loading contract for a partial board.
+  // All three reads are indexed queries for the same trip in the same request, so a failure of one
+  // is very nearly always a failure of all: `Promise.all` rejects and the route renders
+  // `PlanError`, rather than growing a second loading contract for a partial board.
   loader: async ({ params }) => {
-    const [board, notes] = await Promise.all([
+    const [board, notes, transports] = await Promise.all([
       loadPlanBoard({ data: { tripId: params.tripId } }),
       loadDayNotes({ data: { tripId: params.tripId } }),
+      loadPlanTransports({ data: { tripId: params.tripId } }),
     ])
-    return { board, notes }
+    return { board, notes, transports }
   },
   pendingComponent: PlanPending,
   errorComponent: PlanError,
@@ -47,12 +49,17 @@ function PlanError({ error }: { error: Error }) {
 }
 
 function PlanPage() {
-  const { board, notes } = Route.useLoaderData()
+  const { board, notes, transports } = Route.useLoaderData()
   const { trip } = useTripHeader()
 
   return (
     <AppFrame bleed>
-      <PlanScreen payload={board} notes={notes} tripTitle={trip.title} />
+      <PlanScreen
+        payload={board}
+        notes={notes}
+        transports={transports}
+        tripTitle={trip.title}
+      />
     </AppFrame>
   )
 }

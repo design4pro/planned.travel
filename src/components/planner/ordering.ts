@@ -79,6 +79,58 @@ export function noteIdOfNoteItem(itemId: string): string {
   return itemId.slice(NOTE_PREFIX.length)
 }
 
+const LEG_PREFIX = 'leg:'
+
+/** Which table a journey row came from: a whole record, or one leg of a chain. */
+export type LegKind = 'transport' | 'leg'
+
+/** The row a journey's draggable id points at, and the day the row is drawn on. */
+export interface LegRef {
+  readonly kind: LegKind
+  readonly dayId: string
+  readonly id: string
+}
+
+/**
+ * Draggable id for a journey row.
+ *
+ * The fourth id space, added by the same mechanism as the second and the third. Two things make it
+ * wider than theirs, and both are properties of a journey rather than decoration:
+ *
+ * - **It names its table.** A journey reaches the board either as a whole `transports` record or as
+ *   one `transport_legs` row, and the two mint ids independently, so the kind is part of the
+ *   identity rather than something a lookup recovers.
+ * - **It is day-qualified.** A journey covering three days is three rows on the board, and
+ *   `@dnd-kit` needs three distinct ids for them. Without the day the sortable contexts of three
+ *   days would share one id and the second row to mount would win.
+ */
+export function legItemId(kind: LegKind, dayId: string, id: string): string {
+  return `${LEG_PREFIX}${kind}:${dayId}:${id}`
+}
+
+/** True for a draggable id produced by {@link legItemId}. */
+export function isLegItemId(itemId: string): boolean {
+  return itemId.startsWith(LEG_PREFIX)
+}
+
+/**
+ * The row and the day behind a journey's draggable id, or `null` for anything else.
+ *
+ * The id is split on the first three separators only and the remainder is the row id, so an id
+ * carrying a colon — which nothing mints today — round-trips rather than being silently truncated.
+ */
+export function legRefOfLegItem(itemId: string): LegRef | null {
+  if (!isLegItemId(itemId)) return null
+  const parts = itemId.slice(LEG_PREFIX.length).split(':')
+  if (parts.length < 3) return null
+  const [kind, dayId] = parts
+  const id = parts.slice(2).join(':')
+  if ((kind !== 'transport' && kind !== 'leg') || dayId === '' || id === '') {
+    return null
+  }
+  return { kind, dayId, id }
+}
+
 /** One day's stops, in visiting order, as assignment ids. */
 export interface DayOrder {
   readonly dayId: string
@@ -207,14 +259,17 @@ export function indexOf(order: PlanOrder, itemId: string): number {
 /**
  * Total scheduled **stops** across every day.
  *
- * Notes are skipped: a day's sequence holds both, and "12 places planned" is a count
- * of places. Counting the sequence would quietly inflate it the first time a reader
- * writes a note.
+ * Notes and journeys are skipped: a day's sequence holds all three, and "12 places
+ * planned" is a count of places. Counting the sequence would quietly inflate it the
+ * first time a reader writes a note or books a train.
  */
 export function scheduledCount(order: PlanOrder): number {
   return order.days.reduce(
     (total, day) =>
-      total + day.itemIds.filter((itemId) => !isNoteItemId(itemId)).length,
+      total +
+      day.itemIds.filter(
+        (itemId) => !isNoteItemId(itemId) && !isLegItemId(itemId),
+      ).length,
     0,
   )
 }
@@ -385,9 +440,13 @@ export function movePlanItem(
   const source = itemsIn(order, from)
   if (source === null) return { ok: false, reason: 'unknown' }
 
-  // A note belongs to a day or to nothing. Checked before anything else about the
-  // move, because the answer does not depend on where in the column it was dropped.
-  if (target.container === IDEAS_CONTAINER && isNoteItemId(itemId)) {
+  // A note belongs to a day or to nothing, and so does a journey — an idea is a place
+  // nobody has scheduled yet, and neither is one. Checked before anything else about
+  // the move, because the answer does not depend on where in the column it was dropped.
+  if (
+    target.container === IDEAS_CONTAINER &&
+    (isNoteItemId(itemId) || isLegItemId(itemId))
+  ) {
     return { ok: false, reason: 'not-in-ideas' }
   }
 
@@ -493,7 +552,10 @@ export function movePlanItem(
         kind: 'schedule',
         placeId: placeIdOfIdeaItem(itemId),
         dayId: target.container,
-        index,
+        // `order_index` numbers the day's stops and notes and nothing else, so the
+        // journeys above the drop do not count towards it. Without this, a place
+        // dropped below a day's opening `travelling` row lands one slot late.
+        index: index - remaining.slice(0, index).filter(isLegItemId).length,
       },
     }
   }

@@ -58,10 +58,26 @@ const messages = {
   'plan.move.refused.notInIdeasBody': 'Ideas are places waiting for a day. A note belongs to the day it was written on.',
   'plan.move.refused.notInAnotherDay': 'A note stays on its own day',
   'plan.move.refused.notInAnotherDayBody': 'Notes cannot be moved between days yet. Edit the note, or write it on the other day.',
+  /**
+   * The same three sentences a journey needs, said in its own words.
+   *
+   * A journey cannot borrow the note's: "a note belongs to the day it was written on"
+   * is true of a note and false of a train, whose day is its timetable's and not the
+   * reader's. `{name}` is the journey said in words — "Tokyo to Kyoto".
+   */
+  'plan.move.refused.journeyNotInIdeas': 'A journey stays in the day',
+  'plan.move.refused.journeyNotInIdeasBody': 'Ideas are places waiting for a day. A journey belongs to the day it happens on.',
+  'plan.move.refused.journeyNotInAnotherDay': 'A journey stays on its own day',
+  'plan.move.refused.journeyNotInAnotherDayBody': 'A journey’s day comes from its dates. Change them on the Transports tab.',
+  'plan.move.refused.journeyTimed': '{name} leaves at {time}',
+  'plan.move.refused.journeyTimedBody': 'A departure time is the timetable’s, not the plan’s. Put the journey where its clock belongs.',
   'plan.move.spoken.duplicate': '{name} was not moved. That day already has it.',
   'plan.move.spoken.notInIdeas': '{name} was not moved. A note stays in the day.',
   'plan.move.spoken.notInAnotherDay': '{name} was not moved. A note stays on its own day.',
   'plan.move.spoken.timed': '{name} carries {time}. Asking whether to drop it.',
+  'plan.move.spoken.journeyNotInIdeas': '{name} was not moved. A journey stays in the day.',
+  'plan.move.spoken.journeyNotInAnotherDay': '{name} was not moved. A journey stays on its own day.',
+  'plan.move.spoken.journeyTimed': '{name} was not moved. It leaves at {time}.',
   'plan.move.error.save': 'That move did not save',
   'plan.move.error.retry': 'Try it again in a moment.',
   /**
@@ -164,6 +180,30 @@ const messages = {
   'plan.note.icon.wallet': 'Money',
   'plan.note.icon.umbrella': 'Rain',
   'plan.note.icon.triangleAlert': 'Warning',
+  /* ------------------------------------------------- a journey on the board */
+  /**
+   * What one day of a journey is called, and how a journey is named.
+   *
+   * Three triples rather than one, because a flight departing is not a hire car being
+   * picked up, and a reader who sees "Departs / In the air / Lands" on an aeroplane
+   * learns nothing from "Starts / Under way / Ends". `flight` takes the air triple,
+   * `car` the hire triple, and the other ten modes the generic one — a bus, a ferry
+   * and a walk all simply start, go on and end.
+   *
+   * A one-day journey shows none of them: naming a part only makes sense when there
+   * is more than one. `label` is the row's accessible name, so a drag announcement
+   * names a journey the way it names a stop.
+   */
+  'plan.transport.phase.flight.departing': 'Departs',
+  'plan.transport.phase.flight.travelling': 'In the air',
+  'plan.transport.phase.flight.arriving': 'Lands',
+  'plan.transport.phase.hire.departing': 'Pick-up',
+  'plan.transport.phase.hire.travelling': 'On hire',
+  'plan.transport.phase.hire.arriving': 'Drop-off',
+  'plan.transport.phase.journey.departing': 'Starts',
+  'plan.transport.phase.journey.travelling': 'Under way',
+  'plan.transport.phase.journey.arriving': 'Ends',
+  'plan.transport.label': '{from} to {to}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Collab',
   'collab.empty': 'Nothing shared yet',
