@@ -3,7 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -133,7 +133,14 @@ describe('a trip tile whose copy is still running', () => {
  * the badge is read.
  */
 describe('the tile’s favourite mark', () => {
-  /** Holds `setTripFavouriteFn` open so the assertions land mid-write rather than after it. */
+  /**
+   * Holds `setTripFavouriteFn` open so the assertions land mid-write rather than after it, and
+   * hands back the key that lets it land.
+   *
+   * The returned closure calls `land` rather than *being* it: the factory below does not run until
+   * the mock is first called, which is long after this function has returned, so handing `land`
+   * back directly would hand back the placeholder it was bound to here.
+   */
   function holdTheWrite(): () => void {
     let land: () => void = () => undefined
     server.favourite.mockImplementation(
@@ -142,7 +149,7 @@ describe('the tile’s favourite mark', () => {
           land = resolve
         }),
     )
-    return land
+    return () => land()
   }
 
   async function press(item: 'Favourite' | 'Unfavourite'): Promise<void> {
@@ -153,6 +160,11 @@ describe('the tile’s favourite mark', () => {
     await user.click(screen.getByRole('menuitem', { name: item }))
   }
 
+  /**
+   * Not redundant with the `ui` project's `restoreMocks`: these are `vi.hoisted` `vi.fn()`s handed
+   * to a module factory rather than spies, and their call counts demonstrably survive into the next
+   * case — without this, a `router.invalidate` from the case above fails the one below.
+   */
   afterEach(() => {
     server.favourite.mockReset()
     router.invalidate.mockReset()
@@ -186,5 +198,48 @@ describe('the tile’s favourite mark', () => {
     await act(async () => {
       land()
     })
+  })
+
+  /**
+   * The other half of the overlay's promise: the claim is withdrawn only once `useAction` has
+   * awaited the invalidation, so the star goes empty → lit once rather than empty → lit → empty →
+   * lit on its way to the loader's answer.
+   */
+  it('holds the star until the invalidation lands, so it never flickers back', async () => {
+    server.favourite.mockResolvedValue({ tripId: 'trip-1', isFavourite: true })
+    let landInvalidation: () => void = () => undefined
+    router.invalidate.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          landInvalidation = resolve
+        }),
+    )
+    mount(tripCard({ isFavourite: false }))
+
+    await press('Favourite')
+
+    // The write has answered and the loader has not: the claim has to stand, because the payload
+    // this tile still holds says the trip is not starred.
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+    expect(screen.queryByLabelText('Favourite')).not.toBeNull()
+
+    await act(async () => {
+      landInvalidation()
+    })
+  })
+
+  /**
+   * The rollback. A refused write withdraws the claim like any other settlement, so the tile falls
+   * back to what the loader says rather than keeping a star the server never accepted; the reason
+   * reaches the reader through the toast `useAction` raises.
+   */
+  it('rolls the star back when the write is refused', async () => {
+    server.favourite.mockRejectedValue(new Error('the server said no'))
+    mount(tripCard({ isFavourite: false }))
+
+    await press('Favourite')
+
+    await waitFor(() => expect(screen.queryByLabelText('Favourite')).toBeNull())
+    expect(router.invalidate).not.toHaveBeenCalled()
   })
 })

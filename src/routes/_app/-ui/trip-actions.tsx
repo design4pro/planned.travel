@@ -495,7 +495,8 @@ export interface TripFavourite {
  *
  * `claim` withdraws after `useAction` has awaited the router invalidation, so the star goes from
  * empty to lit once and stays there; a failed write withdraws it too, which is the rollback, and
- * the reason arrives in the toast `useAction` raises.
+ * the reason arrives in the toast `useAction` raises. Call it from whatever renders the star —
+ * see {@link TripFavourite} for why that is not this menu.
  */
 export function useTripFavourite(trip: TripCard): TripFavourite {
   const t = useTranslate()
@@ -521,7 +522,7 @@ export function useTripFavourite(trip: TripCard): TripFavourite {
 
 export interface TripActionsMenuProps {
   trip: TripCard
-  /** Owned by the tile, so the menu item and the tile's badge can never disagree. */
+  /** The caller's {@link useTripFavourite}, so this item and the tile's badge cannot disagree. */
   favourite: TripFavourite
 }
 

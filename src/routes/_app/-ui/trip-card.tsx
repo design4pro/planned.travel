@@ -115,10 +115,7 @@ export function TripTile({
 }) {
   const locale = useLocale()
   const t = useTranslate()
-  /**
-   * The tile owns the star, because the tile is what renders both of the things that read it: the
-   * corner mark below and the menu item that flips it. Held here, a press paints both at once.
-   */
+  /** Held here because the tile renders both of its readers — see {@link useTripFavourite}. */
   const favourite = useTripFavourite(trip)
   const range = formatDateRange(trip.startDate, trip.endDate, locale)
   const length = daysBetween(trip.startDate, trip.endDate)
@@ -264,6 +261,10 @@ export function TripTile({
       <div className="absolute end-3 top-3 z-10 flex items-start gap-1.5">
         {favourite.starred ? (
           <span
+            /* `role="img"` because a bare span is `generic`, which ARIA forbids the author to
+               name — the label would be dropped by the readers it is there for. Same answer as
+               `components/map/pins.tsx`. */
+            role="img"
             aria-label={t('shell.trips.card.favourite')}
             className="flex size-6 items-center justify-center rounded-full bg-surface/85 text-warning backdrop-blur-sm"
           >
