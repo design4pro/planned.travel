@@ -817,6 +817,33 @@ describe('a journey between the stops and notes of its day', () => {
     ).toBeInstanceOf(NotFoundError)
   })
 
+  it('leaves a record of this day out of the run when it is drawn as its legs', async () => {
+    // The record keeps the `day_id` it was created with — `replaceTransportChain` does not clear
+    // it — and a journey drawn as its legs is never also drawn whole. Neither leg departs from
+    // this day, so nothing in the day's own rows says the record is chained: the read has to ask.
+    const chained = await journeyOn(days[0].id)
+    await replaceTransportChain(tenant.scope, chained, {
+      stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
+      legs: [{ departureDayId: days[1].id }, { departureDayId: days[2].id }],
+    })
+    const stop = await stopAt(days[0].id, 0)
+    const whole = await journeyOn(days[0].id)
+
+    const written = await reorderDayTransports(tenant.scope, {
+      tripId,
+      dayId: days[0].id,
+      items: [
+        { kind: 'stop', id: stop },
+        { kind: 'transport', id: whole },
+      ],
+    })
+
+    // Placed, it would be written a fraction and mirrored to the room as a row no board draws.
+    expect(written).toEqual([{ kind: 'transport', id: whole }])
+    expect(await sortOrderOf(chained)).toBe(0)
+    expect(await sortOrderOf(whole)).toBe(0.5)
+  })
+
   it('keeps a leg on its day when the chain is rewritten around it', async () => {
     const chained = await journeyOn(null)
     await replaceTransportChain(tenant.scope, chained, {

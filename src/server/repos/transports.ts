@@ -12,7 +12,18 @@
  * and why every journey recorded before chains existed keeps reading exactly as it did.
  */
 
-import { and, asc, count, desc, eq, gte, isNotNull, sum } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  or,
+  sum,
+} from 'drizzle-orm'
 import { z } from 'zod'
 import {
   TRANSPORT_MODES,
@@ -44,7 +55,7 @@ import {
   timeSchema,
   titleSchema,
 } from './validation'
-import type { Transport, TransportLeg } from '#/server/db/types'
+import type { Transport, TransportLeg, Trip } from '#/server/db/types'
 import type { BatchStatement } from './batch'
 import type { TenantScope } from './base'
 
@@ -438,16 +449,52 @@ interface DayRunEntry {
  *
  * A journey drawn as its legs is never also drawn whole, so a record that has legs contributes
  * nothing here — its legs do, each on its own departure day.
+ *
+ * Read as the **day** rather than as the trip, unlike {@link listTripDayTransports}, which answers
+ * the board and has to draw every day at once. The placement below needs one day of a set that
+ * grows with the whole itinerary, and the planner issues one placement per day a drag touches, in
+ * parallel — so borrowing the board's read here meant pulling every `transports` and
+ * `transport_legs` row of the trip to keep one day's.
+ *
+ * Both queries name the day. The records do so directly; the legs do so either through their own
+ * departure day — the half this run places — or by belonging to one of those records, which is the
+ * only thing that can tell us a record of this day is chained and therefore not drawn whole. The
+ * second half is a subquery rather than a second round trip so the two reads still go out together.
  */
-function departingJourneys(
-  records: ReadonlyArray<Transport>,
-  legs: ReadonlyArray<TransportLeg>,
+async function departingJourneys(
+  scope: TenantScope,
+  tripId: string,
   dayId: string,
-): Array<DayRunEntry> {
+): Promise<Array<DayRunEntry>> {
+  const ofTheDay = and(
+    eq(transports.tripId, tripId),
+    eq(transports.dayId, dayId),
+  )
+
+  const [records, legs] = await Promise.all([
+    transportsRepository.findMany(scope, { where: ofTheDay }),
+    transportLegsRepository.findMany(scope, {
+      where: and(
+        eq(transportLegs.tripId, tripId),
+        or(
+          eq(transportLegs.departureDayId, dayId),
+          inArray(
+            transportLegs.transportId,
+            scope.db
+              .select({ id: transports.id })
+              .from(transports)
+              .where(tenantFilter(scope, transports, ofTheDay)),
+          ),
+        ),
+      ),
+    }),
+  ])
+
+  // Every leg of every record of this day is in hand, so a record missing from this set has none.
   const chained = new Set(legs.map((leg) => leg.transportId))
   return [
     ...records
-      .filter((row) => row.dayId === dayId && !chained.has(row.id))
+      .filter((row) => !chained.has(row.id))
       .map((row) => ({
         ref: { kind: 'transport' as const, id: row.id },
         position: row.sortOrder,
@@ -520,21 +567,29 @@ function splitGap(
 export async function reorderDayTransports(
   scope: TenantScope,
   input: ReorderDayTransportsInput,
+  resolvedTrip?: Trip,
 ): Promise<Array<DayRunItemInput>> {
   const values = reorderDayTransportsInput.parse(input)
 
   // Trip, then role, then day — the order `reorderDayTimeline` records: a caller who may not see
   // the trip learns nothing beyond `NotFoundError`.
-  await requireTrip(scope, values.tripId)
+  //
+  // The trip is the one of the three a caller can hand in already proved, and `resolvedTrip` is
+  // that proof: the planner's handler resolves the trip to refuse an archived one immediately
+  // before calling this, so re-reading it here is a second read of a row already in memory. The
+  // guard does not move — omit the argument, or name a different trip with it, and the trip is
+  // resolved here exactly as before, which is what every other caller and both isolation suites do.
+  // It must come from this same `scope`; nothing narrower than that is expressible in the type.
+  if (resolvedTrip?.id !== values.tripId) {
+    await requireTrip(scope, values.tripId)
+  }
   await assertTripRole(scope, values.tripId, WRITERS)
   await requireTripDay(scope, values.tripId, values.dayId)
 
   const [stops, notes, journeys] = await Promise.all([
     listDayAssignments(scope, values.dayId),
     listDayNotes(scope, values.dayId),
-    listTripDayTransports(scope, values.tripId).then(({ records, legs }) =>
-      departingJourneys(records, legs, values.dayId),
-    ),
+    departingJourneys(scope, values.tripId, values.dayId),
   ])
 
   const anchors: Array<DayRunEntry> = [
