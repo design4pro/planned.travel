@@ -810,19 +810,20 @@ export const days = sqliteTable(
  * unfavouriting is a delete and there is no column a writer could ever update — hence `createdAt()`
  * alone, as `place_tags` and the other immutable join rows in this file do, and not `timestamps()`.
  *
- * Keyed by `id`, with the person's choice held unique on `(trip_id, user_id)` exactly as
- * `trip_members` — the other per-person trip row — holds it, rather than keyless on a composite
- * `primaryKey()` like `place_tags`. The two per-person trip rows are then reached the same way,
- * through the keyed tenant repository.
+ * Keyless, on the composite `primaryKey()` of `(trip_id, user_id)` like `place_tags` and the other
+ * immutable join rows here, and not on a surrogate `id` with the same pair re-imposed as a unique
+ * index. `(trip_id, user_id)` *is* the identity of a favourite — a second row for the same pair is
+ * not a second favourite, it is the same one — so the key that says so is the one the table should
+ * carry. `src/server/repos/base.ts` splits the two shapes at the type level, and keeping this one
+ * keyless is what makes `createTenantTableAccess`, not the keyed repository, the access flavour its
+ * three verbs reach for.
  *
- * Its reader and writer are `src/server/repos/trip-favourites.ts`, which lands with `01-S1`
- * (`docs/plans/01-trips-core.md`); the table ships ahead of it. Nothing was backfilled from the
+ * Its reader and writer are `src/server/repos/trip-favourites.ts`. Nothing was backfilled from the
  * deprecated {@link trips.isFavourite}, which holds no person's choice to copy.
  */
 export const tripFavourites = sqliteTable(
   'trip_favourites',
   {
-    id: pk(),
     organizationId: orgRef(),
     tripId: text('trip_id')
       .notNull()
@@ -831,7 +832,7 @@ export const tripFavourites = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('trip_favourites_trip_user_unq').on(t.tripId, t.userId),
+    primaryKey({ columns: [t.tripId, t.userId] }),
     index('trip_favourites_org_user_idx').on(t.organizationId, t.userId),
   ],
 )

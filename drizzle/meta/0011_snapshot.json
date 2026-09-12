@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4b18d1f3-8e9e-4b6e-bf9d-c19df2001c64",
+  "id": "1098717c-5792-461b-bfdc-0a7e02f7b113",
   "prevId": "1033b60f-e87a-4a70-9909-f631168d59e0",
   "tables": {
     "account": {
@@ -8923,23 +8923,6 @@
             "arrival_day_id"
           ],
           "isUnique": false
-        },
-        "transport_legs_org_trip_departure_day_idx": {
-          "name": "transport_legs_org_trip_departure_day_idx",
-          "columns": [
-            "organization_id",
-            "trip_id",
-            "departure_day_id"
-          ],
-          "isUnique": false
-        },
-        "transport_legs_org_transport_idx": {
-          "name": "transport_legs_org_transport_idx",
-          "columns": [
-            "organization_id",
-            "transport_id"
-          ],
-          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -9324,15 +9307,6 @@
           "columns": [
             "organization_id",
             "arrival_day_id"
-          ],
-          "isUnique": false
-        },
-        "transports_org_trip_day_idx": {
-          "name": "transports_org_trip_day_idx",
-          "columns": [
-            "organization_id",
-            "trip_id",
-            "day_id"
           ],
           "isUnique": false
         }
@@ -9743,13 +9717,6 @@
     "trip_favourites": {
       "name": "trip_favourites",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
         "organization_id": {
           "name": "organization_id",
           "type": "text",
@@ -9780,14 +9747,6 @@
         }
       },
       "indexes": {
-        "trip_favourites_trip_user_unq": {
-          "name": "trip_favourites_trip_user_unq",
-          "columns": [
-            "trip_id",
-            "user_id"
-          ],
-          "isUnique": true
-        },
         "trip_favourites_org_user_idx": {
           "name": "trip_favourites_org_user_idx",
           "columns": [
@@ -9825,7 +9784,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "trip_favourites_trip_id_user_id_pk": {
+          "columns": [
+            "trip_id",
+            "user_id"
+          ],
+          "name": "trip_favourites_trip_id_user_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
