@@ -210,6 +210,7 @@ import {
   createTrip,
   deleteTrip,
   listTripMembers,
+  listTripParticipants,
   listTrips,
   memberTripIds,
   removeTripMember,
@@ -3366,6 +3367,42 @@ describe('tenant isolation', () => {
       const refusal = await captureError(() => deleteTrip(scope, alpha.tripId))
       expect((refusal as RepositoryError).code).toBe('FORBIDDEN')
       expect((await requireTrip(scope, alpha.tripId)).id).toBe(alpha.tripId)
+    })
+
+    /** `01-S6a` — the trip's people, read and written across the tenant boundary. */
+    describe('a trip’s people', () => {
+      it('refuses a foreign trip’s participants rather than reporting it has none', async () => {
+        // The trap this closes: `listTripMembers` is tenant-filtered, so B's trip id answers `[]`
+        // through it. `listTripParticipants` resolves the trip *first*, so the answer is a refusal
+        // and not the far more convincing lie that the trip exists and is empty.
+        expect(
+          await captureError(() =>
+            listTripParticipants(alpha.tenant.scope, beta.tripId),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      })
+
+      it('refuses to seat a user from another organization on its own trip', async () => {
+        const before = await listTripMembers(alpha.tenant.scope, alpha.tripId)
+
+        const refusal = await captureError(() =>
+          addTripMember(alpha.tenant.scope, {
+            tripId: alpha.tripId,
+            userId: beta.tenant.ownerUserId,
+            role: 'editor',
+          }),
+        )
+
+        expect(refusal).toBeInstanceOf(RepositoryError)
+        expect((refusal as RepositoryError).code).toBe(
+          'TRIP_MEMBER_NOT_IN_WORKSPACE',
+        )
+        // The tenant column on `trip_members` would have made the row invisible either way; what
+        // matters is that the row was never written, so B's owner never becomes A's collaborator.
+        expect(await listTripMembers(alpha.tenant.scope, alpha.tripId)).toEqual(
+          before,
+        )
+      })
     })
 
     /**

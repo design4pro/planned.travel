@@ -359,6 +359,33 @@ async function enqueueTravelStats(
   }
 }
 
+/**
+ * The statistics fan-out, for a membership change rather than a trip write.
+ *
+ * A membership change is a statistics write (PRD #104 decision 11): the person added or removed has
+ * a different trip count now, and nobody else does. So this takes the recipients rather than reading
+ * them — the added person is not yet a member when the add is enqueued, and the removed one is no
+ * longer one.
+ *
+ * Deliberately a wrapper and not a second implementation. {@link enqueueTravelStats} and
+ * {@link affectedStatYears} are module-private and carry three decisions in their doc comment — the
+ * recipient set, the collapsing envelope ids, and a queue refusal never failing the write — and
+ * `docs/SPEC.md` §8 gives a concept one owner. This adds no arithmetic of its own, which is why the
+ * module's own behaviour is unchanged by its existence.
+ */
+export async function enqueueTripStatsFor(
+  scope: TenantScope,
+  trip: Trip,
+  recipients: ReadonlyArray<string>,
+): Promise<void> {
+  await enqueueTravelStats(
+    scope,
+    trip.id,
+    affectedStatYears(trip.startDate),
+    recipients,
+  )
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Deleting a trip — what it carries, and what it leaves in the bucket
  * ---------------------------------------------------------------------------------------------- */

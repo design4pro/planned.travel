@@ -264,11 +264,7 @@ async function seedTrip(
  * the table — a row predating the guard, or a member whose workspace account has gone — so the
  * assertion is worth keeping and the fixture has to build the state the writer now refuses to.
  */
-async function dropTripMember(
-  world: World,
-  tripId: string,
-  userId: string,
-): Promise<void> {
+async function dropTripMember(tripId: string, userId: string): Promise<void> {
   await harness.db
     .delete(tripMembers)
     .where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, userId)))
@@ -748,7 +744,7 @@ describe('sweepReminders', () => {
     const members = await listMembers(alpha.tenant.scope)
     const second = members.find((row) => row.userId === alpha.otherId)
     await changeMemberRole(alpha.tenant.scope, second?.id ?? '', 'admin')
-    await dropTripMember(alpha, tripId, alpha.ownerId)
+    await dropTripMember(tripId, alpha.ownerId)
 
     const { result } = await sweep(memoryKv(), recordingQueue())
 
@@ -761,7 +757,7 @@ describe('sweepReminders', () => {
 
   it('skips a due trip with no members and leaves no marker behind', async () => {
     const tripId = await seedTrip(alpha)
-    await dropTripMember(alpha, tripId, alpha.ownerId)
+    await dropTripMember(tripId, alpha.ownerId)
     const kv = memoryKv()
 
     const { result } = await sweep(kv, recordingQueue())
