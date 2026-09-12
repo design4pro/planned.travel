@@ -744,7 +744,9 @@ describe('a day that carries a journey', () => {
         <DaySection day={day} categoryFor={categoryFor} />
       </DndContext>,
     )
-    expect(screen.getByRole('button', { name: 'Tokyo to Kyoto' })).toBeDefined()
+    expect(
+      screen.getByRole('button', { name: 'Reorder Tokyo to Kyoto' }),
+    ).toBeDefined()
   })
 
   it('offers the travelling row none, and says which part of the journey it is', () => {
@@ -768,7 +770,9 @@ describe('a day that carries a journey', () => {
         <DaySection day={crossing} categoryFor={categoryFor} />
       </DndContext>,
     )
-    expect(screen.queryByRole('button', { name: 'Tokyo to Kyoto' })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Reorder Tokyo to Kyoto' }),
+    ).toBeNull()
     expect(screen.getByText('Under way')).toBeDefined()
   })
 

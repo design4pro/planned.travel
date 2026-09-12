@@ -116,6 +116,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Na cestě',
   'plan.transport.phase.journey.arriving': 'Konec',
   'plan.transport.label': 'Z {from} do {to}',
+  'plan.transport.drag': 'Změnit pořadí: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Společně',
   'collab.empty': 'Zatím nic nesdíleno',

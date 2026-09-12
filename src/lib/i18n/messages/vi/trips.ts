@@ -116,6 +116,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Đang đi',
   'plan.transport.phase.journey.arriving': 'Kết thúc',
   'plan.transport.label': 'Từ {from} đến {to}',
+  'plan.transport.drag': 'Sắp xếp lại {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Cùng nhau',
   'collab.empty': 'Chưa chia sẻ gì',

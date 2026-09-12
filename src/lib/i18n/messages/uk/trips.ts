@@ -116,6 +116,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'У дорозі',
   'plan.transport.phase.journey.arriving': 'Кінець',
   'plan.transport.label': 'З {from} до {to}',
+  'plan.transport.drag': 'Змінити порядок: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Разом',
   'collab.empty': 'Ще нічим не поділилися',

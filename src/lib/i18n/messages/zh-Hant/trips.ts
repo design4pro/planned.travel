@@ -114,6 +114,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': '途中',
   'plan.transport.phase.journey.arriving': '結束',
   'plan.transport.label': '{from} 至 {to}',
+  'plan.transport.drag': '重新排序{journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': '一起',
   'collab.empty': '還沒有分享任何內容',

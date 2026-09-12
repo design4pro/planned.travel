@@ -204,6 +204,13 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Under way',
   'plan.transport.phase.journey.arriving': 'Ends',
   'plan.transport.label': '{from} to {to}',
+  /**
+   * The journey's drag handle, named as an action the way the note's is — and naming
+   * the journey too, because the row's own text already says "Tokyo to Kyoto" and a
+   * handle that says only that is indistinguishable from the words beside it.
+   * `{journey}` is `plan.transport.label` as the row renders it.
+   */
+  'plan.transport.drag': 'Reorder {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Collab',
   'collab.empty': 'Nothing shared yet',

@@ -116,6 +116,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Σε εξέλιξη',
   'plan.transport.phase.journey.arriving': 'Λήξη',
   'plan.transport.label': 'Από {from} προς {to}',
+  'plan.transport.drag': 'Αναδιάταξη: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Μαζί',
   'collab.empty': 'Δεν έχει μοιραστεί τίποτα ακόμη',

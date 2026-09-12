@@ -116,6 +116,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Dalam perjalanan',
   'plan.transport.phase.journey.arriving': 'Selesai',
   'plan.transport.label': 'Dari {from} ke {to}',
+  'plan.transport.drag': 'Ubah urutan {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Bersama',
   'collab.empty': 'Belum ada yang dibagikan',
