@@ -109,7 +109,13 @@ authorisation decision of its own.
 
 > Walking the route by hand afterwards found three defects no test covered — the invite trigger's
 > placeholder, a member's name squeezed to nothing at 390px, and focus dropped on `<body>` after a
-> removal. Fixed in 5f4c71bd, the focus behaviour measured in a browser rather than assumed.
+> removal. Fixed in ac63ddd2, the focus behaviour measured in a browser rather than assumed.
+>
+> Photographing it for the pull request found two more, fixed in 97606b5a: `DialogHeader`'s
+> `pe-14` is overridden by its own `sm:px-6` from 640px up, so a long dialog title ran under the
+> close button (older than this branch, and every dialog's); and the last-owner hint was shown to
+> readers who were never offered the control it explains. The non-owner e2e case now counts the
+> hint's absence alongside the controls.
 
 ### Phase 5: the gate
 
