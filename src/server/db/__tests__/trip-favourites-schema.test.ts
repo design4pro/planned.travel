@@ -9,7 +9,10 @@
  *    favourite, it is the same one, so the engine refuses it as a primary-key collision rather than
  *    as a unique-index one. `trip-lifecycle.test.ts` covers the behaviour that rests on that refusal
  *    — one row however many times it is set, and the double-click race — and stays the witness for
- *    it; what it cannot see is *which* constraint answered, because both answer identically.
+ *    it; what it cannot see is *which* constraint answered, because both answer identically. That
+ *    is the seam checked below, through `isUniqueConstraintViolation` itself: the sub-code moved
+ *    from `SQLITE_CONSTRAINT_UNIQUE` to `SQLITE_CONSTRAINT_PRIMARYKEY`, and `setFavourite` swallows
+ *    the race only for as long as that predicate keeps recognising it.
  * 2. **The shape decides the access flavour.** `src/server/repos/base.ts` splits `KeyedTenantTable`
  *    from the keyless class at the type level, so an `id` column reappearing here would not fail a
  *    behavioural test — it would quietly put `createTenantRepository` back within reach and take
@@ -23,6 +26,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { tripFavourites } from '#/server/db/schema'
+import { isUniqueConstraintViolation } from '#/server/repos/context'
 import {
   physicalColumns,
   physicalIndexNames,
@@ -76,7 +80,13 @@ describe('trip_favourites', () => {
     it('puts exactly those columns on disk, and drops the unique index with the id', () => {
       const sqlite = replayMigrations()
       try {
-        expect(physicalColumns(sqlite, 'trip_favourites')).toEqual(COLUMNS)
+        // Sorted on both sides, as `reservation-schema.test.ts` sorts: the physical order is
+        // whatever the recreate wrote, the declared order is whatever reads best in `schema.ts`,
+        // and a name-driven ORM makes only the set meaningful. Copied before sorting, because
+        // `COLUMNS` is shared with the declaration assertion above, which does read order.
+        expect(physicalColumns(sqlite, 'trip_favourites').sort()).toEqual(
+          [...COLUMNS].sort(),
+        )
         expect(physicalIndexNames(sqlite, 'trip_favourites')).not.toContain(
           'trip_favourites_trip_user_unq',
         )
@@ -110,7 +120,18 @@ describe('trip_favourites', () => {
 
         sqlite.exec(insert)
 
-        expect(() => sqlite.exec(insert)).toThrow(/UNIQUE constraint failed/i)
+        // Through the predicate `setFavourite` actually swallows the refusal with, not through a
+        // regex that happens to look like it: the key now raises SQLITE_CONSTRAINT_PRIMARYKEY where
+        // the dropped index raised SQLITE_CONSTRAINT_UNIQUE, and the double-click race survives only
+        // because `isUniqueConstraintViolation` recognises both.
+        let refusal: unknown
+        try {
+          sqlite.exec(insert)
+        } catch (cause) {
+          refusal = cause
+        }
+        expect(refusal).toBeDefined()
+        expect(isUniqueConstraintViolation(refusal)).toBe(true)
       } finally {
         sqlite.close()
       }
