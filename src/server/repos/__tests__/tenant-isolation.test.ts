@@ -3312,6 +3312,13 @@ describe('tenant isolation', () => {
 
     it('answers a demoted owner with FORBIDDEN, not NOT_FOUND', async () => {
       const scope = alpha.tenant.scope
+      // A second owner first: since `01-S6a` `updateTripMember` refuses to demote a trip's last
+      // one, and the demotion here is only the setup for the refusal this case is about.
+      await addTripMember(scope, {
+        tripId: alpha.tripId,
+        userId: await alpha.tenant.addUser('Co-owner of A'),
+        role: 'owner',
+      })
       const membership = (await listTripMembers(scope, alpha.tripId)).find(
         (row) => row.userId === alpha.tenant.ownerUserId,
       )
@@ -3342,6 +3349,12 @@ describe('tenant isolation', () => {
 
     it('refuses a delete to a demoted owner, and the trip survives it', async () => {
       const scope = alpha.tenant.scope
+      // As above: the last-owner guard would refuse the demotion, which is not what is on trial.
+      await addTripMember(scope, {
+        tripId: alpha.tripId,
+        userId: await alpha.tenant.addUser('Co-owner of A'),
+        role: 'owner',
+      })
       const membership = (await listTripMembers(scope, alpha.tripId)).find(
         (row) => row.userId === alpha.tenant.ownerUserId,
       )
