@@ -897,8 +897,11 @@ export async function recomputeTravelStats(
    * plans sell unlimited trips. A traveller with a hundred trips in one calendar year therefore made
    * the four `IN (...)` reads below fail against D1 while passing every test here — cron and the
    * queue consumer are the only callers, and the `sqlite-proxy` harness the suite drives enforces no
-   * such ceiling (#381). As a sub-select it binds five parameters whatever the cohort size: this
-   * organization, the two year bounds, and the organization and user of the membership half.
+   * such ceiling (#381). The all-time row is the one that breaks first, because its cohort is a
+   * lifetime rather than a year. As a sub-select this side binds five parameters on a year row and
+   * three on the all-time one, however many trips the traveller is on — this organization, the two
+   * year bounds where there are any, and the organization and user of the membership half — six and
+   * four for the whole statement once the consumer has bound its own organization.
    *
    * Both are functions rather than values because each consumer gets its own sub-select: drizzle's
    * query builders are stateful and thenable, so sharing one across five queries would be passing

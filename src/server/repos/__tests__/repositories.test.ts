@@ -817,23 +817,40 @@ describe('repositories', () => {
         }
       }
 
+      const widestStatement = (): number =>
+        Math.max(
+          ...harness.statements.map((sql) => (sql.match(/\?/g) ?? []).length),
+        )
+
       harness.statements.length = 0
-      const stats = await recomputeTravelStats(
+      const year = await recomputeTravelStats(
         tenant.scope,
         tenant.ownerUserId,
         2026,
       )
 
-      const widest = Math.max(
-        ...harness.statements.map((sql) => (sql.match(/\?/g) ?? []).length),
-      )
-      expect(widest).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+      expect(widestStatement()).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+      expect(year.tripCount).toBe(cohort)
+      expect(year.dayCount).toBe(cohort)
+      expect(year.placeCount).toBe(cohort)
+      expect(year.cityCount).toBe(3)
+      expect(year.spendMinor).toBe(900)
 
-      expect(stats.tripCount).toBe(cohort)
-      expect(stats.dayCount).toBe(cohort)
-      expect(stats.placeCount).toBe(cohort)
-      expect(stats.cityCount).toBe(3)
-      expect(stats.spendMinor).toBe(900)
+      // The all-time row runs the same four reads over a cohort that is a lifetime rather than a
+      // year, so it is the one that crosses the ceiling first — and it is a different branch of
+      // `recomputeTravelStats`, because `statYear = 0` drops the date bounds from the predicate.
+      harness.statements.length = 0
+      const allTime = await recomputeTravelStats(
+        tenant.scope,
+        tenant.ownerUserId,
+      )
+
+      expect(widestStatement()).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+      expect(allTime.tripCount).toBe(cohort)
+      expect(allTime.dayCount).toBe(cohort)
+      expect(allTime.placeCount).toBe(cohort)
+      expect(allTime.cityCount).toBe(3)
+      expect(allTime.spendMinor).toBe(900)
     })
   })
 
