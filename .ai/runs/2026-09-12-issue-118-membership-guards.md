@@ -95,20 +95,20 @@ Both land **before** the guard they make room for, so the suite is never red bet
 
 ### Phase 1: free the fixtures
 
-- [ ] 1.1 `reminders.test.ts` — `dropTripMember` stops routing through `removeTripMember`
-- [ ] 1.2 `tenant-isolation.test.ts` — the two demotion cases gain a second owner
+- [x] 1.1 `reminders.test.ts` — `dropTripMember` stops routing through `removeTripMember` — dc6b1234
+- [x] 1.2 `tenant-isolation.test.ts` — the two demotion cases gain a second owner — dc6b1234
 
 ### Phase 2: the ordering and the four guards
 
-- [ ] 2.1 `listTripMembers` breaks the `created_at` tie on `id`
-- [ ] 2.2 the workspace guard on `addTripMember` (`TRIP_MEMBER_NOT_IN_WORKSPACE`)
-- [ ] 2.3 the last-owner guard on `removeTripMember` and `updateTripMember` (`TRIP_LAST_OWNER`)
-- [ ] 2.4 the owner assert on all three writers, with the self-removal exemption
+- [x] 2.1 `listTripMembers` breaks the `created_at` tie on `id` — d97569aa
+- [x] 2.2 the workspace guard on `addTripMember` (`TRIP_MEMBER_NOT_IN_WORKSPACE`) — d97569aa
+- [x] 2.3 the last-owner guard on `removeTripMember` and `updateTripMember` (`TRIP_LAST_OWNER`) — d97569aa
+- [x] 2.4 the owner assert on all three writers, with the self-removal exemption — d97569aa
 
 ### Phase 3: the read model and the fan-out wrapper
 
-- [ ] 3.1 `listTripParticipants` and the `TripParticipant` union
-- [ ] 3.2 `enqueueTripStatsFor` exported from `trip-lifecycle.ts`
+- [x] 3.1 `listTripParticipants` and the `TripParticipant` union — d97569aa
+- [x] 3.2 `enqueueTripStatsFor` exported from `trip-lifecycle.ts` — d97569aa
 
 ### Phase 4: the gate
 
