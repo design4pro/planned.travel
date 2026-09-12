@@ -219,6 +219,7 @@ import {
   shareLinksRepository,
   startTripCopy,
   tripMembersRepository,
+  tripMemberUserIds,
   tripRolesFor,
   tripsRepository,
   updateTrip,
@@ -3401,6 +3402,42 @@ describe('tenant isolation', () => {
         // matters is that the row was never written, so B's owner never becomes A's collaborator.
         expect(await listTripMembers(alpha.tenant.scope, alpha.tripId)).toEqual(
           before,
+        )
+      })
+
+      it('counts none of a foreign trip’s people through tripMemberUserIds', async () => {
+        // The projection `readTripForDelete` reads the delete dialog's member count off. An
+        // unscoped one would hand A both how many people are on B's trip and who they are.
+        expect(await tripMemberUserIds(alpha.tenant.scope, beta.tripId)).toEqual(
+          [],
+        )
+      })
+
+      it('refuses both membership writes on a foreign membership row, and leaves it standing', async () => {
+        // Each verb resolves its trip from the membership row rather than from an argument, so the
+        // tenant filter has to hold on `requireById` — before `requireTrip`, before the role assert
+        // and before the last-owner guard, none of which would ever be reached with B's row.
+        const betaMembership = (
+          await listTripMembers(beta.tenant.scope, beta.tripId)
+        )[0]
+        expect(betaMembership).toBeDefined()
+
+        for (const attempt of [
+          () =>
+            updateTripMember(alpha.tenant.scope, betaMembership.id, {
+              role: 'viewer',
+            }),
+          () => removeTripMember(alpha.tenant.scope, betaMembership.id),
+        ]) {
+          // A `NotFoundError` and not a `FORBIDDEN`: a row of another tenant is indistinguishable
+          // from a row that does not exist (ADR 0007), so neither verb confirms the id is real.
+          expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+        }
+
+        const after = await listTripMembers(beta.tenant.scope, beta.tripId)
+        expect(after.map((row) => row.id)).toContain(betaMembership.id)
+        expect(after.find((row) => row.id === betaMembership.id)?.role).toBe(
+          betaMembership.role,
         )
       })
     })

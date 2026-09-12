@@ -1508,19 +1508,44 @@ export class TripMemberNotInWorkspaceError extends RepositoryError {
   }
 }
 
-/** The trip's `owner` memberships other than `exceptMemberId` — the last-owner guard's counter. */
-async function countTripOwners(
+/**
+ * "This trip has an `owner` other than this membership row", as a predicate rather than as a count.
+ *
+ * The last-owner guard has to check **and** act in one statement, and this is the half that makes
+ * that possible. A `count()` followed by a write is check-then-act: two owners leaving the same trip
+ * in the same instant each read the other, each proceeds, and the trip is left with nobody who may
+ * write to it — precisely the state {@link TripLastOwnerError} exists to prevent, reached by racing
+ * the code that raises it, and not self-healing: `assertTripRole(scope, tripId, ['owner'])` then
+ * refuses `updateTrip`, `archiveTrip`, `deleteTrip` and the visibility switch for ever.
+ *
+ * D1 has no interactive transaction to hold a count across a write, so the count moves *into* the
+ * write's `WHERE`, where SQLite evaluates it inside the statement's own implicit transaction. Zero
+ * rows affected is then the refusal, and the two callers below are serialised by the engine rather
+ * than by hope.
+ *
+ * The sub-select reads `trip_members` while the statement around it writes `trip_members`. That is
+ * safe because nothing here correlates to the outer row — both arguments are values the caller has
+ * already read — so the inner `FROM` shadowing the outer table changes no meaning. Both halves are
+ * `tenantFilter()`-bound, as in {@link readableTripFilter}.
+ */
+function anotherOwnerExists(
   scope: TenantScope,
   tripId: string,
   exceptMemberId: string,
-): Promise<number> {
-  return tripMembersRepository.count(
-    scope,
-    allOf(
-      eq(tripMembers.tripId, tripId),
-      eq(tripMembers.role, 'owner'),
-      ne(tripMembers.id, exceptMemberId),
-    ),
+): SQL {
+  return exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(tripMembers)
+      .where(
+        tenantFilter(
+          scope,
+          tripMembers,
+          eq(tripMembers.tripId, tripId),
+          eq(tripMembers.role, 'owner'),
+          ne(tripMembers.id, exceptMemberId),
+        ),
+      ),
   )
 }
 
@@ -1571,13 +1596,24 @@ export async function updateTripMember(
   const patch = definedOnly(updateTripMemberInput.parse(input))
   const demotesAnOwner =
     row.role === 'owner' && patch.role !== undefined && patch.role !== 'owner'
-  if (
-    demotesAnOwner &&
-    (await countTripOwners(scope, row.tripId, row.id)) === 0
-  ) {
+  if (!demotesAnOwner) {
+    return tripMembersRepository.requireUpdate(scope, memberId, patch)
+  }
+
+  // The guard travels with the write rather than ahead of it — see `anotherOwnerExists`. `patch`
+  // carries `role`, so it is never empty and `updateWhere` never degrades into a read.
+  const updated = await tripMembersRepository.updateWhere(
+    scope,
+    allOf(
+      eq(tripMembers.id, memberId),
+      anotherOwnerExists(scope, row.tripId, row.id),
+    ),
+    patch,
+  )
+  if (updated.length === 0) {
     throw new TripLastOwnerError()
   }
-  return tripMembersRepository.requireUpdate(scope, memberId, patch)
+  return updated[0]
 }
 
 /**
@@ -1600,13 +1636,23 @@ export async function removeTripMember(
   if (row.userId !== scope.ctx.userId) {
     await assertTripRole(scope, row.tripId, ['owner'])
   }
-  if (
-    row.role === 'owner' &&
-    (await countTripOwners(scope, row.tripId, row.id)) === 0
-  ) {
+  if (row.role !== 'owner') {
+    await tripMembersRepository.requireRemove(scope, memberId)
+    return
+  }
+
+  // As in `updateTripMember`: the condition is part of the delete, so the last owner cannot be
+  // removed by two requests that each saw the other.
+  const removed = await tripMembersRepository.removeWhere(
+    scope,
+    allOf(
+      eq(tripMembers.id, memberId),
+      anotherOwnerExists(scope, row.tripId, row.id),
+    ),
+  )
+  if (removed === 0) {
     throw new TripLastOwnerError()
   }
-  await tripMembersRepository.requireRemove(scope, memberId)
 }
 
 /**
