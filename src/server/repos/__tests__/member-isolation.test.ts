@@ -27,13 +27,18 @@ import {
   deleteTrip,
   getTrip,
   getTripBySlug,
+  listTripMembers,
+  listTripParticipants,
   listTrips,
   listTripsForUser,
   listUpcomingTrips,
+  removeTripMember,
   requireTrip,
   restoreTrip,
   startTripCopy,
+  TripRoleError,
   updateTrip,
+  updateTripMember,
 } from '../trips'
 import {
   countFavourites,
@@ -41,7 +46,12 @@ import {
   setFavourite,
 } from '../trip-favourites'
 import { listTripDayTransports, reorderDayTransports } from '../transports'
-import { captureError, createHarness, subscribeTenant } from './harness'
+import {
+  captureError,
+  createHarness,
+  memberUserIds,
+  subscribeTenant,
+} from './harness'
 import type { Harness, SeededTenant } from './harness'
 import type { TenantScope } from '../base'
 
@@ -213,6 +223,35 @@ describe('member isolation', () => {
       ).toBeInstanceOf(NotFoundError)
     })
 
+    it('refuses the same reorder when the trip is handed in already resolved', async () => {
+      // `reorderDayTransports` takes an optional third argument — the trip its caller has already
+      // resolved — so that the planner's handler, which resolves it to refuse an archived trip,
+      // does not pay for the row twice. A `Trip` is a row and not a proof, so this asserts what
+      // happens when the proof is false: the row read in the owner's scope, handed in by somebody
+      // who may not see the trip at all.
+      const asTheOwnerSeesIt = await requireTrip(alpha.scope, fixture.tripId)
+
+      // Still refused. The visibility guard is skipped, so the refusal comes from the role
+      // assertion behind it and says `FORBIDDEN` rather than `NotFoundError` — the one thing this
+      // argument costs, and the reason it is for a caller that has run `requireTrip` and no other.
+      expect(
+        await captureError(() =>
+          reorderDayTransports(
+            stranger,
+            {
+              tripId: fixture.tripId,
+              dayId: fixture.dayId,
+              items: [{ kind: 'note', id: fixture.noteId }],
+            },
+            asTheOwnerSeesIt,
+          ),
+        ),
+      ).toBeInstanceOf(TripRoleError)
+
+      // A trip of another workspace is refused by the tenant filter whatever is handed in.
+      expect(await listTrips(stranger)).toEqual([])
+    })
+
     it('refuses a child write parented onto it', async () => {
       expect(
         await captureError(() =>
@@ -231,6 +270,60 @@ describe('member isolation', () => {
        * code this slice does not own. Recorded rather than silently omitted, and this case gains its
        * `createDayNote` line the day `01-S2` lands.
        */
+    })
+
+    it('refuses its people, and its visibility, to a non-member (01-S6a)', async () => {
+      // The people read is the same refusal as every other trip-scoped read, and for the same
+      // reason it has to resolve the trip first: an empty participant list would tell the reader
+      // the trip exists and nobody is on it.
+      expect(
+        await captureError(() =>
+          listTripParticipants(stranger, fixture.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // The visibility switch writes through `updateTrip`, so it answers the same way.
+      expect(
+        await captureError(() =>
+          updateTrip(stranger, fixture.tripId, { visibility: 'organization' }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect((await requireTrip(alpha.scope, fixture.tripId)).visibility).toBe(
+        'private',
+      )
+    })
+
+    it('refuses every membership write on it to a non-member (01-S6a)', async () => {
+      const ownerMembership = (
+        await listTripMembers(alpha.scope, fixture.tripId)
+      ).at(0)
+      if (ownerMembership === undefined) {
+        throw new Error('A trip must have its creator’s membership.')
+      }
+
+      // `addTripMember` names the trip id, so the trip is what gets resolved. The other two name a
+      // membership row id, which is tenant-visible but belongs to a trip this reader cannot see —
+      // the resolution order is what turns that into the same `NotFoundError` and not a
+      // `FORBIDDEN` that would confirm the trip is there.
+      for (const attempt of [
+        () =>
+          addTripMember(stranger, {
+            tripId: fixture.tripId,
+            userId: strangerId,
+            role: 'owner',
+          }),
+        () =>
+          updateTripMember(stranger, ownerMembership.id, { role: 'viewer' }),
+        () => removeTripMember(stranger, ownerMembership.id),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        (await listTripMembers(alpha.scope, fixture.tripId)).map(
+          (row) => row.userId,
+        ),
+      ).toEqual([alpha.ownerUserId])
     })
   })
 
@@ -292,6 +385,34 @@ describe('member isolation', () => {
       expect(error).toBeInstanceOf(RepositoryError)
       expect(error).not.toBeInstanceOf(NotFoundError)
       expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    })
+
+    it('and its people are readable, without enabling one write (01-S6a)', async () => {
+      // The half of ADR 0007 that is easy to get wrong in the other direction: organization
+      // visibility is a *read* grant. The participant list opens; nothing else does.
+      expect(
+        memberUserIds(
+          await listTripParticipants(stranger, fixture.tripId),
+        ),
+      ).toEqual([alpha.ownerUserId])
+
+      const visibilityRefusal = await captureError(() =>
+        updateTrip(stranger, fixture.tripId, { visibility: 'private' }),
+      )
+      expect((visibilityRefusal as RepositoryError).code).toBe('FORBIDDEN')
+
+      const inviteRefusal = await captureError(() =>
+        addTripMember(stranger, {
+          tripId: fixture.tripId,
+          userId: strangerId,
+          role: 'owner',
+        }),
+      )
+      expect((inviteRefusal as RepositoryError).code).toBe('FORBIDDEN')
+
+      expect((await requireTrip(alpha.scope, fixture.tripId)).visibility).toBe(
+        'organization',
+      )
     })
 
     it('but the writes are FORBIDDEN, because the reader is not its owner', async () => {
@@ -363,6 +484,81 @@ describe('member isolation', () => {
           (row) => row.sortOrder,
         ),
       ).toEqual(before)
+    })
+  })
+
+  /** `01-S6a` — the editor is the role the people screen has to refuse, not merely not offer. */
+  describe('once the stranger is added as an editor', () => {
+    beforeEach(async () => {
+      await addTripMember(alpha.scope, {
+        tripId: fixture.tripId,
+        userId: strangerId,
+        role: 'editor',
+      })
+    })
+
+    it('reads the trip’s people, because a collaborator may see who they collaborate with', async () => {
+      expect(
+        memberUserIds(
+          await listTripParticipants(stranger, fixture.tripId),
+        ),
+      ).toEqual([alpha.ownerUserId, strangerId])
+    })
+
+    it('is refused the visibility switch and every membership write with FORBIDDEN', async () => {
+      const ownerMembership = (
+        await listTripMembers(alpha.scope, fixture.tripId)
+      ).find((row) => row.userId === alpha.ownerUserId)
+      if (ownerMembership === undefined) {
+        throw new Error('A trip must have its creator’s membership.')
+      }
+      const invitedId = await alpha.addUser('Somebody the editor invited')
+
+      for (const attempt of [
+        () =>
+          updateTrip(stranger, fixture.tripId, { visibility: 'organization' }),
+        () =>
+          addTripMember(stranger, {
+            tripId: fixture.tripId,
+            userId: invitedId,
+            role: 'viewer',
+          }),
+        () =>
+          updateTripMember(stranger, ownerMembership.id, { role: 'viewer' }),
+        () => removeTripMember(stranger, ownerMembership.id),
+      ]) {
+        const error = await captureError(attempt)
+        expect(error).toBeInstanceOf(RepositoryError)
+        expect(error).not.toBeInstanceOf(NotFoundError)
+        expect((error as RepositoryError).code).toBe('FORBIDDEN')
+      }
+
+      const trip = await requireTrip(alpha.scope, fixture.tripId)
+      expect(trip.visibility).toBe('private')
+      expect(
+        (await listTripMembers(alpha.scope, fixture.tripId)).map(
+          (row) => row.userId,
+        ),
+      ).toEqual([alpha.ownerUserId, strangerId])
+    })
+
+    it('may still take themselves off the trip, which is not an administrative act', async () => {
+      const own = (await listTripMembers(alpha.scope, fixture.tripId)).find(
+        (row) => row.userId === strangerId,
+      )
+      if (own === undefined) {
+        throw new Error('The editor must have a membership row.')
+      }
+
+      await removeTripMember(stranger, own.id)
+
+      expect(
+        (await listTripMembers(alpha.scope, fixture.tripId)).map(
+          (row) => row.userId,
+        ),
+      ).toEqual([alpha.ownerUserId])
+      // And the private trip closes behind them.
+      expect(await canReadTrip(stranger, fixture.tripId)).toBe(false)
     })
   })
 })

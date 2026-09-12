@@ -30,7 +30,7 @@ import {
 import { appScope } from '../../../-server/context'
 
 import type { TenantScope } from '#/server/repos'
-import type { Transport, TransportLeg } from '#/server/db/types'
+import type { Transport, TransportLeg, Trip } from '#/server/db/types'
 
 /* -------------------------------------------------------------------------------------------------
  * Shapes
@@ -190,11 +190,12 @@ export const loadPlanTransports = createServerFn({ method: 'GET' })
  * archived trip is a record of something that happened, and the rails render read-only for one, so
  * this can afford to be a plain error.
  */
-async function writableTrip(scope: TenantScope, tripId: string): Promise<void> {
+async function writableTrip(scope: TenantScope, tripId: string): Promise<Trip> {
   const trip = await requireTrip(scope, tripId)
   if (trip.isArchived) {
     throw new Error('This trip is archived. Restore it before making changes.')
   }
+  return trip
 }
 
 /**
@@ -236,12 +237,13 @@ export const reorderDayTransportsFn = createServerFn({ method: 'POST' })
   .validator(reorderDayTransportsInput)
   .handler(async ({ data }): Promise<{ readonly placed: number }> => {
     const scope = await appScope()
-    await writableTrip(scope, data.tripId)
+    const trip = await writableTrip(scope, data.tripId)
 
     // The run as written, not as asked for: the repository drops an id it does not know and puts
     // back a known one the payload left out, so the request and the day on disk can differ — and
-    // the room, like the count, has to hear the disk.
-    const journeys = await reorderDayTransports(scope, data)
+    // the room, like the count, has to hear the disk. The trip goes with it: the repository keeps
+    // its own guard for every other caller and reads the row again only when it is not handed one.
+    const journeys = await reorderDayTransports(scope, data, trip)
     await mirrorDayJourneys(scope, data.tripId, data.dayId, journeys)
 
     return { placed: journeys.length }
