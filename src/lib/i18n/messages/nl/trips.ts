@@ -21,33 +21,50 @@ const messages = {
   'error.collab': 'Het gesprek kon niet worden geladen',
   'error.book': 'De boekingen konden niet worden geladen',
   'error.transports': 'De trajecten zijn niet geladen',
+  'error.people': 'De personen konden niet worden geladen',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reisroute',
   'plan.places': 'Plekken',
-  'plan.day.empty': 'Nog niets gepland — sleep hier een plek of een notitie naartoe',
+  'plan.day.empty':
+    'Nog niets gepland — sleep hier een plek of een notitie naartoe',
   'plan.move.refused.duplicate': '{name} staat al op die dag',
-  'plan.move.refused.duplicateBody': 'Een plek kan maar één keer per dag voorkomen. Verplaats hem naar een andere dag.',
+  'plan.move.refused.duplicateBody':
+    'Een plek kan maar één keer per dag voorkomen. Verplaats hem naar een andere dag.',
   'plan.move.refused.notInIdeas': 'Een notitie blijft in de dag',
-  'plan.move.refused.notInIdeasBody': 'Ideeën zijn plekken die op een dag wachten. Een notitie hoort bij de dag waarvoor ze is geschreven.',
+  'plan.move.refused.notInIdeasBody':
+    'Ideeën zijn plekken die op een dag wachten. Een notitie hoort bij de dag waarvoor ze is geschreven.',
   'plan.move.refused.notInAnotherDay': 'Een notitie blijft op haar eigen dag',
-  'plan.move.refused.notInAnotherDayBody': 'Notities kunnen nog niet naar een andere dag. Bewerk de notitie, of schrijf haar op de andere dag.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Notities kunnen nog niet naar een andere dag. Bewerk de notitie, of schrijf haar op de andere dag.',
   'plan.move.refused.journeyNotInIdeas': 'Een traject blijft in de dag',
-  'plan.move.refused.journeyNotInIdeasBody': 'Ideeën zijn plekken die op een dag wachten. Een traject hoort bij de dag waarop het plaatsvindt.',
-  'plan.move.refused.journeyNotInAnotherDay': 'Een traject blijft op zijn eigen dag',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'De dag van een traject komt uit zijn datums. Pas ze aan op het tabblad Trajecten.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Ideeën zijn plekken die op een dag wachten. Een traject hoort bij de dag waarop het plaatsvindt.',
+  'plan.move.refused.journeyNotInAnotherDay':
+    'Een traject blijft op zijn eigen dag',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'De dag van een traject komt uit zijn datums. Pas ze aan op het tabblad Trajecten.',
   'plan.move.refused.journeyTimed': '{name} vertrekt om {time}',
-  'plan.move.refused.journeyTimedBody': 'Een vertrektijd hoort bij de dienstregeling, niet bij het plan. Zet het traject waar zijn klok het neerzet.',
-  'plan.move.spoken.duplicate': '{name} is niet verplaatst. Die dag heeft hem al.',
-  'plan.move.spoken.notInIdeas': '{name} is niet verplaatst. Een notitie blijft in de dag.',
-  'plan.move.spoken.notInAnotherDay': '{name} is niet verplaatst. Een notitie blijft op haar eigen dag.',
-  'plan.move.spoken.timed': '{name} heeft {time}. We vragen of die tijd mag vervallen.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} is niet verplaatst. Een traject blijft in de dag.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} is niet verplaatst. Een traject blijft op zijn eigen dag.',
-  'plan.move.spoken.journeyTimed': '{name} is niet verplaatst. Het vertrekt om {time}.',
+  'plan.move.refused.journeyTimedBody':
+    'Een vertrektijd hoort bij de dienstregeling, niet bij het plan. Zet het traject waar zijn klok het neerzet.',
+  'plan.move.spoken.duplicate':
+    '{name} is niet verplaatst. Die dag heeft hem al.',
+  'plan.move.spoken.notInIdeas':
+    '{name} is niet verplaatst. Een notitie blijft in de dag.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} is niet verplaatst. Een notitie blijft op haar eigen dag.',
+  'plan.move.spoken.timed':
+    '{name} heeft {time}. We vragen of die tijd mag vervallen.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} is niet verplaatst. Een traject blijft in de dag.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} is niet verplaatst. Een traject blijft op zijn eigen dag.',
+  'plan.move.spoken.journeyTimed':
+    '{name} is niet verplaatst. Het vertrekt om {time}.',
   'plan.move.error.save': 'Die verplaatsing is niet opgeslagen',
   'plan.move.error.retry': 'Probeer het zo meteen opnieuw.',
   'plan.move.dropTime.title': '{name} verplaatsen en {time} laten vervallen?',
-  'plan.move.dropTime.body': 'Deze plek spreekt de tijd erop tegen. Hierheen verplaatsen wist de tijd — de nieuwe volgorde en de gewiste tijd worden samen opgeslagen.',
+  'plan.move.dropTime.body':
+    'Deze plek spreekt de tijd erop tegen. Hierheen verplaatsen wist de tijd — de nieuwe volgorde en de gewiste tijd worden samen opgeslagen.',
   'plan.move.dropTime.confirm': 'Verplaatsen en tijd wissen',
   'plan.move.dropTime.cancel': 'Laat staan waar het staat',
   /* --------------------------------------------------- a day's own notes */
@@ -116,6 +133,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Onderweg',
   'plan.transport.phase.journey.arriving': 'Einde',
   'plan.transport.label': 'Van {from} naar {to}',
+  'plan.transport.drag': 'Herschikken: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Samen',
   'collab.empty': 'Nog niets gedeeld',
@@ -178,6 +196,43 @@ const messages = {
     one: 'over {priced} traject met prijs',
     other: 'over {priced} trajecten met prijs',
   },
+  'people.title': 'Personen',
+  'people.description': 'Wie er op deze reis is, en wie de reis kan vinden',
+  'people.members.title': 'Op deze reis',
+  'people.members.empty': 'Niemand van deze reis zit nog in deze werkruimte',
+  'people.role.label': 'Rol',
+  'people.role.owner': 'Eigenaar',
+  'people.role.editor': 'Bewerker',
+  'people.role.viewer': 'Lezer',
+  'people.you': 'Jij',
+  'people.owner.hint': 'Een reis houdt altijd minstens één eigenaar',
+  'people.remove.action': '{name} van deze reis halen',
+  'people.remove.title': '{name} van deze reis halen?',
+  'people.remove.body':
+    'Diegene verliest meteen toegang tot de reisroute. Wat is toegevoegd, blijft op de reis.',
+  'people.remove.confirm': 'Verwijderen',
+  'people.leave.action': 'Deze reis verlaten',
+  'people.leave.title': 'Deze reis verlaten?',
+  'people.leave.body':
+    'Je verliest de toegang tot de reisroute totdat iemand van de reis je weer toevoegt.',
+  'people.leave.confirm': 'Verlaten',
+  'people.cancel': 'Annuleren',
+  'people.invite.title': 'Iemand toevoegen',
+  'people.invite.placeholder': 'Zoek de mensen in deze werkruimte',
+  'people.invite.action': 'Aan de reis toevoegen',
+  'people.invite.role': 'Doet mee als',
+  'people.invite.empty': 'Iedereen in deze werkruimte is al op deze reis',
+  'people.invite.emptyHint':
+    'Eerst komt er iemand nieuw in de werkruimte, bij Instellingen',
+  'people.visibility.title': 'Wie deze reis kan vinden',
+  'people.visibility.switch': 'Zichtbaar voor iedereen in de werkruimte',
+  'people.visibility.private': 'Alleen de mensen die hier staan zien deze reis',
+  'people.visibility.organization':
+    'Iedereen in deze werkruimte kan deze reis openen',
+  'people.visibility.public': 'Deze reis is gedeeld met een openbare link',
+  'people.error.lastOwner':
+    'Een reis houdt minstens één eigenaar. Maak eerst iemand anders eigenaar.',
+  'people.error.notInWorkspace': 'Die persoon zit niet in deze werkruimte',
 } satisfies TranslationOf<typeof En>
 
 export default messages

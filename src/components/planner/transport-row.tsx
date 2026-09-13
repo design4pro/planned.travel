@@ -120,7 +120,10 @@ export function TransportRow({
         <button
           ref={setActivatorNodeRef}
           type="button"
-          aria-label={name}
+          // The action *and* the journey: the row's own text already reads "Tokyo to
+          // Kyoto", so a handle named only that is a control a reader cannot tell from
+          // the words beside it. `NoteRow`'s handle names its action the same way.
+          aria-label={t('trips.plan.transport.drag', { journey: name })}
           // Not `disabled` while pending, for `StopRow`'s reason: a disabled button cannot
           // hold focus, so a keyboard drop would drop the reader's focus with it.
           className={cn(

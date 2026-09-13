@@ -10,7 +10,7 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
-import { TripActionsMenu } from '../trip-actions'
+import { TripActionsMenu, useTripFavourite } from '../trip-actions'
 import { tripCard } from './fixtures'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -46,11 +46,20 @@ vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
 
 afterEach(cleanup)
 
+/**
+ * The star now belongs to whoever renders the menu — `TripTile` in the product, this harness here —
+ * so the suite mounts the menu the way the tile does rather than with a hand-built stand-in that
+ * could disagree with the real hook.
+ */
+function Menu({ trip }: { trip: TripCard }) {
+  return <TripActionsMenu trip={trip} favourite={useTripFavourite(trip)} />
+}
+
 async function openMenu(trip: TripCard): Promise<Array<string>> {
   const user = userEvent.setup()
   render(
     <I18nProvider locale="en" messages={EN}>
-      <TripActionsMenu trip={trip} />
+      <Menu trip={trip} />
     </I18nProvider>,
   )
   await user.click(

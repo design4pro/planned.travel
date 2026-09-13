@@ -21,33 +21,51 @@ const messages = {
   'error.collab': 'Η συνομιλία δεν φορτώθηκε',
   'error.book': 'Οι κρατήσεις δεν φορτώθηκαν',
   'error.transports': 'Οι μετακινήσεις δεν φορτώθηκαν',
+  'error.people': 'Τα άτομα δεν φορτώθηκαν',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Πρόγραμμα',
   'plan.places': 'Τοποθεσίες',
-  'plan.day.empty': 'Τίποτα προγραμματισμένο — σύρε εδώ ένα μέρος ή μια σημείωση',
+  'plan.day.empty':
+    'Τίποτα προγραμματισμένο — σύρε εδώ ένα μέρος ή μια σημείωση',
   'plan.move.refused.duplicate': 'Το {name} υπάρχει ήδη σε εκείνη την ημέρα',
-  'plan.move.refused.duplicateBody': 'Ένα μέρος μπορεί να εμφανίζεται μία φορά ανά ημέρα. Μετακινήστε το σε άλλη ημέρα.',
+  'plan.move.refused.duplicateBody':
+    'Ένα μέρος μπορεί να εμφανίζεται μία φορά ανά ημέρα. Μετακινήστε το σε άλλη ημέρα.',
   'plan.move.refused.notInIdeas': 'Η σημείωση μένει μέσα στην ημέρα',
-  'plan.move.refused.notInIdeasBody': 'Οι ιδέες είναι μέρη που περιμένουν ημέρα. Η σημείωση ανήκει στην ημέρα για την οποία γράφτηκε.',
+  'plan.move.refused.notInIdeasBody':
+    'Οι ιδέες είναι μέρη που περιμένουν ημέρα. Η σημείωση ανήκει στην ημέρα για την οποία γράφτηκε.',
   'plan.move.refused.notInAnotherDay': 'Η σημείωση μένει στη δική της ημέρα',
-  'plan.move.refused.notInAnotherDayBody': 'Οι σημειώσεις δεν μετακινούνται ακόμη μεταξύ ημερών. Επεξεργαστείτε τη σημείωση ή γράψτε την στην άλλη ημέρα.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Οι σημειώσεις δεν μετακινούνται ακόμη μεταξύ ημερών. Επεξεργαστείτε τη σημείωση ή γράψτε την στην άλλη ημέρα.',
   'plan.move.refused.journeyNotInIdeas': 'Η μετακίνηση μένει μέσα στην ημέρα',
-  'plan.move.refused.journeyNotInIdeasBody': 'Οι ιδέες είναι μέρη που περιμένουν ημέρα. Η μετακίνηση ανήκει στην ημέρα που γίνεται.',
-  'plan.move.refused.journeyNotInAnotherDay': 'Η μετακίνηση μένει στη δική της ημέρα',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Η ημέρα μιας μετακίνησης προκύπτει από τις ημερομηνίες της. Αλλάξτε τες στην καρτέλα Μετακινήσεις.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Οι ιδέες είναι μέρη που περιμένουν ημέρα. Η μετακίνηση ανήκει στην ημέρα που γίνεται.',
+  'plan.move.refused.journeyNotInAnotherDay':
+    'Η μετακίνηση μένει στη δική της ημέρα',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Η ημέρα μιας μετακίνησης προκύπτει από τις ημερομηνίες της. Αλλάξτε τες στην καρτέλα Μετακινήσεις.',
   'plan.move.refused.journeyTimed': 'Το {name} αναχωρεί στις {time}',
-  'plan.move.refused.journeyTimedBody': 'Η ώρα αναχώρησης ανήκει στο δρομολόγιο, όχι στο πλάνο. Βάλτε τη μετακίνηση εκεί που δείχνει το ρολόι της.',
-  'plan.move.spoken.duplicate': 'Το {name} δεν μετακινήθηκε. Εκείνη η ημέρα το έχει ήδη.',
-  'plan.move.spoken.notInIdeas': 'Το {name} δεν μετακινήθηκε. Η σημείωση μένει μέσα στην ημέρα.',
-  'plan.move.spoken.notInAnotherDay': 'Το {name} δεν μετακινήθηκε. Η σημείωση μένει στη δική της ημέρα.',
-  'plan.move.spoken.timed': 'Το {name} έχει ώρα {time}. Ρωτάμε αν θα την αφήσουμε.',
-  'plan.move.spoken.journeyNotInIdeas': 'Το {name} δεν μετακινήθηκε. Η μετακίνηση μένει μέσα στην ημέρα.',
-  'plan.move.spoken.journeyNotInAnotherDay': 'Το {name} δεν μετακινήθηκε. Η μετακίνηση μένει στη δική της ημέρα.',
-  'plan.move.spoken.journeyTimed': 'Το {name} δεν μετακινήθηκε. Αναχωρεί στις {time}.',
+  'plan.move.refused.journeyTimedBody':
+    'Η ώρα αναχώρησης ανήκει στο δρομολόγιο, όχι στο πλάνο. Βάλτε τη μετακίνηση εκεί που δείχνει το ρολόι της.',
+  'plan.move.spoken.duplicate':
+    'Το {name} δεν μετακινήθηκε. Εκείνη η ημέρα το έχει ήδη.',
+  'plan.move.spoken.notInIdeas':
+    'Το {name} δεν μετακινήθηκε. Η σημείωση μένει μέσα στην ημέρα.',
+  'plan.move.spoken.notInAnotherDay':
+    'Το {name} δεν μετακινήθηκε. Η σημείωση μένει στη δική της ημέρα.',
+  'plan.move.spoken.timed':
+    'Το {name} έχει ώρα {time}. Ρωτάμε αν θα την αφήσουμε.',
+  'plan.move.spoken.journeyNotInIdeas':
+    'Το {name} δεν μετακινήθηκε. Η μετακίνηση μένει μέσα στην ημέρα.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    'Το {name} δεν μετακινήθηκε. Η μετακίνηση μένει στη δική της ημέρα.',
+  'plan.move.spoken.journeyTimed':
+    'Το {name} δεν μετακινήθηκε. Αναχωρεί στις {time}.',
   'plan.move.error.save': 'Η μετακίνηση δεν αποθηκεύτηκε',
   'plan.move.error.retry': 'Δοκιμάστε ξανά σε λίγο.',
-  'plan.move.dropTime.title': 'Μετακίνηση του {name} και κατάργηση της ώρας {time};',
-  'plan.move.dropTime.body': 'Αυτή η θέση έρχεται σε αντίθεση με την ώρα που έχει. Η μετακίνηση εδώ σβήνει την ώρα — η νέα σειρά και η σβησμένη ώρα αποθηκεύονται μαζί.',
+  'plan.move.dropTime.title':
+    'Μετακίνηση του {name} και κατάργηση της ώρας {time};',
+  'plan.move.dropTime.body':
+    'Αυτή η θέση έρχεται σε αντίθεση με την ώρα που έχει. Η μετακίνηση εδώ σβήνει την ώρα — η νέα σειρά και η σβησμένη ώρα αποθηκεύονται μαζί.',
   'plan.move.dropTime.confirm': 'Μετακίνηση και κατάργηση ώρας',
   'plan.move.dropTime.cancel': 'Να μείνει όπου είναι',
   /* --------------------------------------------------- a day's own notes */
@@ -116,6 +134,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Σε εξέλιξη',
   'plan.transport.phase.journey.arriving': 'Λήξη',
   'plan.transport.label': 'Από {from} προς {to}',
+  'plan.transport.drag': 'Αναδιάταξη, {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Μαζί',
   'collab.empty': 'Δεν έχει μοιραστεί τίποτα ακόμη',
@@ -178,6 +197,49 @@ const messages = {
     one: 'σε {priced} μετακίνηση με τιμή',
     other: 'σε {priced} μετακινήσεις με τιμή',
   },
+  'people.title': 'Άτομα',
+  'people.description':
+    'Ποιοι είναι σε αυτό το ταξίδι και ποιοι μπορούν να το βρουν',
+  'people.members.title': 'Σε αυτό το ταξίδι',
+  'people.members.empty':
+    'Κανείς από αυτό το ταξίδι δεν είναι πια σε αυτόν τον χώρο εργασίας',
+  'people.role.label': 'Ρόλος',
+  'people.role.owner': 'Ιδιοκτήτης',
+  'people.role.editor': 'Συντάκτης',
+  'people.role.viewer': 'Αναγνώστης',
+  'people.you': 'Εσείς',
+  'people.owner.hint': 'Κάθε ταξίδι κρατά τουλάχιστον έναν ιδιοκτήτη',
+  'people.remove.action': 'Αφαίρεση του {name} από αυτό το ταξίδι',
+  'people.remove.title': 'Αφαίρεση του {name} από αυτό το ταξίδι;',
+  'people.remove.body':
+    'Χάνει αμέσως την πρόσβαση στο πρόγραμμα. Όσα πρόσθεσε μένουν στο ταξίδι.',
+  'people.remove.confirm': 'Αφαίρεση',
+  'people.leave.action': 'Αποχώρηση από το ταξίδι',
+  'people.leave.title': 'Αποχώρηση από αυτό το ταξίδι;',
+  'people.leave.body':
+    'Χάνετε την πρόσβαση στο πρόγραμμα μέχρι να σας προσθέσει ξανά κάποιος από το ταξίδι.',
+  'people.leave.confirm': 'Αποχώρηση',
+  'people.cancel': 'Άκυρο',
+  'people.invite.title': 'Προσθήκη ατόμου',
+  'people.invite.placeholder': 'Αναζητήστε άτομα σε αυτόν τον χώρο εργασίας',
+  'people.invite.action': 'Προσθήκη στο ταξίδι',
+  'people.invite.role': 'Συμμετέχει ως',
+  'people.invite.empty':
+    'Όλοι σε αυτόν τον χώρο εργασίας είναι ήδη σε αυτό το ταξίδι',
+  'people.invite.emptyHint':
+    'Πρώτα μπαίνει κάποιος νέος στον χώρο εργασίας, από τις Ρυθμίσεις',
+  'people.visibility.title': 'Ποιοι μπορούν να βρουν αυτό το ταξίδι',
+  'people.visibility.switch': 'Ορατό σε όλους στον χώρο εργασίας',
+  'people.visibility.private':
+    'Μόνο τα άτομα που αναφέρονται εδώ βλέπουν αυτό το ταξίδι',
+  'people.visibility.organization':
+    'Οποιοσδήποτε σε αυτόν τον χώρο εργασίας μπορεί να ανοίξει αυτό το ταξίδι',
+  'people.visibility.public':
+    'Αυτό το ταξίδι είναι κοινόχρηστο με δημόσιο σύνδεσμο',
+  'people.error.lastOwner':
+    'Κάθε ταξίδι κρατά τουλάχιστον έναν ιδιοκτήτη. Κάντε πρώτα κάποιον άλλον ιδιοκτήτη.',
+  'people.error.notInWorkspace':
+    'Αυτό το άτομο δεν είναι σε αυτόν τον χώρο εργασίας',
 } satisfies TranslationOf<typeof En>
 
 export default messages

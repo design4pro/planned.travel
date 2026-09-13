@@ -21,33 +21,46 @@ const messages = {
   'error.collab': 'No s’ha pogut carregar la conversa',
   'error.book': 'No s’han pogut carregar les reserves',
   'error.transports': 'Els trajectes no s’han carregat',
+  'error.people': 'No s’han pogut carregar les persones',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerari',
   'plan.places': 'Llocs',
   'plan.day.empty': 'Res planificat: arrossega aquí un lloc o una nota',
   'plan.move.refused.duplicate': '{name} ja és en aquell dia',
-  'plan.move.refused.duplicateBody': 'Un lloc només pot aparèixer un cop per dia. Mou-lo a un altre dia.',
+  'plan.move.refused.duplicateBody':
+    'Un lloc només pot aparèixer un cop per dia. Mou-lo a un altre dia.',
   'plan.move.refused.notInIdeas': 'Una nota es queda dins del dia',
-  'plan.move.refused.notInIdeasBody': 'Les idees són llocs que esperen un dia. Una nota pertany al dia per al qual es va escriure.',
+  'plan.move.refused.notInIdeasBody':
+    'Les idees són llocs que esperen un dia. Una nota pertany al dia per al qual es va escriure.',
   'plan.move.refused.notInAnotherDay': 'Una nota es queda al seu dia',
-  'plan.move.refused.notInAnotherDayBody': 'Encara no es poden moure notes entre dies. Editeu la nota o escriviu-la a l’altre dia.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Encara no es poden moure notes entre dies. Editeu la nota o escriviu-la a l’altre dia.',
   'plan.move.refused.journeyNotInIdeas': 'Un trajecte es queda dins del dia',
-  'plan.move.refused.journeyNotInIdeasBody': 'Les idees són llocs que esperen un dia. Un trajecte pertany al dia en què passa.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Les idees són llocs que esperen un dia. Un trajecte pertany al dia en què passa.',
   'plan.move.refused.journeyNotInAnotherDay': 'Un trajecte es queda al seu dia',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'El dia d’un trajecte ve de les seves dates. Canvieu-les a la pestanya Trajectes.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'El dia d’un trajecte ve de les seves dates. Canvieu-les a la pestanya Trajectes.',
   'plan.move.refused.journeyTimed': '{name} surt a les {time}',
-  'plan.move.refused.journeyTimedBody': 'L’hora de sortida és de l’horari, no del pla. Poseu el trajecte on li toca pel rellotge.',
+  'plan.move.refused.journeyTimedBody':
+    'L’hora de sortida és de l’horari, no del pla. Poseu el trajecte on li toca pel rellotge.',
   'plan.move.spoken.duplicate': '{name} no s’ha mogut. Aquell dia ja el té.',
-  'plan.move.spoken.notInIdeas': '{name} no s’ha mogut. Una nota es queda dins del dia.',
-  'plan.move.spoken.notInAnotherDay': '{name} no s’ha mogut. Una nota es queda al seu dia.',
-  'plan.move.spoken.timed': '{name} porta l’hora {time}. Us preguntem si voleu deixar-la anar.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} no s’ha mogut. Un trajecte es queda dins del dia.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} no s’ha mogut. Un trajecte es queda al seu dia.',
+  'plan.move.spoken.notInIdeas':
+    '{name} no s’ha mogut. Una nota es queda dins del dia.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} no s’ha mogut. Una nota es queda al seu dia.',
+  'plan.move.spoken.timed':
+    '{name} porta l’hora {time}. Us preguntem si voleu deixar-la anar.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} no s’ha mogut. Un trajecte es queda dins del dia.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} no s’ha mogut. Un trajecte es queda al seu dia.',
   'plan.move.spoken.journeyTimed': '{name} no s’ha mogut. Surt a les {time}.',
   'plan.move.error.save': 'Aquest moviment no s’ha desat',
   'plan.move.error.retry': 'Torneu-ho a provar d’aquí a un moment.',
   'plan.move.dropTime.title': 'Voleu moure {name} i deixar anar les {time}?',
-  'plan.move.dropTime.body': 'Aquesta posició contradiu l’hora que té. Moure’l aquí esborra l’hora: el nou ordre i l’hora esborrada es desen alhora.',
+  'plan.move.dropTime.body':
+    'Aquesta posició contradiu l’hora que té. Moure’l aquí esborra l’hora: el nou ordre i l’hora esborrada es desen alhora.',
   'plan.move.dropTime.confirm': 'Mou-lo i esborra l’hora',
   'plan.move.dropTime.cancel': 'Deixa’l on és',
   /* --------------------------------------------------- a day's own notes */
@@ -116,6 +129,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'En camí',
   'plan.transport.phase.journey.arriving': 'Final',
   'plan.transport.label': 'De {from} a {to}',
+  'plan.transport.drag': 'Reordena, {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Plegats',
   'collab.empty': 'Encara no s’ha compartit res',
@@ -187,6 +201,45 @@ const messages = {
     many: 'en {priced} trajectes amb preu',
     other: 'en {priced} trajectes amb preu',
   },
+  'people.title': 'Persones',
+  'people.description': 'Qui és en aquest viatge i qui el pot trobar',
+  'people.members.title': 'En aquest viatge',
+  'people.members.empty': 'Ja no queda ningú d’aquest viatge en aquest espai',
+  'people.role.label': 'Rol',
+  'people.role.owner': 'Propietari',
+  'people.role.editor': 'Pot editar',
+  'people.role.viewer': 'Pot veure',
+  'people.you': 'Tu',
+  'people.owner.hint': 'Un viatge sempre manté almenys un propietari',
+  'people.remove.action': 'Treu {name} d’aquest viatge',
+  'people.remove.title': 'Vols treure {name} d’aquest viatge?',
+  'people.remove.body':
+    'Perd l’accés a l’itinerari immediatament. El que va afegir es queda al viatge.',
+  'people.remove.confirm': 'Treu',
+  'people.leave.action': 'Surt d’aquest viatge',
+  'people.leave.title': 'Vols sortir d’aquest viatge?',
+  'people.leave.body':
+    'Perdràs l’accés a l’itinerari fins que algú del viatge et torni a afegir.',
+  'people.leave.confirm': 'Surt',
+  'people.cancel': 'Cancel·la',
+  'people.invite.title': 'Afegeix algú',
+  'people.invite.placeholder': 'Cerca les persones d’aquest espai',
+  'people.invite.action': 'Afegeix al viatge',
+  'people.invite.role': 'S’hi uneix com a',
+  'people.invite.empty': 'Tothom d’aquest espai ja és en aquest viatge',
+  'people.invite.emptyHint':
+    'Primer cal que algú nou entri a l’espai, a Configuració',
+  'people.visibility.title': 'Qui pot trobar aquest viatge',
+  'people.visibility.switch': 'Visible per a tothom de l’espai',
+  'people.visibility.private':
+    'Només les persones que apareixen aquí poden veure aquest viatge',
+  'people.visibility.organization':
+    'Qualsevol persona d’aquest espai pot obrir aquest viatge',
+  'people.visibility.public':
+    'Aquest viatge es comparteix amb un enllaç públic',
+  'people.error.lastOwner':
+    'Un viatge manté almenys un propietari. Fes propietari algú altre primer.',
+  'people.error.notInWorkspace': 'Aquesta persona no és en aquest espai',
 } satisfies TranslationOf<typeof En>
 
 export default messages

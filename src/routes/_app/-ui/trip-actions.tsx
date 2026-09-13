@@ -472,8 +472,58 @@ export function TripDeleteDialog({
  * Action menu
  * ---------------------------------------------------------------------------------------------- */
 
+/**
+ * The trip's star, as one value with one owner.
+ *
+ * The badge on the tile and the menu item that flips it are siblings, and each used to answer "is
+ * this trip starred right now?" for itself — the menu from an optimistic overlay it kept to itself,
+ * the badge from the loader payload. So a press lit the label at once and left the badge two pixels
+ * away dark for the whole write plus `router.invalidate()`. The overlay therefore belongs to
+ * whoever renders both of them (`TripTile`), which hands the same `starred` to each: "the trip's
+ * current star" is one concept, and docs/SPEC.md §8 gives a concept one owner.
+ */
+export interface TripFavourite {
+  /** What the reader should see now — their press if one is in flight, the server's answer otherwise. */
+  readonly starred: boolean
+  /** True while the write this hook started is in flight. */
+  readonly pending: boolean
+  readonly toggle: () => void
+}
+
+/**
+ * The star as the reader has just left it, held only until the loader catches up.
+ *
+ * `claim` withdraws after `useAction` has awaited the router invalidation, so the star goes from
+ * empty to lit once and stays there; a failed write withdraws it too, which is the rollback, and
+ * the reason arrives in the toast `useAction` raises. Call it from whatever renders the star —
+ * see {@link TripFavourite} for why that is not this menu.
+ */
+export function useTripFavourite(trip: TripCard): TripFavourite {
+  const t = useTranslate()
+  const stars = useOptimistic<boolean>()
+  const favourite = useAction(setTripFavouriteFn, {
+    failure: t('shell.tripActions.starFailed'),
+    fallback: t('shell.tripActions.starFallback'),
+  })
+
+  const starred = stars.get(trip.id) ?? trip.isFavourite
+
+  return {
+    starred,
+    pending: favourite.pending,
+    toggle: () => {
+      const next = !starred
+      void stars.claim([[trip.id, next]], () =>
+        favourite.run({ data: { tripId: trip.id, isFavourite: next } }),
+      )
+    },
+  }
+}
+
 export interface TripActionsMenuProps {
   trip: TripCard
+  /** The caller's {@link useTripFavourite}, so this item and the tile's badge cannot disagree. */
+  favourite: TripFavourite
 }
 
 /**
@@ -482,24 +532,12 @@ export interface TripActionsMenuProps {
  * The trigger names the trip — "Actions for Lisbon in April" — because a grid of tiles otherwise
  * hands a screen-reader user a column of identically-named buttons.
  */
-export function TripActionsMenu({ trip }: TripActionsMenuProps) {
+export function TripActionsMenu({ trip, favourite }: TripActionsMenuProps) {
   const t = useTranslate()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [copying, setCopying] = useState(false)
 
-  /**
-   * The star as the reader has just left it, held only until the loader catches up.
-   *
-   * `claim` withdraws after `useAction` has awaited the router invalidation, so the item's label
-   * goes from Favourite to Unfavourite once and stays there; a failed write withdraws it too, which
-   * is the rollback, and the reason arrives in the toast `useAction` raises.
-   */
-  const stars = useOptimistic<boolean>()
-  const favourite = useAction(setTripFavouriteFn, {
-    failure: t('shell.tripActions.starFailed'),
-    fallback: t('shell.tripActions.starFallback'),
-  })
   const archive = useAction(archiveTripFn, {
     success: t('shell.tripActions.archived'),
     failure: t('shell.tripActions.archiveFailed'),
@@ -509,7 +547,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
     failure: t('shell.tripActions.restoreFailed'),
   })
 
-  const starred = stars.get(trip.id) ?? trip.isFavourite
+  const starred = favourite.starred
   const busy = favourite.pending || archive.pending || restore.pending
 
   /**
@@ -525,13 +563,6 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
    * this menu started: a permanently spinning button would claim that it was.
    */
   const frozen = busy || trip.copyPending
-
-  async function toggleFavourite(): Promise<void> {
-    const next = !starred
-    await stars.claim([[trip.id, next]], () =>
-      favourite.run({ data: { tripId: trip.id, isFavourite: next } }),
-    )
-  }
 
   return (
     <>
@@ -581,7 +612,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
 
           <DropdownMenuItem
             icon={starred ? <StarOff /> : <Star />}
-            onSelect={() => void toggleFavourite()}
+            onSelect={() => favourite.toggle()}
             disabled={frozen}
           >
             {starred

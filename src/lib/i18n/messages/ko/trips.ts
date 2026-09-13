@@ -21,33 +21,49 @@ const messages = {
   'error.collab': '대화를 불러오지 못했습니다',
   'error.book': '예약을 불러오지 못했습니다',
   'error.transports': '이동을 불러오지 못했습니다',
+  'error.people': '참여자를 불러오지 못했습니다',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '일정',
   'plan.places': '장소',
-  'plan.day.empty': '아직 일정이 없습니다. 장소나 메모를 여기로 끌어다 놓으세요',
+  'plan.day.empty':
+    '아직 일정이 없습니다. 장소나 메모를 여기로 끌어다 놓으세요',
   'plan.move.refused.duplicate': '{name}은(는) 이미 그날에 있습니다',
-  'plan.move.refused.duplicateBody': '한 장소는 하루에 한 번만 넣을 수 있습니다. 다른 날로 옮겨 보세요.',
+  'plan.move.refused.duplicateBody':
+    '한 장소는 하루에 한 번만 넣을 수 있습니다. 다른 날로 옮겨 보세요.',
   'plan.move.refused.notInIdeas': '메모는 그날 안에 남습니다',
-  'plan.move.refused.notInIdeasBody': '아이디어는 날짜를 기다리는 장소입니다. 메모는 작성한 날에 속합니다.',
+  'plan.move.refused.notInIdeasBody':
+    '아이디어는 날짜를 기다리는 장소입니다. 메모는 작성한 날에 속합니다.',
   'plan.move.refused.notInAnotherDay': '메모는 자기 날에 남습니다',
-  'plan.move.refused.notInAnotherDayBody': '메모는 아직 다른 날로 옮길 수 없습니다. 메모를 수정하거나 다른 날에 새로 쓰세요.',
+  'plan.move.refused.notInAnotherDayBody':
+    '메모는 아직 다른 날로 옮길 수 없습니다. 메모를 수정하거나 다른 날에 새로 쓰세요.',
   'plan.move.refused.journeyNotInIdeas': '이동은 그날 안에 남습니다',
-  'plan.move.refused.journeyNotInIdeasBody': '아이디어는 날짜를 기다리는 장소입니다. 이동은 그것이 일어나는 날에 속합니다.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    '아이디어는 날짜를 기다리는 장소입니다. 이동은 그것이 일어나는 날에 속합니다.',
   'plan.move.refused.journeyNotInAnotherDay': '이동은 자기 날에 남습니다',
-  'plan.move.refused.journeyNotInAnotherDayBody': '이동의 날은 그 날짜에서 정해집니다. 이동 탭에서 바꾸세요.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    '이동의 날은 그 날짜에서 정해집니다. 이동 탭에서 바꾸세요.',
   'plan.move.refused.journeyTimed': '{name}은(는) {time}에 출발합니다',
-  'plan.move.refused.journeyTimedBody': '출발 시각은 시간표의 것이지 계획의 것이 아닙니다. 시계가 가리키는 자리에 이동을 두세요.',
-  'plan.move.spoken.duplicate': '{name}은(는) 이동하지 않았습니다. 그날에는 이미 있습니다.',
-  'plan.move.spoken.notInIdeas': '{name}은(는) 이동하지 않았습니다. 메모는 그날 안에 남습니다.',
-  'plan.move.spoken.notInAnotherDay': '{name}은(는) 이동하지 않았습니다. 메모는 자기 날에 남습니다.',
-  'plan.move.spoken.timed': '{name}에는 {time}이(가) 있습니다. 시간을 지울지 묻습니다.',
-  'plan.move.spoken.journeyNotInIdeas': '{name}은(는) 이동하지 않았습니다. 이동은 그날 안에 남습니다.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name}은(는) 이동하지 않았습니다. 이동은 자기 날에 남습니다.',
-  'plan.move.spoken.journeyTimed': '{name}은(는) 이동하지 않았습니다. {time}에 출발합니다.',
+  'plan.move.refused.journeyTimedBody':
+    '출발 시각은 시간표의 것이지 계획의 것이 아닙니다. 시계가 가리키는 자리에 이동을 두세요.',
+  'plan.move.spoken.duplicate':
+    '{name}은(는) 이동하지 않았습니다. 그날에는 이미 있습니다.',
+  'plan.move.spoken.notInIdeas':
+    '{name}은(는) 이동하지 않았습니다. 메모는 그날 안에 남습니다.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name}은(는) 이동하지 않았습니다. 메모는 자기 날에 남습니다.',
+  'plan.move.spoken.timed':
+    '{name}에는 {time}이(가) 있습니다. 시간을 지울지 묻습니다.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name}은(는) 이동하지 않았습니다. 이동은 그날 안에 남습니다.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name}은(는) 이동하지 않았습니다. 이동은 자기 날에 남습니다.',
+  'plan.move.spoken.journeyTimed':
+    '{name}은(는) 이동하지 않았습니다. {time}에 출발합니다.',
   'plan.move.error.save': '이동을 저장하지 못했습니다',
   'plan.move.error.retry': '잠시 후 다시 시도해 주세요.',
   'plan.move.dropTime.title': '{name}을(를) 옮기고 {time}을(를) 지울까요?',
-  'plan.move.dropTime.body': '이 자리는 지정된 시간과 맞지 않습니다. 여기로 옮기면 시간이 지워지고, 새 순서와 지워진 시간이 함께 저장됩니다.',
+  'plan.move.dropTime.body':
+    '이 자리는 지정된 시간과 맞지 않습니다. 여기로 옮기면 시간이 지워지고, 새 순서와 지워진 시간이 함께 저장됩니다.',
   'plan.move.dropTime.confirm': '옮기고 시간 지우기',
   'plan.move.dropTime.cancel': '그대로 두기',
   /* --------------------------------------------------- a day's own notes */
@@ -115,6 +131,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': '이동 중',
   'plan.transport.phase.journey.arriving': '종료',
   'plan.transport.label': '{from}에서 {to}까지',
+  'plan.transport.drag': '순서 바꾸기 — {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': '함께',
   'collab.empty': '아직 공유된 것이 없습니다',
@@ -168,6 +185,45 @@ const messages = {
   'transports.priced': {
     other: '가격이 있는 이동 {priced}건 기준',
   },
+  'people.title': '참여자',
+  'people.description': '이 여행에 누가 있고, 누가 찾을 수 있는지',
+  'people.members.title': '이 여행의 참여자',
+  'people.members.empty':
+    '이 여행의 참여자 중 이 워크스페이스에 남은 사람이 없습니다',
+  'people.role.label': '역할',
+  'people.role.owner': '소유자',
+  'people.role.editor': '편집자',
+  'people.role.viewer': '뷰어',
+  'people.you': '나',
+  'people.owner.hint': '여행에는 항상 소유자가 한 명 이상 있습니다',
+  'people.remove.action': '{name} 님을 이 여행에서 제외',
+  'people.remove.title': '{name} 님을 이 여행에서 제외할까요?',
+  'people.remove.body':
+    '바로 일정에 접근할 수 없게 됩니다. 추가한 내용은 여행에 남습니다.',
+  'people.remove.confirm': '제외',
+  'people.leave.action': '이 여행에서 나가기',
+  'people.leave.title': '이 여행에서 나갈까요?',
+  'people.leave.body':
+    '여행에 있는 누군가가 다시 추가할 때까지 일정을 볼 수 없습니다.',
+  'people.leave.confirm': '나가기',
+  'people.cancel': '취소',
+  'people.invite.title': '사람 추가',
+  'people.invite.placeholder': '이 워크스페이스의 사람 검색',
+  'people.invite.action': '여행에 추가',
+  'people.invite.role': '참여 역할',
+  'people.invite.empty':
+    '이 워크스페이스의 모든 사람이 이미 이 여행에 있습니다',
+  'people.invite.emptyHint':
+    '설정에서 새로운 사람이 워크스페이스에 먼저 들어옵니다',
+  'people.visibility.title': '이 여행을 찾을 수 있는 사람',
+  'people.visibility.switch': '워크스페이스의 모두에게 보이기',
+  'people.visibility.private': '여기 있는 사람만 이 여행을 볼 수 있습니다',
+  'people.visibility.organization':
+    '이 워크스페이스의 누구나 이 여행을 열 수 있습니다',
+  'people.visibility.public': '이 여행은 공개 링크로 공유되어 있습니다',
+  'people.error.lastOwner':
+    '여행에는 소유자가 한 명 이상 있어야 합니다. 먼저 다른 사람을 소유자로 지정하세요.',
+  'people.error.notInWorkspace': '그 사람은 이 워크스페이스에 없습니다',
 } satisfies TranslationOf<typeof En>
 
 export default messages
