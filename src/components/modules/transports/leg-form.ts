@@ -409,6 +409,23 @@ export function kilometresToMetres(value: string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 1000) : 0
 }
 
+/**
+ * A price as typed → whole minor units. `''` and anything not above zero becomes `0`.
+ *
+ * The comma is accepted because half of the twenty-three locales this form is read
+ * in write the decimal separator that way, and a traveller typing `12,50` means
+ * twelve fifty and not twelve.
+ *
+ * `0` is the same statement `distanceMetres` makes with it — "not recorded" — which
+ * is why a negative or unparseable amount lands on it rather than raising: the
+ * field is optional, and a price nobody could read is a price nobody gave.
+ */
+export function priceToMinor(value: string): number {
+  const parsed = Number.parseFloat(value.trim().replace(',', '.') || '0')
+  const minor = Math.round(parsed * 100)
+  return Number.isFinite(minor) && minor > 0 ? minor : 0
+}
+
 /** Metres → the kilometre string the input shows. `null`/`0` becomes `''`. */
 export function metresToKilometres(metres: number | null): string {
   if (metres === null || metres === 0) {
@@ -1045,6 +1062,130 @@ export function chainPayload(chain: ChainDraft): ChainPayload {
       arrivalDate: leg.arrivalDate.trim(),
       arrivalTime: leg.arrivalTime.trim(),
     })),
+  }
+}
+
+/* ------------------------------------------------------------- record wire */
+
+/**
+ * The transport record as the two writers take it.
+ *
+ * Declared structurally rather than imported from `#/server/fns/transports`, for
+ * the same reason {@link StationLookup} gives: this module states the fields it
+ * fills in, and does not take a dependency on one endpoint's wire format. The
+ * binding to the real contract is asserted where an assertion belongs — the unit
+ * test parses this through `transportInputSchema` and `transportUpdateSchema`, so
+ * a field this builder sets that the schema would silently strip fails there
+ * rather than in a browser.
+ */
+export interface TransportPayload {
+  readonly tripId: string
+  readonly mode: TransportMode
+  readonly status: TransportStatus
+  readonly title: string
+  readonly carrier: string
+  readonly serviceNumber: string
+  readonly bookingCode: string
+  readonly seat: string
+  readonly departureName: string
+  readonly departureCode: string
+  readonly departureDate: string
+  readonly departureTime: string
+  readonly departureDayId: string
+  readonly arrivalName: string
+  readonly arrivalCode: string
+  readonly arrivalDate: string
+  readonly arrivalTime: string
+  readonly arrivalDayId: string
+  readonly distanceMetres: number
+  readonly priceMinor: number
+  readonly currency: string
+  readonly notes: string
+}
+
+/**
+ * The record's own endpoints and days, which a chain owns once there is one.
+ *
+ * The repository rewrites the endpoints from the outer stations in the same batch
+ * that writes the legs, so this is not the source of truth — it is what keeps the
+ * record correct for the moment between the two writes, and for a save whose
+ * second half never lands. The two day references have no such second writer, so
+ * this is the only place they are decided.
+ */
+function recordEndpoints(
+  draft: TransportDraft,
+  chain: ChainDraft,
+): Pick<TransportDraft, ChainOwnedField> {
+  const first = chain.stations.at(0)
+  const last = chain.stations.at(-1)
+  const firstLeg = chain.legs.at(0)
+  const lastLeg = chain.legs.at(-1)
+  if (
+    !chain.broken ||
+    first === undefined ||
+    last === undefined ||
+    firstLeg === undefined ||
+    lastLeg === undefined
+  ) {
+    return {
+      departureName: draft.departureName,
+      departureCode: draft.departureCode,
+      departureDate: draft.departureDate,
+      departureTime: draft.departureTime,
+      departureDayId: draft.departureDayId,
+      arrivalName: draft.arrivalName,
+      arrivalCode: draft.arrivalCode,
+      arrivalDate: draft.arrivalDate,
+      arrivalTime: draft.arrivalTime,
+      arrivalDayId: draft.arrivalDayId,
+    }
+  }
+  return {
+    departureName: first.name.trim(),
+    departureCode: first.code.trim(),
+    departureDate: firstLeg.departureDate,
+    departureTime: firstLeg.departureTime,
+    departureDayId: firstLeg.departureDayId,
+    arrivalName: last.name.trim(),
+    arrivalCode: last.code.trim(),
+    arrivalDate: lastLeg.arrivalDate,
+    arrivalTime: lastLeg.arrivalTime,
+    arrivalDayId: lastLeg.arrivalDayId,
+  }
+}
+
+/**
+ * The draft as the record writers take it — the whole mapping, in one place.
+ *
+ * A pure function and not a closure over the dialog's state, because the one
+ * thing that can go wrong here is a field going missing on the way to the wire,
+ * and a mapping that only exists inside a submit handler can only be checked by
+ * rendering the dialog and pressing the button. Here it is a call.
+ *
+ * `create` and `update` take the same shape; the update adds nothing to it but
+ * the id of the row being rewritten.
+ */
+export function transportPayload(
+  draft: TransportDraft,
+  chain: ChainDraft,
+  tripId: string,
+): TransportPayload {
+  const priceMinor = priceToMinor(draft.price)
+  return {
+    tripId,
+    mode: draft.mode,
+    status: draft.status,
+    title: draft.title.trim(),
+    carrier: draft.carrier,
+    serviceNumber: draft.serviceNumber,
+    bookingCode: draft.bookingCode,
+    seat: draft.seat,
+    ...recordEndpoints(draft, chain),
+    distanceMetres: kilometresToMetres(draft.distanceKm),
+    priceMinor,
+    /* An amount nobody recorded has no currency to be in. */
+    currency: priceMinor > 0 ? draft.currency : '',
+    notes: draft.notes,
   }
 }
 
