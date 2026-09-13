@@ -3,16 +3,22 @@ import { describe, expect, it } from 'vitest'
 import {
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
+  breakIntoLegs,
   dayLabel,
+  emptyChain,
   emptyTransportDraft,
   endpointLabels,
+  flatChain,
   hasTransportErrors,
   isTransportMode,
   isTransportStatus,
   kilometresToMetres,
   metresToKilometres,
   modeLabel,
+  priceToMinor,
+  splitLegAt,
   suggestTransportTitle,
+  transportPayload,
   transportStatusLabel,
   usesCodes,
   usesSeat,
@@ -22,7 +28,8 @@ import {
 
 import { modulesTranslate as t } from '#/lib/i18n/__tests__/modules-translate'
 
-import type { TransportDraft } from '../leg-form'
+import type { TransportDraft, TransportPayload } from '../leg-form'
+import type { TransportInput } from '#/server/fns/transports'
 
 function draft(overrides: Partial<TransportDraft> = {}): TransportDraft {
   return {
@@ -410,6 +417,190 @@ describe('distance conversion', () => {
   it('shows nothing for an unrecorded distance', () => {
     expect(metresToKilometres(null)).toBe('')
     expect(metresToKilometres(0)).toBe('')
+  })
+})
+
+describe('price conversion', () => {
+  it('converts a price to whole minor units', () => {
+    expect(priceToMinor('133.20')).toBe(13_320)
+    expect(priceToMinor('9')).toBe(900)
+  })
+
+  it('accepts a comma decimal, as half the catalogue writes one', () => {
+    expect(priceToMinor('133,20')).toBe(13_320)
+  })
+
+  it('reads an empty or unusable field as nothing recorded', () => {
+    expect(priceToMinor('')).toBe(0)
+    expect(priceToMinor('   ')).toBe(0)
+    expect(priceToMinor('free')).toBe(0)
+    expect(priceToMinor('-20')).toBe(0)
+    expect(priceToMinor('0')).toBe(0)
+  })
+})
+
+/**
+ * The draft-to-wire mapping, as a function rather than a submit closure.
+ *
+ * The hazard this seam exists for is named in `src/server/fns/transports.ts`
+ * itself: "an object schema strips a key it does not declare, so a column the
+ * screen sets and the validator has never heard of is a column written null with
+ * every test still green". While the mapping lived inside the dialog's `submit()`
+ * the only way to check it was to render the dialog and press the button. Here it
+ * is a call, and the two day references — the pair with no second writer — are
+ * asserted directly.
+ */
+describe('the draft as the record writers take it', () => {
+  const TRIP = 'trip-42'
+
+  function filled(): TransportDraft {
+    return draft({
+      mode: 'train',
+      status: 'confirmed',
+      title: '  Shinkansen to Kyoto  ',
+      carrier: 'JR Central',
+      serviceNumber: 'Nozomi 21',
+      bookingCode: 'ABC123',
+      seat: '7A',
+      departureName: 'Tokyo',
+      departureCode: 'TYO',
+      departureDate: '2026-10-09',
+      departureTime: '21:30',
+      departureDayId: 'day-3',
+      arrivalName: 'Kyoto',
+      arrivalCode: 'KYO',
+      arrivalDate: '2026-10-10',
+      arrivalTime: '06:45',
+      arrivalDayId: 'day-4',
+      distanceKm: '476,5',
+      price: '133,20',
+      currency: 'EUR',
+      notes: 'Window seat',
+    })
+  }
+
+  it('carries every field the traveller filled in through to the wire', () => {
+    expect(transportPayload(filled(), emptyChain(), TRIP)).toEqual({
+      tripId: TRIP,
+      mode: 'train',
+      status: 'confirmed',
+      title: 'Shinkansen to Kyoto',
+      carrier: 'JR Central',
+      serviceNumber: 'Nozomi 21',
+      bookingCode: 'ABC123',
+      seat: '7A',
+      departureName: 'Tokyo',
+      departureCode: 'TYO',
+      departureDate: '2026-10-09',
+      departureTime: '21:30',
+      departureDayId: 'day-3',
+      arrivalName: 'Kyoto',
+      arrivalCode: 'KYO',
+      arrivalDate: '2026-10-10',
+      arrivalTime: '06:45',
+      arrivalDayId: 'day-4',
+      distanceMetres: 476_500,
+      priceMinor: 13_320,
+      currency: 'EUR',
+      notes: 'Window seat',
+    })
+  })
+
+  /**
+   * The night train leaves on day 3 and lands on day 4, and only the traveller
+   * knows that. Both references are stated separately and neither is derived, so
+   * losing one is silent — the record simply anchors to a day nobody chose.
+   */
+  it('keeps the two day references apart', () => {
+    const payload = transportPayload(filled(), emptyChain(), TRIP)
+    expect(payload.departureDayId).toBe('day-3')
+    expect(payload.arrivalDayId).toBe('day-4')
+  })
+
+  /**
+   * The binding to the server's contract, which is what the extraction bought.
+   *
+   * A type assertion and not `transportInputSchema.parse(...)`: that schema cannot
+   * be loaded here, because `#/server/fns/transports` reaches `cloudflare:workers`
+   * through the billing runtime, and `vitest.config.ts` keeps that import out of
+   * the Node project by design. The contract is the same one — `TransportInput` is
+   * `z.infer` of that very schema — and asserting both directions covers both
+   * failures: a field this builder forgets fails the first line, and a field it
+   * sets that the validator would silently strip fails the second.
+   */
+  it('fills exactly the fields the write validator declares', () => {
+    const payload = transportPayload(filled(), emptyChain(), TRIP)
+    const asWire: TransportInput = payload
+    const asPayload: TransportPayload = asWire
+    expect(asPayload).toBe(payload)
+  })
+
+  it('blanks the currency of a price nobody recorded', () => {
+    const payload = transportPayload(
+      draft({ price: '', currency: 'EUR' }),
+      emptyChain(),
+      TRIP,
+    )
+    expect(payload.priceMinor).toBe(0)
+    expect(payload.currency).toBe('')
+  })
+
+  /**
+   * Once a journey is broken into legs the record's endpoints are written from the
+   * chain's *outer* stations, not from the flat fields the dialog has hidden — and
+   * not from whatever station happens to sit in the middle.
+   */
+  it('writes the endpoints from the outer stations of a broken chain', () => {
+    const broken = splitLegAt(
+      breakIntoLegs(emptyChain(), {
+        departureName: '  Tokyo  ',
+        departureCode: ' tyo ',
+        departureDate: '2026-10-09',
+        departureTime: '21:30',
+        departureDayId: 'day-3',
+        arrivalName: '  Kyoto  ',
+        arrivalCode: ' kyo ',
+        arrivalDate: '2026-10-10',
+        arrivalTime: '06:45',
+        arrivalDayId: 'day-4',
+        serviceNumber: null,
+        seat: null,
+      }),
+      0,
+    )
+    const payload = transportPayload(filled(), broken, TRIP)
+    expect(payload.departureName).toBe('Tokyo')
+    expect(payload.arrivalName).toBe('Kyoto')
+    expect(broken.stations).toHaveLength(3)
+  })
+
+  /**
+   * The mirror of the case above, and the compatibility claim of the chain stage:
+   * a journey nobody has broken up is its own two endpoints. Its stations exist —
+   * the editor needs something to show — but they are a reading of the record, not
+   * a second source of truth, so the flat fields win.
+   */
+  it('keeps the typed endpoints while the journey is still one movement', () => {
+    const unbroken = flatChain({
+      departureName: 'Somewhere else',
+      departureCode: 'XXX',
+      departureDate: '2020-01-01',
+      departureTime: '00:00',
+      departureDayId: 'day-99',
+      arrivalName: 'Nowhere',
+      arrivalCode: 'YYY',
+      arrivalDate: '2020-01-02',
+      arrivalTime: '23:59',
+      arrivalDayId: 'day-98',
+      serviceNumber: null,
+      seat: null,
+    })
+    expect(unbroken.broken).toBe(false)
+    const payload = transportPayload(filled(), unbroken, TRIP)
+    expect(payload.departureName).toBe('Tokyo')
+    expect(payload.arrivalName).toBe('Kyoto')
+    expect(payload.departureDayId).toBe('day-3')
+    expect(payload.arrivalDayId).toBe('day-4')
   })
 })
 
