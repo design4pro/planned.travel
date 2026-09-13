@@ -2,8 +2,9 @@
  * The SQL in `drizzle/`, read the way wrangler applies it.
  *
  * Several suites replay the shipped migration files rather than building their DDL from
- * `schema.ts`: the schema suites in this directory and
- * `src/server/billing/__tests__/migrations.test.ts` ask what the replay ends up with, and
+ * `schema.ts`: `migrations-match-schema.test.ts` asks what the replay ends up with for every table
+ * there is, the schema suites here and `src/server/billing/__tests__/migrations.test.ts` ask what
+ * shape the migration carrying their table took, and
  * `src/server/db/__tests__/migration-quoted-identifiers.test.ts` inspects the statements on the way
  * past. All need the journal order — the filenames alone do not carry it — so the reading of
  * `meta/_journal.json`, the splitting on statement breakpoints and the replay itself live here
@@ -94,6 +95,22 @@ export function replayMigrations(): DatabaseSync {
   return sqlite
 }
 
+/**
+ * The tables `sqlite` physically has, in name order, SQLite's own bookkeeping excluded.
+ *
+ * The entry point of the table-agnostic reads below: `migrations-match-schema.test.ts` asks this of
+ * both databases and diffs what the three readers answer for every name that comes back, so a table
+ * added to `schema.ts` is covered without anyone naming it here.
+ */
+export function physicalTableNames(sqlite: DatabaseSync): Array<string> {
+  return sqlite
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+    )
+    .all()
+    .map((row) => String(row.name))
+}
+
 /** The columns `table` physically has on `sqlite`, in the order the engine stores them. */
 export function physicalColumns(
   sqlite: DatabaseSync,
@@ -105,37 +122,51 @@ export function physicalColumns(
     .map((row) => String(row.name))
 }
 
-/** The indexes `table` physically has on `sqlite`. */
-export function physicalIndexNames(
+/**
+ * The indexes `table` physically has on `sqlite`, as `name(column, column)` plus `unique` where the
+ * engine enforces one row per value, sorted.
+ *
+ * The covered columns and the uniqueness ride along with the name because an index renamed, narrowed
+ * or quietly demoted to non-unique is the same kind of drift as one that never reached disk, and a
+ * string per index keeps the whole comparison to one `toEqual`.
+ */
+export function physicalIndexes(
   sqlite: DatabaseSync,
   table: string,
 ): Array<string> {
   return sqlite
-    .prepare('SELECT name FROM pragma_index_list(?)')
+    .prepare('SELECT name, "unique" FROM pragma_index_list(?)')
     .all(table)
-    .map((row) => String(row.name))
+    .map((row) => {
+      const name = String(row.name)
+      const covered = sqlite
+        .prepare('SELECT name FROM pragma_index_info(?)')
+        .all(name)
+        .map((entry) => String(entry.name))
+      const unique = Number(row.unique) === 1 ? ' unique' : ''
+      return `${name}(${covered.join(', ')})${unique}`
+    })
+    .sort()
 }
 
 /**
- * Where one column of `table` physically points and what the engine does when the target goes,
- * or `undefined` if the column references nothing.
+ * Every foreign key `table` physically has, as `column -> target.column (ON DELETE …)`, sorted.
  *
- * The declared disposition and the deployed one can differ — drizzle-kit's `ALTER TABLE … ADD
- * COLUMN` emits a `REFERENCES` clause with no `ON DELETE` one, so a column added that way is
- * `NO ACTION` on D1 whatever `schema.ts` says. The schema suites pin both halves, which is why
- * this read is here rather than copied into each of them.
+ * The disposition is part of the answer because the declared one and the deployed one can differ:
+ * drizzle-kit's `ALTER TABLE … ADD COLUMN` emits a `REFERENCES` clause with no `ON DELETE` one, so a
+ * column added that way is `NO ACTION` on D1 whatever `schema.ts` says. Which columns those are is
+ * the allowlist in `migrations-match-schema.test.ts`.
  */
-export function physicalForeignKey(
+export function physicalForeignKeys(
   sqlite: DatabaseSync,
   table: string,
-  column: string,
-): { table: string; onDelete: string } | undefined {
-  const row = sqlite
+): Array<string> {
+  return sqlite
     .prepare('SELECT * FROM pragma_foreign_key_list(?)')
     .all(table)
-    .find((entry) => String(entry.from) === column)
-
-  return row === undefined
-    ? undefined
-    : { table: String(row.table), onDelete: String(row.on_delete) }
+    .map(
+      (row) =>
+        `${String(row.from)} -> ${String(row.table)}.${String(row.to)} (${String(row.on_delete)})`,
+    )
+    .sort()
 }

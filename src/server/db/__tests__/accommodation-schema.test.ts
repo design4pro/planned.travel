@@ -38,14 +38,7 @@ import {
   trips,
 } from '#/server/db/schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
-import {
-  physicalColumns,
-  physicalForeignKey,
-  physicalIndexNames,
-  replayMigrations,
-  shippedMigrations,
-  statementsOf,
-} from './migration-files'
+import { shippedMigrations, statementsOf } from './migration-files'
 import {
   column,
   columnNames,
@@ -175,42 +168,12 @@ describe("the stay's reservation link", () => {
   })
 
   describe('the shipped migrations', () => {
-    it('puts the column and its index on disk', () => {
-      const sqlite = replayMigrations()
-      try {
-        // Sorted on both sides: `ADD COLUMN` appends to the physical table while `schema.ts`
-        // declares each column where it reads best, so the two orders cannot agree and only the
-        // set is meaningful. What must hold is that D1 has every column the module declares.
-        expect(physicalColumns(sqlite, 'day_accommodations').sort()).toEqual(
-          columnNames(dayAccommodations).sort(),
-        )
-        expect(physicalIndexNames(sqlite, 'day_accommodations')).toContain(
-          'day_accommodations_reservation_idx',
-        )
-      } finally {
-        sqlite.close()
-      }
-    })
-
-    it('deploys the link with no ON DELETE clause, and says what that costs', () => {
-      // The declared `set null` above is what a database built from `schema.ts` enforces. This is
-      // what D1 enforces, and they differ: drizzle-kit's `ADD COLUMN` emits the `REFERENCES` clause
-      // without an `ON DELETE` one, so the deployed rule is `NO ACTION`. On the deployed database,
-      // deleting a booking a stay points at therefore *fails* with a constraint error instead of
-      // releasing the stay — the same debt `reservations.expense_id`, `transports.arrival_day_id`
-      // and `expenses.cost_category_id` already carry, and the reason `03-S8a` has to null this
-      // column itself before it deletes a reservation. Pinned rather than fixed: closing it means
-      // either a hand-edited migration, which `drizzle/` forbids as a generated directory, or a
-      // table rebuild, which this additive stage forbids.
-      const sqlite = replayMigrations()
-      try {
-        expect(
-          physicalForeignKey(sqlite, 'day_accommodations', 'reservation_id'),
-        ).toEqual({ table: 'reservations', onDelete: 'NO ACTION' })
-      } finally {
-        sqlite.close()
-      }
-    })
+    // That the column and its index reached `drizzle/*.sql`, and that `reservation_id` is deployed
+    // as `NO ACTION` where `schema.ts` declares `set null`, is asked of every table at once in
+    // `migrations-match-schema.test.ts` — this reference is on the allowlist there, with what the
+    // gap costs (`03-S8a` has to null the column itself before deleting a reservation) written out
+    // beside it (#184). What is left here is the one question about this stage rather than about the
+    // schema.
 
     it('adds the column in one migration and rebuilds nothing', () => {
       const carriers = shippedMigrations().filter((migration) =>
