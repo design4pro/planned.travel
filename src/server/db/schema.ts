@@ -782,6 +782,35 @@ export const tripMembers = sqliteTable(
   ],
 )
 
+/**
+ * A person on a trip who has no account: the travelling companion, the child, the friend who was
+ * invited by phone. A display name and a colour are the whole identity, which is why
+ * `trip_guests_trip_name_unq` is part of the shape rather than a repository convention — on one
+ * trip the name *is* the person, so two guests answering to it are one guest entered twice.
+ *
+ * Shipped ahead of its readers, as a shared-file schema stage does (`docs/plans/01-trips-core.md`,
+ * stage `01-S6`): the guest repository, the participant read model and the guest-into-member merge
+ * are `01-S6b` and land against this table rather than beside it.
+ */
+export const tripGuests = sqliteTable(
+  'trip_guests',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    tripId: text('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    displayName: text('display_name').notNull(),
+    colour: colour('colour'),
+    createdBy: userRef('created_by'),
+    ...timestamps(),
+  },
+  (t) => [
+    index('trip_guests_org_trip_idx').on(t.organizationId, t.tripId),
+    uniqueIndex('trip_guests_trip_name_unq').on(t.tripId, t.displayName),
+  ],
+)
+
 export const days = sqliteTable(
   'days',
   {
