@@ -286,7 +286,7 @@ describe('the deterministic branches', () => {
     expect(world.staged()).toMatchObject({ format: 'json', count: 1 })
   })
 
-  it('does not record a refusal for a deterministic parse — its behaviour is unchanged', async () => {
+  it('records a refusal for a deterministic parse too, so its reader is told', async () => {
     const world = harness({ source: 'not json at all' })
 
     await expect(
@@ -296,7 +296,27 @@ describe('the deterministic branches', () => {
       ),
     ).rejects.toThrow()
 
-    expect(world.staged()).toBeNull()
+    // The same poll reads all three formats, so all three have to leave it something to read.
+    // Without this the reader of a broken `.json` waits out the widget's whole budget and is then
+    // offered "Check again" for a job that will never answer.
+    expect(world.staged()?.refusal).toBeDefined()
+  })
+
+  it('records an `empty` refusal for a calendar that confirms no booking', async () => {
+    const world = harness({
+      source: ['BEGIN:VCALENDAR', 'VERSION:2.0', 'END:VCALENDAR'].join('\r\n'),
+    })
+
+    await expect(
+      world.handler(
+        payload({ format: 'ics', sourceName: 'trip.ics' }),
+        world.context,
+      ),
+    ).rejects.toMatchObject({ code: 'empty' })
+
+    // `modules.book.import.empty.title` — "We could not find a booking in that file" — is written
+    // for exactly this, and an `.ics` with no `VEVENT` is the likeliest way to reach it.
+    expect(world.staged()?.refusal).toEqual({ code: 'empty' })
   })
 })
 

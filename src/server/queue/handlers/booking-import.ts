@@ -455,12 +455,17 @@ function decodeSource(bytes: ArrayBuffer): string {
 /**
  * Records a refusal where the reader's poll will find it, then lets the failure through.
  *
- * Without this a refused document is indistinguishable from a slow one: the handler throws, the
+ * Without this a refused import is indistinguishable from a slow one: the handler throws, the
  * consumer dead-letters, KV stays empty and the widget waits out its whole budget before offering
  * "Check again" — for a job that will never answer. Staging the refusal first turns that into the
  * designed state the copy was written for, and rethrowing is what still stops the retry.
  *
- * Only the document branch records one. The two deterministic parsers behave exactly as they did.
+ * Every format records one, the two deterministic parsers included. They used to be left out on the
+ * grounds that their behaviour was unchanged, and that reasoning does not survive this feature:
+ * `too-large` and `empty` are both raised on the path all three formats share, the reader polling
+ * them is new here, and an `.ics` with no `VEVENT` is exactly the case
+ * `modules.book.import.empty.title` was written for. Leaving it out gave that reader a twenty-second
+ * stall instead of the sentence.
  */
 async function stageRefusal(
   payload: BookingImportPayload,
@@ -518,10 +523,7 @@ export function createBookingImportHandler(
     try {
       return await runBookingImport(payload, context, { ceilingFor })
     } catch (error) {
-      if (
-        payload.format === 'document' &&
-        error instanceof TaskPermanentError
-      ) {
+      if (error instanceof TaskPermanentError) {
         await stageRefusal(payload, context, error)
       }
       throw error

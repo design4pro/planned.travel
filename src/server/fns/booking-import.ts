@@ -42,6 +42,7 @@ import {
 import { enqueueTask } from '#/server/queue/jobs'
 import {
   NotFoundError,
+  assertBookingRole,
   createPlace,
   createReservation,
   getFile,
@@ -195,9 +196,9 @@ export interface BookingImportView {
 
 export interface ConfirmedBookingImport {
   readonly written: number
-  /** `0` or `1`: the confirm stops at the first row it cannot write. */
+  /** How many accepted rows could not be written. The confirm tries every one of them. */
   readonly failed: number
-  /** Accepted rows still to write, the failed one included, so a retry is exact. */
+  /** Accepted rows still to write, the failed ones included, so a retry is exact. */
   readonly remaining: number
 }
 
@@ -460,6 +461,14 @@ export async function startBookingImport(
   input: StartBookingImportInput,
 ): Promise<StartedBookingImport> {
   const trip = await requireTrip(scope, input.tripId)
+  // Here and not only at the confirm. `confirmBookingImport` reaches `createReservation`, which
+  // asks this same question — but by then the reading has been paid for: starting a job spends a
+  // metered `extraction_calls_per_month` unit and sends a document to Workers AI as soon as the
+  // queue handler runs, with nothing between the enqueue and the spend. Without this a trip
+  // `viewer` — who may see the desk and may never write to it — could drain the workspace's whole
+  // monthly allowance a file at a time, and be refused only at the confirm they were never going
+  // to reach.
+  await assertBookingRole(scope, trip.id)
   const file = await getFile(scope, input.fileId)
   if (file === null || file.tripId !== trip.id) {
     throw new NotFoundError('file', input.fileId)
@@ -664,12 +673,22 @@ async function settle(
 }
 
 /**
- * Writes the accepted rows, stops at the first one it cannot write, and never writes one twice.
+ * Writes every accepted row it can, reports the ones it cannot, and never writes one twice.
  *
  * The staged record is the retry's only memory, so it is extended with what was written **before**
  * a partial failure is reported and deleted only when every accepted row is in it. An earlier
  * reading of the ticket deleted it unconditionally and still promised a partial retry; the two
  * cannot both be true.
+ *
+ * **A row that cannot be written is stepped over, not stopped on.** Stopping was the first reading
+ * of "write only the rest", and it does not survive a row that fails the same way every time: the
+ * retry recomputes `pending` as the accepted set minus what is in `written`, lowest index first, so
+ * the row that failed is always the one tried first — it fails again, and every row behind it is
+ * unreachable for good. A hallucinated date is enough to reach that, and it is ordinary model
+ * output: `wallClock` only shape-checks `YYYY-MM-DD`, so `2026-02-30` stages happily and is refused
+ * by `dateSchema`'s calendar check at write time, on every attempt. Stepping over it writes the
+ * other rows on the first confirm, and the reader is left looking at exactly the rows that failed,
+ * because the review list re-reads `written` after a partial confirm.
  */
 export async function confirmBookingImport(
   scope: TenantScope,
@@ -756,8 +775,7 @@ export async function confirmBookingImport(
         organizationId: scope.ctx.organizationId,
         ...serializeError(cause),
       })
-      failed = 1
-      break
+      failed += 1
     }
   }
 

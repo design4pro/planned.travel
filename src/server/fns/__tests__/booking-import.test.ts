@@ -17,6 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   NotFoundError,
+  addTripMember,
   countTripPlaces,
   createPlace,
   createTrip,
@@ -26,12 +27,14 @@ import {
   listTripPlaces,
   listTripReservations,
   recordFile,
+  requireTrip,
   updateOrganizationSettings,
 } from '#/server/repos'
 import { geocodeRuntime } from '#/server/geo/bindings'
 import { createHarness, captureError } from '#/server/repos/__tests__/harness'
 import { stagedImportKey } from '#/server/queue/handlers/booking-import'
 
+import type { RepositoryError } from '#/server/repos'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type {
   StagedImport,
@@ -443,6 +446,58 @@ describe('startBookingImport', () => {
       }).index,
     ).toBe(0)
   })
+
+  /*
+   * The reading is paid for at the enqueue, so the role is asked for at the enqueue.
+   *
+   * A `viewer` passes `requireTrip` — that is what a viewer is — and used to reach the queue on
+   * that alone. Everything after it is spend: the handler takes an `extraction_calls_per_month`
+   * unit and hands the document to Workers AI, and nothing between here and there asks again. The
+   * refusal at `confirmBookingImport` is real but far too late; a viewer could drain a workspace's
+   * whole monthly allowance a file at a time and only then be told they may not keep the rows.
+   */
+  it('refuses a trip viewer before the reading is paid for, and enqueues nothing', async () => {
+    const queue = queueDouble()
+    const viewerId = await alpha.tenant.addUser('viewer')
+    await addTripMember(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+      userId: viewerId,
+      role: 'viewer',
+    })
+    const viewer = alpha.tenant.scopeFor(viewerId)
+
+    // The trip is theirs to read: the refusal below is about writing, not about reach.
+    expect((await requireTrip(viewer, alpha.tripId)).id).toBe(alpha.tripId)
+
+    const error = await captureError(() =>
+      startBookingImport(viewer, queue, {
+        tripId: alpha.tripId,
+        fileId: alpha.fileId,
+        index: 0,
+      }),
+    )
+
+    expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(queue.sent).toEqual([])
+  })
+
+  it('lets a trip editor start one, so the refusal is about the role and nothing else', async () => {
+    const queue = queueDouble()
+    const editorId = await alpha.tenant.addUser('editor')
+    await addTripMember(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+      userId: editorId,
+      role: 'editor',
+    })
+
+    await startBookingImport(alpha.tenant.scopeFor(editorId), queue, {
+      tripId: alpha.tripId,
+      fileId: alpha.fileId,
+      index: 0,
+    })
+
+    expect(queue.sent).toHaveLength(1)
+  })
 })
 
 /* ---------------------------------------------------------------------- get */
@@ -673,7 +728,7 @@ describe('confirmBookingImport', () => {
    * Not an empty title, which is what this used to use: an untitled row is a shape the extraction
    * writes on purpose now, and the confirm names it from the catalogue rather than refusing it.
    */
-  it('stops at the first row it cannot write, and the retry writes only the rest', async () => {
+  it('steps over the row it cannot write, and the retry writes only the rest', async () => {
     const rows = [
       stagedRow({ title: 'One', kind: 'activity' }),
       stagedRow({ title: 'Two', kind: 'activity' }),
@@ -702,18 +757,19 @@ describe('confirmBookingImport', () => {
       ports,
     )
 
-    expect(first).toEqual({ written: 3, failed: 1, remaining: 4 })
+    // Six of seven on the first pass: the unwritable row costs itself and nothing behind it.
+    expect(first).toEqual({ written: 6, failed: 1, remaining: 1 })
     const held = store.entries.get(stagedImportKey(alpha.jobId))
     expect(held).toBeDefined()
     expect(JSON.parse(held ?? '{}')).toMatchObject({
-      written: [{ index: 0 }, { index: 1 }, { index: 2 }],
+      written: [0, 1, 2, 4, 5, 6].map((index) => ({ index })),
     })
 
     // The retry, with the same request the client already sent.
     rows[3] = stagedRow({ title: 'Four', kind: 'activity' })
     await stage(alpha, {
       reservations: rows,
-      written: [0, 1, 2].map((index) => ({
+      written: [0, 1, 2, 4, 5, 6].map((index) => ({
         index,
         reservationId: `res_${index}`,
       })),
@@ -729,12 +785,73 @@ describe('confirmBookingImport', () => {
       ports,
     )
 
-    expect(second).toEqual({ written: 4, failed: 0, remaining: 0 })
+    expect(second).toEqual({ written: 1, failed: 0, remaining: 0 })
     const titles = (
       await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId })
     ).map((row) => row.title)
     expect(titles).toHaveLength(7)
     expect(new Set(titles).size).toBe(7)
+  })
+
+  /*
+   * The case that made stepping over necessary rather than merely tidier.
+   *
+   * `2026-02-30` is ordinary model output, not a contrived value: staging shape-checks the date
+   * against `YYYY-MM-DD` and nothing else, and `dateSchema`'s calendar check refuses it at write
+   * time — the same way, every time. While the confirm stopped at the first row it could not
+   * write, that row was also the lowest pending index on every retry, so rows 1 and 2 here were
+   * unreachable no matter how often the reader pressed "Add the rest".
+   */
+  it('never lets a row that always fails block the rows behind it', async () => {
+    await stage(alpha, {
+      reservations: [
+        stagedRow({
+          title: 'Impossible',
+          kind: 'activity',
+          startsAt: '2026-02-30',
+          endsAt: null,
+        }),
+        stagedRow({ title: 'Second', kind: 'activity' }),
+        stagedRow({ title: 'Third', kind: 'activity' }),
+      ],
+    })
+    const request = {
+      tripId: alpha.tripId,
+      jobId: alpha.jobId,
+      accept: [0, 1, 2],
+    }
+
+    const first = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      request,
+      ports,
+    )
+
+    expect(first).toEqual({ written: 2, failed: 1, remaining: 1 })
+    expect(
+      (await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }))
+        .map((row) => row.title)
+        .sort(),
+    ).toEqual(['Second', 'Third'])
+
+    // The retry the partial alert offers. It writes nothing new and — the point — loses nothing
+    // either: the record still holds the two that went in, so the reader is left looking at the
+    // one row that is genuinely still failing.
+    const second = await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      request,
+      ports,
+    )
+
+    expect(second).toEqual({ written: 0, failed: 1, remaining: 1 })
+    expect(
+      await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
+    ).toHaveLength(2)
+    expect(
+      JSON.parse(store.entries.get(stagedImportKey(alpha.jobId)) ?? '{}'),
+    ).toMatchObject({ written: [{ index: 1 }, { index: 2 }] })
   })
 
   it('writes no price at all for a row whose price the extractor dropped', async () => {
