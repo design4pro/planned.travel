@@ -18,20 +18,16 @@
  *    behavioural test — it would quietly put `createTenantRepository` back within reach and take
  *    `trip-favourites.ts` with it, which is the regression this file exists to catch.
  *
- * Both halves are asserted, declaration and shipped SQL, for the reason `reservation-schema.test.ts`
- * gives: the repository harness builds its DDL from `schema.ts`, so `schema.ts` alone is green
- * whether or not `pnpm db:generate` was ever run, and the replay is the only thing here that asks
- * what D1 is running.
+ * The second case runs against the replayed migrations rather than the harness, for the reason
+ * `migrations-match-schema.test.ts` states in full: the harness builds its DDL from `schema.ts`, so
+ * it is green whether or not `pnpm db:generate` was ever run, and only the replay says what D1 is
+ * actually enforcing — which is the whole point when the question is which constraint refused.
  */
 
 import { describe, expect, it } from 'vitest'
 import { tripFavourites } from '#/server/db/schema'
 import { isUniqueConstraintViolation } from '#/server/repos/context'
-import {
-  physicalColumns,
-  physicalIndexNames,
-  replayMigrations,
-} from './migration-files'
+import { replayMigrations } from './migration-files'
 import {
   columnNames,
   foreignKeys,
@@ -77,26 +73,11 @@ describe('trip_favourites', () => {
   })
 
   describe('as shipped', () => {
-    it('puts exactly those columns on disk, and drops the unique index with the id', () => {
-      const sqlite = replayMigrations()
-      try {
-        // Sorted on both sides, as `reservation-schema.test.ts` sorts: the physical order is
-        // whatever the recreate wrote, the declared order is whatever reads best in `schema.ts`,
-        // and a name-driven ORM makes only the set meaningful. Copied before sorting, because
-        // `COLUMNS` is shared with the declaration assertion above, which does read order.
-        expect(physicalColumns(sqlite, 'trip_favourites').sort()).toEqual(
-          [...COLUMNS].sort(),
-        )
-        expect(physicalIndexNames(sqlite, 'trip_favourites')).not.toContain(
-          'trip_favourites_trip_user_unq',
-        )
-        expect(physicalIndexNames(sqlite, 'trip_favourites')).toContain(
-          'trip_favourites_org_user_idx',
-        )
-      } finally {
-        sqlite.close()
-      }
-    })
+    // That the recreate left exactly the declared columns on disk, and dropped
+    // `trip_favourites_trip_user_unq` with the surrogate key rather than keeping it beside the new
+    // one, is asked of every table at once in `migrations-match-schema.test.ts`: the deployed index
+    // inventory has to equal the declared one, name by name and column by column (#184). What that
+    // diff cannot see is which constraint answers a duplicate, which is the case below.
 
     it('refuses a second row for the same trip and person', () => {
       const sqlite = replayMigrations()
