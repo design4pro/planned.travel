@@ -21,33 +21,49 @@ const messages = {
   'error.collab': '会話を読み込めませんでした',
   'error.book': '予約を読み込めませんでした',
   'error.transports': '移動を読み込めませんでした',
+  'error.people': 'メンバーを読み込めませんでした',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '旅程',
   'plan.places': '場所',
-  'plan.day.empty': 'まだ予定がありません。場所かメモをここにドラッグしてください',
+  'plan.day.empty':
+    'まだ予定がありません。場所かメモをここにドラッグしてください',
   'plan.move.refused.duplicate': '{name} はその日にすでにあります',
-  'plan.move.refused.duplicateBody': '同じ場所は1日に1回までです。別の日に移動してください。',
+  'plan.move.refused.duplicateBody':
+    '同じ場所は1日に1回までです。別の日に移動してください。',
   'plan.move.refused.notInIdeas': 'メモは日の中にとどまります',
-  'plan.move.refused.notInIdeasBody': 'アイデアは日付を待っている場所です。メモは書かれた日に属します。',
+  'plan.move.refused.notInIdeasBody':
+    'アイデアは日付を待っている場所です。メモは書かれた日に属します。',
   'plan.move.refused.notInAnotherDay': 'メモは自分の日にとどまります',
-  'plan.move.refused.notInAnotherDayBody': 'メモはまだ別の日へ移動できません。メモを編集するか、別の日に書いてください。',
+  'plan.move.refused.notInAnotherDayBody':
+    'メモはまだ別の日へ移動できません。メモを編集するか、別の日に書いてください。',
   'plan.move.refused.journeyNotInIdeas': '移動は日の中にとどまります',
-  'plan.move.refused.journeyNotInIdeasBody': 'アイデアは日付を待っている場所です。移動はそれが起こる日に属します。',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'アイデアは日付を待っている場所です。移動はそれが起こる日に属します。',
   'plan.move.refused.journeyNotInAnotherDay': '移動は自分の日にとどまります',
-  'plan.move.refused.journeyNotInAnotherDayBody': '移動の日はその日付から決まります。「移動」タブで変更してください。',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    '移動の日はその日付から決まります。「移動」タブで変更してください。',
   'plan.move.refused.journeyTimed': '{name} は {time} に出発します',
-  'plan.move.refused.journeyTimedBody': '出発時刻は時刻表のもので、プランのものではありません。時計が示す位置に移動を置いてください。',
-  'plan.move.spoken.duplicate': '{name} は移動しませんでした。その日にはすでにあります。',
-  'plan.move.spoken.notInIdeas': '{name} は移動しませんでした。メモは日の中にとどまります。',
-  'plan.move.spoken.notInAnotherDay': '{name} は移動しませんでした。メモは自分の日にとどまります。',
-  'plan.move.spoken.timed': '{name} には {time} が設定されています。時刻を外すか確認します。',
-  'plan.move.spoken.journeyNotInIdeas': '{name} は移動しませんでした。移動は日の中にとどまります。',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} は移動しませんでした。移動は自分の日にとどまります。',
-  'plan.move.spoken.journeyTimed': '{name} は移動しませんでした。出発は {time} です。',
+  'plan.move.refused.journeyTimedBody':
+    '出発時刻は時刻表のもので、プランのものではありません。時計が示す位置に移動を置いてください。',
+  'plan.move.spoken.duplicate':
+    '{name} は移動しませんでした。その日にはすでにあります。',
+  'plan.move.spoken.notInIdeas':
+    '{name} は移動しませんでした。メモは日の中にとどまります。',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} は移動しませんでした。メモは自分の日にとどまります。',
+  'plan.move.spoken.timed':
+    '{name} には {time} が設定されています。時刻を外すか確認します。',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} は移動しませんでした。移動は日の中にとどまります。',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} は移動しませんでした。移動は自分の日にとどまります。',
+  'plan.move.spoken.journeyTimed':
+    '{name} は移動しませんでした。出発は {time} です。',
   'plan.move.error.save': '移動を保存できませんでした',
   'plan.move.error.retry': '少し時間をおいてもう一度お試しください。',
   'plan.move.dropTime.title': '{name} を移動して {time} を外しますか？',
-  'plan.move.dropTime.body': 'この位置は設定された時刻と矛盾します。ここへ移動すると時刻が消え、新しい順序と消えた時刻はまとめて保存されます。',
+  'plan.move.dropTime.body':
+    'この位置は設定された時刻と矛盾します。ここへ移動すると時刻が消え、新しい順序と消えた時刻はまとめて保存されます。',
   'plan.move.dropTime.confirm': '移動して時刻を外す',
   'plan.move.dropTime.cancel': 'そのままにする',
   /* --------------------------------------------------- a day's own notes */
@@ -115,6 +131,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': '移動中',
   'plan.transport.phase.journey.arriving': '終了',
   'plan.transport.label': '{from} から {to} へ',
+  'plan.transport.drag': '並べ替え — {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'みんなで',
   'collab.empty': 'まだ何も共有されていません',
@@ -168,6 +185,44 @@ const messages = {
   'transports.priced': {
     other: '価格のある移動 {priced} 件',
   },
+  'people.title': 'メンバー',
+  'people.description': 'この旅行に誰がいて、誰が見つけられるか',
+  'people.members.title': 'この旅行のメンバー',
+  'people.members.empty':
+    'この旅行のメンバーは、もうこのワークスペースにいません',
+  'people.role.label': '役割',
+  'people.role.owner': 'オーナー',
+  'people.role.editor': '編集者',
+  'people.role.viewer': '閲覧者',
+  'people.you': 'あなた',
+  'people.owner.hint': '旅行にはオーナーが少なくとも1人必要です',
+  'people.remove.action': '{name} をこの旅行から外す',
+  'people.remove.title': '{name} をこの旅行から外しますか？',
+  'people.remove.body':
+    'すぐに旅程を見られなくなります。追加した内容は旅行に残ります。',
+  'people.remove.confirm': '外す',
+  'people.leave.action': 'この旅行から抜ける',
+  'people.leave.title': 'この旅行から抜けますか？',
+  'people.leave.body':
+    '旅行にいる誰かが再び追加するまで、旅程を見られなくなります。',
+  'people.leave.confirm': '抜ける',
+  'people.cancel': 'キャンセル',
+  'people.invite.title': 'メンバーを追加',
+  'people.invite.placeholder': 'このワークスペースの人を検索',
+  'people.invite.action': '旅行に追加',
+  'people.invite.role': '参加時の役割',
+  'people.invite.empty': 'このワークスペースの全員がすでにこの旅行にいます',
+  'people.invite.emptyHint': 'まず設定から、新しい人をワークスペースに迎えます',
+  'people.visibility.title': 'この旅行を見つけられる人',
+  'people.visibility.switch': 'ワークスペースの全員に表示する',
+  'people.visibility.private':
+    'ここに表示されている人だけがこの旅行を見られます',
+  'people.visibility.organization':
+    'このワークスペースの誰でもこの旅行を開けます',
+  'people.visibility.public': 'この旅行は公開リンクで共有されています',
+  'people.error.lastOwner':
+    '旅行にはオーナーが少なくとも1人必要です。先に別の人をオーナーにしてください。',
+  'people.error.notInWorkspace': 'その人はこのワークスペースにいません',
 } satisfies TranslationOf<typeof En>
 
 export default messages

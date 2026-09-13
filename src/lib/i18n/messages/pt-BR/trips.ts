@@ -21,33 +21,47 @@ const messages = {
   'error.collab': 'Não foi possível carregar a conversa',
   'error.book': 'Não foi possível carregar as reservas',
   'error.transports': 'Os deslocamentos não carregaram',
+  'error.people': 'Não foi possível carregar as pessoas',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Roteiro',
   'plan.places': 'Lugares',
   'plan.day.empty': 'Nada planejado — arraste um lugar ou uma nota para cá',
   'plan.move.refused.duplicate': '{name} já está nesse dia',
-  'plan.move.refused.duplicateBody': 'Um lugar só pode aparecer uma vez por dia. Mova-o para outro dia.',
+  'plan.move.refused.duplicateBody':
+    'Um lugar só pode aparecer uma vez por dia. Mova-o para outro dia.',
   'plan.move.refused.notInIdeas': 'Uma nota fica no dia',
-  'plan.move.refused.notInIdeasBody': 'As ideias são lugares esperando por um dia. Uma nota pertence ao dia para o qual foi escrita.',
+  'plan.move.refused.notInIdeasBody':
+    'As ideias são lugares esperando por um dia. Uma nota pertence ao dia para o qual foi escrita.',
   'plan.move.refused.notInAnotherDay': 'Uma nota fica no dia dela',
-  'plan.move.refused.notInAnotherDayBody': 'Ainda não dá para mover notas entre dias. Edite a nota, ou escreva-a no outro dia.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Ainda não dá para mover notas entre dias. Edite a nota, ou escreva-a no outro dia.',
   'plan.move.refused.journeyNotInIdeas': 'Um deslocamento fica no dia',
-  'plan.move.refused.journeyNotInIdeasBody': 'As ideias são lugares esperando por um dia. Um deslocamento pertence ao dia em que acontece.',
-  'plan.move.refused.journeyNotInAnotherDay': 'Um deslocamento fica no dia dele',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'O dia de um deslocamento vem das datas dele. Mude-as na aba Deslocamentos.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'As ideias são lugares esperando por um dia. Um deslocamento pertence ao dia em que acontece.',
+  'plan.move.refused.journeyNotInAnotherDay':
+    'Um deslocamento fica no dia dele',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'O dia de um deslocamento vem das datas dele. Mude-as na aba Deslocamentos.',
   'plan.move.refused.journeyTimed': '{name} parte às {time}',
-  'plan.move.refused.journeyTimedBody': 'Um horário de partida é do itinerário, não do plano. Coloque o deslocamento onde o relógio dele manda.',
-  'plan.move.spoken.duplicate': '{name} não foi movido. Esse dia já tem esse lugar.',
+  'plan.move.refused.journeyTimedBody':
+    'Um horário de partida é do itinerário, não do plano. Coloque o deslocamento onde o relógio dele manda.',
+  'plan.move.spoken.duplicate':
+    '{name} não foi movido. Esse dia já tem esse lugar.',
   'plan.move.spoken.notInIdeas': '{name} não foi movido. Uma nota fica no dia.',
-  'plan.move.spoken.notInAnotherDay': '{name} não foi movido. Uma nota fica no dia dela.',
-  'plan.move.spoken.timed': '{name} tem o horário {time}. Perguntamos se deve ser removido.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} não foi movido. Um deslocamento fica no dia.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} não foi movido. Um deslocamento fica no dia dele.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} não foi movido. Uma nota fica no dia dela.',
+  'plan.move.spoken.timed':
+    '{name} tem o horário {time}. Perguntamos se deve ser removido.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} não foi movido. Um deslocamento fica no dia.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} não foi movido. Um deslocamento fica no dia dele.',
   'plan.move.spoken.journeyTimed': '{name} não foi movido. Parte às {time}.',
   'plan.move.error.save': 'Essa mudança de ordem não foi salva',
   'plan.move.error.retry': 'Tente de novo em instantes.',
   'plan.move.dropTime.title': 'Mover {name} e remover o horário {time}?',
-  'plan.move.dropTime.body': 'Esta posição contradiz o horário definido. Movê-lo para cá apaga o horário — a nova ordem e o horário apagado são salvos juntos.',
+  'plan.move.dropTime.body':
+    'Esta posição contradiz o horário definido. Movê-lo para cá apaga o horário — a nova ordem e o horário apagado são salvos juntos.',
   'plan.move.dropTime.confirm': 'Mover e remover o horário',
   'plan.move.dropTime.cancel': 'Deixar onde está',
   /* --------------------------------------------------- a day's own notes */
@@ -115,6 +129,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'A caminho',
   'plan.transport.phase.journey.arriving': 'Fim',
   'plan.transport.label': 'De {from} para {to}',
+  'plan.transport.drag': 'Reordenar, {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Em conjunto',
   'collab.empty': 'Nada compartilhado ainda',
@@ -186,6 +201,47 @@ const messages = {
     many: 'em {priced} deslocamentos com preço',
     other: 'em {priced} deslocamentos com preço',
   },
+  'people.title': 'Pessoas',
+  'people.description': 'Quem está nesta viagem e quem pode encontrá-la',
+  'people.members.title': 'Nesta viagem',
+  'people.members.empty':
+    'Ninguém desta viagem está mais neste espaço de trabalho',
+  'people.role.label': 'Função',
+  'people.role.owner': 'Proprietário',
+  'people.role.editor': 'Pode editar',
+  'people.role.viewer': 'Pode ver',
+  'people.you': 'Você',
+  'people.owner.hint': 'Uma viagem sempre mantém pelo menos um proprietário',
+  'people.remove.action': 'Remover {name} desta viagem',
+  'people.remove.title': 'Remover {name} desta viagem?',
+  'people.remove.body':
+    'A pessoa perde o acesso ao roteiro na hora. O que ela adicionou continua na viagem.',
+  'people.remove.confirm': 'Remover',
+  'people.leave.action': 'Sair desta viagem',
+  'people.leave.title': 'Sair desta viagem?',
+  'people.leave.body':
+    'Você perde o acesso ao roteiro até que alguém da viagem adicione você de volta.',
+  'people.leave.confirm': 'Sair',
+  'people.cancel': 'Cancelar',
+  'people.invite.title': 'Adicionar alguém',
+  'people.invite.placeholder': 'Busque as pessoas deste espaço de trabalho',
+  'people.invite.action': 'Adicionar à viagem',
+  'people.invite.role': 'Entra como',
+  'people.invite.empty': 'Todo mundo deste espaço já está nesta viagem',
+  'people.invite.emptyHint':
+    'Primeiro alguém novo entra no espaço, em Configurações',
+  'people.visibility.title': 'Quem pode encontrar esta viagem',
+  'people.visibility.switch': 'Visível para todo o espaço de trabalho',
+  'people.visibility.private':
+    'Só as pessoas listadas aqui podem ver esta viagem',
+  'people.visibility.organization':
+    'Qualquer pessoa deste espaço pode abrir esta viagem',
+  'people.visibility.public':
+    'Esta viagem está compartilhada com um link público',
+  'people.error.lastOwner':
+    'Uma viagem mantém pelo menos um proprietário. Torne outra pessoa proprietária primeiro.',
+  'people.error.notInWorkspace':
+    'Essa pessoa não está neste espaço de trabalho',
 } satisfies TranslationOf<typeof En>
 
 export default messages

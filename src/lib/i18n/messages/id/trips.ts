@@ -21,33 +21,49 @@ const messages = {
   'error.collab': 'Percakapan tidak dapat dimuat',
   'error.book': 'Pemesanan tidak dapat dimuat',
   'error.transports': 'Transportasi tidak dapat dimuat',
+  'error.people': 'Daftar orang tidak dapat dimuat',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Rencana perjalanan',
   'plan.places': 'Tempat',
   'plan.day.empty': 'Belum ada rencana — seret tempat atau catatan ke sini',
   'plan.move.refused.duplicate': '{name} sudah ada di hari itu',
-  'plan.move.refused.duplicateBody': 'Satu tempat hanya bisa muncul sekali per hari. Pindahkan ke hari lain.',
+  'plan.move.refused.duplicateBody':
+    'Satu tempat hanya bisa muncul sekali per hari. Pindahkan ke hari lain.',
   'plan.move.refused.notInIdeas': 'Catatan tetap di dalam harinya',
-  'plan.move.refused.notInIdeasBody': 'Ide adalah tempat yang menunggu hari. Catatan milik hari tempat ia ditulis.',
+  'plan.move.refused.notInIdeasBody':
+    'Ide adalah tempat yang menunggu hari. Catatan milik hari tempat ia ditulis.',
   'plan.move.refused.notInAnotherDay': 'Catatan tetap di harinya sendiri',
-  'plan.move.refused.notInAnotherDayBody': 'Catatan belum bisa dipindah antar hari. Ubah catatannya, atau tulis di hari yang lain.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Catatan belum bisa dipindah antar hari. Ubah catatannya, atau tulis di hari yang lain.',
   'plan.move.refused.journeyNotInIdeas': 'Perjalanan tetap di dalam harinya',
-  'plan.move.refused.journeyNotInIdeasBody': 'Ide adalah tempat yang menunggu hari. Perjalanan milik hari saat ia berlangsung.',
-  'plan.move.refused.journeyNotInAnotherDay': 'Perjalanan tetap di harinya sendiri',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Hari sebuah perjalanan berasal dari tanggalnya. Ubah tanggalnya di tab Transportasi.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Ide adalah tempat yang menunggu hari. Perjalanan milik hari saat ia berlangsung.',
+  'plan.move.refused.journeyNotInAnotherDay':
+    'Perjalanan tetap di harinya sendiri',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Hari sebuah perjalanan berasal dari tanggalnya. Ubah tanggalnya di tab Transportasi.',
   'plan.move.refused.journeyTimed': '{name} berangkat pukul {time}',
-  'plan.move.refused.journeyTimedBody': 'Waktu keberangkatan milik jadwal, bukan milik rencana. Letakkan perjalanan sesuai jamnya.',
-  'plan.move.spoken.duplicate': '{name} tidak dipindahkan. Hari itu sudah memilikinya.',
-  'plan.move.spoken.notInIdeas': '{name} tidak dipindahkan. Catatan tetap di dalam harinya.',
-  'plan.move.spoken.notInAnotherDay': '{name} tidak dipindahkan. Catatan tetap di harinya sendiri.',
-  'plan.move.spoken.timed': '{name} punya waktu {time}. Kami tanya apakah waktunya dilepas.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} tidak dipindahkan. Perjalanan tetap di dalam harinya.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} tidak dipindahkan. Perjalanan tetap di harinya sendiri.',
-  'plan.move.spoken.journeyTimed': '{name} tidak dipindahkan. Berangkat pukul {time}.',
+  'plan.move.refused.journeyTimedBody':
+    'Waktu keberangkatan milik jadwal, bukan milik rencana. Letakkan perjalanan sesuai jamnya.',
+  'plan.move.spoken.duplicate':
+    '{name} tidak dipindahkan. Hari itu sudah memilikinya.',
+  'plan.move.spoken.notInIdeas':
+    '{name} tidak dipindahkan. Catatan tetap di dalam harinya.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} tidak dipindahkan. Catatan tetap di harinya sendiri.',
+  'plan.move.spoken.timed':
+    '{name} punya waktu {time}. Kami tanya apakah waktunya dilepas.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} tidak dipindahkan. Perjalanan tetap di dalam harinya.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} tidak dipindahkan. Perjalanan tetap di harinya sendiri.',
+  'plan.move.spoken.journeyTimed':
+    '{name} tidak dipindahkan. Berangkat pukul {time}.',
   'plan.move.error.save': 'Pemindahan itu gagal disimpan',
   'plan.move.error.retry': 'Coba lagi sebentar lagi.',
   'plan.move.dropTime.title': 'Pindahkan {name} dan lepas waktu {time}?',
-  'plan.move.dropTime.body': 'Posisi ini bertentangan dengan waktu yang tertera. Memindahkannya ke sini menghapus waktu — urutan baru dan waktu yang dihapus disimpan bersamaan.',
+  'plan.move.dropTime.body':
+    'Posisi ini bertentangan dengan waktu yang tertera. Memindahkannya ke sini menghapus waktu — urutan baru dan waktu yang dihapus disimpan bersamaan.',
   'plan.move.dropTime.confirm': 'Pindahkan dan hapus waktunya',
   'plan.move.dropTime.cancel': 'Biarkan di tempatnya',
   /* --------------------------------------------------- a day's own notes */
@@ -116,6 +132,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Dalam perjalanan',
   'plan.transport.phase.journey.arriving': 'Selesai',
   'plan.transport.label': 'Dari {from} ke {to}',
+  'plan.transport.drag': 'Ubah urutan, {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Bersama',
   'collab.empty': 'Belum ada yang dibagikan',
@@ -169,6 +186,47 @@ const messages = {
   'transports.priced': {
     other: 'dari {priced} transportasi dengan harga',
   },
+  'people.title': 'Orang',
+  'people.description':
+    'Siapa yang ikut perjalanan ini, dan siapa yang bisa menemukannya',
+  'people.members.title': 'Di perjalanan ini',
+  'people.members.empty':
+    'Tidak ada lagi orang dari perjalanan ini di ruang kerja ini',
+  'people.role.label': 'Peran',
+  'people.role.owner': 'Pemilik',
+  'people.role.editor': 'Bisa mengedit',
+  'people.role.viewer': 'Bisa melihat',
+  'people.you': 'Anda',
+  'people.owner.hint': 'Setiap perjalanan selalu punya setidaknya satu pemilik',
+  'people.remove.action': 'Keluarkan {name} dari perjalanan ini',
+  'people.remove.title': 'Keluarkan {name} dari perjalanan ini?',
+  'people.remove.body':
+    'Dia langsung kehilangan akses ke rencana perjalanan. Yang sudah dia tambahkan tetap ada di perjalanan.',
+  'people.remove.confirm': 'Keluarkan',
+  'people.leave.action': 'Keluar dari perjalanan ini',
+  'people.leave.title': 'Keluar dari perjalanan ini?',
+  'people.leave.body':
+    'Anda kehilangan akses ke rencana perjalanan sampai ada orang di perjalanan yang menambahkan Anda kembali.',
+  'people.leave.confirm': 'Keluar',
+  'people.cancel': 'Batal',
+  'people.invite.title': 'Tambahkan orang',
+  'people.invite.placeholder': 'Cari orang di ruang kerja ini',
+  'people.invite.action': 'Tambahkan ke perjalanan',
+  'people.invite.role': 'Bergabung sebagai',
+  'people.invite.empty':
+    'Semua orang di ruang kerja ini sudah ikut perjalanan ini',
+  'people.invite.emptyHint':
+    'Orang baru bergabung ke ruang kerja dulu, lewat Pengaturan',
+  'people.visibility.title': 'Siapa yang bisa menemukan perjalanan ini',
+  'people.visibility.switch': 'Terlihat oleh semua orang di ruang kerja',
+  'people.visibility.private':
+    'Hanya orang yang tercantum di sini yang bisa melihat perjalanan ini',
+  'people.visibility.organization':
+    'Siapa pun di ruang kerja ini bisa membuka perjalanan ini',
+  'people.visibility.public': 'Perjalanan ini dibagikan lewat tautan publik',
+  'people.error.lastOwner':
+    'Setiap perjalanan punya setidaknya satu pemilik. Jadikan orang lain pemilik dulu.',
+  'people.error.notInWorkspace': 'Orang itu tidak ada di ruang kerja ini',
 } satisfies TranslationOf<typeof En>
 
 export default messages

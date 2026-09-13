@@ -21,33 +21,45 @@ const messages = {
   'error.collab': 'Sohbet yüklenemedi',
   'error.book': 'Rezervasyonlar yüklenemedi',
   'error.transports': 'Yolculuklar yüklenemedi',
+  'error.people': 'Kişiler yüklenemedi',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Yerler',
   'plan.day.empty': 'Henüz plan yok — buraya bir yer veya not sürükle',
   'plan.move.refused.duplicate': '{name} o günde zaten var',
-  'plan.move.refused.duplicateBody': 'Bir yer bir günde yalnızca bir kez yer alabilir. Onu başka bir güne taşıyın.',
+  'plan.move.refused.duplicateBody':
+    'Bir yer bir günde yalnızca bir kez yer alabilir. Onu başka bir güne taşıyın.',
   'plan.move.refused.notInIdeas': 'Not günün içinde kalır',
-  'plan.move.refused.notInIdeasBody': 'Fikirler bir gün bekleyen yerlerdir. Not, yazıldığı güne aittir.',
+  'plan.move.refused.notInIdeasBody':
+    'Fikirler bir gün bekleyen yerlerdir. Not, yazıldığı güne aittir.',
   'plan.move.refused.notInAnotherDay': 'Not kendi gününde kalır',
-  'plan.move.refused.notInAnotherDayBody': 'Notlar henüz günler arasında taşınamıyor. Notu düzenleyin ya da diğer güne yazın.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Notlar henüz günler arasında taşınamıyor. Notu düzenleyin ya da diğer güne yazın.',
   'plan.move.refused.journeyNotInIdeas': 'Yolculuk günün içinde kalır',
-  'plan.move.refused.journeyNotInIdeasBody': 'Fikirler bir gün bekleyen yerlerdir. Yolculuk, gerçekleştiği güne aittir.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Fikirler bir gün bekleyen yerlerdir. Yolculuk, gerçekleştiği güne aittir.',
   'plan.move.refused.journeyNotInAnotherDay': 'Yolculuk kendi gününde kalır',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Bir yolculuğun günü tarihlerinden gelir. Bunları Yolculuklar sekmesinde değiştirin.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Bir yolculuğun günü tarihlerinden gelir. Bunları Yolculuklar sekmesinde değiştirin.',
   'plan.move.refused.journeyTimed': '{name} {time} kalkıyor',
-  'plan.move.refused.journeyTimedBody': 'Kalkış saati tarifenin, planın değil. Yolculuğu saatinin gösterdiği yere koyun.',
+  'plan.move.refused.journeyTimedBody':
+    'Kalkış saati tarifenin, planın değil. Yolculuğu saatinin gösterdiği yere koyun.',
   'plan.move.spoken.duplicate': '{name} taşınmadı. O günde zaten var.',
   'plan.move.spoken.notInIdeas': '{name} taşınmadı. Not günün içinde kalır.',
-  'plan.move.spoken.notInAnotherDay': '{name} taşınmadı. Not kendi gününde kalır.',
-  'plan.move.spoken.timed': '{name} öğesinde {time} var. Saati bırakalım mı diye soruyoruz.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} taşınmadı. Yolculuk günün içinde kalır.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} taşınmadı. Yolculuk kendi gününde kalır.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} taşınmadı. Not kendi gününde kalır.',
+  'plan.move.spoken.timed':
+    '{name} öğesinde {time} var. Saati bırakalım mı diye soruyoruz.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} taşınmadı. Yolculuk günün içinde kalır.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} taşınmadı. Yolculuk kendi gününde kalır.',
   'plan.move.spoken.journeyTimed': '{name} taşınmadı. {time} kalkıyor.',
   'plan.move.error.save': 'Bu taşıma kaydedilmedi',
   'plan.move.error.retry': 'Birazdan tekrar deneyin.',
   'plan.move.dropTime.title': '{name} taşınsın ve {time} kaldırılsın mı?',
-  'plan.move.dropTime.body': 'Bu konum üzerindeki saatle çelişiyor. Buraya taşımak saati siler — yeni sıra ile silinen saat birlikte kaydedilir.',
+  'plan.move.dropTime.body':
+    'Bu konum üzerindeki saatle çelişiyor. Buraya taşımak saati siler — yeni sıra ile silinen saat birlikte kaydedilir.',
   'plan.move.dropTime.confirm': 'Taşı ve saati kaldır',
   'plan.move.dropTime.cancel': 'Olduğu yerde kalsın',
   /* --------------------------------------------------- a day's own notes */
@@ -115,6 +127,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Yolda',
   'plan.transport.phase.journey.arriving': 'Bitiş',
   'plan.transport.label': '{from} – {to} arası',
+  'plan.transport.drag': 'Sırayı değiştir: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Birlikte',
   'collab.empty': 'Henüz bir şey paylaşılmadı',
@@ -177,6 +190,45 @@ const messages = {
     one: 'fiyatı girilmiş {priced} yolculukta',
     other: 'fiyatı girilmiş {priced} yolculukta',
   },
+  'people.title': 'Kişiler',
+  'people.description': 'Bu gezide kimler var ve geziyi kimler bulabilir',
+  'people.members.title': 'Bu gezide',
+  'people.members.empty': 'Bu gezideki kimse artık bu çalışma alanında değil',
+  'people.role.label': 'Rol',
+  'people.role.owner': 'Sahip',
+  'people.role.editor': 'Düzenleyici',
+  'people.role.viewer': 'İzleyici',
+  'people.you': 'Siz',
+  'people.owner.hint': 'Bir gezide her zaman en az bir sahip kalır',
+  'people.remove.action': '{name} kişisini bu geziden çıkar',
+  'people.remove.title': '{name} kişisi bu geziden çıkarılsın mı?',
+  'people.remove.body':
+    'Programa erişimi hemen sona erer. Eklediği şeyler gezide kalır.',
+  'people.remove.confirm': 'Çıkar',
+  'people.leave.action': 'Bu geziden ayrıl',
+  'people.leave.title': 'Bu geziden ayrılınsın mı?',
+  'people.leave.body':
+    'Gezideki biri sizi yeniden ekleyene kadar programa erişiminizi kaybedersiniz.',
+  'people.leave.confirm': 'Ayrıl',
+  'people.cancel': 'Vazgeç',
+  'people.invite.title': 'Birini ekle',
+  'people.invite.placeholder': 'Bu çalışma alanındaki kişileri ara',
+  'people.invite.action': 'Geziye ekle',
+  'people.invite.role': 'Şu rolle katılır',
+  'people.invite.empty': 'Bu çalışma alanındaki herkes zaten bu gezide',
+  'people.invite.emptyHint':
+    'Önce yeni biri çalışma alanına katılır, Ayarlar’dan',
+  'people.visibility.title': 'Bu geziyi kimler bulabilir',
+  'people.visibility.switch': 'Çalışma alanındaki herkese görünür',
+  'people.visibility.private':
+    'Bu geziyi yalnızca burada listelenen kişiler görebilir',
+  'people.visibility.organization':
+    'Bu çalışma alanındaki herkes bu geziyi açabilir',
+  'people.visibility.public':
+    'Bu gezi herkese açık bir bağlantıyla paylaşılıyor',
+  'people.error.lastOwner':
+    'Bir gezide en az bir sahip kalır. Önce başka birini sahip yapın.',
+  'people.error.notInWorkspace': 'Bu kişi bu çalışma alanında değil',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -59,6 +59,7 @@ import { Route as AppTripsTripIdCollabRouteImport } from './routes/_app/trips/$t
 import { Route as AppTripsTripIdCostsRouteImport } from './routes/_app/trips/$tripId/costs'
 import { Route as AppTripsTripIdFilesRouteImport } from './routes/_app/trips/$tripId/files'
 import { Route as AppTripsTripIdListsRouteImport } from './routes/_app/trips/$tripId/lists'
+import { Route as AppTripsTripIdPeopleRouteImport } from './routes/_app/trips/$tripId/people'
 import { Route as AppTripsTripIdPlanRouteImport } from './routes/_app/trips/$tripId/plan'
 import { Route as AppTripsTripIdTransportsRouteImport } from './routes/_app/trips/$tripId/transports'
 
@@ -314,6 +315,11 @@ const AppTripsTripIdListsRoute = AppTripsTripIdListsRouteImport.update({
   path: '/lists',
   getParentRoute: () => AppTripsTripIdRouteRoute,
 } as any)
+const AppTripsTripIdPeopleRoute = AppTripsTripIdPeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => AppTripsTripIdRouteRoute,
+} as any)
 const AppTripsTripIdPlanRoute = AppTripsTripIdPlanRouteImport.update({
   id: '/plan',
   path: '/plan',
@@ -374,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/trips/$tripId/costs': typeof AppTripsTripIdCostsRoute
   '/trips/$tripId/files': typeof AppTripsTripIdFilesRoute
   '/trips/$tripId/lists': typeof AppTripsTripIdListsRoute
+  '/trips/$tripId/people': typeof AppTripsTripIdPeopleRoute
   '/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
   '/console/users/': typeof AppConsoleUsersIndexRoute
@@ -423,6 +430,7 @@ export interface FileRoutesByTo {
   '/trips/$tripId/costs': typeof AppTripsTripIdCostsRoute
   '/trips/$tripId/files': typeof AppTripsTripIdFilesRoute
   '/trips/$tripId/lists': typeof AppTripsTripIdListsRoute
+  '/trips/$tripId/people': typeof AppTripsTripIdPeopleRoute
   '/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
   '/console/users': typeof AppConsoleUsersIndexRoute
@@ -478,6 +486,7 @@ export interface FileRoutesById {
   '/_app/trips/$tripId/costs': typeof AppTripsTripIdCostsRoute
   '/_app/trips/$tripId/files': typeof AppTripsTripIdFilesRoute
   '/_app/trips/$tripId/lists': typeof AppTripsTripIdListsRoute
+  '/_app/trips/$tripId/people': typeof AppTripsTripIdPeopleRoute
   '/_app/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/_app/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
   '/_app/console/users/': typeof AppConsoleUsersIndexRoute
@@ -533,6 +542,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId/costs'
     | '/trips/$tripId/files'
     | '/trips/$tripId/lists'
+    | '/trips/$tripId/people'
     | '/trips/$tripId/plan'
     | '/trips/$tripId/transports'
     | '/console/users/'
@@ -582,6 +592,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId/costs'
     | '/trips/$tripId/files'
     | '/trips/$tripId/lists'
+    | '/trips/$tripId/people'
     | '/trips/$tripId/plan'
     | '/trips/$tripId/transports'
     | '/console/users'
@@ -636,6 +647,7 @@ export interface FileRouteTypes {
     | '/_app/trips/$tripId/costs'
     | '/_app/trips/$tripId/files'
     | '/_app/trips/$tripId/lists'
+    | '/_app/trips/$tripId/people'
     | '/_app/trips/$tripId/plan'
     | '/_app/trips/$tripId/transports'
     | '/_app/console/users/'
@@ -1015,6 +1027,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTripsTripIdListsRouteImport
       parentRoute: typeof AppTripsTripIdRouteRoute
     }
+    '/_app/trips/$tripId/people': {
+      id: '/_app/trips/$tripId/people'
+      path: '/people'
+      fullPath: '/trips/$tripId/people'
+      preLoaderRoute: typeof AppTripsTripIdPeopleRouteImport
+      parentRoute: typeof AppTripsTripIdRouteRoute
+    }
     '/_app/trips/$tripId/plan': {
       id: '/_app/trips/$tripId/plan'
       path: '/plan'
@@ -1093,6 +1112,7 @@ interface AppTripsTripIdRouteRouteChildren {
   AppTripsTripIdCostsRoute: typeof AppTripsTripIdCostsRoute
   AppTripsTripIdFilesRoute: typeof AppTripsTripIdFilesRoute
   AppTripsTripIdListsRoute: typeof AppTripsTripIdListsRoute
+  AppTripsTripIdPeopleRoute: typeof AppTripsTripIdPeopleRoute
   AppTripsTripIdPlanRoute: typeof AppTripsTripIdPlanRoute
   AppTripsTripIdTransportsRoute: typeof AppTripsTripIdTransportsRoute
   AppTripsTripIdIndexRoute: typeof AppTripsTripIdIndexRoute
@@ -1104,6 +1124,7 @@ const AppTripsTripIdRouteRouteChildren: AppTripsTripIdRouteRouteChildren = {
   AppTripsTripIdCostsRoute: AppTripsTripIdCostsRoute,
   AppTripsTripIdFilesRoute: AppTripsTripIdFilesRoute,
   AppTripsTripIdListsRoute: AppTripsTripIdListsRoute,
+  AppTripsTripIdPeopleRoute: AppTripsTripIdPeopleRoute,
   AppTripsTripIdPlanRoute: AppTripsTripIdPlanRoute,
   AppTripsTripIdTransportsRoute: AppTripsTripIdTransportsRoute,
   AppTripsTripIdIndexRoute: AppTripsTripIdIndexRoute,

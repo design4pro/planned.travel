@@ -46,12 +46,15 @@ const departing: PlannerTransport = {
 }
 
 describe('a journey row', () => {
-  it('gives the departing row a drag handle named after the journey', () => {
+  it('names the departing row drag handle after the action and the journey', () => {
     render(<TransportRow transport={departing} position={0} draggable />)
 
     expect(
-      screen.getByRole('button', { name: 'Tokyo to Kyoto' }),
+      screen.getByRole('button', { name: 'Reorder, Tokyo to Kyoto' }),
     ).toBeTruthy()
+    // The regression this pins: naming the handle after the journey alone made it
+    // indistinguishable from the row's own text, which says exactly that.
+    expect(screen.queryByRole('button', { name: 'Tokyo to Kyoto' })).toBeNull()
   })
 
   it('gives the travelling row no handle, and its phase in words', () => {
@@ -110,7 +113,7 @@ describe('a journey row', () => {
         draggable
       />,
     )
-    expect(screen.getByRole('button', { name: 'Tokyo' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reorder, Tokyo' })).toBeTruthy()
     unmount()
 
     render(
@@ -120,7 +123,7 @@ describe('a journey row', () => {
         draggable
       />,
     )
-    expect(screen.getByRole('button', { name: 'Flight' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reorder, Flight' })).toBeTruthy()
   })
 
   it('marks itself for the screen and for the board', () => {

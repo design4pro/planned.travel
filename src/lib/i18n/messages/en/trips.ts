@@ -30,6 +30,7 @@ const messages = {
   'error.collab': 'The conversation did not load',
   'error.book': 'The bookings did not load',
   'error.transports': 'The transports did not load',
+  'error.people': 'The people did not load',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerary',
   'plan.places': 'Places',
@@ -53,11 +54,14 @@ const messages = {
    * the day it was written for.
    */
   'plan.move.refused.duplicate': '{name} is already on that day',
-  'plan.move.refused.duplicateBody': 'A place can only appear once per day. Move it to another day instead.',
+  'plan.move.refused.duplicateBody':
+    'A place can only appear once per day. Move it to another day instead.',
   'plan.move.refused.notInIdeas': 'A note stays in the day',
-  'plan.move.refused.notInIdeasBody': 'Ideas are places waiting for a day. A note belongs to the day it was written on.',
+  'plan.move.refused.notInIdeasBody':
+    'Ideas are places waiting for a day. A note belongs to the day it was written on.',
   'plan.move.refused.notInAnotherDay': 'A note stays on its own day',
-  'plan.move.refused.notInAnotherDayBody': 'Notes cannot be moved between days yet. Edit the note, or write it on the other day.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Notes cannot be moved between days yet. Edit the note, or write it on the other day.',
   /**
    * The same three sentences a journey needs, said in its own words.
    *
@@ -66,17 +70,25 @@ const messages = {
    * reader's. `{name}` is the journey said in words — "Tokyo to Kyoto".
    */
   'plan.move.refused.journeyNotInIdeas': 'A journey stays in the day',
-  'plan.move.refused.journeyNotInIdeasBody': 'Ideas are places waiting for a day. A journey belongs to the day it happens on.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Ideas are places waiting for a day. A journey belongs to the day it happens on.',
   'plan.move.refused.journeyNotInAnotherDay': 'A journey stays on its own day',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'A journey’s day comes from its dates. Change them on the Transports tab.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'A journey’s day comes from its dates. Change them on the Transports tab.',
   'plan.move.refused.journeyTimed': '{name} leaves at {time}',
-  'plan.move.refused.journeyTimedBody': 'A departure time is the timetable’s, not the plan’s. Put the journey where its clock belongs.',
-  'plan.move.spoken.duplicate': '{name} was not moved. That day already has it.',
-  'plan.move.spoken.notInIdeas': '{name} was not moved. A note stays in the day.',
-  'plan.move.spoken.notInAnotherDay': '{name} was not moved. A note stays on its own day.',
+  'plan.move.refused.journeyTimedBody':
+    'A departure time is the timetable’s, not the plan’s. Put the journey where its clock belongs.',
+  'plan.move.spoken.duplicate':
+    '{name} was not moved. That day already has it.',
+  'plan.move.spoken.notInIdeas':
+    '{name} was not moved. A note stays in the day.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} was not moved. A note stays on its own day.',
   'plan.move.spoken.timed': '{name} carries {time}. Asking whether to drop it.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} was not moved. A journey stays in the day.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} was not moved. A journey stays on its own day.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} was not moved. A journey stays in the day.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} was not moved. A journey stays on its own day.',
   'plan.move.spoken.journeyTimed': '{name} was not moved. It leaves at {time}.',
   'plan.move.error.save': 'That move did not save',
   'plan.move.error.retry': 'Try it again in a moment.',
@@ -92,7 +104,8 @@ const messages = {
    * a time, and that is the part a two-word button would hide.
    */
   'plan.move.dropTime.title': 'Move {name} and drop its {time}?',
-  'plan.move.dropTime.body': 'This position contradicts the time on it. Moving it here clears the time — the new order and the cleared time are saved together.',
+  'plan.move.dropTime.body':
+    'This position contradicts the time on it. Moving it here clears the time — the new order and the cleared time are saved together.',
   'plan.move.dropTime.confirm': 'Move and drop the time',
   'plan.move.dropTime.cancel': 'Keep it where it is',
   /* ------------------------------------------------- a day's own notes */
@@ -204,6 +217,20 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Under way',
   'plan.transport.phase.journey.arriving': 'Ends',
   'plan.transport.label': '{from} to {to}',
+  /**
+   * The journey's drag handle, named as an action the way the note's is — and naming
+   * the journey too, because the row's own text already says "Tokyo to Kyoto" and a
+   * handle that says only that is indistinguishable from the words beside it.
+   *
+   * `{journey}` is `plan.transport.label` as the row renders it, which makes it a
+   * phrase rather than a noun — "Von Tokyo nach Kyoto", "Từ Tokyo đến Kyoto". So the
+   * action leads and the journey is appended after the separator each locale uses in
+   * `atlas.actions.visit.add.name`, the same construction: run together instead, half
+   * the twenty-three read as a second preposition ("Ändra ordning på Från…") or stack
+   * a particle onto one ("…京都 へ を並べ替える"), and Arabic turns into the wrong verb
+   * altogether — "reordering *from* Tokyo *to* Kyoto" is a move, not a reorder.
+   */
+  'plan.transport.drag': 'Reorder, {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Collab',
   'collab.empty': 'Nothing shared yet',
@@ -299,6 +326,82 @@ const messages = {
     one: 'across {priced} priced transport',
     other: 'across {priced} priced transports',
   },
+  /* ---------------------------------------------------- the people tab */
+  'people.title': 'People',
+  'people.description': 'Who is on this trip, and who can find it',
+  /* -------------------------------------------------- the members list */
+  'people.members.title': 'On this trip',
+  /**
+   * The list is empty only in one way: every remaining member has left the
+   * workspace, so each of them is dropped rather than rendered nameless. It is
+   * a degenerate state to be honest about, not a call to action - which is why
+   * this is a sentence and not an empty state with a button.
+   */
+  'people.members.empty': 'Nobody on this trip is in this workspace any more',
+  'people.role.label': 'Role',
+  'people.role.owner': 'Owner',
+  'people.role.editor': 'Editor',
+  'people.role.viewer': 'Viewer',
+  'people.you': 'You',
+  /**
+   * What a sole owner's own row says where the role control and the leave
+   * affordance would be. Both are absent because the last-owner guard refuses
+   * every move they could start, so the row says why rather than going quiet.
+   */
+  'people.owner.hint': 'A trip always keeps at least one owner',
+  /* ------------------------------------- taking somebody off, and leaving */
+  /**
+   * `{name}` is the person's name from their workspace profile. It is in the
+   * action as well as in the dialog title because the action is an icon button,
+   * and a list of identical "Remove" labels is a list a screen reader cannot
+   * tell apart.
+   */
+  'people.remove.action': 'Remove {name} from this trip',
+  'people.remove.title': 'Remove {name} from this trip?',
+  'people.remove.body':
+    'They lose access to the plan straight away. What they added stays on the trip.',
+  'people.remove.confirm': 'Remove',
+  'people.leave.action': 'Leave this trip',
+  'people.leave.title': 'Leave this trip?',
+  'people.leave.body':
+    'You lose access to the plan until somebody on the trip adds you back.',
+  'people.leave.confirm': 'Leave',
+  /**
+   * Namespace-local on purpose: the catalogue has no shared action namespace -
+   * `modules.action.cancel` and `console.dialog.cancel` are each their own -
+   * and inventing one is a cross-cutting change this tab does not own.
+   */
+  'people.cancel': 'Cancel',
+  /* ------------------------------------------------- the invite control */
+  'people.invite.title': 'Add somebody',
+  'people.invite.placeholder': 'Search the people in this workspace',
+  'people.invite.action': 'Add to trip',
+  'people.invite.role': 'They join as',
+  'people.invite.empty': 'Everybody in this workspace is already on this trip',
+  'people.invite.emptyHint':
+    'Somebody new joins the workspace first, in Settings',
+  /* ------------------------------------------------- the visibility card */
+  'people.visibility.title': 'Who can find this trip',
+  'people.visibility.switch': 'Visible to everyone in the workspace',
+  /**
+   * The switch has two positions and the column stores three values, so the
+   * stored state is said in words beneath it - including the third, which this
+   * control reports and refuses to move rather than silently downgrading.
+   */
+  'people.visibility.private': 'Only the people listed here can see this trip',
+  'people.visibility.organization':
+    'Anyone in this workspace can open this trip',
+  'people.visibility.public': 'This trip is shared with a public link',
+  /* ---------------------------------------------- the two named refusals */
+  /**
+   * The client picks one of these two from the refusal's `reason` code; the
+   * server never composes a sentence. The last-owner line answers both verbs -
+   * removing the last owner and demoting them - because from the reader's side
+   * it is one rule.
+   */
+  'people.error.lastOwner':
+    'A trip keeps at least one owner. Make somebody else an owner first.',
+  'people.error.notInWorkspace': 'That person is not in this workspace',
 } as const satisfies NamespaceMessages
 
 export default messages

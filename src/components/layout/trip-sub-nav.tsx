@@ -158,7 +158,7 @@ function ShareLink({
 
   return (
     <Link
-      to="/trips/$tripId/collab"
+      to="/trips/$tripId/people"
       params={{ tripId }}
       aria-label={t('shell.trip.nav.shareLabel')}
       className={cn(

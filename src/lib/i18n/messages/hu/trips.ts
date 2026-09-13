@@ -21,33 +21,49 @@ const messages = {
   'error.collab': 'A beszélgetést nem sikerült betölteni',
   'error.book': 'A foglalásokat nem sikerült betölteni',
   'error.transports': 'Az utak nem töltődtek be',
+  'error.people': 'A résztvevőket nem sikerült betölteni',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Útiterv',
   'plan.places': 'Helyek',
   'plan.day.empty': 'Még nincs terv – húzz ide egy helyet vagy egy jegyzetet',
   'plan.move.refused.duplicate': '{name} már szerepel azon a napon',
-  'plan.move.refused.duplicateBody': 'Egy hely naponta csak egyszer szerepelhet. Tegye inkább egy másik napra.',
+  'plan.move.refused.duplicateBody':
+    'Egy hely naponta csak egyszer szerepelhet. Tegye inkább egy másik napra.',
   'plan.move.refused.notInIdeas': 'A jegyzet a napon belül marad',
-  'plan.move.refused.notInIdeasBody': 'Az ötletek napra váró helyek. A jegyzet ahhoz a naphoz tartozik, amelyikre írták.',
+  'plan.move.refused.notInIdeasBody':
+    'Az ötletek napra váró helyek. A jegyzet ahhoz a naphoz tartozik, amelyikre írták.',
   'plan.move.refused.notInAnotherDay': 'A jegyzet a saját napján marad',
-  'plan.move.refused.notInAnotherDayBody': 'A jegyzetek egyelőre nem helyezhetők át másik napra. Szerkessze a jegyzetet, vagy írja meg a másik napon.',
+  'plan.move.refused.notInAnotherDayBody':
+    'A jegyzetek egyelőre nem helyezhetők át másik napra. Szerkessze a jegyzetet, vagy írja meg a másik napon.',
   'plan.move.refused.journeyNotInIdeas': 'Az út a napon belül marad',
-  'plan.move.refused.journeyNotInIdeasBody': 'Az ötletek napra váró helyek. Az út ahhoz a naphoz tartozik, amelyiken megtörténik.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Az ötletek napra váró helyek. Az út ahhoz a naphoz tartozik, amelyiken megtörténik.',
   'plan.move.refused.journeyNotInAnotherDay': 'Az út a saját napján marad',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Az út napja a dátumaiból következik. Módosítsa őket az Utak lapon.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Az út napja a dátumaiból következik. Módosítsa őket az Utak lapon.',
   'plan.move.refused.journeyTimed': '{name} indulása {time}',
-  'plan.move.refused.journeyTimedBody': 'Az indulási idő a menetrendé, nem a terve. Tegye az utat oda, ahová az órája mutatja.',
-  'plan.move.spoken.duplicate': '{name} nem lett áthelyezve. Az a nap már tartalmazza.',
-  'plan.move.spoken.notInIdeas': '{name} nem lett áthelyezve. A jegyzet a napon belül marad.',
-  'plan.move.spoken.notInAnotherDay': '{name} nem lett áthelyezve. A jegyzet a saját napján marad.',
-  'plan.move.spoken.timed': '{name} időpontja {time}. Megkérdezzük, elhagyjuk-e.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} nem lett áthelyezve. Az út a napon belül marad.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} nem lett áthelyezve. Az út a saját napján marad.',
-  'plan.move.spoken.journeyTimed': '{name} nem lett áthelyezve. Indulás: {time}.',
+  'plan.move.refused.journeyTimedBody':
+    'Az indulási idő a menetrendé, nem a terve. Tegye az utat oda, ahová az órája mutatja.',
+  'plan.move.spoken.duplicate':
+    '{name} nem lett áthelyezve. Az a nap már tartalmazza.',
+  'plan.move.spoken.notInIdeas':
+    '{name} nem lett áthelyezve. A jegyzet a napon belül marad.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} nem lett áthelyezve. A jegyzet a saját napján marad.',
+  'plan.move.spoken.timed':
+    '{name} időpontja {time}. Megkérdezzük, elhagyjuk-e.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} nem lett áthelyezve. Az út a napon belül marad.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} nem lett áthelyezve. Az út a saját napján marad.',
+  'plan.move.spoken.journeyTimed':
+    '{name} nem lett áthelyezve. Indulás: {time}.',
   'plan.move.error.save': 'A mozgatást nem sikerült menteni',
   'plan.move.error.retry': 'Próbálja meg újra egy pillanat múlva.',
-  'plan.move.dropTime.title': 'Áthelyezi ezt: {name}, és elhagyja a(z) {time} időpontot?',
-  'plan.move.dropTime.body': 'Ez a hely ellentmond a rajta lévő időpontnak. Az ide helyezés törli az időpontot — az új sorrend és a törölt időpont együtt mentődik.',
+  'plan.move.dropTime.title':
+    'Áthelyezi ezt: {name}, és elhagyja a(z) {time} időpontot?',
+  'plan.move.dropTime.body':
+    'Ez a hely ellentmond a rajta lévő időpontnak. Az ide helyezés törli az időpontot — az új sorrend és a törölt időpont együtt mentődik.',
   'plan.move.dropTime.confirm': 'Áthelyezés az időpont nélkül',
   'plan.move.dropTime.cancel': 'Maradjon, ahol van',
   /* --------------------------------------------------- a day's own notes */
@@ -116,6 +132,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Úton',
   'plan.transport.phase.journey.arriving': 'Vége',
   'plan.transport.label': '{from} és {to} között',
+  'plan.transport.drag': 'Átrendezés: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Közösen',
   'collab.empty': 'Még semmit sem osztottak meg',
@@ -178,6 +195,46 @@ const messages = {
     one: '{priced} árazott úton',
     other: '{priced} árazott úton',
   },
+  'people.title': 'Emberek',
+  'people.description': 'Ki van ezen az utazáson, és ki találhatja meg',
+  'people.members.title': 'Ezen az utazáson',
+  'people.members.empty':
+    'Erről az utazásról már senki sincs ebben a munkaterületben',
+  'people.role.label': 'Szerepkör',
+  'people.role.owner': 'Tulajdonos',
+  'people.role.editor': 'Szerkesztő',
+  'people.role.viewer': 'Megtekintő',
+  'people.you': 'Te',
+  'people.owner.hint': 'Egy utazásnak mindig marad legalább egy tulajdonosa',
+  'people.remove.action': '{name} eltávolítása erről az utazásról',
+  'people.remove.title': 'Eltávolítod {name} nevű utast erről az utazásról?',
+  'people.remove.body':
+    'Azonnal elveszíti a hozzáférést az útitervhez. Amit hozzáadott, az az utazáson marad.',
+  'people.remove.confirm': 'Eltávolítás',
+  'people.leave.action': 'Kilépés az utazásból',
+  'people.leave.title': 'Kilépsz ebből az utazásból?',
+  'people.leave.body':
+    'Elveszíted a hozzáférést az útitervhez, amíg valaki az utazásról vissza nem vesz.',
+  'people.leave.confirm': 'Kilépés',
+  'people.cancel': 'Mégse',
+  'people.invite.title': 'Valaki hozzáadása',
+  'people.invite.placeholder': 'Keresés a munkaterület tagjai között',
+  'people.invite.action': 'Hozzáadás az utazáshoz',
+  'people.invite.role': 'Így csatlakozik',
+  'people.invite.empty': 'A munkaterület minden tagja már ezen az utazáson van',
+  'people.invite.emptyHint':
+    'Előbb valaki új lép be a munkaterületre, a Beállításokban',
+  'people.visibility.title': 'Ki találhatja meg ezt az utazást',
+  'people.visibility.switch': 'Látható a munkaterület minden tagjának',
+  'people.visibility.private':
+    'Ezt az utazást csak az itt felsorolt emberek látják',
+  'people.visibility.organization':
+    'A munkaterület bármely tagja megnyithatja ezt az utazást',
+  'people.visibility.public':
+    'Ez az utazás nyilvános hivatkozással van megosztva',
+  'people.error.lastOwner':
+    'Egy utazásnak marad legalább egy tulajdonosa. Előbb tegyél tulajdonossá valaki mást.',
+  'people.error.notInWorkspace': 'Ez a személy nincs ebben a munkaterületben',
 } satisfies TranslationOf<typeof En>
 
 export default messages

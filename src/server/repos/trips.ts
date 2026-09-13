@@ -239,8 +239,8 @@ export type CreateShareLinkInput = z.infer<typeof createShareLinkInput>
  * more cross an organization boundary than the trip half can.
  *
  * Exported for {@link readableTrips}, which is how a reader should reach it; a query that needs the
- * bare `SQL` — one grouped aggregate here, and the two `journey.ts` readers that do not carry it yet
- * — takes it directly and is visibly doing something the handle could not do for it.
+ * bare `SQL` — one grouped aggregate here, and nothing else in the codebase — takes it directly and
+ * is visibly doing something the handle could not do for it.
  */
 export function readableTripFilter(scope: TenantScope): SQL {
   const isMember = exists(
@@ -274,11 +274,11 @@ export interface ReadableTrips {
  * same weight and deserves the same treatment. `tripsRepository` answers for *every* trip in the
  * tenant, which is right for the quota count in {@link createTrip}, for the slug reservation, and for
  * the plan-usage figure in `billing/runtime.cloudflare.ts`, and wrong for every reader. While both
- * were spelled `tripsRepository.findMany`, nothing but memory told them apart, and memory has already
- * missed two: `listTripsWithoutJourney` and `journalCoverage` in `journey.ts` still offer a workspace
- * member the titles and counts of private trips they cannot open. Fixing those is a ticket of its own
- * — `journey.ts` is not this slice's to edit — but the seam they will be fixed against is this one,
- * and it belongs on the branch that created the two-tier world.
+ * were spelled `tripsRepository.findMany`, nothing but memory told them apart, and memory had already
+ * missed two: `listTripsWithoutJourney` and `journalCoverage` in `journey.ts` offered a workspace
+ * member the titles and counts of private trips they cannot open until #196 routed them through here.
+ * That is the argument for the handle: the miss was invisible at the call site, and the only thing
+ * that makes the next one visible is that a reader has to name `tripsRepository` to get past it.
  */
 export function readableTrips(scope: TenantScope): ReadableTrips {
   const readable = readableTripFilter(scope)

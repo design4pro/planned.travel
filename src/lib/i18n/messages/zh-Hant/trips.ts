@@ -21,33 +21,42 @@ const messages = {
   'error.collab': '無法載入對話',
   'error.book': '無法載入訂房',
   'error.transports': '交通未能載入',
+  'error.people': '無法載入成員',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '行程',
   'plan.places': '地點',
   'plan.day.empty': '還沒有安排 — 把地點或備註拖到這裡',
   'plan.move.refused.duplicate': '{name} 已在那一天裡',
-  'plan.move.refused.duplicateBody': '同一地點每天只能出現一次。請把它移到另一天。',
+  'plan.move.refused.duplicateBody':
+    '同一地點每天只能出現一次。請把它移到另一天。',
   'plan.move.refused.notInIdeas': '備註留在這一天裡',
-  'plan.move.refused.notInIdeasBody': '想法是等待安排日期的地點。備註屬於它所寫的那一天。',
+  'plan.move.refused.notInIdeasBody':
+    '想法是等待安排日期的地點。備註屬於它所寫的那一天。',
   'plan.move.refused.notInAnotherDay': '備註留在自己的那一天',
-  'plan.move.refused.notInAnotherDayBody': '備註還不能在不同日期之間移動。請編輯備註，或在另一天重新寫一則。',
+  'plan.move.refused.notInAnotherDayBody':
+    '備註還不能在不同日期之間移動。請編輯備註，或在另一天重新寫一則。',
   'plan.move.refused.journeyNotInIdeas': '行程留在這一天裡',
-  'plan.move.refused.journeyNotInIdeasBody': '想法是等待安排日期的地點。行程屬於它發生的那一天。',
+  'plan.move.refused.journeyNotInIdeasBody':
+    '想法是等待安排日期的地點。行程屬於它發生的那一天。',
   'plan.move.refused.journeyNotInAnotherDay': '行程留在自己的那一天',
-  'plan.move.refused.journeyNotInAnotherDayBody': '行程的日期來自它的出發與抵達時間。請在「交通」分頁中修改。',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    '行程的日期來自它的出發與抵達時間。請在「交通」分頁中修改。',
   'plan.move.refused.journeyTimed': '{name} 於 {time} 出發',
-  'plan.move.refused.journeyTimedBody': '出發時間屬於時刻表，不屬於計畫。請把行程放在它的時間該在的位置。',
+  'plan.move.refused.journeyTimedBody':
+    '出發時間屬於時刻表，不屬於計畫。請把行程放在它的時間該在的位置。',
   'plan.move.spoken.duplicate': '{name} 沒有移動。那一天已經有它了。',
   'plan.move.spoken.notInIdeas': '{name} 沒有移動。備註留在這一天裡。',
   'plan.move.spoken.notInAnotherDay': '{name} 沒有移動。備註留在自己的那一天。',
   'plan.move.spoken.timed': '{name} 設定了 {time}。正在詢問是否放棄這個時間。',
   'plan.move.spoken.journeyNotInIdeas': '{name} 沒有移動。行程留在這一天裡。',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} 沒有移動。行程留在自己的那一天。',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} 沒有移動。行程留在自己的那一天。',
   'plan.move.spoken.journeyTimed': '{name} 沒有移動。它於 {time} 出發。',
   'plan.move.error.save': '這次移動未能儲存',
   'plan.move.error.retry': '請稍後再試一次。',
   'plan.move.dropTime.title': '移動 {name} 並放棄 {time} 嗎？',
-  'plan.move.dropTime.body': '這個位置與它的時間互相矛盾。移到這裡會清除時間——新的順序和被清除的時間會一起儲存。',
+  'plan.move.dropTime.body':
+    '這個位置與它的時間互相矛盾。移到這裡會清除時間——新的順序和被清除的時間會一起儲存。',
   'plan.move.dropTime.confirm': '移動並清除時間',
   'plan.move.dropTime.cancel': '保持原位',
   /* --------------------------------------------------- a day's own notes */
@@ -114,6 +123,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': '途中',
   'plan.transport.phase.journey.arriving': '結束',
   'plan.transport.label': '{from} 至 {to}',
+  'plan.transport.drag': '重新排序——{journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': '一起',
   'collab.empty': '還沒有分享任何內容',
@@ -167,6 +177,39 @@ const messages = {
   'transports.priced': {
     other: '來自 {priced} 段有價交通',
   },
+  'people.title': '成員',
+  'people.description': '誰在這次旅行裡，誰能找到它',
+  'people.members.title': '這次旅行的成員',
+  'people.members.empty': '這次旅行的人都已不在這個工作區',
+  'people.role.label': '角色',
+  'people.role.owner': '擁有者',
+  'people.role.editor': '編輯者',
+  'people.role.viewer': '檢視者',
+  'people.you': '你',
+  'people.owner.hint': '每次旅行至少保留一位擁有者',
+  'people.remove.action': '將 {name} 移出這次旅行',
+  'people.remove.title': '將 {name} 移出這次旅行？',
+  'people.remove.body':
+    '對方會立即失去檢視行程的權限。已新增的內容留在旅行裡。',
+  'people.remove.confirm': '移出',
+  'people.leave.action': '離開這次旅行',
+  'people.leave.title': '離開這次旅行？',
+  'people.leave.body': '在旅行裡的人重新把你加回來之前，你將無法檢視行程。',
+  'people.leave.confirm': '離開',
+  'people.cancel': '取消',
+  'people.invite.title': '新增成員',
+  'people.invite.placeholder': '搜尋這個工作區裡的人',
+  'people.invite.action': '新增到旅行',
+  'people.invite.role': '加入身分',
+  'people.invite.empty': '這個工作區裡的每個人都已在這次旅行裡',
+  'people.invite.emptyHint': '先在設定裡把新成員加入工作區',
+  'people.visibility.title': '誰能找到這次旅行',
+  'people.visibility.switch': '對工作區裡的所有人可見',
+  'people.visibility.private': '只有這裡列出的人能看到這次旅行',
+  'people.visibility.organization': '這個工作區裡的任何人都能開啟這次旅行',
+  'people.visibility.public': '這次旅行已透過公開連結分享',
+  'people.error.lastOwner': '旅行至少保留一位擁有者。請先把其他人設為擁有者。',
+  'people.error.notInWorkspace': '這個人不在這個工作區裡',
 } satisfies TranslationOf<typeof En>
 
 export default messages
