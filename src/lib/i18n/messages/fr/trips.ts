@@ -21,33 +21,48 @@ const messages = {
   'error.collab': 'La conversation n’a pas pu être chargée',
   'error.book': 'Les réservations n’ont pas pu être chargées',
   'error.transports': 'Les trajets n’ont pas été chargés',
+  'error.people': 'Les personnes n’ont pas pu être chargées',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinéraire',
   'plan.places': 'Lieux',
   'plan.day.empty': 'Rien de prévu — déposez ici un lieu ou une note',
   'plan.move.refused.duplicate': '{name} est déjà dans cette journée',
-  'plan.move.refused.duplicateBody': 'Un lieu ne peut apparaître qu’une fois par journée. Déplacez-le vers une autre journée.',
+  'plan.move.refused.duplicateBody':
+    'Un lieu ne peut apparaître qu’une fois par journée. Déplacez-le vers une autre journée.',
   'plan.move.refused.notInIdeas': 'Une note reste dans la journée',
-  'plan.move.refused.notInIdeasBody': 'Les idées sont des lieux en attente d’une journée. Une note appartient à la journée pour laquelle elle a été écrite.',
+  'plan.move.refused.notInIdeasBody':
+    'Les idées sont des lieux en attente d’une journée. Une note appartient à la journée pour laquelle elle a été écrite.',
   'plan.move.refused.notInAnotherDay': 'Une note reste dans sa journée',
-  'plan.move.refused.notInAnotherDayBody': 'Les notes ne peuvent pas encore changer de journée. Modifiez la note, ou écrivez-la dans l’autre journée.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Les notes ne peuvent pas encore changer de journée. Modifiez la note, ou écrivez-la dans l’autre journée.',
   'plan.move.refused.journeyNotInIdeas': 'Un trajet reste dans la journée',
-  'plan.move.refused.journeyNotInIdeasBody': 'Les idées sont des lieux en attente d’une journée. Un trajet appartient à la journée où il a lieu.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Les idées sont des lieux en attente d’une journée. Un trajet appartient à la journée où il a lieu.',
   'plan.move.refused.journeyNotInAnotherDay': 'Un trajet reste dans sa journée',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'La journée d’un trajet vient de ses dates. Modifiez-les dans l’onglet Trajets.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'La journée d’un trajet vient de ses dates. Modifiez-les dans l’onglet Trajets.',
   'plan.move.refused.journeyTimed': '{name} part à {time}',
-  'plan.move.refused.journeyTimedBody': 'Une heure de départ appartient à l’horaire, pas au plan. Placez le trajet là où son horloge le met.',
-  'plan.move.spoken.duplicate': '{name} n’a pas été déplacé. Cette journée le contient déjà.',
-  'plan.move.spoken.notInIdeas': '{name} n’a pas été déplacé. Une note reste dans la journée.',
-  'plan.move.spoken.notInAnotherDay': '{name} n’a pas été déplacé. Une note reste dans sa journée.',
-  'plan.move.spoken.timed': '{name} porte {time}. Nous demandons s’il faut l’abandonner.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} n’a pas été déplacé. Un trajet reste dans la journée.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} n’a pas été déplacé. Un trajet reste dans sa journée.',
-  'plan.move.spoken.journeyTimed': '{name} n’a pas été déplacé. Départ à {time}.',
+  'plan.move.refused.journeyTimedBody':
+    'Une heure de départ appartient à l’horaire, pas au plan. Placez le trajet là où son horloge le met.',
+  'plan.move.spoken.duplicate':
+    '{name} n’a pas été déplacé. Cette journée le contient déjà.',
+  'plan.move.spoken.notInIdeas':
+    '{name} n’a pas été déplacé. Une note reste dans la journée.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} n’a pas été déplacé. Une note reste dans sa journée.',
+  'plan.move.spoken.timed':
+    '{name} porte {time}. Nous demandons s’il faut l’abandonner.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} n’a pas été déplacé. Un trajet reste dans la journée.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} n’a pas été déplacé. Un trajet reste dans sa journée.',
+  'plan.move.spoken.journeyTimed':
+    '{name} n’a pas été déplacé. Départ à {time}.',
   'plan.move.error.save': 'Ce déplacement n’a pas été enregistré',
   'plan.move.error.retry': 'Réessayez dans un instant.',
   'plan.move.dropTime.title': 'Déplacer {name} et abandonner {time} ?',
-  'plan.move.dropTime.body': 'Cette position contredit l’heure qui y figure. Le déplacer ici efface l’heure : le nouvel ordre et l’heure effacée sont enregistrés ensemble.',
+  'plan.move.dropTime.body':
+    'Cette position contredit l’heure qui y figure. Le déplacer ici efface l’heure : le nouvel ordre et l’heure effacée sont enregistrés ensemble.',
   'plan.move.dropTime.confirm': 'Déplacer et effacer l’heure',
   'plan.move.dropTime.cancel': 'Le laisser où il est',
   /* --------------------------------------------------- a day's own notes */
@@ -187,6 +202,48 @@ const messages = {
     many: 'sur {priced} trajets chiffrés',
     other: 'sur {priced} trajets chiffrés',
   },
+  'people.title': 'Personnes',
+  'people.description': 'Qui participe à ce voyage, et qui peut le trouver',
+  'people.members.title': 'Sur ce voyage',
+  'people.members.empty':
+    'Plus personne de ce voyage ne fait partie de cet espace de travail',
+  'people.role.label': 'Rôle',
+  'people.role.owner': 'Propriétaire',
+  'people.role.editor': 'Éditeur',
+  'people.role.viewer': 'Lecteur',
+  'people.you': 'Vous',
+  'people.owner.hint': 'Un voyage garde toujours au moins un propriétaire',
+  'people.remove.action': 'Retirer {name} de ce voyage',
+  'people.remove.title': 'Retirer {name} de ce voyage ?',
+  'people.remove.body':
+    'Cette personne perd immédiatement l’accès à l’itinéraire. Ce qu’elle a ajouté reste sur le voyage.',
+  'people.remove.confirm': 'Retirer',
+  'people.leave.action': 'Quitter ce voyage',
+  'people.leave.title': 'Quitter ce voyage ?',
+  'people.leave.body':
+    'Vous perdez l’accès à l’itinéraire jusqu’à ce que quelqu’un du voyage vous rajoute.',
+  'people.leave.confirm': 'Quitter',
+  'people.cancel': 'Annuler',
+  'people.invite.title': 'Ajouter quelqu’un',
+  'people.invite.placeholder':
+    'Rechercher les personnes de cet espace de travail',
+  'people.invite.action': 'Ajouter au voyage',
+  'people.invite.role': 'Rejoint en tant que',
+  'people.invite.empty':
+    'Tout le monde dans cet espace participe déjà à ce voyage',
+  'people.invite.emptyHint':
+    'Quelqu’un de nouveau rejoint d’abord l’espace, dans les Réglages',
+  'people.visibility.title': 'Qui peut trouver ce voyage',
+  'people.visibility.switch': 'Visible par tout l’espace de travail',
+  'people.visibility.private':
+    'Seules les personnes listées ici voient ce voyage',
+  'people.visibility.organization':
+    'Toute personne de cet espace peut ouvrir ce voyage',
+  'people.visibility.public': 'Ce voyage est partagé par un lien public',
+  'people.error.lastOwner':
+    'Un voyage garde au moins un propriétaire. Nommez d’abord quelqu’un d’autre propriétaire.',
+  'people.error.notInWorkspace':
+    'Cette personne n’est pas dans cet espace de travail',
 } satisfies TranslationOf<typeof En>
 
 export default messages

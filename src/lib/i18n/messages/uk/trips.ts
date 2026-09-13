@@ -21,33 +21,47 @@ const messages = {
   'error.collab': 'Не вдалося завантажити листування',
   'error.book': 'Не вдалося завантажити бронювання',
   'error.transports': 'Переїзди не завантажилися',
+  'error.people': 'Не вдалося завантажити учасників',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Маршрут',
   'plan.places': 'Місця',
-  'plan.day.empty': 'Нічого не заплановано — перетягніть сюди місце або нотатку',
+  'plan.day.empty':
+    'Нічого не заплановано — перетягніть сюди місце або нотатку',
   'plan.move.refused.duplicate': '{name} уже є в цьому дні',
-  'plan.move.refused.duplicateBody': 'Місце може бути в дні лише один раз. Перенесіть його в інший день.',
+  'plan.move.refused.duplicateBody':
+    'Місце може бути в дні лише один раз. Перенесіть його в інший день.',
   'plan.move.refused.notInIdeas': 'Нотатка лишається в дні',
-  'plan.move.refused.notInIdeasBody': 'Ідеї — це місця, що чекають на свій день. Нотатка належить дню, для якого її написали.',
+  'plan.move.refused.notInIdeasBody':
+    'Ідеї — це місця, що чекають на свій день. Нотатка належить дню, для якого її написали.',
   'plan.move.refused.notInAnotherDay': 'Нотатка лишається у своєму дні',
-  'plan.move.refused.notInAnotherDayBody': 'Нотатки поки не можна переносити між днями. Змініть нотатку або напишіть її в іншому дні.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Нотатки поки не можна переносити між днями. Змініть нотатку або напишіть її в іншому дні.',
   'plan.move.refused.journeyNotInIdeas': 'Переїзд лишається в дні',
-  'plan.move.refused.journeyNotInIdeasBody': 'Ідеї — це місця, що чекають на свій день. Переїзд належить дню, у який він відбувається.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Ідеї — це місця, що чекають на свій день. Переїзд належить дню, у який він відбувається.',
   'plan.move.refused.journeyNotInAnotherDay': 'Переїзд лишається у своєму дні',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'День переїзду визначають його дати. Змініть їх на вкладці «Переїзди».',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'День переїзду визначають його дати. Змініть їх на вкладці «Переїзди».',
   'plan.move.refused.journeyTimed': '{name} вирушає о {time}',
-  'plan.move.refused.journeyTimedBody': 'Час відправлення належить розкладу, а не плану. Поставте переїзд туди, куди його ставить годинник.',
+  'plan.move.refused.journeyTimedBody':
+    'Час відправлення належить розкладу, а не плану. Поставте переїзд туди, куди його ставить годинник.',
   'plan.move.spoken.duplicate': '{name} не переміщено. У цьому дні він уже є.',
-  'plan.move.spoken.notInIdeas': '{name} не переміщено. Нотатка лишається в дні.',
-  'plan.move.spoken.notInAnotherDay': '{name} не переміщено. Нотатка лишається у своєму дні.',
-  'plan.move.spoken.timed': 'У {name} стоїть {time}. Запитуємо, чи прибрати час.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} не переміщено. Переїзд лишається в дні.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} не переміщено. Переїзд лишається у своєму дні.',
+  'plan.move.spoken.notInIdeas':
+    '{name} не переміщено. Нотатка лишається в дні.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} не переміщено. Нотатка лишається у своєму дні.',
+  'plan.move.spoken.timed':
+    'У {name} стоїть {time}. Запитуємо, чи прибрати час.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} не переміщено. Переїзд лишається в дні.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} не переміщено. Переїзд лишається у своєму дні.',
   'plan.move.spoken.journeyTimed': '{name} не переміщено. Вирушає о {time}.',
   'plan.move.error.save': 'Переміщення не збереглося',
   'plan.move.error.retry': 'Спробуйте ще раз за хвилину.',
   'plan.move.dropTime.title': 'Перемістити {name} і прибрати {time}?',
-  'plan.move.dropTime.body': 'Це місце суперечить зазначеному часу. Перенесення сюди стирає час — новий порядок і стертий час зберігаються разом.',
+  'plan.move.dropTime.body':
+    'Це місце суперечить зазначеному часу. Перенесення сюди стирає час — новий порядок і стертий час зберігаються разом.',
   'plan.move.dropTime.confirm': 'Перемістити й прибрати час',
   'plan.move.dropTime.cancel': 'Залишити на місці',
   /* --------------------------------------------------- a day's own notes */
@@ -196,6 +210,43 @@ const messages = {
     many: 'за {priced} переїздами із ціною',
     other: 'за {priced} переїздами із ціною',
   },
+  'people.title': 'Учасники',
+  'people.description': 'Хто в цій подорожі і хто може її знайти',
+  'people.members.title': 'У цій подорожі',
+  'people.members.empty': 'Нікого з цієї подорожі вже немає в цьому просторі',
+  'people.role.label': 'Роль',
+  'people.role.owner': 'Власник',
+  'people.role.editor': 'Редактор',
+  'people.role.viewer': 'Читач',
+  'people.you': 'Ви',
+  'people.owner.hint': 'У подорожі завжди лишається принаймні один власник',
+  'people.remove.action': 'Прибрати {name} з цієї подорожі',
+  'people.remove.title': 'Прибрати {name} з цієї подорожі?',
+  'people.remove.body':
+    'Доступ до маршруту зникне одразу. Усе, що людина додала, лишається в подорожі.',
+  'people.remove.confirm': 'Прибрати',
+  'people.leave.action': 'Покинути цю подорож',
+  'people.leave.title': 'Покинути цю подорож?',
+  'people.leave.body':
+    'Ви втратите доступ до маршруту, доки хтось із подорожі не додасть вас знову.',
+  'people.leave.confirm': 'Покинути',
+  'people.cancel': 'Скасувати',
+  'people.invite.title': 'Додати людину',
+  'people.invite.placeholder': 'Пошук людей у цьому просторі',
+  'people.invite.action': 'Додати до подорожі',
+  'people.invite.role': 'Приєднується як',
+  'people.invite.empty': 'Усі в цьому просторі вже в цій подорожі',
+  'people.invite.emptyHint':
+    'Спершу нова людина приєднується до простору, у налаштуваннях',
+  'people.visibility.title': 'Хто може знайти цю подорож',
+  'people.visibility.switch': 'Видима всім у просторі',
+  'people.visibility.private': 'Цю подорож бачать лише перелічені тут люди',
+  'people.visibility.organization':
+    'Будь-хто в цьому просторі може відкрити цю подорож',
+  'people.visibility.public': 'Ця подорож доступна за публічним посиланням',
+  'people.error.lastOwner':
+    'У подорожі лишається принаймні один власник. Спершу зробіть власником когось іншого.',
+  'people.error.notInWorkspace': 'Цієї людини немає в цьому просторі',
 } satisfies TranslationOf<typeof En>
 
 export default messages

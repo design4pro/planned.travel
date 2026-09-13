@@ -21,33 +21,44 @@ const messages = {
   'error.collab': 'تعذّر تحميل المحادثة',
   'error.book': 'تعذّر تحميل الحجوزات',
   'error.transports': 'لم تُحمَّل التنقلات',
+  'error.people': 'تعذّر تحميل الأشخاص',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'البرنامج',
   'plan.places': 'الأماكن',
   'plan.day.empty': 'لا شيء مخطط بعد — اسحب مكانًا أو ملاحظة إلى هنا',
   'plan.move.refused.duplicate': '{name} موجود بالفعل في ذلك اليوم',
-  'plan.move.refused.duplicateBody': 'لا يمكن أن يظهر المكان أكثر من مرة في اليوم الواحد. انقله إلى يوم آخر بدلاً من ذلك.',
+  'plan.move.refused.duplicateBody':
+    'لا يمكن أن يظهر المكان أكثر من مرة في اليوم الواحد. انقله إلى يوم آخر بدلاً من ذلك.',
   'plan.move.refused.notInIdeas': 'الملاحظة تبقى داخل اليوم',
-  'plan.move.refused.notInIdeasBody': 'الأفكار أماكن تنتظر يومًا، أما الملاحظة فتخص اليوم الذي كُتبت له.',
+  'plan.move.refused.notInIdeasBody':
+    'الأفكار أماكن تنتظر يومًا، أما الملاحظة فتخص اليوم الذي كُتبت له.',
   'plan.move.refused.notInAnotherDay': 'الملاحظة تبقى في يومها',
-  'plan.move.refused.notInAnotherDayBody': 'لا يمكن نقل الملاحظات بين الأيام بعد. عدّل الملاحظة أو اكتبها في اليوم الآخر.',
+  'plan.move.refused.notInAnotherDayBody':
+    'لا يمكن نقل الملاحظات بين الأيام بعد. عدّل الملاحظة أو اكتبها في اليوم الآخر.',
   'plan.move.refused.journeyNotInIdeas': 'الرحلة تبقى داخل اليوم',
-  'plan.move.refused.journeyNotInIdeasBody': 'الأفكار أماكن تنتظر يومًا، أما الرحلة فتخص اليوم الذي تحدث فيه.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'الأفكار أماكن تنتظر يومًا، أما الرحلة فتخص اليوم الذي تحدث فيه.',
   'plan.move.refused.journeyNotInAnotherDay': 'الرحلة تبقى في يومها',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'يوم الرحلة يأتي من تواريخها. غيّرها في تبويب التنقلات.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'يوم الرحلة يأتي من تواريخها. غيّرها في تبويب التنقلات.',
   'plan.move.refused.journeyTimed': '{name} تنطلق في {time}',
-  'plan.move.refused.journeyTimedBody': 'وقت المغادرة يخص الجدول الزمني لا الخطة. ضع الرحلة حيث تشير ساعتها.',
+  'plan.move.refused.journeyTimedBody':
+    'وقت المغادرة يخص الجدول الزمني لا الخطة. ضع الرحلة حيث تشير ساعتها.',
   'plan.move.spoken.duplicate': 'لم يُنقل {name}. ذلك اليوم يحتوي عليه بالفعل.',
   'plan.move.spoken.notInIdeas': 'لم يُنقل {name}. الملاحظة تبقى داخل اليوم.',
-  'plan.move.spoken.notInAnotherDay': 'لم يُنقل {name}. الملاحظة تبقى في يومها.',
+  'plan.move.spoken.notInAnotherDay':
+    'لم يُنقل {name}. الملاحظة تبقى في يومها.',
   'plan.move.spoken.timed': '{name} يحمل الساعة {time}. نسأل هل نُسقطها.',
-  'plan.move.spoken.journeyNotInIdeas': 'لم تُنقل {name}. الرحلة تبقى داخل اليوم.',
-  'plan.move.spoken.journeyNotInAnotherDay': 'لم تُنقل {name}. الرحلة تبقى في يومها.',
+  'plan.move.spoken.journeyNotInIdeas':
+    'لم تُنقل {name}. الرحلة تبقى داخل اليوم.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    'لم تُنقل {name}. الرحلة تبقى في يومها.',
   'plan.move.spoken.journeyTimed': 'لم تُنقل {name}. تنطلق في {time}.',
   'plan.move.error.save': 'لم يُحفظ هذا النقل',
   'plan.move.error.retry': 'حاول مرة أخرى بعد قليل.',
   'plan.move.dropTime.title': 'هل ننقل {name} ونُسقط الساعة {time}؟',
-  'plan.move.dropTime.body': 'هذا الموضع يتعارض مع الوقت المسجَّل عليه. نقله هنا يمسح الوقت، ويُحفظ الترتيب الجديد والوقت الممسوح معًا.',
+  'plan.move.dropTime.body':
+    'هذا الموضع يتعارض مع الوقت المسجَّل عليه. نقله هنا يمسح الوقت، ويُحفظ الترتيب الجديد والوقت الممسوح معًا.',
   'plan.move.dropTime.confirm': 'انقل وأسقط الوقت',
   'plan.move.dropTime.cancel': 'اتركه في مكانه',
   /* --------------------------------------------------- a day's own notes */
@@ -212,6 +223,44 @@ const messages = {
     many: 'عبر {priced} تنقلًا مسعَّرًا',
     other: 'عبر {priced} تنقل مسعَّر',
   },
+  'people.title': 'الأشخاص',
+  'people.description': 'من في هذه الرحلة، ومن يمكنه العثور عليها',
+  'people.members.title': 'في هذه الرحلة',
+  'people.members.empty': 'لم يعد أي من أفراد هذه الرحلة في مساحة العمل هذه',
+  'people.role.label': 'الدور',
+  'people.role.owner': 'المالك',
+  'people.role.editor': 'محرّر',
+  'people.role.viewer': 'مشاهد',
+  'people.you': 'أنت',
+  'people.owner.hint': 'تحتفظ كل رحلة بمالك واحد على الأقل',
+  'people.remove.action': 'إزالة {name} من هذه الرحلة',
+  'people.remove.title': 'إزالة {name} من هذه الرحلة؟',
+  'people.remove.body':
+    'سيفقد الوصول إلى البرنامج فورًا. وما أضافه يبقى في الرحلة.',
+  'people.remove.confirm': 'إزالة',
+  'people.leave.action': 'مغادرة هذه الرحلة',
+  'people.leave.title': 'مغادرة هذه الرحلة؟',
+  'people.leave.body':
+    'ستفقد الوصول إلى البرنامج إلى أن يعيدك أحد المشاركين في الرحلة.',
+  'people.leave.confirm': 'مغادرة',
+  'people.cancel': 'إلغاء',
+  'people.invite.title': 'إضافة شخص',
+  'people.invite.placeholder': 'ابحث عن الأشخاص في مساحة العمل هذه',
+  'people.invite.action': 'إضافة إلى الرحلة',
+  'people.invite.role': 'ينضم بصفة',
+  'people.invite.empty': 'كل من في مساحة العمل هذه موجود بالفعل في هذه الرحلة',
+  'people.invite.emptyHint':
+    'انضمام شخص جديد إلى مساحة العمل يبدأ من الإعدادات',
+  'people.visibility.title': 'من يمكنه العثور على هذه الرحلة',
+  'people.visibility.switch': 'ظاهرة لكل من في مساحة العمل',
+  'people.visibility.private':
+    'الأشخاص المذكورون هنا وحدهم يمكنهم رؤية هذه الرحلة',
+  'people.visibility.organization':
+    'يمكن لأي شخص في مساحة العمل هذه فتح هذه الرحلة',
+  'people.visibility.public': 'هذه الرحلة مشاركة عبر رابط عام',
+  'people.error.lastOwner':
+    'تحتفظ كل رحلة بمالك واحد على الأقل. اجعل شخصًا آخر مالكًا أولًا.',
+  'people.error.notInWorkspace': 'هذا الشخص ليس في مساحة العمل هذه',
 } satisfies TranslationOf<typeof En>
 
 export default messages

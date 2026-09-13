@@ -21,33 +21,49 @@ const messages = {
   'error.collab': 'Non è stato possibile caricare la conversazione',
   'error.book': 'Non è stato possibile caricare le prenotazioni',
   'error.transports': 'Gli spostamenti non sono stati caricati',
+  'error.people': 'Non è stato possibile caricare le persone',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerario',
   'plan.places': 'Luoghi',
   'plan.day.empty': 'Niente in programma: trascina qui un luogo o una nota',
   'plan.move.refused.duplicate': '{name} è già in quel giorno',
-  'plan.move.refused.duplicateBody': 'Un luogo può comparire una sola volta al giorno. Spostalo in un altro giorno.',
+  'plan.move.refused.duplicateBody':
+    'Un luogo può comparire una sola volta al giorno. Spostalo in un altro giorno.',
   'plan.move.refused.notInIdeas': 'Una nota resta nel giorno',
-  'plan.move.refused.notInIdeasBody': 'Le idee sono luoghi in attesa di un giorno. Una nota appartiene al giorno per cui è stata scritta.',
+  'plan.move.refused.notInIdeasBody':
+    'Le idee sono luoghi in attesa di un giorno. Una nota appartiene al giorno per cui è stata scritta.',
   'plan.move.refused.notInAnotherDay': 'Una nota resta nel suo giorno',
-  'plan.move.refused.notInAnotherDayBody': 'Le note non si possono ancora spostare tra i giorni. Modifica la nota, oppure scrivila nell’altro giorno.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Le note non si possono ancora spostare tra i giorni. Modifica la nota, oppure scrivila nell’altro giorno.',
   'plan.move.refused.journeyNotInIdeas': 'Uno spostamento resta nel giorno',
-  'plan.move.refused.journeyNotInIdeasBody': 'Le idee sono luoghi in attesa di un giorno. Uno spostamento appartiene al giorno in cui avviene.',
-  'plan.move.refused.journeyNotInAnotherDay': 'Uno spostamento resta nel suo giorno',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Il giorno di uno spostamento nasce dalle sue date. Modificale nella scheda Spostamenti.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Le idee sono luoghi in attesa di un giorno. Uno spostamento appartiene al giorno in cui avviene.',
+  'plan.move.refused.journeyNotInAnotherDay':
+    'Uno spostamento resta nel suo giorno',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Il giorno di uno spostamento nasce dalle sue date. Modificale nella scheda Spostamenti.',
   'plan.move.refused.journeyTimed': '{name} parte alle {time}',
-  'plan.move.refused.journeyTimedBody': 'Un orario di partenza è dell’orario ufficiale, non del piano. Metti lo spostamento dove lo colloca il suo orologio.',
-  'plan.move.spoken.duplicate': '{name} non è stato spostato. Quel giorno lo contiene già.',
-  'plan.move.spoken.notInIdeas': '{name} non è stato spostato. Una nota resta nel giorno.',
-  'plan.move.spoken.notInAnotherDay': '{name} non è stato spostato. Una nota resta nel suo giorno.',
-  'plan.move.spoken.timed': '{name} porta l’orario {time}. Chiediamo se lasciarlo andare.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} non è stato spostato. Uno spostamento resta nel giorno.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} non è stato spostato. Uno spostamento resta nel suo giorno.',
-  'plan.move.spoken.journeyTimed': '{name} non è stato spostato. Parte alle {time}.',
+  'plan.move.refused.journeyTimedBody':
+    'Un orario di partenza è dell’orario ufficiale, non del piano. Metti lo spostamento dove lo colloca il suo orologio.',
+  'plan.move.spoken.duplicate':
+    '{name} non è stato spostato. Quel giorno lo contiene già.',
+  'plan.move.spoken.notInIdeas':
+    '{name} non è stato spostato. Una nota resta nel giorno.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} non è stato spostato. Una nota resta nel suo giorno.',
+  'plan.move.spoken.timed':
+    '{name} porta l’orario {time}. Chiediamo se lasciarlo andare.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} non è stato spostato. Uno spostamento resta nel giorno.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} non è stato spostato. Uno spostamento resta nel suo giorno.',
+  'plan.move.spoken.journeyTimed':
+    '{name} non è stato spostato. Parte alle {time}.',
   'plan.move.error.save': 'Questo spostamento non è stato salvato',
   'plan.move.error.retry': 'Riprova tra un momento.',
   'plan.move.dropTime.title': 'Spostare {name} e rimuovere le {time}?',
-  'plan.move.dropTime.body': 'Questa posizione contraddice l’orario che porta. Spostarlo qui cancella l’orario: il nuovo ordine e l’orario cancellato si salvano insieme.',
+  'plan.move.dropTime.body':
+    'Questa posizione contraddice l’orario che porta. Spostarlo qui cancella l’orario: il nuovo ordine e l’orario cancellato si salvano insieme.',
   'plan.move.dropTime.confirm': 'Sposta e rimuovi l’orario',
   'plan.move.dropTime.cancel': 'Lascialo dov’è',
   /* --------------------------------------------------- a day's own notes */
@@ -187,6 +203,46 @@ const messages = {
     many: 'su {priced} spostamenti con prezzo',
     other: 'su {priced} spostamenti con prezzo',
   },
+  'people.title': 'Persone',
+  'people.description': 'Chi partecipa a questo viaggio e chi può trovarlo',
+  'people.members.title': 'In questo viaggio',
+  'people.members.empty':
+    'Nessuno di questo viaggio fa più parte di questo spazio di lavoro',
+  'people.role.label': 'Ruolo',
+  'people.role.owner': 'Proprietario',
+  'people.role.editor': 'Può modificare',
+  'people.role.viewer': 'Può visualizzare',
+  'people.you': 'Tu',
+  'people.owner.hint': 'Un viaggio mantiene sempre almeno un proprietario',
+  'people.remove.action': 'Rimuovi {name} da questo viaggio',
+  'people.remove.title': 'Rimuovere {name} da questo viaggio?',
+  'people.remove.body':
+    'Perde subito l’accesso all’itinerario. Quello che ha aggiunto resta nel viaggio.',
+  'people.remove.confirm': 'Rimuovi',
+  'people.leave.action': 'Esci da questo viaggio',
+  'people.leave.title': 'Uscire da questo viaggio?',
+  'people.leave.body':
+    'Perdi l’accesso all’itinerario finché qualcuno del viaggio non ti aggiunge di nuovo.',
+  'people.leave.confirm': 'Esci',
+  'people.cancel': 'Annulla',
+  'people.invite.title': 'Aggiungi qualcuno',
+  'people.invite.placeholder': 'Cerca le persone di questo spazio di lavoro',
+  'people.invite.action': 'Aggiungi al viaggio',
+  'people.invite.role': 'Partecipa come',
+  'people.invite.empty': 'Tutti in questo spazio sono già in questo viaggio',
+  'people.invite.emptyHint':
+    'Prima qualcuno di nuovo entra nello spazio, in Impostazioni',
+  'people.visibility.title': 'Chi può trovare questo viaggio',
+  'people.visibility.switch': 'Visibile a tutti nello spazio di lavoro',
+  'people.visibility.private':
+    'Solo le persone elencate qui vedono questo viaggio',
+  'people.visibility.organization':
+    'Chiunque in questo spazio può aprire questo viaggio',
+  'people.visibility.public': 'Questo viaggio è condiviso con un link pubblico',
+  'people.error.lastOwner':
+    'Un viaggio mantiene almeno un proprietario. Rendi prima proprietario qualcun altro.',
+  'people.error.notInWorkspace':
+    'Questa persona non è in questo spazio di lavoro',
 } satisfies TranslationOf<typeof En>
 
 export default messages

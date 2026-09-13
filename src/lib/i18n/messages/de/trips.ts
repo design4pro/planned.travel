@@ -21,33 +21,50 @@ const messages = {
   'error.collab': 'Die Unterhaltung konnte nicht geladen werden',
   'error.book': 'Die Buchungen konnten nicht geladen werden',
   'error.transports': 'Die Transfers konnten nicht geladen werden',
+  'error.people': 'Die Personen konnten nicht geladen werden',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reiseverlauf',
   'plan.places': 'Orte',
-  'plan.day.empty': 'Noch nichts geplant – zieh einen Ort oder eine Notiz hierher',
+  'plan.day.empty':
+    'Noch nichts geplant – zieh einen Ort oder eine Notiz hierher',
   'plan.move.refused.duplicate': '{name} ist an diesem Tag schon vorhanden',
-  'plan.move.refused.duplicateBody': 'Ein Ort kann pro Tag nur einmal vorkommen. Verschiebe ihn stattdessen auf einen anderen Tag.',
+  'plan.move.refused.duplicateBody':
+    'Ein Ort kann pro Tag nur einmal vorkommen. Verschiebe ihn stattdessen auf einen anderen Tag.',
   'plan.move.refused.notInIdeas': 'Eine Notiz bleibt im Tag',
-  'plan.move.refused.notInIdeasBody': 'Ideen sind Orte, die auf einen Tag warten. Eine Notiz gehört zu dem Tag, für den sie geschrieben wurde.',
+  'plan.move.refused.notInIdeasBody':
+    'Ideen sind Orte, die auf einen Tag warten. Eine Notiz gehört zu dem Tag, für den sie geschrieben wurde.',
   'plan.move.refused.notInAnotherDay': 'Eine Notiz bleibt an ihrem Tag',
-  'plan.move.refused.notInAnotherDayBody': 'Notizen lassen sich noch nicht zwischen Tagen verschieben. Bearbeite die Notiz, oder schreib sie am anderen Tag.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Notizen lassen sich noch nicht zwischen Tagen verschieben. Bearbeite die Notiz, oder schreib sie am anderen Tag.',
   'plan.move.refused.journeyNotInIdeas': 'Ein Transfer bleibt im Tag',
-  'plan.move.refused.journeyNotInIdeasBody': 'Ideen sind Orte, die auf einen Tag warten. Ein Transfer gehört zu dem Tag, an dem er stattfindet.',
-  'plan.move.refused.journeyNotInAnotherDay': 'Ein Transfer bleibt an seinem Tag',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Der Tag eines Transfers ergibt sich aus seinen Daten. Ändere sie im Tab Transfers.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Ideen sind Orte, die auf einen Tag warten. Ein Transfer gehört zu dem Tag, an dem er stattfindet.',
+  'plan.move.refused.journeyNotInAnotherDay':
+    'Ein Transfer bleibt an seinem Tag',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Der Tag eines Transfers ergibt sich aus seinen Daten. Ändere sie im Tab Transfers.',
   'plan.move.refused.journeyTimed': '{name} fährt um {time}',
-  'plan.move.refused.journeyTimedBody': 'Eine Abfahrtszeit gehört zum Fahrplan, nicht zum Plan. Setz den Transfer dorthin, wo seine Uhr ihn hinstellt.',
-  'plan.move.spoken.duplicate': '{name} wurde nicht verschoben. Dieser Tag hat den Ort schon.',
-  'plan.move.spoken.notInIdeas': '{name} wurde nicht verschoben. Eine Notiz bleibt im Tag.',
-  'plan.move.spoken.notInAnotherDay': '{name} wurde nicht verschoben. Eine Notiz bleibt an ihrem Tag.',
-  'plan.move.spoken.timed': '{name} trägt {time}. Wir fragen, ob die Zeit entfallen soll.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} wurde nicht verschoben. Ein Transfer bleibt im Tag.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} wurde nicht verschoben. Ein Transfer bleibt an seinem Tag.',
-  'plan.move.spoken.journeyTimed': '{name} wurde nicht verschoben. Abfahrt um {time}.',
+  'plan.move.refused.journeyTimedBody':
+    'Eine Abfahrtszeit gehört zum Fahrplan, nicht zum Plan. Setz den Transfer dorthin, wo seine Uhr ihn hinstellt.',
+  'plan.move.spoken.duplicate':
+    '{name} wurde nicht verschoben. Dieser Tag hat den Ort schon.',
+  'plan.move.spoken.notInIdeas':
+    '{name} wurde nicht verschoben. Eine Notiz bleibt im Tag.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} wurde nicht verschoben. Eine Notiz bleibt an ihrem Tag.',
+  'plan.move.spoken.timed':
+    '{name} trägt {time}. Wir fragen, ob die Zeit entfallen soll.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} wurde nicht verschoben. Ein Transfer bleibt im Tag.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} wurde nicht verschoben. Ein Transfer bleibt an seinem Tag.',
+  'plan.move.spoken.journeyTimed':
+    '{name} wurde nicht verschoben. Abfahrt um {time}.',
   'plan.move.error.save': 'Das Verschieben wurde nicht gespeichert',
   'plan.move.error.retry': 'Versuch es gleich noch einmal.',
   'plan.move.dropTime.title': '{name} verschieben und {time} entfernen?',
-  'plan.move.dropTime.body': 'Diese Position widerspricht der Zeit darauf. Ein Verschieben hierher löscht die Zeit — die neue Reihenfolge und die gelöschte Zeit werden zusammen gespeichert.',
+  'plan.move.dropTime.body':
+    'Diese Position widerspricht der Zeit darauf. Ein Verschieben hierher löscht die Zeit — die neue Reihenfolge und die gelöschte Zeit werden zusammen gespeichert.',
   'plan.move.dropTime.confirm': 'Verschieben und Zeit entfernen',
   'plan.move.dropTime.cancel': 'So lassen',
   /* --------------------------------------------------- a day's own notes */
@@ -178,6 +195,49 @@ const messages = {
     one: 'über {priced} Transfer mit Preis',
     other: 'über {priced} Transfers mit Preis',
   },
+  'people.title': 'Personen',
+  'people.description': 'Wer auf dieser Reise ist und wer sie finden kann',
+  'people.members.title': 'Auf dieser Reise',
+  'people.members.empty':
+    'Niemand von dieser Reise ist noch in diesem Arbeitsbereich',
+  'people.role.label': 'Rolle',
+  'people.role.owner': 'Inhaber',
+  'people.role.editor': 'Bearbeiter',
+  'people.role.viewer': 'Betrachter',
+  'people.you': 'Du',
+  'people.owner.hint': 'Eine Reise behält immer mindestens einen Inhaber',
+  'people.remove.action': '{name} von dieser Reise entfernen',
+  'people.remove.title': '{name} von dieser Reise entfernen?',
+  'people.remove.body':
+    'Der Zugriff auf den Reiseverlauf endet sofort. Was hinzugefügt wurde, bleibt auf der Reise.',
+  'people.remove.confirm': 'Entfernen',
+  'people.leave.action': 'Diese Reise verlassen',
+  'people.leave.title': 'Diese Reise verlassen?',
+  'people.leave.body':
+    'Du verlierst den Zugriff auf den Reiseverlauf, bis dich jemand von der Reise wieder hinzufügt.',
+  'people.leave.confirm': 'Verlassen',
+  'people.cancel': 'Abbrechen',
+  'people.invite.title': 'Jemanden hinzufügen',
+  'people.invite.placeholder':
+    'Die Personen in diesem Arbeitsbereich durchsuchen',
+  'people.invite.action': 'Zur Reise hinzufügen',
+  'people.invite.role': 'Kommt dazu als',
+  'people.invite.empty':
+    'Alle in diesem Arbeitsbereich sind schon auf dieser Reise',
+  'people.invite.emptyHint':
+    'Erst kommt jemand Neues in den Arbeitsbereich, in den Einstellungen',
+  'people.visibility.title': 'Wer diese Reise finden kann',
+  'people.visibility.switch': 'Für alle im Arbeitsbereich sichtbar',
+  'people.visibility.private':
+    'Nur die hier aufgeführten Personen sehen diese Reise',
+  'people.visibility.organization':
+    'Alle in diesem Arbeitsbereich können diese Reise öffnen',
+  'people.visibility.public':
+    'Diese Reise ist über einen öffentlichen Link geteilt',
+  'people.error.lastOwner':
+    'Eine Reise behält mindestens einen Inhaber. Mach zuerst jemand anderen zum Inhaber.',
+  'people.error.notInWorkspace':
+    'Diese Person ist nicht in diesem Arbeitsbereich',
 } satisfies TranslationOf<typeof En>
 
 export default messages

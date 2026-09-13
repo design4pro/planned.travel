@@ -21,33 +21,48 @@ const messages = {
   'error.collab': 'Samtalet kunde inte läsas in',
   'error.book': 'Bokningarna kunde inte läsas in',
   'error.transports': 'Färderna kunde inte laddas',
+  'error.people': 'Personerna kunde inte läsas in',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Resplan',
   'plan.places': 'Platser',
-  'plan.day.empty': 'Inget planerat än – släpp en plats eller en anteckning här',
+  'plan.day.empty':
+    'Inget planerat än – släpp en plats eller en anteckning här',
   'plan.move.refused.duplicate': '{name} finns redan den dagen',
-  'plan.move.refused.duplicateBody': 'En plats kan bara finnas en gång per dag. Flytta den till en annan dag i stället.',
+  'plan.move.refused.duplicateBody':
+    'En plats kan bara finnas en gång per dag. Flytta den till en annan dag i stället.',
   'plan.move.refused.notInIdeas': 'En anteckning stannar i dagen',
-  'plan.move.refused.notInIdeasBody': 'Idéer är platser som väntar på en dag. En anteckning hör till dagen den skrevs för.',
+  'plan.move.refused.notInIdeasBody':
+    'Idéer är platser som väntar på en dag. En anteckning hör till dagen den skrevs för.',
   'plan.move.refused.notInAnotherDay': 'En anteckning stannar på sin egen dag',
-  'plan.move.refused.notInAnotherDayBody': 'Anteckningar kan ännu inte flyttas mellan dagar. Redigera anteckningen, eller skriv den på den andra dagen.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Anteckningar kan ännu inte flyttas mellan dagar. Redigera anteckningen, eller skriv den på den andra dagen.',
   'plan.move.refused.journeyNotInIdeas': 'En färd stannar i dagen',
-  'plan.move.refused.journeyNotInIdeasBody': 'Idéer är platser som väntar på en dag. En färd hör till dagen den sker.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Idéer är platser som väntar på en dag. En färd hör till dagen den sker.',
   'plan.move.refused.journeyNotInAnotherDay': 'En färd stannar på sin egen dag',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'En färds dag kommer från dess datum. Ändra dem på fliken Färder.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'En färds dag kommer från dess datum. Ändra dem på fliken Färder.',
   'plan.move.refused.journeyTimed': '{name} avgår {time}',
-  'plan.move.refused.journeyTimedBody': 'En avgångstid hör till tidtabellen, inte till planen. Lägg färden där dess klocka hör hemma.',
-  'plan.move.spoken.duplicate': '{name} flyttades inte. Den dagen har den redan.',
-  'plan.move.spoken.notInIdeas': '{name} flyttades inte. En anteckning stannar i dagen.',
-  'plan.move.spoken.notInAnotherDay': '{name} flyttades inte. En anteckning stannar på sin egen dag.',
-  'plan.move.spoken.timed': '{name} har tiden {time}. Vi frågar om den ska tas bort.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} flyttades inte. En färd stannar i dagen.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} flyttades inte. En färd stannar på sin egen dag.',
+  'plan.move.refused.journeyTimedBody':
+    'En avgångstid hör till tidtabellen, inte till planen. Lägg färden där dess klocka hör hemma.',
+  'plan.move.spoken.duplicate':
+    '{name} flyttades inte. Den dagen har den redan.',
+  'plan.move.spoken.notInIdeas':
+    '{name} flyttades inte. En anteckning stannar i dagen.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} flyttades inte. En anteckning stannar på sin egen dag.',
+  'plan.move.spoken.timed':
+    '{name} har tiden {time}. Vi frågar om den ska tas bort.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} flyttades inte. En färd stannar i dagen.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} flyttades inte. En färd stannar på sin egen dag.',
   'plan.move.spoken.journeyTimed': '{name} flyttades inte. Den avgår {time}.',
   'plan.move.error.save': 'Flytten sparades inte',
   'plan.move.error.retry': 'Försök igen om en stund.',
   'plan.move.dropTime.title': 'Flytta {name} och ta bort {time}?',
-  'plan.move.dropTime.body': 'Den här platsen motsäger tiden på den. Att flytta hit rensar tiden — den nya ordningen och den rensade tiden sparas tillsammans.',
+  'plan.move.dropTime.body':
+    'Den här platsen motsäger tiden på den. Att flytta hit rensar tiden — den nya ordningen och den rensade tiden sparas tillsammans.',
   'plan.move.dropTime.confirm': 'Flytta och ta bort tiden',
   'plan.move.dropTime.cancel': 'Låt den vara',
   /* --------------------------------------------------- a day's own notes */
@@ -178,6 +193,43 @@ const messages = {
     one: 'över {priced} prissatt färd',
     other: 'över {priced} prissatta färder',
   },
+  'people.title': 'Personer',
+  'people.description': 'Vilka som är med på resan och vilka som kan hitta den',
+  'people.members.title': 'Med på resan',
+  'people.members.empty': 'Ingen från den här resan finns kvar i arbetsytan',
+  'people.role.label': 'Roll',
+  'people.role.owner': 'Ägare',
+  'people.role.editor': 'Redigerare',
+  'people.role.viewer': 'Läsare',
+  'people.you': 'Du',
+  'people.owner.hint': 'En resa behåller alltid minst en ägare',
+  'people.remove.action': 'Ta bort {name} från resan',
+  'people.remove.title': 'Ta bort {name} från resan?',
+  'people.remove.body':
+    'Personen förlorar åtkomsten till resplanen direkt. Det som lagts till blir kvar på resan.',
+  'people.remove.confirm': 'Ta bort',
+  'people.leave.action': 'Lämna resan',
+  'people.leave.title': 'Lämna den här resan?',
+  'people.leave.body':
+    'Du förlorar åtkomsten till resplanen tills någon på resan lägger till dig igen.',
+  'people.leave.confirm': 'Lämna',
+  'people.cancel': 'Avbryt',
+  'people.invite.title': 'Lägg till någon',
+  'people.invite.placeholder': 'Sök bland personerna i arbetsytan',
+  'people.invite.action': 'Lägg till på resan',
+  'people.invite.role': 'Går med som',
+  'people.invite.empty': 'Alla i arbetsytan är redan med på resan',
+  'people.invite.emptyHint':
+    'Först kommer någon ny in i arbetsytan, under Inställningar',
+  'people.visibility.title': 'Vilka som kan hitta resan',
+  'people.visibility.switch': 'Synlig för alla i arbetsytan',
+  'people.visibility.private': 'Bara personerna som står här ser den här resan',
+  'people.visibility.organization':
+    'Vem som helst i arbetsytan kan öppna den här resan',
+  'people.visibility.public': 'Den här resan delas med en offentlig länk',
+  'people.error.lastOwner':
+    'En resa behåller minst en ägare. Gör någon annan till ägare först.',
+  'people.error.notInWorkspace': 'Den personen finns inte i arbetsytan',
 } satisfies TranslationOf<typeof En>
 
 export default messages

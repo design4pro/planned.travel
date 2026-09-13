@@ -21,33 +21,46 @@ const messages = {
   'error.collab': 'Konverzaci se nepodařilo načíst',
   'error.book': 'Rezervace se nepodařilo načíst',
   'error.transports': 'Přesuny se nenačetly',
+  'error.people': 'Lidi se nepodařilo načíst',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Místa',
   'plan.day.empty': 'Nic naplánováno – přetáhni sem místo nebo poznámku',
   'plan.move.refused.duplicate': '{name} v tom dni už je',
-  'plan.move.refused.duplicateBody': 'Místo se může v jednom dni objevit jen jednou. Přesuňte ho na jiný den.',
+  'plan.move.refused.duplicateBody':
+    'Místo se může v jednom dni objevit jen jednou. Přesuňte ho na jiný den.',
   'plan.move.refused.notInIdeas': 'Poznámka zůstává ve dni',
-  'plan.move.refused.notInIdeasBody': 'Nápady jsou místa, která čekají na svůj den. Poznámka patří ke dni, ke kterému byla napsána.',
+  'plan.move.refused.notInIdeasBody':
+    'Nápady jsou místa, která čekají na svůj den. Poznámka patří ke dni, ke kterému byla napsána.',
   'plan.move.refused.notInAnotherDay': 'Poznámka zůstává u svého dne',
-  'plan.move.refused.notInAnotherDayBody': 'Poznámky zatím nelze přesouvat mezi dny. Upravte poznámku, nebo ji napište k jinému dni.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Poznámky zatím nelze přesouvat mezi dny. Upravte poznámku, nebo ji napište k jinému dni.',
   'plan.move.refused.journeyNotInIdeas': 'Přesun zůstává ve dni',
-  'plan.move.refused.journeyNotInIdeasBody': 'Nápady jsou místa, která čekají na svůj den. Přesun patří ke dni, kdy se odehrává.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Nápady jsou místa, která čekají na svůj den. Přesun patří ke dni, kdy se odehrává.',
   'plan.move.refused.journeyNotInAnotherDay': 'Přesun zůstává u svého dne',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Den přesunu vychází z jeho dat. Změňte je na kartě Přesuny.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Den přesunu vychází z jeho dat. Změňte je na kartě Přesuny.',
   'plan.move.refused.journeyTimed': '{name} odjíždí v {time}',
-  'plan.move.refused.journeyTimedBody': 'Čas odjezdu patří jízdnímu řádu, ne plánu. Umístěte přesun tam, kam ukazují jeho hodiny.',
+  'plan.move.refused.journeyTimedBody':
+    'Čas odjezdu patří jízdnímu řádu, ne plánu. Umístěte přesun tam, kam ukazují jeho hodiny.',
   'plan.move.spoken.duplicate': '{name} se nepřesunul. Ten den ho už má.',
-  'plan.move.spoken.notInIdeas': '{name} se nepřesunul. Poznámka zůstává ve dni.',
-  'plan.move.spoken.notInAnotherDay': '{name} se nepřesunul. Poznámka zůstává u svého dne.',
-  'plan.move.spoken.timed': '{name} má čas {time}. Ptáme se, jestli ho zahodit.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} se nepřesunul. Přesun zůstává ve dni.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} se nepřesunul. Přesun zůstává u svého dne.',
+  'plan.move.spoken.notInIdeas':
+    '{name} se nepřesunul. Poznámka zůstává ve dni.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} se nepřesunul. Poznámka zůstává u svého dne.',
+  'plan.move.spoken.timed':
+    '{name} má čas {time}. Ptáme se, jestli ho zahodit.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} se nepřesunul. Přesun zůstává ve dni.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} se nepřesunul. Přesun zůstává u svého dne.',
   'plan.move.spoken.journeyTimed': '{name} se nepřesunul. Odjíždí v {time}.',
   'plan.move.error.save': 'Přesunutí se nepodařilo uložit',
   'plan.move.error.retry': 'Zkuste to za chvíli znovu.',
   'plan.move.dropTime.title': 'Přesunout {name} a zahodit čas {time}?',
-  'plan.move.dropTime.body': 'Tato pozice je v rozporu s časem, který má. Přesunutí sem čas smaže — nové pořadí i smazaný čas se uloží společně.',
+  'plan.move.dropTime.body':
+    'Tato pozice je v rozporu s časem, který má. Přesunutí sem čas smaže — nové pořadí i smazaný čas se uloží společně.',
   'plan.move.dropTime.confirm': 'Přesunout a smazat čas',
   'plan.move.dropTime.cancel': 'Nechat na místě',
   /* --------------------------------------------------- a day's own notes */
@@ -196,6 +209,43 @@ const messages = {
     many: 'napříč {priced} oceněnými přesuny',
     other: 'napříč {priced} oceněnými přesuny',
   },
+  'people.title': 'Lidé',
+  'people.description': 'Kdo je na této cestě a kdo ji může najít',
+  'people.members.title': 'Na této cestě',
+  'people.members.empty': 'Nikdo z této cesty už není v tomto prostoru',
+  'people.role.label': 'Oprávnění',
+  'people.role.owner': 'Vlastník',
+  'people.role.editor': 'Může upravovat',
+  'people.role.viewer': 'Může prohlížet',
+  'people.you': 'Vy',
+  'people.owner.hint': 'Cesta si vždy ponechá aspoň jednoho vlastníka',
+  'people.remove.action': 'Odebrat {name} z této cesty',
+  'people.remove.title': 'Odebrat {name} z této cesty?',
+  'people.remove.body':
+    'Okamžitě ztratí přístup k programu. To, co přidal, na cestě zůstane.',
+  'people.remove.confirm': 'Odebrat',
+  'people.leave.action': 'Opustit tuto cestu',
+  'people.leave.title': 'Opustit tuto cestu?',
+  'people.leave.body':
+    'Ztratíte přístup k programu, dokud vás někdo z cesty nepřidá zpět.',
+  'people.leave.confirm': 'Opustit',
+  'people.cancel': 'Zrušit',
+  'people.invite.title': 'Přidat někoho',
+  'people.invite.placeholder': 'Hledejte lidi v tomto prostoru',
+  'people.invite.action': 'Přidat na cestu',
+  'people.invite.role': 'Připojí se jako',
+  'people.invite.empty': 'Všichni v tomto prostoru už na této cestě jsou',
+  'people.invite.emptyHint':
+    'Nejdřív se do prostoru připojí někdo nový, v Nastavení',
+  'people.visibility.title': 'Kdo může tuto cestu najít',
+  'people.visibility.switch': 'Viditelné pro všechny v prostoru',
+  'people.visibility.private': 'Tuto cestu vidí jen lidé uvedení zde',
+  'people.visibility.organization':
+    'Tuto cestu může otevřít kdokoli v tomto prostoru',
+  'people.visibility.public': 'Tato cesta je sdílená veřejným odkazem',
+  'people.error.lastOwner':
+    'Cesta si ponechá aspoň jednoho vlastníka. Nejdřív udělejte vlastníkem někoho jiného.',
+  'people.error.notInWorkspace': 'Tento člověk není v tomto prostoru',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -146,7 +146,11 @@ export const DialogHeader = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-b border-edge-faint px-5 py-4 pe-14 sm:px-6 sm:py-5',
+      // The end padding is the close button's seat, and it has to be restated at
+      // `sm`: `sm:px-6` sets both inline sides and is emitted after the unprefixed
+      // `pe-14`, so without `sm:pe-14` a title long enough to reach the corner runs
+      // under the button on every viewport from 640px up.
+      'shrink-0 border-b border-edge-faint px-5 py-4 pe-14 sm:px-6 sm:py-5 sm:pe-14',
       className,
     )}
     {...props}

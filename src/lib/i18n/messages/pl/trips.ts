@@ -21,33 +21,47 @@ const messages = {
   'error.collab': 'Nie udało się wczytać rozmowy',
   'error.book': 'Nie udało się wczytać rezerwacji',
   'error.transports': 'Przejazdy się nie wczytały',
+  'error.people': 'Nie udało się wczytać osób',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Plan dnia',
   'plan.places': 'Miejsca',
   'plan.day.empty': 'Nic nie zaplanowano - przeciągnij tu miejsce albo notatkę',
   'plan.move.refused.duplicate': '{name} jest już w tym dniu',
-  'plan.move.refused.duplicateBody': 'Miejsce może pojawić się w dniu tylko raz. Przenieś je do innego dnia.',
+  'plan.move.refused.duplicateBody':
+    'Miejsce może pojawić się w dniu tylko raz. Przenieś je do innego dnia.',
   'plan.move.refused.notInIdeas': 'Notatka zostaje w dniu',
-  'plan.move.refused.notInIdeasBody': 'Pomysły to miejsca czekające na swój dzień. Notatka należy do dnia, dla którego ją zapisano.',
+  'plan.move.refused.notInIdeasBody':
+    'Pomysły to miejsca czekające na swój dzień. Notatka należy do dnia, dla którego ją zapisano.',
   'plan.move.refused.notInAnotherDay': 'Notatka zostaje w swoim dniu',
-  'plan.move.refused.notInAnotherDayBody': 'Notatek nie można jeszcze przenosić między dniami. Edytuj notatkę albo zapisz ją w innym dniu.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Notatek nie można jeszcze przenosić między dniami. Edytuj notatkę albo zapisz ją w innym dniu.',
   'plan.move.refused.journeyNotInIdeas': 'Przejazd zostaje w dniu',
-  'plan.move.refused.journeyNotInIdeasBody': 'Pomysły to miejsca czekające na swój dzień. Przejazd należy do dnia, w którym się odbywa.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Pomysły to miejsca czekające na swój dzień. Przejazd należy do dnia, w którym się odbywa.',
   'plan.move.refused.journeyNotInAnotherDay': 'Przejazd zostaje w swoim dniu',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Dzień przejazdu wynika z jego dat. Zmień je w zakładce Przejazdy.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Dzień przejazdu wynika z jego dat. Zmień je w zakładce Przejazdy.',
   'plan.move.refused.journeyTimed': '{name} odjeżdża o {time}',
-  'plan.move.refused.journeyTimedBody': 'Godzina odjazdu należy do rozkładu, nie do planu. Umieść przejazd tam, gdzie wskazuje jego zegar.',
-  'plan.move.spoken.duplicate': '{name} nie został przeniesiony. Ten dzień już go ma.',
-  'plan.move.spoken.notInIdeas': '{name} nie został przeniesiony. Notatka zostaje w dniu.',
-  'plan.move.spoken.notInAnotherDay': '{name} nie został przeniesiony. Notatka zostaje w swoim dniu.',
+  'plan.move.refused.journeyTimedBody':
+    'Godzina odjazdu należy do rozkładu, nie do planu. Umieść przejazd tam, gdzie wskazuje jego zegar.',
+  'plan.move.spoken.duplicate':
+    '{name} nie został przeniesiony. Ten dzień już go ma.',
+  'plan.move.spoken.notInIdeas':
+    '{name} nie został przeniesiony. Notatka zostaje w dniu.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} nie został przeniesiony. Notatka zostaje w swoim dniu.',
   'plan.move.spoken.timed': '{name} ma godzinę {time}. Pytamy, czy ją usunąć.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} nie został przeniesiony. Przejazd zostaje w dniu.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} nie został przeniesiony. Przejazd zostaje w swoim dniu.',
-  'plan.move.spoken.journeyTimed': '{name} nie został przeniesiony. Odjeżdża o {time}.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} nie został przeniesiony. Przejazd zostaje w dniu.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} nie został przeniesiony. Przejazd zostaje w swoim dniu.',
+  'plan.move.spoken.journeyTimed':
+    '{name} nie został przeniesiony. Odjeżdża o {time}.',
   'plan.move.error.save': 'Nie udało się zapisać tego przeniesienia',
   'plan.move.error.retry': 'Spróbuj ponownie za chwilę.',
   'plan.move.dropTime.title': 'Przenieść {name} i usunąć godzinę {time}?',
-  'plan.move.dropTime.body': 'To miejsce jest sprzeczne z ustawioną godziną. Przeniesienie tutaj usuwa godzinę - nowa kolejność i usunięta godzina zapisują się razem.',
+  'plan.move.dropTime.body':
+    'To miejsce jest sprzeczne z ustawioną godziną. Przeniesienie tutaj usuwa godzinę - nowa kolejność i usunięta godzina zapisują się razem.',
   'plan.move.dropTime.confirm': 'Przenieś i usuń godzinę',
   'plan.move.dropTime.cancel': 'Zostaw na miejscu',
   /* --------------------------------------------------- a day's own notes */
@@ -195,6 +209,46 @@ const messages = {
     many: 'z {priced} wycenionych przejazdów',
     other: 'z {priced} wycenionych przejazdów',
   },
+  'people.title': 'Osoby',
+  'people.description': 'Kto jest na tej wycieczce i kto może ją znaleźć',
+  'people.members.title': 'Na tej wycieczce',
+  'people.members.empty':
+    'Nikt z tej wycieczki nie należy już do tej przestrzeni',
+  'people.role.label': 'Rola',
+  'people.role.owner': 'Właściciel',
+  'people.role.editor': 'Edytor',
+  'people.role.viewer': 'Obserwator',
+  'people.you': 'Ty',
+  'people.owner.hint': 'Wycieczka zawsze ma co najmniej jednego właściciela',
+  'people.remove.action': 'Usuń {name} z tej wycieczki',
+  'people.remove.title': 'Usunąć {name} z tej wycieczki?',
+  'people.remove.body':
+    'Od razu straci dostęp do planu. To, co dodał, zostaje na wycieczce.',
+  'people.remove.confirm': 'Usuń',
+  'people.leave.action': 'Opuść tę wycieczkę',
+  'people.leave.title': 'Opuścić tę wycieczkę?',
+  'people.leave.body':
+    'Stracisz dostęp do planu, dopóki ktoś z wycieczki nie doda cię z powrotem.',
+  'people.leave.confirm': 'Opuść',
+  'people.cancel': 'Anuluj',
+  'people.invite.title': 'Dodaj kogoś',
+  'people.invite.placeholder': 'Szukaj osób w tej przestrzeni',
+  'people.invite.action': 'Dodaj do wycieczki',
+  'people.invite.role': 'Dołącza jako',
+  'people.invite.empty': 'Wszyscy w tej przestrzeni są już na tej wycieczce',
+  'people.invite.emptyHint':
+    'Najpierw ktoś nowy dołącza do przestrzeni, w Ustawieniach',
+  'people.visibility.title': 'Kto może znaleźć tę wycieczkę',
+  'people.visibility.switch': 'Widoczna dla wszystkich w przestrzeni',
+  'people.visibility.private':
+    'Tę wycieczkę widzą tylko osoby wymienione tutaj',
+  'people.visibility.organization':
+    'Każdy w tej przestrzeni może otworzyć tę wycieczkę',
+  'people.visibility.public':
+    'Ta wycieczka jest udostępniona publicznym linkiem',
+  'people.error.lastOwner':
+    'Wycieczka ma co najmniej jednego właściciela. Najpierw uczyń właścicielem kogoś innego.',
+  'people.error.notInWorkspace': 'Tej osoby nie ma w tej przestrzeni',
 } satisfies TranslationOf<typeof En>
 
 export default messages

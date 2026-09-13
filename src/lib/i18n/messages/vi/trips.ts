@@ -21,33 +21,47 @@ const messages = {
   'error.collab': 'Không tải được cuộc trò chuyện',
   'error.book': 'Không tải được các chỗ đã đặt',
   'error.transports': 'Không tải được các lượt di chuyển',
+  'error.people': 'Không tải được danh sách người tham gia',
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Lịch trình',
   'plan.places': 'Địa điểm',
   'plan.day.empty': 'Chưa có gì — kéo một địa điểm hoặc ghi chú vào đây',
   'plan.move.refused.duplicate': '{name} đã có trong ngày đó',
-  'plan.move.refused.duplicateBody': 'Một địa điểm chỉ xuất hiện một lần mỗi ngày. Hãy chuyển nó sang ngày khác.',
+  'plan.move.refused.duplicateBody':
+    'Một địa điểm chỉ xuất hiện một lần mỗi ngày. Hãy chuyển nó sang ngày khác.',
   'plan.move.refused.notInIdeas': 'Ghi chú ở lại trong ngày',
-  'plan.move.refused.notInIdeasBody': 'Ý tưởng là những địa điểm đang chờ một ngày. Ghi chú thuộc về ngày mà nó được viết.',
+  'plan.move.refused.notInIdeasBody':
+    'Ý tưởng là những địa điểm đang chờ một ngày. Ghi chú thuộc về ngày mà nó được viết.',
   'plan.move.refused.notInAnotherDay': 'Ghi chú ở lại ngày của nó',
-  'plan.move.refused.notInAnotherDayBody': 'Ghi chú chưa thể chuyển sang ngày khác. Hãy sửa ghi chú, hoặc viết nó ở ngày kia.',
+  'plan.move.refused.notInAnotherDayBody':
+    'Ghi chú chưa thể chuyển sang ngày khác. Hãy sửa ghi chú, hoặc viết nó ở ngày kia.',
   'plan.move.refused.journeyNotInIdeas': 'Chuyến đi ở lại trong ngày',
-  'plan.move.refused.journeyNotInIdeasBody': 'Ý tưởng là những địa điểm đang chờ một ngày. Chuyến đi thuộc về ngày mà nó diễn ra.',
+  'plan.move.refused.journeyNotInIdeasBody':
+    'Ý tưởng là những địa điểm đang chờ một ngày. Chuyến đi thuộc về ngày mà nó diễn ra.',
   'plan.move.refused.journeyNotInAnotherDay': 'Chuyến đi ở lại ngày của nó',
-  'plan.move.refused.journeyNotInAnotherDayBody': 'Ngày của chuyến đi đến từ ngày giờ của nó. Hãy đổi chúng ở thẻ Di chuyển.',
+  'plan.move.refused.journeyNotInAnotherDayBody':
+    'Ngày của chuyến đi đến từ ngày giờ của nó. Hãy đổi chúng ở thẻ Di chuyển.',
   'plan.move.refused.journeyTimed': '{name} khởi hành lúc {time}',
-  'plan.move.refused.journeyTimedBody': 'Giờ khởi hành thuộc về lịch chạy, không thuộc về kế hoạch. Hãy đặt chuyến đi đúng chỗ mà đồng hồ của nó chỉ.',
+  'plan.move.refused.journeyTimedBody':
+    'Giờ khởi hành thuộc về lịch chạy, không thuộc về kế hoạch. Hãy đặt chuyến đi đúng chỗ mà đồng hồ của nó chỉ.',
   'plan.move.spoken.duplicate': '{name} chưa được chuyển. Ngày đó đã có rồi.',
-  'plan.move.spoken.notInIdeas': '{name} chưa được chuyển. Ghi chú ở lại trong ngày.',
-  'plan.move.spoken.notInAnotherDay': '{name} chưa được chuyển. Ghi chú ở lại ngày của nó.',
-  'plan.move.spoken.timed': '{name} có giờ {time}. Chúng tôi hỏi xem có bỏ giờ không.',
-  'plan.move.spoken.journeyNotInIdeas': '{name} chưa được chuyển. Chuyến đi ở lại trong ngày.',
-  'plan.move.spoken.journeyNotInAnotherDay': '{name} chưa được chuyển. Chuyến đi ở lại ngày của nó.',
-  'plan.move.spoken.journeyTimed': '{name} chưa được chuyển. Khởi hành lúc {time}.',
+  'plan.move.spoken.notInIdeas':
+    '{name} chưa được chuyển. Ghi chú ở lại trong ngày.',
+  'plan.move.spoken.notInAnotherDay':
+    '{name} chưa được chuyển. Ghi chú ở lại ngày của nó.',
+  'plan.move.spoken.timed':
+    '{name} có giờ {time}. Chúng tôi hỏi xem có bỏ giờ không.',
+  'plan.move.spoken.journeyNotInIdeas':
+    '{name} chưa được chuyển. Chuyến đi ở lại trong ngày.',
+  'plan.move.spoken.journeyNotInAnotherDay':
+    '{name} chưa được chuyển. Chuyến đi ở lại ngày của nó.',
+  'plan.move.spoken.journeyTimed':
+    '{name} chưa được chuyển. Khởi hành lúc {time}.',
   'plan.move.error.save': 'Thay đổi thứ tự chưa được lưu',
   'plan.move.error.retry': 'Hãy thử lại sau giây lát.',
   'plan.move.dropTime.title': 'Chuyển {name} và bỏ giờ {time}?',
-  'plan.move.dropTime.body': 'Vị trí này mâu thuẫn với giờ đã đặt. Chuyển đến đây sẽ xóa giờ — thứ tự mới và giờ đã xóa được lưu cùng nhau.',
+  'plan.move.dropTime.body':
+    'Vị trí này mâu thuẫn với giờ đã đặt. Chuyển đến đây sẽ xóa giờ — thứ tự mới và giờ đã xóa được lưu cùng nhau.',
   'plan.move.dropTime.confirm': 'Chuyển và bỏ giờ',
   'plan.move.dropTime.cancel': 'Giữ nguyên chỗ cũ',
   /* --------------------------------------------------- a day's own notes */
@@ -169,6 +183,47 @@ const messages = {
   'transports.priced': {
     other: 'trên {priced} lượt di chuyển có giá',
   },
+  'people.title': 'Người tham gia',
+  'people.description': 'Ai đang trong chuyến đi này và ai có thể tìm thấy nó',
+  'people.members.title': 'Trong chuyến đi này',
+  'people.members.empty':
+    'Không còn ai của chuyến đi này ở trong không gian này',
+  'people.role.label': 'Vai trò',
+  'people.role.owner': 'Chủ sở hữu',
+  'people.role.editor': 'Người chỉnh sửa',
+  'people.role.viewer': 'Người xem',
+  'people.you': 'Bạn',
+  'people.owner.hint': 'Mỗi chuyến đi luôn giữ ít nhất một chủ sở hữu',
+  'people.remove.action': 'Gỡ {name} khỏi chuyến đi này',
+  'people.remove.title': 'Gỡ {name} khỏi chuyến đi này?',
+  'people.remove.body':
+    'Người đó mất quyền xem lịch trình ngay lập tức. Những gì họ đã thêm vẫn ở lại chuyến đi.',
+  'people.remove.confirm': 'Gỡ',
+  'people.leave.action': 'Rời chuyến đi này',
+  'people.leave.title': 'Rời chuyến đi này?',
+  'people.leave.body':
+    'Bạn sẽ mất quyền xem lịch trình cho đến khi có người trong chuyến đi thêm bạn lại.',
+  'people.leave.confirm': 'Rời',
+  'people.cancel': 'Huỷ',
+  'people.invite.title': 'Thêm người',
+  'people.invite.placeholder': 'Tìm người trong không gian này',
+  'people.invite.action': 'Thêm vào chuyến đi',
+  'people.invite.role': 'Tham gia với vai trò',
+  'people.invite.empty':
+    'Mọi người trong không gian này đều đã ở trong chuyến đi',
+  'people.invite.emptyHint':
+    'Trước tiên hãy mời người mới vào không gian, trong Cài đặt',
+  'people.visibility.title': 'Ai có thể tìm thấy chuyến đi này',
+  'people.visibility.switch': 'Hiển thị với mọi người trong không gian',
+  'people.visibility.private':
+    'Chỉ những người có tên ở đây mới xem được chuyến đi này',
+  'people.visibility.organization':
+    'Bất kỳ ai trong không gian này đều mở được chuyến đi này',
+  'people.visibility.public':
+    'Chuyến đi này được chia sẻ bằng liên kết công khai',
+  'people.error.lastOwner':
+    'Mỗi chuyến đi giữ ít nhất một chủ sở hữu. Hãy đặt người khác làm chủ sở hữu trước.',
+  'people.error.notInWorkspace': 'Người đó không có trong không gian này',
 } satisfies TranslationOf<typeof En>
 
 export default messages
