@@ -1948,10 +1948,18 @@ test.describe('a confirmation file read into the booking desk', () => {
    *
    * Addressed through the first card each time rather than by title, because a
    * run that died after confirming leaves two cards of the same name behind.
+   *
+   * The count is re-read each pass and the assertion is "fewer than before",
+   * rather than counting down from a number taken once. A count read while the
+   * list is still settling after the removal's invalidation can be one higher
+   * than the list ever returns to, and `toHaveCount(left - 1)` then waits out
+   * its timeout for a number that will never arrive — which is what made this
+   * walk fail about one run in three. Nothing is weakened: the loop still ends
+   * only at zero, and every pass must take at least one item away.
    */
   async function sweep(page: Page): Promise<void> {
     const cards = importedCards(page)
-    for (let left = await cards.count(); left > 0; left -= 1) {
+    for (let left = await cards.count(); left > 0; left = await cards.count()) {
       await cards
         .first()
         .getByRole('button', { name: /^Actions for / })
@@ -1961,7 +1969,7 @@ test.describe('a confirmation file read into the booking desk', () => {
         .getByRole('dialog', { name: /^Remove / })
         .getByRole('button', { name: 'Remove booking' })
         .click()
-      await expect(cards).toHaveCount(left - 1)
+      await expect.poll(async () => cards.count()).toBeLessThan(left)
     }
   }
 
@@ -1980,11 +1988,13 @@ test.describe('a confirmation file read into the booking desk', () => {
    * this trip changes how a dialog **another** spec opens is allowed to behave —
    * `trips-core.spec.ts` walks the same leading trip and asks the delete dialog
    * how hard it asks. A walk that borrows the shared fixture gives it back.
+   *
+   * Counted the same way as {@link sweep}, for the same reason.
    */
   async function sweepFiles(page: Page, tripId: string): Promise<void> {
     await visit(page, filesRoute(tripId), 'light')
     const rows = page.getByRole('row').filter({ hasText: UPLOADED })
-    for (let left = await rows.count(); left > 0; left -= 1) {
+    for (let left = await rows.count(); left > 0; left = await rows.count()) {
       await rows
         .first()
         .getByRole('button', { name: /^Actions for / })
@@ -1994,7 +2004,7 @@ test.describe('a confirmation file read into the booking desk', () => {
         .getByRole('dialog', { name: /^Remove / })
         .getByRole('button', { name: 'Remove file' })
         .click()
-      await expect(rows).toHaveCount(left - 1)
+      await expect.poll(async () => rows.count()).toBeLessThan(left)
     }
   }
 
