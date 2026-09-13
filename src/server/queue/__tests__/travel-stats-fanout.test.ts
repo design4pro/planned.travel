@@ -140,6 +140,26 @@ describe('enqueueTripStatsFor', () => {
 
     expect(stubs.sent).toEqual([])
   })
+
+  it('names the trip in the warn line when the binding refuses', async () => {
+    const trip = await createTrip(alpha.scope, {
+      title: 'Lisbon in spring',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'EUR',
+    })
+    stubs.rejects = true
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await enqueueTripStatsFor(alpha.scope, trip, [alpha.ownerUserId])
+
+    // The trip path's half of the attribution: the producer is handed `{ tripId }` by
+    // `enqueueTravelStats`, and dropping it there would leave the organization and a count alone.
+    const line = String(warn.mock.calls[0]?.[0])
+    expect(line).toContain(`"tripId":"${trip.id}"`)
+
+    warn.mockRestore()
+  })
 })
 
 /**
@@ -228,6 +248,26 @@ describe('requestTravelStatsRecompute', () => {
       ),
     ).resolves.toBeUndefined()
     expect(warn).toHaveBeenCalled()
+
+    warn.mockRestore()
+  })
+
+  it("spreads the caller's context into the line, which is what makes it attributable", async () => {
+    stubs.rejects = true
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    // Without this the line is an organization and a count, which cannot say *which* of the writes
+    // in flight lost its statistics. The producer never invents the identity — only the caller knows
+    // it — so the assertion is that whatever it is handed reaches the record.
+    await requestTravelStatsRecompute(
+      alpha.scope,
+      [alpha.ownerUserId],
+      [ALL_TIME_STAT_YEAR],
+      { route: 'a-caller-of-its-own' },
+    )
+
+    const line = String(warn.mock.calls[0]?.[0])
+    expect(line).toContain('"route":"a-caller-of-its-own"')
 
     warn.mockRestore()
   })
