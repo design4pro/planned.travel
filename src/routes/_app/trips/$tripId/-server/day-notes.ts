@@ -34,6 +34,7 @@ import {
   requireDayNote,
   requireTrip,
   requireTripDay,
+  requireWritableTrip,
   tripRoleFor,
   updateDayNote,
 } from '#/server/repos'
@@ -99,25 +100,23 @@ const noteIcon = z.enum(DAY_NOTE_ICONS)
 /**
  * The four questions every note write asks, in the only order that answers them safely.
  *
- * `requireTrip` first, so a caller who may not *see* the trip learns `NotFoundError` and nothing
- * else; the archived refusal next, because it is a property of the trip rather than of the caller;
- * then the role, which is safe to disclose only once they have proved they may see the trip
- * (PRD #104 decisions 1 and 6); then the day, which is the structural check that stops a note being
- * parented onto a day of another trip.
+ * `requireWritableTrip` first — it asks "may this caller see the trip" and "is it still open for
+ * writes" in that order, so a caller who may not *see* the trip learns `NotFoundError` and nothing
+ * else, and the archived refusal comes before the role because it is a property of the trip rather
+ * than of the caller; then the role, which is safe to disclose only once they have proved they may
+ * see the trip (PRD #104 decisions 1 and 6); then the day, which is the structural check that stops
+ * a note being parented onto a day of another trip.
  *
- * The archived refusal is a plain `Error` carrying `writableTrip`'s sentence, and reaches the reader
- * as the generic failure envelope — the same behaviour every planner write on an archived trip has
- * today. It is a backstop for a stale tab: `canWrite` removes the affordance.
+ * Both refusals are authored copy and reach the reader as their own sentence. This is a backstop
+ * for a stale tab either way — `canWrite` removes the affordance — but a stale tab is still owed the
+ * reason its write did not land.
  */
 async function writableTripDay(
   scope: TenantScope,
   tripId: string,
   dayId: string,
 ): Promise<void> {
-  const trip = await requireTrip(scope, tripId)
-  if (trip.isArchived) {
-    throw new Error('This trip is archived. Restore it before making changes.')
-  }
+  await requireWritableTrip(scope, tripId)
   await assertTripRole(scope, tripId, ['owner', 'editor'])
   await requireTripDay(scope, tripId, dayId)
 }

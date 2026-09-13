@@ -105,6 +105,40 @@ describe('authored copy crosses intact', () => {
     expect(logged).toHaveLength(0)
   })
 
+  /**
+   * The half of #391 that `public.test.ts` cannot prove. Classification and reporting are two
+   * different branches of this middleware, so "the sentence survives" and "nobody is paged for a
+   * trip somebody archived on purpose" are two different assertions - and the second one is the
+   * reason the issue was filed.
+   */
+  it('passes the two repository refusals through without paging anyone', async () => {
+    dsn.configured = 'https://k@o.ingest.sentry.io/1'
+
+    for (const [name, message] of [
+      [
+        'TripArchivedError',
+        'This trip is archived. Restore it before making changes.',
+      ],
+      [
+        'TripRoleError',
+        'A viewer may not change this trip; requires one of: owner, editor.',
+      ],
+    ]) {
+      captureException.mockClear()
+      logged.length = 0
+
+      const refusal = new Error(message)
+      refusal.name = name
+
+      expect(readPublicFailure(await throughBoundary(refusal))).toEqual({
+        kind: 'refusal',
+        message,
+      })
+      expect(captureException).not.toHaveBeenCalled()
+      expect(logged).toHaveLength(0)
+    }
+  })
+
   it('passes a shell state through, so the blocked-traveller screen still renders', async () => {
     dsn.configured = 'https://k@o.ingest.sentry.io/1'
     captureException.mockClear()

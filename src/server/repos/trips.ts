@@ -388,6 +388,53 @@ export async function requireTrip(
 }
 
 /**
+ * Thrown when the trip exists and the caller may see it, but it is archived.
+ *
+ * An archived trip is a record of something that happened, and letting a write rewrite it is how a
+ * history stops being one. The message is the whole point of the class: it is authored copy, listed
+ * in `AUTHORED_ERROR_NAMES` (`src/server/errors/public.ts`) so the refusal reaches the reader as
+ * itself instead of as a generic failure with a Sentry event behind it. It carries no interpolation
+ * for the same reason - the sentence crosses the boundary verbatim, so nothing tenant-shaped may be
+ * in it.
+ *
+ * A distinct code rather than `FORBIDDEN`: this is a property of the trip, not of the caller, and
+ * the instruction that follows from it - restore the trip - is a different one.
+ */
+export class TripArchivedError extends RepositoryError {
+  constructor() {
+    super(
+      'This trip is archived. Restore it before making changes.',
+      'TRIP_ARCHIVED',
+    )
+  }
+}
+
+/**
+ * Resolves a trip the caller may see and may still write to, or throws.
+ *
+ * {@link requireTrip} answers "may this person see it"; this adds "is it still open for writes",
+ * which is the check every planner write shares. It lives beside {@link assertTripRole} rather than
+ * in each handler for the reason that guard's docblock gives: the rule is the trip's, so it has to
+ * hold for a queue consumer and a future route as well as for the three server-function modules
+ * that call it today, and one archived-write refusal with three implementations is the class of
+ * defect `docs/SPEC.md` §8 exists to prevent.
+ *
+ * Role is deliberately not checked here. Whether an archived trip refuses before or after the role
+ * is a per-caller decision - `-server/day-notes.ts` documents its own order - so composing the two
+ * is the caller's job.
+ */
+export async function requireWritableTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Trip> {
+  const trip = await requireTrip(scope, tripId)
+  if (trip.isArchived) {
+    throw new TripArchivedError()
+  }
+  return trip
+}
+
+/**
  * Thrown when the caller may see the trip but holds the wrong role on it.
  *
  * `FORBIDDEN` is the same code {@link ForbiddenError} carries for an organization role, because it

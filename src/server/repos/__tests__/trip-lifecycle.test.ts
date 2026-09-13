@@ -44,8 +44,10 @@ import {
   listTripsForUser,
   registerTripCopier,
   requireTrip,
+  requireWritableTrip,
   restoreTrip,
   startTripCopy,
+  TripArchivedError,
   tripRolesFor,
   updateTrip,
   updateTripMember,
@@ -308,6 +310,44 @@ describe('trip lifecycle', () => {
 
       expect((await requireTrip(tenant.scope, trip.id)).isArchived).toBe(true)
       expect((await countTripsByStatus(tenant.scope)).archived).toBe(1)
+    })
+
+    it('refuses a write to an archived trip, and says so in its own words', async () => {
+      const trip = await createTrip(tenant.scope, { title: 'Hokkaido' })
+
+      await expect(
+        requireWritableTrip(tenant.scope, trip.id),
+      ).resolves.toMatchObject({ id: trip.id })
+
+      await archiveTrip(tenant.scope, trip.id)
+      const error = await captureError(() =>
+        requireWritableTrip(tenant.scope, trip.id),
+      )
+
+      expect(error).toBeInstanceOf(TripArchivedError)
+      expect((error as RepositoryError).code).toBe('TRIP_ARCHIVED')
+      // The sentence crosses to the browser verbatim (`AUTHORED_ERROR_NAMES`, #391), so it is
+      // asserted here rather than left to the classifier's own tests.
+      expect(error.message).toBe(
+        'This trip is archived. Restore it before making changes.',
+      )
+    })
+
+    /**
+     * The order inside the guard is the security property, not an implementation detail. Answering
+     * `TRIP_ARCHIVED` to somebody who may not see the trip would confirm that the id exists and
+     * describe its state — the leak the whole `NotFoundError` convention above exists to prevent.
+     */
+    it('tells an outsider nothing about an archived trip beyond “not found”', async () => {
+      const trip = await createTrip(tenant.scope, { title: 'Reykjavík' })
+      await archiveTrip(tenant.scope, trip.id)
+
+      const error = await captureError(() =>
+        requireWritableTrip(outsider, trip.id),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(error.message).not.toContain('archived')
     })
 
     it('lets a demoted owner’s trip still be archived by a remaining owner', async () => {
