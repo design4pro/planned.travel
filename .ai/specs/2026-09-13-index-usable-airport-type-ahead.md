@@ -4,7 +4,7 @@
 | ------------------ | ----- |
 | **Status**         | draft |
 | **Issue**          | #194  |
-| **Spec PR**        | none  |
+| **Spec PR**        | #467  |
 | **Implementation** | none  |
 
 ## 📝 TLDR

@@ -8,10 +8,10 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 
 ## Draft — being written (2)
 
-| Spec                                                                                                                                       | Date       | Issue                                                           | Spec PR | Implementation |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | --------------------------------------------------------------- | ------- | -------------- |
-| [Index-usable airport type-ahead](2026-09-13-index-usable-airport-type-ahead.md)                                                           | 2026-09-13 | [#194](https://github.com/design4pro/planned.travel/issues/194) | —       | —              |
-| [The confirmation file that fills the desk in: a producer, a model branch and a review surface](2026-09-11-booking-confirmation-import.md) | 2026-09-11 | [#178](https://github.com/design4pro/planned.travel/issues/178) | —       | —              |
+| Spec                                                                                                                                       | Date       | Issue                                                           | Spec PR                                                         | Implementation |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [Index-usable airport type-ahead](2026-09-13-index-usable-airport-type-ahead.md)                                                           | 2026-09-13 | [#194](https://github.com/design4pro/planned.travel/issues/194) | [#467](https://github.com/design4pro/planned.travel/issues/467) | —              |
+| [The confirmation file that fills the desk in: a producer, a model branch and a review surface](2026-09-11-booking-confirmation-import.md) | 2026-09-11 | [#178](https://github.com/design4pro/planned.travel/issues/178) | —                                                               | —              |
 
 ## In progress — a build is open (2)
 
