@@ -22,6 +22,9 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { createTranslator, loadCatalogue } from '#/lib/i18n/catalogue'
+import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
+import { negotiate } from '#/lib/i18n/negotiate'
 import { dayKeyIn, resolveTimeZone } from '#/lib/time'
 import { taskQueue } from '#/server/auth/env'
 import { resolveLimitsFromRow } from '#/server/billing/limits'
@@ -42,6 +45,7 @@ import {
   createPlace,
   createReservation,
   getFile,
+  getOrganizationSettings,
   getSubscription,
   listTripPlaces,
   markReservationsImported,
@@ -692,6 +696,30 @@ export async function confirmBookingImport(
 
   const timeZone = resolveTimeZone(trip.timezone)
   const placeFor = placeResolver(scope, ports.geocoding, trip.id)
+  /*
+   * The name a row the source never titled is written under.
+   *
+   * Resolved here rather than staged with the extraction, because it is copy and copy comes from
+   * the 23-locale catalogue (docs/SPEC.md §9) — the queue consumer that staged the row has neither
+   * a reader nor a locale to resolve it in, so anything it wrote would be English in every
+   * workspace. In the workspace's language, the way `renderNotificationEmail` picks one.
+   *
+   * Lazily, beside `ceilingFor` and for the same reason: most confirms have no untitled row at
+   * all, and this is a settings read plus a catalogue load.
+   */
+  let untitled: Promise<string> | null = null
+  const untitledTitle = (): Promise<string> => {
+    untitled ??= (async () => {
+      const settings = await getOrganizationSettings(scope)
+      const locale =
+        settings === null
+          ? DEFAULT_LOCALE
+          : negotiate({ workspace: settings.locale })
+      const t = createTranslator(locale, await loadCatalogue(locale))
+      return t('modules.book.import.review.untitled')
+    })()
+    return untitled
+  }
   const fileId = fileIdOf(staged.jobId)
   const written = [...already]
   let failed = 0
@@ -708,7 +736,7 @@ export async function confirmBookingImport(
         placeId,
         type: draft.type,
         status: 'confirmed',
-        title: draft.title,
+        title: draft.title.length > 0 ? draft.title : await untitledTitle(),
         location: draft.location,
         confirmationNumber: draft.reference,
         notes: row.notes,

@@ -200,7 +200,9 @@ export function icsEventToReservation(event: IcsEvent): StagedReservation {
     .join(' ')
   return {
     externalId: event.uid,
-    title: event.summary ?? 'Untitled booking',
+    // Empty rather than an English placeholder — see the same decision in
+    // `src/server/extract/booking.ts`: the untitled row is named from the catalogue, at confirm.
+    title: event.summary ?? '',
     kind: inferReservationKind(haystack),
     startsAt: event.start,
     endsAt: event.end,
@@ -215,7 +217,7 @@ export function icsEventToReservation(event: IcsEvent): StagedReservation {
 function jsonToReservation(
   row: z.infer<typeof jsonReservationSchema>,
 ): StagedReservation {
-  const title = row.title ?? row.name ?? row.summary ?? 'Untitled booking'
+  const title = row.title ?? row.name ?? row.summary ?? ''
   const notes = row.notes ?? row.description ?? null
   const location = row.location ?? row.address ?? null
   const haystack = [title, notes, location, row.type].filter(Boolean).join(' ')

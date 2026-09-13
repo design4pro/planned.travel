@@ -138,7 +138,10 @@ describe('textToReservations', () => {
     const rows = await textToReservations(model, input)
 
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.title).toBe('Untitled booking')
+    // Empty, which is what lets the catalogue name it: the review list renders
+    // `modules.book.import.review.untitled` and the confirm resolves the same key. A placeholder
+    // written here would be English in all 23 locales.
+    expect(rows[0]?.title).toBe('')
   })
 
   it('marks a row whose start the document did not state', async () => {

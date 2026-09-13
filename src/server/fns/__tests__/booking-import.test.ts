@@ -26,6 +26,7 @@ import {
   listTripPlaces,
   listTripReservations,
   recordFile,
+  updateOrganizationSettings,
 } from '#/server/repos'
 import { geocodeRuntime } from '#/server/geo/bindings'
 import { createHarness, captureError } from '#/server/repos/__tests__/harness'
@@ -621,6 +622,26 @@ describe('confirmBookingImport', () => {
     expect(stubs.mirrored).toHaveLength(1)
   })
 
+  it('names an untitled row from the catalogue, in the workspace’s language', async () => {
+    // `titleSchema` is `min(1)`, so an untitled row has to be named by somebody. Naming it in the
+    // extraction would have written English into a Polish workspace's data — the confirm is the
+    // first place in the chain that has a workspace to ask.
+    await updateOrganizationSettings(alpha.tenant.scope, { locale: 'pl' })
+    await stage(alpha, { reservations: [stagedRow({ title: '' })] })
+
+    await confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      { tripId: alpha.tripId, jobId: alpha.jobId, accept: [0] },
+      ports,
+    )
+
+    const [written] = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(written.title).toBe('Rezerwacja bez nazwy')
+  })
+
   it('links the confirmed booking to the file the import came from', async () => {
     await stage(alpha)
 
@@ -644,17 +665,25 @@ describe('confirmBookingImport', () => {
   })
 
   /**
-   * The partial confirm, which is the whole reason `written` exists. The failing row is a staged
-   * title the column refuses — the shape a record written by an older build can have — and what
-   * matters is what survives it: three bookings, three entries in `written`, and a retry that
-   * writes the four that are left and never a fourth copy of the first three.
+   * The partial confirm, which is the whole reason `written` exists. The failing row carries a
+   * staged currency the column refuses — the shape a record written by an older build can have —
+   * and what matters is what survives it: three bookings, three entries in `written`, and a retry
+   * that writes the four that are left and never a fourth copy of the first three.
+   *
+   * Not an empty title, which is what this used to use: an untitled row is a shape the extraction
+   * writes on purpose now, and the confirm names it from the catalogue rather than refusing it.
    */
   it('stops at the first row it cannot write, and the retry writes only the rest', async () => {
     const rows = [
       stagedRow({ title: 'One', kind: 'activity' }),
       stagedRow({ title: 'Two', kind: 'activity' }),
       stagedRow({ title: 'Three', kind: 'activity' }),
-      stagedRow({ title: '', kind: 'activity' }),
+      stagedRow({
+        title: 'Four',
+        kind: 'activity',
+        priceMinor: 1_000,
+        currency: 'EURO',
+      }),
       stagedRow({ title: 'Five', kind: 'activity' }),
       stagedRow({ title: 'Six', kind: 'activity' }),
       stagedRow({ title: 'Seven', kind: 'activity' }),

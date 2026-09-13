@@ -166,7 +166,11 @@ function rowToReservation(
 
   return {
     externalId: null,
-    title: title.length > 0 ? title : 'Untitled booking',
+    // Empty and not a placeholder: a title nobody wrote is copy, and copy lives in the
+    // 23-locale catalogue (docs/SPEC.md §9). The review list renders
+    // `modules.book.import.review.untitled` for it, and the confirm resolves the same key
+    // before the row is written — an extraction has no reader and no locale to do it in.
+    title,
     kind: kindFrom(row.kind, haystack),
     startsAt: startsAt.length > 0 ? startsAt : null,
     endsAt: row.endsAt?.trim() ?? null,
