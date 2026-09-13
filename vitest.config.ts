@@ -82,6 +82,12 @@ export default defineConfig({
           globals: false,
           include: [
             'scripts/**/__tests__/*.test.{ts,mjs}',
+            // `.ai/scripts` is the kit's second home for a script, chosen because
+            // `guard-generated.sh` refuses edits there in agent mode - a cezar run
+            // cannot rewrite a guard that judges it. Its test companions are
+            // kit-managed the same way `scripts/ci/__tests__` are, so they run in
+            // the same project.
+            '.ai/scripts/**/__tests__/*.test.mjs',
             // The e2e helpers that carry policy rather than plumbing. The console
             // classifier decides which browser output fails a run, is pure, and
             // used to be graded from inside a Playwright spec — a browser launch
