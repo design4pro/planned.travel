@@ -6,8 +6,9 @@
  * module under `src/routes` is in the client graph, so the moment anything there *exports* a
  * function reaching this code, the client bundle has to resolve that specifier and the build fails.
  * The fan-out was private to `trip-lifecycle.ts` and survived only because nothing exported it. It
- * now has two callers — the trip lifecycle and `01-S6a`'s membership writes — so it needed a home
- * outside the route tree rather than a second copy inside it (`docs/SPEC.md` §8).
+ * now has three callers — the trip lifecycle, `01-S6a`'s membership writes, and the atlas's visited
+ * countries — so it needed a home outside the route tree rather than a second copy inside it
+ * (`docs/SPEC.md` §8).
  *
  * `00-S4` owns what a recompute means; this owns only when one is asked for.
  */
@@ -44,6 +45,11 @@ function yearOf(date: string | null | undefined): number | null {
  * The stat years one trip write can have moved: the all-time roll-up always, the year the trip starts
  * in when it has one, and — on an edit that moved the range — the year it *used* to start in, whose
  * row would otherwise keep counting a trip that has left it.
+ *
+ * A date, not a trip, so the atlas's visited countries pass their own: the date a country was
+ * visited on, and on an undo the date carried by the row being removed. A date whose year is not one
+ * the payload schema accepts — `0000-01-01` is still a `YYYY-MM-DD` the input validators let
+ * through — contributes no year row rather than an envelope the consumer would refuse.
  */
 export function affectedStatYears(
   startDate: string | null | undefined,
@@ -59,28 +65,87 @@ export function affectedStatYears(
 }
 
 /**
- * Fans `travel-stats` envelopes out to **the trip's members** for each year the write moved.
+ * Asks the queue to rebuild `travel_stats` for a set of travellers, over a set of years.
  *
- * Three properties, and each is a decision rather than an implementation detail:
+ * The whole producer, and every decision in it. Three properties, and each is a decision rather than
+ * an implementation detail:
  *
- * - **The recipient set is the trip's members, not the workspace** (PRD #104 decision 9). After
- *   ADR 0007 a private trip is invisible to a non-member, so its statistics must be too; `00-S4` was
- *   amended in the same PRD to count a person's trips by membership, and this only sends to the
- *   people that count applies to.
  * - **The ids are `00-S4`'s**, so a burst of writes inside one collapse window folds onto one
- *   recompute per `(user, year)` instead of one per write.
+ *   recompute per `(user, year)` instead of one per write, and the message is held back until that
+ *   window has closed, so the recompute that survives the collapse sees every write in it.
  * - **A queue refusal never fails the write.** D1 is the durable record and has already been written
  *   by the time this runs; a stale statistics panel is a much smaller harm than a save that appears
  *   to have failed. Caught, logged once, and returned from — the same posture `mirrorToRoom` takes.
+ * - **It chunks.** Cloudflare Queues accepts at most {@link QUEUE_BATCH_MAX} messages per
+ *   `sendBatch`, and a trip's membership is bounded by a plan rather than by anything here.
+ *
+ * **Who the recipients are is the caller's**, and it is the only thing that varies between the
+ * writes that reach this: a trip write fans out to the trip's members (PRD #104 decision 9), an
+ * atlas write moves nobody's numbers but the acting traveller's. That is one argument, which is why
+ * this is one producer rather than one per call site (`docs/SPEC.md` §8). The ids are expected to
+ * arrive deduplicated; a repeated one costs a second envelope that the collapse window would ack as
+ * a duplicate anyway.
+ *
+ * The binding is reached inside the function rather than at module scope: `#/server/auth/env` imports
+ * `cloudflare:workers`, a specifier that does not resolve outside workerd, and this module is
+ * imported by suites that run in plain Node.
+ */
+export async function requestTravelStatsRecompute(
+  scope: TenantScope,
+  userIds: ReadonlyArray<string>,
+  years: ReadonlyArray<number>,
+): Promise<void> {
+  const orgId = scope.ctx.organizationId
+  const at = Date.now()
+
+  const envelopes: Array<EnqueueInput<'travel-stats'>> = []
+  for (const userId of userIds) {
+    for (const statYear of years) {
+      envelopes.push({
+        kind: 'travel-stats',
+        orgId,
+        id: travelStatsTaskId(orgId, userId, statYear, at),
+        payload: { userId, statYear },
+        delaySeconds: recomputeDelaySeconds(at),
+      })
+    }
+  }
+  if (envelopes.length === 0) {
+    return
+  }
+
+  try {
+    const { taskQueue } = await import('#/server/auth/env')
+    const queue = taskQueue()
+    for (let index = 0; index < envelopes.length; index += QUEUE_BATCH_MAX) {
+      await enqueueTasks(queue, envelopes.slice(index, index + QUEUE_BATCH_MAX))
+    }
+  } catch (cause) {
+    log().warn('travel statistics were not enqueued', {
+      organizationId: orgId,
+      travellers: userIds.length,
+      ...serializeError(cause),
+    })
+  }
+}
+
+/**
+ * Fans `travel-stats` envelopes out to **the trip's members** for each year the write moved.
+ *
+ * The recipient set is the trip's members, not the workspace (PRD #104 decision 9). After ADR 0007 a
+ * private trip is invisible to a non-member, so its statistics must be too; `00-S4` was amended in
+ * the same PRD to count a person's trips by membership, and this only sends to the people that count
+ * applies to. Deciding that set is all this adds — everything past it is
+ * {@link requestTravelStatsRecompute}'s.
  *
  * `recipients` exists for the one write that destroys its own recipient list: after `deleteTrip` the
  * `trip_members` rows have gone with the cascade, so the delete reads them first and hands them in.
  * Every other caller lets this read them. Either way the ids arrive deduplicated — both come from
  * `tripMemberUserIds`.
  *
- * The binding is reached inside the function rather than at module scope: `#/server/auth/env` imports
- * `cloudflare:workers`, a specifier that does not resolve outside workerd, and this module is
- * imported by a suite that runs in plain Node.
+ * The member read is guarded in turn, and that guard is this function's own: the producer cannot
+ * catch a read it does not make, and a repository that will not answer must no more fail a write D1
+ * has already taken than an unreachable queue does.
  */
 export async function enqueueTravelStats(
   scope: TenantScope,
@@ -88,38 +153,18 @@ export async function enqueueTravelStats(
   years: ReadonlyArray<number>,
   recipients?: ReadonlyArray<string>,
 ): Promise<void> {
-  const orgId = scope.ctx.organizationId
-  const at = Date.now()
-
   try {
     const userIds = recipients ?? (await tripMemberUserIds(scope, tripId))
-    const envelopes: Array<EnqueueInput<'travel-stats'>> = []
-    for (const userId of userIds) {
-      for (const statYear of years) {
-        envelopes.push({
-          kind: 'travel-stats',
-          orgId,
-          id: travelStatsTaskId(orgId, userId, statYear, at),
-          payload: { userId, statYear },
-          delaySeconds: recomputeDelaySeconds(at),
-        })
-      }
-    }
-    if (envelopes.length === 0) {
-      return
-    }
-
-    const { taskQueue } = await import('#/server/auth/env')
-    const queue = taskQueue()
-    for (let index = 0; index < envelopes.length; index += QUEUE_BATCH_MAX) {
-      await enqueueTasks(queue, envelopes.slice(index, index + QUEUE_BATCH_MAX))
-    }
+    await requestTravelStatsRecompute(scope, userIds, years)
   } catch (cause) {
-    log().warn('travel statistics were not enqueued for a trip write', {
-      organizationId: orgId,
-      tripId,
-      ...serializeError(cause),
-    })
+    log().warn(
+      'the members of a trip write could not be read for the statistics fan-out',
+      {
+        organizationId: scope.ctx.organizationId,
+        tripId,
+        ...serializeError(cause),
+      },
+    )
   }
 }
 

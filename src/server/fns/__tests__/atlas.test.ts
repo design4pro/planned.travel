@@ -99,14 +99,25 @@ function uniqueIndexRefusal(): Error {
  */
 vi.mock('#/server/auth/env', () => ({
   taskQueue: () => ({
-    send: async (body: unknown, options?: { delaySeconds?: number }) => {
+    send: async () => undefined,
+    sendBatch: async (
+      messages: Array<{ body: unknown; delaySeconds?: number }>,
+    ) => {
       if (stubs.queueRejects) {
         throw new Error('TASKS binding is unreachable')
       }
-      stubs.sent.push(options === undefined ? { body } : { body, options })
+      // Flattened across batches, and the per-message delay is lifted onto the
+      // same shape a single `send` used to record, so the assertions below read
+      // one envelope at a time whatever the producer batched them into.
+      stubs.sent.push(
+        ...messages.map(({ body, delaySeconds }) =>
+          delaySeconds === undefined
+            ? { body }
+            : { body, options: { delaySeconds } },
+        ),
+      )
       return undefined
     },
-    sendBatch: async () => undefined,
   }),
 }))
 
