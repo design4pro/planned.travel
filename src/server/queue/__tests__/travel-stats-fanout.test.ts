@@ -1,13 +1,14 @@
 /**
- * The statistics fan-out for a **membership** change.
+ * The statistics fan-out for a **membership** change, and the producer underneath it.
  *
  * The fan-out for a *trip* write is asserted end-to-end through the lifecycle handlers, in
  * `src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts`, and that is still the
- * authority on the envelopes themselves. This file covers only what that route cannot reach:
+ * authority on the envelopes themselves. This file covers what that route cannot reach:
  * `enqueueTripStatsFor`, whose whole reason for existing is that a membership change addresses
  * somebody who is *not* in the trip's member list at the moment it is enqueued — the person just
  * added is not a member yet when the add is recorded, and the person just removed is one no longer
- * (PRD #104 decision 11).
+ * (PRD #104 decision 11) — and `requestTravelStatsRecompute`, the one producer both it and the
+ * atlas's visited countries now go through.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -17,13 +18,25 @@ import {
   subscribeTenant,
 } from '#/server/repos/__tests__/harness'
 import { ALL_TIME_STAT_YEAR } from '#/server/queue/types'
-import { enqueueTripStatsFor } from '../travel-stats-fanout'
+import { QUEUE_BATCH_MAX } from '../jobs'
+import {
+  enqueueTripStatsFor,
+  requestTravelStatsRecompute,
+} from '../travel-stats-fanout'
 
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TaskEnvelopeOf } from '#/server/queue/types'
 
-/** Every envelope the fan-out handed the binding, flattened across batches. */
-const stubs = vi.hoisted(() => ({ sent: [] as Array<unknown> }))
+/**
+ * Every envelope the fan-out handed the binding — `sent` flattened across batches, `batchSizes` the
+ * boundaries themselves, which is the only way to see the Queues cap being honoured.
+ */
+const stubs = vi.hoisted(() => ({
+  sent: [] as Array<unknown>,
+  batchSizes: [] as Array<number>,
+  /** When true, the binding refuses the way an unreachable one does. */
+  rejects: false,
+}))
 
 /**
  * The `TASKS` binding. `#/server/auth/env` imports `cloudflare:workers` at module scope, a specifier
@@ -32,6 +45,10 @@ const stubs = vi.hoisted(() => ({ sent: [] as Array<unknown> }))
 vi.mock('#/server/auth/env', () => ({
   taskQueue: () => ({
     sendBatch: async (messages: Array<{ body: unknown }>) => {
+      if (stubs.rejects) {
+        throw new Error('TASKS binding is unreachable')
+      }
+      stubs.batchSizes.push(messages.length)
       stubs.sent.push(...messages.map((message) => message.body))
       return undefined
     },
@@ -44,6 +61,8 @@ describe('enqueueTripStatsFor', () => {
 
   beforeEach(async () => {
     stubs.sent = []
+    stubs.batchSizes = []
+    stubs.rejects = false
     harness = await createHarness()
     alpha = await harness.seedTenant('alpha')
     await subscribeTenant(alpha.scope, 'crew', 5)
@@ -111,5 +130,92 @@ describe('enqueueTripStatsFor', () => {
     await enqueueTripStatsFor(alpha.scope, trip, [])
 
     expect(stubs.sent).toEqual([])
+  })
+})
+
+/**
+ * The producer itself — the seam the atlas and the trip fan-out now share.
+ *
+ * `atlas.ts` used to carry a second copy of this, differing only in who the envelopes went to, and
+ * the assertions below are about the two things that copy did *not* do: honouring the Queues batch
+ * ceiling, and taking its recipients as an argument rather than reading them from a trip. The
+ * envelope's own shape stays the authority of the call-site suites above and in
+ * `src/server/fns/__tests__/atlas.test.ts`.
+ */
+describe('requestTravelStatsRecompute', () => {
+  let harness: Harness
+  let alpha: SeededTenant
+
+  beforeEach(async () => {
+    stubs.sent = []
+    stubs.batchSizes = []
+    stubs.rejects = false
+    harness = await createHarness()
+    alpha = await harness.seedTenant('alpha')
+  })
+
+  function envelopes(): Array<TaskEnvelopeOf<'travel-stats'>> {
+    return stubs.sent as Array<TaskEnvelopeOf<'travel-stats'>>
+  }
+
+  it('sends one envelope per traveller and year it is handed', async () => {
+    const travellers = [alpha.ownerUserId, await alpha.addUser('Second')]
+
+    await requestTravelStatsRecompute(alpha.scope, travellers, [
+      ALL_TIME_STAT_YEAR,
+      2026,
+    ])
+
+    expect(
+      envelopes().map((envelope) => [
+        envelope.payload.userId,
+        envelope.payload.statYear,
+      ]),
+    ).toEqual([
+      [travellers[0], ALL_TIME_STAT_YEAR],
+      [travellers[0], 2026],
+      [travellers[1], ALL_TIME_STAT_YEAR],
+      [travellers[1], 2026],
+    ])
+  })
+
+  it('splits a fan-out wider than the Queues ceiling across batches', async () => {
+    // The copy this replaced sent one message at a time and so could not exceed the cap; this one
+    // batches, which is the whole reason the cap has to be honoured here at all.
+    const travellers = Array.from(
+      { length: QUEUE_BATCH_MAX + 1 },
+      (_unused, index) => `user_${index}`,
+    )
+
+    await requestTravelStatsRecompute(alpha.scope, travellers, [
+      ALL_TIME_STAT_YEAR,
+    ])
+
+    expect(stubs.batchSizes).toEqual([QUEUE_BATCH_MAX, 1])
+    expect(stubs.sent).toHaveLength(QUEUE_BATCH_MAX + 1)
+  })
+
+  it('sends nothing at all when there is no year to recompute', async () => {
+    await requestTravelStatsRecompute(alpha.scope, [alpha.ownerUserId], [])
+
+    expect(stubs.batchSizes).toEqual([])
+  })
+
+  it("never fails the caller's write when the binding refuses", async () => {
+    stubs.rejects = true
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    // D1 is the durable record and has already been written by the time this runs; a stale panel is
+    // a much smaller harm than a save that appears to have failed.
+    await expect(
+      requestTravelStatsRecompute(
+        alpha.scope,
+        [alpha.ownerUserId],
+        [ALL_TIME_STAT_YEAR],
+      ),
+    ).resolves.toBeUndefined()
+    expect(warn).toHaveBeenCalled()
+
+    warn.mockRestore()
   })
 })
