@@ -29,7 +29,10 @@ import type {
 export const BOOK_IMPORTS_KEY = 'planned.book-imports'
 
 export const POLL_INTERVAL_MS = 2_000
-/** Per job, and generous against the extraction budget the queue handler works to. */
+/**
+ * Per job, and generous against the extraction budget the queue handler works to. Counted from the
+ * job's scheduled start, not the drop — see {@link BookImportJob.delayMs}.
+ */
 export const POLL_BUDGET_MS = 20_000
 /** Long enough for the done state to be read and clicked, short enough not to be furniture. */
 export const DONE_LINGER_MS = 12_000
@@ -39,6 +42,18 @@ export interface BookImportJob {
   readonly jobId: string
   readonly tripId: string
   readonly filename: string
+  /**
+   * How long the queue was told to sit on this job before starting it.
+   *
+   * A drop is staggered server-side by `index * EXTRACTION_BUDGET_SECONDS`, so the fourth file is
+   * not dequeued for a minute after the first. {@link POLL_BUDGET_MS} is measured on top of this,
+   * because a file that has not been started yet is not late — and a budget that ignored the
+   * stagger would mark every file but the first `stalled` on every multi-file drop.
+   *
+   * Optional, and absent means none: a register row written before this field existed is still a
+   * job worth polling.
+   */
+  readonly delayMs?: number
 }
 
 function isJob(value: unknown): value is BookImportJob {
@@ -49,7 +64,8 @@ function isJob(value: unknown): value is BookImportJob {
   return (
     typeof row.jobId === 'string' &&
     typeof row.tripId === 'string' &&
-    typeof row.filename === 'string'
+    typeof row.filename === 'string' &&
+    (row.delayMs === undefined || typeof row.delayMs === 'number')
   )
 }
 
@@ -195,14 +211,16 @@ export function useBookImportPoll(
         if (lifetime.signal.aborted) {
           return
         }
-        // A call that failed is not an answer: the next tick asks again, and the budget below is
-        // what stops that from going on forever.
+        // A call that failed is not an answer: the next tick asks again, and the budget is what
+        // stops that from going on forever — for a rejected call as much as for a slow queue.
+        // Offline, an expired session, a trip that was deleted: all of them reject on every tick,
+        // and a job pinned at `working` by them is a card with no button on it on every screen of
+        // the product, for good, because the register outlives the page.
+        const spent = now - since >= POLL_BUDGET_MS + (job.delayMs ?? 0)
         const answer =
-          view === null
-            ? 'working'
-            : now - since >= POLL_BUDGET_MS && view.status === 'working'
-              ? 'stalled'
-              : view.status
+          spent && (view === null || view.status === 'working')
+            ? 'stalled'
+            : (view?.status ?? 'working')
         answered.current.set(job.jobId, answer)
         setProgress(new Map(answered.current))
         if (view !== null) {

@@ -30,8 +30,19 @@ export interface ImportFileDrafts {
 export type ImportSelection = ReadonlyMap<string, ReadonlySet<number>>
 
 export type ImportSelectionAction =
-  /** Everything in `files` — the state a freshly read file arrives in. */
+  /** Everything in `files` — what the Select all button asks for. */
   | { readonly kind: 'all'; readonly files: ReadonlyArray<ImportFileDrafts> }
+  /**
+   * The rows a file arrives with, without disturbing the files already on screen.
+   *
+   * A drop of five files answers one file at a time, so this runs again every time a later one
+   * lands — and by then a reader may already have unticked rows in an earlier one. Rebuilding the
+   * whole map there would silently put those rows back and write bookings the reader rejected.
+   */
+  | {
+      readonly kind: 'arrived'
+      readonly files: ReadonlyArray<ImportFileDrafts>
+    }
   | { readonly kind: 'none' }
   | { readonly kind: 'toggle'; readonly jobId: string; readonly index: number }
 
@@ -65,9 +76,10 @@ function selectEverything(
 /**
  * The selection after one reader action.
  *
- * `toggle` is the only action that reads the previous state, and it rebuilds just the one job's set:
- * a reader who deselects a row changes that row's membership and the count, and nothing else — not
- * the order of the groups, not the other files, not the rows already written by a partial confirm.
+ * `toggle` and `arrived` are the actions that read the previous state. `toggle` rebuilds just the
+ * one job's set: a reader who deselects a row changes that row's membership and the count, and
+ * nothing else — not the order of the groups, not the other files, not the rows already written by
+ * a partial confirm. `arrived` leaves every file a reader has already seen exactly as they left it.
  */
 export function importSelectionReducer(
   state: ImportSelection,
@@ -76,6 +88,23 @@ export function importSelectionReducer(
   switch (action.kind) {
     case 'all':
       return selectEverything(action.files)
+    case 'arrived':
+      return new Map(
+        groupImportDrafts(action.files).map((file) => {
+          const offered = file.drafts.map((draft) => draft.index)
+          const kept = state.get(file.jobId)
+          // A file nothing has been decided about yet arrives fully selected. One a reader has
+          // already pruned keeps their decision, minus any row no longer on offer: a partial
+          // confirm takes the rows it wrote out of the list, and a selection still naming them
+          // would send them a second time.
+          return [
+            file.jobId,
+            kept === undefined
+              ? new Set(offered)
+              : new Set(offered.filter((index) => kept.has(index))),
+          ]
+        }),
+      )
     case 'none':
       return NO_IMPORT_SELECTION
     case 'toggle': {

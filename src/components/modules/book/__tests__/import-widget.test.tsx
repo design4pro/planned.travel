@@ -39,7 +39,7 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => stubs.navigate,
 }))
 
-function registerOne(): void {
+function registerOne(delayMs?: number): void {
   window.localStorage.setItem(
     BOOK_IMPORTS_KEY,
     JSON.stringify([
@@ -47,6 +47,7 @@ function registerOne(): void {
         jobId: 'booking-import:trip-1:file-1',
         tripId: 'trip-1',
         filename: 'confirmation.pdf',
+        ...(delayMs === undefined ? {} : { delayMs }),
       },
     ]),
   )
@@ -129,6 +130,47 @@ describe('the global import widget', () => {
     // The point of a bounded poll: the queue is not asked again on its own.
     await tick(POLL_INTERVAL_MS * 5)
     expect(stubs.view.mock.calls.length).toBe(asked)
+  })
+
+  it('waits out the queue’s stagger before calling a later file in a drop stalled', async () => {
+    // The regression this guards: the queue is told to sit on file *n* for `n * 20s`, so a budget
+    // counted from the drop marked every file but the first stalled at twenty seconds — on every
+    // multi-file drop, which is the feature's headline case.
+    stubs.view.mockResolvedValue({
+      status: 'working',
+    } satisfies BookingImportView)
+    const stagger = 40_000
+    registerOne(stagger)
+
+    mount()
+    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
+
+    // Still being read, because by the queue's own clock it has not started yet.
+    expect(screen.getByText('Reading confirmations')).toBeTruthy()
+    expect(screen.queryByText('This is taking longer than expected')).toBeNull()
+
+    await tick(stagger)
+
+    expect(screen.getByText('This is taking longer than expected')).toBeTruthy()
+  })
+
+  it('stops asking when every call is rejected, rather than polling a dead job forever', async () => {
+    // Offline, an expired session, a trip that was deleted: `getBookingImportFn` rejects on every
+    // tick. Treating that as “still working” pinned the job there for good — and because the
+    // register outlives the page, that is a card with no button on it on every screen, permanently.
+    stubs.view.mockRejectedValue(new Error('offline'))
+    registerOne()
+
+    mount()
+    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
+
+    expect(screen.getByText('This is taking longer than expected')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeTruthy()
+
+    screen.getByRole('button', { name: 'Dismiss' }).click()
+    await tick(POLL_INTERVAL_MS)
+
+    expect(readBookImports()).toHaveLength(0)
   })
 
   it('lets a reader take a job that never answered out of the register', async () => {

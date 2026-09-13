@@ -61,6 +61,7 @@ import {
   importFormatFor,
 } from '#/server/fns/file-policy'
 import {
+  EXTRACTION_BUDGET_SECONDS,
   confirmBookingImportFn,
   startBookingImportFn,
 } from '#/server/fns/booking-import'
@@ -177,7 +178,9 @@ export function ImportBookingsDialog({
     .join(' ')
   useEffect(() => {
     if (shape.length > 0) {
-      dispatch({ kind: 'all', files })
+      // `arrived` and not `all`: this fires again every time a later file in the same drop answers,
+      // and by then a reader may have unticked rows in the one that answered first.
+      dispatch({ kind: 'arrived', files })
     }
     // `shape` stands in for `files`, which is rebuilt on every poll answer.
   }, [shape])
@@ -187,19 +190,24 @@ export function ImportBookingsDialog({
   /**
    * Back to the drop target, keeping whatever is still being read.
    *
-   * Only the jobs that have stopped are forgotten. A reader who takes one file's refusal away has
-   * said nothing about the other four still in the queue, and dropping those from the register
-   * would make readings the workspace has already paid for unreachable.
+   * Only the refusals are forgotten. A reader who takes one file's refusal away has said nothing
+   * about the other four, and the register is the only handle there is on a job id: dropping a
+   * `ready` job would put a reading the workspace has already paid for out of reach before anyone
+   * saw it, and a `stalled` one is not finished at all — it is a client-side poll budget running
+   * out while the queue is still working. Neither has stopped.
+   *
+   * The selection is left alone for the same reason. Nothing with rows in it is forgotten here, so
+   * there is nothing stale to clear, and clearing it would untick the rows of a file that stays on
+   * screen — with no answer arriving afterwards to put them back.
    */
   const reset = (): void => {
     setStage({ kind: 'idle' })
     setRefusals([])
     forgetBookImports(
       registered
-        .filter((job) => (progress.get(job.jobId) ?? 'working') !== 'working')
+        .filter((job) => progress.get(job.jobId) === 'refused')
         .map((job) => job.jobId),
     )
-    dispatch({ kind: 'none' })
   }
 
   /**
@@ -274,7 +282,14 @@ export function ImportBookingsDialog({
       // Registered as each one starts, not after the loop: a file that fails to upload returns
       // early, and the jobs already enqueued have spent the workspace's reading allowance. A
       // register written only on the way out would leave them running and invisible.
-      started.push({ jobId: job.jobId, tripId, filename: file.name })
+      // The stagger goes into the register too: the widget's stall budget is measured from the
+      // job's scheduled start, and only the dialog that sent the index knows what it was.
+      started.push({
+        jobId: job.jobId,
+        tripId,
+        filename: file.name,
+        delayMs: index * EXTRACTION_BUDGET_SECONDS * 1_000,
+      })
       registerBookImports(started)
     }
     setStage({ kind: 'reviewing' })

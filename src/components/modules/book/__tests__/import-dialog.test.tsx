@@ -42,6 +42,7 @@ const stubs = vi.hoisted(() => ({
 
 /** The real module reads the Worker environment through the request scope, which jsdom has none of. */
 vi.mock('#/server/fns/booking-import', () => ({
+  EXTRACTION_BUDGET_SECONDS: 20,
   getBookingImportFn: stubs.view,
   startBookingImportFn: stubs.start,
   confirmBookingImportFn: stubs.confirm,
@@ -70,6 +71,46 @@ function dropTarget(): HTMLElement {
 
 function drop(...files: ReadonlyArray<File>): void {
   fireEvent.drop(dropTarget(), { dataTransfer: { files } })
+}
+
+/** One file read to two rows — at module scope because the refusal tests pair it with a refusal. */
+const READY: BookingImportView = {
+  status: 'ready',
+  staged: {
+    format: 'document',
+    count: 2,
+    written: [],
+    drafts: [
+      {
+        index: 0,
+        type: 'accommodation',
+        title: 'Hotel Okura',
+        location: 'Tokyo',
+        reference: 'ABC123',
+        startDate: '2026-04-02',
+        startTime: '15:00',
+        endDate: '2026-04-05',
+        endTime: '11:00',
+        priceMinor: 48_000,
+        currency: 'JPY',
+        needsReview: false,
+      },
+      {
+        index: 1,
+        type: 'transport',
+        title: '',
+        location: null,
+        reference: null,
+        startDate: '2026-04-02',
+        startTime: null,
+        endDate: null,
+        endTime: null,
+        priceMinor: null,
+        currency: null,
+        needsReview: true,
+      },
+    ],
+  },
 }
 
 beforeEach(() => {
@@ -168,8 +209,30 @@ describe('the import dialog at its boundary', () => {
         jobId: 'booking-import:trip-1:file-1',
         tripId: 'trip-1',
         filename: 'first.ics',
+        delayMs: 0,
       },
     ])
+  })
+
+  it('writes each file’s queue stagger into the register', async () => {
+    stubs.upload
+      .mockResolvedValueOnce({ ok: true, file: { id: 'file-1' } })
+      .mockResolvedValueOnce({ ok: true, file: { id: 'file-2' } })
+    stubs.start
+      .mockResolvedValueOnce({ jobId: 'booking-import:trip-1:file-1' })
+      .mockResolvedValueOnce({ jobId: 'booking-import:trip-1:file-2' })
+    open()
+
+    drop(
+      new File(['x'], 'first.ics', { type: 'text/calendar' }),
+      new File(['x'], 'second.ics', { type: 'text/calendar' }),
+    )
+
+    // Without this the widget counts its stall budget from the drop, and the second file — which
+    // the queue is told to hold for twenty seconds — is called stalled before it can have started.
+    await vi.waitFor(() => {
+      expect(readBookImports().map((job) => job.delayMs)).toEqual([0, 20_000])
+    })
   })
 })
 
@@ -207,45 +270,6 @@ describe('the import dialog’s controls', () => {
 })
 
 describe('the import dialog on a staged answer', () => {
-  const READY: BookingImportView = {
-    status: 'ready',
-    staged: {
-      format: 'document',
-      count: 2,
-      written: [],
-      drafts: [
-        {
-          index: 0,
-          type: 'accommodation',
-          title: 'Hotel Okura',
-          location: 'Tokyo',
-          reference: 'ABC123',
-          startDate: '2026-04-02',
-          startTime: '15:00',
-          endDate: '2026-04-05',
-          endTime: '11:00',
-          priceMinor: 48_000,
-          currency: 'JPY',
-          needsReview: false,
-        },
-        {
-          index: 1,
-          type: 'transport',
-          title: '',
-          location: null,
-          reference: null,
-          startDate: '2026-04-02',
-          startTime: null,
-          endDate: null,
-          endTime: null,
-          priceMinor: null,
-          currency: null,
-          needsReview: true,
-        },
-      ],
-    },
-  }
-
   beforeEach(() => {
     window.localStorage.setItem(
       BOOK_IMPORTS_KEY,
@@ -387,6 +411,47 @@ describe('the import dialog on a refusal', () => {
     expect(
       screen.getByRole('button', { name: 'Try another file' }),
     ).toBeTruthy()
+  })
+
+  it('takes only the refusal out of the register when a reader asks for another file', async () => {
+    // The regression this guards: “Try another file” forgot every job that was not still
+    // `working`, so a second file that had already been read — billed to the workspace, staged in
+    // KV, waiting to be reviewed — lost the only handle there was on its id.
+    window.localStorage.setItem(
+      BOOK_IMPORTS_KEY,
+      JSON.stringify([
+        {
+          jobId: 'booking-import:trip-1:file-1',
+          tripId: 'trip-1',
+          filename: 'confirmation.pdf',
+        },
+        {
+          jobId: 'booking-import:trip-1:file-2',
+          tripId: 'trip-1',
+          filename: 'second.pdf',
+        },
+      ]),
+    )
+    stubs.view.mockImplementation(
+      ({ data }: { data: { jobId: string } }): Promise<BookingImportView> =>
+        Promise.resolve(
+          data.jobId.endsWith('file-1')
+            ? { status: 'refused', refusal: { code: 'unreadable' } }
+            : READY,
+        ),
+    )
+    open()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Try another file' }),
+    )
+
+    expect(readBookImports().map((job) => job.jobId)).toEqual([
+      'booking-import:trip-1:file-2',
+    ])
+    // And the rows of the file that stayed are still ticked: nothing with rows in it was
+    // forgotten, so there was nothing to clear — and no later answer to put them back.
+    expect(screen.getByRole('button', { name: 'Add 2 bookings' })).toBeTruthy()
   })
 
   it('never forwards a server sentence for a file it could not read', async () => {

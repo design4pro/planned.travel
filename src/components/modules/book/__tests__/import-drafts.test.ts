@@ -123,6 +123,72 @@ describe('importSelectionReducer', () => {
     expect(acceptedImportRows(selection, 'a')).toEqual([2])
   })
 
+  it('keeps a reader’s deselections when a later file in the same drop answers', () => {
+    // The regression this guards: a drop is staggered 20s per file, so a reader has a real window
+    // to prune file A before file B lands. Rebuilding the whole map on B's arrival silently put
+    // A's rejected rows back, and the confirm then wrote bookings the reader had refused.
+    const arrived = importSelectionReducer(NO_IMPORT_SELECTION, {
+      kind: 'arrived',
+      files: [file('a', 3)],
+    })
+    const pruned = importSelectionReducer(arrived, {
+      kind: 'toggle',
+      jobId: 'a',
+      index: 1,
+    })
+
+    const both = importSelectionReducer(pruned, {
+      kind: 'arrived',
+      files: [file('a', 3), file('b', 2)],
+    })
+
+    expect(acceptedImportRows(both, 'a')).toEqual([0, 2])
+    // The file nobody has decided about arrives selected, as a freshly read file should.
+    expect(acceptedImportRows(both, 'b')).toEqual([0, 1])
+    expect(importSelectionCount(both)).toBe(4)
+  })
+
+  it('drops a row a partial confirm already wrote, and the file it emptied', () => {
+    const arrived = importSelectionReducer(NO_IMPORT_SELECTION, {
+      kind: 'arrived',
+      files: [file('a', 3), file('b', 1)],
+    })
+
+    // What the dialog hands back after a partial confirm: the written rows are gone from the
+    // staged list, and a file with nothing left is no longer a group at all.
+    const after = importSelectionReducer(arrived, {
+      kind: 'arrived',
+      files: [
+        { jobId: 'a', filename: 'a.pdf', drafts: [draft({ index: 2 })] },
+        file('b', 0),
+      ],
+    })
+
+    expect(acceptedImportRows(after, 'a')).toEqual([2])
+    expect(after.has('b')).toBe(false)
+    expect(importSelectionCount(after)).toBe(1)
+  })
+
+  it('still selects everything when a reader asks for it after pruning', () => {
+    // `all` is the Select all button and keeps its meaning: `arrived` is the automatic path.
+    const arrived = importSelectionReducer(NO_IMPORT_SELECTION, {
+      kind: 'arrived',
+      files: [file('a', 3)],
+    })
+    const pruned = importSelectionReducer(arrived, {
+      kind: 'toggle',
+      jobId: 'a',
+      index: 0,
+    })
+
+    const all = importSelectionReducer(pruned, {
+      kind: 'all',
+      files: [file('a', 3)],
+    })
+
+    expect(acceptedImportRows(all, 'a')).toEqual([0, 1, 2])
+  })
+
   it('empties every file on select none', () => {
     const all = importSelectionReducer(NO_IMPORT_SELECTION, {
       kind: 'all',
