@@ -1853,13 +1853,17 @@ function callsServerFn(url: URL, name: string): boolean {
  * unchecked-import marker" is a statement about the screen, not about a
  * function's return value.
  *
- * The demo workspace is a shared fixture, so every booking this block writes
- * carries {@link IMPORT_MARKER} in its title and is swept away before the walk
- * and after it: a run that died half way costs the next run nothing.
+ * The demo workspace is a shared fixture, so everything this block writes is
+ * swept away before the walk and after it, and a run that died half way costs
+ * the next run nothing: every booking carries {@link IMPORT_MARKER} in its
+ * title, and every file it uploads is named for {@link UPLOADED}.
  */
 test.describe('a confirmation file read into the booking desk', () => {
   /** In every title the fixture calendar carries, and in nothing the seed writes. */
   const IMPORT_MARKER = 'Import walk'
+
+  /** The stem every file this block uploads is named with, and the seed none. */
+  const UPLOADED = 'import-walk'
 
   /** None reads as a lodging: a lodging row would reach the geocoder on confirm. */
   const EVENTS = [
@@ -1909,6 +1913,13 @@ test.describe('a confirmation file read into the booking desk', () => {
     ready: TRIP_SECTIONS,
   })
 
+  /** Where {@link sweepFiles} goes to take back what the walk uploaded. */
+  const filesRoute = (tripId: string): RouteCase => ({
+    name: 'trip-files-import',
+    path: `/trips/${tripId}/files`,
+    ready: TRIP_SECTIONS,
+  })
+
   test.beforeEach(async ({ context, page, baseURL }) => {
     await useSession(context, page, baseURL)
     test.skip(
@@ -1954,6 +1965,39 @@ test.describe('a confirmation file read into the booking desk', () => {
     }
   }
 
+  /**
+   * Removes every file the walk uploaded, however many are left behind.
+   *
+   * {@link sweep} takes back the bookings, but the file is a second thing this
+   * block writes and it outlives them: a confirmed import attaches its source to
+   * the trip, and a refused one leaves the upload that was already stored before
+   * the refusal — neither carries a `reservation_id`, so removing the bookings
+   * does not remove them.
+   *
+   * They cannot be left there. `readTripForDelete` counts a trip's records as
+   * `reservations + transports + expenses + files`, and `DELETE_CONFIRM_THRESHOLD`
+   * puts `requiresTitle` on the far side of *any one* of them. So a file left on
+   * this trip changes how a dialog **another** spec opens is allowed to behave —
+   * `trips-core.spec.ts` walks the same leading trip and asks the delete dialog
+   * how hard it asks. A walk that borrows the shared fixture gives it back.
+   */
+  async function sweepFiles(page: Page, tripId: string): Promise<void> {
+    await visit(page, filesRoute(tripId), 'light')
+    const rows = page.getByRole('row').filter({ hasText: UPLOADED })
+    for (let left = await rows.count(); left > 0; left -= 1) {
+      await rows
+        .first()
+        .getByRole('button', { name: /^Actions for / })
+        .click()
+      await page.getByRole('menuitem', { name: 'Remove file' }).click()
+      await page
+        .getByRole('dialog', { name: /^Remove / })
+        .getByRole('button', { name: 'Remove file' })
+        .click()
+      await expect(rows).toHaveCount(left - 1)
+    }
+  }
+
   test('a calendar is read, pruned and written to the desk as unchecked imports', async ({
     page,
   }) => {
@@ -1963,9 +2007,19 @@ test.describe('a confirmation file read into the booking desk', () => {
 
     const tripId = await aTripToWalk(page)
     const route = bookRoute(tripId)
-    const report = watchConsole(page, route)
+
+    // Both leading sweeps run before the console watch opens, because clearing a
+    // dead run's leavings is not part of what this walk is asked to prove — and
+    // `sweepFiles` steps through the files route, whose relative timestamps
+    // hydrate with a mismatch this block does not own.
     await visit(page, route, 'light')
     await sweep(page)
+    // A run that died between the upload and the confirm leaves a file and no
+    // booking, so the file sweep is not merely the mirror of the one above.
+    await sweepFiles(page, tripId)
+
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
 
     const dialog = await openImport(page)
     await dialog.locator('input[type="file"]').setInputFiles({
@@ -2013,6 +2067,7 @@ test.describe('a confirmation file read into the booking desk', () => {
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
 
     await sweep(page)
+    await sweepFiles(page, tripId)
   })
 
   test('a file the import cannot read is refused by name, and nothing uploads', async ({
@@ -2110,5 +2165,9 @@ test.describe('a confirmation file read into the booking desk', () => {
 
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+
+    // The refusal comes back after the upload has already been stored, so this
+    // walk leaves a file behind even though it wrote no booking.
+    await sweepFiles(page, tripId)
   })
 })
