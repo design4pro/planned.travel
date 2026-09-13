@@ -99,7 +99,13 @@ function uniqueIndexRefusal(): Error {
  */
 vi.mock('#/server/auth/env', () => ({
   taskQueue: () => ({
-    send: async () => undefined,
+    // Refused rather than stubbed out: the statistics producer batches, and a single `send`
+    // reaching this would slip past `queueRejects` and pass the refusal test for the wrong reason.
+    send: async () => {
+      throw new Error(
+        'the travel-stats producer must enqueue through sendBatch',
+      )
+    },
     sendBatch: async (
       messages: Array<{ body: unknown; delaySeconds?: number }>,
     ) => {
@@ -1041,6 +1047,10 @@ describe('travel-stats recompute enqueue', () => {
     // it was reported rather than swallowed.
     expect(await visitedCodes(tenant.scope)).toEqual(['PE'])
     expect(warn).toHaveBeenCalled()
+    // `route` is the atlas's half of the attribution. The producer is shared with
+    // the trip fan-out now, so without the field the line cannot say which of the
+    // two kinds of write in flight lost its statistics.
+    expect(String(warn.mock.calls[0]?.[0])).toContain('"route":"atlas"')
     warn.mockRestore()
   })
 })

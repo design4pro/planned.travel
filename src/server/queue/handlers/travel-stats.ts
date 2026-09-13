@@ -85,8 +85,10 @@ function windowOf(at: number): number {
 
 /**
  * The envelope id for one traveller's year, and the producer's whole idempotency
- * story. Exported because `src/server/fns/atlas.ts` is the only producer and its
- * tests assert the exact string.
+ * story. Exported because `src/server/queue/travel-stats-fanout.ts` and
+ * `src/server/queue/handlers/trip-copy.ts` are the two producers that build these
+ * envelopes, and both must agree on the exact string — which is what the suites
+ * around each of them assert.
  */
 export function travelStatsTaskId(
   orgId: string,

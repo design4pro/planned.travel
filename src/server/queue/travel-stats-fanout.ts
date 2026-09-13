@@ -23,7 +23,7 @@ import { QUEUE_BATCH_MAX, enqueueTasks } from '#/server/queue/jobs'
 import { ALL_TIME_STAT_YEAR, isCalendarStatYear } from '#/server/queue/types'
 
 import type { Trip } from '#/server/db/types'
-import type { Logger } from '#/server/observability'
+import type { LogFields, Logger } from '#/server/observability'
 import type { EnqueueInput } from '#/server/queue/jobs'
 import type { TenantScope } from '#/server/repos'
 
@@ -88,33 +88,38 @@ export function affectedStatYears(
  *
  * The binding is reached inside the function rather than at module scope: `#/server/auth/env` imports
  * `cloudflare:workers`, a specifier that does not resolve outside workerd, and this module is
- * imported by suites that run in plain Node.
+ * imported by suites that run in plain Node. It is not reached at all when there is nothing to send.
+ *
+ * `context` is what the caller's own write is identified by — a trip id, a route — and exists because
+ * the one line this can emit is otherwise unattributable: "statistics were not enqueued" for an
+ * organization says nothing about *which* of the writes in flight lost them.
  */
 export async function requestTravelStatsRecompute(
   scope: TenantScope,
   userIds: ReadonlyArray<string>,
   years: ReadonlyArray<number>,
+  context: LogFields = {},
 ): Promise<void> {
   const orgId = scope.ctx.organizationId
-  const at = Date.now()
-
-  const envelopes: Array<EnqueueInput<'travel-stats'>> = []
-  for (const userId of userIds) {
-    for (const statYear of years) {
-      envelopes.push({
-        kind: 'travel-stats',
-        orgId,
-        id: travelStatsTaskId(orgId, userId, statYear, at),
-        payload: { userId, statYear },
-        delaySeconds: recomputeDelaySeconds(at),
-      })
-    }
-  }
-  if (envelopes.length === 0) {
-    return
-  }
 
   try {
+    const at = Date.now()
+    const envelopes: Array<EnqueueInput<'travel-stats'>> = []
+    for (const userId of userIds) {
+      for (const statYear of years) {
+        envelopes.push({
+          kind: 'travel-stats',
+          orgId,
+          id: travelStatsTaskId(orgId, userId, statYear, at),
+          payload: { userId, statYear },
+          delaySeconds: recomputeDelaySeconds(at),
+        })
+      }
+    }
+    if (envelopes.length === 0) {
+      return
+    }
+
     const { taskQueue } = await import('#/server/auth/env')
     const queue = taskQueue()
     for (let index = 0; index < envelopes.length; index += QUEUE_BATCH_MAX) {
@@ -124,6 +129,7 @@ export async function requestTravelStatsRecompute(
     log().warn('travel statistics were not enqueued', {
       organizationId: orgId,
       travellers: userIds.length,
+      ...context,
       ...serializeError(cause),
     })
   }
@@ -155,7 +161,7 @@ export async function enqueueTravelStats(
 ): Promise<void> {
   try {
     const userIds = recipients ?? (await tripMemberUserIds(scope, tripId))
-    await requestTravelStatsRecompute(scope, userIds, years)
+    await requestTravelStatsRecompute(scope, userIds, years, { tripId })
   } catch (cause) {
     log().warn(
       'the members of a trip write could not be read for the statistics fan-out',
