@@ -14,10 +14,10 @@
  *    the difference between deleting a day and deleting a journey, and nothing in TypeScript
  *    distinguishes them. The harness generates its DDL from this schema and `node:sqlite` enforces
  *    foreign keys, so the cases below delete real parents and read the survivors back.
- * 3. **A tenant column on a table that must not have one.** `airports` is platform content: an
- *    airport belongs to no workspace. A well-meaning `organizationId: orgRef()` added later would
- *    look exactly like every other table in the file and would be caught by nothing, because a
- *    tenant-isolation test only ever asserts the presence of the filter.
+ * 3. **A workspace reference on a table that must not have one.** `airports` is platform content:
+ *    an airport belongs to no workspace, so it points at nothing a workspace owns. The matching
+ *    rule about `organization_id` is asked of every declared table at once in
+ *    `tenant-columns.test.ts`, which names this one as an exemption.
  * 4. **A unique index that refuses the rows the catalogue is made of.** Most airports in a
  *    public-domain dataset carry no IATA code. SQLite treats `NULL`s inside a `UNIQUE` index as
  *    distinct, which is what makes a plain unique index the right one here — and that is a property
@@ -39,13 +39,7 @@ import {
   constraintName,
   createHarness,
 } from '#/server/repos/__tests__/harness'
-import {
-  physicalColumns,
-  physicalIndexNames,
-  replayMigrations,
-  shippedMigrations,
-  statementsOf,
-} from './migration-files'
+import { shippedMigrations, statementsOf } from './migration-files'
 import {
   checkNames,
   columnNames,
@@ -167,10 +161,10 @@ describe('the transport chain and airport catalogue schema', () => {
   })
 
   describe('airports', () => {
-    it('carries no tenant column', () => {
-      // The single stated exception to the tenant-scoped repository rule: an airport belongs to no
-      // workspace, so there is no `organization_id` for a filter to be forgotten on.
-      expect(columnNames(airports)).not.toContain('organization_id')
+    it('points at nothing, because it belongs to nothing', () => {
+      // The other half of being platform content: no foreign key, so no row of any workspace can
+      // take an airport with it. That it carries no `organization_id` either is asserted for every
+      // table at once in `tenant-columns.test.ts`, where `airports` is one of the named exemptions.
       expect(foreignKeys(airports)).toEqual([])
     })
 
@@ -324,33 +318,9 @@ describe('the transport chain and airport catalogue schema', () => {
   })
 
   describe('the shipped migrations', () => {
-    // The one thing the harness above cannot see: it builds its DDL from `schema.ts` through
-    // `drizzle-kit/api`, so every table and column added to that file appears there whether or not
-    // `pnpm db:generate` was ever run — a whole green suite over a schema D1 has never been told
-    // about. `replayMigrations()` applies `drizzle/*.sql` in journal order instead, and the cases
-    // below ask that database what it ended up with.
-
-    it('put both new tables and the arrival-day index on disk', () => {
-      const sqlite = replayMigrations()
-      try {
-        const objects = sqlite
-          .prepare('SELECT name, type FROM sqlite_master WHERE name = ?')
-          .all('transport_legs')
-        expect(objects.map((row) => String(row.type))).toContain('table')
-
-        expect(physicalColumns(sqlite, 'transport_legs')).toEqual(
-          columnNames(transportLegs),
-        )
-        expect(physicalColumns(sqlite, 'airports')).toEqual(
-          columnNames(airports),
-        )
-        expect(physicalIndexNames(sqlite, 'transports')).toContain(
-          'transports_org_arrival_day_idx',
-        )
-      } finally {
-        sqlite.close()
-      }
-    })
+    // That both tables and the new index reached `drizzle/*.sql` at all is asked of every table at
+    // once by `migrations-match-schema.test.ts` (#184). What is left here is the one question that
+    // is about this stage rather than about the schema: the shape of the migration it generated.
 
     it('adds both tables in one migration and rebuilds nothing that exists', () => {
       // The whole compatibility answer for this stage: two `CREATE TABLE`s and one `CREATE INDEX`,

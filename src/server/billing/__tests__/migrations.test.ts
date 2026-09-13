@@ -1,21 +1,10 @@
 /**
- * The generated SQL in `drizzle/`, applied for real — because nothing else applies it.
+ * What the generated SQL in `drizzle/` is allowed to *do* to the table that holds paying customers.
  *
- * `src/server/repos/__tests__/harness.ts` builds its database from the Drizzle schema
- * through `drizzle-kit/api`, which is the right thing for repository tests and a blind
- * spot for this one: every column added to `schema.ts` appears there whether or not a
- * migration file was ever generated. So a green suite says nothing about whether D1
- * can hold the column. This file closes that gap for the `subscriptions` table by
- * replaying `drizzle/*.sql` in journal order into an empty SQLite database and asking
- * the database what it ended up with.
- *
- * The replay runs on `openReplayDatabase()`, which tolerates SQLite's double-quoted-string
- * fallback, and that is not decoration: migration `0001` rebuilds `expenses` and its
- * `INSERT … SELECT` names a column the old table did not have, which only parses because
- * of the fallback. That migration is applied and immutable, so the replay has to tolerate
- * what the engine tolerated — it is a finding about `0001`, not a licence for the next
- * one, and `src/server/db/__tests__/migration-quoted-identifiers.test.ts` is what holds
- * the next one to it.
+ * Whether the shipped migrations carry every column `schema.ts` declares — for `subscriptions` and
+ * for every other table — is asked once, in
+ * `src/server/db/__tests__/migrations-match-schema.test.ts` (#184). What that structural diff cannot
+ * see is the shape of the migration that got there, and for this table the shape is the policy.
  *
  * The last assertion is the one `docs/DEPLOY.md` §5 and §9.10 ask for in prose.
  * SQLite cannot add a constraint to a live table, so drizzle-kit answers a new CHECK
@@ -24,7 +13,8 @@
  * `PRAGMA foreign_keys=OFF` it emits, because D1 does not honour it — and it is a
  * destructive rewrite of a table that will hold paying customers. Additive column adds
  * are the whole policy, and this is the test that notices when a generate stops obeying
- * it.
+ * it. The first assertion guards the input to all of it: a `.sql` file the journal does not name is
+ * never applied, and one the journal names and disk does not have stops the deploy.
  */
 
 import { readdirSync } from 'node:fs'
@@ -33,20 +23,8 @@ import { describe, expect, it } from 'vitest'
 import {
   MIGRATIONS_DIR,
   journalTags,
-  physicalColumns,
-  replayMigrations,
   shippedMigrations,
 } from '#/server/db/__tests__/migration-files'
-
-/** Column names of `subscriptions` after every migration has been applied in order. */
-function migratedColumns(): Array<string> {
-  const sqlite = replayMigrations()
-  try {
-    return physicalColumns(sqlite, 'subscriptions')
-  } finally {
-    sqlite.close()
-  }
-}
 
 describe('the generated migrations', () => {
   it('leave the same SQL files on disk as the journal names', () => {
@@ -56,18 +34,6 @@ describe('the generated migrations', () => {
       .sort()
 
     expect(onDisk).toEqual(journalTags().sort())
-  })
-
-  it('build a subscriptions table that can hold a scheduled plan change', () => {
-    const columns = migratedColumns()
-
-    expect(columns).toContain('pending_plan')
-    expect(columns).toContain('pending_interval')
-    expect(columns).toContain('pending_effective_at')
-    // The three columns the Polar migration renamed are still the ones we read.
-    expect(columns).toContain('provider_customer_id')
-    expect(columns).toContain('provider_subscription_id')
-    expect(columns).toContain('provider_product_id')
   })
 
   it('never rebuild the subscriptions table to add to it', () => {
