@@ -130,6 +130,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'В пути',
   'plan.transport.phase.journey.arriving': 'Конец',
   'plan.transport.label': 'Из {from} в {to}',
+  'plan.transport.drag': 'Изменить порядок, {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Вместе',
   'collab.empty': 'Пока ничем не поделились',

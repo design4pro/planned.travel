@@ -127,6 +127,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Yolda',
   'plan.transport.phase.journey.arriving': 'Bitiş',
   'plan.transport.label': '{from} – {to} arası',
+  'plan.transport.drag': 'Sırayı değiştir: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Birlikte',
   'collab.empty': 'Henüz bir şey paylaşılmadı',

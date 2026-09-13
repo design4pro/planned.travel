@@ -132,6 +132,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Úton',
   'plan.transport.phase.journey.arriving': 'Vége',
   'plan.transport.label': '{from} és {to} között',
+  'plan.transport.drag': 'Átrendezés: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Közösen',
   'collab.empty': 'Még semmit sem osztottak meg',

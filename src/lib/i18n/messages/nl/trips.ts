@@ -133,6 +133,7 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Onderweg',
   'plan.transport.phase.journey.arriving': 'Einde',
   'plan.transport.label': 'Van {from} naar {to}',
+  'plan.transport.drag': 'Herschikken: {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Samen',
   'collab.empty': 'Nog niets gedeeld',

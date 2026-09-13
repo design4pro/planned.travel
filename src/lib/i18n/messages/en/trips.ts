@@ -217,6 +217,20 @@ const messages = {
   'plan.transport.phase.journey.travelling': 'Under way',
   'plan.transport.phase.journey.arriving': 'Ends',
   'plan.transport.label': '{from} to {to}',
+  /**
+   * The journey's drag handle, named as an action the way the note's is — and naming
+   * the journey too, because the row's own text already says "Tokyo to Kyoto" and a
+   * handle that says only that is indistinguishable from the words beside it.
+   *
+   * `{journey}` is `plan.transport.label` as the row renders it, which makes it a
+   * phrase rather than a noun — "Von Tokyo nach Kyoto", "Từ Tokyo đến Kyoto". So the
+   * action leads and the journey is appended after the separator each locale uses in
+   * `atlas.actions.visit.add.name`, the same construction: run together instead, half
+   * the twenty-three read as a second preposition ("Ändra ordning på Från…") or stack
+   * a particle onto one ("…京都 へ を並べ替える"), and Arabic turns into the wrong verb
+   * altogether — "reordering *from* Tokyo *to* Kyoto" is a move, not a reorder.
+   */
+  'plan.transport.drag': 'Reorder, {journey}',
   /* ---------------------------------------------------- the collab tab */
   'collab.title': 'Collab',
   'collab.empty': 'Nothing shared yet',
