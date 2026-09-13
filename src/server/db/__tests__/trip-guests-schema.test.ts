@@ -20,8 +20,8 @@ import { tripGuests } from '#/server/db/schema'
 import { isUniqueConstraintViolation } from '#/server/repos/context'
 import {
   physicalColumns,
-  physicalForeignKey,
-  physicalIndexNames,
+  physicalForeignKeys,
+  physicalIndexes,
   replayMigrations,
 } from './migration-files'
 import {
@@ -110,10 +110,14 @@ describe('trip_guests', () => {
         expect(physicalColumns(sqlite, 'trip_guests').sort()).toEqual(
           [...COLUMNS].sort(),
         )
-        expect(physicalIndexNames(sqlite, 'trip_guests')).toEqual(
+        // `arrayContaining` rather than a whole-list `toEqual`, because SQLite also lists the
+        // autoindex it creates for the text primary key, which is the engine's business and not
+        // this table's contract. The covered columns and the `unique` marker ride inside each
+        // string, so this still pins what the index is, not just that something bears the name.
+        expect(physicalIndexes(sqlite, 'trip_guests')).toEqual(
           expect.arrayContaining([
-            'trip_guests_org_trip_idx',
-            'trip_guests_trip_name_unq',
+            'trip_guests_org_trip_idx(organization_id, trip_id)',
+            'trip_guests_trip_name_unq(trip_id, display_name) unique',
           ]),
         )
       } finally {
@@ -127,16 +131,13 @@ describe('trip_guests', () => {
         // The declared disposition and the deployed one can differ — a column added by
         // `ALTER TABLE … ADD COLUMN` ships as `NO ACTION` whatever `schema.ts` says — so both
         // halves are pinned.
-        expect(
-          physicalForeignKey(sqlite, 'trip_guests', 'organization_id'),
-        ).toEqual({ table: 'organization', onDelete: 'CASCADE' })
-        expect(physicalForeignKey(sqlite, 'trip_guests', 'trip_id')).toEqual({
-          table: 'trips',
-          onDelete: 'CASCADE',
-        })
-        expect(
-          physicalForeignKey(sqlite, 'trip_guests', 'created_by'),
-        ).toBeUndefined()
+        // The whole list, sorted, in one `toEqual`: it pins both cascades *and* the absence of a
+        // third key — `created_by` is a bare `text` column by `userRef`'s design, and a foreign key
+        // appearing on it later would fail here rather than pass unnoticed.
+        expect(physicalForeignKeys(sqlite, 'trip_guests')).toEqual([
+          'organization_id -> organization.id (CASCADE)',
+          'trip_id -> trips.id (CASCADE)',
+        ])
       } finally {
         sqlite.close()
       }
