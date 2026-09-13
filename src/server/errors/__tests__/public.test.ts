@@ -17,6 +17,13 @@ import {
   ConsoleActionError,
   ConsoleUnattributableError,
 } from '#/server/fns/console/errors'
+import {
+  ForbiddenError,
+  MissingTenantContextError,
+  NotFoundError,
+  QuotaExceededError,
+} from '#/server/repos/context'
+import { TripArchivedError, TripRoleError } from '#/server/repos/trips'
 
 import { classifyFailure } from '../public'
 
@@ -51,6 +58,23 @@ describe('authored copy is shown as itself', () => {
     expect(classifyFailure(cause)).toEqual({
       kind: 'refusal',
       message: 'Try again in a moment.',
+    })
+  })
+
+  it('recognises the archived-trip refusal, so a stale tab is told why its write did not land', () => {
+    expect(classifyFailure(new TripArchivedError())).toEqual({
+      kind: 'refusal',
+      message: 'This trip is archived. Restore it before making changes.',
+    })
+  })
+
+  it('recognises a trip-role refusal, whose sentence is role vocabulary and nothing else', () => {
+    const cause = new TripRoleError(['owner', 'editor'], 'viewer')
+
+    expect(classifyFailure(cause)).toEqual({
+      kind: 'refusal',
+      message:
+        'A viewer may not change this trip; requires one of: owner, editor.',
     })
   })
 
@@ -120,6 +144,23 @@ describe('everything else is a diagnostic', () => {
       kind: 'unexpected',
     })
     expect(classifyFailure(undefined)).toEqual({ kind: 'unexpected' })
+  })
+
+  /**
+   * The negative half of the two additions above. Naming two `RepositoryError` subclasses authored
+   * must not make the base class authored - these four are the siblings that would have come along
+   * for free had the list grown by a base name, and each of them has a message written for a
+   * maintainer: a row id, a quota reading, a tenant-context complaint.
+   */
+  it('withholds every repository error that was not named authored', () => {
+    for (const cause of [
+      new NotFoundError('trip', 'trip_01HZY3'),
+      new ForbiddenError('archive this trip', ['owner']),
+      new QuotaExceededError('trips', 10, 10),
+      new MissingTenantContextError('no organization on the session'),
+    ]) {
+      expect(classifyFailure(cause)).toEqual({ kind: 'unexpected' })
+    }
   })
 
   it('does not trust a shape that merely looks like a refusal', () => {

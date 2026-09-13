@@ -396,6 +396,10 @@ const MARK_VISITED_ATTEMPTS = 2
  * way: `visited_countries_org_user_country_unq` refuses the second insert, and
  * the refusal is read as "somebody already did it", not as an error. Correcting a
  * date or a note on an existing record is the atlas panel's job, not this one's.
+ *
+ * The statistics the visit moves are rebuilt off the request: the map repaints
+ * optimistically from {@link AtlasCountryState}, and the panel catches up on its
+ * next read once the `travel-stats` envelopes have been consumed.
  */
 export const markCountryVisitedFn = createServerFn({ method: 'POST' })
   .validator(markCountryVisitedInputSchema)
@@ -430,6 +434,7 @@ export const markCountryVisitedFn = createServerFn({ method: 'POST' })
           scope,
           [scope.ctx.userId],
           affectedStatYears(data.visitedOn),
+          { route: 'atlas' },
         )
         return { ...current, visit: visitRecordOf(visit) }
       } catch (cause) {
@@ -476,6 +481,7 @@ export const unmarkCountryVisitedFn = createServerFn({ method: 'POST' })
       scope,
       [scope.ctx.userId],
       affectedStatYears(visit.lastVisitedOn ?? visit.firstVisitedOn),
+      { route: 'atlas' },
     )
     return { ...current, visit: null }
   })

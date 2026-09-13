@@ -34,6 +34,11 @@ import type { TaskEnvelopeOf } from '#/server/queue/types'
 const stubs = vi.hoisted(() => ({
   sent: [] as Array<unknown>,
   batchSizes: [] as Array<number>,
+  /**
+   * How many times the producer reached for the binding at all. The empty-fan-out guard is only
+   * worth its line if it stops that reach, and a batch count cannot see the difference.
+   */
+  bindingReads: 0,
   /** When true, the binding refuses the way an unreachable one does. */
   rejects: false,
 }))
@@ -43,16 +48,19 @@ const stubs = vi.hoisted(() => ({
  * that does not resolve in the plain-Node project this suite runs in, so it is replaced wholesale.
  */
 vi.mock('#/server/auth/env', () => ({
-  taskQueue: () => ({
-    sendBatch: async (messages: Array<{ body: unknown }>) => {
-      if (stubs.rejects) {
-        throw new Error('TASKS binding is unreachable')
-      }
-      stubs.batchSizes.push(messages.length)
-      stubs.sent.push(...messages.map((message) => message.body))
-      return undefined
-    },
-  }),
+  taskQueue: () => {
+    stubs.bindingReads += 1
+    return {
+      sendBatch: async (messages: Array<{ body: unknown }>) => {
+        if (stubs.rejects) {
+          throw new Error('TASKS binding is unreachable')
+        }
+        stubs.batchSizes.push(messages.length)
+        stubs.sent.push(...messages.map((message) => message.body))
+        return undefined
+      },
+    }
+  },
 }))
 
 describe('enqueueTripStatsFor', () => {
@@ -62,6 +70,7 @@ describe('enqueueTripStatsFor', () => {
   beforeEach(async () => {
     stubs.sent = []
     stubs.batchSizes = []
+    stubs.bindingReads = 0
     stubs.rejects = false
     harness = await createHarness()
     alpha = await harness.seedTenant('alpha')
@@ -131,6 +140,26 @@ describe('enqueueTripStatsFor', () => {
 
     expect(stubs.sent).toEqual([])
   })
+
+  it('names the trip in the warn line when the binding refuses', async () => {
+    const trip = await createTrip(alpha.scope, {
+      title: 'Lisbon in spring',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'EUR',
+    })
+    stubs.rejects = true
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await enqueueTripStatsFor(alpha.scope, trip, [alpha.ownerUserId])
+
+    // The trip path's half of the attribution: the producer is handed `{ tripId }` by
+    // `enqueueTravelStats`, and dropping it there would leave the organization and a count alone.
+    const line = String(warn.mock.calls[0]?.[0])
+    expect(line).toContain(`"tripId":"${trip.id}"`)
+
+    warn.mockRestore()
+  })
 })
 
 /**
@@ -149,6 +178,7 @@ describe('requestTravelStatsRecompute', () => {
   beforeEach(async () => {
     stubs.sent = []
     stubs.batchSizes = []
+    stubs.bindingReads = 0
     stubs.rejects = false
     harness = await createHarness()
     alpha = await harness.seedTenant('alpha')
@@ -195,9 +225,12 @@ describe('requestTravelStatsRecompute', () => {
     expect(stubs.sent).toHaveLength(QUEUE_BATCH_MAX + 1)
   })
 
-  it('sends nothing at all when there is no year to recompute', async () => {
+  it('does not even reach for the binding when there is no year to recompute', async () => {
     await requestTravelStatsRecompute(alpha.scope, [alpha.ownerUserId], [])
 
+    // A batch count alone cannot tell the guard from its absence — the chunk loop would not run
+    // either way. Reaching `taskQueue()` is the cost the guard exists to avoid.
+    expect(stubs.bindingReads).toBe(0)
     expect(stubs.batchSizes).toEqual([])
   })
 
@@ -215,6 +248,26 @@ describe('requestTravelStatsRecompute', () => {
       ),
     ).resolves.toBeUndefined()
     expect(warn).toHaveBeenCalled()
+
+    warn.mockRestore()
+  })
+
+  it("spreads the caller's context into the line, which is what makes it attributable", async () => {
+    stubs.rejects = true
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    // Without this the line is an organization and a count, which cannot say *which* of the writes
+    // in flight lost its statistics. The producer never invents the identity — only the caller knows
+    // it — so the assertion is that whatever it is handed reaches the record.
+    await requestTravelStatsRecompute(
+      alpha.scope,
+      [alpha.ownerUserId],
+      [ALL_TIME_STAT_YEAR],
+      { route: 'a-caller-of-its-own' },
+    )
+
+    const line = String(warn.mock.calls[0]?.[0])
+    expect(line).toContain('"route":"a-caller-of-its-own"')
 
     warn.mockRestore()
   })

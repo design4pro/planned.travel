@@ -79,10 +79,10 @@ import {
   hasTransportErrors,
   isTransportMode,
   isTransportStatus,
-  kilometresToMetres,
   metresToKilometres,
   modeLabel,
   suggestTransportTitle,
+  transportPayload,
   usesCodes,
   usesSeat,
   usesService,
@@ -92,7 +92,7 @@ import {
 import { MODE_ICON } from './mode-icon'
 import { transportDurationMinutes } from './leg-timing'
 
-import type { ChainDraft, ChainOwnedField, TransportDraft } from './leg-form'
+import type { ChainDraft, TransportDraft } from './leg-form'
 import type { TransportData, TransportDayData } from './types'
 
 /** Which of the dialog's two ways of filling a journey in is on screen. */
@@ -289,79 +289,12 @@ export function TransportDialog({
     return error === undefined ? undefined : t(error)
   }
 
-  /**
-   * The record's own endpoints and days, which a chain owns once there is one.
-   *
-   * The repository rewrites the endpoints from the outer stations in the same
-   * batch that writes the legs, so this is not the source of truth — it is what
-   * keeps the record correct for the moment between the two writes, and for a
-   * save whose second half never lands. The two day references have no such
-   * second writer, so this is the only place they are decided.
-   */
-  function recordEndpoints(): Pick<TransportDraft, ChainOwnedField> {
-    const first = chain.stations.at(0)
-    const last = chain.stations.at(-1)
-    const firstLeg = chain.legs.at(0)
-    const lastLeg = chain.legs.at(-1)
-    if (
-      !chain.broken ||
-      first === undefined ||
-      last === undefined ||
-      firstLeg === undefined ||
-      lastLeg === undefined
-    ) {
-      return {
-        departureName: draft.departureName,
-        departureCode: draft.departureCode,
-        departureDate: draft.departureDate,
-        departureTime: draft.departureTime,
-        departureDayId: draft.departureDayId,
-        arrivalName: draft.arrivalName,
-        arrivalCode: draft.arrivalCode,
-        arrivalDate: draft.arrivalDate,
-        arrivalTime: draft.arrivalTime,
-        arrivalDayId: draft.arrivalDayId,
-      }
-    }
-    return {
-      departureName: first.name.trim(),
-      departureCode: first.code.trim(),
-      departureDate: firstLeg.departureDate,
-      departureTime: firstLeg.departureTime,
-      departureDayId: firstLeg.departureDayId,
-      arrivalName: last.name.trim(),
-      arrivalCode: last.code.trim(),
-      arrivalDate: lastLeg.arrivalDate,
-      arrivalTime: lastLeg.arrivalTime,
-      arrivalDayId: lastLeg.arrivalDayId,
-    }
-  }
-
   async function submit(): Promise<void> {
     setTouched(true)
     if (invalid) {
       return
     }
-    const priceMinor = Math.round(
-      Number.parseFloat(draft.price.trim().replace(',', '.') || '0') * 100,
-    )
-    const payload = {
-      tripId,
-      mode: draft.mode,
-      status: draft.status,
-      title: draft.title.trim(),
-      carrier: draft.carrier,
-      serviceNumber: draft.serviceNumber,
-      bookingCode: draft.bookingCode,
-      seat: draft.seat,
-      ...recordEndpoints(),
-      distanceMetres: kilometresToMetres(draft.distanceKm),
-      priceMinor:
-        Number.isFinite(priceMinor) && priceMinor > 0 ? priceMinor : 0,
-      currency:
-        Number.isFinite(priceMinor) && priceMinor > 0 ? draft.currency : '',
-      notes: draft.notes,
-    }
+    const payload = transportPayload(draft, chain, tripId)
     const existingId = transport?.id ?? savedId
     const result =
       existingId === null

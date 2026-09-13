@@ -25,12 +25,13 @@ import {
   reorderDayTransports,
   reorderDayTransportsInput,
   requireTrip,
+  requireWritableTrip,
   tripRoleFor,
 } from '#/server/repos'
 import { appScope } from '../../../-server/context'
 
 import type { TenantScope } from '#/server/repos'
-import type { Transport, TransportLeg, Trip } from '#/server/db/types'
+import type { Transport, TransportLeg } from '#/server/db/types'
 
 /* -------------------------------------------------------------------------------------------------
  * Shapes
@@ -184,21 +185,6 @@ export const loadPlanTransports = createServerFn({ method: 'GET' })
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Resolves the trip and refuses to write to an archived one.
- *
- * The same backstop `-server/plan.ts` and `-server/day-notes.ts` each keep for a stale tab: an
- * archived trip is a record of something that happened, and the rails render read-only for one, so
- * this can afford to be a plain error.
- */
-async function writableTrip(scope: TenantScope, tripId: string): Promise<Trip> {
-  const trip = await requireTrip(scope, tripId)
-  if (trip.isArchived) {
-    throw new Error('This trip is archived. Restore it before making changes.')
-  }
-  return trip
-}
-
-/**
  * Tells the trip room that this day's journeys were re-placed.
  *
  * Under its own field rather than beside the `items` `reorderPlanFn` mirrors, because the two
@@ -237,7 +223,7 @@ export const reorderDayTransportsFn = createServerFn({ method: 'POST' })
   .validator(reorderDayTransportsInput)
   .handler(async ({ data }): Promise<{ readonly placed: number }> => {
     const scope = await appScope()
-    const trip = await writableTrip(scope, data.tripId)
+    const trip = await requireWritableTrip(scope, data.tripId)
 
     // The run as written, not as asked for: the repository drops an id it does not know and puts
     // back a known one the payload left out, so the request and the day on disk can differ — and

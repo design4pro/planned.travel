@@ -29,11 +29,25 @@ import type { PublicFailure } from '#/lib/errors'
  *   from a closed vocabulary of refusal codes.
  * - `ConsoleUnattributableError` (same file) - a 500 whose message is deliberately the only honest
  *   instruction available, because there is nothing for a screen to branch on.
+ * - `TripArchivedError` (`src/server/repos/trips.ts`) - a refusal to rewrite history, whose message
+ *   names the one action that lifts it.
+ * - `TripRoleError` (same file) - "a viewer may not change this trip", from the trip's own closed
+ *   role vocabulary.
+ *
+ * The last two are `RepositoryError` subclasses, and they are listed one by one on purpose.
+ * Listing the base name instead would make every repository error authored by default, which is the
+ * opposite of what redaction is for: `NotFoundError` carries the row id it was asked for, and
+ * `MissingTenantContextError` describes the shape of a tenant context. Those stay diagnostics. What
+ * earns a place here is a sentence written for the reader with nothing interpolated into it that a
+ * reader may not see - which is why every entry is a class with a static or vocabulary-only message,
+ * and why the test file constructs each one and asserts its text.
  */
 const AUTHORED_ERROR_NAMES = new Set([
   'AuthRequirementError',
   'ConsoleActionError',
   'ConsoleUnattributableError',
+  'TripArchivedError',
+  'TripRoleError',
 ])
 
 interface IssueLike {
