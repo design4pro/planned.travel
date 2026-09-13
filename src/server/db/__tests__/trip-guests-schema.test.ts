@@ -142,11 +142,11 @@ describe('trip_guests', () => {
       }
     })
 
-    it('refuses a second guest answering to the same name on the same trip', () => {
+    it('refuses a second guest under a byte-identical name on the same trip', () => {
       const sqlite = replayMigrations()
       try {
-        // Straight at the engine, past a repository that does not exist yet: this is the refusal
-        // `01-S6b` will word, and it has to be the index answering rather than the reader.
+        // Straight at the engine, past a repository that does not exist yet: this is the backstop
+        // `01-S6b`'s duplicate-name rule is written against, answering on its own.
         sqlite.exec(
           "INSERT INTO organization (id, name, slug, created_at) VALUES ('org', 'Org', 'org', 0)",
         )
@@ -177,6 +177,40 @@ describe('trip_guests', () => {
         seedTrip(sqlite, 'trp2')
         expect(() => {
           sqlite.exec(insert('gst3', 'trp2'))
+        }).not.toThrow()
+      } finally {
+        sqlite.close()
+      }
+    })
+
+    it('leaves the case-insensitive half of the rule to the repository', () => {
+      const sqlite = replayMigrations()
+      try {
+        // `display_name` carries SQLite's default BINARY collation, so the engine reads 'Anna' and
+        // 'anna' as two guests. The plan's rule refuses the second one — case-insensitively, after
+        // trimming — and `01-S6b` owes that in the repository (`docs/plans/01-trips-core.md:2850`).
+        // Pinned rather than assumed: this is what makes it visible that the index is a backstop,
+        // so nobody reads the green suite as proof the database is already casefolding.
+        sqlite.exec(
+          "INSERT INTO organization (id, name, slug, created_at) VALUES ('org', 'Org', 'org', 0)",
+        )
+        sqlite.exec(
+          'INSERT INTO user (id, name, email, email_verified, created_at, updated_at)' +
+            " VALUES ('usr', 'Ada', 'ada@example.com', 0, 0, 0)",
+        )
+        seedTrip(sqlite, 'trp')
+        const insert = (id: string, displayName: string) =>
+          'INSERT INTO trip_guests' +
+          ' (id, organization_id, trip_id, display_name, created_at, updated_at)' +
+          ` VALUES ('${id}', 'org', 'trp', '${displayName}', 0, 0)`
+
+        sqlite.exec(insert('gst1', 'Anna'))
+
+        expect(() => {
+          sqlite.exec(insert('gst2', 'anna'))
+        }).not.toThrow()
+        expect(() => {
+          sqlite.exec(insert('gst3', ' Anna'))
         }).not.toThrow()
       } finally {
         sqlite.close()
