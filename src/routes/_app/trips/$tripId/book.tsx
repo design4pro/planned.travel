@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouteContext } from '@tanstack/react-router'
 import { CalendarClock, Ticket } from 'lucide-react'
 import { z } from 'zod'
 
@@ -63,6 +63,9 @@ function BookPage() {
   const t = useTranslate()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
+  // The signed-in user comes off the shell's route context rather than a second
+  // request: the import register in `localStorage` is keyed by it.
+  const { shell } = useRouteContext({ from: '/_app' })
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const [newBookingOpen, setNewBookingOpen] = useState(false)
@@ -114,6 +117,7 @@ function BookPage() {
 
         <ImportBookingsDialog
           tripId={tripId}
+          userId={shell.session.user.id}
           open={importOpen}
           onOpenChange={setImportOpen}
         />

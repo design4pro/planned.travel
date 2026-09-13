@@ -55,15 +55,13 @@ export type {
   ImportSelectionAction,
 } from './import-drafts'
 
-export {
-  ImportBookingsAction,
-  ImportBookingsDialog,
-} from './import-dialog'
+export { ImportBookingsAction, ImportBookingsDialog } from './import-dialog'
 export type { ImportBookingsDialogProps } from './import-dialog'
 
 export {
-  BOOK_IMPORTS_KEY,
+  BOOK_IMPORTS_PREFIX,
   BookImportWidget,
+  bookImportsKey,
   forgetBookImports,
   readBookImports,
   registerBookImports,

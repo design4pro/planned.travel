@@ -3,14 +3,14 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
-import { BOOK_IMPORTS_KEY, readBookImports } from '../import-widget'
+import { bookImportsKey, readBookImports } from '../import-widget'
 import { ImportBookingsDialog } from '../import-dialog'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -53,10 +53,18 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
 }))
 
+/** The account every job in this file belongs to — the register is keyed by it. */
+const USER = 'user-1'
+
 function open(): void {
   render(
     <I18nProvider locale="en" messages={EN}>
-      <ImportBookingsDialog tripId="trip-1" open onOpenChange={() => {}} />
+      <ImportBookingsDialog
+        tripId="trip-1"
+        userId={USER}
+        open
+        onOpenChange={() => {}}
+      />
     </I18nProvider>,
   )
 }
@@ -204,7 +212,7 @@ describe('the import dialog at its boundary', () => {
     expect(await screen.findByText('“second.ics” did not upload')).toBeTruthy()
     // The first file's reading is already enqueued and has spent the workspace's allowance. A
     // register written only after the whole drop succeeded would leave it running and unreachable.
-    expect(readBookImports()).toEqual([
+    expect(readBookImports(USER)).toEqual([
       {
         jobId: 'booking-import:trip-1:file-1',
         tripId: 'trip-1',
@@ -231,7 +239,9 @@ describe('the import dialog at its boundary', () => {
     // Without this the widget counts its stall budget from the drop, and the second file — which
     // the queue is told to hold for twenty seconds — is called stalled before it can have started.
     await vi.waitFor(() => {
-      expect(readBookImports().map((job) => job.delayMs)).toEqual([0, 20_000])
+      expect(readBookImports(USER).map((job) => job.delayMs)).toEqual([
+        0, 20_000,
+      ])
     })
   })
 })
@@ -272,7 +282,7 @@ describe('the import dialog’s controls', () => {
 describe('the import dialog on a staged answer', () => {
   beforeEach(() => {
     window.localStorage.setItem(
-      BOOK_IMPORTS_KEY,
+      bookImportsKey(USER),
       JSON.stringify([
         {
           jobId: 'booking-import:trip-1:file-1',
@@ -282,6 +292,34 @@ describe('the import dialog on a staged answer', () => {
       ]),
     )
     stubs.view.mockResolvedValue(READY)
+  })
+
+  /*
+   * The regression this guards: the poll stops asking about a job the moment it answers anything
+   * but `working`, so a partial confirm left the review list rendering the answer from before it —
+   * both rows still listed, both still ticked, the one just written among them. "Add the rest" then
+   * re-sent an index the server had already written. It was deduped there, so nothing was written
+   * twice; what the reader lost was any way to tell which row was actually still failing.
+   */
+  it('re-reads the staged rows after a partial confirm, so a written row stops being offered', async () => {
+    stubs.view.mockResolvedValueOnce(READY).mockResolvedValue({
+      ...READY,
+      staged: { ...READY.staged!, written: [0] },
+    } satisfies BookingImportView)
+    stubs.confirm.mockResolvedValue({ written: 1, failed: 1, remaining: 1 })
+    open()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Add 2 bookings' }),
+    )
+
+    // The partial alert, and then the list re-read behind it: one row left, and it is the one that
+    // did not go in.
+    expect(await screen.findByText('1 of 2 bookings were added')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.queryByRole('checkbox', { name: /Hotel Okura/ })).toBeNull()
+    })
+    expect(screen.getByRole('button', { name: 'Add the rest' })).toBeTruthy()
   })
 
   it('offers every row selected, counted in the confirm', async () => {
@@ -321,7 +359,7 @@ describe('the import dialog on a staged answer', () => {
 
   it('gives every row of every file its own control, so one label ticks one row', async () => {
     window.localStorage.setItem(
-      BOOK_IMPORTS_KEY,
+      bookImportsKey(USER),
       JSON.stringify([
         {
           jobId: 'booking-import:trip-1:file-1',
@@ -357,7 +395,7 @@ describe('the import dialog on a staged answer', () => {
 describe('the import dialog on a refusal', () => {
   beforeEach(() => {
     window.localStorage.setItem(
-      BOOK_IMPORTS_KEY,
+      bookImportsKey(USER),
       JSON.stringify([
         {
           jobId: 'booking-import:trip-1:file-1',
@@ -418,7 +456,7 @@ describe('the import dialog on a refusal', () => {
     // `working`, so a second file that had already been read — billed to the workspace, staged in
     // KV, waiting to be reviewed — lost the only handle there was on its id.
     window.localStorage.setItem(
-      BOOK_IMPORTS_KEY,
+      bookImportsKey(USER),
       JSON.stringify([
         {
           jobId: 'booking-import:trip-1:file-1',
@@ -446,7 +484,7 @@ describe('the import dialog on a refusal', () => {
       await screen.findByRole('button', { name: 'Try another file' }),
     )
 
-    expect(readBookImports().map((job) => job.jobId)).toEqual([
+    expect(readBookImports(USER).map((job) => job.jobId)).toEqual([
       'booking-import:trip-1:file-2',
     ])
     // And the rows of the file that stayed are still ticked: nothing with rows in it was

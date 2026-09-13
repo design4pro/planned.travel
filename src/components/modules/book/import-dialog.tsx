@@ -102,12 +102,15 @@ type Stage =
 
 export interface ImportBookingsDialogProps {
   readonly tripId: string
+  /** The signed-in account the job register is keyed by — see `bookImportsKey`. */
+  readonly userId: string
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
 }
 
 export function ImportBookingsDialog({
   tripId,
+  userId,
   open,
   onOpenChange,
 }: ImportBookingsDialogProps) {
@@ -121,7 +124,9 @@ export function ImportBookingsDialog({
     NO_IMPORT_SELECTION,
   )
 
-  const registered = useBookImports().filter((job) => job.tripId === tripId)
+  const registered = useBookImports(userId).filter(
+    (job) => job.tripId === tripId,
+  )
   const { progress, views, recheck } = useBookImportPoll(open ? registered : [])
 
   /*
@@ -204,6 +209,7 @@ export function ImportBookingsDialog({
     setStage({ kind: 'idle' })
     setRefusals([])
     forgetBookImports(
+      userId,
       registered
         .filter((job) => progress.get(job.jobId) === 'refused')
         .map((job) => job.jobId),
@@ -290,7 +296,7 @@ export function ImportBookingsDialog({
         filename: file.name,
         delayMs: index * EXTRACTION_BUDGET_SECONDS * 1_000,
       })
-      registerBookImports(started)
+      registerBookImports(userId, started)
     }
     setStage({ kind: 'reviewing' })
   }
@@ -317,10 +323,20 @@ export function ImportBookingsDialog({
 
     await router.invalidate()
     if (left > 0) {
+      // The poll stops asking about a job the moment it answers anything but `working`, so without
+      // this the review list keeps rendering the answer from before the confirm — every row still
+      // listed and still ticked, the ones just written among them, and "Add the rest" re-sending
+      // their indices. `router.invalidate()` does not reach it: the drafts are this hook's own
+      // state, not a loader's. Re-arming is what turns `written` on the staged record into what the
+      // reader sees, which is how a partial confirm names the rows that are actually still failing.
+      recheck()
       setStage({ kind: 'partial', written, total: written + left })
       return
     }
-    forgetBookImports(files.map((file) => file.jobId))
+    forgetBookImports(
+      userId,
+      files.map((file) => file.jobId),
+    )
     toast.success(t('modules.book.import.toast.added', { count: written }))
     setStage({ kind: 'idle' })
     dispatch({ kind: 'none' })

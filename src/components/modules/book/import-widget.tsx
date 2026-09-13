@@ -26,7 +26,25 @@ import type {
 } from '#/server/fns/booking-import'
 
 /** The product prefix, so a reader clearing site data knows what they are clearing. */
-export const BOOK_IMPORTS_KEY = 'planned.book-imports'
+export const BOOK_IMPORTS_PREFIX = 'planned.book-imports'
+
+/**
+ * The register's key, per signed-in account.
+ *
+ * One global key was enough for as long as the register was per browser, and it is not: the widget
+ * is mounted in the authenticated shell, a row is dropped only by a Dismiss click or a fully
+ * successful confirm, and nothing clears it on sign-out. On a shared browser that put the previous
+ * account's dropped `filename` — a hotel, a city, a name — in the next reader's shell, under a
+ * Review link pointing at a trip that is not theirs. The staged rows were never at risk, because
+ * the poll re-checks `orgId` and `tripId` server-side; the filename never reached the server at all.
+ *
+ * Keyed rather than cleared on sign-out, because the sign-out handlers are not the only way an
+ * account stops being the one in front of the browser: a session expires, a tab is closed, a window
+ * is left open. A key nobody else reads needs no handler to have run.
+ */
+export function bookImportsKey(userId: string): string {
+  return `${BOOK_IMPORTS_PREFIX}:${userId}`
+}
 
 export const POLL_INTERVAL_MS = 2_000
 /**
@@ -77,9 +95,9 @@ function isJob(value: unknown): value is BookImportJob {
  * A notifier that throws on mount takes the whole shell with it, and the cost of forgetting a job
  * is one reader pressing Import again, not a lost booking: the staged record lives in KV for a day.
  */
-export function readBookImports(): Array<BookImportJob> {
+export function readBookImports(userId: string): Array<BookImportJob> {
   try {
-    const raw = window.localStorage.getItem(BOOK_IMPORTS_KEY)
+    const raw = window.localStorage.getItem(bookImportsKey(userId))
     if (raw === null) {
       return []
     }
@@ -90,12 +108,16 @@ export function readBookImports(): Array<BookImportJob> {
   }
 }
 
-function writeBookImports(jobs: ReadonlyArray<BookImportJob>): void {
+function writeBookImports(
+  userId: string,
+  jobs: ReadonlyArray<BookImportJob>,
+): void {
   try {
-    window.localStorage.setItem(BOOK_IMPORTS_KEY, JSON.stringify(jobs))
+    window.localStorage.setItem(bookImportsKey(userId), JSON.stringify(jobs))
     // Same-tab listeners: `storage` only fires in the *other* tabs, and the widget and the dialog
-    // are two components in this one.
-    window.dispatchEvent(new Event(BOOK_IMPORTS_KEY))
+    // are two components in this one. The account is in the event name as well as in the key, so a
+    // register written for one account does not re-read another's.
+    window.dispatchEvent(new Event(bookImportsKey(userId)))
   } catch {
     // A register that cannot be written costs the widget, not the import: the job is already
     // enqueued and the dialog that started it still has the id in its own state.
@@ -103,36 +125,46 @@ function writeBookImports(jobs: ReadonlyArray<BookImportJob>): void {
 }
 
 /** Adds jobs to the register, replacing any entry with the same id. */
-export function registerBookImports(jobs: ReadonlyArray<BookImportJob>): void {
+export function registerBookImports(
+  userId: string,
+  jobs: ReadonlyArray<BookImportJob>,
+): void {
   const added = new Set(jobs.map((job) => job.jobId))
-  writeBookImports([
-    ...readBookImports().filter((job) => !added.has(job.jobId)),
+  writeBookImports(userId, [
+    ...readBookImports(userId).filter((job) => !added.has(job.jobId)),
     ...jobs,
   ])
 }
 
 /** Drops jobs from the register — a confirmed import, or a refusal the reader has dismissed. */
-export function forgetBookImports(jobIds: ReadonlyArray<string>): void {
+export function forgetBookImports(
+  userId: string,
+  jobIds: ReadonlyArray<string>,
+): void {
   const dropped = new Set(jobIds)
-  writeBookImports(readBookImports().filter((job) => !dropped.has(job.jobId)))
+  writeBookImports(
+    userId,
+    readBookImports(userId).filter((job) => !dropped.has(job.jobId)),
+  )
 }
 
 /** Re-reads the register on mount and on every write, from either component. */
-export function useBookImports(): Array<BookImportJob> {
+export function useBookImports(userId: string): Array<BookImportJob> {
   const [jobs, setJobs] = useState<Array<BookImportJob>>([])
 
   useEffect(() => {
+    const channel = bookImportsKey(userId)
     const sync = (): void => {
-      setJobs(readBookImports())
+      setJobs(readBookImports(userId))
     }
     sync()
-    window.addEventListener(BOOK_IMPORTS_KEY, sync)
+    window.addEventListener(channel, sync)
     window.addEventListener('storage', sync)
     return () => {
-      window.removeEventListener(BOOK_IMPORTS_KEY, sync)
+      window.removeEventListener(channel, sync)
       window.removeEventListener('storage', sync)
     }
-  }, [])
+  }, [userId])
 
   return jobs
 }
@@ -251,11 +283,14 @@ export function useBookImportPoll(
  * Mounted once, last in the authenticated shell's subtree in `src/routes/_app/route.tsx`. It
  * renders nothing at all until a job is registered, so every screen in the product pays one empty
  * component for it.
+ *
+ * `userId` comes from the shell's session rather than from a read of its own, because the register
+ * is keyed by it — see {@link bookImportsKey}.
  */
-export function BookImportWidget() {
+export function BookImportWidget({ userId }: { readonly userId: string }) {
   const t = useTranslate()
   const navigate = useNavigate()
-  const jobs = useBookImports()
+  const jobs = useBookImports(userId)
   const { progress, views, recheck } = useBookImportPoll(jobs)
   const [dismissed, setDismissed] = useState<ReadonlyArray<string>>([])
 
@@ -396,6 +431,7 @@ export function BookImportWidget() {
               shape="pill"
               onClick={() => {
                 forgetBookImports(
+                  userId,
                   [...refused, ...stalled].map((job) => job.jobId),
                 )
               }}

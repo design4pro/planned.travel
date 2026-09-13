@@ -119,7 +119,7 @@ function AppShell() {
        * impersonation button keeps the shell's first tab stop; it renders nothing at all until a
        * job is in the register.
        */}
-      <BookImportWidget />
+      <BookImportWidget userId={shell.session.user.id} />
     </div>
   )
 }

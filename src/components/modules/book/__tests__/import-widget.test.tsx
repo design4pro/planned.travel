@@ -6,11 +6,11 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Ui from '#/lib/i18n/messages/en/ui'
 import {
-  BOOK_IMPORTS_KEY,
   BookImportWidget,
   DONE_LINGER_MS,
   POLL_BUDGET_MS,
   POLL_INTERVAL_MS,
+  bookImportsKey,
   readBookImports,
 } from '../import-widget'
 
@@ -39,9 +39,12 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => stubs.navigate,
 }))
 
+/** The account every job in this file belongs to — the register is keyed by it. */
+const USER = 'user-1'
+
 function registerOne(delayMs?: number): void {
   window.localStorage.setItem(
-    BOOK_IMPORTS_KEY,
+    bookImportsKey(USER),
     JSON.stringify([
       {
         jobId: 'booking-import:trip-1:file-1',
@@ -56,7 +59,7 @@ function registerOne(delayMs?: number): void {
 function mount(): void {
   render(
     <I18nProvider locale="en" messages={EN}>
-      <BookImportWidget />
+      <BookImportWidget userId={USER} />
     </I18nProvider>,
   )
 }
@@ -154,6 +157,38 @@ describe('the global import widget', () => {
     expect(screen.getByText('This is taking longer than expected')).toBeTruthy()
   })
 
+  /*
+   * The register is per account, not per browser.
+   *
+   * One global key was enough while the register was only ever read by whoever wrote it, and the
+   * widget is mounted in the authenticated shell where that does not hold: an entry leaves the
+   * register only on a Dismiss click or a fully successful confirm, never on sign-out. On a shared
+   * browser that put the previous account's dropped filename — a hotel, a city — in the next
+   * reader's shell, behind a Review link pointing at somebody else's trip.
+   */
+  it('never shows one account the file another account dropped', async () => {
+    stubs.view.mockResolvedValue({
+      status: 'working',
+    } satisfies BookingImportView)
+    registerOne()
+
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <BookImportWidget userId="user-2" />
+      </I18nProvider>,
+    )
+    await tick(POLL_INTERVAL_MS)
+
+    expect(screen.queryByText(/confirmation\.pdf/)).toBeNull()
+    expect(
+      document.querySelector('[data-part="book-import-widget"]'),
+    ).toBeNull()
+    // Nothing was asked for either: the other account's job id never reached the server.
+    expect(stubs.view).not.toHaveBeenCalled()
+    // And the register it could not see is still intact for the account that owns it.
+    expect(readBookImports(USER)).toHaveLength(1)
+  })
+
   it('stops asking when every call is rejected, rather than polling a dead job forever', async () => {
     // Offline, an expired session, a trip that was deleted: `getBookingImportFn` rejects on every
     // tick. Treating that as “still working” pinned the job there for good — and because the
@@ -170,7 +205,7 @@ describe('the global import widget', () => {
     screen.getByRole('button', { name: 'Dismiss' }).click()
     await tick(POLL_INTERVAL_MS)
 
-    expect(readBookImports()).toHaveLength(0)
+    expect(readBookImports(USER)).toHaveLength(0)
   })
 
   it('lets a reader take a job that never answered out of the register', async () => {
@@ -187,7 +222,7 @@ describe('the global import widget', () => {
     screen.getByRole('button', { name: 'Dismiss' }).click()
     await tick(POLL_INTERVAL_MS)
 
-    expect(readBookImports()).toHaveLength(0)
+    expect(readBookImports(USER)).toHaveLength(0)
     expect(
       document.querySelector('[data-part="book-import-widget"]'),
     ).toBeNull()
@@ -212,7 +247,7 @@ describe('the global import widget', () => {
       document.querySelector('[data-part="book-import-widget"]'),
     ).toBeNull()
     // Taken off the screen, not out of the register: the staged rows are still there to review.
-    expect(readBookImports()).toHaveLength(1)
+    expect(readBookImports(USER)).toHaveLength(1)
   })
 
   it('keeps a failure on screen until a reader takes it away', async () => {
@@ -238,7 +273,7 @@ describe('the global import widget', () => {
     screen.getByRole('button', { name: 'Dismiss' }).click()
     await tick(POLL_INTERVAL_MS)
 
-    expect(readBookImports()).toHaveLength(0)
+    expect(readBookImports(USER)).toHaveLength(0)
   })
 
   it('takes the reader to the desk that owns the job', async () => {
