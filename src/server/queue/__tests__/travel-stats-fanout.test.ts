@@ -34,6 +34,11 @@ import type { TaskEnvelopeOf } from '#/server/queue/types'
 const stubs = vi.hoisted(() => ({
   sent: [] as Array<unknown>,
   batchSizes: [] as Array<number>,
+  /**
+   * How many times the producer reached for the binding at all. The empty-fan-out guard is only
+   * worth its line if it stops that reach, and a batch count cannot see the difference.
+   */
+  bindingReads: 0,
   /** When true, the binding refuses the way an unreachable one does. */
   rejects: false,
 }))
@@ -43,16 +48,19 @@ const stubs = vi.hoisted(() => ({
  * that does not resolve in the plain-Node project this suite runs in, so it is replaced wholesale.
  */
 vi.mock('#/server/auth/env', () => ({
-  taskQueue: () => ({
-    sendBatch: async (messages: Array<{ body: unknown }>) => {
-      if (stubs.rejects) {
-        throw new Error('TASKS binding is unreachable')
-      }
-      stubs.batchSizes.push(messages.length)
-      stubs.sent.push(...messages.map((message) => message.body))
-      return undefined
-    },
-  }),
+  taskQueue: () => {
+    stubs.bindingReads += 1
+    return {
+      sendBatch: async (messages: Array<{ body: unknown }>) => {
+        if (stubs.rejects) {
+          throw new Error('TASKS binding is unreachable')
+        }
+        stubs.batchSizes.push(messages.length)
+        stubs.sent.push(...messages.map((message) => message.body))
+        return undefined
+      },
+    }
+  },
 }))
 
 describe('enqueueTripStatsFor', () => {
@@ -62,6 +70,7 @@ describe('enqueueTripStatsFor', () => {
   beforeEach(async () => {
     stubs.sent = []
     stubs.batchSizes = []
+    stubs.bindingReads = 0
     stubs.rejects = false
     harness = await createHarness()
     alpha = await harness.seedTenant('alpha')
@@ -149,6 +158,7 @@ describe('requestTravelStatsRecompute', () => {
   beforeEach(async () => {
     stubs.sent = []
     stubs.batchSizes = []
+    stubs.bindingReads = 0
     stubs.rejects = false
     harness = await createHarness()
     alpha = await harness.seedTenant('alpha')
@@ -195,9 +205,12 @@ describe('requestTravelStatsRecompute', () => {
     expect(stubs.sent).toHaveLength(QUEUE_BATCH_MAX + 1)
   })
 
-  it('sends nothing at all when there is no year to recompute', async () => {
+  it('does not even reach for the binding when there is no year to recompute', async () => {
     await requestTravelStatsRecompute(alpha.scope, [alpha.ownerUserId], [])
 
+    // A batch count alone cannot tell the guard from its absence — the chunk loop would not run
+    // either way. Reaching `taskQueue()` is the cost the guard exists to avoid.
+    expect(stubs.bindingReads).toBe(0)
     expect(stubs.batchSizes).toEqual([])
   })
 

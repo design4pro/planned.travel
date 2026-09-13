@@ -99,7 +99,13 @@ function uniqueIndexRefusal(): Error {
  */
 vi.mock('#/server/auth/env', () => ({
   taskQueue: () => ({
-    send: async () => undefined,
+    // Refused rather than stubbed out: the statistics producer batches, and a single `send`
+    // reaching this would slip past `queueRejects` and pass the refusal test for the wrong reason.
+    send: async () => {
+      throw new Error(
+        'the travel-stats producer must enqueue through sendBatch',
+      )
+    },
     sendBatch: async (
       messages: Array<{ body: unknown; delaySeconds?: number }>,
     ) => {
