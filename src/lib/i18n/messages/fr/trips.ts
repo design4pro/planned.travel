@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinéraire',
   'plan.places': 'Lieux',
+  'plan.readOnly.role':
+    'Vous pouvez consulter ce programme. Seuls le propriétaire du voyage et les éditeurs peuvent le modifier.',
   'plan.day.empty': 'Rien de prévu — déposez ici un lieu ou une note',
   'plan.move.refused.duplicate': '{name} est déjà dans cette journée',
   'plan.move.refused.duplicateBody':

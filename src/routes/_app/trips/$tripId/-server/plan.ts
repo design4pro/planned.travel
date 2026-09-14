@@ -38,6 +38,7 @@ import {
   reorderPlaces,
   requireTrip,
   requireWritableTrip,
+  tripRoleFor,
   updateAssignment,
   updatePlace,
 } from '#/server/repos'
@@ -148,7 +149,19 @@ export interface PlanBoardCategory {
 
 export interface PlanBoardPayload {
   readonly tripId: string
+  /**
+   * The acting user may write the plan: owner or editor, and the trip is not
+   * archived. Every write control the board draws is gated on this.
+   */
   readonly editable: boolean
+  /**
+   * The trip is archived.
+   *
+   * Carried beside `editable` rather than folded into it, because "the trip is
+   * over" and "you may not write" are two different reasons for the same missing
+   * control, and a surface that explains itself has to know which one it is.
+   */
+  readonly archived: boolean
   readonly days: ReadonlyArray<PlanBoardDay>
   /** The whole inventory, in board order. Both rails and the map read from here. */
   readonly places: ReadonlyArray<PlanBoardPlace>
@@ -160,63 +173,80 @@ export interface PlanBoardPayload {
 export const loadPlanBoard = createServerFn({ method: 'GET' })
   .validator(tripInput)
   .handler(async ({ data }): Promise<PlanBoardPayload> => {
-    const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    return readPlanBoard(await appScope(), data.tripId)
+  })
 
-    const [itinerary, inventory, unscheduled, categories] = await Promise.all([
+/**
+ * The board, as the acting user may use it.
+ *
+ * A plain function beside the server-function shell, because outside a Start
+ * build a handler's return value is discarded — the same split `readDayNotes`
+ * records. The role is read beside the board rather than asserted: a viewer is
+ * owed the plan, just not its write controls (PRD #104 decision 6).
+ */
+export async function readPlanBoard(
+  scope: TenantScope,
+  tripId: string,
+): Promise<PlanBoardPayload> {
+  const trip = await requireTrip(scope, tripId)
+
+  const [role, itinerary, inventory, unscheduled, categories] =
+    await Promise.all([
+      tripRoleFor(scope, trip.id, scope.ctx.userId),
       getTripItinerary(scope, trip.id),
       listTripPlaces(scope, { tripId: trip.id }),
       listUnscheduledPlaces(scope, trip.id),
       listCategories(scope),
     ])
 
-    return {
-      tripId: trip.id,
-      editable: !trip.isArchived,
-      unscheduledIds: unscheduled.map((place) => place.id),
-      categories: categories.map((row) => ({
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        colour: row.colour,
-        icon: row.icon,
+  return {
+    tripId: trip.id,
+    editable: !trip.isArchived && (role === 'owner' || role === 'editor'),
+    archived: trip.isArchived,
+    unscheduledIds: unscheduled.map((place) => place.id),
+    categories: categories.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      colour: row.colour,
+      icon: row.icon,
+    })),
+    places: inventory.map((place) => ({
+      id: place.id,
+      name: place.name,
+      address: place.address,
+      city: place.city,
+      categoryId: place.categoryId,
+      imageUrl: place.imageUrl,
+      website: place.website,
+      description: place.description,
+      rating: place.rating,
+      lat: place.lat,
+      lng: place.lng,
+      isVisited: place.isVisited,
+      durationMinutes: place.durationMinutes,
+    })),
+    days: itinerary.map((entry) => ({
+      dayId: entry.day.id,
+      dayNumber: entry.day.dayNumber,
+      date: entry.day.date,
+      title: entry.day.title,
+      stays: entry.accommodations.map((stay) => stay.name),
+      stops: entry.stops.map((stop) => ({
+        assignmentId: stop.assignment.id,
+        placeId: stop.place.id,
+        position: stop.assignment.orderIndex,
+        startTime: stop.assignment.startTime,
+        endTime: stop.assignment.endTime,
+        durationMinutes: stop.assignment.durationMinutes,
+        reservationStatus: asReservationStatus(
+          stop.assignment.reservationStatus,
+        ),
+        notes: stop.assignment.notes,
       })),
-      places: inventory.map((place) => ({
-        id: place.id,
-        name: place.name,
-        address: place.address,
-        city: place.city,
-        categoryId: place.categoryId,
-        imageUrl: place.imageUrl,
-        website: place.website,
-        description: place.description,
-        rating: place.rating,
-        lat: place.lat,
-        lng: place.lng,
-        isVisited: place.isVisited,
-        durationMinutes: place.durationMinutes,
-      })),
-      days: itinerary.map((entry) => ({
-        dayId: entry.day.id,
-        dayNumber: entry.day.dayNumber,
-        date: entry.day.date,
-        title: entry.day.title,
-        stays: entry.accommodations.map((stay) => stay.name),
-        stops: entry.stops.map((stop) => ({
-          assignmentId: stop.assignment.id,
-          placeId: stop.place.id,
-          position: stop.assignment.orderIndex,
-          startTime: stop.assignment.startTime,
-          endTime: stop.assignment.endTime,
-          durationMinutes: stop.assignment.durationMinutes,
-          reservationStatus: asReservationStatus(
-            stop.assignment.reservationStatus,
-          ),
-          notes: stop.assignment.notes,
-        })),
-      })),
-    }
-  })
+    })),
+  }
+}
 
 /* -------------------------------------------------------------------------------------------------
  * Reordering

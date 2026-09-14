@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Útiterv',
   'plan.places': 'Helyek',
+  'plan.readOnly.role':
+    'Ezt a tervet megtekintheted. Csak az utazás tulajdonosa és a szerkesztők módosíthatják.',
   'plan.day.empty': 'Még nincs terv – húzz ide egy helyet vagy egy jegyzetet',
   'plan.move.refused.duplicate': '{name} már szerepel azon a napon',
   'plan.move.refused.duplicateBody':

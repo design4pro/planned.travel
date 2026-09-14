@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reisroute',
   'plan.places': 'Plekken',
+  'plan.readOnly.role':
+    'Je kunt dit plan lezen. Alleen de eigenaar van de reis en bewerkers kunnen het wijzigen.',
   'plan.day.empty':
     'Nog niets gepland — sleep hier een plek of een notitie naartoe',
   'plan.move.refused.duplicate': '{name} staat al op die dag',

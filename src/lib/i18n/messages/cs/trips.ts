@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Místa',
+  'plan.readOnly.role':
+    'Tento plán si můžete prohlížet. Měnit ho může jen vlastník cesty a ti, kdo mohou upravovat.',
   'plan.day.empty': 'Nic naplánováno – přetáhni sem místo nebo poznámku',
   'plan.move.refused.duplicate': '{name} v tom dni už je',
   'plan.move.refused.duplicateBody':
