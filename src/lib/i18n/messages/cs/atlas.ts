@@ -145,7 +145,7 @@ const messages = {
   'panel.empty.pick.body':
     'Zvolte ji na mapě, ve vyhledávání nebo v seznamu a zde se otevře její úplný záznam — první návštěva, poslední návštěva, počet a vaše poznámka.',
 
-  'panel.stat.places': 'Místa',
+  'panel.stat.places': 'Vaše místa',
   'panel.stat.placesNone': 'Na cestách zatím nic nepřipnuto',
   'panel.stat.placesCaption': 'Uložené památky, ubytování a zastávky',
   'panel.stat.regions': 'Regiony',
@@ -376,7 +376,12 @@ const messages = {
     many: 'Návštěvy',
     other: 'Návštěv',
   },
-  'card.places': { one: 'Místo', few: 'Místa', many: 'Místa', other: 'Míst' },
+  'card.places': {
+    one: 'Místo pracovního prostoru',
+    few: 'Místa pracovního prostoru',
+    many: 'Místa pracovního prostoru',
+    other: 'Míst pracovního prostoru',
+  },
   'card.firstTrip': 'První cesta',
   'card.lastTrip': 'Poslední cesta',
   'card.firstVisit': 'První návštěva',

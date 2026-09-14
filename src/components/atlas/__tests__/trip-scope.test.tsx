@@ -32,6 +32,12 @@ import type { NamespaceModule } from '#/lib/i18n/catalogue'
  * Neither query moves; the fix is the copy, and this is where it is held. The
  * panel says whose trips it counts, the card says whose it counts, and neither
  * is allowed back to the bare noun they used to share.
+ *
+ * The places are the same defect one cell over. The panel's `placeCount` is
+ * read over those same member trips; the card's comes from
+ * `countVisitedPlacesByCountry`, the workspace's visited places. So the place
+ * tile and the card's second cell are held here the same way, and the
+ * catalogue check covers both pairs.
  */
 
 // The panel's country pane pulls in the two atlas writes and the router hook
@@ -137,6 +143,9 @@ function cardCell(card: HTMLElement, index: number): readonly [string, string] {
 /** The one word both figures used to be printed under, in both its branches. */
 const BARE_NOUNS = ['Trip', 'Trips'] as const
 
+/** The same, for the places pair. */
+const BARE_PLACE_NOUNS = ['Place', 'Places'] as const
+
 /** A label reduced to what it says, so casing and padding cannot hide a match. */
 const said = (label: string): string => label.trim().toLocaleLowerCase()
 
@@ -197,53 +206,92 @@ describe('the two trip figures on one atlas screen', () => {
       expect(screen.queryAllByText(word)).toEqual([])
     }
   })
+})
 
-  /**
-   * The catalogue half of the same rule. A translator handed two keys that both
-   * mean "trips" will reach for the same noun twice unless the qualifier is
-   * part of what they are translating — and the screen is back where it started
-   * in that locale alone, which no English-reading assertion would ever see.
-   */
-  describe('every locale keeps them apart', () => {
-    const catalogues = import.meta.glob<NamespaceModule>(
-      '../../../lib/i18n/messages/*/atlas.ts',
-      { eager: true },
-    )
-    const locales = Object.entries(catalogues).map(
-      ([path, module]) =>
-        [path.split('/').at(-2) ?? path, module.default] as const,
-    )
+describe('the two place figures on one atlas screen', () => {
+  it('names the panel tile as the places on the trips the reader is on', () => {
+    const places = tile(renderPanel(), 'places')
 
-    // The glob is the gate, exactly as it is in `lib/i18n/__tests__/parity.test`:
-    // a pattern that matches nothing leaves every assertion below vacuous. It is
-    // held against the shipped set rather than against a count, so a
-    // twenty-fourth locale fails this for the honest reason — its catalogue is
-    // unread — instead of for arithmetic.
-    it('reads the catalogue of every locale the product ships', () => {
-      expect(locales.map(([tag]) => tag).sort()).toEqual(
-        [...LOCALE_TAGS].sort(),
-      )
-    })
-
-    it.each(locales)(
-      '%s says something different over each',
-      (_locale, messages) => {
-        const tileLabel = messages['panel.stat.trips']
-        const cardLabel = messages['card.trips']
-        if (typeof tileLabel !== 'string' || typeof cardLabel !== 'object') {
-          throw new Error('the two trip keys have swapped shapes')
-        }
-
-        // Every branch, not the one English happens to need: a locale with six
-        // of them can carry the qualifier on five and lose it on the sixth.
-        const branches = Object.values(cardLabel).filter(
-          (branch) => branch !== undefined,
-        )
-        expect(branches.length).toBeGreaterThan(0)
-        expect(
-          branches.filter((branch) => said(branch) === said(tileLabel)),
-        ).toEqual([])
-      },
-    )
+    expect(said(places.textContent)).toContain('your places7')
   })
+
+  it("names the country card's tally as the workspace's", () => {
+    const card = renderCard(PORTUGAL)
+
+    expect(cardCell(card, 1)).toEqual(['Workspace places', '4'])
+  })
+
+  it('keeps the qualifier when the tally agrees in the singular', () => {
+    const card = renderCard({ ...PORTUGAL, placeCount: 1 })
+
+    expect(cardCell(card, 1)).toEqual(['Workspace place', '1'])
+  })
+
+  it('prints the bare noun over neither figure', () => {
+    renderAtlasScreen()
+
+    for (const word of BARE_PLACE_NOUNS) {
+      expect(screen.queryAllByText(word)).toEqual([])
+    }
+  })
+})
+
+/**
+ * The catalogue half of the same rule. A translator handed two keys that both
+ * mean "trips", or both "places", will reach for the same noun twice unless
+ * the qualifier is part of what they are translating — and the screen is back
+ * where it started in that locale alone, which no English-reading assertion
+ * would ever see.
+ */
+describe('every locale keeps them apart', () => {
+  const catalogues = import.meta.glob<NamespaceModule>(
+    '../../../lib/i18n/messages/*/atlas.ts',
+    { eager: true },
+  )
+  const locales = Object.entries(catalogues).map(
+    ([path, module]) =>
+      [path.split('/').at(-2) ?? path, module.default] as const,
+  )
+
+  // The glob is the gate, exactly as it is in `lib/i18n/__tests__/parity.test`:
+  // a pattern that matches nothing leaves every assertion below vacuous. It is
+  // held against the shipped set rather than against a count, so a
+  // twenty-fourth locale fails this for the honest reason — its catalogue is
+  // unread — instead of for arithmetic.
+  it('reads the catalogue of every locale the product ships', () => {
+    expect(locales.map(([tag]) => tag).sort()).toEqual([...LOCALE_TAGS].sort())
+  })
+
+  /** Each tile key beside the card key it is allowed to disagree with. */
+  const SCOPED_PAIRS = [
+    ['panel.stat.trips', 'card.trips'],
+    ['panel.stat.places', 'card.places'],
+  ] as const
+
+  it.each(
+    locales.flatMap(([locale, messages]) =>
+      SCOPED_PAIRS.map(
+        ([tileKey, cardKey]) => [locale, tileKey, cardKey, messages] as const,
+      ),
+    ),
+  )(
+    '%s says something different over %s and %s',
+    (_locale, tileKey, cardKey, messages) => {
+      const tileLabel = messages[tileKey]
+      const cardLabel = messages[cardKey]
+      if (typeof tileLabel !== 'string' || typeof cardLabel !== 'object') {
+        throw new Error(`${tileKey} and ${cardKey} have swapped shapes`)
+      }
+
+      // Every branch, not the one English happens to need: a locale with six
+      // of them can carry the qualifier on five and lose it on the sixth.
+      const branches = Object.values(cardLabel).filter(
+        (branch) => branch !== undefined,
+      )
+      expect(branches.length).toBeGreaterThan(0)
+      expect(
+        branches.filter((branch) => said(branch) === said(tileLabel)),
+      ).toEqual([])
+    },
+  )
 })

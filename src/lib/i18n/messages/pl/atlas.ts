@@ -147,7 +147,7 @@ const messages = {
   'panel.empty.pick.body':
     'Wskaż go na mapie, w polu wyszukiwania albo na liście, a tutaj otworzy się jego pełny rejestr — pierwsza wizyta, ostatnia wizyta, licznik i Twoja notatka.',
 
-  'panel.stat.places': 'Miejsca',
+  'panel.stat.places': 'Twoje miejsca',
   'panel.stat.placesNone': 'Nic jeszcze nie przypięto na wyjeździe',
   'panel.stat.placesCaption': 'Zapisane atrakcje, noclegi i przystanki',
   'panel.stat.regions': 'Regiony',
@@ -379,10 +379,10 @@ const messages = {
     other: 'Wizyty',
   },
   'card.places': {
-    one: 'Miejsce',
-    few: 'Miejsca',
-    many: 'Miejsc',
-    other: 'Miejsca',
+    one: 'Miejsce przestrzeni roboczej',
+    few: 'Miejsca przestrzeni roboczej',
+    many: 'Miejsc przestrzeni roboczej',
+    other: 'Miejsca przestrzeni roboczej',
   },
   'card.firstTrip': 'Pierwszy wyjazd',
   'card.lastTrip': 'Ostatni wyjazd',

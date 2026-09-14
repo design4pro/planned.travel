@@ -123,7 +123,7 @@ const messages = {
   'panel.empty.pick.body':
     '在地图上、搜索框里或列表中选一个国家，它的完整档案就会在这里打开——第一次到访、最近一次到访、次数统计和您的笔记。',
 
-  'panel.stat.places': '地点',
+  'panel.stat.places': '你的地点',
   'panel.stat.placesNone': '行程里还没有钉下任何地点',
   'panel.stat.placesCaption': '保存的景点、住处和途经地',
   'panel.stat.regions': '地区',
@@ -298,7 +298,7 @@ const messages = {
   /* ------------------------------------------------- the card over the map */
   'card.trips': { other: '工作空间的行程' },
   'card.visits': { other: '到访' },
-  'card.places': { other: '地点' },
+  'card.places': { other: '工作空间的地点' },
   'card.firstTrip': '首次行程',
   'card.lastTrip': '最近行程',
   'card.firstVisit': '首次到访',

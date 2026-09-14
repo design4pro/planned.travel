@@ -145,7 +145,7 @@ const messages = {
   'panel.empty.pick.body':
     'Tria’n un al mapa, al camp de cerca o a la llista, i la seva fitxa completa s’obrirà aquí — primera visita, darrera visita, el recompte i la teva nota.',
 
-  'panel.stat.places': 'Llocs',
+  'panel.stat.places': 'Els teus llocs',
   'panel.stat.placesNone': 'Encara no hi ha res fixat en cap viatge',
   'panel.stat.placesCaption': 'Llocs d’interès, allotjaments i parades desats',
   'panel.stat.regions': 'Regions marcades',
@@ -358,7 +358,11 @@ const messages = {
     other: 'Viatges de l’espai de treball',
   },
   'card.visits': { one: 'Visita', many: 'Visites', other: 'Visites' },
-  'card.places': { one: 'Lloc', many: 'Llocs', other: 'Llocs' },
+  'card.places': {
+    one: 'Lloc de l’espai de treball',
+    many: 'Llocs de l’espai de treball',
+    other: 'Llocs de l’espai de treball',
+  },
   'card.firstTrip': 'Primer viatge',
   'card.lastTrip': 'Darrer viatge',
   'card.firstVisit': 'Primera visita',

@@ -1184,7 +1184,7 @@ describe('CountryOverlay hover', () => {
     expect(cells).toEqual([
       'Visits',
       '2',
-      'Places',
+      'Workspace places',
       '0',
       'First visit',
       'August 2016',
@@ -1205,7 +1205,12 @@ describe('CountryOverlay hover', () => {
     expect(card?.dataset.record).toBe('trips')
     expect(
       [...(card?.querySelectorAll('dt') ?? [])].map((node) => node.textContent),
-    ).toEqual(['Workspace trips', 'Places', 'First trip', 'Last trip'])
+    ).toEqual([
+      'Workspace trips',
+      'Workspace places',
+      'First trip',
+      'Last trip',
+    ])
   })
 
   it('is decoration: nothing in it is announced or reachable', () => {
@@ -1318,7 +1323,7 @@ describe('CountryOverlay panel', () => {
     ).toEqual([
       'Visits',
       '2',
-      'Places',
+      'Workspace places',
       '0',
       'First visit',
       'August 2016',

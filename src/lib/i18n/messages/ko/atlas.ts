@@ -125,7 +125,7 @@ const messages = {
   'panel.empty.pick.body':
     '지도, 검색창, 목록 어디에서든 나라를 고르면 여기에 전체 기록이 열립니다. 첫 방문, 마지막 방문, 방문 횟수, 그리고 메모까지요.',
 
-  'panel.stat.places': '장소',
+  'panel.stat.places': '내 장소',
   'panel.stat.placesNone': '여행에 고정해 둔 장소가 아직 없습니다',
   'panel.stat.placesCaption': '저장한 볼거리·숙소·경유지',
   'panel.stat.regions': '지역',
@@ -312,7 +312,7 @@ const messages = {
   /* ------------------------------------------------- the card over the map */
   'card.trips': { other: '워크스페이스 여행' },
   'card.visits': { other: '방문' },
-  'card.places': { other: '장소' },
+  'card.places': { other: '워크스페이스 장소' },
   'card.firstTrip': '첫 여행',
   'card.lastTrip': '마지막 여행',
   'card.firstVisit': '첫 방문',

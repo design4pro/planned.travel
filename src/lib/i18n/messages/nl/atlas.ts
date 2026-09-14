@@ -137,7 +137,7 @@ const messages = {
   'panel.empty.pick.body':
     'Kies er een op de kaart, in het zoekveld of in de lijst, en het volledige overzicht opent hier — eerste bezoek, laatste bezoek, de teller en je notitie.',
 
-  'panel.stat.places': 'Plekken',
+  'panel.stat.places': 'Jouw plekken',
   'panel.stat.placesNone': 'Nog niets vastgepind op een reis',
   'panel.stat.placesCaption':
     'Opgeslagen bezienswaardigheden, verblijven en stops',
@@ -338,7 +338,10 @@ const messages = {
     other: 'Reizen van de werkruimte',
   },
   'card.visits': { one: 'Bezoek', other: 'Bezoeken' },
-  'card.places': { one: 'Plek', other: 'Plekken' },
+  'card.places': {
+    one: 'Plek van de werkruimte',
+    other: 'Plekken van de werkruimte',
+  },
   'card.firstTrip': 'Eerste reis',
   'card.lastTrip': 'Laatste reis',
   'card.firstVisit': 'Eerste bezoek',

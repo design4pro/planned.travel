@@ -124,7 +124,7 @@ const messages = {
   'panel.empty.pick.body':
     '在地圖上、搜尋欄裡或清單中選一個國家，它的完整檔案就會在這裡打開——第一次造訪、最近一次造訪、次數統計和您的筆記。',
 
-  'panel.stat.places': '地點',
+  'panel.stat.places': '你的地點',
   'panel.stat.placesNone': '行程裡還沒有釘下任何地點',
   'panel.stat.placesCaption': '儲存的景點、住宿與停留點',
   'panel.stat.regions': '地區',
@@ -299,7 +299,7 @@ const messages = {
   /* ------------------------------------------------- the card over the map */
   'card.trips': { other: '工作區的行程' },
   'card.visits': { other: '造訪' },
-  'card.places': { other: '地點' },
+  'card.places': { other: '工作區的地點' },
   'card.firstTrip': '首次行程',
   'card.lastTrip': '最近行程',
   'card.firstVisit': '首次造訪',

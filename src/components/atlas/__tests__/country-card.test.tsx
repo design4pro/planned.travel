@@ -112,12 +112,12 @@ describe('CountryCard', () => {
   it('heads every figure with a unit label that agrees with it', () => {
     render(<CountryCard {...FRANCE} tripCount={1} placeCount={1} />)
     expect(screen.getByText('Workspace trip')).toBeTruthy()
-    expect(screen.getByText('Place')).toBeTruthy()
+    expect(screen.getByText('Workspace place')).toBeTruthy()
 
     render(<CountryCard {...FRANCE} countryCode="IT" />)
     const italy = cardFor('IT')
     expect(within(italy).getByText('Workspace trips')).toBeTruthy()
-    expect(within(italy).getByText('Places')).toBeTruthy()
+    expect(within(italy).getByText('Workspace places')).toBeTruthy()
   })
 
   it('sets tabular numerals on every value that can change', () => {
@@ -226,7 +226,7 @@ describe('CountryCard', () => {
       render(<CountryCard {...THAILAND} />)
       expect(cellsOf('TH')).toEqual([
         ['Visits', '3'],
-        ['Places', '0'],
+        ['Workspace places', '0'],
         ['First visit', 'July 2011'],
         ['Last visit', 'September 2024'],
       ])
@@ -303,7 +303,7 @@ describe('CountryCard', () => {
       )
       expect(cellsOf('TH').map(([label]) => label)).toEqual([
         'Visits',
-        'Places',
+        'Workspace places',
         'First visit',
         'Last visit',
       ])
@@ -328,7 +328,7 @@ describe('CountryCard', () => {
       )
       expect(cellsOf('PT')).toEqual([
         ['Workspace trip', '1'],
-        ['Places', '4'],
+        ['Workspace places', '4'],
         ['First trip', 'August 2026'],
         ['Last trip', 'August 2026'],
       ])
@@ -375,7 +375,7 @@ describe('CountryCard', () => {
       render(<CountryCard {...countryFactColumns(FRANCE_RECORD)} />)
       expect(cellsOf('FR')).toEqual([
         ['Visits', '3'],
-        ['Places', '0'],
+        ['Workspace places', '0'],
         ['First visit', 'July 2011'],
         ['Last visit', 'September 2024'],
       ])
@@ -386,7 +386,7 @@ describe('CountryCard', () => {
       render(<CountryCard {...countryFactColumns(PORTUGAL_RECORD)} />)
       expect(cellsOf('PT')).toEqual([
         ['Workspace trip', '1'],
-        ['Places', '4'],
+        ['Workspace places', '4'],
         ['First trip', 'August 2026'],
         ['Last trip', 'August 2026'],
       ])
@@ -415,7 +415,7 @@ describe('CountryCard', () => {
       expect(cardFor('DZ').dataset.record).toBe('none')
       expect(cellsOf('DZ')).toEqual([
         ['Workspace trips', '0'],
-        ['Places', '0'],
+        ['Workspace places', '0'],
         ['First trip', '—Not recorded'],
         ['Last trip', '—Not recorded'],
       ])

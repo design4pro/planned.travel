@@ -125,7 +125,7 @@ const messages = {
   'panel.empty.pick.body':
     '地図の上、検索欄、または一覧から国を選ぶと、ここに記録の全体が開きます。最初の訪問、最後の訪問、回数、そしてあなたのメモです。',
 
-  'panel.stat.places': '場所',
+  'panel.stat.places': 'あなたの場所',
   'panel.stat.placesNone': '旅行にピン留めした場所はまだありません',
   'panel.stat.placesCaption': '保存した見どころ・宿・立ち寄り先',
   'panel.stat.regions': '地域',
@@ -309,7 +309,7 @@ const messages = {
   /* ------------------------------------------------- the card over the map */
   'card.trips': { other: 'ワークスペースの旅行' },
   'card.visits': { other: '訪問' },
-  'card.places': { other: '場所' },
+  'card.places': { other: 'ワークスペースの場所' },
   'card.firstTrip': '最初の旅行',
   'card.lastTrip': '最後の旅行',
   'card.firstVisit': '最初の訪問',

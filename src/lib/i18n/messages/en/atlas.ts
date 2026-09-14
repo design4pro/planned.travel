@@ -174,7 +174,15 @@ const messages = {
   'panel.empty.pick.body':
     'Choose one on the map, in the search field or from the list, and its full record opens here — first visit, last visit, the tally and your note.',
 
-  'panel.stat.places': 'Places',
+  /**
+   * Whose places, for the reason `panel.stat.trips` gives for whose trips.
+   *
+   * `recomputeTravelStats` counts the places on the trips the reader is a
+   * member of; the per-country tally under `card.places` is
+   * `countVisitedPlacesByCountry`, which counts the workspace's. Both land on
+   * `/atlas`, so each label names its own population.
+   */
+  'panel.stat.places': 'Your places',
   'panel.stat.placesNone': 'Nothing pinned on a trip yet',
   'panel.stat.placesCaption': 'Sights, stays and stops saved',
   'panel.stat.regions': 'Regions',
@@ -419,7 +427,8 @@ const messages = {
    */
   'card.trips': { one: 'Workspace trip', other: 'Workspace trips' },
   'card.visits': { one: 'Visit', other: 'Visits' },
-  'card.places': { one: 'Place', other: 'Places' },
+  /** The workspace's places, not the reader's — see `panel.stat.places`. */
+  'card.places': { one: 'Workspace place', other: 'Workspace places' },
   'card.firstTrip': 'First trip',
   'card.lastTrip': 'Last trip',
   'card.firstVisit': 'First visit',

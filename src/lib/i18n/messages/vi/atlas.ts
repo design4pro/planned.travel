@@ -124,7 +124,7 @@ const messages = {
   'panel.empty.pick.body':
     'Chọn trên bản đồ, trong ô tìm kiếm hoặc từ danh sách, và hồ sơ đầy đủ của nó sẽ mở ra ở đây — lần tới đầu tiên, lần gần nhất, số lần và ghi chú của bạn.',
 
-  'panel.stat.places': 'Địa điểm',
+  'panel.stat.places': 'Địa điểm của bạn',
   'panel.stat.placesNone': 'Chưa ghim gì trong chuyến đi nào',
   'panel.stat.placesCaption': 'Điểm tham quan, chỗ ở và điểm dừng đã lưu',
   'panel.stat.regions': 'Vùng',
@@ -308,7 +308,7 @@ const messages = {
   /* ------------------------------------------------- the card over the map */
   'card.trips': { other: 'Chuyến đi của không gian làm việc' },
   'card.visits': { other: 'Lần tới' },
-  'card.places': { other: 'Địa điểm' },
+  'card.places': { other: 'Địa điểm của không gian làm việc' },
   'card.firstTrip': 'Chuyến đi đầu tiên',
   'card.lastTrip': 'Chuyến đi gần nhất',
   'card.firstVisit': 'Lần tới đầu tiên',
