@@ -439,9 +439,9 @@ async function sampleCanvas(page: Page): Promise<CanvasSample> {
  * Two presses issue no write at all, and both used to be discovered only when
  * `WRITE_TIMEOUT_MS` ran out (issue #477): a press on the entry already checked,
  * which Radix does not report as a change, and a press that lands before the
- * picker has a handler. Both are ruled out on the expect timeout first - the
+ * picker has a handler. Both are ruled out on the expect timeout first — the
  * entry is not checked before the press, and is after it, which only the
- * picker's own handler can do - so the long wait is spent only on a write that
+ * picker's own handler can do — so the long wait is spent only on a write that
  * was actually issued.
  */
 async function chooseBasemap(page: Page, option: string): Promise<void> {

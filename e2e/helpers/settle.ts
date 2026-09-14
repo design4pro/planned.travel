@@ -84,10 +84,10 @@ export const MAP_READY_TIMEOUT_MS = 15_000
  * Every other route hydrates inside Playwright's flat `actionTimeout` (10 s in
  * `playwright.config.ts`). `/atlas` did not, on the 2-vCPU CI runner: MAP-05
  * failed there with the page rendered and the hydration wait out of time
- * (issue #477, run 34760110795). The extra budget is named on the routes that
- * showed the cost rather than absorbed by a suite-wide raise, which would hide
- * a slow-hydration regression on every other screen - the argument
- * `ATLAS_JOURNEY_TIMEOUT_MS` makes in `journeys.spec.ts`.
+ * (issue #477, run 34760110795). The extra budget is named on every route that
+ * declares `map: true`, not only `/atlas`, rather than absorbed by a suite-wide
+ * raise, which would hide a slow-hydration regression on every other screen —
+ * the argument `ATLAS_JOURNEY_TIMEOUT_MS` makes in `journeys.spec.ts`.
  *
  * A ceiling, not an expectation: a page that hydrates waits for none of it.
  */
