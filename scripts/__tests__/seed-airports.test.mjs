@@ -17,6 +17,9 @@
  * - **Two runs of the same artefact address the same rows.** The id is derived from the IATA code,
  *   so a refresh reads as the rows it changed rather than as nine thousand rewritten ones.
  * - **A malformed artefact is refused whole**, rather than loaded half-way.
+ * - **The manifest's `rows=` describes the file it heads**, because that number is what `--verify`
+ *   holds a deployed database to: a count that does not describe the artefact would either pass a
+ *   database that never got the refresh or fail one that did.
  *
  * Loading into a real D1 is `pnpm db:airports:local`, and `scripts/worktree/bootstrap.sh` checks
  * the result; every property that can be asserted without one is asserted here.
@@ -204,5 +207,34 @@ describe('scripts/seed/airports.mjs', () => {
 
     expect(status).toBe(1)
     expect(stderr).toContain('non-integer coordinate')
+  })
+
+  it('refuses an artefact whose manifest miscounts the rows it carries', () => {
+    // `rows=3`, two rows: the shape a truncated write leaves behind, and the one that would make
+    // `--verify` fail a database that holds exactly what was merged.
+    const { status, stderr } = generate(
+      FIXTURE.split('\n').slice(0, 3).concat('').join('\n'),
+    )
+
+    expect(status).toBe(1)
+    expect(stderr).toContain('the manifest declares rows=3, the file carries 2')
+  })
+
+  it('refuses a manifest with no row count to check a database against', () => {
+    const { status, stderr } = generate(FIXTURE.replace(' rows=3', ''))
+
+    expect(status).toBe(1)
+    expect(stderr).toContain('no rows= count')
+  })
+
+  it('refuses --verify together with --sql-out, which never opens a database', () => {
+    const result = spawnSync(
+      process.execPath,
+      [SCRIPT, '--verify', '--sql-out', 'out.sql'],
+      { encoding: 'utf8' },
+    )
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('--verify reads a database')
   })
 })

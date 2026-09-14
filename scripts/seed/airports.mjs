@@ -4,7 +4,7 @@
  * Loads the committed airport catalogue artefact into the `airports` table.
  *
  *   node scripts/seed/airports.mjs [--local | --remote] [--env staging]
- *     [--file <artefact>] [--sql-out <path>] [--batch <rows>]
+ *     [--file <artefact>] [--sql-out <path>] [--batch <rows>] [--verify]
  *
  * This is the "loaded out of band" half that `src/server/catalog/airports.ts` and the
  * `airports` schema comment both name. `scripts/build-airports.mjs` writes
@@ -34,6 +34,17 @@
  * The stamp doing the sweeping is `updated_at`, which is what the catalogue module already
  * documents it as: "the artefact's load stamps", saying nothing about the airport. `created_at`
  * is left alone on a row that already exists, so it keeps meaning when this row first appeared.
+ *
+ * ## Counting what arrived
+ *
+ * A load that never ran is not the same failure as a load that failed: the second one is loud,
+ * the first one leaves the previous cut in place and says nothing. So the artefact's manifest
+ * carries a `rows=` count, this script refuses an artefact that miscounts itself, and `--verify`
+ * asks a database how many airports it holds and fails when the answer is not that number. A
+ * direct load checks itself on the way out. Where the generation and the execution are two steps
+ * — the deploy workflows, which take `--sql-out` and hand the file to wrangler themselves — only
+ * the execution reaches a database, so there `--verify` belongs as a step of its own; see
+ * docs/DEPLOY.md.
  *
  * ## Why SQL through wrangler rather than a client
  *
@@ -101,7 +112,7 @@ function parseArtefact(text) {
     throw new Error(`${ARTEFACT}: expected a version=1 manifest line`)
   }
 
-  return lines.map((line, index) => {
+  const rows = lines.map((line, index) => {
     const fields = line.split('\t')
     if (fields.length !== FIELDS) {
       throw new Error(
@@ -119,6 +130,22 @@ function parseArtefact(text) {
       name: fields[NAME],
     }
   })
+
+  // Last, because a row this script cannot read is the more specific complaint and deserves to be
+  // the one reported. The manifest's `rows=` is what {@link verify} holds a database to, so it is
+  // only worth anything if it describes this file: a count that does not would either pass a
+  // database that never got the refresh, or fail one that did.
+  const declared = /(?:^| )rows=(\d+)(?: |$)/u.exec(header)
+  if (declared === null) {
+    throw new Error(`${ARTEFACT}: the manifest line carries no rows= count`)
+  }
+  if (Number(declared[1]) !== rows.length) {
+    throw new Error(
+      `${ARTEFACT}: the manifest declares rows=${declared[1]}, the file carries ${rows.length}`,
+    )
+  }
+
+  return rows
 }
 
 function blankToNull(value) {
@@ -239,6 +266,7 @@ function parseArgs(args) {
     file: ARTEFACT,
     sqlOut: null,
     batch: BATCH_ROWS,
+    verify: false,
   }
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
@@ -248,6 +276,10 @@ function parseArgs(args) {
     }
     if (arg === '--remote') {
       options.remote = true
+      continue
+    }
+    if (arg === '--verify') {
+      options.verify = true
       continue
     }
     const value = args[(index += 1)]
@@ -261,6 +293,9 @@ function parseArgs(args) {
   if (options.env !== null && !options.remote) {
     throw new Error('--env only applies to --remote')
   }
+  if (options.verify && options.sqlOut !== null) {
+    throw new Error('--verify reads a database, --sql-out never opens one')
+  }
   return options
 }
 
@@ -269,10 +304,70 @@ function databaseFor(env) {
   return env === null ? 'planned-travel-db' : `planned-travel-db-${env}`
 }
 
+/**
+ * One `wrangler d1 execute` against the target the options name.
+ *
+ * `capture` is what tells the load from the verification: the load wants wrangler's progress on
+ * the terminal, the verification wants its `--json` answer back as a string.
+ */
+function execute(options, args, capture = false) {
+  const command = [
+    'wrangler',
+    'd1',
+    'execute',
+    databaseFor(options.env),
+    options.remote ? '--remote' : '--local',
+    ...args,
+  ]
+  if (options.env !== null) command.push('--env', options.env)
+
+  const result = spawnSync('pnpm', ['exec', ...command], {
+    cwd: repoRoot(),
+    stdio: capture ? ['inherit', 'pipe', 'inherit'] : 'inherit',
+    encoding: 'utf8',
+  })
+  if (result.status !== 0) {
+    throw new Error(`wrangler d1 execute exited ${String(result.status)}`)
+  }
+  return result.stdout
+}
+
+/**
+ * Fails unless the target database holds exactly the airports the artefact carries.
+ *
+ * This is the check that tells "the refresh reached this database" from "the previous cut is
+ * still sitting there": both answer a type-ahead, and only one of them answers it with the rows
+ * that were merged.
+ */
+function verify(options, expected) {
+  const database = databaseFor(options.env)
+  const output = execute(
+    options,
+    ['--command', 'select count(*) as n from airports;', '--json'],
+    true,
+  )
+  const loaded = JSON.parse(output)?.[0]?.results?.[0]?.n
+  if (typeof loaded !== 'number') {
+    throw new Error(`no row count in wrangler's answer: ${output.trim()}`)
+  }
+  if (loaded !== expected) {
+    throw new Error(
+      `${database} holds ${loaded} airports, the artefact carries ${expected}: the catalogue in this database is not the committed cut`,
+    )
+  }
+  stdout.write(`${database} holds all ${expected} airports\n`)
+}
+
 async function main() {
   const options = parseArgs(argv.slice(2))
   const text = await readFile(resolve(repoRoot(), options.file), 'utf8')
   const rows = parseArtefact(text)
+
+  if (options.verify) {
+    verify(options, rows.length)
+    return
+  }
+
   const sql = buildSql(rows, Date.now(), options.batch)
 
   if (options.sqlOut !== null) {
@@ -285,28 +380,11 @@ async function main() {
   const file = join(directory, 'airports.sql')
   await writeFile(file, sql)
 
-  const args = [
-    'wrangler',
-    'd1',
-    'execute',
-    databaseFor(options.env),
-    options.remote ? '--remote' : '--local',
-    '--file',
-    file,
-    '--yes',
-  ]
-  if (options.env !== null) args.push('--env', options.env)
-
   stdout.write(
     `loading ${rows.length} airports into ${databaseFor(options.env)} (${options.remote ? 'remote' : 'local'})\n`,
   )
-  const result = spawnSync('pnpm', ['exec', ...args], {
-    cwd: repoRoot(),
-    stdio: 'inherit',
-  })
-  if (result.status !== 0) {
-    throw new Error(`wrangler d1 execute exited ${String(result.status)}`)
-  }
+  execute(options, ['--file', file, '--yes'])
+  verify(options, rows.length)
 }
 
 main().catch((error) => {
