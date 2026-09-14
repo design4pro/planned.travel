@@ -34,12 +34,22 @@ concurrency:
   group: sentry-triage
   cancel-in-progress: false
 
+# `runs-on` below reads through `vars.RUNNER_AGENT`, an organisation variable that is
+# deliberately unset: unset, the default here selects the self-hosted agent pool - no
+# mounted caches, one job per container, the container discarded afterwards. Setting it
+# to `["ubuntu-latest"]` moves the job back to a GitHub-hosted runner without a pull
+# request. See agent-kit's README, "The runner pool".
+#
+# The ephemeral pool is also what keeps the `claude.ai/install.sh` step below honest:
+# it installs into `$HOME/.local/bin` on every run, and on a runner that outlived its
+# job those installs would accumulate. Here there is no such runner.
+
 jobs:
   sweep:
     # A fork inherits the cron, has none of the secrets, and would mail its owner a red run every
     # week forever. Pin it to this repository.
     if: github.repository == 'design4pro/planned.travel'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["self-hosted","linux","ARM64","agent"]') }}
     timeout-minutes: 30
 
     permissions:
