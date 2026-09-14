@@ -17,10 +17,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { NotFoundError, RepositoryError } from '../context'
-import { createDay, createDayNote, listTripDays } from '../days'
+import { createDay, createDayNote, deleteDay, listTripDays } from '../days'
 import { createAssignment } from '../itinerary'
 import { createPlace } from '../places'
-import { TripRoleError, addTripMember, createTrip } from '../trips'
+import { TripRoleError, addTripMember, createTrip, updateTrip } from '../trips'
 import {
   CHAIN_MAX_LEGS,
   createTransport,
@@ -978,10 +978,71 @@ describe('the plan behind one day’s journey read', () => {
       // journey of the trip to place one day of it.
       expect(plan, sql).not.toMatch(/\bSCAN\b/)
       expect(plan, sql).toContain('USING INDEX')
-      expect(plan, sql).not.toContain('transports_org_trip_idx (organization_id=? AND trip_id=?)')
+      expect(plan, sql).not.toContain(
+        'transports_org_trip_idx (organization_id=? AND trip_id=?)',
+      )
       expect(plan, sql).not.toContain(
         'transport_legs_org_trip_idx (organization_id=? AND trip_id=?)',
       )
     }
+  })
+})
+
+/**
+ * Deleting the day a journey lands on, on the database D1 is actually running (#186).
+ *
+ * `{ ddl: 'migrations' }` is the whole test. `schema.ts` declares `transports.arrival_day_id` as
+ * `on delete: 'set null'`, so a schema-built database unlinks the transport by itself and these
+ * pass whatever the day deleters do. What ships is the `NO ACTION` an `ADD COLUMN` leaves behind,
+ * where the delete fails unless the column was cleared first.
+ */
+describe('a day deleted under a transport that arrives on it', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+  let tripId: string
+  let days: Array<Day>
+
+  beforeEach(async () => {
+    harness = await createHarness({ ddl: 'migrations' })
+    tenant = await harness.seedTenant('arrival-day-delete')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Night flight',
+      startDate: '2026-04-10',
+      endDate: '2026-04-13',
+    })
+    tripId = trip.id
+    days = await listTripDays(tenant.scope, trip.id)
+  })
+
+  async function overnight(): Promise<string> {
+    const transport = await createTransport(tenant.scope, {
+      tripId,
+      title: 'NH 10',
+      mode: 'flight',
+      dayId: days[2].id,
+      arrivalDayId: days[3].id,
+    })
+    return transport.id
+  }
+
+  it('unlinks the arrival day when that day is deleted', async () => {
+    const transportId = await overnight()
+
+    await deleteDay(tenant.scope, days[3].id)
+
+    const survivor = await getTransport(tenant.scope, transportId)
+    expect(survivor?.arrivalDayId).toBeNull()
+    expect(survivor?.dayId).toBe(days[2].id)
+  })
+
+  it('unlinks the arrival day when the trip’s range drops it', async () => {
+    const transportId = await overnight()
+
+    await updateTrip(tenant.scope, tripId, { endDate: '2026-04-12' })
+
+    expect(await listTripDays(tenant.scope, tripId)).toHaveLength(3)
+    const survivor = await getTransport(tenant.scope, transportId)
+    expect(survivor?.arrivalDayId).toBeNull()
+    expect(survivor?.dayId).toBe(days[2].id)
   })
 })

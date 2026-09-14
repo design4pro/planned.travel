@@ -374,6 +374,34 @@ export async function deleteTransport(
   await transportsRepository.requireRemove(scope, transportId)
 }
 
+/**
+ * Unlinks every transport of this tenant that arrives on one of `dayIds`, and answers how many.
+ *
+ * Called by the day deleters in `days.ts` immediately before the days go, and that ordering is the
+ * whole point. `schema.ts` declares `arrival_day_id` as `on delete: 'set null'`, but it arrived by
+ * `ADD COLUMN`, which carries no `ON DELETE` clause, so what D1 actually enforces is `NO ACTION` —
+ * pinned by `migrations-match-schema.test.ts`. Closing that gap in the database would mean either
+ * hand-editing a generated migration or rebuilding the table, so the rule the schema promises is
+ * kept here instead: without this, deleting the day a journey lands on raises
+ * `FOREIGN KEY constraint failed` (#186).
+ *
+ * `day_id` needs no such help: it was created with its table, so its `set null` is the deployed one.
+ *
+ * Scoped like every other statement in this file, so a day id belonging to another organization
+ * matches no row rather than clearing one.
+ */
+export async function unlinkTransportsFromDays(
+  scope: TenantScope,
+  dayIds: ReadonlyArray<string>,
+): Promise<number> {
+  const rows = await transportsRepository.updateWhere(
+    scope,
+    inArray(transports.arrivalDayId, [...dayIds]),
+    { arrivalDayId: null },
+  )
+  return rows.length
+}
+
 /* -------------------------------------------------------------------------------------------------
  * A journey's place on the day's number line
  * ---------------------------------------------------------------------------------------------- */

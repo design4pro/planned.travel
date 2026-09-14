@@ -192,6 +192,7 @@ import {
   totalTripDistanceMetres,
   transportLegsRepository,
   transportsRepository,
+  unlinkTransportsFromDays,
   updateTransport,
 } from '../transports'
 import {
@@ -2662,6 +2663,24 @@ describe('tenant isolation', () => {
       const own = await getTransport(scope, alpha.transportId)
       expect(own?.dayId).toBe(alpha.dayId)
       expect(own?.arrivalDayId).toBeNull()
+    })
+
+    it('never unlinks a B transport from its arrival day from A’s scope', async () => {
+      await updateTransport(beta.tenant.scope, beta.transportId, {
+        arrivalDayId: beta.lastDayId,
+      })
+
+      expect(
+        await unlinkTransportsFromDays(alpha.tenant.scope, [beta.lastDayId]),
+      ).toBe(0)
+      expect(
+        (await getTransport(beta.tenant.scope, beta.transportId))?.arrivalDayId,
+      ).toBe(beta.lastDayId)
+
+      // The same call from B's own scope does clear it, so it is scoping that refused A.
+      expect(
+        await unlinkTransportsFromDays(beta.tenant.scope, [beta.lastDayId]),
+      ).toBe(1)
     })
 
     it('leaves B byte-identical after every refusal', async () => {
