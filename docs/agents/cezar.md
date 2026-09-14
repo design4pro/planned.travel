@@ -50,7 +50,7 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
     the same second, so two groomed issues saturate a five-record window. The automation stays
     enabled, polls on schedule and logs `no-match`, so a pinned one looks exactly like a quiet
     repository. Patch 6 widens the budget of a poll that failed to advance, doubling to the
-    100-record search ceiling, so a saturated band clears on the next poll without help.
+    100-record search ceiling within that same check, so a saturated band clears without help.
     Recognise a pin from the main checkout:
 
     ```bash
