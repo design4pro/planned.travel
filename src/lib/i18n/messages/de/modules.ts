@@ -139,6 +139,80 @@ const messages = {
   'book.import.badge': 'Ungeprüfter Import',
   'book.import.hint':
     'Aus einer Bestätigung importiert. Öffne und speichere sie, um sie als geprüft zu markieren.',
+  'book.import.action': 'Importieren',
+  'book.import.title': 'Buchungen aus einer Datei importieren',
+  'book.import.description':
+    'Leg eine Bestätigung ab, wir lesen sie. Bis du sie gesehen hast, kommt nichts in die Reise.',
+  'book.import.drop.idle': 'Dateien hier ablegen oder aussuchen',
+  'book.import.drop.active': 'Loslassen zum Hinzufügen',
+  'book.import.drop.formats':
+    'PDF, gespeicherte E-Mail, Webseite, Foto, Word, Excel, Kalenderdatei oder JSON-Export.',
+  'book.import.drop.limits':
+    'Bis zu {files} Dateien auf einmal, jede bis {size}.',
+  'book.import.drop.browse': 'Dateien aussuchen',
+  'book.import.refused.format':
+    '„{filename}“ ist keine Datei, die dieser Import lesen kann. Er liest ein PDF, eine gespeicherte E-Mail, eine Webseite, ein Foto, ein Word- oder Excel-Dokument, eine Kalenderdatei oder einen JSON-Export.',
+  'book.import.refused.tooMany':
+    'Nur {files} Dateien auf einmal. Der Rest kam nicht dazu.',
+  'book.import.refused.tooLarge':
+    '„{filename}“ hat {size}. Ein Import liest Dateien bis {limit}.',
+  'book.import.refused.empty':
+    '„{filename}“ ist leer, da ist also nichts zu lesen.',
+  'book.import.ceiling.title':
+    'Dieser Arbeitsbereich hat diesen Monat alle Bestätigungen gelesen',
+  'book.import.ceiling.body':
+    'Der Tarif enthält {ceiling} gelesene Dateien im Monat, und das Guthaben erneuert sich am Ersten. Eine Buchung von Hand geht weiterhin.',
+  'book.import.ceiling.none':
+    'Eine Bestätigungsdatei lesen gehört nicht zum Tarif dieses Arbeitsbereichs',
+  'book.import.ceiling.noneBody':
+    'Wechsle den Tarif, damit eine Bestätigung für dich gelesen wird. Eine Buchung von Hand gibt es immer.',
+  'book.import.widget.title': 'Bestätigungen werden gelesen',
+  'book.import.widget.working': '{done} von {total} gelesen',
+  'book.import.widget.file': '„{filename}“ wird gelesen',
+  'book.import.widget.done': {
+    one: 'Eine Buchung wartet auf dich',
+    other: '{count} Buchungen warten auf dich',
+  },
+  'book.import.widget.review': 'Ansehen',
+  'book.import.widget.failed': '„{filename}“ war nicht lesbar',
+  'book.import.widget.stalled': 'Das dauert länger als gedacht',
+  'book.import.widget.check': 'Nochmal nachsehen',
+  'book.import.widget.dismiss': 'Ausblenden',
+  'book.import.review.title': 'Was wir gelesen haben',
+  'book.import.review.from': 'Aus „{filename}“',
+  'book.import.review.selectAll': 'Alle auswählen',
+  'book.import.review.selectNone': 'Keine auswählen',
+  'book.import.review.confirm': {
+    one: '{count} Buchung hinzufügen',
+    other: '{count} Buchungen hinzufügen',
+  },
+  'book.import.review.confirmNone': 'Wähle eine Buchung zum Hinzufügen',
+  'book.import.review.cancel': 'Abbrechen',
+  'book.import.review.needsReview': 'Kurz prüfen',
+  'book.import.review.needsReviewHint':
+    'Ein paar Felder standen nicht im Dokument. Öffne die Buchung, nachdem du sie hinzugefügt hast.',
+  'book.import.review.noPrice': 'Kein Preis gelesen',
+  'book.import.review.noPriceHint':
+    'Das Dokument nannte keinen klar, also blieb das Feld leer statt geraten.',
+  'book.import.review.untitled': 'Buchung ohne Titel',
+  'book.import.empty.title': 'In dieser Datei haben wir keine Buchung gefunden',
+  'book.import.empty.body':
+    'In „{filename}“ war nichts, was nach einer Bestätigung aussieht. Versuch eine andere Datei, oder trag die Buchung von Hand ein.',
+  'book.import.failed.title': '„{filename}“ war nicht lesbar',
+  'book.import.failed.body':
+    'Die Datei ging auf, aber es war nichts daraus zu machen. Versuch eine andere Datei, oder trag die Buchung von Hand ein.',
+  'book.import.failed.retry': 'Andere Datei versuchen',
+  'book.import.uploadFailed': '„{filename}“ wurde nicht hochgeladen',
+  'book.import.uploadRetry': 'Nochmal versuchen',
+  'book.import.toast.added': {
+    one: 'Eine Buchung hinzugefügt',
+    other: '{count} Buchungen hinzugefügt',
+  },
+  'book.import.partial.title':
+    '{written} von {total} Buchungen wurden hinzugefügt',
+  'book.import.partial.body':
+    'Der Rest bleibt ausgewählt. Ein zweiter Versuch schreibt nur den.',
+  'book.import.partial.retry': 'Rest hinzufügen',
   'book.journeyLink': 'Im Transport-Tab',
   'filter.all': 'Alles',
   'book.remove.body':

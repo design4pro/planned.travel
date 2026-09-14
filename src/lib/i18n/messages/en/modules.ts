@@ -218,6 +218,79 @@ const messages = {
   'book.import.badge': 'Unchecked import',
   'book.import.hint':
     'Imported from a confirmation. Open and save it to mark it checked.',
+  'book.import.action': 'Import',
+  'book.import.title': 'Import bookings from a file',
+  'book.import.description':
+    'Drop a confirmation and we will read it. Nothing is added to the trip until you have seen it.',
+  'book.import.drop.idle': 'Drop files here, or browse',
+  'book.import.drop.active': 'Release to add',
+  'book.import.drop.formats':
+    'PDF, saved email, web page, photo, Word, Excel, calendar or JSON export.',
+  'book.import.drop.limits':
+    'Up to {files} files at a time, each up to {size}.',
+  'book.import.drop.browse': 'Browse files',
+  'book.import.refused.format':
+    '“{filename}” is not a file this import can read. It reads a PDF, a saved email, a web page, a photo, a Word or Excel document, a calendar file or a JSON export.',
+  'book.import.refused.tooMany':
+    'Only {files} files at a time. The rest were not added.',
+  'book.import.refused.tooLarge':
+    '“{filename}” is {size}. An import reads files up to {limit}.',
+  'book.import.refused.empty':
+    '“{filename}” is empty, so there is nothing to read.',
+  'book.import.ceiling.title':
+    'This workspace has read all its confirmations this month',
+  'book.import.ceiling.body':
+    'The plan includes {ceiling} file readings a month, and the allowance renews on the first. You can still add a booking by hand.',
+  'book.import.ceiling.none':
+    'Reading a confirmation file is not part of this workspace’s plan',
+  'book.import.ceiling.noneBody':
+    'Upgrade to have a confirmation read for you. Adding a booking by hand is always available.',
+  'book.import.widget.title': 'Reading confirmations',
+  'book.import.widget.working': '{done} of {total} read',
+  'book.import.widget.file': 'Reading “{filename}”',
+  'book.import.widget.done': {
+    one: 'One booking ready to review',
+    other: '{count} bookings ready to review',
+  },
+  'book.import.widget.review': 'Review',
+  'book.import.widget.failed': '“{filename}” could not be read',
+  'book.import.widget.stalled': 'This is taking longer than expected',
+  'book.import.widget.check': 'Check again',
+  'book.import.widget.dismiss': 'Dismiss',
+  'book.import.review.title': 'What we read',
+  'book.import.review.from': 'From “{filename}”',
+  'book.import.review.selectAll': 'Select all',
+  'book.import.review.selectNone': 'Select none',
+  'book.import.review.confirm': {
+    one: 'Add {count} booking',
+    other: 'Add {count} bookings',
+  },
+  'book.import.review.confirmNone': 'Select a booking to add',
+  'book.import.review.cancel': 'Cancel',
+  'book.import.review.needsReview': 'Needs a look',
+  'book.import.review.needsReviewHint':
+    'Some fields were not in the document. Open the booking after adding it.',
+  'book.import.review.noPrice': 'No price read',
+  'book.import.review.noPriceHint':
+    'The document did not state one clearly, so it was left empty rather than guessed.',
+  'book.import.review.untitled': 'Untitled booking',
+  'book.import.empty.title': 'We could not find a booking in that file',
+  'book.import.empty.body':
+    '“{filename}” had nothing that looks like a confirmation. Try another file, or add the booking by hand.',
+  'book.import.failed.title': '“{filename}” could not be read',
+  'book.import.failed.body':
+    'The file opened but nothing could be made of it. Try another file, or add the booking by hand.',
+  'book.import.failed.retry': 'Try another file',
+  'book.import.uploadFailed': '“{filename}” did not upload',
+  'book.import.uploadRetry': 'Try again',
+  'book.import.toast.added': {
+    one: 'One booking added',
+    other: '{count} bookings added',
+  },
+  'book.import.partial.title': '{written} of {total} bookings were added',
+  'book.import.partial.body':
+    'The rest are still selected. Adding again writes only those.',
+  'book.import.partial.retry': 'Add the rest',
   'book.journeyLink': 'On the transports tab',
   'filter.all': 'Everything',
   'book.remove.body':

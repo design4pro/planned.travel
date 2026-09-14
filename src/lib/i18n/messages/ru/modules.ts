@@ -143,6 +143,83 @@ const messages = {
   'book.import.badge': 'Непроверенный импорт',
   'book.import.hint':
     'Взято из подтверждения. Откройте и сохраните, чтобы отметить проверенным.',
+  'book.import.action': 'Импорт',
+  'book.import.title': 'Импорт броней из файла',
+  'book.import.description':
+    'Положи сюда подтверждение, и мы его прочитаем. В поездку ничего не попадёт, пока ты сам не посмотришь.',
+  'book.import.drop.idle': 'Положи файлы сюда или выбери их',
+  'book.import.drop.active': 'Отпусти, чтобы добавить',
+  'book.import.drop.formats':
+    'PDF, сохранённое письмо, веб-страница, фото, Word, Excel, файл календаря или выгрузка JSON.',
+  'book.import.drop.limits': 'До {files} файлов за раз, каждый до {size}.',
+  'book.import.drop.browse': 'Выбрать файлы',
+  'book.import.refused.format':
+    '«{filename}» — не тот файл, который этот импорт умеет читать. Он читает PDF, сохранённое письмо, веб-страницу, фото, документ Word или Excel, файл календаря или выгрузку JSON.',
+  'book.import.refused.tooMany':
+    'Только {files} файлов за раз. Остальные не добавлены.',
+  'book.import.refused.tooLarge':
+    '«{filename}» весит {size}. Импорт читает файлы до {limit}.',
+  'book.import.refused.empty': '«{filename}» пуст, читать нечего.',
+  'book.import.ceiling.title':
+    'Это рабочее пространство прочитало все свои подтверждения за этот месяц',
+  'book.import.ceiling.body':
+    'В тариф входит {ceiling} прочтений файлов в месяц, запас обновляется первого числа. Бронь по-прежнему можно добавить вручную.',
+  'book.import.ceiling.none':
+    'Чтение файла с подтверждением не входит в тариф этого рабочего пространства',
+  'book.import.ceiling.noneBody':
+    'Перейди на тариф выше, и подтверждение прочитают за тебя. Добавить бронь вручную можно всегда.',
+  'book.import.widget.title': 'Читаем подтверждения',
+  'book.import.widget.working': 'Прочитано {done} из {total}',
+  'book.import.widget.file': 'Читаем «{filename}»',
+  'book.import.widget.done': {
+    one: 'Одна бронь готова к проверке',
+    few: '{count} брони готовы к проверке',
+    many: '{count} броней готовы к проверке',
+    other: '{count} броней готовы к проверке',
+  },
+  'book.import.widget.review': 'Проверить',
+  'book.import.widget.failed': '«{filename}» прочитать не удалось',
+  'book.import.widget.stalled': 'Это занимает больше времени, чем мы ждали',
+  'book.import.widget.check': 'Проверить снова',
+  'book.import.widget.dismiss': 'Скрыть',
+  'book.import.review.title': 'Что мы прочитали',
+  'book.import.review.from': 'Из «{filename}»',
+  'book.import.review.selectAll': 'Выбрать все',
+  'book.import.review.selectNone': 'Снять выбор',
+  'book.import.review.confirm': {
+    one: 'Добавить {count} бронь',
+    few: 'Добавить {count} брони',
+    many: 'Добавить {count} броней',
+    other: 'Добавить {count} броней',
+  },
+  'book.import.review.confirmNone': 'Выбери бронь, которую добавить',
+  'book.import.review.cancel': 'Отмена',
+  'book.import.review.needsReview': 'Стоит взглянуть',
+  'book.import.review.needsReviewHint':
+    'Части полей в документе не было. Открой бронь после добавления.',
+  'book.import.review.noPrice': 'Цена не прочитана',
+  'book.import.review.noPriceHint':
+    'Документ не называл её внятно, поэтому поле осталось пустым, а не угаданным.',
+  'book.import.review.untitled': 'Бронь без названия',
+  'book.import.empty.title': 'В этом файле мы не нашли брони',
+  'book.import.empty.body':
+    'В «{filename}» не было ничего похожего на подтверждение. Попробуй другой файл или добавь бронь вручную.',
+  'book.import.failed.title': '«{filename}» прочитать не удалось',
+  'book.import.failed.body':
+    'Файл открылся, но собрать из него ничего не вышло. Попробуй другой файл или добавь бронь вручную.',
+  'book.import.failed.retry': 'Попробовать другой файл',
+  'book.import.uploadFailed': '«{filename}» не загрузился',
+  'book.import.uploadRetry': 'Попробовать снова',
+  'book.import.toast.added': {
+    one: 'Добавлена одна бронь',
+    few: 'Добавлено {count} брони',
+    many: 'Добавлено {count} броней',
+    other: 'Добавлено {count} броней',
+  },
+  'book.import.partial.title': 'Добавлено {written} броней из {total}',
+  'book.import.partial.body':
+    'Остальные так и выбраны. Повторное добавление запишет только их.',
+  'book.import.partial.retry': 'Добавить остальные',
   'book.journeyLink': 'На вкладке транспорта',
   'filter.all': 'Всё',
   'book.remove.body':

@@ -137,6 +137,79 @@ const messages = {
   'book.import.badge': 'Ellenőrizetlen import',
   'book.import.hint':
     'Egy visszaigazolásból importálva. Nyisd meg és mentsd el, ezzel ellenőrzöttnek jelölöd.',
+  'book.import.action': 'Importálás',
+  'book.import.title': 'Foglalások importálása fájlból',
+  'book.import.description':
+    'Dobj ide egy visszaigazolást, és elolvassuk. Semmi nem kerül az útra, amíg meg nem nézted.',
+  'book.import.drop.idle': 'Dobd ide a fájlokat, vagy válaszd ki őket',
+  'book.import.drop.active': 'Engedd el, és bekerül',
+  'book.import.drop.formats':
+    'PDF, mentett e-mail, weboldal, fotó, Word, Excel, naptárfájl vagy JSON-export.',
+  'book.import.drop.limits':
+    'Egyszerre legfeljebb {files} fájl, egyenként {size} méretig.',
+  'book.import.drop.browse': 'Fájlok kiválasztása',
+  'book.import.refused.format':
+    'A „{filename}” nem olyan fájl, amit ez az importálás el tud olvasni. PDF-et, mentett e-mailt, weboldalt, fotót, Word- vagy Excel-dokumentumot, naptárfájlt vagy JSON-exportot olvas.',
+  'book.import.refused.tooMany':
+    'Egyszerre csak {files} fájl. A többi nem került be.',
+  'book.import.refused.tooLarge':
+    'A „{filename}” {size}. Az importálás {limit} méretig olvas fájlokat.',
+  'book.import.refused.empty':
+    'A „{filename}” üres, így nincs mit elolvasni rajta.',
+  'book.import.ceiling.title':
+    'Ez a munkatér ebben a hónapban minden visszaigazolását elolvasta',
+  'book.import.ceiling.body':
+    'A csomag {ceiling} fájlolvasást tartalmaz havonta, a keret pedig elsején újraindul. Foglalást kézzel továbbra is hozzáadhatsz.',
+  'book.import.ceiling.none':
+    'A visszaigazolás elolvasása nem része ennek a munkatérnek a csomagjának',
+  'book.import.ceiling.noneBody':
+    'Válts nagyobb csomagra, és elolvassuk helyetted a visszaigazolást. Kézzel bármikor hozzáadhatsz foglalást.',
+  'book.import.widget.title': 'Visszaigazolásokat olvasunk',
+  'book.import.widget.working': '{done} / {total} elolvasva',
+  'book.import.widget.file': 'A „{filename}” olvasása',
+  'book.import.widget.done': {
+    one: 'Egy foglalás áll készen átnézésre',
+    other: '{count} foglalás áll készen átnézésre',
+  },
+  'book.import.widget.review': 'Átnézés',
+  'book.import.widget.failed': 'A „{filename}” nem volt olvasható',
+  'book.import.widget.stalled': 'Ez a várhatónál hosszabb ideig tart',
+  'book.import.widget.check': 'Nézd meg újra',
+  'book.import.widget.dismiss': 'Eltüntetés',
+  'book.import.review.title': 'Amit elolvastunk',
+  'book.import.review.from': 'Innen: „{filename}”',
+  'book.import.review.selectAll': 'Mindet kijelöli',
+  'book.import.review.selectNone': 'Egyiket sem jelöli ki',
+  'book.import.review.confirm': {
+    one: '{count} foglalás hozzáadása',
+    other: '{count} foglalás hozzáadása',
+  },
+  'book.import.review.confirmNone': 'Jelölj ki egy foglalást a hozzáadáshoz',
+  'book.import.review.cancel': 'Mégse',
+  'book.import.review.needsReview': 'Rá kell nézni',
+  'book.import.review.needsReviewHint':
+    'Néhány mező nem volt benne a dokumentumban. Hozzáadás után nyisd meg a foglalást.',
+  'book.import.review.noPrice': 'Ár nem olvasható ki',
+  'book.import.review.noPriceHint':
+    'A dokumentum egyiket sem írta ki tisztán, így üresen maradt, nem tippeltük meg.',
+  'book.import.review.untitled': 'Cím nélküli foglalás',
+  'book.import.empty.title': 'Nem találtunk foglalást abban a fájlban',
+  'book.import.empty.body':
+    'A „{filename}” nem tartalmazott semmit, ami visszaigazolásra hasonlít. Próbálj másik fájlt, vagy add hozzá a foglalást kézzel.',
+  'book.import.failed.title': 'A „{filename}” nem volt olvasható',
+  'book.import.failed.body':
+    'A fájl megnyílt, de semmit nem lehetett kihozni belőle. Próbálj másik fájlt, vagy add hozzá a foglalást kézzel.',
+  'book.import.failed.retry': 'Másik fájl kipróbálása',
+  'book.import.uploadFailed': 'A „{filename}” nem töltődött fel',
+  'book.import.uploadRetry': 'Próbáld újra',
+  'book.import.toast.added': {
+    one: 'Egy foglalás hozzáadva',
+    other: '{count} foglalás hozzáadva',
+  },
+  'book.import.partial.title': '{written} foglalás került be a {total} közül',
+  'book.import.partial.body':
+    'A többi továbbra is ki van jelölve. Az újbóli hozzáadás csak azokat írja be.',
+  'book.import.partial.retry': 'A többi hozzáadása',
   'book.journeyLink': 'A közlekedés fülön',
   'filter.all': 'Minden',
   'book.remove.body':

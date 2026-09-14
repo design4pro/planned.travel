@@ -89,9 +89,22 @@ export type PdfExportPayload = z.infer<typeof pdfExportPayloadSchema>
 export const bookingImportPayloadSchema = z.object({
   tripId: z.string().min(1).max(64),
   requestedBy: z.string().min(1).max(64),
-  /** R2 key in `FILES` holding the uploaded calendar or JSON export. */
+  /** R2 key in `FILES` holding the uploaded calendar, JSON export or document. */
   sourceKey: z.string().min(1).max(1024),
-  format: z.enum(['ics', 'json']),
+  /**
+   * Sanitised filename, as `trip_files.filename` holds it.
+   *
+   * Carried rather than derived, because the content type is not reachable through the port this
+   * envelope's handler holds: `TaskBindings.FILES.get` answers `{ body, size }` and nothing else,
+   * and widening a structural port that every test fake implements is a larger change than one
+   * string. The platform's document conversion dispatches on the extension anyway.
+   */
+  sourceName: z.string().min(1).max(200),
+  /**
+   * One member per *branch*, not per media type: a grammar the deterministic parsers know, or text
+   * a model reads. The conversion's own routing table stays in `src/server/extract/document.ts`.
+   */
+  format: z.enum(['ics', 'json', 'document']),
 })
 
 export type BookingImportPayload = z.infer<typeof bookingImportPayloadSchema>
@@ -430,6 +443,28 @@ export interface TaskBindings extends TaskSecrets {
    * raising {@link TaskConfigurationError} when it is not.
    */
   DB?: D1Database
+  /**
+   * Workers AI, for the one handler that reads a document it has no grammar for.
+   *
+   * Optional and structural for the same two reasons `DB` and `TRIP_ROOM` are. `Ai` is an abstract
+   * class, so a handler typed against it could not be handed a fake — and the seam between a
+   * booking's rules and a non-deterministic model is the one this stage most needed to be able to
+   * test. The real binding satisfies this shape, which is what `taskEnv()` in `../worker.ts`
+   * asserts once for the whole environment.
+   *
+   * These two members are the ports `src/server/extract/document.ts` (`DocumentConverter`) and
+   * `src/server/extract/booking.ts` (`BookingModel`) declare; the three descriptions must move
+   * together. The conversion's answer is typed as the platform types it — a union whose error arm
+   * carries no `data` — rather than as the happy arm alone.
+   */
+  AI?: {
+    toMarkdown: (input: { name: string; blob: Blob }) => Promise<{
+      data?: string
+      format?: string
+      error?: string
+    }>
+    run: (model: string, input: Record<string, unknown>) => Promise<unknown>
+  }
   TRIP_ROOM?: {
     idFromName: (name: string) => DurableObjectId
     get: (id: DurableObjectId) => {

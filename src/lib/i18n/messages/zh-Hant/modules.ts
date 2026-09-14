@@ -128,6 +128,69 @@ const messages = {
   'book.panel.settledEmpty': '還沒有處理好的 — 全都還要跟進。',
   'book.import.badge': '未核對的匯入',
   'book.import.hint': '從確認信匯入。開啟並儲存即標記為已核對。',
+  'book.import.action': '匯入',
+  'book.import.title': '從檔案匯入訂位',
+  'book.import.description':
+    '把確認單放進來，我們替你讀。你看過之前，出行裡不會多出任何東西。',
+  'book.import.drop.idle': '把檔案放在這裡，或自己挑',
+  'book.import.drop.active': '放手就加進來',
+  'book.import.drop.formats':
+    'PDF、存下來的郵件、網頁、照片、Word、Excel、日曆檔或 JSON 匯出。',
+  'book.import.drop.limits': '一次最多 {files} 個檔案，每個不超過 {size}。',
+  'book.import.drop.browse': '挑選檔案',
+  'book.import.refused.format':
+    '「{filename}」不是這次匯入讀得懂的檔案。它讀 PDF、存下來的郵件、網頁、照片、Word 或 Excel 文件、日曆檔、JSON 匯出。',
+  'book.import.refused.tooMany': '一次只能 {files} 個檔案。其餘沒有加進來。',
+  'book.import.refused.tooLarge':
+    '「{filename}」有 {size}。匯入讀得下 {limit} 以內的檔案。',
+  'book.import.refused.empty': '「{filename}」是空的，沒有可讀的內容。',
+  'book.import.ceiling.title': '這個工作區本月的確認單已經讀完了',
+  'book.import.ceiling.body':
+    '方案每月含 {ceiling} 次檔案讀取，額度在每月一日重置。訂位仍然可以手動新增。',
+  'book.import.ceiling.none': '讀取確認單檔案不在這個工作區的方案內',
+  'book.import.ceiling.noneBody':
+    '升級方案就能讓人替你讀確認單。手動新增訂位隨時都在。',
+  'book.import.widget.title': '正在讀確認單',
+  'book.import.widget.working': '已讀 {total} 份中的 {done} 份',
+  'book.import.widget.file': '正在讀「{filename}」',
+  'book.import.widget.done': {
+    other: '{count} 筆訂位等你過目',
+  },
+  'book.import.widget.review': '過目',
+  'book.import.widget.failed': '「{filename}」讀不出來',
+  'book.import.widget.stalled': '這比預想的久',
+  'book.import.widget.check': '再看一次',
+  'book.import.widget.dismiss': '關掉',
+  'book.import.review.title': '我們讀到的內容',
+  'book.import.review.from': '來自「{filename}」',
+  'book.import.review.selectAll': '全選',
+  'book.import.review.selectNone': '全不選',
+  'book.import.review.confirm': {
+    other: '新增 {count} 筆訂位',
+  },
+  'book.import.review.confirmNone': '選一筆訂位再新增',
+  'book.import.review.cancel': '取消',
+  'book.import.review.needsReview': '需要看一眼',
+  'book.import.review.needsReviewHint':
+    '有幾個欄位文件裡沒有。新增之後把這筆訂位打開看看。',
+  'book.import.review.noPrice': '沒讀到金額',
+  'book.import.review.noPriceHint': '文件沒有寫清楚，所以留空而不是猜一個。',
+  'book.import.review.untitled': '沒有名稱的訂位',
+  'book.import.empty.title': '那個檔案裡找不到訂位',
+  'book.import.empty.body':
+    '「{filename}」裡沒有像確認單的內容。換個檔案，或者手動新增訂位。',
+  'book.import.failed.title': '「{filename}」讀不出來',
+  'book.import.failed.body':
+    '檔案打開了，但沒能從裡面讀出什麼。換個檔案，或者手動新增訂位。',
+  'book.import.failed.retry': '換個檔案試試',
+  'book.import.uploadFailed': '「{filename}」沒有上傳成功',
+  'book.import.uploadRetry': '再試一次',
+  'book.import.toast.added': {
+    other: '已新增 {count} 筆訂位',
+  },
+  'book.import.partial.title': '{total} 筆訂位裡新增了 {written} 筆',
+  'book.import.partial.body': '其餘還是選取的。再新增一次只會寫這些。',
+  'book.import.partial.retry': '把其餘的加上',
   'book.journeyLink': '在交通標籤頁',
   'filter.all': '全部',
   'book.remove.body':
