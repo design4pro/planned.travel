@@ -78,9 +78,13 @@ import {
  * being watched, and its exceptions land in that route's reading. Reading them
  * there is worse than not reading them - it names the wrong screen. The first
  * version of this walk shared a page and failed on `/forgot-password` with
- * WebKit's "Cannot clear timer: timer created with requestIdleCallback() but
- * cleared with clearTimeout()", thrown by `@radix-ui/react-password-toggle-field`
- * tearing down the field on `/login`, one route earlier. A fresh page is what the
+ * "Cannot clear timer: timer created with requestIdleCallback() but cleared with
+ * clearTimeout()", raised while `@radix-ui/react-password-toggle-field` tore down
+ * the field on `/login`, one route earlier. (The sentence turned out to be
+ * Playwright's fake clock rather than WebKit, and on Chromium it was caught being
+ * provoked by Sentry Replay rather than by Radix — most likely the same here; it is
+ * tolerated for that reason in `TOLERATED_PAGE_ERRORS`, and the lesson about the
+ * wrong screen stands for every exception that is not.) A fresh page is what the
  * fourteen separate declarations gave for free, and it is the only part of them
  * worth keeping.
  */
