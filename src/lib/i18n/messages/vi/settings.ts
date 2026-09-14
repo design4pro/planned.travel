@@ -273,6 +273,12 @@ const messages = {
   'notifications.event.organization.invited.hint':
     'Bạn được mời vào một không gian làm việc.',
 
+  'notifications.event.billing.plan_changed': 'Thay đổi gói đăng ký',
+  'notifications.event.billing.plan_changed.hint': 'Không gian làm việc của bạn chuyển sang gói khác.',
+  'notifications.event.billing.invoice_paid': 'Biên nhận thanh toán',
+  'notifications.event.billing.invoice_paid.hint': 'Một hoá đơn của không gian làm việc đã được thanh toán.',
+  'notifications.event.billing.payment_failed': 'Sự cố thanh toán',
+  'notifications.event.billing.payment_failed.hint': 'Một khoản thu cho không gian làm việc không thành công.',
   'workspace.error': 'Không gian làm việc chưa tải được',
   'workspace.summary.description': 'Gói {plan} · tạo ngày {date}',
   'workspace.summary.createdRecently': 'gần đây',

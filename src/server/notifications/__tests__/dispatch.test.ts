@@ -10,6 +10,7 @@
  */
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ZodError } from 'zod'
 
 import { createLogger, createMemorySink } from '#/server/observability'
 import { NotFoundError } from '#/server/repos/context'
@@ -588,5 +589,63 @@ describe('dispatch', () => {
 
     expect(await notificationsRepository.count(beta.scope)).toBe(0)
     expect(await notificationsRepository.count(alpha.scope)).toBe(0)
+  })
+
+  /**
+   * The workspace half of the union (#304). A billing event has no trip, so its recipients come
+   * from `member` rather than `trip_members` — and from the part of it that can act on a plan
+   * change or a failed charge.
+   */
+  describe('an organization-scoped event', () => {
+    function billingEvent(over: Record<string, unknown> = {}) {
+      return {
+        kind: 'billing.plan_changed',
+        entityType: 'subscription',
+        entityId: 'evt_1',
+        scope: 'organization' as const,
+        titleParams: { organizationName: 'Workspace alpha', plan: 'Crew' },
+        bodyParams: { organizationName: 'Workspace alpha', plan: 'Crew' },
+        ...over,
+      }
+    }
+
+    it('reaches the workspace’s owners and admins, and no plain member', async () => {
+      const adminId = await alpha.tenant.addUser('Admin alpha', 'admin')
+      await alpha.tenant.addUser('Plain alpha')
+
+      const result = await dispatch(alpha.scope, billingEvent(), {
+        queue: null,
+      })
+
+      expect([...result.recipients].sort()).toEqual(
+        [alpha.ownerId, adminId].sort(),
+      )
+      expect(result.inAppWritten).toBe(2)
+    })
+
+    it('does not reach a trip member who is not in the workspace’s leadership', async () => {
+      // `otherId` is a `trip_members` row on alpha's trip and a plain `member` of the workspace —
+      // exactly the person the trip branch would have included and this branch must not.
+      const result = await dispatch(alpha.scope, billingEvent(), {
+        queue: null,
+      })
+
+      expect(result.recipients).not.toContain(alpha.otherId)
+    })
+
+    it('refuses a workspace event that carries a trip', async () => {
+      // Strict on both halves: mixing the shapes is a parse error, never a silently ignored field.
+      await expect(
+        dispatch(alpha.scope, billingEvent({ tripId: alpha.tripId }), {
+          queue: null,
+        }),
+      ).rejects.toBeInstanceOf(ZodError)
+    })
+
+    it('refuses a trip event that carries no trip', async () => {
+      await expect(
+        dispatch(alpha.scope, billingEvent({ scope: 'trip' }), { queue: null }),
+      ).rejects.toBeInstanceOf(ZodError)
+    })
   })
 })

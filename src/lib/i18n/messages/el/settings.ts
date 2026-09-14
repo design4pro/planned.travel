@@ -266,6 +266,13 @@ const messages = {
   'notifications.event.organization.invited.hint':
     'Σας προσκαλούν σε χώρο εργασίας.',
 
+  'notifications.event.billing.plan_changed': 'Αλλαγές συνδρομής',
+  'notifications.event.billing.plan_changed.hint': 'Ο χώρος εργασίας σας αλλάζει πλάνο.',
+  'notifications.event.billing.invoice_paid': 'Αποδείξεις πληρωμής',
+  'notifications.event.billing.invoice_paid.hint': 'Εξοφλήθηκε τιμολόγιο του χώρου εργασίας σας.',
+  'notifications.event.billing.payment_failed': 'Προβλήματα πληρωμής',
+  'notifications.event.billing.payment_failed.hint': 'Μια χρέωση του χώρου εργασίας σας δεν ολοκληρώθηκε.',
+
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'Ο χώρος εργασίας δεν φόρτωσε',
   'workspace.summary.description': 'Πλάνο {plan} · δημιουργήθηκε {date}',

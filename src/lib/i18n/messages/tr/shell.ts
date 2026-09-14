@@ -184,6 +184,10 @@ const messages = {
   'notification.billing.plan_changed.title': 'Paketiniz değişti',
   'notification.billing.plan_changed.body':
     '{organizationName} artık {plan} paketinde.',
+  'notification.billing.invoice_paid.title': 'Ödeme alındı',
+  'notification.billing.invoice_paid.body': '{organizationName} için son fatura ödendi.',
+  'notification.billing.payment_failed.title': 'Bir ödeme gerçekleşmedi',
+  'notification.billing.payment_failed.body': '{organizationName} için gecikmiş bir ödeme var. Paketi korumak için ödeme yöntemini güncelleyin.',
   'notification.fallback.title': 'Çalışma alanınızda bir şey değişti',
   'notification.fallback.body': 'Ne olduğunu görmek için geziyi açın.',
 

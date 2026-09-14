@@ -185,6 +185,10 @@ const messages = {
   'notification.billing.plan_changed.title': 'Votre formule a changé',
   'notification.billing.plan_changed.body':
     '{organizationName} est maintenant sur la formule {plan}.',
+  'notification.billing.invoice_paid.title': 'Paiement reçu',
+  'notification.billing.invoice_paid.body': 'La dernière facture de {organizationName} est réglée.',
+  'notification.billing.payment_failed.title': 'Un paiement a échoué',
+  'notification.billing.payment_failed.body': '{organizationName} a un paiement en retard. Mettez à jour le moyen de paiement pour conserver la formule.',
   'notification.fallback.title':
     'Quelque chose a changé dans votre espace de travail',
   'notification.fallback.body': 'Ouvrez le voyage pour voir quoi.',

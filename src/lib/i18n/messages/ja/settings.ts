@@ -249,6 +249,12 @@ const messages = {
   'notifications.event.organization.invited': 'ワークスペースへの招待',
   'notifications.event.organization.invited.hint':
     'ワークスペースに招待されたとき。',
+  'notifications.event.billing.plan_changed': 'プランの変更',
+  'notifications.event.billing.plan_changed.hint': 'ワークスペースのプランが変わったとき。',
+  'notifications.event.billing.invoice_paid': '支払いの領収',
+  'notifications.event.billing.invoice_paid.hint': 'ワークスペースの請求書が支払われたとき。',
+  'notifications.event.billing.payment_failed': '支払いの問題',
+  'notifications.event.billing.payment_failed.hint': 'ワークスペースの請求が失敗したとき。',
   'workspace.error': 'ワークスペースを読み込めませんでした',
   'workspace.summary.description': '{plan}プラン · {date}作成',
   'workspace.summary.createdRecently': '最近',

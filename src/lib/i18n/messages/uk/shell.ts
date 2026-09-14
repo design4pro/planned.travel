@@ -196,6 +196,10 @@ const messages = {
   'notification.billing.plan_changed.title': 'Тариф змінився',
   'notification.billing.plan_changed.body':
     'У {organizationName} тепер тариф {plan}.',
+  'notification.billing.invoice_paid.title': 'Платіж отримано',
+  'notification.billing.invoice_paid.body': 'Останній рахунок для {organizationName} оплачено.',
+  'notification.billing.payment_failed.title': 'Платіж не пройшов',
+  'notification.billing.payment_failed.body': 'У {organizationName} є прострочений платіж. Оновіть спосіб оплати, щоб зберегти тариф.',
   'notification.fallback.title': 'У вашому просторі щось змінилося',
   'notification.fallback.body': 'Відкрийте поїздку й подивіться, що саме.',
 

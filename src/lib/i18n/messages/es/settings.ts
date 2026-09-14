@@ -272,6 +272,13 @@ const messages = {
   'notifications.event.organization.invited.hint':
     'Te invitan a un espacio de trabajo.',
 
+  'notifications.event.billing.plan_changed': 'Cambios de suscripción',
+  'notifications.event.billing.plan_changed.hint': 'Tu espacio de trabajo cambia de plan.',
+  'notifications.event.billing.invoice_paid': 'Recibos de pago',
+  'notifications.event.billing.invoice_paid.hint': 'Se ha pagado una factura de tu espacio de trabajo.',
+  'notifications.event.billing.payment_failed': 'Problemas de pago',
+  'notifications.event.billing.payment_failed.hint': 'Un cobro de tu espacio de trabajo no se ha completado.',
+
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'El espacio de trabajo no se ha cargado',
   'workspace.summary.description': 'Plan {plan} · creado el {date}',

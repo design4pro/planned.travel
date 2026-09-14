@@ -274,6 +274,13 @@ const messages = {
   'notifications.event.organization.invited.hint':
     'Du wirst in einen Arbeitsbereich eingeladen.',
 
+  'notifications.event.billing.plan_changed': 'Abo-Änderungen',
+  'notifications.event.billing.plan_changed.hint': 'Dein Arbeitsbereich wechselt den Tarif.',
+  'notifications.event.billing.invoice_paid': 'Zahlungsbelege',
+  'notifications.event.billing.invoice_paid.hint': 'Eine Rechnung deines Arbeitsbereichs wurde bezahlt.',
+  'notifications.event.billing.payment_failed': 'Zahlungsprobleme',
+  'notifications.event.billing.payment_failed.hint': 'Eine Abbuchung für deinen Arbeitsbereich ist fehlgeschlagen.',
+
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'Der Arbeitsbereich wurde nicht geladen',
   'workspace.summary.description': 'Tarif {plan} · angelegt {date}',

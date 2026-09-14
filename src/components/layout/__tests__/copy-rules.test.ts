@@ -308,6 +308,8 @@ const STORED_EVENTS = [
   'organization.invited',
   'journey.published',
   'billing.plan_changed',
+  'billing.invoice_paid',
+  'billing.payment_failed',
   'trip.copied',
   'trip.copyFailed',
 ]

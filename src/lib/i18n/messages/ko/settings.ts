@@ -236,6 +236,12 @@ const messages = {
   'notifications.event.organization.invited': '워크스페이스 초대',
   'notifications.event.organization.invited.hint':
     '워크스페이스에 초대받았을 때.',
+  'notifications.event.billing.plan_changed': '구독 변경',
+  'notifications.event.billing.plan_changed.hint': '워크스페이스가 다른 플랜으로 바뀔 때.',
+  'notifications.event.billing.invoice_paid': '결제 영수증',
+  'notifications.event.billing.invoice_paid.hint': '워크스페이스 청구서가 결제됐을 때.',
+  'notifications.event.billing.payment_failed': '결제 문제',
+  'notifications.event.billing.payment_failed.hint': '워크스페이스 청구가 실패했을 때.',
   'workspace.error': '워크스페이스를 불러오지 못했어요',
   'workspace.summary.description': '{plan} 플랜 · {date} 생성',
   'workspace.summary.createdRecently': '최근',

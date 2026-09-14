@@ -203,6 +203,10 @@ const messages = {
   'notification.billing.plan_changed.title': 'Zmiana planu',
   'notification.billing.plan_changed.body':
     '{organizationName} korzysta teraz z planu {plan}.',
+  'notification.billing.invoice_paid.title': 'Płatność zaksięgowana',
+  'notification.billing.invoice_paid.body': 'Ostatnia faktura dla {organizationName} została opłacona.',
+  'notification.billing.payment_failed.title': 'Płatność się nie powiodła',
+  'notification.billing.payment_failed.body': '{organizationName} ma zaległą płatność. Zaktualizuj metodę płatności, aby zachować plan.',
   'notification.fallback.title': 'Coś się zmieniło w Twojej przestrzeni',
   'notification.fallback.body': 'Otwórz wyjazd, aby zobaczyć co.',
 

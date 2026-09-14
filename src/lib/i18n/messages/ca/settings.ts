@@ -272,6 +272,13 @@ const messages = {
   'notifications.event.organization.invited.hint':
     'Et conviden a un espai de treball.',
 
+  'notifications.event.billing.plan_changed': 'Canvis de subscripció',
+  'notifications.event.billing.plan_changed.hint': 'El teu espai de treball canvia de pla.',
+  'notifications.event.billing.invoice_paid': 'Rebuts de pagament',
+  'notifications.event.billing.invoice_paid.hint': 'S’ha pagat una factura del teu espai de treball.',
+  'notifications.event.billing.payment_failed': 'Problemes de pagament',
+  'notifications.event.billing.payment_failed.hint': 'Un càrrec del teu espai de treball no s’ha pogut fer.',
+
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'L’espai de treball no s’ha carregat',
   'workspace.summary.description': 'Pla {plan} · creat {date}',

@@ -319,6 +319,13 @@ const messages = {
   'notifications.event.organization.invited.hint':
     'You are invited into a workspace.',
 
+  'notifications.event.billing.plan_changed': 'Subscription changes',
+  'notifications.event.billing.plan_changed.hint': 'Your workspace moves to a different plan.',
+  'notifications.event.billing.invoice_paid': 'Payment receipts',
+  'notifications.event.billing.invoice_paid.hint': 'An invoice for your workspace has been paid.',
+  'notifications.event.billing.payment_failed': 'Payment problems',
+  'notifications.event.billing.payment_failed.hint': 'A charge for your workspace did not go through.',
+
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'The workspace did not load',
   /** `{plan}` is the catalogue plan's own name; `{date}` is already formatted. */

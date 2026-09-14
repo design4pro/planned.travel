@@ -142,6 +142,7 @@ import {
 } from '../members'
 import {
   filterEnabledRecipients,
+  listForEntity,
   listNotifications,
   markRead,
   notificationPreferencesRepository,
@@ -3408,9 +3409,9 @@ describe('tenant isolation', () => {
       it('counts none of a foreign trip’s people through tripMemberUserIds', async () => {
         // The projection `readTripForDelete` reads the delete dialog's member count off. An
         // unscoped one would hand A both how many people are on B's trip and who they are.
-        expect(await tripMemberUserIds(alpha.tenant.scope, beta.tripId)).toEqual(
-          [],
-        )
+        expect(
+          await tripMemberUserIds(alpha.tenant.scope, beta.tripId),
+        ).toEqual([])
       })
 
       it('refuses both membership writes on a foreign membership row, and leaves it standing', async () => {
@@ -3967,6 +3968,57 @@ describe('tenant isolation', () => {
         alpha.tripId,
       )
       expect(alphaRecords[0].sortOrder).toBe(0.5)
+    })
+  })
+
+  /**
+   * The workspace-scoped branch of `dispatch` (#304).
+   *
+   * The trip branch has `requireTrip` in front of it; this one cannot — a billing event names no
+   * trip — so the whole boundary is the tenant filter, on the `listMembers` read that derives the
+   * recipients and on the insert that writes their rows. Both halves are asserted from B.
+   */
+  describe('a workspace-scoped billing dispatch', () => {
+    const BILLING_EVENT_ID = 'evt_billing_isolation'
+
+    const billingEvent = () => ({
+      kind: 'billing.plan_changed',
+      entityType: 'subscription',
+      entityId: BILLING_EVENT_ID,
+      scope: 'organization' as const,
+      titleParams: { organizationName: 'Workspace A', plan: 'Crew' },
+      bodyParams: { organizationName: 'Workspace A', plan: 'Crew' },
+    })
+
+    it('reaches only A’s own leadership and leaves nothing B can read', async () => {
+      const before = await notificationsRepository.count(beta.tenant.scope)
+
+      const result = await dispatch(alpha.tenant.scope, billingEvent(), {
+        queue: null,
+      })
+
+      // The seed gives each workspace one `owner` and one plain `member`, so the derivation is
+      // observable: the owner is in and the member is out, from A's `member` rows alone.
+      expect(result.recipients).toEqual([alpha.tenant.ownerUserId])
+      expect(result.inAppWritten).toBe(1)
+
+      expect(await notificationsRepository.count(beta.tenant.scope)).toBe(
+        before,
+      )
+      expect(
+        await listForEntity(
+          beta.tenant.scope,
+          'subscription',
+          BILLING_EVENT_ID,
+        ),
+      ).toEqual([])
+      expect(
+        await listForEntity(
+          alpha.tenant.scope,
+          'subscription',
+          BILLING_EVENT_ID,
+        ),
+      ).toHaveLength(1)
     })
   })
 })
