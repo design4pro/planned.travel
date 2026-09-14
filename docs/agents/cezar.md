@@ -55,18 +55,19 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
 
     ```bash
     jq -r --slurpfile a .ai/cezar/automations.json '$a[0].automations as $d | .states | to_entries[]
-      | . as $e | ($d[] | select(.id == $e.key) | .name) as $n
+      | . as $e | (first($d[] | select(.id == $e.key) | .name) // "?") as $n
       | "\($n) \($e.key) cursor=\($e.value.cursor.timestamp) frozen=\($e.value.frozenHighWatermark.timestamp // "-") exhausted=\($e.value.widenExhaustedAt.timestamp // "-")"' \
       .ai/cezar/automation-state.json
     ```
 
+    A `?` name is state left behind by an automation that no longer exists in `automations.json`.
     A `cursor` that stays behind a label you applied for more than one interval is a pin; `frozen`
     alone is not, since any truncated poll sets it, including one that advanced. `exhausted` means
     the ladder reached 100 at that cursor and gave up until the cursor moves: the band is wider
     than the search API pages. Recovery, in order: rerun the host-patch script, because a reinstall
     or a collected npx cache drops patch 6 without a word and brings the pin back; if the cursor
     still does not move, re-baseline the automation with
-    `curl -X POST http://localhost:4321/api/v1/p/planned-travel/automations/<id>/enable`, which
+    `curl -X POST "${CEZ_API:-http://localhost:4321}/api/v1/p/${CEZ_PROJECT:-planned-travel}/automations/<id>/enable"`, which
     moves `baselineAt` and the cursor to now. A baseline launches nothing from before it, so every
     issue labelled between the pinned cursor and the baseline is re-triggered by hand: remove the
     label and add it again.
