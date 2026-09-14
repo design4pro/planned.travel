@@ -410,9 +410,11 @@ describe('who may write the plan', () => {
     expect((error as RepositoryError).code).toBe('NOT_FOUND')
   })
 
-  it('tells an editor of an archived trip it is the archive, not their role', async () => {
+  it('tells a viewer of an archived trip it is the archive, not their role', async () => {
+    // A viewer, because an editor passes the role check either way: only a caller
+    // both checks would refuse tells which of the two runs first.
     await archiveTrip(owner, fixture.tripId)
-    stubs.scope = editor
+    stubs.scope = viewer
 
     const error = await captureError(() =>
       inRequest(() =>

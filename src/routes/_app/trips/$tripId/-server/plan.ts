@@ -9,7 +9,8 @@
  * rail and on the map, and sending it three times is three chances for the three
  * copies to disagree.
  *
- * Every write is one repository call behind a Zod boundary, and the arrangement
+ * Every write is one repository call behind a Zod boundary and the guards that
+ * decide whether this caller may make it on this trip, and the arrangement
  * writes touch only the columns that say where a row sits: `day_assignments.day_id`
  * and `order_index`, and — since the day became one sequence rather than two lists
  * (PRD #104 decision 9) — `day_notes.sort_order` beside them, as one number line.
@@ -280,9 +281,11 @@ async function requireEditablePlan(
  *
  * The client's `tripId` only names the trip the role is checked on; the row is
  * addressed by its own id, and the repositories scope that id to the workspace, not
- * to a trip. Without this, a caller who owns any trip could name it and write a
- * place of a trip they only read — or cannot see at all. Not-found rather than
- * forbidden, so the answer says nothing about a trip the caller was never shown.
+ * to a trip. Without this, a caller who owns or edits any trip could name it and
+ * write a place of a trip they only read — or cannot see at all. Not-found rather
+ * than forbidden, so the answer says nothing about a trip the caller was never
+ * shown. `day-notes.ts` reaches the same end the other way round, reading the row
+ * first and guarding the trip it names; either order refuses the same calls.
  */
 async function requirePlaceOfPlan(
   scope: TenantScope,
@@ -295,7 +298,12 @@ async function requirePlaceOfPlan(
   }
 }
 
-/** A stop of the checked trip, or `NotFoundError` — {@link requirePlaceOfPlan}, for a stop. */
+/**
+ * A stop of the checked trip, or `NotFoundError` — {@link requirePlaceOfPlan}, for a stop.
+ *
+ * Read through the trip's stop list, which the repositories already export, rather
+ * than a new single-row getter that would be a repository surface of its own.
+ */
 async function requireStopOfPlan(
   scope: TenantScope,
   trip: Trip,
@@ -303,7 +311,7 @@ async function requireStopOfPlan(
 ): Promise<void> {
   const stops = await listTripAssignments(scope, trip.id)
   if (!stops.some((stop) => stop.id === assignmentId)) {
-    throw new NotFoundError('stop', assignmentId)
+    throw new NotFoundError('day assignment', assignmentId)
   }
 }
 
