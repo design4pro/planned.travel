@@ -11,6 +11,7 @@ import { DAY_NOTE_ICONS } from '#/components/planner/types'
 import { dayNotes, days } from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
 import { NotFoundError } from './context'
+import { unlinkTransportsFromDays } from './transports'
 import {
   dateSchema,
   definedOnly,
@@ -153,6 +154,8 @@ export async function deleteDay(
   dayId: string,
 ): Promise<void> {
   const day = await daysRepository.requireById(scope, dayId)
+  // Before the delete, not after: the deployed `arrival_day_id` constraint refuses it otherwise.
+  await unlinkTransportsFromDays(scope, [dayId])
   await daysRepository.requireRemove(scope, dayId)
   // Close the gap so day numbers stay contiguous.
   await scope.db
@@ -201,13 +204,9 @@ export async function syncTripDays(
 
   const surplus = existing.slice(wanted.length)
   if (surplus.length > 0) {
-    await daysRepository.removeWhere(
-      scope,
-      inArray(
-        days.id,
-        surplus.map((day) => day.id),
-      ),
-    )
+    const surplusIds = surplus.map((day) => day.id)
+    await unlinkTransportsFromDays(scope, surplusIds)
+    await daysRepository.removeWhere(scope, inArray(days.id, surplusIds))
   }
 
   const kept = existing.slice(0, wanted.length)
