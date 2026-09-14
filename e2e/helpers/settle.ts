@@ -78,6 +78,21 @@ export const FROZEN_NOW = '2026-06-15T12:00:00.000Z'
  */
 export const MAP_READY_TIMEOUT_MS = 15_000
 
+/**
+ * How long a route that mounts a live map gets for React to claim its tree.
+ *
+ * Every other route hydrates inside Playwright's flat `actionTimeout` (10 s in
+ * `playwright.config.ts`). `/atlas` did not, on the 2-vCPU CI runner: MAP-05
+ * failed there with the page rendered and the hydration wait out of time
+ * (issue #477, run 34760110795). The extra budget is named on the routes that
+ * showed the cost rather than absorbed by a suite-wide raise, which would hide
+ * a slow-hydration regression on every other screen - the argument
+ * `ATLAS_JOURNEY_TIMEOUT_MS` makes in `journeys.spec.ts`.
+ *
+ * A ceiling, not an expectation: a page that hydrates waits for none of it.
+ */
+const MAP_HYDRATION_TIMEOUT_MS = 20_000
+
 /** What the page says about its maps at the moment the census was taken. */
 export type MapCensus = {
   readonly total: number
@@ -422,7 +437,9 @@ async function hideDevChrome(page: Page): Promise<void> {
 async function settleOnce(page: Page, route: RouteCase): Promise<void> {
   await page.locator(route.ready).first().waitFor({ state: 'visible' })
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
-  await page.waitForFunction(hydratedIn, route.ready)
+  await page.waitForFunction(hydratedIn, route.ready, {
+    timeout: route.map === true ? MAP_HYDRATION_TIMEOUT_MS : undefined,
+  })
   await settleMutations(page)
   // Missing/broken images resolve too — that is a different test's job to fail
   // on, not this one's to hang on.
