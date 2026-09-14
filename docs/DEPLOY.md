@@ -208,10 +208,38 @@ screens keep working. The connection search is the exception — its stop picker
 because a timetable router is asked _where_ and free text carries no coordinates — so an empty
 table means that one feature can never resolve a stop.
 
+It is also not a loud failure when a _refreshed_ artefact never reached a database: the previous
+cut stays in place and answers, so nothing errors and the type-ahead simply serves last month's
+airports. The artefact's manifest line carries the count it should be (`rows=9057`), so ask the
+database whether it agrees rather than reading a number off a screen:
+
 ```bash
-pnpm exec wrangler d1 execute planned-travel-db --remote \
-  --command "select count(*) from airports;"   # 9057 for the committed artefact
+node scripts/seed/airports.mjs --verify --remote                  # production
+node scripts/seed/airports.mjs --verify --remote --env staging    # staging
+node scripts/seed/airports.mjs --verify --local                   # a checkout
 ```
+
+It prints the count and exits `0` when the database holds exactly the airports the committed
+artefact carries, and exits `1` naming both numbers when it does not. A direct load
+(`pnpm db:airports:*`) runs the same check on its own way out, so only a database loaded some
+other way needs the command by hand.
+
+> **Outstanding:** the deploy workflows do not run `--verify` yet. They generate the SQL with
+> `--sql-out` and apply it through `wrangler-action`, so only that second step reaches the
+> database and the check needs a step of its own between "Apply the airport catalogue" and
+> "Deploy Worker" in both `.github/workflows/deploy.yml` and `.github/workflows/deploy-staging.yml`:
+>
+> ```yaml
+> - name: Verify the airport catalogue
+>   if: steps.gate.outputs.configured == 'true'
+>   env:
+>     CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+>     CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+>   run: node scripts/seed/airports.mjs --verify --remote
+> ```
+>
+> (`--verify --remote --env staging` in the staging workflow.) Until that lands, a deploy whose
+> catalogue load silently did nothing is still only visible by running the command above.
 
 You should see **62 domain tables + 9 Better Auth tables** (`user`, `session`, `account`,
 `verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). Both numbers are
