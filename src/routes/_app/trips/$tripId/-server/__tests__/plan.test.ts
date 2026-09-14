@@ -335,6 +335,97 @@ describe('who may write the plan', () => {
     expect(await planState()).toEqual(before)
   })
 
+  it('refuses a write that names a trip of the caller’s own to reach this one, and changes nothing', async () => {
+    // Anyone in the workspace may start a trip and own it, so the role checked on the
+    // named trip proves nothing about the rows the call addresses.
+    const own = await createTrip(viewer, {
+      title: 'My own weekend',
+      startDate: '2026-11-01',
+      endDate: '2026-11-02',
+    })
+    const before = await planState()
+    stubs.scope = viewer
+
+    const attempts: ReadonlyArray<() => Promise<unknown>> = [
+      () =>
+        unschedulePlaceFn({
+          data: { tripId: own.id, assignmentId: fixture.stopId },
+        }),
+      () =>
+        updateStopFn({
+          data: {
+            tripId: own.id,
+            assignmentId: fixture.stopId,
+            startTime: '19:00',
+            endTime: '',
+            durationMinutes: 0,
+            notes: 'Rewritten from next door.',
+            reservationStatus: 'none',
+          },
+        }),
+      () =>
+        updatePlanPlaceFn({
+          data: {
+            tripId: own.id,
+            placeId: fixture.operaId,
+            name: 'Renamed from next door',
+            ...blankPlace,
+            isVisited: true,
+          },
+        }),
+      () =>
+        deletePlanPlaceFn({
+          data: { tripId: own.id, placeId: fixture.operaId },
+        }),
+    ]
+    for (const attempt of attempts) {
+      const error = await captureError(() => inRequest(attempt))
+      expect(error).toBeInstanceOf(RepositoryError)
+      expect((error as RepositoryError).code).toBe('NOT_FOUND')
+    }
+
+    // A ranking carrying another trip's ids ranks none of them. It is not refused,
+    // as a stale tab's ranking is not, so what it did is read from `sortOrder` below.
+    await inRequest(() =>
+      rankIdeasFn({
+        data: { tripId: own.id, placeIds: [fixture.cafeId, fixture.operaId] },
+      }),
+    )
+
+    expect(await planState()).toEqual(before)
+  })
+
+  it('tells a stranger the trip is not found before it tells them anything else', async () => {
+    stubs.scope = stranger
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        deletePlanPlaceFn({
+          data: { tripId: fixture.tripId, placeId: fixture.operaId },
+        }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(RepositoryError)
+    expect((error as RepositoryError).code).toBe('NOT_FOUND')
+  })
+
+  it('tells an editor of an archived trip it is the archive, not their role', async () => {
+    await archiveTrip(owner, fixture.tripId)
+    stubs.scope = editor
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        deletePlanPlaceFn({
+          data: { tripId: fixture.tripId, placeId: fixture.operaId },
+        }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(RepositoryError)
+    expect((error as RepositoryError).code).toBe('TRIP_ARCHIVED')
+  })
+
   it('still lets an editor write the plan', async () => {
     stubs.scope = editor
 

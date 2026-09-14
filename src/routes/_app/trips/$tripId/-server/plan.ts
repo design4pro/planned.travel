@@ -22,11 +22,13 @@ import { z } from 'zod'
 
 import { RESERVATION_STATUSES } from '#/server/db/schema'
 import {
+  NotFoundError,
   assertTripRole,
   createAssignment,
   createPlace,
   deleteAssignment,
   deletePlace,
+  getPlace,
   getTripItinerary,
   listCategories,
   listDayAssignments,
@@ -250,10 +252,6 @@ export async function readPlanBoard(
 }
 
 /* -------------------------------------------------------------------------------------------------
- * Reordering
- * ---------------------------------------------------------------------------------------------- */
-
-/* -------------------------------------------------------------------------------------------------
  * Guard
  * ---------------------------------------------------------------------------------------------- */
 
@@ -276,6 +274,42 @@ async function requireEditablePlan(
   await assertTripRole(scope, trip.id, ['owner', 'editor'])
   return trip
 }
+
+/**
+ * A place of the trip {@link requireEditablePlan} checked, or `NotFoundError`.
+ *
+ * The client's `tripId` only names the trip the role is checked on; the row is
+ * addressed by its own id, and the repositories scope that id to the workspace, not
+ * to a trip. Without this, a caller who owns any trip could name it and write a
+ * place of a trip they only read — or cannot see at all. Not-found rather than
+ * forbidden, so the answer says nothing about a trip the caller was never shown.
+ */
+async function requirePlaceOfPlan(
+  scope: TenantScope,
+  trip: Trip,
+  placeId: string,
+): Promise<void> {
+  const place = await getPlace(scope, placeId)
+  if (place === null || place.tripId !== trip.id) {
+    throw new NotFoundError('place', placeId)
+  }
+}
+
+/** A stop of the checked trip, or `NotFoundError` — {@link requirePlaceOfPlan}, for a stop. */
+async function requireStopOfPlan(
+  scope: TenantScope,
+  trip: Trip,
+  assignmentId: string,
+): Promise<void> {
+  const stops = await listTripAssignments(scope, trip.id)
+  if (!stops.some((stop) => stop.id === assignmentId)) {
+    throw new NotFoundError('stop', assignmentId)
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Reordering
+ * ---------------------------------------------------------------------------------------------- */
 
 /**
  * Tells the trip room that these days were rearranged: one `day` upsert each,
@@ -489,21 +523,35 @@ export const unschedulePlaceFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId: id, assignmentId: id }))
   .handler(async ({ data }): Promise<{ readonly removed: true }> => {
     const scope = await appScope()
-    await requireEditablePlan(scope, data.tripId)
+    const trip = await requireEditablePlan(scope, data.tripId)
+    await requireStopOfPlan(scope, trip, data.assignmentId)
     await deleteAssignment(scope, data.assignmentId)
     return { removed: true }
   })
 
-/** Re-ranks the ideas column, which is `places.sort_order` and nothing else. */
+/**
+ * Re-ranks the ideas column, which is `places.sort_order` and nothing else.
+ *
+ * Ids of another trip are dropped, as {@link reorderPlanFn} drops them: `reorderPlaces`
+ * scopes to the workspace only, so the trip the role was checked on is the filter.
+ */
 export const rankIdeasFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId: id, placeIds: z.array(id).min(1).max(500) }))
   .handler(async ({ data }): Promise<{ readonly ranked: number }> => {
     const scope = await appScope()
-    await requireEditablePlan(scope, data.tripId)
-    const ranked = await reorderPlaces(
-      scope,
-      data.placeIds.map((placeId, index) => ({ placeId, sortOrder: index })),
+    const trip = await requireEditablePlan(scope, data.tripId)
+    const own = new Set(
+      (await listTripPlaces(scope, { tripId: trip.id })).map(
+        (place) => place.id,
+      ),
     )
+    const moves = data.placeIds
+      .map((placeId, index) => ({ placeId, sortOrder: index }))
+      .filter((move) => own.has(move.placeId))
+    if (moves.length === 0) {
+      return { ranked: 0 }
+    }
+    const ranked = await reorderPlaces(scope, moves)
     return { ranked: ranked.length }
   })
 
@@ -532,7 +580,8 @@ export const updateStopFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<{ readonly assignmentId: string }> => {
     const scope = await appScope()
-    await requireEditablePlan(scope, data.tripId)
+    const trip = await requireEditablePlan(scope, data.tripId)
+    await requireStopOfPlan(scope, trip, data.assignmentId)
 
     const updated = await updateAssignment(scope, data.assignmentId, {
       startTime: blankToNull(data.startTime),
@@ -636,7 +685,8 @@ export const updatePlanPlaceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<{ readonly placeId: string }> => {
     const scope = await appScope()
-    await requireEditablePlan(scope, data.tripId)
+    const trip = await requireEditablePlan(scope, data.tripId)
+    await requirePlaceOfPlan(scope, trip, data.placeId)
 
     const updated = await updatePlace(scope, data.placeId, {
       name: data.name,
@@ -662,7 +712,8 @@ export const deletePlanPlaceFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId: id, placeId: id }))
   .handler(async ({ data }): Promise<{ readonly removed: true }> => {
     const scope = await appScope()
-    await requireEditablePlan(scope, data.tripId)
+    const trip = await requireEditablePlan(scope, data.tripId)
+    await requirePlaceOfPlan(scope, trip, data.placeId)
     await deletePlace(scope, data.placeId)
     return { removed: true }
   })
