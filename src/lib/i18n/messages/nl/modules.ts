@@ -137,6 +137,80 @@ const messages = {
   'book.import.badge': 'Ongecontroleerde import',
   'book.import.hint':
     'Geïmporteerd uit een bevestiging. Open en bewaar hem om hem als gecontroleerd te merken.',
+  'book.import.action': 'Importeren',
+  'book.import.title': 'Boekingen uit een bestand importeren',
+  'book.import.description':
+    'Leg een bevestiging neer, dan lezen wij die. Er komt niets op de reis tot jij het hebt gezien.',
+  'book.import.drop.idle': 'Leg bestanden hier neer, of zoek ze op',
+  'book.import.drop.active': 'Laat los om toe te voegen',
+  'book.import.drop.formats':
+    'PDF, opgeslagen e-mail, webpagina, foto, Word, Excel, agendabestand of JSON-export.',
+  'book.import.drop.limits':
+    'Maximaal {files} bestanden per keer, elk tot {size}.',
+  'book.import.drop.browse': 'Bestanden zoeken',
+  'book.import.refused.format':
+    '„{filename}” is geen bestand dat deze import kan lezen. Hij leest een pdf, een opgeslagen e-mail, een webpagina, een foto, een Word- of Excel-document, een agendabestand of een JSON-export.',
+  'book.import.refused.tooMany':
+    'Maar {files} bestanden per keer. De rest is er niet bij gekomen.',
+  'book.import.refused.tooLarge':
+    '„{filename}” is {size}. Een import leest bestanden tot {limit}.',
+  'book.import.refused.empty':
+    '„{filename}” is leeg, dus er is niets te lezen.',
+  'book.import.ceiling.title':
+    'Deze werkruimte heeft deze maand al haar bevestigingen gelezen',
+  'book.import.ceiling.body':
+    'Het plan bevat {ceiling} gelezen bestanden per maand en het tegoed vernieuwt op de eerste. Een boeking met de hand kan altijd nog.',
+  'book.import.ceiling.none':
+    'Een bevestigingsbestand lezen hoort niet bij het plan van deze werkruimte',
+  'book.import.ceiling.noneBody':
+    'Stap over op een hoger plan om een bevestiging te laten lezen. Een boeking met de hand toevoegen kan altijd.',
+  'book.import.widget.title': 'Bevestigingen lezen',
+  'book.import.widget.working': '{done} van {total} gelezen',
+  'book.import.widget.file': '„{filename}” wordt gelezen',
+  'book.import.widget.done': {
+    one: 'Eén boeking klaar om na te kijken',
+    other: '{count} boekingen klaar om na te kijken',
+  },
+  'book.import.widget.review': 'Nakijken',
+  'book.import.widget.failed': '„{filename}” kon niet worden gelezen',
+  'book.import.widget.stalled': 'Dit duurt langer dan verwacht',
+  'book.import.widget.check': 'Opnieuw kijken',
+  'book.import.widget.dismiss': 'Wegdoen',
+  'book.import.review.title': 'Wat we hebben gelezen',
+  'book.import.review.from': 'Uit „{filename}”',
+  'book.import.review.selectAll': 'Alles selecteren',
+  'book.import.review.selectNone': 'Niets selecteren',
+  'book.import.review.confirm': {
+    one: '{count} boeking toevoegen',
+    other: '{count} boekingen toevoegen',
+  },
+  'book.import.review.confirmNone': 'Kies een boeking om toe te voegen',
+  'book.import.review.cancel': 'Annuleren',
+  'book.import.review.needsReview': 'Even nakijken',
+  'book.import.review.needsReviewHint':
+    'Een paar velden stonden niet in het document. Open de boeking nadat je die hebt toegevoegd.',
+  'book.import.review.noPrice': 'Geen prijs gelezen',
+  'book.import.review.noPriceHint':
+    'Het document noemde er geen duidelijke, dus bleef het veld leeg in plaats van geraden.',
+  'book.import.review.untitled': 'Boeking zonder titel',
+  'book.import.empty.title': 'We hebben in dat bestand geen boeking gevonden',
+  'book.import.empty.body':
+    'In „{filename}” stond niets dat op een bevestiging lijkt. Probeer een ander bestand, of voeg de boeking met de hand toe.',
+  'book.import.failed.title': '„{filename}” kon niet worden gelezen',
+  'book.import.failed.body':
+    'Het bestand ging open, maar er was niets van te maken. Probeer een ander bestand, of voeg de boeking met de hand toe.',
+  'book.import.failed.retry': 'Ander bestand proberen',
+  'book.import.uploadFailed': '„{filename}” is niet geüpload',
+  'book.import.uploadRetry': 'Opnieuw proberen',
+  'book.import.toast.added': {
+    one: 'Eén boeking toegevoegd',
+    other: '{count} boekingen toegevoegd',
+  },
+  'book.import.partial.title':
+    '{written} van {total} boekingen zijn toegevoegd',
+  'book.import.partial.body':
+    'De rest staat nog geselecteerd. Nog eens toevoegen schrijft alleen die.',
+  'book.import.partial.retry': 'De rest toevoegen',
   'book.journeyLink': 'Op het vervoertabblad',
   'filter.all': 'Alles',
   'book.remove.body':

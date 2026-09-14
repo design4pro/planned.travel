@@ -131,6 +131,74 @@ const messages = {
   'book.import.badge': '확인 안 된 가져오기',
   'book.import.hint':
     '확인 메일에서 가져왔습니다. 열어서 저장하면 확인한 것으로 표시됩니다.',
+  'book.import.action': '가져오기',
+  'book.import.title': '파일에서 예약 가져오기',
+  'book.import.description':
+    '확인서를 놓으면 읽어 드립니다. 직접 보기 전에는 여행에 아무것도 들어가지 않습니다.',
+  'book.import.drop.idle': '여기에 파일을 놓거나 직접 고르세요',
+  'book.import.drop.active': '놓으면 추가됩니다',
+  'book.import.drop.formats':
+    'PDF, 저장한 메일, 웹페이지, 사진, Word, Excel, 캘린더 파일, JSON 내보내기.',
+  'book.import.drop.limits': '한 번에 {files}개까지, 각각 {size} 이내.',
+  'book.import.drop.browse': '파일 고르기',
+  'book.import.refused.format':
+    '“{filename}”은 이 가져오기가 읽을 수 있는 파일이 아닙니다. 읽을 수 있는 것은 PDF, 저장한 메일, 웹페이지, 사진, Word나 Excel 문서, 캘린더 파일, JSON 내보내기입니다.',
+  'book.import.refused.tooMany':
+    '한 번에 {files}개까지입니다. 나머지는 추가하지 않았습니다.',
+  'book.import.refused.tooLarge':
+    '“{filename}”은 {size}입니다. 가져오기는 {limit} 이내 파일을 읽습니다.',
+  'book.import.refused.empty': '“{filename}”은 비어 있어서 읽을 것이 없습니다.',
+  'book.import.ceiling.title':
+    '이 워크스페이스는 이번 달 확인서를 모두 읽었습니다',
+  'book.import.ceiling.body':
+    '요금제에는 한 달 {ceiling}건의 파일 읽기가 들어 있고, 한도는 1일에 다시 채워집니다. 예약은 직접 입력해 언제든 추가할 수 있습니다.',
+  'book.import.ceiling.none':
+    '확인서 파일 읽기는 이 워크스페이스의 요금제에 들어 있지 않습니다',
+  'book.import.ceiling.noneBody':
+    '요금제를 올리면 확인서를 대신 읽어 드립니다. 직접 입력해 추가하는 것은 언제나 됩니다.',
+  'book.import.widget.title': '확인서를 읽는 중',
+  'book.import.widget.working': '{total}개 중 {done}개 읽음',
+  'book.import.widget.file': '“{filename}” 읽는 중',
+  'book.import.widget.done': {
+    other: '확인할 예약 {count}개',
+  },
+  'book.import.widget.review': '확인하기',
+  'book.import.widget.failed': '“{filename}”을 읽지 못했습니다',
+  'book.import.widget.stalled': '생각보다 오래 걸리고 있습니다',
+  'book.import.widget.check': '다시 확인',
+  'book.import.widget.dismiss': '닫기',
+  'book.import.review.title': '읽어 낸 내용',
+  'book.import.review.from': '“{filename}”에서',
+  'book.import.review.selectAll': '전부 선택',
+  'book.import.review.selectNone': '선택 해제',
+  'book.import.review.confirm': {
+    other: '예약 {count}개 추가',
+  },
+  'book.import.review.confirmNone': '추가할 예약을 고르세요',
+  'book.import.review.cancel': '취소',
+  'book.import.review.needsReview': '살펴봐야 함',
+  'book.import.review.needsReviewHint':
+    '문서에 없던 항목이 있습니다. 추가한 뒤 예약을 열어 보세요.',
+  'book.import.review.noPrice': '금액을 읽지 못함',
+  'book.import.review.noPriceHint':
+    '문서에 분명히 적혀 있지 않아, 추측하지 않고 비워 두었습니다.',
+  'book.import.review.untitled': '제목 없는 예약',
+  'book.import.empty.title': '그 파일에서는 예약을 찾지 못했습니다',
+  'book.import.empty.body':
+    '“{filename}”에는 확인서로 보이는 내용이 없었습니다. 다른 파일을 넣거나 예약을 직접 입력하세요.',
+  'book.import.failed.title': '“{filename}”을 읽지 못했습니다',
+  'book.import.failed.body':
+    '파일은 열렸지만 내용을 만들어 낼 수 없었습니다. 다른 파일을 넣거나 예약을 직접 입력하세요.',
+  'book.import.failed.retry': '다른 파일 넣기',
+  'book.import.uploadFailed': '“{filename}”이 올라가지 않았습니다',
+  'book.import.uploadRetry': '다시 시도',
+  'book.import.toast.added': {
+    other: '예약 {count}개를 추가했습니다',
+  },
+  'book.import.partial.title': '예약 {total}개 중 {written}개를 추가했습니다',
+  'book.import.partial.body':
+    '나머지는 그대로 선택돼 있습니다. 다시 추가하면 그것만 기록됩니다.',
+  'book.import.partial.retry': '나머지 추가',
   'book.journeyLink': '이동 탭에서 보기',
   'filter.all': '전체',
   'book.remove.body':

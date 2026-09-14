@@ -237,8 +237,14 @@ const BOOKING_WRITE_ROLES: ReadonlyArray<TripMember['role']> = [
  * merely reach it: a member of the workspace who is a `viewer` on the trip passes both of the
  * others. Every writer in this file resolves its trip first, so the id handed here is always one
  * the caller could already read.
+ *
+ * Exported because one writer of this trip's bookings does not live in this file: the confirmation
+ * import spends a metered extraction unit the moment it enqueues, long before `createReservation`
+ * is reached, so `startBookingImport` has to ask the same question this early. It asks it through
+ * this function rather than through its own copy of the role list, because two implementations of
+ * an access rule is the class of defect `docs/SPEC.md` §8 exists to prevent.
  */
-async function assertBookingRole(
+export async function assertBookingRole(
   scope: TenantScope,
   tripId: string,
 ): Promise<void> {

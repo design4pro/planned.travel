@@ -134,6 +134,76 @@ const messages = {
   'book.import.badge': 'Impor belum diperiksa',
   'book.import.hint':
     'Diimpor dari sebuah konfirmasi. Buka dan simpan untuk menandainya sudah diperiksa.',
+  'book.import.action': 'Impor',
+  'book.import.title': 'Impor pemesanan dari berkas',
+  'book.import.description':
+    'Jatuhkan satu konfirmasi dan kami akan membacanya. Tidak ada yang masuk ke perjalanan sebelum kamu melihatnya.',
+  'book.import.drop.idle': 'Jatuhkan berkas di sini, atau pilih sendiri',
+  'book.import.drop.active': 'Lepaskan untuk menambahkan',
+  'book.import.drop.formats':
+    'PDF, surel tersimpan, halaman web, foto, Word, Excel, berkas kalender, atau ekspor JSON.',
+  'book.import.drop.limits':
+    'Sampai {files} berkas sekaligus, masing-masing sampai {size}.',
+  'book.import.drop.browse': 'Pilih berkas',
+  'book.import.refused.format':
+    '“{filename}” bukan berkas yang bisa dibaca impor ini. Yang dibaca: PDF, surel tersimpan, halaman web, foto, dokumen Word atau Excel, berkas kalender, atau ekspor JSON.',
+  'book.import.refused.tooMany':
+    'Hanya {files} berkas sekaligus. Sisanya tidak ditambahkan.',
+  'book.import.refused.tooLarge':
+    '“{filename}” berukuran {size}. Impor membaca berkas sampai {limit}.',
+  'book.import.refused.empty':
+    '“{filename}” kosong, jadi tidak ada yang bisa dibaca.',
+  'book.import.ceiling.title':
+    'Ruang kerja ini sudah membaca semua konfirmasinya bulan ini',
+  'book.import.ceiling.body':
+    'Paketnya mencakup {ceiling} pembacaan berkas per bulan, dan kuotanya berganti pada tanggal satu. Kamu masih bisa menambah pemesanan secara manual.',
+  'book.import.ceiling.none':
+    'Membaca berkas konfirmasi tidak termasuk dalam paket ruang kerja ini',
+  'book.import.ceiling.noneBody':
+    'Naikkan paket agar konfirmasi dibacakan untukmu. Menambah pemesanan secara manual selalu tersedia.',
+  'book.import.widget.title': 'Membaca konfirmasi',
+  'book.import.widget.working': '{done} dari {total} terbaca',
+  'book.import.widget.file': 'Membaca “{filename}”',
+  'book.import.widget.done': {
+    other: '{count} pemesanan siap ditinjau',
+  },
+  'book.import.widget.review': 'Tinjau',
+  'book.import.widget.failed': '“{filename}” tidak terbaca',
+  'book.import.widget.stalled': 'Ini lebih lama dari perkiraan',
+  'book.import.widget.check': 'Periksa lagi',
+  'book.import.widget.dismiss': 'Tutup',
+  'book.import.review.title': 'Yang kami baca',
+  'book.import.review.from': 'Dari “{filename}”',
+  'book.import.review.selectAll': 'Pilih semua',
+  'book.import.review.selectNone': 'Jangan pilih apa pun',
+  'book.import.review.confirm': {
+    other: 'Tambah {count} pemesanan',
+  },
+  'book.import.review.confirmNone': 'Pilih satu pemesanan untuk ditambahkan',
+  'book.import.review.cancel': 'Batal',
+  'book.import.review.needsReview': 'Perlu dilihat',
+  'book.import.review.needsReviewHint':
+    'Beberapa kolom tidak ada di dokumen. Buka pemesanannya setelah ditambahkan.',
+  'book.import.review.noPrice': 'Harga tidak terbaca',
+  'book.import.review.noPriceHint':
+    'Dokumennya tidak menyebutkannya dengan jelas, jadi dibiarkan kosong alih-alih dikira-kira.',
+  'book.import.review.untitled': 'Pemesanan tanpa judul',
+  'book.import.empty.title': 'Kami tidak menemukan pemesanan di berkas itu',
+  'book.import.empty.body':
+    '“{filename}” tidak memuat apa pun yang menyerupai konfirmasi. Coba berkas lain, atau tambahkan pemesanannya secara manual.',
+  'book.import.failed.title': '“{filename}” tidak terbaca',
+  'book.import.failed.body':
+    'Berkasnya terbuka tapi tidak ada yang bisa disusun darinya. Coba berkas lain, atau tambahkan pemesanannya secara manual.',
+  'book.import.failed.retry': 'Coba berkas lain',
+  'book.import.uploadFailed': '“{filename}” gagal diunggah',
+  'book.import.uploadRetry': 'Coba lagi',
+  'book.import.toast.added': {
+    other: '{count} pemesanan ditambahkan',
+  },
+  'book.import.partial.title': '{written} dari {total} pemesanan ditambahkan',
+  'book.import.partial.body':
+    'Sisanya masih terpilih. Menambahkan lagi hanya menulis yang itu.',
+  'book.import.partial.retry': 'Tambahkan sisanya',
   'book.journeyLink': 'Di tab transportasi',
   'filter.all': 'Semua',
   'book.remove.body':

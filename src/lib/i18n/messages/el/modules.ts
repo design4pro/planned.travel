@@ -140,6 +140,79 @@ const messages = {
   'book.import.badge': 'Ανέλεγκτη εισαγωγή',
   'book.import.hint':
     'Εισήχθη από επιβεβαίωση. Άνοιξέ την και αποθήκευσέ την για να σημειωθεί ως ελεγμένη.',
+  'book.import.action': 'Εισαγωγή',
+  'book.import.title': 'Εισαγωγή κρατήσεων από αρχείο',
+  'book.import.description':
+    'Άσε εδώ μια επιβεβαίωση και θα τη διαβάσουμε. Τίποτα δεν μπαίνει στο ταξίδι πριν το δεις.',
+  'book.import.drop.idle': 'Άσε τα αρχεία εδώ, ή διάλεξέ τα',
+  'book.import.drop.active': 'Άσ’ το για να προστεθεί',
+  'book.import.drop.formats':
+    'PDF, αποθηκευμένο email, ιστοσελίδα, φωτογραφία, Word, Excel, αρχείο ημερολογίου ή εξαγωγή JSON.',
+  'book.import.drop.limits':
+    'Μέχρι {files} αρχεία τη φορά, καθένα μέχρι {size}.',
+  'book.import.drop.browse': 'Διάλεξε αρχεία',
+  'book.import.refused.format':
+    'Το «{filename}» δεν είναι αρχείο που μπορεί να διαβάσει αυτή η εισαγωγή. Διαβάζει PDF, αποθηκευμένο email, ιστοσελίδα, φωτογραφία, έγγραφο Word ή Excel, αρχείο ημερολογίου ή εξαγωγή JSON.',
+  'book.import.refused.tooMany':
+    'Μόνο {files} αρχεία τη φορά. Τα υπόλοιπα δεν προστέθηκαν.',
+  'book.import.refused.tooLarge':
+    'Το «{filename}» είναι {size}. Μια εισαγωγή διαβάζει αρχεία μέχρι {limit}.',
+  'book.import.refused.empty':
+    'Το «{filename}» είναι άδειο, δεν υπάρχει τίποτα να διαβαστεί.',
+  'book.import.ceiling.title':
+    'Αυτός ο χώρος διάβασε όλες τις επιβεβαιώσεις του αυτόν τον μήνα',
+  'book.import.ceiling.body':
+    'Το πλάνο περιλαμβάνει {ceiling} αναγνώσεις αρχείων τον μήνα και το όριο ανανεώνεται την πρώτη. Μπορείς πάντα να προσθέσεις κράτηση με το χέρι.',
+  'book.import.ceiling.none':
+    'Η ανάγνωση αρχείου επιβεβαίωσης δεν είναι μέρος του πλάνου αυτού του χώρου',
+  'book.import.ceiling.noneBody':
+    'Αναβάθμισε για να σου διαβάζεται μια επιβεβαίωση. Η κράτηση με το χέρι υπάρχει πάντα.',
+  'book.import.widget.title': 'Διαβάζουμε επιβεβαιώσεις',
+  'book.import.widget.working': 'Διαβάστηκαν {done} από {total}',
+  'book.import.widget.file': 'Διαβάζουμε το «{filename}»',
+  'book.import.widget.done': {
+    one: 'Μία κράτηση έτοιμη για έλεγχο',
+    other: '{count} κρατήσεις έτοιμες για έλεγχο',
+  },
+  'book.import.widget.review': 'Δες τις',
+  'book.import.widget.failed': 'Το «{filename}» δεν διαβάστηκε',
+  'book.import.widget.stalled': 'Αυτό αργεί πιο πολύ απ’ όσο περιμέναμε',
+  'book.import.widget.check': 'Δες πάλι',
+  'book.import.widget.dismiss': 'Κλείσ’ το',
+  'book.import.review.title': 'Τι διαβάσαμε',
+  'book.import.review.from': 'Από το «{filename}»',
+  'book.import.review.selectAll': 'Διάλεξε όλα',
+  'book.import.review.selectNone': 'Διάλεξε κανένα',
+  'book.import.review.confirm': {
+    one: 'Πρόσθεσε {count} κράτηση',
+    other: 'Πρόσθεσε {count} κρατήσεις',
+  },
+  'book.import.review.confirmNone': 'Διάλεξε μια κράτηση για να προστεθεί',
+  'book.import.review.cancel': 'Ακύρωση',
+  'book.import.review.needsReview': 'Θέλει μια ματιά',
+  'book.import.review.needsReviewHint':
+    'Κάποια πεδία δεν ήταν στο έγγραφο. Άνοιξε την κράτηση αφού την προσθέσεις.',
+  'book.import.review.noPrice': 'Δεν διαβάστηκε τιμή',
+  'book.import.review.noPriceHint':
+    'Το έγγραφο δεν έλεγε καθαρά καμία, γι’ αυτό έμεινε άδεια αντί να μαντευτεί.',
+  'book.import.review.untitled': 'Κράτηση χωρίς τίτλο',
+  'book.import.empty.title': 'Δεν βρήκαμε κράτηση σ’ αυτό το αρχείο',
+  'book.import.empty.body':
+    'Το «{filename}» δεν είχε τίποτα που να μοιάζει με επιβεβαίωση. Δοκίμασε άλλο αρχείο, ή πρόσθεσε την κράτηση με το χέρι.',
+  'book.import.failed.title': 'Το «{filename}» δεν διαβάστηκε',
+  'book.import.failed.body':
+    'Το αρχείο άνοιξε αλλά δεν βγήκε τίποτα από αυτό. Δοκίμασε άλλο αρχείο, ή πρόσθεσε την κράτηση με το χέρι.',
+  'book.import.failed.retry': 'Δοκίμασε άλλο αρχείο',
+  'book.import.uploadFailed': 'Το «{filename}» δεν ανέβηκε',
+  'book.import.uploadRetry': 'Δοκίμασε πάλι',
+  'book.import.toast.added': {
+    one: 'Μία κράτηση προστέθηκε',
+    other: '{count} κρατήσεις προστέθηκαν',
+  },
+  'book.import.partial.title': 'Προστέθηκαν {written} από {total} κρατήσεις',
+  'book.import.partial.body':
+    'Οι υπόλοιπες μένουν διαλεγμένες. Η επόμενη προσπάθεια γράφει μόνο αυτές.',
+  'book.import.partial.retry': 'Πρόσθεσε τις υπόλοιπες',
   'book.journeyLink': 'Στην καρτέλα μεταφορών',
   'filter.all': 'Όλα',
   'book.remove.body':

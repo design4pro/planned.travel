@@ -32,6 +32,20 @@ export function filesBucket(): R2Bucket {
   return env.FILES
 }
 
+/**
+ * The shared `KV` namespace. Only ever reached from inside a handler.
+ *
+ * Named for its one caller rather than for the binding: a queue handler stages a booking import
+ * under `import:<jobId>` and `./booking-import` is the request path that reads it back. Every
+ * other use of `KV` on this tree reaches it through the runtime its own directory assembles
+ * (`src/server/geo/bindings.ts`, `src/server/metering/bindings.ts`), and a server function has no
+ * such directory — which is why the accessor sits here, beside {@link filesBucket}, rather than
+ * being re-derived in the module that needs it.
+ */
+export function importStore(): KVNamespace {
+  return env.KV
+}
+
 /** Memoised per isolate: the logger holds no request state. */
 let logger: Logger | undefined
 

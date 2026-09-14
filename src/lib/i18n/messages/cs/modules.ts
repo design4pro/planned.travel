@@ -144,6 +144,83 @@ const messages = {
   'book.import.badge': 'Neprověřený import',
   'book.import.hint':
     'Naimportováno z potvrzení. Otevři a ulož, tím se označí jako prověřené.',
+  'book.import.action': 'Importovat',
+  'book.import.title': 'Import rezervací ze souboru',
+  'book.import.description':
+    'Přetáhni sem potvrzení a přečteme ho. Do cesty se nic nepřidá, dokud to neuvidíš.',
+  'book.import.drop.idle': 'Přetáhni sem soubory, nebo je vyber',
+  'book.import.drop.active': 'Pusť to a přidá se',
+  'book.import.drop.formats':
+    'PDF, uložený e-mail, webová stránka, fotka, Word, Excel, kalendář nebo export JSON.',
+  'book.import.drop.limits': 'Najednou až {files} souborů, každý do {size}.',
+  'book.import.drop.browse': 'Vybrat soubory',
+  'book.import.refused.format':
+    '„{filename}“ není soubor, který tenhle import umí přečíst. Čte PDF, uložený e-mail, webovou stránku, fotku, dokument Wordu nebo Excelu, kalendář nebo export JSON.',
+  'book.import.refused.tooMany':
+    'Najednou jen {files} souborů. Zbytek se nepřidal.',
+  'book.import.refused.tooLarge':
+    '„{filename}“ má {size}. Import čte soubory do {limit}.',
+  'book.import.refused.empty': '„{filename}“ je prázdný, není tedy co číst.',
+  'book.import.ceiling.title':
+    'Tento pracovní prostor přečetl všechna svá potvrzení za tento měsíc',
+  'book.import.ceiling.body':
+    'Tarif obsahuje {ceiling} přečtení souboru za měsíc a příděl se obnovuje prvního. Rezervaci pořád můžeš přidat ručně.',
+  'book.import.ceiling.none':
+    'Přečtení souboru s potvrzením není součástí tarifu tohoto pracovního prostoru',
+  'book.import.ceiling.noneBody':
+    'Přejdi na vyšší tarif, ať za tebe potvrzení někdo přečte. Přidat rezervaci ručně jde vždycky.',
+  'book.import.widget.title': 'Čtu potvrzení',
+  'book.import.widget.working': 'Přečteno {done} z {total}',
+  'book.import.widget.file': 'Čtu „{filename}“',
+  'book.import.widget.done': {
+    one: 'Jedna rezervace k prohlédnutí',
+    few: '{count} rezervace k prohlédnutí',
+    many: '{count} rezervace k prohlédnutí',
+    other: '{count} rezervací k prohlédnutí',
+  },
+  'book.import.widget.review': 'Prohlédnout',
+  'book.import.widget.failed': '„{filename}“ se nepodařilo přečíst',
+  'book.import.widget.stalled': 'Trvá to dýl, než jsme čekali',
+  'book.import.widget.check': 'Zkusit znovu',
+  'book.import.widget.dismiss': 'Zavřít',
+  'book.import.review.title': 'Co jsme přečetli',
+  'book.import.review.from': 'Z „{filename}“',
+  'book.import.review.selectAll': 'Vybrat vše',
+  'book.import.review.selectNone': 'Nevybrat nic',
+  'book.import.review.confirm': {
+    one: 'Přidat {count} rezervaci',
+    few: 'Přidat {count} rezervace',
+    many: 'Přidat {count} rezervace',
+    other: 'Přidat {count} rezervací',
+  },
+  'book.import.review.confirmNone': 'Vyber rezervaci, která se má přidat',
+  'book.import.review.cancel': 'Zrušit',
+  'book.import.review.needsReview': 'Chce to očima',
+  'book.import.review.needsReviewHint':
+    'Některá pole v dokumentu nebyla. Po přidání rezervaci otevři.',
+  'book.import.review.noPrice': 'Cena nepřečtena',
+  'book.import.review.noPriceHint':
+    'Dokument ji jasně neuváděl, zůstala tedy prázdná, místo aby se hádala.',
+  'book.import.review.untitled': 'Rezervace bez názvu',
+  'book.import.empty.title': 'V tom souboru jsme rezervaci nenašli',
+  'book.import.empty.body':
+    '„{filename}“ neobsahoval nic, co by vypadalo jako potvrzení. Zkus jiný soubor, nebo rezervaci přidej ručně.',
+  'book.import.failed.title': '„{filename}“ se nepodařilo přečíst',
+  'book.import.failed.body':
+    'Soubor se otevřel, ale nic se z něj nedalo poskládat. Zkus jiný soubor, nebo rezervaci přidej ručně.',
+  'book.import.failed.retry': 'Zkusit jiný soubor',
+  'book.import.uploadFailed': '„{filename}“ se nenahrál',
+  'book.import.uploadRetry': 'Zkusit znovu',
+  'book.import.toast.added': {
+    one: 'Jedna rezervace přidána',
+    few: '{count} rezervace přidány',
+    many: '{count} rezervace přidány',
+    other: '{count} rezervací přidáno',
+  },
+  'book.import.partial.title': 'Přidáno {written} rezervací z {total}',
+  'book.import.partial.body':
+    'Zbytek zůstává vybraný. Další přidání zapíše jen ten.',
+  'book.import.partial.retry': 'Přidat zbytek',
   'book.journeyLink': 'Na kartě dopravy',
   'filter.all': 'Vše',
   'book.remove.body':
