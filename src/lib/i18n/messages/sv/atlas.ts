@@ -138,7 +138,7 @@ const messages = {
   'panel.empty.pick.body':
     'Välj ett på kartan, i sökfältet eller i listan, så öppnas hela posten här — första besöket, senaste besöket, räknaren och din anteckning.',
 
-  'panel.stat.places': 'Platser',
+  'panel.stat.places': 'Dina platser',
   'panel.stat.placesNone': 'Inget fastnålat på någon resa ännu',
   'panel.stat.placesCaption': 'Sparade sevärdheter, boenden och stopp',
   'panel.stat.regions': 'Regioner',
@@ -332,7 +332,7 @@ const messages = {
   /* ------------------------------------------------- the card over the map */
   'card.trips': { one: 'Resa i arbetsytan', other: 'Resor i arbetsytan' },
   'card.visits': { one: 'Besök', other: 'Besök' },
-  'card.places': { one: 'Plats', other: 'Platser' },
+  'card.places': { one: 'Plats i arbetsytan', other: 'Platser i arbetsytan' },
   'card.firstTrip': 'Första resan',
   'card.lastTrip': 'Senaste resan',
   'card.firstVisit': 'Första besöket',

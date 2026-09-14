@@ -145,7 +145,7 @@ const messages = {
   'panel.empty.pick.body':
     'Choisissez-en un sur la carte, dans le champ de recherche ou dans la liste, et sa fiche complète s’ouvre ici — première visite, dernière visite, le décompte et votre note.',
 
-  'panel.stat.places': 'Lieux',
+  'panel.stat.places': 'Vos lieux',
   'panel.stat.placesNone': 'Rien d’épinglé sur un voyage pour l’instant',
   'panel.stat.placesCaption': 'Sites, hébergements et étapes enregistrés',
   'panel.stat.regions': 'Régions',
@@ -356,7 +356,11 @@ const messages = {
     other: 'Voyages de l’espace de travail',
   },
   'card.visits': { one: 'Visite', many: 'Visites', other: 'Visites' },
-  'card.places': { one: 'Lieu', many: 'Lieux', other: 'Lieux' },
+  'card.places': {
+    one: 'Lieu de l’espace de travail',
+    many: 'Lieux de l’espace de travail',
+    other: 'Lieux de l’espace de travail',
+  },
   'card.firstTrip': 'Premier voyage',
   'card.lastTrip': 'Dernier voyage',
   'card.firstVisit': 'Première visite',

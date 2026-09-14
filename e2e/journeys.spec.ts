@@ -356,7 +356,7 @@ test.describe('authenticated routes', () => {
     ).toHaveAttribute('data-record', 'visits')
     await expect(facts).toHaveAttribute('data-visited', 'true')
     await expect(panel).toContainText('Visits')
-    await expect(panel).toContainText('Places')
+    await expect(panel).toContainText('Workspace places')
     expect(
       await facts.locator('dd').allInnerTexts(),
       'and prints every one of its four figures rather than an absence',
@@ -501,15 +501,30 @@ test.describe('authenticated routes', () => {
     // — pinning either alone would assert against the fixture rather than
     // against the card.
     //
-    // The leading trip heading carries the workspace qualifier (`ADD-06`): the
-    // card counts the workspace's trips while the stat tile above the map counts
-    // the reader's, and the two figures disagree by design. A bare `Trips?` here
-    // would fail against the shipped card, so it is spelled as the card spells
-    // it.
+    // The trip and place headings carry the workspace qualifier (`ADD-06`): the
+    // card counts the workspace's trips and places while the stat tiles above
+    // the map count the reader's, and the figures disagree by design. A bare
+    // `Trips?` or `Places?` here would fail against the shipped card, so each is
+    // spelled as the card spells it.
     const headings = {
-      trips: [/^Workspace trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
-      visits: [/^Visits?$/, /^Places?$/, /^First visit$/, /^Last visit$/],
-      none: [/^Workspace trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
+      trips: [
+        /^Workspace trips?$/,
+        /^Workspace places?$/,
+        /^First trip$/,
+        /^Last trip$/,
+      ],
+      visits: [
+        /^Visits?$/,
+        /^Workspace places?$/,
+        /^First visit$/,
+        /^Last visit$/,
+      ],
+      none: [
+        /^Workspace trips?$/,
+        /^Workspace places?$/,
+        /^First trip$/,
+        /^Last trip$/,
+      ],
     } as const
     if (shown.labels.length === 0) {
       expect(

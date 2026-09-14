@@ -124,7 +124,7 @@ const messages = {
   'panel.empty.pick.body':
     'Pilih di peta, di kolom pencarian, atau dari daftar, dan catatan lengkapnya terbuka di sini — kunjungan pertama, kunjungan terakhir, jumlahnya, dan catatan Anda.',
 
-  'panel.stat.places': 'Tempat',
+  'panel.stat.places': 'Tempat Anda',
   'panel.stat.placesNone': 'Belum ada yang disematkan di perjalanan',
   'panel.stat.placesCaption':
     'Objek wisata, penginapan, dan persinggahan tersimpan',
@@ -310,7 +310,7 @@ const messages = {
   /* ------------------------------------------------- the card over the map */
   'card.trips': { other: 'Perjalanan ruang kerja' },
   'card.visits': { other: 'Kunjungan' },
-  'card.places': { other: 'Tempat' },
+  'card.places': { other: 'Tempat ruang kerja' },
   'card.firstTrip': 'Perjalanan pertama',
   'card.lastTrip': 'Perjalanan terakhir',
   'card.firstVisit': 'Kunjungan pertama',

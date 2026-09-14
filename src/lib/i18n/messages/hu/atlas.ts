@@ -136,7 +136,7 @@ const messages = {
   'panel.empty.pick.body':
     'Válassza ki a térképen, a keresőmezőben vagy a listában, és itt megnyílik a teljes bejegyzése — első látogatás, utolsó látogatás, a számláló és az Ön jegyzete.',
 
-  'panel.stat.places': 'Helyek',
+  'panel.stat.places': 'A helyei',
   'panel.stat.placesNone': 'Még semmi sincs kitűzve egy utazáson sem',
   'panel.stat.placesCaption': 'Mentett látnivalók, szállások és megállók',
   'panel.stat.regions': 'Régiók',
@@ -344,7 +344,7 @@ const messages = {
     other: 'A munkaterület utazása',
   },
   'card.visits': { one: 'Látogatás', other: 'Látogatás' },
-  'card.places': { one: 'Hely', other: 'Hely' },
+  'card.places': { one: 'A munkaterület helye', other: 'A munkaterület helye' },
   'card.firstTrip': 'Első utazás',
   'card.lastTrip': 'Utolsó utazás',
   'card.firstVisit': 'Első látogatás',

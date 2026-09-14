@@ -154,7 +154,7 @@ const messages = {
   'panel.empty.pick.body':
     'اختر واحدة على الخريطة أو في حقل البحث أو من القائمة، وسيُفتح سجلها الكامل هنا — أول زيارة وآخر زيارة والعدّاد وملاحظتك.',
 
-  'panel.stat.places': 'الأماكن',
+  'panel.stat.places': 'أماكنك',
   'panel.stat.placesNone': 'لم يُثبَّت شيء في رحلة بعد',
   'panel.stat.placesCaption': 'معالم وإقامات ومحطات محفوظة',
   'panel.stat.regions': 'المناطق',
@@ -401,12 +401,12 @@ const messages = {
     other: 'زيارة',
   },
   'card.places': {
-    zero: 'أماكن',
-    one: 'مكان',
-    two: 'مكانان',
-    few: 'أماكن',
-    many: 'مكانًا',
-    other: 'مكان',
+    zero: 'أماكن مساحة العمل',
+    one: 'مكان مساحة العمل',
+    two: 'مكانا مساحة العمل',
+    few: 'أماكن مساحة العمل',
+    many: 'مكان مساحة العمل',
+    other: 'مكان مساحة العمل',
   },
   'card.firstTrip': 'أول رحلة',
   'card.lastTrip': 'آخر رحلة',
