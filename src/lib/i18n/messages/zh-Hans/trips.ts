@@ -25,6 +25,7 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '行程',
   'plan.places': '地点',
+  'plan.readOnly.archived': '此行程已归档，因此计划为只读。',
   'plan.readOnly.role': '你可以查看此行程。只有行程的所有者和编辑者可以更改。',
   'plan.day.empty': '还没有安排 — 把地点或备注拖到这里',
   'plan.move.refused.duplicate': '{name} 已在那一天里',

@@ -45,6 +45,7 @@ import {
 import { appScope } from '../../../-server/context'
 
 import type { TenantScope, TimelineItemInput } from '#/server/repos'
+import type { Trip } from '#/server/db/types'
 
 /**
  * Booking states a stop can be in.
@@ -252,6 +253,30 @@ export async function readPlanBoard(
  * Reordering
  * ---------------------------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------------------------------
+ * Guard
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The two questions every plan write asks, in the only order that answers them
+ * safely: may this trip still be written, then may this caller write it.
+ *
+ * The archive first, because `requireWritableTrip` also asks whether the caller
+ * may see the trip at all, and a caller who may not learns `NotFoundError` and
+ * nothing else; the role only after that. The repositories these writes call carry
+ * no role guard of their own, so without this a viewer — whom the board no longer
+ * offers a write — could still make one by calling the function (PRD #104
+ * decision 6). The same composition `writableTripDay` records for notes.
+ */
+async function requireEditablePlan(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Trip> {
+  const trip = await requireWritableTrip(scope, tripId)
+  await assertTripRole(scope, trip.id, ['owner', 'editor'])
+  return trip
+}
+
 /**
  * Tells the trip room that these days were rearranged: one `day` upsert each,
  * carrying the merged order.
@@ -446,7 +471,7 @@ export const schedulePlaceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<{ readonly assignmentId: string }> => {
     const scope = await appScope()
-    const trip = await requireWritableTrip(scope, data.tripId)
+    const trip = await requireEditablePlan(scope, data.tripId)
 
     const ordered = await listDayAssignments(scope, data.dayId)
     const assignment = await createAssignment(scope, {
@@ -464,7 +489,7 @@ export const unschedulePlaceFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId: id, assignmentId: id }))
   .handler(async ({ data }): Promise<{ readonly removed: true }> => {
     const scope = await appScope()
-    await requireWritableTrip(scope, data.tripId)
+    await requireEditablePlan(scope, data.tripId)
     await deleteAssignment(scope, data.assignmentId)
     return { removed: true }
   })
@@ -474,7 +499,7 @@ export const rankIdeasFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId: id, placeIds: z.array(id).min(1).max(500) }))
   .handler(async ({ data }): Promise<{ readonly ranked: number }> => {
     const scope = await appScope()
-    await requireWritableTrip(scope, data.tripId)
+    await requireEditablePlan(scope, data.tripId)
     const ranked = await reorderPlaces(
       scope,
       data.placeIds.map((placeId, index) => ({ placeId, sortOrder: index })),
@@ -507,7 +532,7 @@ export const updateStopFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<{ readonly assignmentId: string }> => {
     const scope = await appScope()
-    await requireWritableTrip(scope, data.tripId)
+    await requireEditablePlan(scope, data.tripId)
 
     const updated = await updateAssignment(scope, data.assignmentId, {
       startTime: blankToNull(data.startTime),
@@ -569,7 +594,7 @@ export const createPlanPlaceFn = createServerFn({ method: 'POST' })
       readonly assignmentId: string | null
     }> => {
       const scope = await appScope()
-      const trip = await requireWritableTrip(scope, data.tripId)
+      const trip = await requireEditablePlan(scope, data.tripId)
 
       const place = await createPlace(scope, {
         tripId: trip.id,
@@ -611,7 +636,7 @@ export const updatePlanPlaceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<{ readonly placeId: string }> => {
     const scope = await appScope()
-    await requireWritableTrip(scope, data.tripId)
+    await requireEditablePlan(scope, data.tripId)
 
     const updated = await updatePlace(scope, data.placeId, {
       name: data.name,
@@ -637,7 +662,7 @@ export const deletePlanPlaceFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId: id, placeId: id }))
   .handler(async ({ data }): Promise<{ readonly removed: true }> => {
     const scope = await appScope()
-    await requireWritableTrip(scope, data.tripId)
+    await requireEditablePlan(scope, data.tripId)
     await deletePlace(scope, data.placeId)
     return { removed: true }
   })

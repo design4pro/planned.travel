@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reisroute',
   'plan.places': 'Plekken',
+  'plan.readOnly.archived':
+    'Deze reis is gearchiveerd, dus het plan is alleen-lezen.',
   'plan.readOnly.role':
     'Je kunt dit plan lezen. Alleen de eigenaar van de reis en bewerkers kunnen het wijzigen.',
   'plan.day.empty':

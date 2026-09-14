@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reiseverlauf',
   'plan.places': 'Orte',
+  'plan.readOnly.archived':
+    'Diese Reise ist archiviert, der Plan ist daher schreibgeschützt.',
   'plan.readOnly.role':
     'Du kannst diesen Plan lesen. Ändern können ihn nur der Inhaber der Reise und die Bearbeiter.',
   'plan.day.empty':

@@ -1441,7 +1441,7 @@ export function PlanScreen({
   // Archived wins over the role: it is a property of the trip, so it is true for
   // every reader, and it is the reason an owner or an editor would see this too.
   const readOnlyReason = payload.archived
-    ? 'This trip is archived, so the plan is read-only.'
+    ? t('trips.plan.readOnly.archived')
     : t('trips.plan.readOnly.role')
 
   const railFooter = (

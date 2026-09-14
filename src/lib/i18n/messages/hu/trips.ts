@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Útiterv',
   'plan.places': 'Helyek',
+  'plan.readOnly.archived':
+    'Ez az utazás archiválva van, ezért a terv csak olvasható.',
   'plan.readOnly.role':
     'Ezt a tervet megtekintheted. Csak az utazás tulajdonosa és a szerkesztők módosíthatják.',
   'plan.day.empty': 'Még nincs terv – húzz ide egy helyet vagy egy jegyzetet',

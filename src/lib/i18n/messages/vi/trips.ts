@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Lịch trình',
   'plan.places': 'Địa điểm',
+  'plan.readOnly.archived':
+    'Chuyến đi này đã được lưu trữ nên kế hoạch chỉ có thể xem.',
   'plan.readOnly.role':
     'Bạn có thể xem kế hoạch này. Chỉ chủ sở hữu chuyến đi và người chỉnh sửa mới có thể thay đổi.',
   'plan.day.empty': 'Chưa có gì — kéo một địa điểm hoặc ghi chú vào đây',

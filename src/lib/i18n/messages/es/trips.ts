@@ -25,6 +25,8 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerario',
   'plan.places': 'Lugares',
+  'plan.readOnly.archived':
+    'Este viaje está archivado, así que el plan es de solo lectura.',
   'plan.readOnly.role':
     'Puedes ver este plan. Solo el propietario del viaje y quienes pueden editar pueden cambiarlo.',
   'plan.day.empty': 'Nada planeado: arrastra aquí un lugar o una nota',
