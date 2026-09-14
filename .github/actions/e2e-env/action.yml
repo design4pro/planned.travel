@@ -5,9 +5,10 @@ description: >
   behind it. Optionally the PMTiles basemap in the local R2 simulator - see the
   `basemap` input, which is off.
 
-  Assumes a runner that already carries the browsers, i.e. a job running in
-  `mcr.microsoft.com/playwright:v<version>-noble`. Installing them per run costs
-  a couple of minutes and pins nothing extra.
+  Assumes a runner that already carries the browsers. That used to mean a job
+  running in `mcr.microsoft.com/playwright:v<version>-noble`; it now means the
+  self-hosted pool, whose image is built FROM exactly that. Installing them per
+  run costs a couple of minutes and pins nothing extra.
 
 inputs:
   basemap:

@@ -28,6 +28,13 @@ env:
   VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
   VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
+# `runs-on` in every job below reads through `vars.RUNNER_CI`, an organisation
+# variable that is deliberately unset: unset, each job's own default selects the
+# self-hosted pool. Setting it to `["ubuntu-latest"]` moves every job in every
+# repository back to GitHub-hosted runners without a pull request, which is the
+# only recovery path that does not need the host to be up. See agent-kit's
+# README, "The runner pool".
+
 jobs:
   verify:
     name: lint · typecheck · build
@@ -36,7 +43,7 @@ jobs:
     # `e2e` job carries the same clause in its own `if`, since it does not wait
     # on this one.
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     timeout-minutes: 20
 
     steps:
@@ -198,7 +205,7 @@ jobs:
   test:
     name: unit tests (${{ matrix.shard }}/3)
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -254,7 +261,7 @@ jobs:
     name: unit tests · merged report
     needs: test
     if: ${{ !cancelled() && needs.test.result != 'skipped' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     timeout-minutes: 10
 
     steps:
@@ -333,7 +340,7 @@ jobs:
   e2e:
     name: e2e · critical journeys (${{ matrix.shard }}/2)
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     # Measured on the 2-vCPU runner, first green run (33806080237): 2-3 min of
     # fixed cost - image pull, checkout, install, migrations, seed - then 6m41s of
     # journeys on shard 1 and 9m59s on shard 2, for jobs of 9m44s and 11m58s. At
@@ -354,11 +361,13 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2]
-    # Keep in step with the `@playwright/test` devDependency in package.json:
-    # the image carries the browsers that version expects, and a mismatch is
-    # reported as a missing executable rather than as a wrong one.
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+    # No `container:`. The runner image is itself built FROM
+    # `mcr.microsoft.com/playwright:v1.62.1-noble`, so the browsers are already
+    # on the runner and pulling the same image again per job would buy nothing.
+    # The version coupling did not go away, it moved: keep
+    # `host/runner/Dockerfile` in agent-kit in step with the `@playwright/test`
+    # devDependency in package.json, or a mismatch is reported as a missing
+    # executable rather than as a wrong one.
 
     steps:
       - name: Check out
@@ -396,7 +405,7 @@ jobs:
     name: e2e · merged report
     needs: e2e
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     timeout-minutes: 10
 
     steps:
