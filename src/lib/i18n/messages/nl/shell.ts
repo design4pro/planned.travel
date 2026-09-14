@@ -193,9 +193,11 @@ const messages = {
   'notification.billing.plan_changed.body':
     '{organizationName} zit nu op het abonnement {plan}.',
   'notification.billing.invoice_paid.title': 'Betaling ontvangen',
-  'notification.billing.invoice_paid.body': 'De laatste factuur voor {organizationName} is betaald.',
+  'notification.billing.invoice_paid.body':
+    'De laatste factuur voor {organizationName} is betaald.',
   'notification.billing.payment_failed.title': 'Een betaling is mislukt',
-  'notification.billing.payment_failed.body': '{organizationName} heeft een achterstallige betaling. Werk de betaalmethode bij om het abonnement te houden.',
+  'notification.billing.payment_failed.body':
+    '{organizationName} heeft een achterstallige betaling. Werk de betaalmethode bij om het abonnement te houden.',
   'notification.fallback.title': 'Er is iets veranderd in je werkruimte',
   'notification.fallback.body': 'Open de reis om te zien wat het was.',
 

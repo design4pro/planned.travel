@@ -200,9 +200,12 @@ const messages = {
   'notification.billing.plan_changed.body':
     '{organizationName} nutzt jetzt den Tarif {plan}.',
   'notification.billing.invoice_paid.title': 'Zahlung eingegangen',
-  'notification.billing.invoice_paid.body': 'Die letzte Rechnung für {organizationName} ist bezahlt.',
-  'notification.billing.payment_failed.title': 'Eine Zahlung ist fehlgeschlagen',
-  'notification.billing.payment_failed.body': 'Bei {organizationName} ist eine Zahlung überfällig. Aktualisiere die Zahlungsmethode, um den Tarif zu behalten.',
+  'notification.billing.invoice_paid.body':
+    'Die letzte Rechnung für {organizationName} ist bezahlt.',
+  'notification.billing.payment_failed.title':
+    'Eine Zahlung ist fehlgeschlagen',
+  'notification.billing.payment_failed.body':
+    'Bei {organizationName} ist eine Zahlung überfällig. Aktualisiere die Zahlungsmethode, um den Tarif zu behalten.',
   'notification.fallback.title':
     'In deinem Arbeitsbereich hat sich etwas geändert',
   'notification.fallback.body': 'Öffne die Reise, um zu sehen, was es war.',

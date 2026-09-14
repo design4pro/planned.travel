@@ -74,9 +74,7 @@ export interface SubscriptionRecord {
 
 /** Tenant-scoped persistence for billing state. Implemented over Drizzle/D1. */
 export interface SubscriptionStore {
-  findByOrganization: (
-    organizationId: string,
-  ) => Promise<SubscriptionRecord | null>
+  findByOrganization: (organizationId: string) => Promise<SubscriptionRecord | null>
   findByProviderCustomerId: (
     providerCustomerId: string,
   ) => Promise<SubscriptionRecord | null>
@@ -86,10 +84,7 @@ export interface SubscriptionStore {
   /** Insert or replace the organization's row wholesale. */
   upsert: (record: SubscriptionRecord) => Promise<void>
   /** Attach a provider customer to an organization before any subscription exists. */
-  attachCustomer: (
-    organizationId: string,
-    providerCustomerId: string,
-  ) => Promise<void>
+  attachCustomer: (organizationId: string, providerCustomerId: string) => Promise<void>
   /** Narrow status-only write used by invoice events. */
   updateStatus: (
     organizationId: string,
@@ -111,11 +106,7 @@ export interface UsageReader {
   read: (organizationId: string) => Promise<UsageSnapshot>
 }
 
-export const EMPTY_USAGE: UsageSnapshot = {
-  seats: 0,
-  trips: 0,
-  storageBytes: 0,
-}
+export const EMPTY_USAGE: UsageSnapshot = { seats: 0, trips: 0, storageBytes: 0 }
 
 /* --------------------------------------------------------------- platform seams */
 
@@ -125,11 +116,7 @@ export const EMPTY_USAGE: UsageSnapshot = {
  */
 export interface BillingCache {
   get: (key: string) => Promise<string | null>
-  put: (
-    key: string,
-    value: string,
-    options?: { expirationTtl?: number },
-  ) => Promise<void>
+  put: (key: string, value: string, options?: { expirationTtl?: number }) => Promise<void>
   delete: (key: string) => Promise<void>
 }
 

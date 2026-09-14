@@ -274,11 +274,14 @@ const messages = {
     'Anda diundang masuk ke sebuah ruang kerja.',
 
   'notifications.event.billing.plan_changed': 'Perubahan langganan',
-  'notifications.event.billing.plan_changed.hint': 'Ruang kerja Anda pindah ke paket lain.',
+  'notifications.event.billing.plan_changed.hint':
+    'Ruang kerja Anda pindah ke paket lain.',
   'notifications.event.billing.invoice_paid': 'Bukti pembayaran',
-  'notifications.event.billing.invoice_paid.hint': 'Tagihan ruang kerja Anda sudah dibayar.',
+  'notifications.event.billing.invoice_paid.hint':
+    'Tagihan ruang kerja Anda sudah dibayar.',
   'notifications.event.billing.payment_failed': 'Masalah pembayaran',
-  'notifications.event.billing.payment_failed.hint': 'Penagihan untuk ruang kerja Anda gagal.',
+  'notifications.event.billing.payment_failed.hint':
+    'Penagihan untuk ruang kerja Anda gagal.',
   'workspace.error': 'Ruang kerja gagal dimuat',
   'workspace.summary.description': 'Paket {plan} · dibuat {date}',
   'workspace.summary.createdRecently': 'baru-baru ini',

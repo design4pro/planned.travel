@@ -141,9 +141,11 @@ const messages = {
   'notification.billing.plan_changed.body':
     '{organizationName}現在用的是{plan}方案。',
   'notification.billing.invoice_paid.title': '已收到付款',
-  'notification.billing.invoice_paid.body': '{organizationName}最近的帳單已付清。',
+  'notification.billing.invoice_paid.body':
+    '{organizationName}最近的帳單已付清。',
   'notification.billing.payment_failed.title': '有一筆付款沒有成功',
-  'notification.billing.payment_failed.body': '{organizationName}有一筆逾期款項。請更新付款方式以保留方案。',
+  'notification.billing.payment_failed.body':
+    '{organizationName}有一筆逾期款項。請更新付款方式以保留方案。',
   'notification.fallback.title': '工作區裡有變動',
   'notification.fallback.body': '開啟行程就會看到是什麼。',
   'dashboard.error': '總覽沒能載入',

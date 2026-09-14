@@ -31,6 +31,7 @@ import { dispatchQuietly } from '#/server/notifications/dispatch'
 import { createScope, getOrganization, listMembers } from '#/server/repos'
 import { TaskConfigurationError, TaskPermanentError } from '../types'
 
+import type { SubscriptionStatus } from '#/lib/plans'
 import type { Database } from '#/server/db/types'
 import type { DispatchDeps } from '#/server/notifications/dispatch'
 import type { TenantScope } from '#/server/repos'
@@ -72,11 +73,15 @@ const PROBE_USER_ID = 'system'
  * someone whose card was declined. The webhook enqueues the dunning path as a
  * `billing.subscription.changed` with `status: 'past_due'` (`onOrderProgressed`), which is the only
  * shape a failed payment has — Polar has no `order.payment_failed` event (`docs/ARCHITECTURE.md`).
+ *
+ * Checked against the status vocabulary rather than held as plain strings: a set of `string`
+ * would go on compiling after a status is renamed, and the branch would silently stop matching —
+ * every declined card would then be announced as a plan change.
  */
-const FAILED_PAYMENT_STATUSES: ReadonlySet<string> = new Set([
+const FAILED_PAYMENT_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
   'past_due',
   'unpaid',
-])
+] as const satisfies ReadonlyArray<SubscriptionStatus>)
 
 /**
  * The tenant scope a billing follow-up runs under.

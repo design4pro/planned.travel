@@ -149,9 +149,11 @@ const messages = {
   'notification.billing.plan_changed.body':
     '{organizationName} 워크스페이스는 이제 {plan} 플랜이에요.',
   'notification.billing.invoice_paid.title': '결제가 확인됐어요',
-  'notification.billing.invoice_paid.body': '{organizationName}의 최근 청구서가 결제됐어요.',
+  'notification.billing.invoice_paid.body':
+    '{organizationName}의 최근 청구서가 결제됐어요.',
   'notification.billing.payment_failed.title': '결제가 되지 않았어요',
-  'notification.billing.payment_failed.body': '{organizationName}의 결제가 밀렸어요. 플랜을 유지하려면 결제 수단을 업데이트해 주세요.',
+  'notification.billing.payment_failed.body':
+    '{organizationName}의 결제가 밀렸어요. 플랜을 유지하려면 결제 수단을 업데이트해 주세요.',
   'notification.fallback.title': '워크스페이스에서 무언가 바뀌었어요',
   'notification.fallback.body':
     '여행을 열어 보면 무엇이 바뀌었는지 알 수 있어요.',

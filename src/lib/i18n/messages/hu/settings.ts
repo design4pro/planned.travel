@@ -268,11 +268,14 @@ const messages = {
     'Meghívják egy munkaterületre.',
 
   'notifications.event.billing.plan_changed': 'Előfizetés változásai',
-  'notifications.event.billing.plan_changed.hint': 'A munkaterülete másik csomagra vált.',
+  'notifications.event.billing.plan_changed.hint':
+    'A munkaterülete másik csomagra vált.',
   'notifications.event.billing.invoice_paid': 'Fizetési visszaigazolások',
-  'notifications.event.billing.invoice_paid.hint': 'Kifizették a munkaterülete egyik számláját.',
+  'notifications.event.billing.invoice_paid.hint':
+    'Kifizették a munkaterülete egyik számláját.',
   'notifications.event.billing.payment_failed': 'Fizetési gondok',
-  'notifications.event.billing.payment_failed.hint': 'A munkaterülete egyik terhelése nem sikerült.',
+  'notifications.event.billing.payment_failed.hint':
+    'A munkaterülete egyik terhelése nem sikerült.',
 
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'A munkaterület nem töltődött be',

@@ -265,11 +265,14 @@ const messages = {
     'Du bjuds in till en arbetsyta.',
 
   'notifications.event.billing.plan_changed': 'Abonnemangsändringar',
-  'notifications.event.billing.plan_changed.hint': 'Din arbetsyta byter abonnemang.',
+  'notifications.event.billing.plan_changed.hint':
+    'Din arbetsyta byter abonnemang.',
   'notifications.event.billing.invoice_paid': 'Betalningskvitton',
-  'notifications.event.billing.invoice_paid.hint': 'En faktura för din arbetsyta har betalats.',
+  'notifications.event.billing.invoice_paid.hint':
+    'En faktura för din arbetsyta har betalats.',
   'notifications.event.billing.payment_failed': 'Betalningsproblem',
-  'notifications.event.billing.payment_failed.hint': 'En betalning för din arbetsyta gick inte igenom.',
+  'notifications.event.billing.payment_failed.hint':
+    'En betalning för din arbetsyta gick inte igenom.',
 
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'Arbetsytan lästes inte in',

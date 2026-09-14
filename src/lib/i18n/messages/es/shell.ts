@@ -191,9 +191,11 @@ const messages = {
   'notification.billing.plan_changed.body':
     '{organizationName} ya está en el plan {plan}.',
   'notification.billing.invoice_paid.title': 'Pago recibido',
-  'notification.billing.invoice_paid.body': 'La última factura de {organizationName} está pagada.',
+  'notification.billing.invoice_paid.body':
+    'La última factura de {organizationName} está pagada.',
   'notification.billing.payment_failed.title': 'Un pago no se ha completado',
-  'notification.billing.payment_failed.body': '{organizationName} tiene un pago pendiente. Actualiza el método de pago para mantener el plan.',
+  'notification.billing.payment_failed.body':
+    '{organizationName} tiene un pago pendiente. Actualiza el método de pago para mantener el plan.',
   'notification.fallback.title': 'Algo ha cambiado en tu espacio de trabajo',
   'notification.fallback.body': 'Abre el viaje para ver qué ha sido.',
 

@@ -259,11 +259,14 @@ const messages = {
   'notifications.event.organization.invited.hint': 'تُدعى إلى مساحة عمل.',
 
   'notifications.event.billing.plan_changed': 'تغييرات الاشتراك',
-  'notifications.event.billing.plan_changed.hint': 'انتقال مساحة عملك إلى خطة أخرى.',
+  'notifications.event.billing.plan_changed.hint':
+    'انتقال مساحة عملك إلى خطة أخرى.',
   'notifications.event.billing.invoice_paid': 'إيصالات الدفع',
-  'notifications.event.billing.invoice_paid.hint': 'دفع فاتورة خاصة بمساحة عملك.',
+  'notifications.event.billing.invoice_paid.hint':
+    'دفع فاتورة خاصة بمساحة عملك.',
   'notifications.event.billing.payment_failed': 'مشكلات الدفع',
-  'notifications.event.billing.payment_failed.hint': 'تعذّر خصم مبلغ من مساحة عملك.',
+  'notifications.event.billing.payment_failed.hint':
+    'تعذّر خصم مبلغ من مساحة عملك.',
 
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'لم تُحمّل مساحة العمل',

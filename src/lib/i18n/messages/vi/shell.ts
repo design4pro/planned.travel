@@ -186,9 +186,12 @@ const messages = {
   'notification.billing.plan_changed.body':
     '{organizationName} hiện dùng gói {plan}.',
   'notification.billing.invoice_paid.title': 'Đã nhận thanh toán',
-  'notification.billing.invoice_paid.body': 'Hoá đơn gần nhất của {organizationName} đã được thanh toán.',
-  'notification.billing.payment_failed.title': 'Một khoản thanh toán không thành công',
-  'notification.billing.payment_failed.body': '{organizationName} đang quá hạn thanh toán. Hãy cập nhật phương thức thanh toán để giữ gói.',
+  'notification.billing.invoice_paid.body':
+    'Hoá đơn gần nhất của {organizationName} đã được thanh toán.',
+  'notification.billing.payment_failed.title':
+    'Một khoản thanh toán không thành công',
+  'notification.billing.payment_failed.body':
+    '{organizationName} đang quá hạn thanh toán. Hãy cập nhật phương thức thanh toán để giữ gói.',
   'notification.fallback.title':
     'Có thay đổi trong không gian làm việc của bạn',
   'notification.fallback.body': 'Mở chuyến đi để xem đó là gì.',

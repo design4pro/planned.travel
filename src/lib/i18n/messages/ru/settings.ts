@@ -272,11 +272,14 @@ const messages = {
     'Вас приглашают в рабочее пространство.',
 
   'notifications.event.billing.plan_changed': 'Изменения подписки',
-  'notifications.event.billing.plan_changed.hint': 'Пространство переходит на другой тариф.',
+  'notifications.event.billing.plan_changed.hint':
+    'Пространство переходит на другой тариф.',
   'notifications.event.billing.invoice_paid': 'Подтверждения оплаты',
-  'notifications.event.billing.invoice_paid.hint': 'Счёт вашего пространства оплачен.',
+  'notifications.event.billing.invoice_paid.hint':
+    'Счёт вашего пространства оплачен.',
   'notifications.event.billing.payment_failed': 'Проблемы с оплатой',
-  'notifications.event.billing.payment_failed.hint': 'Списание за ваше пространство не прошло.',
+  'notifications.event.billing.payment_failed.hint':
+    'Списание за ваше пространство не прошло.',
 
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'Пространство не загрузилось',

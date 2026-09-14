@@ -202,9 +202,11 @@ const messages = {
   'notification.billing.plan_changed.body':
     'У {organizationName} теперь тариф {plan}.',
   'notification.billing.invoice_paid.title': 'Платёж получен',
-  'notification.billing.invoice_paid.body': 'Последний счёт для {organizationName} оплачен.',
+  'notification.billing.invoice_paid.body':
+    'Последний счёт для {organizationName} оплачен.',
   'notification.billing.payment_failed.title': 'Платёж не прошёл',
-  'notification.billing.payment_failed.body': 'У {organizationName} есть просроченный платёж. Обновите способ оплаты, чтобы сохранить тариф.',
+  'notification.billing.payment_failed.body':
+    'У {organizationName} есть просроченный платёж. Обновите способ оплаты, чтобы сохранить тариф.',
   'notification.fallback.title': 'В вашем пространстве что-то изменилось',
   'notification.fallback.body': 'Откройте поездку и посмотрите, что именно.',
 

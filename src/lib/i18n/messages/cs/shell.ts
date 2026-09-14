@@ -201,9 +201,11 @@ const messages = {
   'notification.billing.plan_changed.body':
     '{organizationName} má nyní tarif {plan}.',
   'notification.billing.invoice_paid.title': 'Platba přijata',
-  'notification.billing.invoice_paid.body': 'Poslední faktura pro {organizationName} je zaplacená.',
+  'notification.billing.invoice_paid.body':
+    'Poslední faktura pro {organizationName} je zaplacená.',
   'notification.billing.payment_failed.title': 'Platba neproběhla',
-  'notification.billing.payment_failed.body': '{organizationName} má platbu po splatnosti. Aktualizujte platební metodu, ať tarif zůstane.',
+  'notification.billing.payment_failed.body':
+    '{organizationName} má platbu po splatnosti. Aktualizujte platební metodu, ať tarif zůstane.',
   'notification.fallback.title': 'Ve vašem prostoru se něco změnilo',
   'notification.fallback.body': 'Otevřete cestu a podívejte se co.',
 

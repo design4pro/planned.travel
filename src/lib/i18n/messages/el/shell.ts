@@ -178,9 +178,11 @@ const messages = {
   'notification.billing.plan_changed.body':
     'Το {organizationName} είναι πλέον στο πλάνο {plan}.',
   'notification.billing.invoice_paid.title': 'Η πληρωμή ελήφθη',
-  'notification.billing.invoice_paid.body': 'Το τελευταίο τιμολόγιο για {organizationName} εξοφλήθηκε.',
+  'notification.billing.invoice_paid.body':
+    'Το τελευταίο τιμολόγιο για {organizationName} εξοφλήθηκε.',
   'notification.billing.payment_failed.title': 'Μια πληρωμή δεν ολοκληρώθηκε',
-  'notification.billing.payment_failed.body': 'Το {organizationName} έχει ληξιπρόθεσμη πληρωμή. Ενημερώστε τον τρόπο πληρωμής για να κρατήσετε το πλάνο.',
+  'notification.billing.payment_failed.body':
+    'Το {organizationName} έχει ληξιπρόθεσμη πληρωμή. Ενημερώστε τον τρόπο πληρωμής για να κρατήσετε το πλάνο.',
   'notification.fallback.title': 'Κάτι άλλαξε στον χώρο εργασίας σας',
   'notification.fallback.body': 'Ανοίξτε το ταξίδι για να δείτε τι ήταν.',
 

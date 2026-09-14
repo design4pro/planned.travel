@@ -272,11 +272,14 @@ const messages = {
     'On vous invite dans un espace de travail.',
 
   'notifications.event.billing.plan_changed': 'Changements d’abonnement',
-  'notifications.event.billing.plan_changed.hint': 'Votre espace de travail change de formule.',
+  'notifications.event.billing.plan_changed.hint':
+    'Votre espace de travail change de formule.',
   'notifications.event.billing.invoice_paid': 'Reçus de paiement',
-  'notifications.event.billing.invoice_paid.hint': 'Une facture de votre espace de travail a été réglée.',
+  'notifications.event.billing.invoice_paid.hint':
+    'Une facture de votre espace de travail a été réglée.',
   'notifications.event.billing.payment_failed': 'Problèmes de paiement',
-  'notifications.event.billing.payment_failed.hint': 'Un prélèvement pour votre espace de travail a échoué.',
+  'notifications.event.billing.payment_failed.hint':
+    'Un prélèvement pour votre espace de travail a échoué.',
 
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'L’espace de travail ne s’est pas chargé',

@@ -264,11 +264,14 @@ const messages = {
     'Bir çalışma alanına davet ediliyorsunuz.',
 
   'notifications.event.billing.plan_changed': 'Abonelik değişiklikleri',
-  'notifications.event.billing.plan_changed.hint': 'Çalışma alanınız başka bir pakete geçiyor.',
+  'notifications.event.billing.plan_changed.hint':
+    'Çalışma alanınız başka bir pakete geçiyor.',
   'notifications.event.billing.invoice_paid': 'Ödeme makbuzları',
-  'notifications.event.billing.invoice_paid.hint': 'Çalışma alanınızın bir faturası ödendi.',
+  'notifications.event.billing.invoice_paid.hint':
+    'Çalışma alanınızın bir faturası ödendi.',
   'notifications.event.billing.payment_failed': 'Ödeme sorunları',
-  'notifications.event.billing.payment_failed.hint': 'Çalışma alanınız için bir tahsilat gerçekleşmedi.',
+  'notifications.event.billing.payment_failed.hint':
+    'Çalışma alanınız için bir tahsilat gerçekleşmedi.',
 
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'Çalışma alanı yüklenmedi',

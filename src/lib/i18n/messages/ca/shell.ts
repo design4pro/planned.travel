@@ -191,9 +191,11 @@ const messages = {
   'notification.billing.plan_changed.body':
     '{organizationName} ara té el pla {plan}.',
   'notification.billing.invoice_paid.title': 'Pagament rebut',
-  'notification.billing.invoice_paid.body': 'S’ha pagat la darrera factura de {organizationName}.',
+  'notification.billing.invoice_paid.body':
+    'S’ha pagat la darrera factura de {organizationName}.',
   'notification.billing.payment_failed.title': 'Un pagament no s’ha pogut fer',
-  'notification.billing.payment_failed.body': '{organizationName} té un pagament pendent. Actualitza el mètode de pagament per mantenir el pla.',
+  'notification.billing.payment_failed.body':
+    '{organizationName} té un pagament pendent. Actualitza el mètode de pagament per mantenir el pla.',
   'notification.fallback.title':
     'Alguna cosa ha canviat al teu espai de treball',
   'notification.fallback.body': 'Obre el viatge per veure què ha estat.',

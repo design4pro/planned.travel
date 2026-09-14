@@ -270,11 +270,14 @@ const messages = {
     'Někdo vás zve do pracovního prostoru.',
 
   'notifications.event.billing.plan_changed': 'Změny předplatného',
-  'notifications.event.billing.plan_changed.hint': 'Váš prostor přechází na jiný tarif.',
+  'notifications.event.billing.plan_changed.hint':
+    'Váš prostor přechází na jiný tarif.',
   'notifications.event.billing.invoice_paid': 'Potvrzení plateb',
-  'notifications.event.billing.invoice_paid.hint': 'Faktura vašeho prostoru byla zaplacena.',
+  'notifications.event.billing.invoice_paid.hint':
+    'Faktura vašeho prostoru byla zaplacena.',
   'notifications.event.billing.payment_failed': 'Problémy s platbou',
-  'notifications.event.billing.payment_failed.hint': 'Platba za váš prostor neproběhla.',
+  'notifications.event.billing.payment_failed.hint':
+    'Platba za váš prostor neproběhla.',
 
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'Prostor se nenačetl',
