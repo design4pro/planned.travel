@@ -274,8 +274,15 @@ describe('a trip’s people', () => {
         userId: coOwnerId,
         role: 'owner',
       })
-      // The rest keep the total membership order the owner-first partition did not touch.
-      expect(memberUserIds(participants).slice(1)).toEqual([ownerId, editorId])
+      // The rest are the two the partition did not promote, as a set. Their order between them is
+      // not assertable here: `createTrip` and `join` can write inside one millisecond, `created_at`
+      // ties, and the tie falls to the random tail of `newId()` — the same #472 mechanism. That the
+      // tie-break makes the order *total* is the deliberate subject of
+      // 'breaks a created_at tie on the id', which seats its rows at a fixed `createdAt` instead of
+      // hoping for one.
+      const rest = memberUserIds(participants).slice(1)
+      expect(rest).toHaveLength(2)
+      expect(new Set(rest)).toEqual(new Set([ownerId, editorId]))
     })
 
     it('carries no email address on any element', async () => {
