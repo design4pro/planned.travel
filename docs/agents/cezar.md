@@ -226,7 +226,7 @@ fires minutes before the review job posts anything. So the chain is:
 2. A commit on the design4pro/cezar fork
    (`feat(automations): filters.includePullRequests polls label events on pull requests`) teaches
    the poller to honour `filters.includePullRequests` on both gates. It is opt-in per automation -
-   the cockpit's filter schema passes unknown keys through untouched - which is what keeps `issue-regroom`,
+   the fork declares the key in the filter schema and it defaults to false - which is what keeps `issue-regroom`,
    `issue-autofix` and `issue-spec` from starting to fire on PRs that happen to carry their label.
    **Without that commit this automation never fires and says nothing**; keep it through every
    rebase onto an upstream release until upstream ships the filter.
