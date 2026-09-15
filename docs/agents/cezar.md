@@ -10,12 +10,15 @@ the rules of `SDLC.md`.
 
 ## Install and configure
 
-- Pinned version: `@open-mercato/cezar@0.10.1`, installed globally
-  (`npm i -g @open-mercato/cezar@0.10.1`) and started by the cockpit plist as `cezar serve`. The
-  service deliberately does not go through `npx`: npx resolves from a content-hashed cache npm may
-  collect at any time, and the collection takes the host patches below with it, silently. The
+- Version: the cockpit runs the [design4pro/cezar](https://github.com/design4pro/cezar/tree/design4pro)
+  fork - its `design4pro` branch is upstream `v0.11.0` plus one commit per fix below - cloned at
+  `~/dev/cloudflare/cezar`, linked onto PATH with `npm run install-as-command` (so
+  `command -v cezar` keeps its path) and started by the cockpit plist as `cezar serve`. Upstream is
+  not a fallback, whether through `npx` or `npm i -g`: it runs without every fix below and reports
+  nothing, so the first symptom is pull requests sitting with unresolved threads. The
   cockpit plist is host-wide state and lives in `design4pro/agent-kit`
-  (`host/launchd/dev.cezar.cockpit.plist`, with the runbook in that repository's README), not here -
+  (`host/launchd/dev.cezar.cockpit.plist`, with the runbook in that repository's README, "The
+  cockpit runs a fork, not npx" and "Taking an upstream release"), not here -
   one service serves both projects. The
   project entry in `~/.cezar/config.json` points at the main checkout; the versioned part is
   `.ai/cezar/config.json` (`baseBranch: develop`, `worktreeRetention: 10`, `maxParallel: 2`,
@@ -24,24 +27,24 @@ the rules of `SDLC.md`.
   the only source and cezar must not clone the upstream repository at run time).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
   of git; `config.json` and `workflows/` are tracked.
-- Host patches: `bash .ai/scripts/cezar-host-patch.sh` patches the copy of 0.10.1 the service
-  runs - the global install first, the npx cache as a fallback for a host that has not cut over -
-  puts `CEZ_SKILLS_AUTO_UPDATE=0` in the service plist and restarts it. Rerun it after any
-  reinstall or upgrade of cezar; drop each patch once the pinned version carries the fix.
-  - `issue.labeled` polls fail as soon as one recently updated issue has a comment or a
-    cross-reference (open-mercato/cezar#914, fix in upstream PR #916, unreleased), so
-    `issue-regroom`, `issue-autofix` and `issue-spec` never fire.
+- Fork commits: each fix below is one commit on `design4pro`, and a rebase onto an upstream release
+  drops the ones that release carries. Until agent-kit 39 they were string patches on an npm
+  install's `dist/` (`.ai/scripts/cezar-host-patch.sh`, since deleted). `GH_CONFIG_DIR` forwarding
+  needs no commit: 0.11.0 forwards it.
+  - In upstream, `issue.labeled` polls fail as soon as one recently updated issue has a comment or a
+    cross-reference (open-mercato/cezar#914), so `issue-regroom`, `issue-autofix` and `issue-spec`
+    never fire. The fork cherry-picks the fix, upstream PR #916.
   - On every cockpit start the skills coordinator runs `npx skills check <om-*> -p` in each project
     root, and that command re-adds the skills from upstream HEAD: the vendored
     `.claude/skills/om-*` directories become symlinks into an untracked `.agents/skills/`, which
     shows as 400 deleted files in `git status`. `skillsAutoUpdate: false` (kept in
-    `~/.cezar/config.json`) gates only the update; the patch makes `CEZ_SKILLS_AUTO_UPDATE=0` skip
+    `~/.cezar/config.json`) gates only the update; the fork makes `CEZ_SKILLS_AUTO_UPDATE=0` skip
     the check too. Recovery: remove the symlinks, `git checkout -- .claude/skills`, delete `.agents/`.
   - Two runs forking their worktree in the same moment lose the `.git/config` lock: `git worktree
 add -b` writes the new branch's upstream into the shared config, git's config lock has no
     retry, and the fork happens before cezar takes the repository-root lease, so `maxParallel`
     does not order it. Every loser dies with `worktree creation failed` before its workflow runs -
-    three runs here, two of them 26ms apart. The patch retries onto the reattach form, which
+    three runs here, two of them 26ms apart. The fork retries onto the reattach form, which
     writes no shared config.
   - A label automation pins its poll cursor once the 120s overlap band it re-reads on every poll
     holds `maxRecords` label events (planned.travel#351, reported upstream as
@@ -49,7 +52,7 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
     returns the cursor it was handed. `om-auto-manage-issues` writes three labels per issue in
     the same second, so two groomed issues saturate a five-record window. The automation stays
     enabled, polls on schedule and logs `no-match`, so a pinned one looks exactly like a quiet
-    repository. Patch 6 widens the budget of a poll that failed to advance, doubling to the
+    repository. The fork widens the budget of a poll that failed to advance, doubling to the
     100-record search ceiling within that same check, so a saturated band clears without help.
     Recognise a pin from the main checkout:
 
@@ -64,8 +67,9 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
     A `cursor` that stays behind a label you applied for more than one interval is a pin; `frozen`
     alone is not, since any truncated poll sets it, including one that advanced. `exhausted` means
     the ladder reached 100 at that cursor and gave up until the cursor moves: the band is wider
-    than the search API pages. Recovery, in order: rerun the host-patch script, because a reinstall
-    or a collected npx cache drops patch 6 without a word and brings the pin back; if the cursor
+    than the search API pages. Recovery, in order: confirm the cockpit runs a current build of the
+    fork (`readlink -f "$(command -v cezar)"` lands in `~/dev/cloudflare/cezar`), because an
+    upstream install drops the widening without a word and brings the pin back; if the cursor
     still does not move, re-baseline the automation with
     `curl -X POST "${CEZ_API:-http://localhost:4321}/api/v1/p/${CEZ_PROJECT:-planned-travel}/automations/<id>/enable"`, which
     moves `baselineAt` and the cursor to now. A baseline launches nothing from before it, so every
@@ -83,7 +87,8 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
   Polish while everything that leaves the session (code, comments, commits, GitHub) stays English.
   `.ai/scripts/__tests__/cezar-config.test.ts` fails when the key is cleared.
 - Service environment: `CEZ_AUTOMATIONS=1`, `CEZ_AUTONOMOUS_DEFAULT=0`, `CEZ_SKILLS_AUTO_UPDATE=0`,
-  `GH_CONFIG_DIR` (below), and never `GH_TOKEN`, `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
+  `GH_CONFIG_DIR` (below), all four from the agent-kit plist template, and never `GH_TOKEN`,
+  `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
   builds the agent's env from an allowlist (`PATH`, `HOME`, toolchain prefixes such as
   `NODE_*`/`PNPM_*`, `GH_TOKEN`, `GH_CONFIG_DIR`, `ANTHROPIC_*`, `CLAUDE_*`, `CEZ_*`), so a token
   in the service env is a token in every run, and any other variable set there (`HUSKY=0` for
@@ -210,20 +215,21 @@ The `develop` and `main` rulesets refuse a merge while a review thread is unreso
 resolves the threads the `claude-review` job opens. Until this automation a maintainer cleared them
 by running `om-auto-fix-pr` by hand on every PR the review job had commented on.
 
-It cannot be a webhook. Cezar 0.10.1 knows four automation events - `issue.opened`,
+It cannot be a webhook. Cezar 0.11.0 knows four automation events - `issue.opened`,
 `issue.labeled`, `issue.unlabeled`, `pull_request.opened` - and none of them is a review; worse, the
-poller scopes its label source to `is:issue` and then drops any hit carrying `pull_request`, so even
-a label on a PR is invisible to it. `pull_request.opened` is the only PR trigger there is, and it
+upstream poller scopes its label source to `is:issue` and then drops any hit carrying
+`pull_request`, so even a label on a PR is invisible to it. `pull_request.opened` is the only PR trigger there is, and it
 fires minutes before the review job posts anything. So the chain is:
 
 1. `.github/workflows/claude-code-review.yml` ends with `scripts/ci/review-threads-label.mjs`,
    which applies `review-threads` when the PR has live threads opened by the review bot.
-2. Patch 4 in `.ai/scripts/cezar-host-patch.sh` teaches the poller to honour
-   `filters.includePullRequests` on both gates. It is opt-in per automation - the cockpit's filter
-   schema passes unknown keys through untouched - which is what keeps `issue-regroom`,
+2. A commit on the design4pro/cezar fork
+   (`feat(automations): filters.includePullRequests polls label events on pull requests`) teaches
+   the poller to honour `filters.includePullRequests` on both gates. It is opt-in per automation -
+   the fork declares the key in the filter schema and it defaults to false - which is what keeps `issue-regroom`,
    `issue-autofix` and `issue-spec` from starting to fire on PRs that happen to carry their label.
-   **Without the patch this automation never fires and says nothing**; re-run the script after any
-   reinstall or upgrade of cezar.
+   **Without that commit this automation never fires and says nothing**; keep it through every
+   rebase onto an upstream release until upstream ships the filter.
 3. `pr-review-threads` runs the `pr-fix` workflow, and `om-auto-fix-pr` replies in every thread and
    resolves the ones it settles. A finding it agrees with but cannot act on - a guarded file it is
    still refused, a change that belongs upstream - is **not** a decline: it replies with the exact
@@ -281,7 +287,8 @@ brief to `om-auto-fix-issue` - the same hazard the automations avoid by sending
 
 Cezar has no scheduler. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
 (`/api/v1/p/planned-travel/runs`) and falls back to a headless `cezar run` when the cockpit is
-down; launchd calls it at 07:00, 12:00 and 17:00 on weekdays. Install (template in
+down, or exits 1 when `cezar` is not on PATH - there is no npx fallback, since upstream lacks the
+fork's fixes; launchd calls it at 07:00, 12:00 and 17:00 on weekdays. Install (template in
 `.ai/scripts/launchd/`):
 
 ```bash
@@ -312,10 +319,12 @@ must stop before `status:*` is stripped and the surviving labels renamed.
    `blocked`, `status:*` leaves every open issue, `run:*`, `type:*` and `agent-docs` move to their
    SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels waited for
    PR C, and were deleted on 2026-09-08 (docs/agents/triage-labels.md).
-5. The cockpit service already runs 0.10.1 (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`);
-   confirm `.ai/cezar/config.json` in the main checkout is the merged one, apply the host patches
-   (`bash .ai/scripts/cezar-host-patch.sh`, which also restarts the service so it reloads the
-   workflows).
+5. The cockpit service already runs the design4pro/cezar fork
+   (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`, set up per the agent-kit README);
+   confirm `.ai/cezar/config.json` in the main checkout is the merged one, then restart the service
+   while it has no active runs (`launchctl bootout gui/$(id -u)/dev.cezar.cockpit`, then
+   `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.cezar.cockpit.plist`) so it reloads
+   the workflows.
 6. `bash .ai/scripts/cez-automations.sh --dry-run`, then without the flag: the five new automations
    are created enabled.
 7. Install the housekeeping plist (above) and run `bash .ai/scripts/housekeeping.sh` once by hand.
