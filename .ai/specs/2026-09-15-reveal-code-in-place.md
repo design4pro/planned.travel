@@ -305,9 +305,18 @@ three owners land together in one pull request.
    (parity) is the check.
 4. **Pin the WebKit behaviour.** One Playwright case, run by both the `chromium` and `mobile-safari`
    projects, on a booking with a confirmation number and the preference on: click the
-   `[data-state="masked"]` control → `data-state` is `revealed`; click it again → still `revealed`
-   (the WebKit re-mask loop is absent); click outside it → `masked`. Assert on `data-state`, not on the
-   clipboard, which WebKit's automation does not grant.
+   `[data-state="masked"]` control → `data-state` is `revealed`; then `hover()` it and `mouse.down()`
+   → while the pointer is held, `data-state` is **still** `revealed`; `mouse.up()`; click outside it →
+   `masked`. Each of the two regressions gets the assertion that can actually see it. The held-pointer
+   assertion is the `preventDefault()` pin: without it `mousedown` blurs the button, `onBlur` re-masks
+   it, and the state reads `masked` between press and release — whereas after the release the buggy
+   re-mask-then-reveal round trip ends on `revealed` exactly like the fixed path, so a plain second
+   `click()` cannot tell them apart. The click-outside assertion is the `focus()` pin: without the
+   explicit `focus()` a pointer reveal leaves nothing focused, `blur` never fires and the code stays
+   `revealed`. Assert on `data-state`, not on the clipboard, which WebKit's automation does not grant —
+   and not on the `Check`/"… copied" affordance either: `copyToClipboard` has no `execCommand`
+   fallback, so a refused clipboard write leaves `copied` false and no affordance to assert in the one
+   project that needs it.
 5. **Verify.** The gate in `.ai/agentic.config.json`, then the blind A/B pair
    (`scripts/visual/capture.mjs`) on `/trips/demo-trip-01-tokyo-and-kyoto/book` with the preference on:
    the resting frame is identical, and a `--click '[data-state="masked"]'` state (which acts on the
