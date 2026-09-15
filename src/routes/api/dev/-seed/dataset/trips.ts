@@ -1,6 +1,6 @@
 /**
- * The four supporting trips, one per lifecycle state the product has to render well:
- * in progress, completed, archived and a bare draft with no dates at all.
+ * The five supporting trips, one per lifecycle state the product has to render well:
+ * in progress, completed, archived, a bare draft with no dates at all, and a plan with one place.
  *
  * They exist so no screen is judged on the flagship alone — the trip index needs status chips with
  * something behind them, the dashboard needs a trip that is happening *now*, and the atlas and
@@ -9,8 +9,8 @@
  * Every date is `day(n)`, n days from the fixture anchor — see `./anchor.ts`. The offsets are what
  * make the four lifecycle states hold by construction: Lisbon runs `day(-3)` to `day(3)`
  * so it is always under way, the Dolomites closed on `day(-61)` so the journal always has something
- * finished to write up, Marrakech is a season behind at `day(-278)`, and Patagonia carries no dates
- * at all. Read them as a timeline around zero and the fixture explains itself.
+ * finished to write up, Marrakech is a season behind at `day(-278)`, and Patagonia and Porto carry no
+ * dates at all. Read them as a timeline around zero and the fixture explains itself.
  * Each `id` is a fixed constant whose ordinal continues the sequence the flagship opens, because the
  * applier writes the flagship first and `order by id` has to keep meaning "in the order they were
  * written". Never renumber one without renumbering the rest.
@@ -1881,9 +1881,55 @@ export const patagoniaTrip: SeedTrip = {
   travellers: [{ person: 'rafal', role: 'owner' }],
 }
 
+/* -------------------------------------------------------------------------------------------------
+ * Planning — one place pinned, nothing else decided
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The trip with exactly one mapped place.
+ *
+ * The planner opens on one of three frames, and the fixture holds a trip for each: the flagship spans
+ * a country, Patagonia has nothing mapped, and this one is a single coordinate — the rectangle of zero
+ * area that `expandBounds()` widens to a neighbourhood instead of letting `fitBounds` snap to a
+ * doorway. `e2e/places-and-maps.spec.ts` opens it by its title. A second place would make it a small
+ * copy of the flagship and leave the single-place frame with nothing to be asserted against.
+ */
+export const portoTrip: SeedTrip = {
+  id: 'demo-trip-06-porto-one-lunch',
+  slug: 'porto-one-lunch',
+  title: 'Porto, one long lunch',
+  summary:
+    'A Saturday train up from Lisbon for one table by the river. Nothing else is decided.',
+  destination: 'Porto, Portugal',
+  countryCodes: ['PT'],
+  currency: 'EUR',
+  status: 'planning',
+  visibility: 'private',
+  accentColour: '#0f5f73',
+  travellers: [{ person: 'rafal', role: 'owner' }],
+
+  places: [
+    {
+      key: 'cais-da-ribeira',
+      name: 'Cais da Ribeira',
+      categorySlug: 'landmarks',
+      description:
+        'The riverfront under the Dom Luís I bridge, and the only booking this trip needs.',
+      lat: 41.1405,
+      lng: -8.6131,
+      address: 'Cais da Ribeira, 4050-510 Porto',
+      city: 'Porto',
+      countryCode: 'PT',
+      durationMinutes: 120,
+      transportMode: 'walk',
+    },
+  ],
+}
+
 export const supportingTrips: ReadonlyArray<SeedTrip> = [
   lisbonTrip,
   dolomitesTrip,
   marrakechTrip,
   patagoniaTrip,
+  portoTrip,
 ]

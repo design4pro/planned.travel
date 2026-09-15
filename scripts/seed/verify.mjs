@@ -95,7 +95,7 @@ const COUNTERS = [
  *
  * Kept in step with `src/routes/api/dev/-seed/dataset/{flagship,trips}.ts` by hand. Changing an id
  * there without changing it here is meant to turn this check red: the recorded screenshots of
- * `/trips` and `/dashboard` are photographs of exactly these five strings.
+ * `/trips` and `/dashboard` are photographs of exactly these six strings.
  */
 const DEMO_TRIP_IDS = [
   'demo-trip-01-tokyo-and-kyoto',
@@ -103,6 +103,7 @@ const DEMO_TRIP_IDS = [
   'demo-trip-03-dolomites-hut-to-hut',
   'demo-trip-04-marrakech-riad-week',
   'demo-trip-05-patagonia-traverse',
+  'demo-trip-06-porto-one-lunch',
 ]
 
 /** `demo-trip-04-marrakech-riad-week` → `marrakech-riad-week`. */

@@ -1,7 +1,7 @@
 /**
  * Writes one {@link SeedTrip} through the repositories.
  *
- * A single generic pass covers all five trips: the flagship simply supplies every optional collection
+ * A single generic pass covers all six trips: the flagship simply supplies every optional collection
  * and the draft supplies none. Everything goes through `src/server/repos`, so tenant scoping, Zod
  * validation, slug reservation, quota guards, the day-run invariant and the split arithmetic are all
  * exercised rather than bypassed — which is the point of seeding this way instead of writing SQL.

@@ -50,6 +50,7 @@ export {
   lisbonTrip,
   marrakechTrip,
   patagoniaTrip,
+  portoTrip,
 } from './trips'
 
 /** Every trip the seed writes, flagship first — and in ascending id order. */
@@ -65,8 +66,12 @@ export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
  * workspace holds no longer depend on the day it was seeded; and every trip gained a fixed primary
  * key, so a workspace seeded under version 2 still holds generated ones and has to be rebuilt
  * before its cover art matches the recorded screenshots.
+ *
+ * 4 — a sixth trip, `Porto, one long lunch`, with exactly one mapped place, so the planner's
+ * single-place opening camera has a fixture to be asserted against (issue #440). A workspace seeded
+ * under version 3 does not hold it.
  */
-export const DATASET_VERSION = 3
+export const DATASET_VERSION = 4
 
 /**
  * Workspace defaults the demo assumes: English, sterling, London, Monday weeks.
