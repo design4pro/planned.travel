@@ -102,6 +102,15 @@ one) through `.ai/scripts/test-env-up.sh`, reads `baseUrl` out of `.ai/qa/test-e
 passes it to the suite as `PLAYWRIGHT_BASE_URL`. Extra arguments go through to `pnpm e2e`.
 Tear down with `sh .ai/scripts/test-env-down.sh`.
 
+The pool has eleven ports and more worktrees than that are routinely checked out, so a full pool
+is an ordinary state rather than a fault. When every port is taken, `test-env-up.sh` re-scans every
+5 s for up to 300 s (`TEST_ENV_PORT_POLL_SECONDS`, `TEST_ENV_PORT_WAIT_SECONDS`) before giving up. A
+slot frees when a sibling run removes its worktree: the dev server it left behind stops itself
+within 30 s (issue #327), and nothing here stops another checkout's process. If no slot frees in
+time, the script prints `TEST_ENV_STATUS=unavailable` and exits **75**, and `e2e.sh` passes that
+status through. Exit 75 means the suite was not executed for an environment reason: report it as
+"not executed, environment", never as a failed e2e run. Every other non-zero exit is a real failure.
+
 `PLAYWRIGHT_BASE_URL` is read by `playwright.config.ts` and suppresses the `webServer` block
 entirely. Without it the config waits on 3000 until the global timeout. Outside CI the config also
 _refuses_ a base URL outside 3030-3040 unless `PLAYWRIGHT_ALLOW_ANY_PORT=1` is set, because four
