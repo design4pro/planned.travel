@@ -684,7 +684,7 @@ deliberately does not make itself:
 | BKG-08                 | `docs/adr/0011-here-for-public-transit-routing.md`           | `03-S3`, wave 3                                      |
 | BKG-03, and BKG-04     | `docs/adr/0012-workers-ai-for-confirmation-extraction.md`    | `03-S7`, wave 5                                      |
 | MAP-01, MAP-02, MAP-03 | `docs/adr/0013-geoapify-for-geocoding.md`                    | `02-S4` w3 mints the proxy; `02-S13` w4, `02-S11` w6 |
-| MAP-08, MAP-09         | `docs/adr/0019-here-for-road-routing.md`                     | `02-S9` w5 mints the proxy; `02-S12` w6 calls it     |
+| MAP-08, MAP-09         | `docs/adr/0019-here-for-road-routing.md`                     | `02-S9` w5, `02-S12` w6, once plan 02 cites the ADR  |
 
 BKG-08's wave moved from 2 to 3 when `03-S3` was rewritten around a real provider; the table above
 now states 3, and `03-reservations-and-transport.md` is the authority. BKG-04 is not one of the
@@ -692,8 +692,8 @@ fifteen — it is an `11-S1` exclusion — and it is listed here because the sam
 changed its disposition too; its own entry says exactly which parts of it stayed excluded.
 
 **Seven rows still wait**, and the two registers below are still the record for them: weather
-(DOC-08) and foreign-exchange rates (MNY-06, MNY-07, TRP-05, COL-10) are untouched, and the `BROWSER` (DOC-06) and
-image-transformation (ADD-08) bindings are still absent from `wrangler.jsonc`.
+(DOC-08) and foreign-exchange rates (MNY-06, MNY-07, TRP-05, COL-10) are untouched, and the
+`BROWSER` (DOC-06) and image-transformation (ADD-08) bindings are still absent from `wrangler.jsonc`.
 
 ### Owned paths
 
@@ -832,7 +832,7 @@ one decision.** It was recorded here as a single question with four parts hangin
 lookup for MAP-01, type-ahead and share-link resolution for MAP-02, address completion for MAP-03,
 plus routing (MAP-08, MAP-09), transit routing (BKG-08) and the airport and station reference dataset
 (BKG-07) as adjacent decisions "taken with it or immediately after it". They were taken separately,
-by five ADRs, and the separation is the interesting part:
+by four ADRs, and the separation is the interesting part:
 
 - **BKG-07** turned out not to be a provider decision at all. `docs/adr/0010-airport-catalogue-from-public-domain-data.md`
   buys nothing: a public dataset is fetched at **build time** by a pinned script, committed as a
@@ -847,7 +847,7 @@ by five ADRs, and the separation is the interesting part:
   be reused, for exactly that reason.
 - **MAP-08 and MAP-09 — routing** became their own decision rather than an appendix to a closed
   one, and `docs/adr/0019-here-for-road-routing.md` took it: the provider already contracted for
-  BKG-08, and the term that shaped it was not retention but that one request may not serve more
+  BKG-08, and the term that shaped it was less retention than that one request may not serve more
   than one end user. `02-places-and-maps.md` calls this its Gate B.
 
 The two conditions below therefore still bind, unchanged, for weather and for rates.
