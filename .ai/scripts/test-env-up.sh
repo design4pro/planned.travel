@@ -6,6 +6,8 @@
 #   2026-09-06 repair: POSIX port probe via node (bash /dev/tcp is silently "free" under dash),
 #                      atomic stale-lock reclaim (mv before rm), freshness via find -newer descriptor
 #                      (BSD-only stat -f and a src/server path mismatch made it a no-op on Linux)
+#   2026-09-15 repair: wait for a free port instead of failing at once; a pool that stays full
+#                      exits 75 with TEST_ENV_STATUS=unavailable, not 1 (issue #324, free-port.mjs)
 set -eu
 
 # ── Project variables ────────────────────────────────────────────────────────
@@ -65,11 +67,6 @@ acquire_lock() {
 acquire_lock
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
-# node, not bash's /dev/tcp: this runs under plain sh (dash on Debian), where that
-# redirection fails and would read as "free" for every port.
-port_busy() {
-  node -e 'const s=require("net").connect({host:process.argv[1],port:+process.argv[2]});s.setTimeout(1000);s.on("connect",()=>{s.destroy();process.exit(0)});s.on("error",()=>process.exit(1));s.on("timeout",()=>process.exit(1))' "$HOST" "$1" 2>/dev/null
-}
 healthy() { curl -sf -o /dev/null --max-time 5 "$1$HEALTH_PATH"; }
 json_field() { sed -n "s/.*\"$1\": *\"\{0,1\}\([^\",}]*\)\"\{0,1\}.*/\1/p" "$DESCRIPTOR" 2>/dev/null | head -1; }
 epoch() { date +%s; }
@@ -114,13 +111,14 @@ if ! bash "$BOOTSTRAP" --check >/dev/null 2>&1; then
 fi
 
 # ── Port ─────────────────────────────────────────────────────────────────────
-PORT=
-p=$PORT_MIN
-while [ "$p" -le "$PORT_MAX" ]; do
-  if ! port_busy "$p"; then PORT=$p; break; fi
-  p=$((p + 1))
-done
-[ -n "$PORT" ] || { echo "ERROR: no free port in $PORT_MIN-$PORT_MAX" >&2; exit 1; }
+# Waits for a slot rather than failing the moment the pool is full, and exits 75
+# (not 1) when none frees in time: the suite was not executed, which the caller
+# must be able to tell apart from a failed one. Bounds and why: free-port.mjs.
+PORT=$(node .ai/scripts/free-port.mjs "$HOST" "$PORT_MIN" "$PORT_MAX") || {
+  status=$?
+  [ "$status" -eq 75 ] && echo "TEST_ENV_STATUS=unavailable"
+  exit "$status"
+}
 BASE_URL="http://$HOST:$PORT"
 
 # ── App start + health wait ──────────────────────────────────────────────────
