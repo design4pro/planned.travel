@@ -656,8 +656,8 @@ and the plan that owns each:
 | MAP-01 | `02-places-and-maps.md`            | 1    | ~~geocoding — reverse lookup for a map-click place~~ — ADR 0013    |
 | MAP-02 | `02-places-and-maps.md`            | 2    | ~~place search — type-ahead and share-link resolution~~ — ADR 0013 |
 | MAP-03 | `02-places-and-maps.md`            | 5    | ~~geocoding — address completion on the place form~~ — ADR 0013    |
-| MAP-08 | `02-places-and-maps.md`            | 3    | routing — segment times and totals                                 |
-| MAP-09 | `02-places-and-maps.md`            | 4    | routing — road lines behind the overlay                            |
+| MAP-08 | `02-places-and-maps.md`            | 3    | ~~routing — segment times and totals~~ — ADR 0019                  |
+| MAP-09 | `02-places-and-maps.md`            | 4    | ~~routing — road lines behind the overlay~~ — ADR 0019             |
 | BKG-07 | `03-reservations-and-transport.md` | 2    | ~~an airport and station reference dataset~~ — ADR 0010            |
 | BKG-08 | `03-reservations-and-transport.md` | 3    | ~~public-transit routing~~ — ADR 0011                              |
 | BKG-03 | `03-reservations-and-transport.md` | 4    | ~~the `AI` binding~~ — ADR 0012                                    |
@@ -673,9 +673,9 @@ MNY-07 in wave 1 and MAP-01 in wave 1 are the two that make this stage urgent ra
 are wave-1 rows whose central behaviour — a rate frozen at save time, an address on a map-click
 place — cannot be built at all until a decision that is not a build decision has been taken.
 
-**Six of the fifteen have since had their decision taken, and the strikethroughs above say which.**
+**Eight of the fifteen have since had their decision taken, and the strikethroughs above say which.**
 This stage records what a row is waiting on; when the waiting ends, the row leaves the register
-rather than the register quietly keeping it. Four ADRs did it, and each is the argument this file
+rather than the register quietly keeping it. Five ADRs did it, and each is the argument this file
 deliberately does not make itself:
 
 | Row                    | Closed by                                                    | Now built by                                         |
@@ -684,15 +684,15 @@ deliberately does not make itself:
 | BKG-08                 | `docs/adr/0011-here-for-public-transit-routing.md`           | `03-S3`, wave 3                                      |
 | BKG-03, and BKG-04     | `docs/adr/0012-workers-ai-for-confirmation-extraction.md`    | `03-S7`, wave 5                                      |
 | MAP-01, MAP-02, MAP-03 | `docs/adr/0013-geoapify-for-geocoding.md`                    | `02-S4` w3 mints the proxy; `02-S13` w4, `02-S11` w6 |
+| MAP-08, MAP-09         | `docs/adr/0019-here-for-road-routing.md`                     | `02-S9` w5 mints the proxy; `02-S12` w6 calls it     |
 
 BKG-08's wave moved from 2 to 3 when `03-S3` was rewritten around a real provider; the table above
 now states 3, and `03-reservations-and-transport.md` is the authority. BKG-04 is not one of the
 fifteen — it is an `11-S1` exclusion — and it is listed here because the same ADR that closed BKG-03
 changed its disposition too; its own entry says exactly which parts of it stayed excluded.
 
-**Nine rows still wait**, and the two registers below are still the record for them: routing
-(MAP-08, MAP-09) is the half of the geocoding decision that stayed open, weather (DOC-08) and
-foreign-exchange rates (MNY-06, MNY-07, TRP-05, COL-10) are untouched, and the `BROWSER` (DOC-06) and
+**Seven rows still wait**, and the two registers below are still the record for them: weather
+(DOC-08) and foreign-exchange rates (MNY-06, MNY-07, TRP-05, COL-10) are untouched, and the `BROWSER` (DOC-06) and
 image-transformation (ADD-08) bindings are still absent from `wrangler.jsonc`.
 
 ### Owned paths
@@ -759,7 +759,7 @@ open is left **open with its constraint stated**, and none of them is silently r
 provider inside this file. Choosing one here would be the worst outcome available: a plan is not the
 place a commercial commitment gets made. **A decision that has since been taken elsewhere satisfies
 that condition rather than breaking it**, provided the register names the ADR that took it and does
-not restate the reasoning — which is why the four closures above are one line each and a citation.
+not restate the reasoning — which is why the five closures above are one line each and a citation.
 
 ### Blockers
 
@@ -832,7 +832,7 @@ one decision.** It was recorded here as a single question with four parts hangin
 lookup for MAP-01, type-ahead and share-link resolution for MAP-02, address completion for MAP-03,
 plus routing (MAP-08, MAP-09), transit routing (BKG-08) and the airport and station reference dataset
 (BKG-07) as adjacent decisions "taken with it or immediately after it". They were taken separately,
-by four ADRs, and the separation is the interesting part:
+by five ADRs, and the separation is the interesting part:
 
 - **BKG-07** turned out not to be a provider decision at all. `docs/adr/0010-airport-catalogue-from-public-domain-data.md`
   buys nothing: a public dataset is fetched at **build time** by a pinned script, committed as a
@@ -845,10 +845,12 @@ by four ADRs, and the separation is the interesting part:
   decided it was not price but **the right to keep the coordinate**, which is the "cache and for how
   long" term named two paragraphs below. The provider we had already contracted for BKG-08 could not
   be reused, for exactly that reason.
-- **MAP-08 and MAP-09 — routing — stay open**, and are now their own decision rather than an
-  appendix to a closed one. `02-places-and-maps.md` keeps them as its Gate B.
+- **MAP-08 and MAP-09 — routing** became their own decision rather than an appendix to a closed
+  one, and `docs/adr/0019-here-for-road-routing.md` took it: the provider already contracted for
+  BKG-08, and the term that shaped it was not retention but that one request may not serve more
+  than one end user. `02-places-and-maps.md` calls this its Gate B.
 
-The two conditions below therefore still bind, unchanged, for weather, for rates and for routing.
+The two conditions below therefore still bind, unchanged, for weather and for rates.
 
 **The binding constraint, which no plan may plan around.** A free tier is not evidence that a
 capability is free to us. Two conditions rule out the options that look cheapest, and both must be
