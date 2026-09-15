@@ -8,10 +8,15 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
-# One run per branch: a force-push supersedes the run it interrupted.
+# One run per branch. On a pull request a push supersedes the run it
+# interrupted. A push to `develop` or `main` is never cancelled, because that
+# run ends by deploying (`deploy-staging` / `deploy-production` below) and an
+# interrupted `d1 migrations apply` would leave the schema between two
+# versions. Those runs queue instead: GitHub keeps one pending run per group and
+# replaces it with the newest, so a burst of merges costs two runs, not one each.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -187,30 +192,20 @@ jobs:
       - name: Check the build left the route tree alone
         run: git diff --exit-code -- src/routeTree.gen.ts
 
-  # The unit suite, sharded the way the journeys are, and for the same reason:
-  # the runner has two vCPUs, vitest already fills both, and the suite is
-  # CPU-bound - so the only way left to make it finish sooner is to give it more
-  # machines. As one job it was 361 s, 74% of a 486 s pipeline.
-  #
-  # Three rather than more. Vitest cuts shards by file, and the files are not
-  # equal: measured, three shards carry 27% / 34% / 39% of the work and four
-  # carry 24% / 19% / 32% / 25%, so a fourth shard takes about 26 s off the wall
-  # clock and adds a whole job's fixed cost to the bill. Three is where that
-  # trade stops being worth it.
-  #
-  # Each shard writes a blob report instead of its own verdict, because a shard
-  # only ever sees a third of the picture: per-glob coverage thresholds are
-  # meaningless on a third of the files, and three separate "50 passed" lines
-  # are not a result anybody can read. `test-report` below merges them.
+  # The unit suite, as one job. It was three shards and a merge job while the
+  # runner was a 2-vCPU GitHub-hosted machine, where one job took 361 s. In the
+  # self-hosted pool's 3-CPU containers the whole suite with coverage measures
+  # 139 s (one shard alone 43 s, as in CI), so the shards bought about 45 s of
+  # wall clock for three more jobs of fixed cost on a pool of three slots, which
+  # queued longer than that (ADR 0021). One run also puts the per-glob coverage
+  # thresholds over the whole suite directly, with no blob reports to count and
+  # merge. Moved back to GitHub-hosted runners (`vars.RUNNER_CI`, the recovery
+  # path) it takes minutes again, which that path can afford.
   test:
-    name: unit tests (${{ matrix.shard }}/3)
+    name: unit tests
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
 
     steps:
       - name: Check out
@@ -219,84 +214,9 @@ jobs:
       - name: Set up the toolchain
         uses: ./.github/actions/setup
 
-      # `--coverage` on every shard because v8 has to instrument the run that
-      # executes the code; the merge step cannot invent coverage for files a
-      # shard never loaded. The blob carries it, and the numbers add up exactly
-      # - verified against an unsharded run, 10280/19069 statements either way.
-      - name: Run this shard of the suite
-        # `VITEST_SHARDED` turns off the per-glob coverage thresholds for this
-        # run; `test-report` applies them to the merged whole. A shard executes
-        # a third of the files, so what it measures for any one glob is a third
-        # of the truth - the first sharded run failed exactly this way, every
-        # shard red on a tiles threshold that the merged coverage meets, and no
-        # blob written because the process was already exiting.
-        env:
-          VITEST_SHARDED: '1'
-        run: >-
-          pnpm exec vitest run --coverage
-          --shard=${{ matrix.shard }}/${{ strategy.job-total }}
-          --reporter=blob
-          --outputFile=unit-blob-reports/blob-${{ matrix.shard }}.json
-
-      # `always()`: a shard that fails still has a report, and that report is
-      # the only place its failures are legible.
-      #
-      # The directory is not vitest's own `.vitest-reports`, and the dot is the
-      # whole reason: `upload-artifact` treats a dot-prefixed path as hidden and
-      # silently uploads nothing, which it did - the blob was written, the log
-      # said so, and the artifact was empty. `e2e` above writes to `blob-report`
-      # for the same reason.
-      - name: Upload the blob report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: unit-blob-${{ matrix.shard }}
-          path: unit-blob-reports
-          retention-days: 1
-          if-no-files-found: error
-
-  # One verdict for the three shards, and the only place the coverage thresholds
-  # can be judged: they are per-glob, and no single shard holds a whole glob.
-  test-report:
-    name: unit tests · merged report
-    needs: test
-    if: ${{ !cancelled() && needs.test.result != 'skipped' }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out
-        uses: actions/checkout@v7
-
-      - name: Set up the toolchain
-        uses: ./.github/actions/setup
-
-      - name: Download the blob reports
-        uses: actions/download-artifact@v8
-        with:
-          pattern: unit-blob-*
-          path: all-blob-reports
-          merge-multiple: true
-
-      # Counted, not assumed. A shard that dies before writing its blob - an OOM,
-      # a runner evicted - would otherwise merge into a green report over a third
-      # of the suite nobody ran, which is worse than a red one.
-      - name: Check every shard reported
-        shell: bash
-        run: |
-          set -euo pipefail
-          found=$(find all-blob-reports -name '*.json' -type f | wc -l | tr -d ' ')
-          if [ "$found" -ne 3 ]; then
-            echo "::error title=Missing shard report::expected 3 blob reports, found $found - a shard produced none, so this run has not tested the whole suite."
-            exit 1
-          fi
-
-      # Merging replays the recorded results rather than re-running anything, so
-      # this is seconds. The exit code is the suite's, and the coverage
-      # thresholds are applied here - verified by raising one and watching the
-      # merge go red.
-      - name: Merge the shard reports
-        run: pnpm exec vitest --mergeReports=all-blob-reports --coverage --reporter=default --reporter=github-actions
+      # The exit code is the suite's, coverage thresholds included.
+      - name: Run the suite
+        run: pnpm exec vitest run --coverage --reporter=default --reporter=github-actions
 
       - name: Upload coverage report
         if: always()
@@ -490,3 +410,36 @@ jobs:
           path: playwright-report
           retention-days: 7
           if-no-files-found: ignore
+
+      # The verdict, which is why the rulesets require this job for the journeys
+      # and not the shards: a shard's check name moves with the shard count.
+      # `merge-reports` exits 0 whatever the shards found - PR #518's run
+      # 34956377809 shows both shards failed under a green merged report - so
+      # the result comes from `needs.e2e.result`, the aggregate over the matrix,
+      # which is not `success` when any shard failed, was cancelled or never ran.
+      - name: Fail unless every shard passed
+        if: ${{ !cancelled() && needs.e2e.result != 'success' }}
+        run: |
+          echo "::error title=e2e::the journeys did not pass on every shard (result: ${{ needs.e2e.result }}); the report above names the failures."
+          exit 1
+
+  # The deploys, as the last jobs of a push run and only behind a green one.
+  # They used to be workflows of their own, started by the same push at the same
+  # moment as this run and reading nothing from it, so a red commit shipped
+  # exactly like a green one. No status function in `if` means an implicit
+  # `success()`: a failed `verify`, unit suite or e2e report skips the deploy
+  # (ADR 0021). A later merge cannot interrupt one mid-migration either, since
+  # `concurrency` above cancels pull request runs only.
+  deploy-staging:
+    name: deploy · staging
+    needs: [verify, test, e2e-report]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/deploy-staging.yml
+    secrets: inherit
+
+  deploy-production:
+    name: deploy · production
+    needs: [verify, test, e2e-report]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

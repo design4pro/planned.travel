@@ -99,12 +99,6 @@ src/impeccable/
 # per checkout, and meaningless in another one.
 .eslintcache
 
-# Blob reports, written by the sharded unit job in CI (`--reporter=blob`) and by
-# anyone reproducing that locally. Merged into a verdict by `test-report` and
-# never worth keeping afterwards. Not vitest's default `.vitest-reports`,
-# because `upload-artifact` skips a dot-prefixed path as hidden.
-unit-blob-reports/
-
 # Per-run scratch of the retired repository-orchestrated workflows: port pin, ladder verdicts
 # and digests, handoff. Never committed; the agent's PR carries what matters.
 .agent/

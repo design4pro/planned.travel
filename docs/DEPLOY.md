@@ -1388,9 +1388,12 @@ satisfy it exists.
 
 ## 10. Continuous deployment
 
-`.github/workflows/ci.yml` runs on every pull request: install, route-tree freshness, lint,
-typecheck, tests with coverage, build. `.github/workflows/deploy.yml` runs on `main`: build,
-apply D1 migrations, deploy, smoke-check.
+`.github/workflows/ci.yml` runs on every pull request and every push to `develop` and `main`:
+install, route-tree freshness, lint, typecheck, tests with coverage, build, the e2e journeys. A push
+run ends by calling `.github/workflows/deploy-staging.yml` (`develop`) or
+`.github/workflows/deploy.yml` (`main`) - build, apply D1 migrations, deploy, smoke-check - and
+only once `verify`, the unit suite and the e2e report are green (ADR 0021). Either deploy can still be
+dispatched by hand, which waits on nothing.
 
 Configure the repository once. Product ids are public and are inlined into both bundles at build
 time, so they belong in repository **variables**, never secrets. Locally the same names go in
