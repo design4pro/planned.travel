@@ -78,9 +78,13 @@ import {
  * being watched, and its exceptions land in that route's reading. Reading them
  * there is worse than not reading them - it names the wrong screen. The first
  * version of this walk shared a page and failed on `/forgot-password` with
- * WebKit's "Cannot clear timer: timer created with requestIdleCallback() but
- * cleared with clearTimeout()", thrown by `@radix-ui/react-password-toggle-field`
- * tearing down the field on `/login`, one route earlier. A fresh page is what the
+ * "Cannot clear timer: timer created with requestIdleCallback() but cleared with
+ * clearTimeout()", raised while `@radix-ui/react-password-toggle-field` tore down
+ * the field on `/login`, one route earlier. (The sentence turned out to be
+ * Playwright's fake clock rather than WebKit, and on Chromium it was caught being
+ * provoked by Sentry Replay rather than by Radix — most likely the same here; it is
+ * tolerated for that reason in `TOLERATED_PAGE_ERRORS`, and the lesson about the
+ * wrong screen stands for every exception that is not.) A fresh page is what the
  * fourteen separate declarations gave for free, and it is the only part of them
  * worth keeping.
  */
@@ -493,6 +497,11 @@ test.describe('authenticated routes', () => {
           node.textContent.trim(),
         ),
         words: (surface?.textContent ?? '').replace(/\s+/g, ' ').trim().length,
+        // Rendered geometry, which `textContent` cannot see: a label cut down
+        // to its head noun still reads in full to every string above.
+        clipped: [...(surface?.querySelectorAll('dt, dt *') ?? [])]
+          .filter((node) => node.scrollWidth > node.clientWidth)
+          .map((node) => node.textContent.trim()),
       }
     })
     // Which quartet of headings belongs to which record. Most of the demo
@@ -542,6 +551,10 @@ test.describe('authenticated routes', () => {
         shown.labels,
         'the fact grid is all four fields, headed for the record it is reading',
       ).toEqual(headings[record].map((rule) => expect.stringMatching(rule)))
+      expect(
+        shown.clipped,
+        'a heading wraps inside its cell; clipped, the trip heading loses its workspace qualifier',
+      ).toEqual([])
       if (record !== 'none') {
         // The whole point of the visit reading, asserted on the running page:
         // a country the map has filled in prints what is known about it, not an

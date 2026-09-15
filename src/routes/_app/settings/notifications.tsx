@@ -97,6 +97,21 @@ const EVENTS: ReadonlyArray<{
     label: 'settings.notifications.event.organization.invited',
     hint: 'settings.notifications.event.organization.invited.hint',
   },
+  {
+    eventType: 'billing.plan_changed',
+    label: 'settings.notifications.event.billing.plan_changed',
+    hint: 'settings.notifications.event.billing.plan_changed.hint',
+  },
+  {
+    eventType: 'billing.invoice_paid',
+    label: 'settings.notifications.event.billing.invoice_paid',
+    hint: 'settings.notifications.event.billing.invoice_paid.hint',
+  },
+  {
+    eventType: 'billing.payment_failed',
+    label: 'settings.notifications.event.billing.payment_failed',
+    hint: 'settings.notifications.event.billing.payment_failed.hint',
+  },
 ]
 
 export const Route = createFileRoute('/_app/settings/notifications')({

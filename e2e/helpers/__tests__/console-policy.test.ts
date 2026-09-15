@@ -42,6 +42,17 @@ function preloadAdvisory(url: string, tail = WEBKIT_PRELOAD_TAIL): string {
   return `The resource ${url} was preloaded using link preload but not used within a few seconds from the window's load event.${tail}`
 }
 
+/**
+ * What Playwright's fake clock throws when `clearTimeout()` meets one of its idle callbacks.
+ *
+ * `visit()` installs that clock in every frame, and Sentry Replay schedules through a
+ * sandbox iframe's copy while cancelling through the page's, so two clocks' ids meet.
+ * The check is the harness's own: a browser says nothing. Caught on the 01-S1d copy
+ * dialog on Chromium (issue #402).
+ */
+const CLOCK_REFUSAL =
+  'Cannot clear timer: timer created with requestIdleCallback() but cleared with clearTimeout()'
+
 type Case = {
   readonly what: string
   readonly type: string
@@ -168,6 +179,43 @@ const CASES: ReadonlyArray<Case> = [
     what: 'an app warning that merely quotes the preload advisory',
     type: 'warning',
     text: `The theme script bailed out. ${preloadAdvisory('http://localhost:3003/src/styles/styles.css')}`,
+    liveMap: false,
+    verdict: 'fatal',
+  },
+  {
+    what: 'an uncaught exception',
+    type: 'pageerror',
+    text: "TypeError: Cannot read properties of undefined (reading 'from')",
+    liveMap: false,
+    verdict: 'fatal',
+  },
+  {
+    what: "the fake clock's refusal to clear an idle callback as a timeout",
+    type: 'pageerror',
+    text: CLOCK_REFUSAL,
+    liveMap: false,
+    verdict: 'tolerated',
+  },
+  {
+    // Only the pairing that has been seen is let through; the check guards
+    // every other mix of schedule and clear as well.
+    what: "the clock's refusal for a different pairing",
+    type: 'pageerror',
+    text: 'Cannot clear timer: timer created with setTimeout() but cleared with cancelIdleCallback()',
+    liveMap: false,
+    verdict: 'fatal',
+  },
+  {
+    what: 'an uncaught exception that merely quotes the refusal',
+    type: 'pageerror',
+    text: `Teardown failed. ${CLOCK_REFUSAL}`,
+    liveMap: false,
+    verdict: 'fatal',
+  },
+  {
+    what: 'the same sentence written to the console rather than thrown',
+    type: 'error',
+    text: CLOCK_REFUSAL,
     liveMap: false,
     verdict: 'fatal',
   },

@@ -271,6 +271,16 @@ const messages = {
   'notifications.event.organization.invited.hint':
     'Je wordt uitgenodigd voor een werkruimte.',
 
+  'notifications.event.billing.plan_changed': 'Abonnementswijzigingen',
+  'notifications.event.billing.plan_changed.hint':
+    'Je werkruimte stapt over naar een ander abonnement.',
+  'notifications.event.billing.invoice_paid': 'Betaalbewijzen',
+  'notifications.event.billing.invoice_paid.hint':
+    'Een factuur van je werkruimte is betaald.',
+  'notifications.event.billing.payment_failed': 'Betaalproblemen',
+  'notifications.event.billing.payment_failed.hint':
+    'Een afschrijving voor je werkruimte is mislukt.',
+
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'De werkruimte is niet geladen',
   'workspace.summary.description': 'Abonnement {plan} · aangemaakt {date}',

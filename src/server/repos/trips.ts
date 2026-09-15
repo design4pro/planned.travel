@@ -1474,9 +1474,11 @@ export async function listTripMembers(
   return tripMembersRepository.findMany(scope, {
     where: eq(tripMembers.tripId, tripId),
     // `created_at` is a millisecond timestamp, so an owner and a member created inside one request
-    // tie on it and SQLite may answer a tie in either order. `id` is `newId()` and time-sortable,
-    // which makes the order total — and "owner first" in `listTripParticipants` stable rather than
-    // dependent on whatever rowid order the engine happened to produce.
+    // tie on it and SQLite may answer a tie in either order. `asc(id)` makes the order total — the
+    // same two rows always come back the same way — but not creation order: `newId()`'s time prefix
+    // is that same millisecond, so a tie falls to its random tail. Rows written inside one
+    // millisecond have no defined order between them. "Owner first" in `listTripParticipants` does
+    // not rest on this; it is a partition over whatever order comes back.
     orderBy: [asc(tripMembers.createdAt), asc(tripMembers.id)],
   })
 }

@@ -148,6 +148,11 @@ test.describe('MAP-05 — the basemap a member picks is the basemap they get', (
     if (ATLAS === undefined) return
 
     try {
+      // A retry opens on whatever the last attempt left stored, and that
+      // attempt's teardown is best-effort. Owning the starting row keeps every
+      // attempt the same test instead of a press on an entry already checked.
+      await clearOverride(context)
+
       await onRoute(context, APPEARANCE, async (page) => {
         await chooseBasemap(page, CHARCOAL)
         await expect(page.locator(CHARCOAL)).toHaveAttribute(
@@ -430,15 +435,35 @@ async function sampleCanvas(page: Page): Promise<CanvasSample> {
  * checked either way; `pinDemoLanguage()` in `./helpers/session.ts` learned the
  * same lesson about the language chips. The response is armed before the click
  * because it can arrive first.
+ *
+ * Two presses issue no write at all, and both used to be discovered only when
+ * `WRITE_TIMEOUT_MS` ran out (issue #477): a press on the entry already checked,
+ * which Radix does not report as a change, and a press that lands before the
+ * picker has a handler. Both are ruled out on the expect timeout first — the
+ * entry is not checked before the press, and is after it, which only the
+ * picker's own handler can do — so the long wait is spent only on a write that
+ * was actually issued.
  */
 async function chooseBasemap(page: Page, option: string): Promise<void> {
+  const entry = page.locator(option)
+  await expect(
+    entry,
+    `${option} is already checked, so pressing it would write nothing`,
+  ).not.toHaveAttribute('data-state', 'checked')
   const written = page.waitForResponse(
     (response) =>
       response.request().method() === 'POST' &&
       response.url().includes('/_serverFn/'),
     { timeout: WRITE_TIMEOUT_MS },
   )
-  await page.locator(option).click()
+  // Still awaited below; this only keeps a wait that a failed assertion
+  // abandons from surfacing as an unhandled rejection when the page closes.
+  written.catch(() => undefined)
+  await entry.click()
+  await expect(
+    entry,
+    `the press on ${option} never reached the picker`,
+  ).toHaveAttribute('data-state', 'checked')
   // Asserted rather than folded into the predicate: a failed write is a response
   // too, and the picker is optimistic, so the `checked` assertions after this
   // would pass on a write that never reached the column. Read as an expectation
@@ -451,21 +476,22 @@ async function chooseBasemap(page: Page, option: string): Promise<void> {
  * Put the member back on the workspace's map style, which is where local D1
  * starts: `user_settings.map_style` is `NULL` for every row.
  *
- * The round trip ends here anyway; this is what makes a *failed* run leave the
- * fixture as it found it, so the next one starts where the first did rather
- * than opening on somebody else's Charcoal.
+ * The round trip starts and ends here. Ending here is what makes a *failed* run
+ * leave the fixture as it found it; starting here is what makes a retry start
+ * where the first attempt did when that teardown could not finish, rather than
+ * opening on somebody else's Charcoal.
  */
 async function clearOverride(context: BrowserContext): Promise<void> {
   const page = await context.newPage()
   try {
-    // Plain `load`, deliberately not `networkidle`: this runs while the rest of
-    // the suite has the dev server busy, and a document that is still prefetching
-    // sibling routes never goes idle inside the test timeout — which is how the
-    // teardown, not the assertion, failed the first full-suite run. The wait that
-    // matters is the one on the next line, and it is a stronger signal anyway.
-    await page.goto(APPEARANCE.path)
+    // Settled, not merely visible: a press that lands before hydration is
+    // swallowed, and a teardown that pressed on the server's markup is how a
+    // failed attempt left Charcoal stored for both retries after it (issue
+    // #477). `visit()` also stays off `networkidle`, which a document still
+    // prefetching sibling routes never reaches while the suite has the dev
+    // server busy.
+    await visit(page, APPEARANCE, 'light')
     const follow = page.locator(FOLLOW_WORKSPACE)
-    await follow.waitFor({ state: 'visible', timeout: WRITE_TIMEOUT_MS })
     if ((await follow.getAttribute('data-state')) !== 'checked') {
       await chooseBasemap(page, FOLLOW_WORKSPACE)
     }

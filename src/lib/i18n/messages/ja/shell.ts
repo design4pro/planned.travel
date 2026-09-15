@@ -153,6 +153,12 @@ const messages = {
   'notification.billing.plan_changed.title': 'プランが変わりました',
   'notification.billing.plan_changed.body':
     '{organizationName}は{plan}プランになりました。',
+  'notification.billing.invoice_paid.title': 'お支払いを受け取りました',
+  'notification.billing.invoice_paid.body':
+    '{organizationName}の最新の請求書が支払われました。',
+  'notification.billing.payment_failed.title': 'お支払いが完了しませんでした',
+  'notification.billing.payment_failed.body':
+    '{organizationName}のお支払いが滞っています。プランを維持するには支払い方法を更新してください。',
   'notification.fallback.title': 'ワークスペースで何かが変わりました',
   'notification.fallback.body': '旅を開くと、何が変わったのかわかります。',
   'dashboard.error': 'ダッシュボードを読み込めませんでした',

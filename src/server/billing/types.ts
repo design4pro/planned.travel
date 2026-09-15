@@ -140,14 +140,6 @@ export type BillingTask =
       readonly currency: string
       readonly providerEventId: string
     }
-  | {
-      readonly kind: 'billing.invoice.payment_failed'
-      readonly organizationId: string
-      readonly providerOrderId: string
-      readonly attemptCount: number
-      readonly nextAttemptAt: string | null
-      readonly providerEventId: string
-    }
 
 /** The slice of a Cloudflare Queue billing uses. */
 export interface BillingTaskQueue {

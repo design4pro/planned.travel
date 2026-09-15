@@ -25,6 +25,10 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '旅程',
   'plan.places': '場所',
+  'plan.readOnly.archived':
+    'この旅行はアーカイブ済みのため、プランは閲覧専用です。',
+  'plan.readOnly.role':
+    'このプランは閲覧のみできます。変更できるのは旅行のオーナーと編集者だけです。',
   'plan.day.empty':
     'まだ予定がありません。場所かメモをここにドラッグしてください',
   'plan.move.refused.duplicate': '{name} はその日にすでにあります',

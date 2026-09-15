@@ -24,9 +24,11 @@ export type {
   ConsoleReport,
   ConsoleVerdict,
   ToleratedConsoleWarning,
+  ToleratedPageError,
 } from './console-policy'
 export {
   TOLERATED_CONSOLE_WARNINGS,
+  TOLERATED_PAGE_ERRORS,
   classifyConsoleMessage,
 } from './console-policy'
 
@@ -64,7 +66,16 @@ export function watchConsole(
     }
   })
   page.on('pageerror', (error) => {
-    fatal.push(`pageerror: ${error.message}`)
+    const verdict = classifyConsoleMessage({
+      type: 'pageerror',
+      text: error.message,
+      liveMap,
+    })
+    if (verdict === 'tolerated') {
+      tolerated.push(`pageerror: ${error.message}`)
+    } else {
+      fatal.push(`pageerror: ${error.message}`)
+    }
   })
 
   return () => ({ fatal, tolerated })

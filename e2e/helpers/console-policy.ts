@@ -30,7 +30,8 @@ export type ToleratedConsoleWarning = {
  * docs/SPEC.md §2 asks for zero console errors *or warnings*, and that bar still
  * bites. Everything below stays fatal, on every route, with no exception:
  *
- * - every `pageerror`, which is an uncaught exception;
+ * - every `pageerror`, which is an uncaught exception, but for the single
+ *   harness-made one in `TOLERATED_PAGE_ERRORS` below;
  * - every `console.error`, MapLibre's and React's included;
  * - every `console.assert`;
  * - every `console.warn` not matched by an entry in this list — which is every
@@ -94,12 +95,69 @@ export const TOLERATED_CONSOLE_WARNINGS: ReadonlyArray<ToleratedConsoleWarning> 
     },
   ]
 
+/** One narrowly-scoped exception to "an uncaught exception fails the run". */
+export type ToleratedPageError = {
+  /** Why this is the test harness throwing rather than the app. */
+  readonly why: string
+  readonly match: RegExp
+}
+
+/**
+ * The complete list of uncaught exceptions a journey does not fail on.
+ *
+ * Since ADR 0016 the console is the whole net a journey casts, so every entry here
+ * is coverage given up. It holds one, and what makes that one admissible is that
+ * no browser and no line of this application can write it.
+ *
+ * **Two fake clocks, one id.** `visit()` pins the page's clock with
+ * `page.clock.setFixedTime`, and Playwright does that by replacing the timer
+ * functions of every frame with its own (`packages/injected/src/clock.ts` in
+ * playwright-core). Each frame's replacement counts its ids from the same start, and
+ * it throws this sentence when `clearTimeout()` is handed an id it holds as a live
+ * `requestIdleCallback()`.
+ *
+ * Sentry Session Replay hands it one. Its flush debounce (`@sentry/core`'s
+ * `debounce`, called by `ReplayContainer`) schedules through
+ * `getNativeImplementation('setTimeout')`, which — finding the page's `setTimeout`
+ * no longer native — borrows the one from a hidden sandbox iframe, and that frame
+ * has a fake clock of its own. The debounce then cancels with the page's
+ * `clearTimeout()`, and whenever the iframe's timeout and a page idle callback share
+ * a number, the page's clock objects. Caught with its stack on the 01-S1d copy
+ * dialog on Chromium, from a keyboard breadcrumb (issue #402); the same sentence was
+ * blamed on `@radix-ui/react-password-toggle-field` on WebKit
+ * (`e2e/journeys.spec.ts`), where the sign-in form is typed into. Without the fake
+ * clock `window.setTimeout` is native, Sentry takes it, and there is no second clock
+ * — so no build and no browser raises this. It needs a `VITE_SENTRY_DSN` in the
+ * local env to happen at all, which is why CI, which sets none, has never seen it.
+ *
+ * What the entry gives up is this one pairing: were the app itself ever to cancel an
+ * idle callback with `clearTimeout()` — a silent no-op in a browser — the journeys
+ * would not say so. Nothing under `src/` schedules an idle callback today.
+ *
+ * Anchored at both ends, on this one pairing, and read only for a `pageerror`: the
+ * same sentence written to the console, the check's other pairings, and an exception
+ * that merely quotes it all stay fatal. Asserted in `__tests__/console-policy.test.ts`.
+ */
+export const TOLERATED_PAGE_ERRORS: ReadonlyArray<ToleratedPageError> = [
+  {
+    why: "Playwright's fake clock refusing a `clearTimeout()` whose id Sentry Replay took from a sandbox iframe's own fake clock and which collides with a page idle callback — two clocks only the harness installs",
+    match:
+      /^Cannot clear timer: timer created with requestIdleCallback\(\) but cleared with clearTimeout\(\)$/,
+  },
+]
+
 /** Where one console message lands: fails the run, is let through, or is noise. */
 export function classifyConsoleMessage(message: {
   readonly type: string
   readonly text: string
   readonly liveMap: boolean
 }): ConsoleVerdict {
+  if (message.type === 'pageerror') {
+    const tolerated = TOLERATED_PAGE_ERRORS.some((rule) =>
+      rule.match.test(message.text),
+    )
+    return tolerated ? 'tolerated' : 'fatal'
+  }
   if (message.type === 'error' || message.type === 'assert') {
     return 'fatal'
   }

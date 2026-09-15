@@ -247,6 +247,12 @@ const messages = {
   'notification.billing.plan_changed.title': 'Your plan changed',
   'notification.billing.plan_changed.body':
     '{organizationName} is now on the {plan} plan.',
+  'notification.billing.invoice_paid.title': 'Payment received',
+  'notification.billing.invoice_paid.body':
+    'The latest invoice for {organizationName} has been paid.',
+  'notification.billing.payment_failed.title': 'A payment did not go through',
+  'notification.billing.payment_failed.body':
+    '{organizationName} is past due. Update the payment method to keep the plan.',
   /**
    * A row whose key this catalogue does not carry — written against a template
    * that has since been renamed, or by a newer deployment. Never the key itself
