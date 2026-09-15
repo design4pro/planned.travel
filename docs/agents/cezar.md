@@ -167,7 +167,8 @@ spec path, or for `brainstorm` the idea.
 Provisioning is `scripts/worktree/bootstrap.sh --profile worktree --no-seed` (deps, route tree,
 `.dev.vars`, local D1 with airports, basemap when cached; no server), or only `pnpm install` and
 `pnpm generate-routes` for the read-only workflows. The validation gate the skills run is
-`validation.commands` in `.ai/agentic.config.json`; its e2e entry starts the app through
+`validation.commands` in `.ai/agentic.config.json`, which leaves the full journeys to CI (ADR 0021).
+`bash .ai/scripts/e2e.sh`, which a run uses for the journeys its diff reaches, starts the app through
 `.ai/scripts/test-env-up.sh` on a free port from 3030-3040 (`om-prepare-test-env` contract). That
 server is deliberately left running for the rest of the run to reuse, so nothing else would ever
 stop it: under `E2E=1` `vite.config.ts` therefore has it watch for its own root disappearing and

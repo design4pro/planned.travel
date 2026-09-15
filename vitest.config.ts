@@ -152,26 +152,15 @@ export default defineConfig({
        * Thresholds are per-glob rather than global: they hold the platform
        * modules that carry protocol logic to a real bar without turning every
        * new UI file into a coverage failure.
-       *
-       * `VITEST_SHARDED` drops them, and CI sets it on each shard of the unit
-       * job. A shard runs a third of the files, so the coverage it measures
-       * for any one glob is a third of the truth, and the threshold fails on
-       * work another shard did - which is precisely what the first sharded run
-       * did, every shard red on a bar the whole suite clears. The thresholds
-       * are applied once, in `test-report`, over the merged picture. A local
-       * `pnpm test --coverage` shards nothing and keeps them.
        */
-      thresholds:
-        process.env.VITEST_SHARDED === '1'
-          ? undefined
-          : {
-              'src/routes/api/tiles/-lib/**': {
-                statements: 85,
-                branches: 85,
-                functions: 85,
-                lines: 85,
-              },
-            },
+      thresholds: {
+        'src/routes/api/tiles/-lib/**': {
+          statements: 85,
+          branches: 85,
+          functions: 85,
+          lines: 85,
+        },
+      },
     },
   },
 })
