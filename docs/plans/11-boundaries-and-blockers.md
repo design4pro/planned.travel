@@ -24,10 +24,11 @@ Three registers, three stages:
   from the dependencies in `package.json`, with the §3 verdict and one chosen fallback each. Two of
   its ten entries — mail-message parsing and document text extraction — are now **closed** rather
   than deferred, by a platform binding rather than by a package, so `SPEC` §3 is untouched.
-- **`11-S3`** — the absent bindings and the open commercial decisions: routing, weather, and
+- **`11-S3`** — the absent bindings and the open commercial decisions: weather and
   foreign-exchange rates. Geocoding and place search stood here too until `docs/adr/0013-geoapify-for-geocoding.md`
-  took it; the register keeps the closed entries, struck through and cited, because a reader needs to
-  see that a decision was taken and where, not to find it silently gone.
+  took it, and routing until `docs/adr/0019-here-for-road-routing.md`; the register keeps the closed
+  entries, struck through and cited, because a reader needs to see that a decision was taken and
+  where, not to find it silently gone.
 
 **How an area plan uses this file.** A stage that runs into one of these boundaries writes one line
 under its own **Blockers** heading naming the entry here, and plans the rest of the row around it.
