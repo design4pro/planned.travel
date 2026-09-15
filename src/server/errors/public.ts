@@ -44,10 +44,11 @@ import type { PublicFailure } from '#/lib/errors'
  *
  * The set is also closed. Each entry's message is an English sentence that reaches a reader in any
  * of the 23 locales, which `docs/SPEC.md` §9 rule 10 records as a bounded exception to "no
- * untranslated string reaches a screen" - bounded to exactly these names, which the test file pins.
- * A new refusal does not join this list: it travels as a message key the client resolves, the shape
- * `SHELL_STATE_KEYS` already has, or it stays a diagnostic and the caller's localised fallback is
- * what the reader sees. `ForbiddenError` is the standing example of the second.
+ * untranslated string reaches a screen" - bounded to exactly these names, which the test file pins,
+ * whatever sentences they carry. A new refusal class does not join this list: it travels as a
+ * message key the client resolves, the shape `SHELL_STATE_KEYS` already has, or it stays a
+ * diagnostic and the caller's localised fallback is what the reader sees. `ForbiddenError` is the
+ * standing example of the second.
  */
 export const AUTHORED_ERROR_NAMES: ReadonlySet<string> = new Set([
   'AuthRequirementError',

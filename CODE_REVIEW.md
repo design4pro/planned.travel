@@ -63,7 +63,7 @@ under `src/lib/i18n/messages/` in the same PR; the parity test enforces the set.
 string, or adding a key to `en` only, is a blocker. Procedure: the `i18n-messages` skill;
 contract: docs/SPEC.md §9. RTL (`ar`) layouts use logical properties, never `left`/`right`.
 The one bounded exception is server refusal copy (§9 rule 10): a new name in
-`AUTHORED_ERROR_NAMES`, or a new refusal sentence shown to the reader in English, is a blocker.
+`AUTHORED_ERROR_NAMES` without the same PR amending that rule is a blocker.
 
 ## Style (should fix)
 

@@ -31,7 +31,7 @@ describe('the English refusal set is closed', () => {
   /**
    * Every authored name reaches a reader in any locale as an English sentence, which
    * `docs/SPEC.md` §9 rule 10 accepts for exactly these classes and no others. A new name failing
-   * here is the point: a new refusal travels as a message key, or stays a diagnostic.
+   * here is the point: a new refusal class travels as a message key, or stays a diagnostic.
    */
   it('names exactly the classes the localisation exception covers', () => {
     expect([...AUTHORED_ERROR_NAMES].sort()).toEqual([
@@ -41,12 +41,6 @@ describe('the English refusal set is closed', () => {
       'TripArchivedError',
       'TripRoleError',
     ])
-  })
-
-  it('keeps ForbiddenError out, so an organization-role refusal stays a diagnostic', () => {
-    expect(
-      AUTHORED_ERROR_NAMES.has(new ForbiddenError('x', ['owner']).name),
-    ).toBe(false)
   })
 })
 

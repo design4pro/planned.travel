@@ -66,7 +66,7 @@ export class TenantIsolationError extends RepositoryError {
  * localised fallback. Its sentence is written for a maintainer. `action` is typed `string`, so what
  * it interpolates is only as safe as every call site stays, and `required` is not always the
  * reader's way out - `collab.ts` refuses an edit to another traveller's message with `['owner']`
- * although no role may make it. Authoring it would also add English sentences to the refusal set
+ * although no role may make it. Authoring it would also add a class to the English refusal set
  * `docs/SPEC.md` §9 rule 10 closes. Should this refusal ever need to reach the reader, it travels
  * as a message key, not as this sentence.
  */
