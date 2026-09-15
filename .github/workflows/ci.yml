@@ -336,11 +336,14 @@ jobs:
 
       # The runner's own node, before any toolchain, as `verify` runs the
       # agent-layer check: the script imports nothing outside node itself.
+      # `--no-renames`: rename detection is on by default and lists only the
+      # destination of a move, so `git mv src/x.ts docs/x.md` would read as
+      # documentation alone.
       - name: Classify the diff
         id: classify
         run: |
           set -euo pipefail
-          git diff --name-only HEAD^1 HEAD > changed-files.txt
+          git diff --no-renames --name-only HEAD^1 HEAD > changed-files.txt
           node scripts/ci/change-scope.mjs < changed-files.txt >> "$GITHUB_OUTPUT"
 
   # The end-to-end journeys: fourteen declarations in `journeys.spec.ts`, three

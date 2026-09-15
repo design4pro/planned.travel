@@ -3,7 +3,7 @@
 /**
  * Decides whether a pull request's diff can reach anything the e2e journeys exercise.
  *
- *   git diff --name-only HEAD^1 HEAD | node scripts/ci/change-scope.mjs >> "$GITHUB_OUTPUT"
+ *   git diff --no-renames --name-only HEAD^1 HEAD | node scripts/ci/change-scope.mjs >> "$GITHUB_OUTPUT"
  *
  * A spec, an ADR or a skill cannot change what a browser sees, yet every such pull request paid
  * two e2e shards - about 20 min of the self-hosted pool per event, on a pool that runs three CI

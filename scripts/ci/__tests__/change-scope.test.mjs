@@ -4,6 +4,8 @@
  * goes red. So the cases that matter most are the ones that must still run them.
  */
 
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import { scope } from '../change-scope.mjs'
@@ -64,5 +66,19 @@ describe('scope', () => {
 
   it('runs the journeys when the diff lists no files', () => {
     expect(scope([]).e2e).toBe(true)
+  })
+
+  // `scope` can only judge the paths it is given. With rename detection on, `git mv src/x.ts
+  // docs/x.md` lists `docs/x.md` alone, and the move out of `src/` reads as documentation.
+  it('is fed both sides of a move: the workflow lists the diff without rename detection', () => {
+    const workflow = readFileSync(
+      new URL('../../../.github/workflows/ci.yml', import.meta.url),
+      'utf8',
+    )
+    const listing = workflow
+      .split('\n')
+      .filter((line) => line.includes('> changed-files.txt'))
+    expect(listing).toHaveLength(1)
+    expect(listing[0]).toContain('git diff --no-renames --name-only')
   })
 })
