@@ -25,6 +25,10 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Yerler',
+  'plan.readOnly.archived':
+    'Bu seyahat arşivlendi, bu yüzden plan salt okunur.',
+  'plan.readOnly.role':
+    'Bu planı görüntüleyebilirsiniz. Yalnızca seyahatin sahibi ve düzenleyiciler değiştirebilir.',
   'plan.day.empty': 'Henüz plan yok — buraya bir yer veya not sürükle',
   'plan.move.refused.duplicate': '{name} o günde zaten var',
   'plan.move.refused.duplicateBody':

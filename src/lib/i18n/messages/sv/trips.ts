@@ -25,6 +25,10 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Resplan',
   'plan.places': 'Platser',
+  'plan.readOnly.archived':
+    'Den här resan är arkiverad, så planen är skrivskyddad.',
+  'plan.readOnly.role':
+    'Du kan läsa den här planen. Bara resans ägare och redigerare kan ändra den.',
   'plan.day.empty':
     'Inget planerat än – släpp en plats eller en anteckning här',
   'plan.move.refused.duplicate': '{name} finns redan den dagen',

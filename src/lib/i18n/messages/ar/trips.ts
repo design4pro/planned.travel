@@ -25,6 +25,9 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'البرنامج',
   'plan.places': 'الأماكن',
+  'plan.readOnly.archived': 'هذه الرحلة مؤرشفة، لذا الخطة للقراءة فقط.',
+  'plan.readOnly.role':
+    'يمكنك قراءة هذه الخطة. لا يغيّرها إلا مالك الرحلة ومحرّروها.',
   'plan.day.empty': 'لا شيء مخطط بعد — اسحب مكانًا أو ملاحظة إلى هنا',
   'plan.move.refused.duplicate': '{name} موجود بالفعل في ذلك اليوم',
   'plan.move.refused.duplicateBody':
