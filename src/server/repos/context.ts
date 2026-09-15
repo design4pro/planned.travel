@@ -58,7 +58,18 @@ export class TenantIsolationError extends RepositoryError {
   }
 }
 
-/** Thrown when the context is valid but the role is insufficient. */
+/**
+ * Thrown when the context is valid but the role is insufficient.
+ *
+ * It answers the same question as `TripRoleError` in `trips.ts`, and unlike that class it is
+ * deliberately not authored copy: `classifyFailure` redacts it, and the reader sees the caller's
+ * localised fallback. Its sentence is written for a maintainer. `action` is typed `string`, so what
+ * it interpolates is only as safe as every call site stays, and `required` is not always the
+ * reader's way out - `collab.ts` refuses an edit to another traveller's message with `['owner']`
+ * although no role may make it. Authoring it would also add a class to the English refusal set
+ * `docs/SPEC.md` §9 rule 10 closes. Should this refusal ever need to reach the reader, it travels
+ * as a message key, not as this sentence.
+ */
 export class ForbiddenError extends RepositoryError {
   constructor(action: string, required: ReadonlyArray<OrganizationRole>) {
     super(

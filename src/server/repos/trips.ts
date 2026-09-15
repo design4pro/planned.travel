@@ -443,6 +443,11 @@ export async function requireWritableTrip(
  * refused is the class, not the string: nothing outside these repositories reads `code`, and a
  * second name for one answer would make an organization refusal and a trip refusal
  * indistinguishable to anybody who did.
+ *
+ * The same question does not mean the same answer on screen. This class is authored copy and
+ * `ForbiddenError` is not, on purpose: this sentence is drawn from the trip's closed role vocabulary
+ * on both sides, while `ForbiddenError` interpolates a free-text `action`. Its docblock records the
+ * rest of the reasoning, so the asymmetry is a decision rather than an oversight.
  */
 export class TripRoleError extends RepositoryError {
   constructor(
