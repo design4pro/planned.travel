@@ -30,11 +30,11 @@ import {
   journeys,
   trips,
 } from '#/server/db/schema'
-import { assertQuota, createTenantRepository, tenantFilter } from './base'
+import { allOf, anyOf, assertQuota, createTenantRepository, tenantFilter } from './base'
 import { NotFoundError } from './context'
 import { checkInsRepository } from './collab'
 import { placesRepository } from './places'
-import { readableTrips, requireTrip } from './trips'
+import { readableTripFilter, readableTrips, requireTrip } from './trips'
 import {
   colourSchema,
   dateSchema,
@@ -53,6 +53,7 @@ import {
   titleSchema,
   urlSchema,
 } from './validation'
+import type { SQL } from 'drizzle-orm'
 import type { Journey, JourneyEntry, JourneyMood, JourneyPhoto } from '#/server/db/types'
 import type { TenantScope } from './base'
 
@@ -176,12 +177,36 @@ async function reserveSlug(
  * Reads
  * ---------------------------------------------------------------------------------------------- */
 
+/**
+ * Who may read a journey (ADR 0020): whoever may read the trip it names, and every member of the
+ * workspace when it names none.
+ *
+ * A journey is reachable without its trip ever being read — by id, from the journal index, from the
+ * recent-entries strip — so ADR 0007 does not reach it on its own, and until #456 a member who could
+ * not open a private trip could still read its whole write-up. An `EXISTS` over `trips` carrying
+ * {@link readableTripFilter}, so the trip's own answer is the journey's answer and the two can never
+ * disagree; both halves are `tenantFilter()`-bound.
+ *
+ * `journeys.visibility` is deliberately not read: nothing in the product sets it, so every row holds
+ * its `private` default, and honouring it would hide every journey from all but its author.
+ */
+function readableJourneyFilter(scope: TenantScope): SQL {
+  const tripIsReadable = exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(trips)
+      .where(tenantFilter(scope, trips, eq(trips.id, journeys.tripId), readableTripFilter(scope))),
+  )
+  return anyOf(isNull(journeys.tripId), tripIsReadable)
+}
+
 export async function listJourneys(
   scope: TenantScope,
   options: { readonly status?: (typeof JOURNEY_STATUSES)[number]; readonly ownerUserId?: string } = {},
 ): Promise<Array<Journey>> {
   return journeysRepository.findMany(scope, {
-    where: and(
+    where: allOf(
+      readableJourneyFilter(scope),
       options.status ? eq(journeys.status, options.status) : undefined,
       options.ownerUserId ? eq(journeys.ownerUserId, options.ownerUserId) : undefined,
     ),
@@ -190,14 +215,14 @@ export async function listJourneys(
 }
 
 export async function getJourney(scope: TenantScope, journeyId: string): Promise<Journey | null> {
-  return journeysRepository.findById(scope, journeyId)
+  return journeysRepository.findOne(scope, allOf(readableJourneyFilter(scope), eq(journeys.id, journeyId)))
 }
 
 export async function getJourneyBySlug(
   scope: TenantScope,
   slug: string,
 ): Promise<Journey | null> {
-  return journeysRepository.findOne(scope, eq(journeys.slug, slug))
+  return journeysRepository.findOne(scope, allOf(readableJourneyFilter(scope), eq(journeys.slug, slug)))
 }
 
 export interface JourneySummary extends Journey {
@@ -253,7 +278,11 @@ export async function getJourneyStory(
   scope: TenantScope,
   journeyId: string,
 ): Promise<{ readonly journey: Journey; readonly entries: ReadonlyArray<JourneyEntryWithPhotos> }> {
-  const journey = await journeysRepository.requireById(scope, journeyId)
+  const journey = await getJourney(scope, journeyId)
+  if (journey === null) {
+    // The error a foreign tenant's id raises: "not yours to read" must not confirm the journey exists.
+    throw new NotFoundError('journey', journeyId)
+  }
   const entries = await listJourneyEntries(scope, journeyId)
 
   const [photos, moods] = await Promise.all([
@@ -315,8 +344,8 @@ export async function listRecentEntries(
       journeyStatus: journeys.status,
     })
     .from(journeyEntries)
-    .innerJoin(journeys, eq(journeys.id, journeyEntries.journeyId))
-    .where(tenantFilter(scope, journeyEntries))
+    .innerJoin(journeys, tenantFilter(scope, journeys, eq(journeys.id, journeyEntries.journeyId)))
+    .where(tenantFilter(scope, journeyEntries, readableJourneyFilter(scope)))
     .orderBy(desc(journeyEntries.entryDate), desc(journeyEntries.createdAt))
     .limit(options.limit ?? 6)
 
@@ -347,7 +376,10 @@ export async function listRecentEntries(
   }))
 }
 
-/** How the whole journal felt: entry counts per mood, most used first. */
+/**
+ * How the journal felt: entry counts per mood, most used first — over the journeys the reader may
+ * read, since an aggregate over a story they cannot open leaks it as surely as listing it.
+ */
 export async function tallyMoods(
   scope: TenantScope,
 ): Promise<Array<{ readonly mood: JourneyMood; readonly value: number }>> {
@@ -355,7 +387,8 @@ export async function tallyMoods(
     scope.db
       .select({ moodId: journeyEntries.moodId, value: count() })
       .from(journeyEntries)
-      .where(tenantFilter(scope, journeyEntries))
+      .innerJoin(journeys, tenantFilter(scope, journeys, eq(journeys.id, journeyEntries.journeyId)))
+      .where(tenantFilter(scope, journeyEntries, readableJourneyFilter(scope)))
       .groupBy(journeyEntries.moodId)
       .orderBy(desc(count())),
     listMoods(scope),
@@ -464,9 +497,8 @@ export async function listTripsWithoutJourney(
  * just as surely as the denominator did. Asking both of `readableTrips` instead makes
  * `written <= trips` structural rather than something a caller has to clamp.
  *
- * This says nothing about whether the *journey* on an unreadable trip should be listed;
- * that is a journey-visibility question, and the rest of this module still answers it
- * workspace-wide.
+ * Whether the *journey* on an unreadable trip is listed is a separate question, answered by
+ * {@link readableJourneyFilter} (ADR 0020); this counts trips, so it asks `readableTrips`.
  */
 export async function journalCoverage(
   scope: TenantScope,

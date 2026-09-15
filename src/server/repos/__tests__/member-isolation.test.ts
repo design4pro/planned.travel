@@ -18,9 +18,18 @@ import { NotFoundError, RepositoryError } from '../context'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
 import { createAssignment, reorderDayTimeline } from '../itinerary'
 import {
+  createEntry,
   createJourney,
+  createMood,
+  getJourney,
+  getJourneyBySlug,
+  getJourneyStory,
   journalCoverage,
+  listJourneys,
+  listJourneysWithCounts,
+  listRecentEntries,
   listTripsWithoutJourney,
+  tallyMoods,
 } from '../journey'
 import { createPlace } from '../places'
 import {
@@ -208,6 +217,90 @@ describe('member isolation', () => {
         trips: 1,
         written: 1,
       })
+    })
+
+    it('keeps the journey written about it out of every journal reader (#456)', async () => {
+      // ADR 0020: a journey is read by whoever may read the trip it names. The story is reachable
+      // by id, from the index and from the recent strip without the trip ever being read, so each
+      // of those readers has to ask the trip itself.
+      const mood = await createMood(alpha.scope, {
+        key: 'quiet',
+        label: 'Quiet',
+        emoji: '🌿',
+      })
+      const journey = await createJourney(alpha.scope, {
+        tripId: fixture.tripId,
+        title: 'Lisbon, written up',
+      })
+      await createEntry(alpha.scope, {
+        journeyId: journey.id,
+        entryDate: '2026-04-10',
+        title: 'Custard tarts, twice',
+        moodId: mood.id,
+      })
+
+      expect(await listJourneys(stranger)).toEqual([])
+      expect(await listJourneysWithCounts(stranger)).toEqual([])
+      expect(await getJourney(stranger, journey.id)).toBeNull()
+      expect(await getJourneyBySlug(stranger, journey.slug)).toBeNull()
+      expect(
+        await captureError(() => getJourneyStory(stranger, journey.id)),
+      ).toBeInstanceOf(NotFoundError)
+      expect(await listRecentEntries(stranger)).toEqual([])
+      expect(await tallyMoods(stranger)).toEqual([])
+
+      // A journey tied to no trip has nothing to inherit and stays the workspace's, so the
+      // predicate narrowed the journal rather than emptying it.
+      const untied = await createJourney(alpha.scope, {
+        title: 'A weekend walk',
+      })
+      await createEntry(alpha.scope, {
+        journeyId: untied.id,
+        entryDate: '2026-03-01',
+        title: 'Rain on the ridge',
+        moodId: mood.id,
+      })
+      expect((await listJourneys(stranger)).map((row) => row.id)).toEqual([
+        untied.id,
+      ])
+      expect((await getJourneyStory(stranger, untied.id)).entries).toHaveLength(
+        1,
+      )
+      expect(
+        (await listRecentEntries(stranger)).map((row) => row.journeyId),
+      ).toEqual([untied.id])
+      expect(
+        (await tallyMoods(stranger)).map((row) => [row.mood.key, row.value]),
+      ).toEqual([['quiet', 1]])
+
+      // A journey on the stranger's own private trip, so the `EXISTS` is asked to tell two linked
+      // journeys apart: correlated on the wrong trip, or on none, it passes everything above and
+      // fails here — and the owner, on none of the stranger's trips, loses that one in turn.
+      const own = await createTrip(stranger, {
+        title: 'Porto on my own',
+        slug: 'porto-on-my-own',
+        startDate: '2026-05-01',
+        endDate: '2026-05-04',
+      })
+      const ownJourney = await createJourney(stranger, {
+        tripId: own.id,
+        title: 'Porto, written up',
+      })
+      expect(
+        (await listJourneys(stranger)).map((row) => row.id).sort(),
+      ).toEqual([untied.id, ownJourney.id].sort())
+      expect(
+        (await listJourneys(alpha.scope)).map((row) => row.id).sort(),
+      ).toEqual([journey.id, untied.id].sort())
+      expect(
+        (await getJourneyStory(alpha.scope, journey.id)).entries,
+      ).toHaveLength(1)
+      expect((await getJourneyBySlug(alpha.scope, journey.slug))?.id).toBe(
+        journey.id,
+      )
+      expect(
+        (await tallyMoods(alpha.scope)).map((row) => [row.mood.key, row.value]),
+      ).toEqual([['quiet', 2]])
     })
 
     it('refuses every write with NOT_FOUND rather than FORBIDDEN', async () => {
@@ -417,6 +510,41 @@ describe('member isolation', () => {
         ),
       ).toEqual([fixture.tripId])
       expect((await journalCoverage(stranger)).trips).toBe(1)
+    })
+
+    it('and the journey written about it is read with it (#456)', async () => {
+      const mood = await createMood(alpha.scope, {
+        key: 'bright',
+        label: 'Bright',
+        emoji: '☀️',
+      })
+      const journey = await createJourney(alpha.scope, {
+        tripId: fixture.tripId,
+        title: 'Lisbon, written up',
+      })
+      await createEntry(alpha.scope, {
+        journeyId: journey.id,
+        entryDate: '2026-04-10',
+        title: 'Custard tarts, twice',
+        moodId: mood.id,
+      })
+
+      expect((await listJourneys(stranger)).map((row) => row.id)).toEqual([
+        journey.id,
+      ])
+      expect((await getJourney(stranger, journey.id))?.id).toBe(journey.id)
+      expect((await getJourneyBySlug(stranger, journey.slug))?.id).toBe(
+        journey.id,
+      )
+      expect(
+        (await getJourneyStory(stranger, journey.id)).entries,
+      ).toHaveLength(1)
+      expect(
+        (await listRecentEntries(stranger)).map((row) => row.journeyId),
+      ).toEqual([journey.id])
+      expect(
+        (await tallyMoods(stranger)).map((row) => [row.mood.key, row.value]),
+      ).toEqual([['bright', 1]])
     })
 
     it('and any reader may star it, privately to themselves', async () => {
