@@ -93,7 +93,7 @@ Price was never going to decide this; three other terms do, and each one binds t
   (HTTP/1.1 standard) returned by HERE Location Services" (Exhibit 2, §1.3). The TTL of a cached route
   is the lesser of what the response's caching headers allow and 30 days; a response that forbids
   caching is not cached. No route, time or geometry is written to D1, so no column is added for one:
-  the sequence `11-S3` fixes - decision, then column, then feature - ends here at "no column".
+  the sequence `11-S3` fixes - decision, then column, then feature - ends here without a column.
 
 Three further terms travel with it:
 
