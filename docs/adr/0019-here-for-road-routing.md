@@ -219,12 +219,13 @@ The shape ADR 0011 and ADR 0013 fixed is not reopened, and it is restated here o
   `pedestrian`, the walking time the stage is named for. **It may not claim** a time for a segment
   HERE did not route, any routed answer for a segment in Japan, nor present a total that mixes
   routed and great-circle segments as one road number. Its one-metric rule resolves one way: the
-  optimiser keeps ordering by great-circle distance, and the distance on the pill is that metric; a routed time or road distance is shown beside it,
-  never as the metric the order optimises. Ordering by road would need every stop pair routed, which
-  is HERE Matrix Routing, a separate product this ADR does not adopt. Great-circle distance stays as
-  the designed state when the ceiling refuses, the provider fails, a mode is not routed, the
-  segment is in Japan, the viewer is not the requesting member or the order has changed since their
-  Request, and in that state the pill claims a distance and nothing more.
+  optimiser keeps ordering by great-circle distance, and the distance on the pill is that metric; a
+  routed time or road distance is shown beside it, never as the metric the order optimises. Ordering
+  by road would need every stop pair routed, which is HERE Matrix Routing, a separate product this
+  ADR does not adopt. Great-circle distance stays as the designed state when the ceiling refuses,
+  the provider fails, a mode is not routed, the segment is in Japan, the viewer is not the
+  requesting member or the order has changed since their Request, and in that state the pill claims
+  a distance and nothing more.
 - **`02-S12` may claim** a road-following line for a `car`, `taxi`, `bus` or `bike` leg that HERE
   routed, outside Japan, shown to the member who requested it. A `bus` line is the road path a bus
   would drive, not the timetabled service's route. **It may not claim** one for any other leg:
