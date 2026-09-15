@@ -30,9 +30,14 @@ export const TASK_KINDS = [
   'trip-copy',
   // Billing follow-ups. The provider webhook answers the provider immediately and
   // hands the slow part off here, so these travel the same queue as everything else.
+  //
+  // There is no `billing.invoice.payment_failed`, and that is a decision rather than a gap:
+  // **Polar has no `order.payment_failed` event** (`docs/ARCHITECTURE.md`). A failed charge is an
+  // unpaid order with a retry scheduled on it, and the webhook already enqueues it as a
+  // `billing.subscription.changed` carrying `status: 'past_due'` — the one enqueue the two
+  // converging deliveries produce. A second kind for the same event would notify twice.
   'billing.subscription.changed',
   'billing.invoice.paid',
-  'billing.invoice.payment_failed',
 ] as const
 
 export type TaskKind = (typeof TASK_KINDS)[number]
@@ -258,19 +263,6 @@ export const invoicePaidPayloadSchema = z.object({
 
 export type InvoicePaidPayload = z.infer<typeof invoicePaidPayloadSchema>
 
-export const invoicePaymentFailedPayloadSchema = z.object({
-  ...billingTaskBase,
-  kind: z.literal('billing.invoice.payment_failed'),
-  providerOrderId: z.string().min(1).max(128),
-  attemptCount: z.number().int().nonnegative(),
-  /** ISO timestamp of the provider's next retry, or null when it has given up. */
-  nextAttemptAt: z.string().min(1).max(64).nullable(),
-})
-
-export type InvoicePaymentFailedPayload = z.infer<
-  typeof invoicePaymentFailedPayloadSchema
->
-
 export interface TaskPayloadMap {
   email: EmailPayload
   'pdf-export': PdfExportPayload
@@ -282,7 +274,6 @@ export interface TaskPayloadMap {
   'trip-copy': TripCopyPayload
   'billing.subscription.changed': SubscriptionChangedPayload
   'billing.invoice.paid': InvoicePaidPayload
-  'billing.invoice.payment_failed': InvoicePaymentFailedPayload
 }
 
 /* --------------------------------------------------------------- envelope -- */
@@ -353,11 +344,6 @@ export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
     ...envelopeBase,
     kind: z.literal('billing.invoice.paid'),
     payload: invoicePaidPayloadSchema,
-  }),
-  z.object({
-    ...envelopeBase,
-    kind: z.literal('billing.invoice.payment_failed'),
-    payload: invoicePaymentFailedPayloadSchema,
   }),
 ])
 

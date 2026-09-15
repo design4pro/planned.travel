@@ -211,6 +211,12 @@ const messages = {
   'notification.billing.plan_changed.title': 'تغيّرت خطتك',
   'notification.billing.plan_changed.body':
     'أصبحت {organizationName} على خطة {plan}.',
+  'notification.billing.invoice_paid.title': 'تم استلام الدفعة',
+  'notification.billing.invoice_paid.body':
+    'تم دفع أحدث فاتورة لـ {organizationName}.',
+  'notification.billing.payment_failed.title': 'تعذّر إتمام الدفع',
+  'notification.billing.payment_failed.body':
+    'على {organizationName} دفعة متأخرة. حدّث طريقة الدفع للحفاظ على الخطة.',
   'notification.fallback.title': 'حدث تغيير في مساحة عملك',
   'notification.fallback.body': 'افتح الرحلة لترى ما هو.',
 

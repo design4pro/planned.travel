@@ -180,6 +180,12 @@ const messages = {
   'notification.billing.plan_changed.title': 'Paket Anda berubah',
   'notification.billing.plan_changed.body':
     '{organizationName} kini memakai paket {plan}.',
+  'notification.billing.invoice_paid.title': 'Pembayaran diterima',
+  'notification.billing.invoice_paid.body':
+    'Tagihan terakhir untuk {organizationName} sudah dibayar.',
+  'notification.billing.payment_failed.title': 'Pembayaran gagal',
+  'notification.billing.payment_failed.body':
+    '{organizationName} menunggak pembayaran. Perbarui metode pembayaran agar paketnya tetap aktif.',
   'notification.fallback.title': 'Ada yang berubah di ruang kerja Anda',
   'notification.fallback.body': 'Buka perjalanannya untuk melihat apa itu.',
 

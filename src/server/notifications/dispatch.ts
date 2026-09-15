@@ -46,17 +46,14 @@ import {
   storedKey,
 } from '#/lib/notification-copy'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
-import {
-  NOTIFICATION_CHANNELS,
-  NOTIFICATION_SCOPES,
-  NOTIFICATION_TYPES,
-} from '#/server/db/schema'
+import { NOTIFICATION_CHANNELS, NOTIFICATION_TYPES } from '#/server/db/schema'
 import { createLogger, serializeError } from '#/server/observability'
 import { enqueueTasks } from '#/server/queue/jobs'
 import {
   filterEnabledRecipients,
   getOrganizationSettings,
   idSchema,
+  listMembers,
   listTripMembers,
   listUserProfiles,
   notifyMany,
@@ -65,7 +62,9 @@ import {
 } from '#/server/repos'
 
 import type { Locale } from '#/lib/i18n'
-import type { JsonRecord } from '#/server/db/schema'
+// `NOTIFICATION_SCOPES` is a value, imported for its type alone: `TRIP_SCOPES` is checked against
+// it and never read.
+import type { NOTIFICATION_SCOPES, JsonRecord } from '#/server/db/schema'
 import type { Logger } from '#/server/observability'
 import type { EnqueueInput } from '#/server/queue/jobs'
 import type { TaskKind, TaskQueue } from '#/server/queue/types'
@@ -174,7 +173,8 @@ const eventParamsSchema: z.ZodType<JsonRecord> = z.record(
 )
 
 /**
- * What a write path hands to {@link dispatch}.
+ * Everything both shapes of event carry. Spread into each member of the union below rather than
+ * inherited, because the two differ in one field and a base schema would only be read twice.
  *
  * It validates the *caller*, not the client: no recipient list is expressible here, so there is
  * nothing arriving from a browser to distrust. `notify()` re-validates the row shape on the way
@@ -185,7 +185,7 @@ const eventParamsSchema: z.ZodType<JsonRecord> = z.record(
  * 40-character bound is the envelope-id budget: `notify:` + kind + entity id + recipient id has
  * to fit {@link TASK_ID_MAX_LENGTH}.
  */
-export const notificationEventSchema = z.strictObject({
+const notificationEventShape = {
   kind: z
     .string()
     .trim()
@@ -196,13 +196,11 @@ export const notificationEventSchema = z.strictObject({
     .regex(AUDIT_ACTION_PATTERN, {
       error: 'An event kind is a lowercase dotted key, like `collab.message`.',
     }),
-  tripId: idSchema,
   entityType: shortTextSchema.min(1),
   entityId: idSchema,
   /** Absent for a system event — a reminder sweep or a billing follow-up excludes nobody. */
   actorUserId: idSchema.optional(),
   type: z.enum(NOTIFICATION_TYPES).default('info'),
-  scope: z.enum(NOTIFICATION_SCOPES).default('trip'),
   /** Both default to `kind`; the render layer strips a legacy `.title`/`.body` suffix either way. */
   titleKey: shortTextSchema.min(1).optional(),
   bodyKey: shortTextSchema.min(1).optional(),
@@ -213,7 +211,7 @@ export const notificationEventSchema = z.strictObject({
    * Narrows the membership-derived recipient set — the members an expense actually charged, say.
    * It is applied as an *intersection*, so it can only ever remove people: a user id that is not a
    * member of this trip in this organization is not reachable through it, which is what keeps
-   * `trip_members` the sole source of recipients. Absent means "every member but the actor".
+   * the membership table the sole source of recipients. Absent means "every member but the actor".
    */
   audienceUserIds: z.array(idSchema).max(500).optional(),
   /**
@@ -224,7 +222,40 @@ export const notificationEventSchema = z.strictObject({
     .array(z.enum(NOTIFICATION_CHANNELS))
     .min(1)
     .default(['in_app', 'email']),
+}
+
+/**
+ * The `NOTIFICATION_SCOPES` values whose recipients come from a trip — spelled out rather than
+ * derived, so a new scope has to say which side of the split it lands on.
+ */
+const TRIP_SCOPES = ['trip', 'user', 'system'] as const satisfies ReadonlyArray<
+  (typeof NOTIFICATION_SCOPES)[number]
+>
+
+/** A workspace-wide event — a billing follow-up — which has no trip to belong to. */
+const organizationEventSchema = z.strictObject({
+  ...notificationEventShape,
+  scope: z.literal('organization'),
 })
+
+/** Everything else: an event about one trip, and the shape every write path but billing sends. */
+const tripEventSchema = z.strictObject({
+  ...notificationEventShape,
+  scope: z.enum(TRIP_SCOPES).default('trip'),
+  tripId: idSchema,
+})
+
+/**
+ * What a write path hands to {@link dispatch}.
+ *
+ * A union rather than one object with an optional `tripId`, so the two shapes cannot be mixed: a
+ * trip event without a trip and a workspace event carrying one are both parse errors, and the
+ * recipient derivation in {@link membersFor} narrows on `scope` without a runtime re-check.
+ */
+export const notificationEventSchema = z.union([
+  organizationEventSchema,
+  tripEventSchema,
+])
 
 /** What a caller writes. The output type carries the defaults the schema fills in. */
 export type NotificationEvent = z.input<typeof notificationEventSchema>
@@ -246,7 +277,7 @@ export interface DispatchDeps {
 }
 
 export interface DispatchResult {
-  /** Trip members who were eligible before per-channel filtering, actor already removed. */
+  /** Members who were eligible before per-channel filtering, actor already removed. */
   readonly recipients: ReadonlyArray<string>
   readonly inAppWritten: number
   readonly emailsEnqueued: number
@@ -593,7 +624,31 @@ async function enqueueEmails(
 }
 
 /**
- * Fans one event out to the trip's other members.
+ * The membership one event fans out over, and the authorisation that goes with its shape.
+ *
+ * A trip event proves the trip belongs to the scope first: `listTripMembers` answers `[]` for a
+ * foreign trip and must never be the check. A workspace event has no trip to prove and needs none —
+ * `listMembers` is `tenantFilter()`-bound, so the organization on the scope *is* the boundary — and
+ * it reaches the people who can act on a billing follow-up rather than everybody: `owner` and
+ * `admin`, never a plain `member`.
+ */
+async function membersFor(
+  scope: TenantScope,
+  event: z.output<typeof notificationEventSchema>,
+): Promise<Array<string>> {
+  if (event.scope === 'organization') {
+    const members = await listMembers(scope)
+    return members
+      .filter((row) => row.role === 'owner' || row.role === 'admin')
+      .map((row) => row.userId)
+  }
+
+  await requireTrip(scope, event.tripId)
+  return (await listTripMembers(scope, event.tripId)).map((row) => row.userId)
+}
+
+/**
+ * Fans one event out to the other people it concerns — a trip's members, or a workspace's admins.
  *
  * Throws only for an unresolvable trip — the authorisation failure a caller must not swallow
  * silently in a test. A queue that rejects is logged and the in-app rows still stand, and
@@ -606,13 +661,10 @@ export async function dispatch(
 ): Promise<DispatchResult> {
   const event = notificationEventSchema.parse(input)
 
-  // Authorisation. `listTripMembers` returns `[]` for a foreign trip and must never be the check.
-  await requireTrip(scope, event.tripId)
-
-  const members = await listTripMembers(scope, event.tripId)
+  const members = await membersFor(scope, event)
   const audience =
     event.audienceUserIds === undefined ? null : new Set(event.audienceUserIds)
-  const recipients = [...new Set(members.map((row) => row.userId))].filter(
+  const recipients = [...new Set(members)].filter(
     (userId) =>
       userId !== event.actorUserId &&
       (audience === null || audience.has(userId)),

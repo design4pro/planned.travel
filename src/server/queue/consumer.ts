@@ -34,6 +34,10 @@ import {
   numberFromEnv,
   taskEnvelopeSchema,
 } from './types'
+import {
+  handleInvoicePaid,
+  handleSubscriptionChanged,
+} from './handlers/billing'
 import { handleBookingImport } from './handlers/booking-import'
 import { handleEmail } from './handlers/email'
 import { handlePdfExport } from './handlers/pdf-export'
@@ -72,11 +76,11 @@ export interface QueueBatchLike {
 }
 
 /**
- * Handlers that exist today. `thumbnail`, `backup` and the three `billing.*`
- * follow-ups are declared in `TASK_KINDS` — the webhook really does enqueue the
- * billing ones — but their handlers are not written yet, so they are absent here
- * rather than stubbed. An unhandled kind dead-letters with a precise message
- * instead of being quietly acked as if the work had happened.
+ * Handlers that exist today. `thumbnail` and `backup` are declared in
+ * `TASK_KINDS` but their handlers are not written yet, so they are absent here
+ * rather than stubbed — and nothing enqueues either, so nothing dead-letters on
+ * them. An unhandled kind dead-letters with a precise message instead of being
+ * quietly acked as if the work had happened.
  */
 export type TaskHandlerRegistry = Partial<TaskHandlerTable>
 
@@ -87,6 +91,8 @@ export const taskHandlers: TaskHandlerRegistry = {
   'travel-stats': handleTravelStats,
   'trip-purge': handleTripPurge,
   'trip-copy': handleTripCopy,
+  'billing.subscription.changed': handleSubscriptionChanged,
+  'billing.invoice.paid': handleInvoicePaid,
 }
 
 function unhandled(kind: TaskKind): never {
@@ -155,10 +161,6 @@ function runHandler(
         envelope.payload,
         context,
       )
-    case 'billing.invoice.payment_failed':
-      return (
-        registry['billing.invoice.payment_failed'] ?? unhandled(envelope.kind)
-      )(envelope.payload, context)
   }
 }
 

@@ -138,6 +138,12 @@ const messages = {
   'notification.billing.plan_changed.title': '你的方案变了',
   'notification.billing.plan_changed.body':
     '{organizationName}现在用的是{plan}方案。',
+  'notification.billing.invoice_paid.title': '已收到付款',
+  'notification.billing.invoice_paid.body':
+    '{organizationName}最近的账单已付清。',
+  'notification.billing.payment_failed.title': '有一笔付款没有成功',
+  'notification.billing.payment_failed.body':
+    '{organizationName}有一笔逾期款项。请更新付款方式以保留方案。',
   'notification.fallback.title': '工作区里有变动',
   'notification.fallback.body': '打开行程就能看到是什么。',
   'dashboard.error': '面板没能加载出来',
