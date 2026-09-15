@@ -113,8 +113,8 @@ Price was never going to decide this; the terms below do, and each one binds the
   reading would breach on every shared answer. The reading taken is the conservative one: **a routed
   answer belongs to the member whose Request fetched it.** The routing cache is therefore not
   cross-tenant and not shared inside a workspace either: a cached route is keyed to that member
-  within that workspace, which makes the key tenant data, scoped like tenant data - the isolation rule `02-S1` and `11-S3` state,
-  applied rather than merely respected.
+  within that workspace, which makes the key tenant data, scoped like tenant data - the isolation
+  rule `02-S1` and `11-S3` state, applied rather than merely respected.
 - **What is shown follows the same line.** A routed time, road distance or line appears only to the
   member whose Request produced it. Another member looking at the same day makes their own Request
   when they open it. The `07-S6` guest viewer, anything printed or exported as a document, and the
@@ -123,7 +123,8 @@ Price was never going to decide this; the terms below do, and each one binds the
   to great-circle distance. The member's own reorder requests again; after another member's reorder,
   arriving live, a new Request is made only when this member reopens the day or asks for times again,
   never by the live update itself. Print is excluded on a second ground as well: "Unless otherwise
-  expressly permitted by HERE, no map data delivered by HERE can be used to create paper maps" (Supplier Terms, section 1).
+  expressly permitted by HERE, no map data delivered by HERE can be used to create paper maps"
+  (Supplier Terms, section 1).
 - **A cached answer expires, and HERE says when.** "You may not ... Cache or store outside of the
   Platform any Results that include anything from the use of HERE Content or Location Services for
   more than 30 days" (§6.4 j); "Cache or store any Results from HERE Content and Location Services for
@@ -217,8 +218,8 @@ The shape ADR 0011 and ADR 0013 fixed is not reopened, and it is restated here o
   `bicycle`, and `car`, `taxi` and `bus` as themselves - and a segment with no transport mode as
   `pedestrian`, the walking time the stage is named for. **It may not claim** a time for a segment
   HERE did not route, any routed answer for a segment in Japan, nor present a total that mixes
-  routed and great-circle segments as one road number. Its one-metric rule resolves one way: the optimiser keeps ordering by great-circle distance,
-  and the distance on the pill is that metric; a routed time or road distance is shown beside it,
+  routed and great-circle segments as one road number. Its one-metric rule resolves one way: the
+  optimiser keeps ordering by great-circle distance, and the distance on the pill is that metric; a routed time or road distance is shown beside it,
   never as the metric the order optimises. Ordering by road would need every stop pair routed, which
   is HERE Matrix Routing, a separate product this ADR does not adopt. Great-circle distance stays as
   the designed state when the ceiling refuses, the provider fails, a mode is not routed, the
@@ -235,8 +236,8 @@ The shape ADR 0011 and ADR 0013 fixed is not reopened, and it is restated here o
 
 ## Consequences
 
-Gate B's provider question closes; its budget is deferred: `02-S9` proposes it and the maintainer agrees it, as above. `11-S3` records the
-closure by citation, as it does for Gate A.
+Gate B's provider question closes; its budget is deferred: `02-S9` proposes it and the maintainer
+agrees it, as above. `11-S3` records the closure by citation, as it does for Gate A.
 
 Plan 02 still describes Gate B as open, and #439 deliberately did not edit it. Before either stage
 builds against this ADR, plan 02 cites it the way it cites ADR 0013 for Gate A, in every place of
