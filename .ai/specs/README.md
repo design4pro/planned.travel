@@ -10,7 +10,7 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 
 | Spec                                                                             | Date       | Issue                                                           | Spec PR                                                         | Implementation |
 | -------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
-| [Reveal a masked code in place](2026-09-15-reveal-code-in-place.md)              | 2026-09-15 | [#213](https://github.com/design4pro/planned.travel/issues/213) | —                                                               | —              |
+| [Reveal a masked code in place](2026-09-15-reveal-code-in-place.md)              | 2026-09-15 | [#213](https://github.com/design4pro/planned.travel/issues/213) | [#518](https://github.com/design4pro/planned.travel/issues/518) | —              |
 | [Index-usable airport type-ahead](2026-09-13-index-usable-airport-type-ahead.md) | 2026-09-13 | [#194](https://github.com/design4pro/planned.travel/issues/194) | [#467](https://github.com/design4pro/planned.travel/issues/467) | —              |
 
 ## In progress — a build is open (3)
