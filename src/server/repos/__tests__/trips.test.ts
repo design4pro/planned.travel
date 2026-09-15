@@ -8,13 +8,19 @@
  * product is repainted, which moves every screenshot that photographs one.
  *
  * The second half of this file is the guard that turns that into a failing test rather than a
- * surprise: the five demo ids are restated here, so editing one in the dataset reddens the suite
+ * surprise: the six demo ids are restated here, so editing one in the dataset reddens the suite
  * before it reddens a baseline.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { trips as demoTrips } from '#/routes/api/dev/-seed/dataset'
-import { createTrip, deleteTrip, getTripBySlug, listTrips, updateTripInput } from '../trips'
+import {
+  createTrip,
+  deleteTrip,
+  getTripBySlug,
+  listTrips,
+  updateTripInput,
+} from '../trips'
 import { createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
 
@@ -31,6 +37,7 @@ const DEMO_TRIP_IDS = [
   'demo-trip-03-dolomites-hut-to-hut',
   'demo-trip-04-marrakech-riad-week',
   'demo-trip-05-patagonia-traverse',
+  'demo-trip-06-porto-one-lunch',
 ]
 
 /** A generated key: nine base-36 timestamp characters followed by sixteen random ones. */
@@ -49,7 +56,9 @@ describe('trip identifiers', () => {
   describe('when the caller names no id', () => {
     it('mints a fresh, time-sortable key — the path every real user takes', async () => {
       const first = await createTrip(tenant.scope, { title: 'Faroe Islands' })
-      const second = await createTrip(tenant.scope, { title: 'Faroe Islands again' })
+      const second = await createTrip(tenant.scope, {
+        title: 'Faroe Islands again',
+      })
 
       expect(first.id).toMatch(GENERATED_ID)
       expect(second.id).toMatch(GENERATED_ID)
@@ -81,15 +90,23 @@ describe('trip identifiers', () => {
     })
 
     it('rebuilds the trip under the same key, which is what makes a re-seed a no-op', async () => {
-      const first = await createTrip(tenant.scope, { id: 'demo-trip-42-faroe', title: 'Faroe' })
+      const first = await createTrip(tenant.scope, {
+        id: 'demo-trip-42-faroe',
+        title: 'Faroe',
+      })
       await deleteTrip(tenant.scope, first.id)
-      const second = await createTrip(tenant.scope, { id: 'demo-trip-42-faroe', title: 'Faroe' })
+      const second = await createTrip(tenant.scope, {
+        id: 'demo-trip-42-faroe',
+        title: 'Faroe',
+      })
 
       expect(second.id).toBe(first.id)
     })
 
     it('validates it like any other id, so a blank one is refused', async () => {
-      await expect(createTrip(tenant.scope, { id: '   ', title: 'Nowhere' })).rejects.toThrow()
+      await expect(
+        createTrip(tenant.scope, { id: '   ', title: 'Nowhere' }),
+      ).rejects.toThrow()
       await expect(
         createTrip(tenant.scope, { id: 'x'.repeat(65), title: 'Nowhere' }),
       ).rejects.toThrow()
@@ -97,7 +114,10 @@ describe('trip identifiers', () => {
     })
 
     it('is a creation-only field: an update can never move the key', () => {
-      const patch = updateTripInput.parse({ title: 'Renamed', id: 'demo-trip-99-hijacked' })
+      const patch = updateTripInput.parse({
+        title: 'Renamed',
+        id: 'demo-trip-99-hijacked',
+      })
       expect(patch).not.toHaveProperty('id')
     })
   })
