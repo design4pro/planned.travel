@@ -847,7 +847,7 @@ by four ADRs, and the separation is the interesting part:
   be reused, for exactly that reason.
 - **MAP-08 and MAP-09 — routing** became their own decision rather than an appendix to a closed
   one, and `docs/adr/0019-here-for-road-routing.md` took it: the provider already contracted for
-  BKG-08, and the term that shaped it was less retention than that one request may not serve more
+  BKG-08, and the term that shaped it was not retention alone but that one request may not serve more
   than one end user. `02-places-and-maps.md` calls this its Gate B.
 
 The two conditions below therefore still bind, unchanged, for weather and for rates.

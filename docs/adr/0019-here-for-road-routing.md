@@ -97,7 +97,9 @@ Price was never going to decide this; the terms below do, and each one binds the
   basemap archive or any OpenStreetMap-derived dataset.** And "The HERE Content of Japan may only be
   used with Your Content and third-party content for point of interest (PoI), visual content or dynamic
   content incl. traffic" (§6.4 a): whether a road-following line counts as visual content has not been
-  read against our use, so **no road-following line is claimed in Japan**.
+  read against our use, and a routed time or distance is combined with our own places on the same
+  screen, so **no routed answer is requested or claimed in Japan** - a segment or leg with either
+  endpoint inside Japan keeps great-circle distance and the arc.
 - **One request may not serve more than one end user.** "You may not ... Create any Results that
   contain unenhanced or unmodified HERE Content or scaling one Request to serve multiple End Users"
   (§6.4 l), and "Provide Results and/or HERE Content to another person or entity" (§6.4 h). An End
@@ -110,14 +112,16 @@ Price was never going to decide this; the terms below do, and each one binds the
   **rejected**, because every person using the product is equally an End User under (i), and a wrong
   reading would breach on every shared answer. The reading taken is the conservative one: **a routed
   answer belongs to the member whose Request fetched it.** The routing cache is therefore not
-  cross-tenant and not shared inside a workspace either: a cached route is keyed to that member, which
+  cross-tenant and not shared inside a workspace either: a cached route is keyed to that member within that workspace, which
   makes the key tenant data, scoped like tenant data - the isolation rule `02-S1` and `11-S3` state,
   applied rather than merely respected.
 - **What is shown follows the same line.** A routed time, road distance or line appears only to the
   member whose Request produced it. Another member looking at the same day makes their own Request
   when they open it. The `07-S6` guest viewer, anything printed or exported as a document, and the
   day's copy-out in `02-S9` carry no routed number or geometry; they show the great-circle distance
-  and the arc. Print is excluded on a second ground as well: "Unless otherwise expressly permitted by
+  and the arc. When the day's order changes after a member's Request - their own reorder or another
+  member's, arriving live - their routed numbers give way to great-circle distance until their own
+  client requests again. Print is excluded on a second ground as well: "Unless otherwise expressly permitted by
   HERE, no map data delivered by HERE can be used to create paper maps" (Supplier Terms, section 1).
 - **A cached answer expires, and HERE says when.** "You may not ... Cache or store outside of the
   Platform any Results that include anything from the use of HERE Content or Location Services for
@@ -126,10 +130,13 @@ Price was never going to decide this; the terms below do, and each one binds the
   more than 24 hours" (§6.4 k); and, stricter than both, "you may not use HERE Materials in a manner
   that pre-fetches, caches, or stores data or Results, except as explicitly allowed by the caching
   headers (HTTP/1.1 standard) returned by HERE Location Services" (Exhibit 2, §1.3). So **nothing is
-  cached unless the response explicitly permits it** (`Cache-Control` `max-age` or `s-maxage`, or
-  `Expires`); a response without such a header is not cached, and neither is one whose permission is
-  shorter than KV's 60-second minimum `expirationTtl`. When a route is cached, its TTL is the lesser of
-  what the headers allow and 30 days, or 24 hours for a route in Japan. **Nothing is fetched that the
+  cached unless HTTP caching would let a shared cache store it** (RFC 9111): no `no-store`,
+  `no-cache` or `private` directive, and an explicit freshness lifetime taken from `s-maxage`, else
+  `max-age`, else `Expires` minus `Date`, less any `Age`. A response without one is not cached, and
+  neither is one whose lifetime is shorter than KV's 60-second minimum `expirationTtl`; keying the
+  entry per member does not make the proxy a private cache. When a route is cached, its TTL is the
+  lesser of that lifetime and 30 days. No route in Japan is requested (above), so the 24-hour limit
+  of §6.4 k is not reached; if that changes, it is the limit. **Nothing is fetched that the
   member has not asked to see**: no warming of other days, no recompute triggered by another member's
   reorder, no queue or cron refresh. Nobody has yet recorded the headers a live Routing v8 response
   carries, so `02-S9` records them before it sizes its ceiling, and sizes it cold if they permit no
@@ -158,9 +165,10 @@ Four further terms travel with it:
   terms" (§6.2), which also asks for "a reasonably effective notice about the transmission of certain
   information to HERE Services through the use of the Application". The proxy sends coordinates and a
   transport mode and nothing that names a person; a traveller's coordinates may still be personal
-  data, so the product's terms link the HERE End User License Terms and the HERE Privacy Policy, the
-  privacy notice names HERE as a recipient of route coordinates, and no map attribution control hides
-  those links.
+  data, so the product's terms incorporate the HERE End User License Terms and the HERE Privacy Policy
+  by reference and a member accepts them together with the product's own terms, in a form HERE can
+  enforce; the privacy notice names HERE as a recipient of route coordinates; and no map attribution
+  control hides the links to either.
 - **No routed answer reaches a model.** "You may not ... Use HERE Materials in connection with a
   machine learning or artificial intelligence ("AI") system" (§6.4 f). No route, time or geometry is
   passed to the Workers AI binding of ADR 0012 or to any other model.
@@ -174,7 +182,7 @@ The shape ADR 0011 and ADR 0013 fixed is not reopened, and it is restated here o
   does not yet give either stage that work: `02-S9`'s Blockers defer Gate B with "No provider is named
   and no client is written for one", and `02-S12`'s defer it the same way. Until plan 02 amends those
   Blockers to cite this ADR (below), both stages ship their ungated outcome.
-- **The cache answers before the provider does** (`docs/ARCHITECTURE.md` §4) - per member, only when
+- **The cache answers before the provider does** - per member, only when
   HERE's headers allow it, with the TTL above. Its value is a planner reordering the same day back and
   forth, not a second traveller asking the same question; the cost model is written for that.
 - **The credential is the existing `HERE_API_KEY`**, the secret ADR 0011 added (`docs/DEPLOY.md`).
@@ -184,12 +192,15 @@ The shape ADR 0011 and ADR 0013 fixed is not reopened, and it is restated here o
   tenant.
 - **The ceiling lives in `resolveLimits()`** (`src/server/billing/limits.ts`): a new metric in
   `RATE_METRICS` and `PLAN_RATE_CEILINGS`, counted by the KV tally in `src/server/metering/rate.ts`
-  as transit, extraction and geocoding already are. Its numbers are `02-S9`'s to size. Free's figure
+  as transit, extraction and geocoding already are. `02-S9` proposes its numbers. Free's figure
   is not zero, by that module's own rule: the day map is a surface Free's catalogue entry sells.
 - **The budget is deferred, not agreed.** HERE's routing rate and free allowance were not read -
   `here.com/get-started/pricing` renders client-side and returned no figures - and whether the
-  allowance transit already spends is shared with routing is not known. `02-S9` reads both before it
-  sizes the ceiling, and no routed call ships until it has. The ceilings are the cap on spend.
+  allowance transit already spends is shared with routing is not known. `02-S9` reads both, writes
+  the ceilings it proposes and the monthly spend they allow into its plan, and puts them to the
+  maintainer: committing spend on a per-use service is "the user's decision and not a stage's"
+  (`11-S3`). No routed call ships until the maintainer has agreed them, and the agreed ceilings are
+  then the cap on spend.
 - **`docs/ARCHITECTURE.md` §8 gains a routing line** under Metered outbound calls when `02-S9`
   builds, with that rate and a cached column that assumes no cross-member sharing.
 - **The terms are re-read when a stage builds.** HERE "reserves the right to change these Terms at any
@@ -204,13 +215,13 @@ The shape ADR 0011 and ADR 0013 fixed is not reopened, and it is restated here o
   routed in the Routing v8 mode that matches its transport mode - `walk` as `pedestrian`, `bike` as
   `bicycle`, and `car`, `taxi` and `bus` as themselves - and a segment with no transport mode as
   `pedestrian`, the walking time the stage is named for. **It may not claim** a time for a segment
-  HERE did not route, nor present a total that mixes routed and great-circle segments as one road
+  HERE did not route, any routed answer for a segment in Japan, nor present a total that mixes routed and great-circle segments as one road
   number. Its one-metric rule resolves one way: the optimiser keeps ordering by great-circle distance,
   and the distance on the pill is that metric; a routed time or road distance is shown beside it,
   never as the metric the order optimises. Ordering by road would need every stop pair routed, which
   is HERE Matrix Routing, a separate product this ADR does not adopt. Great-circle distance stays as
-  the designed state when the ceiling refuses, the provider fails, a mode is not routed or the viewer
-  is not the requesting member, and in that state the pill claims a distance and nothing more.
+  the designed state when the ceiling refuses, the provider fails, a mode is not routed, the segment is in
+  Japan, the viewer is not the requesting member or the order has changed since their Request, and in that state the pill claims a distance and nothing more.
 - **`02-S12` may claim** a road-following line for a `car`, `taxi`, `bus` or `bike` leg that HERE
   routed, outside Japan, shown to the member who requested it. A `bus` line is the road path a bus
   would drive, not the timetabled service's route. **It may not claim** one for any other leg:
@@ -225,12 +236,19 @@ The shape ADR 0011 and ADR 0013 fixed is not reopened, and it is restated here o
 Gate B's provider question closes; its budget is deferred to `02-S9`, as above. `11-S3` records the
 closure by citation, as it does for Gate A.
 
-Plan 02 still describes Gate B as open, and `#439` deliberately did not edit it. Before either stage
-builds against this ADR, plan 02 cites it the way it cites ADR 0013 for Gate A: in the `02-S1` gate
-text (`docs/plans/02-places-and-maps.md` at "Gate B — routing. STILL OPEN.", "Gate B is untouched and
-still open" and "Gate B — routing. OPEN."), in `02-S9`'s Blockers entry for Gate B, and in `02-S12`'s
-("Gate B — routing. No road-following geometry"). If #437's migration has frozen plan 02 by then, the
-amendment is recorded on #437 instead.
+Plan 02 still describes Gate B as open, and #439 deliberately did not edit it. Before either stage
+builds against this ADR, plan 02 cites it the way it cites ADR 0013 for Gate A, in every place of
+`docs/plans/02-places-and-maps.md` that would otherwise be false:
+
+- the plan's gate summary: "Gate B — routing. STILL OPEN." and "Behind Gate B, two stages still
+  carry a gated behaviour";
+- `02-S1`: "Gate B is untouched and still open", the "Gate B — routing. OPEN." entry, and the
+  falsifiable condition that "no Gate B provider is named at all", which would otherwise count the
+  citation itself as the stage failing;
+- `02-S9`: its divergence note on the reference's segment pills, and its Gate B Blockers entry;
+- `02-S12`: "Road-following lines are Gate B and are not built", and its Gate B Blockers entry.
+
+If #437's migration has frozen plan 02 by then, the amendment is recorded on #437 instead.
 
 We hold two location vendors, not three: HERE for transit and road routing, Geoapify for geocoding.
 One HERE account, one key and one invoice cover both routing products.
@@ -242,10 +260,13 @@ than with distinct routes. The per-member cache still absorbs the reorder loop, 
 that would otherwise dominate the bill - if HERE's headers permit caching at all.
 
 **The same clauses reach ADR 0011.** The transit proxy at HEAD shares its cache across tenants by
-design - `src/server/transit/search.ts` keys a search on the query alone, and its test asserts that a
-second workspace "pays nothing for" the first one's question. Under §6.4 l and §6.4 h that is one
-Request serving multiple End Users, and its six-hour TTL is fixed rather than taken from HERE's
-caching headers (Exhibit 2, §1.3). The TTL is inside the 30-day limit; the sharing is not. That is not
+design - `src/server/transit/search.ts` keys a search on the query alone, and its test "serves one
+workspace the answer another workspace paid for", in which the second workspace "pays nothing for"
+the first one's question. Under §6.4 l and §6.4 h that is one Request serving multiple End Users,
+and its six-hour TTL is fixed rather than taken from HERE's caching headers (Exhibit 2, §1.3). The
+TTL is inside the 30-day limit; the sharing is not. A connection saved through
+`saveSearchedConnection` goes further: it keeps the stations and clocks HERE returned in D1 with no
+expiry and shows them to the trip's other members, which §6.4 j and §6.4 h reach as well. That is not
 this ADR's to fix: `03-reservations-and-transport.md` is frozen and migrated to PRD #167, so the
 correction is tracked in #516, as an amendment to ADR 0011 and a change to that module.
 
