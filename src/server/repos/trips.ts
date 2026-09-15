@@ -239,8 +239,9 @@ export type CreateShareLinkInput = z.infer<typeof createShareLinkInput>
  * more cross an organization boundary than the trip half can.
  *
  * Exported for {@link readableTrips}, which is how a reader should reach it; a query that needs the
- * bare `SQL` — one grouped aggregate here, and nothing else in the codebase — takes it directly and
- * is visibly doing something the handle could not do for it.
+ * bare `SQL` — one grouped aggregate here, and the journey read predicate in `journey.ts`, which asks
+ * it of the trip a journey names (ADR 0020) — takes it directly and is visibly doing something the
+ * handle could not do for it.
  */
 export function readableTripFilter(scope: TenantScope): SQL {
   const isMember = exists(
@@ -442,6 +443,11 @@ export async function requireWritableTrip(
  * refused is the class, not the string: nothing outside these repositories reads `code`, and a
  * second name for one answer would make an organization refusal and a trip refusal
  * indistinguishable to anybody who did.
+ *
+ * The same question does not mean the same answer on screen. This class is authored copy and
+ * `ForbiddenError` is not, on purpose: this sentence is drawn from the trip's closed role vocabulary
+ * on both sides, while `ForbiddenError` interpolates a free-text `action`. Its docblock records the
+ * rest of the reasoning, so the asymmetry is a decision rather than an oversight.
  */
 export class TripRoleError extends RepositoryError {
   constructor(

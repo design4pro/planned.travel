@@ -25,7 +25,24 @@ import {
 } from '#/server/repos/context'
 import { TripArchivedError, TripRoleError } from '#/server/repos/trips'
 
-import { classifyFailure } from '../public'
+import { AUTHORED_ERROR_NAMES, classifyFailure } from '../public'
+
+describe('the English refusal set is closed', () => {
+  /**
+   * Every authored name reaches a reader in any locale as an English sentence, which
+   * `docs/SPEC.md` §9 rule 10 accepts for exactly these classes and no others. A new name failing
+   * here is the point: a new refusal class travels as a message key, or stays a diagnostic.
+   */
+  it('names exactly the classes the localisation exception covers', () => {
+    expect([...AUTHORED_ERROR_NAMES].sort()).toEqual([
+      'AuthRequirementError',
+      'ConsoleActionError',
+      'ConsoleUnattributableError',
+      'TripArchivedError',
+      'TripRoleError',
+    ])
+  })
+})
 
 describe('authored copy is shown as itself', () => {
   it('recognises an authorisation refusal', () => {

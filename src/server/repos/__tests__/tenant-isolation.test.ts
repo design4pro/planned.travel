@@ -116,10 +116,15 @@ import {
   createEntry,
   createJourney,
   createMood,
+  getJourney,
+  getJourneyStory,
   journeyEntriesRepository,
   journeyMoodsRepository,
   journeyPhotosRepository,
   journeysRepository,
+  listJourneys,
+  listRecentEntries,
+  tallyMoods,
 } from '../journey'
 import {
   applyTemplateToTrip,
@@ -4304,6 +4309,33 @@ describe('tenant isolation', () => {
           BILLING_EVENT_ID,
         ),
       ).toHaveLength(1)
+    })
+  })
+
+  /**
+   * The journal's journey readers (#456, ADR 0020).
+   *
+   * They now ask the trip a journey names through a sub-select over `trips`. Both halves of it are
+   * tenant-bound, so A's journey — tied to A's trip — is no more reachable from B through the new
+   * predicate than it was through the tenant filter alone.
+   */
+  describe('the journal read from the other organization', () => {
+    it('lists, opens and tallies none of A’s journeys', async () => {
+      expect(
+        (await listJourneys(beta.tenant.scope)).map((row) => row.id),
+      ).toEqual([beta.journeyId])
+      expect(await getJourney(beta.tenant.scope, alpha.journeyId)).toBeNull()
+      expect(
+        await captureError(() =>
+          getJourneyStory(beta.tenant.scope, alpha.journeyId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        (await listRecentEntries(beta.tenant.scope)).map((row) => row.entry.id),
+      ).toEqual([beta.journeyEntryId])
+      expect(
+        (await tallyMoods(beta.tenant.scope)).map((row) => row.value),
+      ).toEqual([1])
     })
   })
 })
