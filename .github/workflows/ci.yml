@@ -426,20 +426,22 @@ jobs:
   # The deploys, as the last jobs of a push run and only behind a green one.
   # They used to be workflows of their own, started by the same push at the same
   # moment as this run and reading nothing from it, so a red commit shipped
-  # exactly like a green one. No status function in `if` means an implicit
-  # `success()`: a failed `verify`, unit suite or e2e report skips the deploy
-  # (ADR 0021). A later merge cannot interrupt one mid-migration either, since
-  # `concurrency` above cancels pull request runs only.
+  # exactly like a green one. Each `needs` must have succeeded (ADR 0021), and
+  # the `if` says so itself rather than leaving it to an implicit `success()`:
+  # at job level that reads every ancestor, and `e2e-report` descends from
+  # `scope`, which a push skips, so every deploy was skipped with it. A later
+  # merge cannot interrupt one mid-migration either, since `concurrency` above
+  # cancels pull request runs only.
   deploy-staging:
     name: deploy · staging
     needs: [verify, test, e2e-report]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.test.result == 'success' && needs.e2e-report.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/develop' }}
     uses: ./.github/workflows/deploy-staging.yml
     secrets: inherit
 
   deploy-production:
     name: deploy · production
     needs: [verify, test, e2e-report]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.test.result == 'success' && needs.e2e-report.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     uses: ./.github/workflows/deploy.yml
     secrets: inherit
