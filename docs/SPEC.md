@@ -796,6 +796,17 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
 9. **Copy is authored, not copied.** §1's clean-room rule governs every catalogue file. Our English
    copy is our own, and each translation is made from _our_ English — never from the reference's
    catalogues, which are AGPL-licensed source.
+10. **Server refusals are a bounded exception to rule 6.** A refusal whose error class is named in
+    `AUTHORED_ERROR_NAMES` (`src/server/errors/public.ts`) reaches the browser as its English
+    sentence and is shown in place of the caller's localised fallback, in every locale. That is
+    accepted for exactly the classes listed there today — `AuthRequirementError`,
+    `ConsoleActionError`, `ConsoleUnattributableError`, `TripArchivedError`, `TripRoleError` — and
+    the set is closed: `src/server/errors/__tests__/public.test.ts` pins it, so growing it is a
+    change to this rule, not an edit. A new refusal travels as a message key the client resolves in
+    the reader's locale, the shape `SHELL_STATE_KEYS` (`src/components/layout/session.ts`) already
+    has, or stays a diagnostic whose screen shows the localised fallback. Generalising that key
+    resolution to the whole `refusal` channel, with the existing sentences moved into the
+    catalogue, is the work that retires this exception.
 
 ### Catalogue layout (fixed — every i18n item builds against this)
 
