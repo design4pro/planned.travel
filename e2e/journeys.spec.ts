@@ -497,6 +497,11 @@ test.describe('authenticated routes', () => {
           node.textContent.trim(),
         ),
         words: (surface?.textContent ?? '').replace(/\s+/g, ' ').trim().length,
+        // Rendered geometry, which `textContent` cannot see: a label cut down
+        // to its head noun still reads in full to every string above.
+        clipped: [...(surface?.querySelectorAll('dt, dt *') ?? [])]
+          .filter((node) => node.scrollWidth > node.clientWidth)
+          .map((node) => node.textContent.trim()),
       }
     })
     // Which quartet of headings belongs to which record. Most of the demo
@@ -546,6 +551,10 @@ test.describe('authenticated routes', () => {
         shown.labels,
         'the fact grid is all four fields, headed for the record it is reading',
       ).toEqual(headings[record].map((rule) => expect.stringMatching(rule)))
+      expect(
+        shown.clipped,
+        'a heading wraps inside its cell; clipped, the trip heading loses its workspace qualifier',
+      ).toEqual([])
       if (record !== 'none') {
         // The whole point of the visit reading, asserted on the running page:
         // a country the map has filled in prints what is known about it, not an
