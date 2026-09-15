@@ -13,6 +13,7 @@ import {
 } from './helpers/places-and-maps.ts'
 import type { Camera } from './helpers/places-and-maps.ts'
 import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
+import { settleMutations } from './helpers/settle.ts'
 
 /**
  * `02-S3` — the opening camera, asserted where a reader sees it.
@@ -33,7 +34,8 @@ const FIT_MAX_ZOOM = 15
 /**
  * The closest a single place may open and still be the neighbourhood rather than a doorway, and the
  * farthest it may open and still be a place rather than a region. `expandBounds()` widens a point to
- * 0.04°, which lands near zoom 13 on a desktop canvas and near 12 on a phone.
+ * 0.04°, which by the Web Mercator arithmetic should rest somewhere in the low teens on either
+ * viewport; that has not been measured, because the local test environment caps Porto (below).
  *
  * The floor gives way to a lower ceiling when the planner asks for one. Outside the published basemap
  * archive the planner caps the fit at `FIT_MAX_ZOOM_UNMAPPED` (6), because the only ground there is
@@ -50,6 +52,9 @@ const READABLE_ZOOM = { from: 10, below: FIT_MAX_ZOOM } as const
  * 0.3° at zoom 6 and a hundredth of that at zoom 13. Measured at 1440x900 and zoom 6: 1.8%.
  */
 const SINGLE_PLACE_CENTRE_SHARE = 0.25
+
+/** The latitude where Web Mercator ends and MapLibre stops the camera from showing further. */
+const MERCATOR_EDGE = 85
 
 /**
  * Two map screens per test: `/trips` to resolve the trip by name, then the planner. Each loads MapLibre
@@ -74,11 +79,18 @@ test.describe('02-S3 — the opening camera', () => {
     await onRoute(context, ATLAS, async (page) => {
       const camera = await restingCamera(page, (seen) => {
         const [lng, lat] = seen.center
-        if (
-          Math.abs(lng - WORLD_CENTRE[0]) > 0.5 ||
-          Math.abs(lat - WORLD_CENTRE[1]) > 0.5
-        ) {
-          return `the centre is not WORLD_CENTRE [${WORLD_CENTRE.join(', ')}]`
+        if (Math.abs(lng - WORLD_CENTRE[0]) > 0.5) {
+          return `the centre longitude is not WORLD_CENTRE's ${WORLD_CENTRE[0]}`
+        }
+        // MapLibre clamps the centre so the canvas never shows past the Mercator edge. On a canvas
+        // taller than the world at its floor zoom (a phone: 393x659 rests at z0.048 with the centre
+        // pulled to the equator) the whole height is already in frame, and that clamp — not the
+        // atlas — decides the latitude.
+        const wholeHeight =
+          seen.bounds.north >= MERCATOR_EDGE &&
+          seen.bounds.south <= -MERCATOR_EDGE
+        if (!wholeHeight && Math.abs(lat - WORLD_CENTRE[1]) > 0.5) {
+          return `the centre latitude is not WORLD_CENTRE's ${WORLD_CENTRE[1]}`
         }
         if (Math.abs(seen.zoom - seen.minZoom) > 0.01) {
           return 'the zoom is not the world floor the atlas sets as its minimum'
@@ -158,8 +170,11 @@ test.describe('02-S3 — the opening camera', () => {
         if ((seen.fit?.points.length ?? 0) > 0) {
           return 'the planner found places on a trip that holds none'
         }
-        if (seen.bounds.east - seen.bounds.west < 180) {
-          return 'the frame spans less than half the world'
+        // As far out as the planner allows: half the world where the canvas is wide enough, and
+        // the map's own minimum zoom where it is not — a phone holds 120° at z1.2.
+        const flooredOut = Math.abs(seen.zoom - seen.minZoom) <= 0.01
+        if (seen.bounds.east - seen.bounds.west < 180 && !flooredOut) {
+          return 'the frame spans less than half the world and the zoom is not at its floor'
         }
         if (seen.zoom > 3) return 'the zoom is regional, not the world'
         return null
@@ -184,15 +199,22 @@ test.describe('02-S3 — the opening camera', () => {
       const viewport = page.viewportSize()
       if (viewport === null)
         throw new Error('the page has no viewport to resize')
+      // A resize reaches the map through a `ResizeObserver`, so the camera can read as resting
+      // before it has started to move. The DOM going quiet first is what makes each read late
+      // enough to see the frame — and every shift — the action caused.
+      const settled = async (): Promise<void> => {
+        await settleMutations(page)
+        await restingCamera(page, () => null)
+      }
       await page.setViewportSize({
         width: viewport.width - 160,
         height: viewport.height,
       })
-      await restingCamera(page, () => null)
+      await settled()
       await page.emulateMedia({ colorScheme: 'dark' })
-      await restingCamera(page, () => null)
+      await settled()
       await page.setViewportSize(viewport)
-      await restingCamera(page, () => null)
+      await settled()
 
       expect(
         await readShifts(page),
