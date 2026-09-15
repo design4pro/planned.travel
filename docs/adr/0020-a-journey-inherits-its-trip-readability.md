@@ -43,6 +43,12 @@ Every reader that returns a journey row or something derived from one - the jour
 counts, the direct getters, the story, the recent entries, the mood tally - applies the predicate, and
 `member-isolation.test.ts` carries the case beside the trip ones. `journalCoverage` is unchanged: it
 counts trips, so it asks `readableTrips`. A write that resolves a journey by id should ask the same
-question; the readers land first (#456), and the writes and the journey-id-keyed helpers follow. If a
-traveller is ever given a journey visibility control, it narrows this rule rather than replacing it,
-and that is a new record.
+question; the readers land first (#456), and the writes and the journey-id-keyed helpers follow
+(#521). If a traveller is ever given a journey visibility control, it narrows this rule rather than
+replacing it, and that is a new record.
+
+Deleting a trip does not delete the journey written about it: `journeys.trip_id` is
+`ON DELETE SET NULL`, so the journey becomes one tied to no trip and, under this rule, readable by the
+whole organization. That is no wider than before this record, when every journey was, but it is a gap
+in the rule rather than a choice: whether a deleted trip takes its journal with it, or the orphaned
+journey stays with its author, is decided separately (#520).

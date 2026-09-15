@@ -295,6 +295,9 @@ describe('member isolation', () => {
       expect(
         (await getJourneyStory(alpha.scope, journey.id)).entries,
       ).toHaveLength(1)
+      expect((await getJourneyBySlug(alpha.scope, journey.slug))?.id).toBe(
+        journey.id,
+      )
       expect(
         (await tallyMoods(alpha.scope)).map((row) => [row.mood.key, row.value]),
       ).toEqual([['quiet', 2]])
@@ -510,6 +513,11 @@ describe('member isolation', () => {
     })
 
     it('and the journey written about it is read with it (#456)', async () => {
+      const mood = await createMood(alpha.scope, {
+        key: 'bright',
+        label: 'Bright',
+        emoji: '☀️',
+      })
       const journey = await createJourney(alpha.scope, {
         tripId: fixture.tripId,
         title: 'Lisbon, written up',
@@ -518,17 +526,25 @@ describe('member isolation', () => {
         journeyId: journey.id,
         entryDate: '2026-04-10',
         title: 'Custard tarts, twice',
+        moodId: mood.id,
       })
 
       expect((await listJourneys(stranger)).map((row) => row.id)).toEqual([
         journey.id,
       ])
+      expect((await getJourney(stranger, journey.id))?.id).toBe(journey.id)
+      expect((await getJourneyBySlug(stranger, journey.slug))?.id).toBe(
+        journey.id,
+      )
       expect(
         (await getJourneyStory(stranger, journey.id)).entries,
       ).toHaveLength(1)
       expect(
         (await listRecentEntries(stranger)).map((row) => row.journeyId),
       ).toEqual([journey.id])
+      expect(
+        (await tallyMoods(stranger)).map((row) => [row.mood.key, row.value]),
+      ).toEqual([['bright', 1]])
     })
 
     it('and any reader may star it, privately to themselves', async () => {

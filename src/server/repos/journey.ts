@@ -344,7 +344,7 @@ export async function listRecentEntries(
       journeyStatus: journeys.status,
     })
     .from(journeyEntries)
-    .innerJoin(journeys, eq(journeys.id, journeyEntries.journeyId))
+    .innerJoin(journeys, tenantFilter(scope, journeys, eq(journeys.id, journeyEntries.journeyId)))
     .where(tenantFilter(scope, journeyEntries, readableJourneyFilter(scope)))
     .orderBy(desc(journeyEntries.entryDate), desc(journeyEntries.createdAt))
     .limit(options.limit ?? 6)
@@ -387,7 +387,7 @@ export async function tallyMoods(
     scope.db
       .select({ moodId: journeyEntries.moodId, value: count() })
       .from(journeyEntries)
-      .innerJoin(journeys, eq(journeys.id, journeyEntries.journeyId))
+      .innerJoin(journeys, tenantFilter(scope, journeys, eq(journeys.id, journeyEntries.journeyId)))
       .where(tenantFilter(scope, journeyEntries, readableJourneyFilter(scope)))
       .groupBy(journeyEntries.moodId)
       .orderBy(desc(count())),
