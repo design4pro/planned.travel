@@ -316,7 +316,9 @@ three owners land together in one pull request.
    `revealed`. Assert on `data-state`, not on the clipboard, which WebKit's automation does not grant —
    and not on the `Check`/"… copied" affordance either: `copyToClipboard` has no `execCommand`
    fallback, so a refused clipboard write leaves `copied` false and no affordance to assert in the one
-   project that needs it.
+   project that needs it. Before landing, remove each fix in turn and confirm its assertion goes red in
+   `mobile-safari`: nothing here establishes that the WebKit build Playwright runs reproduces Safari's
+   no-focus-on-click behaviour, and a case that stays green without the fix pins nothing.
 5. **Verify.** The gate in `.ai/agentic.config.json`, then the blind A/B pair
    (`scripts/visual/capture.mjs`) on `/trips/demo-trip-01-tokyo-and-kyoto/book` with the preference on:
    the resting frame is identical, and a `--click '[data-state="masked"]'` state (which acts on the
