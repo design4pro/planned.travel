@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 
@@ -100,6 +103,38 @@ describe('the global import widget', () => {
       document.querySelector('[data-part="book-import-widget"]'),
     ).toBeNull()
     expect(stubs.view).not.toHaveBeenCalled()
+  })
+
+  /*
+   * The widget is mounted in the authenticated shell, so whatever this file imports statically is in
+   * the bundle of every screen. A static import of the server function it polls put the function's
+   * schema graph there too (#483): a large share of the shell's JavaScript, for a component that
+   * renders nothing until a job is registered. Types are erased, so `import type` is fine.
+   */
+  it('reaches the server only through a dynamic import, so the shell does not bundle it', () => {
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '..', 'import-widget.tsx'),
+      'utf8',
+    )
+
+    expect(
+      source.match(/^import\s+(?!type\b)[^']*from\s+'#\/server\//gm),
+    ).toBeNull()
+    expect(source).toContain("import('#/server/fns/booking-import')")
+  })
+
+  it('asks the server about a registered job with its trip and job ids', async () => {
+    stubs.view.mockResolvedValue({
+      status: 'working',
+    } satisfies BookingImportView)
+    registerOne()
+
+    mount()
+    await tick(POLL_INTERVAL_MS)
+
+    expect(stubs.view).toHaveBeenCalledWith({
+      data: { tripId: 'trip-1', jobId: 'booking-import:trip-1:file-1' },
+    })
   })
 
   it('picks a job id up out of storage on mount and announces it politely', async () => {

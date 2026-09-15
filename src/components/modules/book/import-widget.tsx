@@ -18,7 +18,6 @@ import { FileSearch } from 'lucide-react'
 
 import { Button, Card, Progress } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
-import { getBookingImportFn } from '#/server/fns/booking-import'
 
 import type {
   BookingImportStatus,
@@ -234,9 +233,17 @@ export function useBookImportPoll(
         const since = startedAt.current.get(job.jobId) ?? now
         startedAt.current.set(job.jobId, since)
 
-        const view = await getBookingImportFn({
-          data: { tripId: job.tripId, jobId: job.jobId },
-        }).catch(() => null)
+        // Loaded on the first ask rather than at the top of the file: the widget is mounted in the
+        // authenticated shell, and a static import put the server function and its schema graph in
+        // the bundle of every screen, whether or not a job was ever registered. A chunk that fails
+        // to load is a call that failed, and is treated as one.
+        const view = await import('#/server/fns/booking-import')
+          .then(({ getBookingImportFn }) =>
+            getBookingImportFn({
+              data: { tripId: job.tripId, jobId: job.jobId },
+            }),
+          )
+          .catch(() => null)
         // Checked after the answer and nowhere else: an unmounted widget must not set state, and
         // the loop is abandoned rather than continued because every remaining job is in the same
         // position.
@@ -282,7 +289,8 @@ export function useBookImportPoll(
  *
  * Mounted once, last in the authenticated shell's subtree in `src/routes/_app/route.tsx`. It
  * renders nothing at all until a job is registered, so every screen in the product pays one empty
- * component for it.
+ * component for it — in the render and in the bundle: the server function it polls is imported
+ * dynamically, on the first ask, so its schema graph stays out of the shell's chunk.
  *
  * `userId` comes from the shell's session rather than from a read of its own, because the register
  * is keyed by it — see {@link bookImportsKey}.
