@@ -1,15 +1,14 @@
 name: Deploy
 
+# Git Flow's release leg: a push to `main` - the merged promotion pull request -
+# deploys production once CI has passed on that commit. ci.yml calls this
+# workflow as its last job, behind `verify`, the unit suite and the e2e report,
+# so a red commit never reaches production (ADR 0021). `workflow_dispatch` waits on
+# nothing: it is for redeploying a commit by hand, or for shipping while CI
+# itself is down.
 on:
-  push:
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
-
-# Never run two deploys at once, and never cancel one half-way: an interrupted
-# `d1 migrations apply` would leave the schema between two versions.
-concurrency:
-  group: deploy-production
-  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -30,6 +29,12 @@ jobs:
     name: Migrate and deploy to production
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     timeout-minutes: 25
+    # Never run two deploys at once, and never cancel one half-way: an interrupted
+    # `d1 migrations apply` would leave the schema between two versions. On the
+    # job, so it holds the same way whether ci.yml calls this or a human dispatches it.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     environment:
       name: production
       url: https://planned.travel
