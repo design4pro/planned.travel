@@ -307,6 +307,42 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  # Which parts of the pipeline this pull request's diff can reach. Only `e2e`
+  # reads the answer: a diff that stops at documentation - a spec, an ADR, a
+  # skill - cannot change what a browser sees, and two shards of it cost ~20 min
+  # of the shared self-hosted pool. `verify` and the unit suite neither wait on
+  # this nor read it, because they are what guards the documentation itself.
+  # The judgement and its reasons live in scripts/ci/change-scope.mjs.
+  #
+  # Pull requests only. A push to `develop` or `main` is the canonical run and
+  # always carries the journeys; `e2e` reads this job being skipped as "run".
+  scope:
+    name: change scope
+    if: github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    timeout-minutes: 5
+    outputs:
+      e2e: ${{ steps.classify.outputs.e2e }}
+
+    steps:
+      # The merge commit and both of its parents. `HEAD^1` is the base tip the
+      # merge was computed against, so the diff below is exactly what merging
+      # this pull request would change - not what the branch changed since it
+      # was cut, which would also count every base commit it has not merged.
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      # The runner's own node, before any toolchain, as `verify` runs the
+      # agent-layer check: the script imports nothing outside node itself.
+      - name: Classify the diff
+        id: classify
+        run: |
+          set -euo pipefail
+          git diff --name-only HEAD^1 HEAD > changed-files.txt
+          node scripts/ci/change-scope.mjs < changed-files.txt >> "$GITHUB_OUTPUT"
+
   # The end-to-end journeys: fourteen declarations in `journeys.spec.ts`, three
   # in `trips-core.spec.ts` and two browser-free HTTP claims in `csrf.spec.ts`,
   # over two browser projects. Not a visual gate
@@ -337,9 +373,17 @@ jobs:
   # credentials are read any more either (the journeys need no basemap - see the
   # `basemap` input of the composite action), so the job runs on a fork.
   # A develop→main PR still defers to the push run, as `verify` does.
+  #
+  # And a PR whose diff stops at documentation skips it, on `scope`'s word. An
+  # explicit 'false' is the only answer that skips: a push or a manual run
+  # (where `scope` is skipped) and a `scope` job that failed all leave the
+  # output empty, and the journeys run. `!cancelled()` is what lets them start
+  # behind a skipped `scope` at all. Waiting on it costs one shallow checkout,
+  # not a `verify`.
   e2e:
     name: e2e · critical journeys (${{ matrix.shard }}/2)
-    if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
+    needs: scope
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)) && needs.scope.outputs.e2e != 'false' }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     # Measured on the 2-vCPU runner, first green run (33806080237): 2-3 min of
     # fixed cost - image pull, checkout, install, migrations, seed - then 6m41s of
@@ -401,10 +445,12 @@ jobs:
 
   # One report for the two shards: the GitHub annotations and the HTML report
   # (with the failing journeys' traces and videos) that a single job would give.
+  # Not behind shards that were skipped - by `scope` or on a develop→main PR -
+  # since there is nothing to merge and the toolchain alone is a minute of pool.
   e2e-report:
     name: e2e · merged report
     needs: e2e
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.e2e.result != 'skipped' }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
     timeout-minutes: 10
 
