@@ -275,6 +275,16 @@ const messages = {
   'notifications.event.organization.invited.hint':
     'Ktoś zaprasza Cię do przestrzeni roboczej.',
 
+  'notifications.event.billing.plan_changed': 'Zmiany subskrypcji',
+  'notifications.event.billing.plan_changed.hint':
+    'Twoja przestrzeń przechodzi na inny plan.',
+  'notifications.event.billing.invoice_paid': 'Potwierdzenia płatności',
+  'notifications.event.billing.invoice_paid.hint':
+    'Faktura Twojej przestrzeni została opłacona.',
+  'notifications.event.billing.payment_failed': 'Problemy z płatnością',
+  'notifications.event.billing.payment_failed.hint':
+    'Obciążenie Twojej przestrzeni się nie powiodło.',
+
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'Przestrzeń się nie wczytała',
   'workspace.summary.description': 'Abonament {plan} · utworzono {date}',

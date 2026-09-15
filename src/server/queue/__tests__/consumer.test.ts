@@ -275,7 +275,7 @@ describe('consumeTaskBatch', () => {
         handled.push(payload.planId)
         return {}
       },
-      'billing.invoice.payment_failed': async (payload) => {
+      'billing.invoice.paid': async (payload) => {
         handled.push(payload.providerOrderId)
         return {}
       },
@@ -287,16 +287,16 @@ describe('consumeTaskBatch', () => {
         status: 'active',
       }),
     )
-    const failed = message(
-      billingEnvelope('billing.invoice.payment_failed', {
+    const paid = message(
+      billingEnvelope('billing.invoice.paid', {
         providerOrderId: '7c0f0f4d-6a6f-4f7a-9b0a-2f2a4a6c1d33',
-        attemptCount: 2,
-        nextAttemptAt: '2026-01-04T09:00:00.000Z',
+        amountPaid: 1200,
+        currency: 'EUR',
       }),
     )
 
     const result = await consumeTaskBatch(
-      batch([changed, failed]),
+      batch([changed, paid]),
       env,
       logger(),
       {
@@ -506,21 +506,19 @@ describe('the dead-letter record', () => {
 
 /**
  * The kinds that are declared and have a `case` but no handler behind it — so every message sent to
- * one dead-letters on first delivery. This is issue #304, not a property of the consumer, and the
- * list is written out rather than derived so that a *new* kind cannot join it silently: adding one
- * without its registry entry fails the test below, and closing #304 shrinks this array to empty.
+ * one dead-letters on first delivery. The list is written out rather than derived so that a *new*
+ * kind cannot join it silently: adding one without its registry entry fails the test below.
+ *
+ * Both survivors are harmless where the `billing.*` pair that used to sit here was not (#304):
+ * nothing in `src/` enqueues a `thumbnail` or a `backup`, so nothing dead-letters on them.
  */
-const UNREGISTERED_KINDS: ReadonlyArray<TaskKind> = [
-  'thumbnail',
-  'backup',
-  'billing.subscription.changed',
-  'billing.invoice.paid',
-  'billing.invoice.payment_failed',
-]
+const UNREGISTERED_KINDS: ReadonlyArray<TaskKind> = ['thumbnail', 'backup']
 
 describe('taskHandlers', () => {
-  it('registers a handler for every declared kind, bar the five #304 is open on', () => {
-    const missing = TASK_KINDS.filter((kind) => taskHandlers[kind] === undefined)
+  it('registers a handler for every declared kind that anything enqueues', () => {
+    const missing = TASK_KINDS.filter(
+      (kind) => taskHandlers[kind] === undefined,
+    )
 
     // Equality, not a subset: a kind that gains a handler has to leave the list above, and a kind
     // that arrives without one has to be seen here rather than in production's dead-letter records.

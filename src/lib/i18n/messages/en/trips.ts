@@ -34,6 +34,9 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerary',
   'plan.places': 'Places',
+  'plan.readOnly.archived': 'This trip is archived, so the plan is read-only.',
+  'plan.readOnly.role':
+    'You can read this plan. Only the trip’s owner and editors can change it.',
   /* --------------------------------------------------- the day's sequence */
   /**
    * The dashed drop target a day shows when its **whole sequence** is empty — no

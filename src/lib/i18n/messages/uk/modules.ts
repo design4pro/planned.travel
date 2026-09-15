@@ -145,6 +145,82 @@ const messages = {
   'book.import.badge': 'Неперевірений імпорт',
   'book.import.hint':
     'Узято з підтвердження. Відкрийте та збережіть, щоб позначити перевіреним.',
+  'book.import.action': 'Імпорт',
+  'book.import.title': 'Імпорт бронювань із файлу',
+  'book.import.description':
+    'Поклади тут підтвердження, і ми його прочитаємо. До поїздки нічого не потрапить, поки ти сам не побачиш.',
+  'book.import.drop.idle': 'Поклади файли тут або вибери їх',
+  'book.import.drop.active': 'Відпусти, щоб додати',
+  'book.import.drop.formats':
+    'PDF, збережений лист, вебсторінка, фото, Word, Excel, файл календаря або вигрузка JSON.',
+  'book.import.drop.limits': 'До {files} файлів за раз, кожен до {size}.',
+  'book.import.drop.browse': 'Вибрати файли',
+  'book.import.refused.format':
+    '«{filename}» — не той файл, який цей імпорт умiє читати. Він читає PDF, збережений лист, вебсторінку, фото, документ Word або Excel, файл календаря чи вигрузку JSON.',
+  'book.import.refused.tooMany': 'Лише {files} файлів за раз. Решту не додано.',
+  'book.import.refused.tooLarge':
+    '«{filename}» важить {size}. Імпорт читає файли до {limit}.',
+  'book.import.refused.empty': '«{filename}» порожній, тож читати нічого.',
+  'book.import.ceiling.title':
+    'Цей робочий простір прочитав усі свої підтвердження за цей місяць',
+  'book.import.ceiling.body':
+    'План містить {ceiling} прочитань файлів на місяць, а запас оновлюється першого числа. Бронювання й далі можна додати вручну.',
+  'book.import.ceiling.none':
+    'Читання файлу з підтвердженням не входить до плану цього робочого простору',
+  'book.import.ceiling.noneBody':
+    'Перейди на вищий план, щоб підтвердження прочитали за тебе. Додати бронювання вручну можна завжди.',
+  'book.import.widget.title': 'Читаємо підтвердження',
+  'book.import.widget.working': 'Прочитано {done} з {total}',
+  'book.import.widget.file': 'Читаємо «{filename}»',
+  'book.import.widget.done': {
+    one: 'Одне бронювання готове до перегляду',
+    few: '{count} бронювання готові до перегляду',
+    many: '{count} бронювань готові до перегляду',
+    other: '{count} бронювань готові до перегляду',
+  },
+  'book.import.widget.review': 'Переглянути',
+  'book.import.widget.failed': '«{filename}» прочитати не вдалося',
+  'book.import.widget.stalled': 'Це триває довше, ніж ми очікували',
+  'book.import.widget.check': 'Перевірити ще раз',
+  'book.import.widget.dismiss': 'Прибрати',
+  'book.import.review.title': 'Що ми прочитали',
+  'book.import.review.from': 'Із «{filename}»',
+  'book.import.review.selectAll': 'Вибрати всі',
+  'book.import.review.selectNone': 'Зняти вибір',
+  'book.import.review.confirm': {
+    one: 'Додати {count} бронювання',
+    few: 'Додати {count} бронювання',
+    many: 'Додати {count} бронювань',
+    other: 'Додати {count} бронювань',
+  },
+  'book.import.review.confirmNone': 'Вибери бронювання, яке додати',
+  'book.import.review.cancel': 'Скасувати',
+  'book.import.review.needsReview': 'Варто глянути',
+  'book.import.review.needsReviewHint':
+    'Частини полів у документі не було. Відкрий бронювання після додавання.',
+  'book.import.review.noPrice': 'Ціну не прочитано',
+  'book.import.review.noPriceHint':
+    'Документ не називав її виразно, тож поле лишилося порожнім, а не вгаданим.',
+  'book.import.review.untitled': 'Бронювання без назви',
+  'book.import.empty.title': 'У цьому файлі ми не знайшли бронювання',
+  'book.import.empty.body':
+    'У «{filename}» не було нічого схожого на підтвердження. Спробуй інший файл або додай бронювання вручну.',
+  'book.import.failed.title': '«{filename}» прочитати не вдалося',
+  'book.import.failed.body':
+    'Файл відкрився, але зібрати з нього нічого не вийшло. Спробуй інший файл або додай бронювання вручну.',
+  'book.import.failed.retry': 'Спробувати інший файл',
+  'book.import.uploadFailed': '«{filename}» не завантажився',
+  'book.import.uploadRetry': 'Спробувати ще раз',
+  'book.import.toast.added': {
+    one: 'Додано одне бронювання',
+    few: 'Додано {count} бронювання',
+    many: 'Додано {count} бронювань',
+    other: 'Додано {count} бронювань',
+  },
+  'book.import.partial.title': 'Додано {written} бронювань із {total}',
+  'book.import.partial.body':
+    'Решта так і вибрана. Повторне додавання запише тільки її.',
+  'book.import.partial.retry': 'Додати решту',
   'book.journeyLink': 'На вкладці транспорту',
   'filter.all': 'Усе',
   'book.remove.body':

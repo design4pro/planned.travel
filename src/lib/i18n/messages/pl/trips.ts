@@ -25,6 +25,10 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Plan dnia',
   'plan.places': 'Miejsca',
+  'plan.readOnly.archived':
+    'Ta podróż jest zarchiwizowana, więc plan jest tylko do odczytu.',
+  'plan.readOnly.role':
+    'Możesz przeglądać ten plan. Zmieniać go mogą tylko właściciel podróży i edytorzy.',
   'plan.day.empty': 'Nic nie zaplanowano - przeciągnij tu miejsce albo notatkę',
   'plan.move.refused.duplicate': '{name} jest już w tym dniu',
   'plan.move.refused.duplicateBody':

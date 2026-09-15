@@ -132,6 +132,76 @@ const messages = {
   'book.import.badge': '未確認のインポート',
   'book.import.hint':
     '確認メールから取り込みました。開いて保存すると確認済みになります。',
+  'book.import.action': 'インポート',
+  'book.import.title': 'ファイルから予約をインポート',
+  'book.import.description':
+    '確認書をここに置けば読み取ります。目で見るまで、旅行には何も追加されません。',
+  'book.import.drop.idle': 'ここにファイルを置く、または選ぶ',
+  'book.import.drop.active': '離すと追加されます',
+  'book.import.drop.formats':
+    'PDF、保存したメール、ウェブページ、写真、Word、Excel、カレンダーファイル、JSON エクスポート。',
+  'book.import.drop.limits': '一度に {files} 件まで、1 件 {size} まで。',
+  'book.import.drop.browse': 'ファイルを選ぶ',
+  'book.import.refused.format':
+    '「{filename}」はこのインポートが読めるファイルではありません。読めるのは PDF、保存したメール、ウェブページ、写真、Word や Excel の書類、カレンダーファイル、JSON エクスポートです。',
+  'book.import.refused.tooMany':
+    '一度に {files} 件までです。残りは追加していません。',
+  'book.import.refused.tooLarge':
+    '「{filename}」は {size} です。インポートが読めるのは {limit} までです。',
+  'book.import.refused.empty':
+    '「{filename}」は空なので、読むものがありません。',
+  'book.import.ceiling.title':
+    'このワークスペースは今月の確認書をすべて読み終えました',
+  'book.import.ceiling.body':
+    'プランには月 {ceiling} 件のファイル読み取りが含まれ、枠は 1 日に戻ります。予約は手入力でいつでも追加できます。',
+  'book.import.ceiling.none':
+    '確認書ファイルの読み取りは、このワークスペースのプランに含まれていません',
+  'book.import.ceiling.noneBody':
+    'プランを上げると確認書を読み取ってもらえます。手入力での追加はいつでもできます。',
+  'book.import.widget.title': '確認書を読んでいます',
+  'book.import.widget.working': '{total} 件中 {done} 件を読み取り',
+  'book.import.widget.file': '「{filename}」を読んでいます',
+  'book.import.widget.done': {
+    other: '{count} 件の予約を確認できます',
+  },
+  'book.import.widget.review': '確認する',
+  'book.import.widget.failed': '「{filename}」は読めませんでした',
+  'book.import.widget.stalled': '思ったより時間がかかっています',
+  'book.import.widget.check': 'もう一度確認',
+  'book.import.widget.dismiss': '閉じる',
+  'book.import.review.title': '読み取った内容',
+  'book.import.review.from': '「{filename}」より',
+  'book.import.review.selectAll': 'すべて選ぶ',
+  'book.import.review.selectNone': '選択を解除',
+  'book.import.review.confirm': {
+    other: '{count} 件の予約を追加',
+  },
+  'book.import.review.confirmNone': '追加する予約を選んでください',
+  'book.import.review.cancel': 'キャンセル',
+  'book.import.review.needsReview': '確認が必要',
+  'book.import.review.needsReviewHint':
+    '一部の項目は書類にありませんでした。追加したあとに予約を開いてください。',
+  'book.import.review.noPrice': '金額は読み取れず',
+  'book.import.review.noPriceHint':
+    '書類にはっきり書かれていなかったので、推測せず空のままにしました。',
+  'book.import.review.untitled': '名称のない予約',
+  'book.import.empty.title': 'そのファイルから予約は見つかりませんでした',
+  'book.import.empty.body':
+    '「{filename}」には確認書らしいものがありませんでした。別のファイルを試すか、手入力で追加してください。',
+  'book.import.failed.title': '「{filename}」は読めませんでした',
+  'book.import.failed.body':
+    'ファイルは開きましたが、中身を読み取れませんでした。別のファイルを試すか、手入力で追加してください。',
+  'book.import.failed.retry': '別のファイルを試す',
+  'book.import.uploadFailed': '「{filename}」はアップロードされませんでした',
+  'book.import.uploadRetry': 'もう一度試す',
+  'book.import.toast.added': {
+    other: '{count} 件の予約を追加しました',
+  },
+  'book.import.partial.title':
+    '{total} 件のうち {written} 件の予約を追加しました',
+  'book.import.partial.body':
+    '残りは選んだままです。もう一度追加すると、その分だけ書き込みます。',
+  'book.import.partial.retry': '残りを追加',
   'book.journeyLink': '移動タブで見る',
   'filter.all': 'すべて',
   'book.remove.body':

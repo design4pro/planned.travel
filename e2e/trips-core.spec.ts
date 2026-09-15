@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
 import type { RouteCase } from './helpers/routes.ts'
+import { settleMutations } from './helpers/settle.ts'
 import {
   DEMO_EMAIL,
   DEMO_PASSWORD,
@@ -511,12 +512,20 @@ test.describe('01-S1d — Copying a trip is asked for before it is started', () 
    * tile, whose Edit item `01-S1` clicks and whose menu is frozen. The dialog is what this stage
    * added to the browser, and the dialog is what is measured; that the write behind it does the
    * right thing is `src/server/repos/__tests__/trip-lifecycle.test.ts`'s claim, not this file's.
+   *
+   * **Settled before it is handed back.** Visible is not arrived: the menu that opened the dialog
+   * is still on its exit animation and handing focus back, and the dialog is still on its entrance.
+   * A trace of the red run shows the Dates trigger clicked 11 ms after the dialog turned visible,
+   * and the popover that click opened lost to that focus hand-off — its first day "not stable",
+   * then "detached from the DOM", with the range unchanged underneath. Every caller goes on to
+   * press something inside the dialog, so the wait lives here rather than in each of them.
    */
   async function openCopyDialog(page: Page): Promise<string> {
     const { tile, title } = await datedTrip(page)
     const menu = await openMenu(page, tile)
     await menu.getByRole('menuitem', { name: 'Copy' }).click()
     await expect(page.locator(DIALOG)).toBeVisible()
+    await settleMutations(page)
     return title
   }
 
@@ -529,6 +538,13 @@ test.describe('01-S1d — Copying a trip is asked for before it is started', () 
    * the demo fixture runs seven days or more (`src/routes/api/dev/-seed/dataset/trips.ts`), so two
    * days is reliably shorter; a fixture that ever led with a one-day trip would fail this loudly
    * rather than quietly stop exercising the branch.
+   *
+   * **The grid is settled between the two clicks.** The first click half-opens the range, which
+   * re-renders the grid and puts the field's "set both dates" error under the trigger the popover
+   * is anchored to. A second click sent straight after it retried against "element is not stable"
+   * and then "element was detached from the DOM". Waiting for the DOM to go quiet is the claim that
+   * fits — here and in `openCopyDialog()` — and a longer timeout would only widen the window the
+   * race hides in.
    */
   async function shortenToTwoDays(page: Page): Promise<void> {
     await page
@@ -537,6 +553,7 @@ test.describe('01-S1d — Copying a trip is asked for before it is started', () 
       .click()
     const days = page.locator('table[role="grid"] button')
     await days.nth(0).click()
+    await settleMutations(page)
     await days.nth(1).click()
   }
 

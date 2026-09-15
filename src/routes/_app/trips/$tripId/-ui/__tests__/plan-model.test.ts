@@ -127,6 +127,7 @@ function board(days: ReadonlyArray<PlanBoardDay>): PlanBoardPayload {
   return {
     tripId: 't1',
     editable: true,
+    archived: false,
     days,
     places: placeIds.map((id) => place(id)),
     unscheduledIds: [],

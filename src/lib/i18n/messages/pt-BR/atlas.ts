@@ -143,7 +143,7 @@ const messages = {
   'panel.empty.pick.body':
     'Escolha um no mapa, no campo de busca ou na lista, e a ficha completa dele abre aqui — primeira visita, última visita, a contagem e a sua nota.',
 
-  'panel.stat.places': 'Lugares',
+  'panel.stat.places': 'Seus lugares',
   'panel.stat.placesNone': 'Nada fixado em uma viagem ainda',
   'panel.stat.placesCaption': 'Atrações, hospedagens e paradas salvas',
   'panel.stat.regions': 'Regiões',
@@ -353,7 +353,11 @@ const messages = {
     other: 'Viagens do espaço de trabalho',
   },
   'card.visits': { one: 'Visita', many: 'Visitas', other: 'Visitas' },
-  'card.places': { one: 'Lugar', many: 'Lugares', other: 'Lugares' },
+  'card.places': {
+    one: 'Lugar do espaço de trabalho',
+    many: 'Lugares do espaço de trabalho',
+    other: 'Lugares do espaço de trabalho',
+  },
   'card.firstTrip': 'Primeira viagem',
   'card.lastTrip': 'Última viagem',
   'card.firstVisit': 'Primeira visita',

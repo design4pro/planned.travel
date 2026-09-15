@@ -78,9 +78,13 @@ import {
  * being watched, and its exceptions land in that route's reading. Reading them
  * there is worse than not reading them - it names the wrong screen. The first
  * version of this walk shared a page and failed on `/forgot-password` with
- * WebKit's "Cannot clear timer: timer created with requestIdleCallback() but
- * cleared with clearTimeout()", thrown by `@radix-ui/react-password-toggle-field`
- * tearing down the field on `/login`, one route earlier. A fresh page is what the
+ * "Cannot clear timer: timer created with requestIdleCallback() but cleared with
+ * clearTimeout()", raised while `@radix-ui/react-password-toggle-field` tore down
+ * the field on `/login`, one route earlier. (The sentence turned out to be
+ * Playwright's fake clock rather than WebKit, and on Chromium it was caught being
+ * provoked by Sentry Replay rather than by Radix — most likely the same here; it is
+ * tolerated for that reason in `TOLERATED_PAGE_ERRORS`, and the lesson about the
+ * wrong screen stands for every exception that is not.) A fresh page is what the
  * fourteen separate declarations gave for free, and it is the only part of them
  * worth keeping.
  */
@@ -356,7 +360,7 @@ test.describe('authenticated routes', () => {
     ).toHaveAttribute('data-record', 'visits')
     await expect(facts).toHaveAttribute('data-visited', 'true')
     await expect(panel).toContainText('Visits')
-    await expect(panel).toContainText('Places')
+    await expect(panel).toContainText('Workspace places')
     expect(
       await facts.locator('dd').allInnerTexts(),
       'and prints every one of its four figures rather than an absence',
@@ -493,6 +497,11 @@ test.describe('authenticated routes', () => {
           node.textContent.trim(),
         ),
         words: (surface?.textContent ?? '').replace(/\s+/g, ' ').trim().length,
+        // Rendered geometry, which `textContent` cannot see: a label cut down
+        // to its head noun still reads in full to every string above.
+        clipped: [...(surface?.querySelectorAll('dt, dt *') ?? [])]
+          .filter((node) => node.scrollWidth > node.clientWidth)
+          .map((node) => node.textContent.trim()),
       }
     })
     // Which quartet of headings belongs to which record. Most of the demo
@@ -501,15 +510,30 @@ test.describe('authenticated routes', () => {
     // — pinning either alone would assert against the fixture rather than
     // against the card.
     //
-    // The leading trip heading carries the workspace qualifier (`ADD-06`): the
-    // card counts the workspace's trips while the stat tile above the map counts
-    // the reader's, and the two figures disagree by design. A bare `Trips?` here
-    // would fail against the shipped card, so it is spelled as the card spells
-    // it.
+    // The trip and place headings carry the workspace qualifier (`ADD-06`): the
+    // card counts the workspace's trips and places while the stat tiles above
+    // the map count the reader's, and the figures disagree by design. A bare
+    // `Trips?` or `Places?` here would fail against the shipped card, so each is
+    // spelled as the card spells it.
     const headings = {
-      trips: [/^Workspace trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
-      visits: [/^Visits?$/, /^Places?$/, /^First visit$/, /^Last visit$/],
-      none: [/^Workspace trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
+      trips: [
+        /^Workspace trips?$/,
+        /^Workspace places?$/,
+        /^First trip$/,
+        /^Last trip$/,
+      ],
+      visits: [
+        /^Visits?$/,
+        /^Workspace places?$/,
+        /^First visit$/,
+        /^Last visit$/,
+      ],
+      none: [
+        /^Workspace trips?$/,
+        /^Workspace places?$/,
+        /^First trip$/,
+        /^Last trip$/,
+      ],
     } as const
     if (shown.labels.length === 0) {
       expect(
@@ -527,6 +551,10 @@ test.describe('authenticated routes', () => {
         shown.labels,
         'the fact grid is all four fields, headed for the record it is reading',
       ).toEqual(headings[record].map((rule) => expect.stringMatching(rule)))
+      expect(
+        shown.clipped,
+        'a heading wraps inside its cell; clipped, the trip heading loses its workspace qualifier',
+      ).toEqual([])
       if (record !== 'none') {
         // The whole point of the visit reading, asserted on the running page:
         // a country the map has filled in prints what is known about it, not an
@@ -1166,12 +1194,38 @@ test.describe('authenticated routes', () => {
  * which is exactly how five raw keys reached the colour picker earlier in the
  * same migration.
  */
+const TRIP_SECTIONS = 'nav[aria-label="Trip sections"]'
+
+/** The trips list, which is the one screen that links to a trip by its id. */
+const TRIPS = APP_ROUTES.find((candidate) => candidate.name === 'trips')
+
+/**
+ * The id behind the first trip card, or a skip.
+ *
+ * Read off the card's own link rather than from a fixture, so the walk follows
+ * the same address a reader would. A workspace with no trips leaves this block
+ * nothing to render and says so. `titled` narrows it to the card carrying that title,
+ * for a walk that needs one trip's content rather than any trip's chrome.
+ */
+async function aTripToWalk(page: Page, titled?: string): Promise<string> {
+  if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
+  await visit(page, TRIPS, 'light')
+  const tripId = await page.evaluate((title) => {
+    for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
+      if (title !== undefined && !anchor.textContent.includes(title)) continue
+      const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
+        anchor.getAttribute('href') ?? '',
+      )
+      if (match !== null) return match[1]
+    }
+    return null
+  }, titled)
+  test.skip(tripId === null, 'the workspace lists no trip to walk into')
+  if (tripId === null) throw new Error('unreachable: the test was skipped')
+  return tripId
+}
+
 test.describe('the trip sections behind a route parameter', () => {
-  const TRIP_SECTIONS = 'nav[aria-label="Trip sections"]'
-
-  /** The trips list, which is the one screen that links to a trip by its id. */
-  const TRIPS = APP_ROUTES.find((candidate) => candidate.name === 'trips')
-
   test.beforeEach(async ({ context, page, baseURL }) => {
     await useSession(context, page, baseURL)
     test.skip(
@@ -1179,32 +1233,6 @@ test.describe('the trip sections behind a route parameter', () => {
       `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
     )
   })
-
-  /**
-   * The id behind the first trip card, or a skip.
-   *
-   * Read off the card's own link rather than from a fixture, so the walk follows
-   * the same address a reader would. A workspace with no trips leaves this block
-   * nothing to render and says so. `titled` narrows it to the card carrying that title,
-   * for a walk that needs one trip's content rather than any trip's chrome.
-   */
-  async function aTripToWalk(page: Page, titled?: string): Promise<string> {
-    if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
-    await visit(page, TRIPS, 'light')
-    const tripId = await page.evaluate((title) => {
-      for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
-        if (title !== undefined && !anchor.textContent.includes(title)) continue
-        const match = /^\/trips\/([^/?#]+)\/plan$/.exec(
-          anchor.getAttribute('href') ?? '',
-        )
-        if (match !== null) return match[1]
-      }
-      return null
-    }, titled)
-    test.skip(tripId === null, 'the workspace lists no trip to walk into')
-    if (tripId === null) throw new Error('unreachable: the test was skipped')
-    return tripId
-  }
 
   /**
    * Every message key the shipped catalogue can produce, as it would look if it
@@ -1825,5 +1853,359 @@ test.describe('the harness itself', () => {
       await failureOf(settle(page, SYNTHETIC_PLAIN)),
       'an undeclared map is a frame captured before the canvas settled, and the GL advisory it emits is fatal on that route',
     ).toContain('does not declare `map: true`')
+  })
+})
+
+/**
+ * Whether a request calls the named server function.
+ *
+ * The segment after `/_serverFn/` is the function's id, base64-encoded, and the
+ * export's name is inside it. The id as a whole is a build artefact; the name is
+ * the one handle on a call that survives a rebuild.
+ */
+function callsServerFn(url: URL, name: string): boolean {
+  const id = url.pathname.split('/_serverFn/').at(1)
+  if (id === undefined) return false
+  return Buffer.from(decodeURIComponent(id), 'base64')
+    .toString('utf8')
+    .includes(name)
+}
+
+/**
+ * 03-S7 — a confirmation file read into the booking desk.
+ *
+ * The one walk here that writes, and it goes through every seam a unit test
+ * stubs: the real `uploadFile` over `XMLHttpRequest`, the local queue consumer
+ * draining a real envelope into KV, the bounded poll, and the confirm writing
+ * into D1. It ends on the desk, because "the rows arrived carrying the
+ * unchecked-import marker" is a statement about the screen, not about a
+ * function's return value.
+ *
+ * The demo workspace is a shared fixture, so everything this block writes is
+ * swept away before the walk and after it, and a run that died half way costs
+ * the next run nothing: every booking carries {@link IMPORT_MARKER} in its
+ * title, and every file it uploads is named for {@link UPLOADED}.
+ */
+test.describe('a confirmation file read into the booking desk', () => {
+  /** In every title the fixture calendar carries, and in nothing the seed writes. */
+  const IMPORT_MARKER = 'Import walk'
+
+  /** The stem every file this block uploads is named with, and the seed none. */
+  const UPLOADED = 'import-walk'
+
+  /** None reads as a lodging: a lodging row would reach the geocoder on confirm. */
+  const EVENTS = [
+    {
+      uid: 'harbour-tour',
+      title: `${IMPORT_MARKER}: harbour tour`,
+      start: '20260304T090000Z',
+      end: '20260304T110000Z',
+    },
+    {
+      uid: 'cooking-class',
+      title: `${IMPORT_MARKER}: cooking class`,
+      start: '20260305T170000Z',
+      end: '20260305T200000Z',
+    },
+    {
+      uid: 'museum-entry',
+      title: `${IMPORT_MARKER}: museum entry`,
+      start: '20260306T100000Z',
+      end: '20260306T120000Z',
+    },
+  ] as const
+
+  /** The row the walk unticks before confirming. */
+  const PRUNED = EVENTS[1]
+
+  const CALENDAR = Buffer.from(
+    [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//planned.travel//e2e//EN',
+      ...EVENTS.flatMap((event) => [
+        'BEGIN:VEVENT',
+        `UID:${event.uid}@e2e.planned.travel`,
+        `SUMMARY:${event.title}`,
+        `DTSTART:${event.start}`,
+        `DTEND:${event.end}`,
+        'END:VEVENT',
+      ]),
+      'END:VCALENDAR',
+    ].join('\r\n'),
+  )
+
+  const bookRoute = (tripId: string): RouteCase => ({
+    name: 'trip-book-import',
+    path: `/trips/${tripId}/book`,
+    ready: TRIP_SECTIONS,
+  })
+
+  /** Where {@link sweepFiles} goes to take back what the walk uploaded. */
+  const filesRoute = (tripId: string): RouteCase => ({
+    name: 'trip-files-import',
+    path: `/trips/${tripId}/files`,
+    ready: TRIP_SECTIONS,
+  })
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  async function openImport(page: Page) {
+    await page.locator('[data-part="import-bookings"]').click()
+    const dialog = page.getByRole('dialog', {
+      name: 'Import bookings from a file',
+    })
+    await expect(dialog).toBeVisible()
+    return dialog
+  }
+
+  function importedCards(page: Page) {
+    return page
+      .locator('article')
+      .filter({ has: page.locator('h4', { hasText: IMPORT_MARKER }) })
+  }
+
+  /**
+   * Removes every booking carrying the marker, however many there are.
+   *
+   * Addressed through the first card each time rather than by title, because a
+   * run that died after confirming leaves two cards of the same name behind.
+   *
+   * The count is re-read each pass and the assertion is "fewer than before",
+   * rather than counting down from a number taken once. A count read while the
+   * list is still settling after the removal's invalidation can be one higher
+   * than the list ever returns to, and `toHaveCount(left - 1)` then waits out
+   * its timeout for a number that will never arrive — which is what made this
+   * walk fail about one run in three. Nothing is weakened: the loop still ends
+   * only at zero, and every pass must take at least one item away.
+   */
+  async function sweep(page: Page): Promise<void> {
+    const cards = importedCards(page)
+    for (let left = await cards.count(); left > 0; left = await cards.count()) {
+      await cards
+        .first()
+        .getByRole('button', { name: /^Actions for / })
+        .click()
+      await page.getByRole('menuitem', { name: 'Remove booking' }).click()
+      await page
+        .getByRole('dialog', { name: /^Remove / })
+        .getByRole('button', { name: 'Remove booking' })
+        .click()
+      await expect.poll(async () => cards.count()).toBeLessThan(left)
+    }
+  }
+
+  /**
+   * Removes every file the walk uploaded, however many are left behind.
+   *
+   * {@link sweep} takes back the bookings, but the file is a second thing this
+   * block writes and it outlives them: a confirmed import attaches its source to
+   * the trip, and a refused one leaves the upload that was already stored before
+   * the refusal — neither carries a `reservation_id`, so removing the bookings
+   * does not remove them.
+   *
+   * They cannot be left there. `readTripForDelete` counts a trip's records as
+   * `reservations + transports + expenses + files`, and `DELETE_CONFIRM_THRESHOLD`
+   * puts `requiresTitle` on the far side of *any one* of them. So a file left on
+   * this trip changes how a dialog **another** spec opens is allowed to behave —
+   * `trips-core.spec.ts` walks the same leading trip and asks the delete dialog
+   * how hard it asks. A walk that borrows the shared fixture gives it back.
+   *
+   * Counted the same way as {@link sweep}, for the same reason.
+   */
+  async function sweepFiles(page: Page, tripId: string): Promise<void> {
+    await visit(page, filesRoute(tripId), 'light')
+    const rows = page.getByRole('row').filter({ hasText: UPLOADED })
+    for (let left = await rows.count(); left > 0; left = await rows.count()) {
+      await rows
+        .first()
+        .getByRole('button', { name: /^Actions for / })
+        .click()
+      await page.getByRole('menuitem', { name: 'Remove file' }).click()
+      await page
+        .getByRole('dialog', { name: /^Remove / })
+        .getByRole('button', { name: 'Remove file' })
+        .click()
+      await expect.poll(async () => rows.count()).toBeLessThan(left)
+    }
+  }
+
+  test('a calendar is read, pruned and written to the desk as unchecked imports', async ({
+    page,
+  }) => {
+    // An upload, a queue batch, a poll, a write and two sweeps, against a dev
+    // server. A ceiling, not an expectation.
+    test.setTimeout(120_000)
+
+    const tripId = await aTripToWalk(page)
+    const route = bookRoute(tripId)
+
+    // Both leading sweeps run before the console watch opens, because clearing a
+    // dead run's leavings is not part of what this walk is asked to prove — and
+    // `sweepFiles` steps through the files route, whose relative timestamps
+    // hydrate with a mismatch this block does not own.
+    await visit(page, route, 'light')
+    await sweep(page)
+    // A run that died between the upload and the confirm leaves a file and no
+    // booking, so the file sweep is not merely the mirror of the one above.
+    await sweepFiles(page, tripId)
+
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    const dialog = await openImport(page)
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'import-walk.ics',
+      mimeType: 'text/calendar',
+      buffer: CALENDAR,
+    })
+
+    // The consumer batches for up to five seconds and the poll asks every two,
+    // so the list is well inside the poll's own twenty-second budget.
+    const review = dialog.getByRole('group', { name: 'What we read' })
+    await expect(review.getByRole('checkbox')).toHaveCount(EVENTS.length, {
+      timeout: 30_000,
+    })
+    await expect(
+      dialog.getByRole('button', { name: `Add ${EVENTS.length} bookings` }),
+      'freshly read rows arrive selected',
+    ).toBeEnabled()
+
+    await review.getByRole('checkbox', { name: PRUNED.title }).click()
+    const confirm = dialog.getByRole('button', {
+      name: `Add ${EVENTS.length - 1} bookings`,
+    })
+    await expect(confirm).toBeEnabled()
+    await confirm.click()
+
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText(`${EVENTS.length - 1} bookings added`),
+    ).toBeVisible()
+
+    const cards = importedCards(page)
+    await expect(cards).toHaveCount(EVENTS.length - 1)
+    await expect(
+      cards.filter({ hasText: PRUNED.title }),
+      'an unticked row must not reach the desk',
+    ).toHaveCount(0)
+    for (const card of await cards.all()) {
+      await expect(card.locator('[data-part="import-marker"]')).toHaveText(
+        'Unchecked import',
+      )
+    }
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+
+    await sweep(page)
+    await sweepFiles(page, tripId)
+  })
+
+  test('a file the import cannot read is refused by name, and nothing uploads', async ({
+    page,
+  }) => {
+    const tripId = await aTripToWalk(page)
+    const route = bookRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    const sent: Array<string> = []
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (
+        callsServerFn(url, 'uploadTripFileFn') ||
+        callsServerFn(url, 'startBookingImportFn')
+      ) {
+        sent.push(url.pathname)
+      }
+    })
+
+    const dialog = await openImport(page)
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'voucher.pkpass',
+      mimeType: 'application/vnd.apple.pkpass',
+      buffer: Buffer.from('PK'),
+    })
+
+    await expect(
+      dialog.getByText('“voucher.pkpass” is not a file this import can read', {
+        exact: false,
+      }),
+    ).toBeVisible()
+    await expect(
+      dialog.locator('[data-part="import-drop"]'),
+      'a refusal leaves the drop target ready for another file',
+    ).toBeEnabled()
+    expect(sent, 'a refused file must never leave the machine').toEqual([])
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The ceiling, reached through a real refusal with only its code changed.
+   *
+   * The demo workspace is on a plan with an allowance and nothing can spend it
+   * from a browser, so the refusal is not waited for — it is made. A document
+   * job runs for real: upload, envelope, the meter spent, and the local
+   * consumer refusing it, because `vite dev` has no model binding and a job
+   * that cannot reach one stages a refusal. The poll's answer is then fetched
+   * from the server as it is and fulfilled with the refusal's code read as
+   * `ceiling`. Nothing about the payload's shape is written by hand: seroval
+   * frames are not a format to forge, and a fabricated one deserialises to
+   * `undefined` rather than failing.
+   */
+  test('a workspace past its reading allowance is told so in its own words', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+
+    await page.route(
+      (url) => callsServerFn(url, 'getBookingImportFn'),
+      async (intercepted) => {
+        const response = await intercepted.fetch()
+        const body = (await response.text()).replace(
+          /"(?:unknown|unreadable)"/gu,
+          '"ceiling"',
+        )
+        await intercepted.fulfill({ response, body })
+      },
+    )
+
+    const tripId = await aTripToWalk(page)
+    const route = bookRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    const dialog = await openImport(page)
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'import-walk.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from(`${EVENTS[0].title}, 4 March 2026 at 09:00.`),
+    })
+
+    await expect(
+      dialog.getByText(
+        'Reading a confirmation file is not part of this workspace’s plan',
+      ),
+    ).toBeVisible({ timeout: 30_000 })
+    await expect(
+      dialog.getByRole('group', { name: 'What we read' }),
+      'a refused job has nothing to review',
+    ).toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+
+    // The refusal comes back after the upload has already been stored, so this
+    // walk leaves a file behind even though it wrote no booking.
+    await sweepFiles(page, tripId)
   })
 })

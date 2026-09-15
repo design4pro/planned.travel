@@ -209,13 +209,19 @@ async function memberIdOf(userId: string): Promise<string> {
 
 describe('readTripPeople', () => {
   it('offers the workspace minus the people already on the trip', async () => {
+    // The subject is *who* is offered, so the two non-owners are asserted as a set. The order
+    // between them is not something the read model promises: `listTripMembers` orders by
+    // `[created_at, id]`, the fixture writes both memberships inside one millisecond, and the tie
+    // then falls to the random tail of `newId()` — which decided this assertion at random until
+    // #472. Owner-first *is* promised, so that half stays an ordered claim.
     const payload = await readTripPeople(owner, fixture.tripId)
+    const participants = memberUserIds(payload.participants)
 
-    expect(memberUserIds(payload.participants)).toEqual([
-      tenant.ownerUserId,
-      fixture.editorId,
-      fixture.viewerId,
-    ])
+    expect(participants).toHaveLength(3)
+    expect(participants[0]).toBe(tenant.ownerUserId)
+    expect(new Set(participants.slice(1))).toEqual(
+      new Set([fixture.editorId, fixture.viewerId]),
+    )
     expect(payload.invitable.map((person) => person.userId)).toEqual([
       fixture.outsiderId,
     ])

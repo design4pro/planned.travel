@@ -136,7 +136,7 @@ const messages = {
   'panel.empty.pick.body':
     'Wähle eins auf der Karte, im Suchfeld oder in der Liste, und sein vollständiger Eintrag öffnet sich hier — erster Besuch, letzter Besuch, der Zähler und deine Notiz.',
 
-  'panel.stat.places': 'Orte',
+  'panel.stat.places': 'Deine Orte',
   'panel.stat.placesNone': 'Noch nichts auf einer Reise angepinnt',
   'panel.stat.placesCaption':
     'Gespeicherte Sehenswürdigkeiten, Unterkünfte und Stopps',
@@ -339,7 +339,10 @@ const messages = {
     other: 'Reisen im Arbeitsbereich',
   },
   'card.visits': { one: 'Besuch', other: 'Besuche' },
-  'card.places': { one: 'Ort', other: 'Orte' },
+  'card.places': {
+    one: 'Ort im Arbeitsbereich',
+    other: 'Orte im Arbeitsbereich',
+  },
   'card.firstTrip': 'Erste Reise',
   'card.lastTrip': 'Letzte Reise',
   'card.firstVisit': 'Erster Besuch',

@@ -185,6 +185,12 @@ const messages = {
   'notification.billing.plan_changed.title': 'Ditt abonnemang har ändrats',
   'notification.billing.plan_changed.body':
     '{organizationName} kör nu abonnemanget {plan}.',
+  'notification.billing.invoice_paid.title': 'Betalning mottagen',
+  'notification.billing.invoice_paid.body':
+    'Den senaste fakturan för {organizationName} är betald.',
+  'notification.billing.payment_failed.title': 'En betalning gick inte igenom',
+  'notification.billing.payment_failed.body':
+    '{organizationName} har en förfallen betalning. Uppdatera betalsättet för att behålla abonnemanget.',
   'notification.fallback.title': 'Något har ändrats i din arbetsyta',
   'notification.fallback.body': 'Öppna resan för att se vad det var.',
 

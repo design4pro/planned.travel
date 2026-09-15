@@ -149,6 +149,87 @@ const messages = {
   'book.panel.settledEmpty': 'لا شيء مسوّى بعد — كله ما زال يحتاج متابعة.',
   'book.import.badge': 'استيراد لم يُراجَع',
   'book.import.hint': 'مستورد من تأكيد. افتحه واحفظه لتعليمه كمراجَع.',
+  'book.import.action': 'استيراد',
+  'book.import.title': 'استيراد الحجوزات من ملف',
+  'book.import.description':
+    'أفلِت تأكيدًا وسنقرأه. لا يُضاف شيء إلى الرحلة قبل أن تراه.',
+  'book.import.drop.idle': 'أفلِت الملفات هنا، أو تصفّح',
+  'book.import.drop.active': 'أفلِت للإضافة',
+  'book.import.drop.formats':
+    'PDF، بريد محفوظ، صفحة ويب، صورة، Word، Excel، ملف تقويم أو تصدير JSON.',
+  'book.import.drop.limits': 'حتى {files} ملفات في المرة، كل واحد حتى {size}.',
+  'book.import.drop.browse': 'تصفّح الملفات',
+  'book.import.refused.format':
+    '«{filename}» ليس ملفًا يقدر هذا الاستيراد على قراءته. يقرأ PDF، بريدًا محفوظًا، صفحة ويب، صورة، مستند Word أو Excel، ملف تقويم أو تصدير JSON.',
+  'book.import.refused.tooMany': '{files} ملفات في المرة فقط. البقية لم تُضَف.',
+  'book.import.refused.tooLarge':
+    '«{filename}» حجمه {size}. الاستيراد يقرأ ملفات حتى {limit}.',
+  'book.import.refused.empty': '«{filename}» فارغ، فليس فيه ما يُقرأ.',
+  'book.import.ceiling.title': 'قرأت مساحة العمل هذه كل تأكيداتها هذا الشهر',
+  'book.import.ceiling.body':
+    'الخطة تتضمن {ceiling} قراءة ملف في الشهر، والحصة تتجدد في الأول منه. لا يزال بإمكانك إضافة حجز بيدك.',
+  'book.import.ceiling.none':
+    'قراءة ملف تأكيد ليست جزءًا من خطة مساحة العمل هذه',
+  'book.import.ceiling.noneBody':
+    'ارتقِ بالخطة ليُقرأ التأكيد عنك. إضافة حجز بيدك متاحة دائمًا.',
+  'book.import.widget.title': 'قراءة التأكيدات',
+  'book.import.widget.working': 'قُرئ {done} من {total}',
+  'book.import.widget.file': 'قراءة «{filename}»',
+  'book.import.widget.done': {
+    zero: 'لا حجز جاهز للمراجعة',
+    one: 'حجز واحد جاهز للمراجعة',
+    two: 'حجزان جاهزان للمراجعة',
+    few: '{count} حجوزات جاهزة للمراجعة',
+    many: '{count} حجزًا جاهزًا للمراجعة',
+    other: '{count} حجز جاهز للمراجعة',
+  },
+  'book.import.widget.review': 'راجِع',
+  'book.import.widget.failed': 'تعذّرت قراءة «{filename}»',
+  'book.import.widget.stalled': 'هذا يطول أكثر من المتوقع',
+  'book.import.widget.check': 'تحقّق مرة أخرى',
+  'book.import.widget.dismiss': 'إخفاء',
+  'book.import.review.title': 'ما قرأناه',
+  'book.import.review.from': 'من «{filename}»',
+  'book.import.review.selectAll': 'تحديد الكل',
+  'book.import.review.selectNone': 'إلغاء التحديد',
+  'book.import.review.confirm': {
+    zero: 'أضِف {count} حجز',
+    one: 'أضِف حجزًا واحدًا',
+    two: 'أضِف حجزين',
+    few: 'أضِف {count} حجوزات',
+    many: 'أضِف {count} حجزًا',
+    other: 'أضِف {count} حجز',
+  },
+  'book.import.review.confirmNone': 'حدّد حجزًا لإضافته',
+  'book.import.review.cancel': 'إلغاء',
+  'book.import.review.needsReview': 'يحتاج نظرة',
+  'book.import.review.needsReviewHint':
+    'بعض الحقول لم تكن في المستند. افتح الحجز بعد إضافته.',
+  'book.import.review.noPrice': 'لم يُقرأ سعر',
+  'book.import.review.noPriceHint':
+    'المستند لم يذكره بوضوح، فتُرك فارغًا بدل تخمينه.',
+  'book.import.review.untitled': 'حجز بلا عنوان',
+  'book.import.empty.title': 'لم نجد حجزًا في ذلك الملف',
+  'book.import.empty.body':
+    '«{filename}» لم يكن فيه ما يشبه تأكيدًا. جرّب ملفًا آخر، أو أضف الحجز بيدك.',
+  'book.import.failed.title': 'تعذّرت قراءة «{filename}»',
+  'book.import.failed.body':
+    'الملف انفتح لكن لم يُستخلص منه شيء. جرّب ملفًا آخر، أو أضف الحجز بيدك.',
+  'book.import.failed.retry': 'جرّب ملفًا آخر',
+  'book.import.uploadFailed': '«{filename}» لم يُرفع',
+  'book.import.uploadRetry': 'حاول مرة أخرى',
+  'book.import.toast.added': {
+    zero: 'لم يُضف أي حجز',
+    one: 'أُضيف حجز واحد',
+    two: 'أُضيف حجزان',
+    few: 'أُضيفت {count} حجوزات',
+    many: 'أُضيف {count} حجزًا',
+    other: 'أُضيف {count} حجز',
+  },
+  'book.import.partial.title': 'أُضيف {written} من {total} حجوزات',
+  'book.import.partial.body':
+    'البقية ما زالت محدّدة. الإضافة مرة أخرى تكتبها وحدها.',
+  'book.import.partial.retry': 'أضِف البقية',
   'book.journeyLink': 'في تبويب المواصلات',
   'filter.all': 'الكل',
   'book.remove.body':

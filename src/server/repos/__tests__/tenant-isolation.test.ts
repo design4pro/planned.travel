@@ -8,7 +8,7 @@
  * own organization.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import {
@@ -142,6 +142,7 @@ import {
 } from '../members'
 import {
   filterEnabledRecipients,
+  listForEntity,
   listNotifications,
   markRead,
   notificationPreferencesRepository,
@@ -192,6 +193,7 @@ import {
   totalTripDistanceMetres,
   transportLegsRepository,
   transportsRepository,
+  unlinkTransportsFromDays,
   updateTransport,
 } from '../transports'
 import {
@@ -253,10 +255,65 @@ import type {
   TenantRepository,
   TenantScope,
 } from '../base'
-import type { TaskBindings } from '#/server/queue/types'
+import type { TaskBindings, TaskQueue } from '#/server/queue/types'
 import type { UserSettings } from '#/server/db/types'
 import type { FakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import type { Harness, SeededTenant } from './harness'
+import type { StagedImport } from '#/server/queue/handlers/booking-import'
+
+/* -------------------------------------------------------------------------------------------------
+ * The confirmation import's request path
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * `#/server/fns/booking-import` is the one module under test here that is not a repository, and it
+ * is included because two of its trust boundaries are not repository boundaries: a **file id** and
+ * a **job id** both arrive from a browser, and KV has no tenant filter of its own. Its three
+ * bindings modules read the Worker environment at module scope through `cloudflare:workers`, which
+ * does not resolve in this project, so each is replaced by a stub that throws — no case below may
+ * reach one, and a case that did would be asserting the wrong thing.
+ */
+vi.mock('#/server/fns/context', () => ({
+  appScope: () => {
+    throw new Error('appScope is not reached: this suite hands the scope in.')
+  },
+  importStore: () => {
+    throw new Error('importStore is not reached: this suite hands it in.')
+  },
+  mirrorToRoom: () => {
+    throw new Error('mirrorToRoom is not reached: nothing here is written.')
+  },
+  patch: () => {
+    throw new Error('patch is not reached: nothing here is written.')
+  },
+}))
+
+vi.mock('#/server/auth/env', () => ({
+  taskQueue: () => {
+    throw new Error('taskQueue is not reached: this suite hands the queue in.')
+  },
+}))
+
+vi.mock('#/server/geo/bindings', () => ({
+  geocodeRuntime: () => {
+    throw new Error('geocodeRuntime is not reached: no place is written here.')
+  },
+}))
+
+const { confirmBookingImport, startBookingImport } =
+  await import('#/server/fns/booking-import')
+const { stagedImportKey } =
+  await import('#/server/queue/handlers/booking-import')
+
+/** The confirm's ports, stubbed to throw for the same reason: a refused confirm reaches neither. */
+const unreachedPorts: Parameters<typeof confirmBookingImport>[3] = {
+  announce: () => {
+    throw new Error('announce is not reached: nothing here is written.')
+  },
+  geocoding: () => {
+    throw new Error('geocoding is not reached: no place is written here.')
+  },
+}
 
 /* -------------------------------------------------------------------------------------------------
  * Fixtures
@@ -2664,6 +2721,24 @@ describe('tenant isolation', () => {
       expect(own?.arrivalDayId).toBeNull()
     })
 
+    it('never unlinks a B transport from its arrival day from A’s scope', async () => {
+      await updateTransport(beta.tenant.scope, beta.transportId, {
+        arrivalDayId: beta.lastDayId,
+      })
+
+      expect(
+        await unlinkTransportsFromDays(alpha.tenant.scope, [beta.lastDayId]),
+      ).toBe(0)
+      expect(
+        (await getTransport(beta.tenant.scope, beta.transportId))?.arrivalDayId,
+      ).toBe(beta.lastDayId)
+
+      // The same call from B's own scope does clear it, so it is scoping that refused A.
+      expect(
+        await unlinkTransportsFromDays(beta.tenant.scope, [beta.lastDayId]),
+      ).toBe(1)
+    })
+
     it('leaves B byte-identical after every refusal', async () => {
       const scope = alpha.tenant.scope
       const before = await listTripTransports(beta.tenant.scope, beta.tripId)
@@ -3408,9 +3483,9 @@ describe('tenant isolation', () => {
       it('counts none of a foreign trip’s people through tripMemberUserIds', async () => {
         // The projection `readTripForDelete` reads the delete dialog's member count off. An
         // unscoped one would hand A both how many people are on B's trip and who they are.
-        expect(await tripMemberUserIds(alpha.tenant.scope, beta.tripId)).toEqual(
-          [],
-        )
+        expect(
+          await tripMemberUserIds(alpha.tenant.scope, beta.tripId),
+        ).toEqual([])
       })
 
       it('refuses both membership writes on a foreign membership row, and leaves it standing', async () => {
@@ -3875,6 +3950,217 @@ describe('tenant isolation', () => {
   })
 
   /**
+   * `03-S7` — a confirmation import aimed across the boundary.
+   *
+   * Two ids arrive from a browser on this path and neither is an authorisation. The **file id** is
+   * re-resolved through `getFile` in the caller's own scope, because a storage key taken from a
+   * request is a path into a bucket every tenant shares. The **job id** is compared against the
+   * staged record's own `orgId` and `tripId`, because KV is one flat namespace with no tenant
+   * filter of its own — a repository refuses a foreign row by construction and a KV key does not.
+   *
+   * The queue double is what makes the two failures distinguishable: "no booking was written" and
+   * "no message was enqueued" are different claims, and a refusal that enqueued the envelope first
+   * would satisfy the first while handing another workspace's file to the extractor.
+   *
+   * `createReservation` and `getFile` are the only writers this block covers.
+   * `markReservationsImported` is asserted where it is defined, in the booking block above, and is
+   * not duplicated here.
+   */
+  describe('a confirmation import aimed across the boundary', () => {
+    /** The `TASKS` binding, recording every envelope handed to it. */
+    function queueDouble(): TaskQueue & { readonly sent: Array<unknown> } {
+      const sent: Array<unknown> = []
+      return {
+        sent,
+        send: (body) => {
+          sent.push(body)
+          return Promise.resolve()
+        },
+        sendBatch: (messages) => {
+          sent.push(...messages)
+          return Promise.resolve()
+        },
+      }
+    }
+
+    /** The slice of KV the staged record lives in, in memory. */
+    function memoryStore(): {
+      readonly entries: Map<string, string>
+      get: (key: string) => Promise<string | null>
+      put: (key: string, value: string) => Promise<void>
+      delete: (key: string) => Promise<void>
+    } {
+      const entries = new Map<string, string>()
+      return {
+        entries,
+        get: (key) => Promise.resolve(entries.get(key) ?? null),
+        put: (key, value) => {
+          entries.set(key, value)
+          return Promise.resolve()
+        },
+        delete: (key) => {
+          entries.delete(key)
+          return Promise.resolve()
+        },
+      }
+    }
+
+    /** A staged record, written the way the queue handler writes one. */
+    function stage(
+      store: ReturnType<typeof memoryStore>,
+      record: Pick<StagedImport, 'jobId' | 'tripId' | 'orgId' | 'requestedBy'>,
+    ): StagedImport {
+      const staged: StagedImport = {
+        ...record,
+        createdAt: Date.parse('2026-09-11T10:00:00Z'),
+        format: 'document',
+        count: 1,
+        reservations: [
+          {
+            externalId: null,
+            title: 'Hotel Roma',
+            kind: 'activity',
+            startsAt: '2026-03-04T14:00:00Z',
+            endsAt: null,
+            allDay: false,
+            floating: false,
+            location: null,
+            notes: null,
+            reference: null,
+          },
+        ],
+      }
+      store.entries.set(stagedImportKey(staged.jobId), JSON.stringify(staged))
+      return staged
+    }
+
+    /** Every booking of a trip with its import marker, for a byte-for-byte diff. */
+    async function markersOf(
+      scope: TenantScope,
+      tripId: string,
+    ): Promise<Record<string, unknown>> {
+      const rows = await listTripReservations(scope, { tripId })
+      return Object.fromEntries(
+        rows.map((row) => [row.id, row.importedAt] as const),
+      )
+    }
+
+    it('refuses B’s file id, and enqueues nothing', async () => {
+      const queue = queueDouble()
+      const before = await markersOf(beta.tenant.scope, beta.tripId)
+
+      expect(
+        await captureError(() =>
+          startBookingImport(alpha.tenant.scope, queue, {
+            tripId: alpha.tripId,
+            fileId: beta.fileId,
+            index: 0,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(queue.sent).toEqual([])
+      expect(await markersOf(beta.tenant.scope, beta.tripId)).toEqual(before)
+    })
+
+    /**
+     * The variant the tenant filter alone lets through: the file is A's own, so `getFile` resolves
+     * it, and only the comparison against the trip refuses it. Without that comparison one
+     * uploaded confirmation could be imported into a trip it was never attached to.
+     */
+    it('refuses a file A owns when it is named against another trip, and enqueues nothing', async () => {
+      const queue = queueDouble()
+      const other = await createTrip(alpha.tenant.scope, { title: 'Lisbon' })
+
+      expect(
+        await captureError(() =>
+          startBookingImport(alpha.tenant.scope, queue, {
+            tripId: other.id,
+            fileId: alpha.fileId,
+            index: 0,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(queue.sent).toEqual([])
+      expect(
+        await listTripReservations(alpha.tenant.scope, { tripId: other.id }),
+      ).toEqual([])
+    })
+
+    it('refuses B’s staged job though the KV key resolves, and writes into neither workspace', async () => {
+      const store = memoryStore()
+      const staged = stage(store, {
+        jobId: `booking-import:${beta.tripId}:${beta.fileId}`,
+        tripId: beta.tripId,
+        orgId: beta.tenant.organizationId,
+        requestedBy: beta.tenant.ownerUserId,
+      })
+      const before = await markersOf(beta.tenant.scope, beta.tripId)
+
+      expect(
+        await captureError(() =>
+          confirmBookingImport(
+            alpha.tenant.scope,
+            store,
+            {
+              tripId: alpha.tripId,
+              jobId: staged.jobId,
+              accept: [0],
+            },
+            unreachedPorts,
+          ),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // Neither side gained a row, and B's markers are the ones B wrote.
+      expect(await markersOf(alpha.tenant.scope, alpha.tripId)).toEqual({
+        [alpha.reservationId]: null,
+      })
+      expect(await markersOf(beta.tenant.scope, beta.tripId)).toEqual(before)
+      // And the record A could not claim is still there for the workspace that owns it.
+      expect(store.entries.has(stagedImportKey(staged.jobId))).toBe(true)
+    })
+
+    /**
+     * The staged record is A's, so the organization comparison passes — and the trip in it is B's.
+     * A confirm that trusted the request's own trip id would write A's rows against B's trip id,
+     * which the insert would stamp as A's own organization: corrupt for one tenant and invisible to
+     * the other.
+     */
+    it('refuses a record of A’s own workspace staged against B’s trip', async () => {
+      const store = memoryStore()
+      const staged = stage(store, {
+        jobId: `booking-import:${beta.tripId}:${alpha.fileId}`,
+        tripId: beta.tripId,
+        orgId: alpha.tenant.organizationId,
+        requestedBy: alpha.tenant.ownerUserId,
+      })
+      const before = await markersOf(beta.tenant.scope, beta.tripId)
+
+      expect(
+        await captureError(() =>
+          confirmBookingImport(
+            alpha.tenant.scope,
+            store,
+            {
+              tripId: alpha.tripId,
+              jobId: staged.jobId,
+              accept: [0],
+            },
+            unreachedPorts,
+          ),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await markersOf(alpha.tenant.scope, alpha.tripId)).toEqual({
+        [alpha.reservationId]: null,
+      })
+      expect(await markersOf(beta.tenant.scope, beta.tripId)).toEqual(before)
+    })
+  })
+
+  /**
    * `03-S5`: the board's read of a trip's journeys, and the reorder that places them.
    *
    * The read is ordinary and is asserted for completeness. The **reorder** is the case this block
@@ -3967,6 +4253,57 @@ describe('tenant isolation', () => {
         alpha.tripId,
       )
       expect(alphaRecords[0].sortOrder).toBe(0.5)
+    })
+  })
+
+  /**
+   * The workspace-scoped branch of `dispatch` (#304).
+   *
+   * The trip branch has `requireTrip` in front of it; this one cannot — a billing event names no
+   * trip — so the whole boundary is the tenant filter, on the `listMembers` read that derives the
+   * recipients and on the insert that writes their rows. Both halves are asserted from B.
+   */
+  describe('a workspace-scoped billing dispatch', () => {
+    const BILLING_EVENT_ID = 'evt_billing_isolation'
+
+    const billingEvent = () => ({
+      kind: 'billing.plan_changed',
+      entityType: 'subscription',
+      entityId: BILLING_EVENT_ID,
+      scope: 'organization' as const,
+      titleParams: { organizationName: 'Workspace A', plan: 'Crew' },
+      bodyParams: { organizationName: 'Workspace A', plan: 'Crew' },
+    })
+
+    it('reaches only A’s own leadership and leaves nothing B can read', async () => {
+      const before = await notificationsRepository.count(beta.tenant.scope)
+
+      const result = await dispatch(alpha.tenant.scope, billingEvent(), {
+        queue: null,
+      })
+
+      // The seed gives each workspace one `owner` and one plain `member`, so the derivation is
+      // observable: the owner is in and the member is out, from A's `member` rows alone.
+      expect(result.recipients).toEqual([alpha.tenant.ownerUserId])
+      expect(result.inAppWritten).toBe(1)
+
+      expect(await notificationsRepository.count(beta.tenant.scope)).toBe(
+        before,
+      )
+      expect(
+        await listForEntity(
+          beta.tenant.scope,
+          'subscription',
+          BILLING_EVENT_ID,
+        ),
+      ).toEqual([])
+      expect(
+        await listForEntity(
+          alpha.tenant.scope,
+          'subscription',
+          BILLING_EVENT_ID,
+        ),
+      ).toHaveLength(1)
     })
   })
 })

@@ -237,6 +237,29 @@ const layout = {
    * every label on this card.
    */
   label: 'block text-micro font-semibold uppercase tracking-label',
+  /**
+   * The box a unit label sits in, per row: as many of the label's own lines as
+   * the longest translation of that row needs, with the label set on the last
+   * of them so it stays against the figure it names.
+   *
+   * The label wraps rather than truncates. The tally heading ends in its
+   * workspace qualifier, which runs it to 116px in English and to 240px
+   * elsewhere against a 112px content box (120px at `2xl`), and a truncated
+   * one keeps only the head noun — `WYJAZDY PRZE…` — which is the bare label
+   * the qualifier replaced. Measured in Chromium with the shipped faces, every
+   * plural form of every locale's figure labels fits in three lines and every
+   * month label in two, at both widths.
+   *
+   * The lines are reserved, not merely allowed, because the card's height is a
+   * promise to whatever anchored it: a trip heading on three lines against a
+   * visit heading on one would move the figures as the pointer crossed a
+   * border. `lh` is the label's own line height, so the reservation follows
+   * Arabic's taller leading without a second number. The skeleton and the error
+   * strut take these same strings. A translation that needs a further line
+   * outgrows the card in that one state, so re-measure before lengthening one.
+   */
+  labelSlotFigure: 'flex min-h-[3lh] flex-col justify-end text-micro',
+  labelSlotMonth: 'flex min-h-[2lh] flex-col justify-end text-micro',
   figure: 'mt-1 block truncate font-display text-title tabular-nums text-ink',
   /**
    * The figures of a card with no record behind it, one ink tier back.
@@ -351,8 +374,10 @@ function FactCell({
         row && layout.rowRule,
       )}
     >
-      <dt>
-        <SectionLabel as="span">{label}</SectionLabel>
+      <dt className={row ? layout.labelSlotMonth : layout.labelSlotFigure}>
+        <SectionLabel as="span" truncate={false}>
+          {label}
+        </SectionLabel>
       </dt>
       <dd className={valueClassName}>{children}</dd>
     </div>
@@ -418,7 +443,13 @@ function BodyStrut() {
               index > 1 && layout.rowRule,
             )}
           >
-            <span className={layout.label}>{STRUT}</span>
+            <span
+              className={
+                index > 1 ? layout.labelSlotMonth : layout.labelSlotFigure
+              }
+            >
+              <span className={layout.label}>{STRUT}</span>
+            </span>
             <span className={index > 1 ? layout.month : layout.figure}>
               {STRUT}
             </span>
@@ -781,10 +812,16 @@ export const CountryCardSkeleton = React.forwardRef<
                 index > 1 && layout.rowRule,
               )}
             >
-              <LineSkeleton
-                width={index > 1 ? 'w-16 max-w-full' : 'w-10 max-w-full'}
-                className={layout.label}
-              />
+              <span
+                className={
+                  index > 1 ? layout.labelSlotMonth : layout.labelSlotFigure
+                }
+              >
+                <LineSkeleton
+                  width={index > 1 ? 'w-16 max-w-full' : 'w-10 max-w-full'}
+                  className={layout.label}
+                />
+              </span>
               <LineSkeleton
                 width={index > 1 ? 'w-24 max-w-full' : 'w-8 max-w-full'}
                 className={index > 1 ? layout.month : layout.figure}

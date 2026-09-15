@@ -128,6 +128,69 @@ const messages = {
   'book.panel.settledEmpty': '还没有处理好的 — 全都还要跟进。',
   'book.import.badge': '未核对的导入',
   'book.import.hint': '从确认信导入。打开并保存即标记为已核对。',
+  'book.import.action': '导入',
+  'book.import.title': '从文件导入预订',
+  'book.import.description':
+    '把确认单放进来，我们替你读。你看过之前，出行里不会多出任何东西。',
+  'book.import.drop.idle': '把文件放在这里，或自己挑',
+  'book.import.drop.active': '松手就加进来',
+  'book.import.drop.formats':
+    'PDF、存下来的邮件、网页、照片、Word、Excel、日历文件或 JSON 导出。',
+  'book.import.drop.limits': '一次最多 {files} 个文件，每个不超过 {size}。',
+  'book.import.drop.browse': '挑选文件',
+  'book.import.refused.format':
+    '“{filename}”不是这次导入读得懂的文件。它读 PDF、存下来的邮件、网页、照片、Word 或 Excel 文档、日历文件、JSON 导出。',
+  'book.import.refused.tooMany': '一次只能 {files} 个文件。其余没有加进来。',
+  'book.import.refused.tooLarge':
+    '“{filename}”有 {size}。导入读得下 {limit} 以内的文件。',
+  'book.import.refused.empty': '“{filename}”是空的，没有可读的内容。',
+  'book.import.ceiling.title': '这个工作区本月的确认单已经读完了',
+  'book.import.ceiling.body':
+    '套餐每月含 {ceiling} 次文件读取，额度在每月一日重置。预订仍然可以手动添加。',
+  'book.import.ceiling.none': '读取确认单文件不在这个工作区的套餐内',
+  'book.import.ceiling.noneBody':
+    '升级套餐即可让人替你读确认单。手动添加预订始终可用。',
+  'book.import.widget.title': '正在读确认单',
+  'book.import.widget.working': '已读 {total} 份中的 {done} 份',
+  'book.import.widget.file': '正在读“{filename}”',
+  'book.import.widget.done': {
+    other: '{count} 条预订等你过目',
+  },
+  'book.import.widget.review': '过目',
+  'book.import.widget.failed': '“{filename}”读不出来',
+  'book.import.widget.stalled': '这比预想的久',
+  'book.import.widget.check': '再看一次',
+  'book.import.widget.dismiss': '关掉',
+  'book.import.review.title': '我们读到的内容',
+  'book.import.review.from': '来自“{filename}”',
+  'book.import.review.selectAll': '全选',
+  'book.import.review.selectNone': '全不选',
+  'book.import.review.confirm': {
+    other: '添加 {count} 条预订',
+  },
+  'book.import.review.confirmNone': '选一条预订再添加',
+  'book.import.review.cancel': '取消',
+  'book.import.review.needsReview': '需要看一眼',
+  'book.import.review.needsReviewHint':
+    '有几个字段文档里没有。添加之后把这条预订打开看看。',
+  'book.import.review.noPrice': '没读到金额',
+  'book.import.review.noPriceHint': '文档没有写清楚，所以留空而不是猜一个。',
+  'book.import.review.untitled': '没有名称的预订',
+  'book.import.empty.title': '那个文件里没找到预订',
+  'book.import.empty.body':
+    '“{filename}”里没有像确认单的内容。换个文件，或者手动添加预订。',
+  'book.import.failed.title': '“{filename}”读不出来',
+  'book.import.failed.body':
+    '文件打开了，但没能从里面读出什么。换个文件，或者手动添加预订。',
+  'book.import.failed.retry': '换个文件试试',
+  'book.import.uploadFailed': '“{filename}”没有上传成功',
+  'book.import.uploadRetry': '再试一次',
+  'book.import.toast.added': {
+    other: '已添加 {count} 条预订',
+  },
+  'book.import.partial.title': '{total} 条预订里添加了 {written} 条',
+  'book.import.partial.body': '其余还是选中的。再添加一次只会写这些。',
+  'book.import.partial.retry': '把其余的加上',
   'book.journeyLink': '在交通标签页',
   'filter.all': '全部',
   'book.remove.body':

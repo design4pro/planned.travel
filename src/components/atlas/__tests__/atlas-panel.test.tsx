@@ -744,7 +744,7 @@ describe('the stats section', () => {
     panel()
 
     for (const label of [
-      'Places',
+      'Your places',
       'Regions',
       'Visits',
       'Your trips',

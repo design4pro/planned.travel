@@ -133,6 +133,75 @@ const messages = {
   'book.import.badge': 'Bản nhập chưa kiểm',
   'book.import.hint':
     'Nhập từ một email xác nhận. Mở và lưu lại để đánh dấu đã kiểm.',
+  'book.import.action': 'Nhập',
+  'book.import.title': 'Nhập chỗ đặt từ một tệp',
+  'book.import.description':
+    'Thả một xác nhận vào đây và chúng tôi sẽ đọc. Chưa có gì vào chuyến cho tới khi bạn xem xong.',
+  'book.import.drop.idle': 'Thả tệp vào đây, hoặc tự chọn',
+  'book.import.drop.active': 'Nhả ra để thêm',
+  'book.import.drop.formats':
+    'PDF, thư đã lưu, trang web, ảnh, Word, Excel, tệp lịch hoặc bản xuất JSON.',
+  'book.import.drop.limits': 'Tối đa {files} tệp mỗi lần, mỗi tệp tới {size}.',
+  'book.import.drop.browse': 'Chọn tệp',
+  'book.import.refused.format':
+    '“{filename}” không phải tệp mà bản nhập này đọc được. Nó đọc PDF, thư đã lưu, trang web, ảnh, tài liệu Word hoặc Excel, tệp lịch hoặc bản xuất JSON.',
+  'book.import.refused.tooMany':
+    'Chỉ {files} tệp mỗi lần. Phần còn lại không được thêm.',
+  'book.import.refused.tooLarge':
+    '“{filename}” nặng {size}. Bản nhập đọc tệp tới {limit}.',
+  'book.import.refused.empty': '“{filename}” rỗng, nên không có gì để đọc.',
+  'book.import.ceiling.title':
+    'Không gian này đã đọc hết xác nhận của tháng nay',
+  'book.import.ceiling.body':
+    'Gói bao gồm {ceiling} lần đọc tệp mỗi tháng, và hạn mức làm mới vào ngày một. Bạn vẫn có thể thêm chỗ đặt bằng tay.',
+  'book.import.ceiling.none':
+    'Đọc tệp xác nhận không nằm trong gói của không gian này',
+  'book.import.ceiling.noneBody':
+    'Nâng gói để được đọc xác nhận thay bạn. Thêm chỗ đặt bằng tay thì luôn có.',
+  'book.import.widget.title': 'Đang đọc xác nhận',
+  'book.import.widget.working': 'Đã đọc {done} trên {total}',
+  'book.import.widget.file': 'Đang đọc “{filename}”',
+  'book.import.widget.done': {
+    other: '{count} chỗ đặt chờ bạn xem',
+  },
+  'book.import.widget.review': 'Xem lại',
+  'book.import.widget.failed': 'Không đọc được “{filename}”',
+  'book.import.widget.stalled': 'Việc này lâu hơn dự tính',
+  'book.import.widget.check': 'Xem lại lần nữa',
+  'book.import.widget.dismiss': 'Bỏ qua',
+  'book.import.review.title': 'Những gì chúng tôi đọc được',
+  'book.import.review.from': 'Từ “{filename}”',
+  'book.import.review.selectAll': 'Chọn tất cả',
+  'book.import.review.selectNone': 'Bỏ chọn hết',
+  'book.import.review.confirm': {
+    other: 'Thêm {count} chỗ đặt',
+  },
+  'book.import.review.confirmNone': 'Chọn một chỗ đặt để thêm',
+  'book.import.review.cancel': 'Huỷ',
+  'book.import.review.needsReview': 'Cần xem lại',
+  'book.import.review.needsReviewHint':
+    'Một số ô không có trong tài liệu. Thêm xong thì mở chỗ đặt ra xem.',
+  'book.import.review.noPrice': 'Không đọc ra giá',
+  'book.import.review.noPriceHint':
+    'Tài liệu không ghi rõ giá, nên ô này để trống thay vì đoán.',
+  'book.import.review.untitled': 'Chỗ đặt chưa có tên',
+  'book.import.empty.title':
+    'Chúng tôi không tìm thấy chỗ đặt nào trong tệp đó',
+  'book.import.empty.body':
+    '“{filename}” không có gì trông giống một xác nhận. Thử tệp khác, hoặc thêm chỗ đặt bằng tay.',
+  'book.import.failed.title': 'Không đọc được “{filename}”',
+  'book.import.failed.body':
+    'Tệp mở được nhưng không dựng ra được gì. Thử tệp khác, hoặc thêm chỗ đặt bằng tay.',
+  'book.import.failed.retry': 'Thử tệp khác',
+  'book.import.uploadFailed': '“{filename}” chưa tải lên được',
+  'book.import.uploadRetry': 'Thử lại',
+  'book.import.toast.added': {
+    other: 'Đã thêm {count} chỗ đặt',
+  },
+  'book.import.partial.title': 'Đã thêm {written} trên {total} chỗ đặt',
+  'book.import.partial.body':
+    'Phần còn lại vẫn đang được chọn. Thêm lần nữa chỉ ghi những cái đó.',
+  'book.import.partial.retry': 'Thêm phần còn lại',
   'book.journeyLink': 'Ở thẻ di chuyển',
   'filter.all': 'Tất cả',
   'book.remove.body':

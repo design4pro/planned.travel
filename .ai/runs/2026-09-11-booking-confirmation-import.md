@@ -1,0 +1,128 @@
+# Execution plan — the confirmation file that fills the desk in
+
+Source doc: .ai/specs/2026-09-11-booking-confirmation-import.md
+Issue: #178 · Spec PR: #433 · Stage `03-S7`
+
+## Goal
+
+Attach a producer, a model-backed branch and a review surface to the booking-import
+queue handler that already exists, so a reader can drop a confirmation file on a
+trip's booking desk, watch it being read from anywhere in the app, review what was
+read, prune it, and confirm it into the desk in one action.
+
+## Scope
+
+The spec's Owned paths, exactly:
+
+- `src/server/extract/document.ts`, `src/server/extract/booking.ts` and their tests (new)
+- `src/server/queue/types.ts`, `src/server/queue/handlers/booking-import.ts` (edit)
+- `src/server/fns/file-policy.ts` (edit), `src/server/fns/booking-import.ts` (new) and its tests
+- `src/server/repos/__tests__/tenant-isolation.test.ts` (append)
+- `src/components/modules/book/import-drafts.ts`, `import-dialog.tsx`, `import-widget.tsx`,
+  `index.ts` (edit) and the drafts tests
+- `src/routes/_app/route.tsx` (widget mount), `src/routes/_app/trips/$tripId/book.tsx` (entry point)
+- `src/lib/i18n/messages/*/modules.ts` — 41 keys under `modules.book.import.*`, 23 locales
+- `e2e/journeys.spec.ts` (append)
+
+## Non-goals
+
+No schema change and no migration. No second parsing engine and no MIME parser.
+No `.pkpass`. No dependency added, removed or upgraded. `src/server/metering/rate.ts`,
+`src/server/billing/limits.ts`, `src/server/geo/**`, `src/server/repos/**`,
+`src/server/queue/consumer.ts`, `src/server/queue/jobs.ts`, `src/server/auth/env.ts`,
+`src/server/fns/context.ts` and `src/components/layout/app-frame.tsx` are used and
+never edited. Generalising the trip-room subscription is `07-S1`'s.
+
+## Risks
+
+- `src/server/queue/types.ts` is a shared file: the change must stay additive (one union
+  member, one payload field) so every existing envelope arm keeps parsing.
+- The model is non-deterministic: both extraction modules take their binding as an
+  injected port so no test touches the network.
+- A partial confirm must never duplicate a booking: `written` on the staged record,
+  and a KV delete only on full success.
+- KV is not tenant-scoped: both job-id paths re-check the staged record's `orgId`
+  and `tripId` against the caller's proven scope.
+
+## Implementation Plan
+
+### Phase 1 — Bytes become text, and text becomes bookings
+
+The two extraction modules and their fixtures. Shippable and inert: nothing imports them.
+
+### Phase 2 — The engine reads a document
+
+The payload widening, the handler branch, the meter spend, the upload-policy answer.
+Shippable and inert: nothing enqueues a `document` job, because nothing enqueues anything.
+
+### Phase 3 — The three verbs
+
+The server functions and the tenant-isolation block. Shippable and inert: no UI calls them.
+
+### Phase 4 — The reader can see it
+
+The drafts module, the dialog, the widget, the shell mount, the route wiring, the copy
+and the e2e block. The capability lands here.
+
+## Progress
+
+PR: #435
+
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
+
+### Phase 1: Bytes become text, and text becomes bookings
+
+- [x] 1.1 `src/server/extract/document.ts` — `DocumentConverter`, `IMPORT_TEXT_MAX_CHARS`, `documentToText`, plus its tests — 0307e306
+- [x] 1.2 `src/server/extract/booking.ts` — `BookingModel`, `EXTRACTION_MODEL`, the answer schema and `textToReservations`, plus its tests — 0307e306
+
+### Phase 2: The engine reads a document
+
+- [x] 2.1 `src/server/queue/types.ts` — `format` gains `'document'`, the payload gains `sourceName` — b9310ec8
+- [x] 2.2 `src/server/queue/handlers/booking-import.ts` — `extractFromDocument`, the meter spend and the branch in front of the parse — b9310ec8
+- [x] 2.3 `src/server/fns/file-policy.ts` — `IMPORT_ACCEPT_ATTRIBUTE`, `MAX_IMPORT_FILES`, `importFormatFor`, `text/html` and `message/rfc822` — b9310ec8
+
+### Phase 3: The three verbs
+
+- [x] 3.1 `startBookingImportFn` — the only enqueue site, with the deterministic id and the stagger — d05384dd
+- [x] 3.2 `getBookingImportFn` — the KV read, the scope re-check and the typed refusal codes — d05384dd
+- [x] 3.3 `confirmBookingImportFn` — the per-row write chain, the marker, `written` and the delete only on full success — d05384dd
+- [x] 3.4 The tenant-isolation block appended to `src/server/repos/__tests__/tenant-isolation.test.ts` — d05384dd
+
+### Phase 4: The reader can see it
+
+- [x] 4.1 `src/components/modules/book/import-drafts.ts` and its tests — b9c22e96
+- [x] 4.2 The forty-one locale keys, `en` first and then all 23 — d6ff14de (48 keys, per the spec's own tables)
+- [x] 4.3 `src/components/modules/book/import-dialog.tsx` — d6ff14de
+- [x] 4.4 `src/components/modules/book/import-widget.tsx` — d6ff14de
+- [x] 4.5 `src/routes/_app/route.tsx` mounts the widget — d6ff14de
+- [x] 4.6 `src/routes/_app/trips/$tripId/book.tsx` mounts the action and the dialog; `index.ts` gains the exports — d6ff14de
+- [x] 4.7 The e2e block appended to `e2e/journeys.spec.ts` — 3748c8f5 (build fix it needed: 4e04b7ab)
+- [x] 4.8 The blind A/B pair on the five declared states — verdict on the PR; one defect found and fixed in 2900ff9e
+- [x] 4.9 The full validation gate, in order — agent-kit-check, typecheck, lint, test (6038/6038),
+      check-generated, build (138 server fns) all green; `e2e.sh --workers=2` 38 passed, 1 failed —
+      `trips-core.spec.ts` "the delete dialog asks as hard as the server says it must", which this
+      branch cannot reach: it touches neither `src/routes/_app/-ui/trip-actions.tsx` (whose
+      `typed.trim() === summary.title` arms the button the spec expects disarmed) nor the spec
+
+### Phase 5: The pull request
+
+- [x] 5.1 Spec bookkeeping — `Status: in-progress`, `Spec PR #433`, `Implementation #435`, and a
+      19-entry `## Amendment` recording every divergence — bb070dfc
+- [x] 5.2 PR body refreshed to `Status: complete`, full label set applied, one label-rationale
+      comment
+- [x] 5.3 `om-auto-review-pr 435 --autofix` — the conflicted head resolved (9711dc58), one blocker,
+      three majors and four minors found and all eight fixed with four new tests — 3c18b4b1
+- [x] 5.4 The re-run gate on 3c18b4b1 — typecheck, lint, test (6042), check-generated, build all green;
+      `e2e.sh --workers=2` 37 passed / 2 failed, and both failures classified as outside this diff:
+      `trips-core.spec.ts:341` pre-existing as in 4.9, and `:572` flaky — it fails on a `pageerror`
+      naming `requestIdleCallback`, a word `src/` does not contain, and passes both in isolation and
+      in a full single-worker run of its own file
+- [x] 5.5 The APPROVED re-review posted, `review` → `merge-queue` with `needs-qa` kept, the label
+      rationale updated in place, and the PR flipped to ready
+- [x] 5.6 `om-auto-qa-pr 435` — evidence only, PASS on ten steps with ten screenshots on the PR: the
+      refusal by name with nothing on the wire, three rows read and pruned to two, the confirm writing
+      only the ticked rows as unchecked imports, the phone viewport, and the card following the job
+      onto `/dashboard` and leading back through `?import=`. No label changed
+- [x] 5.7 The run summary comment, and three follow-ups filed rather than fixed here: #443 (the
+      binary `upload-policy.test.ts` on develop), #444 (the `stageRefusal` ics/json asymmetry) and a
+      second data point on the existing flake issue #317

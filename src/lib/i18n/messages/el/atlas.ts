@@ -130,7 +130,7 @@ const messages = {
   'panel.empty.pick.body':
     'Διαλέξτε μία στον χάρτη, στο πεδίο αναζήτησης ή από τη λίστα, και εδώ ανοίγει το πλήρες αρχείο της — πρώτη επίσκεψη, τελευταία επίσκεψη, ο απολογισμός και η σημείωσή σας.',
 
-  'panel.stat.places': 'Μέρη',
+  'panel.stat.places': 'Τα μέρη σας',
   'panel.stat.placesNone': 'Τίποτα καρφιτσωμένο σε ταξίδι ακόμη',
   'panel.stat.placesCaption': 'Αξιοθέατα, διαμονές και στάσεις αποθηκευμένα',
   'panel.stat.regions': 'Περιφέρειες',
@@ -339,7 +339,10 @@ const messages = {
     other: 'Ταξίδια του χώρου εργασίας',
   },
   'card.visits': { one: 'Επίσκεψη', other: 'Επισκέψεις' },
-  'card.places': { one: 'Μέρος', other: 'Μέρη' },
+  'card.places': {
+    one: 'Μέρος του χώρου εργασίας',
+    other: 'Μέρη του χώρου εργασίας',
+  },
   'card.firstTrip': 'Πρώτο ταξίδι',
   'card.lastTrip': 'Τελευταίο ταξίδι',
   'card.firstVisit': 'Πρώτη επίσκεψη',

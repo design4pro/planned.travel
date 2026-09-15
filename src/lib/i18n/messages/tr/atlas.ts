@@ -136,7 +136,7 @@ const messages = {
   'panel.empty.pick.body':
     'Haritadan, arama alanından veya listeden birini seçin; tam kaydı burada açılır — ilk ziyaret, son ziyaret, sayaç ve notunuz.',
 
-  'panel.stat.places': 'Yerler',
+  'panel.stat.places': 'Yerleriniz',
   'panel.stat.placesNone': 'Henüz bir geziye hiçbir yer iğnelenmedi',
   'panel.stat.placesCaption':
     'Kaydedilen görülecek yerler, konaklamalar ve duraklar',
@@ -338,7 +338,7 @@ const messages = {
   // `card.places` below already follow.
   'card.trips': { one: 'Çalışma alanı gezisi', other: 'Çalışma alanı gezisi' },
   'card.visits': { one: 'Ziyaret', other: 'Ziyaret' },
-  'card.places': { one: 'Yer', other: 'Yer' },
+  'card.places': { one: 'Çalışma alanı yeri', other: 'Çalışma alanı yeri' },
   'card.firstTrip': 'İlk gezi',
   'card.lastTrip': 'Son gezi',
   'card.firstVisit': 'İlk ziyaret',

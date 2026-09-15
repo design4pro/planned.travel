@@ -25,6 +25,10 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Rencana perjalanan',
   'plan.places': 'Tempat',
+  'plan.readOnly.archived':
+    'Perjalanan ini diarsipkan, jadi rencananya hanya bisa dibaca.',
+  'plan.readOnly.role':
+    'Anda bisa melihat rencana ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
   'plan.day.empty': 'Belum ada rencana — seret tempat atau catatan ke sini',
   'plan.move.refused.duplicate': '{name} sudah ada di hari itu',
   'plan.move.refused.duplicateBody':

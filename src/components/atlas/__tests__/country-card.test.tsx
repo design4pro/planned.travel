@@ -112,12 +112,12 @@ describe('CountryCard', () => {
   it('heads every figure with a unit label that agrees with it', () => {
     render(<CountryCard {...FRANCE} tripCount={1} placeCount={1} />)
     expect(screen.getByText('Workspace trip')).toBeTruthy()
-    expect(screen.getByText('Place')).toBeTruthy()
+    expect(screen.getByText('Workspace place')).toBeTruthy()
 
     render(<CountryCard {...FRANCE} countryCode="IT" />)
     const italy = cardFor('IT')
     expect(within(italy).getByText('Workspace trips')).toBeTruthy()
-    expect(within(italy).getByText('Places')).toBeTruthy()
+    expect(within(italy).getByText('Workspace places')).toBeTruthy()
   })
 
   it('sets tabular numerals on every value that can change', () => {
@@ -226,7 +226,7 @@ describe('CountryCard', () => {
       render(<CountryCard {...THAILAND} />)
       expect(cellsOf('TH')).toEqual([
         ['Visits', '3'],
-        ['Places', '0'],
+        ['Workspace places', '0'],
         ['First visit', 'July 2011'],
         ['Last visit', 'September 2024'],
       ])
@@ -303,7 +303,7 @@ describe('CountryCard', () => {
       )
       expect(cellsOf('TH').map(([label]) => label)).toEqual([
         'Visits',
-        'Places',
+        'Workspace places',
         'First visit',
         'Last visit',
       ])
@@ -328,7 +328,7 @@ describe('CountryCard', () => {
       )
       expect(cellsOf('PT')).toEqual([
         ['Workspace trip', '1'],
-        ['Places', '4'],
+        ['Workspace places', '4'],
         ['First trip', 'August 2026'],
         ['Last trip', 'August 2026'],
       ])
@@ -375,7 +375,7 @@ describe('CountryCard', () => {
       render(<CountryCard {...countryFactColumns(FRANCE_RECORD)} />)
       expect(cellsOf('FR')).toEqual([
         ['Visits', '3'],
-        ['Places', '0'],
+        ['Workspace places', '0'],
         ['First visit', 'July 2011'],
         ['Last visit', 'September 2024'],
       ])
@@ -386,7 +386,7 @@ describe('CountryCard', () => {
       render(<CountryCard {...countryFactColumns(PORTUGAL_RECORD)} />)
       expect(cellsOf('PT')).toEqual([
         ['Workspace trip', '1'],
-        ['Places', '4'],
+        ['Workspace places', '4'],
         ['First trip', 'August 2026'],
         ['Last trip', 'August 2026'],
       ])
@@ -415,7 +415,7 @@ describe('CountryCard', () => {
       expect(cardFor('DZ').dataset.record).toBe('none')
       expect(cellsOf('DZ')).toEqual([
         ['Workspace trips', '0'],
-        ['Places', '0'],
+        ['Workspace places', '0'],
         ['First trip', '—Not recorded'],
         ['Last trip', '—Not recorded'],
       ])
@@ -523,7 +523,31 @@ describe('CountryCard', () => {
       expect(markOf('TH').textContent).toBe('')
     })
 
-    it('keeps every label and every value on one line box', () => {
+    /**
+     * The tally heading's qualifier is its last words, and a truncated label
+     * keeps only the head noun the qualifier replaced. Wrapping cannot move the
+     * figures because both cells of a row reserve the same lines, whichever
+     * record the card reads.
+     */
+    it('wraps a long label instead of cutting its qualifier off', () => {
+      render(<CountryCard {...FRANCE} />)
+      render(<CountryCard {...THAILAND} />)
+      render(<CountryCard {...ALGERIA} />)
+
+      const slotsOf = (code: string) =>
+        [...cardFor(code).querySelectorAll('dt')].map((dt) => dt.className)
+      for (const code of ['FR', 'TH', 'DZ']) {
+        expect(cardFor(code).querySelectorAll('dt .truncate')).toHaveLength(0)
+        expect(slotsOf(code)).toEqual(slotsOf('FR'))
+      }
+      const [tally, places, first, last] = slotsOf('FR')
+      expect(tally).toBe(places)
+      expect(first).toBe(last)
+      expect(tally).toContain('min-h-[3lh]')
+      expect(first).toContain('min-h-[2lh]')
+    })
+
+    it('keeps every value on one line box', () => {
       render(<CountryCard {...FRANCE} />)
       render(<CountryCard {...THAILAND} />)
       render(<CountryCard {...ALGERIA} />)
@@ -679,6 +703,18 @@ describe('CountryCardSkeleton', () => {
     ).toBe(true)
   })
 
+  it('reserves the label lines of the card it stands for, cell by cell', () => {
+    render(<CountryCard {...FRANCE} />)
+    const { container } = render(<CountryCardSkeleton />)
+    const slots = [...cardFor('FR').querySelectorAll('dt')].map(
+      (dt) => dt.className,
+    )
+    const cells = [...container.querySelectorAll('[data-part="cell"]')]
+    expect(cells.map((cell) => cell.firstElementChild?.className)).toEqual(
+      slots,
+    )
+  })
+
   it('can carry the same pointer as the card it stands for', () => {
     const { container } = render(<CountryCardSkeleton pointer="top" />)
     expect(container.querySelector('[data-part="pointer"]')).not.toBeNull()
@@ -723,6 +759,22 @@ describe('CountryCardError', () => {
     const strut = cardFor('FR').querySelector('[data-part="strut"]')
     expect(strut?.className).toContain('invisible')
     expect(strut?.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('reserves the rest card’s label lines in that strut', () => {
+    render(<CountryCard {...FRANCE} />)
+    render(<CountryCardError countryCode="IT" />)
+    const slots = [...cardFor('FR').querySelectorAll('dt')].map(
+      (dt) => dt.className,
+    )
+    const grid = cardFor('IT').querySelector(
+      '[data-part="strut"]',
+    )?.firstElementChild
+    expect(
+      [...(grid?.children ?? [])].map(
+        (cell) => cell.firstElementChild?.className,
+      ),
+    ).toEqual(slots)
   })
 
   it('offers no action when there is none to run', () => {

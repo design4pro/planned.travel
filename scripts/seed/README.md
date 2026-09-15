@@ -1,6 +1,6 @@
 # Demo data
 
-A rich, believable demo workspace for `rafal@planned.travel`: five trips in five different states, one
+A rich, believable demo workspace for `rafal@planned.travel`: six trips in six different states, one
 of them fully furnished, plus the journal, atlas, vacation planner, collections and inbox that hang off
 them. Without it every screen renders an empty state and nothing can be judged against the design bar.
 
@@ -168,6 +168,7 @@ demo-trip-02-lisbon-long-weekend
 demo-trip-03-dolomites-hut-to-hut
 demo-trip-04-marrakech-riad-week
 demo-trip-05-patagonia-traverse
+demo-trip-06-porto-one-lunch
 ```
 
 **Why.** A trip's cover art is a _pure hash of its id_ — the contour landform and the colour wash are
@@ -187,7 +188,7 @@ seeds from scratch renders the same cards the baselines were photographed agains
   `$defaultFn` mints a time-sortable random key exactly as before. Nothing about a user's rows
   changed, and no request body can reach the field.
 - Updating a trip can never move its key: `updateTripInput` deliberately does not carry `id`.
-- `node scripts/seed/verify.mjs` restates the five ids and checks them against the rows in the
+- `node scripts/seed/verify.mjs` restates the six ids and checks them against the rows in the
   database, and `src/server/repos/__tests__/trips.test.ts` restates them again against the dataset.
   Editing one without editing both turns the suite red before it turns a screenshot red.
 - Because the keys are constants rather than per-workspace values, **one database holds one demo
@@ -277,6 +278,7 @@ writes that follow still pass through the same quota guard rather than around it
 | Dolomites, hut to hut | `completed` | 13–20 Jun 2026 | EUR      | 3          |
 | Marrakech riad week   | `archived`  | 8–15 Nov 2025  | MAD      | 2          |
 | Patagonia traverse    | `draft`     | —              | USD      | 1          |
+| Porto, one long lunch | `planning`  | —              | EUR      | 1          |
 
 The flagship carries 12 days (each with a title, notes and an accommodation covering it), 38 places
 across nine categories with real coordinates, addresses, opening hours and ratings, 38 stops in

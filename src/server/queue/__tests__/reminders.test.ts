@@ -94,7 +94,12 @@ vi.mock('#/server/notifications/dispatch', async (importOriginal) => {
     dispatch: async (
       ...args: Parameters<typeof actual.dispatch>
     ): ReturnType<typeof actual.dispatch> => {
-      if (spies.failDispatchTripId === args[1].tripId) {
+      // A reminder is always trip-scoped; the workspace half of the union carries no trip.
+      const event = args[1]
+      if (
+        event.scope !== 'organization' &&
+        spies.failDispatchTripId === event.tripId
+      ) {
         throw new Error('the notification could not be dispatched')
       }
       return actual.dispatch(...args)

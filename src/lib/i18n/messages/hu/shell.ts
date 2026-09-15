@@ -187,6 +187,12 @@ const messages = {
   'notification.billing.plan_changed.title': 'Megváltozott a csomagja',
   'notification.billing.plan_changed.body':
     '{organizationName} mostantól ezt a csomagot használja: {plan}.',
+  'notification.billing.invoice_paid.title': 'Fizetés beérkezett',
+  'notification.billing.invoice_paid.body':
+    '{organizationName} legutóbbi számlája ki van fizetve.',
+  'notification.billing.payment_failed.title': 'Egy fizetés nem sikerült',
+  'notification.billing.payment_failed.body':
+    '{organizationName} fizetése késik. Frissítse a fizetési módot, hogy megmaradjon a csomag.',
   'notification.fallback.title': 'Valami megváltozott a munkaterületén',
   'notification.fallback.body':
     'Nyissa meg az utazást, hogy lássa, mi volt az.',

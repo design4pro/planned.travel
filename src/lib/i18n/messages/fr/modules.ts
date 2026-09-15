@@ -143,6 +143,84 @@ const messages = {
   'book.import.badge': 'Import non vérifié',
   'book.import.hint':
     'Importé depuis une confirmation. Ouvrez-le et enregistrez-le pour le marquer vérifié.',
+  'book.import.action': 'Importer',
+  'book.import.title': 'Importer des réservations depuis un fichier',
+  'book.import.description':
+    'Dépose une confirmation, nous la lirons. Rien n’entre dans le voyage avant que tu l’aies vu.',
+  'book.import.drop.idle': 'Dépose les fichiers ici, ou parcours-les',
+  'book.import.drop.active': 'Relâche pour ajouter',
+  'book.import.drop.formats':
+    'PDF, e-mail enregistré, page web, photo, Word, Excel, fichier de calendrier ou export JSON.',
+  'book.import.drop.limits':
+    'Jusqu’à {files} fichiers à la fois, chacun jusqu’à {size}.',
+  'book.import.drop.browse': 'Parcourir les fichiers',
+  'book.import.refused.format':
+    '« {filename} » n’est pas un fichier que cet import sait lire. Il lit un PDF, un e-mail enregistré, une page web, une photo, un document Word ou Excel, un fichier de calendrier ou un export JSON.',
+  'book.import.refused.tooMany':
+    'Seulement {files} fichiers à la fois. Le reste n’a pas été ajouté.',
+  'book.import.refused.tooLarge':
+    '« {filename} » pèse {size}. Un import lit des fichiers jusqu’à {limit}.',
+  'book.import.refused.empty':
+    '« {filename} » est vide, il n’y a donc rien à lire.',
+  'book.import.ceiling.title':
+    'Cet espace a lu toutes ses confirmations ce mois-ci',
+  'book.import.ceiling.body':
+    'La formule comprend {ceiling} lectures de fichier par mois, et le quota se renouvelle le premier. Tu peux toujours ajouter une réservation à la main.',
+  'book.import.ceiling.none':
+    'Lire un fichier de confirmation ne fait pas partie de la formule de cet espace',
+  'book.import.ceiling.noneBody':
+    'Change de formule pour qu’une confirmation soit lue pour toi. Ajouter une réservation à la main reste toujours possible.',
+  'book.import.widget.title': 'Lecture des confirmations',
+  'book.import.widget.working': '{done} sur {total} lus',
+  'book.import.widget.file': 'Lecture de « {filename} »',
+  'book.import.widget.done': {
+    one: 'Une réservation prête à vérifier',
+    many: '{count} réservations prêtes à vérifier',
+    other: '{count} réservations prêtes à vérifier',
+  },
+  'book.import.widget.review': 'Vérifier',
+  'book.import.widget.failed': '« {filename} » n’a pas pu être lu',
+  'book.import.widget.stalled': 'C’est plus long que prévu',
+  'book.import.widget.check': 'Revérifier',
+  'book.import.widget.dismiss': 'Masquer',
+  'book.import.review.title': 'Ce que nous avons lu',
+  'book.import.review.from': 'De « {filename} »',
+  'book.import.review.selectAll': 'Tout sélectionner',
+  'book.import.review.selectNone': 'Ne rien sélectionner',
+  'book.import.review.confirm': {
+    one: 'Ajouter {count} réservation',
+    many: 'Ajouter {count} réservations',
+    other: 'Ajouter {count} réservations',
+  },
+  'book.import.review.confirmNone': 'Sélectionne une réservation à ajouter',
+  'book.import.review.cancel': 'Annuler',
+  'book.import.review.needsReview': 'À regarder',
+  'book.import.review.needsReviewHint':
+    'Certains champs n’étaient pas dans le document. Ouvre la réservation après l’avoir ajoutée.',
+  'book.import.review.noPrice': 'Aucun prix lu',
+  'book.import.review.noPriceHint':
+    'Le document n’en indiquait aucun clairement, le champ est donc resté vide plutôt que deviné.',
+  'book.import.review.untitled': 'Réservation sans titre',
+  'book.import.empty.title':
+    'Nous n’avons trouvé aucune réservation dans ce fichier',
+  'book.import.empty.body':
+    '« {filename} » ne contenait rien qui ressemble à une confirmation. Essaie un autre fichier, ou ajoute la réservation à la main.',
+  'book.import.failed.title': '« {filename} » n’a pas pu être lu',
+  'book.import.failed.body':
+    'Le fichier s’est ouvert mais rien n’en est sorti. Essaie un autre fichier, ou ajoute la réservation à la main.',
+  'book.import.failed.retry': 'Essayer un autre fichier',
+  'book.import.uploadFailed': '« {filename} » n’a pas été envoyé',
+  'book.import.uploadRetry': 'Réessayer',
+  'book.import.toast.added': {
+    one: 'Une réservation ajoutée',
+    many: '{count} réservations ajoutées',
+    other: '{count} réservations ajoutées',
+  },
+  'book.import.partial.title':
+    '{written} réservations sur {total} ont été ajoutées',
+  'book.import.partial.body':
+    'Le reste est toujours sélectionné. Réessayer n’écrit que celles-là.',
+  'book.import.partial.retry': 'Ajouter le reste',
   'book.journeyLink': 'Dans l’onglet transports',
   'filter.all': 'Tout',
   'book.remove.body':

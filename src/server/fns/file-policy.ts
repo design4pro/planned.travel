@@ -50,6 +50,10 @@ const ACCEPTED: ReadonlyMap<string, FileKind> = new Map<string, FileKind>([
   ['text/csv', 'document'],
   ['text/calendar', 'document'],
   ['text/markdown', 'document'],
+  // Two the booking import reads and the library did not hold: a hotel's confirmation page saved
+  // from a browser, and a confirmation email saved from a mail client.
+  ['text/html', 'document'],
+  ['message/rfc822', 'document'],
   [
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'document',
@@ -79,6 +83,9 @@ export const ACCEPT_ATTRIBUTE = [
   '.csv',
   '.ics',
   '.md',
+  '.html',
+  '.htm',
+  '.eml',
   '.docx',
   '.xlsx',
   '.geojson',
@@ -103,6 +110,9 @@ const BY_EXTENSION: ReadonlyMap<string, { type: string; kind: FileKind }> =
     ['csv', { type: 'text/csv', kind: 'document' }],
     ['ics', { type: 'text/calendar', kind: 'document' }],
     ['md', { type: 'text/markdown', kind: 'document' }],
+    ['html', { type: 'text/html', kind: 'document' }],
+    ['htm', { type: 'text/html', kind: 'document' }],
+    ['eml', { type: 'message/rfc822', kind: 'document' }],
     ['geojson', { type: 'application/geo+json', kind: 'map' }],
     ['gpx', { type: 'application/gpx+xml', kind: 'map' }],
     ['json', { type: 'application/json', kind: 'document' }],
@@ -268,4 +278,119 @@ export function checkUpload(
   }
 
   return null
+}
+
+/* ------------------------------------------------------------- booking import -- */
+
+/**
+ * Which stored formats an *import* can read — a different question from which may be stored.
+ *
+ * The accepted-media-type table above is not widened for this: every format below is already
+ * storable. What refusing at the upload boundary needs is the other answer, and nothing else in the
+ * product could give it. A reader who drops a `.pkpass` is told so by name, with the list that
+ * works, rather than having the file accepted and the job fail twenty seconds later.
+ */
+export type ImportFormat = 'ics' | 'json' | 'document'
+
+/** Files one drop may carry. Wider is a fan-out of model calls, narrower is a second drop. */
+export const MAX_IMPORT_FILES = 5
+
+/**
+ * The ceiling on one file an import reads, and it is deliberately below {@link MAX_FILE_BYTES}.
+ *
+ * The queue handler refuses past it rather than streaming it into memory, and a confirmation that
+ * does not fit in five mebibytes is a scan at a resolution nobody needs. Declared here rather than
+ * beside that refusal so the dialog can state the same number it will be judged by.
+ */
+export const MAX_IMPORT_BYTES = 5 * 1024 * 1024
+
+/**
+ * The branch an import takes for each extension it reads.
+ *
+ * **Keyed on the extension rather than on the media type, and that is the whole of the answer.**
+ * The platform's document conversion dispatches on the filename, so an import that decided from a
+ * reported media type would be answering a different question from the one the engine will ask —
+ * and a `.pkpass` announced as `application/pdf` would be accepted here and refused twenty seconds
+ * later by a job nobody is watching. A media type is consulted only for a stored file with no
+ * extension at all.
+ *
+ * `ics` and `json` have grammars and go to the deterministic parsers; everything else becomes text
+ * and then rows through the model. An extension absent from this map is storable but unreadable by
+ * an import, which is exactly what the boundary refusal needs to know.
+ */
+const IMPORT_FORMATS: ReadonlyMap<string, ImportFormat> = new Map<
+  string,
+  ImportFormat
+>([
+  ['ics', 'ics'],
+  ['json', 'json'],
+  ['pdf', 'document'],
+  ['html', 'document'],
+  ['htm', 'document'],
+  ['eml', 'document'],
+  ['txt', 'document'],
+  ['md', 'document'],
+  ['png', 'document'],
+  ['jpg', 'document'],
+  ['jpeg', 'document'],
+  ['webp', 'document'],
+  ['heic', 'document'],
+  ['docx', 'document'],
+  ['xlsx', 'document'],
+])
+
+/**
+ * The `accept` attribute for the import picker: narrower than {@link ACCEPT_ATTRIBUTE}.
+ *
+ * Derived from {@link IMPORT_FORMATS} rather than written beside it, so the list the OS dialog
+ * filters by and the list the server refuses against cannot drift apart.
+ */
+export const IMPORT_ACCEPT_ATTRIBUTE = [...IMPORT_FORMATS.keys()]
+  .map((extension) => `.${extension}`)
+  .join(',')
+
+/** The media types an extensionless stored file may still be read as. */
+const IMPORT_FORMATS_BY_TYPE: ReadonlyMap<string, ImportFormat> = new Map<
+  string,
+  ImportFormat
+>([
+  ['text/calendar', 'ics'],
+  ['application/json', 'json'],
+  ['application/pdf', 'document'],
+  ['text/html', 'document'],
+  ['message/rfc822', 'document'],
+  ['text/plain', 'document'],
+  ['text/markdown', 'document'],
+  ['image/png', 'document'],
+  ['image/jpeg', 'document'],
+  ['image/webp', 'document'],
+  ['image/heic', 'document'],
+  [
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'document',
+  ],
+  [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'document',
+  ],
+])
+
+/**
+ * The format an import would read this file as, or `null` when it cannot read it at all.
+ *
+ * Takes the stored filename and the stored media type — never a format a client sent — because a
+ * format from a browser routes a PDF past the parser that would have refused it.
+ */
+export function importFormatFor(
+  filename: string,
+  contentType: string,
+): ImportFormat | null {
+  const extension = extensionOf(filename)
+  if (extension.length > 0) {
+    return IMPORT_FORMATS.get(extension) ?? null
+  }
+  const resolved = resolveContentType(filename, contentType)
+  return resolved === null
+    ? null
+    : (IMPORT_FORMATS_BY_TYPE.get(resolved) ?? null)
 }

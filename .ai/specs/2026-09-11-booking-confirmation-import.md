@@ -1,11 +1,11 @@
 # The confirmation file that fills the desk in: a producer, a model branch and a review surface
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | draft |
-| **Issue**          | #178  |
-| **Spec PR**        | none  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | in-progress |
+| **Issue**          | #178        |
+| **Spec PR**        | #433        |
+| **Implementation** | #435        |
 
 `03-S7` · FR #178 · Parent PRD #167 · Stage `03-S7` of `docs/plans/03-reservations-and-transport.md` (frozen), rows `BKG-03` and `BKG-04`. Decision: `docs/adr/0012-workers-ai-for-confirmation-extraction.md`.
 
@@ -515,3 +515,94 @@ Each phase leaves the validation gate green and leaves the desk behaving exactly
 A second parsing engine. A MIME parser. `.pkpass`. Any schema change — this spec declares no column. A per-tenant model credential or any operator construct ADR 0012's `11-S1` refused. Generalising the trip-room subscription (`07-S1`). Repairing `RateCeilingError`'s transit-only wording, which is reported above and belongs to no stage in this wave.
 
 Four modules are used and never edited: the queue consumer, the queue job helpers, the auth environment and the function context. The engine is complete and so is the producer helper; this spec attaches to both, importing `appScope` from the context module exactly as every other function module does, and taking the queue binding through `taskQueue()` rather than a new sibling of `filesBucket()`.
+
+## 📝 Amendment
+
+Built by **#435**. The design above is left as it was written; everything below is where the build
+disagreed with it and why. Each entry names what the tree forced.
+
+### The engine and the extraction (Phases 1–3)
+
+1. **A refused document job stages its refusal instead of only throwing.** `stageRefusal`
+   (`src/server/queue/handlers/booking-import.ts:463`) writes a staged record carrying the refusal
+   code before the `TaskPermanentError` leaves the handler. The spec had the ceiling and the
+   unreadable file raise and stop, which leaves the widget polling a key that will never appear
+   until its 20-second budget runs out — a reader is told "this is taking longer than expected"
+   about a file the product already decided it cannot read. It runs only for
+   `payload.format === 'document'`; the `ics` and `json` paths are untouched.
+2. **The `AI` binding reaches the handler through `TaskBindings.AI?`, not an import.** The handler is
+   driven directly in its tests, and every one of them constructs the bindings object; an optional
+   field on that port keeps the handler drivable with a stub, where a module-level `aiBinding()` call
+   would drag `cloudflare:workers` into the `server` Vitest project.
+3. **`MAX_IMPORT_BYTES` lives in `src/server/fns/file-policy.ts:305`,** with the handler re-exporting
+   it (`:124`) for the callers that had it from there. The size limit belongs beside the upload
+   policy that also has to refuse on it, not in the consumer that reads the object afterwards.
+4. **`importFormatFor` is keyed by extension, not by media type.** The stored filename is what the
+   payload carries (Q5), so the format decision is made from the same string rather than from a
+   content type the declared `FILES` port does not return.
+5. **The ceiling read is an injected seam.** `BookingImportSeams.ceilingFor`
+   (`booking-import.ts:273`) hands the handler its ceiling; the default implementation is the
+   `resolveLimits()` read the spec described. A test can then exercise "spent" and "not part of the
+   plan" without a billing fixture.
+6. **`src/server/fns/context.ts` gained `importStore()`** (`:45`), which the "not owned" list said it
+   would not. Every other binding a function module reaches is taken from that file; a second
+   accessor somewhere else would have been the only exception in the directory.
+7. **The staged-row-to-draft mapping is server-owned.** `BookingImportDraft`
+   (`src/server/fns/booking-import.ts:160`) is built by `bookingImportView`, and
+   `import-drafts.ts` keeps only the selection reducer and the presentation. The mapping needs the
+   trip's zone and the staged record, both of which the function already holds; shipping it to the
+   client would have sent the staged shape over the wire so the client could reduce it.
+8. **`startBookingImportFn` takes an `index` input** (`:98`), because the stagger
+   (`delaySeconds = index × EXTRACTION_BUDGET_SECONDS`, `:472`) is computed per call and the caller
+   is the only party that knows which of the five files this is.
+9. **`EXTRACTION_BUDGET_SECONDS = 20`** (`:87`) is one exported constant rather than the literal the
+   spec wrote twice — the stagger and the poll budget are the same number by design, and Q3 is only
+   honest while they stay equal.
+
+### The reader's surface (Phase 4)
+
+10. **48 locale keys, not forty-one, and three of them are plural objects.** `widget.done`,
+    `review.confirm` and `toast.added` all count bookings, so they are `{ one, other }` selected off
+    `params.count`; the rest of the overage is the partial-write and upload-failure copy the spec
+    described in prose without listing keys for. All 48 landed in `en` and in the other 22 locales
+    in the same change.
+11. **The drop target's `<input type="file">` is a sibling of the button, not a child.** A hidden
+    input inside a `<button>` is a nested interactive control; the input sits beside it and the
+    button drives it through a ref, which keeps the target operable by keyboard without a nested
+    control.
+12. **`?import=<jobId>` is the widget-to-dialog hand-off** (`src/routes/_app/trips/$tripId/book.tsx`).
+    The widget's **Review** is pressed from any screen, so it navigates to the desk with the job in
+    the search params and the desk opens the review list from there. The spec left the hand-off
+    unstated, and shared module state would not have survived the navigation it exists for.
+13. **The widget is mounted last in the `_app` subtree** (`src/routes/_app/route.tsx:122`), after
+    `<Outlet />` and the mobile nav, rather than literally beside `<ImpersonationBar />`. Same
+    component tree, same survival across navigation — but a fixed, `z-dropdown` overlay declared
+    before the content it floats over is a stacking accident waiting for its first sibling.
+14. **`confirmBookingImport` takes a `ConfirmBookingImportPorts` argument** (`:208`). Reaching the
+    geocoding proxy and the repositories from inside the function body pulled them into the client
+    bundle through the server-function module graph; passing them in at the `createServerFn` handler
+    keeps the boundary where the build expects it.
+15. **The widget clears the feedback actor rather than sitting beside it.**
+    `bottom-[calc(var(--safe-bottom)+8.5rem)] lg:bottom-[4.5rem]` on the terms `#sentry-feedback`
+    sets for itself in `src/styles/styles.css`. The first build used `lg:bottom-6`, and the blind A/B
+    pair caught the "Report a problem" actor covering the **Review** button outright at every desktop
+    width — the failure mode `src/routes/__root.tsx` already writes down. Fixed in `2900ff9e` and
+    re-checked with `document.elementFromPoint` at the button's centre at 360 and 1280.
+16. **`src/server/geo/__tests__/seam.test.ts` was rewritten,** as its own comment said it would have
+    to be: the proxy had no caller outside its directory, and this build gave it one. The case now
+    names `server/fns/booking-import.ts` and counts shipped modules only.
+17. **The e2e ceiling journey produces the refusal from a refused job, not from a real ceiling.** The
+    allowance is charged only inside `extractFromDocument`, so an `.ics` import — the only import a
+    browser can drive locally — is not ceiling-gated at all. The journey asserts the refusal copy
+    reaches the reader; the two ceiling sentences (ceiling 200 and ceiling 0) are graded in the unit
+    layer, which is where the branch actually lives.
+18. **Three of the five visual states were captured by a throwaway driver.**
+    `scripts/visual/capture.mjs` takes one `--click`, and the review list, the boundary refusal and
+    the widget's working state each need a file put through a real `<input type="file">` and a wait
+    on a queue. A gitignored scratch driver reproduced the script's discipline (`emulateMedia`, the
+    motion-suppressing style tag, the same `fullPage` shutter options) rather than the shared tooling
+    growing a mode for one spec.
+19. **The e2e flows use `.ics`, not a PDF.** The calendar path is a parser
+    (`src/server/queue/ics.ts`); a document goes to Workers AI, which has no local simulator and
+    proxies to the real service. A browser journey that reads a PDF would be a journey against
+    production inference.

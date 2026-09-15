@@ -1142,8 +1142,8 @@ export const transports = sqliteTable(
      * The `set null` here is the schema's, and the test database — built from this file — has it.
      * The deployed one does not: SQLite's `ADD COLUMN` takes no `ON DELETE` clause, so
      * `0006_mighty_nehzno` left the constraint at `NO ACTION`, where deleting a day a leg names
-     * fails rather than nulling the column. Harmless while every row is null; the stage that
-     * first writes it has to clear the column itself, or rebuild the table.
+     * fails rather than nulling the column. So the day deleters in `repos/days.ts` clear it
+     * themselves first, through `unlinkTransportsFromDays` (#186).
      */
     arrivalDayId: text('arrival_day_id').references(() => days.id, {
       onDelete: 'set null',

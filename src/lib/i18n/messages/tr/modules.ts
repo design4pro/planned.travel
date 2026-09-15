@@ -137,6 +137,78 @@ const messages = {
   'book.import.badge': 'Denetlenmemiş içe aktarma',
   'book.import.hint':
     'Bir onaydan içe aktarıldı. Açıp kaydedince denetlenmiş sayılır.',
+  'book.import.action': 'İçe aktar',
+  'book.import.title': 'Rezervasyonları bir dosyadan içe aktar',
+  'book.import.description':
+    'Bir onay belgesi bırak, biz okuruz. Sen görmeden yolculuğa hiçbir şey eklenmez.',
+  'book.import.drop.idle': 'Dosyaları buraya bırak ya da seç',
+  'book.import.drop.active': 'Eklemek için bırak',
+  'book.import.drop.formats':
+    'PDF, kaydedilmiş e-posta, web sayfası, fotoğraf, Word, Excel, takvim dosyası ya da JSON dökümü.',
+  'book.import.drop.limits':
+    'Bir seferde en çok {files} dosya, her biri {size} boyutuna kadar.',
+  'book.import.drop.browse': 'Dosya seç',
+  'book.import.refused.format':
+    '“{filename}” bu içe aktarmanın okuyabileceği bir dosya değil. PDF, kaydedilmiş e-posta, web sayfası, fotoğraf, Word ya da Excel belgesi, takvim dosyası ya da JSON dökümü okur.',
+  'book.import.refused.tooMany':
+    'Bir seferde yalnızca {files} dosya. Kalanlar eklenmedi.',
+  'book.import.refused.tooLarge':
+    '“{filename}” {size} boyutunda. İçe aktarma {limit} boyutuna kadar dosya okur.',
+  'book.import.refused.empty': '“{filename}” boş, yani okunacak bir şey yok.',
+  'book.import.ceiling.title': 'Bu çalışma alanı bu ay bütün onaylarını okudu',
+  'book.import.ceiling.body':
+    'Plan ayda {ceiling} dosya okumasını kapsıyor ve hak ayın birinde yenilenir. Rezervasyonu elle eklemeye devam edebilirsin.',
+  'book.import.ceiling.none':
+    'Onay dosyası okumak bu çalışma alanının planına dahil değil',
+  'book.import.ceiling.noneBody':
+    'Onayın senin için okunması için planı yükselt. Rezervasyonu elle eklemek her zaman açık.',
+  'book.import.widget.title': 'Onaylar okunuyor',
+  'book.import.widget.working': '{total} dosyadan {done} tanesi okundu',
+  'book.import.widget.file': '“{filename}” okunuyor',
+  'book.import.widget.done': {
+    one: 'Gözden geçirilecek bir rezervasyon hazır',
+    other: 'Gözden geçirilecek {count} rezervasyon hazır',
+  },
+  'book.import.widget.review': 'Gözden geçir',
+  'book.import.widget.failed': '“{filename}” okunamadı',
+  'book.import.widget.stalled': 'Bu beklenenden uzun sürüyor',
+  'book.import.widget.check': 'Yeniden bak',
+  'book.import.widget.dismiss': 'Kapat',
+  'book.import.review.title': 'Okuduklarımız',
+  'book.import.review.from': '“{filename}” dosyasından',
+  'book.import.review.selectAll': 'Tümünü seç',
+  'book.import.review.selectNone': 'Hiçbirini seçme',
+  'book.import.review.confirm': {
+    one: '{count} rezervasyon ekle',
+    other: '{count} rezervasyon ekle',
+  },
+  'book.import.review.confirmNone': 'Eklemek için bir rezervasyon seç',
+  'book.import.review.cancel': 'Vazgeç',
+  'book.import.review.needsReview': 'Bakmak gerek',
+  'book.import.review.needsReviewHint':
+    'Bazı alanlar belgede yoktu. Ekledikten sonra rezervasyonu aç.',
+  'book.import.review.noPrice': 'Fiyat okunmadı',
+  'book.import.review.noPriceHint':
+    'Belge fiyatı açıkça yazmamıştı, tahmin edilmek yerine boş bırakıldı.',
+  'book.import.review.untitled': 'Adı olmayan rezervasyon',
+  'book.import.empty.title': 'O dosyada rezervasyon bulamadık',
+  'book.import.empty.body':
+    '“{filename}” içinde onaya benzeyen bir şey yoktu. Başka bir dosya dene ya da rezervasyonu elle ekle.',
+  'book.import.failed.title': '“{filename}” okunamadı',
+  'book.import.failed.body':
+    'Dosya açıldı ama içinden bir şey çıkarılamadı. Başka bir dosya dene ya da rezervasyonu elle ekle.',
+  'book.import.failed.retry': 'Başka bir dosya dene',
+  'book.import.uploadFailed': '“{filename}” yüklenmedi',
+  'book.import.uploadRetry': 'Yeniden dene',
+  'book.import.toast.added': {
+    one: 'Bir rezervasyon eklendi',
+    other: '{count} rezervasyon eklendi',
+  },
+  'book.import.partial.title':
+    '{total} rezervasyondan {written} tanesi eklendi',
+  'book.import.partial.body':
+    'Kalanlar hâlâ seçili. Yeniden eklemek yalnızca onları yazar.',
+  'book.import.partial.retry': 'Kalanları ekle',
   'book.journeyLink': 'Ulaşım sekmesinde',
   'filter.all': 'Hepsi',
   'book.remove.body':

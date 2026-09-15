@@ -136,6 +136,79 @@ const messages = {
   'book.import.badge': 'Ogranskad import',
   'book.import.hint':
     'Importerad från en bekräftelse. Öppna och spara den för att märka den granskad.',
+  'book.import.action': 'Importera',
+  'book.import.title': 'Importera bokningar från en fil',
+  'book.import.description':
+    'Släpp en bekräftelse och vi läser den. Inget hamnar på resan förrän du har sett det.',
+  'book.import.drop.idle': 'Släpp filer här, eller välj dem',
+  'book.import.drop.active': 'Släpp för att lägga till',
+  'book.import.drop.formats':
+    'PDF, sparat mejl, webbsida, foto, Word, Excel, kalenderfil eller JSON-export.',
+  'book.import.drop.limits':
+    'Upp till {files} filer i taget, var och en upp till {size}.',
+  'book.import.drop.browse': 'Välj filer',
+  'book.import.refused.format':
+    '”{filename}” är inte en fil som den här importen kan läsa. Den läser en pdf, ett sparat mejl, en webbsida, ett foto, ett Word- eller Excel-dokument, en kalenderfil eller en JSON-export.',
+  'book.import.refused.tooMany':
+    'Bara {files} filer i taget. Resten kom inte med.',
+  'book.import.refused.tooLarge':
+    '”{filename}” är {size}. En import läser filer upp till {limit}.',
+  'book.import.refused.empty':
+    '”{filename}” är tom, så det finns inget att läsa.',
+  'book.import.ceiling.title':
+    'Den här arbetsytan har läst alla sina bekräftelser den här månaden',
+  'book.import.ceiling.body':
+    'Planen rymmer {ceiling} lästa filer i månaden, och kvoten förnyas den första. Du kan fortfarande lägga till en bokning för hand.',
+  'book.import.ceiling.none':
+    'Att läsa en bekräftelsefil ingår inte i den här arbetsytans plan',
+  'book.import.ceiling.noneBody':
+    'Byt till en högre plan för att få en bekräftelse läst för dig. Att lägga till en bokning för hand går alltid.',
+  'book.import.widget.title': 'Läser bekräftelser',
+  'book.import.widget.working': '{done} av {total} lästa',
+  'book.import.widget.file': 'Läser ”{filename}”',
+  'book.import.widget.done': {
+    one: 'En bokning att titta på',
+    other: '{count} bokningar att titta på',
+  },
+  'book.import.widget.review': 'Titta på dem',
+  'book.import.widget.failed': '”{filename}” kunde inte läsas',
+  'book.import.widget.stalled': 'Det här tar längre tid än väntat',
+  'book.import.widget.check': 'Titta igen',
+  'book.import.widget.dismiss': 'Stäng',
+  'book.import.review.title': 'Det här läste vi',
+  'book.import.review.from': 'Från ”{filename}”',
+  'book.import.review.selectAll': 'Markera alla',
+  'book.import.review.selectNone': 'Markera ingen',
+  'book.import.review.confirm': {
+    one: 'Lägg till {count} bokning',
+    other: 'Lägg till {count} bokningar',
+  },
+  'book.import.review.confirmNone': 'Markera en bokning att lägga till',
+  'book.import.review.cancel': 'Avbryt',
+  'book.import.review.needsReview': 'Värt en titt',
+  'book.import.review.needsReviewHint':
+    'Några fält fanns inte i dokumentet. Öppna bokningen när du har lagt till den.',
+  'book.import.review.noPrice': 'Inget pris läst',
+  'book.import.review.noPriceHint':
+    'Dokumentet angav inget tydligt, så fältet lämnades tomt i stället för gissat.',
+  'book.import.review.untitled': 'Bokning utan titel',
+  'book.import.empty.title': 'Vi hittade ingen bokning i den filen',
+  'book.import.empty.body':
+    '”{filename}” innehöll inget som ser ut som en bekräftelse. Prova en annan fil, eller lägg till bokningen för hand.',
+  'book.import.failed.title': '”{filename}” kunde inte läsas',
+  'book.import.failed.body':
+    'Filen gick att öppna men det gick inte att få något ur den. Prova en annan fil, eller lägg till bokningen för hand.',
+  'book.import.failed.retry': 'Prova en annan fil',
+  'book.import.uploadFailed': '”{filename}” laddades inte upp',
+  'book.import.uploadRetry': 'Försök igen',
+  'book.import.toast.added': {
+    one: 'En bokning tillagd',
+    other: '{count} bokningar tillagda',
+  },
+  'book.import.partial.title': '{written} av {total} bokningar lades till',
+  'book.import.partial.body':
+    'Resten är fortfarande markerade. Att lägga till igen skriver bara dem.',
+  'book.import.partial.retry': 'Lägg till resten',
   'book.journeyLink': 'På transportfliken',
   'filter.all': 'Allt',
   'book.remove.body':

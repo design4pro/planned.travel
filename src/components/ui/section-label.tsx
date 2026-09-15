@@ -9,6 +9,12 @@ export type SectionLabelProps = React.ComponentPropsWithoutRef<'div'> & {
   icon?: React.ReactNode
   /** Trailing content, pushed to the far edge — a count, a link, an action. */
   action?: React.ReactNode
+  /**
+   * `false` wraps an overlong label instead of ending it in an ellipsis. For a
+   * caller that reserves the height the extra lines take, and whose label
+   * carries its meaning at the end — a truncated qualifier is simply gone.
+   */
+  truncate?: boolean
 }
 
 /**
@@ -17,7 +23,18 @@ export type SectionLabelProps = React.ComponentPropsWithoutRef<'div'> & {
  * that makes a set of cards read as one designed system.
  */
 export const SectionLabel = React.forwardRef<HTMLDivElement, SectionLabelProps>(
-  ({ className, as = 'div', icon, action, children, ...props }, ref) => {
+  (
+    {
+      className,
+      as = 'div',
+      icon,
+      action,
+      truncate = true,
+      children,
+      ...props
+    },
+    ref,
+  ) => {
     // Typed as a div so the forwarded ref stays concrete; the rendered tag is
     // still whatever `as` asked for.
     const Tag = as as 'div'
@@ -40,7 +57,7 @@ export const SectionLabel = React.forwardRef<HTMLDivElement, SectionLabelProps>(
               {icon}
             </span>
           ) : null}
-          <span className="truncate">{children}</span>
+          <span className={truncate ? 'truncate' : undefined}>{children}</span>
         </span>
         {action ? (
           <span className="shrink-0 normal-case tracking-normal">{action}</span>

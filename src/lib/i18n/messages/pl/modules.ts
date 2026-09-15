@@ -145,6 +145,84 @@ const messages = {
   'book.import.badge': 'Niesprawdzony import',
   'book.import.hint':
     'Zaimportowane z potwierdzenia. Otwórz i zapisz, żeby oznaczyć jako sprawdzone.',
+  'book.import.action': 'Importuj',
+  'book.import.title': 'Import rezerwacji z pliku',
+  'book.import.description':
+    'Upuść potwierdzenie, a my je przeczytamy. Do wyjazdu nic nie trafia, dopóki tego nie zobaczysz.',
+  'book.import.drop.idle': 'Upuść pliki tutaj albo je wskaż',
+  'book.import.drop.active': 'Puść, żeby dodać',
+  'book.import.drop.formats':
+    'PDF, zapisany e-mail, strona internetowa, zdjęcie, Word, Excel, plik kalendarza albo eksport JSON.',
+  'book.import.drop.limits': 'Najwyżej {files} pliki naraz, każdy do {size}.',
+  'book.import.drop.browse': 'Wskaż pliki',
+  'book.import.refused.format':
+    '„{filename}” to nie plik, który ten import umie przeczytać. Czyta PDF, zapisany e-mail, stronę internetową, zdjęcie, dokument Worda lub Excela, plik kalendarza albo eksport JSON.',
+  'book.import.refused.tooMany':
+    'Tylko {files} pliki naraz. Reszta nie została dodana.',
+  'book.import.refused.tooLarge':
+    '„{filename}” waży {size}. Import czyta pliki do {limit}.',
+  'book.import.refused.empty':
+    '„{filename}” jest pusty, więc nie ma z czego czytać.',
+  'book.import.ceiling.title':
+    'Ten obszar roboczy przeczytał w tym miesiącu wszystkie swoje potwierdzenia',
+  'book.import.ceiling.body':
+    'Plan obejmuje {ceiling} odczytów plików na miesiąc, a limit odnawia się pierwszego. Rezerwację nadal możesz dodać ręcznie.',
+  'book.import.ceiling.none':
+    'Czytanie pliku z potwierdzeniem nie należy do planu tego obszaru roboczego',
+  'book.import.ceiling.noneBody':
+    'Podnieś plan, żeby potwierdzenie zostało przeczytane za ciebie. Ręczne dodanie rezerwacji jest dostępne zawsze.',
+  'book.import.widget.title': 'Czytamy potwierdzenia',
+  'book.import.widget.working': 'Przeczytane {done} z {total}',
+  'book.import.widget.file': 'Czytamy „{filename}”',
+  'book.import.widget.done': {
+    one: 'Jedna rezerwacja gotowa do przejrzenia',
+    few: '{count} rezerwacje gotowe do przejrzenia',
+    many: '{count} rezerwacji gotowych do przejrzenia',
+    other: '{count} rezerwacji gotowych do przejrzenia',
+  },
+  'book.import.widget.review': 'Przejrzyj',
+  'book.import.widget.failed': 'Nie udało się przeczytać „{filename}”',
+  'book.import.widget.stalled': 'Trwa to dłużej, niż się spodziewaliśmy',
+  'book.import.widget.check': 'Sprawdź jeszcze raz',
+  'book.import.widget.dismiss': 'Zamknij',
+  'book.import.review.title': 'Co przeczytaliśmy',
+  'book.import.review.from': 'Z „{filename}”',
+  'book.import.review.selectAll': 'Zaznacz wszystko',
+  'book.import.review.selectNone': 'Odznacz wszystko',
+  'book.import.review.confirm': {
+    one: 'Dodaj {count} rezerwację',
+    few: 'Dodaj {count} rezerwacje',
+    many: 'Dodaj {count} rezerwacji',
+    other: 'Dodaj {count} rezerwacji',
+  },
+  'book.import.review.confirmNone': 'Zaznacz rezerwację do dodania',
+  'book.import.review.cancel': 'Anuluj',
+  'book.import.review.needsReview': 'Warto zerknąć',
+  'book.import.review.needsReviewHint':
+    'Części pól nie było w dokumencie. Otwórz rezerwację po dodaniu.',
+  'book.import.review.noPrice': 'Ceny nie odczytano',
+  'book.import.review.noPriceHint':
+    'Dokument nie podawał jej wyraźnie, więc pole zostało puste, a nie zgadnięte.',
+  'book.import.review.untitled': 'Rezerwacja bez nazwy',
+  'book.import.empty.title': 'Nie znaleźliśmy rezerwacji w tym pliku',
+  'book.import.empty.body':
+    'W „{filename}” nie było nic, co wygląda na potwierdzenie. Spróbuj innego pliku albo dodaj rezerwację ręcznie.',
+  'book.import.failed.title': 'Nie udało się przeczytać „{filename}”',
+  'book.import.failed.body':
+    'Plik się otworzył, ale nic z niego nie wyszło. Spróbuj innego pliku albo dodaj rezerwację ręcznie.',
+  'book.import.failed.retry': 'Spróbuj innego pliku',
+  'book.import.uploadFailed': '„{filename}” się nie wysłał',
+  'book.import.uploadRetry': 'Spróbuj ponownie',
+  'book.import.toast.added': {
+    one: 'Dodano jedną rezerwację',
+    few: 'Dodano {count} rezerwacje',
+    many: 'Dodano {count} rezerwacji',
+    other: 'Dodano {count} rezerwacji',
+  },
+  'book.import.partial.title': 'Dodano {written} z {total} rezerwacji',
+  'book.import.partial.body':
+    'Reszta jest nadal zaznaczona. Ponowne dodanie zapisze tylko ją.',
+  'book.import.partial.retry': 'Dodaj resztę',
   'book.journeyLink': 'Na karcie transportu',
   'filter.all': 'Wszystko',
   'book.remove.body':

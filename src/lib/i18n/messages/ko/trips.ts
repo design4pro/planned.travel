@@ -25,6 +25,9 @@ const messages = {
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '일정',
   'plan.places': '장소',
+  'plan.readOnly.archived': '이 여행은 보관되어 있어 일정은 읽기 전용입니다.',
+  'plan.readOnly.role':
+    '이 일정은 볼 수만 있습니다. 여행 소유자와 편집자만 변경할 수 있습니다.',
   'plan.day.empty':
     '아직 일정이 없습니다. 장소나 메모를 여기로 끌어다 놓으세요',
   'plan.move.refused.duplicate': '{name}은(는) 이미 그날에 있습니다',
