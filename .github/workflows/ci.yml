@@ -366,6 +366,28 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
+      # The other half of the instrumentation the composite action installs, and
+      # the half without which it is blind: the sampler writes to the runner's
+      # disk, and the runner is gone by the time anyone asks. `dev-server.log`
+      # has the same problem for a different reason - every run has always
+      # written it, and no run has ever kept it, which is why a red shard
+      # currently leaves no server-side evidence at all.
+      #
+      # `always()`, because the shard that fails is the only one worth reading.
+      # `if-no-files-found: ignore`, so an instrument can never be what reddens
+      # a run. Seven days rather than the blob's one: these are kilobytes, and
+      # the question they answer outlives the run that raised it.
+      - name: Upload the runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-runtime-${{ matrix.shard }}
+          path: |
+            e2e-runtime.log
+            dev-server.log
+          retention-days: 7
+          if-no-files-found: ignore
+
   # One report for the two shards: the GitHub annotations and the HTML report
   # (with the failing journeys' traces and videos) that a single job would give.
   # Not behind shards that were skipped - by `scope` or on a develop→main PR -
