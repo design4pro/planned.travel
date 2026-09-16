@@ -165,6 +165,34 @@ export async function settleMap(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * Whether a failure reads as the page having navigated out from under the
+ * sequence, rather than as the sequence having found something wrong.
+ *
+ * `settle()` decides whether to retry by matching the failure's *text*, which is
+ * the only evidence Playwright gives it. Exported because `settleOnce()` appends
+ * a hydration diagnostic to that same text: the two are one contract, and a test
+ * that restated this pattern instead of calling it would go green on exactly the
+ * change that breaks them apart.
+ */
+export function readsAsTransient(message: string): boolean {
+  return /Execution context was destroyed|navigation/i.test(message)
+}
+
+/**
+ * The same patterns, removed from text that is about to be appended to a failure.
+ *
+ * A diagnostic that names a node from `navigation.tsx` — or a class called
+ * `navigation-rail` — would otherwise satisfy `readsAsTransient()` on its own and
+ * turn a hard timeout into a silent retry, spending the shard's budget three
+ * times over to reach the same failure. The replacement is a character rather
+ * than nothing on purpose: dropping the match outright could splice two
+ * neighbouring fragments into a fresh one.
+ */
+export function scrubbedOfRetryTriggers(detail: string): string {
+  return detail.replace(/navigation|Execution context was destroyed/gi, '…')
+}
+
+/**
  * Wait until the page is worth asserting against.
  *
  * Retried, because a route that hydrates into a redirect tears down the execution context underneath
@@ -183,8 +211,7 @@ export async function settle(page: Page, route: RouteCase): Promise<void> {
       return
     } catch (error) {
       const transient =
-        error instanceof Error &&
-        /Execution context was destroyed|navigation/i.test(error.message)
+        error instanceof Error && readsAsTransient(error.message)
       if (!transient || attempt === ATTEMPTS) {
         throw error
       }
@@ -500,11 +527,7 @@ async function settleOnce(page: Page, route: RouteCase): Promise<void> {
     // `settle()` chooses whether to retry by matching this message, so a node
     // named after `navigation.tsx` — or a class called `navigation-rail` —
     // would quietly turn a hard timeout into a retry. Scrubbed, not trusted.
-    const safe = detail.replace(
-      /navigation|Execution context was destroyed/gi,
-      '…',
-    )
-    error.message = `${error.message}\nhydration: ${safe}`
+    error.message = `${error.message}\nhydration: ${scrubbedOfRetryTriggers(detail)}`
     throw error
   }
   await settleMutations(page)
