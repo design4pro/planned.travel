@@ -251,6 +251,53 @@ function hydratedIn(selector: string): boolean {
 }
 
 /**
+ * What `hydratedIn` was looking at, for the one case where it stayed `false`
+ * until the wait ran out.
+ *
+ * `page.waitForFunction` can only report that a predicate never went truthy, so
+ * a hydration timeout says nothing about *why*. Run 35101667571 left three of
+ * them and no way to choose between the two explanations: a tree React had not
+ * finished claiming, or one whose last element in document order is not React's
+ * to claim at all. The traces could not settle it either — every successful wait
+ * in them finished under 4.7 s and every failed one sat exactly on the 10 s
+ * ceiling, which is the shape of both. This names the node instead.
+ *
+ * Deliberately *not* folded into `hydratedIn`. That predicate is shared with
+ * `readCaptureState()` so the two cannot disagree about what "hydrated" means,
+ * and `CaptureState.hydrated` is a boolean a spec asserts on; this runs only
+ * once the wait has already failed, and changes nothing about the answer.
+ */
+function describeHydration(selector: string): string {
+  const claimed = (node: Element): boolean =>
+    Object.keys(node).some((key) => key.startsWith('__reactFiber$'))
+  const root = document.querySelector(selector)
+  if (root === null) {
+    return `nothing matches ${selector}`
+  }
+  if (!claimed(root)) {
+    return `${selector} itself carries no fiber, so React never reached it`
+  }
+  const nodes = Array.from(root.querySelectorAll('*'))
+  const unclaimed = nodes.filter((node) => !claimed(node))
+  const name = (node: Element): string =>
+    `${node.tagName.toLowerCase()}${node.id === '' ? '' : `#${node.id}`}` +
+    `${node.getAttribute('data-tsd-source') === null ? '' : ` from ${node.getAttribute('data-tsd-source')}`}`
+  // Guarded on the length rather than on the element being `undefined`, which is
+  // what an index past the end really gives back: `noUncheckedIndexedAccess` is
+  // off, so the type says `Element` and a comparison against `undefined` reads as
+  // dead code. This is the same shape `hydratedIn` uses on the same list.
+  if (nodes.length === 0) {
+    return `${selector} is claimed and holds no elements`
+  }
+  const last = nodes[nodes.length - 1]
+  return (
+    `${nodes.length} elements under ${selector}, ${unclaimed.length} without a fiber; ` +
+    `last in document order is ${name(last)}, which is ` +
+    `${claimed(last) ? 'claimed' : 'the one the wait is still waiting for'}`
+  )
+}
+
+/**
  * Hold until nothing in the document has mutated for `DOM_QUIET_MS`, and never
  * before `DOM_QUIET_FLOOR_MS` has passed.
  *
@@ -437,9 +484,29 @@ async function hideDevChrome(page: Page): Promise<void> {
 async function settleOnce(page: Page, route: RouteCase): Promise<void> {
   await page.locator(route.ready).first().waitFor({ state: 'visible' })
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
-  await page.waitForFunction(hydratedIn, route.ready, {
-    timeout: route.map === true ? MAP_HYDRATION_TIMEOUT_MS : undefined,
-  })
+  try {
+    await page.waitForFunction(hydratedIn, route.ready, {
+      timeout: route.map === true ? MAP_HYDRATION_TIMEOUT_MS : undefined,
+    })
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error
+    }
+    // The diagnostic can never be what fails the step. If the context is gone
+    // the timeout is still the finding, and it is rethrown as it arrived.
+    const detail = await page
+      .evaluate(describeHydration, route.ready)
+      .catch(() => 'the page could not be read once the wait had failed')
+    // `settle()` chooses whether to retry by matching this message, so a node
+    // named after `navigation.tsx` — or a class called `navigation-rail` —
+    // would quietly turn a hard timeout into a retry. Scrubbed, not trusted.
+    const safe = detail.replace(
+      /navigation|Execution context was destroyed/gi,
+      '…',
+    )
+    error.message = `${error.message}\nhydration: ${safe}`
+    throw error
+  }
   await settleMutations(page)
   // Missing/broken images resolve too — that is a different test's job to fail
   // on, not this one's to hang on.
