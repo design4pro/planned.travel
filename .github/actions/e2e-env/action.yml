@@ -163,6 +163,75 @@ runs:
         tail -50 dev-server.log
         exit 1
 
+    # Diagnostic instrumentation, and a step of its own on purpose: the step
+    # above ends in `exit 0` inside its wait loop, so anything appended to it
+    # would never run.
+    #
+    # What it is for. A red shard's failures are not in any one test: every
+    # operation slows about fivefold over the shard's life. Measured on run
+    # 35084673235, comparing the same work early against late in the same shard -
+    # `/trips` 0.60 s against 3.68 s, `/dashboard` 0.42 s against 4.43 s, and the
+    # `beforeEach` that only restores a session and touches no database, 0.05 s
+    # against 1.03 s. Both browser projects show it at once, so the cause is not
+    # in a browser; the one long-lived `vite dev` and its workerd children are
+    # what they share. The hydration wait in `e2e/helpers/settle.ts` is then
+    # simply the narrowest budget in the suite and so the first to break, and the
+    # `globalTimeout` amputation of #466 is the same slowdown seen from the other
+    # end.
+    #
+    # Which resource runs out is not decidable from the blob reports, and
+    # `dev-server.log` is written but never kept, so the red runs have left no
+    # server-side evidence at all. These four signals separate the candidates
+    # that survive: `MemAvailable` for heap exhaustion, `loadavg` for CPU
+    # saturation, the process count for accumulating workerd children, and the
+    # size of `.wrangler` for the state the suite writes and never cleans up -
+    # the whole directory rather than its `d1/` alone, because the run also
+    # stages import answers in KV and puts uploaded files in R2, so narrowing it
+    # to the database would measure a fraction of the growth. Walking it costs
+    # 0.02 s a sample, measured on a 3.4 GB one, so the instrument does not
+    # perturb what it measures.
+    #
+    # `/proc` rather than `ps`, so nothing depends on procps being in the image,
+    # and `VmRSS` rather than `statm`, which counts pages: this pool is ARM64,
+    # where a 64 KiB page would make a 4 KiB assumption wrong by sixteen times
+    # without saying so.
+    #
+    # Every failure is swallowed and the loop can never fail the job. An
+    # instrument that reddens a run is worse than no instrument. It costs one
+    # sample per 15 s - about eighty lines across a full shard.
+    - name: Sample the dev server's resource use
+      shell: bash
+      run: |
+        set -uo pipefail
+        {
+          printf 'iso\tmem_avail_kb\tmem_total_kb\tload1\tprocs\trss_total_kb\twrangler_kb\tdetail\n'
+          while :; do
+            avail=$(awk '/^MemAvailable:/{print $2}' /proc/meminfo 2>/dev/null)
+            total=$(awk '/^MemTotal:/{print $2}' /proc/meminfo 2>/dev/null)
+            load1=$(cut -d' ' -f1 /proc/loadavg 2>/dev/null)
+            wrangler=$(du -sk .wrangler 2>/dev/null | cut -f1)
+            procs=0
+            rss_total=0
+            detail=''
+            for entry in /proc/[0-9]*; do
+              cmd=$(tr '\0' ' ' < "$entry/cmdline" 2>/dev/null) || continue
+              case "$cmd" in
+                *vite*|*workerd*|*miniflare*) ;;
+                *) continue ;;
+              esac
+              rss=$(awk '/^VmRSS:/{print $2}' "$entry/status" 2>/dev/null)
+              [ -n "$rss" ] || continue
+              procs=$((procs + 1))
+              rss_total=$((rss_total + rss))
+              detail="${detail}${entry##*/}:${rss};"
+            done
+            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+              "$(date -u +%FT%TZ)" "${avail:-?}" "${total:-?}" "${load1:-?}" \
+              "$procs" "$rss_total" "${wrangler:-?}" "${detail:-none}"
+            sleep 15
+          done
+        } >> e2e-runtime.log 2>/dev/null &
+
     - name: Seed the demo workspace
       shell: bash
       run: node scripts/seed/seed.mjs
