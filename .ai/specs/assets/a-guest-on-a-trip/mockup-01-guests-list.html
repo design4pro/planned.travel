@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      Mockup — the guests list beneath the members, and its empty state
+    </title>
+    <!--
+      Illustrative static mockup for .ai/specs/2026-09-17-a-guest-on-a-trip.md.
+      Self-contained: inline CSS, no build step, no app code, no external requests.
+      Colour and type values are copied from src/styles/tokens.css; the glyphs are
+      inline SVG stand-ins for the lucide icons the real row composes.
+      Placeholder data only.
+
+      Three panes: the loaded guests list (light), the same list with the inline
+      duplicate refusal on the add field (light), and the empty state (dark).
+      The members section above is existing 01-S6a surface, shown dimmed for
+      position only — this spec changes nothing in it.
+    -->
+    <style>
+      :root {
+        --color-surface: #ffffff;
+        --color-surface-2: #f3f1ed;
+        --color-surface-inset: #edebe6;
+        --color-ink: #16150f;
+        --color-ink-2: #403e36;
+        --color-ink-3: #5b5951;
+        --color-ink-4: #6c6a61;
+        --color-edge: #e3e0d8;
+        --color-edge-faint: rgb(22 21 15 / 0.07);
+        --color-accent: #16150f;
+        --color-accent-on: #ffffff;
+        --color-brand: #256256;
+        --color-danger: #a4291f;
+        --color-danger-soft: #fbe9e6;
+        --text-micro: 0.6875rem;
+        --text-caption: 0.75rem;
+        --text-label: 0.8125rem;
+        --tracking-label: 0.08em;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-full: 9999px;
+      }
+
+      [data-theme='dark'] {
+        --color-surface: #1a1a18;
+        --color-surface-2: #212120;
+        --color-surface-inset: #292926;
+        --color-ink: #f8f7f4;
+        --color-ink-2: #d8d6d0;
+        --color-ink-3: #adaba3;
+        --color-ink-4: #93918a;
+        --color-edge: #3a3a36;
+        --color-edge-faint: rgb(255 255 255 / 0.08);
+        --color-accent: #f8f7f4;
+        --color-accent-on: #16150f;
+        --color-brand: #5fbba0;
+        --color-danger: #f07f74;
+        --color-danger-soft: #2a1614;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        padding: 28px;
+        background: #6e6c66;
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          'Segoe UI',
+          Inter,
+          sans-serif;
+        color: var(--color-ink);
+      }
+
+      .pane {
+        width: 380px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-edge);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        color: var(--color-ink);
+      }
+
+      .pane-label {
+        font-size: var(--text-micro);
+        letter-spacing: var(--tracking-label);
+        text-transform: uppercase;
+        color: #edebe6;
+        margin: 0 0 8px 2px;
+      }
+
+      .section-label {
+        font-size: var(--text-micro);
+        letter-spacing: var(--tracking-label);
+        text-transform: uppercase;
+        color: var(--color-ink-4);
+        margin: 0 0 4px;
+      }
+
+      .section-note {
+        font-size: var(--text-caption);
+        color: var(--color-ink-3);
+        margin: 0 0 12px;
+      }
+
+      .dimmed {
+        opacity: 0.38;
+        pointer-events: none;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 4px;
+        border-bottom: 1px solid var(--color-edge-faint);
+      }
+
+      .row:last-of-type {
+        border-bottom: 0;
+      }
+
+      .avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-full);
+        background: var(--color-surface-inset);
+        display: grid;
+        place-items: center;
+        font-size: var(--text-caption);
+        color: var(--color-ink-3);
+        flex: none;
+      }
+
+      .name {
+        font-size: 0.875rem;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .badge {
+        font-size: var(--text-micro);
+        letter-spacing: 0.04em;
+        padding: 2px 7px;
+        border-radius: var(--radius-full);
+        border: 1px solid var(--color-edge);
+        color: var(--color-ink-3);
+        background: var(--color-surface-2);
+        flex: none;
+      }
+
+      .icons {
+        display: flex;
+        gap: 2px;
+        flex: none;
+      }
+
+      .icon-btn {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--color-ink-4);
+      }
+
+      .icon-btn.hover {
+        background: var(--color-surface-2);
+        border-color: var(--color-edge);
+        color: var(--color-ink-2);
+      }
+
+      .divider {
+        height: 1px;
+        background: var(--color-edge);
+        margin: 18px 0 16px;
+      }
+
+      .field-label {
+        display: block;
+        font-size: var(--text-label);
+        color: var(--color-ink-2);
+        margin: 0 0 6px;
+      }
+
+      .field {
+        display: flex;
+        gap: 8px;
+      }
+
+      .input {
+        flex: 1;
+        border: 1px solid var(--color-edge);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface);
+        padding: 8px 10px;
+        font-size: 0.875rem;
+        color: var(--color-ink);
+      }
+
+      .input.invalid {
+        border-color: var(--color-danger);
+        background: var(--color-danger-soft);
+      }
+
+      .input .placeholder {
+        color: var(--color-ink-4);
+      }
+
+      .btn {
+        border: 1px solid var(--color-accent);
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+        border-radius: var(--radius-sm);
+        padding: 8px 14px;
+        font-size: var(--text-label);
+        white-space: nowrap;
+      }
+
+      .refusal {
+        display: flex;
+        gap: 6px;
+        align-items: flex-start;
+        margin-top: 7px;
+        font-size: var(--text-caption);
+        color: var(--color-danger);
+      }
+
+      .empty {
+        border: 1px dashed var(--color-edge);
+        border-radius: var(--radius-md);
+        background: var(--color-surface-2);
+        padding: 20px 18px;
+        text-align: center;
+      }
+
+      .empty h4 {
+        margin: 0 0 6px;
+        font-size: 0.875rem;
+      }
+
+      .empty p {
+        margin: 0 0 14px;
+        font-size: var(--text-caption);
+        color: var(--color-ink-3);
+        line-height: 1.5;
+      }
+
+      svg {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <p class="pane-label">Loaded — owner's view</p>
+      <div class="pane">
+        <div class="dimmed">
+          <p class="section-label">On this trip</p>
+          <div class="row">
+            <span class="avatar">RW</span><span class="name">Rafał Wolak</span
+            ><span class="badge">Owner</span>
+          </div>
+          <div class="row">
+            <span class="avatar">JK</span><span class="name">Julia Kern</span
+            ><span class="badge">Editor</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <p class="section-label">Travelling with you</p>
+        <p class="section-note">
+          People on this trip who do not have an account
+        </p>
+
+        <div class="row">
+          <span class="avatar">A</span><span class="name">Anna</span>
+          <span class="badge">Guest</span>
+          <span class="icons">
+            <span class="icon-btn" title="Rename Anna"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"
+                /></svg
+            ></span>
+            <span class="icon-btn" title="Anna is now…"
+              ><svg viewBox="0 0 24 24">
+                <path d="M4 7h10M10 3l4 4-4 4M20 17H10M14 13l-4 4 4 4" /></svg
+            ></span>
+            <span class="icon-btn hover" title="Remove Anna from this trip"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"
+                /></svg
+            ></span>
+          </span>
+        </div>
+        <div class="row">
+          <span class="avatar">M</span><span class="name">Marek</span>
+          <span class="badge">Guest</span>
+          <span class="icons">
+            <span class="icon-btn"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"
+                /></svg
+            ></span>
+            <span class="icon-btn"
+              ><svg viewBox="0 0 24 24">
+                <path d="M4 7h10M10 3l4 4-4 4M20 17H10M14 13l-4 4 4 4" /></svg
+            ></span>
+            <span class="icon-btn"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"
+                /></svg
+            ></span>
+          </span>
+        </div>
+
+        <div style="height: 16px"></div>
+        <label class="field-label">Their name</label>
+        <div class="field">
+          <div class="input"><span class="placeholder">Anna</span></div>
+          <span class="btn">Add a guest</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="pane-label">The duplicate name, refused inline</p>
+      <div class="pane">
+        <p class="section-label">Travelling with you</p>
+        <p class="section-note">
+          People on this trip who do not have an account
+        </p>
+
+        <div class="row">
+          <span class="avatar">A</span><span class="name">Anna</span>
+          <span class="badge">Guest</span>
+          <span class="icons">
+            <span class="icon-btn"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"
+                /></svg
+            ></span>
+            <span class="icon-btn"
+              ><svg viewBox="0 0 24 24">
+                <path d="M4 7h10M10 3l4 4-4 4M20 17H10M14 13l-4 4 4 4" /></svg
+            ></span>
+            <span class="icon-btn"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"
+                /></svg
+            ></span>
+          </span>
+        </div>
+
+        <div style="height: 16px"></div>
+        <label class="field-label">Their name</label>
+        <div class="field">
+          <div class="input invalid">&nbsp;&nbsp;anna&nbsp;&nbsp;</div>
+          <span class="btn">Add a guest</span>
+        </div>
+        <p class="refusal">
+          <svg viewBox="0 0 24 24" style="flex: none; margin-top: 1px">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v5M12 16h.01" />
+          </svg>
+          A guest named Anna is already on this trip
+        </p>
+        <p class="section-note" style="margin-top: 10px">
+          The field keeps what was typed, so the reader adds the distinguishing
+          word rather than retyping the name.
+        </p>
+      </div>
+    </div>
+
+    <div data-theme="dark">
+      <p class="pane-label">Empty — the common first state</p>
+      <div class="pane">
+        <p class="section-label">Travelling with you</p>
+        <p class="section-note">
+          People on this trip who do not have an account
+        </p>
+        <div class="empty">
+          <h4>Nobody yet</h4>
+          <p>
+            A guest is somebody travelling with you who does not need an
+            account. Add them by name.
+          </p>
+          <span class="btn">Add a guest</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
