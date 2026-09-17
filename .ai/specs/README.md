@@ -6,11 +6,12 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (1)
+## Draft — being written (2)
 
-| Spec                                                                                                                                | Date       | Issue                                                           | Spec PR | Implementation |
-| ----------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ------- | -------------- |
-| [A guest on a trip: the record, the refusal of duplicates, the bound, and the merge into a member](2026-09-17-a-guest-on-a-trip.md) | 2026-09-17 | [#119](https://github.com/design4pro/planned.travel/issues/119) | —       | —              |
+| Spec                                                                                                                                                                    | Date       | Issue                                                           | Spec PR | Implementation |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ------- | -------------- |
+| [Reservations and transport, what remains: a stay that covers its nights, and the day that says where you sleep](2026-09-17-reservations-and-transport-what-remains.md) | 2026-09-17 | [#167](https://github.com/design4pro/planned.travel/issues/167) | —       | —              |
+| [A guest on a trip: the record, the refusal of duplicates, the bound, and the merge into a member](2026-09-17-a-guest-on-a-trip.md)                                     | 2026-09-17 | [#119](https://github.com/design4pro/planned.travel/issues/119) | —       | —              |
 
 ## Ready — merged, waiting for a build (2)
 
