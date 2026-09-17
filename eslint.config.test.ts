@@ -31,6 +31,14 @@ const PATHS = [
   '.ai/qa/artifacts_20260909-231500-9999/qa.config.ts',
   '.ai/tmp/om-auto-fix-pr/1234/prettier.config.js',
   '.ai/cezar/tmp/transform-cache/entry.ts',
+  // The other five directory entries in `.ai/cezar/.gitignore`. A worktree is a whole second copy
+  // of the repository, so its case is spelled as application source to prove the entry beats the
+  // `src/**` the third case below insists stays linted.
+  '.ai/cezar/dispatch/order.ts',
+  '.ai/cezar/attachments/pasted.ts',
+  '.ai/cezar/drafts/draft.ts',
+  '.ai/cezar/runs/run.ts',
+  '.ai/cezar/worktrees/checkout/src/routes/index.tsx',
   '.claude/hooks/__tests__/hooks.test.ts',
   '.claude/hooks/guard-read.ts',
   'src/routes/index.tsx',
@@ -68,6 +76,23 @@ describe('eslint.config.js ignore list', () => {
       true,
     )
     expect(wasIgnored('.ai/cezar/tmp/transform-cache/entry.ts')).toBe(true)
+  })
+
+  it('ignores every directory `.ai/cezar/.gitignore` refuses, not only the ones that have hurt yet', () => {
+    // This list and that .gitignore have to be read as a pair: cezar's `ensureDataGitignore`
+    // writes the directories, and every one of them is a #203 waiting for its first `.ts` file.
+    // The gap is silent in the way this whole file is about - it stays invisible until somebody
+    // runs the tool that writes the directory, and then reports `parserOptions.project`, which
+    // points at the tsconfig rather than at the untracked file that is not in it. So the cases
+    // below name the directory entries of that .gitignore rather than the paths that have burned
+    // anyone: `tmp/` is pinned by the case above, and these are the other five.
+    expect(wasIgnored('.ai/cezar/dispatch/order.ts')).toBe(true)
+    expect(wasIgnored('.ai/cezar/attachments/pasted.ts')).toBe(true)
+    expect(wasIgnored('.ai/cezar/drafts/draft.ts')).toBe(true)
+    expect(wasIgnored('.ai/cezar/runs/run.ts')).toBe(true)
+    expect(
+      wasIgnored('.ai/cezar/worktrees/checkout/src/routes/index.tsx'),
+    ).toBe(true)
   })
 
   it('re-includes the hook tests, which the list can only do one directory at a time', () => {
