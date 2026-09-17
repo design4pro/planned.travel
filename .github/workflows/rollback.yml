@@ -111,9 +111,16 @@ jobs:
       # install it: the input only picks which binary to call. On the self-hosted
       # pool that binary came from the runner image, so this step was not needed;
       # `ubuntu-latest` ships none, and without it the rollback would have died on
-      # `pnpm: command not found` during the incident it exists for. `install` is
-      # off because nothing here builds - only wrangler and `wrangler.jsonc` are
-      # needed, and wrangler-action fetches wrangler itself.
+      # `pnpm: command not found` during the incident it exists for.
+      #
+      # `install` is off, and that is not the same as "no install happens here".
+      # wrangler-action resolves the wrangler it wants itself, and with pnpm that
+      # is `pnpm add wrangler@<wranglerVersion>` in the checkout root - which
+      # resolves this project's whole dependency graph, because that is what
+      # `pnpm add` does inside a package. A `pnpm install --frozen-lockfile` in
+      # front of it would be a *second* full resolve of a tree nothing but that
+      # `pnpm add` ever reads. What makes the one resolve cheap is the pnpm store
+      # `actions/setup-node` restores, and that happens with `install` either way.
       - name: Set up the toolchain
         if: steps.gate.outputs.configured == 'true'
         uses: ./.github/actions/setup
