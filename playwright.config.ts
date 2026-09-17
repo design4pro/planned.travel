@@ -168,10 +168,12 @@ export default defineConfig({
   // report is what tells load from regression — and stays under ci.yml's own
   // `timeout-minutes: 20`, which must never be the one that fires first.
   //
-  // Both sides of the split now sit well inside it: a pull request shards ~52
-  // chromium tests two ways where one shard used to carry all 52 in 882 s, and
-  // the nightly WebKit run shards its own project the same way. The budget is
-  // unchanged on purpose — it bounds a hung shard, and that job did not change.
+  // Both sides of the split now sit well inside it, measured rather than hoped:
+  // run 35250473957, the first without WebKit, took 285 s and 235 s of journeys
+  // on the two shards — 32% and 26% of this budget, where one shard used to
+  // carry all 52 tests in 882 s and the other ran past 900 s. The nightly WebKit
+  // run shards its own project the same way. The budget is unchanged on purpose
+  // — it bounds a hung shard, and that job did not change.
   globalTimeout: isCI ? 15 * 60_000 : undefined,
   reporter: [
     // `github` writes GitHub annotations and is noise in a terminal; `list` is the

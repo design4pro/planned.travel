@@ -331,9 +331,14 @@ jobs:
     # test count and these tests were not the same size: with both browser projects
     # in one pool the split fell along project lines, and the WebKit shard was the
     # slow one. That is gone with `mobile-safari` (#552, #466) - both shards are now
-    # chromium and carry comparable work. `--shard` still splits by count, not by
-    # duration, so the next thing to make them uneven will be one heavy journey
-    # rather than one heavy engine; Playwright offers no duration split, and moving
+    # chromium and carry comparable work. Measured on run 35250473957, the first
+    # one without WebKit: 285 s of journeys on shard 1 and 235 s on shard 2, for
+    # jobs of 6m35s and 5m08s. Against the config's 900 s `globalTimeout` that is
+    # 32% and 26% of the budget spent - roughly 70% of it unspent, where shard 1
+    # used to sit at 98% and shard 2 past 100%. `--shard` still splits by count,
+    # not by duration, so the next thing to make them uneven will be one heavy
+    # journey rather than one heavy engine; Playwright offers no duration split,
+    # and moving
     # a journey by hand drifts.
     timeout-minutes: 20
     strategy:

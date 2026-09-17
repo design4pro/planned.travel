@@ -71,21 +71,28 @@ four sites where it matters.
 
 ### The cost, honestly
 
-|                      | Before                              | After                                                                               |
-| -------------------- | ----------------------------------- | ----------------------------------------------------------------------------------- |
-| PR e2e wall clock    | 2 shards, 882 s and >900 s of tests | 2 shards of ~26 chromium tests each, ~440 s of tests apiece on the same measurement |
-| PR e2e runner time   | ~22 min an event                    | ~12-14 min an event (the 2-3 min of fixed cost per shard does not shrink)           |
-| Per merge, ~6 events | ~132 min                            | ~75 min                                                                             |
-| WebKit coverage      | every event, ~6 times a merge       | once a day                                                                          |
+|                      | Before                              | After                                                  |
+| -------------------- | ----------------------------------- | ------------------------------------------------------ |
+| PR e2e wall clock    | 2 shards, 882 s and >900 s of tests | **285 s and 235 s of tests** (run 35250473957)         |
+| Budget spent         | 98% and past 100% of 900 s          | **32% and 26%** - about 70% of `globalTimeout` unspent |
+| PR e2e runner time   | ~22 min an event                    | **~11.7 min** an event (jobs of 6m35s and 5m08s)       |
+| Per merge, ~6 events | ~132 min                            | **~70 min**                                            |
+| WebKit coverage      | every event, ~6 times a merge       | once a day                                             |
 
-The saving is real and is **not** being spent on frequency this time. It is banked.
+The "after" column is measured, not projected: run 35250473957 is the first CI run of this change,
+and it is where #466's "at least ~25% of budget unspent" criterion is answered. The saving is real
+and is **not** being spent on frequency this time. It is banked.
 
 ### On #466
 
-This should resolve it: the symptom was one shard carrying 52 WebKit tests against a 900 s budget,
-and no shard now carries more than about half that, of the faster engine. It is left open rather
-than closed by keyword, because #466's own acceptance criteria ask for the headroom to be measured
-on a real run and written down - and that measurement cannot be taken until this lands.
+This resolves the cause, and the measurement #466 asks for is in the table above: run 35250473957
+spent 32% and 26% of the 900 s budget, against its criterion of "at least ~25% unspent". The
+`ci.yml` comment block that carries the sharding arithmetic - #466's third criterion - now names
+those numbers.
+
+It is still left open rather than closed by keyword, for one reason only: #466 asks for no shard to
+exceed the budget "on `develop` or on a feature branch", and the run above is a feature branch. The
+push run on `develop` after this merges is what finishes it.
 
 ### The project is red today, and this decision does not fix it
 
@@ -98,19 +105,18 @@ skipped, 7.0 min.** The same suite under `chromium` was 50 passed, 2 skipped, ex
   at 393px it resolves enabled; the trip the phone layout puts first is not the one the desktop
   layout puts first, so the unconditional assertion above the branch does not hold. **Reproduced on
   unmodified `develop` with this change stashed**, so it predates it.
-- `e2e/journeys.spec.ts:2046` - `a calendar is read, pruned and written to the desk as unchecked
-imports`. Three attempts out of three in the full run, and green when run alone: the import
-  widget's toast, fixed at `bottom-[calc(var(--safe-bottom)+8.5rem)]`, and `#sentry-feedback` both
-  intercept the pointer at phone width. Order-dependent, and a real interception rather than a
-  timeout.
+- `e2e/journeys.spec.ts:2046` - `a calendar is read, pruned and written to the desk as unchecked imports`.
+  Three attempts out of three in the full run, and green when run alone: the import widget's toast,
+  fixed at `bottom-[calc(var(--safe-bottom)+8.5rem)]`, and `#sentry-feedback` both intercept the
+  pointer at phone width. Order-dependent, and a real interception rather than a timeout.
 - One of the four flakes is `pageerror: Importing a module script failed` on `/dashboard` - the exact
   WebKit behaviour `e2e/helpers/admin.ts` already documents.
 
 **So the nightly will be red on its first run.** That is stated here rather than discovered later.
 It is also the strongest evidence for this decision's premise: these failures were being masked,
 because the shard carrying them was dying on `globalTimeout` before it reached them (#466). Fixing
-them is separate work and belongs on its own ticket; nothing in this ADR should be read as claiming
-the coverage it relocates is currently green.
+them is separate work and is tracked as #557; nothing in this ADR should be read as claiming the
+coverage it relocates is currently green.
 
 ## Alternatives rejected
 
