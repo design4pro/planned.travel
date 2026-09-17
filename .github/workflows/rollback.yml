@@ -107,6 +107,19 @@ jobs:
         if: steps.gate.outputs.configured == 'true'
         uses: actions/checkout@v7
 
+      # `wrangler-action` with `packageManager: pnpm` runs pnpm, it does not
+      # install it: the input only picks which binary to call. On the self-hosted
+      # pool that binary came from the runner image, so this step was not needed;
+      # `ubuntu-latest` ships none, and without it the rollback would have died on
+      # `pnpm: command not found` during the incident it exists for. `install` is
+      # off because nothing here builds - only wrangler and `wrangler.jsonc` are
+      # needed, and wrangler-action fetches wrangler itself.
+      - name: Set up the toolchain
+        if: steps.gate.outputs.configured == 'true'
+        uses: ./.github/actions/setup
+        with:
+          install: 'false'
+
       # `--yes` answers the confirmation prompt. Without it the command waits on
       # a stdin nobody is holding and the job sits until its timeout.
       - name: Roll the Worker back
