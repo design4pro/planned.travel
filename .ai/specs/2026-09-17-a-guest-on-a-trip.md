@@ -171,6 +171,8 @@ Each is wrapped in the module's existing `attempted()` helper, so an expected re
 
 ## 📝 UI/UX
 
+Two dependency-free static reproductions sit beside this spec, and they are what the implementation is measured against: [`assets/a-guest-on-a-trip/mockup-01-guests-list.html`](assets/a-guest-on-a-trip/mockup-01-guests-list.html) — the loaded list, the inline duplicate refusal, and the empty state in dark — and [`assets/a-guest-on-a-trip/mockup-02-merge-dialog.html`](assets/a-guest-on-a-trip/mockup-02-merge-dialog.html) — the merge dialog with its combobox open, and what it reports when no relinker is registered.
+
 **The guest list**, beneath the members list in the left column of `/trips/$tripId/people`. Each row: the name, a guest `Badge`, and — for the `owner` only — rename, merge and remove controls. Every component is already in `src/components/ui`: `Card`, `SectionLabel`, `Badge`, `Button`, `IconButton`, `Combobox`, `Input`, `Field`, `Dialog`, `EmptyState`. No new primitive is proposed.
 
 **The empty state is designed, not tolerated.** A trip with no guests is the common first state, so the list shows an `EmptyState` explaining what a guest is — somebody travelling with you who does not need an account — with the add control as its action, rather than an empty box.

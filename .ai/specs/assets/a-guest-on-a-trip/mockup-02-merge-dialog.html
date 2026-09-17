@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mockup — merging a guest into a member, and what it reports</title>
+    <!--
+      Illustrative static mockup for .ai/specs/2026-09-17-a-guest-on-a-trip.md.
+      Self-contained: inline CSS, no build step, no app code, no external requests.
+      Colour and type values are copied from src/styles/tokens.css; the glyphs are
+      inline SVG stand-ins for the lucide icons the real dialog composes.
+      Placeholder data only.
+
+      Two panes: the merge dialog with the member combobox open (light), and the
+      state it reports once the batch has run with no relinker registered (dark) —
+      which is the honest state of the product until 04-* and 05-* register theirs.
+    -->
+    <style>
+      :root {
+        --color-surface: #ffffff;
+        --color-surface-2: #f3f1ed;
+        --color-surface-inset: #edebe6;
+        --color-ink: #16150f;
+        --color-ink-2: #403e36;
+        --color-ink-3: #5b5951;
+        --color-ink-4: #6c6a61;
+        --color-edge: #e3e0d8;
+        --color-edge-faint: rgb(22 21 15 / 0.07);
+        --color-accent: #16150f;
+        --color-accent-on: #ffffff;
+        --color-brand: #256256;
+        --color-danger: #a4291f;
+        --color-danger-soft: #fbe9e6;
+        --color-success: #136b45;
+        --color-success-soft: #e2f1e8;
+        --text-micro: 0.6875rem;
+        --text-caption: 0.75rem;
+        --text-label: 0.8125rem;
+        --tracking-label: 0.08em;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-full: 9999px;
+      }
+
+      [data-theme='dark'] {
+        --color-surface: #1a1a18;
+        --color-surface-2: #212120;
+        --color-surface-inset: #292926;
+        --color-ink: #f8f7f4;
+        --color-ink-2: #d8d6d0;
+        --color-ink-3: #adaba3;
+        --color-ink-4: #93918a;
+        --color-edge: #3a3a36;
+        --color-edge-faint: rgb(255 255 255 / 0.08);
+        --color-accent: #f8f7f4;
+        --color-accent-on: #16150f;
+        --color-brand: #5fbba0;
+        --color-danger: #f07f74;
+        --color-danger-soft: #2a1614;
+        --color-success: #4cc38a;
+        --color-success-soft: #11251c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        padding: 28px;
+        background: #6e6c66;
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          'Segoe UI',
+          Inter,
+          sans-serif;
+        color: var(--color-ink);
+      }
+
+      .pane-label {
+        font-size: var(--text-micro);
+        letter-spacing: var(--tracking-label);
+        text-transform: uppercase;
+        color: #edebe6;
+        margin: 0 0 8px 2px;
+      }
+
+      .dialog {
+        width: 420px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-edge);
+        border-radius: var(--radius-lg);
+        padding: 22px;
+        color: var(--color-ink);
+      }
+
+      .dialog h3 {
+        margin: 0 0 8px;
+        font-size: 1.125rem;
+      }
+
+      .dialog p {
+        margin: 0 0 16px;
+        font-size: var(--text-caption);
+        color: var(--color-ink-3);
+        line-height: 1.55;
+      }
+
+      .field-label {
+        display: block;
+        font-size: var(--text-label);
+        color: var(--color-ink-2);
+        margin: 0 0 6px;
+      }
+
+      .combobox {
+        border: 1px solid var(--color-accent);
+        border-radius: var(--radius-sm);
+        padding: 8px 10px;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--color-ink-4);
+      }
+
+      .listbox {
+        margin-top: 4px;
+        border: 1px solid var(--color-edge);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface);
+        overflow: hidden;
+      }
+
+      .option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--color-edge-faint);
+      }
+
+      .option:last-child {
+        border-bottom: 0;
+      }
+
+      .option.active {
+        background: var(--color-surface-2);
+      }
+
+      .avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: var(--radius-full);
+        background: var(--color-surface-inset);
+        display: grid;
+        place-items: center;
+        font-size: var(--text-micro);
+        color: var(--color-ink-3);
+        flex: none;
+      }
+
+      .role {
+        margin-left: auto;
+        font-size: var(--text-micro);
+        color: var(--color-ink-4);
+      }
+
+      .warning {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        margin: 16px 0 0;
+        padding: 10px 12px;
+        border: 1px solid var(--color-danger);
+        background: var(--color-danger-soft);
+        border-radius: var(--radius-sm);
+        font-size: var(--text-caption);
+        color: var(--color-danger);
+        line-height: 1.5;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .btn {
+        border-radius: var(--radius-sm);
+        padding: 8px 14px;
+        font-size: var(--text-label);
+        border: 1px solid var(--color-edge);
+        background: var(--color-surface);
+        color: var(--color-ink-2);
+      }
+
+      .btn.primary {
+        border-color: var(--color-accent);
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+      }
+
+      .result {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        padding: 12px 14px;
+        border: 1px solid var(--color-success);
+        background: var(--color-success-soft);
+        border-radius: var(--radius-sm);
+        font-size: var(--text-caption);
+        color: var(--color-success);
+        line-height: 1.55;
+      }
+
+      .result strong {
+        display: block;
+        font-size: 0.875rem;
+        margin-bottom: 2px;
+      }
+
+      svg {
+        width: 15px;
+        height: 15px;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <p class="pane-label">The merge dialog, combobox open</p>
+      <div class="dialog">
+        <h3>Anna is now one of the people on this trip</h3>
+        <p>
+          Everything assigned to Anna moves to the person you choose, and the
+          guest goes. This cannot be undone.
+        </p>
+
+        <label class="field-label">Choose somebody on this trip</label>
+        <div class="combobox">
+          <span>Choose somebody on this trip</span>
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+        </div>
+        <div class="listbox">
+          <div class="option active">
+            <span class="avatar">RW</span>Rafał Wolak<span class="role"
+              >Owner</span
+            >
+          </div>
+          <div class="option">
+            <span class="avatar">JK</span>Julia Kern<span class="role"
+              >Editor</span
+            >
+          </div>
+          <div class="option">
+            <span class="avatar">AN</span>Anna Nowak<span class="role"
+              >Viewer</span
+            >
+          </div>
+        </div>
+
+        <p class="warning">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3 2 20h20L12 3ZM12 9v5M12 17h.01" />
+          </svg>
+          The guest record goes when this runs. There is no undo, and no second
+          chance to check the name.
+        </p>
+
+        <div class="actions">
+          <span class="btn">Cancel</span>
+          <span class="btn primary">Merge</span>
+        </div>
+      </div>
+    </div>
+
+    <div data-theme="dark">
+      <p class="pane-label">What it reports, with no relinker registered yet</p>
+      <div class="dialog">
+        <h3>Done</h3>
+        <p class="result">
+          <svg viewBox="0 0 24 24"><path d="m4 12 5 5L20 7" /></svg>
+          <span>
+            <strong>Anna is now Rafał Wolak</strong>
+            Nothing was assigned to them yet.
+          </span>
+        </p>
+        <p style="margin: 16px 0 0">
+          Once <code>04-budget-and-currencies</code> and
+          <code>05-packing-and-todos</code> register their relinkers, this line
+          names each one and how many rows it moved.
+        </p>
+        <div class="actions"><span class="btn primary">Close</span></div>
+      </div>
+    </div>
+  </body>
+</html>
