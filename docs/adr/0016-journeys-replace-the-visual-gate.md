@@ -128,6 +128,11 @@ rather than after it lands on `develop` - and it is bought, not free. Whether th
 the answer is no is the trigger, not the shard count (four shards halve the test time and pay the
 fixed cost twice more, for about the same total).
 
+_Amended by ADR 0022: the answer was no, and the lever pulled was neither of those two. A pull
+request now pays for `chromium` alone - `mobile-safari` was measured as the larger half of every
+event and the half that ran out of wall clock, and it moved to a nightly workflow. Every number in
+the table above describes the arrangement that change replaced._
+
 ### Measurements taken for this decision
 
 - **The atlas journeys need no basemap.** Run against an empty `.e2e-tiles/`, all six are green.
