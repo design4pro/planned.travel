@@ -2,9 +2,7 @@
   "version": 1,
   "baseBranch": "develop",
   "tracker": "github",
-  "browser": {
-    "provider": "playwright"
-  },
+  "browser": { "provider": "playwright" },
   "validation": {
     "commands": [
       "node .ai/scripts/agent-kit-check.mjs",
@@ -54,14 +52,10 @@
       "needs-info",
       "ready-for-agent",
       "ready-for-human"
-    ],
-    "command": ["groom", "autofix", "spec", "review-threads"],
-    "outside": ["do-not-close", "needs-e2e"]
+    ]
   },
   "qaGate": true,
-  "ci": {
-    "maxWaitMinutes": 40
-  },
+  "ci": { "maxWaitMinutes": 40 },
   "engine": {
     "loopStepThreshold": 20,
     "executorTier": "standard",
