@@ -110,6 +110,13 @@ export default [
       // Run scratch: transform caches and other artefacts a run writes while it is in flight, so
       // the repo-wide lint goes red for whoever has a cezar run open. Gitignored like the above.
       '.ai/cezar/tmp/**',
+      // The dispatch channel a dispatched task tree writes through, plus the composer's
+      // attachments and unsent drafts. Cezar's own ensureDataGitignore refuses to track all three,
+      // and a gitignored directory this list does not name is the #203 failure waiting for its
+      // first `.ts` file: red on the machine that wrote it, pointing at `parserOptions.project`.
+      '.ai/cezar/dispatch/**',
+      '.ai/cezar/attachments/**',
+      '.ai/cezar/drafts/**',
       // Same thing one directory up: `om-auto-fix-pr` and friends stage a scratch copy of the
       // repo under `.ai/tmp/<skill>/<run>/`, including a `prettier.config.js` that belongs to
       // no tsconfig. It is gitignored, so it never reaches CI - it just turns `pnpm lint` red
