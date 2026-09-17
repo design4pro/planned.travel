@@ -28,7 +28,12 @@ import type { Unstable_DevWorker } from 'wrangler'
  *   its own ICU and agrees with workerd about nearly everything, which is
  *   exactly why it is not evidence.
  * - The **browser** side is whichever engine the Playwright project runs, and
- *   `mobile-safari` is the one that matters. Measured across all twenty-three
+ *   `mobile-safari` is the one that matters — which is also why this file is worth
+ *   less on a pull request than it looks. That project is off the pull-request
+ *   path (#552) and runs nightly in `.github/workflows/e2e-webkit.yml`, so on a PR
+ *   this spec runs under `chromium`, where it has never found anything. A locale
+ *   or format change is the case to run `pnpm e2e --project=mobile-safari` by hand
+ *   rather than wait for the nightly. Measured across all twenty-three
  *   locales: Chromium agreed with workerd on every single field, and WebKit
  *   26.5 disagreed about Greek month names, Arabic and Catalan and Russian
  *   weekdays, Catalan and Arabic date patterns, Russian and Chinese relative

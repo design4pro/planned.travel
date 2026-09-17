@@ -1,0 +1,174 @@
+name: e2e · webkit
+
+# The WebKit half of the critical journeys, on its own schedule instead of on every
+# pull request.
+#
+# Why it is a workflow of its own. `mobile-safari` is the slower half of the suite and
+# it was costing a pull request the larger half of every e2e event on a shared,
+# self-hosted pool. Measured on the 2-vCPU runner (run 35101667571): `--shard` splits
+# by test count with no project filter, the split fell along project lines, and shard 1
+# — all chromium — finished its 52 tests in 882 s while shard 2 — all `mobile-safari` —
+# needed more than the 900 s `globalTimeout` it had for the same 52. That is issue #466:
+# CI red with nothing failing.
+#
+# The coverage is not being retired, only moved off the pull-request path (issue #552).
+# WebKit has caught defects Chromium cannot see — an `Intl` divergence between WebKit
+# and workerd across the locale catalogue (`e2e/i18n-runtime-parity.spec.ts`), a date
+# heading hydration mismatch (`e2e/trips-core.spec.ts`), a module-import page error on
+# every console route (`e2e/helpers/admin.ts`) — and journey 7 exists for the 393px
+# composition alone (`e2e/journeys.spec.ts`). What changed is when the answer arrives:
+# within a day, against `develop`, instead of within the hour, against a branch.
+#
+# It could not live in `ci.yml` as a post-merge job. `deploy-staging` and
+# `deploy-production` there have `e2e-report` in their `needs`, so a WebKit shard that
+# runs out of wall clock would block the staging deploy — #466 again, one branch over.
+# Here it blocks nothing.
+#
+# Two things a reader should know before relying on it:
+#   - A scheduled workflow runs from the repository's DEFAULT branch, so this file has
+#     to reach `main` before the cron ever fires, and the run then checks out `develop`
+#     explicitly (below) because that is where a regression lands first.
+#   - GitHub disables a schedule after 60 days without repository activity, and a failed
+#     scheduled run notifies the last person to touch the file, nobody else. This is a
+#     net, not a gate.
+on:
+  schedule:
+    # 03:30 UTC daily — the pool is idle, and the result is waiting before the first
+    # pull request of the day. Away from the Tuesday 06:00 sentry-triage sweep.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or SHA to run the WebKit journeys against'
+        type: string
+        default: develop
+
+# One run at a time, never cancelled: a nightly that supersedes itself reports on
+# whichever commit happened to be last, which is the one thing this job must not do.
+concurrency:
+  group: e2e-webkit
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  # What takes `mobile-safari` out of `playwright.config.ts` on every other CI run, and
+  # puts it back here. Without it `--project=mobile-safari` below fails with "project not
+  # found", which is deliberate: a silent empty run is the failure mode worth refusing.
+  E2E_WEBKIT: '1'
+  # Inlined into the bundle by Vite, exactly as in ci.yml — the build the journeys walk
+  # has to be the build a customer gets.
+  VITE_POLAR_PRODUCT_SOLO_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_SOLO_MONTHLY }}
+  VITE_POLAR_PRODUCT_SOLO_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_SOLO_YEARLY }}
+  VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
+  VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
+
+jobs:
+  # Two shards, the same count `ci.yml` uses and for the same reason: one Playwright
+  # worker a shard on a 2-vCPU runner, and 51 declarations do not divide usefully past
+  # two. The arithmetic that sizes it: the project's 51 tests cost more than 900 s
+  # whole, so half of them is the change that brings a shard back inside `globalTimeout`
+  # — which is why this job needs no timeout of its own beyond ci.yml's 20 minutes.
+  e2e-webkit:
+    name: e2e · webkit (${{ matrix.shard }}/2)
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          # A schedule hands this workflow the default branch; the regression worth
+          # catching is on `develop`, which is ahead of it.
+          ref: ${{ inputs.ref || 'develop' }}
+
+      - name: Prepare the e2e environment
+        uses: ./.github/actions/e2e-env
+        with:
+          # Both shards seed identical databases; auditing the seed once is proof
+          # enough, and 25 s off the other shard's critical path.
+          verify-seed: ${{ matrix.shard == 1 }}
+
+      - name: Run this shard of the WebKit journeys
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+        run: pnpm exec playwright test --project=mobile-safari --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=blob
+
+      - name: Upload the blob report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: blob-report-webkit-${{ matrix.shard }}
+          path: blob-report
+          retention-days: 1
+          if-no-files-found: ignore
+
+      # The runner is gone by the time anyone reads the result, and a shard that dies on
+      # wall clock leaves no server-side evidence otherwise. Seven days rather than the
+      # blob's one: these are kilobytes, and the question they answer outlives the run.
+      - name: Upload the runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-webkit-runtime-${{ matrix.shard }}
+          path: |
+            e2e-runtime.log
+            dev-server.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # One report for the two shards, and the verdict. `merge-reports` exits 0 whatever the
+  # shards found (ci.yml carries the run that proved it), so the result comes from
+  # `needs`, the aggregate over the matrix.
+  e2e-webkit-report:
+    name: e2e · webkit merged report
+    needs: e2e-webkit
+    if: ${{ !cancelled() }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || 'develop' }}
+
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup
+
+      - name: Download the blob reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: blob-report-webkit-*
+          path: all-blob-reports
+          merge-multiple: true
+
+      - name: Merge the shard reports
+        run: |
+          set -euo pipefail
+          if [ -z "$(ls -A all-blob-reports 2>/dev/null)" ]; then
+            echo '::notice title=e2e webkit::no shard reports to merge — the journeys did not run.'
+            exit 0
+          fi
+          pnpm exec playwright merge-reports --reporter html,github ./all-blob-reports
+
+      - name: Upload the Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-webkit
+          path: playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Fail unless every shard passed
+        if: ${{ !cancelled() && needs.e2e-webkit.result != 'success' }}
+        run: |
+          echo "::error title=e2e webkit::the WebKit journeys did not pass on every shard (result: ${{ needs.e2e-webkit.result }}); the report above names the failures."
+          exit 1

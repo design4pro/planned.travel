@@ -66,12 +66,40 @@ const FIXTURE_DAY = '2026-08-20'
 const clockPin = { [SERVER_TODAY_HEADER]: FIXTURE_DAY }
 
 /**
+ * Whether the `mobile-safari` project is part of this run.
+ *
+ * It is, everywhere except a CI run that has not asked for it. That asymmetry is
+ * the whole point: WebKit is the slower half of the suite, and on the shared
+ * runner pool a pull request used to pay for it on every event. Measured on the
+ * 2-vCPU runner (run 35101667571), the split fell along project lines — shard 1
+ * was all chromium and finished its 52 tests in 882 s, shard 2 was all
+ * `mobile-safari` and needed more than the 900 s `globalTimeout` it had for the
+ * same 52. That is issue #466, and it was WebKit's cost, not a leak.
+ *
+ * So the cost moved off the pull-request path rather than being deleted: the
+ * project is still declared, still runnable by name, and
+ * `.github/workflows/e2e-webkit.yml` runs it nightly with `E2E_WEBKIT=1`. What a
+ * pull request no longer buys is same-hour feedback on a WebKit-only defect —
+ * that now arrives within a day, against `develop`, and the four comments in the
+ * suite that name this project say where it runs.
+ *
+ * A local run is unaffected and still carries both projects, because the reason
+ * to run WebKit at all is strongest where a human is looking at phone-width
+ * behaviour. `pnpm e2e --project=mobile-safari` is the direct way to ask for it.
+ */
+const runsWebKit = !isCI || process.env.E2E_WEBKIT === '1'
+
+/**
  * The end-to-end journeys.
  *
  * Two projects, matching the two layouts the design system actually ships:
  * a desktop viewport wide enough for the three-column planner, and an iPhone
  * running WebKit — mobile Safari is where safe-area insets, `100dvh` and
  * momentum scrolling behave differently from everything else.
+ *
+ * They do not both run everywhere. `chromium` runs on every event; `mobile-safari`
+ * is off the pull-request path and runs nightly instead — `runsWebKit` above
+ * carries the measurement that moved it and names where it went.
  *
  * No screenshot is compared here any more (ADR 0016). What a run asserts is that
  * every screen answers, renders its own content, hydrates, says nothing in the
@@ -132,12 +160,18 @@ export default defineConfig({
   // budget for every test that does not carry its own: raising it again would
   // absorb a slow-page regression on every other screen rather than report it.
   timeout: isCI ? 60_000 : 30_000,
-  // Per CI shard (ci.yml splits the suite two ways). Measured on the 2-vCPU
-  // runner: 6m41s of journeys on shard 1 and over 8 min on shard 2, against the
-  // ~3 min a local run at two workers suggested. 15 min leaves a retry-heavy
-  // shard room to finish and report instead of being cut off — the report is
-  // what tells load from regression — and stays under ci.yml's own
+  // Per CI shard (ci.yml splits the suite two ways, and e2e-webkit.yml does the
+  // same for its own project). Measured on the 2-vCPU runner while both projects
+  // ran on every event: 6m41s of journeys on shard 1 and over 8 min on shard 2,
+  // against the ~3 min a local run at two workers suggested. 15 min leaves a
+  // retry-heavy shard room to finish and report instead of being cut off — the
+  // report is what tells load from regression — and stays under ci.yml's own
   // `timeout-minutes: 20`, which must never be the one that fires first.
+  //
+  // Both sides of the split now sit well inside it: a pull request shards ~52
+  // chromium tests two ways where one shard used to carry all 52 in 882 s, and
+  // the nightly WebKit run shards its own project the same way. The budget is
+  // unchanged on purpose — it bounds a hung shard, and that job did not change.
   globalTimeout: isCI ? 15 * 60_000 : undefined,
   reporter: [
     // `github` writes GitHub annotations and is noise in a terminal; `list` is the
@@ -188,19 +222,27 @@ export default defineConfig({
         extraHTTPHeaders: clockPin,
       },
     },
-    {
-      name: 'mobile-safari',
-      dependencies: ['setup'],
-      use: {
-        ...devices['iPhone 15'],
-        // Pinned rather than inherited: journey 7's composition argument is measured
-        // against this exact geometry (`e2e/journeys.spec.ts`), so a playwright bump
-        // must not move it under the test. Everything else — WebKit, touch, the
-        // device scale and the user agent — still comes from the descriptor.
-        viewport: { width: 393, height: 659 },
-        extraHTTPHeaders: clockPin,
-      },
-    },
+    // Absent from a pull request's run and present everywhere else — see
+    // `runsWebKit` above for why, and for where it runs instead. Spread rather
+    // than filtered afterwards, so a CI run that did not ask for it fails
+    // `--project=mobile-safari` loudly instead of silently matching nothing.
+    ...(runsWebKit
+      ? [
+          {
+            name: 'mobile-safari',
+            dependencies: ['setup'],
+            use: {
+              ...devices['iPhone 15'],
+              // Pinned rather than inherited: journey 7's composition argument is measured
+              // against this exact geometry (`e2e/journeys.spec.ts`), so a playwright bump
+              // must not move it under the test. Everything else — WebKit, touch, the
+              // device scale and the user agent — still comes from the descriptor.
+              viewport: { width: 393, height: 659 },
+              extraHTTPHeaders: clockPin,
+            },
+          },
+        ]
+      : []),
   ],
 
   webServer:
