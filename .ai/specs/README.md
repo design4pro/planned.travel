@@ -6,13 +6,14 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (3)
+## Draft — being written (4)
 
-| Spec                                                                                                                                | Date       | Issue                                                           | Spec PR                                                         | Implementation |
-| ----------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
-| [A guest on a trip: the record, the refusal of duplicates, the bound, and the merge into a member](2026-09-17-a-guest-on-a-trip.md) | 2026-09-17 | [#119](https://github.com/design4pro/planned.travel/issues/119) | —                                                               | —              |
-| [Reveal a masked code in place](2026-09-15-reveal-code-in-place.md)                                                                 | 2026-09-15 | [#213](https://github.com/design4pro/planned.travel/issues/213) | [#518](https://github.com/design4pro/planned.travel/issues/518) | —              |
-| [Index-usable airport type-ahead](2026-09-13-index-usable-airport-type-ahead.md)                                                    | 2026-09-13 | [#194](https://github.com/design4pro/planned.travel/issues/194) | [#467](https://github.com/design4pro/planned.travel/issues/467) | —              |
+| Spec                                                                                                                                                         | Date       | Issue                                                           | Spec PR                                                         | Implementation |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [Trips core, what remains: the list read two ways, one trip form, an arrangeable planner, and a reminder you can set](2026-09-17-trips-core-what-remains.md) | 2026-09-17 | [#104](https://github.com/design4pro/planned.travel/issues/104) | —                                                               | —              |
+| [A guest on a trip: the record, the refusal of duplicates, the bound, and the merge into a member](2026-09-17-a-guest-on-a-trip.md)                          | 2026-09-17 | [#119](https://github.com/design4pro/planned.travel/issues/119) | —                                                               | —              |
+| [Reveal a masked code in place](2026-09-15-reveal-code-in-place.md)                                                                                          | 2026-09-15 | [#213](https://github.com/design4pro/planned.travel/issues/213) | [#518](https://github.com/design4pro/planned.travel/issues/518) | —              |
+| [Index-usable airport type-ahead](2026-09-13-index-usable-airport-type-ahead.md)                                                                             | 2026-09-13 | [#194](https://github.com/design4pro/planned.travel/issues/194) | [#467](https://github.com/design4pro/planned.travel/issues/467) | —              |
 
 ## In progress — a build is open (3)
 
