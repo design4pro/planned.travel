@@ -38,7 +38,9 @@ self-hosted pool, and the most visible return lately was a timeout rather than a
    A local run is unchanged and still carries both projects. A CI run that did not ask for WebKit
    does not get it, and `--project=mobile-safari` there fails loudly rather than matching nothing.
 2. `.github/workflows/e2e-webkit.yml` runs the project nightly at 03:30 UTC against `develop`, in
-   two shards, with `workflow_dispatch` for an on-demand run against any ref.
+   two shards, with `workflow_dispatch` for an on-demand run against any ref. Both of those triggers
+   are read from the repository's default branch, so neither is available until this file reaches
+   `main` - see "WebKit runs nowhere until this reaches `main`" under Consequences.
 3. The `ci.yml` `e2e` job is untouched. It keeps its two shards, its `globalTimeout` and its
    `timeout-minutes`; the same ~52 chromium tests that used to fill one shard whole now split
    across both.
@@ -59,6 +61,17 @@ against the branch that caused it.** That is the whole of the trade, and it is t
 0016 made in the other direction for the suite as a whole - reversed here for one project, on the
 evidence that this project's share of the cost was the larger one and its share of the findings was
 not proportional.
+
+**WebKit runs nowhere until this reaches `main`.** `runsWebKit` drops `mobile-safari` from every
+`ci.yml` run the moment this lands on `develop` - `ci.yml` runs on both branches - while GitHub
+reads `schedule` from the default branch alone and offers `workflow_dispatch` only for a workflow
+file already present there. So `e2e-webkit.yml` stays inert until a `develop` -> `main` promotion
+carries it across, and for that window the project runs in no CI job at all: not on a pull request,
+not nightly, and not on demand. `pnpm e2e --project=mobile-safari` locally is the only way to ask
+for it meanwhile. The window is bounded by the promotion cadence, and what it suspends was largely
+not being collected anyway - shard 2 was dying on `globalTimeout` before it reached most of these
+tests (#466). It is written down here so the promotion is understood as the step that arms the net,
+rather than a formality after the decision has already taken effect.
 
 **The nightly is a net, not a gate.** It blocks nothing. A failing scheduled run notifies the last
 person to touch the workflow file and nobody else, and GitHub disables a schedule after 60 days

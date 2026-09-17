@@ -25,8 +25,12 @@ name: e2e · webkit
 # Here it blocks nothing.
 #
 # Two things a reader should know before relying on it:
-#   - A scheduled workflow runs from the repository's DEFAULT branch, so this file has
-#     to reach `main` before the cron ever fires, and the run then checks out `develop`
+#   - BOTH triggers below are read from the repository's DEFAULT branch: a cron fires only
+#     from there, and `workflow_dispatch` is only offered for a workflow file already
+#     present there. So this file has to reach `main` before either one works, and until a
+#     `develop` -> `main` promotion carries it across, `mobile-safari` runs in no CI job at
+#     all — `pnpm e2e --project=mobile-safari` locally is the only way to ask for it
+#     meanwhile (ADR 0022). Once the cron does fire, the run checks out `develop`
 #     explicitly (below) because that is where a regression lands first.
 #   - GitHub disables a schedule after 60 days without repository activity, and a failed
 #     scheduled run notifies the last person to touch the file, nobody else. This is a
