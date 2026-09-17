@@ -19,8 +19,8 @@ state for an issue: it says who acts next, and two of the four also start a run.
 | Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | skills; `qa-approved` by a human (or self-QA with evidence)                                                 |
 | Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | issue grooming, Sentry sweep (`priority-high`), PR skills                                                   |
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                   |
-| Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | issues only, one at a time; humans add `needs-triage`, `afk-triage` decides the rest                        |
-| Hold     | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                             |
+| Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | issues only, one at a time; humans and `afk-architecture-review` add `needs-triage`, `afk-triage` the rest  |
+| Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                             |
 | Command  | `groom`, `autofix`, `spec`, `review-threads`                                               | humans, except `review-threads` (the review job); the run removes it as its first mutation                  |
 
 There is no `status:` axis. An open issue carries an **intake** label once it has been groomed, and
@@ -34,8 +34,9 @@ reported by `om-review-prs`, not repaired by a sweeper.
 An intake label is a state, and it is the ladder the pipeline walks by itself.
 
 - `needs-triage` - the issue is groomed and passes the Definition of Ready, and nobody has decided
-  yet whether an agent may take it. **Today only a maintainer adds it**, which is why this ladder
-  has launched almost nothing: grooming records `READY_STATUS` and stops. The edge that would make
+  yet whether an agent may take it. **Today a maintainer adds it, and `afk-architecture-review`
+  adds it to its own `Strong` candidates** - nothing else does, which is why this ladder has
+  launched almost nothing: grooming records `READY_STATUS` and stops. The edge that would make
   the loop self-feeding - a groom ending `READY_STATUS=ready` applies `needs-triage` as its last
   mutation - is designed and not yet wired (cezar `.ai/specs/2026-09-17-afk-intake-bridge.md`).
   **Triage new issues** reacts to the label and runs `afk-triage`.
@@ -126,7 +127,7 @@ Nothing gates the journeys now: they run on every PR, a documentation-only diff 
 
 The retired names are gone from GitHub as of 2026-09-08: the eight `status: *` labels, `prd`,
 `auto-advance` and `agent-pr` were deleted once the live automations
-(docs/agents/cezar-automations.json) no longer read them, leaving the 32 labels of the table above
+(docs/agents/cezar-automations.json) no longer read them, leaving the 35 labels of the table above
 and nothing else. Deleting a label strips it from history too, so a closed issue or a merged PR
 that carried one now shows one label fewer; `docs/agents/migration/labels-2026-09-08.json` and
 `issues-2026-09-08.json` are the snapshot taken immediately before. The four superseded skills
