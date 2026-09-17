@@ -17,3 +17,6 @@ automation-log.ndjson.tmp
 automation-poll.lock
 ui-state.json
 ui-state.json.tmp
+dispatch/
+attachments/
+drafts/
