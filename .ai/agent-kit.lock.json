@@ -1,5 +1,5 @@
 {
-  "kitVersion": 41,
+  "kitVersion": 42,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -43,7 +43,7 @@
       "mode": "100644"
     },
     ".ai/cezar/workflows/pr-autopilot.yml": {
-      "sha256": "ed178ef0c797349c5df1c190bc3a8ff5f63ccad13e549a6910b9f0441e82c9d8",
+      "sha256": "31e5b415fcfb58777f29a1b7b361c01e26773fbe8af5dd5ef6cd985b897b16b0",
       "mode": "100644"
     },
     ".ai/cezar/workflows/pr-fix.yml": {
@@ -79,7 +79,7 @@
       "mode": "100755"
     },
     ".ai/scripts/cez-automations.sh": {
-      "sha256": "6c8b39fe2d9fbf43624caf68abea4c3a8af07edde4e181a2ad9d248a5abd9e4c",
+      "sha256": "311a4c9b064ee487f5a5a863c174c65e57b2e8c1baa6c00e26f562a7eac0e18e",
       "mode": "100755"
     },
     ".ai/scripts/cez-prompt-templates.sh": {
@@ -111,11 +111,11 @@
       "mode": "100644"
     },
     ".ai/trackers/github.md": {
-      "sha256": "8861395adf6c96884356d282726d5f5149233b98121c8b43604805e6bf5c5b09",
+      "sha256": "7809564eb52d7c71aaf01f8b8694a60057be1f49625a90ac552722419940f097",
       "mode": "100644"
     },
     ".claude/hooks/__tests__/hooks.test.ts": {
-      "sha256": "03d8a739b04598ebdeaa726cba49a0100e255d2d74c25d0506020850f2d70dc3",
+      "sha256": "a7b4e94fd22ac1394ed75ef8149a5d9d2e0d17c7180fd96f182cd61900455e3d",
       "mode": "100644"
     },
     ".claude/hooks/format-file.sh": {
@@ -127,7 +127,7 @@
       "mode": "100755"
     },
     ".claude/hooks/guard-generated.sh": {
-      "sha256": "2bc9cd7e46eb818762e1fceff7ce397af5db27943be8df593d2cf79010587c38",
+      "sha256": "9e51fd5ed92cb66925ac4c07c07a454af479a5826fe0f14a65a89c9094807e99",
       "mode": "100755"
     },
     ".claude/hooks/guard-read.sh": {
@@ -143,7 +143,7 @@
       "mode": "100644"
     },
     ".github/workflows/claude-code-review.yml": {
-      "sha256": "5f5ef44458b8103fca8bb32dfe8c194f5e15da25fd80f89402aa9ecbc0301657",
+      "sha256": "d75fa2b51cd4e560a6d85e16411476649b3e640a91dd53d019b91518d2d718bd",
       "mode": "100644"
     },
     ".github/workflows/claude.yml": {
@@ -155,7 +155,7 @@
       "mode": "100644"
     },
     "docs/agents/cezar-automations.json": {
-      "sha256": "5eb2902f23aee9566fb111aa4f7ed114f53189f7906cfcf77ca2591d454713e1",
+      "sha256": "ab3d76ab7f9d5b1c44b6c59affa0af3093fab2225bb2977532016b547a777df2",
       "mode": "100644"
     },
     "scripts/ci/__tests__/claude-credential-gate.test.ts": {
@@ -175,7 +175,7 @@
       "mode": "100644"
     },
     "scripts/ci/__tests__/review-threads-label.test.mjs": {
-      "sha256": "578923112ec465f3302eb300055500793f5b8bc3d16f6681801d57cc2a1781e6",
+      "sha256": "7881f885b3d59d4f2a4f2be3a98e8fa18b13318588bcdbe5d8d8bab8c7afc7b5",
       "mode": "100644"
     },
     "scripts/ci/__tests__/review-workflow-base-checkout.test.ts": {
@@ -195,7 +195,7 @@
       "mode": "100644"
     },
     "scripts/ci/review-threads-label.mjs": {
-      "sha256": "1ea598360e9fc720c9fa3a59ededf4cac1e85728a46dacba9ccf7d69f2a3d337",
+      "sha256": "c738275418b3328b6a29817ae9ba7b744537b76f1e94388dd10b53fdffaf219f",
       "mode": "100644"
     }
   },
