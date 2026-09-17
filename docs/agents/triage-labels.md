@@ -48,8 +48,8 @@ issue form ─► category;  Sentry sweep ─► bug + priority-high + groom
 human: autofix ─► in-progress ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► human review
 human: spec (feature) ─► spec PR (documentation, skip-qa, Refs #n) ─► human merges ─► the same issue is the implementation ticket
       ─► human: autofix on it ─► om-auto-fix-issue's feature route ─► om-auto-implement-spec (cockpit: implement-spec is the same skill by hand)
-PR opened by a human ─(pull_request.opened: pr-autopilot)─► review / fix / QA, never merge
-claude-review leaves open threads ─► review-threads ─(pr-review-threads)─► om-auto-fix-pr replies and resolves
+PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA, never merge
+claude-review leaves open threads ─► review-threads ─(Resolve blocking review threads)─► om-auto-fix-pr replies and resolves
 housekeeping (07:00, 12:00, 17:00 weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
       ─► issue closed when its `Closes #n` PR merged into develop
 human: om-approve-merge-pr from the cockpit; needs-qa merges only with qa-approved

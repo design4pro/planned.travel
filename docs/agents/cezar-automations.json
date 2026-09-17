@@ -1,6 +1,6 @@
 [
   {
-    "name": "issue-groom",
+    "name": "Groom new issues",
     "description": "A maintainer opens an issue; om-auto-manage-issues adds SDLC labels, a Definition of Ready check and implementation notes (ADR 0018). `authors` is the gate: the run holds Bash with no allowlist, so an issue from anyone else is groomed only when a maintainer adds `groom`. Issues a run holds or a human put on hold never match.",
     "events": ["issue.opened"],
     "intervalSeconds": 120,
@@ -20,7 +20,7 @@
     }
   },
   {
-    "name": "issue-regroom",
+    "name": "Re-groom on request",
     "description": "A label only a collaborator can set: `groom` re-runs om-auto-manage-issues on one issue (an external report a maintainer vouches for, an edit, a reply), and the Sentry sweep files with it so its issues are groomed too. The override removes the label first.",
     "events": ["issue.labeled"],
     "intervalSeconds": 120,
@@ -40,7 +40,7 @@
     }
   },
   {
-    "name": "issue-autofix",
+    "name": "Fix issues on the autofix label",
     "description": "A human adds `autofix`; om-auto-fix-issue drives the issue to a reviewed PR on develop (ADR 0018). Held, blocked, do-not-merge or spec-pending issues never match.",
     "events": ["issue.labeled"],
     "intervalSeconds": 60,
@@ -60,7 +60,7 @@
     }
   },
   {
-    "name": "issue-spec",
+    "name": "Write a spec for feature issues",
     "description": "A human adds `spec` to a `feature` issue; om-auto-write-spec lands .ai/specs/<date>-<slug>.md on a design-only PR (ADR 0018).",
     "events": ["issue.labeled"],
     "intervalSeconds": 60,
@@ -81,7 +81,7 @@
     }
   },
   {
-    "name": "pr-autopilot",
+    "name": "Autopilot new pull requests",
     "description": "A human maintainer opens a PR; om-pr-autopilot diagnoses and runs the right chain, never merges (ADR 0018). Agent PRs (authored by design4pro-agent, the cockpit's gh identity) and dependabot are excluded by author; pipeline labels exclude the race with om-open-pr. The standing develop-to-main promotion PR is opened with a maintainer's token - which is what makes `pull_request` workflows run on it at all, claude-code-review.yml among them - so the author filter cannot tell it apart from a hand-opened one, and no filter here reads the base branch. .github/workflows/promote-develop.yml therefore opens it carrying `merge-queue`, which `excludeLabels` already stands down on.",
     "events": ["pull_request.opened"],
     "intervalSeconds": 300,
@@ -111,7 +111,7 @@
     }
   },
   {
-    "name": "pr-review-threads",
+    "name": "Resolve blocking review threads",
     "description": "The `claude-review` job left unresolved review threads on a PR and applied `review-threads`; om-auto-fix-pr drives the PR to merge-ready and resolves them (ADR 0018). The develop ruleset blocks the merge on an open thread, so without this the PR waits for a human to run the same skill by hand. `includePullRequests` is read by the design4pro/cezar fork the cockpit runs - stock cezar 0.11.0 drops every label event on a PR, so this automation does not fire without it. The gate is the label: only a collaborator or the Actions bot can set one, and the review job applies it once per head SHA. The run removes it as its first mutation, so a label still present is a run nobody took. The automation is only ever armed for pull requests targeting the integration branch: review-threads-label.mjs reads `baseBranch` from .ai/agentic.config.json and stands down on anything else, so the standing promotion - whose *head* is the integration branch, and which this run would therefore push follow-up commits straight onto - never arms one.",
     "events": ["issue.labeled"],
     "intervalSeconds": 120,
@@ -125,6 +125,87 @@
     "task": {
       "prompt": "{{github.number}}",
       "workflow": "pr-fix",
+      "autonomous": true,
+      "worktree": true,
+      "variants": 1,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "Triage new issues",
+    "description": "A human adds `needs-triage`; afk-triage verifies the report, writes an Agent Brief comment and sets exactly one intake label. The label is the gate - only a collaborator can set one - which is also why this does not fire on `issue.opened` the way it does in cezar: om-auto-manage-issues already owns that event here, and two autonomous runs grooming the same fresh issue would race on its labels. Groom first, then ask for a brief.",
+    "events": ["issue.labeled"],
+    "intervalSeconds": 600,
+    "filters": {
+      "changedLabels": ["needs-triage"],
+      "excludeLabels": ["in-progress", "do-not-close", "blocked", "needs-info", "ready-for-agent", "ready-for-human"],
+      "maxRecords": 25,
+      "lookbackDays": 7
+    },
+    "task": {
+      "prompt": "Triage issue #{{github.number}} ({{github.url}}).",
+      "workflow": "triage",
+      "worktree": true,
+      "autonomous": true,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "Implement ready-for-agent issues",
+    "description": "An issue labeled `ready-for-agent` is implemented test-first in a worktree from its Agent Brief, gated, opened as a PR and reviewed. Never merges. Distinct from \"Fix issues on the autofix label\", which drives an ungroomed issue end to end - these two never contend for the same issue because they watch different labels. `risk-high` and `security` are excluded: afk-triage never promotes those to `ready-for-agent` in the first place, and this is the second lock on the same door.",
+    "events": ["issue.labeled"],
+    "intervalSeconds": 600,
+    "filters": {
+      "changedLabels": ["ready-for-agent"],
+      "excludeLabels": ["in-progress", "ready-for-human", "needs-info", "blocked", "do-not-merge", "risk-high", "security"],
+      "maxRecords": 25,
+      "lookbackDays": 7
+    },
+    "task": {
+      "prompt": "Implement issue #{{github.number}} ({{github.url}}).",
+      "workflow": "implement-ticket",
+      "worktree": true,
+      "autonomous": true,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "Spec to tickets",
+    "description": "Weekday mornings: afk-to-tickets promotes the ticket frontier, then slices at most one newly merged spec into vertical tickets. Schedule rather than an event, so it never races the issue pipeline above: it reads `.ai/specs/` and the open tree, and only the frontier gets `ready-for-agent`. Idempotent - a spec that already has a parent issue is skipped.",
+    "kind": "schedule",
+    "schedule": { "type": "weekdays", "hour": 7, "minute": 0 },
+    "task": {
+      "prompt": "Run the afk-to-tickets skill for {{project}} on {{date}}: promote the frontier, then slice at most one unsliced spec.",
+      "workflow": "spec-to-tickets",
+      "autonomous": true,
+      "worktree": true,
+      "variants": 1,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "Weekly architecture review",
+    "description": "Mondays: afk-architecture-review reads the last 30 days of hot spots and files at most three refactor issues, each with a recommendation strength. Read-only on code - the only writes are issues, and it never applies `ready-for-agent` itself: `Strong` gets `needs-triage` so triage writes the brief, `Worth exploring` gets `ready-for-human`. It reads `.ai/skills/afk-codebase-design/SKILL.md` for its vocabulary, so that repo-owned skill must exist here or the run has no shared terms to reason in.",
+    "kind": "schedule",
+    "schedule": { "type": "weekly", "day": 1, "hour": 6, "minute": 0 },
+    "task": {
+      "prompt": "Run the afk-architecture-review skill for {{project}} on {{date}}.",
+      "workflow": "architecture-review",
+      "autonomous": true,
+      "worktree": true,
+      "variants": 1,
+      "generateFollowups": false,
+      "dispatch": { "maxSubtasks": 3, "reviewChild": false }
+    }
+  },
+  {
+    "name": "Weekly lessons",
+    "description": "Fridays: afk-lessons turns mistakes repeated across the last 14 days of pull requests into enforced rules - mechanical ones into a lint rule, judgement into CODE_REVIEW.md, operational into AGENTS.md. A lesson seen only once is not a rule, so a quiet fortnight is a no-op, and it opens at most one pull request per run.",
+    "kind": "schedule",
+    "schedule": { "type": "weekly", "day": 5, "hour": 16, "minute": 0 },
+    "task": {
+      "prompt": "Run the afk-lessons skill for {{project}} on {{date}}.",
+      "workflow": "lessons",
       "autonomous": true,
       "worktree": true,
       "variants": 1,

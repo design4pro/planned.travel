@@ -163,6 +163,81 @@ runs:
         tail -50 dev-server.log
         exit 1
 
+    # Diagnostic instrumentation, and a step of its own on purpose: the step
+    # above ends in `exit 0` inside its wait loop, so anything appended to it
+    # would never run.
+    #
+    # What it is for. Run 35101667571 pointed it at #466, and the answer was
+    # that nothing runs out. Across a whole shard `MemAvailable` never fell below
+    # 19 GB of 32 GB, the vite/workerd process count never moved off three, and
+    # `.wrangler` reached 24 MB. The shard is not exhausting a resource, it is
+    # running out of wall clock: Playwright cut shard 2 at `globalTimeout` with
+    # `20 did not run`, after spending 340 s of its 900 s on two tests that blew
+    # the 10 s hydration budget and then passed on retry.
+    #
+    # It also showed two things no blob report can. Both shards print the same
+    # `load1` in the same second, so the runners share one host and sharding buys
+    # no isolation. And the split falls along the browser projects: shard 1 is
+    # all chromium and finished its 52 tests in 882 s, shard 2 is all
+    # mobile-safari and needed more than the 900 s it had for the same 52. WebKit
+    # is what makes the second shard the one that dies - not a leak, and not the
+    # dev server the two of them share.
+    #
+    # Kept because the next question needs the same signals, and because
+    # `dev-server.log` is written by every run and was kept by none, so a red
+    # shard used to leave no server-side evidence at all. `MemAvailable` covers
+    # heap exhaustion, `loadavg` CPU saturation, the process count accumulating
+    # workerd children, and the size of `.wrangler` the state the suite writes
+    # and never cleans up - the whole directory rather than its `d1/` alone,
+    # because the run also stages import answers in KV and puts uploaded files in
+    # R2. Walking it costs 0.02 s a sample, measured on a 3.4 GB one, so the
+    # instrument does not perturb what it measures.
+    #
+    # `/proc` rather than `ps`, so nothing depends on procps being in the image,
+    # and `VmRSS` rather than `statm`, which counts pages: this pool is ARM64,
+    # where a 64 KiB page would make a 4 KiB assumption wrong by sixteen times
+    # without saying so. `nproc` because the first run of this sampler recorded a
+    # `load1` of 17 and left the core count unknowable, which made the number
+    # unreadable; `esbuild` in the match because that run terminated an esbuild
+    # child the filter had not been counting.
+    #
+    # Every failure is swallowed and the loop can never fail the job. An
+    # instrument that reddens a run is worse than no instrument. It costs one
+    # sample per 15 s - 62 lines across a full shard, measured.
+    - name: Sample the dev server's resource use
+      shell: bash
+      run: |
+        set -uo pipefail
+        cores=$(nproc 2>/dev/null || awk '/^processor/{n++}END{print n+0}' /proc/cpuinfo 2>/dev/null)
+        {
+          printf 'iso\tnproc\tmem_avail_kb\tmem_total_kb\tload1\tprocs\trss_total_kb\twrangler_kb\tdetail\n'
+          while :; do
+            avail=$(awk '/^MemAvailable:/{print $2}' /proc/meminfo 2>/dev/null)
+            total=$(awk '/^MemTotal:/{print $2}' /proc/meminfo 2>/dev/null)
+            load1=$(cut -d' ' -f1 /proc/loadavg 2>/dev/null)
+            wrangler=$(du -sk .wrangler 2>/dev/null | cut -f1)
+            procs=0
+            rss_total=0
+            detail=''
+            for entry in /proc/[0-9]*; do
+              cmd=$(tr '\0' ' ' < "$entry/cmdline" 2>/dev/null) || continue
+              case "$cmd" in
+                *vite*|*workerd*|*miniflare*|*esbuild*) ;;
+                *) continue ;;
+              esac
+              rss=$(awk '/^VmRSS:/{print $2}' "$entry/status" 2>/dev/null)
+              [ -n "$rss" ] || continue
+              procs=$((procs + 1))
+              rss_total=$((rss_total + rss))
+              detail="${detail}${entry##*/}:${rss};"
+            done
+            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+              "$(date -u +%FT%TZ)" "${cores:-?}" "${avail:-?}" "${total:-?}" "${load1:-?}" \
+              "$procs" "$rss_total" "${wrangler:-?}" "${detail:-none}"
+            sleep 15
+          done
+        } >> e2e-runtime.log 2>/dev/null &
+
     - name: Seed the demo workspace
       shell: bash
       run: node scripts/seed/seed.mjs

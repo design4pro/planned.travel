@@ -1,9 +1,13 @@
 {
-  "kitVersion": 39,
+  "kitVersion": 42,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
       "sha256": "094b45b3aeb60d9af29213b5e29ae563c0429005948f301a54040f737ed26d33",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/architecture-review.yml": {
+      "sha256": "f07b1124204be8d54ae49605cbb21d49614580d5e82de0f6fcbb556505eec2c9",
       "mode": "100644"
     },
     ".ai/cezar/workflows/backlog.yml": {
@@ -22,6 +26,10 @@
       "sha256": "55aceb2e8779b56ce3c850680e868a5c3283e8d14ccb842e5d80088c09ae9688",
       "mode": "100644"
     },
+    ".ai/cezar/workflows/implement-ticket.yml": {
+      "sha256": "ef47e2ea57c040e98f4db26669ac2f6a53209b2b12b654bcdfb2b7883ef26e4d",
+      "mode": "100644"
+    },
     ".ai/cezar/workflows/issue-autofix.yml": {
       "sha256": "23e8485ac83de587fc745104f0d884e525cf989efa75638a9bfb2179164074cf",
       "mode": "100644"
@@ -30,8 +38,12 @@
       "sha256": "1f435b5291b7f75125839f020524f6483f1d0720b3fa6d3a576f27fb0495a701",
       "mode": "100644"
     },
+    ".ai/cezar/workflows/lessons.yml": {
+      "sha256": "015044969057f16dfb955230c91d9b91bd06c0eb839914a40ea482cb856fbac2",
+      "mode": "100644"
+    },
     ".ai/cezar/workflows/pr-autopilot.yml": {
-      "sha256": "ed178ef0c797349c5df1c190bc3a8ff5f63ccad13e549a6910b9f0441e82c9d8",
+      "sha256": "31e5b415fcfb58777f29a1b7b361c01e26773fbe8af5dd5ef6cd985b897b16b0",
       "mode": "100644"
     },
     ".ai/cezar/workflows/pr-fix.yml": {
@@ -42,8 +54,16 @@
       "sha256": "c32414ddf3f4ea0db0dedd0a763ff0cd5229cf3ea54b7066ab766697028f5109",
       "mode": "100644"
     },
+    ".ai/cezar/workflows/spec-to-tickets.yml": {
+      "sha256": "f5b7d6be493100c316dee8227d91941c307962c18cf3a2d6bc81dbdfed64782d",
+      "mode": "100644"
+    },
     ".ai/cezar/workflows/spec.yml": {
       "sha256": "6243320c8e09c782bed63e2920270e74261f01767b3a6444118a63e5f30fb3be",
+      "mode": "100644"
+    },
+    ".ai/cezar/workflows/triage.yml": {
+      "sha256": "c6fa5e5752c032f55963c77891da492727a1ad4e2a700949674c6a36ed89b72d",
       "mode": "100644"
     },
     ".ai/scripts/__tests__/backlog-status.test.mjs": {
@@ -59,7 +79,7 @@
       "mode": "100755"
     },
     ".ai/scripts/cez-automations.sh": {
-      "sha256": "6c8b39fe2d9fbf43624caf68abea4c3a8af07edde4e181a2ad9d248a5abd9e4c",
+      "sha256": "311a4c9b064ee487f5a5a863c174c65e57b2e8c1baa6c00e26f562a7eac0e18e",
       "mode": "100755"
     },
     ".ai/scripts/cez-prompt-templates.sh": {
@@ -70,12 +90,32 @@
       "sha256": "50b56ecb717ea34fdc9eb74e74f8c56acf691a642b150e389ac08cc818068c9c",
       "mode": "100755"
     },
+    ".ai/skills/afk-architecture-review/SKILL.md": {
+      "sha256": "fd5c7dc7b38235c6d8a5955f1c14e790ba0529cd5b6bb9b526baad04f0cfc6eb",
+      "mode": "100644"
+    },
+    ".ai/skills/afk-domain-modeling/SKILL.md": {
+      "sha256": "82e050064e797467328232f98ec4e0815a747c5688fee607c201118b37443f8f",
+      "mode": "100644"
+    },
+    ".ai/skills/afk-lessons/SKILL.md": {
+      "sha256": "f7122ce759a01adf8245cad715c7584ac81bb981d338c4db5618d3c4756ef2ea",
+      "mode": "100644"
+    },
+    ".ai/skills/afk-to-tickets/SKILL.md": {
+      "sha256": "bb29088f1ad5580fab5358169cdbb4d9a2a2af753510fb643ec767420fa4ddfb",
+      "mode": "100644"
+    },
+    ".ai/skills/afk-triage/SKILL.md": {
+      "sha256": "f633e16eb9c85634177c3a5c875e00e03a3bbb7ca77e6c63979c34072d7ccc3b",
+      "mode": "100644"
+    },
     ".ai/trackers/github.md": {
-      "sha256": "0d597cd5b59a1d2b7855bc9a8efae071c0237e6e89d9be050a5200543086f0a1",
+      "sha256": "7809564eb52d7c71aaf01f8b8694a60057be1f49625a90ac552722419940f097",
       "mode": "100644"
     },
     ".claude/hooks/__tests__/hooks.test.ts": {
-      "sha256": "03d8a739b04598ebdeaa726cba49a0100e255d2d74c25d0506020850f2d70dc3",
+      "sha256": "a7b4e94fd22ac1394ed75ef8149a5d9d2e0d17c7180fd96f182cd61900455e3d",
       "mode": "100644"
     },
     ".claude/hooks/format-file.sh": {
@@ -87,7 +127,7 @@
       "mode": "100755"
     },
     ".claude/hooks/guard-generated.sh": {
-      "sha256": "2bc9cd7e46eb818762e1fceff7ce397af5db27943be8df593d2cf79010587c38",
+      "sha256": "9e51fd5ed92cb66925ac4c07c07a454af479a5826fe0f14a65a89c9094807e99",
       "mode": "100755"
     },
     ".claude/hooks/guard-read.sh": {
@@ -103,7 +143,7 @@
       "mode": "100644"
     },
     ".github/workflows/claude-code-review.yml": {
-      "sha256": "ee5559e6dd01a06f9e54680dea9bce32d38427bfb710a0a17bc7773c52090e5c",
+      "sha256": "d75fa2b51cd4e560a6d85e16411476649b3e640a91dd53d019b91518d2d718bd",
       "mode": "100644"
     },
     ".github/workflows/claude.yml": {
@@ -111,11 +151,11 @@
       "mode": "100644"
     },
     ".github/workflows/merge-gate.yml": {
-      "sha256": "c5d5432e15388ab45b526c838b08972cc360b756cc653fe584cc9b36190fd292",
+      "sha256": "a0a5e66bb9637dd5e365aa0a09eddf9bf30954db1833e0cc11caf2ab32c55983",
       "mode": "100644"
     },
     "docs/agents/cezar-automations.json": {
-      "sha256": "00a9cc884fd65e76e0d9d1f3def2790802c19a6ecc2592cc8086e78fb6b843d3",
+      "sha256": "ab3d76ab7f9d5b1c44b6c59affa0af3093fab2225bb2977532016b547a777df2",
       "mode": "100644"
     },
     "scripts/ci/__tests__/claude-credential-gate.test.ts": {
@@ -135,7 +175,7 @@
       "mode": "100644"
     },
     "scripts/ci/__tests__/review-threads-label.test.mjs": {
-      "sha256": "578923112ec465f3302eb300055500793f5b8bc3d16f6681801d57cc2a1781e6",
+      "sha256": "7881f885b3d59d4f2a4f2be3a98e8fa18b13318588bcdbe5d8d8bab8c7afc7b5",
       "mode": "100644"
     },
     "scripts/ci/__tests__/review-workflow-base-checkout.test.ts": {
@@ -155,7 +195,7 @@
       "mode": "100644"
     },
     "scripts/ci/review-threads-label.mjs": {
-      "sha256": "1ea598360e9fc720c9fa3a59ededf4cac1e85728a46dacba9ccf7d69f2a3d337",
+      "sha256": "c738275418b3328b6a29817ae9ba7b744537b76f1e94388dd10b53fdffaf219f",
       "mode": "100644"
     }
   },

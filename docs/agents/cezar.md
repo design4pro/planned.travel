@@ -32,7 +32,7 @@ the rules of `SDLC.md`.
   install's `dist/` (`.ai/scripts/cezar-host-patch.sh`, since deleted). `GH_CONFIG_DIR` forwarding
   needs no commit: 0.11.0 forwards it.
   - In upstream, `issue.labeled` polls fail as soon as one recently updated issue has a comment or a
-    cross-reference (open-mercato/cezar#914), so `issue-regroom`, `issue-autofix` and `issue-spec`
+    cross-reference (open-mercato/cezar#914), so **Re-groom on request**, **Fix issues on the autofix label** and **Write a spec for feature issues**
     never fire. The fork cherry-picks the fix, upstream PR #916.
   - On every cockpit start the skills coordinator runs `npx skills check <om-*> -p` in each project
     root, and that command re-adds the skills from upstream HEAD: the vendored
@@ -155,13 +155,13 @@ drops `Edit`/`Write` for the ones that must not.
 
 | Workflow         | Agent step                                                               | Model                | Started by                                                                                                                               |
 | ---------------- | ------------------------------------------------------------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `issue-groom`    | `/om-auto-manage-issues {{task}} --prep-impl`                            | sonnet               | automation `issue-groom` (`issue.opened`), `issue-regroom` (label `groom`)                                                               |
-| `issue-autofix`  | `/om-auto-fix-issue {{task}}`                                            | opus                 | automation `issue-autofix` (label `autofix`)                                                                                             |
-| `spec`           | `/om-auto-write-spec {{task}}`                                           | opus                 | automation `issue-spec` (label `spec` on a `feature`)                                                                                    |
+| `issue-groom`    | `/om-auto-manage-issues {{task}} --prep-impl`                            | sonnet               | automation **Groom new issues** (`issue.opened`), **Re-groom on request** (label `groom`)                                                |
+| `issue-autofix`  | `/om-auto-fix-issue {{task}}`                                            | opus                 | automation **Fix issues on the autofix label** (label `autofix`)                                                                         |
+| `spec`           | `/om-auto-write-spec {{task}}`                                           | opus                 | automation **Write a spec for feature issues** (label `spec` on a `feature`)                                                             |
 | `implement-spec` | `/om-auto-implement-spec {{task}}`                                       | opus                 | a human, from the cockpit, after the spec PR merged - or `autofix` on the FR issue, which reaches the same skill through `issue-autofix` |
-| `pr-autopilot`   | `/om-pr-autopilot {{task}}` (no `--allow-merge`)                         | opus                 | automation `pr-autopilot` (`pull_request.opened` by a human maintainer)                                                                  |
+| `pr-autopilot`   | `/om-pr-autopilot {{task}}` (no `--allow-merge`)                         | opus                 | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer)                                                 |
 | `pr-review`      | `/om-auto-review-pr {{task}} --autofix`                                  | opus                 | a human, from the cockpit, on a PR number                                                                                                |
-| `pr-fix`         | `/om-auto-fix-pr {{task}}`                                               | opus                 | automation `pr-review-threads` (label `review-threads` on a PR)                                                                          |
+| `pr-fix`         | `/om-auto-fix-pr {{task}}`                                               | opus                 | automation **Resolve blocking review threads** (label `review-threads` on a PR)                                                          |
 | `housekeeping`   | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50` | opus, sonnet, sonnet | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                    |
 | `brainstorm`     | `/om-brainstorm {{task}}`, **Autonomous off**                            | opus                 | a human, from the cockpit, with the idea as the task                                                                                     |
 
@@ -191,10 +191,10 @@ Registered with the running cockpit by `.ai/scripts/cez-automations.sh` (idempot
 place or create enabled; it lists definitions the cockpit holds that the file no longer names, and
 `--prune` deletes them, so this file is the whole truth about what can start a run - it refuses to
 delete an enabled stray, which is somebody's deliberate act, not a leftover).
-Six definitions: `issue-groom` on `issue.opened` with `authors` naming the human maintainers;
-`issue-regroom`, `issue-autofix`, `issue-spec` on `issue.labeled` with `changedLabels` `groom` /
-`autofix` / `spec`; `pr-autopilot` on `pull_request.opened`, again with `authors`; and
-`pr-review-threads` on `issue.labeled` with `changedLabels` `review-threads`, the one that reaches
+Six definitions: **Groom new issues** on `issue.opened` with `authors` naming the human maintainers;
+**Re-groom on request**, **Fix issues on the autofix label**, **Write a spec for feature issues** on `issue.labeled` with `changedLabels` `groom` /
+`autofix` / `spec`; **Autopilot new pull requests** on `pull_request.opened`, again with `authors`; and
+**Resolve blocking review threads** on `issue.labeled` with `changedLabels` `review-threads`, the one that reaches
 a pull request (next section). Every trigger is gated on who can produce it: the open events by
 author, the label events because only a collaborator can set a label. This matters because the agent step holds Bash with no allowlist and
 the issue body is its prompt: an issue anyone on GitHub can open must not start a run by itself,
@@ -209,7 +209,7 @@ A review or autopilot run checks out the PR's head, hooks and agent layer includ
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
 
-## Review threads that block a merge (`pr-review-threads`)
+## Review threads that block a merge (Resolve blocking review threads)
 
 The `develop` and `main` rulesets refuse a merge while a review thread is unresolved, and nothing
 resolves the threads the `claude-review` job opens. Until this automation a maintainer cleared them
@@ -226,11 +226,11 @@ fires minutes before the review job posts anything. So the chain is:
 2. A commit on the design4pro/cezar fork
    (`feat(automations): filters.includePullRequests polls label events on pull requests`) teaches
    the poller to honour `filters.includePullRequests` on both gates. It is opt-in per automation -
-   the fork declares the key in the filter schema and it defaults to false - which is what keeps `issue-regroom`,
-   `issue-autofix` and `issue-spec` from starting to fire on PRs that happen to carry their label.
+   the fork declares the key in the filter schema and it defaults to false - which is what keeps **Re-groom on request**,
+   **Fix issues on the autofix label** and **Write a spec for feature issues** from starting to fire on PRs that happen to carry their label.
    **Without that commit this automation never fires and says nothing**; keep it through every
    rebase onto an upstream release until upstream ships the filter.
-3. `pr-review-threads` runs the `pr-fix` workflow, and `om-auto-fix-pr` replies in every thread and
+3. **Resolve blocking review threads** runs the `pr-fix` workflow, and `om-auto-fix-pr` replies in every thread and
    resolves the ones it settles. A finding it agrees with but cannot act on - a guarded file it is
    still refused, a change that belongs upstream - is **not** a decline: it replies with the exact
    edit as a diff block, leaves `changes-requested`, and resolves the thread anyway
@@ -245,7 +245,7 @@ conclusion forever. `in-progress`, `blocked` and `do-not-merge` stand the script
 automation excludes them again.
 
 **And the `in-progress` stand-down is why, for its first weeks, this chain never ran at all.**
-`pr-autopilot` fires on `pull_request.opened` and takes `in-progress` within a minute; the review
+**Autopilot new pull requests** fires on `pull_request.opened` and takes `in-progress` within a minute; the review
 job needs five to eight, so step 1 above was never once asked at a moment when the claim was
 absent - `not arming - the PR carries in-progress` on #320, #321 and #322, and zero `pr-fix` runs
 in the cockpit's recorded history. The stand-down is right (a run that owns the PR should not have
@@ -309,7 +309,7 @@ must stop before `status:*` is stripped and the surviving labels renamed.
    `~/Library/LaunchAgents/dev.planned-travel.sweeper.plist`.
 2. In the cockpit (Automations) disable `triage-opened`, `triage-relabel` and `implement`, then
    delete them with `bash .ai/scripts/cez-automations.sh --dry-run --prune` and the same without
-   the flag. All three are superseded: `implement` by `issue-autofix`, and the triage pair by the
+   the flag. All three are superseded: `implement` by **Fix issues on the autofix label**, and the triage pair by the
    groom layer - a Sentry finding reaches it because the sweep files `groom` on creation and
    GitHub records that as a `labeled` timeline event, which is what the poller reads.
 3. Snapshot: `gh label list --limit 200 --json name,color,description > docs/agents/migration/labels-$(date +%F).json`
@@ -329,11 +329,11 @@ must stop before `status:*` is stripped and the surviving labels renamed.
    are created enabled.
 7. Install the housekeeping plist (above) and run `bash .ai/scripts/housekeeping.sh` once by hand.
 8. Verify end to end on a test issue: open it with the Bug form (as a maintainer) → within two minutes an
-   `issue-groom` run adds priority and risk and posts the Definition of Ready and implementation
+   **Groom new issues** run adds priority and risk and posts the Definition of Ready and implementation
    notes → add `autofix` → the run removes the label, claims with `in-progress`, opens a draft PR on
    develop and ends with it ready, labelled `review` + category + `needs-qa|skip-qa` + priority +
    risk, with a run-summary comment and the `PR: #n` line in the cezar run → merge it → the next
-   housekeeping closes the issue. Then open a PR by hand: `pr-autopilot` reviews it and does not
+   housekeeping closes the issue. Then open a PR by hand: **Autopilot new pull requests** reviews it and does not
    merge.
 
 ## Local use
