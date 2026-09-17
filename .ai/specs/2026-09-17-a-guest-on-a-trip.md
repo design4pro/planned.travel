@@ -2,9 +2,9 @@
 
 | Field              | Value |
 | ------------------ | ----- |
-| **Status**         | draft |
+| **Status**         | ready |
 | **Issue**          | #119  |
-| **Spec PR**        | none  |
+| **Spec PR**        | #553  |
 | **Implementation** | none  |
 
 `01-S6b` · FR #119 · Parent PRD #104 · Stage `01-S6` of `docs/plans/01-trips-core.md` (frozen), its **second slice**; PRD decisions 7 and 7b.
