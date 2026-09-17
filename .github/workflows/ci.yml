@@ -268,7 +268,11 @@ jobs:
 
   # The end-to-end journeys: fourteen declarations in `journeys.spec.ts`, three
   # in `trips-core.spec.ts` and two browser-free HTTP claims in `csrf.spec.ts`,
-  # over two browser projects. Not a visual gate
+  # over the `chromium` project alone. `mobile-safari` is still declared and still
+  # runnable by name, but `playwright.config.ts` leaves it out of a CI run that did
+  # not set `E2E_WEBKIT` - it runs nightly in `e2e-webkit.yml` instead, because it
+  # was the larger half of every event here and the half that ran out of wall clock
+  # (issues #552, #466). Not a visual gate
   # any more - no screenshot is compared anywhere (ADR 0016). What a run asserts
   # is that every screen answers, renders, hydrates, says nothing in the console,
   # and lets a reader act on it.
@@ -288,10 +292,14 @@ jobs:
   # which is rare and cheap next to what this used to take.
   #
   # Back on every PR. It was demoted to a post-merge net when it cost ~60 min of
-  # runner per event; measured, it now costs ~22 (two shards of ~11). That is a
+  # runner per event; measured, it then cost ~22 (two shards of ~11). That is a
   # ~63% cut per event and, spread over ~6 PR events a merge, roughly twice the
   # aggregate the post-merge net cost - the feedback loop is bought, not free.
-  # ADR 0016's cost table carries the arithmetic. The `needs-e2e` escape hatch
+  # ADR 0016's cost table carries the arithmetic. Dropping `mobile-safari` off
+  # this path (#552) halves what remains: the same ~52 chromium tests that used
+  # to fill one shard whole now split across both, so each shard carries ~26 and
+  # the fixed cost is the larger part of the job. The nightly `e2e-webkit.yml`
+  # pays WebKit's share once a day instead of ~6 times a merge. The `needs-e2e` escape hatch
   # that the demotion needed goes with it. No R2
   # credentials are read any more either (the journeys need no basemap - see the
   # `basemap` input of the composite action), so the job runs on a fork.
@@ -319,10 +327,19 @@ jobs:
     # produced 10 was taken at two local workers on a 16-core machine and did not
     # survive contact.
     #
-    # The two shards are uneven, 6m41s against 9m59s, because `--shard` splits by
-    # test count and these tests are not the same size. Worth rebalancing only if
-    # shard 2 starts approaching 15 min; the fix would be `--shard` by duration,
-    # which Playwright does not offer, or moving one journey by hand, which drifts.
+    # The two shards were uneven, 6m41s against 9m59s, because `--shard` splits by
+    # test count and these tests were not the same size: with both browser projects
+    # in one pool the split fell along project lines, and the WebKit shard was the
+    # slow one. That is gone with `mobile-safari` (#552, #466) - both shards are now
+    # chromium and carry comparable work. Measured on run 35250473957, the first
+    # one without WebKit: 285 s of journeys on shard 1 and 235 s on shard 2, for
+    # jobs of 6m35s and 5m08s. Against the config's 900 s `globalTimeout` that is
+    # 32% and 26% of the budget spent - roughly 70% of it unspent, where shard 1
+    # used to sit at 98% and shard 2 past 100%. `--shard` still splits by count,
+    # not by duration, so the next thing to make them uneven will be one heavy
+    # journey rather than one heavy engine; Playwright offers no duration split,
+    # and moving
+    # a journey by hand drifts.
     timeout-minutes: 20
     strategy:
       fail-fast: false

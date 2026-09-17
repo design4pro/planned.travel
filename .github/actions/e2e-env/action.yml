@@ -177,11 +177,18 @@ runs:
     #
     # It also showed two things no blob report can. Both shards print the same
     # `load1` in the same second, so the runners share one host and sharding buys
-    # no isolation. And the split falls along the browser projects: shard 1 is
-    # all chromium and finished its 52 tests in 882 s, shard 2 is all
+    # no isolation. And the split fell along the browser projects: shard 1 was
+    # all chromium and finished its 52 tests in 882 s, shard 2 was all
     # mobile-safari and needed more than the 900 s it had for the same 52. WebKit
-    # is what makes the second shard the one that dies - not a leak, and not the
+    # was what made the second shard the one that dies - not a leak, and not the
     # dev server the two of them share.
+    #
+    # That measurement is what moved `mobile-safari` off the pull-request path
+    # (#552): the ci.yml e2e job now runs chromium alone and splits those same 52
+    # tests two ways, and WebKit runs nightly in `e2e-webkit.yml`, sharded the same
+    # way against its own project. So the numbers above describe the arrangement
+    # that was changed, not the one a reader will see in a fresh run - both this
+    # workflow's shards should now sit near half of what shard 1 took.
     #
     # Kept because the next question needs the same signals, and because
     # `dev-server.log` is written by every run and was kept by none, so a red
