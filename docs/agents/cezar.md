@@ -236,9 +236,10 @@ fires minutes before the review job posts anything. So the chain is:
    edit as a diff block, leaves `changes-requested`, and resolves the thread anyway
    (`.ai/skills/om-auto-review-pr/SKILL.md`). Only a disagreement leaves a thread open.
 
-The loop is closed at the head, not at the thread. The run removes `review-threads` as its first
-mutation (`.ai/skills/om-auto-fix-pr/SKILL.md`), and the labelling script keeps one marker comment
-naming the head it last armed, so the same head is never armed twice. That matters because a thread
+The loop is closed at the head, not at the thread. The run's first mutation takes `in-progress`
+and only then removes `review-threads` (`.ai/skills/om-auto-fix-pr/SKILL.md`), so the PR is never
+both untriggered and unclaimed while the run's own push moves the head (#490), and the labelling
+script keeps one marker comment naming the head it last armed, so the same head is never armed twice. That matters because a thread
 the run **declines** stays open on purpose - a disagreement is a human's to settle - and without the
 marker the `reopened` and `ready_for_review` triggers would restart the same run to reach the same
 conclusion forever. `in-progress`, `blocked` and `do-not-merge` stand the script down, and the
