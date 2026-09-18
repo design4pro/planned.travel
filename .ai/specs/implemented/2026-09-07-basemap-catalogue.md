@@ -299,6 +299,9 @@ documented at `-server/settings.ts:195-205`.
 `user_settings` value — so the picker can tell "I chose Paper, and the workspace also happens to be
 Paper" from "I follow the workspace". Today's screen guesses this by comparing the effective value to
 the workspace value (`appearance.tsx:81-85`) and gets it wrong whenever they coincide.
+The payload's merged `mapStyle` and its `workspaceMapStyle` lost their last reader with that
+change; they stayed populated for one release (`BACKWARD_COMPATIBILITY.md` §2) and were then removed
+(#311), so `mapStyleOverride` is the payload's only map-style field.
 
 `ShellPayload` (`shell.ts:39`) gains `readonly mapStyle: string`.
 
