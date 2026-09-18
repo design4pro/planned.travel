@@ -1024,7 +1024,7 @@
      last row of the screen: a field focused near the foot of a long form, an
      anchor, a `scrollIntoView` from a validation error. That is what this rule
      is for, and it is the whole of the shell's business at this edge. Padding
-     the outlet as well would stack a third box on the two above — 96px of
+     the outlet as well would stack a third box on the two above — 136px of
      content-well gutter against a 65px bar — which is dead canvas rather than
      clearance, and is why there is no layout twin of this rule.
 

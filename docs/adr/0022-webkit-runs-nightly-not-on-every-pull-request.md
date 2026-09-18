@@ -125,6 +125,12 @@ skipped, 7.0 min.** The same suite under `chromium` was 50 passed, 2 skipped, ex
 - One of the four flakes is `pageerror: Importing a module script failed` on `/dashboard` - the exact
   WebKit behaviour `e2e/helpers/admin.ts` already documents.
 
+Both failures were later traced to one cause (issue #557, PR #579): below `lg` the
+`#sentry-feedback` actor covered the last row's Actions button on the files screen, because
+`AppFrame` padded only for the tab bar. The sweep that failed there left a file on the shared
+trip, which walked the delete-dialog test into its heavy branch, and that branch typed a
+trailing-space title the dialog correctly trims. The readings above are kept as measured.
+
 **So the nightly will be red on its first run.** That is stated here rather than discovered later.
 It is also the strongest evidence for this decision's premise: these failures were being masked,
 because the shard carrying them was dying on `globalTimeout` before it reached them (#466). Fixing

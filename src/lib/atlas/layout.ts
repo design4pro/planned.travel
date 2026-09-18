@@ -191,9 +191,9 @@ export const APP_HEADER_TOP_CLASS =
  *
  * There is deliberately no *layout* twin of it on the shell. Both kinds of
  * screen already clear the bar, each in the way that suits it: the content well
- * pads for it (`AppFrame` ships `pb-[calc(var(--safe-bottom)+6rem)] lg:pb-16`)
+ * pads for it (`AppFrame` ships `pb-[calc(var(--safe-bottom)+8.5rem)] lg:pb-16`)
  * and a full-bleed slice stops at its top edge by arithmetic ({@link
- * sliceHeight}). Padding the outlet as well stacks a second box on both — 96px
+ * sliceHeight}). Padding the outlet as well stacks a second box on both — 136px
  * against a 65px bar — and turns an intended gutter into dead canvas at the foot
  * of every authenticated screen below `lg`.
  */

@@ -706,11 +706,11 @@ second time is a regression.** `--impersonation-h` is the top one, and it has to
 because nothing below the shell knows the bar exists. Below `lg` the mobile tab bar is `fixed`,
 so it displaces nothing and covers the last row of whatever is behind it — but the two things
 that clear it already exist, one per kind of screen: the content well pads for it
-(`AppFrame` ships `pb-[calc(var(--safe-bottom)+6rem)] lg:pb-16` and says so in its own
+(`AppFrame` ships `pb-[calc(var(--safe-bottom)+8.5rem)] lg:pb-16` and says so in its own
 docblock), and a full-bleed slice stops at its top edge by arithmetic, out of `MOBILE_TAB_BAR`.
-A third reservation around `<Outlet />` stacks on both: a second 65px box beneath the 96px the
-content well already pads leaves 31 + 65 = 96px of canvas visible below the bar instead of the
-31px gutter that was designed, on every non-bleed authenticated screen at 360 and 768. It
+A third reservation around `<Outlet />` stacks on both: a second 65px box beneath the 136px the
+content well already pads leaves 71 + 65 = 136px of canvas visible below the bar instead of the
+71px gutter that clears the feedback actor, on every non-bleed authenticated screen at 360 and 768. It
 shipped once, and every full-page mobile baseline in the suite was re-recorded around it before
 it was caught.
 

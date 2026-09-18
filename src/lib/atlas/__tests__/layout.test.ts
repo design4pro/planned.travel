@@ -236,7 +236,7 @@ describe('the chrome offsets the shell hands out', () => {
     // left. From `lg` there is no bar and no row. It is a term in
     // `documentHeight` so that number describes a document rather than the sum
     // of two boxes — which is what stops the next reader making it come out even
-    // by padding the outlet, and turning a 31px gutter into 96px of dead canvas.
+    // by padding the outlet, and turning a 71px gutter into 136px of dead canvas.
     expect(shellBottomGap(false)).toEqual(MOBILE_TAB_BAR)
     expect(shellBottomGap(true)).toEqual([])
     expect(insetSum(shellBottomGap(false), PHONE)).toBe(
