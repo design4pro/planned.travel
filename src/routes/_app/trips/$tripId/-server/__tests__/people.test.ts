@@ -21,11 +21,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   NotFoundError,
   RepositoryError,
+  TripGuestLimitError,
+  TripGuestMergeTargetError,
+  TripGuestNameTakenError,
   addTripMember,
   createTrip,
+  createTripGuest,
   getMembership,
+  listTripGuests,
   listNotifications,
   listTripMembers,
+  registerGuestRelinker,
   removeMember,
   updateTrip,
 } from '#/server/repos'
@@ -125,11 +131,15 @@ function startContext(): StartContext {
 }
 
 const {
+  addTripGuestFn,
   addTripMemberFn,
   attempted,
   leaveTripFn,
+  mergeGuestIntoMember,
   readTripPeople,
+  removeTripGuestFn,
   removeTripMemberFn,
+  renameTripGuestFn,
   setTripRoleFn,
   setTripVisibilityFn,
   setTripVisibilityInput,
@@ -329,6 +339,20 @@ describe('attempted', () => {
     ).toEqual({ ok: false, reason: 'not-in-workspace' })
   })
 
+  it('turns the three guest refusals into codes too', async () => {
+    for (const [error, reason] of [
+      [new TripGuestNameTakenError('Anna'), 'guest-name-taken'],
+      [new TripGuestLimitError(), 'guest-limit'],
+      [new TripGuestMergeTargetError(), 'guest-merge-target'],
+    ] as const) {
+      expect(
+        await attempted(async () => {
+          throw error
+        }),
+      ).toEqual({ ok: false, reason })
+    }
+  })
+
   it('lets every other failure through untouched', async () => {
     // `FORBIDDEN` and `NOT_FOUND` are states this screen never offers a control for, so they belong
     // in the shared boundary's generic failure rather than in a sentence beside a row.
@@ -519,3 +543,140 @@ describe('setTripVisibilityFn', () => {
 async function readPeople(): Promise<ReadonlyArray<TripParticipant>> {
   return (await readTripPeople(owner, fixture.tripId)).participants
 }
+
+/* ------------------------------------------------------------------- guests */
+
+describe('guests', () => {
+  async function guestNames(): Promise<Array<string>> {
+    return (await listTripGuests(owner, fixture.tripId)).map(
+      (guest) => guest.displayName,
+    )
+  }
+
+  it('carries the guests after the members, and names the bound', async () => {
+    await createTripGuest(owner, { tripId: fixture.tripId, displayName: 'Anna' })
+
+    const payload = await readTripPeople(owner, fixture.tripId)
+
+    expect(payload.participants.at(-1)).toMatchObject({
+      kind: 'guest',
+      displayName: 'Anna',
+    })
+    expect(payload.guestLimit).toBe(50)
+  })
+
+  it('adds, renames and removes a guest, notifying nobody and moving no statistics', async () => {
+    await inRequest(() =>
+      addTripGuestFn({ data: { tripId: fixture.tripId, displayName: 'Anna' } }),
+    )
+    const guestId = (await listTripGuests(owner, fixture.tripId))[0]?.id ?? ''
+
+    await inRequest(() =>
+      renameTripGuestFn({
+        data: { tripId: fixture.tripId, guestId, displayName: 'Hanna' },
+      }),
+    )
+    expect(await guestNames()).toEqual(['Hanna'])
+
+    await inRequest(() =>
+      removeTripGuestFn({ data: { tripId: fixture.tripId, guestId } }),
+    )
+    expect(await guestNames()).toEqual([])
+    expect(envelopes()).toEqual([])
+  })
+
+  it('answers a duplicate as a refusal rather than a failure, and writes nothing', async () => {
+    await createTripGuest(owner, { tripId: fixture.tripId, displayName: 'Anna' })
+
+    // The handler's answer is discarded outside a Start build; "did not throw, and there is still
+    // one Anna" is what is observable here, and `attempted` above holds the mapping itself.
+    await inRequest(() =>
+      addTripGuestFn({
+        data: { tripId: fixture.tripId, displayName: ' ANNA ' },
+      }),
+    )
+
+    expect(await guestNames()).toEqual(['Anna'])
+  })
+
+  it('does not catch the owner assert', async () => {
+    stubs.scope = tenant.scopeFor(fixture.editorId)
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        addTripGuestFn({
+          data: { tripId: fixture.tripId, displayName: 'Anna' },
+        }),
+      ),
+    )
+
+    expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(await guestNames()).toEqual([])
+  })
+
+  it('refuses a guest that belongs to another trip', async () => {
+    const other = await createTrip(owner, { title: 'Porto in June' })
+    const stray = await createTripGuest(owner, {
+      tripId: other.id,
+      displayName: 'Anna',
+    })
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        removeTripGuestFn({
+          data: { tripId: fixture.tripId, guestId: stray.id },
+        }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(NotFoundError)
+    expect(await listTripGuests(owner, other.id)).toHaveLength(1)
+  })
+
+  describe('the merge', () => {
+    it('resolves the member, merges, and reports what each relinker moved', async () => {
+      const guest = await createTripGuest(owner, {
+        tripId: fixture.tripId,
+        displayName: 'Anna',
+      })
+      const unregister = registerGuestRelinker('probe', async () => ({
+        count: 4,
+        statements: [],
+      }))
+      try {
+        const memberId = await memberIdOf(fixture.editorId)
+
+        expect(
+          await mergeGuestIntoMember(owner, {
+            tripId: fixture.tripId,
+            guestId: guest.id,
+            memberId,
+          }),
+        ).toEqual({ memberId, relinked: { probe: 4 } })
+      } finally {
+        unregister()
+      }
+      expect(await guestNames()).toEqual([])
+    })
+
+    it('answers a membership of another trip as the merge-target refusal', async () => {
+      const guest = await createTripGuest(owner, {
+        tripId: fixture.tripId,
+        displayName: 'Anna',
+      })
+      const other = await createTrip(owner, { title: 'Porto in June' })
+      const strayId = (await listTripMembers(owner, other.id))[0]?.id ?? ''
+
+      expect(
+        await attempted(() =>
+          mergeGuestIntoMember(owner, {
+            tripId: fixture.tripId,
+            guestId: guest.id,
+            memberId: strayId,
+          }),
+        ),
+      ).toEqual({ ok: false, reason: 'guest-merge-target' })
+      expect(await guestNames()).toEqual(['Anna'])
+    })
+  })
+})
