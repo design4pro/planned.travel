@@ -23,10 +23,10 @@ import {
   addTripMember,
   createTrip,
   listTripMembers,
-  listTripParticipants,
   removeTripMember,
   updateTripMember,
 } from '../trips'
+import { listTripParticipants } from '../trip-guests'
 import {
   captureError,
   createHarness,

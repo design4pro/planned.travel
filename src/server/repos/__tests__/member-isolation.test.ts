@@ -42,7 +42,6 @@ import {
   getTrip,
   getTripBySlug,
   listTripMembers,
-  listTripParticipants,
   listTrips,
   listTripsForUser,
   listUpcomingTrips,
@@ -54,6 +53,7 @@ import {
   updateTrip,
   updateTripMember,
 } from '../trips'
+import { listTripParticipants } from '../trip-guests'
 import {
   countFavourites,
   listFavouriteTripIds,

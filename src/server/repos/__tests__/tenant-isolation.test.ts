@@ -217,7 +217,6 @@ import {
   createTrip,
   deleteTrip,
   listTripMembers,
-  listTripParticipants,
   listTrips,
   memberTripIds,
   removeTripMember,
@@ -232,6 +231,7 @@ import {
   updateTrip,
   updateTripMember,
 } from '../trips'
+import { listTripParticipants } from '../trip-guests'
 import {
   addCompanyHoliday,
   addHolidayCalendar,

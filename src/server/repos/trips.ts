@@ -50,7 +50,7 @@ import {
   tenantFilter,
 } from './base'
 import { NotFoundError, RepositoryError } from './context'
-import { getMembership, listUserProfiles } from './members'
+import { getMembership } from './members'
 import {
   dayNotesRepository,
   daysRepository,
@@ -1714,10 +1714,10 @@ export async function removeTripMember(
  * One person on a trip, whichever kind of person they are.
  *
  * The discriminated union every later participant surface reads — `01-S8`'s initial-members picker,
- * `01-S9`'s participant vocabulary, the expense-split rows in `04-*`. The `guest` variant is
- * **declared here and never produced** until `01-S6b` (#119) fills it: no column, no query, no row.
- * That is deliberate. Every `kind` switch written from this slice on is exhaustive, so the guests
- * land as data rather than as a new shape every picker has to learn.
+ * `01-S9`'s participant vocabulary, the expense-split rows in `04-*`. It is declared here and
+ * produced by `listTripParticipants` in `trip-guests.ts`, which fills the `guest` variant `01-S6b`
+ * (#119) added rows behind: every `kind` switch written since `01-S6a` is exhaustive, so the guests
+ * landed as data rather than as a new shape every picker had to learn.
  *
  * `colour` is `trip_members.colour`, the per-trip tint those surfaces use. It is carried here and
  * rendered by none of them yet, because it belongs to the read model they consume and costs one
@@ -1739,74 +1739,6 @@ export type TripParticipant =
       readonly displayName: string
       readonly colour: string | null
     }
-
-/**
- * Who is on a trip, owner first — the one participant read model.
- *
- * {@link requireTrip} runs **first**, and the ordering is the whole point: {@link listTripMembers}
- * is tenant-filtered, so a trip id from another organization answers `[]` rather than raising, and a
- * reader that skipped the guard would report "a trip with nobody on it" instead of refusing. The
- * refusal has to come before the answer, not from it.
- *
- * A member whose workspace account has gone has no profile row, so {@link listUserProfiles} returns
- * nothing for them and they are dropped rather than rendered nameless. That is why this can answer
- * an empty array for a trip that still holds membership rows.
- *
- * No email reaches the result. `MemberProfile` carries one; the projection takes `name` and `image`
- * and leaves the address in the repository.
- */
-export async function listTripParticipants(
-  scope: TenantScope,
-  tripId: string,
-): Promise<Array<TripParticipant>> {
-  await requireTrip(scope, tripId)
-
-  const members = await listTripMembers(scope, tripId)
-  if (members.length === 0) {
-    return []
-  }
-  const profiles = new Map(
-    (
-      await listUserProfiles(
-        scope,
-        members.map((row) => row.userId),
-      )
-    ).map((profile) => [profile.userId, profile]),
-  )
-
-  const participants: Array<TripParticipant> = []
-  for (const row of members) {
-    const profile = profiles.get(row.userId)
-    if (profile === undefined) {
-      continue
-    }
-    participants.push({
-      kind: 'member',
-      memberId: row.id,
-      userId: row.userId,
-      // The column is plain `text` behind a `CHECK`, so what comes back is a string. A value the
-      // enum does not carry reads as the least-privileged role — the same posture
-      // `listMemberProfiles` takes with an organization role. It cannot widen anything: this field
-      // renders a badge, and every write is still guarded by `assertTripRole`, which re-reads the
-      // stored value and refuses a role it does not recognise.
-      role: tripMemberRoleSchema.catch('viewer').parse(row.role),
-      colour: row.colour,
-      name: profile.name,
-      image: profile.image,
-    })
-  }
-
-  // Owner first, and everybody else in the membership order `listTripMembers` already totalled.
-  // A stable partition rather than a sort, so two owners keep that order between them.
-  return [
-    ...participants.filter(
-      (row) => row.kind === 'member' && row.role === 'owner',
-    ),
-    ...participants.filter(
-      (row) => !(row.kind === 'member' && row.role === 'owner'),
-    ),
-  ]
-}
 
 /**
  * The acting user's role on each of the given trips, keyed by trip id.
