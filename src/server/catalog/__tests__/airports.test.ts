@@ -60,7 +60,7 @@ import type { Database, NewAirport } from '#/server/db/types'
  * a drop as ``DROP INDEX `airports_name_idx`;``, with no table name, and a replay that kept the
  * matching `CREATE INDEX` but lost the drop would fail on an index that already exists.
  */
-const AIRPORTS_IDENTIFIER = /`(?:__new_)?airports(?:_[a-z_]+)?`/
+const AIRPORTS_IDENTIFIER = /`(?:__new_)?airports(?:_[a-z_]+_(?:idx|unq))?`/
 
 /** Every shipped statement that names this table, in journal order. Read once per test process. */
 let ddl: Array<string> | undefined
