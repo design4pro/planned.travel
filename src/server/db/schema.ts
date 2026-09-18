@@ -3164,10 +3164,15 @@ export const airports = sqliteTable(
   (t) => [
     uniqueIndex('airports_iata_unq').on(t.iataCode),
     uniqueIndex('airports_icao_unq').on(t.icaoCode),
-    // The type-ahead matches a prefix of the code, the name or the city; the two codes are covered
-    // by their unique indexes above.
-    index('airports_name_idx').on(t.name),
-    index('airports_city_idx').on(t.city),
+    // The type-ahead matches a prefix of the code, the name or the city. SQLite can only turn
+    // `LIKE 'term%'` into an indexed range scan when the index collation matches the comparison,
+    // and with `case_sensitive_like` off that means NOCASE — which is why the prefix probes get
+    // their own indexes and do not ride the unique ones. The unique indexes stay BINARY: they
+    // serve `findAirportByCode`'s exact lookup, which compares with the column's own collation.
+    index('airports_iata_prefix_idx').on(sql`${t.iataCode} COLLATE NOCASE`),
+    index('airports_icao_prefix_idx').on(sql`${t.icaoCode} COLLATE NOCASE`),
+    index('airports_name_idx').on(sql`${t.name} COLLATE NOCASE`),
+    index('airports_city_idx').on(sql`${t.city} COLLATE NOCASE`),
     ...latLngChecks('airports_lat_chk', t.lat, t.lng),
   ],
 )

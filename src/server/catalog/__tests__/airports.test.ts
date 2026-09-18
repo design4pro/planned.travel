@@ -56,9 +56,11 @@ import type { Database, NewAirport } from '#/server/db/types'
 
 /**
  * The identifier as drizzle-kit writes it, including the copy-and-swap name it would use if a
- * later migration ever rebuilt this table.
+ * later migration ever rebuilt this table, and the name of one of its indexes: drizzle-kit writes
+ * a drop as ``DROP INDEX `airports_name_idx`;``, with no table name, and a replay that kept the
+ * matching `CREATE INDEX` but lost the drop would fail on an index that already exists.
  */
-const AIRPORTS_IDENTIFIER = /`(?:__new_)?airports`/
+const AIRPORTS_IDENTIFIER = /`(?:__new_)?airports(?:_[a-z_]+)?`/
 
 /** Every shipped statement that names this table, in journal order. Read once per test process. */
 let ddl: Array<string> | undefined
@@ -82,6 +84,11 @@ interface Catalogue {
   readonly db: Database
   /** Every statement the module has issued, in order. */
   readonly queries: Array<string>
+  /**
+   * `EXPLAIN QUERY PLAN` of the last statement issued, with its parameters bound: an unbound
+   * `LIKE ?` cannot be planned as a range, so an unbound plan would be the pessimistic one.
+   */
+  planOfLast: () => string
   close: () => void
 }
 
@@ -95,6 +102,7 @@ async function createCatalogue(rows: Array<NewAirport>): Promise<Catalogue> {
   const sqlite = openCatalogueDatabase()
 
   const queries: Array<string> = []
+  let last: { query: string; bound: Array<null | number | string> } | undefined
   const run = (
     query: string,
     params: ReadonlyArray<unknown>,
@@ -103,6 +111,7 @@ async function createCatalogue(rows: Array<NewAirport>): Promise<Catalogue> {
     queries.push(query)
     const statement = sqlite.prepare(query)
     const bound = params.map(toBoundValue)
+    last = { query, bound }
     if (method === 'run') {
       statement.run(...bound)
       return { rows: [] }
@@ -123,7 +132,16 @@ async function createCatalogue(rows: Array<NewAirport>): Promise<Catalogue> {
   // The seeding above is the fixture's, not the module's, so the log starts where the read does.
   queries.length = 0
 
-  return { db, queries, close: () => sqlite.close() }
+  const planOfLast = () => {
+    if (last === undefined) throw new Error('no statement has been issued')
+    const statement = sqlite.prepare(`EXPLAIN QUERY PLAN ${last.query}`)
+    statement.setReturnArrays(true)
+    return (statement.all(...last.bound) as unknown as Array<Array<unknown>>)
+      .map((row) => String(row[3]))
+      .join('\n')
+  }
+
+  return { db, queries, planOfLast, close: () => sqlite.close() }
 }
 
 function airport(row: Partial<NewAirport> & { id: string }): NewAirport {
@@ -245,6 +263,17 @@ describe('the fixture', () => {
     } finally {
       sqlite.close()
     }
+  })
+
+  it('replays an index drop that names no table, not only the create that follows it', () => {
+    const touchingNameIndex = migrationStatements().filter((statement) =>
+      statement.includes('`airports_name_idx`'),
+    )
+
+    expect(touchingNameIndex.some((s) => s.startsWith('DROP INDEX'))).toBe(true)
+    expect(touchingNameIndex.some((s) => s.startsWith('CREATE INDEX'))).toBe(
+      true,
+    )
   })
 })
 
@@ -429,6 +458,41 @@ describe('searchAirports', () => {
       expect(query).toContain('airports')
       expect(query).not.toContain('organization_id')
     }
+  })
+})
+
+describe('the query plans', () => {
+  // The read runs on every keystroke, so a lost index is a scan of the whole catalogue per key
+  // rather than a failure anyone sees. Each prefix probe needs a NOCASE index, because with
+  // `case_sensitive_like` off SQLite only turns `LIKE 'term%'` into a range over one of those.
+  it.each(['LHR', 'EGLL', 'Warsaw', 'Lond'])(
+    'serves the prefix read for %s from the four NOCASE indexes and scans nothing',
+    async (term) => {
+      const { db, planOfLast } = await catalogue()
+
+      await searchAirports(db, term)
+      const plan = planOfLast()
+
+      expect(plan).not.toContain('SCAN airports')
+      for (const index of [
+        'airports_iata_prefix_idx',
+        'airports_icao_prefix_idx',
+        'airports_name_idx',
+        'airports_city_idx',
+      ]) {
+        expect(plan).toContain(`SEARCH airports USING INDEX ${index}`)
+      }
+    },
+  )
+
+  it('keeps the exact code lookup on the BINARY unique index', async () => {
+    const { db, planOfLast } = await catalogue()
+
+    await findAirportByCode(db, 'LHR')
+
+    expect(planOfLast()).toContain(
+      'SEARCH airports USING INDEX airports_iata_unq (iata_code=?)',
+    )
   })
 })
 
