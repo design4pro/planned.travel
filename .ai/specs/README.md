@@ -6,6 +6,12 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
+## Draft — being written (1)
+
+| Spec                                                                                     | Date       | Issue                                                           | Spec PR | Implementation |
+| ---------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ------- | -------------- |
+| [Drop a pin on the map and it becomes a place](2026-09-18-drop-a-pin-becomes-a-place.md) | 2026-09-18 | [#554](https://github.com/design4pro/planned.travel/issues/554) | —       | —              |
+
 ## Ready — merged, waiting for a build (2)
 
 | Spec                                                                                                                                | Date       | Issue                                                           | Spec PR                                                         | Implementation |
