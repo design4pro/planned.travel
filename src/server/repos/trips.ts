@@ -145,13 +145,13 @@ const tripFields = {
  * Creation accepts two fields an update never may: the primary key itself, and the deprecated
  * `isFavourite` (see its note below).
  *
- * Omit it and the column's `$defaultFn(newId)` mints a time-sortable random key, which is what
+ * The id: omit it and the column's `$defaultFn(newId)` mints a time-sortable random key, which is what
  * every real user gets. Supply it and the row is keyed by the caller's own string — the seam the
  * demo fixture uses so a workspace rebuilt from `scripts/seed` keys its trips identically every
  * time. That matters because a trip's cover art is a pure hash of its id, so a regenerated key
  * silently repaints the card and moves any screenshot that photographs it.
  *
- * It is validated like any other id and it is never reachable from a client: the boundary schema
+ * The id is validated like any other and it is never reachable from a client: the boundary schema
  * `createTripInputSchema` (`src/routes/_app/-server/trip-lifecycle.ts`) is a `z.strictObject`, so a
  * request body carrying this key is refused rather than forwarded.
  */

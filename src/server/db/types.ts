@@ -111,9 +111,10 @@ export type NewUsageRecord = typeof schema.usageRecords.$inferInsert
  * A trip row as the code may read it: every column but the deprecated `is_favourite`.
  *
  * The column is still selected — it stays until a table rebuild drops it — but it records nobody's
- * choice (the favourite lives in `trip_favourites`), so it is projected out of the type here, where
- * every reader gets its row type, and a new `row.isFavourite` is a type error instead of a silent
- * read of the shared boolean. Only the seed's insert (`NewTrip`) still names it.
+ * choice (the favourite lives in `trip_favourites`), so it is projected out of the type every reader
+ * is written against (`readableTrips`, `requireTrip`, the functions typed on `Trip`), and a new
+ * `row.isFavourite` there is a type error instead of a silent read of the shared boolean. Only the
+ * insert type (`NewTrip`) and the seed's path through `createTripInput` still name it.
  */
 export type Trip = Omit<typeof schema.trips.$inferSelect, 'isFavourite'>
 export type NewTrip = typeof schema.trips.$inferInsert

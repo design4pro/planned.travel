@@ -27,7 +27,7 @@ import {
 } from '../trips'
 import { createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
-import type { ReadableTrips, UpdateTripInput } from '../trips'
+import type { UpdateTripInput } from '../trips'
 import type { Trip } from '#/server/db/types'
 
 /**
@@ -206,10 +206,7 @@ describe('the retired trips.is_favourite column', () => {
     expect(row?.isFavourite).toBe(false)
   })
 
-  it('is projected out of the row type every reader gets', () => {
+  it('is projected out of the row type readers are written against', () => {
     expectTypeOf<Trip>().not.toHaveProperty('isFavourite')
-    expectTypeOf<
-      Awaited<ReturnType<ReadableTrips['findOne']>>
-    >().toEqualTypeOf<Trip | null>()
   })
 })

@@ -192,7 +192,7 @@ async function tripCardsFor(
     })
 }
 
-/** The per-reader facts a card carries beyond the row itself, read by {@link tripCardsFor}. */
+/** The per-reader facts a card carries beyond the row itself, as {@link tripCardsFor} reads them. */
 interface TripCardDecorations {
   readonly placeCount: number
   readonly role: TripMemberRole | null
