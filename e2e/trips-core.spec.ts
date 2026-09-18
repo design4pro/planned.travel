@@ -375,7 +375,9 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
 
     if ((await field.count()) === 1) {
       // The heavy branch: nothing arms it but the trip's own name, character for character.
-      await field.fill(`${title} `)
+      // One character short rather than one too many: the dialog trims what was typed, so a
+      // trailing space is the name and arms it (issue #557).
+      await field.fill(title.slice(0, -1))
       await expect(confirm).toBeDisabled()
       await field.fill(title)
       await expect(confirm).toBeEnabled()

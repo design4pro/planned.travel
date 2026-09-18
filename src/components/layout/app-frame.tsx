@@ -16,6 +16,14 @@ export interface AppFrameProps {
  * The single content well every module renders into. Bottom padding clears the
  * mobile tab bar plus the device's safe area, so nothing is ever parked under
  * a home indicator.
+ *
+ * Below `lg` it also clears the "Report a problem" actor, which floats in the
+ * end corner directly above the bar (`#sentry-feedback` in
+ * `src/styles/styles.css`). Measured at 393px its top edge is 132px above the
+ * viewport's foot, so a well padded only for the bar (6rem) left the last row's
+ * end-aligned controls under it once the page was scrolled to the end — a
+ * file's Actions button could not be reached at all (issue #557). 8.5rem is the
+ * same clearance the import widget in `book/import-widget.tsx` sits at.
  */
 export function AppFrame({
   children,
@@ -30,7 +38,7 @@ export function AppFrame({
     <main
       className={cn(
         'mx-auto w-full max-w-content flex-1 px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8',
-        'pb-[calc(var(--safe-bottom)+6rem)] lg:pb-16',
+        'pb-[calc(var(--safe-bottom)+8.5rem)] lg:pb-16',
         className,
       )}
     >

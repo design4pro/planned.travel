@@ -65,12 +65,12 @@ export const Route = createFileRoute('/_app')({
  * exists. `MobileNav` is the opposite case: it is `fixed` below `lg`, and the
  * two things that clear it already exist and are not this component's. The
  * content well reserves the gutter — `AppFrame` ships
- * `pb-[calc(var(--safe-bottom)+6rem)] lg:pb-16` and says so in its own docblock
+ * `pb-[calc(var(--safe-bottom)+8.5rem)] lg:pb-16` and says so in its own docblock
  * — and a full-bleed slice stops at the bar's top edge by arithmetic, out of
  * `MOBILE_TAB_BAR` in `src/lib/atlas/layout.ts`. A third reservation around the
- * outlet stacks on both: a second 65px box beneath the 96px the content well
- * already pads leaves 31 + 65 = 96px of canvas visible below the bar instead of
- * the 31px gutter that was designed, on every non-bleed screen below `lg`. It
+ * outlet stacks on both: a second 65px box beneath the 136px the content well
+ * already pads leaves 71 + 65 = 136px of canvas visible below the bar instead of
+ * the 71px gutter that was designed, on every non-bleed screen below `lg`. It
  * shipped once, and the full-page mobile baselines were re-recorded around it
  * before it was caught.
  *
