@@ -1,5 +1,5 @@
 {
-  "kitVersion": 42,
+  "kitVersion": 43,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -94,6 +94,10 @@
       "sha256": "fd5c7dc7b38235c6d8a5955f1c14e790ba0529cd5b6bb9b526baad04f0cfc6eb",
       "mode": "100644"
     },
+    ".ai/skills/afk-codebase-design/SKILL.md": {
+      "sha256": "c497e4de520acd22deffdfeb49054699c0830b5d114bc4e0817fbbce47bf7cb7",
+      "mode": "100644"
+    },
     ".ai/skills/afk-domain-modeling/SKILL.md": {
       "sha256": "82e050064e797467328232f98ec4e0815a747c5688fee607c201118b37443f8f",
       "mode": "100644"
@@ -155,7 +159,7 @@
       "mode": "100644"
     },
     "docs/agents/cezar-automations.json": {
-      "sha256": "ab3d76ab7f9d5b1c44b6c59affa0af3093fab2225bb2977532016b547a777df2",
+      "sha256": "72bf3839cded6ae462835ee2525e0f480634ee6b35a25eac96b03b0599b3b78a",
       "mode": "100644"
     },
     "scripts/ci/__tests__/claude-credential-gate.test.ts": {
