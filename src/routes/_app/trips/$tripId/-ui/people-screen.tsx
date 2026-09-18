@@ -754,7 +754,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
 
       <GuestNameDialog
         // Keyed by the guest so the field starts from their name each time it opens.
-        key={renaming?.guestId ?? 'closed'}
+        key={`rename:${renaming?.guestId ?? 'closed'}`}
         guest={renaming}
         onOpenChange={(open) => {
           if (!open) setRenaming(null)
@@ -813,7 +813,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
       />
 
       <MergeGuestDialog
-        key={merging?.guestId ?? 'closed'}
+        key={`merge:${merging?.guestId ?? 'closed'}`}
         guest={merging}
         members={members}
         onOpenChange={(open) => {
