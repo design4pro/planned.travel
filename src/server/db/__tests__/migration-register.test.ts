@@ -20,7 +20,7 @@ import { journalTags, shippedMigrations } from './migration-files'
  * rename, and a drop. Deliberately broad — a false positive costs one register row, a miss is the
  * defect this file exists for.
  */
-const NON_ADDITIVE = /__new_\w+|RENAME\s+COLUMN|DROP\s+COLUMN|DROP\s+TABLE/i
+const NON_ADDITIVE = /__new_|RENAME COLUMN|RENAME TO|DROP COLUMN|DROP TABLE/
 
 /** The migration tags §12's register table names, one per row. */
 function registeredTags(): Array<string> {

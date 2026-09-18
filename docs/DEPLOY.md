@@ -285,19 +285,19 @@ the row before the release ships, not after someone needs a rollback. Which migr
 is read off the files rather than remembered:
 
 ```bash
-grep -lE '__new_|RENAME COLUMN|DROP COLUMN|DROP TABLE' drizzle/*.sql
+grep -lE '__new_|RENAME COLUMN|RENAME TO|DROP COLUMN|DROP TABLE' drizzle/*.sql
 ```
 
 Every file it prints has a row in §12, and every row names a file on disk;
 `src/server/db/__tests__/migration-register.test.ts` asserts both, so a generate that recreates,
 renames or drops fails `pnpm test` until its row lands. The rows fail differently — `0001`
 recreated a table, `0003` renamed three columns — which is why §12 records the _kind_ of departure
-and not only the number. Everything the command does not print is absent on purpose. `0000` is the
-initial `CREATE TABLE` set. `0004` is three bare `ALTER TABLE "subscriptions" ADD COLUMN`
+and not only the number. Everything the command does not print is absent on purpose — only
+`CREATE TABLE`, `CREATE INDEX` and bare `ADD COLUMN` — and three of those show the range. `0000` is
+the initial `CREATE TABLE` set. `0004` is three bare `ALTER TABLE "subscriptions" ADD COLUMN`
 statements (`pending_plan`, `pending_interval`, `pending_effective_at`) with no constraint, which is
-exactly the shape that stays additive. `0005` is the same shape at larger scale: two
-`CREATE TABLE` statements for `staff_api_tokens` and
-`platform_audit_log` with their indexes, then five bare column adds on `user` and `session` and one
+exactly the shape that stays additive. `0005` is the same shape at larger scale: two `CREATE TABLE`
+statements for `staff_api_tokens` and `platform_audit_log` with their indexes, then five bare column adds on `user` and `session` and one
 `CREATE INDEX` — no `__new_`, no `DROP TABLE`, no `RENAME TO`, no `PRAGMA foreign_keys`. Its five
 `CHECK` constraints are all inside the `CREATE TABLE` for `platform_audit_log`, which is not what
 the paragraph above warns about: the escalation comes from adding a `CHECK` to a table that already
