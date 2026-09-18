@@ -11,7 +11,8 @@ import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { member } from '#/server/db/auth-schema'
 import { tripGuests, trips } from '#/server/db/schema'
-import { NotFoundError, RepositoryError } from '../context'
+import type { RepositoryError } from '../context';
+import { NotFoundError } from '../context'
 import {
   MAX_TRIP_GUESTS,
   TripGuestLimitError,
