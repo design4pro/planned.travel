@@ -8,9 +8,9 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 
 ## Draft — being written (1)
 
-| Spec                                                                                     | Date       | Issue                                                           | Spec PR | Implementation |
-| ---------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ------- | -------------- |
-| [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md) | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | —       | —              |
+| Spec                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
+| ---------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md) | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | [#584](https://github.com/design4pro/planned.travel/issues/584) | —              |
 
 ## Ready — merged, waiting for a build (2)
 
