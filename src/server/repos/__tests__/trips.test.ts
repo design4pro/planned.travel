@@ -12,17 +12,23 @@
  * before it reddens a baseline.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, expectTypeOf, it } from 'vitest'
 import { trips as demoTrips } from '#/routes/api/dev/-seed/dataset'
+import { trips } from '#/server/db/schema'
 import {
   createTrip,
   deleteTrip,
   getTripBySlug,
   listTrips,
+  tripsRepository,
+  updateTrip,
   updateTripInput,
 } from '../trips'
 import { createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
+import type { ReadableTrips, UpdateTripInput } from '../trips'
+import type { Trip } from '#/server/db/types'
 
 /**
  * The key each demo trip must carry, in the order the applier writes them.
@@ -161,5 +167,49 @@ describe('trip identifiers', () => {
       expect(after).toEqual(before)
       expect(after).toEqual(DEMO_TRIP_IDS)
     })
+  })
+})
+
+/**
+ * The deprecated `trips.is_favourite` column (#206): one boolean shared by every member, so it
+ * records nobody's choice. The favourite lives in `trip_favourites`; this column may only be set by
+ * the seed at creation, and no reader's row type may name it.
+ */
+describe('the retired trips.is_favourite column', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('favourite-column')
+    await subscribeTenant(tenant.scope, 'crew')
+  })
+
+  it('is not a field an update accepts', () => {
+    const patch = updateTripInput.parse({ title: 'Renamed', isFavourite: true })
+    expect(patch).not.toHaveProperty('isFavourite')
+    expectTypeOf<UpdateTripInput>().not.toHaveProperty('isFavourite')
+  })
+
+  it('is left untouched by an update that tries to patch it anyway', async () => {
+    const trip = await createTrip(tenant.scope, { title: 'Faroe Islands' })
+    await updateTrip(tenant.scope, trip.id, {
+      title: 'Faroe Islands, again',
+      isFavourite: true,
+    } as UpdateTripInput)
+
+    const row = await tripsRepository.findOne(
+      tenant.scope,
+      eq(trips.id, trip.id),
+    )
+    expect(row?.title).toBe('Faroe Islands, again')
+    expect(row?.isFavourite).toBe(false)
+  })
+
+  it('is projected out of the row type every reader gets', () => {
+    expectTypeOf<Trip>().not.toHaveProperty('isFavourite')
+    expectTypeOf<
+      Awaited<ReturnType<ReadableTrips['findOne']>>
+    >().toEqualTypeOf<Trip | null>()
   })
 })

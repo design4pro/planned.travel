@@ -138,19 +138,12 @@ const tripFields = {
   accentColour: colourSchema.nullish(),
   budgetTargetMinor: minorAmountSchema.nullish(),
   reminderDays: nonNegativeIntSchema.max(365).optional(),
-  /**
-   * @deprecated The favourite is one person's row in `trip_favourites`; write it through
-   * `setFavourite` (`src/server/repos/trip-favourites.ts`). The column stays because dropping one
-   * is a table rebuild on SQLite — see its `@deprecated` note in `schema.ts` — and this field stays
-   * with it because the dev seed (`routes/api/dev/-seed/apply-trip.ts`) still sets it. Nothing
-   * reads it any more.
-   */
-  isFavourite: z.boolean().optional(),
   isArchived: z.boolean().optional(),
 }
 
 /**
- * Creation accepts one field an update never may: the primary key itself.
+ * Creation accepts two fields an update never may: the primary key itself, and the deprecated
+ * `isFavourite` (see its note below).
  *
  * Omit it and the column's `$defaultFn(newId)` mints a time-sortable random key, which is what
  * every real user gets. Supply it and the row is keyed by the caller's own string — the seam the
@@ -165,6 +158,14 @@ const tripFields = {
 export const createTripInput = z.object({
   ...tripFields,
   id: idSchema.optional(),
+  /**
+   * @deprecated The favourite is one person's row in `trip_favourites`; write it through
+   * `setFavourite` (`src/server/repos/trip-favourites.ts`). The column stays because dropping one
+   * is a table rebuild on SQLite — see its `@deprecated` note in `schema.ts` — and this field stays
+   * with it only because the dev seed (`routes/api/dev/-seed/apply-trip.ts`) still sets it at
+   * creation. It is deliberately not in `tripFields`, so {@link updateTripInput} cannot patch it.
+   */
+  isFavourite: z.boolean().optional(),
 })
 export type CreateTripInput = z.infer<typeof createTripInput>
 
