@@ -62,22 +62,24 @@ its add field, and the rename, remove and merge dialogs.
 
 ## Progress
 
+PR: #574
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: the guest record
 
-- [ ] 1.1 the module and its reads
-- [ ] 1.2 createTripGuest with both rules
-- [ ] 1.3 renameTripGuest and removeTripGuest
-- [ ] 1.4 listTripParticipants moves and fills the guest branch
-- [ ] 1.5 the tenant and member isolation cases
-- [ ] 1.6 the three guest server functions and the payload
-- [ ] 1.7 the copy in all 23 locales
-- [ ] 1.8 the guest list on the people screen, and its e2e block
+- [x] 1.1 the module and its reads — f181c844
+- [x] 1.2 createTripGuest with both rules — f181c844
+- [x] 1.3 renameTripGuest and removeTripGuest — f181c844
+- [x] 1.4 listTripParticipants moves and fills the guest branch — f181c844
+- [x] 1.5 the tenant and member isolation cases — bbd3e846
+- [x] 1.6 the three guest server functions and the payload — 1a310e26
+- [x] 1.7 the copy in all 23 locales — 10e54e62
+- [x] 1.8 the guest list on the people screen, and its e2e block — dbb54b44, 846e5539
 
 ### Phase 2: the merge
 
-- [ ] 2.1 the relinker registry and mergeTripGuest
-- [ ] 2.2 mergeTripGuestFn
-- [ ] 2.3 the merge dialog, and its e2e block
-- [ ] 2.4 the full gate and the spec bookkeeping
+- [x] 2.1 the relinker registry and mergeTripGuest — f181c844
+- [x] 2.2 mergeTripGuestFn — 1a310e26
+- [x] 2.3 the merge dialog, and its e2e block — dbb54b44, 339e7b2c, 846e5539, a620d2af
+- [x] 2.4 the full gate and the spec bookkeeping — 9fc60545
