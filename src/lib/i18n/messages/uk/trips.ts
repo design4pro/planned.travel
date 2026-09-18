@@ -273,6 +273,7 @@ const messages = {
   'people.guest.merge.title': '{name} — тепер один з учасників подорожі',
   'people.guest.merge.body':
     'Усе, що призначено на {name}, перейде до обраної людини, а гість зникне. Скасувати це неможливо.',
+  'people.guest.merge.inherits': '{member} отримає все, що призначено {name}.',
   'people.guest.merge.placeholder': 'Оберіть когось із подорожі',
   'people.guest.merge.confirm': 'Об’єднати',
   'people.guest.merge.done': '{name} — тепер {member}',

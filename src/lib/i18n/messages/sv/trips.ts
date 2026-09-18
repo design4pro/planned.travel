@@ -256,6 +256,8 @@ const messages = {
   'people.guest.merge.title': '{name} är nu en av personerna på den här resan',
   'people.guest.merge.body':
     'Allt som är tilldelat {name} flyttas till personen du väljer, och gästen försvinner. Det går inte att ångra.',
+  'people.guest.merge.inherits':
+    '{member} tar över allt som är tilldelat {name}.',
   'people.guest.merge.placeholder': 'Välj någon på resan',
   'people.guest.merge.confirm': 'Slå ihop',
   'people.guest.merge.done': '{name} är nu {member}',

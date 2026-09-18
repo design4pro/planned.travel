@@ -248,6 +248,8 @@ const messages = {
   'people.guest.merge.title': '{name} をこの旅行のメンバーにする',
   'people.guest.merge.body':
     '{name} に割り当てられたものはすべて選んだ人に移り、ゲストは外れます。元に戻せません。',
+  'people.guest.merge.inherits':
+    '{name}に割り当てられたものはすべて{member}に引き継がれます。',
   'people.guest.merge.placeholder': 'この旅行の人を選ぶ',
   'people.guest.merge.confirm': '統合',
   'people.guest.merge.done': '{name} は {member} になりました',

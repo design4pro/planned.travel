@@ -253,6 +253,8 @@ const messages = {
     '{name} sekarang salah satu orang di perjalanan ini',
   'people.guest.merge.body':
     'Semua yang ditugaskan ke {name} pindah ke orang yang kamu pilih, dan tamu dihapus. Tindakan ini tidak bisa dibatalkan.',
+  'people.guest.merge.inherits':
+    '{member} mewarisi semua yang ditugaskan kepada {name}.',
   'people.guest.merge.placeholder': 'Pilih seseorang di perjalanan ini',
   'people.guest.merge.confirm': 'Gabungkan',
   'people.guest.merge.done': '{name} sekarang adalah {member}',

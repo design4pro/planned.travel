@@ -217,6 +217,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
   const membersHeading = useRef<HTMLHeadingElement>(null)
   /** The same, for a guest who left the list through a removal or a merge. */
   const guestsHeading = useRef<HTMLHeadingElement>(null)
+  const guestField = useRef<HTMLInputElement>(null)
   /** {@link removed}'s twin for the two dialogs that take a guest off the list. */
   const guestGone = useRef(false)
   /**
@@ -345,6 +346,9 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         return
       case 'guest-add':
         setGuestName('')
+        // Back to the field for the next name: the submit may have come from the button, and the
+        // reload re-renders the card around it, so the keyboard is put there rather than assumed.
+        requestAnimationFrame(() => guestField.current?.focus())
         return
       case 'guest-rename':
         setRenaming(null)
@@ -468,6 +472,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         error={refusalOn('guest-add')}
       >
         <Input
+          ref={guestField}
           value={guestName}
           maxLength={200}
           autoComplete="off"
@@ -688,38 +693,37 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
                   icon={<UserRound aria-hidden />}
                   title={t('trips.people.guests.empty')}
                   description={t('trips.people.guests.emptyHint')}
-                  action={addGuestForm}
                 />
               ) : (
-                <>
-                  <ul className="flex flex-col gap-1">
-                    {guests.map((guest, index) => (
-                      <GuestRow
-                        key={guest.guestId}
-                        guest={guest}
-                        index={index}
-                        canManage={isOwner}
-                        busy={busy}
-                        onRename={() => {
-                          setFailure(null)
-                          setRenaming(guest)
-                        }}
-                        onMerge={() => {
-                          setFailure(null)
-                          guestGone.current = false
-                          setMerging(guest)
-                        }}
-                        onRemove={() => {
-                          setFailure(null)
-                          guestGone.current = false
-                          setRemovingGuest(guest)
-                        }}
-                      />
-                    ))}
-                  </ul>
-                  {addGuestForm}
-                </>
+                <ul className="flex flex-col gap-1">
+                  {guests.map((guest, index) => (
+                    <GuestRow
+                      key={guest.guestId}
+                      guest={guest}
+                      index={index}
+                      canManage={isOwner}
+                      busy={busy}
+                      onRename={() => {
+                        setFailure(null)
+                        setRenaming(guest)
+                      }}
+                      onMerge={() => {
+                        setFailure(null)
+                        guestGone.current = false
+                        setMerging(guest)
+                      }}
+                      onRemove={() => {
+                        setFailure(null)
+                        guestGone.current = false
+                        setRemovingGuest(guest)
+                      }}
+                    />
+                  ))}
+                </ul>
               )}
+              {/* One place in the tree whether the list is empty or not, so the field keeps focus
+                  across the first add instead of remounting under the list. */}
+              {addGuestForm}
             </CardContent>
           </Card>
         </section>
@@ -1150,7 +1154,8 @@ export function GuestNameDialog({
 
   return (
     <Dialog open={guest !== null} onOpenChange={onOpenChange}>
-      <DialogContent size="sm">
+      {/* The title and the labelled field say everything; there is no description to point at. */}
+      <DialogContent size="sm" aria-describedby={undefined}>
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -1231,6 +1236,7 @@ export function MergeGuestDialog({
   const t = useTranslate()
   const [target, setTarget] = useState<string | null>(null)
   const name = guest?.displayName ?? ''
+  const heir = members.find((person) => person.memberId === target)
 
   return (
     <Dialog open={guest !== null} onOpenChange={onOpenChange}>
@@ -1256,6 +1262,15 @@ export function MergeGuestDialog({
             searchPlaceholder={t('trips.people.guest.merge.placeholder')}
             ariaLabel={t('trips.people.guest.merge.placeholder')}
           />
+          {/* Always in the tree, so the sentence is announced when a pick fills it. */}
+          <p aria-live="polite" className="text-label text-ink-2">
+            {heir === undefined
+              ? null
+              : t('trips.people.guest.merge.inherits', {
+                  name,
+                  member: heir.name,
+                })}
+          </p>
           {failure}
         </DialogBody>
 

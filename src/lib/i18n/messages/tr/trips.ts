@@ -254,6 +254,8 @@ const messages = {
   'people.guest.merge.title': '{name} artık bu gezideki kişilerden biri',
   'people.guest.merge.body':
     '{name} kişisine atanan her şey seçtiğin kişiye geçer ve misafir kaldırılır. Bu işlem geri alınamaz.',
+  'people.guest.merge.inherits':
+    '{name} için atanan her şey {member} kişisine geçer.',
   'people.guest.merge.placeholder': 'Bu geziden birini seç',
   'people.guest.merge.confirm': 'Birleştir',
   'people.guest.merge.done': '{name} artık {member}',

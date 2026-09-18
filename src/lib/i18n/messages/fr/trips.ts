@@ -272,6 +272,8 @@ const messages = {
     '{name} fait désormais partie des personnes de ce voyage',
   'people.guest.merge.body':
     'Tout ce qui était attribué à {name} passe à la personne choisie, et l’invité est retiré. Cette action est irréversible.',
+  'people.guest.merge.inherits':
+    '{member} reprend tout ce qui est attribué à {name}.',
   'people.guest.merge.placeholder': 'Choisissez quelqu’un de ce voyage',
   'people.guest.merge.confirm': 'Fusionner',
   'people.guest.merge.done': '{name} est désormais {member}',

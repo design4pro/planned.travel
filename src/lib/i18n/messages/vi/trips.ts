@@ -252,6 +252,7 @@ const messages = {
     '{name} giờ là một trong những người của chuyến đi này',
   'people.guest.merge.body':
     'Mọi thứ đã giao cho {name} sẽ chuyển sang người bạn chọn, và khách sẽ bị xoá. Không thể hoàn tác.',
+  'people.guest.merge.inherits': '{member} sẽ nhận mọi thứ đã gán cho {name}.',
   'people.guest.merge.placeholder': 'Chọn một người trong chuyến đi này',
   'people.guest.merge.confirm': 'Gộp',
   'people.guest.merge.done': '{name} giờ là {member}',

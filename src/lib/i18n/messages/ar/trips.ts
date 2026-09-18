@@ -285,6 +285,7 @@ const messages = {
   'people.guest.merge.title': '{name} أصبح الآن أحد أشخاص هذه الرحلة',
   'people.guest.merge.body':
     'كل ما أُسند إلى {name} سينتقل إلى الشخص الذي تختاره، وسيُزال الضيف. لا يمكن التراجع عن ذلك.',
+  'people.guest.merge.inherits': 'سيرث {member} كل ما هو مُسند إلى {name}.',
   'people.guest.merge.placeholder': 'اختر شخصًا من هذه الرحلة',
   'people.guest.merge.confirm': 'دمج',
   'people.guest.merge.done': '{name} أصبح الآن {member}',

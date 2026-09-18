@@ -266,6 +266,8 @@ const messages = {
   'people.guest.merge.title': '{name} agora é uma das pessoas desta viagem',
   'people.guest.merge.body':
     'Tudo o que está atribuído a {name} passa para a pessoa escolhida, e o convidado sai. Não dá para desfazer.',
+  'people.guest.merge.inherits':
+    '{member} herda tudo o que foi atribuído a {name}.',
   'people.guest.merge.placeholder': 'Escolha alguém desta viagem',
   'people.guest.merge.confirm': 'Mesclar',
   'people.guest.merge.done': '{name} agora é {member}',

@@ -271,6 +271,8 @@ const messages = {
   'people.guest.merge.title': '{name} je teď jedním z lidí na tomto výletě',
   'people.guest.merge.body':
     'Vše, co je přiřazeno k {name}, přejde na vybranou osobu a host zmizí. Tuto akci nelze vrátit.',
+  'people.guest.merge.inherits':
+    '{member} převezme vše, co je přiřazeno k {name}.',
   'people.guest.merge.placeholder': 'Vyber někoho z tohoto výletu',
   'people.guest.merge.confirm': 'Sloučit',
   'people.guest.merge.done': '{name} je teď {member}',

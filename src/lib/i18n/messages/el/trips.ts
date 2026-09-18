@@ -266,6 +266,8 @@ const messages = {
     '{name}: είναι πλέον ένα από τα άτομα του ταξιδιού',
   'people.guest.merge.body':
     'Ό,τι έχει ανατεθεί στον/στην {name} περνά στο άτομο που θα επιλέξεις και ο καλεσμένος αφαιρείται. Δεν αναιρείται.',
+  'people.guest.merge.inherits':
+    'Ο/Η {member} αναλαμβάνει ό,τι έχει ανατεθεί στο/στη {name}.',
   'people.guest.merge.placeholder': 'Επίλεξε κάποιον από το ταξίδι',
   'people.guest.merge.confirm': 'Συγχώνευση',
   'people.guest.merge.done': '{name}: είναι πλέον {member}',

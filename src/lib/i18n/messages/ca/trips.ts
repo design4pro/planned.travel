@@ -266,6 +266,8 @@ const messages = {
     '{name} ara és una de les persones d’aquest viatge',
   'people.guest.merge.body':
     'Tot el que està assignat a {name} passa a la persona que triïs i el convidat desapareix. No es pot desfer.',
+  'people.guest.merge.inherits':
+    '{member} hereta tot el que s’ha assignat a {name}.',
   'people.guest.merge.placeholder': 'Tria algú d’aquest viatge',
   'people.guest.merge.confirm': 'Fusiona',
   'people.guest.merge.done': '{name} ara és {member}',

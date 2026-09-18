@@ -260,6 +260,8 @@ const messages = {
   'people.guest.merge.title': '{name} mostantól az utazás egyik résztvevője',
   'people.guest.merge.body':
     'Minden, ami {name} vendéghez van rendelve, a kiválasztott személyhez kerül, a vendég pedig törlődik. Ez nem vonható vissza.',
+  'people.guest.merge.inherits':
+    '{member} átveszi mindazt, ami {name} nevén van.',
   'people.guest.merge.placeholder': 'Válassz valakit az utazásból',
   'people.guest.merge.confirm': 'Összevonás',
   'people.guest.merge.done': '{name} mostantól {member}',

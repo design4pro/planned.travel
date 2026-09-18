@@ -248,6 +248,8 @@ const messages = {
   'people.guest.merge.title': '{name}님을 이 여행의 멤버로 합치기',
   'people.guest.merge.body':
     '{name}님에게 배정된 모든 항목이 선택한 사람에게 옮겨지고 게스트는 제외됩니다. 되돌릴 수 없습니다.',
+  'people.guest.merge.inherits':
+    '{name}에게 배정된 모든 항목을 {member}님이 이어받습니다.',
   'people.guest.merge.placeholder': '이 여행에 있는 사람 선택',
   'people.guest.merge.confirm': '병합',
   'people.guest.merge.done': '{name}님은 이제 {member}님입니다',

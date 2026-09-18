@@ -4,6 +4,7 @@ import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -176,5 +177,34 @@ describe('the merge dialog', () => {
     fireEvent.click(merge)
 
     expect(onConfirm).not.toHaveBeenCalled()
+  })
+})
+
+describe('the merge dialog, once somebody is chosen', () => {
+  it('names who inherits, and arms the confirm for them', async () => {
+    const onConfirm = vi.fn()
+    inEnglish(
+      <MergeGuestDialog
+        guest={ANNA}
+        members={[MAREK]}
+        onOpenChange={() => {}}
+        busy={false}
+        failure={null}
+        onConfirm={onConfirm}
+        onCloseAutoFocus={() => {}}
+      />,
+    )
+
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', { name: 'Choose somebody on this trip' }),
+    )
+    await user.click(await screen.findByRole('option', { name: /Marek/ }))
+
+    expect(
+      screen.getByText('Marek inherits everything assigned to Anna.'),
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Merge' }))
+    expect(onConfirm).toHaveBeenCalledWith('member-marek')
   })
 })

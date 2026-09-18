@@ -1468,11 +1468,15 @@ test.describe('01-S6b — A guest on a trip', () => {
 
     // A name no earlier run left behind, so a duplicate refusal cannot pass for success.
     const name = `E2E guest ${Date.now()}`
-    await page.getByLabel('Their name').fill(name)
-    await page.getByRole('button', { name: 'Add a guest' }).click()
+    const field = page.getByLabel('Their name')
+    await field.fill(name)
+    await field.press('Enter')
 
     const row = page.locator('li').filter({ hasText: name })
     await expect(row).toBeVisible()
+    // The field sits in one place whether the list was empty or not, so the keyboard stays in it.
+    await expect(field).toBeFocused()
+    await expect(field).toHaveValue('')
     await expect(row).toContainText('Guest')
 
     // The merge is irreversible, so the case only proves the dialog asks: the confirm stays

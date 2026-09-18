@@ -231,6 +231,7 @@ const messages = {
   'people.guest.merge.title': '{name} 現在是本次旅行的一員',
   'people.guest.merge.body':
     '指派給 {name} 的所有內容都會轉給你選擇的人，訪客將被移除。此操作無法復原。',
+  'people.guest.merge.inherits': '分配給{name}的所有內容將由{member}接手。',
   'people.guest.merge.placeholder': '選擇本次旅行中的某人',
   'people.guest.merge.confirm': '合併',
   'people.guest.merge.done': '{name} 現在是 {member}',

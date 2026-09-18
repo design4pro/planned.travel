@@ -266,6 +266,8 @@ const messages = {
     '{name} ist jetzt eine der Personen auf dieser Reise',
   'people.guest.merge.body':
     'Alles, was {name} zugewiesen ist, geht an die gewählte Person über, und der Gast wird entfernt. Das lässt sich nicht rückgängig machen.',
+  'people.guest.merge.inherits':
+    '{member} übernimmt alles, was {name} zugeordnet ist.',
   'people.guest.merge.placeholder': 'Wähle jemanden auf dieser Reise',
   'people.guest.merge.confirm': 'Zusammenführen',
   'people.guest.merge.done': '{name} ist jetzt {member}',

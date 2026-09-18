@@ -275,6 +275,7 @@ const messages = {
   'people.guest.merge.title': '{name} — теперь один из участников поездки',
   'people.guest.merge.body':
     'Всё, что назначено на {name}, перейдёт выбранному человеку, а гость исчезнет. Отменить это нельзя.',
+  'people.guest.merge.inherits': '{member} получит всё, что назначено {name}.',
   'people.guest.merge.placeholder': 'Выберите кого-то из поездки',
   'people.guest.merge.confirm': 'Объединить',
   'people.guest.merge.done': '{name} — теперь {member}',

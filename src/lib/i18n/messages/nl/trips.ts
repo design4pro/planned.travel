@@ -258,6 +258,8 @@ const messages = {
   'people.guest.merge.title': '{name} is nu een van de mensen op deze reis',
   'people.guest.merge.body':
     'Alles wat aan {name} is toegewezen gaat naar de persoon die je kiest, en de gast verdwijnt. Dit kan niet ongedaan worden gemaakt.',
+  'people.guest.merge.inherits':
+    '{member} neemt alles over wat aan {name} is toegewezen.',
   'people.guest.merge.placeholder': 'Kies iemand op deze reis',
   'people.guest.merge.confirm': 'Samenvoegen',
   'people.guest.merge.done': '{name} is nu {member}',

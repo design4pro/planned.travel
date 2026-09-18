@@ -426,6 +426,8 @@ const messages = {
   'people.guest.merge.title': '{name} is now one of the people on this trip',
   'people.guest.merge.body':
     'Everything assigned to {name} moves to the person you choose, and the guest goes. This cannot be undone.',
+  'people.guest.merge.inherits':
+    '{member} inherits everything assigned to {name}.',
   'people.guest.merge.placeholder': 'Choose somebody on this trip',
   'people.guest.merge.confirm': 'Merge',
   'people.guest.merge.done': '{name} is now {member}',
