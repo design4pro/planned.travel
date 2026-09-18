@@ -21,7 +21,7 @@ state for an issue: it says who acts next, and two of the four also start a run.
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                   |
 | Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | issues only, one at a time; humans and `afk-architecture-review` add `needs-triage`, `afk-triage` the rest  |
 | Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                             |
-| Command  | `groom`, `autofix`, `spec`, `review-threads`                                               | humans, except `review-threads` (the review job); the run removes it as its first mutation                  |
+| Command  | `groom`, `autofix`, `spec`, `review-threads`                                               | humans, except `review-threads` (the review job); the run consumes it in its claim step                     |
 
 There is no `status:` axis. An open issue carries an **intake** label once it has been groomed, and
 the state of work in flight is the pipeline label on its PR; an open issue with neither, and without
