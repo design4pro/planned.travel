@@ -269,10 +269,9 @@ export async function subscribeTenant(
 /**
  * The user ids of a participant list's `member` variants, in order.
  *
- * `TripParticipant` is a discriminated union whose `guest` variant is declared and never produced
- * until `01-S6b`, so `userId` is not reachable without narrowing on `kind` — which is the whole
- * point of shipping the union now. This is the narrowing, written once rather than in every case
- * that wants to name who came back.
+ * `TripParticipant` is a discriminated union whose `guest` variant carries no `userId`, so `userId`
+ * is not reachable without narrowing on `kind`. This is the narrowing, written once rather than in
+ * every case that wants to name who came back.
  */
 export function memberUserIds(
   participants: ReadonlyArray<TripParticipant>,
