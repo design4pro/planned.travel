@@ -1043,7 +1043,7 @@ function ConfirmDialog({
   )
 }
 
-interface GuestRowProps {
+export interface GuestRowProps {
   readonly guest: TripGuestParticipant
   readonly index: number
   readonly canManage: boolean
@@ -1057,7 +1057,7 @@ interface GuestRowProps {
  * One guest. Every control carries the guest's name in its accessible label, so a screen reader
  * meets "Rename Anna" and "Rename Marek" rather than a column of identical "Rename"s.
  */
-function GuestRow({
+export function GuestRow({
   guest,
   index,
   canManage,
@@ -1120,7 +1120,7 @@ function GuestRow({
   )
 }
 
-interface GuestNameDialogProps {
+export interface GuestNameDialogProps {
   readonly guest: TripGuestParticipant | null
   readonly onOpenChange: (open: boolean) => void
   readonly busy: boolean
@@ -1134,7 +1134,7 @@ interface GuestNameDialogProps {
 }
 
 /** Rename: the add field in a dialog, under the same duplicate rule. */
-function GuestNameDialog({
+export function GuestNameDialog({
   guest,
   onOpenChange,
   busy,
@@ -1203,7 +1203,7 @@ function GuestNameDialog({
   )
 }
 
-interface MergeGuestDialogProps {
+export interface MergeGuestDialogProps {
   readonly guest: TripGuestParticipant | null
   readonly members: ReadonlyArray<TripMemberParticipant>
   readonly onOpenChange: (open: boolean) => void
@@ -1219,7 +1219,7 @@ interface MergeGuestDialogProps {
  * The body says it cannot be undone, and once somebody is chosen it names who inherits — the
  * confirm stays disabled until then, so the danger button never fires on nobody.
  */
-function MergeGuestDialog({
+export function MergeGuestDialog({
   guest,
   members,
   onOpenChange,
