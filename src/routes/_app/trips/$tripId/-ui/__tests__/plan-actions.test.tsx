@@ -5,7 +5,7 @@ import { render as mount, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
-import { DropTimeDialog } from '../plan-actions'
+import { DropTimeDialog, writeThenRefresh } from '../plan-actions'
 
 /**
  * The one question the drag policy ever asks a reader.
@@ -79,5 +79,41 @@ describe('DropTimeDialog', () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(1)
     expect(onDecline).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * A delete lands and its journey restatement is then refused: the stop is already gone, so the
+ * board has to be refreshed even though the write as a whole failed.
+ */
+describe('writeThenRefresh', () => {
+  it('refreshes after a write that failed part-way, and still reports the failure', async () => {
+    const calls: Array<string> = []
+    const refusal = new Error('The journeys could not be saved.')
+    const work = async () => {
+      calls.push('delete')
+      await Promise.resolve()
+      throw refusal
+    }
+    const refresh = vi.fn(async () => {
+      calls.push('refresh')
+    })
+
+    await expect(writeThenRefresh(work, refresh)).rejects.toBe(refusal)
+    expect(calls).toEqual(['delete', 'refresh'])
+  })
+
+  it('refreshes once the write has landed', async () => {
+    const calls: Array<string> = []
+
+    await writeThenRefresh(
+      async () => {
+        calls.push('write')
+      },
+      async () => {
+        calls.push('refresh')
+      },
+    )
+    expect(calls).toEqual(['write', 'refresh'])
   })
 })

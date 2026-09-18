@@ -111,6 +111,25 @@ export function messageOf(error: unknown, fallback: string): string {
   return fallback
 }
 
+/**
+ * Runs one board write, then refreshes the board — after a failure too.
+ *
+ * A write can fail after part of it has landed: a delete whose follow-up journey restatement
+ * is refused has already taken the stop out of the database. Refreshing only on success would
+ * leave the reader an error beside a board that still lists the deleted stop, so the board
+ * always catches up to what the server now holds, and the failure still reaches the caller.
+ */
+export async function writeThenRefresh(
+  work: () => Promise<unknown>,
+  refresh: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await work()
+  } finally {
+    await refresh()
+  }
+}
+
 function categoryOptions(
   categories: ReadonlyArray<PlannerCategory>,
 ): Array<{ value: string; label: string }> {
