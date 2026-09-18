@@ -94,7 +94,7 @@ import {
   emptyDraft,
   emptyTiming,
   messageOf,
-  writeThenRefresh,
+  refreshOnFailure,
 } from './plan-actions'
 import {
   filterRows,
@@ -1061,7 +1061,8 @@ export function PlanScreen({
       setSaving(true)
       setFormError(null)
       try {
-        await writeThenRefresh(work, () => router.invalidate())
+        await work()
+        await router.invalidate()
         if (options.success !== undefined) toast.success(options.success)
         return true
       } catch (cause) {
@@ -1152,9 +1153,13 @@ export function PlanScreen({
         await deletePlanPlaceFn({ data: { tripId: payload.tripId, placeId } })
         // Deleting a stop renumbers its day, so the journeys placed against those
         // numbers are restated against the day the delete leaves behind — the second
-        // of the rule's two call sites.
+        // of the rule's two call sites. The delete has landed by then, so a refused
+        // restatement still refreshes the board before its error is shown.
         if (itemId !== null) {
-          await restateJourneys({ kind: 'delete', before: order, itemId })
+          await refreshOnFailure(
+            () => restateJourneys({ kind: 'delete', before: order, itemId }),
+            () => router.invalidate(),
+          )
         }
       },
       {
@@ -1174,6 +1179,7 @@ export function PlanScreen({
     order,
     payload.tripId,
     restateJourneys,
+    router,
     runWrite,
   ])
 

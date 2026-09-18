@@ -5,7 +5,7 @@ import { render as mount, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
-import { DropTimeDialog, writeThenRefresh } from '../plan-actions'
+import { DropTimeDialog, refreshOnFailure } from '../plan-actions'
 
 /**
  * The one question the drag policy ever asks a reader.
@@ -84,14 +84,15 @@ describe('DropTimeDialog', () => {
 
 /**
  * A delete lands and its journey restatement is then refused: the stop is already gone, so the
- * board has to be refreshed even though the write as a whole failed.
+ * board has to be refreshed even though the write as a whole failed. A write that goes through is
+ * refreshed by its caller, and must not be refreshed twice.
  */
-describe('writeThenRefresh', () => {
-  it('refreshes after a write that failed part-way, and still reports the failure', async () => {
+describe('refreshOnFailure', () => {
+  it('refreshes after the rest of a write is refused, and still reports the failure', async () => {
     const calls: Array<string> = []
     const refusal = new Error('The journeys could not be saved.')
     const work = async () => {
-      calls.push('delete')
+      calls.push('restate')
       await Promise.resolve()
       throw refusal
     }
@@ -99,21 +100,14 @@ describe('writeThenRefresh', () => {
       calls.push('refresh')
     })
 
-    await expect(writeThenRefresh(work, refresh)).rejects.toBe(refusal)
-    expect(calls).toEqual(['delete', 'refresh'])
+    await expect(refreshOnFailure(work, refresh)).rejects.toBe(refusal)
+    expect(calls).toEqual(['restate', 'refresh'])
   })
 
-  it('refreshes once the write has landed', async () => {
-    const calls: Array<string> = []
+  it('leaves the refresh to the caller when the rest of the write lands', async () => {
+    const refresh = vi.fn(async () => {})
 
-    await writeThenRefresh(
-      async () => {
-        calls.push('write')
-      },
-      async () => {
-        calls.push('refresh')
-      },
-    )
-    expect(calls).toEqual(['write', 'refresh'])
+    await refreshOnFailure(async () => {}, refresh)
+    expect(refresh).not.toHaveBeenCalled()
   })
 })

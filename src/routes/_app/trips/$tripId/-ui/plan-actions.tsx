@@ -112,21 +112,24 @@ export function messageOf(error: unknown, fallback: string): string {
 }
 
 /**
- * Runs one board write, then refreshes the board — after a failure too.
+ * Runs the rest of a board write whose first part has already landed, and refreshes the board
+ * if that rest fails.
  *
- * A write can fail after part of it has landed: a delete whose follow-up journey restatement
- * is refused has already taken the stop out of the database. Refreshing only on success would
- * leave the reader an error beside a board that still lists the deleted stop, so the board
- * always catches up to what the server now holds, and the failure still reaches the caller.
+ * A delete whose follow-up journey restatement is refused has already taken the stop out of the
+ * database, so the board catches up to what the server now holds before the failure reaches the
+ * caller. Only such a write refreshes on failure: one that failed outright changed nothing, and
+ * when it failed because the server was unreachable, the refresh would fail too and put the
+ * route's error panel in place of the dialog holding the reader's input.
  */
-export async function writeThenRefresh(
+export async function refreshOnFailure(
   work: () => Promise<unknown>,
   refresh: () => Promise<unknown>,
 ): Promise<void> {
   try {
     await work()
-  } finally {
+  } catch (cause) {
     await refresh()
+    throw cause
   }
 }
 
