@@ -70,7 +70,7 @@ export const Route = createFileRoute('/_app')({
  * `MOBILE_TAB_BAR` in `src/lib/atlas/layout.ts`. A third reservation around the
  * outlet stacks on both: a second 65px box beneath the 136px the content well
  * already pads leaves 71 + 65 = 136px of canvas visible below the bar instead of
- * the 71px gutter that was designed, on every non-bleed screen below `lg`. It
+ * the 71px gutter that clears the feedback actor, on every non-bleed screen below `lg`. It
  * shipped once, and the full-page mobile baselines were re-recorded around it
  * before it was caught.
  *

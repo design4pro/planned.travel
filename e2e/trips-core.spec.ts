@@ -374,7 +374,7 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     await expect(dialog.getByRole('listitem').first()).toBeVisible()
 
     if ((await field.count()) === 1) {
-      // The heavy branch: nothing arms it but the trip's own name, character for character.
+      // The heavy branch: nothing arms it but the trip's own name, trimmed.
       // One character short rather than one too many: the dialog trims what was typed, so a
       // trailing space is the name and arms it (issue #557).
       await field.fill(title.slice(0, -1))

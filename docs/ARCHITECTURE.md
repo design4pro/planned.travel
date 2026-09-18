@@ -710,7 +710,7 @@ that clear it already exist, one per kind of screen: the content well pads for i
 docblock), and a full-bleed slice stops at its top edge by arithmetic, out of `MOBILE_TAB_BAR`.
 A third reservation around `<Outlet />` stacks on both: a second 65px box beneath the 136px the
 content well already pads leaves 71 + 65 = 136px of canvas visible below the bar instead of the
-71px gutter that was designed, on every non-bleed authenticated screen at 360 and 768. It
+71px gutter that clears the feedback actor, on every non-bleed authenticated screen at 360 and 768. It
 shipped once, and every full-page mobile baseline in the suite was re-recorded around it before
 it was caught.
 
