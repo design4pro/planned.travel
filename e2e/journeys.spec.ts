@@ -580,6 +580,13 @@ test.describe('authenticated routes', () => {
    * assertion in it is a thing WebKit on a 393px handset answers differently from
    * Chromium at 1440x900, and none of them has a jsdom equivalent.
    *
+   * It does not run on a pull request. `mobile-safari` was the larger half of every
+   * e2e event and the half that ran out of wall clock (#552, #466), so it moved to
+   * the nightly `.github/workflows/e2e-webkit.yml`. Nothing below changed — what
+   * changed is that a regression in it surfaces within a day rather than within the
+   * hour. Touching the map overlay, the panel placement or anything at phone width
+   * is the case to run `pnpm e2e --project=mobile-safari` before opening the PR.
+   *
    * 1. **`mousemove` does not exist on a finger**, and the browser's synthetic one
    *    arrives *after* the tap - which is exactly how a hover pill ends up
    *    stranded behind the panel the tap opened. The overlay stands hover down for
