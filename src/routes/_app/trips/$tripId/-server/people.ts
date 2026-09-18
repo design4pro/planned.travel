@@ -34,6 +34,7 @@ import {
   RepositoryError,
   TripGuestMergeTargetError,
   addTripMember,
+  assertTripRole,
   createTripGuest,
   listMemberProfiles,
   listTripGuests,
@@ -595,6 +596,11 @@ export async function mergeGuestIntoMember(
   readonly memberId: string
   readonly relinked: Readonly<Record<string, number>>
 }> {
+  // The trip and the owner's standing first, as `mergeTripGuest` checks them: the member list is
+  // tenant-scoped but not visibility-scoped, so reading it first would answer a foreign or hidden
+  // trip, or a non-owner, with the merge-target refusal instead of not found or forbidden.
+  await requireTrip(scope, input.tripId)
+  await assertTripRole(scope, input.tripId, ['owner'])
   const target = (await listTripMembers(scope, input.tripId)).find(
     (member) => member.id === input.memberId,
   )

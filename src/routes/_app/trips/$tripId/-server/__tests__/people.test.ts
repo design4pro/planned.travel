@@ -678,5 +678,44 @@ describe('guests', () => {
       ).toEqual({ ok: false, reason: 'guest-merge-target' })
       expect(await guestNames()).toEqual(['Anna'])
     })
+
+    it('answers a trip in another organization as not found, before any membership is read', async () => {
+      const guest = await createTripGuest(owner, {
+        tripId: fixture.tripId,
+        displayName: 'Anna',
+      })
+      const foreign = await harness.seedTenant('elsewhere')
+
+      // Were the target looked up first, the empty member list would answer the merge-target
+      // refusal — a different answer for "this trip is not yours" than every other write gives.
+      const error = await captureError(() =>
+        mergeGuestIntoMember(foreign.scope, {
+          tripId: fixture.tripId,
+          guestId: guest.id,
+          memberId: 'no-such-member',
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await guestNames()).toEqual(['Anna'])
+    })
+
+    it('refuses an editor before telling them anything about the target', async () => {
+      const guest = await createTripGuest(owner, {
+        tripId: fixture.tripId,
+        displayName: 'Anna',
+      })
+
+      const error = await captureError(() =>
+        mergeGuestIntoMember(tenant.scopeFor(fixture.editorId), {
+          tripId: fixture.tripId,
+          guestId: guest.id,
+          memberId: 'no-such-member',
+        }),
+      )
+
+      expect((error as RepositoryError).code).toBe('FORBIDDEN')
+      expect(await guestNames()).toEqual(['Anna'])
+    })
   })
 })
