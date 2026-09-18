@@ -60,6 +60,7 @@ import {
   urlSchema,
 } from './validation'
 import type { SQL } from 'drizzle-orm'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type {
   Journey,
   JourneyEntry,
@@ -236,6 +237,73 @@ function readableJourneyFilter(scope: TenantScope): SQL {
   return anyOf(isNull(journeys.tripId), tripIsReadable)
 }
 
+/**
+ * {@link readableJourneyFilter} for a row that names its journey by id — an entry or a photo reached
+ * without `journeys` in the query. Until #521 those were read and written under the tenant filter
+ * alone, so the id of a journey on a trip the caller cannot read was enough to act on it.
+ */
+function inReadableJourney(scope: TenantScope, journeyId: SQLiteColumn): SQL {
+  return exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(journeys)
+      .where(
+        tenantFilter(
+          scope,
+          journeys,
+          eq(journeys.id, journeyId),
+          readableJourneyFilter(scope),
+        ),
+      ),
+  )
+}
+
+/** A journey the caller may read, or the `NotFoundError` a foreign tenant's id raises. */
+async function requireJourney(
+  scope: TenantScope,
+  journeyId: string,
+): Promise<Journey> {
+  const journey = await getJourney(scope, journeyId)
+  if (journey === null) {
+    throw new NotFoundError('journey', journeyId)
+  }
+  return journey
+}
+
+async function requireEntry(
+  scope: TenantScope,
+  entryId: string,
+): Promise<JourneyEntry> {
+  const entry = await journeyEntriesRepository.findOne(
+    scope,
+    allOf(
+      eq(journeyEntries.id, entryId),
+      inReadableJourney(scope, journeyEntries.journeyId),
+    ),
+  )
+  if (entry === null) {
+    throw new NotFoundError('journey entry', entryId)
+  }
+  return entry
+}
+
+async function requirePhoto(
+  scope: TenantScope,
+  photoId: string,
+): Promise<JourneyPhoto> {
+  const photo = await journeyPhotosRepository.findOne(
+    scope,
+    allOf(
+      eq(journeyPhotos.id, photoId),
+      inReadableJourney(scope, journeyPhotos.journeyId),
+    ),
+  )
+  if (photo === null) {
+    throw new NotFoundError('journey photo', photoId)
+  }
+  return photo
+}
+
 export async function listJourneys(
   scope: TenantScope,
   options: {
@@ -314,7 +382,10 @@ export async function listJourneyEntries(
   journeyId: string,
 ): Promise<Array<JourneyEntry>> {
   return journeyEntriesRepository.findMany(scope, {
-    where: eq(journeyEntries.journeyId, journeyId),
+    where: allOf(
+      eq(journeyEntries.journeyId, journeyId),
+      inReadableJourney(scope, journeyEntries.journeyId),
+    ),
     orderBy: [
       asc(journeyEntries.entryDate),
       asc(journeyEntries.sortOrder),
@@ -337,11 +408,7 @@ export async function getJourneyStory(
   readonly journey: Journey
   readonly entries: ReadonlyArray<JourneyEntryWithPhotos>
 }> {
-  const journey = await getJourney(scope, journeyId)
-  if (journey === null) {
-    // The error a foreign tenant's id raises: "not yours to read" must not confirm the journey exists.
-    throw new NotFoundError('journey', journeyId)
-  }
+  const journey = await requireJourney(scope, journeyId)
   const entries = await listJourneyEntries(scope, journeyId)
 
   const [photos, moods] = await Promise.all([
@@ -608,9 +675,10 @@ export async function listUnattachedPhotos(
   journeyId: string,
 ): Promise<Array<JourneyPhoto>> {
   return journeyPhotosRepository.findMany(scope, {
-    where: and(
+    where: allOf(
       eq(journeyPhotos.journeyId, journeyId),
       isNull(journeyPhotos.entryId),
+      inReadableJourney(scope, journeyPhotos.journeyId),
     ),
     orderBy: [desc(journeyPhotos.takenAt)],
   })
@@ -651,7 +719,7 @@ export async function updateJourney(
   input: UpdateJourneyInput,
 ): Promise<Journey> {
   const values = definedOnly(updateJourneyInput.parse(input))
-  const existing = await journeysRepository.requireById(scope, journeyId)
+  const existing = await requireJourney(scope, journeyId)
   const slug =
     values.slug === undefined || values.slug === existing.slug
       ? undefined
@@ -668,6 +736,7 @@ export async function publishJourney(
   journeyId: string,
   publicToken: string,
 ): Promise<Journey> {
+  await requireJourney(scope, journeyId)
   return journeysRepository.requireUpdate(scope, journeyId, {
     status: 'published',
     publicToken: z.string().trim().min(16).max(64).parse(publicToken),
@@ -679,6 +748,7 @@ export async function unpublishJourney(
   scope: TenantScope,
   journeyId: string,
 ): Promise<Journey> {
+  await requireJourney(scope, journeyId)
   return journeysRepository.requireUpdate(scope, journeyId, {
     status: 'draft',
     publicToken: null,
@@ -689,6 +759,7 @@ export async function deleteJourney(
   scope: TenantScope,
   journeyId: string,
 ): Promise<void> {
+  await requireJourney(scope, journeyId)
   await journeysRepository.requireRemove(scope, journeyId)
 }
 
@@ -697,7 +768,7 @@ export async function createEntry(
   input: CreateEntryInput,
 ): Promise<JourneyEntry> {
   const values = createEntryInput.parse(input)
-  await journeysRepository.requireById(scope, values.journeyId)
+  await requireJourney(scope, values.journeyId)
   if (values.moodId) {
     await journeyMoodsRepository.requireById(scope, values.moodId)
   }
@@ -722,6 +793,7 @@ export async function updateEntry(
   input: UpdateEntryInput,
 ): Promise<JourneyEntry> {
   const values = definedOnly(updateEntryInput.parse(input))
+  await requireEntry(scope, entryId)
   if (values.moodId) {
     await journeyMoodsRepository.requireById(scope, values.moodId)
   }
@@ -732,6 +804,7 @@ export async function deleteEntry(
   scope: TenantScope,
   entryId: string,
 ): Promise<void> {
+  await requireEntry(scope, entryId)
   await journeyEntriesRepository.requireRemove(scope, entryId)
 }
 
@@ -740,7 +813,7 @@ export async function addPhoto(
   input: AddPhotoInput,
 ): Promise<JourneyPhoto> {
   const values = addPhotoInput.parse(input)
-  await journeysRepository.requireById(scope, values.journeyId)
+  await requireJourney(scope, values.journeyId)
   if (values.entryId) {
     const entry = await journeyEntriesRepository.requireById(
       scope,
@@ -761,7 +834,7 @@ export async function attachPhotoToEntry(
   photoId: string,
   entryId: string | null,
 ): Promise<JourneyPhoto> {
-  const photo = await journeyPhotosRepository.requireById(scope, photoId)
+  const photo = await requirePhoto(scope, photoId)
   if (entryId !== null) {
     const entry = await journeyEntriesRepository.requireById(
       scope,
@@ -782,7 +855,7 @@ export async function deletePhoto(
   readonly storageKey: string
   readonly thumbnailKey: string | null
 }> {
-  const photo = await journeyPhotosRepository.requireById(scope, photoId)
+  const photo = await requirePhoto(scope, photoId)
   await journeyPhotosRepository.requireRemove(scope, photoId)
   return { storageKey: photo.storageKey, thumbnailKey: photo.thumbnailKey }
 }
@@ -854,6 +927,7 @@ export async function countEntriesByMood(
         scope,
         journeyEntries,
         eq(journeyEntries.journeyId, journeyId),
+        inReadableJourney(scope, journeyEntries.journeyId),
       ),
     )
     .groupBy(journeyEntries.moodId)
@@ -872,7 +946,10 @@ export async function listEntriesByIds(
     return []
   }
   return journeyEntriesRepository.findMany(scope, {
-    where: inArray(journeyEntries.id, [...entryIds]),
+    where: allOf(
+      inArray(journeyEntries.id, [...entryIds]),
+      inReadableJourney(scope, journeyEntries.journeyId),
+    ),
     orderBy: [desc(journeyEntries.entryDate)],
   })
 }
