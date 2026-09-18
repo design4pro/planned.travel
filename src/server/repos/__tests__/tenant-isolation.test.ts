@@ -231,7 +231,17 @@ import {
   updateTrip,
   updateTripMember,
 } from '../trips'
-import { listTripParticipants } from '../trip-guests'
+import {
+  TripGuestMergeTargetError,
+  createTripGuest,
+  listTripGuests,
+  listTripParticipants,
+  mergeTripGuest,
+  registerGuestRelinker,
+  removeTripGuest,
+  renameTripGuest,
+  tripGuestsRepository,
+} from '../trip-guests'
 import {
   addCompanyHoliday,
   addHolidayCalendar,
@@ -350,6 +360,7 @@ interface World {
   readonly fileId: string
   readonly shareLinkId: string
   readonly tripMemberId: string
+  readonly guestId: string
   readonly messageId: string
   readonly collabNoteId: string
   readonly pollId: string
@@ -549,6 +560,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
   if (tripMember === undefined) {
     throw new Error('Creating a trip must create its owner membership.')
   }
+  const guest = await createTripGuest(scope, {
+    tripId: trip.id,
+    displayName: 'Travelling without an account',
+  })
 
   const message = await postMessage(scope, {
     tripId: trip.id,
@@ -725,6 +740,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     fileId: file.id,
     shareLinkId: shareLink.id,
     tripMemberId: tripMember.id,
+    guestId: guest.id,
     messageId: message.id,
     collabNoteId: collabNote.id,
     pollId: poll.id,
@@ -803,6 +819,9 @@ const cases: ReadonlyArray<IsolationCase> = [
   }),
   isolationCase('trip members', tripMembersRepository, (w) => w.tripMemberId, {
     role: 'viewer',
+  }),
+  isolationCase('trip guests', tripGuestsRepository, (w) => w.guestId, {
+    displayName: 'hijacked',
   }),
   isolationCase('share links', shareLinksRepository, (w) => w.shareLinkId, {
     viewCount: 99,
@@ -4336,6 +4355,96 @@ describe('tenant isolation', () => {
       expect(
         (await tallyMoods(beta.tenant.scope)).map((row) => row.value),
       ).toEqual([1])
+    })
+  })
+
+  /** `01-S6b` — a trip's guests, read and written across the tenant boundary. */
+  describe('trip guests', () => {
+    it('refuses to put a guest on a foreign trip', async () => {
+      expect(
+        await captureError(() =>
+          createTripGuest(alpha.tenant.scope, {
+            tripId: beta.tripId,
+            displayName: 'Stowaway',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        (await listTripGuests(beta.tenant.scope, beta.tripId)).map(
+          (guest) => guest.id,
+        ),
+      ).toEqual([beta.guestId])
+    })
+
+    it('refuses to rename or remove a foreign guest, and leaves it byte-identical', async () => {
+      const before = await tripGuestsRepository.findById(
+        beta.tenant.scope,
+        beta.guestId,
+      )
+
+      expect(
+        await captureError(() =>
+          renameTripGuest(alpha.tenant.scope, beta.guestId, 'hijacked'),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          removeTripGuest(alpha.tenant.scope, beta.guestId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await tripGuestsRepository.findById(beta.tenant.scope, beta.guestId),
+      ).toEqual(before)
+    })
+
+    it('lists none of a foreign trip’s guests, and refuses its participants', async () => {
+      expect(await listTripGuests(alpha.tenant.scope, beta.tripId)).toEqual([])
+      expect(
+        await captureError(() =>
+          listTripParticipants(alpha.tenant.scope, beta.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('merges neither a foreign guest nor into a foreign member, and relinks nothing', async () => {
+      const calls: Array<string> = []
+      const unregister = registerGuestRelinker('probe', async () => {
+        calls.push('probe')
+        return { count: 0, statements: [] }
+      })
+      try {
+        expect(
+          await captureError(() =>
+            mergeTripGuest(
+              alpha.tenant.scope,
+              alpha.tripId,
+              beta.guestId,
+              alpha.tenant.ownerUserId,
+            ),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+        // B's owner is a member of B's trip and of no trip of A's, so as a target they are
+        // somebody not on this trip — the refusal every outsider gets, disclosing nothing.
+        expect(
+          await captureError(() =>
+            mergeTripGuest(
+              alpha.tenant.scope,
+              alpha.tripId,
+              alpha.guestId,
+              beta.tenant.ownerUserId,
+            ),
+          ),
+        ).toBeInstanceOf(TripGuestMergeTargetError)
+        expect(calls).toEqual([])
+      } finally {
+        unregister()
+      }
+      expect(
+        await tripGuestsRepository.findById(beta.tenant.scope, beta.guestId),
+      ).not.toBeNull()
+      expect(
+        await tripGuestsRepository.findById(alpha.tenant.scope, alpha.guestId),
+      ).not.toBeNull()
     })
   })
 })
