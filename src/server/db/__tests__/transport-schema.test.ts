@@ -187,7 +187,9 @@ describe('the transport chain and airport catalogue schema', () => {
     it('holds one row per code and searches by name and city', () => {
       expect(indexNames(airports).sort()).toEqual([
         'airports_city_idx',
+        'airports_iata_prefix_idx',
         'airports_iata_unq',
+        'airports_icao_prefix_idx',
         'airports_icao_unq',
         'airports_name_idx',
       ])
