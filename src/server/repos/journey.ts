@@ -937,7 +937,7 @@ export async function countEntriesByMood(
   )
 }
 
-/** Re-reads a set of entries inside the tenant, newest first. */
+/** Re-reads a set of entries the caller may read, newest first; an unreadable one is dropped. */
 export async function listEntriesByIds(
   scope: TenantScope,
   entryIds: ReadonlyArray<string>,

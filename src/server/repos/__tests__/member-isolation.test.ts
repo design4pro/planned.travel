@@ -625,7 +625,7 @@ describe('member isolation', () => {
         tripId: fixture.tripId,
         title: 'Lisbon, written up',
       })
-      await createEntry(alpha.scope, {
+      const entry = await createEntry(alpha.scope, {
         journeyId: journey.id,
         entryDate: '2026-04-10',
         title: 'Custard tarts, twice',
@@ -636,6 +636,16 @@ describe('member isolation', () => {
         journey.id,
       ])
       expect((await getJourney(stranger, journey.id))?.id).toBe(journey.id)
+      // The id-keyed helpers (#521) open with the trip too.
+      expect(
+        (await listJourneyEntries(stranger, journey.id)).map((row) => row.id),
+      ).toEqual([entry.id])
+      expect(
+        (await listEntriesByIds(stranger, [entry.id])).map((row) => row.id),
+      ).toEqual([entry.id])
+      expect(await countEntriesByMood(stranger, journey.id)).toEqual([
+        { moodId: mood.id, value: 1 },
+      ])
       expect((await getJourneyBySlug(stranger, journey.slug))?.id).toBe(
         journey.id,
       )
