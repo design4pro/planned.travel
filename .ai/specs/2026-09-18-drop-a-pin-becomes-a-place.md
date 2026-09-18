@@ -269,7 +269,7 @@ Every key lands in all 23 locales in the same change (`i18n-messages` skill). `e
 
 ## 📋 Phasing
 
-1. **Seams and the day's add control** — `planner-add-place.tsx`, `planner-day-tools.tsx`, `day-section.tsx`'s `dayTools`, the `create` variant's draft, the write-error helper. Ships the menu with its `map` option **hidden** until Phase 3, and a working **Add a place to this day**.
+1. **Seams and the day's add control** — `planner-add-place.tsx`, `planner-day-tools.tsx`, `day-section.tsx`'s `dayTools`, the `create` variant's draft, the write-error helper. Ships the pill through `PlannerAddPlace` with **no menu trigger** — the trigger renders only when the menu has at least one option, so an empty menu is never shown — and a working **Add a place to this day**.
 2. **Attribution** — `src/lib/geo/credits.ts`, `geoapify.ts` importing it, `MapAttribution`'s second segment. Ships alone; the obligation is met before the first geocoded address appears.
 3. **The drop** — `-server/geocode.ts`, `planner-map-layer.tsx`, the menu's `map` option, the remaining copy, the e2e journey.
 
@@ -279,7 +279,7 @@ Every key lands in all 23 locales in the same change (`i18n-messages` skill). `e
 
 1. `day-section.tsx`: add `dayTools`; test that it renders once per day when given and not at all when absent. _App works: prop unused._
 2. `planner-day-tools.tsx` + copy keys `addPlace.forDay`, `addPlace.forDayNamed` in 23 locales; unit test that clicking it calls `onAddPlace(day.id)`.
-3. `planner-add-place.tsx` (pill + menu, `map` option not rendered yet) + `addPlace.label`, `addPlace.more`; test the three `data-part`s present in the right states and the pill's props unchanged.
+3. `planner-add-place.tsx` (pill + an options-driven menu that renders no trigger while it has no option) + `addPlace.label`, `addPlace.more`; test that `data-part="add-place"` is present with the pill's props unchanged, and that `add-place-menu` is absent with zero options and present with one.
 4. `placeWriteMessage` in the same file + `addPlace.quota`, `addPlace.quotaAction`; unit test: a `QUOTA_EXCEEDED` error maps to the catalogue sentence and requests the billing toast; any other error keeps `messageOf`'s answer. First assert, in a server-function test, that the code survives serialisation to the client, as `impersonation-bar.tsx:222` relies on.
 5. `plan-screen.tsx` edits 1, 4, 5, 6: widen `create`, mount `PlannerDayTools`, replace `addButton`, route `runWrite`'s message through the helper. Existing `plan-screen` tests and `02-S3`'s camera journey stay green.
 
@@ -292,7 +292,7 @@ Every key lands in all 23 locales in the same change (`i18n-messages` skill). `e
 
 8. `-server/geocode.ts` `reverseGeocodeFn`. `-server/__tests__/geocode.test.ts`: an unauthorised `tripId` (foreign, viewer-only, archived) is refused **before** the provider is called and before `getSubscription` (the provider port is a spy that must have zero calls); a provider refusal returns `{ address: null }`; a hit returns the first candidate's address.
 9. `planner-map-layer.tsx` state machine and listeners, test first — `-ui/__tests__/planner-map-layer.test.tsx`: a context-click calls `onDropped` with the coordinates rounded to six places and the dialog's name field focused; `Escape` while armed cancels without a write and calls `preventDefault`; a long-press shorter than 500 ms does not drop, one of 500 ms does, one that moves 11 px does not; exactly one `map.on` per mount and a matching `map.off` on unmount, and every DOM listener removed; a lookup slower than the budget opens the form with an empty address and a later resolution changes nothing; a second trigger while `dropping` is ignored.
-10. Provisional pin, arming banner, empty-map hint + the `drop.*` keys and `addPlace.option.map` in 23 locales; render the menu's `map` option.
+10. Provisional pin, arming banner, empty-map hint + the `drop.*` keys and `addPlace.option.map` in 23 locales; register the menu's `map` option, which makes the trigger appear.
 11. `plan-screen.tsx` edits 2 and 3: `usePlannerDrop` and `<PlannerMapLayer>`.
 12. `src/server/repos/__tests__/tenant-isolation.test.ts`: extend the existing `createPlace` cases inside `a foreign parent id is rejected, never re-scoped` (`:1251` foreign trip, `:1403` foreign category) with a valid `lat`/`lng` pair, and assert B's place count is unchanged afterwards. No second copy of either case.
 13. `e2e/places-and-maps.spec.ts`: append `test.describe('02-S4 — drop a pin', …)`. First test: each published `data-part` (`add-place`, `add-place-menu`, `add-place-option[value="map"]`, `planner-canvas`) has `toHaveCount(1)` in the state that should contain it. Then: context-click → `getByRole('dialog', { name: 'Add a place to this trip' })` with latitude/longitude filled; keyboard arm → `Enter` → same dialog; save → a new marker, and a reload keeps it. `watchConsole()` before every navigation, `fatal` empty at the end (the GL advisory on a map route is the one tolerated entry), and zero layout shift after paint in Chromium including while the dialog opens. The journey asserts the coordinates and that the address field is editable, never its content, so it passes whether or not the environment holds a geocoder key and never depends on a vendor.
