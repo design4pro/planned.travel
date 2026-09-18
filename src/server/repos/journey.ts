@@ -30,7 +30,13 @@ import {
   journeys,
   trips,
 } from '#/server/db/schema'
-import { allOf, anyOf, assertQuota, createTenantRepository, tenantFilter } from './base'
+import {
+  allOf,
+  anyOf,
+  assertQuota,
+  createTenantRepository,
+  tenantFilter,
+} from './base'
 import { NotFoundError } from './context'
 import { checkInsRepository } from './collab'
 import { placesRepository } from './places'
@@ -54,7 +60,13 @@ import {
   urlSchema,
 } from './validation'
 import type { SQL } from 'drizzle-orm'
-import type { Journey, JourneyEntry, JourneyMood, JourneyPhoto } from '#/server/db/types'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
+import type {
+  Journey,
+  JourneyEntry,
+  JourneyMood,
+  JourneyPhoto,
+} from '#/server/db/types'
 import type { TenantScope } from './base'
 
 /** The tenant's own "today", for a ranking that depends on it. */
@@ -63,9 +75,18 @@ function todayIso(): string {
 }
 
 export const journeysRepository = createTenantRepository(journeys, 'journey')
-export const journeyEntriesRepository = createTenantRepository(journeyEntries, 'journey entry')
-export const journeyPhotosRepository = createTenantRepository(journeyPhotos, 'journey photo')
-export const journeyMoodsRepository = createTenantRepository(journeyMoods, 'mood')
+export const journeyEntriesRepository = createTenantRepository(
+  journeyEntries,
+  'journey entry',
+)
+export const journeyPhotosRepository = createTenantRepository(
+  journeyPhotos,
+  'journey photo',
+)
+export const journeyMoodsRepository = createTenantRepository(
+  journeyMoods,
+  'mood',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -118,10 +139,16 @@ const entryFields = {
   sortOrder: sortOrderSchema.optional(),
 }
 
-export const createEntryInput = z.object({ journeyId: idSchema, ...entryFields })
+export const createEntryInput = z.object({
+  journeyId: idSchema,
+  ...entryFields,
+})
 export type CreateEntryInput = z.infer<typeof createEntryInput>
 
-export const updateEntryInput = z.object({ ...entryFields, entryDate: dateSchema.optional() })
+export const updateEntryInput = z.object({
+  ...entryFields,
+  entryDate: dateSchema.optional(),
+})
 export type UpdateEntryInput = z.infer<typeof updateEntryInput>
 
 export const addPhotoInput = z.object({
@@ -164,7 +191,10 @@ async function reserveSlug(
     const candidate = attempt === 1 ? base : `${base.slice(0, 74)}-${attempt}`
     const clashes = await journeysRepository.count(
       scope,
-      and(eq(journeys.slug, candidate), excludeId ? ne(journeys.id, excludeId) : undefined),
+      and(
+        eq(journeys.slug, candidate),
+        excludeId ? ne(journeys.id, excludeId) : undefined,
+      ),
     )
     if (clashes === 0) {
       return candidate
@@ -195,34 +225,122 @@ function readableJourneyFilter(scope: TenantScope): SQL {
     scope.db
       .select({ present: sql`1` })
       .from(trips)
-      .where(tenantFilter(scope, trips, eq(trips.id, journeys.tripId), readableTripFilter(scope))),
+      .where(
+        tenantFilter(
+          scope,
+          trips,
+          eq(trips.id, journeys.tripId),
+          readableTripFilter(scope),
+        ),
+      ),
   )
   return anyOf(isNull(journeys.tripId), tripIsReadable)
 }
 
+/**
+ * {@link readableJourneyFilter} for a row that names its journey by id — an entry or a photo reached
+ * without `journeys` in the query. Until #521 those were read and written under the tenant filter
+ * alone, so the id of a journey on a trip the caller cannot read was enough to act on it.
+ */
+function inReadableJourney(scope: TenantScope, journeyId: SQLiteColumn): SQL {
+  return exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(journeys)
+      .where(
+        tenantFilter(
+          scope,
+          journeys,
+          eq(journeys.id, journeyId),
+          readableJourneyFilter(scope),
+        ),
+      ),
+  )
+}
+
+/** A journey the caller may read, or the `NotFoundError` a foreign tenant's id raises. */
+async function requireJourney(
+  scope: TenantScope,
+  journeyId: string,
+): Promise<Journey> {
+  const journey = await getJourney(scope, journeyId)
+  if (journey === null) {
+    throw new NotFoundError('journey', journeyId)
+  }
+  return journey
+}
+
+async function requireEntry(
+  scope: TenantScope,
+  entryId: string,
+): Promise<JourneyEntry> {
+  const entry = await journeyEntriesRepository.findOne(
+    scope,
+    allOf(
+      eq(journeyEntries.id, entryId),
+      inReadableJourney(scope, journeyEntries.journeyId),
+    ),
+  )
+  if (entry === null) {
+    throw new NotFoundError('journey entry', entryId)
+  }
+  return entry
+}
+
+async function requirePhoto(
+  scope: TenantScope,
+  photoId: string,
+): Promise<JourneyPhoto> {
+  const photo = await journeyPhotosRepository.findOne(
+    scope,
+    allOf(
+      eq(journeyPhotos.id, photoId),
+      inReadableJourney(scope, journeyPhotos.journeyId),
+    ),
+  )
+  if (photo === null) {
+    throw new NotFoundError('journey photo', photoId)
+  }
+  return photo
+}
+
 export async function listJourneys(
   scope: TenantScope,
-  options: { readonly status?: (typeof JOURNEY_STATUSES)[number]; readonly ownerUserId?: string } = {},
+  options: {
+    readonly status?: (typeof JOURNEY_STATUSES)[number]
+    readonly ownerUserId?: string
+  } = {},
 ): Promise<Array<Journey>> {
   return journeysRepository.findMany(scope, {
     where: allOf(
       readableJourneyFilter(scope),
       options.status ? eq(journeys.status, options.status) : undefined,
-      options.ownerUserId ? eq(journeys.ownerUserId, options.ownerUserId) : undefined,
+      options.ownerUserId
+        ? eq(journeys.ownerUserId, options.ownerUserId)
+        : undefined,
     ),
     orderBy: [desc(journeys.updatedAt)],
   })
 }
 
-export async function getJourney(scope: TenantScope, journeyId: string): Promise<Journey | null> {
-  return journeysRepository.findOne(scope, allOf(readableJourneyFilter(scope), eq(journeys.id, journeyId)))
+export async function getJourney(
+  scope: TenantScope,
+  journeyId: string,
+): Promise<Journey | null> {
+  return journeysRepository.findOne(
+    scope,
+    allOf(readableJourneyFilter(scope), eq(journeys.id, journeyId)),
+  )
 }
 
 export async function getJourneyBySlug(
   scope: TenantScope,
   slug: string,
 ): Promise<Journey | null> {
-  return journeysRepository.findOne(scope, allOf(readableJourneyFilter(scope), eq(journeys.slug, slug)))
+  return journeysRepository.findOne(
+    scope,
+    allOf(readableJourneyFilter(scope), eq(journeys.slug, slug)),
+  )
 }
 
 export interface JourneySummary extends Journey {
@@ -248,7 +366,9 @@ export async function listJourneysWithCounts(
       .groupBy(journeyPhotos.journeyId),
   ])
 
-  const entriesBy = new Map(entryCounts.map((row) => [row.journeyId, row.value]))
+  const entriesBy = new Map(
+    entryCounts.map((row) => [row.journeyId, row.value]),
+  )
   const photosBy = new Map(photoCounts.map((row) => [row.journeyId, row.value]))
   return rows.map((row) => ({
     ...row,
@@ -262,8 +382,15 @@ export async function listJourneyEntries(
   journeyId: string,
 ): Promise<Array<JourneyEntry>> {
   return journeyEntriesRepository.findMany(scope, {
-    where: eq(journeyEntries.journeyId, journeyId),
-    orderBy: [asc(journeyEntries.entryDate), asc(journeyEntries.sortOrder), asc(journeyEntries.id)],
+    where: allOf(
+      eq(journeyEntries.journeyId, journeyId),
+      inReadableJourney(scope, journeyEntries.journeyId),
+    ),
+    orderBy: [
+      asc(journeyEntries.entryDate),
+      asc(journeyEntries.sortOrder),
+      asc(journeyEntries.id),
+    ],
   })
 }
 
@@ -277,12 +404,11 @@ export interface JourneyEntryWithPhotos {
 export async function getJourneyStory(
   scope: TenantScope,
   journeyId: string,
-): Promise<{ readonly journey: Journey; readonly entries: ReadonlyArray<JourneyEntryWithPhotos> }> {
-  const journey = await getJourney(scope, journeyId)
-  if (journey === null) {
-    // The error a foreign tenant's id raises: "not yours to read" must not confirm the journey exists.
-    throw new NotFoundError('journey', journeyId)
-  }
+): Promise<{
+  readonly journey: Journey
+  readonly entries: ReadonlyArray<JourneyEntryWithPhotos>
+}> {
+  const journey = await requireJourney(scope, journeyId)
   const entries = await listJourneyEntries(scope, journeyId)
 
   const [photos, moods] = await Promise.all([
@@ -312,7 +438,8 @@ export async function getJourneyStory(
     entries: entries.map((entry) => ({
       entry,
       photos: photosByEntry.get(entry.id) ?? [],
-      mood: entry.moodId === null ? null : moodsById.get(entry.moodId) ?? null,
+      mood:
+        entry.moodId === null ? null : (moodsById.get(entry.moodId) ?? null),
     })),
   }
 }
@@ -344,7 +471,10 @@ export async function listRecentEntries(
       journeyStatus: journeys.status,
     })
     .from(journeyEntries)
-    .innerJoin(journeys, tenantFilter(scope, journeys, eq(journeys.id, journeyEntries.journeyId)))
+    .innerJoin(
+      journeys,
+      tenantFilter(scope, journeys, eq(journeys.id, journeyEntries.journeyId)),
+    )
     .where(tenantFilter(scope, journeyEntries, readableJourneyFilter(scope)))
     .orderBy(desc(journeyEntries.entryDate), desc(journeyEntries.createdAt))
     .limit(options.limit ?? 6)
@@ -358,7 +488,13 @@ export async function listRecentEntries(
     scope.db
       .select({ entryId: journeyPhotos.entryId, value: count() })
       .from(journeyPhotos)
-      .where(tenantFilter(scope, journeyPhotos, inArray(journeyPhotos.entryId, entryIds)))
+      .where(
+        tenantFilter(
+          scope,
+          journeyPhotos,
+          inArray(journeyPhotos.entryId, entryIds),
+        ),
+      )
       .groupBy(journeyPhotos.entryId),
     listMoods(scope),
   ])
@@ -371,7 +507,10 @@ export async function listRecentEntries(
     journeyId: row.entry.journeyId,
     journeyTitle: row.journeyTitle,
     journeyStatus: row.journeyStatus,
-    mood: row.entry.moodId === null ? null : moodsById.get(row.entry.moodId) ?? null,
+    mood:
+      row.entry.moodId === null
+        ? null
+        : (moodsById.get(row.entry.moodId) ?? null),
     photoCount: photosBy.get(row.entry.id) ?? 0,
   }))
 }
@@ -387,7 +526,14 @@ export async function tallyMoods(
     scope.db
       .select({ moodId: journeyEntries.moodId, value: count() })
       .from(journeyEntries)
-      .innerJoin(journeys, tenantFilter(scope, journeys, eq(journeys.id, journeyEntries.journeyId)))
+      .innerJoin(
+        journeys,
+        tenantFilter(
+          scope,
+          journeys,
+          eq(journeys.id, journeyEntries.journeyId),
+        ),
+      )
       .where(tenantFilter(scope, journeyEntries, readableJourneyFilter(scope)))
       .groupBy(journeyEntries.moodId)
       .orderBy(desc(count())),
@@ -395,21 +541,23 @@ export async function tallyMoods(
   ])
 
   const moodsById = new Map(moods.map((mood) => [mood.id, mood]))
-  return rows
-    .flatMap((row) => {
-      if (row.moodId === null) return []
-      const mood = moodsById.get(row.moodId)
-      return mood === undefined ? [] : [{ mood, value: row.value }]
-    })
-    // Most used first, and a tie broken by the tenant's own mood order rather than
-    // by whatever the group-by happened to return — a strip that reshuffles itself
-    // between two reads of the same data reads as a bug.
-    .sort(
-      (left, right) =>
-        right.value - left.value ||
-        left.mood.sortOrder - right.mood.sortOrder ||
-        left.mood.label.localeCompare(right.mood.label),
-    )
+  return (
+    rows
+      .flatMap((row) => {
+        if (row.moodId === null) return []
+        const mood = moodsById.get(row.moodId)
+        return mood === undefined ? [] : [{ mood, value: row.value }]
+      })
+      // Most used first, and a tie broken by the tenant's own mood order rather than
+      // by whatever the group-by happened to return — a strip that reshuffles itself
+      // between two reads of the same data reads as a bug.
+      .sort(
+        (left, right) =>
+          right.value - left.value ||
+          left.mood.sortOrder - right.mood.sortOrder ||
+          left.mood.label.localeCompare(right.mood.label),
+      )
+  )
 }
 
 export interface UnwrittenTrip {
@@ -442,7 +590,9 @@ export async function listTripsWithoutJourney(
     .from(journeys)
     .where(tenantFilter(scope, journeys))
 
-  const taken = written.flatMap((row) => (row.tripId === null ? [] : [row.tripId]))
+  const taken = written.flatMap((row) =>
+    row.tripId === null ? [] : [row.tripId],
+  )
 
   const candidates = await readableTrips(scope).findMany({
     where: taken.length === 0 ? undefined : notInArray(trips.id, taken),
@@ -525,12 +675,18 @@ export async function listUnattachedPhotos(
   journeyId: string,
 ): Promise<Array<JourneyPhoto>> {
   return journeyPhotosRepository.findMany(scope, {
-    where: and(eq(journeyPhotos.journeyId, journeyId), isNull(journeyPhotos.entryId)),
+    where: allOf(
+      eq(journeyPhotos.journeyId, journeyId),
+      isNull(journeyPhotos.entryId),
+      inReadableJourney(scope, journeyPhotos.journeyId),
+    ),
     orderBy: [desc(journeyPhotos.takenAt)],
   })
 }
 
-export async function listMoods(scope: TenantScope): Promise<Array<JourneyMood>> {
+export async function listMoods(
+  scope: TenantScope,
+): Promise<Array<JourneyMood>> {
   return journeyMoodsRepository.findMany(scope, {
     orderBy: [asc(journeyMoods.sortOrder), asc(journeyMoods.label)],
   })
@@ -563,7 +719,7 @@ export async function updateJourney(
   input: UpdateJourneyInput,
 ): Promise<Journey> {
   const values = definedOnly(updateJourneyInput.parse(input))
-  const existing = await journeysRepository.requireById(scope, journeyId)
+  const existing = await requireJourney(scope, journeyId)
   const slug =
     values.slug === undefined || values.slug === existing.slug
       ? undefined
@@ -580,6 +736,7 @@ export async function publishJourney(
   journeyId: string,
   publicToken: string,
 ): Promise<Journey> {
+  await requireJourney(scope, journeyId)
   return journeysRepository.requireUpdate(scope, journeyId, {
     status: 'published',
     publicToken: z.string().trim().min(16).max(64).parse(publicToken),
@@ -591,13 +748,18 @@ export async function unpublishJourney(
   scope: TenantScope,
   journeyId: string,
 ): Promise<Journey> {
+  await requireJourney(scope, journeyId)
   return journeysRepository.requireUpdate(scope, journeyId, {
     status: 'draft',
     publicToken: null,
   })
 }
 
-export async function deleteJourney(scope: TenantScope, journeyId: string): Promise<void> {
+export async function deleteJourney(
+  scope: TenantScope,
+  journeyId: string,
+): Promise<void> {
+  await requireJourney(scope, journeyId)
   await journeysRepository.requireRemove(scope, journeyId)
 }
 
@@ -606,7 +768,7 @@ export async function createEntry(
   input: CreateEntryInput,
 ): Promise<JourneyEntry> {
   const values = createEntryInput.parse(input)
-  await journeysRepository.requireById(scope, values.journeyId)
+  await requireJourney(scope, values.journeyId)
   if (values.moodId) {
     await journeyMoodsRepository.requireById(scope, values.moodId)
   }
@@ -631,26 +793,40 @@ export async function updateEntry(
   input: UpdateEntryInput,
 ): Promise<JourneyEntry> {
   const values = definedOnly(updateEntryInput.parse(input))
+  await requireEntry(scope, entryId)
   if (values.moodId) {
     await journeyMoodsRepository.requireById(scope, values.moodId)
   }
   return journeyEntriesRepository.requireUpdate(scope, entryId, values)
 }
 
-export async function deleteEntry(scope: TenantScope, entryId: string): Promise<void> {
+export async function deleteEntry(
+  scope: TenantScope,
+  entryId: string,
+): Promise<void> {
+  await requireEntry(scope, entryId)
   await journeyEntriesRepository.requireRemove(scope, entryId)
 }
 
-export async function addPhoto(scope: TenantScope, input: AddPhotoInput): Promise<JourneyPhoto> {
+export async function addPhoto(
+  scope: TenantScope,
+  input: AddPhotoInput,
+): Promise<JourneyPhoto> {
   const values = addPhotoInput.parse(input)
-  await journeysRepository.requireById(scope, values.journeyId)
+  await requireJourney(scope, values.journeyId)
   if (values.entryId) {
-    const entry = await journeyEntriesRepository.requireById(scope, values.entryId)
+    const entry = await journeyEntriesRepository.requireById(
+      scope,
+      values.entryId,
+    )
     if (entry.journeyId !== values.journeyId) {
       throw new NotFoundError('journey entry', values.entryId)
     }
   }
-  return journeyPhotosRepository.insert(scope, { ...values, uploadedBy: scope.ctx.userId })
+  return journeyPhotosRepository.insert(scope, {
+    ...values,
+    uploadedBy: scope.ctx.userId,
+  })
 }
 
 export async function attachPhotoToEntry(
@@ -658,9 +834,12 @@ export async function attachPhotoToEntry(
   photoId: string,
   entryId: string | null,
 ): Promise<JourneyPhoto> {
-  const photo = await journeyPhotosRepository.requireById(scope, photoId)
+  const photo = await requirePhoto(scope, photoId)
   if (entryId !== null) {
-    const entry = await journeyEntriesRepository.requireById(scope, idSchema.parse(entryId))
+    const entry = await journeyEntriesRepository.requireById(
+      scope,
+      idSchema.parse(entryId),
+    )
     if (entry.journeyId !== photo.journeyId) {
       throw new NotFoundError('journey entry', entryId)
     }
@@ -672,8 +851,11 @@ export async function attachPhotoToEntry(
 export async function deletePhoto(
   scope: TenantScope,
   photoId: string,
-): Promise<{ readonly storageKey: string; readonly thumbnailKey: string | null }> {
-  const photo = await journeyPhotosRepository.requireById(scope, photoId)
+): Promise<{
+  readonly storageKey: string
+  readonly thumbnailKey: string | null
+}> {
+  const photo = await requirePhoto(scope, photoId)
   await journeyPhotosRepository.requireRemove(scope, photoId)
   return { storageKey: photo.storageKey, thumbnailKey: photo.thumbnailKey }
 }
@@ -685,20 +867,43 @@ export async function createMood(
   return journeyMoodsRepository.insert(scope, createMoodInput.parse(input))
 }
 
-export async function deleteMood(scope: TenantScope, moodId: string): Promise<void> {
+export async function deleteMood(
+  scope: TenantScope,
+  moodId: string,
+): Promise<void> {
   await journeyMoodsRepository.requireRemove(scope, moodId)
 }
 
 /** The mood palette a new workspace starts with. Idempotent, keyed by `key`. */
 const DEFAULT_MOODS: ReadonlyArray<CreateMoodInput> = [
-  { key: 'radiant', label: 'Radiant', emoji: '☀️', colour: '#B26B08', sortOrder: 1 },
+  {
+    key: 'radiant',
+    label: 'Radiant',
+    emoji: '☀️',
+    colour: '#B26B08',
+    sortOrder: 1,
+  },
   { key: 'calm', label: 'Calm', emoji: '🌿', colour: '#2F6F5E', sortOrder: 2 },
   { key: 'awed', label: 'Awed', emoji: '🏔️', colour: '#2563EB', sortOrder: 3 },
-  { key: 'weary', label: 'Weary', emoji: '🌙', colour: '#6E6D65', sortOrder: 4 },
-  { key: 'hungry', label: 'Hungry', emoji: '🍜', colour: '#C0392B', sortOrder: 5 },
+  {
+    key: 'weary',
+    label: 'Weary',
+    emoji: '🌙',
+    colour: '#6E6D65',
+    sortOrder: 4,
+  },
+  {
+    key: 'hungry',
+    label: 'Hungry',
+    emoji: '🍜',
+    colour: '#C0392B',
+    sortOrder: 5,
+  },
 ]
 
-export async function ensureDefaultMoods(scope: TenantScope): Promise<Array<JourneyMood>> {
+export async function ensureDefaultMoods(
+  scope: TenantScope,
+): Promise<Array<JourneyMood>> {
   const existing = await listMoods(scope)
   const known = new Set(existing.map((row) => row.key))
   const missing = DEFAULT_MOODS.filter((row) => !known.has(row.key))
@@ -717,13 +922,22 @@ export async function countEntriesByMood(
   const rows = await scope.db
     .select({ moodId: journeyEntries.moodId, value: count() })
     .from(journeyEntries)
-    .where(tenantFilter(scope, journeyEntries, eq(journeyEntries.journeyId, journeyId)))
+    .where(
+      tenantFilter(
+        scope,
+        journeyEntries,
+        eq(journeyEntries.journeyId, journeyId),
+        inReadableJourney(scope, journeyEntries.journeyId),
+      ),
+    )
     .groupBy(journeyEntries.moodId)
     .orderBy(desc(count()))
-  return rows.flatMap((row) => (row.moodId === null ? [] : [{ moodId: row.moodId, value: row.value }]))
+  return rows.flatMap((row) =>
+    row.moodId === null ? [] : [{ moodId: row.moodId, value: row.value }],
+  )
 }
 
-/** Re-reads a set of entries inside the tenant, newest first. */
+/** Re-reads a set of entries the caller may read, newest first; an unreadable one is dropped. */
 export async function listEntriesByIds(
   scope: TenantScope,
   entryIds: ReadonlyArray<string>,
@@ -732,7 +946,10 @@ export async function listEntriesByIds(
     return []
   }
   return journeyEntriesRepository.findMany(scope, {
-    where: inArray(journeyEntries.id, [...entryIds]),
+    where: allOf(
+      inArray(journeyEntries.id, [...entryIds]),
+      inReadableJourney(scope, journeyEntries.journeyId),
+    ),
     orderBy: [desc(journeyEntries.entryDate)],
   })
 }

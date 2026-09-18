@@ -18,18 +18,31 @@ import { NotFoundError, RepositoryError } from '../context'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
 import { createAssignment, reorderDayTimeline } from '../itinerary'
 import {
+  addPhoto,
+  attachPhotoToEntry,
+  countEntriesByMood,
   createEntry,
   createJourney,
   createMood,
+  deleteEntry,
+  deleteJourney,
+  deletePhoto,
   getJourney,
   getJourneyBySlug,
   getJourneyStory,
   journalCoverage,
+  listEntriesByIds,
+  listJourneyEntries,
   listJourneys,
   listJourneysWithCounts,
   listRecentEntries,
   listTripsWithoutJourney,
+  listUnattachedPhotos,
+  publishJourney,
   tallyMoods,
+  unpublishJourney,
+  updateEntry,
+  updateJourney,
 } from '../journey'
 import { createPlace } from '../places'
 import {
@@ -303,6 +316,96 @@ describe('member isolation', () => {
       ).toEqual([['quiet', 2]])
     })
 
+    it('refuses every journal write and id-keyed helper on the journey written about it (#521)', async () => {
+      // The #456 readers ask the trip; these reach a journey, an entry or a photo by id, so each of
+      // them has to ask too, or the id alone is enough to rewrite a story the caller cannot open.
+      const mood = await createMood(alpha.scope, {
+        key: 'quiet',
+        label: 'Quiet',
+        emoji: '🌿',
+      })
+      const journey = await createJourney(alpha.scope, {
+        tripId: fixture.tripId,
+        title: 'Lisbon, written up',
+      })
+      const entry = await createEntry(alpha.scope, {
+        journeyId: journey.id,
+        entryDate: '2026-04-10',
+        title: 'Custard tarts, twice',
+        moodId: mood.id,
+      })
+      const photo = await addPhoto(alpha.scope, {
+        journeyId: journey.id,
+        storageKey: 'journeys/lisbon/tram.jpg',
+        contentType: 'image/jpeg',
+      })
+
+      for (const attempt of [
+        () => updateJourney(stranger, journey.id, { title: 'Hijacked' }),
+        () =>
+          publishJourney(stranger, journey.id, 'a-token-long-enough-to-pass'),
+        () => unpublishJourney(stranger, journey.id),
+        () => deleteJourney(stranger, journey.id),
+        () =>
+          createEntry(stranger, {
+            journeyId: journey.id,
+            entryDate: '2026-04-11',
+            title: 'Planted',
+          }),
+        () => updateEntry(stranger, entry.id, { title: 'Hijacked' }),
+        () => deleteEntry(stranger, entry.id),
+        () =>
+          addPhoto(stranger, {
+            journeyId: journey.id,
+            storageKey: 'journeys/lisbon/planted.jpg',
+            contentType: 'image/jpeg',
+          }),
+        () => attachPhotoToEntry(stranger, photo.id, entry.id),
+        () => deletePhoto(stranger, photo.id),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await listJourneyEntries(stranger, journey.id)).toEqual([])
+      expect(await listUnattachedPhotos(stranger, journey.id)).toEqual([])
+      expect(await countEntriesByMood(stranger, journey.id)).toEqual([])
+
+      // A journey tied to no trip stays the workspace's, and asking for both entries in one call
+      // makes the predicate tell two rows apart rather than refuse the whole table.
+      const untied = await createJourney(alpha.scope, {
+        title: 'A weekend walk',
+      })
+      const untiedEntry = await createEntry(stranger, {
+        journeyId: untied.id,
+        entryDate: '2026-03-01',
+        title: 'Rain on the ridge',
+      })
+      expect(
+        (await listEntriesByIds(stranger, [entry.id, untiedEntry.id])).map(
+          (row) => row.id,
+        ),
+      ).toEqual([untiedEntry.id])
+
+      // And nothing moved: the owner reads the story exactly as they wrote it.
+      const story = await getJourneyStory(alpha.scope, journey.id)
+      expect(story.journey.title).toBe('Lisbon, written up')
+      expect(story.journey.status).toBe('draft')
+      expect(story.entries.map((row) => row.entry.title)).toEqual([
+        'Custard tarts, twice',
+      ])
+      expect(
+        (await listUnattachedPhotos(alpha.scope, journey.id)).map(
+          (row) => row.id,
+        ),
+      ).toEqual([photo.id])
+      expect(await countEntriesByMood(alpha.scope, journey.id)).toEqual([
+        { moodId: mood.id, value: 1 },
+      ])
+      expect(
+        (await listEntriesByIds(alpha.scope, [entry.id])).map((row) => row.id),
+      ).toEqual([entry.id])
+    })
+
     it('refuses every write with NOT_FOUND rather than FORBIDDEN', async () => {
       // The distinction is the whole point: `FORBIDDEN` would confirm the trip exists, which is the
       // one thing a non-member must not learn.
@@ -522,7 +625,7 @@ describe('member isolation', () => {
         tripId: fixture.tripId,
         title: 'Lisbon, written up',
       })
-      await createEntry(alpha.scope, {
+      const entry = await createEntry(alpha.scope, {
         journeyId: journey.id,
         entryDate: '2026-04-10',
         title: 'Custard tarts, twice',
@@ -533,6 +636,16 @@ describe('member isolation', () => {
         journey.id,
       ])
       expect((await getJourney(stranger, journey.id))?.id).toBe(journey.id)
+      // The id-keyed helpers (#521) open with the trip too.
+      expect(
+        (await listJourneyEntries(stranger, journey.id)).map((row) => row.id),
+      ).toEqual([entry.id])
+      expect(
+        (await listEntriesByIds(stranger, [entry.id])).map((row) => row.id),
+      ).toEqual([entry.id])
+      expect(await countEntriesByMood(stranger, journey.id)).toEqual([
+        { moodId: mood.id, value: 1 },
+      ])
       expect((await getJourneyBySlug(stranger, journey.slug))?.id).toBe(
         journey.id,
       )
@@ -593,9 +706,7 @@ describe('member isolation', () => {
       // The half of ADR 0007 that is easy to get wrong in the other direction: organization
       // visibility is a *read* grant. The participant list opens; nothing else does.
       expect(
-        memberUserIds(
-          await listTripParticipants(stranger, fixture.tripId),
-        ),
+        memberUserIds(await listTripParticipants(stranger, fixture.tripId)),
       ).toEqual([alpha.ownerUserId])
 
       const visibilityRefusal = await captureError(() =>
@@ -701,9 +812,7 @@ describe('member isolation', () => {
 
     it('reads the trip’s people, because a collaborator may see who they collaborate with', async () => {
       expect(
-        memberUserIds(
-          await listTripParticipants(stranger, fixture.tripId),
-        ),
+        memberUserIds(await listTripParticipants(stranger, fixture.tripId)),
       ).toEqual([alpha.ownerUserId, strangerId])
     })
 
