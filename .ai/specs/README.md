@@ -8,9 +8,9 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 
 ## Draft — being written (1)
 
-| Spec                                                                                     | Date       | Issue                                                           | Spec PR | Implementation |
-| ---------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ------- | -------------- |
-| [Drop a pin on the map and it becomes a place](2026-09-18-drop-a-pin-becomes-a-place.md) | 2026-09-18 | [#554](https://github.com/design4pro/planned.travel/issues/554) | —       | —              |
+| Spec                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
+| ---------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [Drop a pin on the map and it becomes a place](2026-09-18-drop-a-pin-becomes-a-place.md) | 2026-09-18 | [#554](https://github.com/design4pro/planned.travel/issues/554) | [#583](https://github.com/design4pro/planned.travel/issues/583) | —              |
 
 ## Ready — merged, waiting for a build (2)
 

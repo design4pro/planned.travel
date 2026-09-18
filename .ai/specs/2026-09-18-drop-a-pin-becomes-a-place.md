@@ -4,7 +4,7 @@
 | ------------------ | ----- |
 | **Status**         | draft |
 | **Issue**          | #554  |
-| **Spec PR**        | none  |
+| **Spec PR**        | #583  |
 | **Implementation** | none  |
 
 `02-S4` · FR #554 · Parent PRD #437 · Stage `02-S4` of `docs/plans/02-places-and-maps.md`, wave 3; PRD Implementation Decisions 2, 3, 4 and 5. First consumer of the geocoding proxy #281 (spec `.ai/specs/implemented/2026-09-09-geocoding-proxy.md`).
