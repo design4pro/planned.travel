@@ -233,6 +233,35 @@ const messages = {
   'people.error.lastOwner':
     'Bir gezide en az bir sahip kalır. Önce başka birini sahip yapın.',
   'people.error.notInWorkspace': 'Bu kişi bu çalışma alanında değil',
+  'people.guests.title': 'Seninle seyahat edenler',
+  'people.guests.description': 'Bu gezide hesabı olmayan kişiler',
+  'people.guests.empty': 'Henüz kimse yok',
+  'people.guests.emptyHint':
+    'Misafir, seninle seyahat eden ve hesaba ihtiyacı olmayan biridir. Onu adıyla ekle.',
+  'people.guest.badge': 'Misafir',
+  'people.guest.add.label': 'Adı',
+  'people.guest.add.placeholder': 'Elif',
+  'people.guest.add.action': 'Misafir ekle',
+  'people.guest.rename.action': '{name} adını değiştir',
+  'people.guest.rename.title': '{name} adını değiştir',
+  'people.guest.rename.confirm': 'Adını değiştir',
+  'people.guest.remove.action': '{name} bu geziden çıkar',
+  'people.guest.remove.title': '{name} bu geziden çıkarılsın mı?',
+  'people.guest.remove.body':
+    'Misafir kaldırılır. Gezide başka hiçbir şey değişmez.',
+  'people.guest.remove.confirm': 'Çıkar',
+  'people.guest.merge.action': '{name} artık…',
+  'people.guest.merge.title': '{name} artık bu gezideki kişilerden biri',
+  'people.guest.merge.body':
+    '{name} kişisine atanan her şey seçtiğin kişiye geçer ve misafir kaldırılır. Bu işlem geri alınamaz.',
+  'people.guest.merge.placeholder': 'Bu geziden birini seç',
+  'people.guest.merge.confirm': 'Birleştir',
+  'people.guest.merge.done': '{name} artık {member}',
+  'people.guest.merge.nothingMoved': 'Bu kişiye henüz hiçbir şey atanmamıştı',
+  'people.error.guestNameTaken': 'Bu gezide {name} adlı bir misafir zaten var',
+  'people.error.guestLimit':
+    'Bir gezide en fazla {limit} misafir olabilir; daha uzun bir liste katılımcı seçimini ve masraf paylaşımını okumayı zorlaştırır',
+  'people.error.guestMergeTarget': 'Bu gezide zaten olan birini seç',
 } satisfies TranslationOf<typeof En>
 
 export default messages

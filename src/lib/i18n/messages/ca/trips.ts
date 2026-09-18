@@ -244,6 +244,37 @@ const messages = {
   'people.error.lastOwner':
     'Un viatge manté almenys un propietari. Fes propietari algú altre primer.',
   'people.error.notInWorkspace': 'Aquesta persona no és en aquest espai',
+  'people.guests.title': 'Viatgen amb tu',
+  'people.guests.description': 'Persones d’aquest viatge que no tenen compte',
+  'people.guests.empty': 'Encara ningú',
+  'people.guests.emptyHint':
+    'Un convidat és algú que viatja amb tu i no necessita compte. Afegeix-lo pel nom.',
+  'people.guest.badge': 'Convidat',
+  'people.guest.add.label': 'El seu nom',
+  'people.guest.add.placeholder': 'Laia',
+  'people.guest.add.action': 'Afegeix un convidat',
+  'people.guest.rename.action': 'Canvia el nom de {name}',
+  'people.guest.rename.title': 'Canvia el nom de {name}',
+  'people.guest.rename.confirm': 'Canvia el nom',
+  'people.guest.remove.action': 'Treu {name} d’aquest viatge',
+  'people.guest.remove.title': 'Vols treure {name} d’aquest viatge?',
+  'people.guest.remove.body':
+    'El convidat desapareix. No canvia res més del viatge.',
+  'people.guest.remove.confirm': 'Treu',
+  'people.guest.merge.action': '{name} ara és…',
+  'people.guest.merge.title':
+    '{name} ara és una de les persones d’aquest viatge',
+  'people.guest.merge.body':
+    'Tot el que està assignat a {name} passa a la persona que triïs i el convidat desapareix. No es pot desfer.',
+  'people.guest.merge.placeholder': 'Tria algú d’aquest viatge',
+  'people.guest.merge.confirm': 'Fusiona',
+  'people.guest.merge.done': '{name} ara és {member}',
+  'people.guest.merge.nothingMoved': 'Encara no tenia res assignat',
+  'people.error.guestNameTaken':
+    'Ja hi ha un convidat anomenat {name} en aquest viatge',
+  'people.error.guestLimit':
+    'Un viatge admet com a màxim {limit} convidats, perquè una llista més llarga fa difícils de llegir la tria de participants i el repartiment de despeses',
+  'people.error.guestMergeTarget': 'Tria algú que ja sigui en aquest viatge',
 } satisfies TranslationOf<typeof En>
 
 export default messages

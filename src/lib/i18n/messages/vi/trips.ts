@@ -229,6 +229,38 @@ const messages = {
   'people.error.lastOwner':
     'Mỗi chuyến đi giữ ít nhất một chủ sở hữu. Hãy đặt người khác làm chủ sở hữu trước.',
   'people.error.notInWorkspace': 'Người đó không có trong không gian này',
+  'people.guests.title': 'Đi cùng bạn',
+  'people.guests.description':
+    'Những người trong chuyến đi này không có tài khoản',
+  'people.guests.empty': 'Chưa có ai',
+  'people.guests.emptyHint':
+    'Khách là người đi cùng bạn mà không cần tài khoản. Hãy thêm họ bằng tên.',
+  'people.guest.badge': 'Khách',
+  'people.guest.add.label': 'Tên của họ',
+  'people.guest.add.placeholder': 'Lan',
+  'people.guest.add.action': 'Thêm khách',
+  'people.guest.rename.action': 'Đổi tên {name}',
+  'people.guest.rename.title': 'Đổi tên {name}',
+  'people.guest.rename.confirm': 'Đổi tên',
+  'people.guest.remove.action': 'Xoá {name} khỏi chuyến đi này',
+  'people.guest.remove.title': 'Xoá {name} khỏi chuyến đi này?',
+  'people.guest.remove.body':
+    'Khách sẽ bị xoá. Không có gì khác trong chuyến đi thay đổi.',
+  'people.guest.remove.confirm': 'Xoá',
+  'people.guest.merge.action': '{name} giờ là…',
+  'people.guest.merge.title':
+    '{name} giờ là một trong những người của chuyến đi này',
+  'people.guest.merge.body':
+    'Mọi thứ đã giao cho {name} sẽ chuyển sang người bạn chọn, và khách sẽ bị xoá. Không thể hoàn tác.',
+  'people.guest.merge.placeholder': 'Chọn một người trong chuyến đi này',
+  'people.guest.merge.confirm': 'Gộp',
+  'people.guest.merge.done': '{name} giờ là {member}',
+  'people.guest.merge.nothingMoved': 'Chưa có gì được giao cho họ',
+  'people.error.guestNameTaken':
+    'Đã có một khách tên {name} trong chuyến đi này',
+  'people.error.guestLimit':
+    'Một chuyến đi có tối đa {limit} khách, vì danh sách dài hơn khiến việc chọn người tham gia và đọc phần chia chi phí trở nên khó khăn',
+  'people.error.guestMergeTarget': 'Chọn một người đã có trong chuyến đi này',
 } satisfies TranslationOf<typeof En>
 
 export default messages

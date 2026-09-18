@@ -248,6 +248,39 @@ const messages = {
     'Un viaggio mantiene almeno un proprietario. Rendi prima proprietario qualcun altro.',
   'people.error.notInWorkspace':
     'Questa persona non è in questo spazio di lavoro',
+  'people.guests.title': 'Viaggiano con te',
+  'people.guests.description':
+    'Persone di questo viaggio che non hanno un account',
+  'people.guests.empty': 'Ancora nessuno',
+  'people.guests.emptyHint':
+    'Un ospite è qualcuno che viaggia con te e non ha bisogno di un account. Aggiungilo per nome.',
+  'people.guest.badge': 'Ospite',
+  'people.guest.add.label': 'Il suo nome',
+  'people.guest.add.placeholder': 'Giulia',
+  'people.guest.add.action': 'Aggiungi un ospite',
+  'people.guest.rename.action': 'Rinomina {name}',
+  'people.guest.rename.title': 'Rinomina {name}',
+  'people.guest.rename.confirm': 'Rinomina',
+  'people.guest.remove.action': 'Rimuovi {name} da questo viaggio',
+  'people.guest.remove.title': 'Rimuovere {name} da questo viaggio?',
+  'people.guest.remove.body':
+    'L’ospite viene rimosso. Nient’altro cambia nel viaggio.',
+  'people.guest.remove.confirm': 'Rimuovi',
+  'people.guest.merge.action': '{name} ora è…',
+  'people.guest.merge.title':
+    '{name} ora è una delle persone di questo viaggio',
+  'people.guest.merge.body':
+    'Tutto ciò che è assegnato a {name} passa alla persona che scegli e l’ospite viene rimosso. L’operazione non si può annullare.',
+  'people.guest.merge.placeholder': 'Scegli qualcuno di questo viaggio',
+  'people.guest.merge.confirm': 'Unisci',
+  'people.guest.merge.done': '{name} ora è {member}',
+  'people.guest.merge.nothingMoved': 'Non gli era ancora stato assegnato nulla',
+  'people.error.guestNameTaken':
+    'In questo viaggio c’è già un ospite di nome {name}',
+  'people.error.guestLimit':
+    'Un viaggio accoglie al massimo {limit} ospiti, perché un elenco più lungo rende difficili da leggere la scelta dei partecipanti e la divisione delle spese',
+  'people.error.guestMergeTarget':
+    'Scegli qualcuno che è già in questo viaggio',
 } satisfies TranslationOf<typeof En>
 
 export default messages

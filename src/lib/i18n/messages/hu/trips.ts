@@ -239,6 +239,36 @@ const messages = {
   'people.error.lastOwner':
     'Egy utazásnak marad legalább egy tulajdonosa. Előbb tegyél tulajdonossá valaki mást.',
   'people.error.notInWorkspace': 'Ez a személy nincs ebben a munkaterületben',
+  'people.guests.title': 'Veled utaznak',
+  'people.guests.description': 'Az utazás résztvevői, akiknek nincs fiókjuk',
+  'people.guests.empty': 'Még senki',
+  'people.guests.emptyHint':
+    'A vendég veled utazik, és nincs szüksége fiókra. Add hozzá a nevével.',
+  'people.guest.badge': 'Vendég',
+  'people.guest.add.label': 'Neve',
+  'people.guest.add.placeholder': 'Réka',
+  'people.guest.add.action': 'Vendég hozzáadása',
+  'people.guest.rename.action': '{name} átnevezése',
+  'people.guest.rename.title': '{name} átnevezése',
+  'people.guest.rename.confirm': 'Átnevezés',
+  'people.guest.remove.action': '{name} eltávolítása az utazásból',
+  'people.guest.remove.title': 'Eltávolítod {name} vendéget az utazásból?',
+  'people.guest.remove.body':
+    'A vendég törlődik. Semmi más nem változik az utazáson.',
+  'people.guest.remove.confirm': 'Eltávolítás',
+  'people.guest.merge.action': '{name} mostantól…',
+  'people.guest.merge.title': '{name} mostantól az utazás egyik résztvevője',
+  'people.guest.merge.body':
+    'Minden, ami {name} vendéghez van rendelve, a kiválasztott személyhez kerül, a vendég pedig törlődik. Ez nem vonható vissza.',
+  'people.guest.merge.placeholder': 'Válassz valakit az utazásból',
+  'people.guest.merge.confirm': 'Összevonás',
+  'people.guest.merge.done': '{name} mostantól {member}',
+  'people.guest.merge.nothingMoved': 'Még semmi sem volt hozzá rendelve',
+  'people.error.guestNameTaken': 'Már van {name} nevű vendég ezen az utazáson',
+  'people.error.guestLimit':
+    'Egy utazáson legfeljebb {limit} vendég lehet, mert egy hosszabb lista nehezen olvashatóvá teszi a résztvevőválasztót és a költségmegosztást',
+  'people.error.guestMergeTarget':
+    'Válassz valakit, aki már részt vesz az utazáson',
 } satisfies TranslationOf<typeof En>
 
 export default messages

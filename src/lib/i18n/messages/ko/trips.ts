@@ -227,6 +227,36 @@ const messages = {
   'people.error.lastOwner':
     '여행에는 소유자가 한 명 이상 있어야 합니다. 먼저 다른 사람을 소유자로 지정하세요.',
   'people.error.notInWorkspace': '그 사람은 이 워크스페이스에 없습니다',
+  'people.guests.title': '함께 여행하는 사람',
+  'people.guests.description': '이 여행에서 계정이 없는 사람',
+  'people.guests.empty': '아직 없음',
+  'people.guests.emptyHint':
+    '게스트는 계정 없이 함께 여행하는 사람입니다. 이름으로 추가하세요.',
+  'people.guest.badge': '게스트',
+  'people.guest.add.label': '이름',
+  'people.guest.add.placeholder': '지민',
+  'people.guest.add.action': '게스트 추가',
+  'people.guest.rename.action': '{name} 이름 바꾸기',
+  'people.guest.rename.title': '{name} 이름 바꾸기',
+  'people.guest.rename.confirm': '이름 바꾸기',
+  'people.guest.remove.action': '이 여행에서 {name} 제외',
+  'people.guest.remove.title': '이 여행에서 {name}님을 제외할까요?',
+  'people.guest.remove.body':
+    '게스트가 제외됩니다. 여행의 다른 내용은 바뀌지 않습니다.',
+  'people.guest.remove.confirm': '제외',
+  'people.guest.merge.action': '{name}님은 이제…',
+  'people.guest.merge.title': '{name}님을 이 여행의 멤버로 합치기',
+  'people.guest.merge.body':
+    '{name}님에게 배정된 모든 항목이 선택한 사람에게 옮겨지고 게스트는 제외됩니다. 되돌릴 수 없습니다.',
+  'people.guest.merge.placeholder': '이 여행에 있는 사람 선택',
+  'people.guest.merge.confirm': '병합',
+  'people.guest.merge.done': '{name}님은 이제 {member}님입니다',
+  'people.guest.merge.nothingMoved': '아직 배정된 항목이 없었습니다',
+  'people.error.guestNameTaken':
+    '이 여행에 이미 {name}(이)라는 게스트가 있습니다',
+  'people.error.guestLimit':
+    '여행 한 건에 게스트는 최대 {limit}명입니다. 목록이 더 길면 참가자 선택과 비용 분담을 읽기 어려워지기 때문입니다',
+  'people.error.guestMergeTarget': '이미 이 여행에 있는 사람을 선택하세요',
 } satisfies TranslationOf<typeof En>
 
 export default messages

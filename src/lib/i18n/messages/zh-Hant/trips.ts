@@ -212,6 +212,33 @@ const messages = {
   'people.visibility.public': '這次旅行已透過公開連結分享',
   'people.error.lastOwner': '旅行至少保留一位擁有者。請先把其他人設為擁有者。',
   'people.error.notInWorkspace': '這個人不在這個工作區裡',
+  'people.guests.title': '與你同行',
+  'people.guests.description': '本次旅行中沒有帳戶的人',
+  'people.guests.empty': '還沒有人',
+  'people.guests.emptyHint': '訪客是與你同行但不需要帳戶的人。按名字新增即可。',
+  'people.guest.badge': '訪客',
+  'people.guest.add.label': '名字',
+  'people.guest.add.placeholder': '小美',
+  'people.guest.add.action': '新增訪客',
+  'people.guest.rename.action': '重新命名 {name}',
+  'people.guest.rename.title': '重新命名 {name}',
+  'people.guest.rename.confirm': '重新命名',
+  'people.guest.remove.action': '將 {name} 移出此旅行',
+  'people.guest.remove.title': '要將 {name} 移出此旅行嗎？',
+  'people.guest.remove.body': '訪客將被移除。旅行中的其他內容不變。',
+  'people.guest.remove.confirm': '移除',
+  'people.guest.merge.action': '{name} 現在是…',
+  'people.guest.merge.title': '{name} 現在是本次旅行的一員',
+  'people.guest.merge.body':
+    '指派給 {name} 的所有內容都會轉給你選擇的人，訪客將被移除。此操作無法復原。',
+  'people.guest.merge.placeholder': '選擇本次旅行中的某人',
+  'people.guest.merge.confirm': '合併',
+  'people.guest.merge.done': '{name} 現在是 {member}',
+  'people.guest.merge.nothingMoved': '之前尚未指派任何內容給對方',
+  'people.error.guestNameTaken': '本次旅行中已有名為 {name} 的訪客',
+  'people.error.guestLimit':
+    '一次旅行最多 {limit} 位訪客，因為名單更長會讓參與者選擇和費用分攤難以閱讀',
+  'people.error.guestMergeTarget': '請選擇已在本次旅行中的人',
 } satisfies TranslationOf<typeof En>
 
 export default messages

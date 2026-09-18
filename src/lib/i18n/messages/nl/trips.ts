@@ -237,6 +237,37 @@ const messages = {
   'people.error.lastOwner':
     'Een reis houdt minstens één eigenaar. Maak eerst iemand anders eigenaar.',
   'people.error.notInWorkspace': 'Die persoon zit niet in deze werkruimte',
+  'people.guests.title': 'Reizen met je mee',
+  'people.guests.description': 'Mensen op deze reis zonder account',
+  'people.guests.empty': 'Nog niemand',
+  'people.guests.emptyHint':
+    'Een gast reist met je mee en heeft geen account nodig. Voeg hem toe met zijn naam.',
+  'people.guest.badge': 'Gast',
+  'people.guest.add.label': 'Naam',
+  'people.guest.add.placeholder': 'Sanne',
+  'people.guest.add.action': 'Gast toevoegen',
+  'people.guest.rename.action': '{name} hernoemen',
+  'people.guest.rename.title': '{name} hernoemen',
+  'people.guest.rename.confirm': 'Hernoemen',
+  'people.guest.remove.action': '{name} van deze reis verwijderen',
+  'people.guest.remove.title': '{name} van deze reis verwijderen?',
+  'people.guest.remove.body':
+    'De gast verdwijnt. Verder verandert er niets aan de reis.',
+  'people.guest.remove.confirm': 'Verwijderen',
+  'people.guest.merge.action': '{name} is nu…',
+  'people.guest.merge.title': '{name} is nu een van de mensen op deze reis',
+  'people.guest.merge.body':
+    'Alles wat aan {name} is toegewezen gaat naar de persoon die je kiest, en de gast verdwijnt. Dit kan niet ongedaan worden gemaakt.',
+  'people.guest.merge.placeholder': 'Kies iemand op deze reis',
+  'people.guest.merge.confirm': 'Samenvoegen',
+  'people.guest.merge.done': '{name} is nu {member}',
+  'people.guest.merge.nothingMoved':
+    'Er was nog niets aan deze gast toegewezen',
+  'people.error.guestNameTaken':
+    'Er staat al een gast met de naam {name} op deze reis',
+  'people.error.guestLimit':
+    'Een reis heeft hooguit {limit} gasten, omdat een langere lijst de deelnemerskeuze en de kostenverdeling moeilijk leesbaar maakt',
+  'people.error.guestMergeTarget': 'Kies iemand die al op deze reis staat',
 } satisfies TranslationOf<typeof En>
 
 export default messages

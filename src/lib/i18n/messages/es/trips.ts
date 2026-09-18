@@ -246,6 +246,37 @@ const messages = {
     'Un viaje conserva al menos un propietario. Haz propietario a otra persona primero.',
   'people.error.notInWorkspace':
     'Esa persona no está en este espacio de trabajo',
+  'people.guests.title': 'Viajan contigo',
+  'people.guests.description': 'Personas de este viaje que no tienen cuenta',
+  'people.guests.empty': 'Nadie todavía',
+  'people.guests.emptyHint':
+    'Un invitado es alguien que viaja contigo y no necesita cuenta. Añádelo por su nombre.',
+  'people.guest.badge': 'Invitado',
+  'people.guest.add.label': 'Su nombre',
+  'people.guest.add.placeholder': 'Lucía',
+  'people.guest.add.action': 'Añadir un invitado',
+  'people.guest.rename.action': 'Cambiar el nombre de {name}',
+  'people.guest.rename.title': 'Cambiar el nombre de {name}',
+  'people.guest.rename.confirm': 'Cambiar nombre',
+  'people.guest.remove.action': 'Quitar a {name} de este viaje',
+  'people.guest.remove.title': '¿Quitar a {name} de este viaje?',
+  'people.guest.remove.body':
+    'El invitado desaparece. Nada más cambia en el viaje.',
+  'people.guest.remove.confirm': 'Quitar',
+  'people.guest.merge.action': '{name} ahora es…',
+  'people.guest.merge.title':
+    '{name} ahora es una de las personas de este viaje',
+  'people.guest.merge.body':
+    'Todo lo asignado a {name} pasa a la persona que elijas y el invitado desaparece. No se puede deshacer.',
+  'people.guest.merge.placeholder': 'Elige a alguien de este viaje',
+  'people.guest.merge.confirm': 'Fusionar',
+  'people.guest.merge.done': '{name} ahora es {member}',
+  'people.guest.merge.nothingMoved': 'Todavía no tenía nada asignado',
+  'people.error.guestNameTaken':
+    'Ya hay un invitado llamado {name} en este viaje',
+  'people.error.guestLimit':
+    'Un viaje admite como máximo {limit} invitados, porque una lista más larga hace difíciles de leer la selección de participantes y el reparto de gastos',
+  'people.error.guestMergeTarget': 'Elige a alguien que ya esté en este viaje',
 } satisfies TranslationOf<typeof En>
 
 export default messages

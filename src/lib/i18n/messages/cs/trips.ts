@@ -251,6 +251,34 @@ const messages = {
   'people.error.lastOwner':
     'Cesta si ponechá aspoň jednoho vlastníka. Nejdřív udělejte vlastníkem někoho jiného.',
   'people.error.notInWorkspace': 'Tento člověk není v tomto prostoru',
+  'people.guests.title': 'Cestují s tebou',
+  'people.guests.description': 'Lidé na tomto výletě, kteří nemají účet',
+  'people.guests.empty': 'Zatím nikdo',
+  'people.guests.emptyHint':
+    'Host je někdo, kdo s tebou cestuje a nepotřebuje účet. Přidej ho podle jména.',
+  'people.guest.badge': 'Host',
+  'people.guest.add.label': 'Jméno',
+  'people.guest.add.placeholder': 'Tereza',
+  'people.guest.add.action': 'Přidat hosta',
+  'people.guest.rename.action': 'Přejmenovat: {name}',
+  'people.guest.rename.title': 'Přejmenovat: {name}',
+  'people.guest.rename.confirm': 'Přejmenovat',
+  'people.guest.remove.action': 'Odebrat {name} z tohoto výletu',
+  'people.guest.remove.title': 'Odebrat {name} z tohoto výletu?',
+  'people.guest.remove.body': 'Host zmizí. Nic jiného se na výletě nezmění.',
+  'people.guest.remove.confirm': 'Odebrat',
+  'people.guest.merge.action': '{name} je teď…',
+  'people.guest.merge.title': '{name} je teď jedním z lidí na tomto výletě',
+  'people.guest.merge.body':
+    'Vše, co je přiřazeno k {name}, přejde na vybranou osobu a host zmizí. Tuto akci nelze vrátit.',
+  'people.guest.merge.placeholder': 'Vyber někoho z tohoto výletu',
+  'people.guest.merge.confirm': 'Sloučit',
+  'people.guest.merge.done': '{name} je teď {member}',
+  'people.guest.merge.nothingMoved': 'Zatím k němu nebylo nic přiřazeno',
+  'people.error.guestNameTaken': 'Host se jménem {name} už na tomto výletě je',
+  'people.error.guestLimit':
+    'Výlet pojme nejvýše {limit} hostů, protože delší seznam znepřehledňuje výběr účastníků i rozdělení nákladů',
+  'people.error.guestMergeTarget': 'Vyber někoho, kdo už je na tomto výletě',
 } satisfies TranslationOf<typeof En>
 
 export default messages
