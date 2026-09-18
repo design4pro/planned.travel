@@ -42,6 +42,7 @@ yarn.lock
 .ai/scripts/cez-prompt-templates.sh
 .ai/scripts/housekeeping.sh
 .ai/skills/afk-architecture-review/SKILL.md
+.ai/skills/afk-codebase-design/SKILL.md
 .ai/skills/afk-domain-modeling/SKILL.md
 .ai/skills/afk-lessons/SKILL.md
 .ai/skills/afk-to-tickets/SKILL.md
