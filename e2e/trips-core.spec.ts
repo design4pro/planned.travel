@@ -1419,3 +1419,82 @@ test.describe('01-S6a — Who is on this trip', () => {
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 })
+
+test.describe('01-S6b — A guest on a trip', () => {
+  const peopleRoute = (tripId: string): RouteCase => ({
+    name: 'trip-people',
+    path: `/trips/${tripId}/people`,
+    ready: TRIP_SECTIONS,
+  })
+
+  const GUESTS_HEADING = 'Travelling with you'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /** The first trip the index links a planner for — every seeded trip is the demo owner's. */
+  async function aTripToWalk(page: Page): Promise<string> {
+    await visit(page, { name: 'trips', path: '/trips', ready: 'main' }, 'light')
+    const href = await page
+      .locator('a[href^="/trips/"][href$="/plan"]')
+      .first()
+      .getAttribute('href')
+      .catch(() => null)
+    const id = href === null ? null : /^\/trips\/([^/?#]+)\/plan$/.exec(href)
+    test.skip(
+      id === null,
+      'the workspace lists no trip to open the people route on',
+    )
+    if (id === null) throw new Error('unreachable: the test was skipped')
+    return id[1]
+  }
+
+  test('an owner adds a guest, opens the merge dialog without committing, and removes them', async ({
+    page,
+  }) => {
+    const tripId = await aTripToWalk(page)
+    const route = peopleRoute(tripId)
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    await expect(
+      page.getByRole('heading', { name: GUESTS_HEADING }),
+    ).toBeVisible()
+
+    // A name no earlier run left behind, so a duplicate refusal cannot pass for success.
+    const name = `E2E guest ${Date.now()}`
+    await page.getByLabel('Their name').fill(name)
+    await page.getByRole('button', { name: 'Add a guest' }).click()
+
+    const row = page.locator('li').filter({ hasText: name })
+    await expect(row).toBeVisible()
+    await expect(row).toContainText('Guest')
+
+    // The merge is irreversible, so the case only proves the dialog asks: the confirm stays
+    // disarmed until somebody is chosen, and Escape leaves the guest where they were.
+    await page.getByRole('button', { name: `${name} is now…` }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Merge' })).toBeDisabled()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await expect(row).toBeVisible()
+
+    await page
+      .getByRole('button', { name: `Remove ${name} from this trip` })
+      .click()
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Remove', exact: true })
+      .click()
+    await expect(row).toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})
