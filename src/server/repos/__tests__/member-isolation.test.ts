@@ -593,9 +593,7 @@ describe('member isolation', () => {
       // The half of ADR 0007 that is easy to get wrong in the other direction: organization
       // visibility is a *read* grant. The participant list opens; nothing else does.
       expect(
-        memberUserIds(
-          await listTripParticipants(stranger, fixture.tripId),
-        ),
+        memberUserIds(await listTripParticipants(stranger, fixture.tripId)),
       ).toEqual([alpha.ownerUserId])
 
       const visibilityRefusal = await captureError(() =>
@@ -701,9 +699,7 @@ describe('member isolation', () => {
 
     it('reads the trip’s people, because a collaborator may see who they collaborate with', async () => {
       expect(
-        memberUserIds(
-          await listTripParticipants(stranger, fixture.tripId),
-        ),
+        memberUserIds(await listTripParticipants(stranger, fixture.tripId)),
       ).toEqual([alpha.ownerUserId, strangerId])
     })
 
