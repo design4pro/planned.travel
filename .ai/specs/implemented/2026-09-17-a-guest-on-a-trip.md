@@ -1,11 +1,11 @@
 # A guest on a trip: the record, the refusal of duplicates, the bound, and the merge into a member
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | draft |
-| **Issue**          | #119  |
-| **Spec PR**        | none  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #119        |
+| **Spec PR**        | #553        |
+| **Implementation** | #574        |
 
 `01-S6b` · FR #119 · Parent PRD #104 · Stage `01-S6` of `docs/plans/01-trips-core.md` (frozen), its **second slice**; PRD decisions 7 and 7b.
 
@@ -171,7 +171,7 @@ Each is wrapped in the module's existing `attempted()` helper, so an expected re
 
 ## 📝 UI/UX
 
-Two dependency-free static reproductions sit beside this spec, and they are what the implementation is measured against: [`assets/a-guest-on-a-trip/mockup-01-guests-list.html`](assets/a-guest-on-a-trip/mockup-01-guests-list.html) — the loaded list, the inline duplicate refusal, and the empty state in dark — and [`assets/a-guest-on-a-trip/mockup-02-merge-dialog.html`](assets/a-guest-on-a-trip/mockup-02-merge-dialog.html) — the merge dialog with its combobox open, and what it reports when no relinker is registered.
+Two dependency-free static reproductions sit beside this spec, and they are what the implementation is measured against: [`assets/a-guest-on-a-trip/mockup-01-guests-list.html`](../assets/a-guest-on-a-trip/mockup-01-guests-list.html) — the loaded list, the inline duplicate refusal, and the empty state in dark — and [`assets/a-guest-on-a-trip/mockup-02-merge-dialog.html`](../assets/a-guest-on-a-trip/mockup-02-merge-dialog.html) — the merge dialog with its combobox open, and what it reports when no relinker is registered.
 
 **The guest list**, beneath the members list in the left column of `/trips/$tripId/people`. Each row: the name, a guest `Badge`, and — for the `owner` only — rename, merge and remove controls. Every component is already in `src/components/ui`: `Card`, `SectionLabel`, `Badge`, `Button`, `IconButton`, `Combobox`, `Input`, `Field`, `Dialog`, `EmptyState`. No new primitive is proposed.
 
@@ -315,3 +315,13 @@ Every key lands in all 23 locales in the same change (`docs/SPEC.md` §9, the `i
 **Step 11 — the merge dialog.** The "is now…" control, the `Combobox` over the trip's members, the irreversible warning naming the inheriting member, and the report of what moved (or that nothing did). The copy keys land with it. _Verified by:_ the screen's test and one appended block in `e2e/trips-core.spec.ts` opening the merge dialog, with a silent console.
 
 **Step 12 — the gate.** `node .ai/scripts/agent-kit-check.mjs`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `bash .ai/scripts/check-generated.sh`, `pnpm build`, then `pnpm e2e`. _Verified by:_ all green, and no file outside FR #119's Owned paths touched, with `src/server/repos/trips.ts` changed only by the removal of `listTripParticipants` and the export of its type.
+
+## Amendment
+
+What shipped in #574 differs from the design above in these places. Both phases shipped on that one pull request.
+
+1. **The payload carries no separate `guests` field.** `loadTripPeople` already answers `participants`, and the guest rows are its `guest` branch. A second list would carry the same rows twice. The screen filters `participants` by `kind`. The payload gains `guestLimit` instead, so that the client can name the bound in the refusal copy without importing a server constant.
+2. **The refusal reasons are kebab-case**: `guest-name-taken`, `guest-limit` and `guest-merge-target`. They are not `guestNameTaken`, `guestLimit` and `guestMergeTarget`, because they match the reasons `PeopleRefusal` already carried (`last-owner`, `not-in-workspace`).
+3. **A merge into a member of another organization is `TripGuestMergeTargetError`, not `NotFoundError`.** The target is looked up among the trip's own memberships, which are tenant-scoped. A foreign user therefore gives the same answer as any user who is not on the trip, and that answer says nothing about the other organization. The guest and the trip keep the `NotFoundError` the design names. `mergeTripGuestFn` treats a `memberId` it cannot find on the trip the same way.
+4. **The merge report shows the total and no per-relinker lines.** It reads "{name} is now {member}", and adds "Nothing was assigned to them yet" when every count is zero. No relinker is registered yet. Per-relinker copy belongs to the plans that register the first real relinkers.
+5. **The screen's test covers the guest row and the two guest dialogs in isolation**, following `note-dialog.test.tsx`: owner-only controls, the refusal on the field, the confirm disarmed until somebody is chosen. It does not mount the whole route. Nothing covered the whole route before this change either.

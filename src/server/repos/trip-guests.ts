@@ -5,7 +5,7 @@
  * rules that make the record worth having (a duplicate name is **refused**, never suffixed, and a
  * trip holds at most {@link MAX_TRIP_GUESTS}), the participant read model that puts guests beside
  * members, and the irreversible guest-into-member merge with the registry later plans relink
- * through (`01-S6b`, spec `.ai/specs/2026-09-17-a-guest-on-a-trip.md`).
+ * through (`01-S6b`, spec `.ai/specs/implemented/2026-09-17-a-guest-on-a-trip.md`).
  *
  * Every write resolves the trip with {@link requireTrip} and then asserts the `owner` role, inside
  * the repository, so the decision holds for a route, a seed script and a queue consumer alike — the
