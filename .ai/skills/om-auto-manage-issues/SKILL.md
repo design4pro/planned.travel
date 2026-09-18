@@ -7,6 +7,6 @@ Extends the installed skill: read `.claude/skills/om-auto-manage-issues/SKILL.md
 
 - Human-hold labels (skip the issue entirely): `blocked`, `do-not-close`, `do-not-merge`.
 - `groom` is the human "re-groom" trigger label: remove it from an issue as the first mutation when present. Never add `groom`, `autofix` or `spec`; a human decides when an issue starts implementation.
-- Category comes from the issue form (`.github/ISSUE_TEMPLATE`): a bug report is `bug`, an enhancement or idea is `feature`, a maintenance item is `refactor`; Dependabot is `dependencies`; Sentry-filed issues (`pnpm sentry-triage`) are `bug` and keep the `priority-high` the filer set. Do not touch `needs-e2e` (a CI escape hatch outside the taxonomy).
+- Category comes from the issue form (`.github/ISSUE_TEMPLATE`): a bug report is `bug`, an enhancement or idea is `feature`, a maintenance item is `refactor`; Dependabot is `dependencies`; Sentry-filed issues (`pnpm sentry-triage`) are `bug` and keep the `priority-high` the filer set.
 - The Definition of Ready is in `SDLC.md`; the not-ready comment names the missing ticket-level items and points at the issue form section that holds each.
 - Implementation notes must name the owner module for each concept (docs/SPEC.md §8) and warn when the change would touch a protected surface in `BACKWARD_COMPATIBILITY.md`.
