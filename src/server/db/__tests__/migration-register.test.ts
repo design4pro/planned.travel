@@ -28,9 +28,7 @@ function registeredTags(): Array<string> {
   const start = deploy.indexOf('### Register of non-additive migrations')
   if (start === -1) throw new Error('docs/DEPLOY.md has no §12 register')
   const section = deploy.slice(start, deploy.indexOf('\n## ', start))
-  return [...section.matchAll(/^\| `(\d{4}_\w+)`/gm)].map(
-    (match) => match[1] ?? '',
-  )
+  return [...section.matchAll(/^\| `(\d{4}_\w+)`/gm)].map((match) => match[1])
 }
 
 describe('the §12 register of non-additive migrations', () => {
