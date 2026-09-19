@@ -46,6 +46,7 @@ const messages = {
     'Sprawdź, czy ta strona ma dostęp do lokalizacji, i spróbuj ponownie.',
 
   'map.attribution.label': 'Dane mapy od',
+  'map.attribution.geocoder': 'Miejsca wyszukane przez',
 
   'map.basemap.title': 'Mapa podkładowa niedostępna',
   'map.basemap.body':

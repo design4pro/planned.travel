@@ -39,6 +39,7 @@ const messages = {
     '請確認已允許本網站存取位置資訊，然後再試一次。',
 
   'map.attribution.label': '地圖資料來自',
+  'map.attribution.geocoder': '地點查找由',
 
   'map.basemap.title': '底圖暫時無法使用',
   'map.basemap.body':

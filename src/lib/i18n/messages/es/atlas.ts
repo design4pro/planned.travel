@@ -48,6 +48,7 @@ const messages = {
     'Comprueba que el acceso a la ubicación está permitido para este sitio y vuelve a intentarlo.',
 
   'map.attribution.label': 'Datos del mapa de',
+  'map.attribution.geocoder': 'Lugares localizados con',
 
   'map.basemap.title': 'Mapa base no disponible',
   'map.basemap.body':

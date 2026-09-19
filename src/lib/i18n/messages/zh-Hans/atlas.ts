@@ -38,6 +38,7 @@ const messages = {
     '请确认已允许本网站访问位置信息，然后再试一次。',
 
   'map.attribution.label': '地图数据来自',
+  'map.attribution.geocoder': '地点查找由',
 
   'map.basemap.title': '底图暂不可用',
   'map.basemap.body':

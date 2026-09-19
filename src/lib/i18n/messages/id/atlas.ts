@@ -44,6 +44,7 @@ const messages = {
     'Pastikan akses lokasi diizinkan untuk situs ini, lalu coba lagi.',
 
   'map.attribution.label': 'Data peta dari',
+  'map.attribution.geocoder': 'Tempat ditemukan dengan',
 
   'map.basemap.title': 'Peta dasar tidak tersedia',
   'map.basemap.body':

@@ -49,6 +49,7 @@ const messages = {
     'Comprova que l’accés a la ubicació està permès per a aquest lloc web i torna-ho a provar.',
 
   'map.attribution.label': 'Dades del mapa de',
+  'map.attribution.geocoder': 'Llocs localitzats amb',
 
   'map.basemap.title': 'Mapa base no disponible',
   'map.basemap.body':
