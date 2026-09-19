@@ -570,6 +570,25 @@ const messages = {
   'billing.planChanged.title': 'Plan updated',
   'billing.planChanged.body':
     'The change is already in force with Polar, who will invoice the difference. The summary below catches up within a minute.',
+  'billing.discount.toggle': 'Have a promotion code?',
+  'billing.discount.label': 'Promotion code',
+  'billing.discount.hint': 'Applied to the plan you choose next.',
+  'billing.discount.hintCurrent':
+    'Apply it to your current plan, or choose a plan below.',
+  'billing.discount.applyCurrent': 'Apply to current plan',
+  'billing.discount.applying': 'Applying code…',
+  'billing.discount.invalidFormat': 'Codes are 3 to 64 letters and digits.',
+  'billing.discount.rejected.invalid':
+    "That code isn't valid. Check it and try again.",
+  'billing.discount.rejected.rateLimited':
+    'Too many codes tried. Try again in an hour.',
+  'billing.discount.rejected.notApplicable':
+    "That code doesn't apply to this plan.",
+  'billing.discount.rejected.busy':
+    "Codes can't be checked right now. Try again in a minute.",
+  'billing.discount.nextRenewal':
+    'Your promotion code applies from your next renewal.',
+  'billing.discount.appliedTitle': 'Promotion code applied',
   'billing.hero.manage': 'Manage billing',
   'billing.hero.manageHint':
     'Cards, billing address, VAT number, receipts and cancellation live with Polar, who issues the invoice.',

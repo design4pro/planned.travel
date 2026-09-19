@@ -514,6 +514,24 @@ const messages = {
   'billing.planChanged.title': 'Тариф обновлён',
   'billing.planChanged.body':
     'Изменение уже действует в Polar, который выставит счёт на разницу. Сводка ниже догонит в течение минуты.',
+  'billing.discount.toggle': 'Есть промокод?',
+  'billing.discount.label': 'Промокод',
+  'billing.discount.hint': 'Применится к тарифу, который вы выберете.',
+  'billing.discount.hintCurrent':
+    'Примените его к текущему тарифу или выберите тариф ниже.',
+  'billing.discount.applyCurrent': 'Применить к текущему тарифу',
+  'billing.discount.applying': 'Применяем промокод…',
+  'billing.discount.invalidFormat': 'Код состоит из 3–64 букв и цифр.',
+  'billing.discount.rejected.invalid':
+    'Этот код недействителен. Проверьте его и попробуйте снова.',
+  'billing.discount.rejected.rateLimited':
+    'Слишком много попыток. Попробуйте снова через час.',
+  'billing.discount.rejected.notApplicable':
+    'Этот код не подходит для этого тарифа.',
+  'billing.discount.rejected.busy':
+    'Сейчас не удаётся проверить коды. Попробуйте снова через минуту.',
+  'billing.discount.nextRenewal': 'Промокод действует со следующего продления.',
+  'billing.discount.appliedTitle': 'Промокод применён',
   'billing.hero.manage': 'Управление оплатой',
   'billing.hero.manageHint':
     'Карты, адрес для счёта, номер НДС, квитанции и отмена — в Polar, который выставляет счёт.',

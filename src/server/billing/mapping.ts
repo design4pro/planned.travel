@@ -88,6 +88,55 @@ export const polarPendingUpdateSchema = z.object({
 })
 export type PolarPendingUpdate = z.infer<typeof polarPendingUpdateSchema>
 
+/** A product a discount is restricted to. Polar embeds the whole product; only its id is read. */
+const polarDiscountProductSchema = z.object({ id: z.string().min(1) })
+
+/**
+ * The slice of Polar's `Discount` that deciding whether a code fits reads.
+ *
+ * Polar's `Discount` is a union over `type` (`fixed`, `percentage`) and `duration`, and every
+ * variant carries the bounds below; `basis_points` and `amount` are read for logging only, so both
+ * are optional rather than splitting the schema per variant. Every bound is nullable, and `null`
+ * means "no bound" — an open-ended marketing code has no `ends_at` and no `max_redemptions`.
+ */
+export const polarDiscountSchema = z.object({
+  id: z.string().min(1),
+  /** Absent on a discount that can only be applied by id, never typed. */
+  code: z.string().nullish(),
+  type: z.enum(['fixed', 'percentage']),
+  basis_points: z.number().int().nullish(),
+  amount: z.number().int().nullish(),
+  starts_at: z.string().nullish(),
+  ends_at: z.string().nullish(),
+  max_redemptions: z.number().int().nullish(),
+  redemptions_count: z.number().int(),
+  /** Empty means the discount applies to every product. */
+  products: z.array(polarDiscountProductSchema).default([]),
+})
+export type PolarDiscount = z.infer<typeof polarDiscountSchema>
+
+/** `GET /v1/discounts/`. `max_page` is what bounds the paged code lookup. */
+export const polarDiscountListSchema = z.object({
+  items: z.array(polarDiscountSchema),
+  pagination: z.object({
+    total_count: z.number().int(),
+    max_page: z.number().int(),
+  }),
+})
+
+/**
+ * The discount as a subscription embeds it.
+ *
+ * `products` is optional because Polar's subscription-embedded variants are the discount's base
+ * shape and may omit it; a reader that needs the restriction and finds none re-reads the discount
+ * by id (`currentDiscount()` in `checkout.ts`) rather than taking "absent" for "every
+ * product".
+ */
+export const polarSubscriptionDiscountSchema = z.object({
+  id: z.string().min(1),
+  products: z.array(polarDiscountProductSchema).optional(),
+})
+
 /**
  * The slice of Polar's `Subscription` we read.
  *
@@ -109,6 +158,8 @@ export const polarSubscriptionSchema = z.object({
   customer: polarCustomerSchema,
   metadata: polarMetadataSchema.nullish(),
   pending_update: polarPendingUpdateSchema.nullish(),
+  /** The discount in force, read before a product change so a restricted one cannot follow it. */
+  discount: polarSubscriptionDiscountSchema.nullish(),
 })
 export type PolarSubscription = z.infer<typeof polarSubscriptionSchema>
 

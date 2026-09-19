@@ -411,6 +411,49 @@ export function boundedDiagnostic(
  * `settle()`, so what it asserts is the wait and not the round trips around it.
  */
 export async function settleMutations(page: Page): Promise<void> {
+  await boundedSettle(() => quietIn(page))
+}
+
+/**
+ * How long `settleMutations()` waits for the page's answer before it treats the
+ * wait as having reached its cap.
+ *
+ * The cap inside the page is a `setTimeout`, and it can only end a wait whose
+ * answer still makes it back. #501 caught one that did not: the evaluate sat
+ * until the 30 s test timeout while the page went on answering other evaluates,
+ * and its timer queue was empty, so the in-page wait had already ended and
+ * the round trip was what got lost. This is the cap again, kept by the test
+ * process instead, plus room for a round trip under load. A normal wait ends on
+ * the in-page timers well before it and never sees it.
+ */
+export const SETTLE_MUTATIONS_BOUND_MS = DOM_QUIET_CAP_MS + 3_000
+
+/**
+ * `wait()`, or a plain resolve once `SETTLE_MUTATIONS_BOUND_MS` has passed.
+ *
+ * Unlike `boundedDiagnostic()` a rejection is passed on: a navigation that tears
+ * the context down under the wait has to reach `settle()`, which retries it on
+ * the new document. Only the silence is bounded. The losing evaluate is left to
+ * settle on its own, with nothing awaiting it. Exported so a test can prove the
+ * bound with a wait that never settles.
+ */
+export function boundedSettle(wait: () => Promise<void>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const gaveUp = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      // Green either way, so say so: a recurrence of #501 is otherwise a silent
+      // five-second pause.
+      console.warn(
+        `[settle] the quiet wait gave no answer within ${SETTLE_MUTATIONS_BOUND_MS} ms; treated as the cap`,
+      )
+      resolve()
+    }, SETTLE_MUTATIONS_BOUND_MS)
+  })
+  return Promise.race([wait(), gaveUp]).finally(() => clearTimeout(timer))
+}
+
+/** The in-page half of `settleMutations()`: the three timers and two latches. */
+async function quietIn(page: Page): Promise<void> {
   await page.evaluate(
     ({ quietMs, floorMs, capMs }) =>
       new Promise<void>((resolve) => {

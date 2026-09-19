@@ -482,6 +482,26 @@ const messages = {
   'billing.planChanged.title': 'Paket diperbarui',
   'billing.planChanged.body':
     'Perubahannya sudah berlaku di Polar, yang akan menagih selisihnya. Ringkasan di bawah menyusul dalam satu menit.',
+  'billing.discount.toggle': 'Punya kode promo?',
+  'billing.discount.label': 'Kode promo',
+  'billing.discount.hint': 'Diterapkan ke paket yang Anda pilih berikutnya.',
+  'billing.discount.hintCurrent':
+    'Terapkan ke paket Anda saat ini, atau pilih paket di bawah.',
+  'billing.discount.applyCurrent': 'Terapkan ke paket saat ini',
+  'billing.discount.applying': 'Menerapkan kode…',
+  'billing.discount.invalidFormat':
+    'Kode terdiri dari 3 hingga 64 huruf dan angka.',
+  'billing.discount.rejected.invalid':
+    'Kode itu tidak valid. Periksa dan coba lagi.',
+  'billing.discount.rejected.rateLimited':
+    'Terlalu banyak kode dicoba. Coba lagi dalam satu jam.',
+  'billing.discount.rejected.notApplicable':
+    'Kode itu tidak berlaku untuk paket ini.',
+  'billing.discount.rejected.busy':
+    'Kode tidak dapat diperiksa sekarang. Coba lagi dalam satu menit.',
+  'billing.discount.nextRenewal':
+    'Kode promo Anda berlaku mulai perpanjangan berikutnya.',
+  'billing.discount.appliedTitle': 'Kode promo diterapkan',
   'billing.hero.manage': 'Kelola penagihan',
   'billing.hero.manageHint':
     'Kartu, alamat penagihan, NPWP, tanda terima, dan pembatalan ada di Polar, yang menerbitkan tagihannya.',

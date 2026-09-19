@@ -499,6 +499,24 @@ const messages = {
   'billing.planChanged.title': 'Tarif aktualizován',
   'billing.planChanged.body':
     'Změna už u Polaru platí a rozdíl vyfakturuje. Přehled níže se doplní do minuty.',
+  'billing.discount.toggle': 'Máte promo kód?',
+  'billing.discount.label': 'Promo kód',
+  'billing.discount.hint': 'Použije se u tarifu, který zvolíte příště.',
+  'billing.discount.hintCurrent':
+    'Použijte ho u současného tarifu, nebo níže zvolte jiný.',
+  'billing.discount.applyCurrent': 'Použít na současný tarif',
+  'billing.discount.applying': 'Používání kódu…',
+  'billing.discount.invalidFormat': 'Kód má 3 až 64 písmen a číslic.',
+  'billing.discount.rejected.invalid':
+    'Tento kód není platný. Zkontrolujte ho a zkuste to znovu.',
+  'billing.discount.rejected.rateLimited':
+    'Vyzkoušeno příliš mnoho kódů. Zkuste to znovu za hodinu.',
+  'billing.discount.rejected.notApplicable':
+    'Tento kód neplatí pro tento tarif.',
+  'billing.discount.rejected.busy':
+    'Kódy teď nelze ověřit. Zkuste to znovu za minutu.',
+  'billing.discount.nextRenewal': 'Promo kód platí od příštího obnovení.',
+  'billing.discount.appliedTitle': 'Promo kód použit',
   'billing.hero.manage': 'Správa fakturace',
   'billing.hero.manageHint':
     'Karty, fakturační adresa, DIČ, potvrzení a zrušení jsou u Polaru, který vystavuje fakturu.',

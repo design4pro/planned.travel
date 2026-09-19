@@ -451,6 +451,25 @@ const messages = {
   'billing.planChanged.title': 'プランを更新しました',
   'billing.planChanged.body':
     '変更はすでに Polar 側で有効です。差額は Polar が請求します。下の概要は1分以内に追いつきます。',
+  'billing.discount.toggle': 'プロモーションコードをお持ちですか？',
+  'billing.discount.label': 'プロモーションコード',
+  'billing.discount.hint': '次に選ぶプランに適用されます。',
+  'billing.discount.hintCurrent':
+    '現在のプランに適用するか、下からプランを選んでください。',
+  'billing.discount.applyCurrent': '現在のプランに適用',
+  'billing.discount.applying': 'コードを適用しています…',
+  'billing.discount.invalidFormat': 'コードは3〜64文字の英数字です。',
+  'billing.discount.rejected.invalid':
+    'このコードは無効です。確認してもう一度お試しください。',
+  'billing.discount.rejected.rateLimited':
+    '試行回数が多すぎます。1時間後にもう一度お試しください。',
+  'billing.discount.rejected.notApplicable':
+    'このコードはこのプランには使えません。',
+  'billing.discount.rejected.busy':
+    '現在コードを確認できません。1分後にもう一度お試しください。',
+  'billing.discount.nextRenewal':
+    'プロモーションコードは次回の更新から適用されます。',
+  'billing.discount.appliedTitle': 'プロモーションコードを適用しました',
   'billing.hero.manage': '請求を管理',
   'billing.hero.manageHint':
     'カード、請求先住所、税番号、領収書、解約は、請求書を発行する Polar 側にあります。',

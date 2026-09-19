@@ -491,6 +491,23 @@ const messages = {
   'billing.planChanged.title': 'تم تحديث الخطة',
   'billing.planChanged.body':
     'التغيير سارٍ بالفعل عند Polar، وهي من ستفوتر الفرق. الملخّص أدناه يلحق خلال دقيقة.',
+  'billing.discount.toggle': 'هل لديك رمز ترويجي؟',
+  'billing.discount.label': 'الرمز الترويجي',
+  'billing.discount.hint': 'يُطبَّق على الخطة التي تختارها لاحقًا.',
+  'billing.discount.hintCurrent': 'طبِّقه على خطتك الحالية، أو اختر خطة أدناه.',
+  'billing.discount.applyCurrent': 'تطبيق على الخطة الحالية',
+  'billing.discount.applying': 'جارٍ تطبيق الرمز…',
+  'billing.discount.invalidFormat': 'تتكون الرموز من 3 إلى 64 حرفًا ورقمًا.',
+  'billing.discount.rejected.invalid':
+    'هذا الرمز غير صالح. تحقّق منه وحاول مرة أخرى.',
+  'billing.discount.rejected.rateLimited':
+    'جرّبت رموزًا كثيرة جدًا. حاول مرة أخرى بعد ساعة.',
+  'billing.discount.rejected.notApplicable':
+    'هذا الرمز لا ينطبق على هذه الخطة.',
+  'billing.discount.rejected.busy':
+    'لا يمكن التحقق من الرموز الآن. حاول مرة أخرى بعد دقيقة.',
+  'billing.discount.nextRenewal': 'يسري رمزك الترويجي بدءًا من التجديد التالي.',
+  'billing.discount.appliedTitle': 'تم تطبيق الرمز الترويجي',
   'billing.hero.manage': 'إدارة الفواتير',
   'billing.hero.manageHint':
     'البطاقات وعنوان الفاتورة والرقم الضريبي والإيصالات والإلغاء كلها عند Polar، وهي من تُصدر الفاتورة.',

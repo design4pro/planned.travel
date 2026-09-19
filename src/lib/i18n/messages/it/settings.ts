@@ -499,6 +499,25 @@ const messages = {
   'billing.planChanged.title': 'Piano aggiornato',
   'billing.planChanged.body':
     'La modifica è già in vigore su Polar, che fatturerà la differenza. Il riepilogo qui sotto si aggiorna entro un minuto.',
+  'billing.discount.toggle': 'Hai un codice promozionale?',
+  'billing.discount.label': 'Codice promozionale',
+  'billing.discount.hint': 'Verrà applicato al piano che sceglierai.',
+  'billing.discount.hintCurrent':
+    'Applicalo al tuo piano attuale o scegli un piano qui sotto.',
+  'billing.discount.applyCurrent': 'Applica al piano attuale',
+  'billing.discount.applying': 'Applicazione del codice…',
+  'billing.discount.invalidFormat': 'I codici hanno da 3 a 64 lettere e cifre.',
+  'billing.discount.rejected.invalid':
+    'Questo codice non è valido. Controllalo e riprova.',
+  'billing.discount.rejected.rateLimited':
+    'Troppi codici provati. Riprova tra un’ora.',
+  'billing.discount.rejected.notApplicable':
+    'Questo codice non si applica a questo piano.',
+  'billing.discount.rejected.busy':
+    'Al momento non è possibile verificare i codici. Riprova tra un minuto.',
+  'billing.discount.nextRenewal':
+    'Il codice promozionale si applica dal prossimo rinnovo.',
+  'billing.discount.appliedTitle': 'Codice promozionale applicato',
   'billing.hero.manage': 'Gestisci la fatturazione',
   'billing.hero.manageHint':
     'Carte, indirizzo di fatturazione, partita IVA, ricevute e disdetta stanno su Polar, che emette la fattura.',

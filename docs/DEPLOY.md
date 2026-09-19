@@ -876,6 +876,7 @@ edit products:
 | `products:read`           | Resolving product ids on the pricing page and validating §10's four variables at boot. |
 | `webhooks:write`          | Creating the endpoint from the CLI (§9.4) and redelivering an event (§9.7).            |
 | `webhooks:read`           | Reading delivery history when a webhook is misbehaving (§9.7).                         |
+| `discounts:read`          | Resolving a typed promotion code to a discount id (§9.8, **Promotion codes**).         |
 
 The token is presented as `Authorization: Bearer polar_oat_…`. It is server-side only: it lives
 in `POLAR_ACCESS_TOKEN`, is read through the same failing-loudly accessor as every other secret,
@@ -884,6 +885,10 @@ requests/minute in production and 100/minute in sandbox**; over the limit it ans
 `Retry-After` header, which is the header to obey rather than a fixed backoff. The sandbox limit
 is the tighter one, so a matrix walk that polls in a loop will hit `429` there first — that is a
 rate limit, not an integration bug.
+
+The Worker's token never gets `discounts:write`, in either organization. Creating a discount is an
+operator's act: the staging unlock pool of §9.12 is seeded with an operator's own sandbox token
+(`POLAR_ADMIN_TOKEN`), which never becomes a Worker secret.
 
 ### 9.3 `POLAR_SERVER`
 
@@ -1152,7 +1157,7 @@ email, no second entitlement flip. The same button exists on the dashboard's del
 > `3.134.238.10`, `3.129.111.220`, `52.15.118.168`, and the ranges `74.220.50.0/24` and
 > `74.220.58.0/24` (added 2025-10-27).
 
-### 9.8 The four API calls the product makes
+### 9.8 The API calls the product makes
 
 Paths verified against Polar's published OpenAPI document. Trailing slashes are load-bearing.
 
@@ -1235,6 +1240,54 @@ The order matters, and so does the timing:
 - `POST` returns **`409`** when the order's status makes it ineligible.
 - The receipt is a different document at a different path: `GET /v1/orders/{id}/receipt`, which
   returns its own presigned URL. Invoice ≠ receipt; the billing list labels them separately.
+
+**Promotion codes** — `GET /v1/discounts/`, `GET /v1/discounts/{id}`, `GET /v1/subscriptions/{id}`
+
+```bash
+curl -sS "$POLAR_API/discounts/?limit=100&page=1" -H "Authorization: Bearer $POLAR_ACCESS_TOKEN"
+curl -sS "$POLAR_API/discounts/DISCOUNT_ID"        -H "Authorization: Bearer $POLAR_ACCESS_TOKEN"
+curl -sS "$POLAR_API/subscriptions/SUBSCRIPTION_ID" -H "Authorization: Bearer $POLAR_ACCESS_TOKEN"
+```
+
+A code typed on `/settings/billing` never reaches Polar as text. `GET /v1/discounts/` filters by
+name, not by code, so the Worker pages the list (100 a page, at most 10 pages) and matches `code`
+case-insensitively; a hit is cached in KV for 10 minutes and re-confirmed with
+`GET /v1/discounts/{id}`, a miss for one minute. The paged lookup spends at most a fifth of the
+environment's limit above — 100 lookups a minute in production, 20 in sandbox — and a customer is
+told to try again in a minute past it (`billing.discount.lookup_budget_exhausted`). Every caller
+gets 10 attempts an hour, counted per user, per workspace and per address. A `403` on these calls
+is a token without `discounts:read`: coded requests fail as a configuration error, logged as
+`billing.discount.lookup_forbidden`, and uncoded ones are unaffected. Grant the scope to both
+organizations' Worker tokens **before** deploying the release that carries promotion codes.
+
+The resolved id is sent as `discount_id` — in the checkout body, or in a `PATCH` of the
+subscription. Polar's `SubscriptionUpdate` carries `discount_id` only on the product variant, so a
+plan change with a code is sent as `{ "discount_id" }` alone first, then the product, then the
+seats; a code that excludes the product in force rides in the product `PATCH` instead. Before an
+uncoded product change the Worker reads the subscription, and clears a product-restricted discount
+that would not fit the new product with `"discount_id": null`. When that discount cannot be read — a
+`403` for the missing scope, a `404` for a discount deleted since (§9.12 prunes redeemed codes) —
+the key is left out, the discount stays as it was, the plan change goes ahead, and
+`billing.discount.current_unreadable` is logged. **Apply to current plan** sends only the code: the
+plan is read from the subscription row. A `422` on the code-only `PATCH` is
+shown as an invalid code and logged as `billing.discount.rejected` with reason `refused_by_polar`;
+the plan is untouched. A `422` on a product `PATCH` that carried the code is treated the same way
+when a re-read of the discount shows it expired, ran out or was deleted since the lookup; any other
+`422` there stays the generic plan-change error.
+
+**Owed before production: the sandbox measurements.** The implementation was built so that it
+holds whatever these answer, but they were not measured when it landed (#599). An operator walks
+them in the sandbox organization with a §9.12 code and records the answer here:
+
+| #   | Question                                                                                                      | Answer  |
+| --- | ------------------------------------------------------------------------------------------------------------- | ------- |
+| (a) | Does `GET /v1/discounts/?query=<code>` match on `code`? If so, the lookup can narrow with it.                 | pending |
+| (b) | Does a `{ "discount_id" }` `PATCH` apply only from the next cycle, not to the prorated invoice of the change? | pending |
+| (c) | Does Polar refuse (`422`) a `PATCH` with an expired, exhausted or product-excluded discount?                  | pending |
+| (d) | Does Polar drop or keep a product-restricted discount when the product moves to one it excludes?              | pending |
+
+A different answer to (b) changes what the billing screen promises the customer, and reopens the
+spec's Q1 before the field ships to production.
 
 ### 9.9 No in-app invoice form — settled, with its consequences
 
@@ -1383,6 +1436,11 @@ Read the columns as: what you do → what Polar must send → what our side must
 | **6** | **Failed payment**: `past_due` keeps access during dunning, revocation removes it | **No hand-walkable sandbox recipe exists, and this row is deliberately not walked by hand.** Polar retries a failed renewal on a fixed schedule at 2, 7, 14 and 21 days from the first failure, and the sandbox exposes no clock control and no "force a decline on renewal" lever, so the terminal state is three weeks away. This row is therefore **covered by a unit test against a fake billing runtime**, not by a click-through: feed the handler a captured `subscription.past_due` payload, then a captured `subscription.revoked` payload, and assert on the entitlement each time. | `subscription.past_due` on the first failure. `subscription.revoked` when retries are exhausted.                                                                                                                                                                                                | While `past_due`: entitlements **held** — which is only true because §9.1 sets the organization grace period to `After 21 days` in _both_ organizations; with Polar's default of `Immediately` they are revoked at once, in whichever organization was left on it. The banner points at **Manage billing**, and only the hosted portal can fix the card (§9.9). On revocation: entitlements dropped, workspace on Free. **Key the entitlement loss to the `subscription.revoked` event, not to a status string.** Polar's own pages disagree about the terminal status — the failed-payments page says the subscription "moves to `canceled`", while `unpaid` is a real member of the enum — so treat `canceled` _and_ `unpaid` as revoked and let the event be the trigger. |
 | **7** | **Read-only orders list**, with a downloadable invoice for any paid order         | Workspace 1, which now has several paid orders from rows 1–2. Open `/settings/billing`; the list is `GET /v1/orders/?external_customer_id=<organizationId>&limit=100&sorting=-created_at`. Click **Invoice** on a paid order: `POST /v1/orders/{id}/invoice`, then `GET /v1/orders/{id}/invoice`.                                                                                                                                                                                                                                                                                             | `order.updated` when generation completes, carrying `is_invoice_generated: true`.                                                                                                                                                                                                               | Only this workspace's orders appear, and the server function derives `external_customer_id` from the session's active organization rather than from anything the client sent — a client-supplied id must be ignored outright, because the Organization Access Token would happily return another tenant's orders if it were passed through. The first `POST` returns `202`, so the UI shows a _generating_ state and settles on a link; it must not show an error for the `404` a too-eager `GET` produces. An order that has never been generated shows **Generate**, not a broken link. Amounts are tabular and the currency matches the order.                                                                                                                            |
 | **8** | **Customer Portal** through a minted customer session                             | Workspace 1. Click **Manage billing**; the server calls `POST /v1/customer-sessions/` with `{"external_customer_id": "<organizationId>", "return_url": "…/settings/billing?portal=complete"}` and redirects to the `customer_portal_url` on the `201`.                                                                                                                                                                                                                                                                                                                                        | None — this path is synchronous. Any change made _inside_ the portal (a cancel, a plan switch) comes back as the row-4 or row-2 events.                                                                                                                                                         | The browser lands **already signed in** — no one-time code — on the portal for this organization's customer and no other. The subscription, the orders and the payment-method surface are all present. Clicking back returns to `/settings/billing?portal=complete`. Mint a second session and confirm it is a _new_ token: a cached `customer_portal_url` must not be reused after `expires_at`.                                                                                                                                                                                                                                                                                                                                                                            |
+| **9** | **Promotion code** — a 100% code on a plan change, then on a checkout             | Two §9.12 codes. Workspace 1: on `/settings/billing` open **Have a promotion code?**, type the first code and choose another paid plan; the server resolves it (`GET /v1/discounts/…`) and sends `PATCH /v1/subscriptions/{id}` with `{"discount_id": "<id>"}` before the product. A fresh workspace: type the second code and choose **Solo**; the checkout body carries `discount_id`. Then retype a used code, and a made-up one.                                                                                                                                                          | `subscription.updated` for the change; the checkout's `order.paid` / `subscription.created` as in row 1. No event for a refused code.                                                                                                                                                           | The change lands on `?plan=changed&discount=applied` with the renewal sentence, and the next renewal's order is `0.00`. Polar's checkout opens with the discount line already applied and totals `0.00`. A used or unknown code shows “That code isn't valid” under the field, no redirect, no PATCH in the tail, and `billing.discount.rejected` names the precise reason without the code.                                                                                                                                                                                                                                                                                                                                                                                 |
+
+Row 9 is not part of phase A: it belongs to promotion codes (#599), uses the §9.12 pool, and is
+walked on staging before the promotion-code field reaches production. It does not gate phase A, and
+phase A does not gate it beyond rows 1 and 2 working.
 
 Rows 1–5, 7 and 8 are walked by hand and their evidence is the `wrangler tail` transcript plus a
 screenshot of `/settings/billing`. Row 6's evidence is a passing test. Phase A is not done until
@@ -1392,6 +1450,54 @@ Until then, the honest statement of where phase A stands is: **the code is writt
 is unwalked.** Say that, in those terms, in the deploy log and in any release note. A row is green
 when an operator has run it and written the evidence down here — never because the code that would
 satisfy it exists.
+
+### 9.12 Staging unlock codes
+
+A pool of single-use, 100%-off discount codes in the **sandbox** organization lets a tester put a
+staging workspace on Solo or Crew without a card: they choose a plan on `/settings/billing` and type
+the code, either on Polar's hosted checkout (a first purchase) or in the app's promotion-code field.
+The codes exist only in the sandbox organization, which is a different Polar account from
+production, so none of them can be redeemed there. No 100%-off code is ever created in production.
+
+**Who holds the token.** The operator who seeds the pool uses their own sandbox Organization Access
+Token with `discounts:read` and `discounts:write`, exported as `POLAR_ADMIN_TOKEN` in their shell for
+the run. It is never a Worker secret and never committed (§9.2).
+
+**Seeding and topping up.**
+
+```bash
+export POLAR_SERVER=sandbox                        # anything else is refused before any request
+export POLAR_ADMIN_TOKEN=polar_oat_…               # the operator's own sandbox token
+# the four sandbox product ids, as in the staging build (§10), or pass --products a,b,c,d
+export VITE_POLAR_PRODUCT_SOLO_MONTHLY=… VITE_POLAR_PRODUCT_SOLO_YEARLY=…
+export VITE_POLAR_PRODUCT_CREW_MONTHLY=… VITE_POLAR_PRODUCT_CREW_YEARLY=…
+
+node scripts/billing/seed-sandbox-discounts.mjs --dry-run        # what it would create
+node scripts/billing/seed-sandbox-discounts.mjs --count 20       # tops the pool up to 20
+```
+
+Each code is `STAGE` plus eight random characters, `percentage` 100%, `duration: forever`,
+`max_redemptions: 1`, restricted to the four paid products and tagged `metadata.pool =
+staging-unlock`. The script counts the pool's unredeemed codes, creates only the shortfall and
+prints **only the codes it just created**, so a code already handed to one tester is never printed
+for a second. `--list-unused` prints the whole unredeemed pool for an operator who has lost the list.
+
+**Handing codes out.** One code per tester, shared outside the repository (the team's password
+manager or a direct message). A code is never written into this repository, an issue or a PR.
+
+**Detaching a discount from a subscription.** Polar keeps a `forever` discount on the subscription
+until it is removed:
+
+```bash
+curl -sS -X PATCH "$POLAR_API/subscriptions/SUBSCRIPTION_ID" \
+  -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" -H 'content-type: application/json' \
+  -d '{ "discount_id": null }'
+```
+
+**Pruning.** The app's code lookup reads at most 1,000 discounts (ten pages of 100), and redeemed
+pool codes are never deleted by the script. Every run prints the organization's total discount count
+and warns above 800. Once a tester's walk is done, delete their redeemed `STAGE…` codes in the
+sandbox dashboard (**Products → Discounts**), and do it at the latest when the script warns.
 
 ---
 

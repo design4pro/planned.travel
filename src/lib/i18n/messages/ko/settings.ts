@@ -428,6 +428,24 @@ const messages = {
   'billing.planChanged.title': '플랜이 업데이트되었습니다',
   'billing.planChanged.body':
     '변경은 이미 Polar에서 적용되었고 차액은 Polar가 청구합니다. 아래 요약은 1분 안에 따라잡습니다.',
+  'billing.discount.toggle': '프로모션 코드가 있으신가요?',
+  'billing.discount.label': '프로모션 코드',
+  'billing.discount.hint': '다음에 선택하는 요금제에 적용됩니다.',
+  'billing.discount.hintCurrent':
+    '현재 요금제에 적용하거나 아래에서 요금제를 선택하세요.',
+  'billing.discount.applyCurrent': '현재 요금제에 적용',
+  'billing.discount.applying': '코드 적용 중…',
+  'billing.discount.invalidFormat': '코드는 3~64자의 영문자와 숫자입니다.',
+  'billing.discount.rejected.invalid':
+    '유효하지 않은 코드입니다. 확인 후 다시 시도하세요.',
+  'billing.discount.rejected.rateLimited':
+    '시도한 코드가 너무 많습니다. 1시간 후 다시 시도하세요.',
+  'billing.discount.rejected.notApplicable':
+    '이 코드는 이 요금제에 적용되지 않습니다.',
+  'billing.discount.rejected.busy':
+    '지금은 코드를 확인할 수 없습니다. 1분 후 다시 시도하세요.',
+  'billing.discount.nextRenewal': '프로모션 코드는 다음 갱신부터 적용됩니다.',
+  'billing.discount.appliedTitle': '프로모션 코드 적용됨',
   'billing.hero.manage': '결제 관리',
   'billing.hero.manageHint':
     '카드, 청구 주소, 사업자번호, 영수증, 해지는 청구서를 발행하는 Polar에 있습니다.',

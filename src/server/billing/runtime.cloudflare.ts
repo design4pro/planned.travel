@@ -33,6 +33,7 @@ import {
 import type { TenantScope } from '#/server/repos'
 import { requestOutboundRuntime } from '#/server/metering/bindings'
 import { callProvider } from '#/server/metering/outbound'
+import { discountLookupBudgetFor } from './discounts'
 import { createPolarClient } from './polar'
 import { createSubscriptionStore } from './store'
 import { BillingConfigError } from './types'
@@ -290,5 +291,6 @@ export function billingRuntime(
     tasks: createBillingTaskQueue(env.TASKS, logger),
     logger,
     now: () => new Date(),
+    discountLookupBudget: discountLookupBudgetFor(polarServer()),
   }
 }

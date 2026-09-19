@@ -501,6 +501,26 @@ const messages = {
   'billing.planChanged.title': 'Pla actualitzat',
   'billing.planChanged.body':
     'El canvi ja és vigent a Polar, que facturarà la diferència. El resum de sota s’hi posa al dia en un minut.',
+  'billing.discount.toggle': 'Tens un codi promocional?',
+  'billing.discount.label': 'Codi promocional',
+  'billing.discount.hint': 'S’aplicarà al pla que triïs a continuació.',
+  'billing.discount.hintCurrent':
+    'Aplica’l al teu pla actual o tria un pla a continuació.',
+  'billing.discount.applyCurrent': 'Aplica al pla actual',
+  'billing.discount.applying': 'S’està aplicant el codi…',
+  'billing.discount.invalidFormat':
+    'Els codis tenen de 3 a 64 lletres i xifres.',
+  'billing.discount.rejected.invalid':
+    'Aquest codi no és vàlid. Revisa’l i torna-ho a provar.',
+  'billing.discount.rejected.rateLimited':
+    'S’han provat massa codis. Torna-ho a provar d’aquí a una hora.',
+  'billing.discount.rejected.notApplicable':
+    'Aquest codi no s’aplica a aquest pla.',
+  'billing.discount.rejected.busy':
+    'Ara no es poden comprovar els codis. Torna-ho a provar d’aquí a un minut.',
+  'billing.discount.nextRenewal':
+    'El teu codi promocional s’aplica a partir de la propera renovació.',
+  'billing.discount.appliedTitle': 'Codi promocional aplicat',
   'billing.hero.manage': 'Gestiona la facturació',
   'billing.hero.manageHint':
     'Les targetes, l’adreça de facturació, el NIF, els rebuts i la cancel·lació són a Polar, que emet la factura.',
