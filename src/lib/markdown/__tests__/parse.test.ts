@@ -283,6 +283,26 @@ describe('parse — inline', () => {
       text('a *not emphasis* b'),
     ])
   })
+
+  it('reads an escaped bracket as text, and an escaped backslash as no escape', () => {
+    expect(inline('\\[a](https://example.com)')).toEqual([
+      text('[a](https://example.com)'),
+    ])
+    expect(inline('\\\\[a](https://example.com)')).toEqual([
+      text('\\'),
+      { type: 'link', href: 'https://example.com', children: [text('a')] },
+    ])
+  })
+
+  it('reads a destination with balanced parentheses and escapes', () => {
+    expect(inline('[a](https://example.com/x_(y)\\)z)')).toEqual([
+      {
+        type: 'link',
+        href: 'https://example.com/x_(y))z',
+        children: [text('a')],
+      },
+    ])
+  })
 })
 
 describe('parse — outside the subset', () => {
@@ -436,5 +456,14 @@ describe('parse — outside the subset', () => {
     expect(() => parse('['.repeat(10_000))).not.toThrow()
     expect(() => parse('*'.repeat(10_000))).not.toThrow()
     expect(() => parse('`'.repeat(10_000))).not.toThrow()
+    // A `]` somewhere later defeats any cheap "no closer at all" check, so
+    // these reach the label and destination scans once per `[`.
+    expect(() => parse('[a](b'.repeat(20_000))).not.toThrow()
+    expect(() => parse('![a](b'.repeat(20_000))).not.toThrow()
+    expect(() => parse('['.repeat(100_000) + ']')).not.toThrow()
+    expect(() => parse('[a](b('.repeat(20_000))).not.toThrow()
+    expect(() =>
+      parse('['.repeat(20_000) + 'a](b'.repeat(20_000)),
+    ).not.toThrow()
   })
 })
