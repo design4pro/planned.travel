@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import * as React from 'react'
 import { describe, expect, it } from 'vitest'
 import { fireEvent, render as mount, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { WORLD_CENTRE } from '#/lib/atlas/layout'
 import {
   ATLAS,
@@ -321,6 +321,100 @@ test.describe('02-S4 — drop a pin on the map', () => {
       await settleMutations(page)
       await page.keyboard.press('Enter')
       await expectPrefilledForm(page)
+    })
+  })
+})
+
+/**
+ * `02-S5` — a position pasted into either coordinate field fills both.
+ *
+ * The notations and their refusals are `src/lib/geo/__tests__/position.test.ts`'s claim, and the
+ * focus and hint wiring is `place-dialog-paste.test.tsx`'s; this block proves a real
+ * `ClipboardEvent` reaches the real dialog, and that the hint's reserved line keeps the dialog still
+ * when it fills — at the pinned desktop viewport and at 360px, where the pair stacks and the widest
+ * signed numbers wrap. Nothing submits, for the reason the `02-S4` block gives.
+ */
+test.describe('02-S5 — paste a position', () => {
+  test.beforeEach(async ({ context, page, baseURL }, testInfo) => {
+    test.setTimeout(CAMERA_JOURNEY_TIMEOUT_MS)
+    test.skip(
+      testInfo.project.name !== 'chromium',
+      'the add control sits in the desktop rail — on a phone it is inside the places sheet, and the Layout Instability API that reports a shift is Chromium-only',
+    )
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /** Pastes `text` onto `input` the way a browser does: a `ClipboardEvent` with a `DataTransfer`. */
+  async function pasteInto(input: Locator, text: string): Promise<void> {
+    await input.evaluate((element, payload) => {
+      const data = new DataTransfer()
+      data.setData('text/plain', payload)
+      element.dispatchEvent(
+        new ClipboardEvent('paste', {
+          clipboardData: data,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+    }, text)
+  }
+
+  test('fills both fields from a geo: URI without moving the dialog', async ({
+    context,
+  }) => {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.unmapped)
+    await onRoute(context, planRoute(tripId), async (page) => {
+      await page
+        .getByRole('button', { name: 'Add a place', exact: true })
+        .click()
+      const dialog = page.getByRole('dialog', {
+        name: 'Add a place to this trip',
+      })
+      await expect(dialog).toBeVisible()
+      const lat = dialog.locator('[data-part="place-lat"]')
+      const lng = dialog.locator('[data-part="place-lng"]')
+      await expect(lat).toHaveCount(1)
+      await expect(lng).toHaveCount(1)
+
+      const cases = [
+        {
+          viewport: null,
+          payload: 'geo:34.9671,135.7727',
+          values: ['34.9671', '135.7727'],
+        },
+        {
+          viewport: { width: 360, height: 780 },
+          payload: 'geo:-33.856812,-151.215312',
+          values: ['-33.856812', '-151.215312'],
+        },
+      ] as const
+
+      for (const { viewport, payload, values } of cases) {
+        if (viewport !== null) await page.setViewportSize(viewport)
+        await settleMutations(page)
+        await recordShifts(page)
+
+        await pasteInto(lat, payload)
+
+        await expect(lat).toHaveValue(values[0])
+        await expect(lng).toHaveValue(values[1])
+        await expect(lng).toBeFocused()
+        await expect(dialog.getByRole('status')).toHaveText(
+          `Read as latitude ${values[0]}, longitude ${values[1]}`,
+        )
+        await settleMutations(page)
+        expect(
+          await readShifts(page),
+          `layout shift after pasting ${payload}`,
+        ).toEqual([])
+      }
+
+      await page.keyboard.press('Escape')
+      await expect(dialog).toBeHidden()
     })
   })
 })
