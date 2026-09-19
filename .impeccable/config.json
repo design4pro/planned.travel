@@ -26,6 +26,24 @@
         ],
         "createdAt": "2026-09-08T16:21:40.068Z",
         "reason": "Mockup reproduces the DESIGN.md small-end type ramp verbatim - micro 11px / caption 12px / label 13px - whose documented steps are ~1.09 apart, below the rule's 1.25 target; hierarchy in the planner rail comes from weight and ink colour, not size. Off-token 14px base was fixed to the 15px body token instead of suppressed."
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          ".ai/specs/assets/drop-a-pin-becomes-a-place/mockup-01-armed.html"
+        ],
+        "createdAt": "2026-09-18T21:31:57.544Z",
+        "reason": "agent: illustrative spec mockup reproducing the product's own caption/label/body sizes from src/styles/tokens.css, not a new type scale"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          ".ai/specs/assets/drop-a-pin-becomes-a-place/mockup-02-dropped.html"
+        ],
+        "createdAt": "2026-09-18T21:31:57.748Z",
+        "reason": "agent: illustrative spec mockup reproducing the product's own caption/label/body sizes from src/styles/tokens.css, not a new type scale"
       }
     ]
   }
