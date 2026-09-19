@@ -503,6 +503,7 @@ const messages = {
   'billing.discount.label': 'Promo kód',
   'billing.discount.hint': 'Použije se u tarifu, který zvolíte příště.',
   'billing.discount.applyCurrent': 'Použít na současný tarif',
+  'billing.discount.applying': 'Používání kódu…',
   'billing.discount.invalidFormat': 'Kód má 3 až 64 písmen a číslic.',
   'billing.discount.rejected.invalid':
     'Tento kód není platný. Zkontrolujte ho a zkuste to znovu.',

@@ -495,6 +495,7 @@ const messages = {
   'billing.discount.label': 'الرمز الترويجي',
   'billing.discount.hint': 'يُطبَّق على الخطة التي تختارها لاحقًا.',
   'billing.discount.applyCurrent': 'تطبيق على الخطة الحالية',
+  'billing.discount.applying': 'جارٍ تطبيق الرمز…',
   'billing.discount.invalidFormat': 'تتكون الرموز من 3 إلى 64 حرفًا ورقمًا.',
   'billing.discount.rejected.invalid':
     'هذا الرمز غير صالح. تحقّق منه وحاول مرة أخرى.',

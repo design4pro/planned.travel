@@ -521,6 +521,7 @@ const messages = {
   'billing.discount.label': 'Kod promocyjny',
   'billing.discount.hint': 'Zostanie użyty przy planie, który wybierzesz.',
   'billing.discount.applyCurrent': 'Zastosuj do obecnego planu',
+  'billing.discount.applying': 'Stosowanie kodu…',
   'billing.discount.invalidFormat': 'Kod ma od 3 do 64 liter i cyfr.',
   'billing.discount.rejected.invalid':
     'Ten kod jest nieprawidłowy. Sprawdź go i spróbuj ponownie.',

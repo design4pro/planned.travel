@@ -432,6 +432,7 @@ const messages = {
   'billing.discount.label': '프로모션 코드',
   'billing.discount.hint': '다음에 선택하는 요금제에 적용됩니다.',
   'billing.discount.applyCurrent': '현재 요금제에 적용',
+  'billing.discount.applying': '코드 적용 중…',
   'billing.discount.invalidFormat': '코드는 3~64자의 영문자와 숫자입니다.',
   'billing.discount.rejected.invalid':
     '유효하지 않은 코드입니다. 확인 후 다시 시도하세요.',

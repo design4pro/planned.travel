@@ -486,6 +486,7 @@ const messages = {
   'billing.discount.label': 'Kode promo',
   'billing.discount.hint': 'Diterapkan ke paket yang Anda pilih berikutnya.',
   'billing.discount.applyCurrent': 'Terapkan ke paket saat ini',
+  'billing.discount.applying': 'Menerapkan kode…',
   'billing.discount.invalidFormat':
     'Kode terdiri dari 3 hingga 64 huruf dan angka.',
   'billing.discount.rejected.invalid':

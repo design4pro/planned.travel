@@ -409,6 +409,7 @@ const messages = {
   'billing.discount.label': '促銷碼',
   'billing.discount.hint': '將套用於你接下來選擇的方案。',
   'billing.discount.applyCurrent': '套用至目前方案',
+  'billing.discount.applying': '正在套用促銷碼…',
   'billing.discount.invalidFormat': '促銷碼由 3 到 64 個字母和數字組成。',
   'billing.discount.rejected.invalid': '此促銷碼無效。請檢查後再試一次。',
   'billing.discount.rejected.rateLimited': '嘗試的促銷碼過多。請一小時後再試。',

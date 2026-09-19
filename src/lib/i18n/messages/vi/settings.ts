@@ -485,6 +485,7 @@ const messages = {
   'billing.discount.label': 'Mã khuyến mãi',
   'billing.discount.hint': 'Áp dụng cho gói bạn chọn tiếp theo.',
   'billing.discount.applyCurrent': 'Áp dụng cho gói hiện tại',
+  'billing.discount.applying': 'Đang áp dụng mã…',
   'billing.discount.invalidFormat': 'Mã gồm 3 đến 64 chữ cái và chữ số.',
   'billing.discount.rejected.invalid':
     'Mã này không hợp lệ. Hãy kiểm tra và thử lại.',

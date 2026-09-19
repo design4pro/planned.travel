@@ -485,6 +485,7 @@ const messages = {
   'billing.discount.label': 'Promosyon kodu',
   'billing.discount.hint': 'Bir sonraki seçtiğiniz plana uygulanır.',
   'billing.discount.applyCurrent': 'Mevcut plana uygula',
+  'billing.discount.applying': 'Kod uygulanıyor…',
   'billing.discount.invalidFormat':
     'Kodlar 3 ile 64 arası harf ve rakamdan oluşur.',
   'billing.discount.rejected.invalid':

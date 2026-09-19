@@ -405,6 +405,7 @@ const messages = {
   'billing.discount.label': '促销码',
   'billing.discount.hint': '将应用于你接下来选择的套餐。',
   'billing.discount.applyCurrent': '应用于当前套餐',
+  'billing.discount.applying': '正在应用促销码…',
   'billing.discount.invalidFormat': '促销码由 3 到 64 个字母和数字组成。',
   'billing.discount.rejected.invalid': '该促销码无效。请检查后重试。',
   'billing.discount.rejected.rateLimited': '尝试的促销码过多。请一小时后重试。',

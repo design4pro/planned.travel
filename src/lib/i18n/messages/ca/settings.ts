@@ -505,6 +505,7 @@ const messages = {
   'billing.discount.label': 'Codi promocional',
   'billing.discount.hint': 'S’aplicarà al pla que triïs a continuació.',
   'billing.discount.applyCurrent': 'Aplica al pla actual',
+  'billing.discount.applying': 'S’està aplicant el codi…',
   'billing.discount.invalidFormat':
     'Els codis tenen de 3 a 64 lletres i xifres.',
   'billing.discount.rejected.invalid':

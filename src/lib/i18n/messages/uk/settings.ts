@@ -509,6 +509,7 @@ const messages = {
   'billing.discount.label': 'Промокод',
   'billing.discount.hint': 'Застосується до тарифу, який ви оберете.',
   'billing.discount.applyCurrent': 'Застосувати до поточного тарифу',
+  'billing.discount.applying': 'Застосовуємо промокод…',
   'billing.discount.invalidFormat': 'Код складається з 3–64 літер і цифр.',
   'billing.discount.rejected.invalid':
     'Цей код недійсний. Перевірте його й спробуйте ще раз.',

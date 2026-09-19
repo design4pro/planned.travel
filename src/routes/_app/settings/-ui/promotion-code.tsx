@@ -106,7 +106,7 @@ export function PromotionCodeField({
         shape="pill"
         className="self-start"
         aria-expanded={state.expanded}
-        aria-controls={panelId}
+        aria-controls={state.expanded ? panelId : undefined}
         iconAfter={
           <ChevronDown
             className={cn(
@@ -150,7 +150,7 @@ export function PromotionCodeField({
               className="sm:mt-7"
               disabled={disabled || state.value.trim() === ''}
               loading={applyPending}
-              loadingLabel={t('settings.billing.provider.opening')}
+              loadingLabel={t('settings.billing.discount.applying')}
               onClick={onApply}
             >
               {t('settings.billing.discount.applyCurrent')}

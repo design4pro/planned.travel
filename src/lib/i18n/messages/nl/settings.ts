@@ -498,6 +498,7 @@ const messages = {
   'billing.discount.label': 'Promotiecode',
   'billing.discount.hint': 'Geldt voor het abonnement dat je hierna kiest.',
   'billing.discount.applyCurrent': 'Toepassen op huidig abonnement',
+  'billing.discount.applying': 'Code toepassen…',
   'billing.discount.invalidFormat':
     'Codes bestaan uit 3 tot 64 letters en cijfers.',
   'billing.discount.rejected.invalid':

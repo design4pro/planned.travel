@@ -497,6 +497,7 @@ const messages = {
   'billing.discount.label': 'Κωδικός προσφοράς',
   'billing.discount.hint': 'Εφαρμόζεται στο πρόγραμμα που θα επιλέξετε.',
   'billing.discount.applyCurrent': 'Εφαρμογή στο τρέχον πρόγραμμα',
+  'billing.discount.applying': 'Εφαρμογή κωδικού…',
   'billing.discount.invalidFormat':
     'Οι κωδικοί έχουν 3 έως 64 γράμματα και ψηφία.',
   'billing.discount.rejected.invalid':

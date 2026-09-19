@@ -494,6 +494,7 @@ const messages = {
   'billing.discount.label': 'Promóciós kód',
   'billing.discount.hint': 'A következőként választott csomagra érvényes.',
   'billing.discount.applyCurrent': 'Alkalmazás a jelenlegi csomagra',
+  'billing.discount.applying': 'Kód alkalmazása…',
   'billing.discount.invalidFormat': 'A kód 3–64 betűből és számjegyből áll.',
   'billing.discount.rejected.invalid':
     'Ez a kód érvénytelen. Ellenőrizd, és próbáld újra.',

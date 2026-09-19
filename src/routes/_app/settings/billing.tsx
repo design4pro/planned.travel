@@ -54,6 +54,7 @@ import {
 import { formatDate, formatMoneyMinor, formatPrice } from '../-lib/format'
 import { PLAN_COPY, QUOTA_LABEL_KEYS } from '#/lib/plan-copy'
 import {
+  applyPromotionCode,
   downloadInvoice,
   loadBilling,
   openBillingPortal,
@@ -335,7 +336,6 @@ function BillingPage() {
   const [pending, setPending] = useState<string | null>(null)
   const [failure, setFailure] = useState<Failure | null>(null)
   const promotionCode = usePromotionCode()
-  const currentInterval = billedInterval(state)
   const hasLiveSubscription =
     plan.id !== FREE_PLAN.id && isEntitlingStatus(state.status)
 
@@ -383,19 +383,12 @@ function BillingPage() {
     )
   }
 
-  /** Attaches the code to the plan, interval and seats already in force. */
+  /** Attaches the code to whatever plan is in force; the server reads which one. */
   function applyToCurrentPlan(): void {
     const discountCode = promotionCode.read()
-    if (discountCode === null || currentInterval === null) return
+    if (discountCode === undefined || discountCode === null) return
     void handOff(DISCOUNT_KEY, 'plan', () =>
-      startPlanChange({
-        data: {
-          planId: plan.id,
-          interval: currentInterval,
-          seats: plan.seatBased ? state.seats : undefined,
-          discountCode,
-        },
-      }),
+      applyPromotionCode({ data: { discountCode } }),
     )
   }
 

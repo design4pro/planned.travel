@@ -501,6 +501,7 @@ const messages = {
   'billing.discount.label': 'Aktionscode',
   'billing.discount.hint': 'Gilt für den Tarif, den Sie als Nächstes wählen.',
   'billing.discount.applyCurrent': 'Auf aktuellen Tarif anwenden',
+  'billing.discount.applying': 'Code wird angewendet…',
   'billing.discount.invalidFormat':
     'Codes bestehen aus 3 bis 64 Buchstaben und Ziffern.',
   'billing.discount.rejected.invalid':

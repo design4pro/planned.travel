@@ -574,6 +574,7 @@ const messages = {
   'billing.discount.label': 'Promotion code',
   'billing.discount.hint': 'Applied to the plan you choose next.',
   'billing.discount.applyCurrent': 'Apply to current plan',
+  'billing.discount.applying': 'Applying code…',
   'billing.discount.invalidFormat': 'Codes are 3 to 64 letters and digits.',
   'billing.discount.rejected.invalid':
     "That code isn't valid. Check it and try again.",

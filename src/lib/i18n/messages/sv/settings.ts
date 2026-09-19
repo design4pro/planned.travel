@@ -493,6 +493,7 @@ const messages = {
   'billing.discount.label': 'Kampanjkod',
   'billing.discount.hint': 'Används för den plan du väljer härnäst.',
   'billing.discount.applyCurrent': 'Använd på nuvarande plan',
+  'billing.discount.applying': 'Koden tillämpas…',
   'billing.discount.invalidFormat':
     'Koder består av 3 till 64 bokstäver och siffror.',
   'billing.discount.rejected.invalid':

@@ -499,6 +499,7 @@ const messages = {
   'billing.discount.label': 'Código promocional',
   'billing.discount.hint': 'Aplicado ao plano que você escolher em seguida.',
   'billing.discount.applyCurrent': 'Aplicar ao plano atual',
+  'billing.discount.applying': 'Aplicando o código…',
   'billing.discount.invalidFormat':
     'Os códigos têm de 3 a 64 letras e números.',
   'billing.discount.rejected.invalid':

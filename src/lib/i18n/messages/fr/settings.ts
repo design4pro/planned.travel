@@ -507,6 +507,7 @@ const messages = {
   'billing.discount.label': 'Code promo',
   'billing.discount.hint': 'Appliqué à la formule que vous choisirez ensuite.',
   'billing.discount.applyCurrent': 'Appliquer à la formule actuelle',
+  'billing.discount.applying': 'Application du code…',
   'billing.discount.invalidFormat':
     'Un code compte de 3 à 64 lettres et chiffres.',
   'billing.discount.rejected.invalid':

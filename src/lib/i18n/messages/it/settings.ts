@@ -503,6 +503,7 @@ const messages = {
   'billing.discount.label': 'Codice promozionale',
   'billing.discount.hint': 'Verrà applicato al piano che sceglierai.',
   'billing.discount.applyCurrent': 'Applica al piano attuale',
+  'billing.discount.applying': 'Applicazione del codice…',
   'billing.discount.invalidFormat': 'I codici hanno da 3 a 64 lettere e cifre.',
   'billing.discount.rejected.invalid':
     'Questo codice non è valido. Controllalo e riprova.',
