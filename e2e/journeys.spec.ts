@@ -181,7 +181,8 @@ test('a stranger reaches every public screen', async ({ context, page }) => {
  *
  * One submit per attempt, deliberately: `/request-password-reset` allows five
  * a client in 300 s (`src/server/auth/index.ts`), and a sixth answers "Too many
- * attempts" instead of the sent state this test waits for.
+ * attempts" instead of the sent state this test waits for. The address is one
+ * no account owns: the endpoint answers identically, and no token or mail is made.
  */
 test('the reset-link actions stack inside the panel', async ({
   page,
@@ -193,12 +194,16 @@ test('the reset-link actions stack inside the panel', async ({
   )
   if (route === undefined) throw new Error('forgot-password is a public route')
   await visit(page, route, 'light')
-  await page.locator('input[type="email"]').fill(DEMO_EMAIL)
+  await page.locator('input[type="email"]').fill('nobody-598@example.com')
   await page.getByRole('button', { name: 'Email me a reset link' }).click()
 
   const resend = page.getByRole('button', { name: 'Send it again' })
   const change = page.getByRole('button', { name: 'Use a different email' })
-  await expect(change).toBeVisible()
+  await expect(
+    change,
+    'the sent state never arrived - rate limited? /request-password-reset allows five per 300 s',
+  ).toBeVisible()
+  await expect(resend).toBeVisible()
   const panel = await page.locator('[data-part="auth-panel"]').boundingBox()
   const first = await resend.boundingBox()
   const second = await change.boundingBox()
