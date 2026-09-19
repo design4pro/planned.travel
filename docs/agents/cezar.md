@@ -300,8 +300,9 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.planned-travel.house
 ```
 
 launchd gives the job only the substituted PATH, so check `cezar` resolves there, not in your shell:
-`env -i PATH="$(plutil -extract EnvironmentVariables.PATH raw ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist)" /bin/bash -c 'command -v cezar node gh curl jq'`
-must print five paths.
+`env -i PATH="$(plutil -extract EnvironmentVariables.PATH raw ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist)" /bin/bash -c 'command -v cezar node gh curl'`
+must print four paths. The job runs `bash -lc`, whose profile normally only extends that PATH, so this
+non-login check is the stricter of the two. `jq` is optional: without it the log omits the run id.
 
 Remove with `launchctl bootout gui/$(id -u)/dev.planned-travel.housekeeping`. Log:
 `.ai/cezar/tmp/housekeeping.log`. Run it by hand any time: `bash .ai/scripts/housekeeping.sh`.
