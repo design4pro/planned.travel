@@ -85,6 +85,7 @@ const messages = {
   'plan.drop.lookingUp': 'Procurando o endereço…',
   'plan.drop.error':
     'Não foi possível soltar o alfinete. Tente de novo em instantes.',
+  'plan.place.pastedPosition': 'Lido como latitude {lat}, longitude {lng}',
   'plan.note.showMore': 'Mostrar mais',
   'plan.note.showLess': 'Mostrar menos',
   'plan.note.moveUp': 'Mover para cima',

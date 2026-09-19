@@ -84,6 +84,7 @@ const messages = {
   'plan.drop.lookingUp': 'S’està cercant l’adreça…',
   'plan.drop.error':
     'No s’ha pogut deixar l’agulla. Torna-ho a provar d’aquí a una estona.',
+  'plan.place.pastedPosition': 'Llegit com a latitud {lat}, longitud {lng}',
   'plan.note.showMore': 'Mostra’n més',
   'plan.note.showLess': 'Mostra’n menys',
   'plan.note.moveUp': 'Mou amunt',

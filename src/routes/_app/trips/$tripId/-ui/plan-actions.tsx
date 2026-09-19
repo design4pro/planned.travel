@@ -45,9 +45,11 @@ import {
   Switch,
   Textarea,
 } from '#/components/ui'
+import { formatCoordinate, parsePosition } from '#/lib/geo/position'
 import { useTranslate } from '#/lib/i18n'
 
 import type { PlannerCategory, PlannerRow } from '#/components/planner'
+import type { GeoPosition } from '#/lib/geo/position'
 import type {
   PlanBoardDay,
   PlanBoardPlace,
@@ -344,6 +346,11 @@ export interface PlaceDialogProps {
  * path, so the field pair is honest about being the fallback: it validates as a pair,
  * because a latitude without a longitude is not a position and silently storing half
  * of one produces a pin in the Atlantic.
+ *
+ * A position pasted into either field fills both and says what it read, because a
+ * reader with a position on the clipboard should not have to split it by hand. A
+ * paste that does not parse is left to the browser: a field that rewrites itself
+ * under a half-typed number is worse than no help.
  */
 export function PlaceDialog({
   open,
@@ -356,8 +363,13 @@ export function PlaceDialog({
   error,
   onSubmit,
 }: PlaceDialogProps) {
+  const t = useTranslate()
   const [draft, setDraft] = React.useState(initial)
   const [touched, setTouched] = React.useState(false)
+  // The pair the last paste read, shown until either field is edited by hand.
+  const [pasted, setPasted] = React.useState<GeoPosition | null>(null)
+  const lngRef = React.useRef<HTMLInputElement>(null)
+  const pastedHintId = React.useId()
 
   // The dialog is a single instance reused for every row, so the draft is reset
   // from the row it was opened for rather than seeded once at mount.
@@ -365,6 +377,7 @@ export function PlaceDialog({
     if (open) {
       setDraft(initial)
       setTouched(false)
+      setPasted(null)
     }
     // `initial` is rebuilt by the screen when it opens the dialog for a new row.
   }, [initial, open])
@@ -379,6 +392,20 @@ export function PlaceDialog({
   const canSave = named && latValid && lngValid && paired && !saving
 
   const formId = `place-form-${mode}`
+
+  const pastePosition = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const position = parsePosition(event.clipboardData.getData('text/plain'))
+    if (position === null) return
+    event.preventDefault()
+    setDraft({
+      ...draft,
+      lat: formatCoordinate(position.lat),
+      lng: formatCoordinate(position.lng),
+    })
+    setPasted(position)
+    // Ends on the half the reader did not paste into, which the hint describes.
+    lngRef.current?.focus()
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -503,46 +530,70 @@ export function PlaceDialog({
               </Field>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Latitude"
-                hint="Or close this and pick the spot on the map."
-                error={
-                  touched && !latValid
-                    ? 'Between -90 and 90'
-                    : touched && !paired
-                      ? 'A position needs both numbers'
-                      : undefined
-                }
-              >
-                <Input
-                  value={draft.lat}
-                  onChange={(event) =>
-                    setDraft({ ...draft, lat: event.target.value })
+            <div className="flex flex-col gap-1.5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Latitude"
+                  hint="Or close this and pick the spot on the map."
+                  error={
+                    touched && !latValid
+                      ? 'Between -90 and 90'
+                      : touched && !paired
+                        ? 'A position needs both numbers'
+                        : undefined
                   }
-                  placeholder="34.9671"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  className="tabular-nums"
-                />
-              </Field>
-              <Field
-                label="Longitude"
-                error={
-                  touched && !lngValid ? 'Between -180 and 180' : undefined
-                }
-              >
-                <Input
-                  value={draft.lng}
-                  onChange={(event) =>
-                    setDraft({ ...draft, lng: event.target.value })
+                >
+                  <Input
+                    value={draft.lat}
+                    onChange={(event) => {
+                      setDraft({ ...draft, lat: event.target.value })
+                      setPasted(null)
+                    }}
+                    onPaste={pastePosition}
+                    aria-describedby={pastedHintId}
+                    data-part="place-lat"
+                    placeholder="34.9671"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    className="tabular-nums"
+                  />
+                </Field>
+                <Field
+                  label="Longitude"
+                  error={
+                    touched && !lngValid ? 'Between -180 and 180' : undefined
                   }
-                  placeholder="135.7727"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  className="tabular-nums"
-                />
-              </Field>
+                >
+                  <Input
+                    ref={lngRef}
+                    value={draft.lng}
+                    onChange={(event) => {
+                      setDraft({ ...draft, lng: event.target.value })
+                      setPasted(null)
+                    }}
+                    onPaste={pastePosition}
+                    aria-describedby={pastedHintId}
+                    data-part="place-lng"
+                    placeholder="135.7727"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    className="tabular-nums"
+                  />
+                </Field>
+              </div>
+              {/* The box is reserved empty so the hint never shifts what sits below. */}
+              <p
+                id={pastedHintId}
+                role="status"
+                className="min-h-[2lh] text-caption text-ink-3 tabular-nums sm:min-h-lh"
+              >
+                {pasted === null
+                  ? null
+                  : t('trips.plan.place.pastedPosition', {
+                      lat: formatCoordinate(pasted.lat),
+                      lng: formatCoordinate(pasted.lng),
+                    })}
+              </p>
             </div>
 
             {mode === 'create' && days.length > 0 ? (

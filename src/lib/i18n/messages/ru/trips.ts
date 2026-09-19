@@ -85,6 +85,7 @@ const messages = {
   'plan.drop.lookingUp': 'Ищем адрес…',
   'plan.drop.error':
     'Не удалось поставить метку. Попробуйте ещё раз чуть позже.',
+  'plan.place.pastedPosition': 'Распознано: широта {lat}, долгота {lng}',
   'plan.note.showMore': 'Показать больше',
   'plan.note.showLess': 'Показать меньше',
   'plan.note.moveUp': 'Переместить вверх',

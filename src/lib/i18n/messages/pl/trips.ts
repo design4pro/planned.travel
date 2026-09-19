@@ -85,6 +85,7 @@ const messages = {
   'plan.drop.lookingUp': 'Szukam adresu…',
   'plan.drop.error':
     'Nie udało się upuścić pinezki. Spróbuj ponownie za chwilę.',
+  'plan.place.pastedPosition': 'Odczytano jako szerokość {lat}, długość {lng}',
   'plan.note.showMore': 'Pokaż więcej',
   'plan.note.showLess': 'Pokaż mniej',
   'plan.note.moveUp': 'Przenieś w górę',

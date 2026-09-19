@@ -88,6 +88,7 @@ const messages = {
   'plan.drop.pin': 'Νέα τοποθεσία',
   'plan.drop.lookingUp': 'Αναζήτηση διεύθυνσης…',
   'plan.drop.error': 'Η καρφίτσα δεν τοποθετήθηκε. Δοκίμασε ξανά σε λίγο.',
+  'plan.place.pastedPosition': 'Αναγνωρίστηκε: πλάτος {lat}, μήκος {lng}',
   'plan.note.showMore': 'Περισσότερα',
   'plan.note.showLess': 'Λιγότερα',
   'plan.note.moveUp': 'Μετακίνηση πάνω',
