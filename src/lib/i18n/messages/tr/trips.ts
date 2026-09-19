@@ -233,6 +233,7 @@ const messages = {
   'people.error.lastOwner':
     'Bir gezide en az bir sahip kalır. Önce başka birini sahip yapın.',
   'people.error.notInWorkspace': 'Bu kişi bu çalışma alanında değil',
+  'people.error.alreadyOnTrip': 'Bu kişi zaten bu seyahatte',
 } satisfies TranslationOf<typeof En>
 
 export default messages

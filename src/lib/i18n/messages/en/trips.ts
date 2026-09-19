@@ -397,7 +397,7 @@ const messages = {
   'people.visibility.public': 'This trip is shared with a public link',
   /* ---------------------------------------------- the two named refusals */
   /**
-   * The client picks one of these two from the refusal's `reason` code; the
+   * The client picks one of these three from the refusal's `reason` code; the
    * server never composes a sentence. The last-owner line answers both verbs -
    * removing the last owner and demoting them - because from the reader's side
    * it is one rule.
@@ -405,6 +405,7 @@ const messages = {
   'people.error.lastOwner':
     'A trip keeps at least one owner. Make somebody else an owner first.',
   'people.error.notInWorkspace': 'That person is not in this workspace',
+  'people.error.alreadyOnTrip': 'That person is already on this trip',
 } as const satisfies NamespaceMessages
 
 export default messages

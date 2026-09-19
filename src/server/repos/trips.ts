@@ -49,7 +49,11 @@ import {
   inIds,
   tenantFilter,
 } from './base'
-import { NotFoundError, RepositoryError } from './context'
+import {
+  isUniqueConstraintViolation,
+  NotFoundError,
+  RepositoryError,
+} from './context'
 import { getMembership, listUserProfiles } from './members'
 import {
   dayNotesRepository,
@@ -1564,6 +1568,19 @@ export class TripMemberNotInWorkspaceError extends RepositoryError {
 }
 
 /**
+ * Thrown when a trip membership is asked for somebody who is already on the trip.
+ *
+ * The picker never offers a current member, so this is a stale screen, a crafted payload, or two
+ * owners adding the same person at once. The `trip_members_trip_user_unq` index is what refuses; a
+ * lookup first would only narrow the race, so the writer names the index's refusal instead.
+ */
+export class TripMemberExistsError extends RepositoryError {
+  constructor(readonly userId: string) {
+    super('That person is already on this trip.', 'TRIP_MEMBER_EXISTS')
+  }
+}
+
+/**
  * "This trip has an `owner` other than this membership row", as a predicate rather than as a count.
  *
  * The last-owner guard has to check **and** act in one statement, and this is the half that makes
@@ -1624,10 +1641,17 @@ export async function addTripMember(
   if ((await getMembership(scope, values.userId)) === null) {
     throw new TripMemberNotInWorkspaceError(values.userId)
   }
-  return tripMembersRepository.insert(scope, {
-    ...values,
-    invitedBy: scope.ctx.userId,
-  })
+  try {
+    return await tripMembersRepository.insert(scope, {
+      ...values,
+      invitedBy: scope.ctx.userId,
+    })
+  } catch (cause) {
+    if (isUniqueConstraintViolation(cause)) {
+      throw new TripMemberExistsError(values.userId)
+    }
+    throw cause
+  }
 }
 
 /**

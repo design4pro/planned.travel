@@ -229,6 +229,7 @@ const messages = {
   'people.error.lastOwner':
     'Mỗi chuyến đi giữ ít nhất một chủ sở hữu. Hãy đặt người khác làm chủ sở hữu trước.',
   'people.error.notInWorkspace': 'Người đó không có trong không gian này',
+  'people.error.alreadyOnTrip': 'Người đó đã có trong chuyến đi này',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -137,6 +137,21 @@ describe('a trip’s people', () => {
         (await listTripMembers(alpha.scope, tripId)).map((row) => row.userId),
       ).toContain(userId)
     })
+
+    it('refuses somebody already on the trip with its own code, and writes no row', async () => {
+      // A stale people screen, or two owners adding the same person at once: the unique index is
+      // what refuses, and the writer has to name that refusal rather than let the driver's through.
+      const userId = await join('Already here', 'editor')
+      const before = (await listTripMembers(alpha.scope, tripId)).length
+
+      const refusal = await captureError(() =>
+        addTripMember(alpha.scope, { tripId, userId, role: 'viewer' }),
+      )
+
+      expect(refusal).toBeInstanceOf(RepositoryError)
+      expect((refusal as RepositoryError).code).toBe('TRIP_MEMBER_EXISTS')
+      expect((await listTripMembers(alpha.scope, tripId)).length).toBe(before)
+    })
   })
 
   describe('the last-owner guard, which two verbs reach', () => {

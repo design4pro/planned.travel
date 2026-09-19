@@ -239,6 +239,7 @@ const messages = {
   'people.error.lastOwner':
     'Egy utazásnak marad legalább egy tulajdonosa. Előbb tegyél tulajdonossá valaki mást.',
   'people.error.notInWorkspace': 'Ez a személy nincs ebben a munkaterületben',
+  'people.error.alreadyOnTrip': 'Ez a személy már részt vesz ezen az úton',
 } satisfies TranslationOf<typeof En>
 
 export default messages

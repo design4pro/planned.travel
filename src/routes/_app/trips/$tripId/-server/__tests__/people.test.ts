@@ -307,6 +307,11 @@ describe('attempted', () => {
       super('That person is not a member.', 'TRIP_MEMBER_NOT_IN_WORKSPACE')
     }
   }
+  class AlreadyOnTrip extends RepositoryError {
+    constructor() {
+      super('That person is already on this trip.', 'TRIP_MEMBER_EXISTS')
+    }
+  }
 
   it('spreads a success', async () => {
     expect(await attempted(async () => ({ memberId: 'm1' }))).toEqual({
@@ -315,7 +320,7 @@ describe('attempted', () => {
     })
   })
 
-  it('turns the two expected refusals into a code the screen has copy for', async () => {
+  it('turns the three expected refusals into a code the screen has copy for', async () => {
     expect(
       await attempted(async () => {
         throw new LastOwner()
@@ -327,6 +332,12 @@ describe('attempted', () => {
         throw new NotInWorkspace()
       }),
     ).toEqual({ ok: false, reason: 'not-in-workspace' })
+
+    expect(
+      await attempted(async () => {
+        throw new AlreadyOnTrip()
+      }),
+    ).toEqual({ ok: false, reason: 'already-on-trip' })
   })
 
   it('lets every other failure through untouched', async () => {
