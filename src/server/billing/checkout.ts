@@ -30,9 +30,9 @@ import {
   planById,
   requirePrice,
 } from '#/lib/plans'
+import { DISCOUNT_CODE_PATTERN } from '#/lib/discount-code'
 import {
   DISCOUNTS_PATH,
-  DISCOUNT_CODE_PATTERN,
   appliesToProduct,
   logDiscountRejection,
   resolveDiscount,

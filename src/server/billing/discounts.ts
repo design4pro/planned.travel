@@ -29,9 +29,6 @@ import type { BillingIdentity, BillingRuntime } from './types'
 
 export const DISCOUNTS_PATH = '/v1/discounts/'
 
-/** Codes are letters and digits; the cap bounds what we forward to a paged lookup. */
-export const DISCOUNT_CODE_PATTERN = /^[A-Za-z0-9]{3,64}$/
-
 export const DISCOUNT_PAGE_SIZE = 100
 /** Ten pages of a hundred. A code past the thousandth discount is refused and logged. */
 export const DISCOUNT_MAX_PAGES = 10
