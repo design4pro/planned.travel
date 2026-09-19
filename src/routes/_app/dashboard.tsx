@@ -29,11 +29,7 @@ import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
 import {
   countryFlag,
-  daysBetween,
-  daysUntil,
-  formatDateRange,
   formatNumber,
-  formatPercent,
   formatTimeRange,
   formatWeekday,
 } from './-lib/format'
@@ -54,10 +50,11 @@ import {
 } from './-ui/scaffold'
 import { TimezoneClock } from './-ui/timezone-clock'
 import { TripGrid } from './-ui/trip-card'
+import { TripHeroStrip } from './-ui/trip-hero-strip'
 
 import type { ReactNode } from 'react'
 import type { DashboardWidgetId } from '#/lib/clock-zones'
-import type { Locale, MessageKey, Translate } from '#/lib/i18n'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type {
   DashboardPayload,
   ReservationCard,
@@ -197,7 +194,7 @@ function DashboardPage() {
 /* ----------------------------------------------------------------- up next */
 
 function UpNext({ data }: { data: DashboardPayload }) {
-  const { t, locale } = useI18n()
+  const t = useTranslate()
   const trip = data.upNext
 
   if (trip === null) {
@@ -232,19 +229,6 @@ function UpNext({ data }: { data: DashboardPayload }) {
       </Card>
     )
   }
-
-  const startsIn = daysUntil(trip.startDate, data.today)
-  const length = daysBetween(trip.startDate, trip.endDate)
-  const nights = length === null ? null : Math.max(length - 1, 0)
-  const range = formatDateRange(trip.startDate, trip.endDate, locale)
-  /*
-   * Only while the trip is under way: a percentage on a trip that has not started is noise, and
-   * on one that has ended it is a full bar saying nothing. The fraction itself is the server's,
-   * computed from its own date, so this reads no clock either.
-   */
-  const endsIn = daysUntil(trip.endDate, data.today)
-  const underWay =
-    data.elapsed !== null && data.elapsed > 0 && endsIn !== null && endsIn >= 0
 
   return (
     <Card
@@ -320,121 +304,9 @@ function UpNext({ data }: { data: DashboardPayload }) {
           )}
         </div>
 
-        {underWay ? (
-          <Progress
-            data-part="hero-progress"
-            value={Math.round(data.elapsed * 100)}
-            size="sm"
-            tone="brand"
-            label={
-              <span className="text-inverse-muted">
-                {t('shell.dashboard.hero.progress')}
-              </span>
-            }
-            // The primitive's own value text is drawn in the light-surface ink,
-            // which disappears on the inverse card; the same figure in the
-            // card's muted ink instead.
-            valueText={
-              <span className="text-inverse-muted">
-                {formatPercent(data.elapsed, locale)}
-              </span>
-            }
-            className="bg-inverse-edge"
-          />
-        ) : null}
-
-        {/* The three figures the trip is made of — nights, places, the people going — beside the
-            countdown the card already carried. The trip's own people, not the workspace's: the
-            strip is about this trip and nothing else. */}
-        <dl
-          data-part="hero-strip"
-          className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-inverse-edge sm:grid-cols-4"
-        >
-          <HeroStat
-            label={
-              startsIn !== null && startsIn < 0
-                ? t('shell.dashboard.hero.started')
-                : t('shell.dashboard.hero.startsIn')
-            }
-            value={startsInValue(startsIn, locale, t)}
-            hint={startsInHint(startsIn, t)}
-          />
-          <HeroStat
-            label={t('shell.dashboard.hero.nights')}
-            value={nights === null ? '—' : formatNumber(nights, locale)}
-            hint={range ?? t('shell.dashboard.hero.datesMissing')}
-          />
-          <HeroStat
-            label={t('shell.dashboard.hero.places')}
-            value={formatNumber(trip.placeCount, locale)}
-            hint={
-              trip.placeCount === 0
-                ? t('shell.dashboard.hero.placesNone')
-                : t('shell.dashboard.hero.placesHint')
-            }
-          />
-          <HeroStat
-            label={t('shell.dashboard.hero.travellers')}
-            value={formatNumber(trip.peopleCount, locale)}
-            hint={t('shell.dashboard.hero.companionsHint')}
-          />
-        </dl>
+        <TripHeroStrip trip={trip} today={data.today} elapsed={data.elapsed} />
       </div>
     </Card>
-  )
-}
-
-/** An em dash for "no date", `Today` for the day itself, otherwise the figure. */
-function startsInValue(
-  startsIn: number | null,
-  locale: Locale,
-  t: Translate,
-): string {
-  if (startsIn === null) return '—'
-  if (startsIn === 0) return t('shell.dashboard.hero.today')
-  return formatNumber(Math.abs(startsIn), locale)
-}
-
-/**
- * The unit under the countdown, agreeing with the figure above it.
- *
- * `count` selects the CLDR branch and is never printed — the reader is looking
- * at the numeral in the same tile. The two keys used to be the bare words
- * `days ago` and `days`, which read as `Starts in / 1 / days` in English and
- * gave a translator of Polish or Arabic no branch to inflect.
- */
-function startsInHint(startsIn: number | null, t: Translate): string {
-  if (startsIn === null) return t('shell.dashboard.hero.startUnknown')
-  if (startsIn === 0) return t('shell.dashboard.hero.startToday')
-  const count = Math.abs(startsIn)
-  return startsIn < 0
-    ? t('shell.dashboard.hero.startPast', { count })
-    : t('shell.dashboard.hero.startFuture', { count })
-}
-
-function HeroStat({
-  label,
-  value,
-  hint,
-}: {
-  label: string
-  value: string
-  hint: string
-}) {
-  return (
-    <div className="min-w-0 bg-inverse-surface px-4 py-4 text-center">
-      <dt className="mb-2 truncate text-micro font-semibold tracking-label uppercase text-inverse-muted">
-        {label}
-      </dt>
-      {/* No `data-numeric`. Every tile holds a grouped numeral, which is already
-          an isolated run, and the countdown can hold the word `Today`, which is
-          prose. `tabular-nums` is the part every tile actually wants, and it is a
-          class rather than an attribute that also carries bidi meaning. */}
-      <dd className="font-display text-display leading-none font-bold tracking-tighter tabular-nums text-inverse-on">
-        {value}
-      </dd>
-      <p className="mt-1.5 truncate text-caption text-inverse-muted">{hint}</p>
-    </div>
   )
 }
 

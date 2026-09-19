@@ -1514,7 +1514,8 @@ test.describe('01-S6b — A guest on a trip', () => {
 test.describe('01-S7 — Reading a list of trips two ways, and finding the archived ones', () => {
   /**
    * This block's route table. One route: the mode, its switch and the archived fold are all
-   * properties of the trip index, and the dashboard's strip is covered by its unit-level payload.
+   * properties of the trip index. The dashboard's progress bar and strip are a component's, and
+   * `src/routes/_app/-ui/__tests__/trip-hero-strip.test.tsx` covers them.
    */
   const TRIPS: RouteCase = {
     name: 'trips',
