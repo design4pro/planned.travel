@@ -16,7 +16,7 @@ Norway's Locationforecast. Past days use a **recorded** daily value from NASA PO
 window use a climate **estimate** from NASA POWER's long-term means, which always carries a visible
 marker. Both providers are free and licensed for commercial use. That is the one property that lifts
 the block on `DOC-08` (`06-S7` in `docs/plans/06-documents-and-media.md`), and phase 1 records it as
-ADR 0023. Three rules apply throughout. Readings are cached in the existing `KV` namespace under keys
+ADR 0025. Three rules apply throughout. Readings are cached in the existing `KV` namespace under keys
 that carry no tenant data. A whole trip is resolved in one batched server call. A reading that is
 missing renders as missing, never as an invented number.
 
@@ -350,14 +350,20 @@ export const loadTripWeather: ServerFn<
   This is the one SQL change, and it lives in `server/repos` as SPEC §6 requires.
 
 - **Failure mapping**: `RateCeilingError`, `ProviderBlockedError`, a vendor error, or a timeout
-  (10 s, like `GEOAPIFY_TIMEOUT_MS`) turns the affected days into `unavailable`. The function
-  **never rejects** for a provider reason. A trip-not-found or role failure still throws, as it does
-  everywhere else.
-- **Concurrency, deadline and a cap.** All provider calls for one request are issued concurrently
+  turns the affected days into `unavailable`. The function **never rejects** for a provider reason.
+  A trip-not-found or role failure still throws, as it does everywhere else.
+- **Two bounds, and the per-call one is the smaller.** The per-call timeout is **6 s** and the
+  request's overall deadline is **8 s**. The order matters and is the reason this deviates from
+  `GEOAPIFY_TIMEOUT_MS` (10 s): geocoding makes one call with no outer deadline, so a per-call bound
+  is the only bound it has. Here the calls fan out under an 8 s deadline, and a per-call timeout
+  above it could never fire - the deadline would always resolve first, every hung provider would
+  look identical, and the per-call bound would be decoration. At 6 s a single hung provider aborts
+  with about two seconds of headroom left, so the kinds that did answer still render instead of the
+  whole board going `unavailable` together.
+- **Concurrency and a cap.** All provider calls for one request are issued concurrently
   under `Promise.allSettled`, never in sequence - a 21-day, 6-city trip on a cold cache is up to 18
-  calls, which at the 10 s per-call timeout would be three minutes if they queued. The function
-  carries an overall deadline of 8 s; every kind still unresolved at the deadline renders
-  `unavailable`. At most **12 distinct day-locations** are resolved per request, in day order; days
+  calls, which at the 6 s per-call timeout would be close to two minutes if they queued. Every kind
+  still unresolved at the 8 s deadline renders `unavailable`. At most **12 distinct day-locations** are resolved per request, in day order; days
   beyond that render `unavailable`. The worst case per request is therefore 12 locations × 3 kinds =
   36 outbound calls plus 36 KV reads, stated here so it can be checked against the Workers
   per-request subrequest limit before phase 2 lands.
@@ -568,7 +574,7 @@ them.
   `RATE_METRICS` gains a member, and the generic loops in `limits.test.ts` (`:590`, `:610`, `:619`,
   `:711`) cover it.
 - **Licence risk.** It is the reason this spec exists. The terms were read on 2026-09-19 and are
-  recorded in ADR 0023. A term change by either provider is handled by a new ADR, and the vendor
+  recorded in ADR 0025. A term change by either provider is handled by a new ADR, and the vendor
   seam keeps a swap to one file.
 - **Cost.** Zero per call. KV reads and writes stay within the existing binding's allowance at our
   volumes (`docs/ARCHITECTURE.md` §8).
@@ -590,10 +596,13 @@ them.
 
 ## 📋 Phasing
 
-1. **Decision on record.** ADR 0023, plus `11-S3`, `06-S7` and `09-S8` updated. Docs only.
-   The number is 0023 and not the one after it: `docs/adr/` ends at `0022`, and
+1. **Decision on record.** ADR 0025, plus `11-S3`, `06-S7` and `09-S8` updated. Docs only.
+   The number is 0025 because both numbers below it are taken: `docs/adr/` ends at
+   `0023-ci-and-agents-run-on-the-self-hosted-pool.md`, and
    `.ai/specs/2026-09-19-deployed-on-delete-rules.md` (#192, spec PR #626) already claims `0024`
-   inside its own grep assertions. Two specs cannot own one number.
+   inside its own grep assertions. Two specs cannot own one number. Re-check this against
+   `ls docs/adr/` when phase 1 starts rather than trusting this line: the directory moves while a
+   spec waits, and this number was already wrong once.
 2. **Server.** Vendors, policy, limits, repository read and server function, all with unit tests and
    no UI caller. The app is unchanged.
 3. **Surface.** Badge, popover, copy in 23 locales, and a Playwright journey. The feature becomes
@@ -605,7 +614,7 @@ Each phase is one pull request and leaves `develop` green.
 
 ### Phase 1 — decision on record
 
-1. Write `docs/adr/0023-met-norway-and-nasa-power-for-weather.md` in the shape of
+1. Write `docs/adr/0025-met-norway-and-nasa-power-for-weather.md` in the shape of
    `0013-geoapify-for-geocoding.md` (Context / Decision / Consequences / Alternatives rejected). Record
    the three kinds, the terms quoted above with the date they were read, the rejected
    alternatives with the clause that rejects each, and - as `0013` does for Geoapify - what each
@@ -613,7 +622,7 @@ Each phase is one pull request and leaves `develop` green.
    a tenant's trip coordinates to a third party. Check: the file exists, and `pnpm lint` passes on
    markdown.
 2. In `docs/plans/11-boundaries-and-blockers.md`, strike weather through in "The provider decisions"
-   and in the `DOC-08` register row, citing ADR 0023, the same way geocoding cites 0013. In
+   and in the `DOC-08` register row, citing ADR 0025, the same way geocoding cites 0013. In
    `docs/plans/06-documents-and-media.md` `06-S7`, mark the stage unblocked, rename `archive` and
    `climate` to `recorded` and `estimate`, and point at this spec. In
    `docs/plans/09-account-and-settings.md`, change the "Temperature unit" row (`:2605`, and the
@@ -663,7 +672,8 @@ read per the key/TTL table, with the forecast entry's freshness taken from its s
 rather than from its presence (Data Model), `spendRateUnit` per outbound call - a miss or a
 conditional re-fetch alike - in the order forecast → estimate →
 recorded, `callProvider` around each call, the `wx:v1:fail:` negative entry on any vendor error,
-`Promise.allSettled` with the 8 s deadline and the 12-location cap, and the mapping of every
+`Promise.allSettled` with the 6 s per-call timeout inside the 8 s request deadline and the
+12-location cap, and the mapping of every
 provider-side error to `unavailable`. Tests, with an in-memory KV, fake counters and a fake
 fetch:
 
@@ -678,6 +688,9 @@ fetch:
 - a malformed entry treated as a miss;
 - an outage on one vendor leaving the other kinds intact, writing the negative entry, and the
   next resolution spending **no** unit and making **no** call while it lives;
+- **one provider hanging**, on fake timers: it aborts at the 6 s per-call timeout rather than at
+  the 8 s request deadline, that kind renders `unavailable`, and the kinds that answered still
+  render - the case that would be untestable if the per-call bound sat above the deadline;
 - a ceiling of 0 or exhausted producing `unavailable` without a call;
 - a budget of 1 against 3 needed calls spending it on the forecast;
 - **no exported function accepting a trip, place or member id**, asserted by a `seam.test.ts`
