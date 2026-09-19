@@ -838,7 +838,12 @@ function BookingCard({ booking, desk }: { booking: BookingRow; desk: Desk }) {
   function stayFacts(stay: BookingStay): Array<FactItem> {
     const first = desk.dayById.get(stay.startDayId)
     const last = desk.dayById.get(stay.endDayId)
-    const checkIn = timeRange(stay.checkInTime, stay.checkInEndTime)
+    // The window only with its opening: a closing hour alone would reach `timeRange`'s untranslated
+    // "until" form.
+    const checkIn =
+      stay.checkInTime === null
+        ? null
+        : timeRange(stay.checkInTime, stay.checkInEndTime)
     const checkOut = timeRange(stay.checkOutTime, null)
     return [
       ...(first === undefined || last === undefined

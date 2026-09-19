@@ -41,6 +41,10 @@ export function StayFields({
     label: dayName(day),
   }))
   const range = stayRange(draft.startDayId, draft.endDayId, days)
+  // Both time fields are labelled "Time" on screen, under the day they belong to; spoken alone, the
+  // two would be indistinguishable, so each names its side of the stay as well.
+  const checkInTimeName = `${t('modules.book.field.checkIn')}, ${t('modules.field.time')}`
+  const checkOutTimeName = `${t('modules.book.field.checkOut')}, ${t('modules.field.time')}`
 
   return (
     <div className="flex flex-col gap-3">
@@ -71,6 +75,7 @@ export function StayFields({
                 type="time"
                 value={draft.startTime}
                 onChange={(event) => onChange('startTime', event.target.value)}
+                aria-label={checkInTimeName}
               />
             </Field>
             <Field
@@ -110,6 +115,7 @@ export function StayFields({
               type="time"
               value={draft.endTime}
               onChange={(event) => onChange('endTime', event.target.value)}
+              aria-label={checkOutTimeName}
             />
           </Field>
         </div>

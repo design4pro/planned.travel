@@ -52,7 +52,15 @@ function log(): Logger {
  */
 async function stayDays(
   scope: TenantScope,
-  data: Pick<StayInput, 'tripId' | 'startDayId' | 'endDayId'>,
+  data: Pick<
+    StayInput,
+    | 'tripId'
+    | 'startDayId'
+    | 'endDayId'
+    | 'checkInTime'
+    | 'checkInEndTime'
+    | 'checkOutTime'
+  >,
 ): Promise<{ readonly start: Day; readonly end: Day }> {
   const [start, end] = await Promise.all([
     requireTripDay(scope, data.tripId, data.startDayId),
@@ -60,6 +68,23 @@ async function stayDays(
   ])
   if (end.dayNumber < start.dayNumber) {
     throw new Error('The stay ends before it starts. Check the days.')
+  }
+  // The same two time rules the dialog applies, held here too so a direct call cannot store them
+  // inverted. `HH:MM` strings compare in clock order.
+  if (
+    data.checkInTime !== '' &&
+    data.checkInEndTime !== '' &&
+    data.checkInEndTime < data.checkInTime
+  ) {
+    throw new Error('The check-in window closes before it opens.')
+  }
+  if (
+    start.id === end.id &&
+    data.checkInTime !== '' &&
+    data.checkOutTime !== '' &&
+    data.checkOutTime < data.checkInTime
+  ) {
+    throw new Error('The check-out is before the check-in on the same day.')
   }
   return { start, end }
 }
@@ -192,6 +217,10 @@ export async function createStay(
 /**
  * Updates both halves of a stay, booking first. It never creates a booking for a stay that had none:
  * the payload names both rows, and they must already be linked to each other.
+ *
+ * There is no compensation here. If the stay write fails after the booking write, the booking holds
+ * the new values, the stay the old ones, and the ledger line is not resynced; the failure reaches
+ * the reader, and saving again repairs all three, because every write here is an idempotent update.
  */
 export async function updateStay(
   scope: TenantScope,

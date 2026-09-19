@@ -4617,6 +4617,50 @@ describe('tenant isolation', () => {
       ).toEqual(betaBookingsBefore)
     })
 
+    it('refuses a link to a booking of another trip in the same workspace', async () => {
+      const scope = alpha.tenant.scope
+      // The tenant filter cannot tell two trips of one workspace apart; the reference guard can.
+      const otherTrip = await createTrip(scope, {
+        title: 'Porto in autumn',
+        startDate: '2026-10-01',
+        endDate: '2026-10-03',
+        currency: 'EUR',
+      })
+      const otherBooking = await createReservation(scope, {
+        tripId: otherTrip.id,
+        title: 'Porto guesthouse',
+        type: 'accommodation',
+        status: 'confirmed',
+      })
+
+      expect(
+        await captureError(() =>
+          createAccommodation(scope, {
+            tripId: alpha.tripId,
+            startDayId: alpha.dayId,
+            endDayId: alpha.lastDayId,
+            name: 'Linked across trips',
+            reservationId: otherBooking.id,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          updateAccommodation(scope, alpha.accommodationId, {
+            reservationId: otherBooking.id,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        (
+          await dayAccommodationsRepository.findById(
+            scope,
+            alpha.accommodationId,
+          )
+        )?.reservationId,
+      ).toBeNull()
+    })
+
     it('refuses a viewer and admits an editor on the same trip', async () => {
       const viewerId = await alpha.tenant.addUser('Viewer of A')
       const editorId = await alpha.tenant.addUser('Editor of A')

@@ -187,6 +187,23 @@ describe('a stay and the booking that pays for it', () => {
     expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
   })
 
+  it('refuses inverted times before anything is written', async () => {
+    for (const times of [
+      { checkInTime: '15:00', checkInEndTime: '14:00' },
+      {
+        endDayId: day(1).id,
+        checkInTime: '15:00',
+        checkOutTime: '11:00',
+      },
+    ]) {
+      const error = await captureError(() =>
+        createStay(scope, stayPayload(times)),
+      )
+      expect(error.message).toMatch(/before/u)
+    }
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
+  })
+
   it('keeps the total on the booking and divides it by nothing', async () => {
     await createStay(
       scope,

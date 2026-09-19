@@ -279,13 +279,16 @@ export function BookingDialog({
     (booking === undefined || booking.stay !== null)
   const stayId = booking?.stay?.id ?? savedStayId
   const writing = editing || savedId !== null
-  const action = stayBranch
-    ? writing
-      ? updateStay
-      : createStay
-    : writing
-      ? update
-      : create
+  const bookingAction = writing ? update : create
+  const stayAction = writing ? updateStay : createStay
+  const action = stayBranch ? stayAction : bookingAction
+  /*
+   * The type is fixed once a row exists behind it: after a save the dialog stays open only to retry
+   * the ledger line, and switching the type then would write a second booking (into the stay branch)
+   * or retype a booking whose nights are still linked to it (out of it). An existing stay is fixed for
+   * the second reason.
+   */
+  const typeLocked = savedId !== null || (booking?.stay ?? null) !== null
 
   const stops = useMemo(() => stopOptions(days, t), [days, t])
   const stopIds = useMemo(() => stops.map((option) => option.value), [stops])
@@ -484,6 +487,7 @@ export function BookingDialog({
                       key={type}
                       data-part={`type-${type}`}
                       selected={active}
+                      disabled={typeLocked && !active}
                       icon={<Icon aria-hidden />}
                       onClick={() => set('type', type)}
                     >
