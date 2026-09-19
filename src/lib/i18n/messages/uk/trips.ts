@@ -253,6 +253,38 @@ const messages = {
     'У подорожі лишається принаймні один власник. Спершу зробіть власником когось іншого.',
   'people.error.notInWorkspace': 'Цієї людини немає в цьому просторі',
   'people.error.alreadyOnTrip': 'Ця людина вже в цій подорожі',
+  'people.guests.title': 'Подорожують із вами',
+  'people.guests.description': 'Учасники подорожі без облікового запису',
+  'people.guests.empty': 'Поки нікого',
+  'people.guests.emptyHint':
+    'Гість — це той, хто подорожує з вами й не потребує облікового запису. Додайте його за іменем.',
+  'people.guest.badge': 'Гість',
+  'people.guest.add.label': 'Ім’я',
+  'people.guest.add.placeholder': 'Оксана',
+  'people.guest.add.action': 'Додати гостя',
+  'people.guest.rename.action': 'Перейменувати: {name}',
+  'people.guest.rename.title': 'Перейменувати: {name}',
+  'people.guest.rename.confirm': 'Перейменувати',
+  'people.guest.remove.action': 'Прибрати {name} з подорожі',
+  'people.guest.remove.title': 'Прибрати {name} з подорожі?',
+  'people.guest.remove.body':
+    'Гість зникне зі списку. Більше в подорожі нічого не зміниться.',
+  'people.guest.remove.confirm': 'Прибрати',
+  'people.guest.merge.action': '{name} — тепер…',
+  'people.guest.merge.title': '{name} — тепер один з учасників подорожі',
+  'people.guest.merge.body':
+    'Усе, що призначено на {name}, перейде до обраної людини, а гість зникне. Скасувати це неможливо.',
+  'people.guest.merge.inherits': '{member} отримає все, що призначено {name}.',
+  'people.guest.merge.placeholder': 'Оберіть когось із подорожі',
+  'people.guest.merge.confirm': 'Об’єднати',
+  'people.guest.merge.done': '{name} — тепер {member}',
+  'people.guest.merge.nothingMoved':
+    'На цього гостя ще нічого не було призначено',
+  'people.error.guestNameTaken': 'Гість з іменем {name} уже є в цій подорожі',
+  'people.error.guestLimit':
+    'У подорожі може бути щонайбільше {limit} гостей: довший список ускладнює вибір учасників і читання розподілу витрат',
+  'people.error.guestMergeTarget':
+    'Оберіть когось, хто вже бере участь у подорожі',
 } satisfies TranslationOf<typeof En>
 
 export default messages

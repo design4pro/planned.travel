@@ -245,6 +245,39 @@ const messages = {
   'people.error.notInWorkspace':
     'Αυτό το άτομο δεν είναι σε αυτόν τον χώρο εργασίας',
   'people.error.alreadyOnTrip': 'Αυτό το άτομο είναι ήδη σε αυτό το ταξίδι',
+  'people.guests.title': 'Ταξιδεύουν μαζί σου',
+  'people.guests.description': 'Άτομα αυτού του ταξιδιού χωρίς λογαριασμό',
+  'people.guests.empty': 'Κανείς ακόμα',
+  'people.guests.emptyHint':
+    'Καλεσμένος είναι κάποιος που ταξιδεύει μαζί σου χωρίς να χρειάζεται λογαριασμό. Πρόσθεσέ τον με το όνομά του.',
+  'people.guest.badge': 'Καλεσμένος',
+  'people.guest.add.label': 'Όνομα',
+  'people.guest.add.placeholder': 'Άννα',
+  'people.guest.add.action': 'Προσθήκη καλεσμένου',
+  'people.guest.rename.action': 'Μετονομασία: {name}',
+  'people.guest.rename.title': 'Μετονομασία: {name}',
+  'people.guest.rename.confirm': 'Μετονομασία',
+  'people.guest.remove.action': 'Αφαίρεση του/της {name} από το ταξίδι',
+  'people.guest.remove.title': 'Αφαίρεση του/της {name} από το ταξίδι;',
+  'people.guest.remove.body':
+    'Ο καλεσμένος αφαιρείται. Τίποτε άλλο δεν αλλάζει στο ταξίδι.',
+  'people.guest.remove.confirm': 'Αφαίρεση',
+  'people.guest.merge.action': '{name}: είναι πλέον…',
+  'people.guest.merge.title':
+    '{name}: είναι πλέον ένα από τα άτομα του ταξιδιού',
+  'people.guest.merge.body':
+    'Ό,τι έχει ανατεθεί στον/στην {name} περνά στο άτομο που θα επιλέξεις και ο καλεσμένος αφαιρείται. Δεν αναιρείται.',
+  'people.guest.merge.inherits':
+    'Ο/Η {member} αναλαμβάνει ό,τι έχει ανατεθεί στο/στη {name}.',
+  'people.guest.merge.placeholder': 'Επίλεξε κάποιον από το ταξίδι',
+  'people.guest.merge.confirm': 'Συγχώνευση',
+  'people.guest.merge.done': '{name}: είναι πλέον {member}',
+  'people.guest.merge.nothingMoved': 'Δεν είχε ανατεθεί ακόμα τίποτα',
+  'people.error.guestNameTaken':
+    'Υπάρχει ήδη καλεσμένος με όνομα {name} σε αυτό το ταξίδι',
+  'people.error.guestLimit':
+    'Ένα ταξίδι χωράει έως {limit} καλεσμένους, γιατί μια μεγαλύτερη λίστα δυσκολεύει την επιλογή συμμετεχόντων και την ανάγνωση του καταμερισμού εξόδων',
+  'people.error.guestMergeTarget': 'Επίλεξε κάποιον που είναι ήδη στο ταξίδι',
 } satisfies TranslationOf<typeof En>
 
 export default messages

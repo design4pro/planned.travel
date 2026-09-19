@@ -1,5 +1,5 @@
 /**
- * A trip's people: one loader and five writes.
+ * A trip's people: one loader, five membership writes and four guest writes.
  *
  * **Every authorisation decision is already made.** `01-S6a`'s guards live inside the repository
  * writers (`src/server/repos/trips.ts`) — the owner assert with its self-removal exemption, the
@@ -8,10 +8,10 @@
  * invitation notification and the statistics fan-out, and nothing else. A guard added here would be
  * one that `apply-trip.ts`, a queue consumer and `01-S8`'s picker do not have.
  *
- * **Three refusals cross the wire as a code, never as a sentence.** `classifyFailure`
+ * **Expected refusals cross the wire as a code, never as a sentence.** `classifyFailure`
  * (`src/server/errors/public.ts`) redacts everything outside `AUTHORED_ERROR_NAMES`, which holds no
  * `RepositoryError`, and `docs/SPEC.md` §9 forbids a server-authored sentence regardless. So the
- * three refusals the screen has copy for are caught here and answered as {@link PeopleRefusal};
+ * refusals the screen has copy for are caught here and answered as {@link PeopleRefusal};
  * everything else — `FORBIDDEN`, `NOT_FOUND`, a validator — propagates untouched into the shared
  * boundary, which is correct, because this screen offers no control for those states.
  *
@@ -29,16 +29,25 @@ import { TRIP_MEMBER_ROLES, TRIP_VISIBILITIES } from '#/server/db/schema'
 import { createLogger, serializeError } from '#/server/observability'
 import { enqueueTripStatsFor } from '#/server/queue/travel-stats-fanout'
 import {
+  MAX_TRIP_GUESTS,
   NotFoundError,
   RepositoryError,
+  TripGuestMergeTargetError,
   addTripMember,
+  assertTripRole,
+  createTripGuest,
   listMemberProfiles,
+  listTripGuests,
   listTripMembers,
   listTripParticipants,
   listUserProfiles,
+  mergeTripGuest,
   notify,
+  removeTripGuest,
   removeTripMember,
+  renameTripGuest,
   requireTrip,
+  shortTextSchema,
   tripRoleFor,
   updateTrip,
   updateTripMember,
@@ -47,7 +56,12 @@ import { appScope } from '../../../-server/context'
 
 import type { Trip, TripMember } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
-import type { TenantScope, TripParticipant, TripRole } from '#/server/repos'
+import type {
+  TenantScope,
+  TripGuest,
+  TripParticipant,
+  TripRole,
+} from '#/server/repos'
 
 /* -------------------------------------------------------------------------------------------------
  * Shapes
@@ -77,19 +91,26 @@ export interface TripPeoplePayload {
   readonly viewerUserId: string
   /** `null` for a reader who holds no membership — a real state on an organization-visible trip. */
   readonly viewerRole: TripRole | null
+  /** Members owner first, then guests in name order — the guests are read off this list. */
   readonly participants: ReadonlyArray<TripParticipant>
   readonly invitable: ReadonlyArray<InvitablePerson>
+  /** How many guests a trip holds, so the refusal can name the bound without importing it. */
+  readonly guestLimit: number
 }
 
 /**
- * The three repository refusals this screen has copy for, as a closed vocabulary.
+ * The repository refusals this screen has copy for, as a closed vocabulary.
  *
  * One value per rule rather than one per verb: removing a trip's last owner and demoting them are
- * the same rule met by two verbs, and from the reader's side it is one sentence.
+ * the same rule met by two verbs, and from the reader's side it is one sentence. A duplicate guest
+ * name is likewise one rule whether it is met by an add or a rename.
  */
 const REFUSAL_BY_CODE = {
   TRIP_LAST_OWNER: 'last-owner',
   TRIP_MEMBER_NOT_IN_WORKSPACE: 'not-in-workspace',
+  TRIP_GUEST_NAME_TAKEN: 'guest-name-taken',
+  TRIP_GUEST_LIMIT: 'guest-limit',
+  TRIP_GUEST_MERGE_TARGET: 'guest-merge-target',
   TRIP_MEMBER_EXISTS: 'already-on-trip',
 } as const
 
@@ -107,6 +128,8 @@ export type PeopleWrite<T> =
 
 const id = z.string().trim().min(1).max(64)
 const role = z.enum(TRIP_MEMBER_ROLES)
+/** A guest's whole identity. No `email()`: a guest has no address. */
+const guestName = shortTextSchema.min(1)
 
 /**
  * The switch has two positions.
@@ -145,9 +168,9 @@ function refusalOf(cause: unknown): PeopleRefusal | null {
 }
 
 /**
- * Runs a write and turns the three expected refusals into an answer.
+ * Runs a write and turns the expected refusals into an answer.
  *
- * One helper for four handlers so the catch is written once and the vocabulary cannot drift between
+ * One helper for every handler so the catch is written once and the vocabulary cannot drift between
  * them: a refusal this does not recognise is re-thrown, which is what keeps `FORBIDDEN` and
  * `NOT_FOUND` the generic failure they should be.
  *
@@ -241,6 +264,7 @@ export async function readTripPeople(
     viewerRole,
     participants,
     invitable,
+    guestLimit: MAX_TRIP_GUESTS,
   }
 }
 
@@ -455,3 +479,140 @@ export const setTripVisibilityFn = createServerFn({ method: 'POST' })
       return { tripId: trip.id, visibility: visibilityOf(trip) }
     },
   )
+
+/* -------------------------------------------------------------------------------------------------
+ * Guests
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The guest this call is about, proved to be on the trip the caller named — the guest half of
+ * {@link memberOnTrip}, for the same reason: the writers resolve the trip from the row.
+ */
+async function guestOnTrip(
+  scope: TenantScope,
+  tripId: string,
+  guestId: string,
+): Promise<TripGuest> {
+  const row = (await listTripGuests(scope, tripId)).find(
+    (guest) => guest.id === guestId,
+  )
+  if (row === undefined) {
+    throw new NotFoundError('Trip guest', guestId)
+  }
+  return row
+}
+
+/**
+ * Puts a guest on the trip. Nobody is notified and no statistics move: a guest has no account.
+ *
+ * A duplicate name and the fifty-guest bound are the repository's refusals, answered as codes.
+ */
+export const addTripGuestFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ tripId: id, displayName: guestName }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      PeopleWrite<{ readonly guestId: string; readonly displayName: string }>
+    > => {
+      const scope = await appScope()
+      return attempted(async () => {
+        const guest = await createTripGuest(scope, {
+          tripId: data.tripId,
+          displayName: data.displayName,
+        })
+        return { guestId: guest.id, displayName: guest.displayName }
+      })
+    },
+  )
+
+/** Renames a guest, under the same duplicate rule as an add. */
+export const renameTripGuestFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ tripId: id, guestId: id, displayName: guestName }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      PeopleWrite<{ readonly guestId: string; readonly displayName: string }>
+    > => {
+      const scope = await appScope()
+      return attempted(async () => {
+        const row = await guestOnTrip(scope, data.tripId, data.guestId)
+        const guest = await renameTripGuest(scope, row.id, data.displayName)
+        return { guestId: guest.id, displayName: guest.displayName }
+      })
+    },
+  )
+
+/** Takes a guest off the trip. Not a merge: nothing is relinked. */
+export const removeTripGuestFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ tripId: id, guestId: id }))
+  .handler(
+    async ({ data }): Promise<PeopleWrite<{ readonly removed: true }>> => {
+      const scope = await appScope()
+      return attempted(async () => {
+        const row = await guestOnTrip(scope, data.tripId, data.guestId)
+        await removeTripGuest(scope, row.id)
+        return { removed: true }
+      })
+    },
+  )
+
+/**
+ * Merges a guest into a member — irreversibly — and reports what moved.
+ *
+ * The screen's combobox offers membership rows, so a `memberId` arrives; the relinkers rewrite
+ * `guest_id` to a `user_id`, so the repository takes that. The membership row is the translation,
+ * and a `memberId` that is not a membership of this trip is the same refusal as a target off the
+ * trip — which is what it is.
+ */
+export const mergeTripGuestFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ tripId: id, guestId: id, memberId: id }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      PeopleWrite<{
+        readonly memberId: string
+        readonly relinked: Readonly<Record<string, number>>
+      }>
+    > => {
+      const scope = await appScope()
+      return attempted(() => mergeGuestIntoMember(scope, data))
+    },
+  )
+
+/**
+ * The merge handler's body, as a plain function for the reason {@link readTripPeople} is one: a
+ * handler's return value is unreachable outside a Start build, and the counts are the answer.
+ */
+export async function mergeGuestIntoMember(
+  scope: TenantScope,
+  input: {
+    readonly tripId: string
+    readonly guestId: string
+    readonly memberId: string
+  },
+): Promise<{
+  readonly memberId: string
+  readonly relinked: Readonly<Record<string, number>>
+}> {
+  // The trip and the owner's standing first, as `mergeTripGuest` checks them: the member list is
+  // tenant-scoped but not visibility-scoped, so reading it first would answer a foreign or hidden
+  // trip, or a non-owner, with the merge-target refusal instead of not found or forbidden.
+  await requireTrip(scope, input.tripId)
+  await assertTripRole(scope, input.tripId, ['owner'])
+  const target = (await listTripMembers(scope, input.tripId)).find(
+    (member) => member.id === input.memberId,
+  )
+  if (target === undefined) {
+    throw new TripGuestMergeTargetError()
+  }
+  const relinked = await mergeTripGuest(
+    scope,
+    input.tripId,
+    input.guestId,
+    target.userId,
+  )
+  return { memberId: target.id, relinked }
+}
