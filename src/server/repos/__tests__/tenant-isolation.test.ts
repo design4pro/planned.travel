@@ -1271,7 +1271,14 @@ describe('tenant isolation', () => {
     it('rejects a foreign trip on every trip-scoped write', async () => {
       const scope = alpha.tenant.scope
       const attempts: ReadonlyArray<() => Promise<unknown>> = [
-        () => createPlace(scope, { tripId: beta.tripId, name: 'Stolen place' }),
+        // Carrying coordinates, as a pin dropped on the map does (02-S4): they buy it nothing.
+        () =>
+          createPlace(scope, {
+            tripId: beta.tripId,
+            name: 'Stolen place',
+            lat: 48.208494,
+            lng: 16.373118,
+          }),
         () =>
           createTransport(scope, {
             tripId: beta.tripId,
@@ -1418,33 +1425,6 @@ describe('tenant isolation', () => {
       expect(await dayAssignmentsRepository.count(alpha.tenant.scope)).toBe(1)
     })
 
-    it('rejects a dropped pin aimed at a foreign trip or category, and writes to neither tenant', async () => {
-      // 02-S4: a place created from the map carries coordinates, and they buy it nothing.
-      const scope = alpha.tenant.scope
-      const pin = { lat: 48.208494, lng: 16.373118, address: 'Stephansplatz 3' }
-      const alphaBefore = await placesRepository.count(scope)
-      const betaBefore = await placesRepository.count(beta.tenant.scope)
-
-      expect(
-        await captureError(() =>
-          createPlace(scope, { tripId: beta.tripId, name: 'Dropped', ...pin }),
-        ),
-      ).toBeInstanceOf(NotFoundError)
-      expect(
-        await captureError(() =>
-          createPlace(scope, {
-            tripId: alpha.tripId,
-            name: 'Dropped',
-            categoryId: beta.categoryId,
-            ...pin,
-          }),
-        ),
-      ).toBeInstanceOf(NotFoundError)
-
-      expect(await placesRepository.count(scope)).toBe(alphaBefore)
-      expect(await placesRepository.count(beta.tenant.scope)).toBe(betaBefore)
-    })
-
     it('rejects a foreign category, collection, journey, template or plan', async () => {
       const scope = alpha.tenant.scope
 
@@ -1454,9 +1434,13 @@ describe('tenant isolation', () => {
             tripId: alpha.tripId,
             name: 'Cross-categorised',
             categoryId: beta.categoryId,
+            lat: 48.208494,
+            lng: 16.373118,
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
+      expect(await placesRepository.count(alpha.tenant.scope)).toBe(1)
+      expect(await placesRepository.count(beta.tenant.scope)).toBe(1)
 
       expect(
         await captureError(() =>
