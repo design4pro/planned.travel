@@ -307,6 +307,13 @@ non-login check is the stricter of the two. `jq` is optional: without it the log
 Remove with `launchctl bootout gui/$(id -u)/dev.planned-travel.housekeeping`. Log:
 `.ai/cezar/tmp/housekeeping.log`. Run it by hand any time: `bash .ai/scripts/housekeeping.sh`.
 
+A `review-prs` step that claims a PR and exits without releasing it leaves an `in-progress` lock
+nobody holds, and the same run's `merge-buddy` step then skips that PR (#551).
+`scripts/agents/release-leaked-claims.mjs --since <sweep start> --prs <dispatched PRs>` releases
+such a claim and comments whether any review was submitted. It only acts on an `om-auto-review-pr`
+claim by the automation account that is newer than `--since` and is still the PR's newest lock event,
+so it never releases a live claim. Run it by hand with `--dry-run` to see what it would release.
+
 ## Host cutover (operator, once, after PR B merges)
 
 The order is fixed by the labels: the SDLC taxonomy already exists (PR A); the old automations
