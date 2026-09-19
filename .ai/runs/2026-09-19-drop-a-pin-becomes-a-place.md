@@ -91,8 +91,8 @@ The spec's Resolved assumptions 1-9 apply as written. Two execution details:
 
 ### Phase 2: Attribution
 
-- [ ] 2.1 `src/lib/geo/credits.ts`; `geoapify.ts` imports it
-- [ ] 2.2 `MapAttribution` geocoder segment + copy + tests
+- [x] 2.1 `src/lib/geo/credits.ts`; `geoapify.ts` imports it — 1d47fff5c
+- [x] 2.2 `MapAttribution` geocoder segment + copy + tests — 1d47fff5c
 
 ### Phase 3: The drop
 
@@ -113,3 +113,8 @@ The spec's Resolved assumptions 1-9 apply as written. Two execution details:
   `src/server/errors/`), which is outside this stage. `placeWriteMessage` therefore decodes the
   envelope (an authored refusal as written, otherwise the fallback), the `addPlace.quota` /
   `quotaAction` keys are not added, and the gap goes to a follow-up issue and a spec Amendment.
+- **2.2 — no geocoder credit without an archive.** `map-canvas.test.tsx` pins that the
+  no-archive notice names only Natural Earth, because naming OpenStreetMap beside "basemap
+  unavailable" credits a source the reader cannot see. The geocoder segment follows the same rule:
+  it is appended only while the basemap is available, and OpenStreetMap is deduplicated by link, so
+  the line gains exactly one `Geoapify` credit.
