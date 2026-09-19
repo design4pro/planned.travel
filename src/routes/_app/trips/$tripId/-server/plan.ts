@@ -40,6 +40,7 @@ import {
   reorderDayTimeline,
   reorderPlaces,
   requireTrip,
+  requireTripDay,
   requireWritableTrip,
   tripRoleFor,
   updateAssignment,
@@ -652,6 +653,10 @@ export const createPlanPlaceFn = createServerFn({ method: 'POST' })
     }> => {
       const scope = await appScope()
       const trip = await requireEditablePlan(scope, data.tripId)
+      // The day is checked before the place is written, so a refused add leaves nothing behind.
+      if (data.dayId !== '') {
+        await requireTripDay(scope, trip.id, data.dayId)
+      }
 
       const place = await createPlace(scope, {
         tripId: trip.id,
