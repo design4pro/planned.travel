@@ -325,6 +325,46 @@ function describeHydration(selector: string): string {
 }
 
 /**
+ * How long the hydration diagnostic gets to answer before the wait's own
+ * timeout is reported without it.
+ *
+ * `describeHydration` is one `querySelectorAll` and a filter over the result, so
+ * a page that is answering at all answers in milliseconds; 2 s is orders of
+ * magnitude above that and still small beside the test timeout the hydration
+ * wait runs inside (30 s locally, 60 s in CI). A page that does not answer inside it is almost
+ * certainly the wedged main thread that made the wait fail in the first place.
+ */
+export const HYDRATION_DIAGNOSTIC_TIMEOUT_MS = 2_000
+
+/** What the diagnostic says when the page could not be asked. */
+export const UNREADABLE_PAGE =
+  'the page could not be read once the wait had failed'
+
+/**
+ * `read()`'s answer, or `UNREADABLE_PAGE` when it rejects or has not settled
+ * within `HYDRATION_DIAGNOSTIC_TIMEOUT_MS`.
+ *
+ * A race, because `page.evaluate` takes no timeout and cannot be cancelled: the
+ * losing evaluate is simply left to settle on its own, with nothing awaiting it.
+ * Exported, and page-agnostic, so a test can prove the bound with a read that
+ * never settles instead of a browser wedged on purpose.
+ */
+export function boundedDiagnostic(
+  read: () => Promise<string>,
+): Promise<string> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const gaveUp = new Promise<string>((resolve) => {
+    timer = setTimeout(
+      () => resolve(UNREADABLE_PAGE),
+      HYDRATION_DIAGNOSTIC_TIMEOUT_MS,
+    )
+  })
+  return Promise.race([read().catch(() => UNREADABLE_PAGE), gaveUp]).finally(
+    () => clearTimeout(timer),
+  )
+}
+
+/**
  * Hold until nothing in the document has mutated for `DOM_QUIET_MS`, and never
  * before `DOM_QUIET_FLOOR_MS` has passed.
  *
@@ -520,10 +560,11 @@ async function settleOnce(page: Page, route: RouteCase): Promise<void> {
       throw error
     }
     // The diagnostic can never be what fails the step. If the context is gone
-    // the timeout is still the finding, and it is rethrown as it arrived.
-    const detail = await page
-      .evaluate(describeHydration, route.ready)
-      .catch(() => 'the page could not be read once the wait had failed')
+    // or the page stops answering, the timeout is still the finding, and it is
+    // rethrown as it arrived.
+    const detail = await boundedDiagnostic(() =>
+      page.evaluate(describeHydration, route.ready),
+    )
     // `settle()` chooses whether to retry by matching this message, so a node
     // named after `navigation.tsx` — or a class called `navigation-rail` —
     // would quietly turn a hard timeout into a retry. Scrubbed, not trusted.
