@@ -13,9 +13,9 @@
  *   the whole tenant, unbounded. A workspace with several hundred members was
  *   scanning its member table to print a sample date, a sample number and a
  *   sample amount. This reads two rows: the traveller's settings and the
- *   workspace's. The currency merge is the same one `loadAppearance` writes for
- *   `mapStyle` — the traveller's value when they have one, the workspace's
- *   otherwise.
+ *   workspace's. The currency merge is the same one `getEffectiveSettings` runs
+ *   for every inherited value — the traveller's value when they have one, the
+ *   workspace's otherwise.
  * - {@link saveRegionalOverrides} writes the five regional overrides the profile
  *   form edits and cannot write the sixth. `saveRegionalSettings` requires
  *   `locale` in its payload, so that form re-sent the tag its loader data was

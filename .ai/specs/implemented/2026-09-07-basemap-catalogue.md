@@ -585,3 +585,10 @@ Each step leaves the application working and is verifiable on its own. The gate 
 - Converting the theme grid to `RadioCard`. It is a real inconsistency on the same screen, and it
   belongs to whoever next owns that file rather than to this change.
 - A full-bleed preview tile variant of `RadioCard` in `src/components/ui/**`.
+
+## Amendment
+
+#589 (issue #311): `AppearancePayload`'s merged `mapStyle` and its `workspaceMapStyle` lost their
+last reader when `mapStyleOverride` shipped (#308). They stayed populated for one release
+(`BACKWARD_COMPATIBILITY.md` §2) and were then removed, so `mapStyleOverride` is the payload's only
+map-style field and `loadAppearance` no longer reads `organization_settings`.
