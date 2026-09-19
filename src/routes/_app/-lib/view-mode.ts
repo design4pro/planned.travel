@@ -77,10 +77,11 @@ export const TRIPS_VIEW_PREFERENCE = definePreference<TripsViewPreference>({
  *
  * Identity is the answer's signal: the caller redirects only when it gets a different object back.
  */
-export function withRememberedView<TSearch extends { view?: TripViewMode }>(
-  search: TSearch,
-  remembered: TripViewMode,
-): TSearch {
+export function withRememberedView<
+  TSearch extends Readonly<Record<string, unknown>> & {
+    readonly view?: TripViewMode
+  },
+>(search: TSearch, remembered: TripViewMode): TSearch {
   if (search.view !== undefined || remembered === DEFAULT_TRIP_VIEW) {
     return search
   }
