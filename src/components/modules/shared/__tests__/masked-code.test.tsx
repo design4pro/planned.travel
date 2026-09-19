@@ -79,20 +79,6 @@ describe('MaskedCode', () => {
     ).toContain('HG-8842190')
   })
 
-  /**
-   * The reveal unmounts the button doing the revealing, so without the handover
-   * a reader who tabbed onto the mask is returned to the top of the document by
-   * the act of opening it.
-   */
-  it('hands the focus to the revealed control when it was revealed from the keyboard', async () => {
-    render(inEnglish(<MaskedCode value="HG-8842190" label={LABEL} masked />))
-
-    screen.getByRole('button', { name: `Show ${LABEL}` }).focus()
-
-    const copy = await screen.findByRole('button', { name: `Copy ${LABEL}` })
-    expect(document.activeElement).toBe(copy)
-  })
-
   /** A hover never held the focus, so it must not take it either. */
   it('leaves the focus alone when a pointer reveals the code', async () => {
     const user = userEvent.setup()

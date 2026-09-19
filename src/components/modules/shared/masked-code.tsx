@@ -99,14 +99,7 @@ export function MaskedCode({
   // An empty code has nothing to hide, so the preference has nothing to do here:
   // masking it would claim a confirmation number exists when none does.
   if (!masked || revealed || mask === '') {
-    return (
-      <CopyValue
-        ref={copyRef}
-        value={value}
-        label={label}
-        className={className}
-      />
-    )
+    return <CopyValue value={value} label={label} className={className} />
   }
 
   return (
