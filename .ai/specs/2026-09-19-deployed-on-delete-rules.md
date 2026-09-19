@@ -30,20 +30,25 @@ first deletes one of these parents.
   ``ALTER TABLE `reservations` ADD `expense_id` text REFERENCES expenses(id);``, with no `ON DELETE`,
   so SQLite applies `NO ACTION`. The issue names `0009_lumpy_black_tom.sql`, but that file was
   regenerated before merge. `0008_sharp_purple_man.sql` is the migration on `develop`. The code that
-  actually keeps the rule is `deleteExpense()` (`src/server/repos/expenses.ts:490-503`), which calls
-  `unlinkReservationsFromExpense()` (`src/server/repos/reservations.ts:416-441`) before it deletes.
+  actually keeps the rule is `deleteExpense()` (`src/server/repos/expenses.ts:484-503`), which calls
+  `unlinkReservationsFromExpense()` (`src/server/repos/reservations.ts:436-461`) before it deletes.
 - `reservation-schema.test.ts:139`, `'unlinks the booking rather than deleting it when the expense
 goes'`, runs a raw `db.delete(expenses)` on the default harness. That harness builds its DDL from
   `schema.ts`, so the test passes only because it runs against a database that was never shipped.
   `accommodation-schema.test.ts:125`, `'keeps the nights when the booking that reserved them is
 deleted'`, does the same for `day_accommodations.reservation_id`.
-- The same debt is written up separately in four places, and it is wrong in two of them:
+- The same debt is written up separately in seven places, and it is wrong in five of them:
   - `transports.arrivalDayId` (`schema.ts:1139-1147`) and `expenses.costCategoryId`
     (`schema.ts:1473-1476`) say "SQLite's `ADD COLUMN` takes no `ON DELETE` clause". That is false.
     SQLite accepts `ADD COLUMN x text REFERENCES p(id) ON DELETE SET NULL`, and
     `pragma_foreign_key_list` then reports `SET NULL`. This run checked it with `sqlite3` 3.x, and
     `reservation-schema.test.ts:21-23` already says the same. The limit is in drizzle-kit, not in
     the engine.
+  - The same false wording, "`ADD COLUMN`/`ALTER` … carries no `ON DELETE` clause", appears three
+    more times: `unlinkTransportsFromDays` (`src/server/repos/transports.ts:382`),
+    `unlinkAccommodationsFromReservation` (`src/server/repos/itinerary.ts:661`), and the comment in
+    `transport-schema.test.ts:262` (`'releases a leg from a day that is deleted rather than deleting
+the leg'`).
   - `day_accommodations.reservationId` (`schema.ts:1095-1103`) does not mention the deployed rule
     at all.
   - Only the test register, `DEPLOYED_WITHOUT_ON_DELETE` in
@@ -72,11 +77,12 @@ in production and nowhere in the default test suite.
    comment says `NO ACTION` on D1 and `set null` only on a schema-built database. Where an unlinker
    exists, the comment names it. Where none does (`expenses.costCategoryId`, whose deleter is
    `04-S2`), it names the stage that owes one. The false "SQLite's `ADD COLUMN` takes no
-   `ON DELETE` clause" wording is corrected in both places.
+   `ON DELETE` clause" wording is corrected everywhere it appears: the two `schema.ts` comments,
+   the two unlinkers and one `transport-schema.test.ts` comment.
 3. **The tests assert only what D1 does.** The two harness cases that prove an engine unlink are
    deleted. The divergence itself is already pinned structurally by `migrations-match-schema.test.ts`,
    and the code-side unlink is covered on the migrated DDL by
-   `src/server/fns/__tests__/reservations.test.ts:643-726` and
+   `src/server/fns/__tests__/reservations.test.ts:743-…` and
    `src/server/fns/__tests__/stays.test.ts:297-…` (`'deletes only the booking and keeps the nights,
 unlinked'`). The two declaration cases whose names claim behaviour are renamed to claim what they
    actually check, which is the declaration.
@@ -114,7 +120,7 @@ The register's doc comment (`migrations-match-schema.test.ts:35-46`) gets one se
 the ADR. Its current text is otherwise accurate and stays. The comments on the three unlinkers and
 the two `{ ddl: 'migrations' }` describe blocks say the gap is "pinned by
 `reservation-schema.test.ts`" / "`accommodation-schema.test.ts` pins both halves"
-(`reservations.ts:422`, `itinerary.ts:679`, `reservations.test.ts:640`, `stays.test.ts:294`). Once
+(`reservations.ts:442`, `itinerary.ts:662`, `reservations.test.ts:740`, `stays.test.ts:294`). Once
 the engine cases are gone, those references point at the register in
 `migrations-match-schema.test.ts` instead.
 
@@ -184,6 +190,9 @@ One phase, one PR. Each step leaves the gate green.
    - Correct "SQLite's `ADD COLUMN` takes no/carries no `ON DELETE` clause" to "drizzle-kit's
      `ADD COLUMN` writes no `ON DELETE` clause" in `transports.arrivalDayId` and
      `expenses.costCategoryId`, and add the ADR pointer.
+   - Make the same correction outside `schema.ts`: the unlinker doc comments at `transports.ts:382`
+     and `itinerary.ts:661`, and the inline comment at `transport-schema.test.ts:262`. Wording only;
+     no assertion in `transport-schema.test.ts` changes.
    - Add one ADR pointer sentence to the register's comment.
    - Repoint the four "pinned by `…-schema.test.ts`" references to the register.
    - Add the `> **As deployed:**` note to `docs/plans/03-reservations-and-transport.md` under
@@ -212,12 +221,12 @@ deleted, and never takes it along'` to the equivalent.
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                                                                                                                   | Applied default                                        | Why                                                                                                                                                                                                                       |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A1  | Delete the harness case at `reservation-schema.test.ts:139`, or rebuild it on `{ ddl: 'migrations' }` to assert the constraint failure?    | Delete it.                                             | The issue allows either. The deployed `NO ACTION` is already pinned for every table in `migrations-match-schema.test.ts` (#184), and the code-side unlink already runs on the migrated DDL in `reservations.test.ts:643`. |
-| A2  | Does the same treatment extend to `accommodation-schema.test.ts:125` (`day_accommodations.reservation_id`), which the issue does not name? | Yes. The same deletion, after the same coverage check. | It is the same debt and the fourth register entry. An ADR that records the rule "once" while one suite still asserts the opposite would record it inaccurately.                                                           |
-| A3  | Write the ADR now or wait for another occurrence?                                                                                          | Now.                                                   | The register already holds four entries, not the three the issue counted.                                                                                                                                                 |
-| A4  | Make D1 actually enforce `SET NULL` (table rebuild migration)?                                                                             | No. Out of scope.                                      | It is the least reversible option, touches four large tenant tables, and replaces code that already works and is tested. A human can file it separately if wanted.                                                        |
-| A5  | Correct the false "SQLite's `ADD COLUMN` takes no `ON DELETE` clause" in the two sibling comments?                                         | Yes.                                                   | The issue's own title asks that the docs not state what is untrue. The fix is comment-only.                                                                                                                               |
-| A6  | Rewrite the `03` plan paragraph or annotate it?                                                                                            | Annotate it with one `As deployed` line.               | The plan is the backlog source and still read. A one-line note is the smallest reversible change, and it leaves the stage's reasoning as written.                                                                         |
-| A7  | The issue carries `feature` although the work is documentation and tests.                                                                  | Left as is.                                            | Category relabels belong to a human. This run removed only its own trigger label, `spec`.                                                                                                                                 |
+| #   | Question                                                                                                                                                                                                              | Applied default                                        | Why                                                                                                                                                                                                                       |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | Delete the harness case at `reservation-schema.test.ts:139`, or rebuild it on `{ ddl: 'migrations' }` to assert the constraint failure?                                                                               | Delete it.                                             | The issue allows either. The deployed `NO ACTION` is already pinned for every table in `migrations-match-schema.test.ts` (#184), and the code-side unlink already runs on the migrated DDL in `reservations.test.ts:743`. |
+| A2  | Does the same treatment extend to `accommodation-schema.test.ts:125` (`day_accommodations.reservation_id`), which the issue does not name?                                                                            | Yes. The same deletion, after the same coverage check. | It is the same debt and the fourth register entry. An ADR that records the rule "once" while one suite still asserts the opposite would record it inaccurately.                                                           |
+| A3  | Write the ADR now or wait for another occurrence?                                                                                                                                                                     | Now.                                                   | The register already holds four entries, not the three the issue counted.                                                                                                                                                 |
+| A4  | Make D1 actually enforce `SET NULL` (table rebuild migration)?                                                                                                                                                        | No. Out of scope.                                      | It is the least reversible option, touches four large tenant tables, and replaces code that already works and is tested. A human can file it separately if wanted.                                                        |
+| A5  | Correct the false "SQLite's `ADD COLUMN` takes no `ON DELETE` clause" in the two sibling comments, and the "carries no `ON DELETE` clause" variant in `transports.ts`, `itinerary.ts` and `transport-schema.test.ts`? | Yes.                                                   | The issue's own title asks that the docs not state what is untrue. The fix is comment-only.                                                                                                                               |
+| A6  | Rewrite the `03` plan paragraph or annotate it?                                                                                                                                                                       | Annotate it with one `As deployed` line.               | The plan is the backlog source and still read. A one-line note is the smallest reversible change, and it leaves the stage's reasoning as written.                                                                         |
+| A7  | The issue carries `feature` although the work is documentation and tests.                                                                                                                                             | Left as is.                                            | Category relabels belong to a human. This run removed only its own trigger label, `spec`.                                                                                                                                 |
