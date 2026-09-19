@@ -38,6 +38,10 @@ specific error and the plan is unchanged. An operator script seeds single-use 10
    against it. The measurements are recorded in DEPLOY.md §9.8 as an operator walk owed before the
    production rollout, and listed in the PR's Resolved assumptions.
 3. Step 11's staging walk is likewise owed by a human; the §9.11 row lands unwalked.
+4. The review pass (`om-auto-review-pr`) flagged the skipped step-3 gate as a major that needs a human
+   waiver. The applied default, pending that confirmation: the PR may merge to `develop`, and the
+   promotion-code field does not reach production until DEPLOY.md §9.8 (a)–(d) and §9.11 row 9 are
+   walked and recorded. Its other findings were fixed in 77e851b02, 679a5f48a and f4e165aa8.
 
 ## Non-goals
 
