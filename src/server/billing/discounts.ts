@@ -317,12 +317,14 @@ export function logDiscountRejection(
   identity: BillingIdentity,
   reason: string,
   discountId: string | null,
+  providerDetail?: string,
 ): void {
   runtime.logger.warn('billing.discount.rejected', {
     organizationId: identity.organizationId,
     userId: identity.userId,
     discountId,
     reason,
+    providerDetail,
   })
 }
 

@@ -12,6 +12,7 @@
  * pending state on the button it came from and then hand the browser over.
  */
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
 
 import { getSession } from '#/server/auth/session'
 import {
@@ -27,6 +28,7 @@ import type {
   BillingRedirect,
   InvoiceSummary,
   OrderInvoiceResult,
+  PlanChangeResult,
 } from '#/server/billing/checkout'
 import { entitlements } from '#/server/billing/entitlements'
 import { PolarApiError } from '#/server/billing/polar'
@@ -71,6 +73,9 @@ async function billingIdentity(scope: TenantScope): Promise<BillingIdentity> {
     organizationId: scope.ctx.organizationId,
     organizationName: organization.name,
     role: scope.ctx.role,
+    // Cloudflare terminates the connection, so this is the client address; every other
+    // candidate is a header the client writes. Read only by the promotion-code limiter.
+    clientIp: getRequestHeader('cf-connecting-ip') ?? null,
   }
 }
 
@@ -207,10 +212,14 @@ async function guarded<T>(
  * comes back with `surface: 'applied'` and a URL on our own origin carrying
  * `?plan=changed`, because Polar has no hosted "confirm the proration" page to
  * send anybody to.
+ *
+ * A promotion code travels on the same selection. A refused code is not an error: it comes
+ * back as `{ surface: 'discount_rejected', reason }`, nothing in Polar has changed, and the
+ * screen shows the reason under the field. `customerFacing()` is not involved.
  */
 export const startPlanChange = createServerFn({ method: 'POST' })
   .validator(planSelectionInput)
-  .handler(async ({ data }): Promise<BillingRedirect> => {
+  .handler(async ({ data }): Promise<PlanChangeResult> => {
     const { runtime, identity } = await billingSession()
     return await guarded(runtime, identity.organizationId, 'plan_change', () =>
       changePlan(runtime, identity, data),
