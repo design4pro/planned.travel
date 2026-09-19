@@ -1,13 +1,37 @@
 import { useState } from 'react'
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Archive, Compass, Search, Star, X } from 'lucide-react'
+import {
+  Link,
+  createFileRoute,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router'
+import {
+  Archive,
+  ChevronRight,
+  Compass,
+  LayoutGrid,
+  List,
+  Search,
+  Star,
+  X,
+} from 'lucide-react'
 import { z } from 'zod'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
-import { Alert, Button, Card, EmptyState, Input } from '#/components/ui'
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  Input,
+} from '#/components/ui'
+import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { useLocalPreference } from '#/lib/local-preference'
 import { loadTrips } from '../-server/overview'
 import { formatNumber } from '../-lib/format'
 import {
@@ -15,11 +39,24 @@ import {
   FilterBar,
   FilterCount,
   HeaderSkeleton,
+  RowsSkeleton,
   filterLinkClass,
 } from '../-ui/scaffold'
 import { TRIP_STATUS_LABEL } from '../-lib/tone'
+import {
+  DEFAULT_TRIP_VIEW,
+  TRIPS_VIEW_PREFERENCE,
+  TRIP_VIEW_MODES,
+  withRememberedView,
+} from '../-lib/view-mode'
 import { NewTripDialog } from '../-ui/new-trip-dialog'
 import { AddTile, TripGrid } from '../-ui/trip-card'
+import { TripList } from '../-ui/trip-list-row'
+
+import type { ReactNode } from 'react'
+import type { MessageKey } from '#/lib/i18n'
+import type { TripsPayload } from '../-server/overview'
+import type { TripViewMode } from '../-lib/view-mode'
 
 const TRIP_STATUSES = [
   'draft',
@@ -33,7 +70,18 @@ const searchSchema = z.object({
   status: z.enum(TRIP_STATUSES).optional(),
   q: z.string().trim().min(1).max(120).optional(),
   scope: z.enum(['all', 'favourites', 'archived']).optional(),
+  view: z.enum(TRIP_VIEW_MODES).optional(),
 })
+
+const VIEW_OPTIONS: Record<
+  TripViewMode,
+  { readonly icon: ReactNode; readonly label: MessageKey }
+> = {
+  grid: { icon: <LayoutGrid />, label: 'shell.trips.view.grid' },
+  list: { icon: <List />, label: 'shell.trips.view.list' },
+}
+
+const ARCHIVE_ID = 'trip-archive'
 
 /**
  * The favourites scope and its count are the **caller's own** bookmarks (PRD #104 decision 5):
@@ -43,7 +91,30 @@ const searchSchema = z.object({
  */
 export const Route = createFileRoute('/_app/trips/')({
   validateSearch: searchSchema,
-  loaderDeps: ({ search }) => search,
+  /**
+   * The URL is the truth; the remembered mode only fills a URL that says nothing (`01-S7`).
+   *
+   * Read in the browser only, under the same guard `01-S3` uses for the remembered tab: on the
+   * Worker there is no storage, so a cold load of `/trips` stays a grid rather than painting one
+   * layout and swapping to another after hydration. An in-app navigation that names no mode is
+   * redirected once, replacing the entry, so Back does not land on the address it just left.
+   */
+  beforeLoad: ({ search }) => {
+    if (typeof window === 'undefined') return
+    const next = withRememberedView(search, TRIPS_VIEW_PREFERENCE.read().mode)
+    if (next !== search) {
+      throw redirect({ to: '/trips', search: next, replace: true })
+    }
+  },
+  /**
+   * The three keys that change what is read, and not the mode: switching layout re-renders the
+   * page and never re-invokes `loadTrips`, so a toggle costs no D1 read.
+   */
+  loaderDeps: ({ search }) => ({
+    status: search.status,
+    q: search.q,
+    scope: search.scope,
+  }),
   loader: ({ deps }) =>
     loadTrips({
       data: {
@@ -74,8 +145,14 @@ function TripsPage() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const [query, setQuery] = useState(search.q ?? '')
+  const [preference, setPreference] = useLocalPreference(TRIPS_VIEW_PREFERENCE)
 
   const scope = search.scope ?? 'all'
+  const view = search.view ?? DEFAULT_TRIP_VIEW
+  const chooseView = (next: TripViewMode) => {
+    setPreference({ ...preference, mode: next })
+    void navigate({ search: { ...search, view: next }, replace: true })
+  }
   const atLimit = data.tripLimit > 0 && data.totals.total >= data.tripLimit
   const countFor = (status: string): number =>
     data.totals.byStatus.find((row) => row.status === status)?.value ?? 0
@@ -142,7 +219,7 @@ function TripsPage() {
             <FilterBar>
               <Link
                 to="/trips"
-                search={{ q: search.q, scope: search.scope }}
+                search={{ q: search.q, scope: search.scope, view: search.view }}
                 className={filterLinkClass(search.status === undefined)}
               >
                 {t('shell.trips.filter.all')}
@@ -152,7 +229,12 @@ function TripsPage() {
                 <Link
                   key={status}
                   to="/trips"
-                  search={{ status, q: search.q, scope: search.scope }}
+                  search={{
+                    status,
+                    q: search.q,
+                    scope: search.scope,
+                    view: search.view,
+                  }}
                   className={filterLinkClass(search.status === status)}
                 >
                   {t(TRIP_STATUS_LABEL[status])}
@@ -168,6 +250,7 @@ function TripsPage() {
                   status: search.status,
                   q: search.q,
                   scope: scope === 'favourites' ? undefined : 'favourites',
+                  view: search.view,
                 }}
                 className={filterLinkClass(scope === 'favourites')}
               >
@@ -183,6 +266,7 @@ function TripsPage() {
                   status: search.status,
                   q: search.q,
                   scope: scope === 'archived' ? undefined : 'archived',
+                  view: search.view,
                 }}
                 className={filterLinkClass(scope === 'archived')}
               >
@@ -194,45 +278,48 @@ function TripsPage() {
               </Link>
             </FilterBar>
 
-            <form
-              role="search"
-              className="flex shrink-0 items-center gap-2"
-              onSubmit={(event) => {
-                event.preventDefault()
-                const trimmed = query.trim()
-                void navigate({
-                  search: {
-                    ...search,
-                    q: trimmed === '' ? undefined : trimmed,
-                  },
-                })
-              }}
-            >
-              <Input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t('shell.trips.search')}
-                aria-label={t('shell.trips.search')}
-                leading={<Search />}
-                className="lg:w-64"
-              />
-              {search.q === undefined ? null : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  shape="pill"
-                  icon={<X />}
-                  onClick={() => {
-                    setQuery('')
-                    void navigate({ search: { ...search, q: undefined } })
-                  }}
-                >
-                  {t('ui.action.clear')}
-                </Button>
-              )}
-            </form>
+            <div className="flex shrink-0 items-center gap-3">
+              <form
+                role="search"
+                className="flex shrink-0 items-center gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  const trimmed = query.trim()
+                  void navigate({
+                    search: {
+                      ...search,
+                      q: trimmed === '' ? undefined : trimmed,
+                    },
+                  })
+                }}
+              >
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={t('shell.trips.search')}
+                  aria-label={t('shell.trips.search')}
+                  leading={<Search />}
+                  className="lg:w-64"
+                />
+                {search.q === undefined ? null : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    shape="pill"
+                    icon={<X />}
+                    onClick={() => {
+                      setQuery('')
+                      void navigate({ search: { ...search, q: undefined } })
+                    }}
+                  >
+                    {t('ui.action.clear')}
+                  </Button>
+                )}
+              </form>
+              <ViewSwitch view={view} onChange={chooseView} />
+            </div>
           </div>
         </PageHeader>
 
@@ -278,7 +365,7 @@ function TripsPage() {
                   <NewTripDialog disabled={atLimit} size="md" />
                 ) : (
                   <Button asChild variant="primary" shape="pill">
-                    <Link to="/trips" search={{}}>
+                    <Link to="/trips" search={{ view: search.view }}>
                       {t('shell.trips.noMatch.action')}
                     </Link>
                   </Button>
@@ -286,21 +373,51 @@ function TripsPage() {
               }
             />
           </Card>
+        ) : view === 'list' ? (
+          /* This list is the page, under the page's own `h1`, so a trip is the
+             second level here — the same reasoning as the grid below. */
+          <TripList trips={data.trips} titleAs="h2" />
         ) : (
-          <TripGrid
-            trips={data.trips}
-            today={data.today}
-            /* This grid is the page, under the page's own `h1`, so a trip is the
-               second level here. On the dashboard the same grid sits inside a
-               section that already has an `h2` and the tiles stay `h3`. */
-            titleAs="h2"
-            trailing={
-              <AddTile
-                icon={<Compass />}
-                title={t('shell.trips.next.title')}
-                description={t('shell.trips.next.body')}
-                action={<NewTripDialog disabled={atLimit} size="md" />}
+          <>
+            <div
+              /* Keyed by the mode, so switching back into the grid remounts it and
+                 its entrance plays: a cross-fade with a small lift, transform and
+                 opacity only, collapsed to opacity under reduced motion. */
+              key={view}
+              data-motion-transform=""
+              className="hidden animate-rise md:block"
+            >
+              <TripGrid
+                trips={data.trips}
+                today={data.today}
+                /* This grid is the page, under the page's own `h1`, so a trip is the
+                   second level here. On the dashboard the same grid sits inside a
+                   section that already has an `h2` and the tiles stay `h3`. */
+                titleAs="h2"
+                trailing={
+                  <AddTile
+                    icon={<Compass />}
+                    title={t('shell.trips.next.title')}
+                    description={t('shell.trips.next.body')}
+                    action={<NewTripDialog disabled={atLimit} size="md" />}
+                  />
+                }
               />
+            </div>
+            {/* Below `md` the index is always rows: two columns of cover art on a
+                phone is a squeezed desktop (`docs/SPEC.md` §2). Both are in the
+                document and CSS picks one, so the first paint never waits on a
+                media query the server cannot answer. */}
+            <TripList trips={data.trips} titleAs="h2" className="md:hidden" />
+          </>
+        )}
+
+        {scope === 'archived' || data.archivedTrips.length === 0 ? null : (
+          <ArchivedTrips
+            trips={data.archivedTrips}
+            open={preference.archiveOpen}
+            onOpenChange={(open) =>
+              setPreference({ ...preference, archiveOpen: open })
             }
           />
         )}
@@ -309,12 +426,123 @@ function TripsPage() {
   )
 }
 
+/**
+ * The layout switch. Above `md` only: below it the index is always rows, so a switch there would
+ * be a control that changes nothing.
+ */
+function ViewSwitch({
+  view,
+  onChange,
+}: {
+  view: TripViewMode
+  onChange: (next: TripViewMode) => void
+}) {
+  const t = useTranslate()
+  return (
+    <div
+      role="group"
+      aria-label={t('shell.trips.view.label')}
+      className="hidden items-center gap-1 rounded-full bg-surface-2 p-1 md:flex"
+    >
+      {TRIP_VIEW_MODES.map((mode) => (
+        <IconButton
+          key={mode}
+          icon={VIEW_OPTIONS[mode].icon}
+          label={t(VIEW_OPTIONS[mode].label)}
+          size="sm"
+          variant={view === mode ? 'secondary' : 'ghost'}
+          aria-pressed={view === mode}
+          data-part={`trip-view-${mode}`}
+          onClick={() => {
+            if (view !== mode) onChange(mode)
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/**
+ * The archive, folded at the foot of the index (`01-S7`).
+ *
+ * A real disclosure — a button carrying `aria-expanded` and `aria-controls` — rather than a link
+ * to the archived scope, which stays where it was for a reader who wants the archive as the page.
+ * The rows are the list's rows, so each carries the trip's own menu: Copy for every reader, and
+ * Restore and Delete permanently for an owner, through `01-S1`'s functions.
+ *
+ * The body is mounted and unmounted rather than transitioned open: a height transition animates
+ * layout, which `DESIGN.md` forbids, so the rows rise in on their own. The open state is the second
+ * field of `planned.trips-view`; it arrives after hydration, below every viewport's fold.
+ */
+function ArchivedTrips({
+  trips,
+  open,
+  onOpenChange,
+}: {
+  trips: TripsPayload['archivedTrips']
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const locale = useLocale()
+  const t = useTranslate()
+  return (
+    <section className="flex min-w-0 flex-col gap-3">
+      <h2>
+        <button
+          type="button"
+          data-part="trip-archive-disclosure"
+          aria-expanded={open}
+          aria-controls={ARCHIVE_ID}
+          onClick={() => onOpenChange(!open)}
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-2 py-2 text-start text-ink focus-ring',
+            'transition-colors duration-fast ease-out-quint hover:bg-surface-2 active:bg-surface-inset',
+          )}
+        >
+          <ChevronRight
+            aria-hidden
+            data-motion-transform=""
+            data-mirror-rtl
+            className={cn(
+              'size-4 shrink-0 text-ink-4 transition-transform duration-fast ease-out-quint',
+              open && 'rotate-90',
+            )}
+          />
+          <Archive aria-hidden className="size-4 shrink-0 text-ink-3" />
+          <span className="text-label font-semibold">
+            {t('shell.tripStatus.archived')}
+          </span>
+          <Badge tone="neutral" size="sm" className="tabular-nums">
+            {formatNumber(trips.length, locale)}
+          </Badge>
+        </button>
+      </h2>
+      {open ? (
+        <div id={ARCHIVE_ID}>
+          <TripList trips={trips} titleAs="h3" />
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+/**
+ * The skeleton reads the mode from the URL, which the server and the browser both know, so it is
+ * always the shape of the page about to arrive.
+ */
 function TripsPending() {
+  const search = Route.useSearch()
   return (
     <AppFrame>
       <AppSections>
         <HeaderSkeleton />
-        <CardsSkeleton />
+        {search.view === 'list' ? (
+          <Card padding="none" className="overflow-hidden">
+            <RowsSkeleton rows={6} />
+          </Card>
+        ) : (
+          <CardsSkeleton />
+        )}
       </AppSections>
     </AppFrame>
   )

@@ -38,11 +38,7 @@ describe('the trips-view preference', () => {
 
   it('is the only preference the module declares, so the switch, the skeleton and the seed read one key', () => {
     const declarations = Object.values(viewMode).filter(
-      (value) =>
-        typeof value === 'object' &&
-        value !== null &&
-        'key' in value &&
-        'area' in value,
+      (value) => typeof value === 'object' && 'key' in value && 'area' in value,
     )
     expect(declarations).toEqual([TRIPS_VIEW_PREFERENCE])
   })
