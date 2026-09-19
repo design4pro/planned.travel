@@ -465,5 +465,11 @@ describe('parse — outside the subset', () => {
     expect(() =>
       parse('['.repeat(20_000) + 'a](b'.repeat(20_000)),
     ).not.toThrow()
+    // Native `indexOf` keeps these cheap until the source is long, so they are
+    // sized to outrun the test timeout if the closer searches rescan per `[`.
+    expect(() => parse('[a](<'.repeat(400_000))).not.toThrow()
+    expect(() =>
+      parse('[a](b'.repeat(320_000) + ' "' + 'x'.repeat(1_600_000)),
+    ).not.toThrow()
   })
 })
