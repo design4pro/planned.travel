@@ -10,7 +10,7 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 
 | Spec                                                                                                                  | Date       | Issue                                                           | Spec PR                                                         | Implementation |
 | --------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
-| [Promotion codes on subscribe and plan change, and a free-unlock pool on staging](2026-09-19-polar-discount-codes.md) | 2026-09-19 | [#599](https://github.com/design4pro/planned.travel/issues/599) | —                                                               | —              |
+| [Promotion codes on subscribe and plan change, and a free-unlock pool on staging](2026-09-19-polar-discount-codes.md) | 2026-09-19 | [#599](https://github.com/design4pro/planned.travel/issues/599) | [#600](https://github.com/design4pro/planned.travel/issues/600) | —              |
 | [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md)                              | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | [#584](https://github.com/design4pro/planned.travel/issues/584) | —              |
 
 ## Ready — merged, waiting for a build (2)
