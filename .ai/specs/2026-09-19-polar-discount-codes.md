@@ -94,18 +94,24 @@ billing.tsx ──startPlanChange({ planId, interval, seats, discountCode })─�
     resolveDiscount(runtime, code, productId)    (discounts.ts)
        ├─ KV hit  billing:discount:<CODE> → discount id → GET /v1/discounts/{id}
        └─ miss    GET /v1/discounts/?limit=100&page=n, match `code` case-insensitively
-       fit(): starts_at ≤ now < ends_at, redemptions_count < max_redemptions,
+       fit(): (starts_at null or starts_at ≤ now), (ends_at null or now < ends_at),
+              (max_redemptions null or redemptions_count < max_redemptions),
               products empty or ∋ productId
        → { ok: true, discountId } | { ok: false, reason }
     no subscription → createCheckoutSession(... discount_id)
-    subscription    → PATCH { discount_id }                     (always first, alone)
-                      then, product changed: PATCH { product_id, proration_behavior }
+    subscription    → code also fits the current product (or product unchanged):
+                        PATCH { discount_id }                   (first, alone)
+                        then, product changed: PATCH { product_id, proration_behavior }
+                      code excludes the current product (e.g. a Crew-only code, Solo → Crew):
+                        PATCH { product_id, discount_id, proration_behavior }   (combined)
                       then, seats changed:   PATCH { seats, proration_behavior }
                       (seats variant cannot carry a discount)
 ```
 
-A rejection is decided **before any Polar write**, and every rejected attempt counts against a
-limiter (below).
+A rejection is decided **before any Polar write**, with one exception: a `422` on the code-only
+`{ discount_id }` PATCH (API Contracts). Every rejected attempt, that one included, counts against
+the per-caller limiter (below): `discounts.ts` exports `recordRejection()` and `changePlan()` calls
+it for the `422`.
 
 - The code never reaches Polar's checkout as free text. We send `discount_id`, and
   `allow_discount_codes` stays `true`, so a customer who types a code on Polar's page instead keeps
@@ -128,15 +134,22 @@ limiter (below).
     `…:ip:<cf-connecting-ip>`, the address `src/server/audit/trail.ts` already reads; 10 per
     rolling hour each, TTL 3600 s). Past any cap it returns `discount_rejected: 'rate_limited'`
     without calling Polar. The IP key is what a fresh account per batch does not reset.
-  - **Global Polar budget.** Every Polar request the lookup makes (`GET /v1/discounts/` pages and
-    `GET /v1/discounts/{id}`) is counted in one KV key per minute
-    (`billing:discount-lookups:<epochMinute>`, TTL 120 s), capped at 20 requests a minute, a fifth
-    of the sandbox limit and a twenty-fifth of production's (DEPLOY.md §9.8). A lookup that would
-    exceed it returns `rate_limited` without calling Polar and logs
+  - **Global Polar budget.** Every paged `GET /v1/discounts/` request is counted in one KV key per
+    minute (`billing:discount-lookups:<epochMinute>`, TTL 120 s), capped at a fifth of the
+    environment's Polar limit (DEPLOY.md §9.8): 100 requests a minute in production, 20 in the
+    sandbox, picked by `POLAR_SERVER`. The by-id `GET /v1/discounts/{id}` on a KV hit is not
+    counted: it only runs for a code already known to exist, so it cannot enumerate, and each one
+    precedes a plan change the caller is making. A lookup that would exceed the budget returns
+    `discount_rejected: 'busy'` without calling Polar and logs
     `billing.discount.lookup_budget_exhausted`. This is the bound that holds against many
     identities and many addresses at once: the rest of billing keeps its share of the shared token
-    whatever the lookups do. The trade-off is that during an attack an honest coded request can be
-    refused with `rate_limited` too; uncoded plan changes and checkouts never touch the budget.
+    whatever the lookups do. The price is not only an attack-time cost. An unmatched code pages
+    through the whole catalogue, up to 10 requests, so ordinary typos spend the budget too: in
+    production about 10 full misses a minute across all tenants, in the sandbox about 2. Past that,
+    an honest coded request gets `busy` until the minute rolls over, with its own copy ("try again
+    in a minute"), not the per-caller "try again in an hour". Uncoded plan changes and checkouts
+    never touch the budget. The `billing.discount.lookup_budget_exhausted` log is the signal to
+    archive old codes or raise the cap.
 
   KV's eventual consistency makes both caps soft (a burst across colos can exceed them slightly),
   which is acceptable for a guard whose job is to make enumeration slow and visible and to keep
@@ -183,25 +196,41 @@ type PlanChangeResult =
   | BillingRedirect
   | {
       readonly surface: 'discount_rejected'
-      readonly reason: 'invalid' | 'not_applicable' | 'rate_limited'
+      readonly reason: 'invalid' | 'not_applicable' | 'rate_limited' | 'busy'
     }
 ```
 
-The customer sees three reasons only. `invalid` covers unknown, expired, not yet started and
+The customer sees four reasons only. `invalid` covers unknown, expired, not yet started and
 exhausted. Telling those apart would let a stranger learn which production codes exist and which
 are still live. The precise reason goes to the log (`billing.discount.rejected`, with
 organization id, user id and discount id when one resolved, never the typed code).
 `not_applicable` means the discount exists and is live but is restricted to products that do not
-include the selected one.
+include the selected one. `rate_limited` is the caller's own hourly cap; `busy` is the global
+lookup budget, which says nothing about the caller and clears within a minute.
 
-A Polar `422` is mapped to `discount_rejected: 'not_applicable'` **inside `changePlan()`**, only
-around the one call that carries `discount_id`, and only when a code-only PATCH (`{ discount_id }`)
-is the call that failed. Then no product or seat change has happened yet, and the function returns
-the union member. A `422` on a product PATCH that also carried a discount cannot be attributed to
-the code, so it still goes through `customerFacing()` unchanged as today's readable error. For that
-reason, when the product changes **and** a code was given, the code is sent first as its own
-`{ discount_id }` PATCH, and the product PATCH follows only if that succeeded. `customerFacing()`
-itself does not change.
+A Polar `422` is mapped to `discount_rejected: 'invalid'` **inside `changePlan()`**, only when the
+code-only PATCH (`{ discount_id }`) is the call that failed, and it is counted with
+`recordRejection()`. Then no product or seat change has happened yet, and the function returns the
+union member. It is `invalid` and not `not_applicable` because that PATCH is only sent when `fit()`
+has just passed the code against both the current and the selected product (below), so a product
+restriction cannot be the cause; what is left is a code that expired or was exhausted since the
+lookup (the redemption race in the edge cases), which the taxonomy above calls `invalid`. The
+precise Polar detail goes to the log. A `422` on a product PATCH that also carried a discount cannot
+be attributed to the code, so it still goes through `customerFacing()` unchanged as today's
+readable error. `customerFacing()` itself does not change.
+
+Which PATCH carries the code depends on whether the code also fits the product the subscription is
+on now, which `fit()` answers from the discount it already holds:
+
+- **It does, or the product does not change.** The code is sent first as its own
+  `{ discount_id }` PATCH, and the product PATCH follows only if that succeeded. This keeps the
+  `422` attributable.
+- **It does not** (a Crew-only upgrade code while the subscription is on Solo). Attaching it
+  alone first could be refused by Polar for the old product, which step 3(c) leaves open, so the
+  code rides in the product PATCH, `{ product_id, discount_id, proration_behavior }`, which moves
+  to a product the code does fit. A `422` there is today's readable error, as above.
+
+This rule holds whatever step 3 finds, so the order is not fixed ahead of the measurement.
 
 A code-only apply returns a new surface, `discount_applied`, whose URL comes from a new helper
 `discountAppliedUrl(appUrl)` → `/settings/billing?discount=applied`. `applied` and
@@ -209,13 +238,13 @@ A code-only apply returns a new surface, `discount_applied`, whose URL comes fro
 
 Polar calls (DEPLOY.md §9.8 gains three rows):
 
-| Call                           | Body / query                                                       | Scope                 |
-| ------------------------------ | ------------------------------------------------------------------ | --------------------- |
-| `GET /v1/discounts/`           | `limit=100`, `page=n`, at most 10 pages                            | `discounts:read`      |
-| `GET /v1/discounts/{id}`       | — (KV hit path, confirms it still fits)                            | `discounts:read`      |
-| `GET /v1/subscriptions/{id}`   | — (uncoded product change: reads the current discount)             | `subscriptions:read`  |
-| `POST /v1/checkouts/`          | existing body + `discount_id`                                      | `checkouts:write`     |
-| `PATCH /v1/subscriptions/{id}` | `{ discount_id }` alone, then `{ product_id, proration_behavior }` | `subscriptions:write` |
+| Call                           | Body / query                                                                                                               | Scope                 |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `GET /v1/discounts/`           | `limit=100`, `page=n`, at most 10 pages                                                                                    | `discounts:read`      |
+| `GET /v1/discounts/{id}`       | — (KV hit path, confirms it still fits)                                                                                    | `discounts:read`      |
+| `GET /v1/subscriptions/{id}`   | — (uncoded product change: reads the current discount)                                                                     | `subscriptions:read`  |
+| `POST /v1/checkouts/`          | existing body + `discount_id`                                                                                              | `checkouts:write`     |
+| `PATCH /v1/subscriptions/{id}` | `{ discount_id }` alone, then `{ product_id, proration_behavior }`; or combined when the code excludes the current product | `subscriptions:write` |
 
 `product_id` and `discount_id` are both members of Polar's `SubscriptionUpdateBase` variant, and
 `seats` is its own variant with its own call. The Polar OpenAPI description of
@@ -225,8 +254,9 @@ code does not reduce the prorated invoice of the change it accompanies. Step 3 c
 sandbox before any copy promises it, and Q1 asks a human to accept it.
 
 The PATCH order for a change with a code is: `{ discount_id }` → `{ product_id, proration_behavior
-}` (when the product changes) → `{ seats, proration_behavior }` (when seats change). A seats-only
-resize with a code therefore still attaches the code.
+}` (when the product changes) → `{ seats, proration_behavior }` (when seats change), except that a
+code excluding the current product goes into the product PATCH instead of its own (above). A
+seats-only resize with a code therefore still attaches the code.
 
 Script contract (`scripts/billing/seed-sandbox-discounts.mjs`):
 
@@ -262,7 +292,7 @@ On `/settings/billing`, for a member who `canManage`:
   `error` (`aria-invalid`, `aria-describedby`). The plan buttons stay enabled, and a click with an
   invalid code shows the error and sends nothing.
 - A `discount_rejected` result is shown in the same inline error slot, with one message per
-  `reason` (`invalid`, `not_applicable`, `rate_limited`). Focus moves to the input, and the field expands if it was collapsed. No redirect
+  `reason` (`invalid`, `not_applicable`, `rate_limited`, `busy`). Focus moves to the input, and the field expands if it was collapsed. No redirect
   happens and the plan is unchanged.
 - Success: a first purchase goes to Polar's checkout with the code already applied. A plan change
   lands on the existing `?plan=changed` alert, whose body gains one sentence when a code was sent:
@@ -290,42 +320,46 @@ On `/settings/billing`, for a member who `canManage`:
 New keys under `settings.billing.discount.*`. The implementation lands each key in all 23 locales
 through the `i18n-messages` skill.
 
-| Key                                                | `en` text                                           |
-| -------------------------------------------------- | --------------------------------------------------- |
-| `settings.billing.discount.toggle`                 | Have a promotion code?                              |
-| `settings.billing.discount.label`                  | Promotion code                                      |
-| `settings.billing.discount.hint`                   | Applied to the plan you choose next.                |
-| `settings.billing.discount.applyCurrent`           | Apply to current plan                               |
-| `settings.billing.discount.invalidFormat`          | Codes are 3 to 64 letters and digits.               |
-| `settings.billing.discount.rejected.invalid`       | That code isn't valid. Check it and try again.      |
-| `settings.billing.discount.rejected.rateLimited`   | Too many codes tried. Try again in an hour.         |
-| `settings.billing.discount.rejected.notApplicable` | That code doesn't apply to this plan.               |
-| `settings.billing.discount.nextRenewal`            | Your promotion code applies from your next renewal. |
-| `settings.billing.discount.appliedTitle`           | Promotion code applied                              |
+| Key                                                | `en` text                                                |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| `settings.billing.discount.toggle`                 | Have a promotion code?                                   |
+| `settings.billing.discount.label`                  | Promotion code                                           |
+| `settings.billing.discount.hint`                   | Applied to the plan you choose next.                     |
+| `settings.billing.discount.applyCurrent`           | Apply to current plan                                    |
+| `settings.billing.discount.invalidFormat`          | Codes are 3 to 64 letters and digits.                    |
+| `settings.billing.discount.rejected.invalid`       | That code isn't valid. Check it and try again.           |
+| `settings.billing.discount.rejected.rateLimited`   | Too many codes tried. Try again in an hour.              |
+| `settings.billing.discount.rejected.notApplicable` | That code doesn't apply to this plan.                    |
+| `settings.billing.discount.rejected.busy`          | Codes can't be checked right now. Try again in a minute. |
+| `settings.billing.discount.nextRenewal`            | Your promotion code applies from your next renewal.      |
+| `settings.billing.discount.appliedTitle`           | Promotion code applied                                   |
 
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                       | Behaviour                                                                                                                                                                                                                                                                             |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Code-only `{ discount_id }` PATCH answers `422`            | `discount_rejected: not_applicable`. It is the first write, so no product or seat change happened. The `finally` eviction runs as today.                                                                                                                                              |
-| Code attached, then the product PATCH fails                | The subscription carries the new discount on the old plan (it applies from the next renewal either way), and today's readable error is shown. The customer can retry the plan change without the code.                                                                                |
-| Seats-only resize with a code                              | `{ discount_id }` PATCH, then the seats PATCH. Both are covered by a test.                                                                                                                                                                                                            |
-| Solo-restricted discount in force, move to Crew, no code   | The product PATCH carries `discount_id: null`, so the restricted discount does not follow the customer onto a product it excludes.                                                                                                                                                    |
-| Two workspaces redeem a `max_redemptions: 1` code at once  | `fit()` passes both. Whether the second PATCH succeeds depends on Polar's own enforcement on PATCH, which step 3 measures. If Polar does not enforce it, the race is accepted and documented in §9.12: the codes are business-issued, and at worst one extra redemption happens.      |
-| Code valid, seats PATCH fails after product+discount PATCH | Same as today's partial-change path: the first response is persisted, eviction runs, and the error is readable.                                                                                                                                                                       |
-| Discount lookup `429`                                      | Existing "Polar is rate-limiting us… Nothing was changed" message. Plan untouched.                                                                                                                                                                                                    |
-| Token lacks `discounts:read` (`403`)                       | `BillingConfigError`. The customer sees the existing "billing is not connected" copy, and the missing scope is named only in the log (`billing.discount.lookup_forbidden`).                                                                                                           |
-| More than 1,000 discounts in the organization              | Lookup stops after 10 pages → `invalid`, and `billing.discount.lookup_truncated` is logged so the operator knows to archive old codes.                                                                                                                                                |
-| Same code, second workspace, `max_redemptions: 1`          | `invalid` (logged as `exhausted`), read from `redemptions_count` before any PATCH.                                                                                                                                                                                                    |
-| Code only, no subscription                                 | There is no "current plan" to apply to, so the **Apply** button is not rendered. The code rides on the next checkout.                                                                                                                                                                 |
-| Code on a `trialing` subscription                          | PATCH as usual. Polar applies it from the first paid cycle, which for a trial is the next billing cycle.                                                                                                                                                                              |
-| Subscription already has a discount                        | The new `discount_id` replaces it (Polar semantics). The copy says the code applies from the next renewal and no more.                                                                                                                                                                |
-| Plan change without a code                                 | No `discount_id` key is sent, so an existing discount is kept, with one exception: the product change in the row about a Solo-restricted discount, which reads the subscription first and sends `discount_id: null`. A seats-only change without a code is today's request unchanged. |
-| Checkout reused from KV within 60 s                        | Only when the discount id matches, because it is part of the idempotency key.                                                                                                                                                                                                         |
-| Brute-force code guessing                                  | 10 rejected attempts per user, per organization and per client IP per hour, then `rate_limited` with no Polar call. Rejections are logged, and customers see only `invalid`.                                                                                                          |
-| Guessing from many fresh accounts and addresses            | The global lookup budget (20 Polar requests a minute) returns `rate_limited` with no Polar call once spent, and logs `billing.discount.lookup_budget_exhausted`. Honest coded requests are refused too until the minute rolls over. Uncoded billing is unaffected.                    |
-| Same wrong code repeated                                   | Served from the 60 s miss cache, with no Polar call. It still counts against the limiter.                                                                                                                                                                                             |
-| Script pointed at production                               | Exits non-zero before any request, with the reason.                                                                                                                                                                                                                                   |
+| Case                                                       | Behaviour                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Code-only `{ discount_id }` PATCH answers `422`            | `discount_rejected: invalid`, counted against the per-caller limiter, Polar's detail logged. It is the first write, so no product or seat change happened. The `finally` eviction runs as today.                                                                                                 |
+| Code attached, then the product PATCH fails                | The subscription carries the new discount on the old plan (it applies from the next renewal either way), and today's readable error is shown. The customer can retry the plan change without the code.                                                                                           |
+| Seats-only resize with a code                              | `{ discount_id }` PATCH, then the seats PATCH. Both are covered by a test.                                                                                                                                                                                                                       |
+| Solo-restricted discount in force, move to Crew, no code   | The product PATCH carries `discount_id: null`, so the restricted discount does not follow the customer onto a product it excludes.                                                                                                                                                               |
+| Two workspaces redeem a `max_redemptions: 1` code at once  | `fit()` passes both. Whether the second PATCH succeeds depends on Polar's own enforcement on PATCH, which step 3 measures. If Polar does not enforce it, the race is accepted and documented in §9.12: the codes are business-issued, and at worst one extra redemption happens.                 |
+| Code valid, seats PATCH fails after product+discount PATCH | Same as today's partial-change path: the first response is persisted, eviction runs, and the error is readable.                                                                                                                                                                                  |
+| Discount lookup `429`                                      | Existing "Polar is rate-limiting us… Nothing was changed" message. Plan untouched.                                                                                                                                                                                                               |
+| Token lacks `discounts:read` (`403`)                       | `BillingConfigError`. The customer sees the existing "billing is not connected" copy, and the missing scope is named only in the log (`billing.discount.lookup_forbidden`).                                                                                                                      |
+| More than 1,000 discounts in the organization              | Lookup stops after 10 pages → `invalid`, and `billing.discount.lookup_truncated` is logged so the operator knows to archive old codes.                                                                                                                                                           |
+| Same code, second workspace, `max_redemptions: 1`          | `invalid` (logged as `exhausted`), read from `redemptions_count` before any PATCH.                                                                                                                                                                                                               |
+| Code only, no subscription                                 | There is no "current plan" to apply to, so the **Apply** button is not rendered. The code rides on the next checkout.                                                                                                                                                                            |
+| Code on a `trialing` subscription                          | PATCH as usual. Polar applies it from the first paid cycle, which for a trial is the next billing cycle.                                                                                                                                                                                         |
+| Subscription already has a discount                        | The new `discount_id` replaces it (Polar semantics). The copy says the code applies from the next renewal and no more.                                                                                                                                                                           |
+| Plan change without a code                                 | No `discount_id` key is sent, so an existing discount is kept, with one exception: the product change in the row about a Solo-restricted discount, which reads the subscription first and sends `discount_id: null`. A seats-only change without a code is today's request unchanged.            |
+| Checkout reused from KV within 60 s                        | Only when the discount id matches, because it is part of the idempotency key.                                                                                                                                                                                                                    |
+| Brute-force code guessing                                  | 10 rejected attempts per user, per organization and per client IP per hour, then `rate_limited` with no Polar call. Rejections are logged, and customers see only `invalid`.                                                                                                                     |
+| Guessing from many fresh accounts and addresses            | The global lookup budget (paged lookups, a fifth of the environment's Polar limit a minute) returns `busy` with no Polar call once spent, and logs `billing.discount.lookup_budget_exhausted`. Honest coded requests are refused too until the minute rolls over. Uncoded billing is unaffected. |
+| Typos from ordinary customers spend the global budget      | Each unmatched code costs up to 10 paged requests, so a handful of typos in one minute can spend it: honest coded requests then get `busy` ("try again in a minute") until it rolls over. Cached codes and uncoded billing are unaffected.                                                       |
+| Open-ended code (no `ends_at`, no `max_redemptions`)       | `fit()` treats a null bound as no bound, so it fits. The staging pool's codes and unlimited marketing codes have this shape.                                                                                                                                                                     |
+| Upgrade code restricted to the target product              | A Crew-only code on a Solo → Crew change fits the selected product but not the current one, so it rides in the combined product PATCH instead of being attached alone first.                                                                                                                     |
+| Same wrong code repeated                                   | Served from the 60 s miss cache, with no Polar call. It still counts against the limiter.                                                                                                                                                                                                        |
+| Script pointed at production                               | Exits non-zero before any request, with the reason.                                                                                                                                                                                                                                              |
 
 ## 📝 Risks & Impact Review
 
@@ -346,9 +380,10 @@ through the `i18n-messages` skill.
   accounts and addresses is bounded only by the global budget, so enumeration stays possible at
   that rate; that is stated rather than hidden. Both caps are soft (KV is eventually consistent).
 - **Shared Polar rate limit.** Lookups use the token every tenant shares (DEPLOY.md §9.8: 100
-  requests/minute in sandbox, 500 in production). The global budget caps lookups at 20 a minute
-  whatever the number of tenants, so the rest of billing always keeps at least 80% of the limit.
-  The price is that coded requests can be refused while the budget is spent.
+  requests/minute in sandbox, 500 in production). The global budget caps paged lookups at a fifth
+  of that whatever the number of tenants, so the rest of billing always keeps at least 80% of the
+  limit. The price is that coded requests can be refused with `busy` while the budget is spent,
+  which ordinary typos can cause, not only an attack.
 
 ### Out of scope
 
@@ -397,23 +432,27 @@ through the `i18n-messages` skill.
 5. `discounts.ts`: `resolveDiscount(runtime, code, productId)` returning `{ ok, discountId } |
 { ok: false, reason }`, with a pure `fit(discount, productId, now)` and the KV cache. Tests in
    `__tests__/discounts.test.ts` use the existing `harness.ts` fake runtime: each internal reason and
-   its collapse to `invalid`, the case-insensitive match, the 10-page cap, the 60 s miss cache, the
+   its collapse to `invalid`, `fit()` with null `starts_at`, `ends_at` and `max_redemptions` (an
+   open-ended, unlimited code fits), the case-insensitive match, the 10-page cap, the 60 s miss cache, the
    per-caller limiter (the 11th rejection per user, per organization or per IP returns
    `rate_limited` with zero Polar calls; a new user and organization from the same IP do not reset
-   it), the global lookup budget (the 21st Polar lookup request in a minute is not made and returns
-   `rate_limited`, whoever asks), and `403` → `BillingConfigError`.
+   it), `recordRejection()` counting like any other rejection, the global lookup budget (in the
+   sandbox the 21st paged request in a minute is not made and returns `busy`, whoever asks; a
+   by-id confirmation is not counted), and `403` → `BillingConfigError`.
 6. `checkout.ts`: add `discountCode` to `planSelectionInput`. In `createCheckoutSession`, resolve
    and pass `discount_id` into `buildCheckoutParams` (new optional input) and into
    `checkoutIdempotencyKey`. In `changePlan`, resolve before any PATCH, then PATCH in the order
-   `{ discount_id }` → product → seats, and map a `422` on the discount PATCH to
-   `not_applicable`. On a product change without a code, send `discount_id: null` when the
+   `{ discount_id }` → product → seats, or combined product+discount → seats when the code excludes
+   the current product, and map a `422` on the code-only PATCH to `invalid` through
+   `recordRejection()`. On a product change without a code, send `discount_id: null` when the
    subscription's discount excludes the new product. Add `discountAppliedUrl()` and the
    `discount_applied` surface. Extend `checkout.test.ts`: the checkout body carries `discount_id`;
    without a code no `discount_id` key is sent, except the `null` on a product change whose current
    discount excludes the new product; a seats-only change without a code makes no subscription
    read; a rejection makes zero PATCH calls; the
-   PATCH order holds for product+code, seats-only+code and product+seats+code; a `422` on the
-   discount PATCH returns `not_applicable` with no product PATCH; a restricted discount is cleared
+   PATCH order holds for product+code, seats-only+code and product+seats+code; a code restricted
+   to the target product goes in one combined product PATCH; a `422` on the code-only PATCH returns
+   `invalid`, counts a rejection and makes no product PATCH; a restricted discount is cleared
    on a move to an excluded product; code-only returns `discount_applied`; and the idempotency key
    differs by discount.
 7. `-server/billing.ts`: `startPlanChange` returns `PlanChangeResult`. `customerFacing()` is
@@ -428,19 +467,19 @@ through the `i18n-messages` skill.
     `choosePlan`, **Apply to current plan**, `discount_rejected` handling with focus management,
     the `?discount=applied` search param and alert, and the renewal sentence on `?plan=changed`.
     Component tests: the field is hidden without `canManage`, an invalid format sends nothing, each
-    of the three rejection reasons shows its message and focuses the input, **Apply** is absent
+    of the four rejection reasons shows its message and focuses the input, **Apply** is absent
     with no subscription, and `discount_applied` navigates to `?discount=applied`.
 11. Add §9.11 row 9 (sandbox walk: 100% staging code on a plan change, then on a first checkout)
     to the acceptance matrix, and walk it on staging before the phase is called done.
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                                                                                                                                                              | Applied default                                                                                                                                                                                                                                                | Why                                                                                                                                                                                                                                                                                                                                    | Confirm?                   |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| Q1  | A code sent with a plan change: must it discount the prorated invoice of that change, or is "from the next renewal" (Polar's documented `discount_id` behaviour on PATCH) acceptable? | Accept Polar's behaviour: the code applies from the next renewal, and the copy says so. No workaround such as scheduling the change or refunding the difference.                                                                                               | It is the only behaviour Polar offers without us doing price arithmetic, which the Merchant-of-Record rule forbids. It is still a pricing promise to customers.                                                                                                                                                                        | ⚠ NEEDS HUMAN CONFIRMATION |
-| Q2  | How is a typed code turned into a Polar `discount_id`, given `GET /v1/discounts/` filters by name only?                                                                               | Page the list (100 per page, at most 10 pages) and match `code` case-insensitively, caching hits in KV for 10 minutes. Step 3 checks whether `query` also matches codes and narrows with it if so.                                                             | It needs no naming convention that a dashboard user could break silently, and the bounds are explicit and logged.                                                                                                                                                                                                                      | ok                         |
-| Q3  | Should the brief's two capabilities (staging pool, in-app code entry) be separate specs?                                                                                              | One spec, with the pool as Phase 1: a script plus docs that ships and is usable alone, through Polar's own checkout field, on its own PR as soon as this spec merges.                                                                                          | Both use the same Polar discount model and runbook. The review noted that Phase 1 is low-risk ops while Phases 2–3 are a `risk-high` money path, so bundling puts the staging unblock behind the money-path review. A human may prefer to split.                                                                                       | ⚠ NEEDS HUMAN CONFIRMATION |
-| Q4  | Should the active discount be stored in D1 and shown on our billing page?                                                                                                             | No. Nothing is stored, and the Customer Portal and invoices show it.                                                                                                                                                                                           | Least new surface: no migration and no second source of truth for a Polar-owned value.                                                                                                                                                                                                                                                 | ok                         |
-| Q5  | Should `/register` or marketing links carry a code (`?code=`)?                                                                                                                        | No, deferred. Registration does not choose a plan today, so the first purchase happens on `/settings/billing`, where the new field is.                                                                                                                         | It keeps the scope to the ask's two moments (first purchase, plan change) without new public routes.                                                                                                                                                                                                                                   | ok                         |
-| Q6  | How big is the staging pool, and how is it handed out?                                                                                                                                | 20 single-use codes, topped up by re-running the script. The operator shares them outside the repository.                                                                                                                                                      | Single-use caps the damage of a leaked list. Top-up keeps it idempotent.                                                                                                                                                                                                                                                               | ok                         |
-| Q7  | Add a rate limiter against code guessing?                                                                                                                                             | Yes: a soft KV limiter (10 rejected attempts per user, per organization and per client IP per hour), a global budget of 20 Polar lookup requests a minute, a 60 s miss cache, and customer reasons collapsed to `invalid` / `not_applicable` / `rate_limited`. | Every registered user owns an organization and accounts are free, so neither role nor user and organization ids are a bound. The IP key stops a fresh account per batch; the global budget keeps many accounts on many addresses from draining the shared Polar rate limit, at the price of refusing coded requests while it is spent. | ok                         |
+| #   | Question                                                                                                                                                                              | Applied default                                                                                                                                                                                                                                                                                                               | Why                                                                                                                                                                                                                                                                                                                                                                         | Confirm?                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Q1  | A code sent with a plan change: must it discount the prorated invoice of that change, or is "from the next renewal" (Polar's documented `discount_id` behaviour on PATCH) acceptable? | Accept Polar's behaviour: the code applies from the next renewal, and the copy says so. No workaround such as scheduling the change or refunding the difference.                                                                                                                                                              | It is the only behaviour Polar offers without us doing price arithmetic, which the Merchant-of-Record rule forbids. It is still a pricing promise to customers.                                                                                                                                                                                                             | ⚠ NEEDS HUMAN CONFIRMATION |
+| Q2  | How is a typed code turned into a Polar `discount_id`, given `GET /v1/discounts/` filters by name only?                                                                               | Page the list (100 per page, at most 10 pages) and match `code` case-insensitively, caching hits in KV for 10 minutes. Step 3 checks whether `query` also matches codes and narrows with it if so.                                                                                                                            | It needs no naming convention that a dashboard user could break silently, and the bounds are explicit and logged.                                                                                                                                                                                                                                                           | ok                         |
+| Q3  | Should the brief's two capabilities (staging pool, in-app code entry) be separate specs?                                                                                              | One spec, with the pool as Phase 1: a script plus docs that ships and is usable alone, through Polar's own checkout field, on its own PR as soon as this spec merges.                                                                                                                                                         | Both use the same Polar discount model and runbook. The review noted that Phase 1 is low-risk ops while Phases 2–3 are a `risk-high` money path, so bundling puts the staging unblock behind the money-path review. A human may prefer to split.                                                                                                                            | ⚠ NEEDS HUMAN CONFIRMATION |
+| Q4  | Should the active discount be stored in D1 and shown on our billing page?                                                                                                             | No. Nothing is stored, and the Customer Portal and invoices show it.                                                                                                                                                                                                                                                          | Least new surface: no migration and no second source of truth for a Polar-owned value.                                                                                                                                                                                                                                                                                      | ok                         |
+| Q5  | Should `/register` or marketing links carry a code (`?code=`)?                                                                                                                        | No, deferred. Registration does not choose a plan today, so the first purchase happens on `/settings/billing`, where the new field is.                                                                                                                                                                                        | It keeps the scope to the ask's two moments (first purchase, plan change) without new public routes.                                                                                                                                                                                                                                                                        | ok                         |
+| Q6  | How big is the staging pool, and how is it handed out?                                                                                                                                | 20 single-use codes, topped up by re-running the script. The operator shares them outside the repository.                                                                                                                                                                                                                     | Single-use caps the damage of a leaked list. Top-up keeps it idempotent.                                                                                                                                                                                                                                                                                                    | ok                         |
+| Q7  | Add a rate limiter against code guessing?                                                                                                                                             | Yes: a soft KV limiter (10 rejected attempts per user, per organization and per client IP per hour), a global budget of paged lookups at a fifth of the environment's Polar limit per minute (answering `busy`), a 60 s miss cache, and customer reasons collapsed to `invalid` / `not_applicable` / `rate_limited` / `busy`. | Every registered user owns an organization and accounts are free, so neither role nor user and organization ids are a bound. The IP key stops a fresh account per batch; the global budget keeps many accounts on many addresses from draining the shared Polar rate limit, at the price of refusing coded requests while it is spent, which ordinary typos can also cause. | ok                         |
