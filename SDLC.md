@@ -135,7 +135,7 @@ Intake labels go on issues only, one at a time, and say who acts on the issue ne
 
 ## Trigger labels
 
-A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human (or, for `review-threads`, a job) hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation (for `review-threads`, inside the claim step, after `in-progress` is on) — so a trigger label still present is a run nobody took.
+A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human (or, for `review-threads`, a job) hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation — so a trigger label still present is a run nobody took.
 
 | Label            | Starts                                    | Notes                                                                                                                                |
 | ---------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -249,7 +249,9 @@ Three amendment rules are specific to this document's shape:
   stops at documentation skips them, on the `scope` job's word — there is no label that turns them
   on or off.
 - **Who starts a run.** `groom`, `autofix`, `spec` and `review-threads` are the trigger labels wired
-  here, and no skill adds one to its own input. Alongside them the intake ladder runs:
+  here, and no skill adds one to its own input. `review-threads` is removed inside the claim step,
+  after `in-progress` is on, rather than before it (the `om-auto-fix-pr` override, #490), so the
+  PR is never observably free. Alongside them the intake ladder runs:
   `needs-triage` starts triage, and `ready-for-agent` starts `implement-ticket`. A person can also
   hand an issue to the agent directly from the cockpit.
 - **Risk here.** `risk-high` means the diff touches `src/server/auth`, `src/server/repos/base.ts`,

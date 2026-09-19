@@ -14,31 +14,15 @@ permissions:
   contents: read
 
 # `runs-on` below reads through `vars.RUNNER_DEPLOY`, an organisation variable that
-# is deliberately unset: unset, the default here selects GitHub-hosted runners, and
-# deploying is the one thing in this repository that does.
+# is deliberately unset: unset, the default here selects GitHub-hosted runners, so a
+# deploy never queues behind the self-hosted pool and still runs when the machine
+# behind it is down. Shipping is the one thing in this repository that does; ADR 0023
+# records why.
 #
-# Everything else runs on the self-hosted pool, which is four CI slots on one local
-# machine shared with the other repository. Two reasons put shipping on the other side
-# of that line, and both are about the deploy rather than about the budget. A deploy
-# must not queue behind an agent's twenty-minute browser suite, because the slot it is
-# waiting for is the slot that decides how long production stays on the old bundle.
-# And a deploy has to work when the local machine does not - the note this replaces
-# said as much about `vars.RUNNER_CI` being the recovery path for shipping, which made
-# recovery a variable somebody has to remember to set, under exactly the conditions
-# that make it hard to remember. Running there by default retires that lever.
-#
-# It fits, and the premise is written down because it is plan-dependent and has already
-# been wrong once. Verified 2026-09-17 in the organisation's billing page: GitHub Team,
-# 3,000 Actions minutes included, 0 used. Measured over the 30 days to the same date the
-# deploy jobs across both repositories cost ~850 min of pool time, which is ~1,900
-# GitHub-hosted minutes at the ~2.2x a 2-core hosted runner costs against these
-# containers - inside the 3,000, with room left for a failover. On GitHub Free the
-# allowance is 2,000 and this no longer fits; if the organisation is ever downgraded,
-# set `RUNNER_DEPLOY` back to the pool before the next deploy.
-#
-# `RUNNER_DEPLOY` set to `["self-hosted","linux","ARM64","ci"]` puts shipping back on
-# the pool without a pull request, which is the same escape hatch in the other
-# direction. See agent-kit's README, "The runner pool".
+# The default is plan-dependent: it fits GitHub Team's 3,000 included minutes
+# (verified 2026-09-17), not GitHub Free's 2,000. If the organisation is ever
+# downgraded, set `RUNNER_DEPLOY` to `["self-hosted","linux","ARM64","ci"]` before
+# the next deploy - no pull request needed.
 
 jobs:
   deploy:

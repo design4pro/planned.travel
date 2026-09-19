@@ -6,12 +6,13 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (2)
+## Draft — being written (3)
 
-| Spec                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
-| ---------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
-| [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md) | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | [#584](https://github.com/design4pro/planned.travel/issues/584) | —              |
-| [Drop a pin on the map and it becomes a place](2026-09-18-drop-a-pin-becomes-a-place.md) | 2026-09-18 | [#554](https://github.com/design4pro/planned.travel/issues/554) | [#583](https://github.com/design4pro/planned.travel/issues/583) | —              |
+| Spec                                                                                                                  | Date       | Issue                                                           | Spec PR                                                         | Implementation |
+| --------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [Promotion codes on subscribe and plan change, and a free-unlock pool on staging](2026-09-19-polar-discount-codes.md) | 2026-09-19 | [#599](https://github.com/design4pro/planned.travel/issues/599) | [#600](https://github.com/design4pro/planned.travel/issues/600) | —              |
+| [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md)                              | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | [#584](https://github.com/design4pro/planned.travel/issues/584) | —              |
+| [Drop a pin on the map and it becomes a place](2026-09-18-drop-a-pin-becomes-a-place.md)                              | 2026-09-18 | [#554](https://github.com/design4pro/planned.travel/issues/554) | [#583](https://github.com/design4pro/planned.travel/issues/583) | —              |
 
 ## Ready — merged, waiting for a build (1)
 

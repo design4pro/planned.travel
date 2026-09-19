@@ -17,8 +17,14 @@
  * the edit that lets the two drift apart.
  */
 
-import { describe, expect, test } from 'vitest'
-import { readsAsTransient, scrubbedOfRetryTriggers } from '../settle'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import {
+  boundedDiagnostic,
+  HYDRATION_DIAGNOSTIC_TIMEOUT_MS,
+  readsAsTransient,
+  scrubbedOfRetryTriggers,
+  UNREADABLE_PAGE,
+} from '../settle'
 
 /**
  * A hydration timeout as Playwright words it, before anything is appended.
@@ -74,5 +80,51 @@ describe('a genuinely transient failure is still retried', () => {
     expect(readsAsTransient(`${transient}\nhydration: last is div#root`)).toBe(
       true,
     )
+  })
+})
+
+/**
+ * The diagnostic is read from the page the wait just gave up on, and a wedged
+ * main thread is one of the reasons a wait gives up. `page.evaluate` takes no
+ * timeout, so the bound is a race — and these cases drive the real race with a
+ * read that never settles, rather than a browser that would have to be wedged
+ * on purpose.
+ */
+describe('a hydration diagnostic cannot outlive the timeout it explains', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  test('a read that never settles degrades to the fallback at the bound', async () => {
+    let detail: string | undefined
+    void boundedDiagnostic(() => new Promise<string>(() => {})).then(
+      (value) => {
+        detail = value
+      },
+    )
+
+    await vi.advanceTimersByTimeAsync(HYDRATION_DIAGNOSTIC_TIMEOUT_MS - 1)
+    expect(detail).toBeUndefined()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(detail).toBe(UNREADABLE_PAGE)
+  })
+
+  test('a read that rejects degrades to the same fallback', async () => {
+    await expect(
+      boundedDiagnostic(() =>
+        Promise.reject(new Error('Execution context was destroyed')),
+      ),
+    ).resolves.toBe(UNREADABLE_PAGE)
+  })
+
+  test('a read inside the bound is what gets reported', async () => {
+    await expect(
+      boundedDiagnostic(() => Promise.resolve('last is div#root')),
+    ).resolves.toBe('last is div#root')
+    expect(vi.getTimerCount()).toBe(0)
   })
 })

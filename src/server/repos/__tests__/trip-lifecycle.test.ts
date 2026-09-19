@@ -34,6 +34,7 @@ import {
   archiveTrip,
   assertTripRole,
   canReadTrip,
+  canWritePlan,
   chunkFor,
   copyTripContents,
   countTripsByStatus,
@@ -1216,4 +1217,20 @@ describe('trip lifecycle', () => {
       ])
     })
   })
+})
+
+describe('canWritePlan', () => {
+  it.each([
+    ['owner', false, true],
+    ['editor', false, true],
+    ['viewer', false, false],
+    [null, false, false],
+    ['owner', true, false],
+    ['editor', true, false],
+  ] as const)(
+    'a %s on a trip archived=%s may write the plan: %s',
+    (role, isArchived, expected) => {
+      expect(canWritePlan({ isArchived }, role)).toBe(expected)
+    },
+  )
 })
