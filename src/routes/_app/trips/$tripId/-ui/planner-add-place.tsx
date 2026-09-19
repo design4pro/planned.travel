@@ -6,6 +6,7 @@
  * entries later stages add — are entries in one menu rather than edits to the screen.
  */
 
+import * as React from 'react'
 import { ChevronDown, Crosshair, Plus } from 'lucide-react'
 
 import { readPublicFailure } from '#/lib/errors'
@@ -19,8 +20,6 @@ import {
   IconButton,
 } from '#/components/ui'
 
-import type * as React from 'react'
-
 interface AddPlaceOption {
   /** Published as `data-value`, so a journey can address one entry of the menu. */
   readonly value: string
@@ -33,8 +32,11 @@ interface AddPlaceOption {
 export interface PlannerAddPlaceProps {
   /** Opens the empty place form. */
   readonly onCreate: () => void
-  /** Arms a drop on the map. Absent, the menu does not offer it. */
-  readonly onArmMap?: () => void
+  /**
+   * Arms a drop on the map, handing over the menu trigger so cancelling can return focus to it.
+   * Absent, the menu does not offer it.
+   */
+  readonly onArmMap?: (returnFocusTo: HTMLElement | null) => void
   /** False until the map instance exists, which is when a drop can land. */
   readonly mapReady?: boolean
 }
@@ -45,6 +47,9 @@ export function PlannerAddPlace({
   mapReady = false,
 }: PlannerAddPlaceProps) {
   const t = useTranslate()
+  const trigger = React.useRef<HTMLButtonElement>(null)
+  // Set by an option that moves focus somewhere else, so the menu does not pull it back.
+  const handedOff = React.useRef(false)
 
   const options: Array<AddPlaceOption> = []
   if (onArmMap !== undefined) {
@@ -53,7 +58,10 @@ export function PlannerAddPlace({
       label: t('trips.plan.addPlace.option.map'),
       icon: <Crosshair />,
       disabled: !mapReady,
-      onSelect: onArmMap,
+      onSelect: () => {
+        handedOff.current = true
+        onArmMap(trigger.current)
+      },
     })
   }
 
@@ -78,6 +86,7 @@ export function PlannerAddPlace({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <IconButton
+              ref={trigger}
               data-part="add-place-menu"
               icon={<ChevronDown />}
               label={t('trips.plan.addPlace.more')}
@@ -85,7 +94,15 @@ export function PlannerAddPlace({
               variant="ghost"
             />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent
+            align="end"
+            className="w-56"
+            onCloseAutoFocus={(event) => {
+              if (!handedOff.current) return
+              handedOff.current = false
+              event.preventDefault()
+            }}
+          >
             {options.map((option) => (
               <DropdownMenuItem
                 key={option.value}

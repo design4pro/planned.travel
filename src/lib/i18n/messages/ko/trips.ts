@@ -77,6 +77,14 @@ const messages = {
   'plan.addPlace.option.map': '지도에 배치',
   'plan.addPlace.forDay': '이 날에 장소 추가',
   'plan.addPlace.forDayNamed': '장소 추가 — {day}',
+  'plan.drop.hint':
+    '지도를 마우스 오른쪽 버튼으로 클릭하거나 길게 누르면 바로 그 위치에 장소가 추가됩니다.',
+  'plan.drop.armed':
+    '놓을 위치의 지도를 클릭하거나, 지도를 움직인 뒤 Enter 키를 누르면 가운데에 놓입니다.',
+  'plan.drop.stop': '새 핀 배치 중단',
+  'plan.drop.pin': '새 장소',
+  'plan.drop.lookingUp': '주소를 찾는 중…',
+  'plan.drop.error': '핀을 놓지 못했습니다. 잠시 후 다시 시도해 주세요.',
   'plan.note.showMore': '더 보기',
   'plan.note.showLess': '접기',
   'plan.note.moveUp': '위로 이동',

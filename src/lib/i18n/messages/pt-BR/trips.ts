@@ -76,6 +76,15 @@ const messages = {
   'plan.addPlace.option.map': 'Colocar no mapa',
   'plan.addPlace.forDay': 'Adicionar um lugar a este dia',
   'plan.addPlace.forDayNamed': 'Adicionar um lugar, {day}',
+  'plan.drop.hint':
+    'Clique com o botão direito no mapa, ou toque e segure, para adicionar um lugar exatamente ali.',
+  'plan.drop.armed':
+    'Clique no mapa onde ele fica, ou mova o mapa e pressione Enter para soltá-lo no centro.',
+  'plan.drop.stop': 'Parar de colocar um novo alfinete',
+  'plan.drop.pin': 'Novo lugar',
+  'plan.drop.lookingUp': 'Procurando o endereço…',
+  'plan.drop.error':
+    'Não foi possível soltar o alfinete. Tente de novo em instantes.',
   'plan.note.showMore': 'Mostrar mais',
   'plan.note.showLess': 'Mostrar menos',
   'plan.note.moveUp': 'Mover para cima',

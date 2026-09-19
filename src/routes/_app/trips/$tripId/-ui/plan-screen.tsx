@@ -133,6 +133,7 @@ import {
 } from '../-server/day-notes'
 import { reorderDayTransportsFn } from '../-server/plan-transports'
 import { PlannerAddPlace, placeWriteMessage } from './planner-add-place'
+import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
 import { PlannerDayTools } from './planner-day-tools'
 import {
   NoteDeleteDialog,
@@ -474,6 +475,13 @@ export function PlanScreen({
   const [saving, setSaving] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [picking, setPicking] = React.useState<PlannerRow | null>(null)
+  /** A pin dropped on the map; it opens the create form with a draft. Never while repositioning. */
+  const mapDrop = usePlannerDrop({
+    tripId: payload.tripId,
+    editable: editable && picking === null,
+    formOpen: dialog?.kind === 'create',
+    onDropped: (draft) => setDialog({ kind: 'create', draft }),
+  })
   /**
    * The move a reader is being asked about: it lands only if its own time goes.
    * The whole move is kept, not just the item, because confirming replays it —
@@ -1453,7 +1461,15 @@ export function PlanScreen({
   const createDraft = dialog?.kind === 'create' ? dialog.draft : undefined
 
   const addButton = editable ? (
-    <PlannerAddPlace onCreate={() => setDialog({ kind: 'create' })} />
+    <PlannerAddPlace
+      onCreate={() => setDialog({ kind: 'create' })}
+      onArmMap={(returnFocusTo) => {
+        // On a phone the sheet covers the map it is about to arm.
+        setSheet(null)
+        mapDrop.arm(returnFocusTo)
+      }}
+      mapReady={mapDrop.ready && mapDrop.editable}
+    />
   ) : null
 
   // Archived wins over the role: it is a property of the trip, so it is true for
@@ -1579,6 +1595,8 @@ export function PlanScreen({
               the product's own type, at a size that can actually be read — and
               lifted clear of the mobile action bar rather than hidden under it. */}
           <MapAttribution className="end-auto bottom-(--plan-bar) left-1/2 -translate-x-1/2 lg:bottom-2" />
+
+          <PlannerMapLayer drop={mapDrop} empty={allPoints.length === 0} />
         </MapCanvas>
 
         {/* -------------------------------------------------------- desktop */}

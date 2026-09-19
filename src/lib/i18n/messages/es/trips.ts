@@ -75,6 +75,15 @@ const messages = {
   'plan.addPlace.option.map': 'Colocarlo en el mapa',
   'plan.addPlace.forDay': 'Añadir un lugar a este día',
   'plan.addPlace.forDayNamed': 'Añadir un lugar, {day}',
+  'plan.drop.hint':
+    'Haz clic derecho en el mapa, o mantén pulsado, para añadir un lugar justo ahí.',
+  'plan.drop.armed':
+    'Haz clic en el mapa donde va, o mueve el mapa y pulsa Intro para dejarlo en el centro.',
+  'plan.drop.stop': 'Dejar de colocar un nuevo marcador',
+  'plan.drop.pin': 'Lugar nuevo',
+  'plan.drop.lookingUp': 'Buscando la dirección…',
+  'plan.drop.error':
+    'No se pudo colocar el pin. Vuelve a intentarlo en un momento.',
   'plan.note.showMore': 'Mostrar más',
   'plan.note.showLess': 'Mostrar menos',
   'plan.note.moveUp': 'Subir',

@@ -76,6 +76,15 @@ const messages = {
   'plan.addPlace.option.map': 'Поставити на мапу',
   'plan.addPlace.forDay': 'Додати місце до цього дня',
   'plan.addPlace.forDayNamed': 'Додати місце, {day}',
+  'plan.drop.hint':
+    'Клацніть мапу правою кнопкою миші або натисніть і утримуйте, щоб додати місце саме там.',
+  'plan.drop.armed':
+    'Клацніть мапу там, де воно має бути, або посуньте мапу й натисніть Enter, щоб поставити його в центрі.',
+  'plan.drop.stop': 'Припинити розміщення нової шпильки',
+  'plan.drop.pin': 'Нове місце',
+  'plan.drop.lookingUp': 'Шукаємо адресу…',
+  'plan.drop.error':
+    'Не вдалося поставити мітку. Спробуйте ще раз трохи згодом.',
   'plan.note.showMore': 'Показати більше',
   'plan.note.showLess': 'Показати менше',
   'plan.note.moveUp': 'Перемістити вгору',

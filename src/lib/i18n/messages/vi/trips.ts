@@ -76,6 +76,14 @@ const messages = {
   'plan.addPlace.option.map': 'Đặt lên bản đồ',
   'plan.addPlace.forDay': 'Thêm địa điểm vào ngày này',
   'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
+  'plan.drop.hint':
+    'Nhấp chuột phải vào bản đồ, hoặc nhấn giữ, để thêm một địa điểm ngay tại đó.',
+  'plan.drop.armed':
+    'Nhấp vào bản đồ ở nơi nó thuộc về, hoặc di chuyển bản đồ rồi nhấn Enter để thả nó ở giữa.',
+  'plan.drop.stop': 'Dừng đặt ghim mới',
+  'plan.drop.pin': 'Địa điểm mới',
+  'plan.drop.lookingUp': 'Đang tìm địa chỉ…',
+  'plan.drop.error': 'Không thể thả ghim. Hãy thử lại sau giây lát.',
   'plan.note.showMore': 'Xem thêm',
   'plan.note.showLess': 'Thu gọn',
   'plan.note.moveUp': 'Di chuyển lên',

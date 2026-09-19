@@ -136,6 +136,18 @@ const messages = {
   'plan.addPlace.forDay': 'Add a place to this day',
   'plan.addPlace.forDayNamed': 'Add a place to {day}',
   /**
+   * Dropping a pin on the map: the empty map's hint, the arming banner and its
+   * stop button, the provisional pin's name, and what a refused drop says.
+   */
+  'plan.drop.hint':
+    'Right-click the map, or press and hold, to add a place right there.',
+  'plan.drop.armed':
+    'Click the map where it goes, or move the map and press Enter to drop it in the middle.',
+  'plan.drop.stop': 'Stop placing a new pin',
+  'plan.drop.pin': 'New place',
+  'plan.drop.lookingUp': 'Finding the address…',
+  'plan.drop.error': 'The pin could not be dropped. Try it again in a moment.',
+  /**
    * The disclosure, which exists only on a note that carries a detail. Two
    * messages rather than one with a state suffix: several of the twenty-three
    * change more than a word between "more" and "less".

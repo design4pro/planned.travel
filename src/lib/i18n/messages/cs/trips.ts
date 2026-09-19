@@ -75,6 +75,15 @@ const messages = {
   'plan.addPlace.option.map': 'Umístit na mapu',
   'plan.addPlace.forDay': 'Přidat místo do tohoto dne',
   'plan.addPlace.forDayNamed': 'Přidat místo: {day}',
+  'plan.drop.hint':
+    'Klikněte na mapu pravým tlačítkem nebo na ni dlouze podržte prst a místo se přidá přesně tam.',
+  'plan.drop.armed':
+    'Klikněte do mapy tam, kam místo patří, nebo mapu posuňte a stiskněte Enter, aby se umístilo doprostřed.',
+  'plan.drop.stop': 'Přestat umisťovat nový špendlík',
+  'plan.drop.pin': 'Nové místo',
+  'plan.drop.lookingUp': 'Hledá se adresa…',
+  'plan.drop.error':
+    'Špendlík se nepodařilo umístit. Zkuste to za chvíli znovu.',
   'plan.note.showMore': 'Zobrazit více',
   'plan.note.showLess': 'Zobrazit méně',
   'plan.note.moveUp': 'Posunout nahoru',

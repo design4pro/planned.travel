@@ -78,6 +78,15 @@ const messages = {
   'plan.addPlace.option.map': 'Posizionalo sulla mappa',
   'plan.addPlace.forDay': 'Aggiungi un luogo a questo giorno',
   'plan.addPlace.forDayNamed': 'Aggiungi un luogo, {day}',
+  'plan.drop.hint':
+    'Fai clic destro sulla mappa, o tieni premuto, per aggiungere un luogo proprio lì.',
+  'plan.drop.armed':
+    'Fai clic sulla mappa dove va, oppure sposta la mappa e premi Invio per lasciarlo al centro.',
+  'plan.drop.stop': 'Smetti di posizionare un nuovo segnaposto',
+  'plan.drop.pin': 'Nuovo luogo',
+  'plan.drop.lookingUp': 'Ricerca dell’indirizzo…',
+  'plan.drop.error':
+    'Non è stato possibile inserire il segnaposto. Riprova tra un momento.',
   'plan.note.showMore': 'Mostra di più',
   'plan.note.showLess': 'Mostra di meno',
   'plan.note.moveUp': 'Sposta su',
