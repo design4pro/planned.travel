@@ -147,14 +147,6 @@ export function discountBody(code, products) {
   }
 }
 
-/**
- * The codes a run prints. By default only the ones it just created, so a code handed to one tester
- * is not handed to a second; `--list-unused` asks for the whole unredeemed pool on purpose.
- */
-export function codesToPrint(created, unused, listUnused) {
-  return listUnused ? [...unused, ...created] : [...created]
-}
-
 async function polar(
   fetchImpl,
   origin,
@@ -239,19 +231,23 @@ export async function run({
     )
   }
 
-  const created = []
+  // By default only the codes this run creates are printed, so a code handed to one tester is not
+  // handed to a second; `--list-unused` asks for the whole unredeemed pool on purpose.
+  if (options.listUnused) for (const code of unused) out(code)
+
   for (let index = 0; index < missing; index += 1) {
     const code = random()
-    if (!options.dryRun) {
-      await polar(fetchImpl, origin, token, 'POST', DISCOUNTS_PATH, {
-        body: discountBody(code, options.products),
-      })
+    if (options.dryRun) {
+      // Never created, so marked: nobody may hand one of these out.
+      out(`(dry run) ${code}`)
+      continue
     }
-    created.push(code)
-  }
-
-  for (const code of codesToPrint(created, unused, options.listUnused))
+    await polar(fetchImpl, origin, token, 'POST', DISCOUNTS_PATH, {
+      body: discountBody(code, options.products),
+    })
+    // Printed as soon as it exists, so a failure further on loses no code already made.
     out(code)
+  }
   return 0
 }
 

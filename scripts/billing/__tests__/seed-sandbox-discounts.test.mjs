@@ -11,7 +11,6 @@ import {
   DISCOUNTS_PATH,
   POOL_TAG,
   SANDBOX_ORIGIN,
-  codesToPrint,
   discountBody,
   generateCode,
   isUnusedPoolCode,
@@ -36,7 +35,7 @@ function poolCode(code, redemptions = 0) {
 }
 
 /** A Polar double answering the list with `existing` and recording every request. */
-function fakePolar(existing, total = existing.length) {
+function fakePolar(existing, total = existing.length, failPostAt = 0) {
   const calls = []
   const fetch = async (url, init) => {
     calls.push({
@@ -44,6 +43,10 @@ function fakePolar(existing, total = existing.length) {
       method: init.method,
       body: init.body ? JSON.parse(init.body) : undefined,
     })
+    const posts = calls.filter((call) => call.method === 'POST').length
+    if (init.method === 'POST' && posts === failPostAt) {
+      return new Response('{"detail":"boom"}', { status: 500 })
+    }
     const body =
       init.method === 'GET'
         ? { items: existing, pagination: { total_count: total, max_page: 1 } }
@@ -163,11 +166,6 @@ describe('the pool arithmetic', () => {
       metadata: { pool: POOL_TAG },
     })
   })
-
-  it('prints only the new codes unless the whole pool is asked for', () => {
-    expect(codesToPrint(['NEW'], ['OLD'], false)).toEqual(['NEW'])
-    expect(codesToPrint(['NEW'], ['OLD'], true)).toEqual(['OLD', 'NEW'])
-  })
 })
 
 describe('run', () => {
@@ -194,10 +192,34 @@ describe('run', () => {
     expect(result.out).not.toContain('STAGEOLD00001')
   })
 
-  it('creates nothing on a dry run', async () => {
+  it('creates nothing on a dry run, and marks what it prints as never created', async () => {
     const result = await drive(['--count', '2', '--dry-run'])
     expect(result.calls.filter((call) => call.method === 'POST')).toEqual([])
     expect(result.out).toHaveLength(2)
+    expect(result.out.every((line) => line.startsWith('(dry run) '))).toBe(true)
+  })
+
+  it('lists the unredeemed pool before the new codes when asked', async () => {
+    const result = await drive(['--count', '2', '--list-unused'], {
+      existing: [poolCode('STAGEOLD00001')],
+    })
+    expect(result.out[0]).toBe('STAGEOLD00001')
+    expect(result.out).toHaveLength(2)
+  })
+
+  it('has already printed the codes it made when a later create fails', async () => {
+    const out = []
+    await expect(
+      run({
+        argv: ['--count', '3'],
+        env: ENV,
+        fetch: fakePolar([], 0, 2).fetch,
+        out: (line) => out.push(line),
+        err: () => {},
+        random: () => 'STAGEFIRST001',
+      }),
+    ).rejects.toThrow()
+    expect(out).toEqual(['STAGEFIRST001'])
   })
 
   it('only ever calls the sandbox origin', async () => {
