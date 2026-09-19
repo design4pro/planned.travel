@@ -34,6 +34,7 @@ import { DISCOUNT_CODE_PATTERN } from '#/lib/discount-code'
 import {
   DISCOUNTS_PATH,
   appliesToProduct,
+  fit,
   logDiscountRejection,
   resolveDiscount,
 } from './discounts'
@@ -823,6 +824,31 @@ async function attachDiscount(
 }
 
 /**
+ * Whether a `422` on a product `PATCH` that carried the code was about the code. That PATCH also
+ * moves the product, so the refusal alone cannot say; the code is read again and checked as
+ * `resolveDiscount()` checked it, and a code deleted since the lookup counts as the cause too.
+ * A code that still fits, or a read that fails for any other reason, leaves the `422` to the
+ * product.
+ */
+async function codeCausedRefusal(
+  runtime: BillingRuntime,
+  discountId: string,
+  productId: string,
+): Promise<boolean> {
+  try {
+    const discount = polarDiscountSchema.parse(
+      await runtime.polar.request({
+        method: 'GET',
+        path: `${DISCOUNTS_PATH}${discountId}`,
+      }),
+    )
+    return fit(discount, productId, runtime.now()) !== null
+  } catch (cause) {
+    return cause instanceof PolarApiError && cause.status === 404
+  }
+}
+
+/**
  * The scheduled change to keep after a `PATCH` that moved neither the product nor the seats.
  * Polar's own `pending_update` wins; without one, the change already on the row still stands,
  * because attaching a code does not cancel a downgrade booked for the period end.
@@ -1028,6 +1054,25 @@ export async function changePlan(
             organizationId: identity.organizationId,
             discountId: code.discount.id,
           })
+        } else if (
+          code !== null &&
+          cause instanceof PolarApiError &&
+          cause.status === 422 &&
+          (await codeCausedRefusal(
+            runtime,
+            code.discount.id,
+            selection.price.productId,
+          ))
+        ) {
+          // Nothing moved: the refused PATCH was the first one, since the code rode in it.
+          logDiscountRejection(
+            runtime,
+            identity,
+            'refused_by_polar',
+            code.discount.id,
+            cause.detail,
+          )
+          return { surface: 'discount_rejected', reason: 'invalid' }
         }
         throw cause
       }
@@ -1234,7 +1279,9 @@ export async function orderInvoiceUrl(
   )
 
   if (organizationIdFromOrder(order) !== organizationId) {
-    throw new BillingForbiddenError('That invoice belongs to another workspace.')
+    throw new BillingForbiddenError(
+      'That invoice belongs to another workspace.',
+    )
   }
 
   if (!order.is_invoice_generated) {

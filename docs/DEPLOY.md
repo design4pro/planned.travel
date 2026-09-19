@@ -1271,7 +1271,9 @@ the key is left out, the discount stays as it was, the plan change goes ahead, a
 `billing.discount.current_unreadable` is logged. **Apply to current plan** sends only the code: the
 plan is read from the subscription row. A `422` on the code-only `PATCH` is
 shown as an invalid code and logged as `billing.discount.rejected` with reason `refused_by_polar`;
-the plan is untouched.
+the plan is untouched. A `422` on a product `PATCH` that carried the code is treated the same way
+when a re-read of the discount shows it expired, ran out or was deleted since the lookup; any other
+`422` there stays the generic plan-change error.
 
 **Owed before production: the sandbox measurements.** The implementation was built so that it
 holds whatever these answer, but they were not measured when it landed (#599). An operator walks

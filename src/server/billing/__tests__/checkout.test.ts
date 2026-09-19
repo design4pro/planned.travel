@@ -1130,6 +1130,73 @@ describe('promotion codes', () => {
     expect(harness.store.writes).toHaveLength(0)
   })
 
+  it('tells the customer invalid when a code carried in the product PATCH ran out since the lookup', async () => {
+    const restricted = polarDiscount({
+      products: [{ id: TEST_PRODUCT_IDS.crewYearly }],
+    })
+    const catalogue = [restricted]
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: catalogue,
+        rejectPatch: () => {
+          // The last redemption went to someone else between the lookup and this PATCH.
+          catalogue[0] = {
+            ...restricted,
+            max_redemptions: 1,
+            redemptions_count: 1,
+          }
+          return new PolarApiError(
+            422,
+            '{"detail":"exhausted"}',
+            'Unprocessable',
+          )
+        },
+      },
+    })
+
+    const result = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(result).toEqual({ surface: 'discount_rejected', reason: 'invalid' })
+    expect(
+      harness.logs.find(
+        (entry) => entry.message === 'billing.discount.rejected',
+      )?.fields,
+    ).toMatchObject({
+      reason: 'refused_by_polar',
+      discountId: TEST_DISCOUNT_ID,
+    })
+    expect(harness.store.writes).toHaveLength(0)
+  })
+
+  it('leaves a product PATCH 422 to the product when the carried code still fits', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [
+          polarDiscount({ products: [{ id: TEST_PRODUCT_IDS.crewYearly }] }),
+        ],
+        rejectPatch: () =>
+          new PolarApiError(422, '{"detail":"seats"}', 'Unprocessable'),
+      },
+    })
+
+    await expect(
+      changePlan(harness.runtime, billingIdentity(), {
+        planId: 'crew',
+        interval: 'yearly',
+        seats: 4,
+        discountCode: 'SUMMER20',
+      }),
+    ).rejects.toMatchObject({ status: 422 })
+    expect(harness.store.writes).toHaveLength(0)
+  })
+
   it('clears a restricted discount that would not fit the new product', async () => {
     const harness = createHarness({
       record: subscriptionRecord(),

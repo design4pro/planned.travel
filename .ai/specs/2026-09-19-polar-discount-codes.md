@@ -226,8 +226,12 @@ has just passed the code against both the current and the selected product (belo
 restriction cannot be the cause; what is left is a code that expired or was exhausted since the
 lookup (the redemption race in the edge cases), which the taxonomy above calls `invalid`. The
 precise Polar detail goes to the log. A `422` on a product PATCH that also carried a discount cannot
-be attributed to the code, so it still goes through `customerFacing()` unchanged as today's
-readable error. `customerFacing()` itself does not change.
+be attributed to the code from the refusal alone, so `changePlan()` reads the discount again
+(`GET /v1/discounts/{id}`) and runs `fit()` on it against the selected product: a code that no
+longer fits, or is gone (`404`), is the cause, and the same `invalid` is returned and logged with
+nothing moved, since that PATCH was the first write. Otherwise, including a failed re-read, the
+`422` goes through `customerFacing()` unchanged as today's readable error. `customerFacing()`
+itself does not change.
 
 Which PATCH carries the code depends on whether the code also fits the product the subscription is
 on now, which `fit()` answers from the discount it already holds:
