@@ -102,14 +102,18 @@ import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
 import { purgeContext } from '#/server/queue/handlers/__tests__/purge-context'
 import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import {
+  countAccommodationNights,
   createAccommodation,
   createAssignment,
   dayAccommodationsRepository,
   dayAssignmentsRepository,
+  deleteAccommodation,
   getTripItinerary,
   listDayAssignments,
+  listTripAccommodations,
   reorderDayTimeline,
   setAssignmentParticipants,
+  updateAccommodation,
 } from '../itinerary'
 import {
   addPhoto,
@@ -4506,6 +4510,165 @@ describe('tenant isolation', () => {
       expect(
         await tripGuestsRepository.findById(alpha.tenant.scope, alpha.guestId),
       ).not.toBeNull()
+    })
+  })
+
+  /**
+   * 03-S8a — a stay linked to the booking that pays for it.
+   *
+   * The day-range and place guards were already in `itinerary.ts`; what this stage adds is the
+   * `reservation_id` link and the role guard on the three writers. The link is the case worth its
+   * own assertion: both accommodation validators are `z.object`s, so before this stage a
+   * `reservationId` was stripped rather than refused, and a guard that is never reached proves
+   * nothing. It is asserted here to reach the insert, and to refuse B's booking on the way.
+   */
+  describe('a stay and the booking it is linked to', () => {
+    it('cannot read, list, count, update or delete another tenant’s stay', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(await listTripAccommodations(scope, beta.tripId)).toHaveLength(0)
+      for (const attempt of [
+        () => countAccommodationNights(scope, beta.accommodationId),
+        () =>
+          updateAccommodation(scope, beta.accommodationId, {
+            name: 'Hijacked',
+          }),
+        () => deleteAccommodation(scope, beta.accommodationId),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+    })
+
+    it('cannot create a stay on another tenant’s days or place', async () => {
+      const scope = alpha.tenant.scope
+
+      for (const refs of [
+        { startDayId: beta.dayId, endDayId: alpha.lastDayId },
+        { startDayId: alpha.dayId, endDayId: beta.lastDayId },
+        {
+          startDayId: alpha.dayId,
+          endDayId: alpha.lastDayId,
+          placeId: beta.placeId,
+        },
+      ]) {
+        expect(
+          await captureError(() =>
+            createAccommodation(scope, {
+              tripId: alpha.tripId,
+              name: 'Stolen stay',
+              ...refs,
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+    })
+
+    it('links its own booking, and refuses a link to another tenant’s booking', async () => {
+      const scope = alpha.tenant.scope
+      const betaStaysBefore = await listTripAccommodations(
+        beta.tenant.scope,
+        beta.tripId,
+      )
+      const betaBookingsBefore = await listTripReservations(beta.tenant.scope, {
+        tripId: beta.tripId,
+      })
+
+      const linked = await createAccommodation(scope, {
+        tripId: alpha.tripId,
+        startDayId: alpha.dayId,
+        endDayId: alpha.lastDayId,
+        name: 'Alfama guesthouse, booked',
+        reservationId: alpha.reservationId,
+      })
+      expect(linked.reservationId).toBe(alpha.reservationId)
+
+      expect(
+        await captureError(() =>
+          createAccommodation(scope, {
+            tripId: alpha.tripId,
+            startDayId: alpha.dayId,
+            endDayId: alpha.lastDayId,
+            name: 'Dangling stay',
+            reservationId: beta.reservationId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          updateAccommodation(scope, alpha.accommodationId, {
+            reservationId: beta.reservationId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        (
+          await dayAccommodationsRepository.findById(
+            scope,
+            alpha.accommodationId,
+          )
+        )?.reservationId,
+      ).toBeNull()
+
+      expect(
+        await listTripAccommodations(beta.tenant.scope, beta.tripId),
+      ).toEqual(betaStaysBefore)
+      expect(
+        await listTripReservations(beta.tenant.scope, { tripId: beta.tripId }),
+      ).toEqual(betaBookingsBefore)
+    })
+
+    it('refuses a viewer and admits an editor on the same trip', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer of A')
+      const editorId = await alpha.tenant.addUser('Editor of A')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+      const viewer = alpha.tenant.scopeFor(viewerId)
+      const editor = alpha.tenant.scopeFor(editorId)
+      const stay = {
+        tripId: alpha.tripId,
+        startDayId: alpha.dayId,
+        endDayId: alpha.lastDayId,
+        name: 'A second guesthouse',
+      }
+
+      // `FORBIDDEN` is the code every caller maps to a 403, so it is the code asserted.
+      const refusalCode = async (
+        run: () => Promise<unknown>,
+      ): Promise<string> => {
+        const error = await captureError(run)
+        return error instanceof RepositoryError ? error.code : error.name
+      }
+      for (const attempt of [
+        () => createAccommodation(viewer, stay),
+        () =>
+          updateAccommodation(viewer, alpha.accommodationId, {
+            name: 'Viewed',
+          }),
+        () => deleteAccommodation(viewer, alpha.accommodationId),
+      ]) {
+        expect(await refusalCode(attempt)).toBe('FORBIDDEN')
+      }
+
+      const written = await createAccommodation(editor, stay)
+      expect(
+        (
+          await updateAccommodation(editor, written.id, {
+            name: 'Renamed by the editor',
+          })
+        ).name,
+      ).toBe('Renamed by the editor')
+      await deleteAccommodation(editor, written.id)
+      expect(
+        await dayAccommodationsRepository.findById(editor, written.id),
+      ).toBeNull()
     })
   })
 })
