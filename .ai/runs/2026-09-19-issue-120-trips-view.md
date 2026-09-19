@@ -38,7 +38,7 @@ foot of the index.
 | 2   | The plan names `e2e/trips-core.visual.spec.ts` and screenshots; the ticket names `e2e/trips-core.spec.ts`. | The ticket wins: one behavioural block in `e2e/trips-core.spec.ts`, no baselines.                                                                                         | ADR 0016 retired the visual gate; the ticket is the later word.                                                                                                                 |
 | 3   | What does the companion figure count?                                                                      | Members plus guests on the trip (the caller included), labelled "Travellers".                                                                                             | That is `countTripPeople`'s contract in the plan; "companions" excluding the reader would disagree with the list row's count.                                                   |
 | 4   | The list row's "avatar stack of companions"                                                                | A people icon with the count.                                                                                                                                             | The payload carries a count per card, as the ticket's interfaces say; an `AvatarStack` needs names, and a second participants read per card is exactly what the ticket forbids. |
-| 5   | Does the archived fold honour the search and status filters?                                               | Yes: it reads with the same `status` and `q` as the list above it, and is not rendered under the archived scope, where the list already is the archive.                   | A search that narrows the list but not the fold under it reads as broken.                                                                                                       |
+| 5   | Does the archived fold honour the search and status filters?                                               | Yes: it reads with the same `status`, `q` and favourites scope as the list above it, and is not rendered under the archived scope, where the list already is the archive. | A search that narrows the list but not the fold under it reads as broken.                                                                                                       |
 | 6   | The hero's existing four tiles                                                                             | Kept as four: the countdown stays, "Trip dates" becomes Nights (the range moves to its hint), Places stays, the workspace-wide "Travellers" becomes the trip's own count. | Extend, never recreate; the workspace member count was the only figure on the card that was not about the trip.                                                                 |
 | 7   | Elapsed fraction                                                                                           | Inclusive days: day k of an n-day trip is k/n; 0 before the start, 1 after the end, `null` without both dates.                                                            | The last day of a trip is still under way, and a one-day trip should read as full on its day.                                                                                   |
 
@@ -85,12 +85,12 @@ foot of the index.
 
 ### Phase 1: The pure module
 
-- [ ] 1.1 view-mode.ts and its unit tests
+- [x] 1.1 view-mode.ts and its unit tests — 86b70e930
 
 ### Phase 2: Server
 
-- [ ] 2.1 countTripPeople with tenant- and member-isolation cases
-- [ ] 2.2 loadTrips archived array and per-card count; loadDashboard elapsed fraction
+- [x] 2.1 countTripPeople with tenant- and member-isolation cases — ee2eec479
+- [x] 2.2 loadTrips archived array and per-card count; loadDashboard elapsed fraction — e07482dff
 
 ### Phase 3: UI
 
