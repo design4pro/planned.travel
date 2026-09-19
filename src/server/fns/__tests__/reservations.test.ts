@@ -31,6 +31,7 @@ import {
   getReservation,
   linkReservationExpense,
   listTripDays,
+  listAuditLog,
   listTripExpenses,
   listTripReservations,
 } from '#/server/repos'
@@ -109,6 +110,7 @@ const {
   bookingUpdateSchema,
   createBookingFn,
   deleteBookingFn,
+  setBookingStatusFn,
   syncReservationExpense,
   updateBookingFn,
 } = await import('../reservations')
@@ -156,6 +158,14 @@ const deleteBooking = async (data: {
   reservationId: string
 }): Promise<void> => {
   await startStorage.run(startContext(), () => deleteBookingFn({ data }))
+}
+
+const setBookingStatus = async (data: {
+  tripId: string
+  reservationId: string
+  status: 'pending' | 'confirmed' | 'cancelled'
+}): Promise<void> => {
+  await startStorage.run(startContext(), () => setBookingStatusFn({ data }))
 }
 
 /**
@@ -496,6 +506,92 @@ describe('linkReservationExpense across two trips of one workspace', () => {
       ),
     ).toBeInstanceOf(NotFoundError)
     expect((await getReservation(scope, reservation.id))?.expenseId).toBeNull()
+  })
+})
+
+/**
+ * A booking write names two ids, the trip and the booking, and the handler uses the trip's for its
+ * live-room event, its audit entry and its ledger line. The caller here is an owner of both trips,
+ * so the role check passes on either one: only the check that the booking belongs to the named
+ * trip stands between the request and a write attributed to the wrong trip. The refusal is the
+ * same `NotFoundError` a missing id gets, so a mismatch reveals nothing about the other trip.
+ */
+describe('a booking write naming another trip of the same workspace', () => {
+  let other: Trip
+  let bookingId: string
+
+  beforeEach(async () => {
+    other = await createTrip(scope, {
+      title: 'Osaka later',
+      startDate: '2026-06-01',
+      endDate: '2026-06-03',
+      currency: 'EUR',
+    })
+    await createBooking(
+      bookingPayload({
+        tripId: trip.id,
+        startDate: '2026-04-11',
+        startTime: '19:00',
+        priceMinor: 24_000,
+        currency: 'JPY',
+      }),
+    )
+    bookingId = (await onlyBooking()).id
+  })
+
+  /** Everything the refused write must have left alone. */
+  async function expectUntouched(): Promise<void> {
+    const booking = await getReservation(scope, bookingId)
+    expect(booking?.tripId).toBe(trip.id)
+    expect(booking?.title).toBe('Dinner at Den')
+    expect(booking?.status).toBe('pending')
+    expect(booking?.priceMinor).toBe(24_000)
+
+    const lines = await listTripExpenses(scope, trip.id)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]?.amountMinor).toBe(24_000)
+    expect(await listTripExpenses(scope, other.id)).toEqual([])
+
+    // Only the create's own entry: nothing was recorded for the refused write.
+    const audit = await listAuditLog(scope, { entityId: bookingId })
+    expect(audit.items.map((entry) => entry.action)).toEqual([
+      'reservation.created',
+    ])
+  }
+
+  it('refuses an update', async () => {
+    await expect(
+      updateBooking(
+        bookingPayload({
+          tripId: other.id,
+          reservationId: bookingId,
+          title: 'Renamed elsewhere',
+          startDate: '2026-04-11',
+          startTime: '19:00',
+          priceMinor: 30_000,
+          currency: 'JPY',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    await expectUntouched()
+  })
+
+  it('refuses a status change', async () => {
+    await expect(
+      setBookingStatus({
+        tripId: other.id,
+        reservationId: bookingId,
+        status: 'confirmed',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    await expectUntouched()
+  })
+
+  it('refuses a delete', async () => {
+    await expect(
+      deleteBooking({ tripId: other.id, reservationId: bookingId }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    await expectUntouched()
   })
 })
 
