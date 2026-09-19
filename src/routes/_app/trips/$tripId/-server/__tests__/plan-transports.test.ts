@@ -221,7 +221,7 @@ describe('the journeys a day can draw', () => {
     expect(payload.transports.map((row) => row.id)).not.toContain(idea.id)
   })
 
-  it('keeps a record that only arrives on a day, and says the trip is writable', async () => {
+  it('keeps a record that only arrives on a day', async () => {
     const scope = tenant.scope
     const landing = await createTransport(scope, {
       tripId: fixture.tripId,
