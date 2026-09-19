@@ -83,7 +83,8 @@ _Amended by ADR 0021 (decision 4): every PR that can change what a browser sees,
 diff that stops at `docs/`, `.ai/`, `.claude/` or Markdown outside `src/`, `e2e/` and `public/`
 skips the journeys, on the word of `scripts/ci/change-scope.mjs` (#527). Only an explicit
 `e2e=false` from the `scope` job skips them, so an unlisted path, an empty diff, a `scope` job that
-failed or was skipped, and a push to `develop` or `main` all run them._
+failed, and a push to `develop` or `main` or a manual run (where `scope` is skipped) all run them. A
+develop→main PR still defers to the push run (ADR 0021 decision 2)._
 
 ## Consequences
 
