@@ -486,6 +486,21 @@ const messages = {
   'book.error.endTimeNeedsDate':
     'Een eindtijd heeft de dag nodig waarop hij valt.',
   'book.error.endsBeforeStart': 'Dit eindigt voordat het begint.',
+  'book.fieldName.checkInDay': 'aankomstdag',
+  'book.fieldName.checkOutDay': 'vertrekdag',
+  'book.stay.pickDay': 'Kies een dag',
+  'book.stay.nights': {
+    one: '{count} nacht',
+    other: '{count} nachten',
+  },
+  'book.stay.range': '{from} tot {to}',
+  'book.stay.label': 'Verblijf',
+  'book.remove.keepsNights':
+    'De nachten blijven in de reis. Alleen de boeking wordt verwijderd.',
+  'book.menu.removeWithStay': 'Boeking en verblijf verwijderen',
+  'book.removeStay.body':
+    'De boeking en de nachten die ze betaalt, worden allebei verwijderd.',
+  'book.toast.stayRemoved': 'Boeking en verblijf verwijderd',
   'book.error.endTimeBeforeStart': 'De eindtijd ligt voor de begintijd.',
   'book.error.guests': 'Het aantal personen moet een heel getal tot 1000 zijn.',
   'error.price': 'Dat bedrag kunnen we niet lezen.',

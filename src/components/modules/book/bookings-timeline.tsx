@@ -64,6 +64,7 @@ import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import { deleteBookingFn, setBookingStatusFn } from '#/server/fns/reservations'
+import { deleteStayFn } from '#/server/fns/stays'
 import {
   ConfirmDialog,
   FactList,
@@ -87,10 +88,15 @@ import {
   bookingTypeLabel,
   isBookingStatus,
   isBookingType,
+  stayNights,
 } from './booking-form'
 
 import type { BadgeTone } from '#/components/ui'
-import type { BookingDayOption, BookingRow } from '#/server/fns/reservations'
+import type {
+  BookingDayOption,
+  BookingRow,
+  BookingStay,
+} from '#/server/fns/reservations'
 import type { ConfirmRequest, FactItem, StatusOption } from '../shared'
 import type { BookingStatus } from './booking-form'
 import type { BookingDateGroup } from './grouping'
@@ -282,6 +288,8 @@ interface Desk {
   readonly onEdit: (booking: BookingRow) => void
   readonly onStatus: (booking: BookingRow, next: string) => void
   readonly onDelete: (booking: BookingRow) => void
+  /** Removes a stay's booking and its nights together — only offered on a booking with a stay. */
+  readonly onDeleteWithStay: (booking: BookingRow) => void
 }
 
 export interface BookingsTimelineProps {
@@ -326,6 +334,11 @@ export function BookingsTimeline({
   })
   const remove = useAction(deleteBookingFn, {
     success: t('modules.book.toast.removed'),
+    failure: t('modules.book.toast.removeFailed'),
+    onSuccess: () => setConfirm(null),
+  })
+  const removeWithStay = useAction(deleteStayFn, {
+    success: t('modules.book.toast.stayRemoved'),
     failure: t('modules.book.toast.removeFailed'),
     onSuccess: () => setConfirm(null),
   })
@@ -375,10 +388,32 @@ export function BookingsTimeline({
   function askToRemove(booking: BookingRow): void {
     setConfirm({
       title: t('modules.remove.confirmTitle', { name: booking.title }),
-      description: t('modules.book.remove.body'),
+      // The nights outlive their booking unless the reader says otherwise, so a stay's booking
+      // says so rather than promising the whole thing leaves the timeline.
+      description: t(
+        booking.stay === null
+          ? 'modules.book.remove.body'
+          : 'modules.book.remove.keepsNights',
+      ),
       confirmLabel: t('modules.book.remove.confirm'),
       onConfirm: () =>
         remove.run({ data: { tripId, reservationId: booking.id } }),
+    })
+  }
+
+  function askToRemoveWithStay(booking: BookingRow): void {
+    const stay = booking.stay
+    if (stay === null) {
+      return
+    }
+    setConfirm({
+      title: t('modules.remove.confirmTitle', { name: booking.title }),
+      description: t('modules.book.removeStay.body'),
+      confirmLabel: t('modules.book.menu.removeWithStay'),
+      onConfirm: () =>
+        removeWithStay.run({
+          data: { tripId, reservationId: booking.id, stayId: stay.id },
+        }),
     })
   }
 
@@ -390,6 +425,7 @@ export function BookingsTimeline({
     onEdit: setEditing,
     onStatus: changeStatus,
     onDelete: askToRemove,
+    onDeleteWithStay: askToRemoveWithStay,
   }
 
   if (bookings.length === 0) {
@@ -503,7 +539,7 @@ export function BookingsTimeline({
 
       <ConfirmDialog
         request={confirm}
-        pending={remove.pending}
+        pending={remove.pending || removeWithStay.pending}
         onOpenChange={(next) => {
           if (!next) {
             setConfirm(null)
@@ -730,17 +766,7 @@ function BookingCard({ booking, desk }: { booking: BookingRow; desk: Desk }) {
     booking.dayId === null ? undefined : desk.dayById.get(booking.dayId)
 
   const facts: Array<FactItem> = [
-    ...(times === null
-      ? []
-      : [{ label: t('modules.field.time'), value: times }]),
-    ...(booking.endDate === null || booking.endDate === booking.startDate
-      ? []
-      : [
-          {
-            label: t('modules.book.until'),
-            value: formatDate(booking.endDate, locale) ?? booking.endDate,
-          },
-        ]),
+    ...(booking.stay === null ? pointFacts() : stayFacts(booking.stay)),
     ...(booking.provider === null
       ? []
       : [{ label: t('modules.book.provider'), value: booking.provider }]),
@@ -790,6 +816,53 @@ function BookingCard({ booking, desk }: { booking: BookingRow; desk: Desk }) {
           },
         ]),
   ]
+
+  /** Every other booking is a point in time: when it is, and until when. */
+  function pointFacts(): Array<FactItem> {
+    return [
+      ...(times === null
+        ? []
+        : [{ label: t('modules.field.time'), value: times }]),
+      ...(booking.endDate === null || booking.endDate === booking.startDate
+        ? []
+        : [
+            {
+              label: t('modules.book.until'),
+              value: formatDate(booking.endDate, locale) ?? booking.endDate,
+            },
+          ]),
+    ]
+  }
+
+  /** A stay reads as its nights, then the window to arrive in and the hour to leave by. */
+  function stayFacts(stay: BookingStay): Array<FactItem> {
+    const first = desk.dayById.get(stay.startDayId)
+    const last = desk.dayById.get(stay.endDayId)
+    const checkIn = timeRange(stay.checkInTime, stay.checkInEndTime)
+    const checkOut = timeRange(stay.checkOutTime, null)
+    return [
+      ...(first === undefined || last === undefined
+        ? []
+        : [
+            {
+              label: t('modules.book.stay.label'),
+              value: (
+                <span data-part="stay-card-nights" className="tabular-nums">
+                  {t('modules.book.stay.nights', {
+                    count: stayNights(first.dayNumber, last.dayNumber),
+                  })}
+                </span>
+              ),
+            },
+          ]),
+      ...(checkIn === null
+        ? []
+        : [{ label: t('modules.book.field.checkIn'), value: checkIn }]),
+      ...(checkOut === null
+        ? []
+        : [{ label: t('modules.book.field.checkOut'), value: checkOut }]),
+    ]
+  }
 
   return (
     <article
@@ -863,6 +936,16 @@ function BookingCard({ booking, desk }: { booking: BookingRow; desk: Desk }) {
               separated: true,
               onSelect: () => desk.onDelete(booking),
             },
+            ...(booking.stay === null
+              ? []
+              : [
+                  {
+                    label: t('modules.book.menu.removeWithStay'),
+                    icon: <Trash2 aria-hidden />,
+                    tone: 'danger' as const,
+                    onSelect: () => desk.onDeleteWithStay(booking),
+                  },
+                ]),
           ]}
         />
       </div>

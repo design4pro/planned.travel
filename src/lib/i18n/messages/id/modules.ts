@@ -475,6 +475,20 @@ const messages = {
   'book.error.timeNeedsDate': 'Sebuah waktu perlu tanggal tempat ia jatuh.',
   'book.error.endTimeNeedsDate': 'Waktu selesai perlu tanggal tempat ia jatuh.',
   'book.error.endsBeforeStart': 'Ini berakhir sebelum dimulai.',
+  'book.fieldName.checkInDay': 'hari check-in',
+  'book.fieldName.checkOutDay': 'hari check-out',
+  'book.stay.pickDay': 'Pilih hari',
+  'book.stay.nights': {
+    other: '{count} malam',
+  },
+  'book.stay.range': '{from} sampai {to}',
+  'book.stay.label': 'Menginap',
+  'book.remove.keepsNights':
+    'Malam-malamnya tetap di perjalanan. Hanya pemesanan yang dihapus.',
+  'book.menu.removeWithStay': 'Hapus pemesanan dan menginap',
+  'book.removeStay.body':
+    'Pemesanan dan malam-malam yang dibayarnya sama-sama dihapus.',
+  'book.toast.stayRemoved': 'Pemesanan dan menginap dihapus',
   'book.error.endTimeBeforeStart': 'Waktu selesai lebih awal dari waktu mulai.',
   'book.error.guests': 'Jumlah orang harus bilangan bulat sampai 1000.',
   'error.price': 'Jumlah itu tidak bisa kami baca.',

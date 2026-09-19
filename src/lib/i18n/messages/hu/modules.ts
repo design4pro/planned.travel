@@ -484,6 +484,21 @@ const messages = {
   'book.error.endTimeNeedsDate':
     'A befejezés időpontjához kell a nap is, amire esik.',
   'book.error.endsBeforeStart': 'Ez előbb ér véget, mint ahogy elkezdődik.',
+  'book.fieldName.checkInDay': 'bejelentkezés napja',
+  'book.fieldName.checkOutDay': 'kijelentkezés napja',
+  'book.stay.pickDay': 'Válassz napot',
+  'book.stay.nights': {
+    one: '{count} éjszaka',
+    other: '{count} éjszaka',
+  },
+  'book.stay.range': '{from} – {to}',
+  'book.stay.label': 'Szállás',
+  'book.remove.keepsNights':
+    'Az éjszakák az utazásban maradnak. Csak a foglalás kerül törlésre.',
+  'book.menu.removeWithStay': 'Foglalás és szállás eltávolítása',
+  'book.removeStay.body':
+    'A foglalás és az általa fizetett éjszakák is eltávolításra kerülnek.',
+  'book.toast.stayRemoved': 'Foglalás és szállás eltávolítva',
   'book.error.endTimeBeforeStart': 'A befejezés időpontja korábbi a kezdésnél.',
   'book.error.guests': 'A személyek száma egész szám legyen, legfeljebb 1000.',
   'error.price': 'Ezt az összeget nem tudjuk értelmezni.',

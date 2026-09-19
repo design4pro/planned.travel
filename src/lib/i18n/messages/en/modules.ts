@@ -629,6 +629,21 @@ const messages = {
   'book.error.timeNeedsDate': 'A time needs the date it is on.',
   'book.error.endTimeNeedsDate': 'An end time needs the date it is on.',
   'book.error.endsBeforeStart': 'This ends before it starts.',
+  'book.fieldName.checkInDay': 'check-in day',
+  'book.fieldName.checkOutDay': 'check-out day',
+  'book.stay.pickDay': 'Choose a day',
+  'book.stay.nights': {
+    one: '{count} night',
+    other: '{count} nights',
+  },
+  'book.stay.range': '{from} to {to}',
+  'book.stay.label': 'Stay',
+  'book.remove.keepsNights':
+    'The nights stay on the trip. Only the booking is removed.',
+  'book.menu.removeWithStay': 'Remove booking and stay',
+  'book.removeStay.body':
+    'The booking and the nights it pays for are both removed.',
+  'book.toast.stayRemoved': 'Booking and stay removed',
   'book.error.endTimeBeforeStart': 'The end time is before the start time.',
   'book.error.guests': 'Guests must be a whole number up to 1000.',
   'error.price': 'That is not an amount we can read.',
