@@ -249,6 +249,7 @@ import {
 } from '../trips'
 import {
   TripGuestMergeTargetError,
+  countTripPeople,
   createTripGuest,
   listTripGuests,
   listTripParticipants,
@@ -4713,6 +4714,59 @@ describe('tenant isolation', () => {
       expect(
         await dayAccommodationsRepository.findById(editor, written.id),
       ).toBeNull()
+    })
+  })
+
+  /** `01-S7` — the companion figure on every trip card, counted for a whole page at once. */
+  describe('trip people counts', () => {
+    it('counts only the caller’s trips, and gives a foreign id no entry rather than a zero', async () => {
+      const counts = await countTripPeople(alpha.tenant.scope, [
+        alpha.tripId,
+        beta.tripId,
+      ])
+
+      const members = await listTripMembers(alpha.tenant.scope, alpha.tripId)
+      const guests = await listTripGuests(alpha.tenant.scope, alpha.tripId)
+      expect(guests.length).toBeGreaterThan(0)
+      expect(counts.get(alpha.tripId)).toBe(members.length + guests.length)
+      expect(counts.has(beta.tripId)).toBe(false)
+      expect([...counts.keys()]).toEqual([alpha.tripId])
+    })
+
+    it('answers an empty map for the other tenant’s ids alone', async () => {
+      const betaMembers = await listTripMembers(beta.tenant.scope, beta.tripId)
+      const betaGuests = await listTripGuests(beta.tenant.scope, beta.tripId)
+
+      expect(await countTripPeople(alpha.tenant.scope, [beta.tripId])).toEqual(
+        new Map(),
+      )
+
+      // A read, and nothing of B's moved under it.
+      expect(await listTripMembers(beta.tenant.scope, beta.tripId)).toEqual(
+        betaMembers,
+      )
+      expect(await listTripGuests(beta.tenant.scope, beta.tripId)).toEqual(
+        betaGuests,
+      )
+    })
+
+    it('reads a whole page in two grouped statements, never one per card', async () => {
+      const second = await createTrip(alpha.tenant.scope, {
+        title: 'A second trip of A',
+        currency: 'EUR',
+      })
+      harness.statements.length = 0
+
+      const counts = await countTripPeople(alpha.tenant.scope, [
+        alpha.tripId,
+        second.id,
+      ])
+
+      expect(counts.get(second.id)).toBe(1)
+      expect(harness.statements).toHaveLength(2)
+      for (const statement of harness.statements) {
+        expect(statement).toMatch(/group by/i)
+      }
     })
   })
 })
