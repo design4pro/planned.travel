@@ -885,6 +885,10 @@ requests/minute in production and 100/minute in sandbox**; over the limit it ans
 is the tighter one, so a matrix walk that polls in a loop will hit `429` there first — that is a
 rate limit, not an integration bug.
 
+The Worker's token never gets `discounts:write`, in either organization. Creating a discount is an
+operator's act: the staging unlock pool of §9.12 is seeded with an operator's own sandbox token
+(`POLAR_ADMIN_TOKEN`), which never becomes a Worker secret.
+
 ### 9.3 `POLAR_SERVER`
 
 One secret selects the whole billing environment. Its value domain is exactly two strings:
@@ -1392,6 +1396,54 @@ Until then, the honest statement of where phase A stands is: **the code is writt
 is unwalked.** Say that, in those terms, in the deploy log and in any release note. A row is green
 when an operator has run it and written the evidence down here — never because the code that would
 satisfy it exists.
+
+### 9.12 Staging unlock codes
+
+A pool of single-use, 100%-off discount codes in the **sandbox** organization lets a tester put a
+staging workspace on Solo or Crew without a card: they choose a plan on `/settings/billing` and type
+the code, either on Polar's hosted checkout (a first purchase) or in the app's promotion-code field.
+The codes exist only in the sandbox organization, which is a different Polar account from
+production, so none of them can be redeemed there. No 100%-off code is ever created in production.
+
+**Who holds the token.** The operator who seeds the pool uses their own sandbox Organization Access
+Token with `discounts:read` and `discounts:write`, exported as `POLAR_ADMIN_TOKEN` in their shell for
+the run. It is never a Worker secret and never committed (§9.2).
+
+**Seeding and topping up.**
+
+```bash
+export POLAR_SERVER=sandbox                        # anything else is refused before any request
+export POLAR_ADMIN_TOKEN=polar_oat_…               # the operator's own sandbox token
+# the four sandbox product ids, as in the staging build (§10), or pass --products a,b,c,d
+export VITE_POLAR_PRODUCT_SOLO_MONTHLY=… VITE_POLAR_PRODUCT_SOLO_YEARLY=…
+export VITE_POLAR_PRODUCT_CREW_MONTHLY=… VITE_POLAR_PRODUCT_CREW_YEARLY=…
+
+node scripts/billing/seed-sandbox-discounts.mjs --dry-run        # what it would create
+node scripts/billing/seed-sandbox-discounts.mjs --count 20       # tops the pool up to 20
+```
+
+Each code is `STAGE` plus eight random characters, `percentage` 100%, `duration: forever`,
+`max_redemptions: 1`, restricted to the four paid products and tagged `metadata.pool =
+staging-unlock`. The script counts the pool's unredeemed codes, creates only the shortfall and
+prints **only the codes it just created**, so a code already handed to one tester is never printed
+for a second. `--list-unused` prints the whole unredeemed pool for an operator who has lost the list.
+
+**Handing codes out.** One code per tester, shared outside the repository (the team's password
+manager or a direct message). A code is never written into this repository, an issue or a PR.
+
+**Detaching a discount from a subscription.** Polar keeps a `forever` discount on the subscription
+until it is removed:
+
+```bash
+curl -sS -X PATCH "$POLAR_API/subscriptions/SUBSCRIPTION_ID" \
+  -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" -H 'content-type: application/json' \
+  -d '{ "discount_id": null }'
+```
+
+**Pruning.** The app's code lookup reads at most 1,000 discounts (ten pages of 100), and redeemed
+pool codes are never deleted by the script. Every run prints the organization's total discount count
+and warns above 800. Once a tester's walk is done, delete their redeemed `STAGE…` codes in the
+sandbox dashboard (**Products → Discounts**), and do it at the latest when the script warns.
 
 ---
 
