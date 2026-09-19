@@ -86,6 +86,15 @@ export const SUBSCRIPTIONS_PATH = '/v1/subscriptions/'
 /** Only plans a customer can actually buy are accepted. */
 const paidPlanIds = PAID_PLAN_LIST.map((plan) => plan.id)
 
+/**
+ * A promotion code typed on the billing screen. Polar allows 256 characters; no human types
+ * more than 64, and the cap bounds what reaches the paged lookup in `./discounts`.
+ */
+const discountCodeField = z
+  .string()
+  .trim()
+  .regex(DISCOUNT_CODE_PATTERN, 'Codes are 3 to 64 letters and digits.')
+
 export const planSelectionInput = z.object({
   planId: z
     .enum(PLAN_IDS)
@@ -95,17 +104,14 @@ export const planSelectionInput = z.object({
   interval: z.enum(BILLING_INTERVALS),
   /** Requested seats. Clamped into the plan's range before it reaches Polar. */
   seats: z.number().int().min(1).max(1000).optional(),
-  /**
-   * A promotion code typed on the billing screen. Polar allows 256 characters; no human types
-   * more than 64, and the cap bounds what reaches the paged lookup in `./discounts`.
-   */
-  discountCode: z
-    .string()
-    .trim()
-    .regex(DISCOUNT_CODE_PATTERN, 'Codes are 3 to 64 letters and digits.')
-    .optional(),
+  /** A promotion code, sent with the plan choice it should apply to. */
+  discountCode: discountCodeField.optional(),
 })
 export type PlanSelectionInput = z.infer<typeof planSelectionInput>
+
+/** **Apply to current plan**: the code alone; the plan comes from the subscription row. */
+export const discountCodeInput = z.object({ discountCode: discountCodeField })
+export type DiscountCodeInput = z.infer<typeof discountCodeInput>
 
 /**
  * The customer portal takes no arguments.
@@ -745,12 +751,26 @@ async function currentDiscount(
     return { id: embedded.id, products: embedded.products }
   }
 
-  return polarDiscountSchema.parse(
-    await runtime.polar.request({
-      method: 'GET',
-      path: `${DISCOUNTS_PATH}${embedded.id}`,
-    }),
-  )
+  try {
+    return polarDiscountSchema.parse(
+      await runtime.polar.request({
+        method: 'GET',
+        path: `${DISCOUNTS_PATH}${embedded.id}`,
+      }),
+    )
+  } catch (cause) {
+    if (!(cause instanceof PolarApiError)) throw cause
+    if (cause.status !== 403 && cause.status !== 404) throw cause
+    // A token without `discounts:read`, or a discount deleted since it was redeemed: neither
+    // may stop a plan change that brought no code. Leaving the key out is what every product
+    // change did before promotion codes existed, so the discount is simply left alone.
+    runtime.logger.warn('billing.discount.current_unreadable', {
+      discountId: embedded.id,
+      status: cause.status,
+      ...(cause.status === 403 ? { missingScope: 'discounts:read' } : {}),
+    })
+    return null
+  }
 }
 
 /**
@@ -773,6 +793,118 @@ async function productPatchDiscount(
   const current = await currentDiscount(runtime, path)
   if (current === null || appliesToProduct(current, productId)) return {}
   return { discount_id: null }
+}
+
+/**
+ * Attach a resolved discount in a `PATCH` that carries nothing else, so a `422` can only be about
+ * the code: `fit()` has just passed it, so what is left is a code that expired or ran out since
+ * the lookup. That refusal is returned, never thrown; the attempt was counted already, in
+ * `resolveDiscount()`.
+ */
+async function attachDiscount(
+  runtime: BillingRuntime,
+  identity: BillingIdentity,
+  path: string,
+  discountId: string,
+): Promise<PolarSubscription | DiscountRejection> {
+  try {
+    return await patchSubscription(runtime, path, { discount_id: discountId })
+  } catch (cause) {
+    if (!(cause instanceof PolarApiError) || cause.status !== 422) throw cause
+    logDiscountRejection(
+      runtime,
+      identity,
+      'refused_by_polar',
+      discountId,
+      cause.detail,
+    )
+    return { surface: 'discount_rejected', reason: 'invalid' }
+  }
+}
+
+/**
+ * The scheduled change to keep after a `PATCH` that moved neither the product nor the seats.
+ * Polar's own `pending_update` wins; without one, the change already on the row still stands,
+ * because attaching a code does not cancel a downgrade booked for the period end.
+ */
+function keptPendingChange(
+  applied: PolarSubscription,
+  record: SubscriptionRecord,
+): PendingPlanChange | null {
+  return (
+    pendingChangeFromPolar(applied.pending_update) ??
+    record.pendingChange ??
+    null
+  )
+}
+
+/**
+ * Attach a promotion code to the plan in force, whatever the page believed that plan to be.
+ *
+ * **Apply to current plan** sends only the code: the plan, interval and seats are read from the
+ * subscription row here, so a tab left open across a change made in the Customer Portal cannot
+ * turn "apply the code" into a plan change that moves money.
+ */
+export async function applyDiscountToCurrentPlan(
+  runtime: BillingRuntime,
+  identity: BillingIdentity,
+  input: DiscountCodeInput,
+): Promise<PlanChangeResult> {
+  assertCanManage(identity)
+
+  const { discountCode } = discountCodeInput.parse(input)
+  const record = await runtime.subscriptions.findByOrganization(
+    identity.organizationId,
+  )
+  const subscriptionId = liveSubscriptionId(record)
+  if (
+    subscriptionId === null ||
+    record === null ||
+    record.providerProductId === null
+  ) {
+    // The button is offered only with a live subscription; a stale page that no longer has
+    // one is told the code does not apply, and nothing is counted or sent.
+    return { surface: 'discount_rejected', reason: 'not_applicable' }
+  }
+
+  const resolved = await resolveDiscount(
+    runtime,
+    identity,
+    discountCode,
+    record.providerProductId,
+  )
+  if (!resolved.ok) {
+    return { surface: 'discount_rejected', reason: resolved.reason }
+  }
+
+  try {
+    const applied = await attachDiscount(
+      runtime,
+      identity,
+      `${SUBSCRIPTIONS_PATH}${subscriptionId}`,
+      resolved.discount.id,
+    )
+    if ('surface' in applied) return applied
+
+    await persistChangedSubscription(
+      runtime,
+      identity.organizationId,
+      applied,
+      keptPendingChange(applied, record),
+    )
+  } finally {
+    await evictPlanState(runtime, identity.organizationId)
+  }
+
+  runtime.logger.info('billing.discount.applied', {
+    organizationId: identity.organizationId,
+    planId: record.planId,
+    discountId: resolved.discount.id,
+  })
+  return {
+    url: discountAppliedUrl(runtime.appUrl),
+    surface: 'discount_applied',
+  }
 }
 
 /**
@@ -866,38 +998,39 @@ export async function changePlan(
     let applied: PolarSubscription | null = null
 
     if (code?.alone === true) {
-      try {
-        applied = await patchSubscription(runtime, path, {
-          discount_id: code.discount.id,
-        })
-      } catch (cause) {
-        if (!(cause instanceof PolarApiError) || cause.status !== 422)
-          throw cause
-        // The first write, and the only thing it carried was the code: `fit()` has just
-        // passed it for both products, so what is left is a code that expired or ran out
-        // since the lookup. Counted already, in `resolveDiscount()`.
-        logDiscountRejection(
-          runtime,
-          identity,
-          'refused_by_polar',
-          code.discount.id,
-          cause.detail,
-        )
-        return { surface: 'discount_rejected', reason: 'invalid' }
-      }
+      const attached = await attachDiscount(
+        runtime,
+        identity,
+        path,
+        code.discount.id,
+      )
+      if ('surface' in attached) return attached
+      applied = attached
     }
 
     if (productChanged) {
-      applied = await patchSubscription(runtime, path, {
-        product_id: selection.price.productId,
-        proration_behavior: proration,
-        ...(await productPatchDiscount(
-          runtime,
-          path,
-          code,
-          selection.price.productId,
-        )),
-      })
+      try {
+        applied = await patchSubscription(runtime, path, {
+          product_id: selection.price.productId,
+          proration_behavior: proration,
+          ...(await productPatchDiscount(
+            runtime,
+            path,
+            code,
+            selection.price.productId,
+          )),
+        })
+      } catch (cause) {
+        if (code?.alone === true) {
+          // The code is already on the subscription and stays there; only the plan did not
+          // move. Said here because the customer-facing error cannot know it.
+          runtime.logger.warn('billing.plan_change.discount_kept', {
+            organizationId: identity.organizationId,
+            discountId: code.discount.id,
+          })
+        }
+        throw cause
+      }
     }
 
     if (seatsChanged) {
@@ -908,7 +1041,10 @@ export async function changePlan(
     }
 
     if (applied !== null) {
-      pendingChange = pendingChangeFor(applied, proration, selection, record)
+      pendingChange =
+        productChanged || seatsChanged
+          ? pendingChangeFor(applied, proration, selection, record)
+          : keptPendingChange(applied, record)
       await persistChangedSubscription(
         runtime,
         identity.organizationId,
@@ -1098,9 +1234,7 @@ export async function orderInvoiceUrl(
   )
 
   if (organizationIdFromOrder(order) !== organizationId) {
-    throw new BillingForbiddenError(
-      'That invoice belongs to another workspace.',
-    )
+    throw new BillingForbiddenError('That invoice belongs to another workspace.')
   }
 
   if (!order.is_invoice_generated) {

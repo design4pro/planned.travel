@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CHECKOUT_PATH,
   CUSTOMER_SESSION_PATH,
+  applyDiscountToCurrentPlan,
   INVOICE_HISTORY_LIMIT,
   INVOICE_POLL_DELAYS_MS,
   INVOICE_RETRY_AFTER_MS,
@@ -1180,6 +1181,197 @@ describe('promotion codes', () => {
         proration_behavior: 'next_period',
       },
     ])
+  })
+})
+
+describe('promotion codes, when Polar says no', () => {
+  const embeddedWithoutProducts = () =>
+    polarSubscription({ discount: { id: TEST_DISCOUNT_ID } })
+
+  it.each([
+    [
+      'a token without discounts:read',
+      new PolarApiError(403, '{}', 'Forbidden'),
+    ],
+    ['a discount deleted since', null],
+  ] as const)(
+    'still moves an uncoded plan when the current discount is unreadable: %s',
+    async (_, discountError) => {
+      const harness = createHarness({
+        record: subscriptionRecord(),
+        polar: {
+          // No catalogue entry: the by-id read answers 404.
+          discounts: [],
+          subscriptionRead: embeddedWithoutProducts(),
+          ...(discountError === null ? {} : { discountError }),
+        },
+      })
+
+      const result = await changePlan(harness.runtime, billingIdentity(), {
+        planId: 'solo',
+        interval: 'yearly',
+      })
+
+      expect(result).toMatchObject({ surface: 'applied' })
+      const patches = harness.calls.filter((call) => call.method === 'PATCH')
+      expect(patches).toHaveLength(1)
+      expect(bodyOf(patches[0])).not.toHaveProperty('discount_id')
+      expect(
+        harness.logs.find(
+          (entry) => entry.message === 'billing.discount.current_unreadable',
+        )?.fields,
+      ).toMatchObject({ discountId: TEST_DISCOUNT_ID })
+    },
+  )
+
+  it('says the code stayed when the product PATCH after it fails', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [polarDiscount()],
+        rejectPatch: (body) =>
+          typeof body === 'object' && body !== null && 'product_id' in body
+            ? new PolarApiError(500, '{}', 'Polar PATCH failed with 500.')
+            : null,
+      },
+    })
+    const key = warmPlanCache(harness)
+
+    await expect(
+      changePlan(harness.runtime, billingIdentity(), {
+        planId: 'crew',
+        interval: 'yearly',
+        seats: 4,
+        discountCode: 'SUMMER20',
+      }),
+    ).rejects.toMatchObject({ status: 500 })
+
+    expect(harness.store.writes).toHaveLength(0)
+    expect(harness.cache.entries.has(key)).toBe(false)
+    expect(
+      harness.logs.find(
+        (entry) => entry.message === 'billing.plan_change.discount_kept',
+      )?.fields,
+    ).toMatchObject({ discountId: TEST_DISCOUNT_ID })
+  })
+
+  it('keeps a booked downgrade when only a code is attached', async () => {
+    const booked = {
+      planId: 'solo' as const,
+      interval: 'monthly' as const,
+      effectiveAt: new Date('2026-09-01T00:00:00.000Z'),
+    }
+    const harness = createHarness({
+      record: subscriptionRecord({ pendingChange: booked }),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(harness.store.writes.at(-1)?.pendingChange).toEqual(booked)
+  })
+})
+
+describe('applyDiscountToCurrentPlan', () => {
+  it('sends only the code, whatever plan the page thought was current', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord({ seats: 6 }),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    const result = await applyDiscountToCurrentPlan(
+      harness.runtime,
+      billingIdentity(),
+      { discountCode: 'summer20' },
+    )
+
+    expect(result).toEqual({
+      url: discountAppliedUrl(TEST_APP_URL),
+      surface: 'discount_applied',
+    })
+    expect(
+      harness.calls
+        .filter((call) => call.method === 'PATCH')
+        .map((call) => bodyOf(call)),
+    ).toEqual([{ discount_id: TEST_DISCOUNT_ID }])
+    expect(harness.store.writes).toHaveLength(1)
+  })
+
+  it('checks the code against the product in force', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [
+          polarDiscount({ products: [{ id: TEST_PRODUCT_IDS.soloMonthly }] }),
+        ],
+      },
+    })
+
+    const result = await applyDiscountToCurrentPlan(
+      harness.runtime,
+      billingIdentity(),
+      { discountCode: 'SUMMER20' },
+    )
+
+    expect(result).toEqual({
+      surface: 'discount_rejected',
+      reason: 'not_applicable',
+    })
+    expect(harness.calls.some((call) => call.method === 'PATCH')).toBe(false)
+  })
+
+  it('refuses without a live subscription, and looks nothing up', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord({ status: 'canceled' }),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    const result = await applyDiscountToCurrentPlan(
+      harness.runtime,
+      billingIdentity(),
+      { discountCode: 'SUMMER20' },
+    )
+
+    expect(result).toEqual({
+      surface: 'discount_rejected',
+      reason: 'not_applicable',
+    })
+    expect(harness.calls).toEqual([])
+  })
+
+  it('turns a 422 into invalid and writes nothing', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [polarDiscount()],
+        rejectPatch: () => new PolarApiError(422, '{}', 'Unprocessable'),
+      },
+    })
+
+    const result = await applyDiscountToCurrentPlan(
+      harness.runtime,
+      billingIdentity(),
+      { discountCode: 'SUMMER20' },
+    )
+
+    expect(result).toEqual({ surface: 'discount_rejected', reason: 'invalid' })
+    expect(harness.store.writes).toHaveLength(0)
+  })
+
+  it('refuses a member', async () => {
+    const harness = createHarness({ record: subscriptionRecord() })
+    await expect(
+      applyDiscountToCurrentPlan(
+        harness.runtime,
+        billingIdentity({ role: 'member' }),
+        { discountCode: 'SUMMER20' },
+      ),
+    ).rejects.toBeInstanceOf(BillingForbiddenError)
   })
 })
 

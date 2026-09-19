@@ -1257,14 +1257,19 @@ environment's limit above — 100 lookups a minute in production, 20 in sandbox 
 told to try again in a minute past it (`billing.discount.lookup_budget_exhausted`). Every caller
 gets 10 attempts an hour, counted per user, per workspace and per address. A `403` on these calls
 is a token without `discounts:read`: coded requests fail as a configuration error, logged as
-`billing.discount.lookup_forbidden`, and uncoded ones are unaffected.
+`billing.discount.lookup_forbidden`, and uncoded ones are unaffected. Grant the scope to both
+organizations' Worker tokens **before** deploying the release that carries promotion codes.
 
 The resolved id is sent as `discount_id` — in the checkout body, or in a `PATCH` of the
 subscription. Polar's `SubscriptionUpdate` carries `discount_id` only on the product variant, so a
 plan change with a code is sent as `{ "discount_id" }` alone first, then the product, then the
 seats; a code that excludes the product in force rides in the product `PATCH` instead. Before an
 uncoded product change the Worker reads the subscription, and clears a product-restricted discount
-that would not fit the new product with `"discount_id": null`. A `422` on the code-only `PATCH` is
+that would not fit the new product with `"discount_id": null`. When that discount cannot be read — a
+`403` for the missing scope, a `404` for a discount deleted since (§9.12 prunes redeemed codes) —
+the key is left out, the discount stays as it was, the plan change goes ahead, and
+`billing.discount.current_unreadable` is logged. **Apply to current plan** sends only the code: the
+plan is read from the subscription row. A `422` on the code-only `PATCH` is
 shown as an invalid code and logged as `billing.discount.rejected` with reason `refused_by_polar`;
 the plan is untouched.
 

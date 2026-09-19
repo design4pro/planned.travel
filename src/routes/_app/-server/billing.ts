@@ -16,8 +16,10 @@ import { getRequestHeader } from '@tanstack/react-start/server'
 
 import { getSession } from '#/server/auth/session'
 import {
+  applyDiscountToCurrentPlan,
   changePlan,
   createPortalSession,
+  discountCodeInput,
   listRecentInvoices,
   orderInvoiceInput,
   orderInvoiceUrl,
@@ -223,6 +225,19 @@ export const startPlanChange = createServerFn({ method: 'POST' })
     const { runtime, identity } = await billingSession()
     return await guarded(runtime, identity.organizationId, 'plan_change', () =>
       changePlan(runtime, identity, data),
+    )
+  })
+
+/**
+ * **Apply to current plan**: attach a promotion code to the subscription in force. Only the code
+ * travels; the plan is read from the subscription row, so this can never change the plan.
+ */
+export const applyPromotionCode = createServerFn({ method: 'POST' })
+  .validator(discountCodeInput)
+  .handler(async ({ data }): Promise<PlanChangeResult> => {
+    const { runtime, identity } = await billingSession()
+    return await guarded(runtime, identity.organizationId, 'plan_change', () =>
+      applyDiscountToCurrentPlan(runtime, identity, data),
     )
   })
 

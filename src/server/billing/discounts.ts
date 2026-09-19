@@ -155,7 +155,9 @@ async function readCount(
 
 /**
  * Count one coded attempt against every key it belongs to, or refuse it when any is spent.
- * A refused attempt is not counted again: the cap is already reached.
+ * A refused attempt is not counted again: the cap is already reached. Each counted attempt
+ * re-arms the key's TTL, so the window is an hour after the last counted attempt rather than a
+ * rolling hour — stricter than the spec's wording, never looser.
  */
 async function takeAttempt(
   runtime: BillingRuntime,

@@ -43,8 +43,7 @@ export const POLAR_SUBSCRIPTION_STATUSES = [
   'unpaid',
   'paused',
 ] as const
-export type PolarSubscriptionStatus =
-  (typeof POLAR_SUBSCRIPTION_STATUSES)[number]
+export type PolarSubscriptionStatus = (typeof POLAR_SUBSCRIPTION_STATUSES)[number]
 
 /** Polar's `OrderStatus`. An order is what Polar issues instead of an invoice. */
 export const POLAR_ORDER_STATUSES = [
@@ -130,7 +129,7 @@ export const polarDiscountListSchema = z.object({
  *
  * `products` is optional because Polar's subscription-embedded variants are the discount's base
  * shape and may omit it; a reader that needs the restriction and finds none re-reads the discount
- * by id (`currentDiscountProducts()` in `checkout.ts`) rather than taking "absent" for "every
+ * by id (`currentDiscount()` in `checkout.ts`) rather than taking "absent" for "every
  * product".
  */
 export const polarSubscriptionDiscountSchema = z.object({
@@ -250,9 +249,7 @@ export function toSubscriptionStatus(
 }
 
 /** Parse an ISO-8601 instant, tolerating null and refusing an unparseable string. */
-export function fromPolarTimestamp(
-  value: string | null | undefined,
-): Date | null {
+export function fromPolarTimestamp(value: string | null | undefined): Date | null {
   if (value == null || value === '') return null
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? null : parsed
@@ -403,8 +400,7 @@ export function cancelledRecord(
     status: 'canceled',
     interval: null,
     seats: free.seatRange.min,
-    providerCustomerId:
-      providerCustomerId ?? previous?.providerCustomerId ?? null,
+    providerCustomerId: providerCustomerId ?? previous?.providerCustomerId ?? null,
     providerSubscriptionId: previous?.providerSubscriptionId ?? null,
     providerProductId: null,
     currentPeriodStart: previous?.currentPeriodStart ?? null,
