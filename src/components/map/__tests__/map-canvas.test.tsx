@@ -178,6 +178,16 @@ function StatusProbe() {
 }
 
 /**
+ * Vitest's default per-test budget is 5 s — shorter than the start-up budget
+ * `mapMounted()` below is allowed to spend. Left at the default, a map that
+ * genuinely never mounts would be cut off by the outer clock first and reported
+ * as a bare "test timed out" instead of as the readiness assertion that failed.
+ * The component's start-up budget on top of the default is what that leaves for
+ * the assertions each case is actually about.
+ */
+vi.setConfig({ testTimeout: MAP_ENGINE_TIMEOUT_MS + 5_000 })
+
+/**
  * Waits for the map to be *committed*, not merely constructed.
  *
  * `harness.maps` is pushed from MapLibre's constructor, which runs inside the
@@ -414,6 +424,7 @@ describe('MapCanvas', () => {
     const user = userEvent.setup()
     serveNothing()
     render(<MapCanvas label="Trip map" />)
+    await mapMounted()
 
     const retry = await screen.findByRole('button', { name: 'Try again' })
     expect(Object.keys(lastMap().options.style.sources).sort()).toEqual(
