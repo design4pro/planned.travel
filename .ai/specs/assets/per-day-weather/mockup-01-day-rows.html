@@ -1,0 +1,334 @@
+<!doctype html>
+<!-- Illustrative static mockup for .ai/specs/2026-09-19-per-day-weather.md. Not app code. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Per-day weather mockup</title>
+    <style>
+      :root {
+        --bg: #f6f5f2;
+        --surface: #ffffff;
+        --ink: #1d1c1a;
+        --ink-3: #6b6862;
+        --ink-4: #9a968f;
+        --accent: #e9e6df;
+        --info: #2f6db3;
+        --info-soft: #e5eef8;
+        --warning: #a36200;
+        --line: #e4e1da;
+        --shadow: 0 10px 30px rgb(0 0 0 / 0.12);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #141413;
+          --surface: #1d1c1b;
+          --ink: #f1efea;
+          --ink-3: #a8a49c;
+          --ink-4: #7c786f;
+          --accent: #2c2a27;
+          --info: #86b4ea;
+          --info-soft: #1d2a3a;
+          --warning: #e7a948;
+          --line: #2f2d2a;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.4 system-ui,
+          sans-serif;
+      }
+      .wrap {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: minmax(0, 380px) minmax(0, 320px);
+        align-items: start;
+      }
+      @media (max-width: 720px) {
+        .wrap {
+          grid-template-columns: 1fr;
+        }
+      }
+      h2 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-3);
+        margin: 0 0 8px;
+      }
+      .rail {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 8px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 12px;
+      }
+      .row + .row {
+        margin-top: 2px;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+      }
+      .num {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--accent);
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .title {
+        font-weight: 700;
+      }
+      .date {
+        color: var(--ink-3);
+        font-size: 12px;
+        margin-left: 6px;
+        font-variant-numeric: tabular-nums;
+      }
+      .stops {
+        color: var(--ink-4);
+        font-size: 12px;
+      }
+      .badge {
+        flex: none;
+        width: 92px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        padding: 0 8px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink);
+        background: transparent;
+      }
+      .badge.est {
+        border: 1px dashed var(--info);
+        color: var(--info);
+      }
+      .badge.na {
+        color: var(--ink-4);
+      }
+      .badge.sk {
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          var(--line),
+          var(--accent)
+        );
+      }
+      .badge.focus {
+        outline: 2px solid var(--info);
+        outline-offset: 2px;
+      }
+      .lo {
+        color: var(--ink-3);
+      }
+      .pop {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px;
+        box-shadow: var(--shadow);
+      }
+      .pop h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .grid dt {
+        color: var(--ink-3);
+      }
+      .grid dd {
+        margin: 0;
+        text-align: right;
+      }
+      .slots {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin: 12px 0;
+        text-align: center;
+        font-size: 12px;
+      }
+      .slots div {
+        background: var(--accent);
+        border-radius: 8px;
+        padding: 6px 2px;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--info);
+        background: var(--info-soft);
+        padding: 6px 8px;
+        border-radius: 8px;
+        margin-top: 10px;
+      }
+      .attr {
+        font-size: 11px;
+        color: var(--ink-4);
+        margin-top: 10px;
+        border-top: 1px solid var(--line);
+        padding-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section>
+        <h2>Day rail: one badge per day, beside the header button</h2>
+        <div class="rail">
+          <div class="row">
+            <div class="head">
+              <span class="num">1</span>
+              <div>
+                <span class="title">Kyoto arrival</span
+                ><span class="date">Sat 3 Oct</span>
+                <div class="stops">3 stops</div>
+              </div>
+            </div>
+            <span
+              class="badge focus"
+              aria-label="Forecast: partly cloudy, high 24°, low 16°"
+              >⛅ 24° <span class="lo">16°</span></span
+            >
+          </div>
+          <div class="row">
+            <div class="head">
+              <span class="num">2</span>
+              <div>
+                <span class="title">Arashiyama</span
+                ><span class="date">Sun 4 Oct</span>
+                <div class="stops">4 stops</div>
+              </div>
+            </div>
+            <span class="badge" aria-label="Forecast: rain, high 21°, low 15°"
+              >🌧 21° <span class="lo">15°</span></span
+            >
+          </div>
+          <div class="row">
+            <div class="head">
+              <span class="num">3</span>
+              <div>
+                <span class="title">Nara day trip</span
+                ><span class="date">Mon 5 Oct</span>
+                <div class="stops">2 stops</div>
+              </div>
+            </div>
+            <span class="badge na" aria-label="Weather unavailable for this day"
+              >—</span
+            >
+          </div>
+          <div class="row">
+            <div class="head">
+              <span class="num">4</span>
+              <div>
+                <span class="title">Osaka</span
+                ><span class="date">Tue 20 Oct</span>
+                <div class="stops">5 stops</div>
+              </div>
+            </div>
+            <span
+              class="badge est"
+              aria-label="Estimate: typical high 22°, low 14°"
+              >≈ 22° <span class="lo">14°</span></span
+            >
+          </div>
+          <div class="row">
+            <div class="head">
+              <span class="num">5</span>
+              <div>
+                <span class="title">Loading</span
+                ><span class="date">Wed 21 Oct</span>
+                <div class="stops">1 stop</div>
+              </div>
+            </div>
+            <span class="badge sk" aria-label="Loading weather"></span>
+          </div>
+          <div class="row">
+            <div class="head">
+              <span class="num">6</span>
+              <div>
+                <span class="title">Undated day</span>
+                <div class="stops">0 stops</div>
+              </div>
+            </div>
+            <span class="badge" aria-hidden="true"></span>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h2>Popover: forecast day</h2>
+        <div class="pop" role="dialog" aria-label="Weather for Sat 3 Oct">
+          <h3>Weather for Sat 3 Oct</h3>
+          <dl class="grid">
+            <dt>High / low</dt>
+            <dd>24° / 16°</dd>
+            <dt>Precipitation</dt>
+            <dd>1.2 mm · 30% chance</dd>
+            <dt>Wind</dt>
+            <dd>14 km/h</dd>
+            <dt>Sunrise</dt>
+            <dd>05:53</dd>
+            <dt>Sunset</dt>
+            <dd>17:36</dd>
+          </dl>
+          <div class="slots">
+            <div>Night<br />🌙 17°</div>
+            <div>Morning<br />⛅ 19°</div>
+            <div>Afternoon<br />⛅ 24°</div>
+            <div>Evening<br />☁ 20°</div>
+          </div>
+          <div class="attr">Forecast data: MET Norway, CC BY 4.0</div>
+        </div>
+        <h2 style="margin-top: 20px">Popover: estimate day</h2>
+        <div class="pop" role="dialog" aria-label="Weather for Tue 20 Oct">
+          <h3>Weather for Tue 20 Oct</h3>
+          <dl class="grid">
+            <dt>Typical high / low</dt>
+            <dd>≈ 22° / 14°</dd>
+            <dt>Precipitation</dt>
+            <dd>≈ 4.1 mm</dd>
+            <dt>Sunrise</dt>
+            <dd>06:05</dd>
+            <dt>Sunset</dt>
+            <dd>17:16</dd>
+          </dl>
+          <div class="note">
+            A long-term average for this month, not a forecast.
+          </div>
+          <div class="attr">
+            Data: NASA Langley Research Center POWER Project
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

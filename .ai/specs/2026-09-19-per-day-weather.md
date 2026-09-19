@@ -270,6 +270,10 @@ export const loadTripWeather: ServerFn<
 - Motion: the popover uses the existing primitive's motion, and `prefers-reduced-motion` is honoured
   by it. Keyboard: Tab reaches the badge, Enter/Space opens it, Escape closes it.
 
+Illustrative mockup (static, not app code): `assets/per-day-weather/mockup-01-day-rows.html`,
+rendered as `mockup-01-day-rows-light.png`, `mockup-02-day-rows-dark.png` and
+`mockup-03-day-rows-mobile.png` in the same folder.
+
 ## 📝 Visual change expected
 
 - Route `/trips/$tripId/plan`: every dated day header with a location gains a badge. States to
