@@ -42,12 +42,14 @@ existing hardcoded English.
 
 ## Progress
 
+PR: #635
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: paste a position into the place form
 
-- [ ] 1.1 The parser, test-first
-- [ ] 1.2 The copy in 23 locales
-- [ ] 1.3 The paste behaviour and its component test
-- [ ] 1.4 The journey
-- [ ] 1.5 Spec bookkeeping and the full gate
+- [x] 1.1 The parser, test-first — 22400544a
+- [x] 1.2 The copy in 23 locales — 01a5f50c6
+- [x] 1.3 The paste behaviour and its component test — 01a5f50c6
+- [x] 1.4 The journey — bb1e053c2
+- [x] 1.5 Spec bookkeeping and the full gate — 950466281
