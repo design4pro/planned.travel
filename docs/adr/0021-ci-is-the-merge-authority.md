@@ -90,6 +90,8 @@ for a redeploy, or for shipping while CI is down.
 - **A merge waits for CI, and stalls when the pool does.** The recovery paths are the ones that
   already existed: `vars.RUNNER_CI` set to `["ubuntu-latest"]` moves every job to GitHub-hosted
   runners without a pull request, and organisation and repository admins bypass both rulesets.
+  _Amended by ADR 0023: `vars.RUNNER_CI` alone brings CI back but not the required `claude-review`
+  check, which runs on `vars.RUNNER_AGENT`; the variable path needs both set._
 - **Production ships a CI run later.** Merging the promotion pull request now deploys after the push
   run on `main`, about the length of the e2e shards, not at the moment of the push.
 - **A flake on `develop` holds that commit's staging deploy** until a rerun or the next merge. A
