@@ -1,11 +1,11 @@
 # Index-usable airport type-ahead
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | ready |
-| **Issue**          | #194  |
-| **Spec PR**        | #467  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | in-progress |
+| **Issue**          | #194        |
+| **Spec PR**        | #467        |
+| **Implementation** | none        |
 
 ## 📝 TLDR
 

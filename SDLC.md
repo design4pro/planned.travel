@@ -249,7 +249,9 @@ Three amendment rules are specific to this document's shape:
   stops at documentation skips them, on the `scope` job's word — there is no label that turns them
   on or off.
 - **Who starts a run.** `groom`, `autofix`, `spec` and `review-threads` are the trigger labels wired
-  here, and no skill adds one to its own input. Alongside them the intake ladder runs:
+  here, and no skill adds one to its own input. `review-threads` is removed inside the claim step,
+  after `in-progress` is on, rather than before it (the `om-auto-fix-pr` override, #490), so the
+  PR is never observably free. Alongside them the intake ladder runs:
   `needs-triage` starts triage, and `ready-for-agent` starts `implement-ticket`. A person can also
   hand an issue to the agent directly from the cockpit.
 - **Risk here.** `risk-high` means the diff touches `src/server/auth`, `src/server/repos/base.ts`,

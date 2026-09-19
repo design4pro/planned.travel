@@ -2849,7 +2849,7 @@ export const staffApiTokens = sqliteTable(
  * was reported as a finding and amended there, in that file's own commit; nothing here and in
  * docs/DEPLOY.md §5 disagrees with it any more. The behaviour is pinned by tests in
  * `src/server/db/__tests__/platform-schema.test.ts` rather than left as prose, since it cannot be
- * changed after `0004` ships without a table recreate (docs/DEPLOY.md §5).
+ * changed after `0005` ships without a table recreate (docs/DEPLOY.md §5).
  *
  * **Four cross-column `CHECK`s, because the two obvious ones only cover half of each rule.**
  * docs/ACCESS.md §4.1 lists four, and the Notes column they come from states two biconditionals:
@@ -2881,7 +2881,7 @@ export const staffApiTokens = sqliteTable(
  * `actor_kind` and {@link PLATFORM_ACTOR_ROLES} on `actor_role`. A value outside any of the four
  * fails `pnpm typecheck` at the insert, which is the whole of the guarantee for the two with no
  * `CHECK` behind them and the first line of it for the two that have one. `$type` is a type-level
- * cast that emits no SQL — the `changes` column has carried one since `0004` and generates plain
+ * cast that emits no SQL — the `changes` column has carried one since `0005` and generates plain
  * `text` — so adding these moved no migration.
  */
 export const platformAuditLog = sqliteTable(
@@ -3164,10 +3164,15 @@ export const airports = sqliteTable(
   (t) => [
     uniqueIndex('airports_iata_unq').on(t.iataCode),
     uniqueIndex('airports_icao_unq').on(t.icaoCode),
-    // The type-ahead matches a prefix of the code, the name or the city; the two codes are covered
-    // by their unique indexes above.
-    index('airports_name_idx').on(t.name),
-    index('airports_city_idx').on(t.city),
+    // The type-ahead matches a prefix of the code, the name or the city. SQLite can only turn
+    // `LIKE 'term%'` into an indexed range scan when the index collation matches the comparison,
+    // and with `case_sensitive_like` off that means NOCASE — which is why the prefix probes get
+    // their own indexes and do not ride the unique ones. The unique indexes stay BINARY: they
+    // serve `findAirportByCode`'s exact lookup, which compares with the column's own collation.
+    index('airports_iata_prefix_idx').on(sql`${t.iataCode} COLLATE NOCASE`),
+    index('airports_icao_prefix_idx').on(sql`${t.icaoCode} COLLATE NOCASE`),
+    index('airports_name_idx').on(sql`${t.name} COLLATE NOCASE`),
+    index('airports_city_idx').on(sql`${t.city} COLLATE NOCASE`),
     ...latLngChecks('airports_lat_chk', t.lat, t.lng),
   ],
 )

@@ -265,6 +265,36 @@ const messages = {
   'people.error.lastOwner':
     'تحتفظ كل رحلة بمالك واحد على الأقل. اجعل شخصًا آخر مالكًا أولًا.',
   'people.error.notInWorkspace': 'هذا الشخص ليس في مساحة العمل هذه',
+  'people.error.alreadyOnTrip': 'هذا الشخص موجود بالفعل في هذه الرحلة',
+  'people.guests.title': 'يسافرون معك',
+  'people.guests.description': 'أشخاص في هذه الرحلة ليس لديهم حساب',
+  'people.guests.empty': 'لا أحد بعد',
+  'people.guests.emptyHint':
+    'الضيف شخص يسافر معك ولا يحتاج إلى حساب. أضفه باسمه.',
+  'people.guest.badge': 'ضيف',
+  'people.guest.add.label': 'اسمه',
+  'people.guest.add.placeholder': 'ليلى',
+  'people.guest.add.action': 'إضافة ضيف',
+  'people.guest.rename.action': 'إعادة تسمية {name}',
+  'people.guest.rename.title': 'إعادة تسمية {name}',
+  'people.guest.rename.confirm': 'إعادة التسمية',
+  'people.guest.remove.action': 'إزالة {name} من هذه الرحلة',
+  'people.guest.remove.title': 'هل تريد إزالة {name} من هذه الرحلة؟',
+  'people.guest.remove.body': 'سيُزال الضيف. لن يتغير شيء آخر في الرحلة.',
+  'people.guest.remove.confirm': 'إزالة',
+  'people.guest.merge.action': '{name} أصبح الآن…',
+  'people.guest.merge.title': '{name} أصبح الآن أحد أشخاص هذه الرحلة',
+  'people.guest.merge.body':
+    'كل ما أُسند إلى {name} سينتقل إلى الشخص الذي تختاره، وسيُزال الضيف. لا يمكن التراجع عن ذلك.',
+  'people.guest.merge.inherits': 'سيرث {member} كل ما هو مُسند إلى {name}.',
+  'people.guest.merge.placeholder': 'اختر شخصًا من هذه الرحلة',
+  'people.guest.merge.confirm': 'دمج',
+  'people.guest.merge.done': '{name} أصبح الآن {member}',
+  'people.guest.merge.nothingMoved': 'لم يُسند إليه أي شيء بعد',
+  'people.error.guestNameTaken': 'يوجد بالفعل ضيف باسم {name} في هذه الرحلة',
+  'people.error.guestLimit':
+    'تتسع الرحلة لـ {limit} ضيفًا على الأكثر، لأن القائمة الأطول تجعل اختيار المشاركين وتقسيم المصاريف صعب القراءة',
+  'people.error.guestMergeTarget': 'اختر شخصًا موجودًا بالفعل في هذه الرحلة',
 } satisfies TranslationOf<typeof En>
 
 export default messages

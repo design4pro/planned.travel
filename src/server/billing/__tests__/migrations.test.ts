@@ -37,7 +37,7 @@ describe('the generated migrations', () => {
   })
 
   it('never rebuild the subscriptions table to add to it', () => {
-    // 0000 creates it and 0002 renames three columns in place; nothing after 0000 may
+    // 0000 creates it and 0003 renames three columns in place; nothing after 0000 may
     // copy the table aside and drop the original.
     for (const migration of shippedMigrations().slice(1)) {
       // A recreate is what drizzle-kit answers a new CHECK constraint with, and it

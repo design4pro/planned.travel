@@ -28,6 +28,7 @@ import { createTenantRepository, tenantFilter } from './base'
 import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { getExpense } from './expenses'
+import { unlinkAccommodationsFromReservation } from './itinerary'
 import { placesRepository } from './places'
 import { requireTrip, tripRoleFor } from './trips'
 import {
@@ -356,11 +357,19 @@ export async function setReservationStatus(
   })
 }
 
+/**
+ * Removes a booking, releasing any stay made under it first — see
+ * {@link unlinkAccommodationsFromReservation} for why the database cannot be made to do it.
+ *
+ * Not a transaction, because D1 gives this module none: an unlink that succeeds and a delete that
+ * fails leaves the booking and its nights, no longer linked, both still visible to the reader.
+ */
 export async function deleteReservation(
   scope: TenantScope,
   reservationId: string,
 ): Promise<void> {
   await requireWritableReservation(scope, reservationId)
+  await unlinkAccommodationsFromReservation(scope, reservationId)
   await reservationsRepository.requireRemove(scope, reservationId)
 }
 

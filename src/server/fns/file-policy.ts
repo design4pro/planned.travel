@@ -317,63 +317,105 @@ export const MAX_IMPORT_BYTES = 5 * 1024 * 1024
  * `ics` and `json` have grammars and go to the deterministic parsers; everything else becomes text
  * and then rows through the model. An extension absent from this map is storable but unreadable by
  * an import, which is exactly what the boundary refusal needs to know.
+ *
+ * The values are {@link ImportReader}s rather than formats, because the document branch itself
+ * reads three ways and the queue's reader must take the same one the boundary accepted.
  */
-const IMPORT_FORMATS: ReadonlyMap<string, ImportFormat> = new Map<
+const IMPORT_READERS: ReadonlyMap<string, ImportReader> = new Map<
   string,
-  ImportFormat
+  ImportReader
 >([
   ['ics', 'ics'],
   ['json', 'json'],
-  ['pdf', 'document'],
-  ['html', 'document'],
-  ['htm', 'document'],
-  ['eml', 'document'],
-  ['txt', 'document'],
-  ['md', 'document'],
-  ['png', 'document'],
-  ['jpg', 'document'],
-  ['jpeg', 'document'],
-  ['webp', 'document'],
-  ['heic', 'document'],
-  ['docx', 'document'],
-  ['xlsx', 'document'],
+  ['pdf', 'convert'],
+  ['html', 'convert'],
+  ['htm', 'convert'],
+  ['eml', 'mail'],
+  ['txt', 'text'],
+  ['md', 'text'],
+  ['png', 'convert'],
+  ['jpg', 'convert'],
+  ['jpeg', 'convert'],
+  ['webp', 'convert'],
+  ['heic', 'convert'],
+  ['docx', 'convert'],
+  ['xlsx', 'convert'],
 ])
 
 /**
  * The `accept` attribute for the import picker: narrower than {@link ACCEPT_ATTRIBUTE}.
  *
- * Derived from {@link IMPORT_FORMATS} rather than written beside it, so the list the OS dialog
+ * Derived from {@link IMPORT_READERS} rather than written beside it, so the list the OS dialog
  * filters by and the list the server refuses against cannot drift apart.
  */
-export const IMPORT_ACCEPT_ATTRIBUTE = [...IMPORT_FORMATS.keys()]
+export const IMPORT_ACCEPT_ATTRIBUTE = [...IMPORT_READERS.keys()]
   .map((extension) => `.${extension}`)
   .join(',')
 
 /** The media types an extensionless stored file may still be read as. */
-const IMPORT_FORMATS_BY_TYPE: ReadonlyMap<string, ImportFormat> = new Map<
+const IMPORT_READERS_BY_TYPE: ReadonlyMap<string, ImportReader> = new Map<
   string,
-  ImportFormat
+  ImportReader
 >([
   ['text/calendar', 'ics'],
   ['application/json', 'json'],
-  ['application/pdf', 'document'],
-  ['text/html', 'document'],
-  ['message/rfc822', 'document'],
-  ['text/plain', 'document'],
-  ['text/markdown', 'document'],
-  ['image/png', 'document'],
-  ['image/jpeg', 'document'],
-  ['image/webp', 'document'],
-  ['image/heic', 'document'],
+  ['application/pdf', 'convert'],
+  ['text/html', 'convert'],
+  ['message/rfc822', 'mail'],
+  ['text/plain', 'text'],
+  ['text/markdown', 'text'],
+  ['image/png', 'convert'],
+  ['image/jpeg', 'convert'],
+  ['image/webp', 'convert'],
+  ['image/heic', 'convert'],
   [
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'document',
+    'convert',
   ],
   [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'document',
+    'convert',
   ],
 ])
+
+/**
+ * How an import reads one file — one step finer than {@link ImportFormat}.
+ *
+ * The `document` branch splits three ways because its reader does: `text` is decoded as it stands,
+ * `mail` is decoded with its base64 runs stripped, and `convert` goes through the platform's
+ * document conversion.
+ */
+export type ImportReader = 'ics' | 'json' | 'text' | 'mail' | 'convert'
+
+const FORMAT_OF_READER: Readonly<Record<ImportReader, ImportFormat>> = {
+  ics: 'ics',
+  json: 'json',
+  text: 'document',
+  mail: 'document',
+  convert: 'document',
+}
+
+/**
+ * The reader an import would use for this file, or `null` when it cannot read it at all.
+ *
+ * The one resolution both the upload boundary ({@link importFormatFor}) and the queue's document
+ * reader (`documentToText`) ask, so the policy that accepted a file and the code that reads it
+ * cannot disagree about it. The extension decides; the stored media type is consulted only for a
+ * file with no extension at all.
+ */
+export function importReaderFor(
+  filename: string,
+  contentType: string,
+): ImportReader | null {
+  const extension = extensionOf(filename)
+  if (extension.length > 0) {
+    return IMPORT_READERS.get(extension) ?? null
+  }
+  const resolved = resolveContentType(filename, contentType)
+  return resolved === null
+    ? null
+    : (IMPORT_READERS_BY_TYPE.get(resolved) ?? null)
+}
 
 /**
  * The format an import would read this file as, or `null` when it cannot read it at all.
@@ -385,12 +427,6 @@ export function importFormatFor(
   filename: string,
   contentType: string,
 ): ImportFormat | null {
-  const extension = extensionOf(filename)
-  if (extension.length > 0) {
-    return IMPORT_FORMATS.get(extension) ?? null
-  }
-  const resolved = resolveContentType(filename, contentType)
-  return resolved === null
-    ? null
-    : (IMPORT_FORMATS_BY_TYPE.get(resolved) ?? null)
+  const reader = importReaderFor(filename, contentType)
+  return reader === null ? null : FORMAT_OF_READER[reader]
 }

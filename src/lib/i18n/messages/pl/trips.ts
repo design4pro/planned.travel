@@ -254,6 +254,41 @@ const messages = {
   'people.error.lastOwner':
     'Wycieczka ma co najmniej jednego właściciela. Najpierw uczyń właścicielem kogoś innego.',
   'people.error.notInWorkspace': 'Tej osoby nie ma w tej przestrzeni',
+  'people.error.alreadyOnTrip': 'Ta osoba jest już na tej wycieczce',
+  'people.guests.title': 'Podróżują z tobą',
+  'people.guests.description': 'Osoby na tej wycieczce, które nie mają konta',
+  'people.guests.empty': 'Jeszcze nikogo',
+  'people.guests.emptyHint':
+    'Gość to ktoś, kto podróżuje z tobą i nie potrzebuje konta. Dodaj go po imieniu.',
+  'people.guest.badge': 'Gość',
+  'people.guest.add.label': 'Imię',
+  'people.guest.add.placeholder': 'Ania',
+  'people.guest.add.action': 'Dodaj gościa',
+  'people.guest.rename.action': 'Zmień nazwę: {name}',
+  'people.guest.rename.title': 'Zmień nazwę: {name}',
+  'people.guest.rename.confirm': 'Zmień nazwę',
+  'people.guest.remove.action': 'Usuń {name} z tej wycieczki',
+  'people.guest.remove.title': 'Usunąć {name} z tej wycieczki?',
+  'people.guest.remove.body':
+    'Gość zniknie z listy. Nic innego na wycieczce się nie zmieni.',
+  'people.guest.remove.confirm': 'Usuń',
+  'people.guest.merge.action': '{name} to teraz…',
+  'people.guest.merge.title': '{name} jest teraz jedną z osób na tej wycieczce',
+  'people.guest.merge.body':
+    'Wszystko, co przypisano do {name}, przejdzie na wybraną osobę, a gość zniknie. Tego nie da się cofnąć.',
+  'people.guest.merge.inherits':
+    '{member} przejmie wszystko, co przypisano do {name}.',
+  'people.guest.merge.placeholder': 'Wybierz kogoś z tej wycieczki',
+  'people.guest.merge.confirm': 'Połącz',
+  'people.guest.merge.done': '{name} to teraz {member}',
+  'people.guest.merge.nothingMoved':
+    'Nic nie było jeszcze do tej osoby przypisane',
+  'people.error.guestNameTaken':
+    'Gość o imieniu {name} jest już na tej wycieczce',
+  'people.error.guestLimit':
+    'Wycieczka mieści najwyżej {limit} gości, bo dłuższa lista utrudnia wybór uczestników i czytelność podziału kosztów',
+  'people.error.guestMergeTarget':
+    'Wybierz kogoś, kto już jest na tej wycieczce',
 } satisfies TranslationOf<typeof En>
 
 export default messages

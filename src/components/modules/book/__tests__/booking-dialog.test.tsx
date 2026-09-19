@@ -13,6 +13,7 @@ import Ui from '#/lib/i18n/messages/en/ui'
 import { BookingDialog } from '../booking-dialog'
 
 import type { Catalogue } from '#/lib/i18n'
+import type { BookingDayOption, BookingRow } from '#/server/fns/reservations'
 
 /**
  * What the traveller is told when a booking will not save, asserted where they
@@ -42,11 +43,16 @@ const EN: Catalogue = {
  * refused draft reaches neither, which is the second assertion below.
  */
 const reservations = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn() }))
+const stays = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn() }))
 const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
 
 vi.mock('#/server/fns/reservations', () => ({
   createBookingFn: reservations.create,
   updateBookingFn: reservations.update,
+}))
+vi.mock('#/server/fns/stays', () => ({
+  createStayFn: stays.create,
+  updateStayFn: stays.update,
 }))
 vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
 
@@ -99,5 +105,155 @@ describe('BookingDialog', () => {
     submitTheForm()
 
     expect(reservations.create).not.toHaveBeenCalled()
+  })
+})
+
+/* ------------------------------------------------------------------ the stay */
+
+const DAYS: ReadonlyArray<BookingDayOption> = [1, 2, 3, 4, 5].map((n) => ({
+  id: `day-${n}`,
+  dayNumber: n,
+  date: `2026-04-${String(9 + n).padStart(2, '0')}`,
+  title: null,
+  stops: [],
+}))
+
+/** A stay already on the trip: in on day 1, out on day 4. */
+const STAY: BookingRow = {
+  id: 'booking-1',
+  type: 'accommodation',
+  status: 'confirmed',
+  title: 'Hotel Gracery Shinjuku',
+  provider: null,
+  location: null,
+  confirmationNumber: null,
+  url: null,
+  startDate: '2026-04-10',
+  startTime: '15:00',
+  endDate: '2026-04-13',
+  endTime: '11:00',
+  guests: null,
+  priceMinor: null,
+  currency: null,
+  notes: null,
+  dayId: 'day-1',
+  assignmentId: null,
+  hasLedgerLine: false,
+  importedAt: null,
+  transportId: null,
+  stay: {
+    id: 'stay-1',
+    startDayId: 'day-1',
+    endDayId: 'day-4',
+    checkInTime: '15:00',
+    checkInEndTime: null,
+    checkOutTime: '11:00',
+  },
+}
+
+function openStay(booking?: BookingRow): void {
+  render(
+    <I18nProvider locale="en" messages={EN}>
+      <BookingDialog
+        tripId="trip-1"
+        booking={booking}
+        days={DAYS}
+        currency="JPY"
+        open
+        onOpenChange={() => {}}
+      />
+    </I18nProvider>,
+  )
+}
+
+describe('BookingDialog — a stay', () => {
+  it('states the nights between the two chosen days', () => {
+    openStay(STAY)
+
+    const nights = document.querySelector('[data-part="stay-nights"]')
+    expect(nights?.textContent).toBe(
+      '3 nights · Day 1 — 2026-04-10 to Day 4 — 2026-04-13',
+    )
+    // The typed dates and the single-day pin are the other types' dating, not a stay's.
+    expect(document.querySelector('input[type="date"]')).toBeNull()
+  })
+
+  it('asks for the two days, not a date, before it saves a new stay', () => {
+    openStay()
+    submitTheForm()
+
+    expect(
+      screen.getAllByText('This booking needs a check-in day.').length,
+    ).toBeGreaterThan(0)
+    expect(screen.queryByText('This booking needs a date.')).toBeNull()
+    expect(stays.create).not.toHaveBeenCalled()
+  })
+
+  it('keeps typed dates for an accommodation booking that has no nights behind it', () => {
+    openStay({ ...STAY, stay: null })
+
+    expect(document.querySelector('[data-part="stay-nights"]')).toBeNull()
+    expect(document.querySelector('input[type="date"]')).not.toBeNull()
+  })
+
+  it('fixes the type of an existing stay', () => {
+    openStay(STAY)
+
+    const other = document.querySelector<HTMLButtonElement>(
+      '[data-part="type-restaurant"]',
+    )
+    expect(other?.disabled).toBe(true)
+  })
+
+  it('fixes the type once a ledger refusal leaves a saved booking open', async () => {
+    reservations.create.mockResolvedValue({
+      reservationId: 'booking-2',
+      ledger: 'failed',
+    })
+    openStay()
+    const other = document.querySelector<HTMLButtonElement>(
+      '[data-part="type-other"]',
+    )
+    if (other === null) {
+      throw new Error('the dialog rendered no "other" type chip')
+    }
+    fireEvent.click(other)
+    fireEvent.change(screen.getByRole('textbox', { name: /name/iu }), {
+      target: { value: 'Museum pass' },
+    })
+    submitTheForm()
+
+    await vi.waitFor(() => expect(reservations.create).toHaveBeenCalledTimes(1))
+    // Switching to a stay now would write a second booking through the stay's own create.
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector<HTMLButtonElement>(
+          '[data-part="type-accommodation"]',
+        )?.disabled,
+      ).toBe(true),
+    )
+  })
+
+  it('saves an edited stay through the stay write, naming both rows', async () => {
+    stays.update.mockResolvedValue({
+      reservationId: 'booking-1',
+      stayId: 'stay-1',
+      ledger: 'none',
+    })
+    openStay(STAY)
+    submitTheForm()
+
+    await vi.waitFor(() => expect(stays.update).toHaveBeenCalledTimes(1))
+    expect(stays.update.mock.calls[0]?.[0]).toMatchObject({
+      data: {
+        reservationId: 'booking-1',
+        stayId: 'stay-1',
+        startDayId: 'day-1',
+        endDayId: 'day-4',
+        checkInTime: '15:00',
+        checkOutTime: '11:00',
+      },
+    })
+    expect(reservations.update).not.toHaveBeenCalled()
   })
 })

@@ -27,6 +27,7 @@ import { runBatch } from './batch'
 import { NotFoundError } from './context'
 import { listDayNotes, listTripDays, requireTripDay } from './days'
 import { placesRepository } from './places'
+import { reservationsRepository } from './reservations'
 import { assertTripRole, requireTrip } from './trips'
 import {
   currencySchema,
@@ -45,6 +46,7 @@ import type {
   DayAccommodation,
   DayAssignment,
   Place,
+  Reservation,
 } from '#/server/db/types'
 import type { TenantScope } from './base'
 
@@ -139,6 +141,7 @@ export const createAccommodationInput = z.object({
   priceMinor: minorAmountSchema.nullish(),
   currency: currencySchema.nullish(),
   notes: longTextSchema.nullish(),
+  reservationId: idSchema.nullish(),
 })
 export type CreateAccommodationInput = z.infer<typeof createAccommodationInput>
 
@@ -155,6 +158,7 @@ export const updateAccommodationInput = z.object({
   priceMinor: minorAmountSchema.nullish(),
   currency: currencySchema.nullish(),
   notes: longTextSchema.nullish(),
+  reservationId: idSchema.nullish(),
 })
 export type UpdateAccommodationInput = z.infer<typeof updateAccommodationInput>
 
@@ -172,6 +176,22 @@ async function requirePlaceOfTrip(
     throw new NotFoundError('place', placeId)
   }
   return place
+}
+
+/** The booking a stay is linked to must be a booking of the stay's own trip. */
+async function requireReservationOfTrip(
+  scope: TenantScope,
+  tripId: string,
+  reservationId: string,
+): Promise<Reservation> {
+  const reservation = await reservationsRepository.requireById(
+    scope,
+    reservationId,
+  )
+  if (reservation.tripId !== tripId) {
+    throw new NotFoundError('reservation', reservationId)
+  }
+  return reservation
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -593,6 +613,7 @@ export async function createAccommodation(
 ): Promise<DayAccommodation> {
   const values = createAccommodationInput.parse(input)
   await requireTrip(scope, values.tripId)
+  await assertTripRole(scope, values.tripId, ['owner', 'editor'])
   const start = await requireTripDay(scope, values.tripId, values.startDayId)
   const end = await requireTripDay(scope, values.tripId, values.endDayId)
   if (end.dayNumber < start.dayNumber) {
@@ -600,6 +621,9 @@ export async function createAccommodation(
   }
   if (values.placeId) {
     await requirePlaceOfTrip(scope, values.tripId, values.placeId)
+  }
+  if (values.reservationId) {
+    await requireReservationOfTrip(scope, values.tripId, values.reservationId)
   }
   return dayAccommodationsRepository.insert(scope, values)
 }
@@ -614,6 +638,7 @@ export async function updateAccommodation(
     scope,
     accommodationId,
   )
+  await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
   if (values.startDayId) {
     await requireTripDay(scope, existing.tripId, values.startDayId)
   }
@@ -622,6 +647,9 @@ export async function updateAccommodation(
   }
   if (values.placeId) {
     await requirePlaceOfTrip(scope, existing.tripId, values.placeId)
+  }
+  if (values.reservationId) {
+    await requireReservationOfTrip(scope, existing.tripId, values.reservationId)
   }
   return dayAccommodationsRepository.requireUpdate(
     scope,
@@ -634,7 +662,38 @@ export async function deleteAccommodation(
   scope: TenantScope,
   accommodationId: string,
 ): Promise<void> {
+  const existing = await dayAccommodationsRepository.requireById(
+    scope,
+    accommodationId,
+  )
+  await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
   await dayAccommodationsRepository.requireRemove(scope, accommodationId)
+}
+
+/**
+ * Unlinks every stay of this tenant that was made under one booking, and answers how many.
+ *
+ * Called by {@link deleteReservation} immediately before the booking goes, and that ordering is the
+ * whole point. `schema.ts` declares `reservation_id` as `on delete: 'set null'`, but it arrived by
+ * `ADD COLUMN`, which carries no `ON DELETE` clause, so what D1 actually enforces is `NO ACTION` —
+ * pinned by `accommodation-schema.test.ts` and `migrations-match-schema.test.ts`. Closing that gap in
+ * the database would mean either hand-editing a generated migration or rebuilding the table, so the
+ * rule the schema promises is kept here instead: without this, deleting a stay's booking raises
+ * `FOREIGN KEY constraint failed` and the nights never get the chance to outlive it.
+ *
+ * Scoped like every other statement in this file, so a booking id belonging to another organization
+ * matches no row rather than clearing one.
+ */
+export async function unlinkAccommodationsFromReservation(
+  scope: TenantScope,
+  reservationId: string,
+): Promise<number> {
+  const rows = await dayAccommodationsRepository.updateWhere(
+    scope,
+    eq(dayAccommodations.reservationId, reservationId),
+    { reservationId: null },
+  )
+  return rows.length
 }
 
 /** Nights covered by a stay, derived from the day run rather than stored twice. */

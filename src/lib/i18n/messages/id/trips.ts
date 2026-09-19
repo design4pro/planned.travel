@@ -231,6 +231,41 @@ const messages = {
   'people.error.lastOwner':
     'Setiap perjalanan punya setidaknya satu pemilik. Jadikan orang lain pemilik dulu.',
   'people.error.notInWorkspace': 'Orang itu tidak ada di ruang kerja ini',
+  'people.error.alreadyOnTrip': 'Orang itu sudah ada di perjalanan ini',
+  'people.guests.title': 'Bepergian bersamamu',
+  'people.guests.description': 'Orang di perjalanan ini yang tidak punya akun',
+  'people.guests.empty': 'Belum ada',
+  'people.guests.emptyHint':
+    'Tamu adalah orang yang bepergian bersamamu dan tidak memerlukan akun. Tambahkan dengan namanya.',
+  'people.guest.badge': 'Tamu',
+  'people.guest.add.label': 'Namanya',
+  'people.guest.add.placeholder': 'Sari',
+  'people.guest.add.action': 'Tambah tamu',
+  'people.guest.rename.action': 'Ganti nama {name}',
+  'people.guest.rename.title': 'Ganti nama {name}',
+  'people.guest.rename.confirm': 'Ganti nama',
+  'people.guest.remove.action': 'Keluarkan {name} dari perjalanan ini',
+  'people.guest.remove.title': 'Keluarkan {name} dari perjalanan ini?',
+  'people.guest.remove.body':
+    'Tamu dihapus. Tidak ada hal lain di perjalanan yang berubah.',
+  'people.guest.remove.confirm': 'Keluarkan',
+  'people.guest.merge.action': '{name} sekarang adalah…',
+  'people.guest.merge.title':
+    '{name} sekarang salah satu orang di perjalanan ini',
+  'people.guest.merge.body':
+    'Semua yang ditugaskan ke {name} pindah ke orang yang kamu pilih, dan tamu dihapus. Tindakan ini tidak bisa dibatalkan.',
+  'people.guest.merge.inherits':
+    '{member} mewarisi semua yang ditugaskan kepada {name}.',
+  'people.guest.merge.placeholder': 'Pilih seseorang di perjalanan ini',
+  'people.guest.merge.confirm': 'Gabungkan',
+  'people.guest.merge.done': '{name} sekarang adalah {member}',
+  'people.guest.merge.nothingMoved': 'Belum ada yang ditugaskan kepadanya',
+  'people.error.guestNameTaken':
+    'Tamu bernama {name} sudah ada di perjalanan ini',
+  'people.error.guestLimit':
+    'Satu perjalanan menampung paling banyak {limit} tamu, karena daftar yang lebih panjang membuat pemilih peserta dan pembagian biaya sulit dibaca',
+  'people.error.guestMergeTarget':
+    'Pilih seseorang yang sudah ada di perjalanan ini',
 } satisfies TranslationOf<typeof En>
 
 export default messages

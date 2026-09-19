@@ -395,6 +395,35 @@ describe('who may write the plan', () => {
     expect(await planState()).toEqual(before)
   })
 
+  it('refuses an add onto a day that is not this trip’s, and writes no place', async () => {
+    // A stale tab can still name a day the trip no longer has (#511); a day of another
+    // trip takes the same refusal in `requireTripDay`.
+    const other = await createTrip(owner, {
+      title: 'Graz in November',
+      startDate: '2026-11-01',
+      endDate: '2026-11-02',
+    })
+    const [elsewhere] = await listTripDays(owner, other.id)
+    const before = await planState()
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        createPlanPlaceFn({
+          data: {
+            tripId: fixture.tripId,
+            name: 'Added from a stale tab',
+            ...blankPlace,
+            dayId: elsewhere.id,
+          },
+        }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(RepositoryError)
+    expect((error as RepositoryError).code).toBe('NOT_FOUND')
+    expect(await planState()).toEqual(before)
+  })
+
   it('tells a stranger the trip is not found before it tells them anything else', async () => {
     stubs.scope = stranger
 

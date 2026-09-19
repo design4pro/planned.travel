@@ -38,7 +38,7 @@ concurrency:
 # deliberately unset: unset, the default here selects the self-hosted agent pool - no
 # mounted caches, one job per container, the container discarded afterwards. Setting it
 # to `["ubuntu-latest"]` moves the job back to a GitHub-hosted runner without a pull
-# request. See agent-kit's README, "The runner pool".
+# request. ADR 0023.
 #
 # The ephemeral pool is also what keeps the `claude.ai/install.sh` step below honest:
 # it installs into `$HOME/.local/bin` on every run, and on a runner that outlived its

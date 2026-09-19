@@ -13,9 +13,10 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { legItemId } from '#/components/planner'
+import { ideaItemId, legItemId } from '#/components/planner'
 import {
   journeyWrites,
+  journeyWritesFor,
   timeOfTransports,
   transportRowsOf,
   withTransportItems,
@@ -54,7 +55,7 @@ const journey = (
 
 const payload = (
   transports: ReadonlyArray<PlanTransport>,
-): PlanTransportsPayload => ({ tripId: 't1', canWrite: true, transports })
+): PlanTransportsPayload => ({ tripId: 't1', transports })
 
 /** The board as `orderFromPayload` leaves it: stops and notes, and no journeys. */
 const order = (days: Record<string, ReadonlyArray<string>>): PlanOrder => ({
@@ -481,5 +482,96 @@ describe('journeyWrites', () => {
         ],
       },
     ])
+  })
+})
+
+/**
+ * Which board and which days each landed write restates — the choice the four call sites in
+ * `plan-screen.tsx` used to make inline, where no test could reach it.
+ */
+describe('journeyWritesFor', () => {
+  const rows = transportRowsOf(
+    payload([journey('j1', { position: 1.5 })]),
+    DAY_IDS,
+  )
+  // a1 · a2 · j1 · a3 on the first day, one stop on the second.
+  const before = withTransports(
+    order({ d1: ['a1', 'a2', 'a3'], d2: ['b1'] }),
+    rows,
+    positionsOf(['a1', 'a2', 'a3', 'b1']),
+  )
+  const d1 = (...items: ReadonlyArray<{ kind: string; id: string }>) => [
+    { dayId: 'd1', items },
+  ]
+  const stop = (id: string) => ({ kind: 'stop', id })
+  const j1 = { kind: 'transport', id: 'j1' }
+
+  it('restates the day a deleted stop left, against the day without it', () => {
+    expect(
+      journeyWritesFor({ kind: 'delete', before, itemId: 'a2' }, rows),
+    ).toEqual(d1(stop('a1'), j1, stop('a3')))
+  })
+
+  it('writes nothing when the deleted place was only an idea', () => {
+    const withIdea: PlanOrder = { ...before, ideaIds: [ideaItemId('p1')] }
+
+    expect(
+      journeyWritesFor(
+        { kind: 'delete', before: withIdea, itemId: ideaItemId('p1') },
+        rows,
+      ),
+    ).toEqual([])
+  })
+
+  it('restates the day an unscheduled stop left, which only the board before names', () => {
+    const next: PlanOrder = {
+      days: [
+        { dayId: 'd1', itemIds: ['a1', leg('j1'), 'a3'] },
+        { dayId: 'd2', itemIds: ['b1'] },
+      ],
+      ideaIds: [ideaItemId('p2')],
+    }
+
+    expect(
+      journeyWritesFor(
+        { kind: 'unschedule', before, next, itemId: 'a2' },
+        rows,
+      ),
+    ).toEqual(d1(stop('a1'), j1, stop('a3')))
+  })
+
+  it('names a scheduled stop by the assignment the write created', () => {
+    const next: PlanOrder = {
+      days: [
+        {
+          dayId: 'd1',
+          itemIds: ['a1', 'a2', leg('j1'), ideaItemId('p9'), 'a3'],
+        },
+        { dayId: 'd2', itemIds: ['b1'] },
+      ],
+      ideaIds: [],
+    }
+
+    expect(
+      journeyWritesFor(
+        {
+          kind: 'schedule',
+          next,
+          placeId: 'p9',
+          assignmentId: 'asg9',
+          dayId: 'd1',
+        },
+        rows,
+      ),
+    ).toEqual(d1(stop('a1'), stop('a2'), j1, stop('asg9'), stop('a3')))
+  })
+
+  it('restates every day a reorder touched that a journey departs from', () => {
+    expect(
+      journeyWritesFor(
+        { kind: 'reorder', next: before, dayIds: ['d1', 'd2'] },
+        rows,
+      ),
+    ).toEqual(d1(stop('a1'), stop('a2'), j1, stop('a3')))
   })
 })

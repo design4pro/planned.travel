@@ -249,6 +249,42 @@ const messages = {
     'Un voyage garde au moins un propriétaire. Nommez d’abord quelqu’un d’autre propriétaire.',
   'people.error.notInWorkspace':
     'Cette personne n’est pas dans cet espace de travail',
+  'people.error.alreadyOnTrip': 'Cette personne fait déjà partie de ce voyage',
+  'people.guests.title': 'Ils voyagent avec vous',
+  'people.guests.description':
+    'Les personnes de ce voyage qui n’ont pas de compte',
+  'people.guests.empty': 'Personne pour l’instant',
+  'people.guests.emptyHint':
+    'Un invité voyage avec vous sans avoir besoin de compte. Ajoutez-le par son nom.',
+  'people.guest.badge': 'Invité',
+  'people.guest.add.label': 'Son nom',
+  'people.guest.add.placeholder': 'Léa',
+  'people.guest.add.action': 'Ajouter un invité',
+  'people.guest.rename.action': 'Renommer {name}',
+  'people.guest.rename.title': 'Renommer {name}',
+  'people.guest.rename.confirm': 'Renommer',
+  'people.guest.remove.action': 'Retirer {name} de ce voyage',
+  'people.guest.remove.title': 'Retirer {name} de ce voyage ?',
+  'people.guest.remove.body':
+    'L’invité est retiré. Rien d’autre ne change dans le voyage.',
+  'people.guest.remove.confirm': 'Retirer',
+  'people.guest.merge.action': '{name} est désormais…',
+  'people.guest.merge.title':
+    '{name} fait désormais partie des personnes de ce voyage',
+  'people.guest.merge.body':
+    'Tout ce qui était attribué à {name} passe à la personne choisie, et l’invité est retiré. Cette action est irréversible.',
+  'people.guest.merge.inherits':
+    '{member} reprend tout ce qui est attribué à {name}.',
+  'people.guest.merge.placeholder': 'Choisissez quelqu’un de ce voyage',
+  'people.guest.merge.confirm': 'Fusionner',
+  'people.guest.merge.done': '{name} est désormais {member}',
+  'people.guest.merge.nothingMoved': 'Rien ne lui était encore attribué',
+  'people.error.guestNameTaken':
+    'Un invité nommé {name} fait déjà partie de ce voyage',
+  'people.error.guestLimit':
+    'Un voyage compte au plus {limit} invités, car une liste plus longue rend illisibles le choix des participants et le partage des dépenses',
+  'people.error.guestMergeTarget':
+    'Choisissez quelqu’un qui fait déjà partie de ce voyage',
 } satisfies TranslationOf<typeof En>
 
 export default messages

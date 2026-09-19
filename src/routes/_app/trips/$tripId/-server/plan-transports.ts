@@ -26,7 +26,6 @@ import {
   reorderDayTransportsInput,
   requireTrip,
   requireWritableTrip,
-  tripRoleFor,
 } from '#/server/repos'
 import { appScope } from '../../../-server/context'
 
@@ -66,8 +65,6 @@ export interface PlanTransport {
 
 export interface PlanTransportsPayload {
   readonly tripId: string
-  /** The acting user may move a journey: owner or editor, and the trip is not archived. */
-  readonly canWrite: boolean
   readonly transports: ReadonlyArray<PlanTransport>
 }
 
@@ -148,10 +145,7 @@ export async function readPlanTransports(
   tripId: string,
 ): Promise<PlanTransportsPayload> {
   const trip = await requireTrip(scope, tripId)
-  const [role, { records, legs }] = await Promise.all([
-    tripRoleFor(scope, trip.id, scope.ctx.userId),
-    listTripDayTransports(scope, trip.id),
-  ])
+  const { records, legs } = await listTripDayTransports(scope, trip.id)
 
   const byId = new Map(records.map((record) => [record.id, record]))
   const chained = new Set(legs.map((leg) => leg.transportId))
@@ -166,7 +160,6 @@ export async function readPlanTransports(
 
   return {
     tripId: trip.id,
-    canWrite: !trip.isArchived && (role === 'owner' || role === 'editor'),
     transports: rows.filter(coversADay),
   }
 }

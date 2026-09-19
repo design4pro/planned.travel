@@ -60,14 +60,9 @@ permissions:
 
 # `runs-on` below reads through `vars.RUNNER_CI`, an organisation variable that is
 # deliberately unset: unset, the default here selects the self-hosted pool. Setting it
-# to `["ubuntu-latest"]` moves every job in every repository back to GitHub-hosted
-# runners without a pull request.
-#
-# In a test workflow that is a convenience. Here it is the recovery path for shipping:
-# production now deploys from one local machine, and the switch has to work when that
-# machine does not. That is why it is an organisation variable and not a literal label
-# array - reverting by pull request would need the merge gate, which needs the same
-# runners that are missing. See agent-kit's README, "The runner pool".
+# to `["ubuntu-latest"]` moves every job that reads it back to GitHub-hosted runners
+# without a pull request. Merging the promotion also needs the `claude-review` check,
+# which reads `vars.RUNNER_AGENT`, so a host outage needs both set. ADR 0023.
 
 jobs:
   promote:

@@ -25,6 +25,7 @@ import { z } from 'zod'
 import {
   DAY_NOTE_ICONS,
   assertTripRole,
+  canWritePlan,
   createDayNote,
   deleteDayNote,
   listDayAssignments,
@@ -251,7 +252,7 @@ export async function readDayNotes(
 
   return {
     tripId: trip.id,
-    canWrite: !trip.isArchived && (role === 'owner' || role === 'editor'),
+    canWrite: canWritePlan(trip, role),
     notes: notes.map((note) => ({
       id: note.id,
       dayId: note.dayId,

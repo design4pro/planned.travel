@@ -235,6 +235,39 @@ const messages = {
   'people.error.lastOwner':
     'En resa behåller minst en ägare. Gör någon annan till ägare först.',
   'people.error.notInWorkspace': 'Den personen finns inte i arbetsytan',
+  'people.error.alreadyOnTrip': 'Den personen är redan med på resan',
+  'people.guests.title': 'Reser med dig',
+  'people.guests.description':
+    'Personer på den här resan som inte har något konto',
+  'people.guests.empty': 'Ingen än',
+  'people.guests.emptyHint':
+    'En gäst reser med dig och behöver inget konto. Lägg till gästen med namn.',
+  'people.guest.badge': 'Gäst',
+  'people.guest.add.label': 'Namn',
+  'people.guest.add.placeholder': 'Elsa',
+  'people.guest.add.action': 'Lägg till gäst',
+  'people.guest.rename.action': 'Byt namn på {name}',
+  'people.guest.rename.title': 'Byt namn på {name}',
+  'people.guest.rename.confirm': 'Byt namn',
+  'people.guest.remove.action': 'Ta bort {name} från resan',
+  'people.guest.remove.title': 'Ta bort {name} från resan?',
+  'people.guest.remove.body': 'Gästen försvinner. Inget annat på resan ändras.',
+  'people.guest.remove.confirm': 'Ta bort',
+  'people.guest.merge.action': '{name} är nu…',
+  'people.guest.merge.title': '{name} är nu en av personerna på den här resan',
+  'people.guest.merge.body':
+    'Allt som är tilldelat {name} flyttas till personen du väljer, och gästen försvinner. Det går inte att ångra.',
+  'people.guest.merge.inherits':
+    '{member} tar över allt som är tilldelat {name}.',
+  'people.guest.merge.placeholder': 'Välj någon på resan',
+  'people.guest.merge.confirm': 'Slå ihop',
+  'people.guest.merge.done': '{name} är nu {member}',
+  'people.guest.merge.nothingMoved': 'Inget var tilldelat gästen ännu',
+  'people.error.guestNameTaken':
+    'En gäst som heter {name} finns redan på resan',
+  'people.error.guestLimit':
+    'En resa rymmer högst {limit} gäster, eftersom en längre lista gör deltagarväljarna och kostnadsfördelningen svåra att läsa',
+  'people.error.guestMergeTarget': 'Välj någon som redan är med på resan',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -367,6 +367,7 @@ async function extractFromDocument(
 
   const text = await documentToText(ai, {
     name: payload.sourceName,
+    contentType: payload.contentType,
     bytes,
   })
   return textToReservations(ai, { text, sourceName: payload.sourceName })

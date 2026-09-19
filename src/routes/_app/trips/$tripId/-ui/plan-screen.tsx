@@ -75,14 +75,11 @@ import {
   IDEAS_CONTAINER,
   IdeasList,
   PlannerRail,
-  containerOf,
-  ideaItemId,
   initialSelection,
   isLegItemId,
   itemsIn,
   journeyName,
   noteItemId,
-  removePlanItem,
   selectionReducer,
   usePlanDnd,
 } from '#/components/planner'
@@ -97,6 +94,7 @@ import {
   emptyDraft,
   emptyTiming,
   messageOf,
+  refreshOnFailure,
 } from './plan-actions'
 import {
   filterRows,
@@ -110,7 +108,7 @@ import {
   timeByItem,
 } from './plan-model'
 import {
-  journeyWrites,
+  journeyWritesFor,
   positionByItem,
   timeOfTransports,
   transportRowsOf,
@@ -155,6 +153,7 @@ import type { PlanNotesPayload } from '../-server/day-notes'
 import type { PlanBoardPayload } from '../-server/plan'
 import type { PlanTransportsPayload } from '../-server/plan-transports'
 import type { PlaceFormValues, TimingDraft } from './plan-actions'
+import type { JourneyRestatement } from './plan-transport-model'
 import type { NoteDraft } from './note-dialog'
 
 /* -------------------------------------------------------------------------------------------------
@@ -716,9 +715,9 @@ export function PlanScreen({
    * no day's fractions are measured against another's.
    */
   const restateJourneys = React.useCallback(
-    async (next: PlanOrder, days: ReadonlyArray<string>): Promise<void> => {
+    async (change: JourneyRestatement): Promise<void> => {
       await Promise.all(
-        journeyWrites(next, days, transportRows).map((write) =>
+        journeyWritesFor(change, transportRows).map((write) =>
           reorderDayTransportsFn({
             data: {
               tripId: payload.tripId,
@@ -748,10 +747,11 @@ export function PlanScreen({
               data: reorderPayload(payload.tripId, change, clearTime),
             })
           }
-          await restateJourneys(
+          await restateJourneys({
+            kind: 'reorder',
             next,
-            change.days.map((day) => day.dayId),
-          )
+            dayIds: change.days.map((day) => day.dayId),
+          })
           return
         case 'schedule': {
           const { assignmentId } = await schedulePlaceFn({
@@ -762,13 +762,13 @@ export function PlanScreen({
               index: change.index,
             },
           })
-          // The arrangement a schedule returns still names the new stop by its `idea:` id,
-          // which the day run would drop as a row the day does not hold — and the journey
-          // would then be measured against the gap the stop was supposed to fill.
-          await restateJourneys(
-            renameItem(next, ideaItemId(change.placeId), assignmentId),
-            [change.dayId],
-          )
+          await restateJourneys({
+            kind: 'schedule',
+            next,
+            placeId: change.placeId,
+            assignmentId,
+            dayId: change.dayId,
+          })
           return
         }
         case 'unschedule':
@@ -778,7 +778,12 @@ export function PlanScreen({
               assignmentId: change.assignmentId,
             },
           })
-          await restateJourneys(next, dayOfItem(order, itemId))
+          await restateJourneys({
+            kind: 'unschedule',
+            before: order,
+            next,
+            itemId,
+          })
           return
         case 'rank-ideas':
           await rankIdeasFn({
@@ -1148,11 +1153,12 @@ export function PlanScreen({
         await deletePlanPlaceFn({ data: { tripId: payload.tripId, placeId } })
         // Deleting a stop renumbers its day, so the journeys placed against those
         // numbers are restated against the day the delete leaves behind — the second
-        // of the rule's two call sites.
+        // of the rule's two call sites. The delete has landed by then, so a refused
+        // restatement still refreshes the board before its error is shown.
         if (itemId !== null) {
-          await restateJourneys(
-            removePlanItem(order, itemId),
-            dayOfItem(order, itemId),
+          await refreshOnFailure(
+            () => restateJourneys({ kind: 'delete', before: order, itemId }),
+            () => router.invalidate(),
           )
         }
       },
@@ -1173,6 +1179,7 @@ export function PlanScreen({
     order,
     payload.tripId,
     restateJourneys,
+    router,
     runWrite,
   ])
 
@@ -1818,32 +1825,6 @@ export function PlanScreen({
       />
     </DndContext>
   )
-}
-
-/**
- * The day holding an item, as the one-element list {@link journeyWrites} takes — or
- * nothing at all when the item is in the ideas column, which holds no journeys.
- */
-function dayOfItem(order: PlanOrder, itemId: string): Array<string> {
-  const container = containerOf(order, itemId)
-  return container === null || container === IDEAS_CONTAINER ? [] : [container]
-}
-
-/**
- * The same arrangement with one draggable id renamed.
- *
- * Exists for a single case: a schedule's board still calls the new stop by its `idea:`
- * id, and the journey beside it has to be restated against the assignment the write
- * actually created.
- */
-function renameItem(order: PlanOrder, from: string, to: string): PlanOrder {
-  return {
-    ideaIds: order.ideaIds,
-    days: order.days.map((day) => ({
-      dayId: day.dayId,
-      itemIds: day.itemIds.map((itemId) => (itemId === from ? to : itemId)),
-    })),
-  }
 }
 
 /** The stored timing of one stop, for the dialog to open on. */

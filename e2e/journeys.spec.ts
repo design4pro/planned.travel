@@ -172,6 +172,55 @@ test('a stranger reaches every public screen', async ({ context, page }) => {
 })
 
 /**
+ * The forgot-password "sent" state keeps both of its actions inside the card.
+ *
+ * Geometry a real layout engine decides: `Button` is `shrink-0` and `block`
+ * makes it `w-full`, so two of them in a row each claim the whole row and the
+ * second is pushed out of the panel (#598). Only a desktop-width viewport shows
+ * it - below `sm` the column hid the defect - and jsdom computes no boxes.
+ *
+ * One submit per attempt, deliberately: `/request-password-reset` allows five
+ * a client in 300 s (`src/server/auth/index.ts`), and a sixth answers "Too many
+ * attempts" instead of the sent state this test waits for. The address is one
+ * no account owns: the endpoint answers identically, and no token or mail is made.
+ */
+test('the reset-link actions stack inside the panel', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'the overflow only existed at the `sm` breakpoint and up')
+  const route = PUBLIC_ROUTES.find(
+    (candidate) => candidate.name === 'forgot-password',
+  )
+  if (route === undefined) throw new Error('forgot-password is a public route')
+  await visit(page, route, 'light')
+  await page.locator('input[type="email"]').fill('nobody-598@example.com')
+  await page.getByRole('button', { name: 'Email me a reset link' }).click()
+
+  const resend = page.getByRole('button', { name: 'Send it again' })
+  const change = page.getByRole('button', { name: 'Use a different email' })
+  await expect(
+    change,
+    'the sent state never arrived - rate limited? /request-password-reset allows five per 300 s',
+  ).toBeVisible()
+  await expect(resend).toBeVisible()
+  const panel = await page.locator('[data-part="auth-panel"]').boundingBox()
+  const first = await resend.boundingBox()
+  const second = await change.boundingBox()
+  if (panel === null || first === null || second === null) {
+    throw new Error('the panel and both actions must have drawn')
+  }
+  for (const box of [first, second]) {
+    expect(box.x).toBeGreaterThanOrEqual(panel.x)
+    expect(box.x + box.width).toBeLessThanOrEqual(panel.x + panel.width)
+  }
+  expect(
+    second.y,
+    '"Use a different email" sits below "Send it again"',
+  ).toBeGreaterThanOrEqual(first.y + first.height)
+})
+
+/**
  * Authenticated screens.
  *
  * `scripts/seed` used to create users that deliberately could not sign in, which left everything
@@ -1377,6 +1426,55 @@ test.describe('the trip sections behind a route parameter', () => {
     )) {
       expect(label.trim(), 'a journey row carries an empty name').not.toBe('')
     }
+
+    const keys = await rawMessageKeys(page)
+    expect(keys, `unresolved message keys on ${route.path}`).toEqual([])
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * A stay is chosen as the days it runs between, and the dialog says how many nights that is.
+   *
+   * Graded in a browser because the count is the answer to two Radix selects the reader drives, and
+   * only a real pointer proves the answer follows them: the arithmetic itself is `stayNights`'s,
+   * graded by vitest. Nothing is saved — the block reads the demo trip and leaves it as it found it.
+   */
+  test('a stay states the nights between the days it is given', async ({
+    page,
+  }) => {
+    // The flagship trip is the seeded one long enough to hold a stay from day 1 to day 4.
+    const tripId = await aTripToWalk(page, 'Tokyo & Kyoto')
+    const route: RouteCase = {
+      name: 'trip-book',
+      path: `/trips/${tripId}/book`,
+      ready: TRIP_SECTIONS,
+    }
+
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    await page.locator('[data-part="new-booking"]').first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.locator('[data-part="type-accommodation"]').click()
+
+    async function chooseDay(part: string, dayNumber: number): Promise<void> {
+      await dialog.locator(`[data-part="${part}"] button`).click()
+      await page
+        .getByRole('option', {
+          name: new RegExp(`^Day ${dayNumber}(?!\\d)`, 'u'),
+        })
+        .click()
+    }
+    await chooseDay('stay-check-in-day', 1)
+    await chooseDay('stay-check-out-day', 4)
+
+    const nights = dialog.locator('[data-part="stay-nights"]')
+    await expect(nights).toHaveText(/^3 nights · Day 1\b.* to Day 4\b/u)
+    await expect(nights).toHaveCSS('font-variant-numeric', 'tabular-nums')
+    // A stay is dated by its days; a typed date beside them would be a second answer.
+    await expect(dialog.locator('input[type="date"]')).toHaveCount(0)
 
     const keys = await rawMessageKeys(page)
     expect(keys, `unresolved message keys on ${route.path}`).toEqual([])

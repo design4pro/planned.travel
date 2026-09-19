@@ -32,6 +32,7 @@ function booking(overrides: Partial<BookingRow> & { id: string }): BookingRow {
     hasLedgerLine: false,
     importedAt: null,
     transportId: null,
+    stay: null,
     ...overrides,
   }
 }

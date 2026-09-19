@@ -488,6 +488,21 @@ const messages = {
   'book.error.endTimeNeedsDate':
     'Μια ώρα λήξης χρειάζεται τη μέρα στην οποία πέφτει.',
   'book.error.endsBeforeStart': 'Αυτό τελειώνει πριν αρχίσει.',
+  'book.fieldName.checkInDay': 'ημέρα άφιξης',
+  'book.fieldName.checkOutDay': 'ημέρα αναχώρησης',
+  'book.stay.pickDay': 'Διάλεξε μέρα',
+  'book.stay.nights': {
+    one: '{count} νύχτα',
+    other: '{count} νύχτες',
+  },
+  'book.stay.range': 'από {from} έως {to}',
+  'book.stay.label': 'Διαμονή',
+  'book.remove.keepsNights':
+    'Οι νύχτες μένουν στο ταξίδι. Αφαιρείται μόνο η κράτηση.',
+  'book.menu.removeWithStay': 'Αφαίρεση κράτησης και διαμονής',
+  'book.removeStay.body':
+    'Αφαιρούνται και η κράτηση και οι νύχτες που πληρώνει.',
+  'book.toast.stayRemoved': 'Η κράτηση και η διαμονή αφαιρέθηκαν',
   'book.error.endTimeBeforeStart':
     'Η ώρα λήξης είναι πριν από την ώρα έναρξης.',
   'book.error.guests': 'Ο αριθμός ατόμων πρέπει να είναι ακέραιος έως 1000.',

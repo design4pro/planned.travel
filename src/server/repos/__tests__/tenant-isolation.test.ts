@@ -102,29 +102,45 @@ import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
 import { purgeContext } from '#/server/queue/handlers/__tests__/purge-context'
 import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import {
+  countAccommodationNights,
   createAccommodation,
   createAssignment,
   dayAccommodationsRepository,
   dayAssignmentsRepository,
+  deleteAccommodation,
   getTripItinerary,
   listDayAssignments,
+  listTripAccommodations,
   reorderDayTimeline,
   setAssignmentParticipants,
+  updateAccommodation,
 } from '../itinerary'
 import {
   addPhoto,
+  attachPhotoToEntry,
+  countEntriesByMood,
   createEntry,
   createJourney,
   createMood,
+  deleteEntry,
+  deleteJourney,
+  deletePhoto,
   getJourney,
   getJourneyStory,
   journeyEntriesRepository,
   journeyMoodsRepository,
   journeyPhotosRepository,
   journeysRepository,
+  listEntriesByIds,
+  listJourneyEntries,
   listJourneys,
   listRecentEntries,
+  listUnattachedPhotos,
+  publishJourney,
   tallyMoods,
+  unpublishJourney,
+  updateEntry,
+  updateJourney,
 } from '../journey'
 import {
   applyTemplateToTrip,
@@ -217,7 +233,6 @@ import {
   createTrip,
   deleteTrip,
   listTripMembers,
-  listTripParticipants,
   listTrips,
   memberTripIds,
   removeTripMember,
@@ -232,6 +247,17 @@ import {
   updateTrip,
   updateTripMember,
 } from '../trips'
+import {
+  TripGuestMergeTargetError,
+  createTripGuest,
+  listTripGuests,
+  listTripParticipants,
+  mergeTripGuest,
+  registerGuestRelinker,
+  removeTripGuest,
+  renameTripGuest,
+  tripGuestsRepository,
+} from '../trip-guests'
 import {
   addCompanyHoliday,
   addHolidayCalendar,
@@ -350,6 +376,7 @@ interface World {
   readonly fileId: string
   readonly shareLinkId: string
   readonly tripMemberId: string
+  readonly guestId: string
   readonly messageId: string
   readonly collabNoteId: string
   readonly pollId: string
@@ -549,6 +576,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
   if (tripMember === undefined) {
     throw new Error('Creating a trip must create its owner membership.')
   }
+  const guest = await createTripGuest(scope, {
+    tripId: trip.id,
+    displayName: 'Travelling without an account',
+  })
 
   const message = await postMessage(scope, {
     tripId: trip.id,
@@ -725,6 +756,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     fileId: file.id,
     shareLinkId: shareLink.id,
     tripMemberId: tripMember.id,
+    guestId: guest.id,
     messageId: message.id,
     collabNoteId: collabNote.id,
     pollId: poll.id,
@@ -803,6 +835,9 @@ const cases: ReadonlyArray<IsolationCase> = [
   }),
   isolationCase('trip members', tripMembersRepository, (w) => w.tripMemberId, {
     role: 'viewer',
+  }),
+  isolationCase('trip guests', tripGuestsRepository, (w) => w.guestId, {
+    displayName: 'hijacked',
   }),
   isolationCase('share links', shareLinksRepository, (w) => w.shareLinkId, {
     viewCount: 99,
@@ -3485,6 +3520,20 @@ describe('tenant isolation', () => {
         )
       })
 
+      it('refuses a foreign trip’s existing member as NOT_FOUND, never as already on the trip', async () => {
+        // B's owner is on B's trip, so the unique index would refuse the insert. `TRIP_MEMBER_EXISTS`
+        // here would confirm who is on B's trip; the trip has to be unresolvable before the index.
+        expect(
+          await captureError(() =>
+            addTripMember(alpha.tenant.scope, {
+              tripId: beta.tripId,
+              userId: beta.tenant.ownerUserId,
+              role: 'editor',
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      })
+
       it('counts none of a foreign trip’s people through tripMemberUserIds', async () => {
         // The projection `readTripForDelete` reads the delete dialog's member count off. An
         // unscoped one would hand A both how many people are on B's trip and who they are.
@@ -4336,6 +4385,334 @@ describe('tenant isolation', () => {
       expect(
         (await tallyMoods(beta.tenant.scope)).map((row) => row.value),
       ).toEqual([1])
+    })
+
+    it('writes to and reads by id none of A’s journeys, entries or photos (#521)', async () => {
+      // The writes and id-keyed helpers now resolve through the same read predicate, whose
+      // sub-selects are tenant-bound too; A's ids stay a `NotFoundError` or nothing from B.
+      const scope = beta.tenant.scope
+      for (const attempt of [
+        () => updateJourney(scope, alpha.journeyId, { title: 'Stolen' }),
+        () =>
+          publishJourney(scope, alpha.journeyId, 'a-token-long-enough-to-pass'),
+        () => unpublishJourney(scope, alpha.journeyId),
+        () => deleteJourney(scope, alpha.journeyId),
+        () => updateEntry(scope, alpha.journeyEntryId, { title: 'Stolen' }),
+        () => deleteEntry(scope, alpha.journeyEntryId),
+        () => attachPhotoToEntry(scope, alpha.journeyPhotoId, null),
+        () => deletePhoto(scope, alpha.journeyPhotoId),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await listJourneyEntries(scope, alpha.journeyId)).toEqual([])
+      expect(await listUnattachedPhotos(scope, alpha.journeyId)).toEqual([])
+      expect(await countEntriesByMood(scope, alpha.journeyId)).toEqual([])
+      expect(
+        (
+          await listEntriesByIds(scope, [
+            alpha.journeyEntryId,
+            beta.journeyEntryId,
+          ])
+        ).map((row) => row.id),
+      ).toEqual([beta.journeyEntryId])
+
+      const story = await getJourneyStory(alpha.tenant.scope, alpha.journeyId)
+      expect(story.journey.title).toBe('Lisbon notebook')
+      expect(story.entries.map((row) => row.photos.length)).toEqual([1])
+    })
+  })
+
+  /** `01-S6b` — a trip's guests, read and written across the tenant boundary. */
+  describe('trip guests', () => {
+    it('refuses to put a guest on a foreign trip', async () => {
+      expect(
+        await captureError(() =>
+          createTripGuest(alpha.tenant.scope, {
+            tripId: beta.tripId,
+            displayName: 'Stowaway',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        (await listTripGuests(beta.tenant.scope, beta.tripId)).map(
+          (guest) => guest.id,
+        ),
+      ).toEqual([beta.guestId])
+    })
+
+    it('refuses to rename or remove a foreign guest, and leaves it byte-identical', async () => {
+      const before = await tripGuestsRepository.findById(
+        beta.tenant.scope,
+        beta.guestId,
+      )
+
+      expect(
+        await captureError(() =>
+          renameTripGuest(alpha.tenant.scope, beta.guestId, 'hijacked'),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          removeTripGuest(alpha.tenant.scope, beta.guestId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await tripGuestsRepository.findById(beta.tenant.scope, beta.guestId),
+      ).toEqual(before)
+    })
+
+    it('lists none of a foreign trip’s guests, and refuses its participants', async () => {
+      expect(await listTripGuests(alpha.tenant.scope, beta.tripId)).toEqual([])
+      expect(
+        await captureError(() =>
+          listTripParticipants(alpha.tenant.scope, beta.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('merges neither a foreign guest nor into a foreign member, and relinks nothing', async () => {
+      const calls: Array<string> = []
+      const unregister = registerGuestRelinker('probe', async () => {
+        calls.push('probe')
+        return { count: 0, statements: [] }
+      })
+      try {
+        expect(
+          await captureError(() =>
+            mergeTripGuest(
+              alpha.tenant.scope,
+              alpha.tripId,
+              beta.guestId,
+              alpha.tenant.ownerUserId,
+            ),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+        // B's owner is a member of B's trip and of no trip of A's, so as a target they are
+        // somebody not on this trip — the refusal every outsider gets, disclosing nothing.
+        expect(
+          await captureError(() =>
+            mergeTripGuest(
+              alpha.tenant.scope,
+              alpha.tripId,
+              alpha.guestId,
+              beta.tenant.ownerUserId,
+            ),
+          ),
+        ).toBeInstanceOf(TripGuestMergeTargetError)
+        expect(calls).toEqual([])
+      } finally {
+        unregister()
+      }
+      expect(
+        await tripGuestsRepository.findById(beta.tenant.scope, beta.guestId),
+      ).not.toBeNull()
+      expect(
+        await tripGuestsRepository.findById(alpha.tenant.scope, alpha.guestId),
+      ).not.toBeNull()
+    })
+  })
+
+  /**
+   * 03-S8a — a stay linked to the booking that pays for it.
+   *
+   * The day-range and place guards were already in `itinerary.ts`; what this stage adds is the
+   * `reservation_id` link and the role guard on the three writers. The link is the case worth its
+   * own assertion: both accommodation validators are `z.object`s, so before this stage a
+   * `reservationId` was stripped rather than refused, and a guard that is never reached proves
+   * nothing. It is asserted here to reach the insert, and to refuse B's booking on the way.
+   */
+  describe('a stay and the booking it is linked to', () => {
+    it('cannot read, list, count, update or delete another tenant’s stay', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(await listTripAccommodations(scope, beta.tripId)).toHaveLength(0)
+      for (const attempt of [
+        () => countAccommodationNights(scope, beta.accommodationId),
+        () =>
+          updateAccommodation(scope, beta.accommodationId, {
+            name: 'Hijacked',
+          }),
+        () => deleteAccommodation(scope, beta.accommodationId),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+    })
+
+    it('cannot create a stay on another tenant’s days or place', async () => {
+      const scope = alpha.tenant.scope
+
+      for (const refs of [
+        { startDayId: beta.dayId, endDayId: alpha.lastDayId },
+        { startDayId: alpha.dayId, endDayId: beta.lastDayId },
+        {
+          startDayId: alpha.dayId,
+          endDayId: alpha.lastDayId,
+          placeId: beta.placeId,
+        },
+      ]) {
+        expect(
+          await captureError(() =>
+            createAccommodation(scope, {
+              tripId: alpha.tripId,
+              name: 'Stolen stay',
+              ...refs,
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+    })
+
+    it('links its own booking, and refuses a link to another tenant’s booking', async () => {
+      const scope = alpha.tenant.scope
+      const betaStaysBefore = await listTripAccommodations(
+        beta.tenant.scope,
+        beta.tripId,
+      )
+      const betaBookingsBefore = await listTripReservations(beta.tenant.scope, {
+        tripId: beta.tripId,
+      })
+
+      const linked = await createAccommodation(scope, {
+        tripId: alpha.tripId,
+        startDayId: alpha.dayId,
+        endDayId: alpha.lastDayId,
+        name: 'Alfama guesthouse, booked',
+        reservationId: alpha.reservationId,
+      })
+      expect(linked.reservationId).toBe(alpha.reservationId)
+
+      expect(
+        await captureError(() =>
+          createAccommodation(scope, {
+            tripId: alpha.tripId,
+            startDayId: alpha.dayId,
+            endDayId: alpha.lastDayId,
+            name: 'Dangling stay',
+            reservationId: beta.reservationId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          updateAccommodation(scope, alpha.accommodationId, {
+            reservationId: beta.reservationId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        (
+          await dayAccommodationsRepository.findById(
+            scope,
+            alpha.accommodationId,
+          )
+        )?.reservationId,
+      ).toBeNull()
+
+      expect(
+        await listTripAccommodations(beta.tenant.scope, beta.tripId),
+      ).toEqual(betaStaysBefore)
+      expect(
+        await listTripReservations(beta.tenant.scope, { tripId: beta.tripId }),
+      ).toEqual(betaBookingsBefore)
+    })
+
+    it('refuses a link to a booking of another trip in the same workspace', async () => {
+      const scope = alpha.tenant.scope
+      // The tenant filter cannot tell two trips of one workspace apart; the reference guard can.
+      const otherTrip = await createTrip(scope, {
+        title: 'Porto in autumn',
+        startDate: '2026-10-01',
+        endDate: '2026-10-03',
+        currency: 'EUR',
+      })
+      const otherBooking = await createReservation(scope, {
+        tripId: otherTrip.id,
+        title: 'Porto guesthouse',
+        type: 'accommodation',
+        status: 'confirmed',
+      })
+
+      expect(
+        await captureError(() =>
+          createAccommodation(scope, {
+            tripId: alpha.tripId,
+            startDayId: alpha.dayId,
+            endDayId: alpha.lastDayId,
+            name: 'Linked across trips',
+            reservationId: otherBooking.id,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          updateAccommodation(scope, alpha.accommodationId, {
+            reservationId: otherBooking.id,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        (
+          await dayAccommodationsRepository.findById(
+            scope,
+            alpha.accommodationId,
+          )
+        )?.reservationId,
+      ).toBeNull()
+    })
+
+    it('refuses a viewer and admits an editor on the same trip', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer of A')
+      const editorId = await alpha.tenant.addUser('Editor of A')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+      const viewer = alpha.tenant.scopeFor(viewerId)
+      const editor = alpha.tenant.scopeFor(editorId)
+      const stay = {
+        tripId: alpha.tripId,
+        startDayId: alpha.dayId,
+        endDayId: alpha.lastDayId,
+        name: 'A second guesthouse',
+      }
+
+      // `FORBIDDEN` is the code every caller maps to a 403, so it is the code asserted.
+      const refusalCode = async (
+        run: () => Promise<unknown>,
+      ): Promise<string> => {
+        const error = await captureError(run)
+        return error instanceof RepositoryError ? error.code : error.name
+      }
+      for (const attempt of [
+        () => createAccommodation(viewer, stay),
+        () =>
+          updateAccommodation(viewer, alpha.accommodationId, {
+            name: 'Viewed',
+          }),
+        () => deleteAccommodation(viewer, alpha.accommodationId),
+      ]) {
+        expect(await refusalCode(attempt)).toBe('FORBIDDEN')
+      }
+
+      const written = await createAccommodation(editor, stay)
+      expect(
+        (
+          await updateAccommodation(editor, written.id, {
+            name: 'Renamed by the editor',
+          })
+        ).name,
+      ).toBe('Renamed by the editor')
+      await deleteAccommodation(editor, written.id)
+      expect(
+        await dayAccommodationsRepository.findById(editor, written.id),
+      ).toBeNull()
     })
   })
 })

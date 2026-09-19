@@ -254,6 +254,39 @@ const messages = {
   'people.error.lastOwner':
     'В поездке остаётся хотя бы один владелец. Сначала сделайте владельцем кого-то ещё.',
   'people.error.notInWorkspace': 'Этого человека нет в этом пространстве',
+  'people.error.alreadyOnTrip': 'Этот человек уже в этой поездке',
+  'people.guests.title': 'Путешествуют с вами',
+  'people.guests.description': 'Участники поездки без учётной записи',
+  'people.guests.empty': 'Пока никого',
+  'people.guests.emptyHint':
+    'Гость — это тот, кто едет с вами и не нуждается в учётной записи. Добавьте его по имени.',
+  'people.guest.badge': 'Гость',
+  'people.guest.add.label': 'Имя',
+  'people.guest.add.placeholder': 'Аня',
+  'people.guest.add.action': 'Добавить гостя',
+  'people.guest.rename.action': 'Переименовать: {name}',
+  'people.guest.rename.title': 'Переименовать: {name}',
+  'people.guest.rename.confirm': 'Переименовать',
+  'people.guest.remove.action': 'Убрать {name} из поездки',
+  'people.guest.remove.title': 'Убрать {name} из поездки?',
+  'people.guest.remove.body':
+    'Гость исчезнет из списка. Больше в поездке ничего не изменится.',
+  'people.guest.remove.confirm': 'Убрать',
+  'people.guest.merge.action': '{name} — теперь…',
+  'people.guest.merge.title': '{name} — теперь один из участников поездки',
+  'people.guest.merge.body':
+    'Всё, что назначено на {name}, перейдёт выбранному человеку, а гость исчезнет. Отменить это нельзя.',
+  'people.guest.merge.inherits': '{member} получит всё, что назначено {name}.',
+  'people.guest.merge.placeholder': 'Выберите кого-то из поездки',
+  'people.guest.merge.confirm': 'Объединить',
+  'people.guest.merge.done': '{name} — теперь {member}',
+  'people.guest.merge.nothingMoved':
+    'На этого гостя ещё ничего не было назначено',
+  'people.error.guestNameTaken':
+    'Гость с именем {name} уже есть в этой поездке',
+  'people.error.guestLimit':
+    'В поездке может быть не больше {limit} гостей: длинный список затрудняет выбор участников и чтение разделения расходов',
+  'people.error.guestMergeTarget': 'Выберите того, кто уже участвует в поездке',
 } satisfies TranslationOf<typeof En>
 
 export default messages

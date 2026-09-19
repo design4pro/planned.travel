@@ -185,19 +185,23 @@ async function tripCardsFor(
   ])
   const starred = new Set(favourites)
   return (trip) =>
-    toTripCard(
-      trip,
-      placeCounts.get(trip.id) ?? 0,
-      roles.get(trip.id) ?? null,
-      starred.has(trip.id),
-    )
+    toTripCard(trip, {
+      placeCount: placeCounts.get(trip.id) ?? 0,
+      role: roles.get(trip.id) ?? null,
+      isFavourite: starred.has(trip.id),
+    })
+}
+
+/** The per-reader facts a card carries beyond the row itself, as {@link tripCardsFor} reads them. */
+interface TripCardDecorations {
+  readonly placeCount: number
+  readonly role: TripMemberRole | null
+  readonly isFavourite: boolean
 }
 
 export function toTripCard(
   trip: Trip,
-  placeCount: number,
-  role: TripMemberRole | null,
-  isFavourite: boolean,
+  { placeCount, role, isFavourite }: TripCardDecorations,
 ): TripCard {
   return {
     id: trip.id,

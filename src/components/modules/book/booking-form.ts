@@ -65,6 +65,15 @@ export interface BookingDraft {
   /** The stop on a day this booking is for — `''` for none. */
   readonly assignmentId: string
   readonly notes: string
+  /**
+   * A stay's check-in day and check-out day — `''` until chosen. Only the stay branch reads them;
+   * its check-in and check-out *times* are `startTime` and `endTime`, the same columns the booking
+   * already has.
+   */
+  readonly startDayId: string
+  readonly endDayId: string
+  /** The end of a stay's check-in window — `''` when the property states none. */
+  readonly checkInEndTime: string
 }
 
 export function emptyBookingDraft(currency: string): BookingDraft {
@@ -86,6 +95,9 @@ export function emptyBookingDraft(currency: string): BookingDraft {
     dayId: '',
     assignmentId: '',
     notes: '',
+    startDayId: '',
+    endDayId: '',
+    checkInEndTime: '',
   }
 }
 
@@ -568,6 +580,128 @@ const FIELD_NAMES: { readonly [K in BookingField]: MessageKey } = {
   assignmentId: 'modules.book.fieldName.stop',
 }
 
+/* ------------------------------------------------------------------ the stay */
+
+/** A day of the trip, as far as a stay needs to know it. */
+export interface StayDay {
+  readonly id: string
+  readonly dayNumber: number
+}
+
+/**
+ * The nights a stay covers: the difference between its two day numbers.
+ *
+ * Check in on day 1 and out on day 4 is three nights; in and out on the same day is **zero**, not one.
+ * The same rule as the server's `countAccommodationNights`, and the only place the screen counts.
+ */
+export function stayNights(
+  firstDayNumber: number,
+  lastDayNumber: number,
+): number {
+  return Math.max(lastDayNumber - firstDayNumber, 0)
+}
+
+/** A stay's two days, resolved, and the nights between them — `null` until both are valid. */
+export interface StayRange<TDay extends StayDay> {
+  readonly first: TDay
+  readonly last: TDay
+  readonly nights: number
+}
+
+export function stayRange<TDay extends StayDay>(
+  startDayId: string,
+  endDayId: string,
+  days: ReadonlyArray<TDay>,
+): StayRange<TDay> | null {
+  const first = days.find((day) => day.id === startDayId)
+  const last = days.find((day) => day.id === endDayId)
+  if (first === undefined || last === undefined) {
+    return null
+  }
+  if (last.dayNumber < first.dayNumber) {
+    return null
+  }
+  return { first, last, nights: stayNights(first.dayNumber, last.dayNumber) }
+}
+
+export type StayDayWord = 'checkIn' | 'checkOut'
+
+/**
+ * What one day of a stay is to the reader: _check in_ on the first, _check out_ on the last, nothing
+ * on the nights between — and **both** on a stay that begins and ends on the same day.
+ */
+export function stayDayWords(
+  dayNumber: number,
+  firstDayNumber: number,
+  lastDayNumber: number,
+): ReadonlyArray<StayDayWord> {
+  const words: Array<StayDayWord> = []
+  if (dayNumber === firstDayNumber) {
+    words.push('checkIn')
+  }
+  if (dayNumber === lastDayNumber) {
+    words.push('checkOut')
+  }
+  return words
+}
+
+/**
+ * The rules a stay adds in place of the typed-date rules: both days chosen, the check-out day not
+ * before the check-in day, a check-in window that does not close before it opens, and — on a
+ * same-day stay — no check-out before the check-in.
+ *
+ * The typed-date rules do not run beside these: the stay branch renders no date field, so an error
+ * landing on one would refuse the save with nothing on screen to say why.
+ */
+export function validateStayDraft(
+  draft: BookingDraft,
+  days: ReadonlyArray<StayDay>,
+): BookingErrors {
+  const errors: BookingErrors = {}
+
+  if (draft.startDayId === '') {
+    errors.startDayId = {
+      key: 'modules.book.error.required',
+      keyParams: { field: 'modules.book.fieldName.checkInDay' },
+    }
+  }
+  if (draft.endDayId === '') {
+    errors.endDayId = {
+      key: 'modules.book.error.required',
+      keyParams: { field: 'modules.book.fieldName.checkOutDay' },
+    }
+  }
+
+  const first = days.find((day) => day.id === draft.startDayId)
+  const last = days.find((day) => day.id === draft.endDayId)
+  if (
+    first !== undefined &&
+    last !== undefined &&
+    last.dayNumber < first.dayNumber
+  ) {
+    errors.endDayId = { key: 'modules.book.error.endsBeforeStart' }
+  }
+
+  if (
+    draft.startTime !== '' &&
+    draft.checkInEndTime !== '' &&
+    draft.checkInEndTime < draft.startTime
+  ) {
+    errors.checkInEndTime = { key: 'modules.book.error.endTimeBeforeStart' }
+  }
+  if (
+    first !== undefined &&
+    first.id === last?.id &&
+    draft.startTime !== '' &&
+    draft.endTime !== '' &&
+    draft.endTime < draft.startTime
+  ) {
+    errors.endTime = { key: 'modules.book.error.endTimeBeforeStart' }
+  }
+
+  return errors
+}
+
 /**
  * Every reason this draft cannot be saved, keyed by the field that owns it.
  *
@@ -584,14 +718,21 @@ export interface BookingDraftContext {
    * is perfectly good. The repository decides ownership either way.
    */
   readonly stopIds?: ReadonlyArray<string>
+  /**
+   * The trip's days, when the draft is a stay recorded against them. Given, the stay's rules
+   * ({@link validateStayDraft}) replace the typed-date rules.
+   */
+  readonly stayDays?: ReadonlyArray<StayDay>
 }
 
 export function validateBookingDraft(
   draft: BookingDraft,
   context: BookingDraftContext = {},
 ): BookingErrors {
-  const errors: BookingErrors = {}
   const shape = SHAPES[draft.type]
+  const stay = context.stayDays
+  const errors: BookingErrors =
+    stay === undefined ? {} : validateStayDraft(draft, stay)
 
   if (draft.title.trim().length === 0) {
     errors.title = { key: 'modules.book.error.titleEmpty' }
@@ -599,36 +740,8 @@ export function validateBookingDraft(
     errors.title = { key: 'modules.error.titleLong' }
   }
 
-  for (const field of shape.required) {
-    if (draft[field].trim().length === 0) {
-      errors[field] = {
-        key: 'modules.book.error.required',
-        keyParams: { field: FIELD_NAMES[field] },
-      }
-    }
-  }
-
-  if (draft.startTime !== '' && draft.startDate === '') {
-    errors.startDate = { key: 'modules.book.error.timeNeedsDate' }
-  }
-  if (draft.endTime !== '' && draft.endDate === '' && draft.startDate === '') {
-    errors.endDate = { key: 'modules.book.error.endTimeNeedsDate' }
-  }
-
-  if (
-    draft.startDate !== '' &&
-    draft.endDate !== '' &&
-    draft.endDate < draft.startDate
-  ) {
-    errors.endDate = { key: 'modules.book.error.endsBeforeStart' }
-  } else if (
-    draft.startDate !== '' &&
-    draft.startDate === draft.endDate &&
-    draft.startTime !== '' &&
-    draft.endTime !== '' &&
-    draft.endTime < draft.startTime
-  ) {
-    errors.endTime = { key: 'modules.book.error.endTimeBeforeStart' }
+  if (stay === undefined) {
+    validateTypedDates(draft, shape, errors)
   }
 
   if (draft.guests.trim() !== '') {
@@ -664,6 +777,45 @@ export function validateBookingDraft(
   }
 
   return errors
+}
+
+/** The rules of a booking dated by typed calendar dates: every type except a stay on its days. */
+function validateTypedDates(
+  draft: BookingDraft,
+  shape: BookingTypeShape,
+  errors: BookingErrors,
+): void {
+  for (const field of shape.required) {
+    if (draft[field].trim().length === 0) {
+      errors[field] = {
+        key: 'modules.book.error.required',
+        keyParams: { field: FIELD_NAMES[field] },
+      }
+    }
+  }
+
+  if (draft.startTime !== '' && draft.startDate === '') {
+    errors.startDate = { key: 'modules.book.error.timeNeedsDate' }
+  }
+  if (draft.endTime !== '' && draft.endDate === '' && draft.startDate === '') {
+    errors.endDate = { key: 'modules.book.error.endTimeNeedsDate' }
+  }
+
+  if (
+    draft.startDate !== '' &&
+    draft.endDate !== '' &&
+    draft.endDate < draft.startDate
+  ) {
+    errors.endDate = { key: 'modules.book.error.endsBeforeStart' }
+  } else if (
+    draft.startDate !== '' &&
+    draft.startDate === draft.endDate &&
+    draft.startTime !== '' &&
+    draft.endTime !== '' &&
+    draft.endTime < draft.startTime
+  ) {
+    errors.endTime = { key: 'modules.book.error.endTimeBeforeStart' }
+  }
 }
 
 export function hasBookingErrors(errors: BookingErrors): boolean {

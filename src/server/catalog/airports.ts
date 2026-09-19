@@ -37,11 +37,17 @@
  * ## Prefix, cap, and the two things they protect
  *
  * The read is a **prefix** match — `LIKE 'term%'` on the IATA code, the ICAO code, the name and the
- * city — and not an infix or a word search. A leading wildcard cannot use an index, and this is a
- * table of tens of thousands of rows queried on every keystroke. A term that appears in the middle
- * of a name is deliberately not found; a `LIKE '%term%'` over the whole catalogue behind a
- * type-ahead is the shape that reads fine in a test with four rows and scans the table in
- * production.
+ * city — and not an infix or a word search. This is a table of thousands of rows queried on every
+ * keystroke, and a prefix is what an index can serve: SQLite turns `LIKE 'term%'` into a range over
+ * an index whose collation matches the comparison, which with `case_sensitive_like` off means
+ * `NOCASE`. So each of the four columns carries a `NOCASE` index — `airports_iata_prefix_idx`,
+ * `airports_icao_prefix_idx`, `airports_name_idx` and `airports_city_idx` — and the read plans as
+ * one indexed probe per column rather than a scan; `__tests__/airports.test.ts` asserts that plan
+ * by index name. The two unique code indexes stay `BINARY`, because {@link findAirportByCode}'s
+ * equality compares with the column's own collation and a `NOCASE` index could not serve it. A
+ * leading wildcard can use none of this, so a term that appears in the middle of a name is
+ * deliberately not found; a `LIKE '%term%'` over the whole catalogue behind a type-ahead is the
+ * shape that reads fine in a test with four rows and scans the table in production.
  *
  * The result is capped at {@link AIRPORT_MATCH_LIMIT}, and the cap is a ceiling rather than a
  * default: a caller may ask for fewer and cannot ask for more. A two-letter prefix matches hundreds

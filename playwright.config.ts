@@ -138,8 +138,21 @@ export default defineConfig({
   // and has not been re-measured over fourteen; the starvation was contention
   // for one software renderer, which fewer tests do not relieve, so it stands
   // until somebody times it. Parallelism in CI comes from the shards in
-  // ci.yml; locally Playwright's default (half the cores) applies.
-  workers: isCI ? 1 : undefined,
+  // ci.yml.
+  //
+  // Two locally, measured on a busy machine rather than an idle one (issue
+  // #335): on 16 cores with the cezar cockpit and other agent work in flight
+  // (load average 30-118), Playwright's default of half the cores — eight
+  // workers — went red on one full run in two, and four workers did the same.
+  // Every failure was a timeout, a 10 s hydration wait or a 30 s expect, on
+  // atlas and non-atlas screens alike, so the per-test atlas budget below does
+  // not cover it. Two workers passed two consecutive full runs under the same
+  // load, at 6.7 and 4.2 min wall-clock against 2.3-2.8 min at eight. A longer
+  // local timeout was the alternative and was not taken: the starvation hits
+  // the 10 s action and hydration waits as well, so it would have meant raising
+  // every budget and hiding slow-page regressions. `--workers=N` still
+  // overrides this on a quiet machine.
+  workers: isCI ? 1 : 2,
   // Doubled under CI, because the runner is about three times slower than the
   // machine this number was chosen on and the budget was sized on the wrong one.
   // Measured: `the click surface never takes the reader's input` is 10.7 s in

@@ -498,6 +498,23 @@ const messages = {
   'book.error.endTimeNeedsDate':
     'Часу завершення потрібен день, на який він припадає.',
   'book.error.endsBeforeStart': 'Це завершується раніше, ніж починається.',
+  'book.fieldName.checkInDay': 'день заїзду',
+  'book.fieldName.checkOutDay': 'день виїзду',
+  'book.stay.pickDay': 'Виберіть день',
+  'book.stay.nights': {
+    one: '{count} ніч',
+    few: '{count} ночі',
+    many: '{count} ночей',
+    other: '{count} ночі',
+  },
+  'book.stay.range': 'з {from} по {to}',
+  'book.stay.label': 'Проживання',
+  'book.remove.keepsNights':
+    'Ночі залишаються в подорожі. Вилучається лише бронювання.',
+  'book.menu.removeWithStay': 'Вилучити бронювання і проживання',
+  'book.removeStay.body':
+    'Вилучаються і бронювання, і ночі, за які воно платить.',
+  'book.toast.stayRemoved': 'Бронювання і проживання вилучено',
   'book.error.endTimeBeforeStart': 'Час завершення раніше за час початку.',
   'book.error.guests': 'Кількість людей має бути цілим числом, не більше 1000.',
   'error.price': 'Цю суму ми прочитати не можемо.',

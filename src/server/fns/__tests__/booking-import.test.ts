@@ -332,7 +332,7 @@ describe('startBookingImport', () => {
     expect(queue.sent[0]?.options).toBeUndefined()
   })
 
-  it('takes the storage key, the filename and the format off the stored row', async () => {
+  it('takes the storage key, the filename, the media type and the format off the stored row', async () => {
     const queue = queueDouble()
 
     await startBookingImport(alpha.tenant.scope, queue, {
@@ -346,6 +346,7 @@ describe('startBookingImport', () => {
       requestedBy: alpha.tenant.ownerUserId,
       sourceKey: `files/${alpha.tenant.organizationId}/confirmation.pdf`,
       sourceName: 'confirmation.pdf',
+      contentType: 'application/pdf',
       format: 'document',
     })
   })

@@ -626,7 +626,7 @@ auditor then ran the emitted SQL into `node:sqlite` and inserted against it rath
 a `human` row carrying a `token_id` was accepted, and so were `human` and `agent` rows with a
 `NULL` `actor_user_id`. All three contradict the Notes column above. Prose that the schema does
 not enforce is a convention, and this table is the one place in the product where a convention is
-not enough. The two extra constraints landed while migration `0004` had still never left its
+not enough. The two extra constraints landed while migration `0005` had still never left its
 worktree, which is the only window in which the shape of this table is free to change: SQLite
 cannot add a `CHECK` to an existing table, so `docs/DEPLOY.md` §register would have had to carry a
 non-additive recreate instead.

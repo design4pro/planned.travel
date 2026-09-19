@@ -49,8 +49,12 @@ import {
   inIds,
   tenantFilter,
 } from './base'
-import { NotFoundError, RepositoryError } from './context'
-import { getMembership, listUserProfiles } from './members'
+import {
+  isUniqueConstraintViolation,
+  NotFoundError,
+  RepositoryError,
+} from './context'
+import { getMembership } from './members'
 import {
   dayNotesRepository,
   daysRepository,
@@ -138,33 +142,34 @@ const tripFields = {
   accentColour: colourSchema.nullish(),
   budgetTargetMinor: minorAmountSchema.nullish(),
   reminderDays: nonNegativeIntSchema.max(365).optional(),
-  /**
-   * @deprecated The favourite is one person's row in `trip_favourites`; write it through
-   * `setFavourite` (`src/server/repos/trip-favourites.ts`). The column stays because dropping one
-   * is a table rebuild on SQLite — see its `@deprecated` note in `schema.ts` — and this field stays
-   * with it because the dev seed (`routes/api/dev/-seed/apply-trip.ts`) still sets it. Nothing
-   * reads it any more.
-   */
-  isFavourite: z.boolean().optional(),
   isArchived: z.boolean().optional(),
 }
 
 /**
- * Creation accepts one field an update never may: the primary key itself.
+ * Creation accepts two fields an update never may: the primary key itself, and the deprecated
+ * `isFavourite` (see its note below).
  *
- * Omit it and the column's `$defaultFn(newId)` mints a time-sortable random key, which is what
+ * The id: omit it and the column's `$defaultFn(newId)` mints a time-sortable random key, which is what
  * every real user gets. Supply it and the row is keyed by the caller's own string — the seam the
  * demo fixture uses so a workspace rebuilt from `scripts/seed` keys its trips identically every
  * time. That matters because a trip's cover art is a pure hash of its id, so a regenerated key
  * silently repaints the card and moves any screenshot that photographs it.
  *
- * It is validated like any other id and it is never reachable from a client: the boundary schema
+ * The id is validated like any other and it is never reachable from a client: the boundary schema
  * `createTripInputSchema` (`src/routes/_app/-server/trip-lifecycle.ts`) is a `z.strictObject`, so a
  * request body carrying this key is refused rather than forwarded.
  */
 export const createTripInput = z.object({
   ...tripFields,
   id: idSchema.optional(),
+  /**
+   * @deprecated The favourite is one person's row in `trip_favourites`; write it through
+   * `setFavourite` (`src/server/repos/trip-favourites.ts`). The column stays because dropping one
+   * is a table rebuild on SQLite — see its `@deprecated` note in `schema.ts` — and this field stays
+   * with it only because the dev seed (`routes/api/dev/-seed/apply-trip.ts`) still sets it at
+   * creation. It is deliberately not in `tripFields`, so {@link updateTripInput} cannot patch it.
+   */
+  isFavourite: z.boolean().optional(),
 })
 export type CreateTripInput = z.infer<typeof createTripInput>
 
@@ -1564,6 +1569,19 @@ export class TripMemberNotInWorkspaceError extends RepositoryError {
 }
 
 /**
+ * Thrown when a trip membership is asked for somebody who is already on the trip.
+ *
+ * The picker never offers a current member, so this is a stale screen, a crafted payload, or two
+ * owners adding the same person at once. The `trip_members_trip_user_unq` index is what refuses; a
+ * lookup first would only narrow the race, so the writer names the index's refusal instead.
+ */
+export class TripMemberExistsError extends RepositoryError {
+  constructor(readonly userId: string) {
+    super('That person is already on this trip.', 'TRIP_MEMBER_EXISTS')
+  }
+}
+
+/**
  * "This trip has an `owner` other than this membership row", as a predicate rather than as a count.
  *
  * The last-owner guard has to check **and** act in one statement, and this is the half that makes
@@ -1613,6 +1631,8 @@ function anotherOwnerExists(
  * lookup so a non-owner learns nothing about who is in the workspace. Then the target has to be a
  * member of that workspace: without this, a well-formed id for *any* account in the database became
  * a membership row, which is the tenant boundary crossed by the one column nothing was checking.
+ * Somebody already on the trip is refused by the unique index only after all three, so the
+ * {@link TripMemberExistsError} it becomes tells nothing to a caller the guards would have stopped.
  */
 export async function addTripMember(
   scope: TenantScope,
@@ -1624,10 +1644,17 @@ export async function addTripMember(
   if ((await getMembership(scope, values.userId)) === null) {
     throw new TripMemberNotInWorkspaceError(values.userId)
   }
-  return tripMembersRepository.insert(scope, {
-    ...values,
-    invitedBy: scope.ctx.userId,
-  })
+  try {
+    return await tripMembersRepository.insert(scope, {
+      ...values,
+      invitedBy: scope.ctx.userId,
+    })
+  } catch (cause) {
+    if (isUniqueConstraintViolation(cause)) {
+      throw new TripMemberExistsError(values.userId)
+    }
+    throw cause
+  }
 }
 
 /**
@@ -1714,10 +1741,10 @@ export async function removeTripMember(
  * One person on a trip, whichever kind of person they are.
  *
  * The discriminated union every later participant surface reads — `01-S8`'s initial-members picker,
- * `01-S9`'s participant vocabulary, the expense-split rows in `04-*`. The `guest` variant is
- * **declared here and never produced** until `01-S6b` (#119) fills it: no column, no query, no row.
- * That is deliberate. Every `kind` switch written from this slice on is exhaustive, so the guests
- * land as data rather than as a new shape every picker has to learn.
+ * `01-S9`'s participant vocabulary, the expense-split rows in `04-*`. It is declared here and
+ * produced by `listTripParticipants` in `trip-guests.ts`, which fills the `guest` variant `01-S6b`
+ * (#119) added rows behind: every `kind` switch written since `01-S6a` is exhaustive, so the guests
+ * landed as data rather than as a new shape every picker had to learn.
  *
  * `colour` is `trip_members.colour`, the per-trip tint those surfaces use. It is carried here and
  * rendered by none of them yet, because it belongs to the read model they consume and costs one
@@ -1739,74 +1766,6 @@ export type TripParticipant =
       readonly displayName: string
       readonly colour: string | null
     }
-
-/**
- * Who is on a trip, owner first — the one participant read model.
- *
- * {@link requireTrip} runs **first**, and the ordering is the whole point: {@link listTripMembers}
- * is tenant-filtered, so a trip id from another organization answers `[]` rather than raising, and a
- * reader that skipped the guard would report "a trip with nobody on it" instead of refusing. The
- * refusal has to come before the answer, not from it.
- *
- * A member whose workspace account has gone has no profile row, so {@link listUserProfiles} returns
- * nothing for them and they are dropped rather than rendered nameless. That is why this can answer
- * an empty array for a trip that still holds membership rows.
- *
- * No email reaches the result. `MemberProfile` carries one; the projection takes `name` and `image`
- * and leaves the address in the repository.
- */
-export async function listTripParticipants(
-  scope: TenantScope,
-  tripId: string,
-): Promise<Array<TripParticipant>> {
-  await requireTrip(scope, tripId)
-
-  const members = await listTripMembers(scope, tripId)
-  if (members.length === 0) {
-    return []
-  }
-  const profiles = new Map(
-    (
-      await listUserProfiles(
-        scope,
-        members.map((row) => row.userId),
-      )
-    ).map((profile) => [profile.userId, profile]),
-  )
-
-  const participants: Array<TripParticipant> = []
-  for (const row of members) {
-    const profile = profiles.get(row.userId)
-    if (profile === undefined) {
-      continue
-    }
-    participants.push({
-      kind: 'member',
-      memberId: row.id,
-      userId: row.userId,
-      // The column is plain `text` behind a `CHECK`, so what comes back is a string. A value the
-      // enum does not carry reads as the least-privileged role — the same posture
-      // `listMemberProfiles` takes with an organization role. It cannot widen anything: this field
-      // renders a badge, and every write is still guarded by `assertTripRole`, which re-reads the
-      // stored value and refuses a role it does not recognise.
-      role: tripMemberRoleSchema.catch('viewer').parse(row.role),
-      colour: row.colour,
-      name: profile.name,
-      image: profile.image,
-    })
-  }
-
-  // Owner first, and everybody else in the membership order `listTripMembers` already totalled.
-  // A stable partition rather than a sort, so two owners keep that order between them.
-  return [
-    ...participants.filter(
-      (row) => row.kind === 'member' && row.role === 'owner',
-    ),
-    ...participants.filter(
-      (row) => !(row.kind === 'member' && row.role === 'owner'),
-    ),
-  ]
-}
 
 /**
  * The acting user's role on each of the given trips, keyed by trip id.
@@ -1847,6 +1806,23 @@ export async function tripRoleFor(
     limit: 1,
   })
   return rows[0]?.role ?? null
+}
+
+/**
+ * Whether the acting user may write this trip's plan: owner or editor, and the trip is not archived.
+ *
+ * The one answer every planner read gives its write controls. It sits beside {@link tripRoleFor}
+ * because it is that role read to a boolean, and a second copy of it is what would let the board
+ * and its notes disagree about who may write the day the roles change (`docs/SPEC.md` §8). Pure, so
+ * a read that already holds the trip and the role pays nothing for it. The write guards
+ * ({@link requireWritableTrip}, {@link assertTripRole}) are the enforcement; this only draws the
+ * affordance.
+ */
+export function canWritePlan(
+  trip: Pick<Trip, 'isArchived'>,
+  role: TripMember['role'] | null,
+): boolean {
+  return !trip.isArchived && (role === 'owner' || role === 'editor')
 }
 
 /* -------------------------------------------------------------------------------------------------
