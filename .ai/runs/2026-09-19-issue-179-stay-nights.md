@@ -80,8 +80,13 @@ difference between two day numbers, and read on the booking desk as nights rathe
 - Found by the e2e block: exporting the plain stay writes beside the server functions kept
   `./context` (and `cloudflare:workers`) in the client graph, and the booking desk failed to load in
   dev. Fixed by moving them to `stay-writes.ts` (ac3dc78c7).
+- Found by UI QA: D1 enforces `day_accommodations.reservation_id` as `NO ACTION` (it arrived by
+  `ADD COLUMN`), so deleting a booking with a linked stay failed. `deleteReservation` now unlinks the
+  stay first, with regression cases on the migrated database (b1017af72).
 
 ## Progress
+
+PR: #614
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
@@ -100,7 +105,7 @@ difference between two day numbers, and read on the booking desk as nights rathe
 - [x] 3.1 `booking-form.ts` stay rules and `__tests__/stays.test.ts` — 5d214961d
 - [x] 3.2 Copy in all 23 locales — 5d214961d
 - [x] 3.3 `stay-dialog.tsx` and the swap in `booking-dialog.tsx` — 5d214961d
-- [x] 3.4 The stay card and the remove-with-stay action; `index.ts` — 5d214961d, ac3dc78c7
+- [x] 3.4 The stay card and the remove-with-stay action; `index.ts` — 5d214961d, ac3dc78c7, fa61b4e8c, b1017af72
 - [x] 3.5 e2e block in `e2e/journeys.spec.ts` — 9624a6aa5
 
 ### Phase 4: Gate
