@@ -1,5 +1,5 @@
 {
-  "kitVersion": 43,
+  "kitVersion": 45,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -67,7 +67,7 @@
       "mode": "100644"
     },
     ".ai/scripts/__tests__/backlog-status.test.mjs": {
-      "sha256": "5790852ffc14ae9cf18775de252837fc4a2f2b99d2e95234d19c7f0805d0f80e",
+      "sha256": "4d86195466544d20a43a150a7f97f75aaad65ac75b8803a7b53acfa816426f77",
       "mode": "100644"
     },
     ".ai/scripts/agent-kit-check.mjs": {
@@ -75,7 +75,7 @@
       "mode": "100755"
     },
     ".ai/scripts/backlog-status.mjs": {
-      "sha256": "2453df0a50e3fd5c897e0934408bb1ec642c1f20a4189c5a901040d400508e7a",
+      "sha256": "6e6ba66a3b880fce756ba5929c3069aaa8535fd264b6fe778f55b416e9597b96",
       "mode": "100755"
     },
     ".ai/scripts/cez-automations.sh": {
@@ -115,7 +115,7 @@
       "mode": "100644"
     },
     ".ai/trackers/github.md": {
-      "sha256": "7809564eb52d7c71aaf01f8b8694a60057be1f49625a90ac552722419940f097",
+      "sha256": "860b230bab06d78ca29597573a98f3b3a509de1a390b3a9e9e91487d523733eb",
       "mode": "100644"
     },
     ".claude/hooks/__tests__/hooks.test.ts": {
@@ -123,7 +123,7 @@
       "mode": "100644"
     },
     ".claude/hooks/format-file.sh": {
-      "sha256": "720e9eda702807eb9bb90bcbbd5568ce3f102be72e84edcf23dc3bd99b68e058",
+      "sha256": "163d68b6278d37bd7b047956cac18f4064dfcca1f60e6b95a67f9e4a4d5fd009",
       "mode": "100755"
     },
     ".claude/hooks/git-guardrails.sh": {
@@ -139,7 +139,7 @@
       "mode": "100755"
     },
     ".claude/settings.json": {
-      "sha256": "9e67d65658790a0bfd5643c39f4b483b0b1d5edc406288a6991f7f2445ac18ac",
+      "sha256": "b834b14b455d16a7a39912c4327a9d39710060e6ea0b3508e435c373c70a21bf",
       "mode": "100644"
     },
     ".claude/skills/backlog/SKILL.md": {
