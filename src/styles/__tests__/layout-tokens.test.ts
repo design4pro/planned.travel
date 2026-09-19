@@ -144,7 +144,7 @@ describe('the chrome offsets that read the bar', () => {
     // The bottom edge is not the shell's to lay out. `AppFrame` already pads the
     // content well for the bar and a full-bleed slice already stops at its top
     // edge, so a third box under the outlet is dead canvas rather than
-    // clearance — 96px of gutter against a 65px bar, at 360px and at 768px.
+    // clearance — 136px of gutter against a 65px bar, at 360px and at 768px.
     // What neither of those can do is move a scroll position, which is what the
     // rule below is for and all it is for.
     const css = stylesheet().replace(/\s+/g, '')

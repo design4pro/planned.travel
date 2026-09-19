@@ -113,18 +113,30 @@ import {
 } from '../itinerary'
 import {
   addPhoto,
+  attachPhotoToEntry,
+  countEntriesByMood,
   createEntry,
   createJourney,
   createMood,
+  deleteEntry,
+  deleteJourney,
+  deletePhoto,
   getJourney,
   getJourneyStory,
   journeyEntriesRepository,
   journeyMoodsRepository,
   journeyPhotosRepository,
   journeysRepository,
+  listEntriesByIds,
+  listJourneyEntries,
   listJourneys,
   listRecentEntries,
+  listUnattachedPhotos,
+  publishJourney,
   tallyMoods,
+  unpublishJourney,
+  updateEntry,
+  updateJourney,
 } from '../journey'
 import {
   applyTemplateToTrip,
@@ -3504,6 +3516,20 @@ describe('tenant isolation', () => {
         )
       })
 
+      it('refuses a foreign trip’s existing member as NOT_FOUND, never as already on the trip', async () => {
+        // B's owner is on B's trip, so the unique index would refuse the insert. `TRIP_MEMBER_EXISTS`
+        // here would confirm who is on B's trip; the trip has to be unresolvable before the index.
+        expect(
+          await captureError(() =>
+            addTripMember(alpha.tenant.scope, {
+              tripId: beta.tripId,
+              userId: beta.tenant.ownerUserId,
+              role: 'editor',
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      })
+
       it('counts none of a foreign trip’s people through tripMemberUserIds', async () => {
         // The projection `readTripForDelete` reads the delete dialog's member count off. An
         // unscoped one would hand A both how many people are on B's trip and who they are.
@@ -4355,6 +4381,41 @@ describe('tenant isolation', () => {
       expect(
         (await tallyMoods(beta.tenant.scope)).map((row) => row.value),
       ).toEqual([1])
+    })
+
+    it('writes to and reads by id none of A’s journeys, entries or photos (#521)', async () => {
+      // The writes and id-keyed helpers now resolve through the same read predicate, whose
+      // sub-selects are tenant-bound too; A's ids stay a `NotFoundError` or nothing from B.
+      const scope = beta.tenant.scope
+      for (const attempt of [
+        () => updateJourney(scope, alpha.journeyId, { title: 'Stolen' }),
+        () =>
+          publishJourney(scope, alpha.journeyId, 'a-token-long-enough-to-pass'),
+        () => unpublishJourney(scope, alpha.journeyId),
+        () => deleteJourney(scope, alpha.journeyId),
+        () => updateEntry(scope, alpha.journeyEntryId, { title: 'Stolen' }),
+        () => deleteEntry(scope, alpha.journeyEntryId),
+        () => attachPhotoToEntry(scope, alpha.journeyPhotoId, null),
+        () => deletePhoto(scope, alpha.journeyPhotoId),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await listJourneyEntries(scope, alpha.journeyId)).toEqual([])
+      expect(await listUnattachedPhotos(scope, alpha.journeyId)).toEqual([])
+      expect(await countEntriesByMood(scope, alpha.journeyId)).toEqual([])
+      expect(
+        (
+          await listEntriesByIds(scope, [
+            alpha.journeyEntryId,
+            beta.journeyEntryId,
+          ])
+        ).map((row) => row.id),
+      ).toEqual([beta.journeyEntryId])
+
+      const story = await getJourneyStory(alpha.tenant.scope, alpha.journeyId)
+      expect(story.journey.title).toBe('Lisbon notebook')
+      expect(story.entries.map((row) => row.photos.length)).toEqual([1])
     })
   })
 

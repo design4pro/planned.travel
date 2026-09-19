@@ -251,6 +251,7 @@ const messages = {
   'people.error.lastOwner':
     'Cesta si ponechá aspoň jednoho vlastníka. Nejdřív udělejte vlastníkem někoho jiného.',
   'people.error.notInWorkspace': 'Tento člověk není v tomto prostoru',
+  'people.error.alreadyOnTrip': 'Tento člověk už na této cestě je',
   'people.guests.title': 'Cestují s tebou',
   'people.guests.description': 'Lidé na tomto výletě, kteří nemají účet',
   'people.guests.empty': 'Zatím nikdo',

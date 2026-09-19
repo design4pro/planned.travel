@@ -252,6 +252,7 @@ const messages = {
   'people.error.lastOwner':
     'У подорожі лишається принаймні один власник. Спершу зробіть власником когось іншого.',
   'people.error.notInWorkspace': 'Цієї людини немає в цьому просторі',
+  'people.error.alreadyOnTrip': 'Ця людина вже в цій подорожі',
   'people.guests.title': 'Подорожують із вами',
   'people.guests.description': 'Учасники подорожі без облікового запису',
   'people.guests.empty': 'Поки нікого',

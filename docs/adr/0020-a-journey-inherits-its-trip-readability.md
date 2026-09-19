@@ -42,8 +42,8 @@ author - and it conflicts with the trip that journal describes being readable by
 Every reader that returns a journey row or something derived from one - the journal list and its
 counts, the direct getters, the story, the recent entries, the mood tally - applies the predicate, and
 `member-isolation.test.ts` carries the case beside the trip ones. `journalCoverage` is unchanged: it
-counts trips, so it asks `readableTrips`. A write that resolves a journey by id should ask the same
-question; the readers land first (#456), and the writes and the journey-id-keyed helpers follow
+counts trips, so it asks `readableTrips`. A write that resolves a journey by id asks the same
+question: the readers landed first (#456), and the writes and the journey-id-keyed helpers followed
 (#521). If a traveller is ever given a journey visibility control, it narrows this rule rather than
 replacing it, and that is a new record.
 

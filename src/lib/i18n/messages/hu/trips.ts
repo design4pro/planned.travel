@@ -239,6 +239,7 @@ const messages = {
   'people.error.lastOwner':
     'Egy utazásnak marad legalább egy tulajdonosa. Előbb tegyél tulajdonossá valaki mást.',
   'people.error.notInWorkspace': 'Ez a személy nincs ebben a munkaterületben',
+  'people.error.alreadyOnTrip': 'Ez a személy már ezen az utazáson van',
   'people.guests.title': 'Veled utaznak',
   'people.guests.description': 'Az utazás résztvevői, akiknek nincs fiókjuk',
   'people.guests.empty': 'Még senki',

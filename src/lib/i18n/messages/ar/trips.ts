@@ -265,6 +265,7 @@ const messages = {
   'people.error.lastOwner':
     'تحتفظ كل رحلة بمالك واحد على الأقل. اجعل شخصًا آخر مالكًا أولًا.',
   'people.error.notInWorkspace': 'هذا الشخص ليس في مساحة العمل هذه',
+  'people.error.alreadyOnTrip': 'هذا الشخص موجود بالفعل في هذه الرحلة',
   'people.guests.title': 'يسافرون معك',
   'people.guests.description': 'أشخاص في هذه الرحلة ليس لديهم حساب',
   'people.guests.empty': 'لا أحد بعد',

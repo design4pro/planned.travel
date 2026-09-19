@@ -227,6 +227,7 @@ const messages = {
   'people.error.lastOwner':
     '여행에는 소유자가 한 명 이상 있어야 합니다. 먼저 다른 사람을 소유자로 지정하세요.',
   'people.error.notInWorkspace': '그 사람은 이 워크스페이스에 없습니다',
+  'people.error.alreadyOnTrip': '그 사람은 이미 이 여행에 있습니다',
   'people.guests.title': '함께 여행하는 사람',
   'people.guests.description': '이 여행에서 계정이 없는 사람',
   'people.guests.empty': '아직 없음',

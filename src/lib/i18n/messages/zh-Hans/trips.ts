@@ -212,6 +212,7 @@ const messages = {
   'people.visibility.public': '这次旅行已通过公开链接分享',
   'people.error.lastOwner': '旅行至少保留一位所有者。请先把别人设为所有者。',
   'people.error.notInWorkspace': '这个人不在这个工作区里',
+  'people.error.alreadyOnTrip': '这个人已经在这次旅行中了',
   'people.guests.title': '与你同行',
   'people.guests.description': '本次旅行中没有账户的人',
   'people.guests.empty': '还没有人',

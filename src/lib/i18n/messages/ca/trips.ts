@@ -244,6 +244,7 @@ const messages = {
   'people.error.lastOwner':
     'Un viatge manté almenys un propietari. Fes propietari algú altre primer.',
   'people.error.notInWorkspace': 'Aquesta persona no és en aquest espai',
+  'people.error.alreadyOnTrip': 'Aquesta persona ja és en aquest viatge',
   'people.guests.title': 'Viatgen amb tu',
   'people.guests.description': 'Persones d’aquest viatge que no tenen compte',
   'people.guests.empty': 'Encara ningú',

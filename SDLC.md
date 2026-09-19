@@ -135,7 +135,7 @@ Intake labels go on issues only, one at a time, and say who acts on the issue ne
 
 ## Trigger labels
 
-A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human (or, for `review-threads`, a job) hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation — so a trigger label still present is a run nobody took.
+A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human (or, for `review-threads`, a job) hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation (for `review-threads`, inside the claim step, after `in-progress` is on) — so a trigger label still present is a run nobody took.
 
 | Label            | Starts                                    | Notes                                                                                                                                |
 | ---------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |

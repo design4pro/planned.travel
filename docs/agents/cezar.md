@@ -236,9 +236,11 @@ fires minutes before the review job posts anything. So the chain is:
    edit as a diff block, leaves `changes-requested`, and resolves the thread anyway
    (`.ai/skills/om-auto-review-pr/SKILL.md`). Only a disagreement leaves a thread open.
 
-The loop is closed at the head, not at the thread. The run removes `review-threads` as its first
-mutation (`.ai/skills/om-auto-fix-pr/SKILL.md`), and the labelling script keeps one marker comment
-naming the head it last armed, so the same head is never armed twice. That matters because a thread
+The loop is closed at the head, not at the thread. The run's first mutation takes `in-progress`
+and only then removes `review-threads` (`.ai/skills/om-auto-fix-pr/SKILL.md`), so the PR is never
+both untriggered and unclaimed while the run's own push moves the head (#490), and the labelling
+script keeps one marker comment naming the head it last armed, so the same head is never armed
+twice. That matters because a thread
 the run **declines** stays open on purpose - a disagreement is a human's to settle - and without the
 marker the `reopened` and `ready_for_review` triggers would restart the same run to reach the same
 conclusion forever. `in-progress`, `blocked` and `do-not-merge` stand the script down, and the
@@ -292,10 +294,15 @@ fork's fixes; launchd calls it at 07:00, 12:00 and 17:00 on weekdays. Install (t
 `.ai/scripts/launchd/`):
 
 ```bash
-sed -e "s|__REPO_ROOT__|$PWD|g" -e "s|__PATH__|$(dirname "$(command -v node)"):$(dirname "$(command -v gh)"):/usr/bin:/bin|g" \
+sed -e "s|__REPO_ROOT__|$PWD|g" -e "s|__PATH__|$(dirname "$(command -v cezar)"):$(dirname "$(command -v node)"):$(dirname "$(command -v gh)"):/usr/bin:/bin|g" \
   .ai/scripts/launchd/dev.planned-travel.housekeeping.plist > ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist
 ```
+
+launchd gives the job only the substituted PATH, so check `cezar` resolves there, not in your shell:
+`env -i PATH="$(plutil -extract EnvironmentVariables.PATH raw ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist)" /bin/bash -c 'command -v cezar node gh curl'`
+must print four paths. The job runs `bash -lc`, whose profile normally only extends that PATH, so this
+non-login check is the stricter of the two. `jq` is optional: without it the log omits the run id.
 
 Remove with `launchctl bootout gui/$(id -u)/dev.planned-travel.housekeeping`. Log:
 `.ai/cezar/tmp/housekeeping.log`. Run it by hand any time: `bash .ai/scripts/housekeeping.sh`.

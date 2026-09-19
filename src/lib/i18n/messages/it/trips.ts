@@ -248,6 +248,7 @@ const messages = {
     'Un viaggio mantiene almeno un proprietario. Rendi prima proprietario qualcun altro.',
   'people.error.notInWorkspace':
     'Questa persona non è in questo spazio di lavoro',
+  'people.error.alreadyOnTrip': 'Questa persona è già in questo viaggio',
   'people.guests.title': 'Viaggiano con te',
   'people.guests.description':
     'Persone di questo viaggio che non hanno un account',

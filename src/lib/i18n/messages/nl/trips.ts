@@ -237,6 +237,7 @@ const messages = {
   'people.error.lastOwner':
     'Een reis houdt minstens één eigenaar. Maak eerst iemand anders eigenaar.',
   'people.error.notInWorkspace': 'Die persoon zit niet in deze werkruimte',
+  'people.error.alreadyOnTrip': 'Die persoon is al op deze reis',
   'people.guests.title': 'Reizen met je mee',
   'people.guests.description': 'Mensen op deze reis zonder account',
   'people.guests.empty': 'Nog niemand',

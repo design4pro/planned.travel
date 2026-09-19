@@ -243,6 +243,7 @@ const messages = {
     'Eine Reise behält mindestens einen Inhaber. Mach zuerst jemand anderen zum Inhaber.',
   'people.error.notInWorkspace':
     'Diese Person ist nicht in diesem Arbeitsbereich',
+  'people.error.alreadyOnTrip': 'Diese Person ist schon auf dieser Reise',
   'people.guests.title': 'Reisen mit dir',
   'people.guests.description':
     'Personen auf dieser Reise, die kein Konto haben',

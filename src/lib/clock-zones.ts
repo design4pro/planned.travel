@@ -268,7 +268,7 @@ export function zoneClockTime(
   locale: string,
 ): string | null {
   if (!isFormattableZone(zone)) return null
-  const cacheKey = `${locale} ${zone}`
+  const cacheKey = `${locale}\u0000${zone}`
   let formatter = clockFormatters.get(cacheKey)
   if (formatter === undefined) {
     formatter = new Intl.DateTimeFormat(locale, {

@@ -3,7 +3,6 @@ import {
   IMPORT_TEXT_MAX_CHARS,
   ImportRefusedError,
   documentToText,
-  extensionOf,
   needsConversion,
   stripBase64Runs,
 } from '../document'
@@ -26,14 +25,6 @@ function converterAnswering(answer: DocumentConversion | (() => never)) {
   const converter: DocumentConverter = { toMarkdown }
   return { ...converter, toMarkdown }
 }
-
-describe('extensionOf', () => {
-  it('lowercases the last segment and answers empty for a name without one', () => {
-    expect(extensionOf('Confirmation.PDF')).toBe('pdf')
-    expect(extensionOf('archive.tar.gz')).toBe('gz')
-    expect(extensionOf('confirmation')).toBe('')
-  })
-})
 
 describe('routing by extension', () => {
   it('sends a PDF through the conversion', async () => {
@@ -73,6 +64,51 @@ describe('routing by extension', () => {
 
     expect(converter.toMarkdown).not.toHaveBeenCalled()
     expect(text).toContain('Check-in 4 March.')
+  })
+
+  it('decodes an extensionless text/plain upload rather than converting it', async () => {
+    const converter = converterAnswering({ data: 'never used' })
+
+    const text = await documentToText(converter, {
+      name: 'confirmation',
+      contentType: 'text/plain',
+      bytes: bytesOf('Flight LH123 on 4 March'),
+    })
+
+    expect(converter.toMarkdown).not.toHaveBeenCalled()
+    expect(text).toBe('Flight LH123 on 4 March')
+  })
+
+  it('strips the base64 runs of an extensionless message/rfc822 upload', async () => {
+    const run = 'QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5'.repeat(9)
+    const converter = converterAnswering({ data: 'never used' })
+
+    const text = await documentToText(converter, {
+      name: 'confirmation',
+      contentType: 'message/rfc822',
+      bytes: bytesOf(
+        `Subject: Your stay\r\n\r\nCheck-in 4 March.\r\n\r\n${run}`,
+      ),
+    })
+
+    expect(converter.toMarkdown).not.toHaveBeenCalled()
+    expect(text).toContain('Check-in 4 March.')
+    expect(text).not.toContain(run)
+  })
+
+  it('reads an extensionless file by its name alone when no media type travelled, as the previous build did', async () => {
+    const converter = converterAnswering({
+      data: 'converted',
+      format: 'markdown',
+    })
+
+    const text = await documentToText(converter, {
+      name: 'confirmation',
+      bytes: bytesOf('Flight LH123 on 4 March'),
+    })
+
+    expect(converter.toMarkdown).toHaveBeenCalledTimes(1)
+    expect(text).toBe('converted')
   })
 
   it('names the conversion formats it would reach for', () => {

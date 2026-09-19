@@ -254,6 +254,7 @@ const messages = {
   'people.error.lastOwner':
     'Wycieczka ma co najmniej jednego właściciela. Najpierw uczyń właścicielem kogoś innego.',
   'people.error.notInWorkspace': 'Tej osoby nie ma w tej przestrzeni',
+  'people.error.alreadyOnTrip': 'Ta osoba jest już na tej wycieczce',
   'people.guests.title': 'Podróżują z tobą',
   'people.guests.description': 'Osoby na tej wycieczce, które nie mają konta',
   'people.guests.empty': 'Jeszcze nikogo',

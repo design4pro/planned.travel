@@ -313,6 +313,8 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         return t('trips.people.error.lastOwner')
       case 'not-in-workspace':
         return t('trips.people.error.notInWorkspace')
+      case 'already-on-trip':
+        return t('trips.people.error.alreadyOnTrip')
       case 'guest-name-taken':
         return t('trips.people.error.guestNameTaken', {
           name:

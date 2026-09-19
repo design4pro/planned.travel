@@ -233,6 +233,7 @@ const messages = {
   'people.error.lastOwner':
     'Bir gezide en az bir sahip kalır. Önce başka birini sahip yapın.',
   'people.error.notInWorkspace': 'Bu kişi bu çalışma alanında değil',
+  'people.error.alreadyOnTrip': 'Bu kişi zaten bu seyahatte',
   'people.guests.title': 'Seninle seyahat edenler',
   'people.guests.description': 'Bu gezide hesabı olmayan kişiler',
   'people.guests.empty': 'Henüz kimse yok',

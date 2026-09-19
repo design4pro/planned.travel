@@ -111,6 +111,7 @@ const REFUSAL_BY_CODE = {
   TRIP_GUEST_NAME_TAKEN: 'guest-name-taken',
   TRIP_GUEST_LIMIT: 'guest-limit',
   TRIP_GUEST_MERGE_TARGET: 'guest-merge-target',
+  TRIP_MEMBER_EXISTS: 'already-on-trip',
 } as const
 
 export type PeopleRefusal =

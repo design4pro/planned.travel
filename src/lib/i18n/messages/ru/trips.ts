@@ -254,6 +254,7 @@ const messages = {
   'people.error.lastOwner':
     'В поездке остаётся хотя бы один владелец. Сначала сделайте владельцем кого-то ещё.',
   'people.error.notInWorkspace': 'Этого человека нет в этом пространстве',
+  'people.error.alreadyOnTrip': 'Этот человек уже в этой поездке',
   'people.guests.title': 'Путешествуют с вами',
   'people.guests.description': 'Участники поездки без учётной записи',
   'people.guests.empty': 'Пока никого',

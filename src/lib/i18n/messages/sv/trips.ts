@@ -235,6 +235,7 @@ const messages = {
   'people.error.lastOwner':
     'En resa behåller minst en ägare. Gör någon annan till ägare först.',
   'people.error.notInWorkspace': 'Den personen finns inte i arbetsytan',
+  'people.error.alreadyOnTrip': 'Den personen är redan med på resan',
   'people.guests.title': 'Reser med dig',
   'people.guests.description':
     'Personer på den här resan som inte har något konto',
