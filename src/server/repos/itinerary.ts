@@ -27,7 +27,7 @@ import { runBatch } from './batch'
 import { NotFoundError } from './context'
 import { listDayNotes, listTripDays, requireTripDay } from './days'
 import { placesRepository } from './places'
-import { reservationsRepository } from './reservations'
+import { requireReservationOfTrip } from './reservations'
 import { assertTripRole, requireTrip } from './trips'
 import {
   currencySchema,
@@ -46,7 +46,6 @@ import type {
   DayAccommodation,
   DayAssignment,
   Place,
-  Reservation,
 } from '#/server/db/types'
 import type { TenantScope } from './base'
 
@@ -176,22 +175,6 @@ async function requirePlaceOfTrip(
     throw new NotFoundError('place', placeId)
   }
   return place
-}
-
-/** The booking a stay is linked to must be a booking of the stay's own trip. */
-async function requireReservationOfTrip(
-  scope: TenantScope,
-  tripId: string,
-  reservationId: string,
-): Promise<Reservation> {
-  const reservation = await reservationsRepository.requireById(
-    scope,
-    reservationId,
-  )
-  if (reservation.tripId !== tripId) {
-    throw new NotFoundError('reservation', reservationId)
-  }
-  return reservation
 }
 
 /* -------------------------------------------------------------------------------------------------
