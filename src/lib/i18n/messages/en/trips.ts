@@ -406,6 +406,38 @@ const messages = {
     'A trip keeps at least one owner. Make somebody else an owner first.',
   'people.error.notInWorkspace': 'That person is not in this workspace',
   'people.error.alreadyOnTrip': 'That person is already on this trip',
+  'people.guests.title': 'Travelling with you',
+  'people.guests.description': 'People on this trip who do not have an account',
+  'people.guests.empty': 'Nobody yet',
+  'people.guests.emptyHint':
+    'A guest is somebody travelling with you who does not need an account. Add them by name.',
+  'people.guest.badge': 'Guest',
+  'people.guest.add.label': 'Their name',
+  'people.guest.add.placeholder': 'Anna',
+  'people.guest.add.action': 'Add a guest',
+  'people.guest.rename.action': 'Rename {name}',
+  'people.guest.rename.title': 'Rename {name}',
+  'people.guest.rename.confirm': 'Rename',
+  'people.guest.remove.action': 'Remove {name} from this trip',
+  'people.guest.remove.title': 'Remove {name} from this trip?',
+  'people.guest.remove.body':
+    'The guest goes. Nothing else on the trip changes.',
+  'people.guest.remove.confirm': 'Remove',
+  'people.guest.merge.action': '{name} is now…',
+  'people.guest.merge.title': '{name} is now one of the people on this trip',
+  'people.guest.merge.body':
+    'Everything assigned to {name} moves to the person you choose, and the guest goes. This cannot be undone.',
+  'people.guest.merge.inherits':
+    '{member} inherits everything assigned to {name}.',
+  'people.guest.merge.placeholder': 'Choose somebody on this trip',
+  'people.guest.merge.confirm': 'Merge',
+  'people.guest.merge.done': '{name} is now {member}',
+  'people.guest.merge.nothingMoved': 'Nothing was assigned to them yet',
+  'people.error.guestNameTaken': 'A guest named {name} is already on this trip',
+  'people.error.guestLimit':
+    'A trip holds at most {limit} guests, because a longer list makes the participant pickers and the split arithmetic hard to read',
+  'people.error.guestMergeTarget':
+    'Choose somebody who is already on this trip',
 } as const satisfies NamespaceMessages
 
 export default messages

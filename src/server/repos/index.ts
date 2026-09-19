@@ -12,6 +12,7 @@
  * |-----------------|--------|
  * | `trips`         | `trips`, `trip_members`, `share_links` |
  * | `trip-favourites` | `trip_favourites` |
+ * | `trip-guests`   | `trip_guests` |
  * | `days`          | `days`, `day_notes` |
  * | `itinerary`     | `day_assignments`, `assignment_participants`, `day_accommodations` |
  * | `places`        | `places`, `place_tags` |
@@ -60,6 +61,7 @@ export * from './reservations'
 export * from './settings'
 export * from './tags'
 export * from './transports'
+export * from './trip-guests'
 export * from './trip-favourites'
 export * from './trips'
 export * from './vacay'

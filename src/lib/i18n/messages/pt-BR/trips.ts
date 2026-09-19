@@ -247,6 +247,38 @@ const messages = {
   'people.error.notInWorkspace':
     'Essa pessoa não está neste espaço de trabalho',
   'people.error.alreadyOnTrip': 'Essa pessoa já está nesta viagem',
+  'people.guests.title': 'Viajando com você',
+  'people.guests.description': 'Pessoas desta viagem que não têm conta',
+  'people.guests.empty': 'Ninguém ainda',
+  'people.guests.emptyHint':
+    'Um convidado é alguém que viaja com você e não precisa de conta. Adicione pelo nome.',
+  'people.guest.badge': 'Convidado',
+  'people.guest.add.label': 'Nome',
+  'people.guest.add.placeholder': 'Ana',
+  'people.guest.add.action': 'Adicionar convidado',
+  'people.guest.rename.action': 'Renomear {name}',
+  'people.guest.rename.title': 'Renomear {name}',
+  'people.guest.rename.confirm': 'Renomear',
+  'people.guest.remove.action': 'Remover {name} desta viagem',
+  'people.guest.remove.title': 'Remover {name} desta viagem?',
+  'people.guest.remove.body': 'O convidado sai. Nada mais muda na viagem.',
+  'people.guest.remove.confirm': 'Remover',
+  'people.guest.merge.action': '{name} agora é…',
+  'people.guest.merge.title': '{name} agora é uma das pessoas desta viagem',
+  'people.guest.merge.body':
+    'Tudo o que está atribuído a {name} passa para a pessoa escolhida, e o convidado sai. Não dá para desfazer.',
+  'people.guest.merge.inherits':
+    '{member} herda tudo o que foi atribuído a {name}.',
+  'people.guest.merge.placeholder': 'Escolha alguém desta viagem',
+  'people.guest.merge.confirm': 'Mesclar',
+  'people.guest.merge.done': '{name} agora é {member}',
+  'people.guest.merge.nothingMoved':
+    'Nada tinha sido atribuído a essa pessoa ainda',
+  'people.error.guestNameTaken':
+    'Já existe um convidado chamado {name} nesta viagem',
+  'people.error.guestLimit':
+    'Uma viagem comporta no máximo {limit} convidados, porque uma lista maior dificulta a escolha de participantes e a leitura da divisão de gastos',
+  'people.error.guestMergeTarget': 'Escolha alguém que já está nesta viagem',
 } satisfies TranslationOf<typeof En>
 
 export default messages

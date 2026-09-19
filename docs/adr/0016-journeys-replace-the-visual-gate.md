@@ -79,6 +79,13 @@ a measurement that belongs to that work rather than an assumption made here.
 `types: [labeled]` trigger. It needs no basemap - measured, see below - so it reads no R2 credential
 and runs on a fork.
 
+_Amended by ADR 0021 (decision 4): every PR that can change what a browser sees, not every PR. A
+diff that stops at `docs/`, `.ai/`, `.claude/` or Markdown outside `src/`, `e2e/` and `public/`
+skips the journeys, on the word of `scripts/ci/change-scope.mjs` (#527). Only an explicit
+`e2e=false` from the `scope` job skips them, so an unlisted path, an empty diff, a `scope` job that
+failed, and a push to `develop` or `main` or a manual run (where `scope` is skipped) all run them. A
+develop→main PR still defers to the push run (ADR 0021 decision 2)._
+
 ## Consequences
 
 ### What is given up, stated plainly
@@ -108,6 +115,9 @@ server function.
 | `e2e` runner time | 12 x ~5.0 min = **~60 min**                        | **~22 min**, measured green on the 2-vCPU runner (run 33806080237): jobs of 9m44s and 11m58s, being 2-3 min of fixed cost plus 6m41s and 9m59s of journeys |
 | Trigger           | push to `develop`/`main`, or the `needs-e2e` label | **every PR**                                                                                                                                               |
 | R2 credentials    | required; the job skipped without them             | none; runs on a fork                                                                                                                                       |
+
+_Amended by ADR 0021: the trigger is every PR whose diff reaches past documentation - see the note
+under decision 6._
 
 Per event that is a **~63% cut**, and the first CI run corrected the estimate this table used to
 carry. A local run at two workers suggested ~4.5 min a shard; the runner took 6m41s and 9m59s, plus

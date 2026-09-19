@@ -228,6 +228,38 @@ const messages = {
     '旅行にはオーナーが少なくとも1人必要です。先に別の人をオーナーにしてください。',
   'people.error.notInWorkspace': 'その人はこのワークスペースにいません',
   'people.error.alreadyOnTrip': 'その人はすでにこの旅行に参加しています',
+  'people.guests.title': '一緒に旅する人',
+  'people.guests.description': 'この旅行でアカウントを持たない人',
+  'people.guests.empty': 'まだいません',
+  'people.guests.emptyHint':
+    'ゲストとは、アカウントがなくても一緒に旅する人のことです。名前で追加しましょう。',
+  'people.guest.badge': 'ゲスト',
+  'people.guest.add.label': '名前',
+  'people.guest.add.placeholder': '花子',
+  'people.guest.add.action': 'ゲストを追加',
+  'people.guest.rename.action': '{name} の名前を変更',
+  'people.guest.rename.title': '{name} の名前を変更',
+  'people.guest.rename.confirm': '名前を変更',
+  'people.guest.remove.action': '{name} をこの旅行から外す',
+  'people.guest.remove.title': '{name} をこの旅行から外しますか？',
+  'people.guest.remove.body':
+    'ゲストが外れます。旅行のほかの内容は変わりません。',
+  'people.guest.remove.confirm': '外す',
+  'people.guest.merge.action': '{name} は…',
+  'people.guest.merge.title': '{name} をこの旅行のメンバーにする',
+  'people.guest.merge.body':
+    '{name} に割り当てられたものはすべて選んだ人に移り、ゲストは外れます。元に戻せません。',
+  'people.guest.merge.inherits':
+    '{name}に割り当てられたものはすべて{member}に引き継がれます。',
+  'people.guest.merge.placeholder': 'この旅行の人を選ぶ',
+  'people.guest.merge.confirm': '統合',
+  'people.guest.merge.done': '{name} は {member} になりました',
+  'people.guest.merge.nothingMoved': 'まだ何も割り当てられていませんでした',
+  'people.error.guestNameTaken':
+    '{name} という名前のゲストはすでにこの旅行にいます',
+  'people.error.guestLimit':
+    '旅行に追加できるゲストは最大 {limit} 人です。それ以上になると参加者の選択や費用の分担が読みにくくなるためです',
+  'people.error.guestMergeTarget': 'すでにこの旅行にいる人を選んでください',
 } satisfies TranslationOf<typeof En>
 
 export default messages
