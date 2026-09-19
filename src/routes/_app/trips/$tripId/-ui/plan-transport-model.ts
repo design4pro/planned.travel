@@ -13,13 +13,17 @@
  */
 
 import {
+  IDEAS_CONTAINER,
+  containerOf,
   expandJourneyRows,
+  ideaItemId,
   isNoteItemId,
   legItemId,
   legRefOfLegItem,
   mergeDayTimeline,
   noteIdOfNoteItem,
   noteItemId,
+  removePlanItem,
 } from '#/components/planner'
 import {
   formatMoneyMinor,
@@ -332,6 +336,97 @@ export function journeyWrites(
     writes.push({ dayId, items })
   }
   return writes
+}
+
+/**
+ * A write the board has just landed, as far as the journeys beside it care.
+ *
+ * `before` is the board the write was made against and `next` the board it leaves behind. A
+ * delete carries no `next`: its board is `before` with the stop taken out.
+ */
+export type JourneyRestatement =
+  | {
+      readonly kind: 'reorder'
+      readonly next: PlanOrder
+      readonly dayIds: ReadonlyArray<string>
+    }
+  | {
+      readonly kind: 'schedule'
+      readonly next: PlanOrder
+      readonly placeId: string
+      readonly assignmentId: string
+      readonly dayId: string
+    }
+  | {
+      readonly kind: 'unschedule'
+      readonly before: PlanOrder
+      readonly next: PlanOrder
+      readonly itemId: string
+    }
+  | {
+      readonly kind: 'delete'
+      readonly before: PlanOrder
+      readonly itemId: string
+    }
+
+/**
+ * The journey writes one landed write owes, which is {@link journeyWrites} asked about the right
+ * board and the right days.
+ *
+ * - A reorder restates every day it touched, against the board it produced.
+ * - A schedule restates the day it lands on — but its board still calls the new stop by its
+ *   `idea:` id, which the run would drop as a row the day does not hold, so the stop is renamed to
+ *   the assignment the write actually created first.
+ * - An unschedule and a delete restate the day the stop *left*, which only the board before the
+ *   write can name; the ideas column holds no journeys, so a stop taken from there owes nothing.
+ */
+export function journeyWritesFor(
+  change: JourneyRestatement,
+  rows: ReadonlyArray<PlannerTransport>,
+): Array<JourneyWrite> {
+  switch (change.kind) {
+    case 'reorder':
+      return journeyWrites(change.next, change.dayIds, rows)
+    case 'schedule':
+      return journeyWrites(
+        renameItem(
+          change.next,
+          ideaItemId(change.placeId),
+          change.assignmentId,
+        ),
+        [change.dayId],
+        rows,
+      )
+    case 'unschedule':
+      return journeyWrites(
+        change.next,
+        dayOfItem(change.before, change.itemId),
+        rows,
+      )
+    case 'delete':
+      return journeyWrites(
+        removePlanItem(change.before, change.itemId),
+        dayOfItem(change.before, change.itemId),
+        rows,
+      )
+  }
+}
+
+/** The day holding an item — or none when it sits in the ideas column. */
+function dayOfItem(order: PlanOrder, itemId: string): Array<string> {
+  const container = containerOf(order, itemId)
+  return container === null || container === IDEAS_CONTAINER ? [] : [container]
+}
+
+/** The same arrangement with one draggable id renamed. */
+function renameItem(order: PlanOrder, from: string, to: string): PlanOrder {
+  return {
+    ideaIds: order.ideaIds,
+    days: order.days.map((day) => ({
+      dayId: day.dayId,
+      itemIds: day.itemIds.map((itemId) => (itemId === from ? to : itemId)),
+    })),
+  }
 }
 
 /** A stop or a note, as the run names it. */
