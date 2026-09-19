@@ -395,7 +395,7 @@ const messages = {
   'people.visibility.organization':
     'Anyone in this workspace can open this trip',
   'people.visibility.public': 'This trip is shared with a public link',
-  /* ---------------------------------------------- the two named refusals */
+  /* -------------------------------------------- the three named refusals */
   /**
    * The client picks one of these three from the refusal's `reason` code; the
    * server never composes a sentence. The last-owner line answers both verbs -

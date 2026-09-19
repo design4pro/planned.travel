@@ -237,7 +237,7 @@ const messages = {
   'people.error.lastOwner':
     'Een reis houdt minstens één eigenaar. Maak eerst iemand anders eigenaar.',
   'people.error.notInWorkspace': 'Die persoon zit niet in deze werkruimte',
-  'people.error.alreadyOnTrip': 'Die persoon zit al in deze reis',
+  'people.error.alreadyOnTrip': 'Die persoon is al op deze reis',
 } satisfies TranslationOf<typeof En>
 
 export default messages

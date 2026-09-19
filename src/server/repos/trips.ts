@@ -1630,6 +1630,8 @@ function anotherOwnerExists(
  * lookup so a non-owner learns nothing about who is in the workspace. Then the target has to be a
  * member of that workspace: without this, a well-formed id for *any* account in the database became
  * a membership row, which is the tenant boundary crossed by the one column nothing was checking.
+ * Somebody already on the trip is refused by the unique index only after all three, so the
+ * {@link TripMemberExistsError} it becomes tells nothing to a caller the guards would have stopped.
  */
 export async function addTripMember(
   scope: TenantScope,

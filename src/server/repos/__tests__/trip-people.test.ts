@@ -25,6 +25,7 @@ import {
   listTripMembers,
   listTripParticipants,
   removeTripMember,
+  TripMemberExistsError,
   updateTripMember,
 } from '../trips'
 import {
@@ -148,7 +149,7 @@ describe('a trip’s people', () => {
         addTripMember(alpha.scope, { tripId, userId, role: 'viewer' }),
       )
 
-      expect(refusal).toBeInstanceOf(RepositoryError)
+      expect(refusal).toBeInstanceOf(TripMemberExistsError)
       expect((refusal as RepositoryError).code).toBe('TRIP_MEMBER_EXISTS')
       expect((await listTripMembers(alpha.scope, tripId)).length).toBe(before)
     })
@@ -213,6 +214,18 @@ describe('a trip’s people', () => {
   })
 
   describe('the owner assert, and its one exemption', () => {
+    it('refuses an editor re-adding a current member with FORBIDDEN, not as already on the trip', async () => {
+      // The owner assert runs before the unique index answers, so a non-owner learns nothing about
+      // who is on the trip from the refusal's code.
+      const editor = alpha.scopeFor(await join('Editor of A', 'editor'))
+
+      const refusal = await captureError(() =>
+        addTripMember(editor, { tripId, userId: ownerId, role: 'viewer' }),
+      )
+
+      expect((refusal as RepositoryError).code).toBe('FORBIDDEN')
+    })
+
     it('refuses an editor all three writes with FORBIDDEN', async () => {
       const editorId = await join('Editor of A', 'editor')
       const viewerId = await join('Viewer of A', 'viewer')
