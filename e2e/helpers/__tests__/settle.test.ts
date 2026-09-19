@@ -20,9 +20,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   boundedDiagnostic,
+  boundedSettle,
+  DOM_QUIET_CAP_MS,
   HYDRATION_DIAGNOSTIC_TIMEOUT_MS,
   readsAsTransient,
   scrubbedOfRetryTriggers,
+  SETTLE_MUTATIONS_BOUND_MS,
   UNREADABLE_PAGE,
 } from '../settle'
 
@@ -125,6 +128,54 @@ describe('a hydration diagnostic cannot outlive the timeout it explains', () => 
     await expect(
       boundedDiagnostic(() => Promise.resolve('last is div#root')),
     ).resolves.toBe('last is div#root')
+    expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+/**
+ * The quiet wait promises to degrade to a fixed pause, never to a test timeout,
+ * and its own cap is an in-page timer that cannot keep that promise when the
+ * evaluate's answer never comes back (#501). These drive the real race with a
+ * wait that never settles.
+ */
+describe('a quiet wait cannot outlive its bound', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  test('the bound sits past the in-page cap, so the cap still ends a normal wait', () => {
+    expect(SETTLE_MUTATIONS_BOUND_MS).toBeGreaterThan(DOM_QUIET_CAP_MS)
+  })
+
+  test('a wait that never settles resolves at the bound', async () => {
+    let settled = false
+    void boundedSettle(() => new Promise<void>(() => {})).then(() => {
+      settled = true
+    })
+
+    await vi.advanceTimersByTimeAsync(SETTLE_MUTATIONS_BOUND_MS - 1)
+    expect(settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(settled).toBe(true)
+  })
+
+  test('a navigation still rejects, so settle() can retry on the new document', async () => {
+    await expect(
+      boundedSettle(() =>
+        Promise.reject(new Error('Execution context was destroyed')),
+      ),
+    ).rejects.toThrow('Execution context was destroyed')
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  test('a wait inside the bound leaves no timer behind', async () => {
+    await expect(boundedSettle(() => Promise.resolve())).resolves.toBe(
+      undefined,
+    )
     expect(vi.getTimerCount()).toBe(0)
   })
 })
