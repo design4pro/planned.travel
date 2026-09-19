@@ -8,6 +8,8 @@ import {
   resetPmtilesProtocol,
 } from '#/lib/map/pmtiles'
 
+import { MAP_ENGINE_TIMEOUT_MS } from '../map-context'
+
 import type { MapCategory, MapPlace } from '../types'
 
 /**
@@ -205,6 +207,31 @@ function lastMap() {
   return map
 }
 
+/**
+ * Waits for the map to be *committed*, not merely constructed — the same gate
+ * `map-canvas.test.tsx` uses, for the same reason.
+ *
+ * Nothing below this line exists until `MapCanvas` holds an instance: children
+ * are mounted on the commit after construction, which is two dynamic imports and
+ * an archive probe into an async bootstrap. Testing Library's default budget is a
+ * UI-transition budget, so on a loaded machine a bare `findByRole` for a pin used
+ * to expire while the loading overlay was still up and report a missing marker
+ * when in truth none had been asked for yet. Gate on the readiness the surface
+ * itself publishes, inside the budget the component gives its own start-up: past
+ * `MAP_ENGINE_TIMEOUT_MS` a map that has not appeared is a real defect rather
+ * than a slow machine, and every assertion after the gate waits only on the one
+ * React commit it is actually about.
+ */
+async function mapMounted(): Promise<void> {
+  await waitFor(
+    () => {
+      expect(harness.maps).toHaveLength(1)
+      expect(screen.queryByText(/Loading map/)).toBeNull()
+    },
+    { timeout: MAP_ENGINE_TIMEOUT_MS },
+  )
+}
+
 beforeEach(() => {
   harness.maps.length = 0
   harness.eases.length = 0
@@ -224,6 +251,7 @@ describe('PlaceMarkers', () => {
         <PlaceMarkers places={[KYOTO, TOKYO]} categories={CATEGORIES} />
       </MapCanvas>,
     )
+    await mapMounted()
 
     const pin = await screen.findByRole('button', {
       name: 'Fushimi Inari Taisha, Landmarks, day 1, 68 Fukakusa Yabunouchicho, rated 5 out of 5',
@@ -244,6 +272,7 @@ describe('PlaceMarkers', () => {
         <PlaceMarkers places={[TOKYO, twin]} categories={CATEGORIES} />
       </MapCanvas>,
     )
+    await mapMounted()
 
     expect(
       await screen.findByRole('button', { name: /2 places/ }),
@@ -267,6 +296,7 @@ describe('PlaceMarkers', () => {
         />
       </MapCanvas>,
     )
+    await mapMounted()
 
     expect(await screen.findByRole('button', { name: /Sensoji/ })).toBeDefined()
   })
@@ -287,6 +317,7 @@ describe('PlaceMarkers', () => {
         />
       </MapCanvas>,
     )
+    await mapMounted()
 
     expect(await screen.findByRole('button', { name: /Sensoji/ })).toBeDefined()
     expect(screen.getByRole('button', { name: /Asakusa Shrine/ })).toBeDefined()
@@ -304,6 +335,7 @@ describe('PlaceMarkers', () => {
         />
       </MapCanvas>,
     )
+    await mapMounted()
 
     await user.click(
       await screen.findByRole('button', { name: /Fushimi Inari/ }),
@@ -317,6 +349,7 @@ describe('PlaceMarkers', () => {
         <PlaceMarkers places={[KYOTO]} categories={CATEGORIES} />
       </MapCanvas>,
     )
+    await mapMounted()
 
     const pin = await screen.findByRole('button', { name: /Fushimi Inari/ })
     expect(screen.queryByText('68 Fukakusa Yabunouchicho')).toBeNull()
@@ -346,6 +379,7 @@ describe('PlaceMarkers', () => {
         <PlaceMarkers places={[TOKYO, twin]} categories={CATEGORIES} />
       </MapCanvas>,
     )
+    await mapMounted()
 
     await user.click(await screen.findByRole('button', { name: /2 places/ }))
     expect(harness.eases).toHaveLength(1)
@@ -358,6 +392,7 @@ describe('PlaceMarkers', () => {
         <PlaceMarkers places={[KYOTO, TOKYO]} categories={CATEGORIES} />
       </MapCanvas>,
     )
+    await mapMounted()
 
     await screen.findByRole('button', { name: /Fushimi Inari/ })
     const map = lastMap()
@@ -380,8 +415,7 @@ describe('FitBounds', () => {
         />
       </MapCanvas>,
     )
-
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     const map = lastMap()
     expect(map.fits).toHaveLength(0)
 
@@ -405,8 +439,7 @@ describe('FitBounds', () => {
         />
       </MapCanvas>,
     )
-
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     const map = lastMap()
     map.emit('load')
     await waitFor(() => expect(map.fits).toHaveLength(1))
@@ -427,8 +460,7 @@ describe('FitBounds', () => {
         <FitBounds points={[[KYOTO.lng, KYOTO.lat]]} enabled={false} />
       </MapCanvas>,
     )
-
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     const map = lastMap()
     map.emit('load')
     expect(map.fits).toHaveLength(0)
@@ -447,7 +479,7 @@ describe('FitBounds', () => {
     )
     const { rerender } = render(view)
 
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     const map = lastMap()
     map.emit('load')
     await waitFor(() => expect(map.fits).toHaveLength(1))
