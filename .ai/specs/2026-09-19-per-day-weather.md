@@ -16,7 +16,7 @@ Norway's Locationforecast. Past days use a **recorded** daily value from NASA PO
 window use a climate **estimate** from NASA POWER's long-term means, which always carries a visible
 marker. Both providers are free and licensed for commercial use. That is the one property that lifts
 the block on `DOC-08` (`06-S7` in `docs/plans/06-documents-and-media.md`), and phase 1 records it as
-ADR 0024. Three rules apply throughout. Readings are cached in the existing `KV` namespace under keys
+ADR 0023. Three rules apply throughout. Readings are cached in the existing `KV` namespace under keys
 that carry no tenant data. A whole trip is resolved in one batched server call. A reading that is
 missing renders as missing, never as an invented number.
 
@@ -47,11 +47,26 @@ commercial use, and neither needs a key.
 
 Today is computed in the trip's time zone (`trips.timezone`, via `todayKeyIn` in `src/lib/time.ts`).
 
+`recorded` and `estimate` rename `06-S7`'s `archive` and `climate`. The reason is the badge: those
+two words are what its accessible name says to a reader, and the glossary should match what the
+product says. Phase 1 step 2 updates `06-S7` to this vocabulary in the same change, so one set of
+words survives.
+
 | Day relative to today                                 | Kind       | Provider                         | What it gives                                                                                                                |
 | ----------------------------------------------------- | ---------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | today … last day the forecast fully covers (≈ 9 days) | `forecast` | MET Norway Locationforecast 2.0  | min/max °C, precipitation mm, precipitation probability where given, max wind m/s, a condition symbol, and four 6-hour slots |
-| before today                                          | `recorded` | NASA POWER daily point API       | min/max °C, precipitation mm/day, mean wind m/s at 2 m                                                                       |
+| before today, but inside POWER's publication lag      | `recorded` | none yet                         | nothing is published yet: the day renders "Not yet recorded", never a back-filled forecast                                   |
+| before today, beyond that lag                         | `recorded` | NASA POWER daily point API       | min/max °C, precipitation mm/day, mean wind m/s at 2 m                                                                       |
 | after the forecast's last full day                    | `estimate` | NASA POWER climatology point API | the long-term monthly mean min/max °C and precipitation for that day's month                                                 |
+
+POWER publishes a day some time after it ends, and the delay is a property of the product rather
+than of our code. `nasa-power.ts` holds it as `POWER_LAG_DAYS`, measured against the live API and
+pinned with the date it was measured; days inside it are "Not yet recorded". This case is not
+exotic - it is what a traveller sees on day 5 of their own trip, looking back at days 1 to 4, which
+is the single most-viewed state this feature has. **`POWER_LAG_DAYS` must be verified against the
+API before phase 2 merges**; if the honest answer turns out to be that the lag is long enough to
+matter for a whole trip, the alternative is to persist each day's forecast reading as the day rolls
+past, and that is a fourth KV shape and a change to this Data Model, not an implementation detail.
 
 Sunrise and sunset are **computed, not fetched**. `src/lib/sun.ts` (new, pure) runs the standard NOAA
 solar-position algorithm for a latitude, a longitude, a date and a time zone. That costs no request
@@ -70,7 +85,8 @@ so the boundary moves with the provider rather than with our guess.
   - responses are cached, and `Expires` / `If-Modified-Since` are honoured;
   - coordinates are truncated to at most 4 decimals;
   - at most 20 requests per second per application, spread out rather than simultaneous;
-  - HTTPS and gzip only;
+  - HTTPS, and gzip - which the Workers runtime negotiates on every outbound `fetch`, so no
+    `Accept-Encoding` header is set by hand;
   - attribution is shown on screen.
 - **NASA POWER** has no restriction on use, including commercial use, and asks to be cited. Its grid
   is roughly 0.5°. Near-real-time values settle into climate-quality values after 2-3 months, and the
@@ -119,6 +135,14 @@ src/components/planner/day-weather-badge.tsx       badge + popover with the full
   `callProvider(outbound, { provider: 'met-norway' | 'nasa-power', operation, organizationId })` →
   cache write. A read or write error on KV is logged and treated as a miss, as `geocode.ts:336` and
   `:362` do.
+- **A failure is cached, because a spent unit cannot be refunded.** `spendRateUnit` increments a KV
+  counter (`src/server/metering/rate.ts:129`) before the call, so an outage would otherwise bill
+  every retry: a Free workspace reloading a three-location board during a thirty-minute MET outage
+  would burn nine units a reload and eventually lock itself out of a feature that was never
+  delivered. On any vendor error or timeout the policy writes
+  `wx:v1:fail:<provider>:<lat4>:<lng4>` with a 5-minute TTL. While that entry is present the
+  location's days of that provider's kinds resolve to `unavailable` **without an outbound call and
+  without a meter spend**. The entry holds no tenant data, like every other key here.
 - **Batching.** The server function groups the trip's days by rounded coordinate and makes **at most
   one call per location and provider**:
   - one Locationforecast call covers every forecast day at that location;
@@ -128,6 +152,17 @@ src/components/planner/day-weather-badge.tsx       badge + popover with the full
   A fourteen-day trip in one city costs at most three outbound calls on a cold cache, and none on a
   warm one.
 
+- **MET's per-second cap is not bounded by a monthly ceiling.** `weather_lookups_per_month` is
+  metered per organisation (`src/server/metering/rate.ts:77`, `PLAN_RATE_CEILINGS` keyed by
+  `PlanId` at `src/server/billing/limits.ts:171`), so twenty workspaces opening a board in the same
+  second are twenty simultaneous calls from one `User-Agent` while every monthly ceiling is intact.
+  MET's limit is 20 requests per second **per application**. The bound is therefore stated here and
+  checked in phase 2: at most one MET call per location, at most 12 locations per request (below),
+  and a forecast entry that lives at least an hour - so reaching 20 req/s needs more than twenty
+  cold, distinct-location board opens inside one second, which is far above our volumes. If the
+  outbound counters (`src/server/metering/outbound.ts`) ever show that ceiling approached, the
+  answer is a KV token bucket under `wx:v1:ratelimit:met-norway:<unix-second>`, and this paragraph
+  is where that decision gets recorded.
 - **User-Agent.** A checked-in constant in `met-norway.ts`, `planned.travel/1.0 (+https://planned.travel)`
   (a site link satisfies MET's contact rule). It is not a secret, and no credential exists for
   either provider, so `06-S7` constraint 1 (the secret) has nothing to store.
@@ -142,26 +177,48 @@ because they hold what a traveller wrote. KV only, in the existing `KV` binding:
 
 | Key                                         | Value                                                                                                                                               | TTL                                                 |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `wx:v1:forecast:<lat4>:<lng4>`              | `{ v:1, fetchedAt, lastModified, expires, series: RawStep[] }`: the provider's timeseries, trimmed to the fields we read, **not** grouped into days | `min(3600, seconds until MET's Expires)`, floor 60  |
+| `wx:v1:forecast:<lat4>:<lng4>`              | `{ v:1, fetchedAt, lastModified, expires, series: RawStep[] }`: the provider's timeseries, trimmed to the fields we read, **not** grouped into days | `clamp(secondsUntilExpires, 60, 21600)`             |
 | `wx:v1:recorded:<lat1>:<lng1>:<YYYY-MM-DD>` | `{ v:1, fetchedAt, day: RecordedDay }`                                                                                                              | 24 h if the date is under 90 days old, else 30 days |
 | `wx:v1:estimate:<lat1>:<lng1>`              | `{ v:1, fetchedAt, months: MonthlyMean[12] }`                                                                                                       | 30 days                                             |
 
+- **The forecast TTL never undercuts `Expires`.** MET's terms make honouring it mandatory, so the
+  entry lives at least until then: `clamp(secondsUntilExpires, 60, 21600)` floors a missing or past
+  header at 60 s and caps a pathological one at six hours, and it never rounds _down_ to an hour the
+  way a `min(3600, …)` would. The re-fetch after expiry carries `If-Modified-Since`, so an unchanged
+  forecast costs a 304 rather than a body.
 - `<lat4>` means rounded to 4 decimals, which is also MET's truncation rule. `<lat1>` means rounded to
   1 decimal. NASA's grid is about 0.5°, so a finer key only fragments the cache for the same cell.
 - **Days are grouped at read time, never in the cache.** Two trips at the same coordinate can have
   different time zones (or none, which resolves to UTC), so a cached day boundary would be wrong for
   one of them. The entry holds the raw timeseries; `met-norway.ts` groups it into the reading trip's
   local days on every read. That is a pure function over at most about 90 steps.
+- **Known limitation: one zone per trip, not one per day.** Both the day boundaries above and
+  `sun.ts`'s rise and set times use the trip's zone (`trips.timezone`, `src/server/db/schema.ts:695`
+  - a single nullable column). On a multi-zone trip - Tokyo to London - the London days are bucketed
+    into Tokyo's 24 hours and their sunrise is hours out. #631 asks for the day's own zone, and this
+    spec knowingly does not deliver it in v1: resolving a zone from a coordinate needs a lookup that
+    does not exist in `src/lib/` (`timezones.ts` labels and validates zones, it does not resolve one
+    from a point) and would add a dependency, which docs/SPEC.md §3 makes a decision of its own. The
+    reading stays correct for the overwhelmingly common single-zone trip, and the fix is a follow-up
+    that carries the dependency decision with it.
 - **This deviates from the `06-S7` key sketch, deliberately.** Forecast and estimate are keyed per
   location, not per date, because one provider call answers every date and one KV entry per call
   keeps reads at one per location. Recorded values stay per date because the requested range differs
   between trips. The long TTLs on settled history and on climatology follow from what the data is: a
   30-year monthly mean does not change within a month.
+- **One version lever.** `src/server/weather/weather.ts` exports
+  `WEATHER_CACHE_VERSION = 'v1'`, the single source of the `v1` in every key and of the `v` in every
+  value, as `src/server/geo/geocode.ts:251` does for geo. A change to any stored shape bumps it;
+  entries are never rewritten in place, and the previous prefix is left to expire on its own TTL.
 - **No tenant data in any key**: coordinates, a date, and nothing else. The module exports no
   function that takes a trip, place or member id (`06-S7`, isolation rule).
 - **A missing value in a cached entry is a miss, not an error.** That covers a malformed entry, a
   wrong `v`, or a failed Zod parse; the pattern is `src/server/billing/entitlements.ts:110-136`.
   NASA's `-999` normalises to `null` for that field, never to a number.
+- **Concurrent misses on the same key are accepted, not serialised.** The overlap window is one
+  provider round-trip, and the per-request call cap below bounds what that can cost. A
+  `wx:v1:lock:` single-flight entry would add a failure mode (a stale lock) to save a duplicate call
+  that the 1-hour forecast entry already makes rare.
 
 **Limits.** A fourth rate metric, `weather_lookups_per_month`, goes into `RATE_METRICS` and
 `PLAN_RATE_CEILINGS` (`src/server/billing/limits.ts:120-189`, whose comment "All three are far below…"
@@ -171,11 +228,17 @@ number of misses, calls are spent in the order **forecast → estimate → recor
 is the one a traveller acts on. Everything not reached is `unavailable`, and a test covers a
 budget of 1 against 3 needed calls. The numbers follow the geocode reasoning in that
 file's comment: a cold fourteen-day trip spends up to three units, so Free's 300 covers about a
-hundred cold trip views a month.
+hundred cold trip views a month. Free's allowance is non-zero because the surface that spends it is
+on - `src/server/billing/limits.ts:126-137` fixes the rule that "an allowance is zero exactly when
+the surface that spends it is off", and the planner board is in Free's catalogue entry
+(`src/lib/plans.ts:246,254`, "a day-by-day itinerary and map"), so a zero here would refuse every
+open of a screen the pricing page sells.
 
 ## 📝 API Contracts
 
-One server function, route-local like `-server/geocode.ts:40-99`:
+One server function, route-local beside the plan loaders in `src/routes/_app/trips/$tripId/-server/`
+(`plan.ts`, `day-notes.ts` and `plan-transports.ts` are its structural models - there is no
+`-server/geocode.ts` in this repository):
 
 ```ts
 // src/routes/_app/trips/$tripId/-server/weather.ts
@@ -206,7 +269,7 @@ interface DayReading {
 }
 
 interface SunTimes {
-  sunrise: string | null // 'HH:mm' local to the trip's zone; null in polar night / midnight sun
+  sunrise: string | null // 'HH:mm' in the trip's zone (see the multi-zone limitation); null in polar night / midnight sun
   sunset: string | null
 }
 
@@ -222,11 +285,18 @@ export const loadTripWeather: ServerFn<
   weather, and nothing is written.
 - **Day location**: resolved in the tenant scope by a new repository read,
   `readDayLocations(scope, tripId)` in `src/server/repos/itinerary.ts`. For each dated day it returns
-  one coordinate, chosen in this order:
-  1. the place of a stay covering that day (`day_accommodations` from `start_day_id` to
-     `end_day_id` → `places.lat/lng`). On a changeover day covered by two stays, the stay whose
-     `start_day_id` is this day wins, because that is where the traveller sleeps. A stay whose
-     `place_id` is `NULL` (the FK is `set null`) is skipped, not treated as a location;
+  one coordinate. A candidate qualifies only when its place row has **both** `lat` and `lng` non-null
+  (`src/server/db/schema.ts:211` makes them nullable, and a hand-made place routinely has neither);
+  a candidate missing either is skipped and the next rule applies:
+  1. the place of the stay covering that day - `day_accommodations` joined to `days` at both ends,
+     where this day's `day_number` (`src/server/db/schema.ts:828`, unique per trip) is between the
+     start day's and the end day's. `start_day_id` and `end_day_id` are ids, not an order, so the
+     comparison is on `day_number` and never on the ids themselves. When more than one stay covers
+     the day - the schema permits it, there is no exclusion constraint - the tie is broken in this
+     order: the stay whose `start_day_id` **is** this day (that is where the traveller sleeps), then
+     the stay with the highest start `day_number`, then the lowest `id`. The order is total, so the
+     result is deterministic. A stay whose `place_id` is `NULL` (the FK is `set null`) is skipped,
+     not treated as a location;
   2. else the first assigned place by `order_index` (`day_assignments` → `places`);
   3. else `null`, which makes the day `none`.
 
@@ -236,16 +306,26 @@ export const loadTripWeather: ServerFn<
   (10 s, like `GEOAPIFY_TIMEOUT_MS`) turns the affected days into `unavailable`. The function
   **never rejects** for a provider reason. A trip-not-found or role failure still throws, as it does
   everywhere else.
+- **Concurrency, deadline and a cap.** All provider calls for one request are issued concurrently
+  under `Promise.allSettled`, never in sequence - a 21-day, 6-city trip on a cold cache is up to 18
+  calls, which at the 10 s per-call timeout would be three minutes if they queued. The function
+  carries an overall deadline of 8 s; every kind still unresolved at the deadline renders
+  `unavailable`. At most **12 distinct day-locations** are resolved per request, in day order; days
+  beyond that render `unavailable`. The worst case per request is therefore 12 locations × 3 kinds =
+  36 outbound calls plus 36 KV reads, stated here so it can be checked against the Workers
+  per-request subrequest limit before phase 2 lands.
 - **Client**: called with TanStack Query from the plan screen after first paint, with key
   `['trip-weather', tripId]` and `staleTime` of 15 minutes. It is not part of the route loader.
 
 ## 📝 UI/UX
 
 - **Badge** (`day-weather-badge.tsx`), placed **beside** the day header button in `day-section.tsx`,
-  never inside it. The date label (`:163-171`) sits inside the header `<button>` (`:140-176`), so the
+  never inside it. The date label (`:161-166`) sits inside the header `<button>` (`:134-171`), so the
   badge cannot go there. The header button and the badge become siblings in a new
-  `flex items-center` wrapper: the button keeps `flex-1` and its current contents, and the badge sits
-  at the row's end, vertically centred. It shows a condition icon for a forecast, a
+  `flex items-center` wrapper: the button's `w-full` (`:139`) becomes `flex-1 min-w-0`, its contents
+  and the inner `flex-1` span (`:156`) are untouched, and the badge sits at the row's end, vertically
+  centred. This narrows the day header's click target by the badge's width, which is the price of one
+  button per action. It shows a condition icon for a forecast, a
   thermometer for recorded or estimated days, the max/min pair in `tabular-nums`, and the unit. Its
   box is **reserved at final size** from first paint: a skeleton while loading, and nothing but empty
   space for `none`. A late reading never shifts the itinerary (SPEC §2, zero layout shift).
@@ -259,8 +339,27 @@ export const loadTripWeather: ServerFn<
   - an attribution line that names MET Norway (with CC BY 4.0) or NASA POWER.
 
   The badge is its own button, the header button's sibling, so no button is nested in another. Focus returns to
-  the badge when the popover closes. When the day detail (#124, `01-S9b`) lands, it renders the same
-  `DayWeatherPanel` body in its declared weather region. This spec does not wait for it.
+  the badge when the popover closes.
+
+  **Why four slots and not the reference's twelve.** The reference renders twelve columns at 2-hour
+  steps across the day (#631). We render four 6-hour slots, and the reason is the provider rather
+  than the design: Locationforecast's `compact` product carries `next_1_hours` only for roughly the
+  first two to three days and drops to 6-hour blocks beyond that, so a uniform 2-hour strip is
+  unbuildable for most days of a trip at the moment somebody plans it - which is exactly when this
+  screen is read. Four 6-hour slots are the finest resolution available for **every** forecast day,
+  which is what keeps the block's shape stable across a trip. Two alternatives were rejected:
+  `complete` returns the same time steps with more parameters per step, so it buys extra variables
+  and not finer resolution, at a much larger response that works against both MET's caching
+  expectations and the size of the cached timeseries; and bucketing `next_1_hours` at 2-hour steps
+  for the first 48-72 h with a 6-hour fallback beyond would change the block's column count between
+  day 2 and day 4 of one trip, which reads worse than a uniform block and doubles the grouping
+  logic. `recorded` and `estimate` days carry **no strip at all** - `slots` is `null` and the region
+  is omitted, never filled with interpolated values.
+
+  **When #124 lands**, `DayWeatherPanel` moves into its declared weather region, the badge's
+  `Popover` is removed, and activating the badge opens the day detail with focus on that region. The
+  badge itself stays. Until then the Popover is the only place the fuller reading exists, and that
+  is why this spec ships it rather than waiting: #124 is open and labelled `blocked`, with no date.
 
 - **Unavailable**: a muted "—" badge whose name and popover say "Weather unavailable for this day".
   It is never a zero and never a blank that looks like success.
@@ -298,6 +397,7 @@ locales in the same change (`i18n-messages` skill).
 | `plan.weather.badge.recorded`         | `Recorded: high {max}, low {min}`                     |
 | `plan.weather.badge.estimate`         | `Estimate: typical high {max}, low {min}`             |
 | `plan.weather.badge.unavailable`      | `Weather unavailable for this day`                    |
+| `plan.weather.badge.notYetRecorded`   | `Not yet recorded`                                    |
 | `plan.weather.badge.loading`          | `Loading weather`                                     |
 | `plan.weather.panel.title`            | `Weather for {date}`                                  |
 | `plan.weather.panel.precipitation`    | `Precipitation`                                       |
@@ -329,23 +429,62 @@ locales in the same change (`i18n-messages` skill).
 MET's symbol codes are mapped to the condition groups by a table in `day-weather-badge.tsx`'s model
 file; the day/night suffix is dropped for the label.
 
+## 📝 Observability
+
+`resolveTripWeather` emits one structured log per resolution - `weather.resolved` with
+`{ locations, forecastDays, recordedDays, estimateDays, hits, misses, unavailable }` and no tenant
+identifier beyond `organizationId` - on top of `callProvider`'s existing `calls` / `errors` /
+`blocked` counters. The two rates that decide whether this feature is working are the cache hit
+ratio and the share of days rendering `unavailable`; without that line both are invisible until a
+user reports a blank badge.
+
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                               | What the user sees                                                                                                                            |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Day has no date                                                    | No badge (`none`), exactly as today.                                                                                                          |
-| Day has a date but no stay and no place                            | No badge (`none`).                                                                                                                            |
-| MET returns 403/429/5xx or times out                               | Forecast days show "unavailable". Recorded and estimated days still render, because they come from separate calls. Logged via `callProvider`. |
-| NASA returns `-999` for a field                                    | That field is omitted in the popover. If both temperatures are missing, the day is "unavailable".                                             |
-| Yesterday or the day before, not yet in NASA's near-real-time data | "Unavailable" for that day. It is never back-filled from the forecast.                                                                        |
-| Workspace hits `weather_lookups_per_month`                         | Cached days still render. Uncached days show "unavailable". The ceiling is never exceeded.                                                    |
-| Provider ledger blocks a vendor (`ProviderBlockedError`)           | Same as an outage for that vendor.                                                                                                            |
-| KV read or write fails                                             | Treated as a miss, with a logged event. The reading is still served from the provider.                                                        |
-| Trip time zone missing or invalid                                  | `resolveTimeZone` falls back to UTC, which is the existing behaviour.                                                                         |
-| Polar day or polar night                                           | `sun.ts` returns `null` for rise/set. The popover says "No sunrise" or "No sunset", shown as a dash with that accessible name.                |
-| Trip in the far future (for example next year)                     | Every day is an estimate with its marker.                                                                                                     |
-| Two days at the same place                                         | One call; both days are served from the same entry.                                                                                           |
-| The forecast window's last day is partial                          | It is not a forecast day, so it is an estimate.                                                                                               |
+| Case                                                               | What the user sees                                                                                                                                                         |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Day has no date                                                    | No badge (`none`), exactly as today.                                                                                                                                       |
+| Day has a date but no stay and no place                            | No badge (`none`).                                                                                                                                                         |
+| MET returns 403/429/5xx or times out                               | Forecast days show "unavailable". Recorded and estimated days still render, because they come from separate calls. Logged via `callProvider`.                              |
+| NASA returns `-999` for a field                                    | That field is omitted in the popover. If both temperatures are missing, the day is "unavailable".                                                                          |
+| A past day still inside POWER's publication lag (`POWER_LAG_DAYS`) | A muted badge reading "Not yet recorded", with that accessible name. It is never back-filled from the forecast, and never shown as a number.                               |
+| Workspace hits `weather_lookups_per_month`                         | Cached days still render. Uncached days show "unavailable". The ceiling is never exceeded.                                                                                 |
+| Provider ledger blocks a vendor (`ProviderBlockedError`)           | Same as an outage for that vendor.                                                                                                                                         |
+| KV read or write fails                                             | Treated as a miss, with a logged event. The reading is still served from the provider.                                                                                     |
+| Trip time zone missing or invalid                                  | `resolveTimeZone` falls back to UTC, which is the existing behaviour.                                                                                                      |
+| Trip spanning two time zones                                       | Days are bucketed and sun times computed in the trip's single zone. Wrong by the offset for the far leg - the limitation recorded in the Data Model, not a defect to file. |
+| Polar day or polar night                                           | `sun.ts` returns `null` for rise/set. The popover says "No sunrise" or "No sunset", shown as a dash with that accessible name.                                             |
+| Trip in the far future (for example next year)                     | Every day is an estimate with its marker.                                                                                                                                  |
+| Two days at the same place                                         | One call; both days are served from the same entry.                                                                                                                        |
+| The forecast window's last day is partial                          | It is not a forecast day, so it is an estimate.                                                                                                                            |
+
+## ✅ Acceptance criteria
+
+Each line is independently checkable, and the phase steps below reference them rather than restating
+them.
+
+- **AC1** A 14-day single-city trip on a cold cache makes exactly 3 outbound calls and spends exactly
+  3 rate units (`weather.test.ts`).
+- **AC2** The same trip on a warm cache makes 0 outbound calls and spends 0 rate units.
+- **AC3** A MET outage leaves every `recorded` and `estimate` day rendering, and `loadTripWeather`
+  resolves rather than rejects.
+- **AC4** A ceiling of 0 produces `unavailable` for every uncached day with no outbound call.
+- **AC5** No exported function of `src/server/weather/` accepts a trip, place or member id
+  (`seam.test.ts`).
+- **AC6** `sunTimes` is within ±2 min of the NOAA calculator for all six fixture cases, and returns
+  `null` at Tromsø on 21 December and 21 June.
+- **AC7** `slots` is non-null for `forecast` and `null` for `recorded` and `estimate`, and the panel
+  omits the region when it is `null`.
+- **AC8** Every key in **Copy** exists in all 23 locales (the parity test).
+- **AC9** The plan route's `PerformanceObserver('layout-shift')` sum is 0 across the weather query
+  settling, and the first day header's `boundingBox()` is identical before and after.
+- **AC10** A foreign workspace's trip id resolves no day locations (`tenant-isolation.test.ts`).
+- **AC11** An estimate badge's accessible name begins with "Estimate"; a recorded badge's with
+  "Recorded".
+- **AC12** No MET request URL carries more than 4 decimal places of latitude or longitude.
+- **AC13** After a vendor error, the next resolution for that location spends no rate unit and makes
+  no outbound call while the `wx:v1:fail:` entry lives.
+- **AC14** A past day inside `POWER_LAG_DAYS` renders "Not yet recorded" and is never back-filled
+  from a forecast.
 
 ## 📝 Risks & Impact Review
 
@@ -355,7 +494,7 @@ file; the day/night suffix is dropped for the label.
   `RATE_METRICS` gains a member, and the generic loops in `limits.test.ts` (`:590`, `:610`, `:619`,
   `:711`) cover it.
 - **Licence risk.** It is the reason this spec exists. The terms were read on 2026-09-19 and are
-  recorded in ADR 0024. A term change by either provider is handled by a new ADR, and the vendor
+  recorded in ADR 0023. A term change by either provider is handled by a new ADR, and the vendor
   seam keeps a swap to one file.
 - **Cost.** Zero per call. KV reads and writes stay within the existing binding's allowance at our
   volumes (`docs/ARCHITECTURE.md` §8).
@@ -367,6 +506,7 @@ file; the day/night suffix is dropped for the label.
 - Any paid or non-commercial source.
 - Alerts and warnings, radar or map layers, air quality, and weather notifications.
 - Weather per place, rather than per day.
+- A per-day time zone resolved from the day's coordinate, and the dependency decision it carries.
 - The public or shared trip page.
 - Storing readings in D1.
 - A separate temperature-unit preference; this spec couples to `distance_unit`.
@@ -375,7 +515,10 @@ file; the day/night suffix is dropped for the label.
 
 ## 📋 Phasing
 
-1. **Decision on record.** ADR 0024, plus `11-S3` and `06-S7` updated. Docs only.
+1. **Decision on record.** ADR 0023, plus `11-S3`, `06-S7` and `09-S8` updated. Docs only.
+   The number is 0023 and not the one after it: `docs/adr/` ends at `0022`, and
+   `.ai/specs/2026-09-19-deployed-on-delete-rules.md` (#192, spec PR #626) already claims `0024`
+   inside its own grep assertions. Two specs cannot own one number.
 2. **Server.** Vendors, policy, limits, repository read and server function, all with unit tests and
    no UI caller. The app is unchanged.
 3. **Surface.** Badge, popover, copy in 23 locales, and a Playwright journey. The feature becomes
@@ -387,16 +530,24 @@ Each phase is one pull request and leaves `develop` green.
 
 ### Phase 1 — decision on record
 
-1. Write `docs/adr/0024-met-norway-and-nasa-power-for-weather.md` in the shape of
+1. Write `docs/adr/0023-met-norway-and-nasa-power-for-weather.md` in the shape of
    `0013-geoapify-for-geocoding.md` (Context / Decision / Consequences / Alternatives rejected). Record
-   the three kinds, the terms quoted above with the date they were read, and the rejected
-   alternatives with the clause that rejects each. Check: the file exists, and `pnpm lint` passes on
+   the three kinds, the terms quoted above with the date they were read, the rejected
+   alternatives with the clause that rejects each, and - as `0013` does for Geoapify - what each
+   provider may do with the coordinates it receives and for how long, since every request discloses
+   a tenant's trip coordinates to a third party. Check: the file exists, and `pnpm lint` passes on
    markdown.
 2. In `docs/plans/11-boundaries-and-blockers.md`, strike weather through in "The provider decisions"
-   and in the `DOC-08` register row, citing ADR 0024, the same way geocoding cites 0013. In
-   `docs/plans/06-documents-and-media.md` `06-S7`, mark the stage unblocked and point at this spec.
+   and in the `DOC-08` register row, citing ADR 0023, the same way geocoding cites 0013. In
+   `docs/plans/06-documents-and-media.md` `06-S7`, mark the stage unblocked, rename `archive` and
+   `climate` to `recorded` and `estimate`, and point at this spec. In
+   `docs/plans/09-account-and-settings.md`, change the "Temperature unit" row (`:2605`, and the
+   paragraph at `:2620-2626` that defers it onto this row) from "defer, behind a block" to the
+   closed disposition - coupled to `distance_unit`, no separate switch - citing this ADR, because
+   this spec is where that concept is owned (docs/SPEC.md §8).
    Check: `grep -n "DOC-08" docs/plans/11-boundaries-and-blockers.md` shows the struck row with the
-   citation.
+   citation, and `grep -n "Temperature unit" docs/plans/09-account-and-settings.md` shows the closed
+   row.
 
 ### Phase 2 — server
 
@@ -407,8 +558,11 @@ Each phase is one pull request and leaves `develop` green.
    sunset), and Sydney on 21 December. Each must be within ±2 min.
 4. Write `src/server/weather/met-norway.ts`: `createMetNorwayClient({ fetch })` and `metNorwayVendor`.
    It calls `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=&lon=` with the fixed
-   `User-Agent`, `Accept-Encoding: gzip`, and `If-Modified-Since` when a previous `lastModified` is
-   known. It normalises the timeseries into full local days (the trip's time zone), producing min/max,
+   `User-Agent` and `If-Modified-Since` when a previous `lastModified` is known. `lat` and `lon` are
+   truncated to 4 decimals in the request URL - the same rounding the cache key uses, and MET
+   answers 403 for anything finer - and a test asserts no request URL ever carries more. The client
+   sets no `Accept-Encoding` of its own: the Workers runtime negotiates content encoding on every
+   outbound `fetch`, which is what satisfies MET's compression term. It normalises the timeseries into full local days (the trip's time zone), producing min/max,
    summed precipitation, max probability, max wind, a dominant symbol and four 6-hour slots, and it
    returns `expires`. Tests use a recorded fixture: day bucketing across a time-zone offset, dropping a
    partial last day, and a 304 re-using the cached entry.
@@ -417,34 +571,53 @@ start, end)` using `T2M_MAX,T2M_MIN,PRECTOTCORR,WS2M`, `community=AG`, `time-sta
    `climatology(lat, lng)` using `T2M_MAX,T2M_MIN,PRECTOTCORR` (no wind, because an estimate does not
    show it). `-999` becomes `null`. Tests use fixtures for
    both endpoints and a fill-value case.
-6. Write `src/server/weather/weather.ts`, containing `resolveTripWeather(runtime, days: {dayId,
-date, lat, lng}[], today, timeZone)`: kind selection, grouping by rounded coordinate, the
-   KV read-through with the key/TTL table, metering per miss, `callProvider` around each call, and
-   mapping errors to `unavailable`. Tests, with an in-memory KV, fake counters and a fake fetch:
-   - selection at each boundary;
-   - one call per location and provider for a fourteen-day trip;
-   - a warm cache making zero calls;
-   - a malformed entry treated as a miss;
-   - an outage on one vendor leaving the other kinds intact;
-   - a ceiling of 0 or exhausted producing `unavailable` without a call;
-   - **no exported function accepting a trip, place or member id**, asserted by a `seam.test.ts`
-     that keys are built only from `(kind, lat, lng, date?)`.
+   6a. Write the **pure half** of `src/server/weather/weather.ts`:
+   `selectKind(dateKey, today, forecastWindowEnd, powerLagDays)` and `groupByLocation(days)` - no
+   I/O and no runtime argument. Tests: selection at each boundary (the day before today, today
+   itself, the last fully covered day, the day after it, and a past day inside `POWER_LAG_DAYS`); a
+   fourteen-day trip in one city groups to one location; two days at the same coordinate group
+   together; a day with no coordinate groups nowhere.
+
+6b. Write the **read-through half**: `resolveTripWeather(runtime, days, today, timeZone)` - the KV
+read per the key/TTL table, `spendRateUnit` per miss in the order forecast → estimate →
+recorded, `callProvider` around each call, the `wx:v1:fail:` negative entry on any vendor error,
+`Promise.allSettled` with the 8 s deadline and the 12-location cap, and the mapping of every
+provider-side error to `unavailable`. Tests, with an in-memory KV, fake counters and a fake
+fetch:
+
+- one call per location and provider for a fourteen-day trip;
+- a warm cache making zero calls;
+- a malformed entry treated as a miss;
+- an outage on one vendor leaving the other kinds intact, writing the negative entry, and the
+  next resolution spending **no** unit and making **no** call while it lives;
+- a ceiling of 0 or exhausted producing `unavailable` without a call;
+- a budget of 1 against 3 needed calls spending it on the forecast;
+- **no exported function accepting a trip, place or member id**, asserted by a `seam.test.ts`
+  that keys are built only from `(kind, lat, lng, date?)`.
+
 7. Write `src/server/weather/bindings.ts` with `weatherRuntime({ organizationId, ceiling })`, wiring
    `env.KV`, `requestOutboundRuntime()` and the global `fetch`, plus `cloudflare-env.d.ts`. Add `'met-norway'` and
    `'nasa-power'` to `METERED_PROVIDERS` (`src/server/db/schema.ts:414`). `callProvider` accepts only
    those slugs. No migration is needed, because the column is plain text, and the fixtures in
    `src/server/fns/console/__tests__/providers.test.ts` and
-   `src/server/catalog/__tests__/provider-usage.test.ts` are updated. Add
+   `src/server/catalog/__tests__/provider-usage.test.ts` are updated, together with the
+   `METERED_PROVIDERS` docblock at `src/server/db/schema.ts:406-419`, whose "Four, because four
+   clients exist" enumeration becomes six with `src/server/weather/met-norway.ts` and
+   `src/server/weather/nasa-power.ts` named as the two new call sites. Add
    `weather_lookups_per_month` to `RATE_METRICS` and `PLAN_RATE_CEILINGS`, and one test in
    `limits.test.ts` asserting that every plan's weather allowance is above 0.
 8. Add `readDayLocations(scope, tripId)` in `src/server/repos/itinerary.ts` (stay → first place →
    null), and a case in `src/server/repos/__tests__/tenant-isolation.test.ts` showing that another
    workspace's trip id resolves nothing.
 9. Write `src/routes/_app/trips/$tripId/-server/weather.ts` with `loadTripWeather`: a Zod
-   `strictObject` input, `assertTripRole` at read level, the ceiling from
+   `strictObject` input, **no `assertTripRole`** (the trip is read in the tenant scope, so a trip the
+   caller cannot see is `NotFound`, as every other plan loader does -
+   `src/server/repos/trips.ts:485`), the ceiling from
    `resolveLimitsFromRow(await getSubscription(scope)).rates.weather_lookups_per_month`, and the
-   runtime through injected `ports` as `-server/geocode.ts` does. Tests: a viewer can read; a foreign
-   trip is refused; a provider error yields `unavailable` rather than a rejection.
+   runtime reaching it as an injected port, the way `src/server/fns/booking-import.ts:889` takes
+   `geocoding: geocodeRuntime`, so the `cloudflare:workers` import stays behind
+   `src/server/weather/bindings.ts` and the function stays testable with a fake runtime.
+   Tests: a viewer can read; a foreign trip is refused; a provider error yields `unavailable` rather than a rejection.
    Gate: `validation.commands` green.
 
 ### Phase 3 — surface
@@ -456,14 +629,16 @@ date, lat, lng}[], today, timeZone)`: kind selection, grouping by rounded coordi
     badge in `day-section.tsx` from a `weather` prop. The plan screen runs the query and passes each
     day's `DayWeather` down. Unit tests cover the model: unit conversion, symbol grouping, and the
     accessible name for each kind, including the estimate prefix.
-12. Make e2e deterministic without stubbing across the server boundary, which `page.route` cannot
-    reach. `bindings.ts` swaps the global `fetch` for `fixtureFetch` from
-    `src/server/weather/fixtures.ts` when `env.WEATHER_FIXTURES === '1'`. That variable is set only
-    in the e2e dev vars (`.dev.vars.example` documents it) and never in `wrangler.jsonc`, and a unit
-    test asserts that `wrangler.jsonc` does not define it. The fixture responds by coordinate: one
-    location returns a forecast, one returns HTTP 503, and NASA returns fixed daily and climatology
-    bodies. Add a journey `e2e/trip-weather.spec.ts` on a seeded trip whose places use those
-    coordinates.
+12. Make the e2e journey deterministic by **seeding the cache, not by stubbing the providers**.
+    Nothing test-only ships in the Worker: `scripts/seed/seed.mjs` writes three `wx:v1:` entries for
+    the seeded trip's coordinates (one `forecast`, one `recorded`, one `estimate`) beside the rows
+    it already writes, seeds one place at a coordinate with no entry, and sets the demo workspace's
+    `weather_lookups_per_month` ceiling to 0 - so the `unavailable` state comes from the real
+    ceiling path and no outbound call is ever attempted. This exercises the read-through path the
+    product actually runs, instead of a branch that exists only for tests, and it needs no
+    `WEATHER_FIXTURES` variable, no fixture module in the bundle and no `wrangler.jsonc` guard. The
+    vendor-outage case lives in `weather.test.ts` (step 6b), not in the journey. Add a journey
+    `e2e/trip-weather.spec.ts` on that seeded trip.
     Cover a forecast day, a past trip's recorded day, an estimate with its marker and accessible
     name, an unavailable day, and keyboard open/close of the popover. **No layout shift** is measured, not
     eyeballed: the first day header's `boundingBox()` is equal before and after the weather query
@@ -472,13 +647,14 @@ date, lat, lng}[], today, timeZone)`: kind selection, grouping by rounded coordi
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                                  | Applied default                                                                  | Why                                                                                                                               |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Q1  | Split into separate specs (forecast vs history/estimate)? | One spec, three phases.                                                          | `06-S7` argues the halves are not independently useful. A forecast-only badge leaves most of a trip blank at planning time.       |
-| Q2  | Which coordinate represents a day?                        | The stay covering the day, else the first assigned place by order, else none.    | This reuses existing rows with no new field. Carrying yesterday's location forward would invent a location.                       |
-| Q3  | Temperature unit preference?                              | Couple to the existing `distance_unit` (user over organisation).                 | This needs no new column or preference and is reversible. `09-S8` can split it later.                                             |
-| Q4  | Sunrise/sunset source?                                    | Compute locally in `src/lib/sun.ts`.                                             | Zero calls, exact, and testable. MET Sunrise would be one call per date.                                                          |
-| Q5  | How is the estimate derived?                              | NASA POWER long-term monthly mean for the day's month.                           | One call per location, a statistically meaningful average, and always marked as an estimate.                                      |
-| Q6  | Where does the fuller reading live before #124 lands?     | A `Popover` from the badge. The same panel body goes into the #124 region later. | This does not block on an open issue and reuses an existing primitive.                                                            |
-| Q7  | Rate ceilings for `weather_lookups_per_month`?            | Free 300, Solo 3,000, Crew 12,000.                                               | The providers cost nothing, and the ceiling exists to bound abuse and respect MET's rate policy. The numbers are cheap to change. |
-| Q8  | Fetch in the route loader or after paint?                 | After paint, through TanStack Query.                                             | A provider outage must never render `PlanError` or delay the board.                                                               |
+| #   | Question                                                  | Applied default                                                                                                        | Why                                                                                                                                                                                                                                          |
+| --- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | Split into separate specs (forecast vs history/estimate)? | One spec, three phases.                                                                                                | `06-S7` argues the halves are not independently useful. A forecast-only badge leaves most of a trip blank at planning time.                                                                                                                  |
+| Q2  | Which coordinate represents a day?                        | The stay covering the day, else the first assigned place by order, else none.                                          | This reuses existing rows with no new field. Carrying yesterday's location forward would invent a location.                                                                                                                                  |
+| Q3  | Temperature unit preference?                              | Couple to the existing `distance_unit` (user over organisation).                                                       | This closes `09-S8`'s deferral of the temperature unit onto `06-S7`: the answer is "no separate preference", not "later". No new column, and reversible.                                                                                     |
+| Q4  | Sunrise/sunset source?                                    | Compute locally in `src/lib/sun.ts`.                                                                                   | Zero calls, exact, and testable. MET Sunrise would be one call per date.                                                                                                                                                                     |
+| Q5  | How is the estimate derived?                              | NASA POWER long-term monthly mean for the day's month.                                                                 | One call per location, a statistically meaningful average, and always marked as an estimate.                                                                                                                                                 |
+| Q6  | Where does the fuller reading live before #124 lands?     | A `Popover` from the badge. `DayWeatherPanel` moves into #124's region when it lands, and the Popover is removed then. | #124 is open and labelled `blocked`, with no date. Waiting would ship a badge whose reading a reader cannot open; the panel body is written once and re-mounted, not written twice.                                                          |
+| Q7  | Rate ceilings for `weather_lookups_per_month`?            | Free 300, Solo 3,000, Crew 12,000.                                                                                     | The providers cost nothing, and the ceiling exists to bound abuse and respect MET's rate policy. The numbers are cheap to change.                                                                                                            |
+| Q8  | Fetch in the route loader or after paint?                 | After paint, through TanStack Query.                                                                                   | A provider outage must never render `PlanError` or delay the board.                                                                                                                                                                          |
+| Q9  | Whose time zone - the trip's or the day's?                | The trip's, for both day bucketing and sun times, with the multi-zone case recorded as a known limitation.             | #631 asks for the day's zone, but no coordinate→zone lookup exists in `src/lib/` and adding one is a dependency decision (docs/SPEC.md §3). Recorded rather than silently chosen: a reviewer who wants the dependency can overturn this row. |
