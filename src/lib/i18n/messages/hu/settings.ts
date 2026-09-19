@@ -490,6 +490,22 @@ const messages = {
   'billing.planChanged.title': 'Csomag frissítve',
   'billing.planChanged.body':
     'A változás a Polarnál már érvényes, a különbséget ő számlázza. Az alábbi összegzés egy percen belül utolér.',
+  'billing.discount.toggle': 'Van promóciós kódod?',
+  'billing.discount.label': 'Promóciós kód',
+  'billing.discount.hint': 'A következőként választott csomagra érvényes.',
+  'billing.discount.applyCurrent': 'Alkalmazás a jelenlegi csomagra',
+  'billing.discount.invalidFormat': 'A kód 3–64 betűből és számjegyből áll.',
+  'billing.discount.rejected.invalid':
+    'Ez a kód érvénytelen. Ellenőrizd, és próbáld újra.',
+  'billing.discount.rejected.rateLimited':
+    'Túl sok kódot próbáltál. Próbáld újra egy óra múlva.',
+  'billing.discount.rejected.notApplicable':
+    'Ez a kód erre a csomagra nem érvényes.',
+  'billing.discount.rejected.busy':
+    'A kódokat most nem lehet ellenőrizni. Próbáld újra egy perc múlva.',
+  'billing.discount.nextRenewal':
+    'A promóciós kód a következő megújítástól érvényes.',
+  'billing.discount.appliedTitle': 'Promóciós kód alkalmazva',
   'billing.hero.manage': 'Számlázás kezelése',
   'billing.hero.manageHint':
     'A kártyák, a számlázási cím, az adószám, a nyugták és a lemondás a Polarnál vannak, amely a számlát kiállítja.',

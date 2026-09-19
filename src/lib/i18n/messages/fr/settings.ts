@@ -503,6 +503,23 @@ const messages = {
   'billing.planChanged.title': 'Formule mise à jour',
   'billing.planChanged.body':
     "Le changement est déjà effectif chez Polar, qui facturera la différence. Le récapitulatif ci-dessous se met à jour en moins d'une minute.",
+  'billing.discount.toggle': 'Vous avez un code promo ?',
+  'billing.discount.label': 'Code promo',
+  'billing.discount.hint': 'Appliqué à la formule que vous choisirez ensuite.',
+  'billing.discount.applyCurrent': 'Appliquer à la formule actuelle',
+  'billing.discount.invalidFormat':
+    'Un code compte de 3 à 64 lettres et chiffres.',
+  'billing.discount.rejected.invalid':
+    'Ce code n’est pas valide. Vérifiez-le et réessayez.',
+  'billing.discount.rejected.rateLimited':
+    'Trop de codes essayés. Réessayez dans une heure.',
+  'billing.discount.rejected.notApplicable':
+    'Ce code ne s’applique pas à cette formule.',
+  'billing.discount.rejected.busy':
+    'Impossible de vérifier les codes pour le moment. Réessayez dans une minute.',
+  'billing.discount.nextRenewal':
+    'Votre code promo s’applique à partir de votre prochain renouvellement.',
+  'billing.discount.appliedTitle': 'Code promo appliqué',
   'billing.hero.manage': 'Gérer la facturation',
   'billing.hero.manageHint':
     'Cartes, adresse de facturation, numéro de TVA, reçus et résiliation sont chez Polar, qui émet la facture.',

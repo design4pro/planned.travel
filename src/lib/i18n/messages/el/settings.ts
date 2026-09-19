@@ -493,6 +493,23 @@ const messages = {
   'billing.planChanged.title': 'Το πρόγραμμα ενημερώθηκε',
   'billing.planChanged.body':
     'Η αλλαγή ισχύει ήδη στην Polar, που θα χρεώσει τη διαφορά. Η σύνοψη παρακάτω προλαβαίνει μέσα σε ένα λεπτό.',
+  'billing.discount.toggle': 'Έχετε κωδικό προσφοράς;',
+  'billing.discount.label': 'Κωδικός προσφοράς',
+  'billing.discount.hint': 'Εφαρμόζεται στο πρόγραμμα που θα επιλέξετε.',
+  'billing.discount.applyCurrent': 'Εφαρμογή στο τρέχον πρόγραμμα',
+  'billing.discount.invalidFormat':
+    'Οι κωδικοί έχουν 3 έως 64 γράμματα και ψηφία.',
+  'billing.discount.rejected.invalid':
+    'Ο κωδικός δεν είναι έγκυρος. Ελέγξτε τον και δοκιμάστε ξανά.',
+  'billing.discount.rejected.rateLimited':
+    'Δοκιμάστηκαν πάρα πολλοί κωδικοί. Δοκιμάστε ξανά σε μία ώρα.',
+  'billing.discount.rejected.notApplicable':
+    'Ο κωδικός δεν ισχύει για αυτό το πρόγραμμα.',
+  'billing.discount.rejected.busy':
+    'Οι κωδικοί δεν μπορούν να ελεγχθούν τώρα. Δοκιμάστε ξανά σε ένα λεπτό.',
+  'billing.discount.nextRenewal':
+    'Ο κωδικός προσφοράς ισχύει από την επόμενη ανανέωση.',
+  'billing.discount.appliedTitle': 'Ο κωδικός προσφοράς εφαρμόστηκε',
   'billing.hero.manage': 'Διαχείριση χρεώσεων',
   'billing.hero.manageHint':
     'Κάρτες, διεύθυνση χρέωσης, ΑΦΜ, αποδείξεις και ακύρωση βρίσκονται στην Polar, που εκδίδει το παραστατικό.',

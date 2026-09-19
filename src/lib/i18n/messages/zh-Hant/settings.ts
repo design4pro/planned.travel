@@ -405,6 +405,17 @@ const messages = {
   'billing.planChanged.title': '方案已更新',
   'billing.planChanged.body':
     '變更已在 Polar 生效，差額由 Polar 開立。下方摘要會在一分鐘內跟上。',
+  'billing.discount.toggle': '有促銷碼嗎？',
+  'billing.discount.label': '促銷碼',
+  'billing.discount.hint': '將套用於你接下來選擇的方案。',
+  'billing.discount.applyCurrent': '套用至目前方案',
+  'billing.discount.invalidFormat': '促銷碼由 3 到 64 個字母和數字組成。',
+  'billing.discount.rejected.invalid': '此促銷碼無效。請檢查後再試一次。',
+  'billing.discount.rejected.rateLimited': '嘗試的促銷碼過多。請一小時後再試。',
+  'billing.discount.rejected.notApplicable': '此促銷碼不適用於此方案。',
+  'billing.discount.rejected.busy': '目前無法驗證促銷碼。請一分鐘後再試。',
+  'billing.discount.nextRenewal': '你的促銷碼將從下次續訂起生效。',
+  'billing.discount.appliedTitle': '已套用促銷碼',
   'billing.hero.manage': '管理帳單',
   'billing.hero.manageHint':
     '信用卡、帳單地址、稅籍編號、收據和取消都在開立發票的 Polar 那邊。',

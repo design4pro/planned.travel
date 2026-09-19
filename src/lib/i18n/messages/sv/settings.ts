@@ -489,6 +489,22 @@ const messages = {
   'billing.planChanged.title': 'Planen uppdaterad',
   'billing.planChanged.body':
     'Ändringen gäller redan hos Polar, som fakturerar mellanskillnaden. Sammanställningen nedan hinner upp inom en minut.',
+  'billing.discount.toggle': 'Har du en kampanjkod?',
+  'billing.discount.label': 'Kampanjkod',
+  'billing.discount.hint': 'Används för den plan du väljer härnäst.',
+  'billing.discount.applyCurrent': 'Använd på nuvarande plan',
+  'billing.discount.invalidFormat':
+    'Koder består av 3 till 64 bokstäver och siffror.',
+  'billing.discount.rejected.invalid':
+    'Koden är ogiltig. Kontrollera den och försök igen.',
+  'billing.discount.rejected.rateLimited':
+    'För många koder har provats. Försök igen om en timme.',
+  'billing.discount.rejected.notApplicable':
+    'Koden gäller inte för den här planen.',
+  'billing.discount.rejected.busy':
+    'Koder kan inte kontrolleras just nu. Försök igen om en minut.',
+  'billing.discount.nextRenewal': 'Din kampanjkod gäller från nästa förnyelse.',
+  'billing.discount.appliedTitle': 'Kampanjkoden har tillämpats',
   'billing.hero.manage': 'Hantera faktureringen',
   'billing.hero.manageHint':
     'Kort, faktureringsadress, momsnummer, kvitton och uppsägning finns hos Polar, som utfärdar fakturan.',

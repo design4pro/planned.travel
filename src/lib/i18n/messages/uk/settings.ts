@@ -505,6 +505,21 @@ const messages = {
   'billing.planChanged.title': 'Тариф оновлено',
   'billing.planChanged.body':
     'Зміна вже діє в Polar, який виставить рахунок на різницю. Зведення нижче наздожене за хвилину.',
+  'billing.discount.toggle': 'Маєте промокод?',
+  'billing.discount.label': 'Промокод',
+  'billing.discount.hint': 'Застосується до тарифу, який ви оберете.',
+  'billing.discount.applyCurrent': 'Застосувати до поточного тарифу',
+  'billing.discount.invalidFormat': 'Код складається з 3–64 літер і цифр.',
+  'billing.discount.rejected.invalid':
+    'Цей код недійсний. Перевірте його й спробуйте ще раз.',
+  'billing.discount.rejected.rateLimited':
+    'Забагато спроб. Спробуйте ще раз за годину.',
+  'billing.discount.rejected.notApplicable':
+    'Цей код не підходить для цього тарифу.',
+  'billing.discount.rejected.busy':
+    'Зараз не вдається перевірити коди. Спробуйте ще раз за хвилину.',
+  'billing.discount.nextRenewal': 'Промокод діє з наступного продовження.',
+  'billing.discount.appliedTitle': 'Промокод застосовано',
   'billing.hero.manage': 'Керування оплатою',
   'billing.hero.manageHint':
     'Картки, адреса для рахунка, номер ПДВ, квитанції та скасування — у Polar, який виставляє рахунок.',

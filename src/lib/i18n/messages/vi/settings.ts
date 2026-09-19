@@ -481,6 +481,22 @@ const messages = {
   'billing.planChanged.title': 'Đã cập nhật gói',
   'billing.planChanged.body':
     'Thay đổi đã có hiệu lực ở Polar, nơi sẽ xuất hoá đơn phần chênh lệch. Bản tóm tắt bên dưới theo kịp trong vòng một phút.',
+  'billing.discount.toggle': 'Bạn có mã khuyến mãi?',
+  'billing.discount.label': 'Mã khuyến mãi',
+  'billing.discount.hint': 'Áp dụng cho gói bạn chọn tiếp theo.',
+  'billing.discount.applyCurrent': 'Áp dụng cho gói hiện tại',
+  'billing.discount.invalidFormat': 'Mã gồm 3 đến 64 chữ cái và chữ số.',
+  'billing.discount.rejected.invalid':
+    'Mã này không hợp lệ. Hãy kiểm tra và thử lại.',
+  'billing.discount.rejected.rateLimited':
+    'Đã thử quá nhiều mã. Hãy thử lại sau một giờ.',
+  'billing.discount.rejected.notApplicable':
+    'Mã này không áp dụng cho gói này.',
+  'billing.discount.rejected.busy':
+    'Hiện không thể kiểm tra mã. Hãy thử lại sau một phút.',
+  'billing.discount.nextRenewal':
+    'Mã khuyến mãi của bạn có hiệu lực từ kỳ gia hạn tiếp theo.',
+  'billing.discount.appliedTitle': 'Đã áp dụng mã khuyến mãi',
   'billing.hero.manage': 'Quản lý thanh toán',
   'billing.hero.manageHint':
     'Thẻ, địa chỉ thanh toán, mã số thuế, biên nhận và việc huỷ đều nằm ở Polar, nơi phát hành hoá đơn.',

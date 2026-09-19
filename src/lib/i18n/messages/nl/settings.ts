@@ -494,6 +494,23 @@ const messages = {
   'billing.planChanged.title': 'Abonnement bijgewerkt',
   'billing.planChanged.body':
     'De wijziging geldt al bij Polar, dat het verschil factureert. Het overzicht hieronder loopt binnen een minuut bij.',
+  'billing.discount.toggle': 'Heb je een promotiecode?',
+  'billing.discount.label': 'Promotiecode',
+  'billing.discount.hint': 'Geldt voor het abonnement dat je hierna kiest.',
+  'billing.discount.applyCurrent': 'Toepassen op huidig abonnement',
+  'billing.discount.invalidFormat':
+    'Codes bestaan uit 3 tot 64 letters en cijfers.',
+  'billing.discount.rejected.invalid':
+    'Die code is ongeldig. Controleer hem en probeer het opnieuw.',
+  'billing.discount.rejected.rateLimited':
+    'Te veel codes geprobeerd. Probeer het over een uur opnieuw.',
+  'billing.discount.rejected.notApplicable':
+    'Die code geldt niet voor dit abonnement.',
+  'billing.discount.rejected.busy':
+    'Codes kunnen nu niet worden gecontroleerd. Probeer het over een minuut opnieuw.',
+  'billing.discount.nextRenewal':
+    'Je promotiecode geldt vanaf je volgende verlenging.',
+  'billing.discount.appliedTitle': 'Promotiecode toegepast',
   'billing.hero.manage': 'Facturatie beheren',
   'billing.hero.manageHint':
     'Kaarten, factuuradres, btw-nummer, bonnen en opzegging staan bij Polar, dat de factuur uitgeeft.',
