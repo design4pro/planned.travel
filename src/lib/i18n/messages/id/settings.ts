@@ -182,7 +182,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Sembunyikan kode konfirmasi sampai saya memintanya',
   'appearance.privacy.codesHint':
-    'Referensi pemesanan dan nomor konfirmasi tetap tersamar di meja pemesanan dan di transportasi sampai Anda mengarahkan kursor, memberi fokus, atau mengetuknya. Harga tidak pernah disembunyikan.',
+    'Referensi pemesanan dan nomor konfirmasi tetap tersamar di meja pemesanan dan di transportasi sampai Anda mengeklik atau mengetuknya, lalu tersamar lagi saat Anda beralih. Harga tidak pernah disembunyikan.',
   'appearance.saveFailed': 'Perubahan itu tidak tersimpan',
   'appearance.saveFailedBody':
     'Ia tampil di sini, tetapi perangkat berikutnya yang Anda pakai tidak akan mendapatkannya.',

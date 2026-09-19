@@ -67,6 +67,7 @@ import {
   updateTripMember,
 } from '../trips'
 import {
+  countTripPeople,
   createTripGuest,
   listTripGuests,
   listTripParticipants,
@@ -177,6 +178,29 @@ describe('member isolation', () => {
       expect(
         Object.values(counts.byStatus).filter((value) => value > 0),
       ).toEqual([])
+    })
+
+    /** `01-S7` — the companion figure, and both of the arrays the trips loader reads. */
+    it('gets no people count and is in neither the active nor the archived list', async () => {
+      await createTripGuest(alpha.scope, {
+        tripId: fixture.tripId,
+        displayName: 'Anna',
+      })
+      expect(
+        (await countTripPeople(alpha.scope, [fixture.tripId])).get(
+          fixture.tripId,
+        ),
+      ).toBe(2)
+      expect(await countTripPeople(stranger, [fixture.tripId])).toEqual(
+        new Map(),
+      )
+
+      expect(await listTrips(stranger, { archived: false })).toEqual([])
+      await archiveTrip(alpha.scope, fixture.tripId)
+      expect(await listTrips(stranger, { archived: true })).toEqual([])
+      expect(
+        (await listTrips(alpha.scope, { archived: true })).map((row) => row.id),
+      ).toEqual([fixture.tripId])
     })
 
     it('is neither offered to write up nor counted in journal coverage (#196)', async () => {

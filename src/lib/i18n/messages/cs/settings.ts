@@ -177,7 +177,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Skrývat potvrzovací kódy, dokud si je nevyžádám',
   'appearance.privacy.codesHint':
-    'Rezervační reference a potvrzovací čísla zůstanou v přehledu rezervací i u dopravy zakrytá, dokud na ně nenajedete, nepřepnete na ně fokus nebo na ně neklepnete. Ceny se neskrývají nikdy.',
+    'Rezervační reference a potvrzovací čísla zůstanou v přehledu rezervací i u dopravy zakrytá, dokud na ně nekliknete nebo neklepnete, a když přejdete jinam, znovu se zakryjí. Ceny se neskrývají nikdy.',
   'appearance.saveFailed': 'Tato změna se neuložila',
   'appearance.saveFailedBody':
     'Tady se projevila, ale další zařízení, ze kterého se přihlásíte, ji mít nebude.',

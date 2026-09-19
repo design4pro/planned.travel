@@ -163,7 +163,7 @@ const messages = {
   'appearance.privacy.title': '共有している画面では',
   'appearance.privacy.codesLabel': '確認コードは求めるまで隠す',
   'appearance.privacy.codesHint':
-    '予約番号と確認コードは、予約デスクと移動の画面では伏せたままにし、ポインタを重ねるか、フォーカスするか、タップしたときだけ表示します。金額が伏せられることはありません。',
+    '予約番号と確認コードは、予約デスクと移動の画面では伏せたままにし、クリックかタップしたときだけ表示して、ほかの操作に移ると再び伏せます。金額が伏せられることはありません。',
   'appearance.saveFailed': 'その変更は保存されませんでした',
   'appearance.saveFailedBody':
     'ここには反映されていますが、次に別のデバイスでサインインすると元に戻ります。',

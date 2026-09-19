@@ -171,7 +171,7 @@ const messages = {
   'appearance.privacy.title': 'Paylaşılan bir ekranda',
   'appearance.privacy.codesLabel': 'Onay kodlarını ben isteyene kadar gizle',
   'appearance.privacy.codesHint':
-    'Rezervasyon referansları ve onay numaraları; rezervasyon masasında ve ulaşımda, üzerine gelene, odaklanana veya dokunana kadar maskeli kalır. Fiyatlar asla gizlenmez.',
+    'Rezervasyon referansları ve onay numaraları; rezervasyon masasında ve ulaşımda, tıklayana veya dokunana kadar maskeli kalır ve başka bir yere geçtiğinizde yeniden maskelenir. Fiyatlar asla gizlenmez.',
   'appearance.saveFailed': 'Bu değişiklik kaydedilmedi',
   'appearance.saveFailedBody':
     'Burada görünüyor ama giriş yapacağınız bir sonraki cihazda olmayacak.',

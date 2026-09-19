@@ -183,7 +183,7 @@ const messages = {
   'appearance.privacy.title': 'Trên màn hình dùng chung',
   'appearance.privacy.codesLabel': 'Ẩn mã xác nhận cho đến khi tôi yêu cầu',
   'appearance.privacy.codesHint':
-    'Mã đặt chỗ và số xác nhận vẫn được che trong mục đặt chỗ và di chuyển cho đến khi bạn di chuột, đưa tiêu điểm hoặc chạm vào chúng. Giá tiền không bao giờ bị ẩn.',
+    'Mã đặt chỗ và số xác nhận vẫn được che trong mục đặt chỗ và di chuyển cho đến khi bạn nhấp hoặc chạm vào chúng, và được che lại khi bạn chuyển sang chỗ khác. Giá tiền không bao giờ bị ẩn.',
   'appearance.saveFailed': 'Thay đổi đó chưa được lưu',
   'appearance.saveFailedBody':
     'Nó đang hiện ở đây, nhưng thiết bị bạn đăng nhập lần tới sẽ không có.',
