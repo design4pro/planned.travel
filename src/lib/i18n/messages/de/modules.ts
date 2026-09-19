@@ -493,6 +493,21 @@ const messages = {
   'book.error.endTimeNeedsDate':
     'Eine Endzeit braucht den Tag, auf den sie fällt.',
   'book.error.endsBeforeStart': 'Das endet, bevor es anfängt.',
+  'book.fieldName.checkInDay': 'Anreisetag',
+  'book.fieldName.checkOutDay': 'Abreisetag',
+  'book.stay.pickDay': 'Tag wählen',
+  'book.stay.nights': {
+    one: '{count} Nacht',
+    other: '{count} Nächte',
+  },
+  'book.stay.range': '{from} bis {to}',
+  'book.stay.label': 'Aufenthalt',
+  'book.remove.keepsNights':
+    'Die Nächte bleiben in der Reise. Nur die Buchung wird entfernt.',
+  'book.menu.removeWithStay': 'Buchung und Aufenthalt entfernen',
+  'book.removeStay.body':
+    'Die Buchung und die Nächte, die sie bezahlt, werden beide entfernt.',
+  'book.toast.stayRemoved': 'Buchung und Aufenthalt entfernt',
   'book.error.endTimeBeforeStart': 'Die Endzeit liegt vor der Startzeit.',
   'book.error.guests': 'Die Personenzahl muss eine ganze Zahl bis 1000 sein.',
   'error.price': 'Diesen Betrag können wir nicht lesen.',

@@ -501,6 +501,22 @@ const messages = {
   'book.error.endTimeNeedsDate':
     'Godzina zakończenia potrzebuje dnia, w którym wypada.',
   'book.error.endsBeforeStart': 'To kończy się przed rozpoczęciem.',
+  'book.fieldName.checkInDay': 'dzień zameldowania',
+  'book.fieldName.checkOutDay': 'dzień wymeldowania',
+  'book.stay.pickDay': 'Wybierz dzień',
+  'book.stay.nights': {
+    one: '{count} noc',
+    few: '{count} noce',
+    many: '{count} nocy',
+    other: '{count} nocy',
+  },
+  'book.stay.range': 'od {from} do {to}',
+  'book.stay.label': 'Pobyt',
+  'book.remove.keepsNights':
+    'Noce zostają w podróży. Usuwana jest tylko rezerwacja.',
+  'book.menu.removeWithStay': 'Usuń rezerwację i pobyt',
+  'book.removeStay.body': 'Usunięte zostaną rezerwacja i noce, za które płaci.',
+  'book.toast.stayRemoved': 'Usunięto rezerwację i pobyt',
   'book.error.endTimeBeforeStart':
     'Godzina zakończenia jest przed godziną rozpoczęcia.',
   'book.error.guests': 'Liczba osób musi być pełną liczbą do 1000.',

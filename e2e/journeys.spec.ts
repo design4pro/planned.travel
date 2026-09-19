@@ -1433,6 +1433,55 @@ test.describe('the trip sections behind a route parameter', () => {
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
+
+  /**
+   * A stay is chosen as the days it runs between, and the dialog says how many nights that is.
+   *
+   * Graded in a browser because the count is the answer to two Radix selects the reader drives, and
+   * only a real pointer proves the answer follows them: the arithmetic itself is `stayNights`'s,
+   * graded by vitest. Nothing is saved — the block reads the demo trip and leaves it as it found it.
+   */
+  test('a stay states the nights between the days it is given', async ({
+    page,
+  }) => {
+    // The flagship trip is the seeded one long enough to hold a stay from day 1 to day 4.
+    const tripId = await aTripToWalk(page, 'Tokyo & Kyoto')
+    const route: RouteCase = {
+      name: 'trip-book',
+      path: `/trips/${tripId}/book`,
+      ready: TRIP_SECTIONS,
+    }
+
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+
+    await page.locator('[data-part="new-booking"]').first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.locator('[data-part="type-accommodation"]').click()
+
+    async function chooseDay(part: string, dayNumber: number): Promise<void> {
+      await dialog.locator(`[data-part="${part}"] button`).click()
+      await page
+        .getByRole('option', {
+          name: new RegExp(`^Day ${dayNumber}(?!\\d)`, 'u'),
+        })
+        .click()
+    }
+    await chooseDay('stay-check-in-day', 1)
+    await chooseDay('stay-check-out-day', 4)
+
+    const nights = dialog.locator('[data-part="stay-nights"]')
+    await expect(nights).toHaveText(/^3 nights · Day 1\b.* to Day 4\b/u)
+    await expect(nights).toHaveCSS('font-variant-numeric', 'tabular-nums')
+    // A stay is dated by its days; a typed date beside them would be a second answer.
+    await expect(dialog.locator('input[type="date"]')).toHaveCount(0)
+
+    const keys = await rawMessageKeys(page)
+    expect(keys, `unresolved message keys on ${route.path}`).toEqual([])
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
 })
 
 /**

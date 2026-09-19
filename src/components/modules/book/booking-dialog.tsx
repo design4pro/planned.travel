@@ -6,6 +6,10 @@
  * you show at the door. `booking-form.ts` owns which fields each type shows, what
  * they are called and which of them it will not submit without, so the dialog is
  * a rendering of that contract rather than a fork per type.
+ *
+ * The one branch is the stay: a stay on a trip with days is dated by the days it runs between rather
+ * than by typed dates, so choosing it swaps the date block for `StayFields` and saves through the
+ * stay's own writes, which record the booking and its nights together.
  */
 import { useEffect, useId, useMemo, useState } from 'react'
 import {
@@ -39,6 +43,7 @@ import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 import { createBookingFn, updateBookingFn } from '#/server/fns/reservations'
+import { createStayFn, updateStayFn } from '#/server/fns/stays'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import { resolve } from '../shared/deferred-message'
 import {
@@ -56,6 +61,7 @@ import {
   showsField,
   validateBookingDraft,
 } from './booking-form'
+import { StayFields } from './stay-dialog'
 
 import type { ComboboxOption } from '#/components/ui'
 import type { LucideIcon } from 'lucide-react'
@@ -160,9 +166,7 @@ function saveLabel(state: {
   if (state.ledgerRefused) {
     return 'modules.book.action.ledgerRetry'
   }
-  return state.editing
-    ? 'modules.book.action.save'
-    : 'modules.book.action.add'
+  return state.editing ? 'modules.book.action.save' : 'modules.book.action.add'
 }
 
 function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
@@ -185,6 +189,9 @@ function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
     dayId: row.dayId ?? '',
     assignmentId: row.assignmentId ?? '',
     notes: row.notes ?? '',
+    startDayId: row.stay?.startDayId ?? '',
+    endDayId: row.stay?.endDayId ?? '',
+    checkInEndTime: row.stay?.checkInEndTime ?? '',
   }
 }
 
@@ -223,6 +230,8 @@ export function BookingDialog({
    * would book the same thing twice.
    */
   const [savedId, setSavedId] = useState<string | null>(null)
+  /** The stay written with `savedId`, when the saved booking is a stay — its retry updates both. */
+  const [savedStayId, setSavedStayId] = useState<string | null>(null)
   const [ledgerRefused, setLedgerRefused] = useState(false)
 
   useEffect(() => {
@@ -236,6 +245,7 @@ export function BookingDialog({
     )
     setTouched(false)
     setSavedId(null)
+    setSavedStayId(null)
     setLedgerRefused(false)
   }, [open, booking, currency])
 
@@ -248,19 +258,54 @@ export function BookingDialog({
     success: t('modules.book.toast.updated'),
     failure: t('modules.book.toast.updateFailed'),
   })
-  const action = editing || savedId !== null ? update : create
+  const createStay = useAction(createStayFn, {
+    success: t('modules.book.toast.added'),
+    description: t('modules.book.toast.addedBody'),
+    failure: t('modules.book.toast.addFailed'),
+  })
+  const updateStay = useAction(updateStayFn, {
+    success: t('modules.book.toast.updated'),
+    failure: t('modules.book.toast.updateFailed'),
+  })
+
+  /*
+   * A stay is dated by the trip's days, so it needs days to choose from. An accommodation booking
+   * saved before stays existed has no nights behind it; it keeps its typed dates rather than being
+   * turned into a stay by the act of opening it.
+   */
+  const stayBranch =
+    draft.type === 'accommodation' &&
+    days.length > 0 &&
+    (booking === undefined || booking.stay !== null)
+  const stayId = booking?.stay?.id ?? savedStayId
+  const writing = editing || savedId !== null
+  const bookingAction = writing ? update : create
+  const stayAction = writing ? updateStay : createStay
+  const action = stayBranch ? stayAction : bookingAction
+  /*
+   * The type is fixed once a row exists behind it: after a save the dialog stays open only to retry
+   * the ledger line, and switching the type then would write a second booking (into the stay branch)
+   * or retype a booking whose nights are still linked to it (out of it). An existing stay is fixed for
+   * the second reason.
+   */
+  const typeLocked = savedId !== null || (booking?.stay ?? null) !== null
 
   const stops = useMemo(() => stopOptions(days, t), [days, t])
   const stopIds = useMemo(() => stops.map((option) => option.value), [stops])
   const errors = useMemo(
-    () => validateBookingDraft(draft, { stopIds }),
-    [draft, stopIds],
+    () =>
+      validateBookingDraft(
+        draft,
+        stayBranch ? { stopIds, stayDays: days } : { stopIds },
+      ),
+    [draft, stopIds, stayBranch, days],
   )
   const invalid = hasBookingErrors(errors)
   const shape = bookingShape(draft.type)
 
   /** The date behind the day this booking is pinned to — the middle link of the ledger's chain. */
-  const linkedDayDate = days.find((day) => day.id === draft.dayId)?.date ?? null
+  const linkedDayId = stayBranch ? draft.startDayId : draft.dayId
+  const linkedDayDate = days.find((day) => day.id === linkedDayId)?.date ?? null
   /*
    * The last link of that chain, read off day one rather than sent as a field of its own.
    *
@@ -316,6 +361,55 @@ export function BookingDialog({
       return
     }
     const priceMinor = parseMoneyToMinor(draft.price, draft.currency) ?? 0
+    const result = stayBranch
+      ? await saveStay(priceMinor)
+      : await saveBooking(priceMinor)
+    if (result === null) {
+      return
+    }
+    if (result.ledger === 'failed') {
+      // A partial success: the booking is on the trip and its cost line is not. Saying so and
+      // closing would leave the reader to discover a missing line later, so the dialog stays open
+      // and offers the half that failed.
+      setSavedId(result.reservationId)
+      setLedgerRefused(true)
+      return
+    }
+    onOpenChange(false)
+  }
+
+  /** The stay's two rows in one action; a retry after a ledger refusal updates both. */
+  async function saveStay(priceMinor: number) {
+    const payload = {
+      tripId,
+      status: draft.status,
+      title: draft.title.trim(),
+      provider: draft.provider,
+      location: draft.location,
+      confirmationNumber: draft.confirmationNumber,
+      url: draft.url,
+      guests: draft.guests === '' ? 0 : Number.parseInt(draft.guests, 10),
+      priceMinor,
+      currency: priceMinor === 0 ? '' : draft.currency,
+      notes: draft.notes,
+      startDayId: draft.startDayId,
+      endDayId: draft.endDayId,
+      checkInTime: draft.startTime,
+      checkInEndTime: draft.checkInEndTime,
+      checkOutTime: draft.endTime,
+    }
+    const existingId = booking?.id ?? savedId
+    if (existingId === null || stayId === null) {
+      const result = await createStay.run({ data: payload })
+      setSavedStayId(result?.stayId ?? null)
+      return result
+    }
+    return updateStay.run({
+      data: { ...payload, reservationId: existingId, stayId },
+    })
+  }
+
+  async function saveBooking(priceMinor: number) {
     const payload = {
       tripId,
       type: draft.type,
@@ -337,22 +431,9 @@ export function BookingDialog({
       notes: draft.notes,
     }
     const existingId = booking?.id ?? savedId
-    const result =
-      existingId === null
-        ? await create.run({ data: payload })
-        : await update.run({ data: { ...payload, reservationId: existingId } })
-    if (result === null) {
-      return
-    }
-    if (result.ledger === 'failed') {
-      // A partial success: the booking is on the trip and its cost line is not. Saying so and
-      // closing would leave the reader to discover a missing line later, so the dialog stays open
-      // and offers the half that failed.
-      setSavedId(result.reservationId)
-      setLedgerRefused(true)
-      return
-    }
-    onOpenChange(false)
+    return existingId === null
+      ? create.run({ data: payload })
+      : update.run({ data: { ...payload, reservationId: existingId } })
   }
 
   return (
@@ -404,7 +485,9 @@ export function BookingDialog({
                   return (
                     <Chip
                       key={type}
+                      data-part={`type-${type}`}
                       selected={active}
+                      disabled={typeLocked && !active}
                       icon={<Icon aria-hidden />}
                       onClick={() => set('type', type)}
                     >
@@ -461,67 +544,83 @@ export function BookingDialog({
               ) : null}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid grid-cols-[1fr_auto] items-start gap-3">
-                <Field
-                  label={t(shape.startLabel)}
-                  error={errorFor('startDate')}
-                >
-                  <Input
-                    type="date"
-                    value={draft.startDate}
-                    onChange={(event) => set('startDate', event.target.value)}
-                  />
-                </Field>
-                {showsField(draft.type, 'startTime') ? (
+            {stayBranch ? (
+              <StayFields
+                draft={draft}
+                days={days}
+                dayName={(day) => dayLabel(day, t)}
+                onChange={set}
+                errorFor={errorFor}
+              />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-[1fr_auto] items-start gap-3">
                   <Field
-                    label={t('modules.field.time')}
-                    error={errorFor('startTime')}
+                    label={t(shape.startLabel)}
+                    error={errorFor('startDate')}
                   >
                     <Input
-                      type="time"
-                      value={draft.startTime}
-                      onChange={(event) => set('startTime', event.target.value)}
-                      className="w-28"
+                      type="date"
+                      value={draft.startDate}
+                      onChange={(event) => set('startDate', event.target.value)}
                     />
                   </Field>
-                ) : null}
-              </div>
-
-              {showsField(draft.type, 'endDate') ||
-              showsField(draft.type, 'endTime') ? (
-                <div className="grid grid-cols-[1fr_auto] items-start gap-3">
-                  {showsField(draft.type, 'endDate') ? (
-                    <Field
-                      label={t(shape.endLabel)}
-                      error={errorFor('endDate')}
-                    >
-                      <Input
-                        type="date"
-                        value={draft.endDate}
-                        min={
-                          draft.startDate === '' ? undefined : draft.startDate
-                        }
-                        onChange={(event) => set('endDate', event.target.value)}
-                      />
-                    </Field>
-                  ) : null}
-                  {showsField(draft.type, 'endTime') ? (
+                  {showsField(draft.type, 'startTime') ? (
                     <Field
                       label={t('modules.field.time')}
-                      error={errorFor('endTime')}
+                      error={errorFor('startTime')}
                     >
                       <Input
                         type="time"
-                        value={draft.endTime}
-                        onChange={(event) => set('endTime', event.target.value)}
+                        value={draft.startTime}
+                        onChange={(event) =>
+                          set('startTime', event.target.value)
+                        }
                         className="w-28"
                       />
                     </Field>
                   ) : null}
                 </div>
-              ) : null}
-            </div>
+
+                {showsField(draft.type, 'endDate') ||
+                showsField(draft.type, 'endTime') ? (
+                  <div className="grid grid-cols-[1fr_auto] items-start gap-3">
+                    {showsField(draft.type, 'endDate') ? (
+                      <Field
+                        label={t(shape.endLabel)}
+                        error={errorFor('endDate')}
+                      >
+                        <Input
+                          type="date"
+                          value={draft.endDate}
+                          min={
+                            draft.startDate === '' ? undefined : draft.startDate
+                          }
+                          onChange={(event) =>
+                            set('endDate', event.target.value)
+                          }
+                        />
+                      </Field>
+                    ) : null}
+                    {showsField(draft.type, 'endTime') ? (
+                      <Field
+                        label={t('modules.field.time')}
+                        error={errorFor('endTime')}
+                      >
+                        <Input
+                          type="time"
+                          value={draft.endTime}
+                          onChange={(event) =>
+                            set('endTime', event.target.value)
+                          }
+                          className="w-28"
+                        />
+                      </Field>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-3">
               {showsField(draft.type, 'guests') ? (
@@ -625,7 +724,7 @@ export function BookingDialog({
               </Field>
             ) : null}
 
-            {days.length === 0 ? null : (
+            {days.length === 0 || stayBranch ? null : (
               <Field
                 label={t('modules.book.field.day')}
                 hint={t('modules.book.field.dayHint')}

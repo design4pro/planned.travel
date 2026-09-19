@@ -478,6 +478,20 @@ const messages = {
   'book.error.timeNeedsDate': 'En tid behöver dagen den ligger på.',
   'book.error.endTimeNeedsDate': 'En sluttid behöver dagen den ligger på.',
   'book.error.endsBeforeStart': 'Det här slutar innan det börjar.',
+  'book.fieldName.checkInDay': 'incheckningsdag',
+  'book.fieldName.checkOutDay': 'utcheckningsdag',
+  'book.stay.pickDay': 'Välj en dag',
+  'book.stay.nights': {
+    one: '{count} natt',
+    other: '{count} nätter',
+  },
+  'book.stay.range': '{from} till {to}',
+  'book.stay.label': 'Vistelse',
+  'book.remove.keepsNights':
+    'Nätterna ligger kvar i resan. Bara bokningen tas bort.',
+  'book.menu.removeWithStay': 'Ta bort bokningen och vistelsen',
+  'book.removeStay.body': 'Både bokningen och nätterna den betalar tas bort.',
+  'book.toast.stayRemoved': 'Bokningen och vistelsen borttagna',
   'book.error.endTimeBeforeStart': 'Sluttiden ligger före starttiden.',
   'book.error.guests':
     'Antalet personer måste vara ett helt tal upp till 1000.',

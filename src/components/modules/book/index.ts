@@ -26,7 +26,11 @@ export {
   minorUnitDigits,
   parseMoneyToMinor,
   showsField,
+  stayDayWords,
+  stayNights,
+  stayRange,
   validateBookingDraft,
+  validateStayDraft,
 } from './booking-form'
 export type {
   BookingDraft,
@@ -39,7 +43,13 @@ export type {
   BookingTypeShape,
   LedgerNotice,
   LedgerNoticeContext,
+  StayDay,
+  StayDayWord,
+  StayRange,
 } from './booking-form'
+
+export { StayFields } from './stay-dialog'
+export type { StayFieldsProps } from './stay-dialog'
 
 export {
   NO_IMPORT_SELECTION,
