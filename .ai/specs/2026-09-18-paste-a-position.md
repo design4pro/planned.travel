@@ -59,14 +59,15 @@ Each refusal returns `null`. The UI treats every `null` the same way: it does no
   Google Maps, Apple Maps, OpenStreetMap's "share" and RFC 5870 all use. A pair whose first half is
   outside ±90 is **refused, never swapped**: `151.2153, -33.8568` is refused. A pair that is valid
   both ways (`-60, 70`) is read as written. Swapping it would move a point in the Southern Ocean
-  (-60, 70) to Kazakhstan (70, -60).
+  (-60, 70) to Baffin Bay in the Arctic (70, -60).
 - **Letters name the axis and must agree with the order.** The first half takes `N`/`S`, the second
   `E`/`W` (case-insensitive). `135.7727 E, 34.9671 N` is refused rather than reordered. Letters on one
   half only is refused.
 - **A sign or a letter, never both.** `-51.5 N` is a contradiction and `-51.5 S` is a double
   negative. Both are refused.
 - **Ranges.** Latitude within ±90, longitude within ±180, inclusive. Minutes and seconds are `< 60`.
-  With minutes present the degrees must be an integer.
+  With minutes present the degrees must be an integer, and with seconds present the minutes must be
+  an integer too: `34°58.5'30"N` counts the half-minute twice and is refused.
 - **`geo:` with a query is refused.** Android's `geo:0,0?q=34.96,135.77(Fushimi Inari)` puts the
   real position in the query and `0,0` (Null Island) in the path. A `crs` other than `wgs84` is also
   refused. Altitude and the `u` parameter are accepted and discarded.
@@ -144,8 +145,9 @@ export function formatCoordinate(value: number): string
 ```
 
 Implementation constraint: every pattern is anchored and has no nested or adjacent unbounded
-quantifiers. Together with the 256-character cap, a long paste costs linear time, and the 100,000-character
-test pins that.
+quantifiers, so matching costs linear time in the input. The 256-character cap means a longer paste
+never reaches a pattern at all. The two are pinned separately: the 100,000-character test pins the
+cap, and a near-cap pathological string per notation pins the patterns (Implementation Plan, step 1).
 
 ## 📝 UI/UX
 
@@ -163,14 +165,19 @@ test pins that.
   erases itself on a half-typed number is worse than no help.
 - **After a successful paste the reader edits a field by hand.** The hint clears on the next
   `change` of either field, because it described values that are no longer both there. The reserved
-  line stays (see below), so clearing it moves nothing.
+  box stays (see below), so clearing it moves nothing.
 - **Reopening the dialog** resets the hint along with the draft (the existing `useEffect` on
   `open`).
 
 **The hint line.** It is a `<p>` directly under the two-column grid, spanning both columns, in the
-`FieldHint` look (`text-caption text-ink-3`) plus `tabular-nums`. Its line box is **reserved whether
-or not it has content** (`min-h-lh`, i.e. one caption line). A hint that appears under a field is the
-classic layout shift, and on mobile the pair stacks and anything below would jump. It sits under the
+`FieldHint` look (`text-caption text-ink-3`) plus `tabular-nums`. Its box is **reserved whether
+or not it has content**: two caption lines below the `sm` breakpoint and one from `sm` up
+(`min-h-[2lh] sm:min-h-lh`). A hint that appears under a field is the classic layout shift, and on
+mobile the pair stacks and anything below would jump. Two signed six-decimal numbers in a long
+locale do not fit one caption line at 360px, so the narrow reservation is two lines. The copy is
+held to that box: every locale's string, filled with `-33.856812` and `-151.215312`, fits two
+lines at 360px and one line at the `sm` dialog width, and a translation that does not is shortened
+rather than clamped, because the numbers are the point of the line. It sits under the
 pair rather than under one field because it describes both halves, and because `Field`'s own `hint`
 slot renders nothing when empty, so it cannot reserve space without changing `components/ui` (out of
 scope). The latitude field keeps its existing hint ("Or close this and pick the spot on the map.").
@@ -188,11 +195,11 @@ remains decimal, and a paste bypasses the soft keyboard.
 
 ## 📝 Visual change expected
 
-- **`/trips/$tripId/plan` → "Add a place" and a place's "Edit" → the place dialog, at rest.** One
-  caption-height empty line appears under the latitude/longitude pair, so everything below it (the
-  "Put it on a day" select in create mode, the dialog footer) sits one caption line lower than
-  today. Light and dark. On desktop the pair is two columns and the line spans both. On mobile the
-  pair stacks and the line follows the longitude field.
+- **`/trips/$tripId/plan` → "Add a place" and a place's "Edit" → the place dialog, at rest.** An
+  empty reserved box appears under the latitude/longitude pair, so everything below it (the
+  "Put it on a day" select in create mode, the dialog footer) sits lower than today: one caption
+  line on desktop, two on mobile. Light and dark. On desktop the pair is two columns and the box
+  spans both. On mobile the pair stacks and the box follows the longitude field.
 - **Same dialog, after a successful paste.** Both fields show the normalised numbers, the reserved
   line shows "Read as latitude …, longitude …" in `tabular-nums`, focus is on longitude, and nothing
   moves. Light and dark, desktop and mobile.
@@ -283,9 +290,12 @@ call without it. Together they are one reviewable change of one module, one dial
 1. **The parser, test-first.** Create `src/lib/geo/__tests__/position.test.ts`, then
    `src/lib/geo/position.ts` with `GeoPosition`, `parsePosition` and `formatCoordinate`, as in API
    Contracts. Cases:
-   - Round-trips: each of the four notations yields the same pair for Fushimi Inari
-     (`34.9671, 135.7727`) and for a south-west position (`-33.8568, -151.2153`, sign and `S`/`W`
-     forms).
+   - Round-trips, each notation with its own exact expected pair. For Fushimi Inari the decimal,
+     lettered and `geo:` forms yield `{ lat: 34.9671, lng: 135.7727 }`. `34°58'01.6"N 135°46'21.7"E`
+     yields `{ lat: 34.967111, lng: 135.772694 }` and `34°58.027'N 135°46.362'E` yields
+     `{ lat: 34.967117, lng: 135.7727 }`: DMS is converted and then rounded, so it lands within
+     `1e-4` of the decimal pair but not on it. A south-west position (`-33.8568, -151.2153`) is
+     checked in its sign and `S`/`W` forms.
    - Hemisphere letters: a letter flips the sign, and a conflicting or doubled sign-plus-letter
      (`-51.5 N`, `-51.5 S`) returns `null`.
    - Ranges: latitude 90.0001 and longitude 180.0001 return `null`, and ±90 and ±180 parse.
@@ -295,10 +305,16 @@ call without it. Together they are one reviewable change of one module, one dial
      refused.
    - Prose, empty input and single numbers: `Meet at 12, 30 people`, `''` and `34.9671` return
      `null`.
-   - Minutes or seconds of 60 or more return `null`.
+   - Minutes or seconds of 60 or more return `null`, and so do fractional degrees with minutes
+     (`34.5°58'N …`) and fractional minutes with seconds (`34°58.5'30"N …`).
    - `formatCoordinate` covers six decimals, trailing zeros, `-0` and no exponent for `1e-7`.
-   - A 100,000-character string (`'1'.repeat(1e5)` and `'1, '.repeat(33_334)`) returns `null`
-     inside the default test timeout.
+   - A 100,000-character string (`'1'.repeat(1e5)` and `'1, '.repeat(33_334)`) returns `null`.
+     This pins the length guard only: no pattern runs on it.
+   - Backtracking safety, below the cap: for each notation a pathological string of about 255
+     characters (a valid prefix, a long run of the characters its repeated groups accept, and a
+     trailing character that makes the match fail, e.g. `'1'.repeat(250) + ',x'`,
+     `` `N${'1'.repeat(250)}x` ``, `` `34°${' '.repeat(250)}x` ``, `` `geo:${'1'.repeat(250)};` ``)
+     returns `null` in under 50 ms of wall-clock time each.
 
    Verify with `pnpm exec vitest run src/lib/geo`.
 
@@ -311,7 +327,7 @@ call without it. Together they are one reviewable change of one module, one dial
    - Add a shared `onPaste` handler: parse `clipboardData.getData('text/plain')`, and on success
      `preventDefault()`, write both draft fields with `formatCoordinate`, set `pasted`, and focus the
      longitude input through a ref (caret at the end).
-   - Render the reserved `<p id={pastedHintId} role="status" className="min-h-lh text-caption text-ink-3 tabular-nums">`
+   - Render the reserved `<p id={pastedHintId} role="status" className="min-h-[2lh] sm:min-h-lh text-caption text-ink-3 tabular-nums">`
      under the pair, containing `t('trips.plan.place.pastedPosition', …)` only when `pasted` is set.
    - Pass `aria-describedby={pastedHintId}` on both inputs.
 
@@ -338,23 +354,29 @@ call without it. Together they are one reviewable change of one module, one dial
    - Assert zero layout shifts in Chromium. A synthetic event sets no `hadRecentInput`, so a shift
      caused by the hint would be counted.
 
+   - Repeat the paste and the zero-shift assertion at a 360px viewport with the signed payload
+     `geo:-33.856812,-151.215312`, so the stacked layout and the widest numbers are covered, not
+     only the pinned 1440px one.
+
    If WebKit does not carry `clipboardData` through a constructed `ClipboardEvent`, skip the
    `mobile-safari` project for this case with that reason stated, as the existing layout-shift case
    does.
 
 5. **Verify.** Run the gate in `.ai/agentic.config.json`. Then run the blind A/B pair
    (`scripts/visual/capture.mjs`) for the plan's `02-S5` states: `resting` (unchanged), `form-open`
-   (the reserved line) and `pasted`. Capture each in light and dark, at 360 and 1280.
+   (the reserved box) and `pasted`. Capture each in light and dark, at 360 and 1280. Capture
+   `pasted` with the signed six-decimal payload in `en` and in the locale whose string is longest,
+   and check that the hint stays inside its reserved box.
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                                                     | Applied default                                                                                                  | Why                                                                                                                                                             |
-| --- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q1  | Where does focus go after a successful paste?                                | The longitude field: from latitude it moves across, from longitude it stays.                                     | The issue says "moves focus on" so the reader sees where the halves went. Longitude is the half they did not paste into, and it carries the hint's description. |
-| Q2  | Where does the hint sit, given `Field` renders nothing for an empty hint?    | One reserved line under the pair, spanning both columns, `role="status"` plus `aria-describedby` on both inputs. | It describes both halves, reserves its box without a `components/ui` change (Decision 7), and is announced whichever field was pasted into.                     |
-| Q3  | May a hemisphere-lettered pair arrive longitude-first (`135.77 E, 34.96 N`)? | No, it is refused.                                                                                               | Refusing is always the reversible side, since nothing changes. Real clipboards (Google, Apple, OSM, RFC 5870) are latitude-first, so this can be widened later. |
-| Q4  | Does a sign combined with the matching letter (`-51.5 S`) parse?             | No: a sign or a letter, never both.                                                                              | One rule instead of a "consistent vs conflicting" table, and no real source writes both.                                                                        |
-| Q5  | Does degrees-minutes without seconds (`34°58.027'N`) count as DMS?           | Yes, with seconds optional.                                                                                      | Garmin and many hiking sites emit it, and it is the same grammar with one group optional.                                                                       |
-| Q6  | Does parsing also run on typing or blur?                                     | No, on paste only.                                                                                               | Rewriting a field mid-keystroke is the failure the issue warns about. Paste is the one moment the whole string is known.                                        |
-| Q7  | Precision of the filled values?                                              | Six decimals, trailing zeros dropped.                                                                            | About 0.1 m, beyond any pin's accuracy, and short enough to read in the hint.                                                                                   |
-| Q8  | "Position" collides with `CONTEXT.md`'s stop order.                          | Keep the issue's `position.ts` / `parsePosition`, and name the type `GeoPosition`.                               | The plan and the issue already use the name. The distinct type keeps the two senses apart in code without a rename across the plan.                             |
+| #   | Question                                                                     | Applied default                                                                                                                                        | Why                                                                                                                                                             |
+| --- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | Where does focus go after a successful paste?                                | The longitude field: from latitude it moves across, from longitude it stays.                                                                           | The issue says "moves focus on" so the reader sees where the halves went. Longitude is the half they did not paste into, and it carries the hint's description. |
+| Q2  | Where does the hint sit, given `Field` renders nothing for an empty hint?    | A reserved box under the pair (two lines below `sm`, one from `sm` up), spanning both columns, `role="status"` plus `aria-describedby` on both inputs. | It describes both halves, reserves its box without a `components/ui` change (Decision 7), and is announced whichever field was pasted into.                     |
+| Q3  | May a hemisphere-lettered pair arrive longitude-first (`135.77 E, 34.96 N`)? | No, it is refused.                                                                                                                                     | Refusing is always the reversible side, since nothing changes. Real clipboards (Google, Apple, OSM, RFC 5870) are latitude-first, so this can be widened later. |
+| Q4  | Does a sign combined with the matching letter (`-51.5 S`) parse?             | No: a sign or a letter, never both.                                                                                                                    | One rule instead of a "consistent vs conflicting" table, and no real source writes both.                                                                        |
+| Q5  | Does degrees-minutes without seconds (`34°58.027'N`) count as DMS?           | Yes, with seconds optional.                                                                                                                            | Garmin and many hiking sites emit it, and it is the same grammar with one group optional.                                                                       |
+| Q6  | Does parsing also run on typing or blur?                                     | No, on paste only.                                                                                                                                     | Rewriting a field mid-keystroke is the failure the issue warns about. Paste is the one moment the whole string is known.                                        |
+| Q7  | Precision of the filled values?                                              | Six decimals, trailing zeros dropped.                                                                                                                  | About 0.1 m, beyond any pin's accuracy, and short enough to read in the hint.                                                                                   |
+| Q8  | "Position" collides with `CONTEXT.md`'s stop order.                          | Keep the issue's `position.ts` / `parsePosition`, and name the type `GeoPosition`.                                                                     | The plan and the issue already use the name. The distinct type keeps the two senses apart in code without a rename across the plan.                             |
