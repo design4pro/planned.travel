@@ -230,7 +230,7 @@ async function checkTripIdentifiers(remote) {
   }
 
   const readBack = rows.map((row) => String(row.id))
-  const ordered = readBack.join(' ') === DEMO_TRIP_IDS.join(' ')
+  const ordered = readBack.join('\u0000') === DEMO_TRIP_IDS.join('\u0000')
   if (!ordered) {
     held = false
     out(`  order by id gives ${readBack.join(', ') || '(no rows)'}`)

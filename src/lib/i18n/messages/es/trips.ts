@@ -246,6 +246,7 @@ const messages = {
     'Un viaje conserva al menos un propietario. Haz propietario a otra persona primero.',
   'people.error.notInWorkspace':
     'Esa persona no está en este espacio de trabajo',
+  'people.error.alreadyOnTrip': 'Esa persona ya está en este viaje',
 } satisfies TranslationOf<typeof En>
 
 export default messages
