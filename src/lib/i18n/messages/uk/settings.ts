@@ -508,6 +508,8 @@ const messages = {
   'billing.discount.toggle': 'Маєте промокод?',
   'billing.discount.label': 'Промокод',
   'billing.discount.hint': 'Застосується до тарифу, який ви оберете.',
+  'billing.discount.hintCurrent':
+    'Застосуйте його до поточного тарифу або оберіть тариф нижче.',
   'billing.discount.applyCurrent': 'Застосувати до поточного тарифу',
   'billing.discount.applying': 'Застосовуємо промокод…',
   'billing.discount.invalidFormat': 'Код складається з 3–64 літер і цифр.',

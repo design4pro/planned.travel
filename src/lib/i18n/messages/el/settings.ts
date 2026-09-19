@@ -496,6 +496,8 @@ const messages = {
   'billing.discount.toggle': 'Έχετε κωδικό προσφοράς;',
   'billing.discount.label': 'Κωδικός προσφοράς',
   'billing.discount.hint': 'Εφαρμόζεται στο πρόγραμμα που θα επιλέξετε.',
+  'billing.discount.hintCurrent':
+    'Εφαρμόστε τον στο τρέχον πρόγραμμά σας ή επιλέξτε ένα πρόγραμμα παρακάτω.',
   'billing.discount.applyCurrent': 'Εφαρμογή στο τρέχον πρόγραμμα',
   'billing.discount.applying': 'Εφαρμογή κωδικού…',
   'billing.discount.invalidFormat':

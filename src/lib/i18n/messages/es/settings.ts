@@ -506,6 +506,8 @@ const messages = {
   'billing.discount.toggle': '¿Tienes un código promocional?',
   'billing.discount.label': 'Código promocional',
   'billing.discount.hint': 'Se aplicará al plan que elijas a continuación.',
+  'billing.discount.hintCurrent':
+    'Aplícalo a tu plan actual o elige un plan a continuación.',
   'billing.discount.applyCurrent': 'Aplicar al plan actual',
   'billing.discount.applying': 'Aplicando el código…',
   'billing.discount.invalidFormat':

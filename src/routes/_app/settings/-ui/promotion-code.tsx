@@ -128,7 +128,11 @@ export function PromotionCodeField({
           <Field
             className="sm:max-w-xs sm:flex-1"
             label={t('settings.billing.discount.label')}
-            hint={t('settings.billing.discount.hint')}
+            hint={t(
+              canApply
+                ? 'settings.billing.discount.hintCurrent'
+                : 'settings.billing.discount.hint',
+            )}
             error={state.error === null ? undefined : t(state.error)}
           >
             <Input

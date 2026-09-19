@@ -500,6 +500,8 @@ const messages = {
   'billing.discount.toggle': 'Haben Sie einen Aktionscode?',
   'billing.discount.label': 'Aktionscode',
   'billing.discount.hint': 'Gilt für den Tarif, den Sie als Nächstes wählen.',
+  'billing.discount.hintCurrent':
+    'Wenden Sie ihn auf Ihren aktuellen Tarif an oder wählen Sie unten einen Tarif.',
   'billing.discount.applyCurrent': 'Auf aktuellen Tarif anwenden',
   'billing.discount.applying': 'Code wird angewendet…',
   'billing.discount.invalidFormat':

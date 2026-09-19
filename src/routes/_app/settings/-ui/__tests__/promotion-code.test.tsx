@@ -72,7 +72,7 @@ const toggle = () =>
 describe('the promotion-code field', () => {
   it('starts collapsed behind a real disclosure button', async () => {
     const user = userEvent.setup()
-    renderPage({ send: vi.fn() })
+    renderPage({ send: vi.fn(), canApply: false })
 
     expect(toggle().getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByLabelText('Promotion code')).toBeNull()
@@ -156,6 +156,21 @@ describe('the promotion-code field', () => {
     await user.click(toggle())
     expect(
       screen.queryByRole('button', { name: 'Apply to current plan' }),
+    ).toBeNull()
+  })
+
+  it('names both paths in the hint when the code can go on the current plan', async () => {
+    const user = userEvent.setup()
+    renderPage({ send: vi.fn() })
+
+    await user.click(toggle())
+    expect(
+      screen.queryByText(
+        'Apply it to your current plan, or choose a plan below.',
+      ),
+    ).not.toBeNull()
+    expect(
+      screen.queryByText('Applied to the plan you choose next.'),
     ).toBeNull()
   })
 

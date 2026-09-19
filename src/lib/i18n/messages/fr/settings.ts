@@ -506,6 +506,8 @@ const messages = {
   'billing.discount.toggle': 'Vous avez un code promo ?',
   'billing.discount.label': 'Code promo',
   'billing.discount.hint': 'Appliqué à la formule que vous choisirez ensuite.',
+  'billing.discount.hintCurrent':
+    'Appliquez-le à votre formule actuelle ou choisissez une formule ci-dessous.',
   'billing.discount.applyCurrent': 'Appliquer à la formule actuelle',
   'billing.discount.applying': 'Application du code…',
   'billing.discount.invalidFormat':

@@ -517,6 +517,8 @@ const messages = {
   'billing.discount.toggle': 'Есть промокод?',
   'billing.discount.label': 'Промокод',
   'billing.discount.hint': 'Применится к тарифу, который вы выберете.',
+  'billing.discount.hintCurrent':
+    'Примените его к текущему тарифу или выберите тариф ниже.',
   'billing.discount.applyCurrent': 'Применить к текущему тарифу',
   'billing.discount.applying': 'Применяем промокод…',
   'billing.discount.invalidFormat': 'Код состоит из 3–64 букв и цифр.',

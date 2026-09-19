@@ -404,6 +404,7 @@ const messages = {
   'billing.discount.toggle': '有促销码吗？',
   'billing.discount.label': '促销码',
   'billing.discount.hint': '将应用于你接下来选择的套餐。',
+  'billing.discount.hintCurrent': '应用于你当前的套餐，或在下方选择套餐。',
   'billing.discount.applyCurrent': '应用于当前套餐',
   'billing.discount.applying': '正在应用促销码…',
   'billing.discount.invalidFormat': '促销码由 3 到 64 个字母和数字组成。',

@@ -408,6 +408,7 @@ const messages = {
   'billing.discount.toggle': '有促銷碼嗎？',
   'billing.discount.label': '促銷碼',
   'billing.discount.hint': '將套用於你接下來選擇的方案。',
+  'billing.discount.hintCurrent': '套用於你目前的方案，或在下方選擇方案。',
   'billing.discount.applyCurrent': '套用至目前方案',
   'billing.discount.applying': '正在套用促銷碼…',
   'billing.discount.invalidFormat': '促銷碼由 3 到 64 個字母和數字組成。',

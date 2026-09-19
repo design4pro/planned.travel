@@ -504,6 +504,8 @@ const messages = {
   'billing.discount.toggle': 'Tens un codi promocional?',
   'billing.discount.label': 'Codi promocional',
   'billing.discount.hint': 'S’aplicarà al pla que triïs a continuació.',
+  'billing.discount.hintCurrent':
+    'Aplica’l al teu pla actual o tria un pla a continuació.',
   'billing.discount.applyCurrent': 'Aplica al pla actual',
   'billing.discount.applying': 'S’està aplicant el codi…',
   'billing.discount.invalidFormat':

@@ -520,6 +520,8 @@ const messages = {
   'billing.discount.toggle': 'Masz kod promocyjny?',
   'billing.discount.label': 'Kod promocyjny',
   'billing.discount.hint': 'Zostanie użyty przy planie, który wybierzesz.',
+  'billing.discount.hintCurrent':
+    'Użyj go w obecnym planie albo wybierz plan poniżej.',
   'billing.discount.applyCurrent': 'Zastosuj do obecnego planu',
   'billing.discount.applying': 'Stosowanie kodu…',
   'billing.discount.invalidFormat': 'Kod ma od 3 do 64 liter i cyfr.',

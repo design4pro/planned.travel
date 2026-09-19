@@ -494,6 +494,7 @@ const messages = {
   'billing.discount.toggle': 'هل لديك رمز ترويجي؟',
   'billing.discount.label': 'الرمز الترويجي',
   'billing.discount.hint': 'يُطبَّق على الخطة التي تختارها لاحقًا.',
+  'billing.discount.hintCurrent': 'طبِّقه على خطتك الحالية، أو اختر خطة أدناه.',
   'billing.discount.applyCurrent': 'تطبيق على الخطة الحالية',
   'billing.discount.applying': 'جارٍ تطبيق الرمز…',
   'billing.discount.invalidFormat': 'تتكون الرموز من 3 إلى 64 حرفًا ورقمًا.',

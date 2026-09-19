@@ -454,6 +454,8 @@ const messages = {
   'billing.discount.toggle': 'プロモーションコードをお持ちですか？',
   'billing.discount.label': 'プロモーションコード',
   'billing.discount.hint': '次に選ぶプランに適用されます。',
+  'billing.discount.hintCurrent':
+    '現在のプランに適用するか、下からプランを選んでください。',
   'billing.discount.applyCurrent': '現在のプランに適用',
   'billing.discount.applying': 'コードを適用しています…',
   'billing.discount.invalidFormat': 'コードは3〜64文字の英数字です。',

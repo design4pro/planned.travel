@@ -492,6 +492,8 @@ const messages = {
   'billing.discount.toggle': 'Har du en kampanjkod?',
   'billing.discount.label': 'Kampanjkod',
   'billing.discount.hint': 'Används för den plan du väljer härnäst.',
+  'billing.discount.hintCurrent':
+    'Använd den för din nuvarande plan eller välj en plan nedan.',
   'billing.discount.applyCurrent': 'Använd på nuvarande plan',
   'billing.discount.applying': 'Koden tillämpas…',
   'billing.discount.invalidFormat':

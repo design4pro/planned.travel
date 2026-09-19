@@ -484,6 +484,8 @@ const messages = {
   'billing.discount.toggle': 'Promosyon kodunuz var mı?',
   'billing.discount.label': 'Promosyon kodu',
   'billing.discount.hint': 'Bir sonraki seçtiğiniz plana uygulanır.',
+  'billing.discount.hintCurrent':
+    'Mevcut planınıza uygulayın veya aşağıdan bir plan seçin.',
   'billing.discount.applyCurrent': 'Mevcut plana uygula',
   'billing.discount.applying': 'Kod uygulanıyor…',
   'billing.discount.invalidFormat':

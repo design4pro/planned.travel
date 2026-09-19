@@ -497,6 +497,8 @@ const messages = {
   'billing.discount.toggle': 'Heb je een promotiecode?',
   'billing.discount.label': 'Promotiecode',
   'billing.discount.hint': 'Geldt voor het abonnement dat je hierna kiest.',
+  'billing.discount.hintCurrent':
+    'Pas hem toe op je huidige abonnement of kies hieronder een abonnement.',
   'billing.discount.applyCurrent': 'Toepassen op huidig abonnement',
   'billing.discount.applying': 'Code toepassen…',
   'billing.discount.invalidFormat':

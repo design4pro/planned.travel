@@ -493,6 +493,8 @@ const messages = {
   'billing.discount.toggle': 'Van promóciós kódod?',
   'billing.discount.label': 'Promóciós kód',
   'billing.discount.hint': 'A következőként választott csomagra érvényes.',
+  'billing.discount.hintCurrent':
+    'Alkalmazza a jelenlegi csomagjára, vagy válasszon egy csomagot lent.',
   'billing.discount.applyCurrent': 'Alkalmazás a jelenlegi csomagra',
   'billing.discount.applying': 'Kód alkalmazása…',
   'billing.discount.invalidFormat': 'A kód 3–64 betűből és számjegyből áll.',

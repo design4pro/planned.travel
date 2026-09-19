@@ -431,6 +431,8 @@ const messages = {
   'billing.discount.toggle': '프로모션 코드가 있으신가요?',
   'billing.discount.label': '프로모션 코드',
   'billing.discount.hint': '다음에 선택하는 요금제에 적용됩니다.',
+  'billing.discount.hintCurrent':
+    '현재 요금제에 적용하거나 아래에서 요금제를 선택하세요.',
   'billing.discount.applyCurrent': '현재 요금제에 적용',
   'billing.discount.applying': '코드 적용 중…',
   'billing.discount.invalidFormat': '코드는 3~64자의 영문자와 숫자입니다.',

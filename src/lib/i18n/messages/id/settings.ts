@@ -485,6 +485,8 @@ const messages = {
   'billing.discount.toggle': 'Punya kode promo?',
   'billing.discount.label': 'Kode promo',
   'billing.discount.hint': 'Diterapkan ke paket yang Anda pilih berikutnya.',
+  'billing.discount.hintCurrent':
+    'Terapkan ke paket Anda saat ini, atau pilih paket di bawah.',
   'billing.discount.applyCurrent': 'Terapkan ke paket saat ini',
   'billing.discount.applying': 'Menerapkan kode…',
   'billing.discount.invalidFormat':
