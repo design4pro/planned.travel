@@ -421,7 +421,7 @@ export async function settleMutations(page: Page): Promise<void> {
  * The cap inside the page is a `setTimeout`, and it can only end a wait whose
  * answer still makes it back. #501 caught one that did not: the evaluate sat
  * until the 30 s test timeout while the page went on answering other evaluates,
- * and its clock held no timer at all, so the in-page wait had already ended and
+ * and its timer queue was empty, so the in-page wait had already ended and
  * the round trip was what got lost. This is the cap again, kept by the test
  * process instead, plus room for a round trip under load. A normal wait ends on
  * the in-page timers well before it and never sees it.
@@ -440,7 +440,14 @@ export const SETTLE_MUTATIONS_BOUND_MS = DOM_QUIET_CAP_MS + 3_000
 export function boundedSettle(wait: () => Promise<void>): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined
   const gaveUp = new Promise<void>((resolve) => {
-    timer = setTimeout(resolve, SETTLE_MUTATIONS_BOUND_MS)
+    timer = setTimeout(() => {
+      // Green either way, so say so: a recurrence of #501 is otherwise a silent
+      // five-second pause.
+      console.warn(
+        `[settle] the quiet wait gave no answer within ${SETTLE_MUTATIONS_BOUND_MS} ms; treated as the cap`,
+      )
+      resolve()
+    }, SETTLE_MUTATIONS_BOUND_MS)
   })
   return Promise.race([wait(), gaveUp]).finally(() => clearTimeout(timer))
 }

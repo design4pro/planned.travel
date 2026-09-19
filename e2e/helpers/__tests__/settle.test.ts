@@ -141,10 +141,12 @@ describe('a hydration diagnostic cannot outlive the timeout it explains', () => 
 describe('a quiet wait cannot outlive its bound', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   test('the bound sits past the in-page cap, so the cap still ends a normal wait', () => {
@@ -161,6 +163,7 @@ describe('a quiet wait cannot outlive its bound', () => {
     expect(settled).toBe(false)
     await vi.advanceTimersByTimeAsync(1)
     expect(settled).toBe(true)
+    expect(console.warn).toHaveBeenCalledOnce()
   })
 
   test('a navigation still rejects, so settle() can retry on the new document', async () => {
@@ -172,10 +175,28 @@ describe('a quiet wait cannot outlive its bound', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
+  test('a wait that rejects after the bound is left to settle unobserved', async () => {
+    let reject: (error: Error) => void = () => {}
+    const settled = boundedSettle(
+      () =>
+        new Promise<void>((_resolve, fail) => {
+          reject = fail
+        }),
+    )
+
+    await vi.advanceTimersByTimeAsync(SETTLE_MUTATIONS_BOUND_MS)
+    await expect(settled).resolves.toBe(undefined)
+    // Vitest fails the run on an unhandled rejection, so reaching the end of
+    // this test is the assertion.
+    reject(new Error('Target page, context or browser has been closed'))
+    await vi.advanceTimersByTimeAsync(0)
+  })
+
   test('a wait inside the bound leaves no timer behind', async () => {
     await expect(boundedSettle(() => Promise.resolve())).resolves.toBe(
       undefined,
     )
     expect(vi.getTimerCount()).toBe(0)
+    expect(console.warn).not.toHaveBeenCalled()
   })
 })
