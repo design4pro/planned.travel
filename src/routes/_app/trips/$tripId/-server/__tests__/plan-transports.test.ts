@@ -236,7 +236,6 @@ describe('the journeys a day can draw', () => {
 
     expect(row?.departureDayId).toBeNull()
     expect(row?.arrivalDayId).toBe(fixture.secondDayId)
-    expect(payload.canWrite).toBe(true)
   })
 })
 

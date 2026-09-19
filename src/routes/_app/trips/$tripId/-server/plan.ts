@@ -25,6 +25,7 @@ import { RESERVATION_STATUSES } from '#/server/db/schema'
 import {
   NotFoundError,
   assertTripRole,
+  canWritePlan,
   createAssignment,
   createPlace,
   deleteAssignment,
@@ -205,7 +206,7 @@ export async function readPlanBoard(
 
   return {
     tripId: trip.id,
-    editable: !trip.isArchived && (role === 'owner' || role === 'editor'),
+    editable: canWritePlan(trip, role),
     archived: trip.isArchived,
     unscheduledIds: unscheduled.map((place) => place.id),
     categories: categories.map((row) => ({

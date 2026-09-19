@@ -1876,6 +1876,23 @@ export async function tripRoleFor(
   return rows[0]?.role ?? null
 }
 
+/**
+ * Whether the acting user may write this trip's plan: owner or editor, and the trip is not archived.
+ *
+ * The one answer every planner read gives its write controls. It sits beside {@link tripRoleFor}
+ * because it is that role read to a boolean, and a second copy of it is what would let the board
+ * and its notes disagree about who may write the day the roles change (`docs/SPEC.md` §8). Pure, so
+ * a read that already holds the trip and the role pays nothing for it. The write guards
+ * ({@link requireWritableTrip}, {@link assertTripRole}) are the enforcement; this only draws the
+ * affordance.
+ */
+export function canWritePlan(
+  trip: Pick<Trip, 'isArchived'>,
+  role: TripMember['role'] | null,
+): boolean {
+  return !trip.isArchived && (role === 'owner' || role === 'editor')
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Share links
  * ---------------------------------------------------------------------------------------------- */
