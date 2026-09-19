@@ -135,11 +135,21 @@ src/components/planner/day-weather-badge.tsx       badge + popover with the full
   KV slice as `GeoCache`), `counters`, `outbound: requestOutboundRuntime()`, `organizationId`,
   `ceiling`, `now()`, `logger`, and the two vendor clients. `fetch` is injected into both clients,
   so tests drive them with a fake.
-- **Ordering per location**, the same as geo: plan gate (`ceiling <= 0` → `RateCeilingError`) →
-  cache → meter (`spendRateUnit`, a miss only) → vendor call inside
+- **Ordering per location**: cache → plan gate (`ceiling <= 0`, or a budget already exhausted) →
+  meter (`spendRateUnit`, once per outbound call) → vendor call inside
   `callProvider(outbound, { provider: 'met-norway' | 'nasa-power', operation, organizationId })` →
   cache write. A read or write error on KV is logged and treated as a miss, as `geocode.ts:336` and
   `:362` do.
+- **The gate sits after the cache here, unlike geo, and that is deliberate.** `geocode.ts` gates
+  first so a workspace at ceiling 0 is never served an answer another workspace paid for. That
+  reasoning does not transfer: the weather metric meters **outbound calls**, and a cache hit makes
+  none, so gating one would charge for a read that costs us nothing. Gating first would also
+  contradict three things this spec already promises - the Edge Cases row "Cached days still
+  render", AC4's "every **uncached** day", and the phase-3 journey, which seeds entries, sets the
+  ceiling to 0, and expects the seeded days to render. Exhausting the budget therefore degrades the
+  board rather than emptying it: cached days render, uncached days go `unavailable`, and no
+  `RateCeilingError` reaches the caller - a ceiling is not an error on a read path that has an
+  honest "we could not get this" state.
 - **A failure is cached, because a spent unit cannot be refunded.** `spendRateUnit` increments a KV
   counter (`src/server/metering/rate.ts:129`) before the call, so an outage would otherwise bill
   every retry: a Free workspace reloading a three-location board during a thirty-minute MET outage
@@ -252,7 +262,7 @@ because they hold what a traveller wrote. KV only, in the existing `KV` binding:
 - **Concurrent misses on the same key are accepted, not serialised.** The overlap window is one
   provider round-trip, and the per-request call cap below bounds what that can cost. A
   `wx:v1:lock:` single-flight entry would add a failure mode (a stale lock) to save a duplicate call
-  that the 1-hour forecast entry already makes rare.
+  that a forecast entry fresh until its `Expires` already makes rare.
 
 **Limits.** A fourth rate metric, `weather_lookups_per_month`, goes into `RATE_METRICS` and
 `PLAN_RATE_CEILINGS` (`src/server/billing/limits.ts:120-189`, whose comment "All three are far below…"
@@ -283,6 +293,7 @@ const input = z.strictObject({ tripId: id })
 type DayWeather =
   | { dayId: string; status: 'none' } // undated day, or no location
   | { dayId: string; status: 'unavailable'; kind: WeatherKind } // provider/ceiling/parse failure
+  | { dayId: string; status: 'not-yet-recorded' } // past day inside POWER_LAG_DAYS
   | { dayId: string; status: 'ok'; reading: DayReading; sun: SunTimes | null }
 
 type WeatherKind = 'forecast' | 'recorded' | 'estimate'
@@ -399,6 +410,12 @@ export const loadTripWeather: ServerFn<
 
 - **Unavailable**: a muted "—" badge whose name and popover say "Weather unavailable for this day".
   It is never a zero and never a blank that looks like success.
+- **Not yet recorded**: its own state, not a flavour of unavailable. A muted badge reading "Not yet
+  recorded", carrying no popover, for a past day inside `POWER_LAG_DAYS`. It is a separate
+  `DayWeather` variant (`status: 'not-yet-recorded'`) because "we have not published it yet" and
+  "we asked and it failed" are different answers to the traveller and `unavailable`'s copy is fixed
+  regardless of kind: folding the two together would make AC14 unsatisfiable, since a genuine NASA
+  failure on a `recorded` day already produces `{ status: 'unavailable', kind: 'recorded' }`.
 - **Colour**: semantic tokens only (`--color-info`, `--color-warning`, `--color-danger` and their
   `-soft` companions). There is no weather palette and no change to `src/styles/tokens.css`. The icons
   come from the icon set already in use.
@@ -417,6 +434,7 @@ reproduction and nothing else.
   - resting forecast;
   - recorded (past trip);
   - estimate with its marker;
+  - not yet recorded;
   - unavailable;
   - loading skeleton;
   - popover open for a forecast and for an estimate.
@@ -484,31 +502,36 @@ user reports a blank badge.
 
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                               | What the user sees                                                                                                                                                         |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Day has no date                                                    | No badge (`none`), exactly as today.                                                                                                                                       |
-| Day has a date but no stay and no place                            | No badge (`none`).                                                                                                                                                         |
-| MET returns 403/429/5xx or times out                               | Forecast days show "unavailable". Recorded and estimated days still render, because they come from separate calls. Logged via `callProvider`.                              |
-| NASA returns `-999` for a field                                    | That field is omitted in the popover. If both temperatures are missing, the day is "unavailable".                                                                          |
-| A past day still inside POWER's publication lag (`POWER_LAG_DAYS`) | A muted badge reading "Not yet recorded", with that accessible name. It is never back-filled from the forecast, and never shown as a number.                               |
-| Workspace hits `weather_lookups_per_month`                         | Cached days still render. Uncached days show "unavailable". The ceiling is never exceeded.                                                                                 |
-| Provider ledger blocks a vendor (`ProviderBlockedError`)           | Same as an outage for that vendor.                                                                                                                                         |
-| KV read or write fails                                             | Treated as a miss, with a logged event. The reading is still served from the provider.                                                                                     |
-| Trip time zone missing or invalid                                  | `resolveTimeZone` falls back to UTC, which is the existing behaviour.                                                                                                      |
-| Trip spanning two time zones                                       | Days are bucketed and sun times computed in the trip's single zone. Wrong by the offset for the far leg - the limitation recorded in the Data Model, not a defect to file. |
-| Polar day or polar night                                           | `sun.ts` returns `null` for rise/set. The popover says "No sunrise" or "No sunset", shown as a dash with that accessible name.                                             |
-| Trip in the far future (for example next year)                     | Every day is an estimate with its marker.                                                                                                                                  |
-| A recorded or estimated day                                        | No hourly strip at all. `slots` is `null` and the popover omits the region entirely - never empty columns, and never a value interpolated from the daily min/max.          |
-| Two days at the same place                                         | One call; both days are served from the same entry.                                                                                                                        |
-| The forecast window's last day is partial                          | It is not a forecast day, so it is an estimate.                                                                                                                            |
+| Case                                                               | What the user sees                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Day has no date                                                    | No badge (`none`), exactly as today.                                                                                                                                                                                                                           |
+| Day has a date but no stay and no place                            | No badge (`none`).                                                                                                                                                                                                                                             |
+| MET returns 403/429/5xx or times out                               | Forecast days show "unavailable". Recorded and estimated days still render, because they come from separate calls. Logged via `callProvider`.                                                                                                                  |
+| NASA returns `-999` for a field                                    | That field is omitted in the popover. If both temperatures are missing, the day is "unavailable".                                                                                                                                                              |
+| A past day still inside POWER's publication lag (`POWER_LAG_DAYS`) | `status: 'not-yet-recorded'`: a muted badge reading "Not yet recorded", with that accessible name and no popover. It is never back-filled from the forecast, never shown as a number, and never collapsed into `unavailable`. No outbound call is made for it. |
+| Workspace hits `weather_lookups_per_month`                         | Cached days still render. Uncached days show "unavailable". The ceiling is never exceeded.                                                                                                                                                                     |
+| Provider ledger blocks a vendor (`ProviderBlockedError`)           | Same as an outage for that vendor.                                                                                                                                                                                                                             |
+| KV read or write fails                                             | Treated as a miss, with a logged event. The reading is still served from the provider.                                                                                                                                                                         |
+| Trip time zone missing or invalid                                  | `resolveTimeZone` falls back to UTC, which is the existing behaviour.                                                                                                                                                                                          |
+| Trip spanning two time zones                                       | Days are bucketed and sun times computed in the trip's single zone. Wrong by the offset for the far leg - the limitation recorded in the Data Model, not a defect to file.                                                                                     |
+| Polar day or polar night                                           | `sun.ts` returns `null` for rise/set. The popover says "No sunrise" or "No sunset", shown as a dash with that accessible name.                                                                                                                                 |
+| Trip in the far future (for example next year)                     | Every day is an estimate with its marker.                                                                                                                                                                                                                      |
+| A recorded or estimated day                                        | No hourly strip at all. `slots` is `null` and the popover omits the region entirely - never empty columns, and never a value interpolated from the daily min/max.                                                                                              |
+| Two days at the same place                                         | One call; both days are served from the same entry.                                                                                                                                                                                                            |
+| The forecast window's last day is partial                          | It is not a forecast day, so it is an estimate.                                                                                                                                                                                                                |
 
 ## ✅ Acceptance criteria
 
 Each line is independently checkable, and the phase steps below reference them rather than restating
 them.
 
-- **AC1** A 14-day single-city trip on a cold cache makes exactly 3 outbound calls and spends exactly
-  3 rate units (`weather.test.ts`).
+- **AC1** A 14-day single-city trip **straddling all three kinds** — it starts far enough in the past
+  that its first day is published (beyond `POWER_LAG_DAYS`), covers today, and runs past the
+  forecast window — makes exactly 3 outbound calls on a cold cache and spends exactly 3 rate units
+  (`weather.test.ts`, on a fixed fake `today` so the placement cannot drift). The placement is
+  stated because the count follows from the kinds present, not from the day count: a trip starting
+  today is 2 calls, an all-past trip beyond the lag is 1, and a far-future trip is 1. **At most 3
+  per location** is the invariant; 3 is the maximum this fixture is built to hit.
 - **AC2** The same trip on a warm cache — every entry present and, for the forecast, still inside
   its `expires` — makes 0 outbound calls and spends 0 rate units.
 - **AC2b** A forecast entry that is present but past its `expires` produces exactly one conditional
@@ -532,8 +555,10 @@ them.
 - **AC12** No MET request URL carries more than 4 decimal places of latitude or longitude.
 - **AC13** After a vendor error, the next resolution for that location spends no rate unit and makes
   no outbound call while the `wx:v1:fail:` entry lives.
-- **AC14** A past day inside `POWER_LAG_DAYS` renders "Not yet recorded" and is never back-filled
-  from a forecast.
+- **AC14** A past day inside `POWER_LAG_DAYS` resolves to `status: 'not-yet-recorded'`, renders
+  "Not yet recorded" as its accessible name, and is never back-filled from a forecast. A NASA
+  failure on a past day outside the lag resolves to `{ status: 'unavailable', kind: 'recorded' }`
+  instead, so the two are distinguishable by the type and not only by the copy.
 
 ## 📝 Risks & Impact Review
 
@@ -625,10 +650,13 @@ start, end)` using `T2M_MAX,T2M_MIN,PRECTOTCORR,WS2M`, `community=AG`, `time-sta
    both endpoints and a fill-value case.
    6a. Write the **pure half** of `src/server/weather/weather.ts`:
    `selectKind(dateKey, today, forecastWindowEnd, powerLagDays)` and `groupByLocation(days)` - no
-   I/O and no runtime argument. Tests: selection at each boundary (the day before today, today
-   itself, the last fully covered day, the day after it, and a past day inside `POWER_LAG_DAYS`); a
+   I/O and no runtime argument. `selectKind` returns `'forecast' | 'recorded' | 'estimate' |
+'not-yet-recorded'`, the last of which is the one answer that is not a `WeatherKind` and needs
+   no provider: `groupByLocation` drops those days, so they cost no call. Tests: selection at each
+   boundary (the day before today, today itself, the last fully covered day, the day after it, and a
+   past day inside `POWER_LAG_DAYS` answering `'not-yet-recorded'`); a
    fourteen-day trip in one city groups to one location; two days at the same coordinate group
-   together; a day with no coordinate groups nowhere.
+   together; a day with no coordinate groups nowhere; a `'not-yet-recorded'` day groups nowhere.
 
 6b. Write the **read-through half**: `resolveTripWeather(runtime, days, today, timeZone)` - the KV
 read per the key/TTL table, with the forecast entry's freshness taken from its stored `expires`
@@ -639,8 +667,11 @@ recorded, `callProvider` around each call, the `wx:v1:fail:` negative entry on a
 provider-side error to `unavailable`. Tests, with an in-memory KV, fake counters and a fake
 fetch:
 
-- one call per location and kind for a fourteen-day trip (three calls at one location: one MET
-  Locationforecast, one NASA daily, one NASA climatology);
+- one call per location and kind for the fourteen-day trip AC1 fixes — straddling all three kinds
+  against a fixed fake `today`, so three calls at one location: one MET Locationforecast, one NASA
+  daily, one NASA climatology (AC1);
+- a fourteen-day trip starting today, which has no `recorded` days and so makes two calls, not
+  three - the bound is per kind present, not a constant;
 - a warm cache - every entry present and inside its `expires` - making zero calls (AC2);
 - a forecast entry present but past its `expires`: exactly one conditional request, and a `304`
   answer re-using the cached `series` while moving `expires` forward and spending one unit (AC2b);

@@ -123,6 +123,13 @@
         font-variant-numeric: tabular-nums;
         color: var(--ink);
         background: transparent;
+        /* The interactive badges are real <button>s, because an aria-label on a
+           bare <span> sits on the generic role and is never announced. These
+           four declarations only neutralise the UA button styles. */
+        font-family: inherit;
+        line-height: normal;
+        margin: 0;
+        cursor: pointer;
       }
       .badge.est {
         border: 1px dashed var(--info);
@@ -214,11 +221,13 @@
                 <div class="stops">3 stops</div>
               </div>
             </div>
-            <span
+            <button
+              type="button"
               class="badge focus"
               aria-label="Forecast: partly cloudy, high 24°, low 16°"
-              >⛅ 24° <span class="lo">16°</span></span
             >
+              ⛅ 24° <span class="lo">16°</span>
+            </button>
           </div>
           <div class="row">
             <div class="head">
@@ -229,9 +238,13 @@
                 <div class="stops">4 stops</div>
               </div>
             </div>
-            <span class="badge" aria-label="Forecast: rain, high 21°, low 15°"
-              >🌧 21° <span class="lo">15°</span></span
+            <button
+              type="button"
+              class="badge"
+              aria-label="Forecast: rain, high 21°, low 15°"
             >
+              🌧 21° <span class="lo">15°</span>
+            </button>
           </div>
           <div class="row">
             <div class="head">
@@ -242,9 +255,13 @@
                 <div class="stops">2 stops</div>
               </div>
             </div>
-            <span class="badge na" aria-label="Weather unavailable for this day"
-              >—</span
+            <button
+              type="button"
+              class="badge na"
+              aria-label="Weather unavailable for this day"
             >
+              —
+            </button>
           </div>
           <div class="row">
             <div class="head">
@@ -255,11 +272,13 @@
                 <div class="stops">5 stops</div>
               </div>
             </div>
-            <span
+            <button
+              type="button"
               class="badge est"
               aria-label="Estimate: typical high 22°, low 14°"
-              >≈ 22° <span class="lo">14°</span></span
             >
+              ≈ 22° <span class="lo">14°</span>
+            </button>
           </div>
           <div class="row">
             <div class="head">
@@ -270,7 +289,7 @@
                 <div class="stops">1 stop</div>
               </div>
             </div>
-            <span class="badge sk" aria-label="Loading weather"></span>
+            <span class="badge sk" role="img" aria-label="Loading weather"></span>
           </div>
           <div class="row">
             <div class="head">
