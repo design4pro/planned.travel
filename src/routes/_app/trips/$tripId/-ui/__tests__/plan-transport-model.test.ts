@@ -55,7 +55,7 @@ const journey = (
 
 const payload = (
   transports: ReadonlyArray<PlanTransport>,
-): PlanTransportsPayload => ({ tripId: 't1', canWrite: true, transports })
+): PlanTransportsPayload => ({ tripId: 't1', transports })
 
 /** The board as `orderFromPayload` leaves it: stops and notes, and no journeys. */
 const order = (days: Record<string, ReadonlyArray<string>>): PlanOrder => ({
