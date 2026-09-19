@@ -39,6 +39,7 @@ const messages = {
     'このサイトに位置情報の利用が許可されているか確認して、もう一度お試しください。',
 
   'map.attribution.label': '地図データの提供元',
+  'map.attribution.geocoder': '場所の検索元',
 
   'map.basemap.title': 'ベースマップを利用できません',
   'map.basemap.body':

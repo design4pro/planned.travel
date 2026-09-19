@@ -72,6 +72,20 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Ajouter une note',
   'plan.note.addForDay': 'Ajouter une note, {day}',
+  'plan.addPlace.label': 'Ajouter un lieu',
+  'plan.addPlace.more': 'Autres façons d’ajouter un lieu',
+  'plan.addPlace.option.map': 'Le placer sur la carte',
+  'plan.addPlace.forDay': 'Ajouter un lieu à ce jour',
+  'plan.addPlace.forDayNamed': 'Ajouter un lieu, {day}',
+  'plan.drop.hint':
+    'Faites un clic droit sur la carte, ou maintenez-la enfoncée, pour ajouter un lieu à cet endroit précis.',
+  'plan.drop.armed':
+    'Cliquez sur la carte à son emplacement, ou déplacez la carte et appuyez sur Entrée pour le déposer au centre.',
+  'plan.drop.stop': 'Arrêter de placer un nouveau repère',
+  'plan.drop.pin': 'Nouveau lieu',
+  'plan.drop.lookingUp': 'Recherche de l’adresse…',
+  'plan.drop.error':
+    'L’épingle n’a pas pu être posée. Réessayez dans un instant.',
   'plan.note.showMore': 'Afficher plus',
   'plan.note.showLess': 'Afficher moins',
   'plan.note.moveUp': 'Monter',

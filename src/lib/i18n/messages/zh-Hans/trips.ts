@@ -64,6 +64,18 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '添加备注',
   'plan.note.addForDay': '添加备注——{day}',
+  'plan.addPlace.label': '添加地点',
+  'plan.addPlace.more': '添加地点的其他方式',
+  'plan.addPlace.option.map': '放到地图上',
+  'plan.addPlace.forDay': '在这一天添加地点',
+  'plan.addPlace.forDayNamed': '添加地点——{day}',
+  'plan.drop.hint': '在地图上点击右键或长按，即可在该处添加地点。',
+  'plan.drop.armed':
+    '在地图上点击它所在的位置，或移动地图后按 Enter 键，将其放在中央。',
+  'plan.drop.stop': '停止放置新图钉',
+  'plan.drop.pin': '新地点',
+  'plan.drop.lookingUp': '正在查找地址…',
+  'plan.drop.error': '未能放下图钉。请稍后再试。',
   'plan.note.showMore': '展开',
   'plan.note.showLess': '收起',
   'plan.note.moveUp': '上移',

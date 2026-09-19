@@ -43,6 +43,7 @@ const messages = {
     'تأكد من السماح لهذا الموقع بالوصول إلى موقعك الجغرافي، ثم حاول مجددًا.',
 
   'map.attribution.label': 'بيانات الخريطة من',
+  'map.attribution.geocoder': 'تم تحديد الأماكن بواسطة',
 
   'map.basemap.title': 'خريطة الأساس غير متاحة',
   'map.basemap.body':

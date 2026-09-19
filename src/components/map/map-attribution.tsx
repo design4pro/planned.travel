@@ -1,6 +1,7 @@
 import * as React from 'react'
 
 import { cn } from '#/lib/cn'
+import { GEOAPIFY_CREDITS } from '#/lib/geo/credits'
 import { MAP_ATTRIBUTION } from '#/lib/map/style'
 import { focusRing } from '#/components/ui'
 import { useAtlasCopy } from './copy'
@@ -54,6 +55,16 @@ export function MapCreditList({ credits }: MapCreditListProps) {
 export type MapAttributionProps = React.ComponentPropsWithoutRef<'div'>
 
 /**
+ * The geocoder's credits the tile credit does not already carry.
+ *
+ * Both sources credit OpenStreetMap, and one line naming it twice would be noise, so
+ * a geocoder credit is dropped when its link is already on the line.
+ */
+const GEOCODER_CREDITS: ReadonlyArray<MapCredit> = GEOAPIFY_CREDITS.filter(
+  (credit) => !MAP_ATTRIBUTION.some((entry) => entry.href === credit.url),
+).map((credit) => ({ label: credit.name, href: credit.url }))
+
+/**
  * Data credit for the vector basemap.
  *
  * MapLibre ships its own attribution control, but it comes with its own white
@@ -70,6 +81,11 @@ export type MapAttributionProps = React.ComponentPropsWithoutRef<'div'>
  * canvas renders that panel for exactly as long as the archive is missing, so
  * the outlines are named once, in the one place a reader is already looking,
  * and never as a second pill stacked behind the panel where nobody can read it.
+ *
+ * The geocoder is credited on the same line (ADR 0013): every coordinate a map
+ * draws may have come from it, so its credit follows the tile credit wherever
+ * that is shown, as a second segment with its own sentence rather than a second
+ * badge.
  *
  * Placing one of these inside a `MapCanvas` also takes the map's single credit
  * slot, so the canvas stands its own default copy down rather than leaving a
@@ -104,6 +120,15 @@ export const MapAttribution = React.forwardRef<
     >
       <span className="sr-only">{t('atlas.map.attribution.label')}</span>
       <MapCreditList credits={MAP_ATTRIBUTION} />
+      {GEOCODER_CREDITS.length === 0 ? null : (
+        <>
+          <span aria-hidden="true" className="mx-1 text-ink-4">
+            ·
+          </span>
+          <span className="sr-only">{t('atlas.map.attribution.geocoder')}</span>
+          <MapCreditList credits={GEOCODER_CREDITS} />
+        </>
+      )}
     </div>
   )
 })

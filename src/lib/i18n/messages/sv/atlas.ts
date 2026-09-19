@@ -47,6 +47,7 @@ const messages = {
     'Kontrollera att platsåtkomst är tillåten för den här webbplatsen och försök sedan igen.',
 
   'map.attribution.label': 'Kartdata från',
+  'map.attribution.geocoder': 'Platser hittade med',
 
   'map.basemap.title': 'Baskartan är inte tillgänglig',
   'map.basemap.body':

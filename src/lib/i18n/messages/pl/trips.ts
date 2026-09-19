@@ -71,6 +71,20 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Dodaj notatkę',
   'plan.note.addForDay': 'Dodaj notatkę: {day}',
+  'plan.addPlace.label': 'Dodaj miejsce',
+  'plan.addPlace.more': 'Więcej sposobów dodania miejsca',
+  'plan.addPlace.option.map': 'Umieść na mapie',
+  'plan.addPlace.forDay': 'Dodaj miejsce do tego dnia',
+  'plan.addPlace.forDayNamed': 'Dodaj miejsce: {day}',
+  'plan.drop.hint':
+    'Kliknij mapę prawym przyciskiem albo przytrzymaj na niej palec, aby dodać miejsce dokładnie tam.',
+  'plan.drop.armed':
+    'Kliknij mapę tam, gdzie ma się znaleźć, albo przesuń mapę i naciśnij Enter, aby upuścić je na środku.',
+  'plan.drop.stop': 'Przestań umieszczać nową pinezkę',
+  'plan.drop.pin': 'Nowe miejsce',
+  'plan.drop.lookingUp': 'Szukam adresu…',
+  'plan.drop.error':
+    'Nie udało się upuścić pinezki. Spróbuj ponownie za chwilę.',
   'plan.note.showMore': 'Pokaż więcej',
   'plan.note.showLess': 'Pokaż mniej',
   'plan.note.moveUp': 'Przenieś w górę',
