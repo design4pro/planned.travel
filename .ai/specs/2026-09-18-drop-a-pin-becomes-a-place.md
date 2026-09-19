@@ -83,7 +83,7 @@ One server function, `reverseGeocodeFn`. It authorises **before** it spends:
 3. `getSubscription(scope)` → `resolveLimitsFromRow(row).rates.geocode_lookups_per_month` — the pair `src/server/fns/booking-import.ts:608` already uses.
 4. `reverseGeocode(geocodeRuntime({ organizationId: scope.ctx.organizationId, ceiling }), { lat, lng, language })`.
 
-It maps the proxy's refusals to a **result**, not an error: `GeoProviderError`, `RateCeilingError` and `ProviderBlockedError` become `{ address: null }`. The drop never needs to know _why_ there is no address, and an error crossing the wire would be one more thing a client could render as an apology. Authorisation failures (`NotFoundError`, `ForbiddenError`) still throw — those are not degraded lookups, they are refused requests.
+It maps the proxy's refusals to a **result**, not an error: `GeoProviderError`, `RateCeilingError` and `ProviderBlockedError` become `{ address: null }`. The drop never needs to know _why_ there is no address, and an error crossing the wire would be one more thing a client could render as an apology. Authorisation failures (`NotFoundError`, `TripArchivedError`, `TripRoleError`) still throw — those are not degraded lookups, they are refused requests.
 
 `searchPlacesFn` is **not** added (Resolved assumption 4).
 
@@ -161,9 +161,9 @@ z.strictObject({
 ```
 
 - `address` is the first candidate's formatted address, trimmed; `null` when there is no candidate or the proxy refused.
-- Throws `NotFoundError` for a trip the caller cannot see and `ForbiddenError` for one they cannot edit or that is archived — **before** `getSubscription`, before the cache and before the meter.
+- Throws `NotFoundError` for a trip the caller cannot see, `TripArchivedError` for an archived one, and `TripRoleError` for one they cannot edit — **before** `getSubscription`, before the cache and before the meter. Both trip errors are in `AUTHORED_ERROR_NAMES`, so their sentence reaches the reader verbatim.
 - `language` is the reader's active locale, so the cached answer is keyed on it by the proxy.
-- The coordinate the client sends is already rounded to six places, which is also the precision `reverseCacheKey` keys on — a pin dropped twice on the same point is one provider call.
+- The client sends the coordinate rounded to six places; `reverseCacheKey` keys on four (`toFixed(4)`, an ~11 m bucket, intentionally coarser — `geocode.test.ts` pins it). The server key does the deduping, so a pin dropped twice within the same bucket is one provider call, provided the first answer had a candidate (an empty answer is not cached).
 
 ### `createPlanPlaceFn` — unchanged
 
@@ -232,9 +232,9 @@ Every key lands in all 23 locales in the same change (`i18n-messages` skill). `e
 | Situation                                                             | What the reader sees                                                                                                                                                                  |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Lookup exceeds 1,500 ms                                               | Form opens with coordinates, address empty. The late answer is dropped (the request is aborted where the client supports it).                                                         |
-| No `GEOAPIFY_API_KEY`, provider blocked, or provider down             | Same as a timeout; the proxy refuses before the meter, so nothing is spent.                                                                                                           |
+| No `GEOAPIFY_API_KEY`, provider blocked, or provider down             | Same as a timeout. Only a missing `GEOAPIFY_API_KEY` is refused before the meter; a blocked or down provider fails after `spend`, so the lookup is charged.                           |
 | Workspace's `geocode_lookups_per_month` spent                         | Same as a timeout. The drop is a degraded feature, not a broken one; the ceiling is the billing page's story, not the form's.                                                         |
-| Point in the sea / no candidate                                       | Same as a timeout.                                                                                                                                                                    |
+| Point in the sea / no candidate                                       | Same as a timeout. The lookup is charged, and the empty answer is not cached, so a second drop on the same point is charged again.                                                    |
 | Viewer, archived trip, or foreign `tripId`                            | No gesture is offered (`editable` is false); a crafted call is refused by `reverseGeocodeFn` before any spend.                                                                        |
 | Places quota spent                                                    | The save is refused by `createPlace` as today; the form stays open with the draft, the error reads `trips.plan.addPlace.quota`, and a toast offers `See plans` → `/settings/billing`. |
 | Reader cancels the form                                               | Provisional pin removed, no write, focus returns.                                                                                                                                     |
@@ -246,7 +246,7 @@ Every key lands in all 23 locales in the same change (`i18n-messages` skill). `e
 
 ## 📝 Risks & Impact Review
 
-- **Money (risk-high trigger).** A lookup spends a metered, per-tenant allowance. Mitigated by authorising before the meter (tested), by the permanent KV cache, and by rounding to the cache key's precision. The gesture is only offered to editors of an unarchived trip.
+- **Money (risk-high trigger).** A lookup spends a metered, per-tenant allowance. Mitigated by authorising before the meter (tested) and by the permanent KV cache, keyed on an ~11 m bucket (`reverseCacheKey`, four decimal places). Not mitigated: a blocked or down provider, and an answer with no candidate, are charged after `spend` — and an empty answer is not cached, so repeat drops on it are charged each time. The residual is bounded by the workspace's `geocode_lookups_per_month` ceiling and the 1,500 ms client budget, and is accepted for this stage. The gesture is only offered to editors of an unarchived trip.
 - **Tenant scoping (risk-high trigger).** `reverseGeocodeFn` scopes through `requireWritableTrip`; the write path is `createPlace`, whose foreign-trip and foreign-category refusals gain coordinate-carrying cases in `tenant-isolation.test.ts`.
 - **Shared surface (risk-high trigger).** `plan-screen.tsx` and `day-section.tsx` are contended. The six-item edit list above is the whole change to the former; the latter gains one optional prop. After this stage `02-S6`, `02-S7`, `02-S8`, `02-S9` and `02-S12` extend the three route-local files instead.
 - **Plan ownership.** `docs/plans/02-places-and-maps.md` gives wave 3 no owner in `src/components/map`. This stage edits one file there, `map-attribution.tsx`, because FR #554 step 10 and PRD Decision 5 assign it the credit line; it does not touch `index.ts`, the barrel the rule protects (Resolved assumption 6).
