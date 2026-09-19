@@ -77,8 +77,8 @@ specific error and the plan is unchanged. An operator script seeds single-use 10
 
 ### Phase 1: Staging pool
 
-- [ ] 1.1 Seed script with `--dry-run`, and its unit tests
-- [ ] 1.2 DEPLOY.md §9.12 runbook and the §9.2 note
+- [x] 1.1 Seed script with `--dry-run`, and its unit tests — c9b896d61
+- [x] 1.2 DEPLOY.md §9.12 runbook and the §9.2 note — a0842e6f9
 
 ### Phase 2: Server
 
