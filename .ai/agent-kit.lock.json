@@ -1,5 +1,5 @@
 {
-  "kitVersion": 46,
+  "kitVersion": 47,
   "projectId": "planned-travel",
   "rendered": {
     ".ai/cezar/config.json": {
@@ -115,7 +115,7 @@
       "mode": "100644"
     },
     ".ai/trackers/github.md": {
-      "sha256": "860b230bab06d78ca29597573a98f3b3a509de1a390b3a9e9e91487d523733eb",
+      "sha256": "7418ba0e6e44ded3989b748f94e240f2628eb6086c2c5cdd364dc3c5ef48257c",
       "mode": "100644"
     },
     ".claude/hooks/__tests__/hooks.test.ts": {
