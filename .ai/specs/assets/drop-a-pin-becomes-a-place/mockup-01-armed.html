@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mockup — the add control, its menu, and the armed drop</title>
+    <!--
+      Illustrative static mockup for .ai/specs/2026-09-18-drop-a-pin-becomes-a-place.md.
+      Self-contained: inline CSS, no build step, no app code, no external requests.
+      Colour values are copied from src/styles/tokens.css; the map is a flat stand-in
+      for the basemap, the glyphs inline SVG stand-ins for the lucide icons.
+      Placeholder data only.
+
+      Two panes: the rail's "Add a place" pill with its menu open (light), and the
+      armed state — crosshair, arming banner, focused map region — (dark).
+    -->
+    <style>
+      :root {
+        --color-surface: #ffffff;
+        --color-surface-2: #f3f1ed;
+        --color-ink: #16150f;
+        --color-ink-2: #403e36;
+        --color-ink-3: #5b5951;
+        --color-edge: #e3e0d8;
+        --color-accent: #16150f;
+        --color-accent-on: #ffffff;
+        --color-brand: #256256;
+        --glass: rgb(255 255 255 / 0.82);
+        --glass-edge: rgb(22 21 15 / 0.08);
+        --map-land: #eceae3;
+        --map-water: #cfe0e6;
+        --map-road: #ffffff;
+      }
+      [data-theme='dark'] {
+        --color-surface: #1a1a18;
+        --color-surface-2: #212120;
+        --color-ink: #f8f7f4;
+        --color-ink-2: #d8d6d0;
+        --color-ink-3: #adaba3;
+        --color-edge: #3a3a36;
+        --color-accent: #f8f7f4;
+        --color-accent-on: #16150f;
+        --color-brand: #5fbba0;
+        --glass: rgb(26 26 24 / 0.82);
+        --glass-edge: rgb(255 255 255 / 0.08);
+        --map-land: #262624;
+        --map-water: #1b2a30;
+        --map-road: #3a3a36;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        padding: 28px;
+        background: #6e6c66;
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        font-size: 14px;
+      }
+      .pane {
+        position: relative;
+        width: 720px;
+        height: 460px;
+        overflow: hidden;
+        border-radius: 16px;
+        color: var(--color-ink);
+        background:
+          radial-gradient(
+            ellipse 40% 30% at 20% 80%,
+            var(--map-water) 60%,
+            transparent 61%
+          ),
+          linear-gradient(
+            115deg,
+            transparent 48%,
+            var(--map-road) 48.5%,
+            var(--map-road) 49.5%,
+            transparent 50%
+          ),
+          linear-gradient(
+            20deg,
+            transparent 60%,
+            var(--map-road) 60.4%,
+            var(--map-road) 61%,
+            transparent 61.4%
+          ),
+          var(--map-land);
+      }
+      .caption {
+        position: absolute;
+        left: 12px;
+        bottom: 10px;
+        font-size: 11px;
+        color: var(--color-ink-3);
+        letter-spacing: 0.04em;
+      }
+      .glass {
+        background: var(--glass);
+        backdrop-filter: blur(12px);
+        box-shadow:
+          inset 0 0 0 1px var(--glass-edge),
+          0 8px 24px rgb(22 21 15 / 0.12);
+      }
+      .rail {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        bottom: 16px;
+        width: 300px;
+        border-radius: 16px;
+        padding: 12px;
+      }
+      .rail h2 {
+        margin: 0 0 10px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ink-3);
+      }
+      .add {
+        display: flex;
+        gap: 4px;
+      }
+      .pill {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 32px;
+        border-radius: 999px;
+        border: 0;
+        font: inherit;
+        font-weight: 600;
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+      }
+      .more {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: 0;
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+        outline: 2px solid var(--color-brand);
+        outline-offset: 2px;
+      }
+      .menu {
+        position: absolute;
+        top: 88px;
+        right: 28px;
+        width: 220px;
+        padding: 4px;
+        border-radius: 12px;
+        background: var(--color-surface);
+        box-shadow:
+          0 0 0 1px var(--color-edge),
+          0 12px 32px rgb(22 21 15 / 0.18);
+      }
+      .menu div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: var(--color-surface-2);
+      }
+      .row {
+        margin-top: 14px;
+        padding: 10px;
+        border-radius: 12px;
+        background: var(--color-surface-2);
+        color: var(--color-ink-2);
+      }
+      .banner {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 4px 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--color-ink-2);
+        white-space: nowrap;
+      }
+      .banner button {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        border: 0;
+        background: transparent;
+        color: var(--color-ink-2);
+      }
+      .focus-ring {
+        position: absolute;
+        inset: 3px;
+        border-radius: 16px;
+        outline: 2px solid var(--color-brand);
+        pointer-events: none;
+      }
+      .crosshair {
+        position: absolute;
+        left: 50%;
+        top: 55%;
+        transform: translate(-50%, -50%);
+        color: var(--color-ink);
+      }
+      .attr {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--color-ink-3);
+      }
+      .attr u {
+        text-decoration-color: var(--color-edge);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Pane 1: resting → menu-open (light) -->
+    <section class="pane" data-theme="light" aria-label="Menu open, light">
+      <div class="rail glass">
+        <h2>Places · 4</h2>
+        <div class="add">
+          <button class="pill">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add a place
+          </button>
+          <button
+            class="more"
+            aria-label="More ways to add a place"
+            aria-expanded="true"
+          >
+            ▾
+          </button>
+        </div>
+        <div class="row">Fushimi Inari Taisha · Kyoto</div>
+        <div class="row">Nishiki Market · Kyoto</div>
+      </div>
+      <div class="menu" role="menu">
+        <div role="menuitem">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="7" />
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+          </svg>
+          Place it on the map
+        </div>
+      </div>
+      <div class="attr glass">
+        <u>OpenStreetMap</u> · <u>Protomaps</u> · <u>Geoapify</u>
+      </div>
+      <span class="caption"
+        >resting → menu-open · light · the credit line gains Geoapify</span
+      >
+    </section>
+
+    <!-- Pane 2: armed (dark) -->
+    <section class="pane" data-theme="dark" aria-label="Armed, dark">
+      <div class="focus-ring"></div>
+      <div class="banner glass" role="status">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#5fbba0"
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="7" />
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+        </svg>
+        Click the map where it goes, or move the map and press Enter to drop it
+        in the middle.
+        <button aria-label="Stop placing a new pin">✕</button>
+      </div>
+      <svg
+        class="crosshair"
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <path d="M12 2v8M12 14v8M2 12h8M14 12h8" />
+      </svg>
+      <div class="attr glass">
+        <u>OpenStreetMap</u> · <u>Protomaps</u> · <u>Geoapify</u>
+      </div>
+      <span class="caption"
+        >armed · dark · map region focused, crosshair at the drop point</span
+      >
+    </section>
+  </body>
+</html>

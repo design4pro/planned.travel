@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mockup — the provisional pin and the prefilled form</title>
+    <!--
+      Illustrative static mockup for .ai/specs/2026-09-18-drop-a-pin-becomes-a-place.md.
+      Self-contained: inline CSS, no build step, no app code, no external requests.
+      Colour values are copied from src/styles/tokens.css; the map is a flat stand-in.
+      Placeholder data only.
+
+      Two panes: the provisional pin while the address is looked up (dark — the case
+      the pin's ring exists for), and the existing "Add a place to this trip" dialog
+      opened with coordinates and address filled, name focused (light).
+    -->
+    <style>
+      :root {
+        --color-surface: #ffffff;
+        --color-surface-2: #f3f1ed;
+        --color-ink: #16150f;
+        --color-ink-2: #403e36;
+        --color-ink-3: #5b5951;
+        --color-edge: #e3e0d8;
+        --color-accent: #16150f;
+        --color-accent-on: #ffffff;
+        --color-brand: #256256;
+        --map-land: #eceae3;
+        --map-water: #cfe0e6;
+        --map-road: #ffffff;
+      }
+      [data-theme='dark'] {
+        --color-surface: #1a1a18;
+        --color-surface-2: #212120;
+        --color-ink: #f8f7f4;
+        --color-ink-2: #d8d6d0;
+        --color-ink-3: #adaba3;
+        --color-edge: #3a3a36;
+        --color-accent: #f8f7f4;
+        --color-accent-on: #16150f;
+        --color-brand: #5fbba0;
+        --map-land: #262624;
+        --map-water: #1b2a30;
+        --map-road: #3a3a36;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        padding: 28px;
+        background: #6e6c66;
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        font-size: 14px;
+      }
+      .pane {
+        position: relative;
+        width: 720px;
+        height: 520px;
+        overflow: hidden;
+        border-radius: 16px;
+        color: var(--color-ink);
+        background:
+          radial-gradient(
+            ellipse 40% 30% at 20% 80%,
+            var(--map-water) 60%,
+            transparent 61%
+          ),
+          linear-gradient(
+            115deg,
+            transparent 48%,
+            var(--map-road) 48.5%,
+            var(--map-road) 49.5%,
+            transparent 50%
+          ),
+          var(--map-land);
+      }
+      .caption {
+        position: absolute;
+        left: 12px;
+        bottom: 10px;
+        font-size: 11px;
+        color: var(--color-ink-3);
+        letter-spacing: 0.04em;
+      }
+      .pin {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 44px;
+        height: 44px;
+      }
+      .pin .ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        border: 2px dashed var(--color-accent);
+        background: transparent;
+      }
+      .pin .dot {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 18px;
+        height: 18px;
+        transform: translate(-50%, -50%);
+        border-radius: 999px;
+        background: var(--color-accent);
+        box-shadow: 0 0 0 3px var(--color-accent-on);
+      }
+      .scrim {
+        position: absolute;
+        inset: 0;
+        background: rgb(22 21 15 / 0.35);
+      }
+      .dialog {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 460px;
+        border-radius: 16px;
+        background: var(--color-surface);
+        padding: 20px;
+        box-shadow: 0 24px 64px rgb(22 21 15 / 0.3);
+      }
+      .dialog h3 {
+        margin: 0 0 4px;
+        font-size: 17px;
+      }
+      .dialog p {
+        margin: 0 0 14px;
+        font-size: 12px;
+        color: var(--color-ink-3);
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-ink-2);
+        margin: 10px 0 4px;
+      }
+      .input {
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid var(--color-edge);
+        padding: 7px 10px;
+        color: var(--color-ink);
+      }
+      .input.focus {
+        outline: 2px solid var(--color-brand);
+        outline-offset: 1px;
+        color: var(--color-ink-3);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .btn {
+        height: 32px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 0;
+        font: inherit;
+        font-weight: 600;
+      }
+      .primary {
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+      }
+      .ghost {
+        background: var(--color-surface-2);
+        color: var(--color-ink);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Pane 1: dropping (dark) -->
+    <section class="pane" data-theme="dark" aria-label="Dropping, dark">
+      <div class="pin" role="img" aria-label="New place">
+        <div class="ring"></div>
+        <div class="dot"></div>
+      </div>
+      <span class="caption"
+        >dropping · dark · provisional pin, "Finding the address…" announced, ≤
+        1.5 s</span
+      >
+    </section>
+
+    <!-- Pane 2: form open (light) -->
+    <section class="pane" data-theme="light" aria-label="Form open, light">
+      <div class="pin">
+        <div class="ring"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="dialog" role="dialog" aria-label="Add a place to this trip">
+        <h3>Add a place to this trip</h3>
+        <p>
+          Give it a name now and a position later — an unplanned place waits in
+          the places panel until you drop it on a day.
+        </p>
+        <label>Name</label>
+        <div class="input focus">Fushimi Inari Taisha</div>
+        <label>Address</label>
+        <div class="input">68 Fukakusa Yabunouchicho, Fushimi Ward, Kyoto</div>
+        <div class="grid">
+          <div>
+            <label>Latitude</label>
+            <div class="input">34.967140</div>
+          </div>
+          <div>
+            <label>Longitude</label>
+            <div class="input">135.772672</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn ghost">Cancel</button>
+          <button class="btn primary">Add place</button>
+        </div>
+      </div>
+      <span class="caption"
+        >dropped · light · the existing form, unchanged, opened with a
+        draft</span
+      >
+    </section>
+  </body>
+</html>
