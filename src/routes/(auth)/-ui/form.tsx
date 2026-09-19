@@ -81,6 +81,7 @@ export function AuthPanel({
 }) {
   return (
     <div
+      data-part="auth-panel"
       className={cn(
         'rounded-xl border border-edge-faint bg-surface p-6 shadow-card sm:p-7',
         className,

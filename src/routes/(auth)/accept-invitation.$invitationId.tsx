@@ -368,7 +368,7 @@ function AcceptInvitationPage() {
         <FormAlert message={failure} onDismiss={() => setFailure(null)} />
         <InvitationDetails invitation={view.invitation} />
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
+        <div className="mt-6 flex flex-col gap-3">
           <Button
             variant="primary"
             size="lg"

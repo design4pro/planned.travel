@@ -188,7 +188,7 @@ function VerifyEmailPage() {
               ? t('auth.verify.pending.resentBody')
               : t('auth.verify.pending.body')}
           </Notice>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3">
             <Button
               variant="secondary"
               size="lg"
