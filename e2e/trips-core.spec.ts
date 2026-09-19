@@ -1504,3 +1504,134 @@ test.describe('01-S6b — A guest on a trip', () => {
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 })
+
+test.describe('01-S7 — Reading a list of trips two ways, and finding the archived ones', () => {
+  /**
+   * This block's route table. One route: the mode, its switch and the archived fold are all
+   * properties of the trip index, and the dashboard's strip is covered by its unit-level payload.
+   */
+  const TRIPS: RouteCase = {
+    name: 'trips',
+    path: '/trips',
+    ready: 'main',
+  }
+
+  const LIST_SWITCH = '[data-part="trip-view-list"]'
+  const GRID_SWITCH = '[data-part="trip-view-grid"]'
+  const ROW = '[data-part="trip-row"]'
+  const DISCLOSURE = '[data-part="trip-archive-disclosure"]'
+  const TRIGGER = '[data-part="trip-actions-trigger"]'
+
+  test.beforeEach(async ({ context, page, baseURL, isMobile }) => {
+    test.skip(
+      isMobile,
+      'the switch is a wide-viewport control; the phone reads the index as rows already',
+    )
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * The mode is a presentation of the list the loader already holds, so switching it is a URL
+   * change and nothing else: the trips loader is not called on the way from the grid to the rows or
+   * back. A switch that refetched would still pass every visual check and fail this one.
+   */
+  test('the switch lays the same trips out as rows, in the URL, without asking the server again', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const tiles = page.locator('[data-part="trip-tile"]:visible')
+    await expect(tiles.first()).toBeVisible()
+    const tileCount = await tiles.count()
+
+    // The trips loader by name, decoded from the function id: the `_app` layout's own loader runs on
+    // every navigation and is not this stage's claim.
+    const loaderCalls: Array<string> = []
+    page.on('request', (request) => {
+      const id = new URL(request.url()).pathname.split('/_serverFn/').at(1)
+      if (
+        id !== undefined &&
+        Buffer.from(decodeURIComponent(id), 'base64')
+          .toString('utf8')
+          .includes('loadTrips')
+      ) {
+        loaderCalls.push(request.url())
+      }
+    })
+
+    await page.locator(LIST_SWITCH).click()
+    await expect(page).toHaveURL(/[?&]view=list(&|$)/)
+    await expect(page.locator(LIST_SWITCH)).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(page.locator(`${ROW}:visible`)).toHaveCount(tileCount)
+    await expect(page.locator('[data-part="trip-tile"]:visible')).toHaveCount(0)
+
+    await page.locator(GRID_SWITCH).click()
+    await expect(page).toHaveURL(/[?&]view=grid(&|$)/)
+    await expect(tiles).toHaveCount(tileCount)
+
+    expect(loaderCalls, loaderCalls.join('\n')).toEqual([])
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The demo workspace carries no archived trip, so this test makes one and puts it back: the last
+   * row, which is never the dashboard's prominent trip nor the tile another block reads first. The
+   * fold is asserted to be a real disclosure — a button whose `aria-expanded` follows it and whose
+   * body names the archived trip — and the restore runs even when an assertion fails.
+   */
+  test('an archived trip waits in a closed fold at the foot of the index, and opens on request', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, { ...TRIPS, path: '/trips?view=list' }, 'light')
+
+    const rows = page.locator(`${ROW}:visible`)
+    await expect(rows.first()).toBeVisible()
+    const last = rows.last()
+    const title = (await last.getByRole('heading').innerText()).trim()
+
+    await last.locator(TRIGGER).click()
+    await page.getByRole('menuitem', { name: 'Archive' }).click()
+
+    try {
+      const disclosure = page.locator(DISCLOSURE)
+      await expect(disclosure).toBeVisible()
+      await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.locator('#trip-archive')).toHaveCount(0)
+
+      await disclosure.click()
+      await expect(disclosure).toHaveAttribute('aria-expanded', 'true')
+      const archive = page.locator('#trip-archive')
+      await expect(
+        archive.getByRole('heading', { name: title, exact: true }),
+      ).toBeVisible()
+    } finally {
+      const archived = page
+        .locator('#trip-archive')
+        .locator(ROW)
+        .filter({
+          has: page.getByRole('heading', { name: title, exact: true }),
+        })
+      if ((await page.locator('#trip-archive').count()) === 0) {
+        await page.locator(DISCLOSURE).click()
+      }
+      await archived.locator(TRIGGER).click()
+      await page.getByRole('menuitem', { name: 'Restore' }).click()
+      await expect(archived).toHaveCount(0)
+      await settleMutations(page)
+    }
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})
