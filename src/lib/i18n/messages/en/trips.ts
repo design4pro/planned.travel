@@ -124,6 +124,17 @@ const messages = {
    */
   'plan.note.add': 'Add a note',
   'plan.note.addForDay': 'Add a note for {day}',
+  /* ---------------------------------------------- adding a place */
+  /**
+   * The rail's add control and its menu, the day footer's own add control
+   * (`forDayNamed` is its accessible name, so ten days are ten distinguishable
+   * buttons).
+   */
+  'plan.addPlace.label': 'Add a place',
+  'plan.addPlace.more': 'More ways to add a place',
+  'plan.addPlace.option.map': 'Place it on the map',
+  'plan.addPlace.forDay': 'Add a place to this day',
+  'plan.addPlace.forDayNamed': 'Add a place to {day}',
   /**
    * The disclosure, which exists only on a note that carries a detail. Two
    * messages rather than one with a state suffix: several of the twenty-three

@@ -74,6 +74,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Notitie toevoegen',
   'plan.note.addForDay': 'Notitie toevoegen: {day}',
+  'plan.addPlace.label': 'Plek toevoegen',
+  'plan.addPlace.more': 'Meer manieren om een plek toe te voegen',
+  'plan.addPlace.option.map': 'Op de kaart plaatsen',
+  'plan.addPlace.forDay': 'Plek aan deze dag toevoegen',
+  'plan.addPlace.forDayNamed': 'Plek toevoegen: {day}',
   'plan.note.showMore': 'Meer tonen',
   'plan.note.showLess': 'Minder tonen',
   'plan.note.moveUp': 'Omhoog verplaatsen',

@@ -72,6 +72,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '메모 추가',
   'plan.note.addForDay': '메모 추가 — {day}',
+  'plan.addPlace.label': '장소 추가',
+  'plan.addPlace.more': '장소를 추가하는 다른 방법',
+  'plan.addPlace.option.map': '지도에 배치',
+  'plan.addPlace.forDay': '이 날에 장소 추가',
+  'plan.addPlace.forDayNamed': '장소 추가 — {day}',
   'plan.note.showMore': '더 보기',
   'plan.note.showLess': '접기',
   'plan.note.moveUp': '위로 이동',

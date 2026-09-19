@@ -70,6 +70,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Přidat poznámku',
   'plan.note.addForDay': 'Přidat poznámku: {day}',
+  'plan.addPlace.label': 'Přidat místo',
+  'plan.addPlace.more': 'Další způsoby, jak přidat místo',
+  'plan.addPlace.option.map': 'Umístit na mapu',
+  'plan.addPlace.forDay': 'Přidat místo do tohoto dne',
+  'plan.addPlace.forDayNamed': 'Přidat místo: {day}',
   'plan.note.showMore': 'Zobrazit více',
   'plan.note.showLess': 'Zobrazit méně',
   'plan.note.moveUp': 'Posunout nahoru',

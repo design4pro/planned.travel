@@ -71,6 +71,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Adicionar uma nota',
   'plan.note.addForDay': 'Adicionar uma nota, {day}',
+  'plan.addPlace.label': 'Adicionar um lugar',
+  'plan.addPlace.more': 'Mais formas de adicionar um lugar',
+  'plan.addPlace.option.map': 'Colocar no mapa',
+  'plan.addPlace.forDay': 'Adicionar um lugar a este dia',
+  'plan.addPlace.forDayNamed': 'Adicionar um lugar, {day}',
   'plan.note.showMore': 'Mostrar mais',
   'plan.note.showLess': 'Mostrar menos',
   'plan.note.moveUp': 'Mover para cima',

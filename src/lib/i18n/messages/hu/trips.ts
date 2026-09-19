@@ -73,6 +73,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Jegyzet hozzáadása',
   'plan.note.addForDay': 'Jegyzet hozzáadása: {day}',
+  'plan.addPlace.label': 'Hely hozzáadása',
+  'plan.addPlace.more': 'További módok hely hozzáadására',
+  'plan.addPlace.option.map': 'Elhelyezés a térképen',
+  'plan.addPlace.forDay': 'Hely hozzáadása ehhez a naphoz',
+  'plan.addPlace.forDayNamed': 'Hely hozzáadása: {day}',
   'plan.note.showMore': 'Több megjelenítése',
   'plan.note.showLess': 'Kevesebb megjelenítése',
   'plan.note.moveUp': 'Mozgatás felfelé',

@@ -67,6 +67,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'إضافة ملاحظة',
   'plan.note.addForDay': 'إضافة ملاحظة، {day}',
+  'plan.addPlace.label': 'إضافة مكان',
+  'plan.addPlace.more': 'طرق أخرى لإضافة مكان',
+  'plan.addPlace.option.map': 'ضعه على الخريطة',
+  'plan.addPlace.forDay': 'إضافة مكان إلى هذا اليوم',
+  'plan.addPlace.forDayNamed': 'إضافة مكان، {day}',
   'plan.note.showMore': 'عرض المزيد',
   'plan.note.showLess': 'عرض أقل',
   'plan.note.moveUp': 'تحريك لأعلى',

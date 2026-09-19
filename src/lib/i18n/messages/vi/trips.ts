@@ -71,6 +71,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Thêm ghi chú',
   'plan.note.addForDay': 'Thêm ghi chú, {day}',
+  'plan.addPlace.label': 'Thêm địa điểm',
+  'plan.addPlace.more': 'Các cách khác để thêm địa điểm',
+  'plan.addPlace.option.map': 'Đặt lên bản đồ',
+  'plan.addPlace.forDay': 'Thêm địa điểm vào ngày này',
+  'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
   'plan.note.showMore': 'Xem thêm',
   'plan.note.showLess': 'Thu gọn',
   'plan.note.moveUp': 'Di chuyển lên',

@@ -48,6 +48,11 @@ export interface DaySectionProps {
   readonly onDeleteNote?: (note: PlannerNote) => void
   /** `-1` is one place earlier in the day's sequence, `1` one place later. */
   readonly onMoveNote?: (note: PlannerNote, direction: -1 | 1) => void
+  /**
+   * What the day's footer offers beyond its note, drawn under the note control. The
+   * screen composes it, so a stage that adds a footer control never edits this file.
+   */
+  readonly dayTools?: (day: PlannerDay) => React.ReactNode
 }
 
 /**
@@ -85,6 +90,7 @@ export function DaySection({
   onEditNote,
   onDeleteNote,
   onMoveNote,
+  dayTools,
 }: DaySectionProps) {
   const t = useTranslate()
   const itemIds = React.useMemo(
@@ -282,6 +288,8 @@ export function DaySection({
           </button>
         </div>
       ) : null}
+
+      {dayTools?.(day)}
     </section>
   )
 }

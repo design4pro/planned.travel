@@ -72,6 +72,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Lägg till en anteckning',
   'plan.note.addForDay': 'Lägg till en anteckning: {day}',
+  'plan.addPlace.label': 'Lägg till en plats',
+  'plan.addPlace.more': 'Fler sätt att lägga till en plats',
+  'plan.addPlace.option.map': 'Placera den på kartan',
+  'plan.addPlace.forDay': 'Lägg till en plats på den här dagen',
+  'plan.addPlace.forDayNamed': 'Lägg till en plats: {day}',
   'plan.note.showMore': 'Visa mer',
   'plan.note.showLess': 'Visa mindre',
   'plan.note.moveUp': 'Flytta upp',

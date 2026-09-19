@@ -73,6 +73,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Tambahkan catatan',
   'plan.note.addForDay': 'Tambahkan catatan, {day}',
+  'plan.addPlace.label': 'Tambahkan tempat',
+  'plan.addPlace.more': 'Cara lain menambahkan tempat',
+  'plan.addPlace.option.map': 'Letakkan di peta',
+  'plan.addPlace.forDay': 'Tambahkan tempat ke hari ini',
+  'plan.addPlace.forDayNamed': 'Tambahkan tempat, {day}',
   'plan.note.showMore': 'Tampilkan selengkapnya',
   'plan.note.showLess': 'Tampilkan lebih sedikit',
   'plan.note.moveUp': 'Pindahkan ke atas',

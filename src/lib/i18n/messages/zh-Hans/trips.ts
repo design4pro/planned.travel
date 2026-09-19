@@ -64,6 +64,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '添加备注',
   'plan.note.addForDay': '添加备注——{day}',
+  'plan.addPlace.label': '添加地点',
+  'plan.addPlace.more': '添加地点的其他方式',
+  'plan.addPlace.option.map': '放到地图上',
+  'plan.addPlace.forDay': '在这一天添加地点',
+  'plan.addPlace.forDayNamed': '添加地点——{day}',
   'plan.note.showMore': '展开',
   'plan.note.showLess': '收起',
   'plan.note.moveUp': '上移',

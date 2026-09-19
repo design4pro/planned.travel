@@ -75,6 +75,11 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Προσθήκη σημείωσης',
   'plan.note.addForDay': 'Προσθήκη σημείωσης, {day}',
+  'plan.addPlace.label': 'Προσθήκη τοποθεσίας',
+  'plan.addPlace.more': 'Περισσότεροι τρόποι προσθήκης τοποθεσίας',
+  'plan.addPlace.option.map': 'Τοποθέτηση στον χάρτη',
+  'plan.addPlace.forDay': 'Προσθήκη τοποθεσίας σε αυτή την ημέρα',
+  'plan.addPlace.forDayNamed': 'Προσθήκη τοποθεσίας, {day}',
   'plan.note.showMore': 'Περισσότερα',
   'plan.note.showLess': 'Λιγότερα',
   'plan.note.moveUp': 'Μετακίνηση πάνω',
