@@ -576,6 +576,10 @@ function parseInline(
   const nodes: Array<MarkdownInline> = []
   let buffer = ''
   let index = 0
+  // Computed the first time a link is attempted, and only for this source.
+  let stops: LinkStops | null = null
+  const linkAt = (start: number): ReturnType<typeof matchLink> =>
+    matchLink(source, start, (stops ??= linkStops(source)))
 
   const flush = (): void => {
     if (buffer !== '') {
@@ -638,7 +642,7 @@ function parseInline(
     // Images are outside the subset. Consuming the whole construct is what
     // keeps an image from degrading into a stray `!` beside a working link.
     if (linkable && char === '!' && source[index + 1] === '[') {
-      const link = matchLink(source, index + 1)
+      const link = linkAt(index + 1)
       if (link !== null) {
         buffer += source.slice(index, link.end)
         index = link.end
@@ -650,7 +654,7 @@ function parseInline(
     }
 
     if (linkable && char === '[') {
-      const link = matchLink(source, index)
+      const link = linkAt(index)
       if (link !== null) {
         const href = safeHref(link.destination)
         if (href !== null) {
@@ -802,61 +806,20 @@ function isAlphanumeric(char: string | undefined): boolean {
 function matchLink(
   source: string,
   start: number,
+  stops: LinkStops,
 ): { label: string; destination: string; end: number } | null {
-  // A body of nothing but `[` would otherwise be scanned to the end once per
-  // bracket. One native search says there is no closer at all.
-  if (source.indexOf(']', start) === -1) return null
+  const labelEnd = stops.labelEnd[start]
+  if (labelEnd === -1 || source[labelEnd + 1] !== '(') return null
 
-  let depth = 0
-  let index = start
-
-  while (index < source.length) {
-    const char = source[index]
-    if (char === '\\') {
-      index += 2
-      continue
-    }
-    if (char === '[') depth += 1
-    if (char === ']') {
-      depth -= 1
-      if (depth === 0) break
-    }
-    index += 1
-  }
-
-  if (depth !== 0 || source[index] !== ']' || source[index + 1] !== '(') {
-    return null
-  }
-
-  const label = source.slice(start + 1, index)
-  let cursor = index + 2
+  const label = source.slice(start + 1, labelEnd)
+  let cursor = labelEnd + 2
   while (LINK_SPACE.test(source[cursor] ?? '')) cursor += 1
 
-  let destination = ''
-  if (source[cursor] === '<') {
-    const close = source.indexOf('>', cursor + 1)
-    if (close === -1) return null
-    destination = source.slice(cursor + 1, close)
-    cursor = close + 1
-  } else {
-    let parens = 0
-    while (cursor < source.length) {
-      const char = source[cursor]
-      if (char === '\\' && cursor + 1 < source.length) {
-        destination += source[cursor + 1]
-        cursor += 2
-        continue
-      }
-      if (LINK_SPACE.test(char)) break
-      if (char === '(') parens += 1
-      if (char === ')') {
-        if (parens === 0) break
-        parens -= 1
-      }
-      destination += char
-      cursor += 1
-    }
-  }
+  const angled = source[cursor] === '<'
+  const from = angled ? cursor + 1 : cursor
+  const to = angled ? source.indexOf('>', from) : stops.destinationEnd[cursor]
+  if (to === -1) return null
+  cursor = angled ? to + 1 : to
 
   // An optional title, which the subset reads only in order to skip it.
   while (LINK_SPACE.test(source[cursor] ?? '')) cursor += 1
@@ -869,7 +832,77 @@ function matchLink(
   }
 
   if (source[cursor] !== ')') return null
+  // Built only once the link holds: a failed attempt copying its destination
+  // would copy the rest of the line once per `[`.
+  const raw = source.slice(from, to)
+  const destination = angled ? raw : raw.replace(/\\([\s\S])/g, '$1')
   return { label, destination, end: cursor + 1 }
+}
+
+/** Where every link scan over one inline source ends, by starting offset. */
+interface LinkStops {
+  /** The `]` that closes the `[` at an offset, or -1 when nothing closes it. */
+  readonly labelEnd: Int32Array
+  /**
+   * Where a bare destination starting at an offset stops: its first space, the
+   * `)` that closes it, or the end of the source.
+   */
+  readonly destinationEnd: Int32Array
+}
+
+/**
+ * Both link scans for a whole source, in one pass.
+ *
+ * Scanning from each `[` separately re-reads the rest of the line once per
+ * bracket, which makes a long line of `[a](b` quadratic. Every offset a scan
+ * starts from — a `[` the inline reader left unescaped, a destination after
+ * `(` or a space — is one a walk from the start of the source also visits,
+ * because an escape pairs the same backslashes whichever of them the walk
+ * begins before. So one walk answers all of them: `[` offsets match their `]`
+ * on a stack, and an offset still waiting for its destination to end sits in
+ * the group of its paren depth, settled by the next space or by the `)` that
+ * leaves that depth.
+ */
+function linkStops(source: string): LinkStops {
+  const labelEnd = new Int32Array(source.length).fill(-1)
+  const destinationEnd = new Int32Array(source.length + 1)
+  const brackets: Array<number> = []
+  const open: Array<number> = []
+  // Where each paren depth's group of `open` begins; the base depth is 0.
+  const depths: Array<number> = [0]
+
+  const settle = (from: number, end: number): void => {
+    for (let index = from; index < open.length; index += 1) {
+      destinationEnd[open[index]] = end
+    }
+    open.length = from
+  }
+
+  let index = 0
+  while (index < source.length) {
+    const char = source[index]
+    open.push(index)
+    if (char === '\\' && index + 1 < source.length) {
+      index += 2
+      continue
+    }
+    if (char === '[') brackets.push(index)
+    if (char === ']') {
+      const opener = brackets.pop()
+      if (opener !== undefined) labelEnd[opener] = index
+    }
+    if (LINK_SPACE.test(char)) {
+      settle(0, index)
+      depths.length = 1
+    }
+    if (char === '(') depths.push(open.length)
+    if (char === ')') settle(depths.length > 1 ? (depths.pop() ?? 0) : 0, index)
+    index += 1
+  }
+
+  settle(0, source.length)
+  destinationEnd[source.length] = source.length
+  return { labelEnd, destinationEnd }
 }
 
 /**

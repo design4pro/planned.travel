@@ -436,5 +436,14 @@ describe('parse — outside the subset', () => {
     expect(() => parse('['.repeat(10_000))).not.toThrow()
     expect(() => parse('*'.repeat(10_000))).not.toThrow()
     expect(() => parse('`'.repeat(10_000))).not.toThrow()
+    // A `]` somewhere later defeats any cheap "no closer at all" check, so
+    // these reach the label and destination scans once per `[`.
+    expect(() => parse('[a](b'.repeat(20_000))).not.toThrow()
+    expect(() => parse('![a](b'.repeat(20_000))).not.toThrow()
+    expect(() => parse('['.repeat(100_000) + ']')).not.toThrow()
+    expect(() => parse('[a](b('.repeat(20_000))).not.toThrow()
+    expect(() =>
+      parse('['.repeat(20_000) + 'a](b'.repeat(20_000)),
+    ).not.toThrow()
   })
 })
