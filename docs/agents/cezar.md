@@ -311,8 +311,8 @@ A `review-prs` step that claims a PR and exits without releasing it leaves an `i
 nobody holds, and the same run's `merge-buddy` step then skips that PR (#551).
 `scripts/agents/release-leaked-claims.mjs --since <sweep start> --prs <dispatched PRs>` releases
 such a claim and comments whether any review was submitted. It only acts on an `om-auto-review-pr`
-claim by the automation account that is newer than `--since` and is still the PR's newest lock event,
-so it never releases a live claim. Run it by hand with `--dry-run` to see what it would release.
+claim by the automation account that is the PR's only lock event since `--since`: a take-over, or a
+newer claim after a release, belongs to a live run and is left alone. Run it by hand with `--dry-run` to see what it would release.
 
 ## Host cutover (operator, once, after PR B merges)
 

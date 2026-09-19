@@ -122,6 +122,47 @@ describe('planRelease', () => {
     ).toBeNull()
   })
 
+  it('never releases a chain take-over, which its driver releases', () => {
+    const body =
+      '🤖 `om-auto-review-pr` taking over the chain lock — code review. Started: 2026-09-17T11:30:05Z.'
+    expect(
+      plan(pr({ comments: [comment(body, '2026-09-17T11:30:05Z')] })),
+    ).toBeNull()
+  })
+
+  it('never releases a newer claim by the same skill after this sweep released its own', () => {
+    const comments = [
+      comment(CLAIM, '2026-09-17T11:05:00Z'),
+      comment(
+        '🤖 `om-auto-review-pr` completed: approved. Lock released.',
+        '2026-09-17T11:10:00Z',
+      ),
+      comment(
+        '🤖 `om-auto-review-pr` started by @design4pro-agent at 2026-09-17T11:30:00Z.',
+        '2026-09-17T11:30:00Z',
+      ),
+    ]
+    expect(plan(pr({ comments }))).toBeNull()
+  })
+
+  it('reads only the first line, so a word further down moves no lock', () => {
+    const comments = [
+      comment(`${CLAIM}\n\nThe previous run aborted.`, '2026-09-17T11:16:53Z'),
+      comment(
+        '🤖 `om-auto-review-pr` — CI result\n\nstarted by the push at 11:18',
+        '2026-09-17T11:19:00Z',
+      ),
+    ]
+    expect(plan(pr({ comments }))?.claimedAt).toBe('2026-09-17T11:16:53Z')
+  })
+
+  it('does not count a pending review, which has no submission time', () => {
+    const reviews = [
+      { author: { login: ME }, state: 'PENDING', submittedAt: null },
+    ]
+    expect(plan(pr({ reviews }))?.review).toBeNull()
+  })
+
   it('reads past non-lock robot comments such as the label rationale', () => {
     const comments = [
       comment(CLAIM, '2026-09-17T11:16:53Z'),
