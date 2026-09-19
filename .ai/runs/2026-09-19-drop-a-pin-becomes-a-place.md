@@ -83,11 +83,11 @@ The spec's Resolved assumptions 1-9 apply as written. Two execution details:
 
 ### Phase 1: Seams and the day's add control
 
-- [ ] 1.1 `day-section.tsx` `dayTools` render prop + test
-- [ ] 1.2 `planner-day-tools.tsx` + copy + test
-- [ ] 1.3 `planner-add-place.tsx` pill + menu + copy + test
-- [ ] 1.4 `placeWriteMessage` + copy + tests
-- [ ] 1.5 `plan-screen.tsx` edits 1, 4, 5, 6
+- [x] 1.1 `day-section.tsx` `dayTools` render prop + test — 37323db35
+- [x] 1.2 `planner-day-tools.tsx` + copy + test — 37323db35
+- [x] 1.3 `planner-add-place.tsx` pill + menu + copy + test — 37323db35
+- [x] 1.4 `placeWriteMessage` + copy + tests — 37323db35
+- [x] 1.5 `plan-screen.tsx` edits 1, 4, 5, 6 — 37323db35
 
 ### Phase 2: Attribution
 
@@ -103,3 +103,13 @@ The spec's Resolved assumptions 1-9 apply as written. Two execution details:
 - [ ] 3.5 `tenant-isolation.test.ts` coordinate-carrying `createPlace` cases
 - [ ] 3.6 `e2e/places-and-maps.spec.ts` `02-S4` describe
 - [ ] 3.7 Spec metadata, spec index, full validation gate
+
+## Deviations found during the build
+
+- **1.4 — the quota code does not reach the client.** `QuotaExceededError` is not in
+  `AUTHORED_ERROR_NAMES`, so `failureRedactionMiddleware` sends `{ kind: 'unexpected', reference }`
+  and no code; Resolved assumption 8's `code === 'QUOTA_EXCEEDED'` can never match in production.
+  Carrying it would change the global failure envelope (`src/lib/errors.ts`,
+  `src/server/errors/`), which is outside this stage. `placeWriteMessage` therefore decodes the
+  envelope (an authored refusal as written, otherwise the fallback), the `addPlace.quota` /
+  `quotaAction` keys are not added, and the gap goes to a follow-up issue and a spec Amendment.
