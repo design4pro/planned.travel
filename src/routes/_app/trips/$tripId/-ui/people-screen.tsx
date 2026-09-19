@@ -93,6 +93,7 @@ const VISIBILITY_COPY = {
 const REFUSAL_COPY = {
   'last-owner': 'trips.people.error.lastOwner',
   'not-in-workspace': 'trips.people.error.notInWorkspace',
+  'already-on-trip': 'trips.people.error.alreadyOnTrip',
 } as const satisfies Record<PeopleRefusal, MessageKey>
 
 /** Every write this screen can start, as the thing that is attempted rather than as a callback. */

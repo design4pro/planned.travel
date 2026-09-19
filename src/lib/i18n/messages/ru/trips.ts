@@ -254,6 +254,7 @@ const messages = {
   'people.error.lastOwner':
     'В поездке остаётся хотя бы один владелец. Сначала сделайте владельцем кого-то ещё.',
   'people.error.notInWorkspace': 'Этого человека нет в этом пространстве',
+  'people.error.alreadyOnTrip': 'Этот человек уже в этой поездке',
 } satisfies TranslationOf<typeof En>
 
 export default messages

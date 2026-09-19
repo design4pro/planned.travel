@@ -231,6 +231,7 @@ const messages = {
   'people.error.lastOwner':
     'Setiap perjalanan punya setidaknya satu pemilik. Jadikan orang lain pemilik dulu.',
   'people.error.notInWorkspace': 'Orang itu tidak ada di ruang kerja ini',
+  'people.error.alreadyOnTrip': 'Orang itu sudah ada di perjalanan ini',
 } satisfies TranslationOf<typeof En>
 
 export default messages

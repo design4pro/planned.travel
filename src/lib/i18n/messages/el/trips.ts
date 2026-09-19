@@ -244,6 +244,7 @@ const messages = {
     'Κάθε ταξίδι κρατά τουλάχιστον έναν ιδιοκτήτη. Κάντε πρώτα κάποιον άλλον ιδιοκτήτη.',
   'people.error.notInWorkspace':
     'Αυτό το άτομο δεν είναι σε αυτόν τον χώρο εργασίας',
+  'people.error.alreadyOnTrip': 'Αυτό το άτομο είναι ήδη σε αυτό το ταξίδι',
 } satisfies TranslationOf<typeof En>
 
 export default messages

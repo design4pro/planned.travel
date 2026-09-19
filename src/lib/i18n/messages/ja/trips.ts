@@ -227,6 +227,7 @@ const messages = {
   'people.error.lastOwner':
     '旅行にはオーナーが少なくとも1人必要です。先に別の人をオーナーにしてください。',
   'people.error.notInWorkspace': 'その人はこのワークスペースにいません',
+  'people.error.alreadyOnTrip': 'その人はすでにこの旅行に参加しています',
 } satisfies TranslationOf<typeof En>
 
 export default messages

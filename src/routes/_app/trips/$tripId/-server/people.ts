@@ -8,10 +8,10 @@
  * invitation notification and the statistics fan-out, and nothing else. A guard added here would be
  * one that `apply-trip.ts`, a queue consumer and `01-S8`'s picker do not have.
  *
- * **Two refusals cross the wire as a code, never as a sentence.** `classifyFailure`
+ * **Three refusals cross the wire as a code, never as a sentence.** `classifyFailure`
  * (`src/server/errors/public.ts`) redacts everything outside `AUTHORED_ERROR_NAMES`, which holds no
  * `RepositoryError`, and `docs/SPEC.md` §9 forbids a server-authored sentence regardless. So the
- * two refusals the screen has copy for are caught here and answered as {@link PeopleRefusal};
+ * three refusals the screen has copy for are caught here and answered as {@link PeopleRefusal};
  * everything else — `FORBIDDEN`, `NOT_FOUND`, a validator — propagates untouched into the shared
  * boundary, which is correct, because this screen offers no control for those states.
  *
@@ -82,7 +82,7 @@ export interface TripPeoplePayload {
 }
 
 /**
- * The two repository refusals this screen has copy for, as a closed vocabulary.
+ * The three repository refusals this screen has copy for, as a closed vocabulary.
  *
  * One value per rule rather than one per verb: removing a trip's last owner and demoting them are
  * the same rule met by two verbs, and from the reader's side it is one sentence.
@@ -90,6 +90,7 @@ export interface TripPeoplePayload {
 const REFUSAL_BY_CODE = {
   TRIP_LAST_OWNER: 'last-owner',
   TRIP_MEMBER_NOT_IN_WORKSPACE: 'not-in-workspace',
+  TRIP_MEMBER_EXISTS: 'already-on-trip',
 } as const
 
 export type PeopleRefusal =
@@ -144,7 +145,7 @@ function refusalOf(cause: unknown): PeopleRefusal | null {
 }
 
 /**
- * Runs a write and turns the two expected refusals into an answer.
+ * Runs a write and turns the three expected refusals into an answer.
  *
  * One helper for four handlers so the catch is written once and the vocabulary cannot drift between
  * them: a refusal this does not recognise is re-thrown, which is what keeps `FORBIDDEN` and

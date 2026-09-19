@@ -3497,6 +3497,20 @@ describe('tenant isolation', () => {
         )
       })
 
+      it('refuses a foreign trip’s existing member as NOT_FOUND, never as already on the trip', async () => {
+        // B's owner is on B's trip, so the unique index would refuse the insert. `TRIP_MEMBER_EXISTS`
+        // here would confirm who is on B's trip; the trip has to be unresolvable before the index.
+        expect(
+          await captureError(() =>
+            addTripMember(alpha.tenant.scope, {
+              tripId: beta.tripId,
+              userId: beta.tenant.ownerUserId,
+              role: 'editor',
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      })
+
       it('counts none of a foreign trip’s people through tripMemberUserIds', async () => {
         // The projection `readTripForDelete` reads the delete dialog's member count off. An
         // unscoped one would hand A both how many people are on B's trip and who they are.
