@@ -12,6 +12,7 @@ import { createLogger, createMemorySink } from '#/server/observability'
 import { rateMeterKey } from '#/server/metering/rate'
 import { createBookingImportHandler, stagedImportKey } from '../booking-import'
 
+import { bookingImportPayloadSchema } from '../../types'
 import type { StagedImport } from '../booking-import'
 import type {
   BookingImportPayload,
@@ -253,6 +254,44 @@ describe('the document branch', () => {
     )
 
     expect(world.toMarkdown).not.toHaveBeenCalled()
+    expect(world.run).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads an extensionless text/plain source by the media type the payload carries', async () => {
+    const world = harness({
+      source: 'Hotel Roma, check-in 4 March',
+      answer: ONE_BOOKING,
+    })
+
+    await world.handler(
+      payload({ sourceName: 'confirmation', contentType: 'text/plain' }),
+      world.context,
+    )
+
+    expect(world.toMarkdown).not.toHaveBeenCalled()
+    expect(world.run).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts an envelope written by the previous build, which carried no media type', async () => {
+    const previous = {
+      tripId: 'trip_1',
+      requestedBy: 'user_1',
+      sourceKey: 'trips/org_a/trip_1/file_1-confirmation',
+      sourceName: 'confirmation',
+      format: 'document',
+    }
+    const parsed = bookingImportPayloadSchema.parse(previous)
+    expect(parsed.contentType).toBeUndefined()
+
+    const world = harness({
+      source: 'Hotel Roma, check-in 4 March',
+      answer: ONE_BOOKING,
+    })
+
+    await world.handler(parsed, world.context)
+
+    // Read as the previous build read it: by the name alone, which sends it to the conversion.
+    expect(world.toMarkdown).toHaveBeenCalledTimes(1)
     expect(world.run).toHaveBeenCalledTimes(1)
   })
 })

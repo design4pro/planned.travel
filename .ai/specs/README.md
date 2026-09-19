@@ -11,6 +11,7 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 | Spec                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
 | ---------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
 | [Drop a pin on the map and it becomes a place](2026-09-18-drop-a-pin-becomes-a-place.md) | 2026-09-18 | [#554](https://github.com/design4pro/planned.travel/issues/554) | [#583](https://github.com/design4pro/planned.travel/issues/583) | —              |
+| [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md) | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | [#584](https://github.com/design4pro/planned.travel/issues/584) | —              |
 
 ## Ready — merged, waiting for a build (2)
 

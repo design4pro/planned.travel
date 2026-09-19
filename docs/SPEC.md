@@ -253,7 +253,7 @@ because Node's lookup walks up past the worktree root, so `pnpm typecheck` can p
 still in place. The manifest is the authority and the resolver is not. That sentence is kept for
 the next dependency removal, not because this one is open.
 
-**The three provider columns were renamed in migration `0002`.** `stripe_customer_id`,
+**The three provider columns were renamed in migration `0003`.** `stripe_customer_id`,
 `stripe_subscription_id` and `stripe_price_id` in `src/server/db/schema.ts` became
 `provider_customer_id`, `provider_subscription_id` and `provider_product_id`, and the two indexes
 moved with them: `subscriptions_stripe_subscription_unq` →

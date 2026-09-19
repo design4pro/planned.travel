@@ -294,10 +294,15 @@ fork's fixes; launchd calls it at 07:00, 12:00 and 17:00 on weekdays. Install (t
 `.ai/scripts/launchd/`):
 
 ```bash
-sed -e "s|__REPO_ROOT__|$PWD|g" -e "s|__PATH__|$(dirname "$(command -v node)"):$(dirname "$(command -v gh)"):/usr/bin:/bin|g" \
+sed -e "s|__REPO_ROOT__|$PWD|g" -e "s|__PATH__|$(dirname "$(command -v cezar)"):$(dirname "$(command -v node)"):$(dirname "$(command -v gh)"):/usr/bin:/bin|g" \
   .ai/scripts/launchd/dev.planned-travel.housekeeping.plist > ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist
 ```
+
+launchd gives the job only the substituted PATH, so check `cezar` resolves there, not in your shell:
+`env -i PATH="$(plutil -extract EnvironmentVariables.PATH raw ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist)" /bin/bash -c 'command -v cezar node gh curl'`
+must print four paths. The job runs `bash -lc`, whose profile normally only extends that PATH, so this
+non-login check is the stricter of the two. `jq` is optional: without it the log omits the run id.
 
 Remove with `launchctl bootout gui/$(id -u)/dev.planned-travel.housekeeping`. Log:
 `.ai/cezar/tmp/housekeeping.log`. Run it by hand any time: `bash .ai/scripts/housekeeping.sh`.

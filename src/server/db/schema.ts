@@ -2849,7 +2849,7 @@ export const staffApiTokens = sqliteTable(
  * was reported as a finding and amended there, in that file's own commit; nothing here and in
  * docs/DEPLOY.md §5 disagrees with it any more. The behaviour is pinned by tests in
  * `src/server/db/__tests__/platform-schema.test.ts` rather than left as prose, since it cannot be
- * changed after `0004` ships without a table recreate (docs/DEPLOY.md §5).
+ * changed after `0005` ships without a table recreate (docs/DEPLOY.md §5).
  *
  * **Four cross-column `CHECK`s, because the two obvious ones only cover half of each rule.**
  * docs/ACCESS.md §4.1 lists four, and the Notes column they come from states two biconditionals:
@@ -2881,7 +2881,7 @@ export const staffApiTokens = sqliteTable(
  * `actor_kind` and {@link PLATFORM_ACTOR_ROLES} on `actor_role`. A value outside any of the four
  * fails `pnpm typecheck` at the insert, which is the whole of the guarantee for the two with no
  * `CHECK` behind them and the first line of it for the two that have one. `$type` is a type-level
- * cast that emits no SQL — the `changes` column has carried one since `0004` and generates plain
+ * cast that emits no SQL — the `changes` column has carried one since `0005` and generates plain
  * `text` — so adding these moved no migration.
  */
 export const platformAuditLog = sqliteTable(

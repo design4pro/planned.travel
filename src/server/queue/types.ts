@@ -106,8 +106,18 @@ export const bookingImportPayloadSchema = z.object({
    */
   sourceName: z.string().min(1).max(200),
   /**
+   * The stored media type, as `trip_files.content_type` holds it.
+   *
+   * What lets the reader take the branch the upload boundary accepted an extensionless file by
+   * (`importReaderFor`, `src/server/fns/file-policy.ts`) instead of re-deriving it from a name that
+   * has no extension. Optional because a message enqueued by the previous build does not carry it,
+   * and such a message is read exactly as that build read it: by the filename alone.
+   */
+  contentType: z.string().min(1).max(255).optional(),
+  /**
    * One member per *branch*, not per media type: a grammar the deterministic parsers know, or text
-   * a model reads. The conversion's own routing table stays in `src/server/extract/document.ts`.
+   * a model reads. The finer routing inside `document` is `importReaderFor`, in
+   * `src/server/fns/file-policy.ts`.
    */
   format: z.enum(['ics', 'json', 'document']),
 })

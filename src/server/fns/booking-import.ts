@@ -492,6 +492,7 @@ export async function startBookingImport(
       requestedBy: scope.ctx.userId,
       sourceKey: file.storageKey,
       sourceName: file.filename,
+      contentType: file.contentType,
       format,
     },
     ...(delaySeconds === 0 ? {} : { delaySeconds }),
