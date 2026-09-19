@@ -181,6 +181,7 @@ import {
   linkReservationExpense,
   listTripReservations,
   markReservationsImported,
+  requireReservationOfTrip,
   reservationsRepository,
   setReservationStatus,
   updateReservation,
@@ -226,6 +227,7 @@ import {
   addTripMember,
   archiveTrip,
   canReadTrip,
+  MAX_BOUND_PARAMETERS,
   copyTripContents,
   countTripsByStatus,
   TripRoleError,
@@ -249,6 +251,7 @@ import {
 } from '../trips'
 import {
   TripGuestMergeTargetError,
+  countTripPeople,
   createTripGuest,
   listTripGuests,
   listTripParticipants,
@@ -1271,7 +1274,14 @@ describe('tenant isolation', () => {
     it('rejects a foreign trip on every trip-scoped write', async () => {
       const scope = alpha.tenant.scope
       const attempts: ReadonlyArray<() => Promise<unknown>> = [
-        () => createPlace(scope, { tripId: beta.tripId, name: 'Stolen place' }),
+        // Carrying coordinates, as a pin dropped on the map does (02-S4): they buy it nothing.
+        () =>
+          createPlace(scope, {
+            tripId: beta.tripId,
+            name: 'Stolen place',
+            lat: 48.208494,
+            lng: 16.373118,
+          }),
         () =>
           createTransport(scope, {
             tripId: beta.tripId,
@@ -1427,9 +1437,13 @@ describe('tenant isolation', () => {
             tripId: alpha.tripId,
             name: 'Cross-categorised',
             categoryId: beta.categoryId,
+            lat: 48.208494,
+            lng: 16.373118,
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
+      expect(await placesRepository.count(alpha.tenant.scope)).toBe(1)
+      expect(await placesRepository.count(beta.tenant.scope)).toBe(1)
 
       expect(
         await captureError(() =>
@@ -3006,6 +3020,8 @@ describe('tenant isolation', () => {
         () =>
           linkReservationExpense(scope, beta.reservationId, alpha.expenseId),
         () => clearReservationImported(scope, beta.reservationId),
+        // B's booking under B's own trip still resolves to nothing from A.
+        () => requireReservationOfTrip(scope, beta.tripId, beta.reservationId),
       ]
       for (const attempt of attempts) {
         expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
@@ -4713,6 +4729,79 @@ describe('tenant isolation', () => {
       expect(
         await dayAccommodationsRepository.findById(editor, written.id),
       ).toBeNull()
+    })
+  })
+
+  /** `01-S7` — the companion figure on every trip card, counted for a whole page at once. */
+  describe('trip people counts', () => {
+    it('counts only the caller’s trips, and gives a foreign id no entry rather than a zero', async () => {
+      const counts = await countTripPeople(alpha.tenant.scope, [
+        alpha.tripId,
+        beta.tripId,
+      ])
+
+      const members = await listTripMembers(alpha.tenant.scope, alpha.tripId)
+      const guests = await listTripGuests(alpha.tenant.scope, alpha.tripId)
+      expect(guests.length).toBeGreaterThan(0)
+      expect(counts.get(alpha.tripId)).toBe(members.length + guests.length)
+      expect(counts.has(beta.tripId)).toBe(false)
+      expect([...counts.keys()]).toEqual([alpha.tripId])
+    })
+
+    it('answers an empty map for the other tenant’s ids alone', async () => {
+      const betaMembers = await listTripMembers(beta.tenant.scope, beta.tripId)
+      const betaGuests = await listTripGuests(beta.tenant.scope, beta.tripId)
+
+      expect(await countTripPeople(alpha.tenant.scope, [beta.tripId])).toEqual(
+        new Map(),
+      )
+
+      // A read, and nothing of B's moved under it.
+      expect(await listTripMembers(beta.tenant.scope, beta.tripId)).toEqual(
+        betaMembers,
+      )
+      expect(await listTripGuests(beta.tenant.scope, beta.tripId)).toEqual(
+        betaGuests,
+      )
+    })
+
+    it('reads a whole page in two grouped statements, never one per card', async () => {
+      const second = await createTrip(alpha.tenant.scope, {
+        title: 'A second trip of A',
+        currency: 'EUR',
+      })
+      harness.statements.length = 0
+
+      const counts = await countTripPeople(alpha.tenant.scope, [
+        alpha.tripId,
+        second.id,
+      ])
+
+      expect(counts.get(second.id)).toBe(1)
+      expect(harness.statements).toHaveLength(2)
+      for (const statement of harness.statements) {
+        expect(statement).toMatch(/group by/i)
+      }
+    })
+
+    it('keeps every statement within D1’s bound-parameter limit for a full page of a hundred trips', async () => {
+      const page = [
+        alpha.tripId,
+        ...Array.from({ length: 99 }, (_, index) => `missing-trip-${index}`),
+      ]
+      harness.statements.length = 0
+
+      const counts = await countTripPeople(alpha.tenant.scope, page)
+
+      expect(counts.get(alpha.tripId)).toBeGreaterThan(0)
+      expect(counts.size).toBe(1)
+      // Two chunks, a members and a guests statement each.
+      expect(harness.statements).toHaveLength(4)
+      for (const statement of harness.statements) {
+        expect(statement.split('?').length - 1).toBeLessThanOrEqual(
+          MAX_BOUND_PARAMETERS,
+        )
+      }
     })
   })
 })

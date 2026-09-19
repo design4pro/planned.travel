@@ -65,6 +65,7 @@ const messages = {
 
   /** Heard, never seen: the pill beside it is the credit a reader can read. */
   'map.attribution.label': 'Map data from',
+  'map.attribution.geocoder': 'Places located with',
 
   'map.basemap.title': 'Basemap unavailable',
   'map.basemap.body':

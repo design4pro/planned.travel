@@ -178,7 +178,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Ocultar los códigos de confirmación hasta que los pida',
   'appearance.privacy.codesHint':
-    'Las referencias de reserva y los números de confirmación quedan enmascarados en el escritorio de reservas y en los transportes hasta que pases por encima, los enfoques o los toques. Los precios no se ocultan nunca.',
+    'Las referencias de reserva y los números de confirmación quedan enmascarados en el escritorio de reservas y en los transportes hasta que hagas clic en ellos o los toques, y vuelven a enmascararse cuando pasas a otra cosa. Los precios no se ocultan nunca.',
   'appearance.saveFailed': 'Ese cambio no se ha guardado',
   'appearance.saveFailedBody':
     'Aquí se ve, pero el próximo dispositivo desde el que entres no lo tendrá.',

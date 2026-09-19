@@ -45,6 +45,7 @@ const messages = {
     'Ellenőrizze, hogy az oldal hozzáférhet-e a helyadatokhoz, majd próbálja újra.',
 
   'map.attribution.label': 'Térképadatok forrása:',
+  'map.attribution.geocoder': 'Helyek keresése:',
 
   'map.basemap.title': 'Az alaptérkép nem érhető el',
   'map.basemap.body':

@@ -71,6 +71,20 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Додати нотатку',
   'plan.note.addForDay': 'Додати нотатку, {day}',
+  'plan.addPlace.label': 'Додати місце',
+  'plan.addPlace.more': 'Інші способи додати місце',
+  'plan.addPlace.option.map': 'Поставити на мапу',
+  'plan.addPlace.forDay': 'Додати місце до цього дня',
+  'plan.addPlace.forDayNamed': 'Додати місце, {day}',
+  'plan.drop.hint':
+    'Клацніть мапу правою кнопкою миші або натисніть і утримуйте, щоб додати місце саме там.',
+  'plan.drop.armed':
+    'Клацніть мапу там, де воно має бути, або посуньте мапу й натисніть Enter, щоб поставити його в центрі.',
+  'plan.drop.stop': 'Припинити розміщення нової шпильки',
+  'plan.drop.pin': 'Нове місце',
+  'plan.drop.lookingUp': 'Шукаємо адресу…',
+  'plan.drop.error':
+    'Не вдалося поставити мітку. Спробуйте ще раз трохи згодом.',
   'plan.note.showMore': 'Показати більше',
   'plan.note.showLess': 'Показати менше',
   'plan.note.moveUp': 'Перемістити вгору',

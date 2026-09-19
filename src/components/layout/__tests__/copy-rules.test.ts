@@ -52,6 +52,8 @@ const APP_FILES = [
   join('-lib', 'tone.ts'),
   join('-ui', 'scaffold.tsx'),
   join('-ui', 'trip-card.tsx'),
+  join('-ui', 'trip-list-row.tsx'),
+  join('-ui', 'trip-hero-strip.tsx'),
   join('-ui', 'dashboard-widgets.tsx'),
   join('-ui', 'timezone-clock.tsx'),
   join('-ui', 'new-trip-dialog.tsx'),

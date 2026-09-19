@@ -24,6 +24,7 @@ export function tripCard(patch: Partial<TripCard> = {}): TripCard {
     isArchived: false,
     copyPending: false,
     placeCount: 12,
+    peopleCount: 3,
     updatedAt: '2026-03-01T00:00:00.000Z',
     role: 'owner',
     ...patch,

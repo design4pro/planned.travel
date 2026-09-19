@@ -14,6 +14,7 @@ import {
   countAuditActions,
   countFavourites,
   countPlacesPerTrip,
+  countTripPeople,
   countUnread,
   getAtlasSummary,
   getDashboardSummary,
@@ -34,6 +35,7 @@ import {
 } from '#/server/repos'
 import { roleSatisfies } from '#/server/auth/tenant'
 import { serverToday } from '#/server/clock'
+import { elapsedFraction } from '../-lib/view-mode'
 import { appScope } from './context'
 import { isoOfRequired } from './serialise'
 
@@ -93,6 +95,11 @@ export interface TripCard {
    */
   readonly copyPending: boolean
   readonly placeCount: number
+  /**
+   * Members plus guests on this trip (`countTripPeople`, `01-S7`) — the companion figure on the
+   * prominent card and the list row. Zero only when the count answered nothing for this trip.
+   */
+  readonly peopleCount: number
   readonly updatedAt: string
   /**
    * The caller's own role on this trip, or `null` when they hold none — which after ADR 0007 means
@@ -133,6 +140,12 @@ export interface StatusCount {
 export interface DashboardPayload {
   readonly today: string
   readonly upNext: TripCard | null
+  /**
+   * How far through its dates the `upNext` trip is, in `0..1`, or `null` without a trip or without
+   * both dates. Computed here from `serverToday()` rather than in the browser, so the figure is
+   * pinned by `x-pt-server-today` in development like every other date on the screen.
+   */
+  readonly elapsed: number | null
   readonly upcoming: ReadonlyArray<TripCard>
   readonly mine: ReadonlyArray<TripCard>
   readonly reservations: ReadonlyArray<ReservationCard>
@@ -170,16 +183,17 @@ export interface DashboardPayload {
 }
 
 /**
- * A card maker for one list of trips: the three per-tile facts a card needs beyond the row itself —
- * the place count, the reader's own role and the reader's own star — read for the whole list in
- * three statements rather than three per tile, then applied one tile at a time.
+ * A card maker for one list of trips: the four per-tile facts a card needs beyond the row itself —
+ * the place count, the people count, the reader's own role and the reader's own star — read for the
+ * whole list in a fixed handful of statements rather than per tile, then applied one tile at a time.
  */
 async function tripCardsFor(
   scope: TenantScope,
   tripIds: ReadonlyArray<string>,
 ): Promise<(trip: Trip) => TripCard> {
-  const [placeCounts, roles, favourites] = await Promise.all([
+  const [placeCounts, peopleCounts, roles, favourites] = await Promise.all([
     countPlacesPerTrip(scope, tripIds),
+    countTripPeople(scope, tripIds),
     tripRolesFor(scope, tripIds),
     listFavouriteTripIds(scope),
   ])
@@ -187,6 +201,7 @@ async function tripCardsFor(
   return (trip) =>
     toTripCard(trip, {
       placeCount: placeCounts.get(trip.id) ?? 0,
+      peopleCount: peopleCounts.get(trip.id) ?? 0,
       role: roles.get(trip.id) ?? null,
       isFavourite: starred.has(trip.id),
     })
@@ -195,13 +210,14 @@ async function tripCardsFor(
 /** The per-reader facts a card carries beyond the row itself, as {@link tripCardsFor} reads them. */
 interface TripCardDecorations {
   readonly placeCount: number
+  readonly peopleCount: number
   readonly role: TripMemberRole | null
   readonly isFavourite: boolean
 }
 
 export function toTripCard(
   trip: Trip,
-  { placeCount, role, isFavourite }: TripCardDecorations,
+  { placeCount, peopleCount, role, isFavourite }: TripCardDecorations,
 ): TripCard {
   return {
     id: trip.id,
@@ -220,6 +236,7 @@ export function toTripCard(
     isArchived: trip.isArchived,
     copyPending: trip.copyPendingAt !== null,
     placeCount,
+    peopleCount,
     updatedAt: isoOfRequired(trip.updatedAt),
     role,
   }
@@ -270,6 +287,10 @@ export const loadDashboard = createServerFn({ method: 'GET' }).handler(
     return {
       today,
       upNext: first === undefined ? null : card(first),
+      elapsed:
+        first === undefined
+          ? null
+          : elapsedFraction(first.startDate, first.endDate, today),
       upcoming: summary.upcomingTrips.slice(1).map(card),
       mine: summary.myTrips.map(card),
       reservations: summary.upcomingReservations.map(toReservationCard),
@@ -316,6 +337,12 @@ const tripFilterSchema = z.object({
 export interface TripsPayload {
   readonly today: string
   readonly trips: ReadonlyArray<TripCard>
+  /**
+   * The archived trips the same `status` and `search` filters match, for the fold at the foot of the
+   * index — read here so opening it is not a second request. Empty under the archived scope, where
+   * `trips` already is the archive.
+   */
+  readonly archivedTrips: ReadonlyArray<TripCard>
   readonly totals: {
     readonly total: number
     readonly archived: number
@@ -331,27 +358,48 @@ export const loadTrips = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const today = serverToday()
 
-    const [rows, summary, quotas, favourites] = await Promise.all([
-      listTrips(scope, {
-        status: data.status,
-        search: data.search,
-        archived: data.archived ?? false,
-        favourite: data.favourite,
-        limit: 100,
-      }),
-      getDashboardSummary(scope, { today }),
-      resolveQuotas(scope),
-      countFavourites(scope),
-    ])
-
-    const card = await tripCardsFor(
-      scope,
-      rows.map((trip) => trip.id),
+    const archivedScope = data.archived === true
+    const [rows, archivedRows, summary, quotas, favourites] = await Promise.all(
+      [
+        listTrips(scope, {
+          status: data.status,
+          search: data.search,
+          archived: archivedScope,
+          favourite: data.favourite,
+          limit: 100,
+        }),
+        archivedScope
+          ? Promise.resolve([])
+          : listTrips(scope, {
+              status: data.status,
+              search: data.search,
+              archived: true,
+              favourite: data.favourite,
+              limit: 100,
+            }),
+        getDashboardSummary(scope, { today }),
+        resolveQuotas(scope),
+        countFavourites(scope),
+      ],
     )
+
+    // One card maker per list rather than one over both, so neither per-card read binds more ids
+    // than a single page of trips does today.
+    const [card, archivedCard] = await Promise.all([
+      tripCardsFor(
+        scope,
+        rows.map((trip) => trip.id),
+      ),
+      tripCardsFor(
+        scope,
+        archivedRows.map((trip) => trip.id),
+      ),
+    ])
 
     return {
       today,
       trips: rows.map(card),
+      archivedTrips: archivedRows.map(archivedCard),
       totals: {
         total: summary.trips.total,
         archived: summary.trips.archived,

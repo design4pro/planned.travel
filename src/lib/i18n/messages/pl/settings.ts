@@ -181,7 +181,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Ukrywaj kody potwierdzeń, dopóki o nie nie poproszę',
   'appearance.privacy.codesHint':
-    'Numery rezerwacji i kody potwierdzeń pozostają zasłonięte w rezerwacjach i w transporcie, dopóki nie najedziesz na nie kursorem, nie ustawisz na nich fokusu albo ich nie dotkniesz. Ceny nigdy nie są ukrywane.',
+    'Numery rezerwacji i kody potwierdzeń pozostają zasłonięte w rezerwacjach i w transporcie, dopóki ich nie klikniesz albo nie dotkniesz, i zasłaniają się ponownie, gdy przejdziesz dalej. Ceny nigdy nie są ukrywane.',
   'appearance.saveFailed': 'Ta zmiana nie została zapisana',
   'appearance.saveFailedBody':
     'Widać ją tutaj, ale kolejne urządzenie, z którego się zalogujesz, jej nie będzie miało.',

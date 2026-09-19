@@ -44,6 +44,7 @@ const messages = {
     'Kiểm tra xem trang này đã được phép truy cập vị trí chưa, rồi thử lại.',
 
   'map.attribution.label': 'Dữ liệu bản đồ từ',
+  'map.attribution.geocoder': 'Địa điểm được xác định bởi',
 
   'map.basemap.title': 'Bản đồ nền không khả dụng',
   'map.basemap.body':

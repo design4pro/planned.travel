@@ -25,7 +25,7 @@
 import * as React from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core'
-import { Crosshair, Layers, ListTree, Plus, X } from 'lucide-react'
+import { Crosshair, Layers, ListTree, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -132,6 +132,9 @@ import {
   updateDayNoteFn,
 } from '../-server/day-notes'
 import { reorderDayTransportsFn } from '../-server/plan-transports'
+import { PlannerAddPlace, placeWriteMessage } from './planner-add-place'
+import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
+import { PlannerDayTools } from './planner-day-tools'
 import {
   NoteDeleteDialog,
   NoteDialog,
@@ -152,7 +155,7 @@ import type {
 import type { PlanNotesPayload } from '../-server/day-notes'
 import type { PlanBoardPayload } from '../-server/plan'
 import type { PlanTransportsPayload } from '../-server/plan-transports'
-import type { PlaceFormValues, TimingDraft } from './plan-actions'
+import type { PlaceDraft, PlaceFormValues, TimingDraft } from './plan-actions'
 import type { JourneyRestatement } from './plan-transport-model'
 import type { NoteDraft } from './note-dialog'
 
@@ -368,7 +371,7 @@ function MapBehaviour({
  * ---------------------------------------------------------------------------------------------- */
 
 type DialogState =
-  | { readonly kind: 'create' }
+  | { readonly kind: 'create'; readonly draft?: PlaceDraft }
   | { readonly kind: 'edit'; readonly placeId: string }
   | { readonly kind: 'timing'; readonly itemId: string }
   | { readonly kind: 'delete'; readonly placeId: string }
@@ -472,6 +475,13 @@ export function PlanScreen({
   const [saving, setSaving] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [picking, setPicking] = React.useState<PlannerRow | null>(null)
+  /** A pin dropped on the map; it opens the create form with a draft. Never while repositioning. */
+  const mapDrop = usePlannerDrop({
+    tripId: payload.tripId,
+    editable: editable && picking === null,
+    formOpen: dialog?.kind === 'create',
+    onDropped: (draft) => setDialog({ kind: 'create', draft }),
+  })
   /**
    * The move a reader is being asked about: it lands only if its own time goes.
    * The whole move is kept, not just the item, because confirming replays it —
@@ -1066,7 +1076,7 @@ export function PlanScreen({
         if (options.success !== undefined) toast.success(options.success)
         return true
       } catch (cause) {
-        setFormError(messageOf(cause, options.fallback))
+        setFormError(placeWriteMessage(cause, options.fallback))
         return false
       } finally {
         setSaving(false)
@@ -1406,6 +1416,21 @@ export function PlanScreen({
               setDialog({ kind: 'note-delete', noteId: note.id })
             }
             onMoveNote={moveNote}
+            dayTools={
+              editable
+                ? (entry) => (
+                    <PlannerDayTools
+                      day={entry}
+                      onAddPlace={(dayId) =>
+                        setDialog({
+                          kind: 'create',
+                          draft: { ...emptyDraft, dayId },
+                        })
+                      }
+                    />
+                  )
+                : undefined
+            }
           />
         ))
       )}
@@ -1432,17 +1457,19 @@ export function PlanScreen({
     />
   )
 
+  /** What the create form opens on: a draft a gesture filled, or an empty one. */
+  const createDraft = dialog?.kind === 'create' ? dialog.draft : undefined
+
   const addButton = editable ? (
-    <Button
-      variant="primary"
-      shape="pill"
-      size="sm"
-      block
-      icon={<Plus strokeWidth={2.5} />}
-      onClick={() => setDialog({ kind: 'create' })}
-    >
-      Add a place
-    </Button>
+    <PlannerAddPlace
+      onCreate={() => setDialog({ kind: 'create' })}
+      onArmMap={(returnFocusTo) => {
+        // On a phone the sheet covers the map it is about to arm.
+        setSheet(null)
+        mapDrop.arm(returnFocusTo)
+      }}
+      mapReady={mapDrop.ready && mapDrop.editable}
+    />
   ) : null
 
   // Archived wins over the role: it is a property of the trip, so it is true for
@@ -1568,6 +1595,8 @@ export function PlanScreen({
               the product's own type, at a size that can actually be read — and
               lifted clear of the mobile action bar rather than hidden under it. */}
           <MapAttribution className="end-auto bottom-(--plan-bar) left-1/2 -translate-x-1/2 lg:bottom-2" />
+
+          <PlannerMapLayer drop={mapDrop} empty={allPoints.length === 0} />
         </MapCanvas>
 
         {/* -------------------------------------------------------- desktop */}
@@ -1736,7 +1765,7 @@ export function PlanScreen({
                 const place = placeById.get(dialog.placeId)
                 return place === undefined ? emptyDraft : draftFromPlace(place)
               })()
-            : emptyDraft
+            : (createDraft ?? emptyDraft)
         }
         saving={saving}
         error={formError}

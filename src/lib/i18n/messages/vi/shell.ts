@@ -31,9 +31,9 @@
  * why.** Each sits in a `.truncate` box, and a faithful phrase clipped into an
  * ellipsis reads worse than a shorter true one:
  *
- * - `dashboard.hero.travellersHint` is `ở không gian này`, not `trong không
- *   gian này` — 115px of copy in a 107px tile. Both render "in this
- *   workspace"; `ở` is the plainer preposition.
+ * - `dashboard.hero.companionsHint` is `ở chuyến này`, not `trong chuyến đi
+ *   này` — the tile is 107px, and the longer phrase clips. Both render "on
+ *   this trip"; `ở` is the plainer preposition.
  * - `dashboard.trips.label` is `Chuyến đi`, not `Chuyến đi của bạn` — 126px in
  *   a 111px label. The list underneath is the reader's own, and the sibling
  *   key `dashboard.trips.all` already reads `Tất cả chuyến đi`.
@@ -206,10 +206,6 @@ const messages = {
   'dashboard.upNext': 'Sắp tới',
   'dashboard.openPlan': 'Mở lịch trình',
   'dashboard.hero.travellers': 'Người đi',
-  'dashboard.hero.travellersHint': 'ở không gian này',
-  'dashboard.hero.dates': 'Ngày đi',
-  'dashboard.hero.datesUnset': 'Chưa đặt',
-  'dashboard.hero.datesHint': { other: '{days} ngày' },
   'dashboard.hero.datesMissing': 'Thêm ngày để dựng lịch trình',
   'dashboard.hero.startsIn': 'Còn',
   'dashboard.hero.started': 'Đã khởi hành',
@@ -218,6 +214,9 @@ const messages = {
   'dashboard.hero.startToday': 'chúc bạn đi vui',
   'dashboard.hero.startPast': { other: 'ngày trước' },
   'dashboard.hero.startFuture': { other: 'ngày' },
+  'dashboard.hero.nights': 'Số đêm',
+  'dashboard.hero.companionsHint': 'ở chuyến này',
+  'dashboard.hero.progress': 'Đang diễn ra',
   'dashboard.hero.places': 'Địa điểm',
   'dashboard.hero.placesNone': 'chưa ghim gì cả',
   'dashboard.hero.placesHint': 'trên bản đồ',
@@ -506,6 +505,9 @@ const messages = {
   'trips.savedPlaces': 'Địa điểm đã lưu',
   'trips.filter.all': 'Tất cả',
   'trips.filter.favourites': 'Yêu thích',
+  'trips.view.label': 'Bố cục',
+  'trips.view.grid': 'Lưới',
+  'trips.view.list': 'Danh sách',
   'trips.card.favourite': 'Được yêu thích',
   'trips.card.noDestination': 'Chưa chọn điểm đến',
   'trips.card.noDates': 'Chưa chọn ngày',

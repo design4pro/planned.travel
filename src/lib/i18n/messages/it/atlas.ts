@@ -50,6 +50,7 @@ const messages = {
     'Controlla che l’accesso alla posizione sia consentito per questo sito, poi riprova.',
 
   'map.attribution.label': 'Dati della mappa di',
+  'map.attribution.geocoder': 'Luoghi localizzati con',
 
   'map.basemap.title': 'Mappa di base non disponibile',
   'map.basemap.body':

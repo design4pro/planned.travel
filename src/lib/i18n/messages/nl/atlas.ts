@@ -46,6 +46,7 @@ const messages = {
     'Controleer of deze site toegang tot je locatie heeft en probeer het dan opnieuw.',
 
   'map.attribution.label': 'Kaartgegevens van',
+  'map.attribution.geocoder': 'Plaatsen gevonden met',
 
   'map.basemap.title': 'Basiskaart niet beschikbaar',
   'map.basemap.body':
