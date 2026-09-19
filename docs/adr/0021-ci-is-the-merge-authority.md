@@ -92,6 +92,10 @@ for a redeploy, or for shipping while CI is down.
   runners without a pull request, and organisation and repository admins bypass both rulesets.
   _Amended by ADR 0023: `vars.RUNNER_CI` alone brings CI back but not the required `claude-review`
   check, which runs on `vars.RUNNER_AGENT`; the variable path needs both set._
+  _Amended by ADR 0023 (#563): `vars.RUNNER_CI` moves every job **except** the three shipping
+  workflows - `deploy.yml`, `deploy-staging.yml` and `rollback.yml` - which read
+  `vars.RUNNER_DEPLOY` and already default to GitHub-hosted runners. The lever in the other
+  direction is `RUNNER_DEPLOY` set to `["self-hosted","linux","ARM64","ci"]`._
 - **Production ships a CI run later.** Merging the promotion pull request now deploys after the push
   run on `main`, about the length of the e2e shards, not at the moment of the push.
 - **A flake on `develop` holds that commit's staging deploy** until a rerun or the next merge. A
