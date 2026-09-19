@@ -190,7 +190,9 @@ The four older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`), th
 The automations that used to start them (`triage-opened`, `triage-relabel`, `implement`) had
 already been removed from the cockpit. `triage` and `implement-ticket` are names reused by the
 kit's unattended intake ladder (the last five rows, `SDLC.md` § Intake labels), not those workflows
-restored: they run the `afk-*` skills and name no model, so they run on the cockpit's default.
+restored: `triage` and the three schedule workflows run the `afk-*` skills, `implement-ticket` chains
+`om-*` steps from the Agent Brief instead; none of the five name a model, so they run on the
+cockpit's default.
 
 ## Automations (`docs/agents/cezar-automations.json`)
 
