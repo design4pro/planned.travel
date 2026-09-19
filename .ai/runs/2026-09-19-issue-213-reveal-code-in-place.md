@@ -47,12 +47,14 @@ or a `Tab` past it reveals nothing. The focus handover machine in `MaskedCode` a
 
 ## Progress
 
+PR: #616
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: One control, click to reveal, blur to mask
 
-- [ ] 1.1 CopyValue learns to start masked
-- [ ] 1.2 MaskedCode renders one CopyValue
-- [ ] 1.3 The settings hint tells the truth
-- [ ] 1.4 Pin the WebKit behaviour
-- [ ] 1.5 Verify and record the spec lifecycle
+- [x] 1.1 CopyValue learns to start masked — 63831ca7b
+- [x] 1.2 MaskedCode renders one CopyValue — fdb9e48e9
+- [x] 1.3 The settings hint tells the truth — 8f91f9657
+- [x] 1.4 Pin the WebKit behaviour — 9c1acd709
+- [x] 1.5 Verify and record the spec lifecycle — 9f80c9aa8
