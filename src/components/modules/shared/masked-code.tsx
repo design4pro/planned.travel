@@ -15,10 +15,6 @@
  * "hidden" that a `Ctrl-F`, a screenshot pipeline or the accessibility tree can
  * still read is not hidden.
  */
-import { useEffect, useRef, useState } from 'react'
-import { Eye } from 'lucide-react'
-
-import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { CopyValue } from './controls'
 
@@ -56,21 +52,13 @@ export interface MaskedCodeProps {
 /**
  * The code, masked or not, with a per-card reveal.
  *
- * The reveal is a `button` and not a `div` with a mouse handler: it is reachable
- * from the keyboard, it says what it does, and it opens on hover, on focus and on
- * tap alike. Revealing is per card and never writes the preference — the setting
- * is what the reader decided about every screen, and one glance at one code is
- * not a decision to change it.
- *
- * **The reveal hands the focus on.** Revealing unmounts this button and mounts
- * {@link CopyValue}'s in its place, so a reader who tabbed onto the mask would
- * otherwise be dropped back at the top of the document by the very act of
- * opening it. The handover happens only when this button actually held the focus
- * — a hover reveals without ever taking it, and must not take it now.
- *
- * Motion: the swap is a colour and opacity change on one element whose width is
- * already the same in both states, because the mask has the code's own character
- * count. Nothing below the row moves when a code is revealed.
+ * This owns the rule — the preference, the empty-code exception, the glyph count
+ * and the name of the reveal — and hands the mask to {@link CopyValue}, which owns
+ * the control: a click, a tap, `Enter` or `Space` reveals, the next activation
+ * copies, and moving on masks the code again. A hover or a `Tab` past it reveals
+ * nothing. Revealing is per card and never writes the preference — the setting is
+ * what the reader decided about every screen, and one glance at one code is not a
+ * decision to change it.
  */
 export function MaskedCode({
   value,
@@ -79,54 +67,20 @@ export function MaskedCode({
   className,
 }: MaskedCodeProps) {
   const t = useTranslate()
-  const [revealed, setRevealed] = useState(false)
-  const copyRef = useRef<HTMLButtonElement>(null)
-  const handOver = useRef(false)
-  const mask = maskCode(value)
-
-  useEffect(() => {
-    if (revealed && handOver.current) {
-      handOver.current = false
-      copyRef.current?.focus()
-    }
-  }, [revealed])
-
-  function reveal(target: HTMLButtonElement): void {
-    handOver.current ||= document.activeElement === target
-    setRevealed(true)
-  }
-
   // An empty code has nothing to hide, so the preference has nothing to do here:
   // masking it would claim a confirmation number exists when none does.
-  if (!masked || revealed || mask === '') {
-    return (
-      <CopyValue
-        ref={copyRef}
-        value={value}
-        label={label}
-        className={className}
-      />
-    )
-  }
+  const glyphs = masked ? maskCode(value) : ''
 
   return (
-    <button
-      type="button"
-      data-part="confirmation-code"
-      aria-label={t('modules.action.showCode', { label })}
-      onClick={(event) => reveal(event.currentTarget)}
-      onFocus={(event) => reveal(event.currentTarget)}
-      onPointerEnter={(event) => reveal(event.currentTarget)}
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-sm bg-surface-inset px-1.5 font-mono text-caption tracking-wide text-ink-4 focus-ring',
-        'transition-colors duration-fast ease-out-quint hover:text-ink-2',
-        className,
-      )}
-    >
-      <span aria-hidden className="tabular-nums">
-        {mask}
-      </span>
-      <Eye aria-hidden className="size-3" />
-    </button>
+    <CopyValue
+      value={value}
+      label={label}
+      className={className}
+      mask={
+        glyphs === ''
+          ? undefined
+          : { glyphs, revealLabel: t('modules.action.showCode', { label }) }
+      }
+    />
   )
 }

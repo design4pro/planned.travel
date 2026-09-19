@@ -178,7 +178,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Masquer les codes de confirmation jusqu’à ce que je les demande',
   'appearance.privacy.codesHint':
-    'Les références de réservation et les numéros de confirmation restent masqués sur le bureau des réservations et sur les transports jusqu’à ce que vous les survoliez, les activiez au clavier ou les touchiez. Les prix ne sont jamais masqués.',
+    'Les références de réservation et les numéros de confirmation restent masqués sur le bureau des réservations et sur les transports jusqu’à ce que vous cliquiez dessus ou les touchiez, et se masquent de nouveau dès que vous passez à autre chose. Les prix ne sont jamais masqués.',
   'appearance.saveFailed': 'Ce changement n’a pas été enregistré',
   'appearance.saveFailedBody':
     'Il s’applique ici, mais le prochain appareil depuis lequel vous vous connecterez ne l’aura pas.',

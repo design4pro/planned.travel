@@ -172,7 +172,7 @@ const messages = {
   'appearance.privacy.title': 'På en delad skärm',
   'appearance.privacy.codesLabel': 'Dölj bekräftelsekoder tills jag ber om dem',
   'appearance.privacy.codesHint':
-    'Bokningsreferenser och bekräftelsenummer förblir dolda i bokningsvyn och bland transporterna tills du för pekaren över dem, fokuserar dem eller trycker på dem. Priser döljs aldrig.',
+    'Bokningsreferenser och bekräftelsenummer förblir dolda i bokningsvyn och bland transporterna tills du klickar eller trycker på dem, och döljs igen när du går vidare. Priser döljs aldrig.',
   'appearance.saveFailed': 'Den ändringen sparades inte',
   'appearance.saveFailedBody':
     'Här syns den, men inte på nästa enhet du loggar in från.',

@@ -220,7 +220,7 @@ const messages = {
   'appearance.privacy.title': 'On a shared screen',
   'appearance.privacy.codesLabel': 'Hide confirmation codes until I ask',
   'appearance.privacy.codesHint':
-    'Booking references and confirmation numbers stay masked on the bookings desk and on transports until you hover, focus or tap one. Prices are never hidden.',
+    'Booking references and confirmation numbers stay masked on the bookings desk and on transports until you click or tap one, and mask again when you move on. Prices are never hidden.',
   'appearance.saveFailed': 'That change was not stored',
   'appearance.saveFailedBody':
     'It is showing here, but the next device you sign in from will not have it.',
