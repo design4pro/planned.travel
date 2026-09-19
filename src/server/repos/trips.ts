@@ -142,33 +142,34 @@ const tripFields = {
   accentColour: colourSchema.nullish(),
   budgetTargetMinor: minorAmountSchema.nullish(),
   reminderDays: nonNegativeIntSchema.max(365).optional(),
-  /**
-   * @deprecated The favourite is one person's row in `trip_favourites`; write it through
-   * `setFavourite` (`src/server/repos/trip-favourites.ts`). The column stays because dropping one
-   * is a table rebuild on SQLite — see its `@deprecated` note in `schema.ts` — and this field stays
-   * with it because the dev seed (`routes/api/dev/-seed/apply-trip.ts`) still sets it. Nothing
-   * reads it any more.
-   */
-  isFavourite: z.boolean().optional(),
   isArchived: z.boolean().optional(),
 }
 
 /**
- * Creation accepts one field an update never may: the primary key itself.
+ * Creation accepts two fields an update never may: the primary key itself, and the deprecated
+ * `isFavourite` (see its note below).
  *
- * Omit it and the column's `$defaultFn(newId)` mints a time-sortable random key, which is what
+ * The id: omit it and the column's `$defaultFn(newId)` mints a time-sortable random key, which is what
  * every real user gets. Supply it and the row is keyed by the caller's own string — the seam the
  * demo fixture uses so a workspace rebuilt from `scripts/seed` keys its trips identically every
  * time. That matters because a trip's cover art is a pure hash of its id, so a regenerated key
  * silently repaints the card and moves any screenshot that photographs it.
  *
- * It is validated like any other id and it is never reachable from a client: the boundary schema
+ * The id is validated like any other and it is never reachable from a client: the boundary schema
  * `createTripInputSchema` (`src/routes/_app/-server/trip-lifecycle.ts`) is a `z.strictObject`, so a
  * request body carrying this key is refused rather than forwarded.
  */
 export const createTripInput = z.object({
   ...tripFields,
   id: idSchema.optional(),
+  /**
+   * @deprecated The favourite is one person's row in `trip_favourites`; write it through
+   * `setFavourite` (`src/server/repos/trip-favourites.ts`). The column stays because dropping one
+   * is a table rebuild on SQLite — see its `@deprecated` note in `schema.ts` — and this field stays
+   * with it only because the dev seed (`routes/api/dev/-seed/apply-trip.ts`) still sets it at
+   * creation. It is deliberately not in `tripFields`, so {@link updateTripInput} cannot patch it.
+   */
+  isFavourite: z.boolean().optional(),
 })
 export type CreateTripInput = z.infer<typeof createTripInput>
 
