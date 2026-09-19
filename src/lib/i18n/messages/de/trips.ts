@@ -244,6 +244,41 @@ const messages = {
   'people.error.notInWorkspace':
     'Diese Person ist nicht in diesem Arbeitsbereich',
   'people.error.alreadyOnTrip': 'Diese Person ist schon auf dieser Reise',
+  'people.guests.title': 'Reisen mit dir',
+  'people.guests.description':
+    'Personen auf dieser Reise, die kein Konto haben',
+  'people.guests.empty': 'Noch niemand',
+  'people.guests.emptyHint':
+    'Ein Gast reist mit dir und braucht kein Konto. Füge ihn mit seinem Namen hinzu.',
+  'people.guest.badge': 'Gast',
+  'people.guest.add.label': 'Name',
+  'people.guest.add.placeholder': 'Lena',
+  'people.guest.add.action': 'Gast hinzufügen',
+  'people.guest.rename.action': '{name} umbenennen',
+  'people.guest.rename.title': '{name} umbenennen',
+  'people.guest.rename.confirm': 'Umbenennen',
+  'people.guest.remove.action': '{name} von dieser Reise entfernen',
+  'people.guest.remove.title': '{name} von dieser Reise entfernen?',
+  'people.guest.remove.body':
+    'Der Gast wird entfernt. Sonst ändert sich nichts an der Reise.',
+  'people.guest.remove.confirm': 'Entfernen',
+  'people.guest.merge.action': '{name} ist jetzt…',
+  'people.guest.merge.title':
+    '{name} ist jetzt eine der Personen auf dieser Reise',
+  'people.guest.merge.body':
+    'Alles, was {name} zugewiesen ist, geht an die gewählte Person über, und der Gast wird entfernt. Das lässt sich nicht rückgängig machen.',
+  'people.guest.merge.inherits':
+    '{member} übernimmt alles, was {name} zugeordnet ist.',
+  'people.guest.merge.placeholder': 'Wähle jemanden auf dieser Reise',
+  'people.guest.merge.confirm': 'Zusammenführen',
+  'people.guest.merge.done': '{name} ist jetzt {member}',
+  'people.guest.merge.nothingMoved': 'Diesem Gast war noch nichts zugewiesen',
+  'people.error.guestNameTaken':
+    'Ein Gast namens {name} ist bereits auf dieser Reise',
+  'people.error.guestLimit':
+    'Eine Reise fasst höchstens {limit} Gäste, weil eine längere Liste die Teilnehmerauswahl und die Kostenaufteilung schwer lesbar macht',
+  'people.error.guestMergeTarget':
+    'Wähle jemanden, der bereits auf dieser Reise ist',
 } satisfies TranslationOf<typeof En>
 
 export default messages

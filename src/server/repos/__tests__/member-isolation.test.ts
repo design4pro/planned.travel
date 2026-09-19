@@ -55,7 +55,6 @@ import {
   getTrip,
   getTripBySlug,
   listTripMembers,
-  listTripParticipants,
   listTrips,
   listTripsForUser,
   listUpcomingTrips,
@@ -67,6 +66,14 @@ import {
   updateTrip,
   updateTripMember,
 } from '../trips'
+import {
+  createTripGuest,
+  listTripGuests,
+  listTripParticipants,
+  mergeTripGuest,
+  removeTripGuest,
+  renameTripGuest,
+} from '../trip-guests'
 import {
   countFavourites,
   listFavouriteTripIds,
@@ -870,6 +877,32 @@ describe('member isolation', () => {
       ).toEqual([alpha.ownerUserId])
       // And the private trip closes behind them.
       expect(await canReadTrip(stranger, fixture.tripId)).toBe(false)
+    })
+
+    /** `01-S6b` — every guest write is the owner's, and an editor is refused each one. */
+    it('is refused every guest write with FORBIDDEN, and the guests stay as they were', async () => {
+      const guest = await createTripGuest(alpha.scope, {
+        tripId: fixture.tripId,
+        displayName: 'Anna',
+      })
+
+      for (const attempt of [
+        () =>
+          createTripGuest(stranger, {
+            tripId: fixture.tripId,
+            displayName: 'Marek',
+          }),
+        () => renameTripGuest(stranger, guest.id, 'Hanna'),
+        () => removeTripGuest(stranger, guest.id),
+        () => mergeTripGuest(stranger, fixture.tripId, guest.id, strangerId),
+      ]) {
+        const error = await captureError(attempt)
+        expect(error).toBeInstanceOf(RepositoryError)
+        expect(error).not.toBeInstanceOf(NotFoundError)
+        expect((error as RepositoryError).code).toBe('FORBIDDEN')
+      }
+
+      expect(await listTripGuests(alpha.scope, fixture.tripId)).toEqual([guest])
     })
   })
 })
