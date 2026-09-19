@@ -178,7 +178,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Bevestigingscodes verbergen tot ik erom vraag',
   'appearance.privacy.codesHint':
-    'Boekingsreferenties en bevestigingsnummers blijven verborgen op het boekingsoverzicht en bij het vervoer totdat je erover zweeft, erop focust of erop tikt. Prijzen worden nooit verborgen.',
+    'Boekingsreferenties en bevestigingsnummers blijven verborgen op het boekingsoverzicht en bij het vervoer totdat je erop klikt of tikt, en worden weer verborgen zodra je verdergaat. Prijzen worden nooit verborgen.',
   'appearance.saveFailed': 'Die wijziging is niet bewaard',
   'appearance.saveFailedBody':
     'Hier zie je hem wel, maar op het volgende apparaat waarop je inlogt niet.',

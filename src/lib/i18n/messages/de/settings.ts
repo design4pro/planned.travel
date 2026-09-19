@@ -180,7 +180,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Bestätigungscodes verbergen, bis ich sie sehen möchte',
   'appearance.privacy.codesHint':
-    'Buchungsreferenzen und Bestätigungsnummern bleiben im Buchungsbereich und bei den Transporten verdeckt, bis Sie darauf zeigen, sie fokussieren oder antippen. Preise werden nie verborgen.',
+    'Buchungsreferenzen und Bestätigungsnummern bleiben im Buchungsbereich und bei den Transporten verdeckt, bis Sie darauf klicken oder tippen, und werden wieder verdeckt, sobald Sie weitergehen. Preise werden nie verborgen.',
   'appearance.saveFailed': 'Diese Änderung wurde nicht gespeichert',
   'appearance.saveFailedBody':
     'Hier ist sie zu sehen, auf dem nächsten Gerät, mit dem du dich anmeldest, aber nicht.',
