@@ -854,34 +854,35 @@ interface LinkStops {
  * Both link scans for a whole source, in one pass.
  *
  * Scanning from each `[` separately re-reads the rest of the line once per
- * bracket, which makes a long line of `[a](b` quadratic. Every offset a scan
- * starts from — a `[` the inline reader left unescaped, a destination after
- * `(` or a space — is one a walk from the start of the source also visits,
- * because an escape pairs the same backslashes whichever of them the walk
- * begins before. So one walk answers all of them: `[` offsets match their `]`
- * on a stack, and an offset still waiting for its destination to end sits in
- * the group of its paren depth, settled by the next space or by the `)` that
- * leaves that depth.
+ * bracket, which makes a long line of `[a](b` quadratic. A walk from the start
+ * of the source skips only a character that follows a backslash it paired, and
+ * no scan ever starts on one: a destination starts after `(` or a space, and a
+ * `[` after a paired backslash is one the inline reader already consumed as an
+ * escape — which holds because {@link ESCAPABLE} holds both `\` and `[`. So one
+ * walk answers every scan: `[` offsets match their `]` on a stack, and an
+ * offset still waiting for its destination to end sits in the group of its
+ * paren depth, settled by the next space or by the `)` that leaves that depth.
  */
 function linkStops(source: string): LinkStops {
   const labelEnd = new Int32Array(source.length).fill(-1)
-  const destinationEnd = new Int32Array(source.length + 1)
+  // -1 for an offset no scan starts on, which reads as "no link" if one ever did.
+  const destinationEnd = new Int32Array(source.length + 1).fill(-1)
   const brackets: Array<number> = []
-  const open: Array<number> = []
-  // Where each paren depth's group of `open` begins; the base depth is 0.
+  const pending: Array<number> = []
+  // Where each paren depth's group of `pending` begins; the base depth is 0.
   const depths: Array<number> = [0]
 
   const settle = (from: number, end: number): void => {
-    for (let index = from; index < open.length; index += 1) {
-      destinationEnd[open[index]] = end
+    for (let index = from; index < pending.length; index += 1) {
+      destinationEnd[pending[index]] = end
     }
-    open.length = from
+    pending.length = from
   }
 
   let index = 0
   while (index < source.length) {
     const char = source[index]
-    open.push(index)
+    pending.push(index)
     if (char === '\\' && index + 1 < source.length) {
       index += 2
       continue
@@ -895,8 +896,12 @@ function linkStops(source: string): LinkStops {
       settle(0, index)
       depths.length = 1
     }
-    if (char === '(') depths.push(open.length)
-    if (char === ')') settle(depths.length > 1 ? (depths.pop() ?? 0) : 0, index)
+    if (char === '(') depths.push(pending.length)
+    if (char === ')') {
+      // At the base depth the `)` closes every pending destination.
+      const group = depths.length > 1 ? depths.pop() : 0
+      settle(group ?? 0, index)
+    }
     index += 1
   }
 

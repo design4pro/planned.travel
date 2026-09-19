@@ -283,6 +283,26 @@ describe('parse — inline', () => {
       text('a *not emphasis* b'),
     ])
   })
+
+  it('reads an escaped bracket as text, and an escaped backslash as no escape', () => {
+    expect(inline('\\[a](https://example.com)')).toEqual([
+      text('[a](https://example.com)'),
+    ])
+    expect(inline('\\\\[a](https://example.com)')).toEqual([
+      text('\\'),
+      { type: 'link', href: 'https://example.com', children: [text('a')] },
+    ])
+  })
+
+  it('reads a destination with balanced parentheses and escapes', () => {
+    expect(inline('[a](https://example.com/x_(y)\\)z)')).toEqual([
+      {
+        type: 'link',
+        href: 'https://example.com/x_(y))z',
+        children: [text('a')],
+      },
+    ])
+  })
 })
 
 describe('parse — outside the subset', () => {
