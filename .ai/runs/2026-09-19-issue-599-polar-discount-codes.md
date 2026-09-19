@@ -82,12 +82,12 @@ specific error and the plan is unchanged. An operator script seeds single-use 10
 
 ### Phase 2: Server
 
-- [ ] 2.1 Step 3 gate recorded as an owed sandbox walk in DEPLOY.md §9.8
-- [ ] 2.2 Discount wire schemas and their tests
-- [ ] 2.3 `discounts.ts` with `fit()`, cache, limiter, budget, and tests
-- [ ] 2.4 `checkout.ts` — input, checkout, PATCH order, outcomes, and tests
-- [ ] 2.5 `startPlanChange` returns `PlanChangeResult`
-- [ ] 2.6 DEPLOY.md §9.2 scope and §9.8 rows
+- [x] 2.1 Step 3 gate recorded as an owed sandbox walk in DEPLOY.md §9.8 — 93f86401d
+- [x] 2.2 Discount wire schemas and their tests — 5dd62bd7a
+- [x] 2.3 `discounts.ts` with `fit()`, cache, limiter, budget, and tests — 283db7cfb
+- [x] 2.4 `checkout.ts` — input, checkout, PATCH order, outcomes, and tests — 1b89068ec
+- [x] 2.5 `startPlanChange` returns `PlanChangeResult` — 1b89068ec
+- [x] 2.6 DEPLOY.md §9.2 scope and §9.8 rows — 93f86401d
 
 ### Phase 3: UI
 
