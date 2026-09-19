@@ -287,3 +287,46 @@ describe('a stay and the booking that pays for it', () => {
     expect(await listTripAccommodations(scope, trip.id)).toHaveLength(1)
   })
 })
+
+/**
+ * The same two deletes on the database D1 is actually running. `reservation_id` arrived by
+ * `ADD COLUMN`, so what D1 enforces is `NO ACTION`, not the `set null` `schema.ts` declares
+ * (`accommodation-schema.test.ts` pins both halves); on the default harness these cases would pass
+ * whether or not the link is cleared before the booking goes.
+ */
+describe('on the migrated database', () => {
+  beforeEach(async () => {
+    const harness = await createHarness({ ddl: 'migrations' })
+    scope = (await harness.seedTenant('stays-migrated')).scope
+    trip = await createTrip(scope, {
+      title: 'Tokyo in spring',
+      startDate: '2026-04-10',
+      endDate: '2026-04-14',
+      currency: 'JPY',
+    })
+    days = await listTripDays(scope, trip.id)
+  })
+
+  it('deletes only the booking and keeps the nights, unlinked', async () => {
+    const result = await createStay(scope, stayPayload())
+
+    await deleteReservation(scope, result.reservationId)
+
+    const [stay] = await listTripAccommodations(scope, trip.id)
+    expect(stay.id).toBe(result.stayId)
+    expect(stay.reservationId).toBeNull()
+  })
+
+  it('removes the stay with its booking', async () => {
+    const result = await createStay(scope, stayPayload())
+
+    await deleteStay(scope, {
+      tripId: trip.id,
+      reservationId: result.reservationId,
+      stayId: result.stayId,
+    })
+
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
+    expect(await listTripAccommodations(scope, trip.id)).toEqual([])
+  })
+})

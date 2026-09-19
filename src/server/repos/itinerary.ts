@@ -670,6 +670,32 @@ export async function deleteAccommodation(
   await dayAccommodationsRepository.requireRemove(scope, accommodationId)
 }
 
+/**
+ * Unlinks every stay of this tenant that was made under one booking, and answers how many.
+ *
+ * Called by {@link deleteReservation} immediately before the booking goes, and that ordering is the
+ * whole point. `schema.ts` declares `reservation_id` as `on delete: 'set null'`, but it arrived by
+ * `ADD COLUMN`, which carries no `ON DELETE` clause, so what D1 actually enforces is `NO ACTION` —
+ * pinned by `accommodation-schema.test.ts` and `migrations-match-schema.test.ts`. Closing that gap in
+ * the database would mean either hand-editing a generated migration or rebuilding the table, so the
+ * rule the schema promises is kept here instead: without this, deleting a stay's booking raises
+ * `FOREIGN KEY constraint failed` and the nights never get the chance to outlive it.
+ *
+ * Scoped like every other statement in this file, so a booking id belonging to another organization
+ * matches no row rather than clearing one.
+ */
+export async function unlinkAccommodationsFromReservation(
+  scope: TenantScope,
+  reservationId: string,
+): Promise<number> {
+  const rows = await dayAccommodationsRepository.updateWhere(
+    scope,
+    eq(dayAccommodations.reservationId, reservationId),
+    { reservationId: null },
+  )
+  return rows.length
+}
+
 /** Nights covered by a stay, derived from the day run rather than stored twice. */
 export async function countAccommodationNights(
   scope: TenantScope,
