@@ -79,6 +79,8 @@ The spec's Resolved assumptions 1-9 apply as written. Two execution details:
 
 ## Progress
 
+PR: #619
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Seams and the day's add control
@@ -96,13 +98,13 @@ The spec's Resolved assumptions 1-9 apply as written. Two execution details:
 
 ### Phase 3: The drop
 
-- [ ] 3.1 `-server/geocode.ts` `reverseGeocodeFn` + server test
-- [ ] 3.2 `planner-map-layer.tsx` state machine and listeners + unit test
-- [ ] 3.3 Provisional pin, arming banner, empty-map hint, copy, the menu's `map` option
-- [ ] 3.4 `plan-screen.tsx` edits 2 and 3
-- [ ] 3.5 `tenant-isolation.test.ts` coordinate-carrying `createPlace` cases
-- [ ] 3.6 `e2e/places-and-maps.spec.ts` `02-S4` describe
-- [ ] 3.7 Spec metadata, spec index, full validation gate
+- [x] 3.1 `-server/geocode.ts` `reverseGeocodeFn` + server test — 8bb38967e
+- [x] 3.2 `planner-map-layer.tsx` state machine and listeners + unit test — ea9486fe0, b2257211d
+- [x] 3.3 Provisional pin, arming banner, empty-map hint, copy, the menu's `map` option — ea9486fe0
+- [x] 3.4 `plan-screen.tsx` edits 2 and 3 — ea9486fe0
+- [x] 3.5 `tenant-isolation.test.ts` coordinate-carrying `createPlace` cases — 33835a379
+- [x] 3.6 `e2e/places-and-maps.spec.ts` `02-S4` describe — b2257211d
+- [x] 3.7 Spec metadata, spec index, full validation gate — 485ddc2e4
 
 ## Deviations found during the build
 
@@ -118,3 +120,7 @@ The spec's Resolved assumptions 1-9 apply as written. Two execution details:
   unavailable" credits a source the reader cannot see. The geocoder segment follows the same rule:
   it is appended only while the basemap is available, and OpenStreetMap is deduplicated by link, so
   the line gains exactly one `Geoapify` credit.
+- **Phase 3.** The rest are recorded in the spec's `## Amendment`: `usePlannerDrop` gains
+  `formOpen`, the map option arms from the menu's `onCloseAutoFocus` (a modal dropdown traps focus
+  until it has closed), a held mouse press does not drop, one extra key `trips.plan.drop.error`, and
+  the journey does not submit (the shared demo workspace, as `trips-core.spec.ts` already reasons).
