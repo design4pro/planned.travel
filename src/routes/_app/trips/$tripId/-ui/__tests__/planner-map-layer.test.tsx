@@ -414,6 +414,67 @@ describe('PlannerMapLayer', () => {
       expect(onDropped).not.toHaveBeenCalled()
     })
 
+    it('cancels on Escape from the banner, and keeps focus on the map when the trigger is gone', () => {
+      const surface = fakeMap()
+      render(<Screen map={surface.map} />)
+
+      // The menu trigger unmounted with the sheet it lived in.
+      act(() => drop.arm(document.createElement('button')))
+      const stop = screen.getByRole('button', {
+        name: 'Stop placing a new pin',
+      })
+      stop.focus()
+      const escape = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      })
+      act(() => stop.dispatchEvent(escape))
+
+      expect(escape.defaultPrevented).toBe(true)
+      expect(drop.state).toBe('idle')
+      expect(document.activeElement).toBe(surface.canvas)
+    })
+
+    it('stops from the banner button, focusing the map when there is no trigger', () => {
+      const surface = fakeMap()
+      render(<Screen map={surface.map} />)
+
+      act(() => drop.arm(null))
+      act(() =>
+        screen.getByRole('button', { name: 'Stop placing a new pin' }).click(),
+      )
+
+      expect(drop.state).toBe('idle')
+      expect(document.activeElement).toBe(surface.canvas)
+    })
+
+    it('leaves a key or a press on a place pin to the pin', () => {
+      const surface = fakeMap()
+      const marker = document.createElement('div')
+      marker.className = 'maplibregl-marker'
+      const pin = document.createElement('button')
+      marker.appendChild(pin)
+      surface.container.appendChild(marker)
+      render(<Screen map={surface.map} />)
+
+      act(() => drop.arm(null))
+      const enter = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      })
+      act(() => {
+        pin.dispatchEvent(enter)
+        pin.dispatchEvent(pointer('pointerdown', { pointerType: 'mouse' }))
+        pin.dispatchEvent(pointer('pointerup', { pointerType: 'mouse' }))
+      })
+
+      expect(enter.defaultPrevented).toBe(false)
+      expect(drop.state).toBe('armed')
+      expect(lookup.reverseGeocodeFn).not.toHaveBeenCalled()
+    })
+
     it('leaves Escape to the screen while idle', () => {
       const surface = fakeMap()
       render(<Screen map={surface.map} />)
@@ -426,6 +487,14 @@ describe('PlannerMapLayer', () => {
       act(() => surface.canvas.dispatchEvent(escape))
       expect(escape.defaultPrevented).toBe(false)
     })
+  })
+
+  it('ignores a gesture that reaches the map while the form is open', () => {
+    const surface = fakeMap()
+    render(<Screen map={surface.map} formOpen />)
+
+    surface.contextMenu(16.37, 48.2)
+    expect(lookup.reverseGeocodeFn).not.toHaveBeenCalled()
   })
 
   it('names the gesture over an empty map', () => {
@@ -443,6 +512,8 @@ describe('PlannerMapLayer', () => {
     const surface = fakeMap()
     const added = vi.spyOn(surface.container, 'addEventListener')
     const removed = vi.spyOn(surface.container, 'removeEventListener')
+    const windowAdded = vi.spyOn(window, 'addEventListener')
+    const windowRemoved = vi.spyOn(window, 'removeEventListener')
     const { unmount } = render(<Screen map={surface.map} />)
 
     expect(surface.map.on).toHaveBeenCalledOnce()
@@ -464,6 +535,11 @@ describe('PlannerMapLayer', () => {
       removed.mock.calls.map(([type, listener]) => [type, listener]),
     ).toEqual(added.mock.calls.map(([type, listener]) => [type, listener]))
     expect(added).toHaveBeenCalledTimes(5)
+    const escape = windowAdded.mock.calls.find(
+      ([type, , capture]) => String(type) === 'keydown' && capture === true,
+    )
+    expect(escape).toBeDefined()
+    expect(windowRemoved).toHaveBeenCalledWith('keydown', escape?.[1], true)
     expect(surface.container.hasAttribute('data-part')).toBe(false)
   })
 })

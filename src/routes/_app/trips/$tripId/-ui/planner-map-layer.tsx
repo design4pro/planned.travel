@@ -55,7 +55,8 @@ export interface PlannerDrop {
   readonly pin: DropPoint | null
   /** Arms the map; `Escape` or the banner's stop button hands focus back to `returnFocusTo`. */
   readonly arm: (returnFocusTo?: HTMLElement | null) => void
-  readonly cancel: () => void
+  /** Disarms or withdraws the drop; `false` when there was nowhere to hand focus back to. */
+  readonly cancel: () => boolean
   readonly drop: (point: WrappableLngLat) => void
   /** Called by the layer as it mounts and unmounts. */
   readonly attach: (ready: boolean) => void
@@ -129,7 +130,9 @@ export function usePlannerDrop({
     reset()
     const target = returnFocus.current
     returnFocus.current = null
-    if (target?.isConnected === true) target.focus()
+    if (target?.isConnected !== true) return false
+    target.focus()
+    return true
   }, [reset])
 
   const arm = React.useCallback(
@@ -143,7 +146,8 @@ export function usePlannerDrop({
 
   const drop = React.useCallback(
     (point: WrappableLngLat) => {
-      if (!editable || stateRef.current === 'dropping') return
+      // An open form covers the map; a gesture that still reaches it is not a second drop.
+      if (!editable || formOpen || stateRef.current === 'dropping') return
       const wrapped = point.wrap()
       const lng = round(wrapped.lng)
       const lat = round(wrapped.lat)
@@ -178,7 +182,7 @@ export function usePlannerDrop({
         },
       )
     },
-    [editable, language, reset, t, tripId],
+    [editable, formOpen, language, reset, t, tripId],
   )
 
   // The provisional pin answers "here" until the form it opened is saved or dismissed; a saved
@@ -233,6 +237,8 @@ export function PlannerMapLayer({ drop, empty }: PlannerMapLayerProps) {
   const map = useMapInstance()
   const dropRef = React.useRef(drop)
   dropRef.current = drop
+  // The banner's stop: disarm, and keep focus on the map when there is no trigger to return to.
+  const stopRef = React.useRef<(() => void) | null>(null)
 
   const { attach } = drop
   React.useEffect(() => {
@@ -272,7 +278,14 @@ export function PlannerMapLayer({ drop, empty }: PlannerMapLayerProps) {
       return map.unproject([x - box.left, y - box.top])
     }
 
+    // A place pin sits inside the canvas container and is a control of its own: a press or a key
+    // on it is the pin's, never a drop.
+    const onMarker = (event: Event): boolean =>
+      event.target instanceof Element &&
+      event.target.closest('.maplibregl-marker') !== null
+
     const onPointerDown = (event: PointerEvent): void => {
+      if (onMarker(event)) return
       if (press !== null) {
         // A second pointer is a pinch, not a press.
         release()
@@ -311,18 +324,26 @@ export function PlannerMapLayer({ drop, empty }: PlannerMapLayerProps) {
     }
 
     const onKeyDown = (event: KeyboardEvent): void => {
-      const current = dropRef.current
-      if (event.key === 'Escape' && current.state !== 'idle') {
-        // The screen's window-level Escape clears the selection unless told otherwise.
+      if (onMarker(event)) return
+      if (event.key === 'Enter' && dropRef.current.state === 'armed') {
         event.preventDefault()
-        current.cancel()
-        return
-      }
-      if (event.key === 'Enter' && current.state === 'armed') {
-        event.preventDefault()
-        current.drop(map.getCenter())
+        dropRef.current.drop(map.getCenter())
       }
     }
+
+    // `Escape` disarms wherever focus is — the banner's stop button sits outside the canvas
+    // container. Captured on the window, so it runs before the screen's own window-level Escape,
+    // which clears the selection unless told otherwise.
+    const onEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape' || dropRef.current.state === 'idle') return
+      event.preventDefault()
+      stop()
+    }
+
+    const stop = (): void => {
+      if (!dropRef.current.cancel()) map.getCanvas().focus()
+    }
+    stopRef.current = stop
 
     map.on('contextmenu', onContextMenu)
     container.addEventListener('pointerdown', onPointerDown)
@@ -330,6 +351,7 @@ export function PlannerMapLayer({ drop, empty }: PlannerMapLayerProps) {
     container.addEventListener('pointerup', onPointerUp)
     container.addEventListener('pointercancel', release)
     container.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keydown', onEscape, true)
 
     return () => {
       release()
@@ -339,6 +361,8 @@ export function PlannerMapLayer({ drop, empty }: PlannerMapLayerProps) {
       container.removeEventListener('pointerup', onPointerUp)
       container.removeEventListener('pointercancel', release)
       container.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keydown', onEscape, true)
+      stopRef.current = null
       container.removeAttribute('data-part')
     }
   }, [map])
@@ -396,10 +420,11 @@ export function PlannerMapLayer({ drop, empty }: PlannerMapLayerProps) {
             label={t('trips.plan.drop.stop')}
             size="sm"
             variant="ghost"
-            onClick={drop.cancel}
+            onClick={() => stopRef.current?.()}
           />
         </GlassPanel>
-      ) : empty && drop.editable && drop.state === 'idle' ? (
+      ) : null}
+      {empty && drop.editable && drop.state === 'idle' ? (
         <GlassPanel
           radius="full"
           padding="xs"

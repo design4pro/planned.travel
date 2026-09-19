@@ -17,6 +17,7 @@ import {
   createTrip,
 } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
+import { GeoProviderError } from '#/server/geo/geocode'
 
 import type {
   GeocodeCandidate,
@@ -77,6 +78,8 @@ interface Ports {
 /** An in-memory runtime; `provider: null` is a deployment holding no credential. */
 function ports(options: {
   readonly answer?: ReadonlyArray<GeocodeCandidate>
+  /** What the vendor call throws instead of answering. */
+  readonly failure?: Error
   readonly configured?: boolean
   readonly ceiling?: number
 }): Ports {
@@ -93,7 +96,11 @@ function ports(options: {
     retention: 'permanent',
     attribution: [{ name: 'Stub', url: 'https://example.test/' }],
   }
-  const reverse = vi.fn(() => Promise.resolve(options.answer ?? []))
+  const reverse = vi.fn(() =>
+    options.failure === undefined
+      ? Promise.resolve(options.answer ?? [])
+      : Promise.reject(options.failure),
+  )
   const geocoding = vi.fn((runtime: GeocodeRuntimeOptions): GeocodeRuntime => ({
     cache: store,
     counters: store,
@@ -242,4 +249,23 @@ describe('reverseLookup', () => {
       expect(port.reverse).not.toHaveBeenCalled()
     },
   )
+
+  it('turns a provider that cannot be reached into no address, not an error', async () => {
+    const port = ports({
+      failure: new GeoProviderError('unreachable', 'The provider is down.'),
+    })
+
+    await expect(
+      reverseLookup(owner, { tripId, ...POINT }, port),
+    ).resolves.toEqual({ address: null })
+    expect(port.reverse).toHaveBeenCalledOnce()
+  })
+
+  it('lets any other failure through', async () => {
+    const port = ports({ failure: new Error('A bug, not a refusal.') })
+
+    await expect(
+      reverseLookup(owner, { tripId, ...POINT }, port),
+    ).rejects.toThrow('A bug, not a refusal.')
+  })
 })
