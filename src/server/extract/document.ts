@@ -6,14 +6,16 @@
  * failure modes, so they are testable apart. This module answers a `string` and knows nothing
  * about a trip, a reservation or a currency. `./booking` takes it from here.
  *
- * Three routes, decided by extension, because the R2 port a queue handler holds exposes no content
- * type (`src/server/queue/types.ts`, `TaskBindings.FILES.get` answers `{ body, size }`) and the
- * platform's conversion dispatches on the filename anyway:
+ * Three routes, decided by `importReaderFor` — the same resolution the upload boundary accepted the
+ * file by, so the two cannot disagree. The extension decides; the stored media type, carried on the
+ * queue payload because the R2 port a queue handler holds exposes none (`src/server/queue/types.ts`,
+ * `TaskBindings.FILES.get` answers `{ body, size }`), is consulted only for a name without one:
  *
  * - a PDF, a web page, a Word or Excel document and an image go through `converter.toMarkdown`;
- * - `.txt` and `.md` are decoded as UTF-8, because they are already text and a conversion would be
- *   a network round trip spent on a no-op;
- * - `.eml` is decoded as UTF-8 too, with its long base64 runs stripped — see {@link BASE64_RUN}.
+ * - `.txt` and `.md` (`text/plain`, `text/markdown`) are decoded as UTF-8, because they are already
+ *   text and a conversion would be a network round trip spent on a no-op;
+ * - `.eml` (`message/rfc822`) is decoded as UTF-8 too, with its long base64 runs stripped — see
+ *   {@link BASE64_RUN}.
  *
  * **The mail message has no MIME parser and that is a decision.** `toMarkdown`'s published format
  * list does not include `message/rfc822`, and a MIME package is a `pnpm add` the dependency freeze
@@ -25,6 +27,7 @@
  * attachment directly is a format this import accepts anyway.
  */
 
+import { importReaderFor } from '../fns/file-policy'
 import { TaskPermanentError } from '../queue/types'
 
 /** Every way an import can refuse, and the vocabulary the reader's copy is chosen from. */
@@ -101,22 +104,6 @@ export type DocumentTextFailure = Extract<
   'unreadable' | 'empty'
 >
 
-/** Extensions the platform conversion reads. Everything else here is already text. */
-const CONVERTED_EXTENSIONS = [
-  'pdf',
-  'html',
-  'htm',
-  'docx',
-  'xlsx',
-  'png',
-  'jpg',
-  'jpeg',
-  'webp',
-  'heic',
-] as const
-
-const PLAIN_TEXT_EXTENSIONS = ['txt', 'md'] as const
-
 /**
  * A base64 block: tokens of sixty-plus base64 characters, wrapped or not, totalling two hundred.
  *
@@ -180,13 +167,18 @@ async function convert(
  */
 export async function documentToText(
   converter: DocumentConverter,
-  input: { readonly name: string; readonly bytes: ArrayBuffer },
+  input: {
+    readonly name: string
+    readonly bytes: ArrayBuffer
+    /** The stored media type; absent on a payload written before it travelled. */
+    readonly contentType?: string
+  },
 ): Promise<string> {
-  const extension = extensionOf(input.name)
+  const reader = importReaderFor(input.name, input.contentType ?? '')
   const raw =
-    extension === 'eml'
+    reader === 'mail'
       ? stripBase64Runs(decodeUtf8(input.bytes))
-      : (PLAIN_TEXT_EXTENSIONS as ReadonlyArray<string>).includes(extension)
+      : reader === 'text'
         ? decodeUtf8(input.bytes)
         : await convert(converter, input)
 
@@ -202,7 +194,5 @@ export async function documentToText(
 
 /** Whether the conversion would be reached for this name, so a caller can say why it was not. */
 export function needsConversion(name: string): boolean {
-  return (CONVERTED_EXTENSIONS as ReadonlyArray<string>).includes(
-    extensionOf(name),
-  )
+  return importReaderFor(name, '') === 'convert'
 }
