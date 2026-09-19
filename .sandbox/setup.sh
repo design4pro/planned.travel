@@ -9,4 +9,9 @@ bash scripts/worktree/bootstrap.sh --profile cloud --port "$APP_PORT" --no-seed
 
 # Better Auth builds every callback from APP_URL, so it must be the public preview host,
 # not localhost. Rewritten on every run because bootstrap resets it to the local port.
-sed -i "s#^APP_URL=.*#APP_URL=${APP_URL}#" .dev.vars
+# Written the way bootstrap.sh writes it: no `sed -i` (GNU-only), no URL inside a sed expression,
+# and appended when the line is missing.
+DEV_VARS_TMP=".dev.vars.$$.part"
+grep -v '^APP_URL=' .dev.vars > "$DEV_VARS_TMP" || true
+printf 'APP_URL=%s\n' "$APP_URL" >> "$DEV_VARS_TMP"
+mv -f "$DEV_VARS_TMP" .dev.vars
