@@ -111,7 +111,7 @@ function ForgotPasswordPage() {
               </p>
             </div>
           </div>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3">
             <Button
               variant="secondary"
               size="lg"

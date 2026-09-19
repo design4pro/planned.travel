@@ -172,6 +172,50 @@ test('a stranger reaches every public screen', async ({ context, page }) => {
 })
 
 /**
+ * The forgot-password "sent" state keeps both of its actions inside the card.
+ *
+ * Geometry a real layout engine decides: `Button` is `shrink-0` and `block`
+ * makes it `w-full`, so two of them in a row each claim the whole row and the
+ * second is pushed out of the panel (#598). Only a desktop-width viewport shows
+ * it - below `sm` the column hid the defect - and jsdom computes no boxes.
+ *
+ * One submit per attempt, deliberately: `/request-password-reset` allows five
+ * a client in 300 s (`src/server/auth/index.ts`), and a sixth answers "Too many
+ * attempts" instead of the sent state this test waits for.
+ */
+test('the reset-link actions stack inside the panel', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'the overflow only existed at the `sm` breakpoint and up')
+  const route = PUBLIC_ROUTES.find(
+    (candidate) => candidate.name === 'forgot-password',
+  )
+  if (route === undefined) throw new Error('forgot-password is a public route')
+  await visit(page, route, 'light')
+  await page.locator('input[type="email"]').fill(DEMO_EMAIL)
+  await page.getByRole('button', { name: 'Email me a reset link' }).click()
+
+  const resend = page.getByRole('button', { name: 'Send it again' })
+  const change = page.getByRole('button', { name: 'Use a different email' })
+  await expect(change).toBeVisible()
+  const panel = await page.locator('[data-part="auth-panel"]').boundingBox()
+  const first = await resend.boundingBox()
+  const second = await change.boundingBox()
+  if (panel === null || first === null || second === null) {
+    throw new Error('the panel and both actions must have drawn')
+  }
+  for (const box of [first, second]) {
+    expect(box.x).toBeGreaterThanOrEqual(panel.x)
+    expect(box.x + box.width).toBeLessThanOrEqual(panel.x + panel.width)
+  }
+  expect(
+    second.y,
+    '"Use a different email" sits below "Send it again"',
+  ).toBeGreaterThanOrEqual(first.y + first.height)
+})
+
+/**
  * Authenticated screens.
  *
  * `scripts/seed` used to create users that deliberately could not sign in, which left everything
