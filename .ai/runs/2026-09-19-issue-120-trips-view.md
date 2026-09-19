@@ -94,11 +94,11 @@ foot of the index.
 
 ### Phase 3: UI
 
-- [ ] 3.1 Copy in all 23 locales
-- [ ] 3.2 trip-list-row.tsx: the row, the list, the skeleton
-- [ ] 3.3 Trips index: search param, seed, narrowed deps, switch, list mode, archived disclosure
-- [ ] 3.4 Dashboard hero: progress and the three figures
+- [x] 3.1 Copy in all 23 locales — 20bd251d6
+- [x] 3.2 trip-list-row.tsx: the row, the list, the skeleton — 20bd251d6
+- [x] 3.3 Trips index: search param, seed, narrowed deps, switch, list mode, archived disclosure — 20bd251d6
+- [x] 3.4 Dashboard hero: progress and the three figures — 20bd251d6
 
 ### Phase 4: Browser evidence
 
-- [ ] 4.1 The 01-S7 block in e2e/trips-core.spec.ts
+- [x] 4.1 The 01-S7 block in e2e/trips-core.spec.ts — fb552abda
