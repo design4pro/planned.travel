@@ -95,15 +95,20 @@ budget:
   `e2e · merged report` and `merge-gate` (on `RUNNER_CI`) **and** `claude-review` (on
   `RUNNER_AGENT`). The admin bypass ADR 0021 names is the other way through, and it skips the checks
   rather than running them.
-- **Recovering the checks during a host outage needs both pool variables.** Set `RUNNER_CI` and
-  `RUNNER_AGENT` to `["ubuntu-latest"]`. With `RUNNER_CI` alone CI comes back and the promotion
-  pull request opens green, and it still cannot merge, because the required `claude-review` check is
-  queued against a dead `agent` pool. Unset both once the host is back.
+- **Recovering the checks during a host outage needs both pool variables, and still leaves `e2e`
+  red.** Set `RUNNER_CI` and `RUNNER_AGENT` to `["ubuntu-latest"]`; with `RUNNER_CI` alone the
+  required `claude-review` check stays queued against a dead `agent` pool. Neither brings browsers:
+  the `e2e` job lost its `container:` in phase 3 and `.github/actions/e2e-env` assumes a runner that
+  already carries them, so on a hosted runner both shards fail on a missing browser executable and
+  `e2e · merged report` goes red. What the fallback does bring back green is a pull request that
+  skips `e2e` - the develop→main promotion, which defers it to the push run, and a
+  documentation-only diff. A code pull request into `develop` still needs the admin bypass, and the
+  push run's red `e2e` still holds the deploys behind it. Unset both once the host is back.
 - **A merged commit still reaches production through the pool.** `ci.yml` calls `deploy.yml` and
   `deploy-staging.yml` as its last jobs, behind `verify`, `test` and `e2e-report` (ADR 0021), which
   run on `RUNNER_CI`. The hosted default keeps a deploy from queueing and lets `workflow_dispatch` on
   `deploy.yml` or `rollback.yml` ship with the host down; the ordinary merge-to-deploy path still
-  needs the pool, or the recovery above.
+  needs the pool, since the recovery above leaves its `e2e` red.
 - **The host's durability is a requirement, not a nicety.** Every merge in this repository passes
   through it. Docker's `--restart always` handles a dying container, not a reboot, a sleeping Mac or
   an OrbStack that never came up - which is what phase 6 exists for. #498's own description asked
