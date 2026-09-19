@@ -181,6 +181,7 @@ import {
   linkReservationExpense,
   listTripReservations,
   markReservationsImported,
+  requireReservationOfTrip,
   reservationsRepository,
   setReservationStatus,
   updateReservation,
@@ -3019,6 +3020,8 @@ describe('tenant isolation', () => {
         () =>
           linkReservationExpense(scope, beta.reservationId, alpha.expenseId),
         () => clearReservationImported(scope, beta.reservationId),
+        // B's booking under B's own trip still resolves to nothing from A.
+        () => requireReservationOfTrip(scope, beta.tripId, beta.reservationId),
       ]
       for (const attempt of attempts) {
         expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)

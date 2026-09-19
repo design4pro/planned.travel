@@ -19,10 +19,10 @@ import {
   createReservation,
   deleteReservation,
   getDay,
-  getReservation,
   getTripItinerary,
   linkReservationExpense,
   listTripReservations,
+  requireReservationOfTrip,
   requireTrip,
   setReservationStatus,
   totalTripReservationsMinor,
@@ -432,6 +432,9 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<BookingWriteResult> => {
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
+    // Everything below acts on `data.tripId` — the room, the trail, the ledger — so the booking
+    // must be one of that trip's, not merely one the caller may edit.
+    await requireReservationOfTrip(scope, data.tripId, data.reservationId)
     assertOrder(data)
 
     const reservation = await updateReservation(
@@ -475,6 +478,7 @@ export const setBookingStatusFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly status: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
+    await requireReservationOfTrip(scope, data.tripId, data.reservationId)
     await setReservationStatus(scope, data.reservationId, data.status)
 
     await mirrorToRoom(scope, data.tripId, [
@@ -501,14 +505,16 @@ export const deleteBookingFn = createServerFn({ method: 'POST' })
 
     // Read before the delete, because the row is what says whether it had a cost line — and the
     // decision about that line belongs in one function, not in an `if` here.
-    const reservation = await getReservation(scope, data.reservationId)
-    if (reservation !== null) {
-      await syncReservationExpense(scope, {
-        reservation,
-        trip,
-        discarded: true,
-      })
-    }
+    const reservation = await requireReservationOfTrip(
+      scope,
+      data.tripId,
+      data.reservationId,
+    )
+    await syncReservationExpense(scope, {
+      reservation,
+      trip,
+      discarded: true,
+    })
     await deleteReservation(scope, data.reservationId)
 
     await mirrorToRoom(scope, data.tripId, [

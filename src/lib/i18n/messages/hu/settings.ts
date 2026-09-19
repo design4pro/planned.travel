@@ -174,7 +174,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Visszaigazolási kódok elrejtése, amíg meg nem nézem őket',
   'appearance.privacy.codesHint':
-    'A foglalási hivatkozások és a visszaigazolási számok a foglalások és az utazások nézetében takarva maradnak, amíg rájuk nem mutat, fókuszba nem hozza vagy meg nem érinti őket. Az árakat sosem rejtjük el.',
+    'A foglalási hivatkozások és a visszaigazolási számok a foglalások és az utazások nézetében takarva maradnak, amíg rájuk nem kattint vagy meg nem érinti őket, és újra eltakarjuk őket, amikor továbblép. Az árakat sosem rejtjük el.',
   'appearance.saveFailed': 'Ez a módosítás nem lett eltárolva',
   'appearance.saveFailedBody':
     'Itt látszik, de a következő eszközön, ahonnan belép, már nem lesz meg.',

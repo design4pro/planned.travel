@@ -179,7 +179,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Nascondi i codici di conferma finché non li chiedo',
   'appearance.privacy.codesHint':
-    'I riferimenti di prenotazione e i numeri di conferma restano mascherati nella scrivania delle prenotazioni e nei trasporti finché non ci passi sopra, non li selezioni o non li tocchi. I prezzi non vengono mai nascosti.',
+    'I riferimenti di prenotazione e i numeri di conferma restano mascherati nella scrivania delle prenotazioni e nei trasporti finché non ci fai clic o non li tocchi, e tornano mascherati quando passi ad altro. I prezzi non vengono mai nascosti.',
   'appearance.saveFailed': 'Questa modifica non è stata salvata',
   'appearance.saveFailedBody':
     'Qui si vede, ma il prossimo dispositivo da cui entri non ce l’avrà.',

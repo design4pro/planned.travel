@@ -276,6 +276,26 @@ async function requireWritableReservation(
   return existing
 }
 
+/**
+ * The booking, when it is a booking of `tripId`: `NotFoundError` otherwise, the same answer a
+ * missing id gets, so naming another trip's booking reveals nothing about it. For every caller
+ * that names a trip and a booking together and then acts on the trip's id.
+ */
+export async function requireReservationOfTrip(
+  scope: TenantScope,
+  tripId: string,
+  reservationId: string,
+): Promise<Reservation> {
+  const reservation = await reservationsRepository.requireById(
+    scope,
+    reservationId,
+  )
+  if (reservation.tripId !== tripId) {
+    throw new NotFoundError('reservation', reservationId)
+  }
+  return reservation
+}
+
 /** Verifies every optional reference points at a row of the same trip inside the same tenant. */
 async function assertReferences(
   scope: TenantScope,

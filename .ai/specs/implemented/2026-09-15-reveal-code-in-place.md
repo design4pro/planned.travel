@@ -1,11 +1,11 @@
 # Reveal a masked code in place
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | ready |
-| **Issue**          | #213  |
-| **Spec PR**        | #518  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #213        |
+| **Spec PR**        | #518        |
+| **Implementation** | #616        |
 
 ## 📝 TLDR
 
@@ -334,3 +334,17 @@ three owners land together in one pull request.
 | Q4  | Does keyboard focus still reveal?                                                        | No — `Enter`/`Space` reveals, focus alone does not.                                                                          | Tabbing through a page is no more intent than a hover, and the issue names click as the intent-bearing gesture.                          |
 | Q5  | Does the settings hint change with the behaviour?                                        | Yes, in the same PR, all 23 locales.                                                                                         | It currently promises reveal on hover and focus; §8 treats that sentence as part of the concept.                                         |
 | Q6  | Keep `data-part="confirmation-code"`?                                                    | Drop it; expose `data-state` on `CopyValue` instead.                                                                         | Nothing reads it, and a domain name on a generic control is the wrong owner. Plan 03's recorded capture command is history.              |
+
+## Amendment
+
+Implemented in #616. Two things shipped differently from the design above.
+
+- **`data-state` is not unique to this control.** Radix triggers on the same card (the status menu,
+  the row menu) carry `data-state="open"`/`"closed"`, so a bare `[data-state]` selector matches three
+  buttons on a booking card. `[data-state="masked"]` and `[data-state="revealed"]` remain unique and
+  are what a capture or a test should address.
+- **The Playwright case writes its own booking.** The seed writes no reservation, so there is no code
+  on `/trips/demo-trip-01-tokyo-and-kyoto/book` to reveal. `e2e/masked-code.spec.ts` adds a booking
+  named for its project with a confirmation number, turns the preference on, and removes both again.
+  The mutation check in step 4 was run: without the explicit `focus()` the case goes red in both
+  projects, and without `preventDefault()` it goes red in `mobile-safari` only.
