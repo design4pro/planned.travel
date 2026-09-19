@@ -25,6 +25,7 @@ import { NotFoundError } from '#/server/repos/context'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 
 import type { Day, Trip } from '#/server/db/types'
+import type * as Repos from '#/server/repos'
 import type { TenantScope } from '#/server/repos'
 
 /* ------------------------------------------------------------------ mocking */
@@ -33,7 +34,7 @@ const stubs = vi.hoisted(() => ({ failStayWrite: false }))
 
 /** The one seam: `createAccommodation` refuses when asked to, and is the real one otherwise. */
 vi.mock('#/server/repos', async (importOriginal) => {
-  const real = await importOriginal<typeof import('#/server/repos')>()
+  const real = await importOriginal<typeof Repos>()
   return {
     ...real,
     createAccommodation: async (
@@ -72,7 +73,7 @@ vi.mock('../context', () => ({
   },
 }))
 
-const { createStay, deleteStay, updateStay } = await import('../stays')
+const { createStay, deleteStay, updateStay } = await import('../stay-writes')
 const { bookingDeskPayload } = await import('../reservations')
 
 /* -------------------------------------------------------------------- setup */
@@ -133,9 +134,9 @@ describe('a stay and the booking that pays for it', () => {
 
     const [booking] = await listTripReservations(scope, { tripId: trip.id })
     const [stay] = await listTripAccommodations(scope, trip.id)
-    expect(booking?.id).toBe(result.reservationId)
-    expect(stay?.id).toBe(result.stayId)
-    expect(stay?.reservationId).toBe(booking?.id)
+    expect(booking.id).toBe(result.reservationId)
+    expect(stay.id).toBe(result.stayId)
+    expect(stay.reservationId).toBe(booking.id)
     expect(booking).toMatchObject({
       type: 'accommodation',
       startDate: '2026-04-10',
@@ -196,9 +197,9 @@ describe('a stay and the booking that pays for it', () => {
     const [stay] = await listTripAccommodations(scope, trip.id)
     const [expense] = await listTripExpenses(scope, trip.id)
     // Three nights and a total of 42 000: no figure of 14 000 exists anywhere.
-    expect(booking?.priceMinor).toBe(42_000)
-    expect(stay?.priceMinor).toBeNull()
-    expect(expense?.amountMinor).toBe(42_000)
+    expect(booking.priceMinor).toBe(42_000)
+    expect(stay.priceMinor).toBeNull()
+    expect(expense.amountMinor).toBe(42_000)
   })
 
   it('leaves the nights when only the booking is deleted, and clears the link', async () => {
@@ -207,9 +208,9 @@ describe('a stay and the booking that pays for it', () => {
     await deleteReservation(scope, result.reservationId)
 
     const [stay] = await listTripAccommodations(scope, trip.id)
-    expect(stay?.id).toBe(result.stayId)
-    expect(stay?.reservationId).toBeNull()
-    expect(stay?.startDayId).toBe(day(1).id)
+    expect(stay.id).toBe(result.stayId)
+    expect(stay.reservationId).toBeNull()
+    expect(stay.startDayId).toBe(day(1).id)
   })
 
   it('removes both when the reader removes the stay with its booking', async () => {
