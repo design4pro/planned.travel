@@ -6,11 +6,12 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (2)
+## Draft — being written (3)
 
 | Spec                                                                                                                  | Date       | Issue                                                           | Spec PR                                                         | Implementation |
 | --------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
 | [Promotion codes on subscribe and plan change, and a free-unlock pool on staging](2026-09-19-polar-discount-codes.md) | 2026-09-19 | [#599](https://github.com/design4pro/planned.travel/issues/599) | [#600](https://github.com/design4pro/planned.travel/issues/600) | —              |
+| [Document the ON DELETE rule D1 enforces, not the one schema.ts declares](2026-09-19-deployed-on-delete-rules.md)     | 2026-09-19 | [#192](https://github.com/design4pro/planned.travel/issues/192) | —                                                               | —              |
 | [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md)                              | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | [#584](https://github.com/design4pro/planned.travel/issues/584) | —              |
 
 ## Ready — merged, waiting for a build (1)
