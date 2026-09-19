@@ -76,14 +76,16 @@ function enabled(name: string): boolean {
 describe('the trip action menu', () => {
   /**
    * Every reader may copy a trip they can see (PRD #104 decision 6), so Copy is not an owner's
-   * privilege — it is the first of the two items a viewer has, above the star.
+   * privilege — it is the first of the two items a viewer has, above the star. Edit, archive and
+   * delete are owner-only in the repository (`assertTripRole(…, ['owner'])`), so an editor gets the
+   * same two items as a viewer or a colleague who is no member of the trip.
    */
-  it('offers a viewer exactly Copy and Favourite, in that order', async () => {
-    expect(await openMenu(tripCard({ role: null }))).toEqual([
-      'Copy',
-      'Favourite',
-    ])
-  })
+  it.each([['viewer'], ['editor'], [null]] as const)(
+    'offers role %s exactly Copy and Favourite, in that order',
+    async (role) => {
+      expect(await openMenu(tripCard({ role }))).toEqual(['Copy', 'Favourite'])
+    },
+  )
 
   it('keeps Copy at the top of an owner’s longer menu', async () => {
     expect(await openMenu(tripCard({ role: 'owner' }))).toEqual([
