@@ -46,6 +46,7 @@ import type { Trip } from '#/server/db/types'
 
 const stubs = vi.hoisted(() => ({
   scope: null as TenantScope | null,
+  mirrorToRoom: vi.fn(async (): Promise<void> => undefined),
 }))
 
 /**
@@ -61,7 +62,7 @@ vi.mock('../context', () => ({
     }
     return stubs.scope
   },
-  mirrorToRoom: async (): Promise<void> => undefined,
+  mirrorToRoom: stubs.mirrorToRoom,
   patch: (kind: string, id: string, fields: unknown) => ({
     entity: { kind, id },
     op: 'upsert',
@@ -537,10 +538,13 @@ describe('a booking write naming another trip of the same workspace', () => {
       }),
     )
     bookingId = (await onlyBooking()).id
+    stubs.mirrorToRoom.mockClear()
   })
 
   /** Everything the refused write must have left alone. */
   async function expectUntouched(): Promise<void> {
+    expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+
     const booking = await getReservation(scope, bookingId)
     expect(booking?.tripId).toBe(trip.id)
     expect(booking?.title).toBe('Dinner at Den')
