@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as React from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { render as mount, screen } from '@testing-library/react'
+import { render as mount, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
@@ -90,7 +90,12 @@ describe('PlannerAddPlace', () => {
     expect(option.getAttribute('data-value')).toBe('map')
 
     await userEvent.click(option)
-    expect(onArmMap).toHaveBeenCalledOnce()
+    // Once the menu has closed, so the map can take focus; handed the trigger to return it to.
+    await waitFor(() => {
+      expect(onArmMap).toHaveBeenCalledExactlyOnceWith(
+        screen.getByRole('button', { name: 'More ways to add a place' }),
+      )
+    })
   })
 
   it('holds the map option back until the map exists', async () => {

@@ -48,8 +48,9 @@ export function PlannerAddPlace({
 }: PlannerAddPlaceProps) {
   const t = useTranslate()
   const trigger = React.useRef<HTMLButtonElement>(null)
-  // Set by an option that moves focus somewhere else, so the menu does not pull it back.
-  const handedOff = React.useRef(false)
+  // An option that moves focus elsewhere runs once the menu has let go of it: while open the
+  // menu traps focus, and on close it hands focus back to its trigger.
+  const afterClose = React.useRef<(() => void) | null>(null)
 
   const options: Array<AddPlaceOption> = []
   if (onArmMap !== undefined) {
@@ -59,8 +60,7 @@ export function PlannerAddPlace({
       icon: <Crosshair />,
       disabled: !mapReady,
       onSelect: () => {
-        handedOff.current = true
-        onArmMap(trigger.current)
+        afterClose.current = () => onArmMap(trigger.current)
       },
     })
   }
@@ -98,9 +98,11 @@ export function PlannerAddPlace({
             align="end"
             className="w-56"
             onCloseAutoFocus={(event) => {
-              if (!handedOff.current) return
-              handedOff.current = false
+              const run = afterClose.current
+              if (run === null) return
+              afterClose.current = null
               event.preventDefault()
+              run()
             }}
           >
             {options.map((option) => (
