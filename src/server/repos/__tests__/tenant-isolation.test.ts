@@ -226,6 +226,7 @@ import {
   addTripMember,
   archiveTrip,
   canReadTrip,
+  MAX_BOUND_PARAMETERS,
   copyTripContents,
   countTripsByStatus,
   TripRoleError,
@@ -4766,6 +4767,26 @@ describe('tenant isolation', () => {
       expect(harness.statements).toHaveLength(2)
       for (const statement of harness.statements) {
         expect(statement).toMatch(/group by/i)
+      }
+    })
+
+    it('keeps every statement within D1’s bound-parameter limit for a full page of a hundred trips', async () => {
+      const page = [
+        alpha.tripId,
+        ...Array.from({ length: 99 }, (_, index) => `missing-trip-${index}`),
+      ]
+      harness.statements.length = 0
+
+      const counts = await countTripPeople(alpha.tenant.scope, page)
+
+      expect(counts.get(alpha.tripId)).toBeGreaterThan(0)
+      expect(counts.size).toBe(1)
+      // Two chunks, a members and a guests statement each.
+      expect(harness.statements).toHaveLength(4)
+      for (const statement of harness.statements) {
+        expect(statement.split('?').length - 1).toBeLessThanOrEqual(
+          MAX_BOUND_PARAMETERS,
+        )
       }
     })
   })

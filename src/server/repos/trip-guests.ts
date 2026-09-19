@@ -29,6 +29,7 @@ import { runBatch } from './batch'
 import { NotFoundError, RepositoryError } from './context'
 import { listUserProfiles } from './members'
 import {
+  ID_FILTER_CHUNK,
   assertTripRole,
   listTripMembers,
   readableTripFilter,
@@ -298,7 +299,7 @@ export async function listTripParticipants(
 /**
  * How many people are on each of the given trips — members plus guests — keyed by trip id (`01-S7`).
  *
- * Two grouped statements for the whole list, one per table, because its callers are the trip index
+ * Two grouped statements per ninety ids, one per table, because its callers are the trip index
  * and the dashboard, and a query per card is the shape `countTripsByStatus` and `countPlacesPerTrip`
  * already refuse. D1 bills rows read, and both tables lead their composite index with
  * `organization_id`, so each scan is bounded by the tenant.
@@ -313,9 +314,27 @@ export async function countTripPeople(
   tripIds: ReadonlyArray<string>,
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>()
-  if (tripIds.length === 0) {
-    return counts
+  // Chunked because the read predicate binds five parameters of its own beside one per id, so a
+  // full page of a hundred trips is a statement D1 refuses. A trip id sits in exactly one chunk, so
+  // the chunks' counts never overlap and simply add up.
+  const chunks: Array<ReadonlyArray<string>> = []
+  for (let index = 0; index < tripIds.length; index += ID_FILTER_CHUNK) {
+    chunks.push(tripIds.slice(index, index + ID_FILTER_CHUNK))
   }
+  const rows = await Promise.all(
+    chunks.map((chunk) => countPeopleInChunk(scope, chunk)),
+  )
+  for (const row of rows.flat()) {
+    counts.set(row.tripId, (counts.get(row.tripId) ?? 0) + row.value)
+  }
+  return counts
+}
+
+/** One chunk's two grouped statements, members and guests, over the ids the caller may read. */
+async function countPeopleInChunk(
+  scope: TenantScope,
+  tripIds: ReadonlyArray<string>,
+): Promise<ReadonlyArray<{ tripId: string; value: number }>> {
   const readableIds = scope.db
     .select({ id: trips.id })
     .from(trips)
@@ -352,11 +371,7 @@ export async function countTripPeople(
       )
       .groupBy(tripGuests.tripId),
   ])
-
-  for (const row of [...members, ...guests]) {
-    counts.set(row.tripId, (counts.get(row.tripId) ?? 0) + row.value)
-  }
-  return counts
+  return [...members, ...guests]
 }
 
 /* -------------------------------------------------------------------------------------------------
