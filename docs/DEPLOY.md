@@ -876,6 +876,7 @@ edit products:
 | `products:read`           | Resolving product ids on the pricing page and validating §10's four variables at boot. |
 | `webhooks:write`          | Creating the endpoint from the CLI (§9.4) and redelivering an event (§9.7).            |
 | `webhooks:read`           | Reading delivery history when a webhook is misbehaving (§9.7).                         |
+| `discounts:read`          | Resolving a typed promotion code to a discount id (§9.8, **Promotion codes**).         |
 
 The token is presented as `Authorization: Bearer polar_oat_…`. It is server-side only: it lives
 in `POLAR_ACCESS_TOKEN`, is read through the same failing-loudly accessor as every other secret,
@@ -1156,7 +1157,7 @@ email, no second entitlement flip. The same button exists on the dashboard's del
 > `3.134.238.10`, `3.129.111.220`, `52.15.118.168`, and the ranges `74.220.50.0/24` and
 > `74.220.58.0/24` (added 2025-10-27).
 
-### 9.8 The four API calls the product makes
+### 9.8 The API calls the product makes
 
 Paths verified against Polar's published OpenAPI document. Trailing slashes are load-bearing.
 
@@ -1239,6 +1240,47 @@ The order matters, and so does the timing:
 - `POST` returns **`409`** when the order's status makes it ineligible.
 - The receipt is a different document at a different path: `GET /v1/orders/{id}/receipt`, which
   returns its own presigned URL. Invoice ≠ receipt; the billing list labels them separately.
+
+**Promotion codes** — `GET /v1/discounts/`, `GET /v1/discounts/{id}`, `GET /v1/subscriptions/{id}`
+
+```bash
+curl -sS "$POLAR_API/discounts/?limit=100&page=1" -H "Authorization: Bearer $POLAR_ACCESS_TOKEN"
+curl -sS "$POLAR_API/discounts/DISCOUNT_ID"        -H "Authorization: Bearer $POLAR_ACCESS_TOKEN"
+curl -sS "$POLAR_API/subscriptions/SUBSCRIPTION_ID" -H "Authorization: Bearer $POLAR_ACCESS_TOKEN"
+```
+
+A code typed on `/settings/billing` never reaches Polar as text. `GET /v1/discounts/` filters by
+name, not by code, so the Worker pages the list (100 a page, at most 10 pages) and matches `code`
+case-insensitively; a hit is cached in KV for 10 minutes and re-confirmed with
+`GET /v1/discounts/{id}`, a miss for one minute. The paged lookup spends at most a fifth of the
+environment's limit above — 100 lookups a minute in production, 20 in sandbox — and a customer is
+told to try again in a minute past it (`billing.discount.lookup_budget_exhausted`). Every caller
+gets 10 attempts an hour, counted per user, per workspace and per address. A `403` on these calls
+is a token without `discounts:read`: coded requests fail as a configuration error, logged as
+`billing.discount.lookup_forbidden`, and uncoded ones are unaffected.
+
+The resolved id is sent as `discount_id` — in the checkout body, or in a `PATCH` of the
+subscription. Polar's `SubscriptionUpdate` carries `discount_id` only on the product variant, so a
+plan change with a code is sent as `{ "discount_id" }` alone first, then the product, then the
+seats; a code that excludes the product in force rides in the product `PATCH` instead. Before an
+uncoded product change the Worker reads the subscription, and clears a product-restricted discount
+that would not fit the new product with `"discount_id": null`. A `422` on the code-only `PATCH` is
+shown as an invalid code and logged as `billing.discount.rejected` with reason `refused_by_polar`;
+the plan is untouched.
+
+**Owed before production: the sandbox measurements.** The implementation was built so that it
+holds whatever these answer, but they were not measured when it landed (#599). An operator walks
+them in the sandbox organization with a §9.12 code and records the answer here:
+
+| #   | Question                                                                                                      | Answer  |
+| --- | ------------------------------------------------------------------------------------------------------------- | ------- |
+| (a) | Does `GET /v1/discounts/?query=<code>` match on `code`? If so, the lookup can narrow with it.                 | pending |
+| (b) | Does a `{ "discount_id" }` `PATCH` apply only from the next cycle, not to the prorated invoice of the change? | pending |
+| (c) | Does Polar refuse (`422`) a `PATCH` with an expired, exhausted or product-excluded discount?                  | pending |
+| (d) | Does Polar drop or keep a product-restricted discount when the product moves to one it excludes?              | pending |
+
+A different answer to (b) changes what the billing screen promises the customer, and reopens the
+spec's Q1 before the field ships to production.
 
 ### 9.9 No in-app invoice form — settled, with its consequences
 
