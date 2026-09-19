@@ -4,8 +4,8 @@ Status: accepted
 Date: 2026-09-19
 Records: the runner migration of #495, #497, #498 and #563, which was decided in workflow comments
 and pull request descriptions and never written down as a decision.
-Amends: ADR 0021 (its recovery path, `vars.RUNNER_CI` alone, does not bring back the required
-`claude-review` check; `vars.RUNNER_AGENT` is needed too).
+Amends: ADR 0021 (the variable half of its recovery path: `vars.RUNNER_CI` alone does not bring
+back the required `claude-review` check; `vars.RUNNER_AGENT` is needed too).
 
 ## Context
 
@@ -59,15 +59,17 @@ the host that is down.
 **3. The pool is two pools, and a job that spends tokens goes to `agent`.** The `ci` pool mounts
 shared caches (the pnpm store) and is sized for throughput. The `agent` pool mounts nothing, takes
 one job per container, registers `--ephemeral`, and recreates the container from an unmodified
-image before the next job. The three token-spending jobs need that for two separate reasons:
+image before the next job. Each of the three token-spending jobs needs that for a reason of its
+own:
 
-- **They install into `$HOME` on every run.** `claude.ai/install.sh` writes to `$HOME/.local/bin`;
-  on a runner that outlived its job those installs would accumulate.
-- **`bypassPermissions` is only safe on a runner that does not outlive its job.** The permission
-  mode was argued for on the grounds that "the runner is disposable". On `ubuntu-latest` that was a
-  property of GitHub's platform; on the pool it is a property of two lines in `host/runner`, and
-  only the `agent` pool has them. `claude.yml` holds `contents: write` for forty turns - nothing it
-  leaves behind may reach the next job.
+- **`sentry-triage.yml`'s `sweep` installs into `$HOME` on every run.** `claude.ai/install.sh`
+  writes to `$HOME/.local/bin`; on a runner that outlived its job those installs would accumulate.
+- **`claude-review` runs with `bypassPermissions`, which is only safe on a runner that does not
+  outlive its job.** The permission mode was argued for on the grounds that "the runner is
+  disposable". On `ubuntu-latest` that was a property of GitHub's platform; on the pool it is a
+  property of two lines in `host/runner`, and only the `agent` pool has them.
+- **`claude.yml` holds `contents: write` for forty turns** - nothing it leaves behind may reach the
+  next job.
 
 `rearm-review-threads` sits in `claude-code-review.yml` but runs on `ci`: it runs one repository
 script and spends no tokens.
@@ -88,10 +90,12 @@ budget:
 ## Consequences
 
 - **CI and the agents stop costing hosted minutes, and start costing one machine's availability.**
-  When the host is down, no pull request in either branch can merge: both the `main` and `develop`
-  rulesets require `lint · typecheck · build`, `unit tests`, `e2e · merged report` and `merge-gate`
-  (on `RUNNER_CI`) **and** `claude-review` (on `RUNNER_AGENT`).
-- **Recovering during a host outage needs both pool variables.** Set `RUNNER_CI` and
+  When the host is down, no pull request in either branch can merge through its checks: both the
+  `main` and `develop` rulesets require `lint · typecheck · build`, `unit tests`,
+  `e2e · merged report` and `merge-gate` (on `RUNNER_CI`) **and** `claude-review` (on
+  `RUNNER_AGENT`). The admin bypass ADR 0021 names is the other way through, and it skips the checks
+  rather than running them.
+- **Recovering the checks during a host outage needs both pool variables.** Set `RUNNER_CI` and
   `RUNNER_AGENT` to `["ubuntu-latest"]`. With `RUNNER_CI` alone CI comes back and the promotion
   pull request opens green, and it still cannot merge, because the required `claude-review` check is
   queued against a dead `agent` pool. Unset both once the host is back.
@@ -116,9 +120,11 @@ budget:
   two binaries `ubuntu-latest` ships and the pool image did not. `CODE_REVIEW.md` now asks that a
   `runs-on` change show a run of the job on its new runner, and that every tool it calls is installed
   by the workflow rather than inherited; for a required check or a shipping job a gap blocks.
-- **A `runs-on` change in the Claude workflows is not exercised by the pull request that makes it.**
+- **A `runs-on` change in the Claude workflows is half exercised by the pull request that makes it.**
+  GitHub evaluates `runs-on` when it schedules the job, so the job lands on its new runner on the
+  proposing branch - which is how phase 4 found `unzip` and `gh` missing (#497).
   `claude-code-action`'s OIDC exchange refuses a workflow that differs from the default-branch copy,
-  so those jobs settle only once the change reaches `main`.
+  so the review work itself settles only once the change reaches `main`.
 - **Where the reasoning lives.** This record owns the why. The workflow comments keep only what an
   operator needs at the `runs-on` line - which variable, what unset means, what to set in an outage -
   and point here. `claude.yml`, `claude-code-review.yml` and `merge-gate.yml` are rendered by
