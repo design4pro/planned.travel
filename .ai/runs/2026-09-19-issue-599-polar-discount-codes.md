@@ -91,6 +91,6 @@ specific error and the plan is unchanged. An operator script seeds single-use 10
 
 ### Phase 3: UI
 
-- [ ] 3.1 Copy keys in all 23 locales
-- [ ] 3.2 `billing.tsx` field, apply button, rejection handling, alerts, and component tests
-- [ ] 3.3 §9.11 row 9
+- [x] 3.1 Copy keys in all 23 locales — 390da6a59
+- [x] 3.2 `billing.tsx` field, apply button, rejection handling, alerts, and component tests — 179e514e7
+- [x] 3.3 §9.11 row 9 — 4cda8b0b3 (row landed unwalked; the staging walk is owed by a human, Decision 3)
