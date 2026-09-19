@@ -35,13 +35,19 @@
       * {
         box-sizing: border-box;
       }
+      /* Type sizes are the product's own steps, copied from src/styles/tokens.css:
+         --text-micro 11px, --text-caption 12px, --text-label 13px, --text-body 15px.
+         There is no 14px step in the product, so none is used here. The planner rail
+         carries its hierarchy with weight and the --ink / --ink-3 / --ink-4 ramp
+         rather than with size, exactly as src/components/planner/day-section.tsx does
+         (text-label font-bold for the title, text-caption for the date and stops). */
       body {
         margin: 0;
         padding: 24px 16px;
         background: var(--bg);
         color: var(--ink);
         font:
-          14px/1.4 system-ui,
+          15px/1.55 system-ui,
           sans-serif;
       }
       .wrap {
@@ -96,6 +102,7 @@
         font-size: 12px;
       }
       .title {
+        font-size: 13px; /* --text-label, as day-section.tsx uses */
         font-weight: 700;
       }
       .date {
@@ -162,7 +169,7 @@
       }
       .pop h3 {
         margin: 0 0 10px;
-        font-size: 14px;
+        font-size: 15px; /* --text-body */
       }
       .grid {
         display: grid;
@@ -289,7 +296,11 @@
                 <div class="stops">1 stop</div>
               </div>
             </div>
-            <span class="badge sk" role="img" aria-label="Loading weather"></span>
+            <span
+              class="badge sk"
+              role="img"
+              aria-label="Loading weather"
+            ></span>
           </div>
           <div class="row">
             <div class="head">

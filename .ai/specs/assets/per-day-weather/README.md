@@ -2,8 +2,14 @@
 
 Dependency-free reproductions of the badge and its popover for
 `.ai/specs/2026-09-19-per-day-weather.md`. They are illustrations of the proposed design, not app
-code: the markup is standalone HTML and the palette is copied from `src/styles/tokens.css`
-(`:71-79` light, `:290-298` dark) so the frames preview the token-based design the spec mandates.
+code: the markup is standalone HTML, and both the palette (`src/styles/tokens.css:71-79` light,
+`:290-298` dark) and the type steps (`--text-micro` 11px, `--text-caption` 12px, `--text-label`
+13px, `--text-body` 15px, `:665-683`) are copied from the tokens, so the frames preview the
+token-based design the spec mandates rather than a scale invented here. The product has no 14px
+step and neither does this file. Those steps sit closer together than a generic type-scale check
+expects, which is why `flat-type-hierarchy` is suppressed for this file in `.impeccable/config.json`
+as it is for the other spec mockups: the planner rail gets its hierarchy from weight and the
+`--ink` / `--ink-3` / `--ink-4` ramp, exactly as `src/components/planner/day-section.tsx` does.
 
 | File                      | Shows                                                                                                                                                                                                                                                                                                                                         |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
