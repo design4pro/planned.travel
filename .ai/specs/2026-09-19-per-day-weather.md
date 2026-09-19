@@ -99,6 +99,11 @@ so the boundary moves with the provider rather than with our guess.
 - **Open-Meteo commercial subscription.** Same capability, but a recurring bill. Once the free
   sources above cover the need, `docs/ARCHITECTURE.md` §8's budget does not justify it.
 - **Meteostat.** CC BY-NC, excluded by the same clause.
+- **A twelve-column 2-hour strip, as the reference renders it** (#631). Locationforecast's `compact`
+  product carries `next_1_hours` for only the first two to three days; beyond that the finest step is
+  six hours. A strip whose resolution changes between day 2 and day 4 of one trip is harder to read
+  than a uniform one, so every forecast day gets four 6-hour slots. The `complete` product does not
+  help: it adds parameters per step, not steps.
 - **Per-date MET Sunrise 3.0 calls.** A trip of fourteen days would cost fourteen calls for numbers a
   pure function computes exactly.
 - **Estimate from "the same date last year"** (a single past year, as `06-S7` sketched). One year is
@@ -454,6 +459,7 @@ user reports a blank badge.
 | Trip spanning two time zones                                       | Days are bucketed and sun times computed in the trip's single zone. Wrong by the offset for the far leg - the limitation recorded in the Data Model, not a defect to file. |
 | Polar day or polar night                                           | `sun.ts` returns `null` for rise/set. The popover says "No sunrise" or "No sunset", shown as a dash with that accessible name.                                             |
 | Trip in the far future (for example next year)                     | Every day is an estimate with its marker.                                                                                                                                  |
+| A recorded or estimated day                                        | No hourly strip at all. `slots` is `null` and the popover omits the region entirely - never empty columns, and never a value interpolated from the daily min/max.          |
 | Two days at the same place                                         | One call; both days are served from the same entry.                                                                                                                        |
 | The forecast window's last day is partial                          | It is not a forecast day, so it is an estimate.                                                                                                                            |
 
