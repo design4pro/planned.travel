@@ -221,7 +221,6 @@ const messages = {
   'dashboard.upNext': 'Ближайшая поездка',
   'dashboard.openPlan': 'Открыть план',
   'dashboard.hero.travellers': 'Спутники',
-  'dashboard.hero.dates': 'Даты поездки',
   'dashboard.hero.datesMissing': 'Добавьте даты, чтобы появились дни',
   'dashboard.hero.startsIn': 'Старт через',
   'dashboard.hero.started': 'Старт был',

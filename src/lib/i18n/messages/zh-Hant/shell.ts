@@ -157,7 +157,6 @@ const messages = {
   'dashboard.upNext': '接下來',
   'dashboard.openPlan': '開啟計劃',
   'dashboard.hero.travellers': '同行的人',
-  'dashboard.hero.dates': '行程日期',
   'dashboard.hero.datesMissing': '填上日期就能排出每一天',
   'dashboard.hero.startsIn': '距出發',
   'dashboard.hero.started': '已出發',

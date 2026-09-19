@@ -223,7 +223,6 @@ const messages = {
   'dashboard.upNext': 'Najbliższy wyjazd',
   'dashboard.openPlan': 'Otwórz plan',
   'dashboard.hero.travellers': 'Podróżni',
-  'dashboard.hero.dates': 'Daty wyjazdu',
   'dashboard.hero.datesMissing': 'Dodaj daty, aby zbudować dni',
   'dashboard.hero.startsIn': 'Start za',
   'dashboard.hero.started': 'Start był',

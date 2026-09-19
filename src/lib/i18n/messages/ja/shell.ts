@@ -170,7 +170,6 @@ const messages = {
   'dashboard.upNext': '次の予定',
   'dashboard.openPlan': '計画を開く',
   'dashboard.hero.travellers': '旅の人数',
-  'dashboard.hero.dates': '旅の日程',
   'dashboard.hero.datesMissing': '日程を入れると日ごとに組み立てます',
   'dashboard.hero.startsIn': '出発まで',
   'dashboard.hero.started': '出発から',

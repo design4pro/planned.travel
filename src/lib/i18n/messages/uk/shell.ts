@@ -216,7 +216,6 @@ const messages = {
   'dashboard.upNext': 'Найближча поїздка',
   'dashboard.openPlan': 'Відкрити план',
   'dashboard.hero.travellers': 'Мандрівники',
-  'dashboard.hero.dates': 'Дати поїздки',
   'dashboard.hero.datesMissing': 'Додайте дати, щоб з’явилися дні',
   'dashboard.hero.startsIn': 'Старт за',
   'dashboard.hero.started': 'Старт був',

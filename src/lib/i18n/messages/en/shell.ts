@@ -273,7 +273,6 @@ const messages = {
   'dashboard.upNext': 'Up next',
   'dashboard.openPlan': 'Open the plan',
   'dashboard.hero.travellers': 'Travellers',
-  'dashboard.hero.dates': 'Trip dates',
   'dashboard.hero.datesMissing': 'Add dates to build days',
   'dashboard.hero.startsIn': 'Starts in',
   'dashboard.hero.started': 'Started',

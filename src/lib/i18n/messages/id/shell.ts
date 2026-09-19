@@ -199,7 +199,6 @@ const messages = {
   'dashboard.upNext': 'Berikutnya',
   'dashboard.openPlan': 'Buka rencananya',
   'dashboard.hero.travellers': 'Pelancong',
-  'dashboard.hero.dates': 'Tanggal',
   'dashboard.hero.datesMissing': 'Isi tanggalnya untuk menyusun hari',
   'dashboard.hero.startsIn': 'Dimulai dalam',
   'dashboard.hero.started': 'Sudah mulai',

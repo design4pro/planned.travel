@@ -206,7 +206,6 @@ const messages = {
   'dashboard.upNext': 'À venir',
   'dashboard.openPlan': 'Ouvrir le programme',
   'dashboard.hero.travellers': 'Voyageurs',
-  'dashboard.hero.dates': 'Dates',
   'dashboard.hero.datesMissing': 'Ajoutez des dates pour créer les journées',
   'dashboard.hero.startsIn': 'Départ dans',
   'dashboard.hero.started': 'Depuis',

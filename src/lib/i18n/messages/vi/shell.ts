@@ -206,7 +206,6 @@ const messages = {
   'dashboard.upNext': 'Sắp tới',
   'dashboard.openPlan': 'Mở lịch trình',
   'dashboard.hero.travellers': 'Người đi',
-  'dashboard.hero.dates': 'Ngày đi',
   'dashboard.hero.datesMissing': 'Thêm ngày để dựng lịch trình',
   'dashboard.hero.startsIn': 'Còn',
   'dashboard.hero.started': 'Đã khởi hành',

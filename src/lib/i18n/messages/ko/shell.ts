@@ -166,7 +166,6 @@ const messages = {
   'dashboard.upNext': '다음 일정',
   'dashboard.openPlan': '계획 열기',
   'dashboard.hero.travellers': '여행자',
-  'dashboard.hero.dates': '여행 날짜',
   'dashboard.hero.datesMissing': '날짜를 넣으면 하루씩 짜 드려요',
   'dashboard.hero.startsIn': '출발까지',
   'dashboard.hero.started': '출발한 뒤',

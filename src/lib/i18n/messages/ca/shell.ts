@@ -211,7 +211,6 @@ const messages = {
   'dashboard.upNext': 'A continuació',
   'dashboard.openPlan': 'Obre el pla',
   'dashboard.hero.travellers': 'Viatgers',
-  'dashboard.hero.dates': 'Dates',
   'dashboard.hero.datesMissing': 'Afegeix dates per crear els dies',
   'dashboard.hero.startsIn': 'Comença en',
   'dashboard.hero.started': 'Començat fa',

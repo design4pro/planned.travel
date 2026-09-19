@@ -221,7 +221,6 @@ const messages = {
   'dashboard.upNext': 'Als Nächstes',
   'dashboard.openPlan': 'Ablauf öffnen',
   'dashboard.hero.travellers': 'Mitreisende',
-  'dashboard.hero.dates': 'Reisedaten',
   'dashboard.hero.datesMissing': 'Daten eintragen, dann entstehen die Tage',
   'dashboard.hero.startsIn': 'Beginnt in',
   'dashboard.hero.started': 'Begonnen vor',

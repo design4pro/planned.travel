@@ -220,7 +220,6 @@ const messages = {
   'dashboard.upNext': 'Nejbližší cesta',
   'dashboard.openPlan': 'Otevřít plán',
   'dashboard.hero.travellers': 'Cestující',
-  'dashboard.hero.dates': 'Termín cesty',
   'dashboard.hero.datesMissing': 'Zadejte termín a vzniknou dny',
   'dashboard.hero.startsIn': 'Start za',
   'dashboard.hero.started': 'Start byl',

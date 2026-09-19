@@ -208,7 +208,6 @@ const messages = {
   'dashboard.upNext': 'A seguir',
   'dashboard.openPlan': 'Abrir o roteiro',
   'dashboard.hero.travellers': 'Viajantes',
-  'dashboard.hero.dates': 'Datas',
   'dashboard.hero.datesMissing': 'Adicione datas para criar os dias',
   'dashboard.hero.startsIn': 'Começa em',
   'dashboard.hero.started': 'Começou há',

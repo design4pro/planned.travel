@@ -231,7 +231,6 @@ const messages = {
   'dashboard.upNext': 'التالي',
   'dashboard.openPlan': 'افتح الخطة',
   'dashboard.hero.travellers': 'المسافرون',
-  'dashboard.hero.dates': 'تواريخ الرحلة',
   'dashboard.hero.datesMissing': 'أضف التواريخ لتُبنى الأيام',
   'dashboard.hero.startsIn': 'تبدأ بعد',
   'dashboard.hero.started': 'بدأت',

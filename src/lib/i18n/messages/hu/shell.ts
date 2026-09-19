@@ -208,7 +208,6 @@ const messages = {
   'dashboard.upNext': 'Következik',
   'dashboard.openPlan': 'Terv megnyitása',
   'dashboard.hero.travellers': 'Utazók',
-  'dashboard.hero.dates': 'Utazás dátumai',
   'dashboard.hero.datesMissing':
     'Adjon meg dátumokat, hogy felépüljenek a napok',
   'dashboard.hero.startsIn': 'Indulásig',

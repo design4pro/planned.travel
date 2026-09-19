@@ -212,7 +212,6 @@ const messages = {
   'dashboard.upNext': 'Eerstvolgend',
   'dashboard.openPlan': 'Open het dagplan',
   'dashboard.hero.travellers': 'Reisgenoten',
-  'dashboard.hero.dates': 'Reisdata',
   'dashboard.hero.datesMissing': 'Vul data in, dan ontstaan de dagen',
   'dashboard.hero.startsIn': 'Begint over',
   'dashboard.hero.started': 'Begonnen',

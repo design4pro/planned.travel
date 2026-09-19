@@ -205,7 +205,6 @@ const messages = {
   'dashboard.upNext': 'Närmast',
   'dashboard.openPlan': 'Öppna dagsplanen',
   'dashboard.hero.travellers': 'Ressällskap',
-  'dashboard.hero.dates': 'Resdatum',
   'dashboard.hero.datesMissing': 'Fyll i datum, så byggs dagarna',
   'dashboard.hero.startsIn': 'Börjar om',
   'dashboard.hero.started': 'Startade för',

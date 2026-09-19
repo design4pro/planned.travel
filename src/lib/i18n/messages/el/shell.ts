@@ -197,7 +197,6 @@ const messages = {
   'dashboard.upNext': 'Ακολουθεί',
   'dashboard.openPlan': 'Ανοίξτε το πρόγραμμα',
   'dashboard.hero.travellers': 'Ταξιδιώτες',
-  'dashboard.hero.dates': 'Ημερομηνίες',
   'dashboard.hero.datesMissing': 'Βάλτε ημερομηνίες για να φτιαχτούν οι ημέρες',
   'dashboard.hero.startsIn': 'Ξεκινά σε',
   'dashboard.hero.started': 'Ξεκίνησε',

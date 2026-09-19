@@ -204,7 +204,6 @@ const messages = {
   'dashboard.upNext': 'Sırada',
   'dashboard.openPlan': 'Programı aç',
   'dashboard.hero.travellers': 'Yolcular',
-  'dashboard.hero.dates': 'Gezi tarihleri',
   'dashboard.hero.datesMissing': 'Günlerin kurulması için tarih ekleyin',
   'dashboard.hero.startsIn': 'Başlamasına',
   'dashboard.hero.started': 'Başladı',
