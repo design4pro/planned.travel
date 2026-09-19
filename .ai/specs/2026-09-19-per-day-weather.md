@@ -149,7 +149,8 @@ src/components/planner/day-weather-badge.tsx       badge + popover with the full
   location's days of that provider's kinds resolve to `unavailable` **without an outbound call and
   without a meter spend**. The entry holds no tenant data, like every other key here.
 - **Batching.** The server function groups the trip's days by rounded coordinate and makes **at most
-  one call per location and provider**:
+  one call per location and kind** — not per provider, because NASA POWER answers two of the three
+  kinds through two different endpoints:
   - one Locationforecast call covers every forecast day at that location;
   - one NASA daily call (`start`..`end` spanning the past days) covers every recorded day;
   - one climatology call covers every estimated day.
@@ -163,8 +164,9 @@ src/components/planner/day-weather-badge.tsx       badge + popover with the full
   second are twenty simultaneous calls from one `User-Agent` while every monthly ceiling is intact.
   MET's limit is 20 requests per second **per application**. The bound is therefore stated here and
   checked in phase 2: at most one MET call per location, at most 12 locations per request (below),
-  and a forecast entry that lives at least an hour - so reaching 20 req/s needs more than twenty
-  cold, distinct-location board opens inside one second, which is far above our volumes. If the
+  and a location re-validated no more often than its `Expires` (Data Model) - so reaching 20 req/s
+  needs more than twenty distinct-location board opens inside one second, all of them cold or past
+  `Expires`, which is far above our volumes. If the
   outbound counters (`src/server/metering/outbound.ts`) ever show that ceiling approached, the
   answer is a KV token bucket under `wx:v1:ratelimit:met-norway:<unix-second>`, and this paragraph
   is where that decision gets recorded.
@@ -182,15 +184,33 @@ because they hold what a traveller wrote. KV only, in the existing `KV` binding:
 
 | Key                                         | Value                                                                                                                                               | TTL                                                 |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `wx:v1:forecast:<lat4>:<lng4>`              | `{ v:1, fetchedAt, lastModified, expires, series: RawStep[] }`: the provider's timeseries, trimmed to the fields we read, **not** grouped into days | `clamp(secondsUntilExpires, 60, 21600)`             |
+| `wx:v1:forecast:<lat4>:<lng4>`              | `{ v:1, fetchedAt, lastModified, expires, series: RawStep[] }`: the provider's timeseries, trimmed to the fields we read, **not** grouped into days | 6 h, fixed — retention, not freshness (below)       |
 | `wx:v1:recorded:<lat1>:<lng1>:<YYYY-MM-DD>` | `{ v:1, fetchedAt, day: RecordedDay }`                                                                                                              | 24 h if the date is under 90 days old, else 30 days |
 | `wx:v1:estimate:<lat1>:<lng1>`              | `{ v:1, fetchedAt, months: MonthlyMean[12] }`                                                                                                       | 30 days                                             |
 
-- **The forecast TTL never undercuts `Expires`.** MET's terms make honouring it mandatory, so the
-  entry lives at least until then: `clamp(secondsUntilExpires, 60, 21600)` floors a missing or past
-  header at 60 s and caps a pathological one at six hours, and it never rounds _down_ to an hour the
-  way a `min(3600, …)` would. The re-fetch after expiry carries `If-Modified-Since`, so an unchanged
-  forecast costs a 304 rather than a body.
+- **Freshness is the stored `expires`; the KV TTL is only retention.** MET's terms make honouring
+  `Expires` mandatory, and the obvious way to encode that - a TTL equal to the seconds until
+  `Expires` - quietly makes the conditional re-fetch below impossible. `lastModified` lives inside
+  this same entry, so an entry that is evicted at the instant it goes stale takes the validator with
+  it, and there is never a moment where the code holds a stale body and something to send in
+  `If-Modified-Since`. The two concerns are therefore split. The entry is **retained** for a fixed
+  6 h whatever the header says, and is judged **fresh** at read time by comparing `now` against the
+  `expires` field in the value:
+  - `now < expires` → a hit. Served without an outbound call and without a rate unit, so `Expires`
+    is honoured exactly: a reading is never served past it without asking MET first.
+  - `now >= expires`, entry present → a **conditional re-fetch** carrying
+    `If-Modified-Since: lastModified`. A `304` keeps `series` untouched and rewrites the entry with
+    the response's new `Expires` and a fresh 6 h retention; a `200` replaces it wholesale. Either
+    way it is one outbound call and one rate unit, like any other miss - the 304 saves MET a body,
+    not us a call.
+  - no entry → an unconditional fetch, as on a cold cache.
+
+  Six hours is the retention, not a freshness claim: it is long enough that a board reopened later
+  the same day still holds a validator to send, and short enough that a coordinate nobody revisits
+  leaves nothing behind for a day. A missing or already-past `Expires` header is floored at 60 s
+  from `fetchedAt`, so a broken header degrades to re-validating often rather than to serving stale
+  data forever.
+
 - `<lat4>` means rounded to 4 decimals, which is also MET's truncation rule. `<lat1>` means rounded to
   1 decimal. NASA's grid is about 0.5°, so a finer key only fragments the cache for the same cell.
 - **Days are grouped at read time, never in the cache.** Two trips at the same coordinate can have
@@ -237,7 +257,9 @@ because they hold what a traveller wrote. KV only, in the existing `KV` binding:
 **Limits.** A fourth rate metric, `weather_lookups_per_month`, goes into `RATE_METRICS` and
 `PLAN_RATE_CEILINGS` (`src/server/billing/limits.ts:120-189`, whose comment "All three are far below…"
 becomes "All four", with a paragraph for weather): free 300, solo 3,000, crew 12,000. Only
-a cache miss spends it, one unit per outbound call. When the remaining budget is smaller than the
+an outbound call spends it, one unit each — a miss, and equally the conditional re-fetch of a
+forecast entry past its `expires`, whose 304 saves MET a body but is still a request. When the
+remaining budget is smaller than the
 number of misses, calls are spent in the order **forecast → estimate → recorded**: the near-term day
 is the one a traveller acts on. Everything not reached is `unavailable`, and a test covers a
 budget of 1 against 3 needed calls. The numbers follow the geocode reasoning in that
@@ -383,9 +405,10 @@ export const loadTripWeather: ServerFn<
 - Motion: the popover uses the existing primitive's motion, and `prefers-reduced-motion` is honoured
   by it. Keyboard: Tab reaches the badge, Enter/Space opens it, Escape closes it.
 
-Illustrative mockup (static, not app code): `assets/per-day-weather/mockup-01-day-rows.html`,
-rendered as `mockup-01-day-rows-light.png`, `mockup-02-day-rows-dark.png` and
-`mockup-03-day-rows-mobile.png` in the same folder.
+Illustrative mockup (static, not app code): `assets/per-day-weather/mockup-01-day-rows.html`. Open it
+in a browser for the light, dark and 360 px views; rendered frames are attached to this spec's pull
+request rather than committed, because `.ai/specs/AGENTS.md` reserves `assets/` for the `.html`
+reproduction and nothing else.
 
 ## 📝 Visual change expected
 
@@ -405,40 +428,47 @@ rendered as `mockup-01-day-rows-light.png`, `mockup-02-day-rows-dark.png` and
 New keys in `src/lib/i18n/messages/en/trips.ts`. The implementation lands every one of them in all 23
 locales in the same change (`i18n-messages` skill).
 
-| Key                                   | en text                                               |
-| ------------------------------------- | ----------------------------------------------------- |
-| `plan.weather.badge.forecast`         | `Forecast: {condition}, high {max}, low {min}`        |
-| `plan.weather.badge.recorded`         | `Recorded: high {max}, low {min}`                     |
-| `plan.weather.badge.estimate`         | `Estimate: typical high {max}, low {min}`             |
-| `plan.weather.badge.unavailable`      | `Weather unavailable for this day`                    |
-| `plan.weather.badge.notYetRecorded`   | `Not yet recorded`                                    |
-| `plan.weather.badge.loading`          | `Loading weather`                                     |
-| `plan.weather.panel.title`            | `Weather for {date}`                                  |
-| `plan.weather.panel.precipitation`    | `Precipitation`                                       |
-| `plan.weather.panel.probability`      | `{percent} chance`                                    |
-| `plan.weather.panel.wind`             | `Wind`                                                |
-| `plan.weather.panel.sunrise`          | `Sunrise`                                             |
-| `plan.weather.panel.sunset`           | `Sunset`                                              |
-| `plan.weather.panel.slot.night`       | `Night`                                               |
-| `plan.weather.panel.slot.morning`     | `Morning`                                             |
-| `plan.weather.panel.slot.afternoon`   | `Afternoon`                                           |
-| `plan.weather.panel.slot.evening`     | `Evening`                                             |
-| `plan.weather.panel.estimateNote`     | `A long-term average for this month, not a forecast.` |
-| `plan.weather.panel.recordedNote`     | `Measured values for this day.`                       |
-| `plan.weather.attribution.metNorway`  | `Forecast data: MET Norway, CC BY 4.0`                |
-| `plan.weather.attribution.nasaPower`  | `Data: NASA Langley Research Center POWER Project`    |
-| `plan.weather.condition.clear`        | `Clear`                                               |
-| `plan.weather.condition.fair`         | `Fair`                                                |
-| `plan.weather.condition.partlyCloudy` | `Partly cloudy`                                       |
-| `plan.weather.condition.cloudy`       | `Cloudy`                                              |
-| `plan.weather.condition.fog`          | `Fog`                                                 |
-| `plan.weather.condition.rain`         | `Rain`                                                |
-| `plan.weather.condition.heavyRain`    | `Heavy rain`                                          |
-| `plan.weather.condition.sleet`        | `Sleet`                                               |
-| `plan.weather.condition.snow`         | `Snow`                                                |
-| `plan.weather.condition.thunder`      | `Thunder`                                             |
-| `plan.weather.panel.noSunrise`        | `No sunrise`                                          |
-| `plan.weather.panel.noSunset`         | `No sunset`                                           |
+| Key                                     | en text                                               |
+| --------------------------------------- | ----------------------------------------------------- |
+| `plan.weather.badge.forecast`           | `Forecast: {condition}, high {max}, low {min}`        |
+| `plan.weather.badge.recorded`           | `Recorded: high {max}, low {min}`                     |
+| `plan.weather.badge.estimate`           | `Estimate: typical high {max}, low {min}`             |
+| `plan.weather.badge.unavailable`        | `Weather unavailable for this day`                    |
+| `plan.weather.badge.notYetRecorded`     | `Not yet recorded`                                    |
+| `plan.weather.badge.loading`            | `Loading weather`                                     |
+| `plan.weather.panel.title`              | `Weather for {date}`                                  |
+| `plan.weather.panel.temperature`        | `High / low`                                          |
+| `plan.weather.panel.temperatureTypical` | `Typical high / low`                                  |
+| `plan.weather.panel.precipitation`      | `Precipitation`                                       |
+| `plan.weather.panel.probability`        | `{percent} chance`                                    |
+| `plan.weather.panel.wind`               | `Wind`                                                |
+| `plan.weather.panel.sunrise`            | `Sunrise`                                             |
+| `plan.weather.panel.sunset`             | `Sunset`                                              |
+| `plan.weather.panel.slot.night`         | `Night`                                               |
+| `plan.weather.panel.slot.morning`       | `Morning`                                             |
+| `plan.weather.panel.slot.afternoon`     | `Afternoon`                                           |
+| `plan.weather.panel.slot.evening`       | `Evening`                                             |
+| `plan.weather.panel.estimateNote`       | `A long-term average for this month, not a forecast.` |
+| `plan.weather.panel.recordedNote`       | `Measured values for this day.`                       |
+| `plan.weather.attribution.metNorway`    | `Forecast data: MET Norway, CC BY 4.0`                |
+| `plan.weather.attribution.nasaPower`    | `Data: NASA Langley Research Center POWER Project`    |
+| `plan.weather.condition.clear`          | `Clear`                                               |
+| `plan.weather.condition.fair`           | `Fair`                                                |
+| `plan.weather.condition.partlyCloudy`   | `Partly cloudy`                                       |
+| `plan.weather.condition.cloudy`         | `Cloudy`                                              |
+| `plan.weather.condition.fog`            | `Fog`                                                 |
+| `plan.weather.condition.rain`           | `Rain`                                                |
+| `plan.weather.condition.heavyRain`      | `Heavy rain`                                          |
+| `plan.weather.condition.sleet`          | `Sleet`                                               |
+| `plan.weather.condition.snow`           | `Snow`                                                |
+| `plan.weather.condition.thunder`        | `Thunder`                                             |
+| `plan.weather.panel.noSunrise`          | `No sunrise`                                          |
+| `plan.weather.panel.noSunset`           | `No sunset`                                           |
+
+The popover's temperature row takes `plan.weather.panel.temperature` for a `forecast` and a
+`recorded` day and `plan.weather.panel.temperatureTypical` for an `estimate`: the estimate is a
+long-term average, and a row labelled "High / low" over it would read as a prediction. They are two
+keys rather than one interpolated string because the wording differs, not a word inside it.
 
 MET's symbol codes are mapped to the condition groups by a table in `day-weather-badge.tsx`'s model
 file; the day/night suffix is dropped for the label.
@@ -479,7 +509,11 @@ them.
 
 - **AC1** A 14-day single-city trip on a cold cache makes exactly 3 outbound calls and spends exactly
   3 rate units (`weather.test.ts`).
-- **AC2** The same trip on a warm cache makes 0 outbound calls and spends 0 rate units.
+- **AC2** The same trip on a warm cache — every entry present and, for the forecast, still inside
+  its `expires` — makes 0 outbound calls and spends 0 rate units.
+- **AC2b** A forecast entry that is present but past its `expires` produces exactly one conditional
+  request carrying `If-Modified-Since`, and a `304` answer leaves the cached `series` unchanged
+  while moving `expires` forward.
 - **AC3** A MET outage leaves every `recorded` and `estimate` day rendering, and `loadTripWeather`
   resolves rather than rejects.
 - **AC4** A ceiling of 0 produces `unavailable` for every uncached day with no outbound call.
@@ -580,8 +614,10 @@ Each phase is one pull request and leaves `develop` green.
    sets no `Accept-Encoding` of its own: the Workers runtime negotiates content encoding on every
    outbound `fetch`, which is what satisfies MET's compression term. It normalises the timeseries into full local days (the trip's time zone), producing min/max,
    summed precipitation, max probability, max wind, a dominant symbol and four 6-hour slots, and it
-   returns `expires`. Tests use a recorded fixture: day bucketing across a time-zone offset, dropping a
-   partial last day, and a 304 re-using the cached entry.
+   returns `expires`. A `304` carries no body, so the client reports it as such and returns only the
+   response's fresh `expires` and `lastModified`; the caller keeps the cached `series`. Tests use a
+   recorded fixture: day bucketing across a time-zone offset, dropping a partial last day, and a 304
+   returning the new headers without a series.
 5. Write `src/server/weather/nasa-power.ts` with `createNasaPowerClient({ fetch })`, `daily(lat, lng,
 start, end)` using `T2M_MAX,T2M_MIN,PRECTOTCORR,WS2M`, `community=AG`, `time-standard=LST`, and
    `climatology(lat, lng)` using `T2M_MAX,T2M_MIN,PRECTOTCORR` (no wind, because an estimate does not
@@ -595,14 +631,19 @@ start, end)` using `T2M_MAX,T2M_MIN,PRECTOTCORR,WS2M`, `community=AG`, `time-sta
    together; a day with no coordinate groups nowhere.
 
 6b. Write the **read-through half**: `resolveTripWeather(runtime, days, today, timeZone)` - the KV
-read per the key/TTL table, `spendRateUnit` per miss in the order forecast → estimate →
+read per the key/TTL table, with the forecast entry's freshness taken from its stored `expires`
+rather than from its presence (Data Model), `spendRateUnit` per outbound call - a miss or a
+conditional re-fetch alike - in the order forecast → estimate →
 recorded, `callProvider` around each call, the `wx:v1:fail:` negative entry on any vendor error,
 `Promise.allSettled` with the 8 s deadline and the 12-location cap, and the mapping of every
 provider-side error to `unavailable`. Tests, with an in-memory KV, fake counters and a fake
 fetch:
 
-- one call per location and provider for a fourteen-day trip;
-- a warm cache making zero calls;
+- one call per location and kind for a fourteen-day trip (three calls at one location: one MET
+  Locationforecast, one NASA daily, one NASA climatology);
+- a warm cache - every entry present and inside its `expires` - making zero calls (AC2);
+- a forecast entry present but past its `expires`: exactly one conditional request, and a `304`
+  answer re-using the cached `series` while moving `expires` forward and spending one unit (AC2b);
 - a malformed entry treated as a miss;
 - an outage on one vendor leaving the other kinds intact, writing the negative entry, and the
   next resolution spending **no** unit and making **no** call while it lives;
