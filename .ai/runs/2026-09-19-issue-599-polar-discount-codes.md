@@ -77,6 +77,8 @@ specific error and the plan is unchanged. An operator script seeds single-use 10
 
 ## Progress
 
+PR: #617
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Staging pool
