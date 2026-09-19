@@ -67,6 +67,19 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'إضافة ملاحظة',
   'plan.note.addForDay': 'إضافة ملاحظة، {day}',
+  'plan.addPlace.label': 'إضافة مكان',
+  'plan.addPlace.more': 'طرق أخرى لإضافة مكان',
+  'plan.addPlace.option.map': 'ضعه على الخريطة',
+  'plan.addPlace.forDay': 'إضافة مكان إلى هذا اليوم',
+  'plan.addPlace.forDayNamed': 'إضافة مكان، {day}',
+  'plan.drop.hint':
+    'انقر بزر الفأرة الأيمن على الخريطة، أو اضغط مطوّلًا، لإضافة مكان في ذلك الموضع تمامًا.',
+  'plan.drop.armed':
+    'انقر على الخريطة حيث يجب أن يكون، أو حرّك الخريطة واضغط Enter لوضعه في المنتصف.',
+  'plan.drop.stop': 'إيقاف وضع دبوس جديد',
+  'plan.drop.pin': 'مكان جديد',
+  'plan.drop.lookingUp': 'جارٍ البحث عن العنوان…',
+  'plan.drop.error': 'تعذّر وضع الدبوس. حاول مرة أخرى بعد قليل.',
   'plan.note.showMore': 'عرض المزيد',
   'plan.note.showLess': 'عرض أقل',
   'plan.note.moveUp': 'تحريك لأعلى',

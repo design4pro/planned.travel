@@ -74,6 +74,20 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Notiz hinzufügen',
   'plan.note.addForDay': 'Notiz hinzufügen: {day}',
+  'plan.addPlace.label': 'Ort hinzufügen',
+  'plan.addPlace.more': 'Weitere Wege, einen Ort hinzuzufügen',
+  'plan.addPlace.option.map': 'Auf der Karte platzieren',
+  'plan.addPlace.forDay': 'Ort zu diesem Tag hinzufügen',
+  'plan.addPlace.forDayNamed': 'Ort hinzufügen: {day}',
+  'plan.drop.hint':
+    'Klick mit der rechten Maustaste auf die Karte oder halte sie gedrückt, um genau dort einen Ort hinzuzufügen.',
+  'plan.drop.armed':
+    'Klick auf die Karte, wo er hingehört, oder verschieb die Karte und drück die Eingabetaste, um ihn in der Mitte abzulegen.',
+  'plan.drop.stop': 'Platzieren der neuen Stecknadel beenden',
+  'plan.drop.pin': 'Neuer Ort',
+  'plan.drop.lookingUp': 'Adresse wird gesucht…',
+  'plan.drop.error':
+    'Die Stecknadel konnte nicht gesetzt werden. Versuch es gleich noch einmal.',
   'plan.note.showMore': 'Mehr anzeigen',
   'plan.note.showLess': 'Weniger anzeigen',
   'plan.note.moveUp': 'Nach oben',

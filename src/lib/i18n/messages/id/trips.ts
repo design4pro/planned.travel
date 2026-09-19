@@ -73,6 +73,19 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Tambahkan catatan',
   'plan.note.addForDay': 'Tambahkan catatan, {day}',
+  'plan.addPlace.label': 'Tambahkan tempat',
+  'plan.addPlace.more': 'Cara lain menambahkan tempat',
+  'plan.addPlace.option.map': 'Letakkan di peta',
+  'plan.addPlace.forDay': 'Tambahkan tempat ke hari ini',
+  'plan.addPlace.forDayNamed': 'Tambahkan tempat, {day}',
+  'plan.drop.hint':
+    'Klik kanan pada peta, atau tekan dan tahan, untuk menambahkan tempat tepat di sana.',
+  'plan.drop.armed':
+    'Klik peta di tempat seharusnya, atau geser peta lalu tekan Enter untuk meletakkannya di tengah.',
+  'plan.drop.stop': 'Berhenti meletakkan pin baru',
+  'plan.drop.pin': 'Tempat baru',
+  'plan.drop.lookingUp': 'Mencari alamat…',
+  'plan.drop.error': 'Pin tidak dapat diletakkan. Coba lagi sebentar lagi.',
   'plan.note.showMore': 'Tampilkan selengkapnya',
   'plan.note.showLess': 'Tampilkan lebih sedikit',
   'plan.note.moveUp': 'Pindahkan ke atas',

@@ -1271,7 +1271,14 @@ describe('tenant isolation', () => {
     it('rejects a foreign trip on every trip-scoped write', async () => {
       const scope = alpha.tenant.scope
       const attempts: ReadonlyArray<() => Promise<unknown>> = [
-        () => createPlace(scope, { tripId: beta.tripId, name: 'Stolen place' }),
+        // Carrying coordinates, as a pin dropped on the map does (02-S4): they buy it nothing.
+        () =>
+          createPlace(scope, {
+            tripId: beta.tripId,
+            name: 'Stolen place',
+            lat: 48.208494,
+            lng: 16.373118,
+          }),
         () =>
           createTransport(scope, {
             tripId: beta.tripId,
@@ -1427,9 +1434,13 @@ describe('tenant isolation', () => {
             tripId: alpha.tripId,
             name: 'Cross-categorised',
             categoryId: beta.categoryId,
+            lat: 48.208494,
+            lng: 16.373118,
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
+      expect(await placesRepository.count(alpha.tenant.scope)).toBe(1)
+      expect(await placesRepository.count(beta.tenant.scope)).toBe(1)
 
       expect(
         await captureError(() =>

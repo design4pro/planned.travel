@@ -49,6 +49,7 @@ const messages = {
     'Vérifiez que l’accès à la position est autorisé pour ce site, puis réessayez.',
 
   'map.attribution.label': 'Données cartographiques de',
+  'map.attribution.geocoder': 'Lieux localisés avec',
 
   'map.basemap.title': 'Fond de carte indisponible',
   'map.basemap.body':

@@ -45,6 +45,7 @@ const messages = {
     'Bu site için konum erişiminin açık olduğunu kontrol edip yeniden deneyin.',
 
   'map.attribution.label': 'Harita verisinin kaynağı:',
+  'map.attribution.geocoder': 'Yer aramasının kaynağı:',
 
   'map.basemap.title': 'Altlık harita kullanılamıyor',
   'map.basemap.body':

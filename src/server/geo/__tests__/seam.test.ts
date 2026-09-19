@@ -65,8 +65,12 @@ describe('the geo directory keeps its bindings in one file', () => {
       .filter((file) => /from '#\/server\/geo\//.test(codeOf(file)))
       .map((file) => file.slice(SRC.length))
     // The proxy acquired its first door: a confirmation import geocodes the place it writes out of
-    // a staged row, so a booking read from a document lands on the map like a hand-made one. A
-    // second entry here is a second caller of the binding seam, which is what this case is for.
-    expect(importers).toEqual(['server/fns/booking-import.ts'])
+    // a staged row, so a booking read from a document lands on the map like a hand-made one. The
+    // planner (02-S4) is the second: a pin dropped on the map asks for the address beneath it.
+    // A further entry here is a further caller of the binding seam, which is what this case is for.
+    expect(importers.sort()).toEqual([
+      'routes/_app/trips/$tripId/-server/geocode.ts',
+      'server/fns/booking-import.ts',
+    ])
   })
 })

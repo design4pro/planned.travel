@@ -224,6 +224,107 @@ test.describe('02-S3 — the opening camera', () => {
   })
 })
 
+/**
+ * `02-S4` — a pin dropped on the planner's map becomes the ordinary create form, prefilled.
+ *
+ * The state machine, the listeners and the lookup budget are `planner-map-layer.test.tsx`'s claim;
+ * this block proves the gesture reaches a real MapLibre canvas and ends in the real dialog. It runs
+ * on the unmapped trip, whose empty map is also where the gesture is named, and which has no pin
+ * under the pointer to take the click instead.
+ *
+ * **Nothing here submits**, for the reason `trips-core.spec.ts` gives: a created place is an
+ * additive write to the workspace both browser projects share. The dialog is what this stage
+ * added to the browser; the write behind it is the unchanged `createPlanPlaceFn`.
+ */
+test.describe('02-S4 — drop a pin on the map', () => {
+  test.beforeEach(async ({ context, page, baseURL }, testInfo) => {
+    test.setTimeout(CAMERA_JOURNEY_TIMEOUT_MS)
+    test.skip(
+      testInfo.project.name !== 'chromium',
+      'the add control sits in the desktop rail; on a phone it is inside the places sheet',
+    )
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  const CREATE_DIALOG = 'Add a place to this trip'
+
+  /** The create form, opened by a drop, with the point it was dropped on. */
+  async function expectPrefilledForm(page: Page): Promise<void> {
+    const dialog = page.getByRole('dialog', { name: CREATE_DIALOG })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByLabel('Latitude')).toHaveValue(/^-?\d+(\.\d+)?$/)
+    await expect(dialog.getByLabel('Longitude')).toHaveValue(/^-?\d+(\.\d+)?$/)
+    await expect(dialog.getByLabel('Name')).toBeFocused()
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(page.getByRole('img', { name: 'New place' })).toHaveCount(0)
+  }
+
+  test('publishes one add control, one menu and one map option', async ({
+    context,
+  }) => {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.unmapped)
+    await onRoute(context, planRoute(tripId), async (page) => {
+      await expect(page.locator('[data-part="add-place"]')).toHaveCount(1)
+      await expect(page.locator('[data-part="add-place-menu"]')).toHaveCount(1)
+      await expect(page.locator('[data-part="planner-canvas"]')).toHaveCount(1)
+
+      await page.locator('[data-part="add-place-menu"]').click()
+      await expect(
+        page.locator('[data-part="add-place-option"][data-value="map"]'),
+      ).toHaveCount(1)
+      await page.keyboard.press('Escape')
+    })
+  })
+
+  test('a context-click on the map opens the form at that point', async ({
+    context,
+  }) => {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.unmapped)
+    await onRoute(context, planRoute(tripId), async (page) => {
+      await expect(
+        page.getByText(
+          'Right-click the map, or press and hold, to add a place right there.',
+        ),
+      ).toBeVisible()
+
+      // The container is MapLibre's zero-height wrapper; the canvas inside it is what a pointer hits.
+      await page
+        .locator('[data-part="planner-canvas"] canvas')
+        .click({ button: 'right' })
+      await expectPrefilledForm(page)
+    })
+  })
+
+  test('the keyboard arms the map from the menu and drops in the middle', async ({
+    context,
+  }) => {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.unmapped)
+    await onRoute(context, planRoute(tripId), async (page) => {
+      await page.locator('[data-part="add-place-menu"]').focus()
+      await page.keyboard.press('Enter')
+      const option = page.locator(
+        '[data-part="add-place-option"][data-value="map"]',
+      )
+      await expect(option).toBeVisible()
+      await option.focus()
+      await page.keyboard.press('Enter')
+
+      await expect(
+        page.getByRole('button', { name: 'Stop placing a new pin' }),
+      ).toBeVisible()
+      await settleMutations(page)
+      await page.keyboard.press('Enter')
+      await expectPrefilledForm(page)
+    })
+  })
+})
+
 function annotate(camera: Camera): void {
   test
     .info()
