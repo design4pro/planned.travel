@@ -12,11 +12,14 @@
  * pending state on the button it came from and then hand the browser over.
  */
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
 
 import { getSession } from '#/server/auth/session'
 import {
+  applyDiscountToCurrentPlan,
   changePlan,
   createPortalSession,
+  discountCodeInput,
   listRecentInvoices,
   orderInvoiceInput,
   orderInvoiceUrl,
@@ -27,6 +30,7 @@ import type {
   BillingRedirect,
   InvoiceSummary,
   OrderInvoiceResult,
+  PlanChangeResult,
 } from '#/server/billing/checkout'
 import { entitlements } from '#/server/billing/entitlements'
 import { PolarApiError } from '#/server/billing/polar'
@@ -71,6 +75,9 @@ async function billingIdentity(scope: TenantScope): Promise<BillingIdentity> {
     organizationId: scope.ctx.organizationId,
     organizationName: organization.name,
     role: scope.ctx.role,
+    // Cloudflare terminates the connection, so this is the client address; every other
+    // candidate is a header the client writes. Read only by the promotion-code limiter.
+    clientIp: getRequestHeader('cf-connecting-ip') ?? null,
   }
 }
 
@@ -207,13 +214,33 @@ async function guarded<T>(
  * comes back with `surface: 'applied'` and a URL on our own origin carrying
  * `?plan=changed`, because Polar has no hosted "confirm the proration" page to
  * send anybody to.
+ *
+ * A promotion code travels on the same selection. A refused code is not an error: it comes
+ * back as `{ surface: 'discount_rejected', reason }`, nothing in Polar has changed, and the
+ * screen shows the reason under the field. `customerFacing()` is not involved.
  */
 export const startPlanChange = createServerFn({ method: 'POST' })
   .validator(planSelectionInput)
-  .handler(async ({ data }): Promise<BillingRedirect> => {
+  .handler(async ({ data }): Promise<PlanChangeResult> => {
     const { runtime, identity } = await billingSession()
     return await guarded(runtime, identity.organizationId, 'plan_change', () =>
       changePlan(runtime, identity, data),
+    )
+  })
+
+/**
+ * **Apply to current plan**: attach a promotion code to the subscription in force. Only the code
+ * travels; the plan is read from the subscription row, so this can never change the plan.
+ */
+export const applyPromotionCode = createServerFn({ method: 'POST' })
+  .validator(discountCodeInput)
+  .handler(async ({ data }): Promise<PlanChangeResult> => {
+    const { runtime, identity } = await billingSession()
+    return await guarded(
+      runtime,
+      identity.organizationId,
+      'discount_apply',
+      () => applyDiscountToCurrentPlan(runtime, identity, data),
     )
   })
 

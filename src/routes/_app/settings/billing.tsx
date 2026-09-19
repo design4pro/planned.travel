@@ -45,6 +45,7 @@ import {
   clampSeats,
   formatQuota,
   formatQuotaUsage,
+  isEntitlingStatus,
   isUnlimited,
   monthlyEquivalent,
   planById,
@@ -53,17 +54,22 @@ import {
 import { formatDate, formatMoneyMinor, formatPrice } from '../-lib/format'
 import { PLAN_COPY, QUOTA_LABEL_KEYS } from '#/lib/plan-copy'
 import {
+  applyPromotionCode,
   downloadInvoice,
   loadBilling,
   openBillingPortal,
   startPlanChange,
 } from '../-server/billing'
 import { SettingsSection } from '../-ui/settings-nav'
+import { PromotionCodeField, usePromotionCode } from './-ui/promotion-code'
 
 import type { BadgeTone } from '#/components/ui'
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { BillingInterval, BillingState, Plan, QuotaKey } from '#/lib/plans'
-import type { InvoiceSummary } from '#/server/billing/checkout'
+import type {
+  InvoiceSummary,
+  PlanChangeResult,
+} from '#/server/billing/checkout'
 import type { Entitlements, QuotaState } from '#/server/billing/types'
 import type { ReactNode } from 'react'
 
@@ -91,6 +97,11 @@ interface BillingSearch {
    * sends the browser back here rather than out to the provider.
    */
   readonly plan?: 'changed'
+  /**
+   * Set when a promotion code was attached: alone, or with the plan change `plan` announces.
+   * Either way it applies from the next renewal, which the screen owes the customer.
+   */
+  readonly discount?: 'applied'
 }
 
 function readOutcome(value: unknown): CheckoutOutcome | undefined {
@@ -102,6 +113,7 @@ export const Route = createFileRoute('/_app/settings/billing')({
     checkout: readOutcome(search.checkout),
     portal: search.portal === 'complete' ? 'complete' : undefined,
     plan: search.plan === 'changed' ? 'changed' : undefined,
+    discount: search.discount === 'applied' ? 'applied' : undefined,
   }),
   loader: () => loadBilling(),
   pendingComponent: BillingPending,
@@ -301,6 +313,9 @@ interface Failure {
 /** The single portal action's pending key. Polar mints one URL, so there is one. */
 const PORTAL_KEY = 'portal'
 
+/** The pending key of **Apply to current plan**. */
+const DISCOUNT_KEY = 'discount'
+
 function BillingPage() {
   const t = useTranslate()
   const data = Route.useLoaderData()
@@ -320,6 +335,9 @@ function BillingPage() {
   )
   const [pending, setPending] = useState<string | null>(null)
   const [failure, setFailure] = useState<Failure | null>(null)
+  const promotionCode = usePromotionCode()
+  const hasLiveSubscription =
+    plan.id !== FREE_PLAN.id && isEntitlingStatus(state.status)
 
   /**
    * Hands the browser over, keeping the button that asked in a pending state.
@@ -331,13 +349,19 @@ function BillingPage() {
   async function handOff(
     key: string,
     scope: FailureScope,
-    run: () => Promise<{ url: string }>,
+    run: () => Promise<PlanChangeResult | { url: string }>,
   ): Promise<void> {
     setPending(key)
     setFailure(null)
     try {
-      const { url } = await run()
-      window.location.assign(url)
+      const result = await run()
+      if ('url' in result) {
+        window.location.assign(result.url)
+        return
+      }
+      // A refused promotion code: nothing changed, so the page stays and says why.
+      setPending(null)
+      promotionCode.reject(result.reason)
     } catch (cause) {
       setPending(null)
       setFailure({ scope, message: messageOf(t, cause) })
@@ -345,14 +369,26 @@ function BillingPage() {
   }
 
   function choosePlan(target: Plan): void {
+    const discountCode = promotionCode.read()
+    if (discountCode === null) return
     void handOff(`plan:${target.id}`, 'plan', () =>
       startPlanChange({
         data: {
           planId: target.id,
           interval,
           seats: target.seatBased ? seats : undefined,
+          discountCode,
         },
       }),
+    )
+  }
+
+  /** Attaches the code to whatever plan is in force; the server reads which one. */
+  function applyToCurrentPlan(): void {
+    const discountCode = promotionCode.read()
+    if (discountCode === undefined || discountCode === null) return
+    void handOff(DISCOUNT_KEY, 'plan', () =>
+      applyPromotionCode({ data: { discountCode } }),
     )
   }
 
@@ -392,6 +428,19 @@ function BillingPage() {
           actions={<RefreshButton onClick={refresh} />}
         >
           {t('settings.billing.planChanged.body')}
+          {search.discount === 'applied'
+            ? ` ${t('settings.billing.discount.nextRenewal')}`
+            : null}
+        </Alert>
+      ) : null}
+
+      {search.discount === 'applied' && search.plan !== 'changed' ? (
+        <Alert
+          tone="success"
+          title={t('settings.billing.discount.appliedTitle')}
+          actions={<RefreshButton onClick={refresh} />}
+        >
+          {t('settings.billing.discount.nextRenewal')}
         </Alert>
       ) : null}
 
@@ -440,6 +489,16 @@ function BillingPage() {
             >
               {failure.message}
             </Alert>
+          ) : null}
+
+          {data.canManage ? (
+            <PromotionCodeField
+              state={promotionCode}
+              canApply={hasLiveSubscription}
+              applyPending={pending === DISCOUNT_KEY}
+              disabled={pending !== null}
+              onApply={applyToCurrentPlan}
+            />
           ) : null}
 
           <div className="grid gap-4 xl:grid-cols-3">

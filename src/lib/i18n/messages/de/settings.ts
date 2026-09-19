@@ -497,6 +497,26 @@ const messages = {
   'billing.planChanged.title': 'Tarif aktualisiert',
   'billing.planChanged.body':
     'Die Änderung gilt bereits bei Polar, das die Differenz abrechnet. Die Übersicht unten zieht innerhalb einer Minute nach.',
+  'billing.discount.toggle': 'Haben Sie einen Aktionscode?',
+  'billing.discount.label': 'Aktionscode',
+  'billing.discount.hint': 'Gilt für den Tarif, den Sie als Nächstes wählen.',
+  'billing.discount.hintCurrent':
+    'Wenden Sie ihn auf Ihren aktuellen Tarif an oder wählen Sie unten einen Tarif.',
+  'billing.discount.applyCurrent': 'Auf aktuellen Tarif anwenden',
+  'billing.discount.applying': 'Code wird angewendet…',
+  'billing.discount.invalidFormat':
+    'Codes bestehen aus 3 bis 64 Buchstaben und Ziffern.',
+  'billing.discount.rejected.invalid':
+    'Dieser Code ist ungültig. Prüfen Sie ihn und versuchen Sie es erneut.',
+  'billing.discount.rejected.rateLimited':
+    'Zu viele Codes versucht. Versuchen Sie es in einer Stunde erneut.',
+  'billing.discount.rejected.notApplicable':
+    'Dieser Code gilt nicht für diesen Tarif.',
+  'billing.discount.rejected.busy':
+    'Codes können gerade nicht geprüft werden. Versuchen Sie es in einer Minute erneut.',
+  'billing.discount.nextRenewal':
+    'Ihr Aktionscode gilt ab Ihrer nächsten Verlängerung.',
+  'billing.discount.appliedTitle': 'Aktionscode angewendet',
   'billing.hero.manage': 'Abrechnung verwalten',
   'billing.hero.manageHint':
     'Karten, Rechnungsadresse, USt-IdNr., Belege und Kündigung liegen bei Polar, das die Rechnung ausstellt.',

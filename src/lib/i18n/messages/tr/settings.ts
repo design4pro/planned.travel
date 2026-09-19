@@ -481,6 +481,26 @@ const messages = {
   'billing.planChanged.title': 'Plan güncellendi',
   'billing.planChanged.body':
     'Değişiklik Polar tarafında zaten geçerli; farkı o faturalandıracak. Aşağıdaki özet bir dakika içinde yetişir.',
+  'billing.discount.toggle': 'Promosyon kodunuz var mı?',
+  'billing.discount.label': 'Promosyon kodu',
+  'billing.discount.hint': 'Bir sonraki seçtiğiniz plana uygulanır.',
+  'billing.discount.hintCurrent':
+    'Mevcut planınıza uygulayın veya aşağıdan bir plan seçin.',
+  'billing.discount.applyCurrent': 'Mevcut plana uygula',
+  'billing.discount.applying': 'Kod uygulanıyor…',
+  'billing.discount.invalidFormat':
+    'Kodlar 3 ile 64 arası harf ve rakamdan oluşur.',
+  'billing.discount.rejected.invalid':
+    'Bu kod geçerli değil. Kontrol edip tekrar deneyin.',
+  'billing.discount.rejected.rateLimited':
+    'Çok fazla kod denendi. Bir saat sonra tekrar deneyin.',
+  'billing.discount.rejected.notApplicable':
+    'Bu kod bu plan için geçerli değil.',
+  'billing.discount.rejected.busy':
+    'Kodlar şu anda kontrol edilemiyor. Bir dakika sonra tekrar deneyin.',
+  'billing.discount.nextRenewal':
+    'Promosyon kodunuz bir sonraki yenilemeden itibaren geçerlidir.',
+  'billing.discount.appliedTitle': 'Promosyon kodu uygulandı',
   'billing.hero.manage': 'Faturalandırmayı yönet',
   'billing.hero.manageHint':
     'Kartlar, fatura adresi, vergi numarası, makbuzlar ve iptal, faturayı kesen Polar tarafında.',

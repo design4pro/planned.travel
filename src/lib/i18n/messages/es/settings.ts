@@ -503,6 +503,26 @@ const messages = {
   'billing.planChanged.title': 'Plan actualizado',
   'billing.planChanged.body':
     'El cambio ya está en vigor en Polar, que facturará la diferencia. El resumen de abajo se pone al día en un minuto.',
+  'billing.discount.toggle': '¿Tienes un código promocional?',
+  'billing.discount.label': 'Código promocional',
+  'billing.discount.hint': 'Se aplicará al plan que elijas a continuación.',
+  'billing.discount.hintCurrent':
+    'Aplícalo a tu plan actual o elige un plan a continuación.',
+  'billing.discount.applyCurrent': 'Aplicar al plan actual',
+  'billing.discount.applying': 'Aplicando el código…',
+  'billing.discount.invalidFormat':
+    'Los códigos tienen de 3 a 64 letras y cifras.',
+  'billing.discount.rejected.invalid':
+    'Ese código no es válido. Revísalo e inténtalo de nuevo.',
+  'billing.discount.rejected.rateLimited':
+    'Demasiados códigos probados. Inténtalo de nuevo dentro de una hora.',
+  'billing.discount.rejected.notApplicable':
+    'Ese código no se aplica a este plan.',
+  'billing.discount.rejected.busy':
+    'Ahora no se pueden comprobar los códigos. Inténtalo de nuevo dentro de un minuto.',
+  'billing.discount.nextRenewal':
+    'Tu código promocional se aplica a partir de tu próxima renovación.',
+  'billing.discount.appliedTitle': 'Código promocional aplicado',
   'billing.hero.manage': 'Gestionar la facturación',
   'billing.hero.manageHint':
     'Las tarjetas, la dirección de facturación, el NIF, los recibos y la cancelación están en Polar, que emite la factura.',

@@ -24,7 +24,7 @@ import { EMPTY_USAGE } from '../types'
 
 import type { Subscription } from '#/server/db/types'
 import type { UpsertSubscriptionInput } from '#/server/repos'
-import type { PolarOrder, PolarSubscription } from '../mapping'
+import type { PolarDiscount, PolarOrder, PolarSubscription } from '../mapping'
 import type {
   BillingCache,
   BillingIdentity,
@@ -51,7 +51,8 @@ export const TEST_SUBSCRIPTION_ID = '4c1e8b22-5a7d-4c19-9e33-6f8b0a1d2e34'
 export const TEST_ORDER_ID = 'a95f2c71-3b8e-4d06-9c52-1e7a4f930b68'
 export const TEST_CHECKOUT_ID = 'e2b71f04-6c3d-4a58-b019-7d5e2c86af13'
 export const TEST_CHECKOUT_URL = `https://buy.polar.sh/c/${TEST_CHECKOUT_ID}`
-export const TEST_PORTAL_URL = 'https://polar.sh/planned-travel/portal?token=test'
+export const TEST_PORTAL_URL =
+  'https://polar.sh/planned-travel/portal?token=test'
 export const TEST_INVOICE_PDF_URL = 'https://polar.sh/invoices/test.pdf'
 
 /* ------------------------------------------------------------------- signing */
@@ -156,7 +157,10 @@ function blankRow(organizationId: string): Subscription {
  * rather than spread, so a column added to the table without a line here is a type
  * error in this file instead of a value that silently stops being persisted.
  */
-function applyPatch(base: Subscription, patch: UpsertSubscriptionInput): Subscription {
+function applyPatch(
+  base: Subscription,
+  patch: UpsertSubscriptionInput,
+): Subscription {
   const keep = <T>(next: T | null | undefined, current: T | null): T | null =>
     next === undefined ? current : next
 
@@ -235,7 +239,8 @@ export class FakeSubscriptionStore implements SubscriptionStore {
     providerCustomerId: string,
   ): Promise<SubscriptionRecord | null> {
     for (const row of this.rows.values()) {
-      if (row.providerCustomerId === providerCustomerId) return recordFromRow(row)
+      if (row.providerCustomerId === providerCustomerId)
+        return recordFromRow(row)
     }
     return null
   }
@@ -264,7 +269,9 @@ export class FakeSubscriptionStore implements SubscriptionStore {
     // the Free plan's ceilings rather than left on the column defaults.
     const existing = this.rows.get(organizationId)
     this.#write(organizationId, {
-      ...(existing === undefined ? ceilingColumns(ceilingsForPlan('free', 1)) : {}),
+      ...(existing === undefined
+        ? ceilingColumns(ceilingsForPlan('free', 1))
+        : {}),
       providerCustomerId,
     })
   }
@@ -283,7 +290,10 @@ export class FakeSubscriptionStore implements SubscriptionStore {
 }
 
 /** The catalogue product a plan and interval are sold under, or `null` for Free. */
-function productIdFor(planId: PlanId, interval: BillingInterval | null): string | null {
+function productIdFor(
+  planId: PlanId,
+  interval: BillingInterval | null,
+): string | null {
   if (planId === 'free' || interval === null) return null
   return planById(planId).prices[interval]?.productId ?? null
 }
@@ -358,6 +368,30 @@ export function polarSubscription(
       interval: 'monthly',
       seats: 4,
     },
+    ...overrides,
+  }
+}
+
+export const TEST_DISCOUNT_ID = '7f3a9c10-2b4d-4e6f-8a1b-3c5d7e9f0a2b'
+
+/**
+ * A Polar `Discount` as `GET /v1/discounts/` lists it: a live, unrestricted, open-ended 20%
+ * code. Restrictions and bounds are opted into per test.
+ */
+export function polarDiscount(
+  overrides: Partial<PolarDiscount> = {},
+): PolarDiscount {
+  return {
+    id: TEST_DISCOUNT_ID,
+    code: 'SUMMER20',
+    type: 'percentage',
+    basis_points: 2000,
+    amount: null,
+    starts_at: null,
+    ends_at: null,
+    max_redemptions: null,
+    redemptions_count: 0,
+    products: [],
     ...overrides,
   }
 }
@@ -489,6 +523,17 @@ export interface PolarStubSeed {
   readonly orderInvoiceSequence?: ReadonlyArray<unknown>
   /** Thrown by every request, for the paths that must degrade rather than fail. */
   readonly error?: Error
+  /**
+   * The organization's discount catalogue. `GET /v1/discounts/` pages it by the request's own
+   * `limit` and `page`; `GET /v1/discounts/{id}` finds one in it or answers 404.
+   */
+  readonly discounts?: ReadonlyArray<PolarDiscount>
+  /** Thrown by every `/v1/discounts/` request — a 403 for a token without the scope. */
+  readonly discountError?: Error
+  /** Body of `GET /v1/subscriptions/{id}`. Defaults to `subscription`, then the fixture. */
+  readonly subscriptionRead?: unknown
+  /** Decides per body whether a `PATCH /v1/subscriptions/{id}` is refused, and with what. */
+  readonly rejectPatch?: (body: unknown) => Error | null
 }
 
 function defaultCheckout(): unknown {
@@ -554,7 +599,35 @@ export function createPolarStub(seed: PolarStubSeed = {}): {
         return seed.customerSession ?? defaultCustomerSession()
       }
       if (method === 'PATCH' && path.startsWith('/v1/subscriptions/')) {
+        const refusal = seed.rejectPatch?.(request.body) ?? null
+        if (refusal !== null) throw refusal
         return seed.subscription ?? polarSubscription()
+      }
+      if (method === 'GET' && path.startsWith('/v1/subscriptions/')) {
+        return (
+          seed.subscriptionRead ?? seed.subscription ?? polarSubscription()
+        )
+      }
+      if (path.startsWith('/v1/discounts/')) {
+        if (seed.discountError !== undefined) throw seed.discountError
+        const catalogue = seed.discounts ?? []
+        if (path === '/v1/discounts/') {
+          const limit = Number(request.query?.limit ?? 10)
+          const page = Number(request.query?.page ?? 1)
+          return {
+            items: catalogue.slice((page - 1) * limit, page * limit),
+            pagination: {
+              total_count: catalogue.length,
+              max_page: Math.max(1, Math.ceil(catalogue.length / limit)),
+            },
+          }
+        }
+        const id = path.slice('/v1/discounts/'.length)
+        const found = catalogue.find((discount) => discount.id === id)
+        if (found === undefined) {
+          throw new PolarApiError(404, '{"error":"ResourceNotFound"}', 'Not found')
+        }
+        return found
       }
       if (method === 'GET' && path === '/v1/orders/') {
         const items = seed.orders ?? []
@@ -634,6 +707,8 @@ export function createHarness(options: HarnessOptions = {}): Harness {
     tasks,
     logger,
     now: () => now,
+    // The sandbox budget, the tighter of the two.
+    discountLookupBudget: 20,
   }
 
   return {

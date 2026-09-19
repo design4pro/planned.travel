@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CHECKOUT_PATH,
   CUSTOMER_SESSION_PATH,
+  applyDiscountToCurrentPlan,
   INVOICE_HISTORY_LIMIT,
   INVOICE_POLL_DELAYS_MS,
   INVOICE_RETRY_AFTER_MS,
@@ -31,6 +32,7 @@ import {
   checkoutSuccessUrl,
   createCheckoutSession,
   createPortalSession,
+  discountAppliedUrl,
   invoiceSummaryOf,
   isEligibleForTrial,
   listRecentInvoices,
@@ -58,6 +60,7 @@ import {
   TEST_APP_URL,
   TEST_CHECKOUT_URL,
   TEST_CUSTOMER_ID,
+  TEST_DISCOUNT_ID,
   TEST_INVOICE_PDF_URL,
   TEST_ORDER_ID,
   TEST_ORG_ID,
@@ -66,6 +69,7 @@ import {
   billingIdentity,
   createHarness,
   invoiceNotRenderedYet,
+  polarDiscount,
   polarOrder,
   polarSubscription,
   subscriptionRecord,
@@ -101,7 +105,10 @@ function bodyOf(request: PolarRequest): Record<string, unknown> {
 }
 
 /** A sleep that records what it was asked to wait and waits none of it. */
-function recordingSleep(): { sleep: (ms: number) => Promise<void>; waits: Array<number> } {
+function recordingSleep(): {
+  sleep: (ms: number) => Promise<void>
+  waits: Array<number>
+} {
   const waits: Array<number> = []
   return {
     waits,
@@ -258,7 +265,9 @@ describe('return urls', () => {
     )
     // Deliberately bare: the screen keys every alert off a search parameter, so the
     // absence of one is the absence of a claim.
-    expect(billingHomeUrl(TEST_APP_URL)).toBe('https://planned.travel/settings/billing')
+    expect(billingHomeUrl(TEST_APP_URL)).toBe(
+      'https://planned.travel/settings/billing',
+    )
   })
 
   it('uses Polar’s own interpolation token, not another provider’s', () => {
@@ -760,12 +769,13 @@ describe('changePlan', () => {
       seats: 9,
     })
 
-    expect(harness.calls).toHaveLength(2)
-    expect(bodyOf(harness.calls[0])).toHaveProperty(
+    const patches = harness.calls.filter((call) => call.method === 'PATCH')
+    expect(patches).toHaveLength(2)
+    expect(bodyOf(patches[0])).toHaveProperty(
       'product_id',
       TEST_PRODUCT_IDS.crewYearly,
     )
-    expect(bodyOf(harness.calls[1])).toHaveProperty('seats', 9)
+    expect(bodyOf(patches[1])).toHaveProperty('seats', 9)
   })
 
   it('asks Polar for nothing when nothing actually changed', async () => {
@@ -796,7 +806,7 @@ describe('changePlan', () => {
 
     // ARCHITECTURE §4 rule 2. The URL below is our own billing screen, so a plan
     // state left in KV would render the plan we just moved off for the whole TTL.
-    expect(redirect.url).toBe(planChangedUrl(TEST_APP_URL))
+    expect(redirect).toMatchObject({ url: planChangedUrl(TEST_APP_URL) })
     expect(harness.cache.entries.has(key)).toBe(false)
     expect(harness.cache.deletes).toBe(1)
   })
@@ -852,6 +862,582 @@ describe('changePlan', () => {
         planId: 'solo',
         interval: 'monthly',
       }),
+    ).rejects.toBeInstanceOf(BillingForbiddenError)
+  })
+})
+
+/* ------------------------------------------------------- promotion codes */
+
+describe('promotion codes', () => {
+  const SUBSCRIPTION_PATH = `/v1/subscriptions/${TEST_SUBSCRIPTION_ID}`
+
+  function patchBodies(calls: ReadonlyArray<PolarRequest>) {
+    return calls
+      .filter((call) => call.method === 'PATCH')
+      .map((call) => bodyOf(call))
+  }
+
+  it('attaches the resolved discount to the checkout by id', async () => {
+    const harness = createHarness({ polar: { discounts: [polarDiscount()] } })
+
+    const result = await createCheckoutSession(
+      harness.runtime,
+      billingIdentity(),
+      {
+        planId: 'crew',
+        interval: 'monthly',
+        seats: 4,
+        discountCode: 'summer20',
+      },
+    )
+
+    expect(result).toEqual({ url: TEST_CHECKOUT_URL, surface: 'checkout' })
+    const body = bodyOf(callTo(harness.calls, 'POST', CHECKOUT_PATH))
+    expect(body.discount_id).toBe(TEST_DISCOUNT_ID)
+    expect(body.allow_discount_codes).toBe(true)
+  })
+
+  it('sends no discount key on a checkout without a code', async () => {
+    const harness = createHarness()
+
+    await createCheckoutSession(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    expect(
+      bodyOf(callTo(harness.calls, 'POST', CHECKOUT_PATH)),
+    ).not.toHaveProperty('discount_id')
+  })
+
+  it('refuses a checkout with a code it cannot find, and opens nothing', async () => {
+    const harness = createHarness({ polar: { discounts: [] } })
+
+    const result = await createCheckoutSession(
+      harness.runtime,
+      billingIdentity(),
+      {
+        planId: 'crew',
+        interval: 'monthly',
+        seats: 4,
+        discountCode: 'NOPE123',
+      },
+    )
+
+    expect(result).toEqual({ surface: 'discount_rejected', reason: 'invalid' })
+    expect(harness.calls.some((call) => call.path === CHECKOUT_PATH)).toBe(
+      false,
+    )
+  })
+
+  it('keys the checkout by the discount, so a cached uncoded one is not reused', () => {
+    const selection = resolvePlanSelection({
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+    const now = new Date(960_000)
+
+    expect(checkoutIdempotencyKey(TEST_ORG_ID, selection, now)).not.toBe(
+      checkoutIdempotencyKey(TEST_ORG_ID, selection, now, TEST_DISCOUNT_ID),
+    )
+    expect(checkoutIdempotencyKey(TEST_ORG_ID, selection, now, null)).toBe(
+      checkoutIdempotencyKey(TEST_ORG_ID, selection, now),
+    )
+  })
+
+  it('marks a plan change that carried a code, and a code on its own', () => {
+    expect(planChangedUrl(TEST_APP_URL, true)).toBe(
+      `${TEST_APP_URL}/settings/billing?plan=changed&discount=applied`,
+    )
+    expect(discountAppliedUrl(TEST_APP_URL)).toBe(
+      `${TEST_APP_URL}/settings/billing?discount=applied`,
+    )
+  })
+
+  it('writes nothing to the subscription when the code is refused', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [
+          polarDiscount({ products: [{ id: TEST_PRODUCT_IDS.soloMonthly }] }),
+        ],
+      },
+    })
+
+    const result = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(result).toEqual({
+      surface: 'discount_rejected',
+      reason: 'not_applicable',
+    })
+    expect(patchBodies(harness.calls)).toEqual([])
+  })
+
+  it('attaches a code to the plan in force on its own', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    const result = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(result).toEqual({
+      url: discountAppliedUrl(TEST_APP_URL),
+      surface: 'discount_applied',
+    })
+    expect(patchBodies(harness.calls)).toEqual([
+      { discount_id: TEST_DISCOUNT_ID },
+    ])
+  })
+
+  it('attaches the code before the product, and reads no subscription for it', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    const result = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(result).toEqual({
+      url: planChangedUrl(TEST_APP_URL, true),
+      surface: 'applied',
+    })
+    expect(patchBodies(harness.calls)).toEqual([
+      { discount_id: TEST_DISCOUNT_ID },
+      {
+        product_id: TEST_PRODUCT_IDS.crewYearly,
+        proration_behavior: 'next_period',
+      },
+    ])
+    expect(
+      harness.calls.some(
+        (call) => call.method === 'GET' && call.path === SUBSCRIPTION_PATH,
+      ),
+    ).toBe(false)
+  })
+
+  it('attaches the code before the seats, never inside the seats body', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 8,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(patchBodies(harness.calls)).toEqual([
+      { discount_id: TEST_DISCOUNT_ID },
+      { seats: 8, proration_behavior: 'invoice' },
+    ])
+  })
+
+  it('orders code, product, seats when all three move', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 9,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(
+      patchBodies(harness.calls).map((body) => Object.keys(body)[0]),
+    ).toEqual(['discount_id', 'product_id', 'seats'])
+  })
+
+  it('carries a code that excludes the product in force inside the product PATCH', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [
+          polarDiscount({ products: [{ id: TEST_PRODUCT_IDS.crewYearly }] }),
+        ],
+      },
+    })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(patchBodies(harness.calls)).toEqual([
+      {
+        product_id: TEST_PRODUCT_IDS.crewYearly,
+        proration_behavior: 'next_period',
+        discount_id: TEST_DISCOUNT_ID,
+      },
+    ])
+  })
+
+  it('tells the customer invalid when Polar refuses the code, and moves nothing', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [polarDiscount()],
+        rejectPatch: (body) =>
+          typeof body === 'object' && body !== null && 'product_id' in body
+            ? null
+            : new PolarApiError(422, '{"detail":"expired"}', 'Unprocessable'),
+      },
+    })
+
+    const result = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(result).toEqual({ surface: 'discount_rejected', reason: 'invalid' })
+    expect(patchBodies(harness.calls)).toEqual([
+      { discount_id: TEST_DISCOUNT_ID },
+    ])
+    expect(
+      harness.logs.find(
+        (entry) => entry.message === 'billing.discount.rejected',
+      )?.fields,
+    ).toMatchObject({
+      reason: 'refused_by_polar',
+      discountId: TEST_DISCOUNT_ID,
+    })
+    expect(harness.store.writes).toHaveLength(0)
+  })
+
+  it('tells the customer invalid when a code carried in the product PATCH ran out since the lookup', async () => {
+    const restricted = polarDiscount({
+      products: [{ id: TEST_PRODUCT_IDS.crewYearly }],
+    })
+    const catalogue = [restricted]
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: catalogue,
+        rejectPatch: () => {
+          // The last redemption went to someone else between the lookup and this PATCH.
+          catalogue[0] = {
+            ...restricted,
+            max_redemptions: 1,
+            redemptions_count: 1,
+          }
+          return new PolarApiError(
+            422,
+            '{"detail":"exhausted"}',
+            'Unprocessable',
+          )
+        },
+      },
+    })
+
+    const result = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(result).toEqual({ surface: 'discount_rejected', reason: 'invalid' })
+    expect(
+      harness.logs.find(
+        (entry) => entry.message === 'billing.discount.rejected',
+      )?.fields,
+    ).toMatchObject({
+      reason: 'refused_by_polar',
+      discountId: TEST_DISCOUNT_ID,
+    })
+    expect(harness.store.writes).toHaveLength(0)
+  })
+
+  it('leaves a product PATCH 422 to the product when the carried code still fits', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [
+          polarDiscount({ products: [{ id: TEST_PRODUCT_IDS.crewYearly }] }),
+        ],
+        rejectPatch: () =>
+          new PolarApiError(422, '{"detail":"seats"}', 'Unprocessable'),
+      },
+    })
+
+    await expect(
+      changePlan(harness.runtime, billingIdentity(), {
+        planId: 'crew',
+        interval: 'yearly',
+        seats: 4,
+        discountCode: 'SUMMER20',
+      }),
+    ).rejects.toMatchObject({ status: 422 })
+    expect(harness.store.writes).toHaveLength(0)
+  })
+
+  it('clears a restricted discount that would not fit the new product', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        subscriptionRead: polarSubscription({
+          discount: {
+            id: TEST_DISCOUNT_ID,
+            products: [{ id: TEST_PRODUCT_IDS.crewMonthly }],
+          },
+        }),
+      },
+    })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'solo',
+      interval: 'yearly',
+    })
+
+    expect(patchBodies(harness.calls)).toEqual([
+      {
+        product_id: TEST_PRODUCT_IDS.soloYearly,
+        proration_behavior: 'next_period',
+        discount_id: null,
+      },
+    ])
+  })
+
+  it('reads the discount itself when the subscription embeds it without products', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [polarDiscount()],
+        subscriptionRead: polarSubscription({
+          discount: { id: TEST_DISCOUNT_ID },
+        }),
+      },
+    })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'solo',
+      interval: 'yearly',
+    })
+
+    callTo(harness.calls, 'GET', `/v1/discounts/${TEST_DISCOUNT_ID}`)
+    // Unrestricted, so it follows the customer: the key is omitted, not nulled.
+    expect(patchBodies(harness.calls)).toEqual([
+      {
+        product_id: TEST_PRODUCT_IDS.soloYearly,
+        proration_behavior: 'next_period',
+      },
+    ])
+  })
+})
+
+describe('promotion codes, when Polar says no', () => {
+  const embeddedWithoutProducts = () =>
+    polarSubscription({ discount: { id: TEST_DISCOUNT_ID } })
+
+  it.each([
+    [
+      'a token without discounts:read',
+      new PolarApiError(403, '{}', 'Forbidden'),
+    ],
+    ['a discount deleted since', null],
+  ] as const)(
+    'still moves an uncoded plan when the current discount is unreadable: %s',
+    async (_, discountError) => {
+      const harness = createHarness({
+        record: subscriptionRecord(),
+        polar: {
+          // No catalogue entry: the by-id read answers 404.
+          discounts: [],
+          subscriptionRead: embeddedWithoutProducts(),
+          ...(discountError === null ? {} : { discountError }),
+        },
+      })
+
+      const result = await changePlan(harness.runtime, billingIdentity(), {
+        planId: 'solo',
+        interval: 'yearly',
+      })
+
+      expect(result).toMatchObject({ surface: 'applied' })
+      const patches = harness.calls.filter((call) => call.method === 'PATCH')
+      expect(patches).toHaveLength(1)
+      expect(bodyOf(patches[0])).not.toHaveProperty('discount_id')
+      expect(
+        harness.logs.find(
+          (entry) => entry.message === 'billing.discount.current_unreadable',
+        )?.fields,
+      ).toMatchObject({ discountId: TEST_DISCOUNT_ID })
+    },
+  )
+
+  it('says the code stayed when the product PATCH after it fails', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [polarDiscount()],
+        rejectPatch: (body) =>
+          typeof body === 'object' && body !== null && 'product_id' in body
+            ? new PolarApiError(500, '{}', 'Polar PATCH failed with 500.')
+            : null,
+      },
+    })
+    const key = warmPlanCache(harness)
+
+    await expect(
+      changePlan(harness.runtime, billingIdentity(), {
+        planId: 'crew',
+        interval: 'yearly',
+        seats: 4,
+        discountCode: 'SUMMER20',
+      }),
+    ).rejects.toMatchObject({ status: 500 })
+
+    expect(harness.store.writes).toHaveLength(0)
+    expect(harness.cache.entries.has(key)).toBe(false)
+    expect(
+      harness.logs.find(
+        (entry) => entry.message === 'billing.plan_change.discount_kept',
+      )?.fields,
+    ).toMatchObject({ discountId: TEST_DISCOUNT_ID })
+  })
+
+  it('keeps a booked downgrade when only a code is attached', async () => {
+    const booked = {
+      planId: 'solo' as const,
+      interval: 'monthly' as const,
+      effectiveAt: new Date('2026-09-01T00:00:00.000Z'),
+    }
+    const harness = createHarness({
+      record: subscriptionRecord({ pendingChange: booked }),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+      discountCode: 'SUMMER20',
+    })
+
+    expect(harness.store.writes.at(-1)?.pendingChange).toEqual(booked)
+  })
+})
+
+describe('applyDiscountToCurrentPlan', () => {
+  it('sends only the code, whatever plan the page thought was current', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord({ seats: 6 }),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    const result = await applyDiscountToCurrentPlan(
+      harness.runtime,
+      billingIdentity(),
+      { discountCode: 'summer20' },
+    )
+
+    expect(result).toEqual({
+      url: discountAppliedUrl(TEST_APP_URL),
+      surface: 'discount_applied',
+    })
+    expect(
+      harness.calls
+        .filter((call) => call.method === 'PATCH')
+        .map((call) => bodyOf(call)),
+    ).toEqual([{ discount_id: TEST_DISCOUNT_ID }])
+    expect(harness.store.writes).toHaveLength(1)
+  })
+
+  it('checks the code against the product in force', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [
+          polarDiscount({ products: [{ id: TEST_PRODUCT_IDS.soloMonthly }] }),
+        ],
+      },
+    })
+
+    const result = await applyDiscountToCurrentPlan(
+      harness.runtime,
+      billingIdentity(),
+      { discountCode: 'SUMMER20' },
+    )
+
+    expect(result).toEqual({
+      surface: 'discount_rejected',
+      reason: 'not_applicable',
+    })
+    expect(harness.calls.some((call) => call.method === 'PATCH')).toBe(false)
+  })
+
+  it('refuses without a live subscription, and looks nothing up', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord({ status: 'canceled' }),
+      polar: { discounts: [polarDiscount()] },
+    })
+
+    const result = await applyDiscountToCurrentPlan(
+      harness.runtime,
+      billingIdentity(),
+      { discountCode: 'SUMMER20' },
+    )
+
+    expect(result).toEqual({
+      surface: 'discount_rejected',
+      reason: 'not_applicable',
+    })
+    expect(harness.calls).toEqual([])
+  })
+
+  it('turns a 422 into invalid and writes nothing', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        discounts: [polarDiscount()],
+        rejectPatch: () => new PolarApiError(422, '{}', 'Unprocessable'),
+      },
+    })
+
+    const result = await applyDiscountToCurrentPlan(
+      harness.runtime,
+      billingIdentity(),
+      { discountCode: 'SUMMER20' },
+    )
+
+    expect(result).toEqual({ surface: 'discount_rejected', reason: 'invalid' })
+    expect(harness.store.writes).toHaveLength(0)
+  })
+
+  it('refuses a member', async () => {
+    const harness = createHarness({ record: subscriptionRecord() })
+    await expect(
+      applyDiscountToCurrentPlan(
+        harness.runtime,
+        billingIdentity({ role: 'member' }),
+        { discountCode: 'SUMMER20' },
+      ),
     ).rejects.toBeInstanceOf(BillingForbiddenError)
   })
 })
@@ -913,6 +1499,8 @@ describe('changePlan writes what Polar answered', () => {
   it('persists the second response when the product and the seats both move', async () => {
     const harness = createHarness({ record: SOLO_RECORD() })
     const { runtime, calls } = withScriptedPolar(harness, [
+      // The read before an uncoded product change: no discount to clear.
+      polarSubscription({ product_id: TEST_PRODUCT_IDS.soloMonthly, seats: 1 }),
       polarSubscription({ product_id: TEST_PRODUCT_IDS.crewMonthly, seats: 1 }),
       polarSubscription({ product_id: TEST_PRODUCT_IDS.crewMonthly, seats: 6 }),
     ])
@@ -923,7 +1511,7 @@ describe('changePlan writes what Polar answered', () => {
       seats: 6,
     })
 
-    expect(calls).toHaveLength(2)
+    expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(2)
     // Only the last answer describes both moves; persisting the first would write a
     // seat count Polar has already superseded.
     expect(harness.store.writes).toHaveLength(1)
@@ -935,6 +1523,7 @@ describe('changePlan writes what Polar answered', () => {
     const harness = createHarness({ record: SOLO_RECORD() })
     const key = warmPlanCache(harness)
     const { runtime } = withScriptedPolar(harness, [
+      polarSubscription({ product_id: TEST_PRODUCT_IDS.soloMonthly, seats: 1 }),
       polarSubscription({ product_id: TEST_PRODUCT_IDS.crewMonthly, seats: 1 }),
       new PolarApiError(409, '{}', 'Polar PATCH failed with 409.'),
     ])
@@ -1007,12 +1596,14 @@ describe('changePlan writes what Polar answered', () => {
       url: billingHomeUrl(TEST_APP_URL),
       surface: 'unchanged',
     })
-    expect(redirect.url).not.toContain('plan=changed')
+    expect(JSON.stringify(redirect)).not.toContain('plan=changed')
     expect(
       harness.logs.some((log) => log.message === 'billing.plan_change.applied'),
     ).toBe(false)
     expect(
-      harness.logs.some((log) => log.message === 'billing.plan_change.unchanged'),
+      harness.logs.some(
+        (log) => log.message === 'billing.plan_change.unchanged',
+      ),
     ).toBe(true)
   })
 })
@@ -1061,7 +1652,11 @@ describe('pendingChangeFor', () => {
         pendingChangeFor(
           polarSubscription(),
           proration,
-          resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 8 }),
+          resolvePlanSelection({
+            planId: 'crew',
+            interval: 'monthly',
+            seats: 8,
+          }),
           record,
         ),
         proration,
@@ -1070,7 +1665,11 @@ describe('pendingChangeFor', () => {
   })
 
   it('refuses a schedule it cannot date or name', () => {
-    const selection = resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 8 })
+    const selection = resolvePlanSelection({
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 8,
+    })
 
     expect(
       pendingChangeFor(
