@@ -83,13 +83,13 @@ difference between two day numbers, and read on the booking desk as nights rathe
 
 ### Phase 1: Repository guards
 
-- [ ] 1.1 Widen both accommodation validators with `reservationId`, add the reference guard and the role guard; tenant-isolation block
+- [x] 1.1 Widen both accommodation validators with `reservationId`, add the reference guard and the role guard; tenant-isolation block — 5151ce875
 
 ### Phase 2: Stay server functions
 
-- [ ] 2.1 `fns/stays.ts`: create, update, delete
-- [ ] 2.2 Desk payload carries the linked stay per booking
-- [ ] 2.3 Server-seam tests
+- [x] 2.1 `fns/stays.ts`: create, update, delete — 1e8afb638
+- [x] 2.2 Desk payload carries the linked stay per booking — 1e8afb638
+- [x] 2.3 Server-seam tests — 1e8afb638
 
 ### Phase 3: The stay on the desk
 
