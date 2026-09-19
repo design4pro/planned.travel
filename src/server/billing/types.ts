@@ -214,6 +214,13 @@ export interface BillingRuntime {
   readonly logger: BillingLogger
   /** Injected clock so trials and period maths are testable. */
   readonly now: () => Date
+  /**
+   * Paged `GET /v1/discounts/` requests allowed per minute across every tenant — a fifth of the
+   * environment's Polar rate limit (DEPLOY.md §9.2), so promotion-code lookups can never starve
+   * the rest of billing on the one token every tenant shares. `discountLookupBudgetFor()` in
+   * `./discounts` derives it from `POLAR_SERVER`.
+   */
+  readonly discountLookupBudget: number
 }
 
 /** A billing runtime narrowed to one tenant. Everything quota-related takes this. */
@@ -237,6 +244,11 @@ export interface BillingIdentity {
   readonly organizationId: string
   readonly organizationName: string
   readonly role: 'owner' | 'admin' | 'member'
+  /**
+   * The client address (`cf-connecting-ip`), or `null` outside a request. Read only by the
+   * promotion-code limiter, which counts per address because accounts are free to mint.
+   */
+  readonly clientIp?: string | null
 }
 
 /** Only owners and admins may spend the organization's money. */

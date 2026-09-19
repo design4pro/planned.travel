@@ -523,6 +523,17 @@ export interface PolarStubSeed {
   readonly orderInvoiceSequence?: ReadonlyArray<unknown>
   /** Thrown by every request, for the paths that must degrade rather than fail. */
   readonly error?: Error
+  /**
+   * The organization's discount catalogue. `GET /v1/discounts/` pages it by the request's own
+   * `limit` and `page`; `GET /v1/discounts/{id}` finds one in it or answers 404.
+   */
+  readonly discounts?: ReadonlyArray<PolarDiscount>
+  /** Thrown by every `/v1/discounts/` request — a 403 for a token without the scope. */
+  readonly discountError?: Error
+  /** Body of `GET /v1/subscriptions/{id}`. Defaults to `subscription`, then the fixture. */
+  readonly subscriptionRead?: unknown
+  /** Decides per body whether a `PATCH /v1/subscriptions/{id}` is refused, and with what. */
+  readonly rejectPatch?: (body: unknown) => Error | null
 }
 
 function defaultCheckout(): unknown {
@@ -588,7 +599,35 @@ export function createPolarStub(seed: PolarStubSeed = {}): {
         return seed.customerSession ?? defaultCustomerSession()
       }
       if (method === 'PATCH' && path.startsWith('/v1/subscriptions/')) {
+        const refusal = seed.rejectPatch?.(request.body) ?? null
+        if (refusal !== null) throw refusal
         return seed.subscription ?? polarSubscription()
+      }
+      if (method === 'GET' && path.startsWith('/v1/subscriptions/')) {
+        return (
+          seed.subscriptionRead ?? seed.subscription ?? polarSubscription()
+        )
+      }
+      if (path.startsWith('/v1/discounts/')) {
+        if (seed.discountError !== undefined) throw seed.discountError
+        const catalogue = seed.discounts ?? []
+        if (path === '/v1/discounts/') {
+          const limit = Number(request.query?.limit ?? 10)
+          const page = Number(request.query?.page ?? 1)
+          return {
+            items: catalogue.slice((page - 1) * limit, page * limit),
+            pagination: {
+              total_count: catalogue.length,
+              max_page: Math.max(1, Math.ceil(catalogue.length / limit)),
+            },
+          }
+        }
+        const id = path.slice('/v1/discounts/'.length)
+        const found = catalogue.find((discount) => discount.id === id)
+        if (found === undefined) {
+          throw new PolarApiError(404, '{"error":"ResourceNotFound"}', 'Not found')
+        }
+        return found
       }
       if (method === 'GET' && path === '/v1/orders/') {
         const items = seed.orders ?? []
@@ -668,6 +707,8 @@ export function createHarness(options: HarnessOptions = {}): Harness {
     tasks,
     logger,
     now: () => now,
+    // The sandbox budget, the tighter of the two.
+    discountLookupBudget: 20,
   }
 
   return {
