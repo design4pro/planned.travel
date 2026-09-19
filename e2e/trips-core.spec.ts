@@ -216,7 +216,13 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     ready: 'main',
   }
 
-  const TRIGGER = '[data-part="trip-actions-trigger"]'
+  /**
+   * A trip on the index in whichever layout this viewport draws: the grid's tile above `md`, the
+   * row below it (`01-S7`), where the grid is still in the document but hidden. `:visible` keeps
+   * every lookup on the copy a reader can actually reach.
+   */
+  const CARD = '[data-part="trip-tile"]:visible, [data-part="trip-row"]:visible'
+  const TRIGGER = '[data-part="trip-actions-trigger"]:visible'
 
   test.beforeEach(async ({ context, page, baseURL }) => {
     await useSession(context, page, baseURL)
@@ -234,10 +240,7 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
   async function firstTripTitle(page: Page): Promise<string> {
     // By role rather than by tag: the index renders its tiles at `h2` and the dashboard grid at
     // `h3`, and which level a card takes is the surrounding outline's business, not this claim's.
-    const heading = page
-      .locator('[data-part="trip-tile"]')
-      .first()
-      .getByRole('heading')
+    const heading = page.locator(CARD).first().getByRole('heading')
     await expect(heading).toHaveCount(1)
     return (await heading.innerText()).trim()
   }
@@ -328,7 +331,7 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     await visit(page, FAVOURITES, 'light')
 
     await expect(page.getByRole('link', { name: 'Favourites 0' })).toBeVisible()
-    await expect(page.locator('[data-part="trip-tile"]')).toHaveCount(0)
+    await expect(page.locator(CARD)).toHaveCount(0)
 
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
@@ -429,7 +432,13 @@ test.describe('01-S1d — Copying a trip is asked for before it is started', () 
     ready: 'main',
   }
 
-  const TRIGGER = '[data-part="trip-actions-trigger"]'
+  /**
+   * A trip on the index in whichever layout this viewport draws: the grid's tile above `md`, the
+   * row below it (`01-S7`), where the grid is still in the document but hidden. `:visible` keeps
+   * every lookup on the copy a reader can actually reach.
+   */
+  const CARD = '[data-part="trip-tile"]:visible, [data-part="trip-row"]:visible'
+  const TRIGGER = '[data-part="trip-actions-trigger"]:visible'
   const DIALOG = '[data-part="trip-copy-dialog"]'
 
   /**
@@ -472,10 +481,7 @@ test.describe('01-S1d — Copying a trip is asked for before it is started', () 
     tile: ReturnType<Page['locator']>
     title: string
   }> {
-    const tile = page
-      .locator('[data-part="trip-tile"]')
-      .filter({ hasNotText: NO_DATES })
-      .first()
+    const tile = page.locator(CARD).filter({ hasNotText: NO_DATES }).first()
     test.skip(
       (await tile.count()) === 0,
       'every trip in this workspace is undated, so there is no run for a copy to shorten',
