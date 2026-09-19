@@ -1591,6 +1591,53 @@ test.describe('01-S7 — Reading a list of trips two ways, and finding the archi
   })
 
   /**
+   * The remembered mode is a default for in-app navigation only. A cold load of `/trips` is the
+   * server's render, and the server has no storage to read, so it paints the grid and the URL says
+   * nothing; the next in-app arrival is seeded with the stored mode, replacing rather than adding a
+   * history entry, so Back returns to where the reader came from.
+   */
+  test('a remembered list is the default for an in-app arrival, never for a cold visit', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        'planned.trips-view',
+        JSON.stringify({ mode: 'list', archiveOpen: false }),
+      )
+    })
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    await expect(
+      page.locator('[data-part="trip-tile"]:visible').first(),
+    ).toBeVisible()
+    await expect(page).not.toHaveURL(/[?&]view=/)
+    await expect(page.locator(LIST_SWITCH)).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+
+    // The top bar's `New trip` is a plain link to the index, which is the in-app arrival.
+    await visit(
+      page,
+      { name: 'dashboard', path: '/dashboard', ready: 'main' },
+      'light',
+    )
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'New trip', exact: true })
+      .click()
+    await expect(page).toHaveURL(/\/trips\?view=list$/)
+    await expect(page.locator(`${ROW}:visible`).first()).toBeVisible()
+
+    await page.goBack()
+    await expect(page).toHaveURL(/\/dashboard$/)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
    * The demo workspace carries no archived trip, so this test makes one and puts it back: the last
    * row, which is never the dashboard's prominent trip nor the tile another block reads first. The
    * fold is asserted to be a real disclosure — a button whose `aria-expanded` follows it and whose
