@@ -415,6 +415,11 @@ function TripsPage() {
         {scope === 'archived' || data.archivedTrips.length === 0 ? null : (
           <ArchivedTrips
             trips={data.archivedTrips}
+            // The fold reads at most a page, so an unfiltered count is the workspace's own total —
+            // the figure the Archived filter above it prints — rather than the page's length.
+            count={
+              unfiltered ? data.totals.archived : data.archivedTrips.length
+            }
             open={preference.archiveOpen}
             onOpenChange={(open) =>
               setPreference({ ...preference, archiveOpen: open })
@@ -476,10 +481,12 @@ function ViewSwitch({
  */
 function ArchivedTrips({
   trips,
+  count,
   open,
   onOpenChange,
 }: {
   trips: TripsPayload['archivedTrips']
+  count: number
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -513,7 +520,7 @@ function ArchivedTrips({
             {t('shell.tripStatus.archived')}
           </span>
           <Badge tone="neutral" size="sm" className="tabular-nums">
-            {formatNumber(trips.length, locale)}
+            {formatNumber(count, locale)}
           </Badge>
         </button>
       </h2>
