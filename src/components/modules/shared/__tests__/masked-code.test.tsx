@@ -1,8 +1,8 @@
 /**
  * The mask, at the two seams the timelines depend on: the glyph count, which is
- * what keeps a revealed code from moving the row it sits in, and the reveal
- * itself — which is a control swap, and therefore a place a keyboard reader can
- * be dropped.
+ * what keeps a revealed code from moving the row it sits in, and the rule for
+ * when a code is masked — which only an intent-bearing gesture lifts, and only
+ * until the reader moves on. The control's own states are `copy-value.test.tsx`.
  */
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -79,24 +79,34 @@ describe('MaskedCode', () => {
     ).toContain('HG-8842190')
   })
 
-  /** A hover never held the focus, so it must not take it either. */
-  it('leaves the focus alone when a pointer reveals the code', async () => {
+  /** A pointer crossing a row is not a decision to read the code on it. */
+  it('a hover no longer reveals the code', async () => {
+    const user = userEvent.setup()
+    render(inEnglish(<MaskedCode value="HG-8842190" label={LABEL} masked />))
+
+    await user.hover(screen.getByRole('button', { name: `Show ${LABEL}` }))
+
+    expect(document.body.textContent).not.toContain('HG-8842190')
+  })
+
+  it('moving on masks the code again', async () => {
     const user = userEvent.setup()
     render(
       inEnglish(
         <>
-          <button type="button">Elsewhere</button>
           <MaskedCode value="HG-8842190" label={LABEL} masked />
+          <button type="button">Elsewhere</button>
         </>,
       ),
     )
 
-    const elsewhere = screen.getByRole('button', { name: 'Elsewhere' })
-    elsewhere.focus()
-    await user.hover(screen.getByRole('button', { name: `Show ${LABEL}` }))
+    await user.click(screen.getByRole('button', { name: `Show ${LABEL}` }))
+    expect(document.body.textContent).toContain('HG-8842190')
 
-    expect(screen.getByRole('button', { name: `Copy ${LABEL}` })).toBeDefined()
-    expect(document.activeElement).toBe(elsewhere)
+    await user.click(screen.getByRole('button', { name: 'Elsewhere' }))
+
+    expect(document.body.textContent).not.toContain('HG-8842190')
+    expect(screen.getByRole('button', { name: `Show ${LABEL}` })).toBeDefined()
   })
 
   it('never masks when the preference is off, or when there is no code', () => {
