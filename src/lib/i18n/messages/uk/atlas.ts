@@ -40,6 +40,7 @@ const messages = {
     'Перевірте, чи дозволено цьому сайту доступ до геолокації, і спробуйте ще раз.',
 
   'map.attribution.label': 'Дані карти від',
+  'map.attribution.geocoder': 'Місця знайдено за допомогою',
 
   'map.basemap.title': 'Базова карта недоступна',
   'map.basemap.body':

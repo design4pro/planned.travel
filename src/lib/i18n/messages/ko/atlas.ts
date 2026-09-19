@@ -39,6 +39,7 @@ const messages = {
     '이 사이트에 위치 접근이 허용되어 있는지 확인한 뒤 다시 시도해 주세요.',
 
   'map.attribution.label': '지도 데이터 제공',
+  'map.attribution.geocoder': '장소 검색 제공',
 
   'map.basemap.title': '기본 지도를 사용할 수 없습니다',
   'map.basemap.body':

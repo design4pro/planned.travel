@@ -1,11 +1,11 @@
 # Drop a pin on the map and it becomes a place
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | draft |
-| **Issue**          | #554  |
-| **Spec PR**        | #583  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | in-progress |
+| **Issue**          | #554        |
+| **Spec PR**        | #583        |
+| **Implementation** | none        |
 
 `02-S4` · FR #554 · Parent PRD #437 · Stage `02-S4` of `docs/plans/02-places-and-maps.md`, wave 3; PRD Implementation Decisions 2, 3, 4 and 5. First consumer of the geocoding proxy #281 (spec `.ai/specs/implemented/2026-09-09-geocoding-proxy.md`).
 
@@ -297,3 +297,17 @@ Every key lands in all 23 locales in the same change (`i18n-messages` skill). `e
 12. `src/server/repos/__tests__/tenant-isolation.test.ts`: extend the existing `createPlace` cases inside `a foreign parent id is rejected, never re-scoped` (`:1251` foreign trip, `:1403` foreign category) with a valid `lat`/`lng` pair, and assert B's place count is unchanged afterwards. No second copy of either case.
 13. `e2e/places-and-maps.spec.ts`: append `test.describe('02-S4 — drop a pin', …)`. First test: each published `data-part` (`add-place`, `add-place-menu`, `add-place-option[value="map"]`, `planner-canvas`) has `toHaveCount(1)` in the state that should contain it. Then: context-click → `getByRole('dialog', { name: 'Add a place to this trip' })` with latitude/longitude filled; keyboard arm → `Enter` → same dialog; save → a new marker, and a reload keeps it. `watchConsole()` before every navigation, `fatal` empty at the end (the GL advisory on a map route is the one tolerated entry), and zero layout shift after paint in Chromium including while the dialog opens. The journey asserts the coordinates and that the address field is editable, never its content, so it passes whether or not the environment holds a geocoder key and never depends on a vendor.
 14. Blind A/B pair (`scripts/visual/capture.mjs`) for resting, armed and dropped, light and dark, for the human reviewer; QA evidence on the implementation PR (`needs-qa`).
+
+## Amendment
+
+What ships in #619 differs from the design above in these places. All three phases ship on that one pull request.
+
+1. **A places-quota refusal does not reach the client as `QUOTA_EXCEEDED` (Resolved assumption 8).** `QuotaExceededError` is not in `AUTHORED_ERROR_NAMES`, so `failureRedactionMiddleware` sends `{ kind: 'unexpected', reference }` with no code, and `code === 'QUOTA_EXCEEDED'` can never match in production. Carrying it would change the global failure envelope (`src/lib/errors.ts`, `src/server/errors/`), which is outside this stage. `placeWriteMessage(cause, fallback)` therefore decodes the envelope: an authored refusal reads as written, and anything else gets the caller's fallback. It takes no `t`. The `addPlace.quota` / `addPlace.quotaAction` keys and the billing toast are not added. Carrying the quota refusal across the envelope is a follow-up issue. A side effect: a failed place write no longer shows the raw envelope string in the form.
+2. **No geocoder credit without a basemap archive (Resolved assumption 9).** `map-canvas.test.tsx` pins that the no-archive notice names Natural Earth alone and that no credit pill stands behind the notice. The geocoder segment follows the same rule: it is appended only while the basemap is available, with OpenStreetMap deduplicated by link. The line reads `OpenStreetMap · Protomaps · Geoapify`, and the no-archive state is unchanged.
+3. **The map option publishes `data-value="map"`, not `value="map"`.** A menu item is a `div`, which carries no `value`. The journey addresses `[data-part="add-place-option"][data-value="map"]`.
+4. **`usePlannerDrop` takes a fourth option, `formOpen`.** The provisional pin stands until the form it opened closes, and the hook has no other way to see the screen's dialog state. It returns `{ state, editable, ready, pin, arm, cancel, drop, attach }`. `ready` keeps the menu option disabled until the map exists. `arm(returnFocusTo)` is handed the menu trigger, and `Escape` returns focus to it. The screen names the hook's result `mapDrop`, because `drop` is already a parameter inside `runMove`.
+5. **The map option arms from the menu's `onCloseAutoFocus`, not from `onSelect`.** The dropdown traps focus until it has closed. A map focused from `onSelect` had focus pulled back into the menu, and then focus fell to `body`.
+6. **A mouse press held still does not drop; a finger or a pen does.** A held mouse button is the start of a pan. When the map is armed, any short press that does not move past the tolerance is the click that drops.
+7. **One more key, `trips.plan.drop.error`.** When a lookup is refused for authorisation, the pin is withdrawn and a toast shows the refusal's own sentence. This key is the fallback when the failure carries no sentence.
+8. **The journey does not submit the form.** A created place is an additive write to the workspace both browser projects share, and `trips-core.spec.ts` declines such writes for the same reason. The save path is the unchanged `createPlanPlaceFn`. The journey runs on the unmapped trip, whose empty map also shows the hint. It runs in Chromium only, because the add control is in the desktop rail. It asserts the coordinates, the focused name field and the withdrawn pin rather than a reload.
+9. **The isolation cases gain coordinates in place.** The foreign-trip attempt and the foreign-category attempt in `a foreign parent id is rejected, never re-scoped` carry `lat`/`lng`. The category case now also asserts both tenants' place counts.

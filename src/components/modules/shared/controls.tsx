@@ -8,7 +8,7 @@
  * what will be destroyed rather than "Are you sure?".
  */
 import * as React from 'react'
-import { Check, MoreHorizontal } from 'lucide-react'
+import { Check, Eye, MoreHorizontal } from 'lucide-react'
 
 import {
   Badge,
@@ -246,21 +246,33 @@ async function copyToClipboard(value: string): Promise<boolean> {
  * A confirmation number is only useful if it can be got out of the screen. The
  * button carries the value's name, so a screen reader hears what was copied.
  *
- * `ref` reaches the button itself, for the one caller that replaces a control of
- * its own with this one and has to hand the focus over ({@link MaskedCode}).
+ * **`mask` starts it masked.** The value is then not in the DOM: the button shows
+ * `glyphs` and answers to `revealLabel` until the reader activates it, and the
+ * next activation copies. Masked and revealed are two states of this one button,
+ * so the focus never has to be handed anywhere. Losing the focus masks it again —
+ * the reader moved on. A hover or a `Tab` reveals nothing: neither is a decision
+ * to read a code.
+ *
+ * Safari, and Firefox on macOS, focus no button on a click, and blur a focused one
+ * on `mousedown`. So while a mask is given, `mousedown` moves no focus and the
+ * reveal takes it explicitly — otherwise a pointer reveal would never blur, and a
+ * second click would mask before it could copy.
  */
 export function CopyValue({
   value,
   label,
   className,
-  ref,
+  mask,
 }: {
   value: string
   label: string
   className?: string
-  ref?: React.Ref<HTMLButtonElement>
+  /** Absent — the control only copies. `revealLabel` arrives translated. */
+  mask?: { readonly glyphs: string; readonly revealLabel: string }
 }) {
   const [copied, setCopied] = React.useState(false)
+  const [revealed, setRevealed] = React.useState(false)
+  const hidden = mask !== undefined && !revealed
 
   React.useEffect(() => {
     if (!copied) {
@@ -270,29 +282,66 @@ export function CopyValue({
     return () => window.clearTimeout(timer)
   }, [copied])
 
+  function activate(button: HTMLButtonElement): void {
+    if (hidden) {
+      setRevealed(true)
+      button.focus()
+      return
+    }
+    void copyToClipboard(value).then(setCopied)
+  }
+
+  // Both states are this one element, so its focus survives the reveal.
   return (
     <button
-      ref={ref}
       type="button"
-      aria-label={copied ? `${label} copied` : `Copy ${label}`}
-      onClick={() => {
-        void copyToClipboard(value).then(setCopied)
-      }}
+      data-state={mask && (hidden ? 'masked' : 'revealed')}
+      aria-label={hidden ? mask.revealLabel : copyLabel(label, copied)}
+      onMouseDown={mask && ((event) => event.preventDefault())}
+      onClick={(event) => activate(event.currentTarget)}
+      onBlur={
+        mask &&
+        (() => {
+          setRevealed(false)
+          setCopied(false)
+        })
+      }
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-sm font-mono text-caption tracking-wide uppercase focus-ring',
-        'transition-colors duration-fast ease-out-quint hover:text-brand',
-        copied ? 'text-success' : 'text-ink',
+        'inline-flex items-center gap-1.5 rounded-sm font-mono text-caption tracking-wide focus-ring',
+        'transition-colors duration-fast ease-out-quint',
+        mask && 'px-1.5',
+        hidden
+          ? 'bg-surface-inset text-ink-4 hover:text-ink-2'
+          : cn(
+              'uppercase hover:text-brand',
+              copied ? 'text-success' : 'text-ink',
+            ),
         className,
       )}
     >
-      <span className="tabular-nums">{value}</span>
-      <Check
-        aria-hidden
-        className={cn(
-          'size-3 transition-opacity duration-fast',
-          copied ? 'opacity-100' : 'opacity-0',
-        )}
-      />
+      {hidden ? (
+        <>
+          <span aria-hidden className="tabular-nums">
+            {mask.glyphs}
+          </span>
+          <Eye aria-hidden className="size-3" />
+        </>
+      ) : (
+        <>
+          <span className="tabular-nums">{value}</span>
+          <Check
+            aria-hidden
+            className={cn(
+              'size-3 transition-opacity duration-fast',
+              copied ? 'opacity-100' : 'opacity-0',
+            )}
+          />
+        </>
+      )}
     </button>
   )
+}
+
+function copyLabel(label: string, copied: boolean): string {
+  return copied ? `${label} copied` : `Copy ${label}`
 }

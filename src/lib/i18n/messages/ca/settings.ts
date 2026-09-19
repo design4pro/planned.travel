@@ -178,7 +178,7 @@ const messages = {
   'appearance.privacy.codesLabel':
     'Amaga els codis de confirmació fins que els demani',
   'appearance.privacy.codesHint':
-    'Les referències de reserva i els números de confirmació es mantenen ocults a l’escriptori de reserves i als transports fins que hi passis per sobre, hi posis el focus o els toquis. Els preus no s’amaguen mai.',
+    'Les referències de reserva i els números de confirmació es mantenen ocults a l’escriptori de reserves i als transports fins que hi facis clic o els toquis, i s’amaguen de nou quan passes a una altra cosa. Els preus no s’amaguen mai.',
   'appearance.saveFailed': 'Aquest canvi no s’ha desat',
   'appearance.saveFailedBody':
     'Aquí es veu, però el pròxim dispositiu des del qual entris no el tindrà.',

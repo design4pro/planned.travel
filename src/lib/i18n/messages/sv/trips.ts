@@ -72,6 +72,19 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Lägg till en anteckning',
   'plan.note.addForDay': 'Lägg till en anteckning: {day}',
+  'plan.addPlace.label': 'Lägg till en plats',
+  'plan.addPlace.more': 'Fler sätt att lägga till en plats',
+  'plan.addPlace.option.map': 'Placera den på kartan',
+  'plan.addPlace.forDay': 'Lägg till en plats på den här dagen',
+  'plan.addPlace.forDayNamed': 'Lägg till en plats: {day}',
+  'plan.drop.hint':
+    'Högerklicka på kartan, eller tryck och håll, för att lägga till en plats precis där.',
+  'plan.drop.armed':
+    'Klicka på kartan där den ska ligga, eller flytta kartan och tryck på Enter för att släppa den i mitten.',
+  'plan.drop.stop': 'Sluta placera en ny nål',
+  'plan.drop.pin': 'Ny plats',
+  'plan.drop.lookingUp': 'Letar efter adressen…',
+  'plan.drop.error': 'Nålen kunde inte placeras. Försök igen om en stund.',
   'plan.note.showMore': 'Visa mer',
   'plan.note.showLess': 'Visa mindre',
   'plan.note.moveUp': 'Flytta upp',

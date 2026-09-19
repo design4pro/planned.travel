@@ -47,6 +47,7 @@ const messages = {
     'Verifique se o acesso à localização está permitido para este site e tente de novo.',
 
   'map.attribution.label': 'Dados do mapa de',
+  'map.attribution.geocoder': 'Lugares localizados com',
 
   'map.basemap.title': 'Mapa base indisponível',
   'map.basemap.body':

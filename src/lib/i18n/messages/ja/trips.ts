@@ -73,6 +73,20 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'メモを追加',
   'plan.note.addForDay': 'メモを追加 — {day}',
+  'plan.addPlace.label': '場所を追加',
+  'plan.addPlace.more': '場所を追加するほかの方法',
+  'plan.addPlace.option.map': '地図上に配置',
+  'plan.addPlace.forDay': 'この日に場所を追加',
+  'plan.addPlace.forDayNamed': '場所を追加 — {day}',
+  'plan.drop.hint':
+    '地図を右クリックするか長押しすると、その地点に場所を追加できます。',
+  'plan.drop.armed':
+    '置きたい地点で地図をクリックするか、地図を動かして Enter キーを押すと中央に配置されます。',
+  'plan.drop.stop': '新しいピンの配置をやめる',
+  'plan.drop.pin': '新しい場所',
+  'plan.drop.lookingUp': '住所を検索しています…',
+  'plan.drop.error':
+    'ピンを置けませんでした。少し待ってからもう一度お試しください。',
   'plan.note.showMore': 'もっと見る',
   'plan.note.showLess': '折りたたむ',
   'plan.note.moveUp': '上へ移動',

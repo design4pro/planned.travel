@@ -44,6 +44,7 @@ const messages = {
     'Zkontrolujte, že má tento web povolen přístup k poloze, a zkuste to znovu.',
 
   'map.attribution.label': 'Mapová data od',
+  'map.attribution.geocoder': 'Místa vyhledána pomocí',
 
   'map.basemap.title': 'Podkladová mapa není k dispozici',
   'map.basemap.body':

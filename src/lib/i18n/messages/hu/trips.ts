@@ -73,6 +73,20 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Jegyzet hozzáadása',
   'plan.note.addForDay': 'Jegyzet hozzáadása: {day}',
+  'plan.addPlace.label': 'Hely hozzáadása',
+  'plan.addPlace.more': 'További módok hely hozzáadására',
+  'plan.addPlace.option.map': 'Elhelyezés a térképen',
+  'plan.addPlace.forDay': 'Hely hozzáadása ehhez a naphoz',
+  'plan.addPlace.forDayNamed': 'Hely hozzáadása: {day}',
+  'plan.drop.hint':
+    'Kattints jobb gombbal a térképre, vagy tartsd rajta az ujjad, hogy pontosan oda adj hozzá egy helyet.',
+  'plan.drop.armed':
+    'Kattints a térképen oda, ahová tartozik, vagy mozgasd a térképet, és nyomd meg az Entert, hogy a közepére kerüljön.',
+  'plan.drop.stop': 'Új gombostű elhelyezésének leállítása',
+  'plan.drop.pin': 'Új hely',
+  'plan.drop.lookingUp': 'Cím keresése…',
+  'plan.drop.error':
+    'A tűt nem sikerült elhelyezni. Próbáld újra egy kicsit később.',
   'plan.note.showMore': 'Több megjelenítése',
   'plan.note.showLess': 'Kevesebb megjelenítése',
   'plan.note.moveUp': 'Mozgatás felfelé',
