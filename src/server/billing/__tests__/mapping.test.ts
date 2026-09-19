@@ -25,6 +25,8 @@ import {
   organizationIdFromOrder,
   organizationIdFromSubscription,
   pendingChangeFromPolar,
+  polarDiscountListSchema,
+  polarDiscountSchema,
   polarOrderSchema,
   polarSubscriptionSchema,
   resolveSubscriptionPlan,
@@ -39,6 +41,7 @@ import {
   TEST_ORDER_ID,
   TEST_ORG_ID,
   TEST_SUBSCRIPTION_ID,
+  polarDiscount,
   polarOrder,
   polarSubscription,
   subscriptionRecord,
@@ -46,6 +49,62 @@ import {
 
 import type { PolarSubscriptionStatus } from '../mapping'
 import type { SubscriptionStatus } from '#/lib/plans'
+
+/* ------------------------------------------------------------------ discounts */
+
+describe('polarDiscountSchema', () => {
+  it('parses a percentage code with no bounds', () => {
+    const parsed = polarDiscountSchema.parse(polarDiscount())
+    expect(parsed).toMatchObject({ type: 'percentage', basis_points: 2000, products: [] })
+    expect(parsed.ends_at).toBeNull()
+    expect(parsed.max_redemptions).toBeNull()
+  })
+
+  it('parses a fixed code, reading only the product ids', () => {
+    const parsed = polarDiscountSchema.parse({
+      ...polarDiscount({ type: 'fixed', basis_points: undefined, amount: 500 }),
+      products: [{ id: TEST_PRODUCT_IDS.soloMonthly, name: 'Solo', prices: [] }],
+      currency: 'usd',
+      duration: 'once',
+    })
+    expect(parsed.amount).toBe(500)
+    expect(parsed.products).toEqual([{ id: TEST_PRODUCT_IDS.soloMonthly }])
+  })
+
+  it('keeps dates and bounds, and defaults a missing product list to every product', () => {
+    const { products: _omitted, ...wire } = polarDiscount({
+      starts_at: '2026-01-01T00:00:00Z',
+      ends_at: '2026-12-31T00:00:00Z',
+      max_redemptions: 1,
+      redemptions_count: 1,
+    })
+    const parsed = polarDiscountSchema.parse(wire)
+    expect(parsed).toMatchObject({ max_redemptions: 1, redemptions_count: 1, products: [] })
+    expect(parsed.ends_at).toBe('2026-12-31T00:00:00Z')
+  })
+
+  it('refuses a discount without a redemption count', () => {
+    const { redemptions_count: _omitted, ...wire } = polarDiscount()
+    expect(polarDiscountSchema.safeParse(wire).success).toBe(false)
+  })
+
+  it('parses a page of discounts with its pagination', () => {
+    const page = polarDiscountListSchema.parse({
+      items: [polarDiscount()],
+      pagination: { total_count: 1, max_page: 1 },
+    })
+    expect(page.pagination.max_page).toBe(1)
+  })
+
+  it('reads the discount a subscription carries, and its absence', () => {
+    expect(
+      polarSubscriptionSchema.parse(
+        polarSubscription({ discount: { id: 'd1', products: [{ id: 'p1' }] } }),
+      ).discount,
+    ).toEqual({ id: 'd1', products: [{ id: 'p1' }] })
+    expect(polarSubscriptionSchema.parse(polarSubscription()).discount).toBeUndefined()
+  })
+})
 
 /* ------------------------------------------------------------------- statuses */
 
@@ -438,11 +497,14 @@ describe('the ported surface', () => {
         'pendingChangeFromPolar',
         'polarCheckoutSchema',
         'polarCustomerSessionSchema',
+        'polarDiscountListSchema',
+        'polarDiscountSchema',
         'polarMetadataSchema',
         'polarOrderInvoiceSchema',
         'polarOrderListSchema',
         'polarOrderSchema',
         'polarPendingUpdateSchema',
+        'polarSubscriptionDiscountSchema',
         'polarSubscriptionSchema',
         'resolveSubscriptionPlan',
         'subscriptionIdFromOrder',
