@@ -236,8 +236,11 @@ export const applyPromotionCode = createServerFn({ method: 'POST' })
   .validator(discountCodeInput)
   .handler(async ({ data }): Promise<PlanChangeResult> => {
     const { runtime, identity } = await billingSession()
-    return await guarded(runtime, identity.organizationId, 'plan_change', () =>
-      applyDiscountToCurrentPlan(runtime, identity, data),
+    return await guarded(
+      runtime,
+      identity.organizationId,
+      'discount_apply',
+      () => applyDiscountToCurrentPlan(runtime, identity, data),
     )
   })
 
