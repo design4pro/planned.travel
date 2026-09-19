@@ -817,7 +817,7 @@ function matchLink(
 
   const angled = source[cursor] === '<'
   const from = angled ? cursor + 1 : cursor
-  const to = angled ? source.indexOf('>', from) : stops.destinationEnd[cursor]
+  const to = angled ? stops.next['>'][from] : stops.destinationEnd[cursor]
   if (to === -1) return null
   cursor = angled ? to + 1 : to
 
@@ -825,7 +825,7 @@ function matchLink(
   while (LINK_SPACE.test(source[cursor] ?? '')) cursor += 1
   const quote = source[cursor]
   if (quote === '"' || quote === "'") {
-    const close = source.indexOf(quote, cursor + 1)
+    const close = stops.next[quote][cursor + 1]
     if (close === -1) return null
     cursor = close + 1
     while (LINK_SPACE.test(source[cursor] ?? '')) cursor += 1
@@ -848,6 +848,11 @@ interface LinkStops {
    * `)` that closes it, or the end of the source.
    */
   readonly destinationEnd: Int32Array
+  /**
+   * The first `>`, `"` or `'` at or after an offset, or -1 when none follows:
+   * what an angle destination and a quoted title close on.
+   */
+  readonly next: Readonly<Record<'>' | '"' | "'", Int32Array>>
 }
 
 /**
@@ -907,7 +912,27 @@ function linkStops(source: string): LinkStops {
 
   settle(0, source.length)
   destinationEnd[source.length] = source.length
-  return { labelEnd, destinationEnd }
+  return { labelEnd, destinationEnd, next: nextOccurrences(source) }
+}
+
+/**
+ * The closer searches, answered backwards in one pass so a run of unclosed
+ * `<` or quotes does not re-read the rest of the source once per `[`.
+ */
+function nextOccurrences(source: string): LinkStops['next'] {
+  const next = {
+    '>': new Int32Array(source.length + 1),
+    '"': new Int32Array(source.length + 1),
+    "'": new Int32Array(source.length + 1),
+  }
+  const closers = Object.entries(next)
+  for (const [, table] of closers) table[source.length] = -1
+  for (let index = source.length - 1; index >= 0; index -= 1) {
+    for (const [char, table] of closers) {
+      table[index] = source[index] === char ? index : table[index + 1]
+    }
+  }
+  return next
 }
 
 /**
