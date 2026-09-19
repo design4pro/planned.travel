@@ -116,7 +116,8 @@ export const bookingImportPayloadSchema = z.object({
   contentType: z.string().min(1).max(255).optional(),
   /**
    * One member per *branch*, not per media type: a grammar the deterministic parsers know, or text
-   * a model reads. The conversion's own routing table stays in `src/server/extract/document.ts`.
+   * a model reads. The finer routing inside `document` is `importReaderFor`, in
+   * `src/server/fns/file-policy.ts`.
    */
   format: z.enum(['ics', 'json', 'document']),
 })

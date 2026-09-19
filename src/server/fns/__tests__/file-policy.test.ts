@@ -15,6 +15,11 @@ describe('importReaderFor', () => {
     expect(importReaderFor('pass.pkpass', 'text/plain')).toBeNull()
   })
 
+  it('reads the last extension, whatever its case', () => {
+    expect(importReaderFor('Confirmation.PDF', '')).toBe('convert')
+    expect(importReaderFor('archive.tar.gz', 'application/pdf')).toBeNull()
+  })
+
   it('agrees with importFormatFor on every file, so the boundary and the reader cannot drift', () => {
     const cases: Array<[string, string]> = [
       ['trip.ics', 'text/calendar'],

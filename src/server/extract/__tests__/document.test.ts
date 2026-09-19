@@ -3,7 +3,6 @@ import {
   IMPORT_TEXT_MAX_CHARS,
   ImportRefusedError,
   documentToText,
-  extensionOf,
   needsConversion,
   stripBase64Runs,
 } from '../document'
@@ -26,14 +25,6 @@ function converterAnswering(answer: DocumentConversion | (() => never)) {
   const converter: DocumentConverter = { toMarkdown }
   return { ...converter, toMarkdown }
 }
-
-describe('extensionOf', () => {
-  it('lowercases the last segment and answers empty for a name without one', () => {
-    expect(extensionOf('Confirmation.PDF')).toBe('pdf')
-    expect(extensionOf('archive.tar.gz')).toBe('gz')
-    expect(extensionOf('confirmation')).toBe('')
-  })
-})
 
 describe('routing by extension', () => {
   it('sends a PDF through the conversion', async () => {

@@ -117,11 +117,6 @@ const BASE64_RUN = /[A-Za-z0-9+/=]{60,}(?:\s+[A-Za-z0-9+/=]{60,})*/g
 
 const BASE64_RUN_MIN_CHARS = 200
 
-export function extensionOf(name: string): string {
-  const dot = name.lastIndexOf('.')
-  return dot === -1 ? '' : name.slice(dot + 1).toLowerCase()
-}
-
 /** Drops the base64 blocks of a saved mail message and keeps everything else as it stands. */
 export function stripBase64Runs(text: string): string {
   return text.replace(BASE64_RUN, (run) =>
@@ -174,13 +169,17 @@ export async function documentToText(
     readonly contentType?: string
   },
 ): Promise<string> {
-  const reader = importReaderFor(input.name, input.contentType ?? '')
-  const raw =
-    reader === 'mail'
-      ? stripBase64Runs(decodeUtf8(input.bytes))
-      : reader === 'text'
-        ? decodeUtf8(input.bytes)
-        : await convert(converter, input)
+  let raw: string
+  switch (importReaderFor(input.name, input.contentType ?? '')) {
+    case 'mail':
+      raw = stripBase64Runs(decodeUtf8(input.bytes))
+      break
+    case 'text':
+      raw = decodeUtf8(input.bytes)
+      break
+    default:
+      raw = await convert(converter, input)
+  }
 
   const text = raw.trim()
   if (text.length === 0) {
