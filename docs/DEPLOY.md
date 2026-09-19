@@ -244,7 +244,7 @@ other way needs the command by hand.
 You should see **62 domain tables + 9 Better Auth tables** (`user`, `session`, `account`,
 `verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). Both numbers are
 read off the schema rather than remembered: `grep -c 'sqliteTable(' src/server/db/schema.ts` prints
-the first and the same command over `auth-schema.ts` prints the second. Migration `0004` moved the
+the first and the same command over `auth-schema.ts` prints the second. Migration `0005` moved the
 domain count from 57 by adding `staff_api_tokens` and `platform_audit_log`; `0007` moved it from 60
 by adding `provider_registry` and `provider_usage`, both purely `CREATE TABLE` + `CREATE INDEX`.
 
@@ -281,14 +281,23 @@ stranding a paying customer. It does not remove the reader.
 
 **§12's register is the list.** A migration that is not in it is additive; a migration that is not
 additive and not in it is a defect belonging to the round that generated it, and the fix is to add
-the row before the release ships, not after someone needs a rollback. Five migrations exist and
-two are registered, and the two fail differently — `0001` recreated a table, `0002` renamed three
-columns — which is why §12 records the _kind_ of departure and not only the number. The other three
-are absent on purpose. `0000` is the initial `CREATE TABLE` set. `0003` is three bare
-`ALTER TABLE "subscriptions" ADD COLUMN` statements (`pending_plan`, `pending_interval`,
-`pending_effective_at`) with no constraint, which is exactly the shape that stays additive. `0004`
-is the same shape at larger scale: two `CREATE TABLE` statements for `staff_api_tokens` and
-`platform_audit_log` with their indexes, then five bare column adds on `user` and `session` and one
+the row before the release ships, not after someone needs a rollback. Which migrations need a row
+is read off the files rather than remembered:
+
+```bash
+grep -lE '__new_|RENAME COLUMN|RENAME TO|DROP COLUMN|DROP TABLE' drizzle/*.sql
+```
+
+Every file it prints has a row in §12, and every row names a file on disk;
+`src/server/db/__tests__/migration-register.test.ts` asserts both, so a generate that recreates,
+renames or drops fails `pnpm test` until its row lands. The rows fail differently — `0001`
+recreated a table, `0003` renamed three columns — which is why §12 records the _kind_ of departure
+and not only the number. Everything the command does not print is absent on purpose — only
+`CREATE TABLE`, `CREATE INDEX` and bare `ADD COLUMN` — and three of those show the range. `0000` is
+the initial `CREATE TABLE` set. `0004` is three bare `ALTER TABLE "subscriptions" ADD COLUMN`
+statements (`pending_plan`, `pending_interval`, `pending_effective_at`) with no constraint, which is
+exactly the shape that stays additive. `0005` is the same shape at larger scale: two `CREATE TABLE`
+statements for `staff_api_tokens` and `platform_audit_log` with their indexes, then five bare column adds on `user` and `session` and one
 `CREATE INDEX` — no `__new_`, no `DROP TABLE`, no `RENAME TO`, no `PRAGMA foreign_keys`. Its five
 `CHECK` constraints are all inside the `CREATE TABLE` for `platform_audit_log`, which is not what
 the paragraph above warns about: the escalation comes from adding a `CHECK` to a table that already
@@ -302,7 +311,7 @@ an append-only log. Both are narrowed with Drizzle's `$type` instead, which emit
 therefore appears nowhere in this file; a value outside either list fails `pnpm typecheck` at the
 insert, and that is the whole of the guarantee for those two columns.
 
-`0004` matches `docs/ACCESS.md` §4.1 line for line, including the one line that used to differ.
+`0005` matches `docs/ACCESS.md` §4.1 line for line, including the one line that used to differ.
 `platform_audit_log.token_id` ships as `ON DELETE restrict`, and §4.1's type column says
 `on delete restrict` as well; §5 there carries the reasoning. The wording it replaced was
 `on delete set null`, which named an outcome this table cannot produce: SQLite re-evaluates
@@ -1269,7 +1278,7 @@ members of Polar's own enum, so narrowing the tuple would make a legitimate webh
 OpenAPI (`https://polar.sh/docs/openapi.json`, `info.version` 2026-04): `SubscriptionStatus` is
 exactly those eight values.
 
-**The three provider columns were renamed, and that rename is migration `0002`.** Phase A moved
+**The three provider columns were renamed, and that rename is migration `0003`.** Phase A moved
 them rather than leaving three inherited names holding Polar ids:
 
 | Was                      | Is now                     | Holds                                                                          |
@@ -1282,7 +1291,7 @@ The two indexes over those columns move with them, because their names carry the
 `subscriptions_stripe_subscription_unq` → **`subscriptions_provider_subscription_unq`** (unique)
 and `subscriptions_stripe_customer_idx` → **`subscriptions_provider_customer_idx`**.
 
-`drizzle/0002_calm_daredevil.sql` is three `ALTER TABLE "subscriptions" RENAME COLUMN` statements
+`drizzle/0003_calm_daredevil.sql` is three `ALTER TABLE "subscriptions" RENAME COLUMN` statements
 plus a `DROP INDEX` and a `CREATE [UNIQUE] INDEX` for each of the two indexes.
 
 **What the empty table did and did not buy, corrected.** An earlier revision of this section
@@ -1296,11 +1305,11 @@ the seed on every run, and no Polar subscription exists because §9.11 has not b
   rename was the right call rather than a two-release dance over three names nobody was reading.
 - **There is still a reader risk, and it is not the rows.** The reader §5 protects is the previous
   Worker's SQL. Drizzle bakes a fixed column list into every statement, so a Worker rolled back
-  past `0002` issues `select … "stripe_customer_id" …` against a schema that no longer has that
+  past `0003` issues `select … "stripe_customer_id" …` against a schema that no longer has that
   column and fails with `no such column` on its first billing query — with an empty table exactly
   as with a full one. §12 registers that window and carries the recipe for crossing it.
 
-So the honest statement is: `0002` is a **deliberate, registered exception** to §5's additive
+So the honest statement is: `0003` is a **deliberate, registered exception** to §5's additive
 policy, taken because the cost was one rollback window on a pre-revenue release and the benefit
 was not shipping three misleading column names into every future migration. It is not a precedent.
 The moment a production row exists the data argument expires too, and any further column move is
@@ -1599,13 +1608,15 @@ or both, when one change is both:
   `PRAGMA foreign_keys=OFF/ON`, which D1 does not honour (§5), and a hand-written `CHECK`
   constraint that the regenerated schema no longer carries would be lost silently.
 
-| Migration                 | Departure                     | What it did                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Crossing it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `0001_aspiring_cargill`   | table recreate                | Rebuilt `expenses` to give `original_currency` its own column. Previously the shared `currency()` builder hardcoded the name, so `currency` and `originalCurrency` both mapped to one SQL column and the source currency of a foreign receipt was silently discarded.                                                                                                                                                                                                                                                                                  | Rollback is safe for the reader: it only gained a column, so the older Worker's statements still resolve. The recreate matters going forward, not backward — read §5 before generating another one.                                                                                                                                                                                                                                                                                                                                              |
-| `0002_calm_daredevil`     | reader-unsafe                 | Renamed `stripe_customer_id` → `provider_customer_id`, `stripe_subscription_id` → `provider_subscription_id`, `stripe_price_id` → `provider_product_id`, and swapped the two indexes over them (§9.10).                                                                                                                                                                                                                                                                                                                                                | **Not safe on code alone.** A Worker from before the phase-A release selects the three old names. Move the schema back first, or do not roll back past it.                                                                                                                                                                                                                                                                                                                                                                                       |
-| `0011_red_cassandra_nova` | reader-unsafe, table recreate | Ships in the first release cut after PR #450. Rebuilt `trip_favourites` onto the composite `PRIMARY KEY(trip_id, user_id)` it should have carried from `0009`, dropping the surrogate `id` column and the `trip_favourites_trip_user_unq` index that had been re-imposing the same pair. `trip_favourites_org_user_idx` is recreated unchanged. No other table references it, so the recreate copies rows under `PRAGMA foreign_keys=OFF/ON` that D1 ignores (§5) without an inbound cascade to strand, and the table carries no hand-written `CHECK`. | **Not safe on code alone, in either direction — read the deploy note below before applying it.** The old reader is `createTenantRepository`, whose `select()` and `insert()` name every column of _its own_ schema, `id` included. Prefer rolling forward. If the rollback is unavoidable, the cheap path is the one this section already names for `0002`: this table holds one row per person per starred trip and nothing else depends on it, so re-create it from the `0009` schema and accept the lost stars rather than reversing the key. |
+| Migration                   | Departure                     | What it did                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Crossing it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `0001_aspiring_cargill`     | table recreate                | Rebuilt `expenses` to give `original_currency` its own column. Previously the shared `currency()` builder hardcoded the name, so `currency` and `originalCurrency` both mapped to one SQL column and the source currency of a foreign receipt was silently discarded.                                                                                                                                                                                                                                                                                  | Rollback is safe for the reader: it only gained a column, so the older Worker's statements still resolve. The recreate matters going forward, not backward — read §5 before generating another one.                                                                                                                                                                                                                                                                                                                                              |
+| `0002_locale_normalisation` | table recreate                | Rebuilt `organization_settings` to move the `locale` default from `'en-GB'` to `'en'` — a column default being the one thing SQLite cannot `ALTER`. Columns and both `CHECK` constraints are carried over unchanged, and `settings-locale.test.ts` re-derives the DDL from the schema. A hand-written half then rewrote every stored tag in `organization_settings.locale` and `user_settings.locale` onto the twenty-three shipped tags, clearing a personal override nothing could map.                                                              | Rollback is safe for the reader: the column set is unchanged, so the older Worker's statements still resolve. The data half is one-way — a rollback does not restore the regional tags it replaced, and nothing should try to.                                                                                                                                                                                                                                                                                                                   |
+| `0003_calm_daredevil`       | reader-unsafe                 | Renamed `stripe_customer_id` → `provider_customer_id`, `stripe_subscription_id` → `provider_subscription_id`, `stripe_price_id` → `provider_product_id`, and swapped the two indexes over them (§9.10).                                                                                                                                                                                                                                                                                                                                                | **Not safe on code alone.** A Worker from before the phase-A release selects the three old names. Move the schema back first, or do not roll back past it.                                                                                                                                                                                                                                                                                                                                                                                       |
+| `0010_basemap_default`      | table recreate                | Rebuilt `organization_settings` to move the `map_style` default from `'planned-light'` to `'auto'`, the same idiom and the same carried-over columns and `CHECK` constraints as `0002_locale_normalisation`; `settings-map-style.test.ts` re-derives the DDL. A hand-written half then cleared each `user_settings.map_style` equal to its workspace value, and remapped workspace rows holding `'planned-light'` to `'auto'`.                                                                                                                         | Rollback is safe for the reader: the column set is unchanged and `auto` was already a catalogue id before this migration, so the older Worker reads every remapped row. The remap is one-way; nothing needs it reversed.                                                                                                                                                                                                                                                                                                                         |
+| `0011_red_cassandra_nova`   | reader-unsafe, table recreate | Ships in the first release cut after PR #450. Rebuilt `trip_favourites` onto the composite `PRIMARY KEY(trip_id, user_id)` it should have carried from `0009`, dropping the surrogate `id` column and the `trip_favourites_trip_user_unq` index that had been re-imposing the same pair. `trip_favourites_org_user_idx` is recreated unchanged. No other table references it, so the recreate copies rows under `PRAGMA foreign_keys=OFF/ON` that D1 ignores (§5) without an inbound cascade to strand, and the table carries no hand-written `CHECK`. | **Not safe on code alone, in either direction — read the deploy note below before applying it.** The old reader is `createTenantRepository`, whose `select()` and `insert()` name every column of _its own_ schema, `id` included. Prefer rolling forward. If the rollback is unavoidable, the cheap path is the one this section already names for `0003`: this table holds one row per person per starred trip and nothing else depends on it, so re-create it from the `0009` schema and accept the lost stars rather than reversing the key. |
 
-**Crossing `0002`, if it is ever necessary.** In order, and only with the billing screen expected
+**Crossing `0003`, if it is ever necessary.** In order, and only with the billing screen expected
 to be down for the duration:
 
 1. Prefer rolling **forward**. A fix deployed on the current schema costs one deploy; a schema
@@ -1618,11 +1629,11 @@ to be down for the duration:
 3. Roll the Worker back. Verify with §11's click-through, not with the eight curl checks — none of
    them touches billing.
 4. Getting forward again is the same three renames in the original direction, and then the normal
-   deploy. `d1_migrations` already lists `0002` as applied and must not be edited; the renames are
+   deploy. `d1_migrations` already lists `0003` as applied and must not be edited; the renames are
    data-plane statements, not migrations.
 
 **The cheap alternative, and it is usually the right one.** The `subscriptions` table is the only
-table `0002` touched, and pre-revenue it is empty or holds one seeded demo row. Dropping and
+table `0003` touched, and pre-revenue it is empty or holds one seeded demo row. Dropping and
 re-creating it from the old schema is faster than the rename dance and loses nothing that exists.
 That stops being true the day the first production row is written, which is also the day this
 register stops being a formality.
@@ -2027,7 +2038,7 @@ or the last one; there is no third outcome.
 - [ ] `wrangler.jsonc` still lists three crons and staging still lists one — `0 4 * * 1` is absent
       from both until phase D (§15.3), confirmed with §11's `…/schedules` read-back rather than
       with `wrangler deployments list`, which never prints a cron.
-- [ ] Rolling back past the phase-A release needs §12's register read first — migration `0002`
+- [ ] Rolling back past the phase-A release needs §12's register read first — migration `0003`
       renamed three columns, so `wrangler rollback` on its own is not enough across that window.
 
 **Verification** (§11)
