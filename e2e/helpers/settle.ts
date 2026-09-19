@@ -330,8 +330,8 @@ function describeHydration(selector: string): string {
  *
  * `describeHydration` is one `querySelectorAll` and a filter over the result, so
  * a page that is answering at all answers in milliseconds; 2 s is orders of
- * magnitude above that and still small beside the 30 s test timeout the
- * hydration wait runs inside. A page that does not answer inside it is almost
+ * magnitude above that and still small beside the test timeout the hydration
+ * wait runs inside (30 s locally, 60 s in CI). A page that does not answer inside it is almost
  * certainly the wedged main thread that made the wait fail in the first place.
  */
 export const HYDRATION_DIAGNOSTIC_TIMEOUT_MS = 2_000

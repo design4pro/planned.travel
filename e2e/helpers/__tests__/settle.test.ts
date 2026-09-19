@@ -86,7 +86,7 @@ describe('a genuinely transient failure is still retried', () => {
 /**
  * The diagnostic is read from the page the wait just gave up on, and a wedged
  * main thread is one of the reasons a wait gives up. `page.evaluate` takes no
- * timeout, so the bound is a race - and these cases drive the real race with a
+ * timeout, so the bound is a race — and these cases drive the real race with a
  * read that never settles, rather than a browser that would have to be wedged
  * on purpose.
  */
@@ -125,5 +125,6 @@ describe('a hydration diagnostic cannot outlive the timeout it explains', () => 
     await expect(
       boundedDiagnostic(() => Promise.resolve('last is div#root')),
     ).resolves.toBe('last is div#root')
+    expect(vi.getTimerCount()).toBe(0)
   })
 })
