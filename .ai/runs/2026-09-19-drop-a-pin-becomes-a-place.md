@@ -124,3 +124,10 @@ PR: #619
   `formOpen`, the map option arms from the menu's `onCloseAutoFocus` (a modal dropdown traps focus
   until it has closed), a held mouse press does not drop, one extra key `trips.plan.drop.error`, and
   the journey does not submit (the shared demo workspace, as `trips-core.spec.ts` already reasons).
+- **Review (`om-auto-review-pr`).** Four minor findings in the map layer were fixed in `09f08d5b7`:
+  - keys and presses on a place pin no longer reach the drop;
+  - `Escape` disarms from anywhere through a capture-phase window listener;
+  - a cancel with no trigger keeps focus on the map;
+  - a gesture under the open form is ignored.
+
+  The quota follow-up is #621.
