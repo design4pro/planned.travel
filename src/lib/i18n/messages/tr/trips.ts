@@ -69,6 +69,19 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Not ekle',
   'plan.note.addForDay': 'Not ekle: {day}',
+  'plan.addPlace.label': 'Yer ekle',
+  'plan.addPlace.more': 'Yer eklemenin diğer yolları',
+  'plan.addPlace.option.map': 'Haritaya yerleştir',
+  'plan.addPlace.forDay': 'Bu güne yer ekle',
+  'plan.addPlace.forDayNamed': 'Yer ekle: {day}',
+  'plan.drop.hint':
+    'Tam oraya bir yer eklemek için haritaya sağ tıklayın veya basılı tutun.',
+  'plan.drop.armed':
+    'Haritada gideceği yere tıklayın ya da haritayı kaydırıp ortaya bırakmak için Enter tuşuna basın.',
+  'plan.drop.stop': 'Yeni raptiye yerleştirmeyi durdur',
+  'plan.drop.pin': 'Yeni yer',
+  'plan.drop.lookingUp': 'Adres aranıyor…',
+  'plan.drop.error': 'İğne bırakılamadı. Birazdan tekrar dene.',
   'plan.note.showMore': 'Daha fazla göster',
   'plan.note.showLess': 'Daha az göster',
   'plan.note.moveUp': 'Yukarı taşı',

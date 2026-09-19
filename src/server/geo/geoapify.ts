@@ -23,6 +23,7 @@
 
 import { z } from 'zod'
 
+import { GEOAPIFY_CREDITS } from '#/lib/geo/credits'
 import { GEOCODE_CANDIDATES, GeoProviderError } from './geocode'
 
 import type { Locale } from '#/lib/i18n'
@@ -134,10 +135,7 @@ function candidateOf(
 export const geoapifyVendor: GeocodeVendor = {
   slug: 'geoapify',
   retention: 'permanent',
-  attribution: [
-    { name: 'OpenStreetMap', url: 'https://www.openstreetmap.org/copyright' },
-    { name: 'Geoapify', url: 'https://www.geoapify.com/' },
-  ],
+  attribution: GEOAPIFY_CREDITS,
 }
 
 export interface GeoapifyClientOptions {

@@ -29,9 +29,6 @@ import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
 import {
   countryFlag,
-  daysBetween,
-  daysUntil,
-  formatDateRange,
   formatNumber,
   formatTimeRange,
   formatWeekday,
@@ -53,10 +50,11 @@ import {
 } from './-ui/scaffold'
 import { TimezoneClock } from './-ui/timezone-clock'
 import { TripGrid } from './-ui/trip-card'
+import { TripHeroStrip } from './-ui/trip-hero-strip'
 
 import type { ReactNode } from 'react'
 import type { DashboardWidgetId } from '#/lib/clock-zones'
-import type { Locale, MessageKey, Translate } from '#/lib/i18n'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type {
   DashboardPayload,
   ReservationCard,
@@ -196,7 +194,7 @@ function DashboardPage() {
 /* ----------------------------------------------------------------- up next */
 
 function UpNext({ data }: { data: DashboardPayload }) {
-  const { t, locale } = useI18n()
+  const t = useTranslate()
   const trip = data.upNext
 
   if (trip === null) {
@@ -231,10 +229,6 @@ function UpNext({ data }: { data: DashboardPayload }) {
       </Card>
     )
   }
-
-  const startsIn = daysUntil(trip.startDate, data.today)
-  const length = daysBetween(trip.startDate, trip.endDate)
-  const range = formatDateRange(trip.startDate, trip.endDate, locale)
 
   return (
     <Card
@@ -310,110 +304,9 @@ function UpNext({ data }: { data: DashboardPayload }) {
           )}
         </div>
 
-        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-inverse-edge sm:grid-cols-4">
-          <HeroStat
-            label={t('shell.dashboard.hero.travellers')}
-            value={formatNumber(data.counts.members, locale)}
-            hint={t('shell.dashboard.hero.travellersHint')}
-          />
-          <HeroStat
-            label={t('shell.dashboard.hero.dates')}
-            value={range ?? t('shell.dashboard.hero.datesUnset')}
-            hint={
-              length === null
-                ? t('shell.dashboard.hero.datesMissing')
-                : t('shell.dashboard.hero.datesHint', {
-                    count: length,
-                    days: formatNumber(length, locale),
-                  })
-            }
-            compact
-          />
-          <HeroStat
-            label={
-              startsIn !== null && startsIn < 0
-                ? t('shell.dashboard.hero.started')
-                : t('shell.dashboard.hero.startsIn')
-            }
-            value={startsInValue(startsIn, locale, t)}
-            hint={startsInHint(startsIn, t)}
-          />
-          <HeroStat
-            label={t('shell.dashboard.hero.places')}
-            value={formatNumber(trip.placeCount, locale)}
-            hint={
-              trip.placeCount === 0
-                ? t('shell.dashboard.hero.placesNone')
-                : t('shell.dashboard.hero.placesHint')
-            }
-          />
-        </dl>
+        <TripHeroStrip trip={trip} today={data.today} elapsed={data.elapsed} />
       </div>
     </Card>
-  )
-}
-
-/** An em dash for "no date", `Today` for the day itself, otherwise the figure. */
-function startsInValue(
-  startsIn: number | null,
-  locale: Locale,
-  t: Translate,
-): string {
-  if (startsIn === null) return '—'
-  if (startsIn === 0) return t('shell.dashboard.hero.today')
-  return formatNumber(Math.abs(startsIn), locale)
-}
-
-/**
- * The unit under the countdown, agreeing with the figure above it.
- *
- * `count` selects the CLDR branch and is never printed — the reader is looking
- * at the numeral in the same tile. The two keys used to be the bare words
- * `days ago` and `days`, which read as `Starts in / 1 / days` in English and
- * gave a translator of Polish or Arabic no branch to inflect.
- */
-function startsInHint(startsIn: number | null, t: Translate): string {
-  if (startsIn === null) return t('shell.dashboard.hero.startUnknown')
-  if (startsIn === 0) return t('shell.dashboard.hero.startToday')
-  const count = Math.abs(startsIn)
-  return startsIn < 0
-    ? t('shell.dashboard.hero.startPast', { count })
-    : t('shell.dashboard.hero.startFuture', { count })
-}
-
-function HeroStat({
-  label,
-  value,
-  hint,
-  compact = false,
-}: {
-  label: string
-  value: string
-  hint: string
-  compact?: boolean
-}) {
-  return (
-    <div className="min-w-0 bg-inverse-surface px-4 py-4 text-center">
-      <dt className="mb-2 truncate text-micro font-semibold tracking-label uppercase text-inverse-muted">
-        {label}
-      </dt>
-      {/* No `data-numeric`. Three of these four tiles hold nothing but a grouped
-          numeral, which is already an isolated run — and the fourth holds a
-          formatted date range, whose month name is Arabic prose that the
-          direction layer's `direction: ltr` would push behind its own year.
-          `tabular-nums` is the part every tile actually wants, and it is a class
-          rather than an attribute that also carries bidi meaning. */}
-      <dd
-        className={
-          compact
-            ? 'font-display text-label leading-tight font-bold tabular-nums text-inverse-on'
-            : 'font-display text-display leading-none font-bold tracking-tighter tabular-nums text-inverse-on'
-        }
-      >
-        {value}
-      </dd>
-      <p className="mt-1.5 truncate text-caption text-inverse-muted">{hint}</p>
-    </div>
   )
 }
 

@@ -1303,7 +1303,7 @@ async function copyPlaces(
  * predicate and whatever else the query compares. The same reasoning, and the same ninety, as
  * `ID_FILTER_CHUNK_SIZE` in `src/server/notifications/dispatch.ts`.
  */
-const ID_FILTER_CHUNK = 90
+export const ID_FILTER_CHUNK = 90
 
 /**
  * Re-hangs the source's tags on the copied places.

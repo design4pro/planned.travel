@@ -45,6 +45,7 @@ const messages = {
     'Prüfe, ob der Standortzugriff für diese Seite erlaubt ist, und versuch es dann noch einmal.',
 
   'map.attribution.label': 'Kartendaten von',
+  'map.attribution.geocoder': 'Orte gefunden mit',
 
   'map.basemap.title': 'Basiskarte nicht verfügbar',
   'map.basemap.body':

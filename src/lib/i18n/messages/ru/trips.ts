@@ -71,6 +71,20 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Добавить заметку',
   'plan.note.addForDay': 'Добавить заметку, {day}',
+  'plan.addPlace.label': 'Добавить место',
+  'plan.addPlace.more': 'Другие способы добавить место',
+  'plan.addPlace.option.map': 'Поставить на карту',
+  'plan.addPlace.forDay': 'Добавить место в этот день',
+  'plan.addPlace.forDayNamed': 'Добавить место, {day}',
+  'plan.drop.hint':
+    'Щёлкните по карте правой кнопкой мыши или нажмите и удерживайте, чтобы добавить место именно там.',
+  'plan.drop.armed':
+    'Щёлкните по карте там, где оно должно быть, или сдвиньте карту и нажмите Enter, чтобы поставить его в центре.',
+  'plan.drop.stop': 'Прекратить размещение новой булавки',
+  'plan.drop.pin': 'Новое место',
+  'plan.drop.lookingUp': 'Ищем адрес…',
+  'plan.drop.error':
+    'Не удалось поставить метку. Попробуйте ещё раз чуть позже.',
   'plan.note.showMore': 'Показать больше',
   'plan.note.showLess': 'Показать меньше',
   'plan.note.moveUp': 'Переместить вверх',

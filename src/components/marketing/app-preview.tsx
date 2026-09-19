@@ -18,11 +18,11 @@ import {
   Sparkline,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
-import { formatDateRange, formatWeekday } from '#/lib/format'
+import { formatWeekday } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { MiniMap } from './visuals'
 
-import type { Locale, MessageKey, Translate } from '#/lib/i18n'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 
 /* ------------------------------------------------------------ browser shell */
@@ -108,13 +108,10 @@ function MiniTopNav() {
 /** The illustrated trip, as the dashboard's own hero tiles would state it. */
 const TRAVELLERS = 3
 const STARTS_IN_DAYS = 26
-const TRIP_FROM = '2026-04-12'
-const TRIP_TO = '2026-04-24'
+/** 12 to 24 April: thirteen days, twelve nights. */
+const NIGHTS = 12
 
-function heroFacts(
-  t: Translate,
-  locale: Locale,
-): ReadonlyArray<{
+function heroFacts(t: Translate): ReadonlyArray<{
   label: string
   value: string
   unit?: string
@@ -125,10 +122,8 @@ function heroFacts(
       value: String(TRAVELLERS),
     },
     {
-      label: t('shell.dashboard.hero.dates'),
-      // The whole range in one slot: where the month sits relative to the days
-      // is the locale's business, and the frozen table is what settles it.
-      value: formatDateRange(TRIP_FROM, TRIP_TO, locale) ?? '',
+      label: t('shell.dashboard.hero.nights'),
+      value: String(NIGHTS),
     },
     {
       label: t('shell.dashboard.hero.startsIn'),
@@ -141,7 +136,6 @@ function heroFacts(
 
 function MiniTripHero() {
   const t = useTranslate()
-  const locale = useLocale()
   return (
     <Card
       variant="inverse"
@@ -167,7 +161,7 @@ function MiniTripHero() {
         </p>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg bg-inverse-surface p-3 ring-1 ring-inverse-edge ring-inset sm:grid-cols-4">
-          {heroFacts(t, locale).map((fact) => (
+          {heroFacts(t).map((fact) => (
             <div key={fact.label} className="min-w-0">
               <p className="truncate text-micro font-semibold uppercase tracking-label text-inverse-muted">
                 {fact.label}

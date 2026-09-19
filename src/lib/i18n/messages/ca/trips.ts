@@ -70,6 +70,20 @@ const messages = {
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Afegeix una nota',
   'plan.note.addForDay': 'Afegeix una nota, {day}',
+  'plan.addPlace.label': 'Afegeix un lloc',
+  'plan.addPlace.more': 'Més maneres d’afegir un lloc',
+  'plan.addPlace.option.map': 'Col·loca’l al mapa',
+  'plan.addPlace.forDay': 'Afegeix un lloc a aquest dia',
+  'plan.addPlace.forDayNamed': 'Afegeix un lloc, {day}',
+  'plan.drop.hint':
+    'Fes clic amb el botó dret al mapa, o mantén-lo premut, per afegir-hi un lloc just allà.',
+  'plan.drop.armed':
+    'Fes clic al mapa on va, o mou el mapa i prem Retorn per deixar-lo al centre.',
+  'plan.drop.stop': 'Deixa de col·locar una agulla nova',
+  'plan.drop.pin': 'Lloc nou',
+  'plan.drop.lookingUp': 'S’està cercant l’adreça…',
+  'plan.drop.error':
+    'No s’ha pogut deixar l’agulla. Torna-ho a provar d’aquí a una estona.',
   'plan.note.showMore': 'Mostra’n més',
   'plan.note.showLess': 'Mostra’n menys',
   'plan.note.moveUp': 'Mou amunt',

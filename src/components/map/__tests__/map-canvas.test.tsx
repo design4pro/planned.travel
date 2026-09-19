@@ -759,6 +759,40 @@ describe('MapCanvas', () => {
     })
   })
 
+  it('credits the geocoder on the same line, naming OpenStreetMap once', async () => {
+    serveArchive()
+    render(
+      <MapCanvas label="Trip map">
+        <MapAttribution className="left-1/2" />
+      </MapCanvas>,
+    )
+    await mapMounted()
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('link', { name: 'Geoapify' })).toHaveLength(1)
+    })
+    // Both sources credit OpenStreetMap; the line says so once.
+    expect(screen.getAllByRole('link', { name: 'OpenStreetMap' })).toHaveLength(
+      1,
+    )
+    expect(screen.getByText('Places located with')).toBeDefined()
+  })
+
+  it('leaves the geocoder out of the notice when there is no archive', async () => {
+    serveNothing()
+    render(
+      <MapCanvas label="Trip map">
+        <MapAttribution />
+      </MapCanvas>,
+    )
+    await mapMounted()
+
+    expect(
+      await screen.findByRole('link', { name: 'Natural Earth' }),
+    ).toBeDefined()
+    expect(screen.queryByRole('link', { name: 'Geoapify' })).toBeNull()
+  })
+
   it('keeps its notice out of the edge a screen says its chrome covers', async () => {
     serveNothing()
     // What the planner declares on a phone: an action bar and a credit floating
