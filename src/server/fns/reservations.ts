@@ -572,6 +572,23 @@ export interface BookingRow {
    * a click without either list claiming to own the other's record.
    */
   readonly transportId: string | null
+  /** The nights this booking pays for, when it is a stay's booking. */
+  readonly stay: BookingStay | null
+}
+
+/**
+ * The stay half of a stay's booking: which days it covers and when the reader arrives and leaves.
+ *
+ * Day ids rather than dates or a night count — the screen already holds the trip's days, and the
+ * nights are derived from their numbers in one place (`stayNights`), never sent twice.
+ */
+export interface BookingStay {
+  readonly id: string
+  readonly startDayId: string
+  readonly endDayId: string
+  readonly checkInTime: string | null
+  readonly checkInEndTime: string | null
+  readonly checkOutTime: string | null
 }
 
 /** One planned stop, offered under the day it sits on. */
@@ -646,6 +663,23 @@ export async function bookingDeskPayload(
     totalTripReservationsMinor(scope, trip.id),
   ])
 
+  // Every stay appears under each day it covers, so the itinerary is de-duplicated by booking.
+  const stays = new Map<string, BookingStay>()
+  for (const { accommodations } of itinerary) {
+    for (const stay of accommodations) {
+      if (stay.reservationId !== null) {
+        stays.set(stay.reservationId, {
+          id: stay.id,
+          startDayId: stay.startDayId,
+          endDayId: stay.endDayId,
+          checkInTime: stay.checkInTime,
+          checkInEndTime: stay.checkInEndTime,
+          checkOutTime: stay.checkOutTime,
+        })
+      }
+    }
+  }
+
   return {
     currency: trip.currency,
     byStatus,
@@ -683,6 +717,7 @@ export async function bookingDeskPayload(
       hasLedgerLine: row.expenseId !== null,
       importedAt: row.importedAt?.toISOString() ?? null,
       transportId: row.transportId,
+      stay: stays.get(row.id) ?? null,
     })),
   }
 }
