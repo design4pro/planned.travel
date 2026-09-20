@@ -87,6 +87,7 @@ const messages = {
   'plan.drop.lookingUp': 'Cím keresése…',
   'plan.drop.error':
     'A tűt nem sikerült elhelyezni. Próbáld újra egy kicsit később.',
+  'plan.place.pastedPosition': 'Beolvasva: szélesség {lat}, hosszúság {lng}',
   'plan.note.showMore': 'Több megjelenítése',
   'plan.note.showLess': 'Kevesebb megjelenítése',
   'plan.note.moveUp': 'Mozgatás felfelé',

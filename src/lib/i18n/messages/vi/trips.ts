@@ -84,6 +84,7 @@ const messages = {
   'plan.drop.pin': 'Địa điểm mới',
   'plan.drop.lookingUp': 'Đang tìm địa chỉ…',
   'plan.drop.error': 'Không thể thả ghim. Hãy thử lại sau giây lát.',
+  'plan.place.pastedPosition': 'Đã đọc là vĩ độ {lat}, kinh độ {lng}',
   'plan.note.showMore': 'Xem thêm',
   'plan.note.showLess': 'Thu gọn',
   'plan.note.moveUp': 'Di chuyển lên',

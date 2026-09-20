@@ -148,6 +148,13 @@ const messages = {
   'plan.drop.lookingUp': 'Finding the address…',
   'plan.drop.error': 'The pin could not be dropped. Try it again in a moment.',
   /**
+   * The place form's coordinate pair, after a pasted position was read.
+   * `{lat}` and `{lng}` are the numbers exactly as the fields now hold them — a
+   * `.` decimal point in every locale, because the fields require one. Keep it
+   * to two caption lines at 360px with both numbers at `-151.215312`.
+   */
+  'plan.place.pastedPosition': 'Read as latitude {lat}, longitude {lng}',
+  /**
    * The disclosure, which exists only on a note that carries a detail. Two
    * messages rather than one with a state suffix: several of the twenty-three
    * change more than a word between "more" and "less".

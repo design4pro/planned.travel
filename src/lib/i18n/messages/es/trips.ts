@@ -84,6 +84,7 @@ const messages = {
   'plan.drop.lookingUp': 'Buscando la dirección…',
   'plan.drop.error':
     'No se pudo colocar el pin. Vuelve a intentarlo en un momento.',
+  'plan.place.pastedPosition': 'Leído como latitud {lat}, longitud {lng}',
   'plan.note.showMore': 'Mostrar más',
   'plan.note.showLess': 'Mostrar menos',
   'plan.note.moveUp': 'Subir',

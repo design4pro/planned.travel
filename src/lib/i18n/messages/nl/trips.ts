@@ -88,6 +88,8 @@ const messages = {
   'plan.drop.lookingUp': 'Adres wordt gezocht…',
   'plan.drop.error':
     'De speld kon niet worden geplaatst. Probeer het zo meteen opnieuw.',
+  'plan.place.pastedPosition':
+    'Gelezen als breedtegraad {lat}, lengtegraad {lng}',
   'plan.note.showMore': 'Meer tonen',
   'plan.note.showLess': 'Minder tonen',
   'plan.note.moveUp': 'Omhoog verplaatsen',

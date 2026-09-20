@@ -76,6 +76,7 @@ const messages = {
   'plan.drop.pin': '新地点',
   'plan.drop.lookingUp': '正在查找地址…',
   'plan.drop.error': '未能放下图钉。请稍后再试。',
+  'plan.place.pastedPosition': '已识别为纬度 {lat}，经度 {lng}',
   'plan.note.showMore': '展开',
   'plan.note.showLess': '收起',
   'plan.note.moveUp': '上移',

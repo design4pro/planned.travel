@@ -87,6 +87,7 @@ const messages = {
   'plan.drop.lookingUp': '住所を検索しています…',
   'plan.drop.error':
     'ピンを置けませんでした。少し待ってからもう一度お試しください。',
+  'plan.place.pastedPosition': '緯度 {lat}、経度 {lng} として読み取りました',
   'plan.note.showMore': 'もっと見る',
   'plan.note.showLess': '折りたたむ',
   'plan.note.moveUp': '上へ移動',

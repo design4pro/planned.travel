@@ -82,6 +82,7 @@ const messages = {
   'plan.drop.pin': 'Yeni yer',
   'plan.drop.lookingUp': 'Adres aranıyor…',
   'plan.drop.error': 'İğne bırakılamadı. Birazdan tekrar dene.',
+  'plan.place.pastedPosition': 'Enlem {lat}, boylam {lng} olarak okundu',
   'plan.note.showMore': 'Daha fazla göster',
   'plan.note.showLess': 'Daha az göster',
   'plan.note.moveUp': 'Yukarı taşı',

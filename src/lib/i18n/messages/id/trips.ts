@@ -86,6 +86,7 @@ const messages = {
   'plan.drop.pin': 'Tempat baru',
   'plan.drop.lookingUp': 'Mencari alamat…',
   'plan.drop.error': 'Pin tidak dapat diletakkan. Coba lagi sebentar lagi.',
+  'plan.place.pastedPosition': 'Terbaca sebagai lintang {lat}, bujur {lng}',
   'plan.note.showMore': 'Tampilkan selengkapnya',
   'plan.note.showLess': 'Tampilkan lebih sedikit',
   'plan.note.moveUp': 'Pindahkan ke atas',
