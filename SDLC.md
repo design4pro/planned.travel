@@ -61,7 +61,7 @@ For a bug, ready means reproducible: `om-verify-in-repo` is that gate, and the l
 
 **This section describes a layer that is not switched on here.** It rests on a product brief at `.ai/specs/product-brief.md` whose **Non-goals**, **Business rules** and **Decisions** tables carry stable ids (`N01`, `R03`, `D07`), an owner, a status and a review-by date, and are then protected in review the way `BACKWARD_COMPATIBILITY.md` protects contract surfaces — a PR contradicting an entry is a blocker until a superseding row lands with it.
 
-There is no such file in this repository, the `discovery` block is absent from `.ai/agentic.config.json`, and three of the four skills that would feed it (`om-synthetic-users`, `om-backlog`, `om-mockup-prototype`) are not installed. So nothing above is enforced today, and a reader should not go looking for decision ids that do not exist. Turning it on is one run of `om-setup-discovery-pipeline` followed by one of `om-discover`; `## This repository` says so again where the rest of the local facts are.
+There is no such file in this repository, the `discovery` block is absent from `.ai/agentic.config.json`, and the four skills the layer needs — `om-setup-discovery-pipeline`, which installs it, plus the feeders `om-synthetic-users`, `om-backlog` and `om-mockup-prototype` — are exactly the four the collection has and `skills-lock.json` does not (37 of 41). So nothing above is enforced today, and a reader should not go looking for decision ids that do not exist. Turning it on starts by installing those skills, because the setup skill is itself one of the missing ones; `## This repository` says so again where the rest of the local facts are.
 
 ## Scoping rule (SLC)
 
@@ -236,9 +236,10 @@ Two amendment rules are specific to this document's shape:
   (ADR 0003): only a merge commit advances the merge base, and a squashed promotion compounds
   conflicts on every promotion after it. #492 merged on 2026-09-14 and wrote that rule down; it
   taught no skill to follow it. `om-approve-merge-pr` still calls the descriptor's **merge-pr**,
-  whose strategy is `--squash` by default, and neither the skill nor the descriptor reads the base
-  branch anywhere — so **merge the promotion PR by hand**, and read "the patch landed" as "the
-  rule is written down", never as "the tooling now honours it".
+  whose strategy is `--squash` by default, and neither picks the merge strategy from _which_ base
+  branch a PR targets — the one place the descriptor reads the base branch is to ask whether it has
+  a merge queue, which is a different question. So **merge the promotion PR by hand**, and read
+  "the patch landed" as "the rule is written down", never as "the tooling now honours it".
 - **CI is the merge authority** (ADR 0021). The local validation gate is the fast loop that keeps a
   PR from wasting a CI run; the required checks on `develop` are what actually gate the merge, and
   a reviewer reads them rather than the agent's own report. The critical journeys run on **every**
@@ -264,11 +265,13 @@ Two amendment rules are specific to this document's shape:
   enters with a category); Sentry findings as `bug` + `priority-high` + `groom`, never `autofix`;
   and follow-ups from `om-followup-issue-from-pr` and `om-review-prs`.
 - **The product layer is off.** No `.ai/specs/product-brief.md`, no `discovery` block in
-  `.ai/agentic.config.json`, and `om-synthetic-users`, `om-backlog` and `om-mockup-prototype` are
-  not among the installed skills (`skills-lock.json` carries 37 of the collection's 41). So
-  `## Product decisions as a protected contract` describes nothing that is enforced here, and no
-  decision ids exist to quote in a review. Turning it on is `om-setup-discovery-pipeline`, then
-  `om-discover`; until then the Definition of Ready's ticket-level tier is the only product gate.
+  `.ai/agentic.config.json`, and the four skills it needs — `om-setup-discovery-pipeline`,
+  `om-synthetic-users`, `om-backlog`, `om-mockup-prototype` — are the four `skills-lock.json` is
+  missing (37 of the collection's 41). So `## Product decisions as a protected contract` describes
+  nothing that is enforced here, and no decision ids exist to quote in a review. Turning it on means
+  installing those four first — `om-setup-discovery-pipeline` cannot be run before it is installed —
+  then running it and `om-discover` (that one _is_ installed); until then the Definition of Ready's
+  ticket-level tier is the only product gate.
 
 ### Automations
 
@@ -297,10 +300,13 @@ of them are started by hand from the cockpit.
 the opposite: **it runs on a schedule, just not on cezar's.** A launchd agent on the cezar host —
 `dev.planned-travel.housekeeping`, template at `.ai/scripts/launchd/` — calls
 `.ai/scripts/housekeeping.sh` at 07:00, 12:00 and 17:00 on weekdays, and that script POSTs one
-`housekeeping` run to the cockpit's API. Cezar has no scheduler of its own, which is why the
-schedule lives outside it (`docs/agents/cezar.md` § Housekeeping). So read "no automation" as "no
-row in the table above", never as "nothing starts it" — the earlier wording told a reader that an
-issue whose PR merged stays open until someone runs the sweep by hand, and that was wrong.
+`housekeeping` run to the cockpit's API. Cezar does have a scheduler — the table's last three rows
+are wall-clock schedules, not events — but it takes one occurrence per automation, in the shapes
+`weekdays` and `weekly`, each at a single time of day (`docs/agents/cezar-automations.json`). Three
+runs a weekday is not one of them, so this cadence lives outside it (`docs/agents/cezar.md`
+§ Housekeeping). So read "no automation" as "no row in the table above", never as "nothing starts
+it" — the earlier wording told a reader that an issue whose PR merged stays open until someone runs
+the sweep by hand, and that was wrong.
 
 The `authors: ["rafalwolak"]` filter on the two `opened` automations is a security gate, not a
 convenience: those runs read the issue or PR body as a prompt and hold Bash with no allowlist, so
