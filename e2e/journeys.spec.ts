@@ -2309,6 +2309,16 @@ test.describe('a confirmation file read into the booking desk', () => {
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
 
+    // A refused job keeps the shell's import card on every screen until it is
+    // dismissed, and at phone width that fixed card sits over the files list's
+    // row actions, so `sweepFiles` could not click them. Dismissed here, where
+    // the refusal is known to have landed, rather than guessed at in the sweep.
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    const widget = page.locator('[data-part="book-import-widget"]')
+    await widget.getByRole('button', { name: 'Dismiss' }).click()
+    await expect(widget).toBeHidden()
+
     // The refusal comes back after the upload has already been stored, so this
     // walk leaves a file behind even though it wrote no booking.
     await sweepFiles(page, tripId)
