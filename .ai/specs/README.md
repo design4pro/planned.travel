@@ -6,13 +6,12 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (3)
+## Draft — being written (2)
 
 | Spec                                                                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
 | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
 | [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627) | —              |
 | [Weather for every day of a trip, from free sources we are licensed to use](2026-09-19-per-day-weather.md)                               | 2026-09-19 | [#631](https://github.com/design4pro/planned.travel/issues/631) | [#636](https://github.com/design4pro/planned.travel/issues/636) | —              |
-| [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md)                                                 | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | [#584](https://github.com/design4pro/planned.travel/issues/584) | —              |
 
 ## Ready — merged, waiting for a build (1)
 
@@ -20,11 +19,12 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 | ----------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
 | [Document the ON DELETE rule D1 enforces, not the one schema.ts declares](2026-09-19-deployed-on-delete-rules.md) | 2026-09-19 | [#192](https://github.com/design4pro/planned.travel/issues/192) | [#626](https://github.com/design4pro/planned.travel/issues/626) | —              |
 
-## In progress — a build is open (6)
+## In progress — a build is open (7)
 
 | Spec                                                                                                                                       | Date       | Issue                                                           | Spec PR                                                         | Implementation                                                  |
 | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
 | [Promotion codes on subscribe and plan change, and a free-unlock pool on staging](2026-09-19-polar-discount-codes.md)                      | 2026-09-19 | [#599](https://github.com/design4pro/planned.travel/issues/599) | [#600](https://github.com/design4pro/planned.travel/issues/600) | —                                                               |
+| [Paste a position, and have both coordinate fields fill](2026-09-18-paste-a-position.md)                                                   | 2026-09-18 | [#555](https://github.com/design4pro/planned.travel/issues/555) | [#584](https://github.com/design4pro/planned.travel/issues/584) | —                                                               |
 | [Drop a pin on the map and it becomes a place](2026-09-18-drop-a-pin-becomes-a-place.md)                                                   | 2026-09-18 | [#554](https://github.com/design4pro/planned.travel/issues/554) | [#583](https://github.com/design4pro/planned.travel/issues/583) | —                                                               |
 | [Index-usable airport type-ahead](2026-09-13-index-usable-airport-type-ahead.md)                                                           | 2026-09-13 | [#194](https://github.com/design4pro/planned.travel/issues/194) | [#467](https://github.com/design4pro/planned.travel/issues/467) | —                                                               |
 | [Who is on this trip: the people route, the membership guards, and the visibility switch](2026-09-11-who-is-on-this-trip.md)               | 2026-09-11 | [#118](https://github.com/design4pro/planned.travel/issues/118) | [#436](https://github.com/design4pro/planned.travel/issues/436) | —                                                               |

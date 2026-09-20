@@ -85,6 +85,7 @@ const messages = {
   'plan.drop.pin': 'Ny plats',
   'plan.drop.lookingUp': 'Letar efter adressen…',
   'plan.drop.error': 'Nålen kunde inte placeras. Försök igen om en stund.',
+  'plan.place.pastedPosition': 'Tolkat som latitud {lat}, longitud {lng}',
   'plan.note.showMore': 'Visa mer',
   'plan.note.showLess': 'Visa mindre',
   'plan.note.moveUp': 'Flytta upp',

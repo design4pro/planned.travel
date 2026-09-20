@@ -80,6 +80,7 @@ const messages = {
   'plan.drop.pin': 'مكان جديد',
   'plan.drop.lookingUp': 'جارٍ البحث عن العنوان…',
   'plan.drop.error': 'تعذّر وضع الدبوس. حاول مرة أخرى بعد قليل.',
+  'plan.place.pastedPosition': 'قُرئ كخط عرض {lat} وخط طول {lng}',
   'plan.note.showMore': 'عرض المزيد',
   'plan.note.showLess': 'عرض أقل',
   'plan.note.moveUp': 'تحريك لأعلى',

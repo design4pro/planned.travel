@@ -86,6 +86,7 @@ const messages = {
   'plan.drop.lookingUp': 'Recherche de l’adresse…',
   'plan.drop.error':
     'L’épingle n’a pas pu être posée. Réessayez dans un instant.',
+  'plan.place.pastedPosition': 'Lu comme latitude {lat}, longitude {lng}',
   'plan.note.showMore': 'Afficher plus',
   'plan.note.showLess': 'Afficher moins',
   'plan.note.moveUp': 'Monter',

@@ -85,6 +85,7 @@ const messages = {
   'plan.drop.lookingUp': 'Шукаємо адресу…',
   'plan.drop.error':
     'Не вдалося поставити мітку. Спробуйте ще раз трохи згодом.',
+  'plan.place.pastedPosition': 'Розпізнано: широта {lat}, довгота {lng}',
   'plan.note.showMore': 'Показати більше',
   'plan.note.showLess': 'Показати менше',
   'plan.note.moveUp': 'Перемістити вгору',

@@ -85,6 +85,7 @@ const messages = {
   'plan.drop.pin': '새 장소',
   'plan.drop.lookingUp': '주소를 찾는 중…',
   'plan.drop.error': '핀을 놓지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'plan.place.pastedPosition': '위도 {lat}, 경도 {lng}(으)로 읽었습니다',
   'plan.note.showMore': '더 보기',
   'plan.note.showLess': '접기',
   'plan.note.moveUp': '위로 이동',

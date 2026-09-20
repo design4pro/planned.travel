@@ -84,6 +84,8 @@ const messages = {
   'plan.drop.lookingUp': 'Hledá se adresa…',
   'plan.drop.error':
     'Špendlík se nepodařilo umístit. Zkuste to za chvíli znovu.',
+  'plan.place.pastedPosition':
+    'Načteno jako zeměpisná šířka {lat}, délka {lng}',
   'plan.note.showMore': 'Zobrazit více',
   'plan.note.showLess': 'Zobrazit méně',
   'plan.note.moveUp': 'Posunout nahoru',

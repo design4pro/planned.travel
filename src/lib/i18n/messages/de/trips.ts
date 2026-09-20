@@ -88,6 +88,7 @@ const messages = {
   'plan.drop.lookingUp': 'Adresse wird gesucht…',
   'plan.drop.error':
     'Die Stecknadel konnte nicht gesetzt werden. Versuch es gleich noch einmal.',
+  'plan.place.pastedPosition': 'Gelesen als Breite {lat}, Länge {lng}',
   'plan.note.showMore': 'Mehr anzeigen',
   'plan.note.showLess': 'Weniger anzeigen',
   'plan.note.moveUp': 'Nach oben',

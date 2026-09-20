@@ -87,6 +87,7 @@ const messages = {
   'plan.drop.lookingUp': 'Ricerca dell’indirizzo…',
   'plan.drop.error':
     'Non è stato possibile inserire il segnaposto. Riprova tra un momento.',
+  'plan.place.pastedPosition': 'Letto come latitudine {lat}, longitudine {lng}',
   'plan.note.showMore': 'Mostra di più',
   'plan.note.showLess': 'Mostra di meno',
   'plan.note.moveUp': 'Sposta su',
