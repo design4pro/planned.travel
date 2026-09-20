@@ -15,3 +15,31 @@ Extends the installed skill: read `.claude/skills/om-code-review/SKILL.md` and f
 - Server function called from another server function's handler → blocker (`scripts/check-server-fn-manifest.mjs` explains the production failure).
 
 Apply `BACKWARD_COMPATIBILITY.md` to every touched surface. Smells from docs/agents/CODING_STANDARDS.md are judgement findings (minor), never blockers.
+
+## The persona panel
+
+Five reviewers in `.claude/agents/persona-*.md` read the change from a seat this checklist does not
+occupy: `persona-traveller` (the person using it), `persona-workspace-owner` (the person paying for
+it and administering the data), `persona-product-owner` (the promise the ticket made),
+`persona-manual-tester` (the states nobody wrote a test for), `persona-accessibility-auditor`
+(WCAG 2.2 AA). They are read-only and advisory - they return findings in this file's severity
+vocabulary, they never edit and they never decide.
+
+Consult a persona with the `Agent` tool when the diff reaches its seat, and not otherwise:
+
+| The diff touches                                         | Consult                         |
+| -------------------------------------------------------- | ------------------------------- |
+| a rendered surface, a message, a default a user meets    | `persona-traveller`             |
+| a component, a form, a dialog, a chart, a page           | `persona-accessibility-auditor` |
+| tenancy, roles, sharing, deletion, export, invitations   | `persona-workspace-owner`       |
+| a screen, a form, a list, or a server function           | `persona-manual-tester`         |
+| a capability added or narrowed, or a ticket claimed done | `persona-product-owner`         |
+
+Send each one the diff and the ticket, and run the ones that apply in a single message so they work
+in parallel. Fold what comes back into your own report rather than pasting it: a persona finding
+that maps onto a blocker in this file is a blocker, and everything else is a judgement finding you
+weigh and may reject with a reason. A panel that found nothing is worth one line saying so.
+
+Skip the panel entirely on a diff that reaches no seat - a dependency bump, a generated file, a
+docs-only change. Consulting nobody is the correct outcome there, and cheaper than five reports
+saying the same.
