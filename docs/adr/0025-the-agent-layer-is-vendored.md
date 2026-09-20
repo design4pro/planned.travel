@@ -4,7 +4,10 @@ Status: accepted
 Date: 2026-09-20
 Supersedes: ADR 0024 (the kit distributes the agent layer, and a kit-owned fix is an issue in the kit).
 Amends: ADR 0021 (decision 1: the gate loses its first command), ADR 0018 (`guard-generated.sh`
-keeps three of its four tiers; the fourth, and only the fourth, goes).
+keeps three of its four tiers; tier 3, and only tier 3, goes), ADR 0023 (the host runbook moved to
+`design4pro/cezar`), ADR 0003 (its consequences call `guard-generated.sh` the thing that keeps
+`om-approve-merge-pr/SKILL.md` outside an agent run's reach; that is now true under
+`GITHUB_ACTIONS` only).
 
 ## Context
 
@@ -120,6 +123,17 @@ file is.
 - **Nothing detects a hand edit of an agent-layer file.** No lock, no hash, and in a cezar run no
   hook. Review does, or it does not. In exchange, a correction to a skill, a hook or a workflow is
   one commit on the branch that needs it, which is the whole point.
+- **A branch that is behind on the agent layer is no longer failed, and this one is a real loss
+  rather than a trade.** The `Check the agent layer` step did two things, and the comment above it
+  named the second: `--base`/`--head` compared the base branch's lock with the head's, so a branch
+  cut before a pipeline change went red for being stale, not only for being edited. That matters
+  because `pr-autopilot` and `pr-fix` check out the pull request _head_ - a branch from last week
+  runs last week's hooks, last week's workflows and last week's guards, and nothing else in the
+  repository notices. It cannot be reconstructed in that shape: it compared two copies of a lock
+  file that no longer exists. What is left is that a stale agent layer is now visible only in the
+  diff, as an absence, which is the hardest thing for a reviewer to see. A per-file
+  `git merge-base` comparison over the same paths would recover most of it and is the obvious
+  follow-up if this bites.
 - **A cezar run can now rewrite its own gate, its own skills and its own workflows.** That is tier
   3 going, stated plainly. The reviewer of its pull request is what stands there instead, and a
   diff that quietly widens what a run may do is a review finding like any other. Under GitHub
