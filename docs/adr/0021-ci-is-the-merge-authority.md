@@ -58,7 +58,8 @@ three slots are free, for three more jobs on a pool that has three.
 ## Decision
 
 **1. The local gate is the fast loop.** `validation.commands` is `agent-kit-check`, `typecheck`,
-`lint`, `test`, `check-generated`, `build`. The full journeys leave it. A run whose diff reaches a
+`lint`, `test`, `check-generated`, `build`. _Amended by ADR 0025: `agent-kit-check` is gone with the
+kit that needed it, so the gate now starts at `typecheck`. Nothing else in this decision moves._ The full journeys leave it. A run whose diff reaches a
 screen still runs the journeys that screen is in, `bash .ai/scripts/e2e.sh e2e/<file>.spec.ts`, as the
 `verifying-changes` ladder says.
 

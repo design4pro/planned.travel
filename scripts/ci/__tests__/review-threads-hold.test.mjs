@@ -4,8 +4,8 @@
  * is the run's `in-progress` hold, taken before the trigger label comes off. This pins the hold
  * against exactly that state - live bot thread, head moved past the marker, no trigger label -
  * so the guard cannot be weakened without this going red. The rendered review-threads-label test
- * covers the two halves separately; this repo-owned pin survives an agent-kit re-render until the
- * combined case lands in the kit's template.
+ * covers the two halves separately; this pin is the combined case, and it stays until that test
+ * grows one.
  */
 
 import { describe, expect, it } from 'vitest'

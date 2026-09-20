@@ -5,7 +5,7 @@ description: planned.travel's own half of the codebase-design skill - its house 
 
 # AFK codebase design in planned.travel
 
-**Read `.ai/skills/afk-codebase-design/SKILL.md` first.** That file is the shared half, rendered by the agent kit into every repository that uses this pipeline: the vocabulary (module, interface, depth, seam, adapter, leverage, locality), the five rules, the dependency-category skeleton, the design-it-twice procedure and the done-when. `afk-triage`, `afk-to-tickets` and `afk-architecture-review` read that path literally, so those terms are guaranteed to be the same everywhere.
+**Read `.ai/skills/afk-codebase-design/SKILL.md` first.** That file is the shared half, carried by every repository that runs this pipeline - rendered from design4pro/agent-kit until the kit was retired (ADR 0025), vendored since: the vocabulary (module, interface, depth, seam, adapter, leverage, locality), the five rules, the dependency-category skeleton, the design-it-twice procedure and the done-when. `afk-triage`, `afk-to-tickets` and `afk-architecture-review` read that path literally, so those terms are guaranteed to be the same everywhere.
 
 This file is the other half: what is true only here. It shadows the rendered file by name in the cockpit's registry - `.ai/cezar/skills` is scanned before `.ai/skills` and the first of a name wins - so an agent that loads the skill by name gets **this** file and must read the rendered one alongside it. Neither half is complete on its own.
 
