@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # PreToolUse hook (Bash). Three tiers, by who is at the other end of the command.
 #
-# Tier one - everyone, in every session: destructive git, `--no-verify`, and the two Cloudflare
+# Tier one - everyone, in every session: destructive git, `--no-verify`, the two Cloudflare
 # operations nothing recovers from - writing a secret and deleting a D1/R2/KV store or the Worker
-# itself. Everything here destroys work that is not recoverable from the reflog by someone who
-# does not already know to look. `develop` and `main` are the shared branches - staging and
-# production respectively - so a force-push to either rewrites what somebody else has pulled.
+# itself - and the commands that delete the checkout or its history rather than a file inside it.
+# Everything here destroys work that is not recoverable from the reflog by someone who does not
+# already know to look, or takes the reflog itself away. `develop` and `main` are the shared
+# branches - staging and production respectively - so a force-push to either, or a delete of
+# either, rewrites what somebody else has already pulled.
 #
 # Tier two - agent runs (CEZ_TASK_ID or GITHUB_ACTIONS): the things an om-* run never needs.
 # Dumping the environment (the worktree holds live secrets in .dev.vars), changing the pinned
-# stack (docs/SPEC.md §3), and shipping - deploys and remote migrations. GitHub mutations,
+# stack (docs/SPEC.md §3), shipping - deploys and remote migrations - leaving the user the run was
+# started as, and deleting anything but build output and scratch space. GitHub mutations,
 # `git add -A`, closing keywords and `pnpm exec` are the om-* skills' ordinary tools (tracker
 # descriptor .ai/trackers/github.md, SDLC.md) and stay open under Cezar.
 #
@@ -122,6 +125,82 @@ echo "$scan" | grep -Eq 'git\s+commit\b.*\s-n(\s|$)' && block 'git --no-verify'
 echo "$scan" | grep -Eq 'wrangler\s+secret\b' && block 'wrangler secret'
 echo "$scan" | grep -Eq 'wrangler\s+((d1|r2\s+bucket|kv\s+namespace)\s+)?delete\b' && block 'wrangler delete'
 
+
+# Destroying the checkout itself, refused in every session. The two rules above it are refused
+# because the reflog makes them recoverable by somebody who knows to look; these are the commands
+# that take the reflog away, or take the whole history at once, and nothing recovers from them.
+# None has a caller here - a developer retiring their own checkout does it from a shell, not from
+# an agent session.
+echo "$scan" | grep -Eq 'git\s+reflog\s+expire' && block 'git reflog expire'
+echo "$scan" | grep -Eq 'git\s+gc\b[^|;&]*--prune' && block 'git gc --prune'
+echo "$scan" | grep -Eq 'git\s+(filter-branch|filter-repo)\b' && block 'git history rewrite'
+echo "$scan" | grep -Eq 'gh\s+repo\s+delete\b' && block 'gh repo delete'
+# Deleting a shared branch on the remote, in either spelling: `--delete develop` and the colon
+# refspec `:develop` are the same act, and both undo what everybody else has already pulled. A
+# merged feature branch stays deletable, which is what `--delete-branch` on a merge needs.
+echo "$scan" | grep -Eq 'git\s+push\b[^|;&]*--delete\s+\S*\s*(develop|main)([^[:alnum:]_/-]|$)' \
+  && block 'git push --delete develop/main'
+echo "$scan" | grep -Eq 'git\s+push\b[^|;&]*[[:space:]]:(refs/heads/)?(develop|main)([^[:alnum:]_/-]|$)' \
+  && block 'git push :develop/main'
+
+# A recursive delete, judged by what it names. This is the hole the rest of this file left open.
+# guard-generated.sh confines Edit and Write to the worktree and says in its own header that a
+# Bash redirect still reaches outside - but nothing here read `rm` at all, so a run could delete
+# the tree it was given, and every tree beside it, without matching a single rule in either hook.
+#
+# `rm_invocations` prints one `<recursive> <target>` line per target of every `rm` in the command,
+# so `rm -rf dist && rm -rf src` is judged as the two acts it is rather than as one string that
+# happens to contain an accepted word. The two tiers then differ only in which targets they take:
+# this one refuses what has no caller anywhere, and the agent tier below accepts only what a
+# command in package.json can put back.
+rm_invocations() { # command
+  printf '%s\n' "$1" | awk '
+    function emit(   j) {
+      if (!inrm) return
+      for (j = 1; j <= n; j++) printf "%d %s\n", rec, tgt[j]
+      inrm = 0; rec = 0; n = 0
+    }
+    {
+      for (i = 1; i <= NF; i++) {
+        t = $i
+        # A control operator ends the invocation; the next word starts a new command.
+        if (t == "&&" || t == "||" || t ~ /^[|;&]+$/) { emit(); continue }
+        if (t ~ /(^|\/)rm$/) { emit(); inrm = 1; continue }
+        if (!inrm) continue
+        if (t == "--") continue
+        # A flag may follow the targets (`rm node_modules -rf` is valid), so recursion is decided
+        # over the whole invocation and the targets are held until it ends.
+        if (t == "--recursive") { rec = 1; continue }
+        if (t ~ /^--/) continue
+        if (t ~ /^-/) { if (t ~ /[rR]/) rec = 1; continue }
+        tgt[++n] = t
+      }
+    }
+    END { emit() }'
+}
+
+# The machine, the account, the checkout. `$HOME` and `~` are matched literally: this hook never
+# expands a variable, and the shell that would have is the one being stopped.
+fatal_rm_target() { # path
+  case "$1" in
+    / | // | /\* | '~' | '~/' | '~/*') return 0 ;;
+    '$HOME' | '${HOME}' | '$HOME'/* | '${HOME}'/*) return 0 ;;
+    . | ./ | ./\* | .. | ../ | \*) return 0 ;;
+    /Users | /Users/ | /home | /home/ | /etc | /usr | /var) return 0 ;;
+    '$CLAUDE_PROJECT_DIR' | '${CLAUDE_PROJECT_DIR}' | '$CLAUDE_PROJECT_DIR'/) return 0 ;;
+    "$guard_root" | "$guard_root"/) return 0 ;;
+  esac
+  return 1
+}
+
+guard_root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+rm_seen=$(rm_invocations "$scan")
+while read -r rm_rec rm_target; do
+  [ "$rm_rec" = 1 ] || continue
+  fatal_rm_target "$rm_target" && block "recursive delete of '$rm_target'"
+done <<RM_TIER_ONE
+$rm_seen
+RM_TIER_ONE
 # Everything below applies to agent runs only; a developer at the keyboard keeps pnpm and env.
 [ -n "${CEZ_TASK_ID:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ] || exit 0
 
@@ -135,6 +214,47 @@ echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+(add|remove|rm|uninstall|upda
 echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])printenv\b' && agent_block 'printenv' 'The environment holds secrets.'
 echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])env(\s*$|\s*\||\s+-0|\s*;|\s*&&)' && agent_block 'env dump' 'The environment holds secrets.'
 
+
+# A recursive delete in an agent run, judged against what a command in package.json can put back.
+# The list is an allowlist because a denylist of paths worth keeping is the same list that is
+# always missing one, and the one it is missing here is the source tree. A run that needs to
+# delete anything else ends as blocked and names the path - which is a failure a reviewer can
+# read, and the direction this file's mistakes should point in.
+disposable_rm_target() { # path
+  case "${1%/}" in
+    node_modules | */node_modules | node_modules/* | */node_modules/*) return 0 ;;
+    dist | */dist | build | */build | coverage | */coverage) return 0 ;;
+    .wrangler | */.wrangler | .turbo | */.turbo | .vite | */.vite) return 0 ;;
+    .output | */.output | .cache | */.cache) return 0 ;;
+    playwright-report* | */playwright-report* | test-results* | */test-results*) return 0 ;;
+    .ai/tmp | .ai/tmp/* | */.ai/tmp | */.ai/tmp/*) return 0 ;;
+    .ai/analysis/* | */.ai/analysis/*) return 0 ;;
+    .ai/cezar/tmp | .ai/cezar/tmp/* | */.ai/cezar/tmp/*) return 0 ;;
+    /tmp/* | /private/tmp/* | /var/folders/*) return 0 ;;
+    '$TMPDIR'/* | '${TMPDIR}'/*) return 0 ;;
+    *.log) return 0 ;;
+  esac
+  return 1
+}
+
+while read -r rm_rec rm_target; do
+  [ "$rm_rec" = 1 ] || continue
+  disposable_rm_target "$rm_target" || agent_block "recursive delete of '$rm_target'" \
+    'A run deletes only build output and scratch space. Delete the files you need one by one, or end the run as blocked and name the path.'
+done <<RM_AGENT_TIER
+$rm_seen
+RM_AGENT_TIER
+
+# The two ways to spell the same delete without naming `rm` as the command.
+echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])find\s[^|;&]*(-delete|-exec\s+rm)\b' \
+  && agent_block 'find -delete' 'A run deletes only build output and scratch space, by naming the path.'
+# The worktree a run was given is the cockpit's to create and retire, and `--force` discards
+# uncommitted work in it - including a human's, when the path is wrong.
+echo "$scan" | grep -Eq 'git\s+worktree\s+remove\b[^|;&]*(--force|-f)\b' \
+  && agent_block 'git worktree remove --force' 'The cockpit owns the worktrees; end the run instead.'
+# Nothing a run does needs to leave the user it was started as.
+echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])sudo\s' \
+  && agent_block 'sudo' 'A run holds exactly the permissions it was started with.'
 # Shipping is a human decision, and an unattended run has nobody to answer a prompt about it.
 # `deploy` is not the only way to ship: `versions upload` + `versions deploy` is the gradual
 # rollout, `rollback` and `triggers deploy` change what production serves, and `d1 execute

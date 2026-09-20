@@ -402,6 +402,101 @@ describe('git-guardrails.sh', () => {
       })
     })
   })
+// Deleting the checkout rather than a file in it. Nothing here read `rm` before: guard-generated.sh
+// confines Edit and Write to the worktree and says in its own header that a Bash redirect still
+// reaches outside, so `rm -rf src` in a run matched no rule in either hook.
+describe("deleting the checkout", () => {
+  it.each([
+    "rm -rf /",
+    "rm -rf ~",
+    "rm -rf .",
+    "rm -rf $HOME/dev",
+    "rm -rf *",
+    "git reflog expire --expire=now --all",
+    "git gc --prune=now",
+    "git filter-branch --tree-filter x HEAD",
+    "gh repo delete design4pro/planned.travel",
+    "git push origin --delete develop",
+    "git push origin :main",
+  ])("blocks %s in every session", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2);
+    }
+  });
+
+  // Build output and scratch space: every one of these is put back by a command in package.json
+  // or by the run itself, so a run may clear them and a developer is never asked about it.
+  it.each([
+    "rm -rf node_modules",
+    "rm -rf node_modules && pnpm install",
+    "rm -rf dist .wrangler",
+    "rm -rf playwright-report test-results",
+    "rm -rf /tmp/x",
+    "rm -rf .ai/tmp/run-1",
+    "rm .ai/qa/dev-server.pid",
+  ])("leaves %s alone in every session", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(0);
+    }
+  });
+
+  // The source tree is not disposable, but a developer deleting their own checkout is their
+  // business - so this tier splits the way the file's other agent rules do.
+  it.each(["rm -rf src", "rm -rf e2e/fixtures", "rm -rf docs"])(
+    "refuses %s in a run and allows it at the keyboard",
+    (command) => {
+      expect(bash(command).status).toBe(0);
+      expect(bash(command, AGENT).status).toBe(2);
+      expect(bash(command, ACTIONS).status).toBe(2);
+    },
+  );
+
+  // Each `rm` is judged on its own targets. A command that clears node_modules and then the
+  // source tree is not sheltered by the accepted word standing first in the string.
+  it("judges every rm in a command separately", () => {
+    expect(bash("rm -rf node_modules && rm -rf src").status).toBe(0);
+    expect(bash("rm -rf node_modules && rm -rf src", AGENT).status).toBe(2);
+    expect(bash("rm -rf dist && rm -rf /", AGENT).status).toBe(2);
+    expect(bash("rm -rf dist && rm -rf /").status).toBe(2);
+  });
+
+  // `rm node_modules -rf` is valid, so recursion is decided over the whole invocation rather
+  // than by the word that happens to follow `rm`.
+  it("reads a flag that follows the target", () => {
+    expect(bash("rm node_modules -rf", AGENT).status).toBe(0);
+    expect(bash("rm src -rf", AGENT).status).toBe(2);
+  });
+
+  // The same contract the rest of the file keeps: a quoted argument of a prose command is text.
+  it("reads a quoted delete as text, not as an invocation", () => {
+    expect(bash('echo "rm -rf /"').status).toBe(0);
+    expect(bash('git commit -m "guard the rm -rf / case"').status).toBe(0);
+    expect(bash('grep -rn "rm -rf" .claude/hooks').status).toBe(0);
+    // ...and an executor is still read as one, because nothing is stripped for it.
+    expect(bash('bash -lc "rm -rf /"').status).toBe(2);
+  });
+
+  // The two ways to spell the same delete without naming `rm`, plus the user boundary and the
+  // worktree the cockpit owns. All of them are a run's business only.
+  it.each([
+    "find . -name *.tmp -delete",
+    "find . -type f -exec rm {} +",
+    "sudo launchctl list",
+    "git worktree remove --force ../wt",
+  ])("refuses %s in a run only", (command) => {
+    expect(bash(command).status).toBe(0);
+    expect(bash(command, AGENT).status).toBe(2);
+  });
+
+  // Deleting a merged feature branch is routine, and `--delete-branch` on a merge needs it.
+  it("leaves a feature branch deletable", () => {
+    for (const env of [{}, AGENT]) {
+      expect(bash("git push origin --delete fix/issue-12-x", env).status).toBe(
+        0,
+      );
+    }
+  });
+});
 })
 
 describe('guard-generated.sh', () => {
