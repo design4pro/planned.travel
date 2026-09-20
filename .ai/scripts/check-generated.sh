@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Validation-gate step: the committed generated files match their sources.
-# Mirrors the three drift checks in .github/workflows/ci.yml. All three files are
+# Mirrors the four drift checks in .github/workflows/ci.yml. All four files are
 # generated and committed; a hand edit or a forgotten regeneration is caught here
 # rather than as a mystery type error (route tree), a query against a column that
-# does not exist (migrations), or a spec index that quietly stops matching the
-# directory it describes.
+# does not exist (migrations), a spec index that quietly stops matching the
+# directory it describes, or a binding the types do not know about.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -33,6 +33,17 @@ pnpm generate-spec-index
 git add --intent-to-add -- .ai/specs/README.md
 if ! git diff --exit-code -- .ai/specs/README.md; then
   echo "ERROR: .ai/specs/README.md is stale. Run 'pnpm generate-spec-index' and commit the result." >&2
+  exit 1
+fi
+
+echo "==> worker configuration"
+# Its generator is `wrangler types`, and until the agent layer was vendored this file was the one
+# of the four with no drift check at all - a PreToolUse hook refused to let it be edited instead
+# (ADR 0025). A hand edit survived exactly until the next `pnpm cf-typegen`, on one machine only.
+pnpm cf-typegen
+git add --intent-to-add -- worker-configuration.d.ts
+if ! git diff --exit-code -- worker-configuration.d.ts; then
+  echo "ERROR: worker-configuration.d.ts is stale. Run 'pnpm cf-typegen' and commit the result." >&2
   exit 1
 fi
 

@@ -15,7 +15,7 @@ Extends the installed skill: read `.claude/skills/om-auto-review-pr/SKILL.md` an
   thread blocks the merge and nothing but a human clicking will ever clear it, so a run that agrees
   and walks away has converted a one-line correction into a permanent stall. `changes-requested` is
   what says a human still owes something; the resolved thread carries what they owe.
-  Before you use this outcome on a guarded path, try the edit: since PR #325 `guard-generated.sh`
-  lets a run amend a guarded file **this branch already changes**, which is most review findings on
-  a pipeline PR. The outcome is for what is still refused after that.
+  Before you use this outcome, try the edit: since ADR 0025 no hook refuses one by path, so the
+  reach that is actually missing is a credential, an upstream repository or a repository setting -
+  not a file the run is forbidden to open.
 - On a pass without autofix (another author's PR, no `--autofix`) the threads are left as found; the report lists them by path so the autopilot's next chain can pick them up.

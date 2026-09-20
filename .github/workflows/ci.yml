@@ -112,6 +112,21 @@ jobs:
             exit 1
           fi
 
+      - name: Generate the worker configuration
+        run: pnpm cf-typegen
+
+      # The fourth generated file, and until the agent layer was vendored the only one with no
+      # drift check: a PreToolUse hook refused to let it be edited instead (ADR 0025). A hand
+      # edit survived until the next `pnpm cf-typegen`, and only on the machine that ran it.
+      - name: Check the committed worker configuration is current
+        run: |
+          set -euo pipefail
+          git add --intent-to-add -- worker-configuration.d.ts
+          if ! git diff --exit-code -- worker-configuration.d.ts; then
+            echo "::error title=Stale worker configuration::worker-configuration.d.ts no longer matches wrangler.jsonc. Run 'pnpm cf-typegen' and commit the result."
+            exit 1
+          fi
+
       # ESLint spends its time building a typed program and then walking it, and
       # on a pull request almost none of that work is new. `--cache` skips a file
       # whose bytes have not changed since the last run: measured on this repo,

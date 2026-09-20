@@ -129,17 +129,17 @@ variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-
   this hook is its only gate; `CLAUDE_REVIEW_PR_COMMENT=1` opens `gh pr comment` for that one job.
 - `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree and denies `.dev.vars`, `.env*`,
   `.e2e-tiles/`, cezar run state and `.ai/qa/test-env.env`.
-- `guard-generated.sh` also refuses edits under `.github/`, `.claude/`, `.husky/`, `.ai/cezar/`,
-  `.ai/agentic.config.json`, `.ai/trackers/`, `.ai/browsers/`, `.ai/skills/`, `.ai/scripts/` (a run
-  must not rewrite its own validation gate), `.npmrc`, `pnpm-workspace.yaml`,
-  `docs/agents/reference.md` and `docs/agents/out-of-scope.md`.
+- There is no third hook. `guard-generated.sh`, which refused agent edits under `.github/`,
+  `.claude/`, `.ai/` and a handful of named files, is gone (ADR 0025): it was this repository's own
+  invention rather than anything Cezar CLI prescribes, and the one thing it protected alone -
+  `worker-configuration.d.ts` drifting from `wrangler.jsonc` - is now a drift check in
+  `.ai/scripts/check-generated.sh` and in `ci.yml`, where CI sees it and a hand edit cannot
+  outlive the next run. A run may now edit its own gate, its own skills and its own workflows;
+  review is what catches that, as it does for every other file in the diff.
 
-  One exception, and only in a cezar run: a guarded file **this branch already changes**. A
-  reviewer asking for a correction to a change a human proposed is not a run rewriting its own
-  rules, and refusing it is how a review thread stays open forever - the `develop` ruleset merges
-  nothing with one. Introducing a change to a guarded file the branch does not already carry is
-  still refused, and under `GITHUB_ACTIONS` the block is absolute, because there the diff is the
-  attacker's and "the branch already changes it" is the attacker's own claim.
+  Under GitHub Actions one piece of it survives by other means. `claude-code-review.yml` re-checks
+  out `.claude/`, `scripts/ci/` and `.ai/agentic.config.json` from the base ref before the agent
+  starts, so a pull request still cannot supply the agent configuration that reads it.
 
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The hooks,
