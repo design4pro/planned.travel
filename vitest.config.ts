@@ -82,11 +82,11 @@ export default defineConfig({
           globals: false,
           include: [
             'scripts/**/__tests__/*.test.{ts,mjs}',
-            // `.ai/scripts` is the kit's second home for a script, chosen because
-            // `guard-generated.sh` refuses edits there in agent mode - a cezar run
-            // cannot rewrite a guard that judges it. Its test companions are
-            // kit-managed the same way `scripts/ci/__tests__` are, so they run in
-            // the same project.
+            // `.ai/scripts` is the second home for a script that belongs to the
+            // pipeline rather than to the application - the validation gate and the
+            // e2e entrypoint live there, and `guard-generated.sh` still refuses a
+            // GitHub Actions run any write to them. Their test companions run in
+            // the same project as `scripts/ci/__tests__`.
             '.ai/scripts/**/__tests__/*.test.mjs',
             // The e2e helpers that carry policy rather than plumbing. The console
             // classifier decides which browser output fails a run, is pure, and

@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
-# PreToolUse hook (Edit|Write): blocks hand-edits of generated files, and in agent runs
-# (CEZ_TASK_ID or GITHUB_ACTIONS) writes outside the worktree and the paths that configure the
-# agent itself (ADR 0018).
+# PreToolUse hook (Edit|Write). Three tiers, and they are deliberately different in reach
+# (ADR 0018, narrowed by ADR 0025):
 #
-# Each of these has a generator, and the generator is the source of truth. A hand-edit survives
-# exactly until the next run of it, and in between produces the worst kind of failure: one that
-# reproduces on one machine and not another.
+#   1. always  - a hand-edit of a generated file
+#   2. in an agent run (CEZ_TASK_ID or GITHUB_ACTIONS) - a write outside the worktree
+#   3. under GITHUB_ACTIONS only - a write to a path that configures the agent
+#
+# Each generated file has a generator, and the generator is the source of truth. A hand-edit
+# survives exactly until the next run of it, and in between produces the worst kind of failure:
+# one that reproduces on one machine and not another.
+#
+# Tier 3 used to apply to cezar runs too, with an exception for a file the branch already changed.
+# ADR 0025 removed that half. It was the whole of the edit friction the kit retirement was about -
+# a correction to a skill, a hook or a workflow became a two-repository round trip - and in a cezar
+# run the branch is a human's, proposed as a pull request and read by a reviewer before it merges.
+# Under GitHub Actions none of that holds: there the diff is the attacker's, `claude-code-review.yml`
+# reads it with a write token under bypassPermissions, and `git-guardrails.sh` - re-read on every
+# PreToolUse - is a file on disk that a run could otherwise rewrite mid-flight. So tier 3 stays
+# exactly where the trust does not.
 #
 # Contract: exit 2 blocks the tool call and feeds stderr back to the model; exit 0 allows.
 set -euo pipefail
@@ -94,18 +106,21 @@ case "$abs" in
   *) deny_outside "is outside the worktree" ;;
 esac
 
+# Tier 3, and under GITHUB_ACTIONS alone. A cezar run reaches this line and stops here.
+[ -n "${GITHUB_ACTIONS:-}" ] || exit 0
+
 # The agent's own configuration: hooks, settings, Cezar workflows, the om config, tracker and
 # browser descriptors, the skill overrides and the validation entrypoints under .ai/scripts/ (a
-# run must not rewrite its own gate). docs/agents/reference.md and out-of-scope.md are the
-# clean-room rule and the product boundary, governance a run reads and never edits.
+# run must not rewrite the gate it is about to be judged by). docs/agents/reference.md and
+# out-of-scope.md are the clean-room rule and the product boundary, governance a run reads and
+# never edits.
 #
-# .ai/agent-kit.lock.json is here because it is the root of trust for that gate and not merely
-# another generated file. agent-kit-check.mjs proves nothing except that each file's hash equals
-# the hash the lock states, so a run able to edit both edits the file and restates its hash in the
-# same breath and the check still exits 0 - the one failure that leaves the gate looking green.
-# Protecting the lock is what makes every hash in it mean something, the `watched` skills-lock.json
-# entry included; that file stays editable so om-apply-upgrade-notes can still move it, and the
-# lock is now what reports it when something else does.
+# `.claude/hooks/` is the load-bearing entry. `git-guardrails.sh` is re-read on every PreToolUse
+# and its own header calls itself the only thing between a crafted pull request and
+# `gh pr review --approve`; a run able to write it disarms the rest of this file in one call.
+# `claude-code-review.yml` restores four paths from the base ref before the agent starts, which
+# stops the pull request supplying its judge - it does nothing about the running agent, and this
+# line is that half.
 #
 # scripts/ci/ and the two docs/agents/cezar-*.json are the same argument one step out:
 # review-threads-label.mjs is the single thing that arms "Resolve blocking review threads", and the two JSON files
@@ -113,31 +128,8 @@ esac
 # prompt it is about to be handed is the same act as a run rewriting .ai/cezar/.
 rel="${abs#"$root"/}"
 
-# True when the branch already changes this path relative to its base. Fails closed: no git, no
-# base ref, no match - the caller treats the file as untouched and the block stands.
-in_branch_diff() {
-  base=$(jq -r '.baseBranch // empty' "$root/.ai/agentic.config.json" 2>/dev/null) || return 1
-  [ -n "$base" ] || return 1
-  changed=$(git -C "$root" diff --name-only "origin/$base...HEAD" 2>/dev/null) || return 1
-  # Not a pipe: `grep -q` closes early, and under `pipefail` that SIGPIPEs the writer and turns a
-  # match into a non-zero pipeline - the one shape of this test that fails open-looking and blocks.
-  grep -Fxq "$1" <<< "$changed"
-}
-
-if printf '%s' "$rel" | grep -Eq '^(\.github/|\.claude/|\.husky/|\.ai/cezar/|\.ai/agentic\.config\.json$|\.ai/trackers/|\.ai/browsers/|\.ai/skills/|\.ai/scripts/|\.ai/agent-kit\.lock\.json$|scripts/ci/|docs/agents/cezar-(automations|prompt-templates)\.json$|\.npmrc$|pnpm-workspace\.yaml$|docs/agents/reference\.md$|docs/agents/out-of-scope\.md$)'; then
-  # One exception, and only for a cezar run: a file the branch already changes. A reviewer asking
-  # for a correction to a change a human proposed is not a run rewriting its own rules, and
-  # refusing it is how a review thread stays open forever - the `develop` ruleset merges nothing
-  # with one, so the block turns a one-line correction into a permanent stall. Introducing a
-  # change to a guarded file the branch does not already carry stays refused: that is the case
-  # this rule exists for.
-  #
-  # Never under GITHUB_ACTIONS. There the diff is the attacker's, so "the branch already changes
-  # it" is a claim the attacker made, and the block is absolute.
-  if [ -z "${GITHUB_ACTIONS:-}" ] && in_branch_diff "$rel"; then
-    exit 0
-  fi
-  echo "BLOCKED (agent run): '$rel' configures the agent; a run never edits it. Note it under 'Noticed but not touching' and carry on." >&2
+if printf '%s' "$rel" | grep -Eq '^(\.github/|\.claude/|\.husky/|\.ai/cezar/|\.ai/agentic\.config\.json$|\.ai/trackers/|\.ai/browsers/|\.ai/skills/|\.ai/scripts/|scripts/ci/|docs/agents/cezar-(automations|prompt-templates)\.json$|\.npmrc$|pnpm-workspace\.yaml$|docs/agents/reference\.md$|docs/agents/out-of-scope\.md$)'; then
+  echo "BLOCKED (GitHub Actions): '$rel' configures the agent; a run started by a pull request never edits it. Note it under 'Noticed but not touching' and carry on." >&2
   exit 2
 fi
 

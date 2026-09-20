@@ -305,26 +305,25 @@ anything from anyone else waits for a maintainer to add a trigger label.
 - Neither triage nor implementation touches `risk-high` or `security` work.
 - To stop it all, `cez automation pause <id>`, or start the cockpit with `CEZ_AUTOMATIONS=0`.
 
-**Files the kit owns.** `.ai/agent-kit.lock.json` hashes them, and that lock file — not a list in
-prose — is the answer to "is this file mine to edit": `node .ai/scripts/agent-kit-check.mjs` walks
-its explicit keys, not a directory glob. It covers `.ai/cezar/workflows/`, `.ai/cezar/config.json`,
-`.ai/skills/afk-*/`, `.claude/hooks/`, `.claude/settings.json`, `.ai/trackers/github.md`,
-`scripts/ci/`, three `.github/workflows/` and `docs/agents/cezar-automations.json`, and only part of
-`.ai/scripts/`. That check is the **first** command of the validation gate, so editing a tracked
-file directly fails it and therefore fails every PR in the repository: change the template in the
-agent-kit repository and re-sync instead.
+**Where an agent-layer file is fixed** (ADR 0025). Here, on the branch that needs it. The agent
+layer — `.ai/cezar/`, `.ai/skills/`, `.ai/scripts/`, `.ai/trackers/`, `.claude/hooks/`,
+`.claude/settings.json`, `scripts/ci/`, the Claude workflows — was rendered from
+`design4pro/agent-kit`, hashed in a lock file and refused to every agent run by
+`guard-generated.sh`. The kit is retired, the lock is gone, and the hook no longer refuses those
+paths **in a cezar run**: no upstream issue, no sync pull request, no seed commit. Review is what
+catches a change that should not have been made.
 
-**Where a guarded file is fixed** (ADR 0024). `.claude/hooks/guard-generated.sh` refuses an agent
-write to a path that configures the agent, whether or not the kit owns it, so "guarded" and
-"kit-owned" are different sets and the refusal alone does not say where the work goes. Three
-answers, and the lock file decides which:
+Two things still refuse, and neither is negotiable. **Under `GITHUB_ACTIONS` the same block is
+absolute** — there the diff belongs to whoever opened the pull request, `claude-code-review.yml`
+reads it with a write token, and a run that could write `.claude/hooks/` would disarm the guards
+mid-flight. A finding on one of those paths is reported, not applied. And **a write outside the
+worktree is refused in either mode**: a change that belongs to another repository is a pull request
+there, from its own clone.
 
-| The path is…                                                                                                                       | The fix is written                                                                                                                                                                                                              |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| in `.ai/agent-kit.lock.json`                                                                                                       | an autofix issue in `design4pro/agent-kit`, which runs the same pipeline. One idempotent upstream issue with a back-link, `blocked` here, and the fix arrives as a `chore(agent-kit): sync kit NN` pull request.                |
-| under `.claude/skills/`, pinned by `skills-lock.json`                                                                              | upstream in `open-mercato/skills`, to which we have no push rights. A repo-specific rule belongs in an `.ai/skills/<name>/SKILL.md` extension instead; an extension can never relax a skill's safety rules.                     |
-| guarded but in neither lock (`.ai/scripts/check-generated.sh`, `.ai/agentic.config.json`, `.husky/pre-commit`, `.ai/skills/om-*/`) | here, by the **seed-commit route**: the guard already allows a run to edit a guarded path that its branch _already changes_ relative to its base, so a human opens the branch with the one-line touch and re-applies `autofix`. |
+One further exception is not ours: `.claude/skills/` is pinned by `skills-lock.json` to
+`open-mercato/skills`, to which we have no push rights. A repo-specific rule belongs in an
+`.ai/skills/<name>/SKILL.md` extension instead; an extension can never relax a skill's safety rules.
 
-A run that stops on a guarded path says which of the three it is. A second "blocked" comment on the
-same issue is a defect in the routing, not in the guard.
+`money-tracker.online` carries the same agent layer and is no longer kept in step by anything. A fix
+that belongs in both is written in both.
 <!-- END per-repo -->
