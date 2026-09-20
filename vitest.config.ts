@@ -84,8 +84,9 @@ export default defineConfig({
             'scripts/**/__tests__/*.test.{ts,mjs}',
             // `.ai/scripts` is the second home for a script that belongs to the
             // pipeline rather than to the application - the validation gate and the
-            // e2e entrypoint live there. Their test companions run in the same
-            // project as `scripts/ci/__tests__`.
+            // e2e entrypoint live there, and `guard-generated.sh` still refuses a
+            // GitHub Actions run any write to them. Their test companions run in
+            // the same project as `scripts/ci/__tests__`.
             '.ai/scripts/**/__tests__/*.test.mjs',
             // The e2e helpers that carry policy rather than plumbing. The console
             // classifier decides which browser output fails a run, is pure, and

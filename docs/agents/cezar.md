@@ -129,19 +129,26 @@ variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-
   this hook is its only gate; `CLAUDE_REVIEW_PR_COMMENT=1` opens `gh pr comment` for that one job.
 - `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree and denies `.dev.vars`, `.env*`,
   `.e2e-tiles/`, cezar run state and `.ai/qa/test-env.env`.
-- There is no third hook. `guard-generated.sh`, which refused agent edits under `.github/`,
-  `.claude/`, `.ai/` and a handful of named files, is gone (ADR 0025): it was this repository's own
-  invention rather than anything Cezar CLI prescribes. A run may now edit its own gate, its own
-  skills and its own workflows; review is what catches that, as it does for every other file in the
-  diff. `worker-configuration.d.ts` is the one file that loses a protection and gains nothing -
-  ADR 0025 decision 2 records why the drift check the other three generated files have cannot be
-  written for it.
+- `guard-generated.sh` (Edit, Write) refuses a write outside the worktree or through `..`. Its
+  header records what that is for: a `pr-autopilot` run reached `../agent-kit/templates/…` and
+  rewrote eight files in a sibling checkout a human was working in, and nothing downstream could
+  tell. Edit and Write only - a Bash redirect still reaches outside, which is `git-guardrails.sh`'s
+  problem and not a matcher's.
 
-  Under GitHub Actions something narrower than the hook was already in place and still is:
-  `claude-code-review.yml` re-checks out `.claude/settings.json`, `.claude/hooks`, `scripts/ci` and
-  `.ai/agentic.config.json` from the base ref before the agent starts. Four paths, not all of
-  `.claude/` - `.claude/skills/` is not among them - and it restores rather than cleans, so a path
-  the pull request adds survives it. Both limits predate the hook's removal.
+  **It no longer refuses the paths that configure the agent - in a cezar run** (ADR 0025). That
+  block was the edit friction the agent-kit retirement was about: `.github/`, `.claude/`, `.ai/`
+  and a handful of named files could not be corrected on the branch that needed correcting. Here
+  the diff is a human's, proposed as a pull request and read by a reviewer, so a run may now edit
+  its own gate, its own skills and its own workflows, and review is what catches a diff that
+  widens what a run may do.
+
+  **Under `GITHUB_ACTIONS` the block is unchanged and absolute.** There the diff is the attacker's:
+  `claude-code-review.yml` reads it with a write token under `--permission-mode bypassPermissions`,
+  and `git-guardrails.sh` is re-read on every `PreToolUse`, so a run able to write it disarms the
+  rest in one call. The workflow's base-ref re-checkout is the other half of that and covers four
+  paths only - `.claude/settings.json`, `.claude/hooks`, `scripts/ci`, `.ai/agentic.config.json`,
+  not all of `.claude/` and not `.claude/skills/` - and it restores rather than cleans, so a path
+  the pull request adds survives it. Both limits predate ADR 0025.
 
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The hooks,
