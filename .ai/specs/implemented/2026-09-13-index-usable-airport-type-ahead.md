@@ -2,10 +2,10 @@
 
 | Field              | Value       |
 | ------------------ | ----------- |
-| **Status**         | in-progress |
+| **Status**         | implemented |
 | **Issue**          | #194        |
 | **Spec PR**        | #467        |
-| **Implementation** | none        |
+| **Implementation** | #581        |
 
 ## 📝 TLDR
 
