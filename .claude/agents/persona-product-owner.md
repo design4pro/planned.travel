@@ -58,3 +58,5 @@ ship | ship with fixes | do not ship - confidence high | medium | low
 ```
 
 Severity is CODE_REVIEW.md's, so the caller can act without translating you.
+
+Write the report in English whatever language the request arrived in, and whatever language the caller is speaking: it is pasted into review comments, pull request bodies and issues, and those are English here.

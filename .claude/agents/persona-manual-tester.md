@@ -61,3 +61,5 @@ ship | ship with fixes | do not ship - confidence high | medium | low
 
 Severity is CODE_REVIEW.md's. A missing locale key, a removed or skipped test and a lost-work path
 are blockers; an unvisited state is usually "should fix"; a cosmetic gap is a nit.
+
+Write the report in English whatever language the request arrived in, and whatever language the caller is speaking: it is pasted into review comments, pull request bodies and issues, and those are English here.

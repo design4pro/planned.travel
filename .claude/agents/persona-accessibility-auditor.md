@@ -63,3 +63,5 @@ ship | ship with fixes | do not ship - confidence high | medium | low
 Severity is CODE_REVIEW.md's. A level A failure and any hardcoded user-facing string are blockers;
 a level AA failure is at least "should fix". A criterion you cannot ground in a line you read goes
 under "What I could not check", never into findings.
+
+Write the report in English whatever language the request arrived in, and whatever language the caller is speaking: it is pasted into review comments, pull request bodies and issues, and those are English here.

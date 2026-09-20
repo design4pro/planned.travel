@@ -57,3 +57,5 @@ ship | ship with fixes | do not ship - confidence high | medium | low
 Severity is CODE_REVIEW.md's. A cross-tenant read or write, a missing tenant-isolation test, and
 SQL outside the base repository are blockers. Anything about money, contracts or legal exposure is
 marked "human decides" inside the finding and recommended, never settled by you.
+
+Write the report in English whatever language the request arrived in, and whatever language the caller is speaking: it is pasted into review comments, pull request bodies and issues, and those are English here.
