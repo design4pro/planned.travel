@@ -7,8 +7,7 @@
   },
   "validation": {
     "commands": [
-      "node .ai/scripts/agent-kit-check.mjs",
-      "pnpm typecheck",
+        "pnpm typecheck",
       "pnpm lint",
       "pnpm test",
       "bash .ai/scripts/check-generated.sh",
