@@ -112,7 +112,6 @@ jobs:
             exit 1
           fi
 
-
       # ESLint spends its time building a typed program and then walking it, and
       # on a pull request almost none of that work is new. `--cache` skips a file
       # whose bytes have not changed since the last run: measured on this repo,

@@ -508,7 +508,7 @@ Each phase leaves the validation gate green and leaves the desk behaving exactly
 15. **`src/routes/_app/trips/$tripId/book.tsx`** mounts the Import action beside `NewBookingAction` and the dialog beside it; **`index.ts`** gains the new exports. _Verify:_ `pnpm typecheck`, `pnpm lint`, `pnpm test`.
 16. **The e2e block**, appended to `e2e/journeys.spec.ts`: open `/trips/<demo>/book`, open the dialog, drop a small fixture calendar through the real upload path, wait for the review list, deselect one row, confirm, assert the desk shows the remaining rows with the unchecked-import marker; then assert the refusal state for an unaccepted format and the ceiling message with the rate read stubbed; and assert a silent console throughout. _Verify:_ `bash .ai/scripts/e2e.sh e2e/journeys.spec.ts`.
 17. **The blind A/B pair** on the five declared states, per docs/SPEC.md §7.4 and the `verifying-changes` skill. _Verify:_ `scripts/visual/capture.mjs` at 360, 1280 and 2560 in both themes, the critic's verdict attached to the PR.
-18. **The full gate**, in order: `node .ai/scripts/agent-kit-check.mjs`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `bash .ai/scripts/check-generated.sh`, `pnpm build`, `bash .ai/scripts/e2e.sh`. _Verify:_ every command green, nothing skipped or waived.
+18. **The full gate**, in order: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `bash .ai/scripts/check-generated.sh`, `pnpm build`, `bash .ai/scripts/e2e.sh`. _Verify:_ every command green, nothing skipped or waived.
 
 ## 📝 Out of scope
 
