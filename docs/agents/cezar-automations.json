@@ -1,7 +1,7 @@
 [
   {
     "name": "Groom new issues",
-    "description": "A maintainer opens an issue; om-auto-manage-issues adds SDLC labels, a Definition of Ready check and implementation notes (ADR 0018). `authors` is the gate: the run holds Bash with no allowlist, so an issue from anyone else is groomed only when a maintainer adds `groom`. Issues a run holds or a human put on hold never match.",
+    "description": "A maintainer opens an issue; om-auto-manage-issues adds SDLC labels, a Definition of Ready check and implementation notes (ADR 0018). `authors` is the gate: the run holds Bash with no allowlist, so an issue from anyone else is groomed only when a maintainer adds `groom`. Issues a run holds or a human put on hold never match. A groom that ends `READY_STATUS=ready` adds `needs-triage` as its last mutation, which is what hands the issue to `Triage new issues`; the conditions that narrow it are in `.ai/skills/om-auto-manage-issues/SKILL.md`.",
     "events": ["issue.opened"],
     "intervalSeconds": 120,
     "filters": {
