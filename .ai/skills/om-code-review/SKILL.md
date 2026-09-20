@@ -27,18 +27,25 @@ vocabulary, they never edit and they never decide.
 
 Consult a persona with the `Agent` tool when the diff reaches its seat, and not otherwise:
 
-| The diff touches                                         | Consult                         |
-| -------------------------------------------------------- | ------------------------------- |
-| a rendered surface, a message, a default a user meets    | `persona-traveller`             |
-| a component, a form, a dialog, a chart, a page           | `persona-accessibility-auditor` |
-| tenancy, roles, sharing, deletion, export, invitations   | `persona-workspace-owner`       |
-| a screen, a form, a list, or a server function           | `persona-manual-tester`         |
-| a capability added or narrowed, or a ticket claimed done | `persona-product-owner`         |
+| The diff touches                                                        | Consult                         |
+| ----------------------------------------------------------------------- | ------------------------------- |
+| a rendered surface, a message, a default a user meets                   | `persona-traveller`             |
+| a component, a form, a dialog, a chart, a page                          | `persona-accessibility-auditor` |
+| tenancy, roles, sharing, deletion, export, invitations, anything billed | `persona-workspace-owner`       |
+| a screen, a form, a list, or a server function                          | `persona-manual-tester`         |
+| a capability added or narrowed, or a ticket claimed done                | `persona-product-owner`         |
 
 Send each one the diff and the ticket, and run the ones that apply in a single message so they work
 in parallel. Fold what comes back into your own report rather than pasting it: a persona finding
 that maps onto a blocker in this file is a blocker, and everything else is a judgement finding you
 weigh and may reject with a reason. A panel that found nothing is worth one line saying so.
+
+Folding is for findings. The sections that are not findings - `## What I could not check` in every
+report, `## Human decides`, `## Acceptance criteria` and `## Cases worth a test` where the persona
+returns them - are carried into your own report verbatim under the persona's name rather than
+weighed against this file's severities. These reviews mostly run unattended and nothing else
+surfaces a subagent's output, so your report is the only place the human those sections were
+written for will ever read them.
 
 Skip the panel entirely on a diff that reaches no seat - a dependency bump, a generated file, a
 docs-only change. Consulting nobody is the correct outcome there, and cheaper than five reports
