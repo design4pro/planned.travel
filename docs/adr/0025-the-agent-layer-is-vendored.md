@@ -4,7 +4,7 @@ Status: accepted
 Date: 2026-09-20
 Supersedes: ADR 0024 (the kit distributes the agent layer, and a kit-owned fix is an issue in the kit).
 Amends: ADR 0021 (decision 1: the gate loses its first command), ADR 0018 (`guard-generated.sh` is
-removed; the property it held is kept by other means).
+removed; one of the things it protected is not replaced, and decision 2 says which).
 
 ## Context
 
@@ -47,12 +47,29 @@ written, not about a hash.
 judges that run_ - is not wrong. A hook that refuses by path is the wrong instrument for it: it is
 this repository's own invention, neither Cezar CLI nor Open Mercato prescribes it, it cannot tell a
 correction from a subversion, and its own escape hatch ("a guarded file this branch already changes")
-already conceded that most refusals were false positives. Three things stand in its place.
-`worker-configuration.d.ts` - the one file it protected alone - gets a drift check in
-`.ai/scripts/check-generated.sh` and in `ci.yml`, which is strictly stronger, because CI sees it and a
-hook on one machine does not. Under GitHub Actions the agent config is still not the pull request's to
-supply: `claude-code-review.yml` re-checks out `.claude/`, `scripts/ci/` and `.ai/agentic.config.json`
-from the base ref. Everything else is review's job, as it is for every other file in a diff.
+already conceded that most refusals were false positives. Under GitHub Actions the agent config is
+still not the pull request's to supply: `claude-code-review.yml` re-checks out `.claude/`,
+`scripts/ci/` and `.ai/agentic.config.json` from the base ref. Everything else is review's job, as it
+is for every other file in a diff.
+
+**One protection the hook held alone is not replaced, and this is a known gap.**
+`worker-configuration.d.ts` is the fourth generated file and the only one with no drift check: the
+route tree, `drizzle/` and the spec index are all diffed against a fresh regeneration by
+`.ai/scripts/check-generated.sh` and by `ci.yml`, and this change intended to add a fourth block in
+the same shape. It cannot be added, because the committed file is not `wrangler types`' output.
+Today's wrangler emits `TRIP_ROOM: DurableObjectNamespace<import("./src/server/worker").TripRoom>`
+and a `Cloudflare.GlobalProps` carrying `typeof import("./src/server/worker")`; that file is what
+`src/server/worker.ts` imports `Env` from, so the reference is circular, `Env` resolves to an empty
+type and `pnpm typecheck` reports 14 errors on files this branch does not touch. The committed copy
+carries `DurableObjectNamespace /* TripRoom */` instead, which is the adjustment that makes it
+compile. Generated-then-adjusted has nothing to be diffed against, and that - not an oversight - is
+why this one file got a hook that refused edits rather than a check that compared them.
+
+The file is stale today, independently of this change: `wrangler.jsonc` declares `AI`,
+`CF_VERSION_METADATA` and `SANDCASTLE_REGISTRY`, and the committed types know none of them. Nothing
+in the repository would have reported that, before or after. It is a defect of its own and is filed
+as one; the fix is either an upstream wrangler that does not self-reference, or a check that asserts
+every binding in `wrangler.jsonc` appears in the types without demanding byte equality.
 
 **3. The host layer moves to `design4pro/cezar`.** The launchd plists and the runner pool live there
 under `host/`, with the runbook in `docs/host/README.md` and the placement argued in that
@@ -72,6 +89,9 @@ void: every guarded path is now simply a path, and a fix is written where the fi
   periodic diff rather than a return to rendering.
 - **Nothing detects a hand edit of an agent-layer file.** Review does, or it does not. In exchange,
   a correction to a skill, a hook or a workflow is one commit on the branch that needs it.
+- **`worker-configuration.d.ts` is now unguarded in both directions:** nothing refuses an edit to it
+  and nothing notices when `wrangler.jsonc` moves past it. Decision 2 says why the obvious
+  replacement does not work here. This is the one place where this ADR is a net loss.
 - **The gate is one command shorter and no branch goes red for being behind a version number.** The
   13-merge-commit class disappears with the `--base` comparison, and `refresh-open-prs.yml` - which
   ADR 0024 introduced only to compensate for narrowing that comparison - is never needed.

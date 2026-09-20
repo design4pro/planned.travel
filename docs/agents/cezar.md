@@ -131,11 +131,11 @@ variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-
   `.e2e-tiles/`, cezar run state and `.ai/qa/test-env.env`.
 - There is no third hook. `guard-generated.sh`, which refused agent edits under `.github/`,
   `.claude/`, `.ai/` and a handful of named files, is gone (ADR 0025): it was this repository's own
-  invention rather than anything Cezar CLI prescribes, and the one thing it protected alone -
-  `worker-configuration.d.ts` drifting from `wrangler.jsonc` - is now a drift check in
-  `.ai/scripts/check-generated.sh` and in `ci.yml`, where CI sees it and a hand edit cannot
-  outlive the next run. A run may now edit its own gate, its own skills and its own workflows;
-  review is what catches that, as it does for every other file in the diff.
+  invention rather than anything Cezar CLI prescribes. A run may now edit its own gate, its own
+  skills and its own workflows; review is what catches that, as it does for every other file in the
+  diff. `worker-configuration.d.ts` is the one file that loses a protection and gains nothing -
+  ADR 0025 decision 2 records why the drift check the other three generated files have cannot be
+  written for it.
 
   Under GitHub Actions one piece of it survives by other means. `claude-code-review.yml` re-checks
   out `.claude/`, `scripts/ci/` and `.ai/agentic.config.json` from the base ref before the agent
