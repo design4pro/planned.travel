@@ -136,12 +136,46 @@ describe('git-guardrails.sh', () => {
     'pnpm --filter web deploy',
     'pnpm deploy:staging',
     'pnpm db:migrate:remote',
-    'pnpm db:migrate:remote:staging',
   ]
   it.each(SHIPPING)('blocks %s in an agent run', (command) => {
     expect(bash(command, AGENT).status).toBe(2)
   })
   it.each(SHIPPING)(
+    'leaves %s to the prompt outside an agent run',
+    (command) => {
+      expect(bash(command).status).toBe(0)
+    },
+  )
+
+  // Staging is the half of `--remote` an agent run is meant to reach: a query plan is only worth
+  // reading against real data and real statistics, and a staging mistake is repaired by reloading
+  // staging. `--env staging` is what wrangler resolves the bindings from, so it is what the rule
+  // reads - and its absence is what production looks like, which is why the two lists below differ
+  // by the selector and by the database name, and by nothing else.
+  const STAGING_D1 = [
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "EXPLAIN QUERY PLAN select 1"',
+    'wrangler d1 execute planned-travel-db-staging --remote --env=staging --command "select count(*) from trips"',
+    'wrangler d1 migrations apply planned-travel-db-staging --remote --env staging',
+    'pnpm wrangler d1 execute planned-travel-db-staging --env staging --remote --file ./plan.sql',
+    'pnpm db:migrate:remote:staging',
+  ]
+  it.each(STAGING_D1)('allows %s in an agent run', (command) => {
+    expect(bash(command, AGENT).status).toBe(0)
+  })
+
+  // Production stays refused however the command is dressed. The last two are the ways a selector
+  // could be made to vouch for a statement it does not govern: the production name carried
+  // alongside it, and a second command sharing the line.
+  const PRODUCTION_D1 = [
+    'wrangler d1 execute planned-travel-db --remote --command "select 1"',
+    'wrangler d1 migrations apply planned-travel-db --remote',
+    'wrangler d1 execute planned-travel-db --remote --env staging --command "select 1"',
+    'wrangler d1 execute planned-travel-db --remote --command "select 1" && wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1"',
+  ]
+  it.each(PRODUCTION_D1)('blocks %s in an agent run', (command) => {
+    expect(bash(command, AGENT).status).toBe(2)
+  })
+  it.each([...STAGING_D1, ...PRODUCTION_D1])(
     'leaves %s to the prompt outside an agent run',
     (command) => {
       expect(bash(command).status).toBe(0)

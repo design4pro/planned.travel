@@ -137,19 +137,40 @@ echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])env(\s*$|\s*\||\s+-0|\s*;|\s*&&)' &&
 
 # Shipping is a human decision, and an unattended run has nobody to answer a prompt about it.
 # `deploy` is not the only way to ship: `versions upload` + `versions deploy` is the gradual
-# rollout, `rollback` and `triggers deploy` change what production serves, and `d1 execute
-# --remote` reaches the live database. `db:migrate:local` is the local D1 copy and stays open;
-# `--remote` is what names staging or production.
+# rollout, `rollback` and `triggers deploy` change what production serves. `db:migrate:local` is
+# the local D1 copy and stays open; `--remote` is what names staging or production.
 echo "$scan" | grep -Eq 'wrangler\s+(deploy|rollback|versions\s+(deploy|upload)|triggers\s+deploy)\b' \
   && agent_block 'wrangler deploy' 'Deploying is a human decision; end the run as blocked and say what is ready to ship.'
-echo "$scan" | grep -Eq 'wrangler\s+d1\s+(migrations\s+apply|execute)\b.*--remote' \
-  && agent_block 'remote d1 access' 'The staging and production databases are a human decision; end the run as blocked.'
+
+# Remote D1 is split by which database is at the other end, because that is what decides the cost
+# of a mistake. Staging is the half an agent run is *supposed* to reach - #582 is the shape of it: a
+# query plan is only worth reading against real data and real statistics, so a rule that refused
+# staging made a ticket unfinishable rather than safe, and the run ended as blocked on work nobody
+# else was going to do. A staging mistake is repaired by reloading staging. Production is not, and
+# stays a human decision exactly as before.
+#
+# `--env staging` is the discriminator rather than the database name, because it is what wrangler
+# resolves bindings from; a name is a convention that drifts. Its *absence* is what production
+# looks like on a command line - wrangler falls back to the top-level bindings - so the rule fails
+# closed on it.
+#
+# The production database name is refused even when the selector is present, which closes the
+# compound `... --remote && ... --remote --env staging`: `$scan` is the whole line, so a selector
+# anywhere in it would otherwise vouch for a production statement somewhere else in it. The name is
+# matched as a whole token, or `planned-travel-db` would match itself inside
+# `planned-travel-db-staging` and refuse the thing this rule exists to allow.
+if echo "$scan" | grep -Eq 'wrangler\s+d1\s+(migrations\s+apply|execute)\b.*--remote'; then
+  echo "$scan" | grep -Eq 'planned-travel-db([^[:alnum:]_-]|$)' \
+    && agent_block 'remote d1 access (production)' 'The production database is a human decision; end the run as blocked. Staging is open to an agent run via --env staging.'
+  echo "$scan" | grep -Eq '(--env[[:space:]=]+staging|-e[[:space:]]+staging)([^[:alnum:]_-]|$)' \
+    || agent_block 'remote d1 access (production)' 'A remote D1 command without --env staging reaches production, which is a human decision; end the run as blocked.'
+fi
 # The package scripts that reach staging or production, named as this repository spells them -
 # `db:migrate:remote` and `db:migrate:remote:staging`, not the `db:migrate:prod` of a sibling
 # repo. A list copied from elsewhere would match nothing here and look protective while being
 # inert. Longest alternative first, and flags and a filter argument are skipped over, so
 # `pnpm -s run deploy` and `pnpm --filter web deploy` are the same deploy.
-echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+((-{1,2}[^[:space:]]+|[a-z]+)\s+)*(deploy:staging|db:migrate:remote:staging|db:migrate:remote|deploy)(\s|$)' \
+echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+((-{1,2}[^[:space:]]+|[a-z]+)\s+)*(deploy:staging|db:migrate:remote|deploy)(\s|$)' \
   && agent_block 'pnpm deploy|remote migration' 'Deploys and remote migrations are a human decision; end the run as blocked.'
 
 # GitHub Actions only. .github/workflows/claude-code-review.yml runs on every pull_request
