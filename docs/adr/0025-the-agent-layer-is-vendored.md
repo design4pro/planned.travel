@@ -47,10 +47,16 @@ written, not about a hash.
 judges that run_ - is not wrong. A hook that refuses by path is the wrong instrument for it: it is
 this repository's own invention, neither Cezar CLI nor Open Mercato prescribes it, it cannot tell a
 correction from a subversion, and its own escape hatch ("a guarded file this branch already changes")
-already conceded that most refusals were false positives. Under GitHub Actions the agent config is
-still not the pull request's to supply: `claude-code-review.yml` re-checks out `.claude/`,
-`scripts/ci/` and `.ai/agentic.config.json` from the base ref. Everything else is review's job, as it
-is for every other file in a diff.
+already conceded that most refusals were false positives. Everything it refused is review's job now,
+as it is for every other file in a diff.
+
+Under GitHub Actions part of the agent config is still not the pull request's to supply, and it is
+worth being exact about which part, because the hook is not what provided it.
+`claude-code-review.yml` re-checks out four paths from the base ref - `.claude/settings.json`,
+`.claude/hooks`, `scripts/ci` and `.ai/agentic.config.json` - and that is independent of anything
+this ADR changes. It does **not** cover `.claude/skills/`, and it restores rather than cleans, so a
+path a pull request _adds_ under those trees survives it. Both gaps predate this change and neither
+is closed by it; the workflow's own comments name the second one.
 
 **One protection the hook held alone is not replaced, and this is a known gap.**
 `worker-configuration.d.ts` is the fourth generated file and the only one with no drift check: the
@@ -97,8 +103,9 @@ void: every guarded path is now simply a path, and a fix is written where the fi
   ADR 0024 introduced only to compensate for narrowing that comparison - is never needed.
 - **Two protections are given up knowingly.** The worktree-confinement rule goes, which once stopped a
   `pr-autopilot` run reaching `../agent-kit/templates/…` and rewriting eight files in a sibling
-  checkout - far less relevant now that the sibling is archived. And the agent-config write block goes
-  outside GitHub Actions, where decision 2's re-checkout replaces it.
+  checkout - far less relevant now that the sibling is archived. And the agent-config write block
+  goes everywhere: under GitHub Actions the base-ref re-checkout covers four of those paths and was
+  already doing so, and `.claude/skills/` was never covered by either.
 - **`git-guardrails.sh`, `guard-read.sh` and `format-file.sh` stay.** The destructive-git net and the
   read confinement are not what this ADR is about, and removing either would be a real regression.
 - **The `afk-*` ladder stays as it is.** Pruning it was one of the four complaints that motivated this

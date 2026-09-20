@@ -137,9 +137,11 @@ variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-
   ADR 0025 decision 2 records why the drift check the other three generated files have cannot be
   written for it.
 
-  Under GitHub Actions one piece of it survives by other means. `claude-code-review.yml` re-checks
-  out `.claude/`, `scripts/ci/` and `.ai/agentic.config.json` from the base ref before the agent
-  starts, so a pull request still cannot supply the agent configuration that reads it.
+  Under GitHub Actions something narrower than the hook was already in place and still is:
+  `claude-code-review.yml` re-checks out `.claude/settings.json`, `.claude/hooks`, `scripts/ci` and
+  `.ai/agentic.config.json` from the base ref before the agent starts. Four paths, not all of
+  `.claude/` - `.claude/skills/` is not among them - and it restores rather than cleans, so a path
+  the pull request adds survives it. Both limits predate the hook's removal.
 
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The hooks,
