@@ -134,6 +134,7 @@ budget:
   operator needs at the `runs-on` line - which variable, what unset means, what to set in an outage -
   and point here. `claude.yml`, `claude-code-review.yml` and `merge-gate.yml` are rendered by
   agent-kit, so their comments change there. How the host and the pool are run is agent-kit's README,
+  _- since ADR 0025, `design4pro/cezar`'s `docs/host/README.md`, which is where `host/` moved -_
   "The runner pool".
 
 ## Alternatives rejected

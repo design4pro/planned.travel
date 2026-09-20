@@ -5,6 +5,9 @@
 # rather than as a mystery type error (route tree), a query against a column that
 # does not exist (migrations), or a spec index that quietly stops matching the
 # directory it describes.
+#
+# `worker-configuration.d.ts` is deliberately not here: it is generated and then
+# adjusted, so it has nothing to be diffed against. See ADR 0025.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 

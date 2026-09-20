@@ -23,7 +23,7 @@ steps:
       - Record each decision the brief left open as a Resolved assumptions row in the handoff file, for the PR body.
   - id: gate
     name: Validation gate
-    command: (test -d node_modules || pnpm install --frozen-lockfile) && node .ai/scripts/agent-kit-check.mjs && pnpm typecheck && pnpm lint && pnpm test && bash .ai/scripts/check-generated.sh && pnpm build
+    command: (test -d node_modules || pnpm install --frozen-lockfile) && pnpm typecheck && pnpm lint && pnpm test && bash .ai/scripts/check-generated.sh && pnpm build
     onFail:
       retry: implement
       max: 2

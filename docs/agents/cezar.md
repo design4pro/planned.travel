@@ -16,10 +16,10 @@ the rules of `SDLC.md`.
   `command -v cezar` keeps its path) and started by the cockpit plist as `cezar serve`. Upstream is
   not a fallback, whether through `npx` or `npm i -g`: it runs without every fix below and reports
   nothing, so the first symptom is pull requests sitting with unresolved threads. The
-  cockpit plist is host-wide state and lives in `design4pro/agent-kit`
-  (`host/launchd/dev.cezar.cockpit.plist`, with the runbook in that repository's README, "The
-  cockpit runs a fork, not npx" and "Taking an upstream release"), not here -
-  one service serves both projects. The
+  cockpit plist is host-wide state and lives in the fork's own repository
+  (`design4pro/cezar`, `host/launchd/dev.cezar.cockpit.plist`, with the runbook in its
+  `docs/host/README.md`, "The cockpit runs a fork, not npx" and "Taking an upstream release"), not
+  here - one service serves both projects. The
   project entry in `~/.cezar/config.json` points at the main checkout; the versioned part is
   `.ai/cezar/config.json` (`baseBranch: develop`, `worktreeRetention: 10`, `maxParallel: 2`,
   `reviewGate: false` so a successful non-autonomous run settles at `done` and the automations
@@ -28,8 +28,8 @@ the rules of `SDLC.md`.
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
   of git; `config.json` and `workflows/` are tracked.
 - Fork commits: each fix below is one commit on `design4pro`, and a rebase onto an upstream release
-  drops the ones that release carries. Until agent-kit 39 they were string patches on an npm
-  install's `dist/` (`.ai/scripts/cezar-host-patch.sh`, since deleted). `GH_CONFIG_DIR` forwarding
+  drops the ones that release carries. They were string patches on an npm install's `dist/` until
+  September 2026 (`.ai/scripts/cezar-host-patch.sh`, since deleted). `GH_CONFIG_DIR` forwarding
   needs no commit: 0.11.0 forwards it.
   - In upstream, `issue.labeled` polls fail as soon as one recently updated issue has a comment or a
     cross-reference (open-mercato/cezar#914), so **Re-groom on request**, **Fix issues on the autofix label** and **Write a spec for feature issues**
@@ -87,7 +87,7 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
   Polish while everything that leaves the session (code, comments, commits, GitHub) stays English.
   `.ai/scripts/__tests__/cezar-config.test.ts` fails when the key is cleared.
 - Service environment: `CEZ_AUTOMATIONS=1`, `CEZ_AUTONOMOUS_DEFAULT=0`, `CEZ_SKILLS_AUTO_UPDATE=0`,
-  `GH_CONFIG_DIR` (below), all four from the agent-kit plist template, and never `GH_TOKEN`,
+  `GH_CONFIG_DIR` (below), all four from the plist template in `design4pro/cezar`, and never `GH_TOKEN`,
   `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
   builds the agent's env from an allowlist (`PATH`, `HOME`, toolchain prefixes such as
   `NODE_*`/`PNPM_*`, `GH_TOKEN`, `GH_CONFIG_DIR`, `ANTHROPIC_*`, `CLAUDE_*`, `CEZ_*`), so a token
@@ -129,17 +129,26 @@ variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-
   this hook is its only gate; `CLAUDE_REVIEW_PR_COMMENT=1` opens `gh pr comment` for that one job.
 - `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree and denies `.dev.vars`, `.env*`,
   `.e2e-tiles/`, cezar run state and `.ai/qa/test-env.env`.
-- `guard-generated.sh` also refuses edits under `.github/`, `.claude/`, `.husky/`, `.ai/cezar/`,
-  `.ai/agentic.config.json`, `.ai/trackers/`, `.ai/browsers/`, `.ai/skills/`, `.ai/scripts/` (a run
-  must not rewrite its own validation gate), `.npmrc`, `pnpm-workspace.yaml`,
-  `docs/agents/reference.md` and `docs/agents/out-of-scope.md`.
+- `guard-generated.sh` (Edit, Write) refuses a write outside the worktree or through `..`. Its
+  header records what that is for: a `pr-autopilot` run reached `../agent-kit/templates/…` and
+  rewrote eight files in a sibling checkout a human was working in, and nothing downstream could
+  tell. Edit and Write only - a Bash redirect still reaches outside, which is `git-guardrails.sh`'s
+  problem and not a matcher's.
 
-  One exception, and only in a cezar run: a guarded file **this branch already changes**. A
-  reviewer asking for a correction to a change a human proposed is not a run rewriting its own
-  rules, and refusing it is how a review thread stays open forever - the `develop` ruleset merges
-  nothing with one. Introducing a change to a guarded file the branch does not already carry is
-  still refused, and under `GITHUB_ACTIONS` the block is absolute, because there the diff is the
-  attacker's and "the branch already changes it" is the attacker's own claim.
+  **It no longer refuses the paths that configure the agent - in a cezar run** (ADR 0025). That
+  block was the edit friction the agent-kit retirement was about: `.github/`, `.claude/`, `.ai/`
+  and a handful of named files could not be corrected on the branch that needed correcting. Here
+  the diff is a human's, proposed as a pull request and read by a reviewer, so a run may now edit
+  its own gate, its own skills and its own workflows, and review is what catches a diff that
+  widens what a run may do.
+
+  **Under `GITHUB_ACTIONS` the block is unchanged and absolute.** There the diff is the attacker's:
+  `claude-code-review.yml` reads it with a write token under `--permission-mode bypassPermissions`,
+  and `git-guardrails.sh` is re-read on every `PreToolUse`, so a run able to write it disarms the
+  rest in one call. The workflow's base-ref re-checkout is the other half of that and covers four
+  paths only - `.claude/settings.json`, `.claude/hooks`, `scripts/ci`, `.ai/agentic.config.json`,
+  not all of `.claude/` and not `.claude/skills/` - and it restores rather than cleans, so a path
+  the pull request adds survives it. Both limits predate ADR 0025.
 
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The hooks,
@@ -358,7 +367,8 @@ must stop before `status:*` is stripped and the surviving labels renamed.
    SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels waited for
    PR C, and were deleted on 2026-09-08 (docs/agents/triage-labels.md).
 5. The cockpit service already runs the design4pro/cezar fork
-   (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`, set up per the agent-kit README);
+   (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`, set up per `design4pro/cezar`'s
+   `docs/host/README.md`);
    confirm `.ai/cezar/config.json` in the main checkout is the merged one, then restart the service
    while it has no active runs (`launchctl bootout gui/$(id -u)/dev.cezar.cockpit`, then
    `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.cezar.cockpit.plist`) so it reloads

@@ -1,6 +1,6 @@
 # 0024. agent-kit runs the pipeline; a kit-owned fix is an issue in the kit
 
-Status: accepted
+Status: superseded by ADR 0025
 Date: 2026-09-20
 Records: the agent layer's distribution through `design4pro/agent-kit`, which has been a structural
 decision since 2026-09-08 with no ADR anywhere and has therefore been argued from README prose.
