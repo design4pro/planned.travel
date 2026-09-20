@@ -21,19 +21,25 @@
  * things asserted here are single lines.
  */
 
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+const WORKFLOWS = join(ROOT, '.github/workflows')
 
-/** Every workflow that calls wrangler-action against a deployed environment. */
-const SHIPPING_WORKFLOWS = ['deploy.yml', 'deploy-staging.yml', 'rollback.yml']
+const read = (name) => readFileSync(join(WORKFLOWS, name), 'utf8')
 
-const read = (name) =>
-  readFileSync(join(ROOT, '.github/workflows', name), 'utf8')
+/**
+ * Every workflow that calls wrangler-action, discovered rather than listed. A hand-written list
+ * exempts a fourth shipping workflow from this guard by omission, and does it silently - the one
+ * way a test like this comes back green while covering less than it says.
+ */
+const SHIPPING_WORKFLOWS = readdirSync(WORKFLOWS).filter((name) =>
+  read(name).includes('cloudflare/wrangler-action'),
+)
 
 /**
  * The `wranglerVersion:` inputs `workflow` sets. Anchored on the key at the start of a line so the
@@ -44,11 +50,17 @@ function versionInputs(workflow) {
 }
 
 describe('shipping workflows leave the wrangler version to the lockfile', () => {
+  it('has workflows to guard', () => {
+    // Discovery that matches nothing - a renamed directory, a moved action - would leave every
+    // case below with no input and the suite green on zero coverage.
+    expect(SHIPPING_WORKFLOWS).not.toEqual([])
+  })
+
   it.each(SHIPPING_WORKFLOWS)('%s pins no wrangler version', (name) => {
     expect(versionInputs(read(name))).toEqual([])
   })
 
-  it('finds the pins the pre-#567 workflows carried', () => {
+  it('recognises the pin shape the workflows used to carry', () => {
     const before = [
       '        with:',
       '          packageManager: pnpm',
@@ -65,8 +77,17 @@ describe('shipping workflows leave the wrangler version to the lockfile', () => 
   it('installs the dependency tree in rollback.yml, so wrangler is there to resolve', () => {
     // The rollback runs no build, and skipping the install was defensible while a pin made
     // wrangler-action fetch its own wrangler. Without one it probes `pnpm exec wrangler --version`
-    // instead, and that needs a node_modules: turn the install back off and the rollback - the one
-    // workflow that only ever runs mid-incident - fails at the step it exists for.
-    expect(read('rollback.yml')).not.toMatch(/^\s*install: 'false'/m)
+    // instead, and that needs a node_modules.
+    //
+    // Turning the install back off would not fail loudly, which is why this is worth a test rather
+    // than a comment: the action catches the failed probe and installs `wrangler@4` - its default
+    // when the input is unset - straight from the registry. The rollback stays green while the
+    // lockfile quietly stops owning the version, which is exactly the failure #567 closed.
+    //
+    // .github/actions/setup no longer offers a switch to turn it off: this workflow was the only
+    // caller that ever set one, so #567 removed the input with the last use of it. Asserted on the
+    // bare key rather than on one spelling of a value, so that re-adding the switch and reaching
+    // for it here is a failing test rather than a silent return to the paragraph above.
+    expect(read('rollback.yml')).not.toMatch(/^\s*install:/m)
   })
 })

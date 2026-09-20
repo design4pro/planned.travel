@@ -133,17 +133,9 @@ jobs:
           packageManager: pnpm
           # No `wranglerVersion` on purpose, here or in any other call below.
           # Unset, wrangler-action runs whatever `pnpm exec wrangler --version`
-          # reports, so pnpm-lock.yaml owns the version the same way it owns
-          # every other dependency - the argument .github/actions/setup already
-          # makes for pnpm itself.
-          #
-          # Given one, the action compares it to the installed version with
-          # string equality whenever the input is an exact semver, not with
-          # range satisfaction. The pin here was `4.70.0`, the floor of the
-          # `^4.70.0` range in package.json, while the lockfile resolves
-          # `4.124.0` - so the comparison failed on every run and every deploy,
-          # staging deploy and rollback quietly downgraded wrangler to a version
-          # this repository never typechecks or tests against (#567).
+          # reports, so pnpm-lock.yaml owns the version. What the old pin did
+          # and why it is not coming back is written down once, next to the test
+          # that holds it open: scripts/__tests__/wrangler-version-ownership.test.mjs (#567).
           command: d1 migrations apply planned-travel-db-staging --remote --env staging
 
       # The `airports` table is the one the migration above creates and does not
@@ -158,8 +150,8 @@ jobs:
       # table is never empty for a reader, and a deploy carrying an unchanged
       # artefact rewrites nine thousand rows to the values they already hold,
       # which costs seconds and changes nothing anyone can observe. The SQL is
-      # generated first so the execute below is the same wrangler-action, on the
-      # same wrangler, as every other call here.
+      # generated first so the execute below is the same wrangler-action, using
+      # the same wrangler as every other call here.
       - name: Load the airport catalogue
         if: steps.gate.outputs.configured == 'true'
         run: node scripts/seed/airports.mjs --sql-out airports.sql
