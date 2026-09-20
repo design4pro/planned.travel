@@ -59,9 +59,9 @@ three slots are free, for three more jobs on a pool that has three.
 
 **1. The local gate is the fast loop.** `validation.commands` is `agent-kit-check`, `typecheck`,
 `lint`, `test`, `check-generated`, `build`. _Amended by ADR 0025: `agent-kit-check` is gone with the
-kit that needed it, so the gate now starts at `typecheck`. Nothing else in this decision moves._ The full journeys leave it. A run whose diff reaches a
-screen still runs the journeys that screen is in, `bash .ai/scripts/e2e.sh e2e/<file>.spec.ts`, as the
-`verifying-changes` ladder says.
+kit that needed it, so the gate now starts at `typecheck`. Nothing else in this decision moves._ The
+full journeys leave it. A run whose diff reaches a screen still runs the journeys that screen is in,
+`bash .ai/scripts/e2e.sh e2e/<file>.spec.ts`, as the `verifying-changes` ladder says.
 
 **2. CI is the merge authority.** Both rulesets require `lint · typecheck · build`, `unit tests`,
 `e2e · merged report` and `merge-gate`, next to `claude-review`. A job skipped by its `if` reports
