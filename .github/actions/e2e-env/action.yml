@@ -10,7 +10,8 @@ description: >
   preinstalled and no context distinguishes that image from the hosted ones. The
   version installed is the one `pnpm install` just resolved from the lockfile,
   so nothing is pinned twice, and an image whose browsers have drifted from the
-  lockfile is corrected rather than trusted.
+  lockfile is corrected rather than trusted. Their system libraries are asked
+  for only where the job can elevate to install them - see the step.
 
 inputs:
   basemap:
@@ -81,7 +82,20 @@ runs:
     # tarball - which is why this step is a plain install rather than a restore.
     - name: Install the browsers
       shell: bash
-      run: pnpm exec playwright install --with-deps ${{ inputs.browsers }}
+      run: |
+        # The browsers, always. The system libraries only where they can actually
+        # be installed: `--with-deps` is apt, and playwright-core's
+        # `transformCommandsForRoot` runs it under `sudo` when the process is not
+        # root, falling back to `su root -c`, which cannot work unattended. The
+        # pool's container runs as an unprivileged `runner` and carries no sudo -
+        # and needs none, being built FROM the Playwright image, whose libraries
+        # are already in place. Asking for them there would fail the job; asking
+        # for the browsers costs a no-op.
+        if [ "$(id -u)" = 0 ] || command -v sudo >/dev/null 2>&1; then
+          pnpm exec playwright install --with-deps ${{ inputs.browsers }}
+        else
+          pnpm exec playwright install ${{ inputs.browsers }}
+        fi
 
     - name: Generate route tree
       shell: bash

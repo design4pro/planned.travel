@@ -93,6 +93,14 @@ build, and repairs a stale one instead of failing mid-suite. Running it everywhe
 to reason about and strictly safer than any condition that infers what an image contains from who
 owns the machine.
 
+The system libraries are the one part that stays conditional, and on a capability rather than on an
+identity: `--with-deps` is apt, and playwright-core runs apt under `sudo` when the process is not
+root, falling back to `su root -c`, which cannot work unattended. The pool's container runs as an
+unprivileged `runner` with no sudo - and needs none, being built FROM the Playwright image - so the
+step asks for the libraries only where `id -u` is 0 or `sudo` exists, and for the browsers
+everywhere. Without that split the unconditional install would have failed the `e2e` job on the
+pool, which is to say it would have broken the fallback this record claims.
+
 This is what makes decision 1 safe on any of the three destinations, and it repairs the fallback in
 the direction ADR 0023 left broken. It also removes a manual coupling: `host/runner/Dockerfile` in
 design4pro/cezar no longer has to be kept in step with the `@playwright/test` devDependency by hand,
