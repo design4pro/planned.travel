@@ -57,6 +57,14 @@ that now grooms, triages, implements, reviews and QAs the work, and the CI and t
 > a reader of a changelog does not need line by line. It carries no `*(@handle)*` credits and no
 > Contributors block, because it did not go through the Supersede Credit Rule's verification pass —
 > entries from `0.2.0` on do.
+>
+> **Cutoff: `feefaecc7` (#676, 2026-09-21T05:52:57Z)** — the tip of `develop` this entry was
+> enumerated against. The heading's date is not the window's end, because more merged into
+> `develop` that same day: #677, #675 and #695 landed after this cutoff and belong to `0.2.0`, not
+> here. `0.2.0` must start from this commit rather than from `merged:>=2026-09-21`, which would
+> re-collect #674 — counted here, but not itemised, so the duplicate guard cannot see it. Every
+> entry records its cutoff this way; the reason is in the repo-local `om-auto-update-changelog`
+> override.
 
 ## ✨ Features
 
