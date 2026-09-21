@@ -226,7 +226,7 @@ if [ "$FORCE" = 1 ] || ! have_deps; then
   # .husky/pre-commit exits on this same CEZ_TASK_ID signal.
   #
   # Outside a run it must stay unset. This script is the documented first command in a fresh
-  # checkout (CLAUDE.md, `pnpm worktree:bootstrap`), so on that first run node_modules is absent,
+  # checkout (AGENTS.md, `pnpm worktree:bootstrap`), so on that first run node_modules is absent,
   # this branch is always taken, and skipping `prepare` unconditionally would leave a human
   # developer with core.hooksPath never set - no lint-staged, no typecheck, no tests on any of
   # their commits, silently and permanently.

@@ -6,14 +6,6 @@ description: >
   between two copies of them is the kind of thing that shows up as a build that
   only fails in one workflow. So they live here once.
 
-inputs:
-  install:
-    description: >
-      Run `pnpm install --frozen-lockfile`. Off only for a job that needs the
-      toolchain but not the dependency tree.
-    required: false
-    default: 'true'
-
 runs:
   using: composite
   steps:
@@ -69,7 +61,11 @@ runs:
         node-version: 24.x
         cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
+    # Unconditional. An `install` input used to make this step skippable, and
+    # rollback.yml was the only caller that ever turned it off - #567 took that
+    # away, because wrangler-action probes `pnpm exec wrangler --version` to
+    # find the wrangler it runs, and that needs a node_modules. The input went
+    # with its last use rather than staying behind as a switch nothing throws.
     - name: Install dependencies
-      if: inputs.install == 'true'
       shell: bash
       run: pnpm install --frozen-lockfile

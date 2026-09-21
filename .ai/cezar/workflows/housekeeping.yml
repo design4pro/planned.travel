@@ -13,7 +13,7 @@ steps:
     name: om-review-prs
     prompt: '/om-review-prs'
     model: opus
-    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite]
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
   - id: merge-buddy
     name: om-merge-buddy (read-only)
     prompt: '/om-merge-buddy'

@@ -240,6 +240,22 @@ Two amendment rules are specific to this document's shape:
   branch a PR targets — the one place the descriptor reads the base branch is to ask whether it has
   a merge queue, which is a different question. So **merge the promotion PR by hand**, and read
   "the patch landed" as "the rule is written down", never as "the tooling now honours it".
+- **The release log is `CHANGELOG.md`, and its topmost heading is the version of record.** There is
+  no `version` in `package.json` and no release tags, on purpose — the file's own header says why,
+  and `om-auto-update-changelog`'s repo-local override says how to resolve `--version` without one.
+  Two things read that heading: the changelog skill, and `om-close-fixed-issues`, whose default
+  `--since last-release` is how the housekeeping sweep knows how far back to look. **That boundary
+  is a floor, and it only ever moves forward.** Before the file existed the lookup fell back to the
+  last seven days, so anything older stayed open — and GitHub would not close it either, because
+  `develop` is not the default branch. A dated heading does not reach back past itself and recover
+  those: it swaps a rolling seven-day window for a fixed one, so the first sweep after a new heading
+  lands reads a _narrower_ window than the sweep before it did. Reconciling what merged before the
+  first heading is a one-time explicit backfill — `om-close-fixed-issues --since <date>` with a
+  `--limit` wide enough to reach that far back, because the default 50 is itself a shorter reach
+  than the date bound — and it is tracked as its own issue (#697), not implied by this file
+  existing. Draft
+  the next entry by hand on the open promotion PR; it is deliberately not on a schedule, because a
+  person writes the Highlights paragraph.
 - **CI is the merge authority** (ADR 0021). The local validation gate is the fast loop that keeps a
   PR from wasting a CI run; the required checks on `develop` are what actually gate the merge, and
   a reviewer reads them rather than the agent's own report. The critical journeys run on **every**

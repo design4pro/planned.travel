@@ -8,6 +8,23 @@ name: Re-arm review threads
 on:
   pull_request:
     types: [unlabeled]
+  # The second moment the answer can change, and the one the `unlabeled` trigger cannot cover: a
+  # review that lands after every run that would have asked. claude-code-review.yml arms at the end
+  # of its own job, and `chatgpt-codex-connector` reviews independently and asynchronously - about
+  # three minutes after the pull request opens, measured across #690, #692 and #695. Whether that
+  # thread is ever seen therefore depends on how long the Claude review happened to take: on #690 it
+  # ran seven and a half minutes and the thread landed inside the window, on #692 and #695 it ran
+  # about thirty seconds and the thread arrived two and a half minutes after the arming step had
+  # already reported "no unresolved review-bot thread on this PR". Nothing re-asked, so a P1 finding
+  # sat on both pull requests holding the merge, unread by the automation built to pick it up - and
+  # #695, the change that taught the script Codex's login, lost that race on itself.
+  #
+  # `submitted` rather than a review-comment event: Codex posts its findings as one review, so this
+  # fires once per review instead of once per comment. A human's review starts a run too, and that
+  # is deliberate - the script filters to bot-authored threads and is keyed to the head, so an
+  # unwanted run is one API read and a skip, and the judgement stays in the one place that holds it.
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   # The arming step at the end of claude-code-review.yml always ran while a claim was held, and so
@@ -24,7 +41,9 @@ jobs:
   # So ask again when the claim comes off. Same script, same head-keyed marker, same decision -
   # only the moment is new, and it is the first moment the answer can be anything but "held".
   rearm-review-threads:
-    if: github.event.action == 'unlabeled' && github.event.label.name == 'in-progress'
+    if: >-
+      github.event_name == 'pull_request_review' ||
+      (github.event.action == 'unlabeled' && github.event.label.name == 'in-progress')
     # The ci pool, not the agent pool: this job runs one repository script and spends no tokens.
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["blacksmith-4vcpu-ubuntu-2404-arm"]') }}
     permissions:
@@ -35,12 +54,25 @@ jobs:
       # a write token, and the branch under review must not be the one that supplies it. Same
       # reasoning as "Take the agent hooks and the CI scripts from the base branch" in
       # claude-code-review.yml.
+      #
+      # `pull_request_review` needs the same guarantee, and this `ref` is the whole of it. The event
+      # is not privileged the way `pull_request_target` is: the workflow file comes from the pull
+      # request's own merge ref, the same as for `pull_request` - measured on #695, whose new
+      # trigger fired while neither `main` nor `develop` carried it yet. So the branch under review
+      # does supply the workflow, and only this explicit checkout keeps the script it runs out of
+      # that branch's reach. Nothing here may rely on the file itself being trustworthy.
+      #
+      # That is safe rather than alarming, because the token is not privileged either: on a pull
+      # request from a fork `GITHUB_TOKEN` is read-only whatever `permissions:` asks for, so a fork
+      # that rewrote this file would gain nothing. The same read-only token is why this job cannot
+      # label a fork's pull request at all - a limitation it shares with the `unlabeled` trigger
+      # above, and one that costs nothing while every pull request here is same-repository.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.base.ref }}
           fetch-depth: 1
 
-      - name: Re-arm the review-thread autofix now the claim is released
+      - name: Re-arm the review-thread autofix
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

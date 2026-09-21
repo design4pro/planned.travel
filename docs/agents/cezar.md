@@ -121,7 +121,14 @@ A Claude Code session is an agent run when `CEZ_TASK_ID` (cezar) or `GITHUB_ACTI
 hooks in `.claude/hooks/` then tighten:
 
 - `git-guardrails.sh` also blocks `pnpm add|remove|update` (the stack is pinned, docs/SPEC.md §3),
-  `printenv` and `env` dumps. Under cezar, GitHub mutations, `git add -A`, closing keywords and
+  `printenv` and `env` dumps, and a recursive delete of anything but build output and scratch
+  space - the target list is an allowlist, so a path it does not name ends the run as blocked
+  rather than being deleted, and `find -delete`, `find -exec rm`, `sudo` and
+  `git worktree remove --force` are refused with it. In every session, agent or not, the same hook
+  refuses the deletes and history rewrites that take the checkout itself: a recursive delete naming
+  the filesystem root, the home directory, the working directory or the worktree root,
+  `git reflog expire`, `git gc --prune`, `git filter-branch`, `gh repo delete`, and deleting
+  `develop` or `main` on the remote. Under cezar, GitHub mutations, `git add -A`, closing keywords and
   `pnpm exec` are open: the om-* skills perform them through `.ai/trackers/github.md` and `SDLC.md`
   governs them. Under GitHub Actions every `gh issue|pr` mutation, `gh label|release|repo|secret|
 variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-review.yml` reads
@@ -255,7 +262,8 @@ upstream poller scopes its label source to `is:issue` and then drops any hit car
 fires minutes before the review job posts anything. So the chain is:
 
 1. `.github/workflows/claude-code-review.yml` ends with `scripts/ci/review-threads-label.mjs`,
-   which applies `review-threads` when the PR has live threads opened by the review bot.
+   which applies `review-threads` when the PR has live threads opened by a review bot - the
+   `claude` review job or `chatgpt-codex-connector`, whichever left them.
 2. A commit on the design4pro/cezar fork
    (`feat(automations): filters.includePullRequests polls label events on pull requests`) teaches
    the poller to honour `filters.includePullRequests` on both gates. It is opt-in per automation -
@@ -290,10 +298,26 @@ for `pull_request.unlabeled`, and a separate job re-runs the same script when th
 pushes nothing cannot re-arm itself when it drops its own claim - only asked at the first moment
 the answer can be anything but "held".
 
+There is a third ask, and it exists because a review bot does not have to answer while anyone is
+listening. `chatgpt-codex-connector` reviews asynchronously, about three minutes after a pull
+request opens, while step 1 arms at the end of the Claude review job - so whether its thread is
+seen at all came down to how long that job happened to run. Measured on three pull requests the
+same morning: on #690 the review took seven and a half minutes and the thread landed inside the
+window, on #692 and #695 it took about thirty seconds and the thread arrived two and a half minutes
+after the arming step had already reported "no unresolved review-bot thread on this PR". Both
+carried a P1 finding that held the merge and that no run was ever armed to read. So
+`rearm-review-threads.yml` now also listens for `pull_request_review.submitted`, which is the one
+event that fires when a review exists rather than when someone hoped it would.
+
 The gate is the same as for `groom` and `autofix`: only a collaborator or the Actions bot can set a
-label, so an outsider cannot start a run that holds an unrestricted Bash. A human's review thread is
-deliberately not a trigger - the script arms only on the review bot's threads, because a
-disagreement with a person is settled by talking. Rehearse the decision against any live PR with
+label, so an outsider cannot start a run that holds an unrestricted Bash. A human's review still
+never arms anything - it starts the workflow, since `pull_request_review` does not ask who
+submitted, and the script then declines it, because a disagreement with a person is settled by
+talking. Keeping that judgement in the script rather than in the trigger is deliberate: the
+workflow's condition can only ask what kind of event this is, while the script can see who opened
+each thread and whether it is still live. Which logins count is `DEFAULT_REVIEW_BOTS` in that
+script; a bot missing from it goes unnoticed rather than failing, because its threads simply never
+arm a run. Rehearse the decision against any live PR with
 `GH_REPO=… PR_NUMBER=… HEAD_SHA=… node scripts/ci/review-threads-label.mjs --dry-run`.
 
 ## Prompt templates (`docs/agents/cezar-prompt-templates.json`)

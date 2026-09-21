@@ -4,12 +4,13 @@
 # label on an issue, never on a pull request (docs/adr/0015-label-protocol.md), and none of the
 # pull-request labels applies to a bot's bump: `agent-pr` and `agent-docs` mean a run opened it.
 #
-# Two pins are load-bearing and are deliberately NOT ignored here, because a bump to either has to
-# be followed by a matching edit and it is better that the pull request exists and goes red:
+# One pin is load-bearing and is deliberately NOT ignored here, because a bump to it has to be
+# followed by a matching edit and it is better that the pull request exists and goes red:
 #   * `@playwright/test` - the container image tag `mcr.microsoft.com/playwright:v<version>-noble`
 #     in ci.yml has to move with it.
-#   * `wrangler` - the `wranglerVersion` input in both deploy workflows (four occurrences) has to
-#     move with it.
+#
+# `wrangler` used to be the second. The shipping workflows no longer name a version, so a bump
+# needs no edit anywhere: the lockfile is the only place it is written down (#567).
 #
 # The `@tanstack/*` packages pinned to `latest` are inert here: the range is satisfied by every
 # release, so Dependabot has nothing to raise. They move when the lockfile is refreshed by hand.

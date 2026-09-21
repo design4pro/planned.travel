@@ -753,7 +753,7 @@ Rows unblocked: `BKG-10` (`03-S5`, wave 4).
   and its output is reviewed like any other change.
 - `src/server/catalog/airports.ts` — new. The prefix read over the catalogue table. It lives in
   `src/server/catalog` and not in `src/server/repos` because an airport belongs to no tenant, which is
-  the single stated exception to the tenant-scoped repository rule in `CLAUDE.md` and `docs/SPEC.md`
+  the single stated exception to the tenant-scoped repository rule in `AGENTS.md` and `docs/SPEC.md`
   §6 — and stating which exception is being used is the price of using it.
 - `src/server/catalog/__tests__/airports.test.ts` — new. The prefix query, the cap, and the case that
   matters most: a code the catalogue does not carry resolves to nothing and blocks no write.

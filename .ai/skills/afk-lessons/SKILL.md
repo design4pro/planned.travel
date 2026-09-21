@@ -34,7 +34,7 @@ A **lesson** is one root cause stated as a rule. Example: "New persisted fields 
 |---|---|
 | Mechanical: a tool can detect it | A test or lint check in the existing suites. Include a case that fails without the rule. |
 | Judgement: a reviewer must decide | A bullet in the matching `CODE_REVIEW.md` checklist section, plus its severity. |
-| Operational: how agents run | `AGENTS.md` (the section it belongs to), or the `afk-*` skill that made the mistake. |
+| Operational: how agents run | `AGENTS.md` (the section it belongs to), or the `afk-*` skill that made the mistake. Write above the `intent-skills` markers - the block between them is generated. |
 | Vocabulary: the wrong word or a confused concept | A `CONTEXT.md` entry, following `afk-domain-modeling`. |
 
 Keep each rule to one or two sentences, and cite the PRs that motivated it, the way existing rules cite `#810`.
