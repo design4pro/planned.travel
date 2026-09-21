@@ -103,11 +103,29 @@ describe(WORKFLOW, () => {
 
   describe(REARM_WORKFLOW, () => {
     // Its own file, so that the `unlabeled` it needs never starts claude-code-review.yml (#300).
-    it('starts only when a label comes off, and only for in-progress', () => {
+    it('starts on a label coming off only for in-progress', () => {
       expect(pullRequestTypes(rearmWorkflow)).toEqual(['unlabeled'])
       expect(rearmWorkflow).toMatch(
-        /if: github\.event\.action == 'unlabeled' && github\.event\.label\.name == 'in-progress'/,
+        /github\.event\.action == 'unlabeled' && github\.event\.label\.name == 'in-progress'/,
       )
+    })
+
+    // The other moment the answer can change. A review bot that reviews asynchronously can submit
+    // after every run that would have asked - claude-code-review.yml arms at the end of its own
+    // job, and on #692 and #695 that job had finished two and a half minutes before Codex posted.
+    // Without this trigger the thread holds the merge and nothing ever arms a run to clear it.
+    it('starts again when a review is submitted, whoever submitted it', () => {
+      expect(rearmWorkflow).toMatch(/\n {2}pull_request_review:\n {4}types: \[submitted\]/)
+      expect(rearmWorkflow).toMatch(/github\.event_name == 'pull_request_review'/)
+    })
+
+    // A privileged event hands this job a write token on a fork's pull request too, so the guard
+    // the rest of this file asserts has to cover the new trigger rather than only the old one.
+    // Both events carry `pull_request`, so the one `ref:` below is the whole of it.
+    it('keeps the base-branch checkout for the review trigger too', () => {
+      const job = rearmWorkflow.slice(rearmWorkflow.indexOf('\n  rearm-review-threads:'))
+      expect(job.match(/uses: actions\/checkout@v\d+/g)).toHaveLength(1)
+      expect(job).toMatch(/ref: \$\{\{ github\.event\.pull_request\.base\.ref \}\}/)
     })
 
     it('checks out the base branch rather than the pull request', () => {
