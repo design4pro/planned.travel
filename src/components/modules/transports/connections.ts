@@ -16,9 +16,11 @@
  */
 
 import { modeLabel } from './vocabulary'
+import { arrivesBeforeDeparts, instantAt } from '#/lib/transport-timing'
 
 import type { DeferredMessage } from '../shared/deferred-message'
 import type { MessageKey } from '#/lib/i18n'
+import type { LegZones } from '#/lib/transport-timing'
 
 export interface TransportLike {
   readonly id: string
@@ -54,26 +56,15 @@ export function minimumConnectionMinutes(mode: string): number {
 /**
  * A wall-clock instant in milliseconds, or `null` when the transport has no date.
  *
- * A missing time is read as the start of the day for a departure and the end of it
- * for an arrival by the callers below, so an undated-time transport is never *wrongly*
- * flagged as impossible.
+ * A missing time is read as the start of the day, so an undated-time transport sorts ahead of
+ * the timed ones on its day and is never *wrongly* flagged as impossible.
  */
-function instantOf(date: string | null, time: string | null): number | null {
-  if (date === null || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return null
-  }
-  const clock =
-    time !== null && /^\d{2}:\d{2}/.test(time) ? time.slice(0, 5) : '00:00'
-  const parsed = Date.parse(`${date}T${clock}:00.000Z`)
-  return Number.isNaN(parsed) ? null : parsed
-}
-
 export function transportDepartureAt(transport: TransportLike): number | null {
-  return instantOf(transport.departureDate, transport.departureTime)
+  return instantAt(transport.departureDate, transport.departureTime)
 }
 
 export function transportArrivalAt(transport: TransportLike): number | null {
-  return instantOf(transport.arrivalDate, transport.arrivalTime)
+  return instantAt(transport.arrivalDate, transport.arrivalTime)
 }
 
 /** Travel order: dated transports by departure, then undated ones in the order given. */
@@ -326,26 +317,21 @@ export function summariseConnections(
 /**
  * Whether one transport's own times make sense. Used live in the dialog, where the
  * answer has to appear as the traveller types rather than after a round trip.
+ *
+ * The rule itself is `arrivesBeforeDeparts` (`#/lib/transport-timing`), the one the repository
+ * refuses a write by; this only names the message. `zones` are the two ends' zones, judged in only
+ * when both are named.
  */
-export function transportTimingError(transport: {
-  readonly departureDate: string
-  readonly departureTime: string
-  readonly arrivalDate: string
-  readonly arrivalTime: string
-}): MessageKey | null {
-  if (transport.departureDate === '' || transport.arrivalDate === '') {
-    return null
-  }
-  const from = instantOf(
-    transport.departureDate,
-    transport.departureTime === '' ? '00:00' : transport.departureTime,
-  )
-  const to = instantOf(
-    transport.arrivalDate,
-    transport.arrivalTime === '' ? '23:59' : transport.arrivalTime,
-  )
-  if (from === null || to === null) {
-    return null
-  }
-  return to < from ? 'modules.transports.error.arrivesBeforeDeparts' : null
+export function transportTimingError(
+  transport: {
+    readonly departureDate: string
+    readonly departureTime: string
+    readonly arrivalDate: string
+    readonly arrivalTime: string
+  },
+  zones?: LegZones,
+): MessageKey | null {
+  return arrivesBeforeDeparts(transport, zones)
+    ? 'modules.transports.error.arrivesBeforeDeparts'
+    : null
 }

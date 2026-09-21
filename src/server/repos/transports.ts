@@ -39,6 +39,7 @@ import { assertTripRole, requireTrip } from './trips'
 
 import type { TripRole } from './trips'
 import { resolveTimeZone } from '#/lib/time'
+import { arrivesBeforeDeparts } from '#/lib/transport-timing'
 import {
   currencySchema,
   dateSchema,
@@ -55,6 +56,7 @@ import {
   titleSchema,
 } from './validation'
 import type { Transport, TransportLeg, Trip } from '#/server/db/types'
+import type { LegClocks, LegZones } from '#/lib/transport-timing'
 import type { BatchStatement } from './batch'
 import type { TenantScope } from './base'
 
@@ -317,6 +319,40 @@ async function requireDayPair(
   }
 }
 
+/**
+ * Refuses a Transport or a Leg that lands before it takes off.
+ *
+ * The rule is the dialog's own, from `#/lib/transport-timing`: real instants when both ends name
+ * a zone, wall clocks otherwise. It is here and not in the server functions because every writer
+ * passes through this file and not all of them through a server function that checked — a chain
+ * and a found connection used to reach the table with no ordering check at all.
+ */
+function requireTimeOrder(
+  subject: 'transport' | 'leg',
+  clocks: LegClocks,
+  zones: LegZones,
+): void {
+  if (arrivesBeforeDeparts(clocks, zones)) {
+    throw new RepositoryError(
+      `This ${subject} arrives before it departs. Check the times.`,
+      'TIME_ORDER',
+    )
+  }
+}
+
+/** Every leg of a chain, each judged in the zones of the two stations it runs between. */
+function requireLegOrder(
+  stations: ReadonlyArray<ChainStationInput>,
+  legs: ReadonlyArray<ChainLegInput>,
+): void {
+  legs.forEach((leg, index) => {
+    requireTimeOrder('leg', leg, {
+      from: stations.at(index)?.timezone,
+      to: stations.at(index + 1)?.timezone,
+    })
+  })
+}
+
 export async function createTransport(
   scope: TenantScope,
   input: CreateTransportInput,
@@ -330,6 +366,10 @@ export async function createTransport(
     values.dayId ?? null,
     values.arrivalDayId ?? null,
   )
+  requireTimeOrder('transport', values, {
+    from: values.departureTimezone,
+    to: values.arrivalTimezone,
+  })
   return transportsRepository.insert(scope, values)
 }
 
@@ -350,6 +390,12 @@ export async function updateTransport(
       ? (values.arrivalDayId ?? null)
       : existing.arrivalDayId
   await requireDayPair(scope, existing.tripId, departureDayId, arrivalDayId)
+  // The clocks likewise: the flat form sends no zones, so the stored ones are what it is judged in.
+  const resulting = { ...existing, ...values }
+  requireTimeOrder('transport', resulting, {
+    from: resulting.departureTimezone,
+    to: resulting.arrivalTimezone,
+  })
   return transportsRepository.requireUpdate(scope, transportId, values)
 }
 
@@ -921,6 +967,7 @@ export async function replaceTransportChain(
   const parent = await transportsRepository.requireById(scope, transportId)
   await assertTripRole(scope, parent.tripId, WRITERS)
 
+  requireLegOrder(stations, legs)
   await requireChainDays(scope, parent.tripId, legs)
 
   // The chain is rewritten by delete-and-reinsert, so a leg's day position would be lost on every
@@ -1135,6 +1182,9 @@ export async function saveSearchedConnection(
   if (existing !== null && existing.tripId !== values.tripId) {
     throw new NotFoundError('transport', existing.id)
   }
+  // Before the record is created, not only inside the chain write below: a leg refused there would
+  // leave behind a new journey with no chain.
+  requireLegOrder(values.stations, values.legs)
 
   const parent =
     existing ?? (await createTransport(scope, newRecordFrom(values)))

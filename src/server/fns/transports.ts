@@ -7,10 +7,10 @@
  * and the second is never derived from the first: a night flight leaves on
  * Tuesday and lands on Wednesday, and only the traveller knows that.
  *
- * The only rule this layer adds on top of the repository is that a journey cannot
- * arrive before it departs; whether two *consecutive* journeys connect is a
- * judgement for the screen to surface, not a reason to refuse the save (see
- * `connections.ts`).
+ * This layer adds no rule of its own on top of the repository: a journey that
+ * arrives before it departs is refused there, for every writer. Whether two
+ * *consecutive* journeys connect is a judgement for the screen to surface, not a
+ * reason to refuse the save (see `connections.ts`).
  */
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -46,6 +46,7 @@ import {
   transitQuerySchema,
 } from '#/server/transit/search'
 import { resolveTimeZone } from '#/lib/time'
+import { DATE_PATTERN, TIME_PATTERN } from '#/lib/transport-timing'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
 
 import type { AirportMatch } from '#/server/catalog/airports'
@@ -71,14 +72,14 @@ const optionalDate = z
   .string()
   .trim()
   .refine(
-    (value) => value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value),
+    (value) => value === '' || DATE_PATTERN.test(value),
     'must be an ISO calendar date (YYYY-MM-DD)',
   )
 const optionalTime = z
   .string()
   .trim()
   .refine(
-    (value) => value === '' || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value),
+    (value) => value === '' || TIME_PATTERN.test(value),
     'must be a 24-hour time (HH:MM)',
   )
 
@@ -142,20 +143,6 @@ export const transportUpdateSchema = z.object({
 })
 
 export type TransportInput = z.infer<typeof transportInputSchema>
-
-/** A transport that lands before it takes off is a typo, and the server says so too. */
-function assertOrder(data: TransportInput): void {
-  if (data.departureDate === '' || data.arrivalDate === '') {
-    return
-  }
-  const from = `${data.departureDate}T${data.departureTime === '' ? '00:00' : data.departureTime}`
-  const to = `${data.arrivalDate}T${data.arrivalTime === '' ? '23:59' : data.arrivalTime}`
-  if (to < from) {
-    throw new Error(
-      'This transport arrives before it departs. Check the times.',
-    )
-  }
-}
 
 function payload(data: TransportInput) {
   return {
@@ -527,7 +514,6 @@ export const createTransportFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
-    assertOrder(data)
 
     const transport = await createTransport(scope, {
       tripId: data.tripId,
@@ -551,7 +537,6 @@ export const updateTransportFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
-    assertOrder(data)
 
     const transport = await updateTransport(
       scope,

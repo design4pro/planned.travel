@@ -8,11 +8,13 @@
  */
 import { formatWeekday } from '#/lib/format'
 import { isKnownTimeZone } from '#/lib/timezones'
+import { DATE_PATTERN, TIME_PATTERN } from '#/lib/transport-timing'
 import { transportTimingError } from './connections'
 
 import { isTransportMode, modeLabel } from './vocabulary'
 
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
+import type { LegZones } from '#/lib/transport-timing'
 import type { TransportData } from './types'
 import type { TransportMode, TransportStatus } from './vocabulary'
 
@@ -297,9 +299,6 @@ export function suggestTransportTitle(
 export type TransportErrors = Partial<
   Record<keyof TransportDraft | 'form', MessageKey>
 >
-
-const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/u
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u
 
 export function validateTransportDraft(
   draft: TransportDraft,
@@ -892,6 +891,7 @@ function stationErrors(station: StationDraft): StationErrors {
 
 function chainLegErrors(
   leg: ChainLegDraft,
+  zones: LegZones,
   mode: string,
   days: ReadonlyArray<DayChoice>,
 ): ChainLegErrors {
@@ -910,12 +910,16 @@ function chainLegErrors(
     }
   }
 
-  const ordering = transportTimingError({
-    departureDate: leg.departureDate.trim(),
-    departureTime: leg.departureTime.trim(),
-    arrivalDate: leg.arrivalDate.trim(),
-    arrivalTime: leg.arrivalTime.trim(),
-  })
+  // Judged in the two stations' zones, the rule the repository refuses the chain by.
+  const ordering = transportTimingError(
+    {
+      departureDate: leg.departureDate.trim(),
+      departureTime: leg.departureTime.trim(),
+      arrivalDate: leg.arrivalDate.trim(),
+      arrivalTime: leg.arrivalTime.trim(),
+    },
+    zones,
+  )
   if (ordering !== null && errors.arrivalTime === undefined) {
     errors.arrivalTime = ordering
   }
@@ -943,7 +947,17 @@ export function validateChain(
 ): ChainErrors {
   const errors: ChainErrors = {
     stations: chain.stations.map(stationErrors),
-    legs: chain.legs.map((leg) => chainLegErrors(leg, mode, days)),
+    legs: chain.legs.map((leg, index) =>
+      chainLegErrors(
+        leg,
+        {
+          from: chain.stations.at(index)?.timezone,
+          to: chain.stations.at(index + 1)?.timezone,
+        },
+        mode,
+        days,
+      ),
+    ),
   }
   return chain.legs.length > CHAIN_MAX_LEGS
     ? { ...errors, form: 'modules.transports.chain.error.tooManyLegs' }
