@@ -126,11 +126,40 @@ another repository, and a deploy has to run when the machine does not.
   still included on GitHub Team once the deploys have taken theirs, that is on the order of **$550 a
   month**.
 
-  On Blacksmith ARM at $0.0025 per 2-vCPU minute, scaling linearly with cores and with 3,000
-  x64-equivalent minutes included, the same workload is on the order of **$175 a month**. That
-  figure assumes ARM job-minutes close to the pool's, which is the assumption this change is least
-  sure of; it is to be replaced with the measurement from the first week of real runs, and the rule
-  this record learned the hard way is that an extrapolated CI cost is worth nothing.
+  On Blacksmith ARM the same gate was then run for real (run 35587121453, green, every job
+  including both e2e shards), and the result is worth stating against the expectation, because the
+  expectation was wrong again - this record first estimated $175 a month on the assumption that ARM
+  job-minutes would land near the pool's:
+
+  | Job                        | Blacksmith 4 vCPU ARM | GitHub-hosted |
+  | -------------------------- | --------------------- | ------------- |
+  | `unit tests`               | **5.7**               | 9.3           |
+  | `lint · typecheck · build` | 2.9                   | **2.3**       |
+  | `e2e` shard 1/2            | 13.1                  | **12.4**      |
+  | `e2e` shard 2/2            | 10.1                  | **8.9**       |
+  | `e2e · merged report`      | 0.7                   | 0.6           |
+  | `change scope`             | 0.1                   | 0.1           |
+  | **total job-minutes**      | **32.5**              | 33.6          |
+
+  Blacksmith is 1.6x faster on the one job that is purely processor-bound and slightly slower on
+  every job that is not. The e2e shards dominate this suite and they are dominated in turn by setup
+  - `playwright install --with-deps` over apt, `pnpm install` against a store no cache restores
+    here, migrations, a dev server - so four fast cores buy almost nothing there. The saving is
+    therefore a price saving rather than a speed saving: **$0.005 per minute against $0.008, on
+    roughly the same number of minutes**, or about 39% a run.
+
+  Carried across the workload at the same ratio of partial and cancelled runs the pool sample
+  showed, that is on the order of **$285 a month against ~$550** - a halving, not the two thirds
+  first written here. The decision stands on that, and on the durability argument that is the real
+  reason for it, but the number is half as good as the estimate and this is the second estimate in
+  this record to have been optimistic. Nothing about CI cost is worth writing down here until it has
+  been run.
+
+  **Two measured follow-ups, neither taken here.** The e2e shards are setup-bound, not CPU-bound, so
+  a 2-vCPU shard would likely cost meaningfully less than a 4-vCPU one at close to the same wall
+  clock - that is a per-job size, not a per-variable one, and it needs its own measurement. And
+  Blacksmith's own cache and sticky disks target exactly the setup minutes that dominate the shard.
+  Each is a separate change with a number attached.
 
 - **A third party joins the merge path.** This is the honest counterweight: the laptop leaves, and a
   vendor arrives. Blacksmith runs each job in an ephemeral Firecracker microVM with a just-in-time
