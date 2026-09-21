@@ -1179,6 +1179,36 @@ describe('a journey that arrives before it departs', () => {
     )
   })
 
+  /**
+   * The dialog's edit of a chain whose outer stations change: the record is written before the
+   * chain, so the patch carries the new zones, and the clocks are judged in them, not in the
+   * zones the chain is about to replace.
+   */
+  it('orders an update in the zones it sends, not the ones it replaces', async () => {
+    const created = await createTransport(tenant.scope, {
+      tripId,
+      title: 'Reversed',
+      mode: 'flight',
+      departureTimezone: HONOLULU.timezone,
+      arrivalTimezone: TOKYO.timezone,
+    })
+
+    const updated = await updateTransport(tenant.scope, created.id, {
+      ...WESTBOUND,
+      departureTimezone: TOKYO.timezone,
+      arrivalTimezone: HONOLULU.timezone,
+    })
+    expect(updated.departureTimezone).toBe(TOKYO.timezone)
+
+    await expectTimeOrder(() =>
+      updateTransport(tenant.scope, created.id, {
+        ...INVERTED,
+        departureTimezone: LONDON.timezone,
+        arrivalTimezone: NEW_YORK.timezone,
+      }),
+    )
+  })
+
   it('refuses a chain with a leg that lands first, and leaves the chain as it was', async () => {
     const created = await createTransport(tenant.scope, {
       tripId,
