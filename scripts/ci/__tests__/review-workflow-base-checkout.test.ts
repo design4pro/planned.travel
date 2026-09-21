@@ -119,9 +119,11 @@ describe(WORKFLOW, () => {
       expect(rearmWorkflow).toMatch(/github\.event_name == 'pull_request_review'/)
     })
 
-    // A privileged event hands this job a write token on a fork's pull request too, so the guard
-    // the rest of this file asserts has to cover the new trigger rather than only the old one.
-    // Both events carry `pull_request`, so the one `ref:` below is the whole of it.
+    // `pull_request_review` runs the workflow from the pull request's own merge ref, not from the
+    // base branch - #695's new trigger fired while neither `main` nor `develop` carried it yet - so
+    // the branch under review supplies this file and only the explicit `ref:` keeps the script it
+    // runs out of that branch's reach. Both events carry `pull_request`, so that one `ref:` covers
+    // the new trigger as well as the old, and this asserts it stays the only checkout.
     it('keeps the base-branch checkout for the review trigger too', () => {
       const job = rearmWorkflow.slice(rearmWorkflow.indexOf('\n  rearm-review-threads:'))
       expect(job.match(/uses: actions\/checkout@v\d+/g)).toHaveLength(1)

@@ -55,10 +55,18 @@ jobs:
       # reasoning as "Take the agent hooks and the CI scripts from the base branch" in
       # claude-code-review.yml.
       #
-      # `pull_request_review` needs the same guarantee and gets it the same way. It is one of the
-      # privileged events - the workflow file is read from the base branch and the token carries
-      # write even for a fork - so the file cannot be rewritten by the branch under review, and this
-      # `ref` keeps what it runs out of that branch's reach too. Both halves of the rule, unchanged.
+      # `pull_request_review` needs the same guarantee, and this `ref` is the whole of it. The event
+      # is not privileged the way `pull_request_target` is: the workflow file comes from the pull
+      # request's own merge ref, the same as for `pull_request` - measured on #695, whose new
+      # trigger fired while neither `main` nor `develop` carried it yet. So the branch under review
+      # does supply the workflow, and only this explicit checkout keeps the script it runs out of
+      # that branch's reach. Nothing here may rely on the file itself being trustworthy.
+      #
+      # That is safe rather than alarming, because the token is not privileged either: on a pull
+      # request from a fork `GITHUB_TOKEN` is read-only whatever `permissions:` asks for, so a fork
+      # that rewrote this file would gain nothing. The same read-only token is why this job cannot
+      # label a fork's pull request at all - a limitation it shares with the `unlabeled` trigger
+      # above, and one that costs nothing while every pull request here is same-repository.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.base.ref }}
