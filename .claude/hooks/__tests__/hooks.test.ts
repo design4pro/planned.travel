@@ -488,12 +488,82 @@ describe("deleting the checkout", () => {
     expect(bash(command, AGENT).status).toBe(2);
   });
 
-  // Deleting a merged feature branch is routine, and `--delete-branch` on a merge needs it.
+  // A shell metacharacter glued to `rm` used to hide the invocation from every tier, the
+  // always-on one included: the tokenizer split on whitespace, so `$(rm` was one unknown word
+  // rather than an operator followed by `rm`. These are the strongest guarantee in the file, so
+  // they are pinned in all three tiers.
+  it.each([
+    "echo $(rm -rf /)",
+    "(rm -rf /)",
+    "true;rm -rf /",
+    "echo `rm -rf /`",
+    "rm -rf dist&&rm -rf /",
+  ])("reads %s as an invocation, not as one unknown word", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2);
+    }
+  });
+
+  // A `*` in a `case` glob matches `/` and `..` alike, so a path walking back up out of an
+  // accepted prefix was accepted along with it. Any `..` segment is refused before the allowlist
+  // is consulted; ordinary dotted paths are not, which the two counter-cases pin.
+  it.each([
+    "rm -rf node_modules/../src",
+    "rm -rf .ai/tmp/../../src",
+    "rm -rf /tmp/../home",
+    "rm -rf dist/../../elsewhere",
+  ])("refuses %s, which walks out of the allowlist", (command) => {
+    expect(bash(command, AGENT).status).toBe(2);
+  });
+
+  it("keeps dotted paths that stay inside an allowed root", () => {
+    expect(bash("rm -rf node_modules/.cache", AGENT).status).toBe(0);
+    expect(bash("rm -rf .ai/tmp/run-1/a..b", AGENT).status).toBe(0);
+  });
+
+  // A recursive `rm` whose targets come from a pipe names no path this hook can read, so there
+  // is nothing to match against the allowlist. It is refused and told to name the path rather
+  // than dropped - in a run only, which is where the allowlist applies at all.
+  it.each(["find . -name node_modules | xargs rm -rf", "ls | xargs rm -rf"])(
+    "refuses the target-less %s in a run only",
+    (command) => {
+      expect(bash(command).status).toBe(0);
+      expect(bash(command, AGENT).status).toBe(2);
+    },
+  );
+
+  // A newline ends a command as surely as a semicolon does. State surviving one used to carry a
+  // recursive-delete flag onto the next line and block it, naming a target it never had.
+  it("does not leak an invocation across a newline", () => {
+    expect(bash("rm -rf node_modules\npnpm install", AGENT).status).toBe(0);
+  });
+
+  it("still judges a second delete written on its own line", () => {
+    const r = bash("rm -rf dist\nrm -rf src", AGENT);
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("src");
+  });
+
+  // git-push(1) documents `-d, --delete` as one option, an exact synonym since 1.7.0, so the
+  // short spelling deletes a shared branch just as the long one does.
+  it.each([
+    "git push -d origin develop",
+    "git push origin -d main",
+    "git push --delete origin develop",
+  ])("blocks the shared-branch delete %s", (command) => {
+    expect(bash(command).status).toBe(2);
+  });
+
+  // Deleting a merged feature branch is routine, and `--delete-branch` on a merge needs it -
+  // in either spelling. `develop-foo` is a branch of its own: the rule ends on a word boundary
+  // that excludes `-`, so a name merely starting with a shared one is not swallowed.
   it("leaves a feature branch deletable", () => {
     for (const env of [{}, AGENT]) {
       expect(bash("git push origin --delete fix/issue-12-x", env).status).toBe(
         0,
       );
+      expect(bash("git push -d origin fix/issue-12-x", env).status).toBe(0);
+      expect(bash("git push origin -d develop-foo", env).status).toBe(0);
     }
   });
 });

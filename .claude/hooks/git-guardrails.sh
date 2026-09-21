@@ -135,10 +135,14 @@ echo "$scan" | grep -Eq 'git\s+reflog\s+expire' && block 'git reflog expire'
 echo "$scan" | grep -Eq 'git\s+gc\b[^|;&]*--prune' && block 'git gc --prune'
 echo "$scan" | grep -Eq 'git\s+(filter-branch|filter-repo)\b' && block 'git history rewrite'
 echo "$scan" | grep -Eq 'gh\s+repo\s+delete\b' && block 'gh repo delete'
-# Deleting a shared branch on the remote, in either spelling: `--delete develop` and the colon
-# refspec `:develop` are the same act, and both undo what everybody else has already pulled. A
-# merged feature branch stays deletable, which is what `--delete-branch` on a merge needs.
-echo "$scan" | grep -Eq 'git\s+push\b[^|;&]*--delete\s+\S*\s*(develop|main)([^[:alnum:]_/-]|$)' \
+# Deleting a shared branch on the remote, in each of its three spellings: `--delete develop`, the
+# short form `-d`, and the colon refspec `:develop` are one act, and all of them undo what
+# everybody else has already pulled. `-d` is not a variant this rule may leave to the long
+# spelling it already covers - git-push(1) documents the two as one option ("-d, --delete"), an
+# exact synonym since 1.7.0, so matching only `--delete` protected the shared branches from
+# nobody who types the short form. A merged feature branch stays deletable in either spelling,
+# which is what `--delete-branch` on a merge needs.
+echo "$scan" | grep -Eq 'git\s+push\b[^|;&]*\s(--delete|-d)\s+\S*\s*(develop|main)([^[:alnum:]_/-]|$)' \
   && block 'git push --delete develop/main'
 echo "$scan" | grep -Eq 'git\s+push\b[^|;&]*[[:space:]]:(refs/heads/)?(develop|main)([^[:alnum:]_/-]|$)' \
   && block 'git push :develop/main'
@@ -157,14 +161,23 @@ rm_invocations() { # command
   printf '%s\n' "$1" | awk '
     function emit(   j) {
       if (!inrm) return
+      # No literal target: the paths come from somewhere this hook cannot read, so there is
+      # nothing to match an allowlist against. Emit a placeholder no allowlist accepts, so the
+      # run is refused and told to name the path, rather than dropped.
+      if (n == 0) tgt[++n] = "<unnamed>"
       for (j = 1; j <= n; j++) printf "%d %s\n", rec, tgt[j]
       inrm = 0; rec = 0; n = 0
     }
     {
+      # Space out the shell metacharacters before the fields are read, so a word one of them is
+      # glued to is still that word: `;rm` is an operator followed by `rm`, not one unknown token.
+      gsub(/[;|&()`]/, " & ")
+      # A newline ends a command as surely as a semicolon does, so no state survives one.
+      inrm = 0; rec = 0; n = 0
       for (i = 1; i <= NF; i++) {
         t = $i
         # A control operator ends the invocation; the next word starts a new command.
-        if (t == "&&" || t == "||" || t ~ /^[|;&]+$/) { emit(); continue }
+        if (t ~ /^[;|&()`]+$/) { emit(); continue }
         if (t ~ /(^|\/)rm$/) { emit(); inrm = 1; continue }
         if (!inrm) continue
         if (t == "--") continue
@@ -175,8 +188,8 @@ rm_invocations() { # command
         if (t ~ /^-/) { if (t ~ /[rR]/) rec = 1; continue }
         tgt[++n] = t
       }
-    }
-    END { emit() }'
+      emit()
+    }'
 }
 
 # The machine, the account, the checkout. `$HOME` and `~` are matched literally: this hook never
@@ -221,6 +234,16 @@ echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])env(\s*$|\s*\||\s+-0|\s*;|\s*&&)' &&
 # delete anything else ends as blocked and names the path - which is a failure a reviewer can
 # read, and the direction this file's mistakes should point in.
 disposable_rm_target() { # path
+  # A `*` in a `case` glob matches `/` and `..` alike, so a path that walks back up out of an
+  # accepted prefix used to be accepted along with it: `node_modules/../src` matched
+  # `node_modules/*` and named the source tree, which is the one path this allowlist exists to
+  # keep. So any `..` segment is refused before the allowlist is consulted at all. Refusing
+  # rather than normalising is deliberate - resolving a path here would have to guess at symlinks
+  # and at a working directory this hook does not know, and a run can always name the directory
+  # it means.
+  case "/${1#/}/" in
+    */../*) return 1 ;;
+  esac
   case "${1%/}" in
     node_modules | */node_modules | node_modules/* | */node_modules/*) return 0 ;;
     dist | */dist | build | */build | coverage | */coverage) return 0 ;;
