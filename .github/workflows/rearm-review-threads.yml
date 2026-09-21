@@ -72,6 +72,17 @@ jobs:
           ref: ${{ github.event.pull_request.base.ref }}
           fetch-depth: 1
 
+      # The checkout above is the base branch's, so this is the base branch's copy of the script -
+      # the same guarantee the step below runs under, and the reason this step follows rather than
+      # precedes it.
+      #
+      # `gh` is what review-threads-label.mjs drives the issues API with, and no step named it.
+      # This job moved to a Blacksmith image in ADR 0026, and CODE_REVIEW.md is what says a moved
+      # job installs what it calls rather than assuming it from the image - the same gap that was
+      # closed in promote-develop.yml and claude-code-review.yml, in the third place it occurs.
+      - name: Ensure the GitHub CLI
+        run: bash scripts/ci/ensure-gh.sh
+
       - name: Re-arm the review-thread autofix
         env:
           GH_TOKEN: ${{ github.token }}
