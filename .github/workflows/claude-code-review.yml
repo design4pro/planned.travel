@@ -200,7 +200,7 @@ jobs:
       #
       # `always()`: a review that tripped either guard above may still have left threads behind, and
       # threads from an earlier head hold the merge whatever this run did. The script is where the
-      # judgement lives - it arms only for live, non-outdated threads opened by the review bot, and
+      # judgement lives - it arms only for live, non-outdated threads opened by a review bot, and
       # only once per head - so the step condition stays deliberately blunt.
       #
       # `github.token` is enough: the consumer is cezar's poller, which reads the issues API, and

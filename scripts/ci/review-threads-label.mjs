@@ -40,8 +40,21 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync, realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-/** Logins whose threads are the automation's business. A human's thread is a human's to settle. */
-const DEFAULT_REVIEW_BOTS = ['claude', 'claude[bot]', 'github-actions[bot]']
+/**
+ * Logins whose threads are the automation's business. A human's thread is a human's to settle.
+ *
+ * Every review bot that comments on this repository belongs here, and the cost of an omission is
+ * silent: a pull request whose only unresolved threads come from a bot that is missing from this
+ * list never gets `review-threads`, so the automation never starts and the findings sit there
+ * until somebody notices by eye. `chatgpt-codex-connector` was missing for exactly that reason -
+ * it had open P1 threads on #690 and #692 that no run had ever been armed to pick up.
+ */
+const DEFAULT_REVIEW_BOTS = [
+  'claude',
+  'claude[bot]',
+  'github-actions[bot]',
+  'chatgpt-codex-connector',
+]
 
 export const MARKER = '<!-- agent-review-threads:'
 
