@@ -300,7 +300,7 @@ export async function listTripParticipants(
  * How many people are on each of the given trips — members plus guests — keyed by trip id (`01-S7`).
  *
  * Two grouped statements per ninety ids, one per table, because its callers are the trip index
- * and the dashboard, and a query per card is the shape `countTripsByStatus` and `countPlacesPerTrip`
+ * and the dashboard, and a query per card is the shape `countTripsByStatus` and `readTripCardFacts`
  * already refuse. D1 bills rows read, and both tables lead their composite index with
  * `organization_id`, so each scan is bounded by the tenant.
  *

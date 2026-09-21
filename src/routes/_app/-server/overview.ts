@@ -13,15 +13,12 @@ import {
   RepositoryError,
   countAuditActions,
   countFavourites,
-  countPlacesPerTrip,
-  countTripPeople,
   countUnread,
   getAtlasSummary,
   getDashboardSummary,
   getOrganization,
   listAuditLog,
   listCollectionsWithCounts,
-  listFavouriteTripIds,
   listJourneysWithCounts,
   listMemberProfiles,
   listNotifications,
@@ -30,8 +27,8 @@ import {
   markAllRead,
   markRead,
   notificationsRepository,
+  readTripCardFacts,
   resolveQuotas,
-  tripRolesFor,
 } from '#/server/repos'
 import { roleSatisfies } from '#/server/auth/tenant'
 import { serverToday } from '#/server/clock'
@@ -39,7 +36,7 @@ import { elapsedFraction } from '../-lib/view-mode'
 import { appScope } from './context'
 import { isoOfRequired } from './serialise'
 
-import type { TenantScope } from '#/server/repos'
+import type { TenantScope, TripCardFacts } from '#/server/repos'
 import type { JsonRecord } from '#/server/db/schema'
 import type {
   Notification,
@@ -183,41 +180,28 @@ export interface DashboardPayload {
 }
 
 /**
- * A card maker for one list of trips: the four per-tile facts a card needs beyond the row itself —
- * the place count, the people count, the reader's own role and the reader's own star — read for the
- * whole list in a fixed handful of statements rather than per tile, then applied one tile at a time.
+ * A card maker for one list of trips: the per-tile facts a card needs beyond the row itself, read
+ * for the whole list by {@link readTripCardFacts}, then applied one tile at a time.
  */
 async function tripCardsFor(
   scope: TenantScope,
   tripIds: ReadonlyArray<string>,
 ): Promise<(trip: Trip) => TripCard> {
-  const [placeCounts, peopleCounts, roles, favourites] = await Promise.all([
-    countPlacesPerTrip(scope, tripIds),
-    countTripPeople(scope, tripIds),
-    tripRolesFor(scope, tripIds),
-    listFavouriteTripIds(scope),
-  ])
-  const starred = new Set(favourites)
-  return (trip) =>
-    toTripCard(trip, {
-      placeCount: placeCounts.get(trip.id) ?? 0,
-      peopleCount: peopleCounts.get(trip.id) ?? 0,
-      role: roles.get(trip.id) ?? null,
-      isFavourite: starred.has(trip.id),
-    })
+  const facts = await readTripCardFacts(scope, tripIds)
+  return (trip) => toTripCard(trip, facts.get(trip.id) ?? NO_CARD_FACTS)
 }
 
-/** The per-reader facts a card carries beyond the row itself, as {@link tripCardsFor} reads them. */
-interface TripCardDecorations {
-  readonly placeCount: number
-  readonly peopleCount: number
-  readonly role: TripMemberRole | null
-  readonly isFavourite: boolean
+/** What a trip the reader may not read would show — never reached for the rows the lists return. */
+const NO_CARD_FACTS: TripCardFacts = {
+  placeCount: 0,
+  peopleCount: 0,
+  role: null,
+  isFavourite: false,
 }
 
 export function toTripCard(
   trip: Trip,
-  { placeCount, peopleCount, role, isFavourite }: TripCardDecorations,
+  { placeCount, peopleCount, role, isFavourite }: TripCardFacts,
 ): TripCard {
   return {
     id: trip.id,
