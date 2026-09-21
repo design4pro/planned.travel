@@ -149,31 +149,71 @@ describe('git-guardrails.sh', () => {
 
   // Staging is the half of `--remote` an agent run is meant to reach: a query plan is only worth
   // reading against real data and real statistics, and a staging mistake is repaired by reloading
-  // staging. `--env staging` is what wrangler resolves the bindings from, so it is what the rule
-  // reads - and its absence is what production looks like, which is why the two lists below differ
-  // by the selector and by the database name, and by nothing else.
+  // staging. The rule allowlists the database each statement names - `planned-travel-db-staging`,
+  // the one spelling package.json uses - and requires `--env staging` on top of it, because its
+  // absence is what production looks like on a command line.
   const STAGING_D1 = [
     'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "EXPLAIN QUERY PLAN select 1"',
     'wrangler d1 execute planned-travel-db-staging --remote --env=staging --command "select count(*) from trips"',
     'wrangler d1 migrations apply planned-travel-db-staging --remote --env staging',
     'pnpm wrangler d1 execute planned-travel-db-staging --env staging --remote --file ./plan.sql',
     'pnpm db:migrate:remote:staging',
+    // A selector spelled inside the SQL is neither here nor there once the database itself is
+    // what decides: this one is staging because the positional says so.
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1 -- -e staging"',
   ]
   it.each(STAGING_D1)('allows %s in an agent run', (command) => {
     expect(bash(command, AGENT).status).toBe(0)
   })
 
-  // Production stays refused however the command is dressed. The last two are the ways a selector
-  // could be made to vouch for a statement it does not govern: the production name carried
-  // alongside it, and a second command sharing the line.
+  // Production stays refused however the command is dressed, which is what an allowlist on the
+  // positional buys over a denylist of one name. Every entry after the fourth was allowed while
+  // the rule denylisted `planned-travel-db`, and each names production a different way: by
+  // `database_id` (both ids sit in plaintext in wrangler.jsonc, and a bare one resolves through
+  // the D1 API without the config being consulted, so `--env` never narrows it), and by the `DB`
+  // binding, which wrangler resolves to the top-level - production - database.
+  //
+  // The selector is forged four different ways in here, and none of them matters any more: a
+  // second statement borrowing the first one's `--env staging`, a `-e` with no left-hand boundary
+  // (`./restore-e staging.sql`), and `-e staging` / `--env staging` sitting inertly inside the SQL
+  // or a trailing shell comment - `$scan` keeps quoted spans for `wrangler`, which is not on the
+  // `prose_command` list. The allowlist decides before any of that is read. The last one is the
+  // flags-first spelling, where the token after the subcommand is not the database at all: an
+  // unreadable positional takes the production path, because this file fails closed.
   const PRODUCTION_D1 = [
     'wrangler d1 execute planned-travel-db --remote --command "select 1"',
     'wrangler d1 migrations apply planned-travel-db --remote',
     'wrangler d1 execute planned-travel-db --remote --env staging --command "select 1"',
     'wrangler d1 execute planned-travel-db --remote --command "select 1" && wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1"',
+    'wrangler d1 execute a9738748-8c2d-4e67-8e6d-8dc55171d219 --remote --env staging --command "select * from user"',
+    'wrangler d1 execute a9738748-8c2d-4e67-8e6d-8dc55171d219 --remote --file ./restore-e staging.sql',
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 execute DB --remote --command "delete from trips"',
+    'wrangler d1 execute DB --remote --command "delete from trips"',
+    'wrangler d1 execute DB --remote --command "drop table trips -- -e staging"',
+    'wrangler d1 execute DB --remote --command "drop table user" # --env staging',
+    'wrangler d1 execute --remote DB --command "drop table user" --env staging',
+    // The allowlist is an equality test, not a substring one, and these are the two ways that
+    // distinction is usually lost: a neighbouring database whose name merely starts with the
+    // allowed one, and the allowed name in another case. Both are the production path, because
+    // neither is the database package.json reaches staging by.
+    'wrangler d1 execute planned-travel-db-staging-old --remote --env staging --command "select 1"',
+    'wrangler d1 execute PLANNED-TRAVEL-DB-STAGING --remote --env staging --command "select 1"',
+    // The rule reads the sub-command, not the first word of the line, so a runner in front of
+    // wrangler changes nothing.
+    'npx wrangler d1 execute DB --remote --env staging --command "select 1"',
   ]
   it.each(PRODUCTION_D1)('blocks %s in an agent run', (command) => {
     expect(bash(command, AGENT).status).toBe(2)
+  })
+
+  // The staging database by id is refused too, and deliberately: an agent run has no reason to
+  // spell the database any way but the way package.json spells it, and an allowlist carrying a
+  // second constant is a second thing that drifts out of step with wrangler.jsonc.
+  it('refuses even the staging database named by id in an agent run', () => {
+    const byId =
+      'wrangler d1 execute 0a30dba4-6978-494c-b2f0-2d02ca9a153e --remote --env staging --command "select 1"'
+    expect(bash(byId, AGENT).status).toBe(2)
+    expect(bash(byId).status).toBe(0)
   })
   it.each([...STAGING_D1, ...PRODUCTION_D1])(
     'leaves %s to the prompt outside an agent run',

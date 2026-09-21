@@ -149,20 +149,38 @@ echo "$scan" | grep -Eq 'wrangler\s+(deploy|rollback|versions\s+(deploy|upload)|
 # else was going to do. A staging mistake is repaired by reloading staging. Production is not, and
 # stays a human decision exactly as before.
 #
-# `--env staging` is the discriminator rather than the database name, because it is what wrangler
-# resolves bindings from; a name is a convention that drifts. Its *absence* is what production
-# looks like on a command line - wrangler falls back to the top-level bindings - so the rule fails
-# closed on it.
+# The rule is an allowlist on the database each statement names, not a denylist of the production
+# one. `wrangler d1 execute` accepts a `database_id` or a binding name as readily as a
+# `database_name`, and the production id sits in plaintext in wrangler.jsonc, so denylisting the
+# production `database_name` left `wrangler d1 execute <production-id> --remote --env staging`
+# allowed: a bare id resolves through the D1 API without the config being consulted, so `--env`
+# never narrows it. Every positional on the line is checked rather than only the first, which is
+# what closes the compound `... --env staging && wrangler d1 execute DB --remote ...` - `DB` is the
+# *top-level*, production binding, and a selector belonging to the statement before it must not
+# vouch for it. Splitting the line into sub-commands was the other candidate and is worse: `$scan`
+# has already had its quotes stripped, so an `&&` inside a `--command` string would split a
+# legitimate statement into fragments carrying neither `wrangler d1` nor `--remote`, and the gate
+# would stop firing at all.
 #
-# The production database name is refused even when the selector is present, which closes the
-# compound `... --remote && ... --remote --env staging`: `$scan` is the whole line, so a selector
-# anywhere in it would otherwise vouch for a production statement somewhere else in it. The name is
-# matched as a whole token, or `planned-travel-db` would match itself inside
-# `planned-travel-db-staging` and refuse the thing this rule exists to allow.
+# Only the staging `database_name` passes; the staging id and the `DB` binding are refused too,
+# because an agent run has no reason to spell the database any way but the way package.json spells
+# it, and a second constant is a second thing that drifts.
+#
+# `--env staging` is still required on top of that, because it is what wrangler resolves bindings
+# from, and its absence is what production looks like on a command line. `-e` carries a left-hand
+# boundary like every other rule in this file, or `--file ./restore-e staging.sql` reads as a
+# selector that is not there.
 if echo "$scan" | grep -Eq 'wrangler\s+d1\s+(migrations\s+apply|execute)\b.*--remote'; then
-  echo "$scan" | grep -Eq 'planned-travel-db([^[:alnum:]_-]|$)' \
-    && agent_block 'remote d1 access (production)' 'The production database is a human decision; end the run as blocked. Staging is open to an agent run via --env staging.'
-  echo "$scan" | grep -Eq '(--env[[:space:]=]+staging|-e[[:space:]]+staging)([^[:alnum:]_-]|$)' \
+  targets=$(echo "$scan" \
+    | grep -oE 'wrangler[[:space:]]+d1[[:space:]]+(migrations[[:space:]]+apply|execute)[[:space:]]+[^[:space:]]+' \
+    | sed -E 's/.*[[:space:]]//') || true
+  # A here-string, not a pipe: `agent_block` exits, and from a piped loop it would exit only the
+  # subshell and let the command through. An unreadable positional takes the production path.
+  while IFS= read -r target; do
+    [ "$target" = 'planned-travel-db-staging' ] && continue
+    agent_block "remote d1 access (${target:-unreadable})" 'Only the staging database is open to an agent run, spelled the way package.json spells it - wrangler d1 ... planned-travel-db-staging --remote --env staging. Anything else is a human decision; end the run as blocked.'
+  done <<< "$targets"
+  echo "$scan" | grep -Eq '(^|[^[:alnum:]_-])(--env[[:space:]=]+staging|-e[[:space:]]+staging)([^[:alnum:]_-]|$)' \
     || agent_block 'remote d1 access (production)' 'A remote D1 command without --env staging reaches production, which is a human decision; end the run as blocked.'
 fi
 # The package scripts that reach staging or production, named as this repository spells them -
