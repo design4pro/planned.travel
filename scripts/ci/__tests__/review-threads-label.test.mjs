@@ -101,8 +101,18 @@ describe('decide', () => {
     ).toBe('skip')
   })
 
-  it('recognises the bot under each login it posts as', () => {
-    for (const author of ['claude', 'claude[bot]', 'github-actions[bot]'])
+  // Every review bot that comments here, under every login it posts as. An omission from this
+  // list does not fail - it goes quiet, which is worse: the PR simply never gets the label, so no
+  // run is ever armed and the findings are left for somebody to spot by eye. That is what
+  // happened to `chatgpt-codex-connector`, which held open P1 threads on #690 and #692 that no
+  // run had been armed to pick up.
+  it('recognises every review bot, under each login it posts as', () => {
+    for (const author of [
+      'claude',
+      'claude[bot]',
+      'github-actions[bot]',
+      'chatgpt-codex-connector',
+    ])
       expect(decide(input({ threads: [botThread({ author })] })).act).toBe(
         'label',
       )
