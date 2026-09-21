@@ -222,6 +222,48 @@ describe('git-guardrails.sh', () => {
     },
   )
 
+  // A compound line is only as safe as the part of it the rule can read, and the first shape of
+  // this allowlist read only the positionals its pattern recognised — so anything it could not
+  // read rode along on a line that also carried one compliant staging statement. Both cases
+  // below were refused outright by the blanket rule this one replaced, which makes them
+  // regressions rather than gaps, and both are why the rule counts `wrangler d1` occurrences
+  // instead of inspecting the ones it happens to parse.
+  it.each([
+    // A sub-command the extraction never names. `export` is the quiet one: it is a read, so it
+    // trips no destructive instinct, and it moves every tenant's row out of production.
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 export planned-travel-db --remote --output ./dump.sql',
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 time-travel restore planned-travel-db --timestamp 2026-09-01T00:00:00Z',
+    // A production statement whose positional is pushed onto a continued line, so the statement
+    // the extraction sees on the first line has no database of its own to read.
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 execute \\\nplanned-travel-db --remote --command "delete from trips"',
+  ])('blocks a production statement riding along a staging line: %s', (command) => {
+    expect(bash(command, AGENT).status).toBe(2)
+    expect(bash(command).status).toBe(0)
+  })
+
+  // A backslash-newline is a line continuation, and every rule here greps a line at a time, so
+  // one has to be folded away before the rules run or it splits a statement into two halves that
+  // each match nothing. This reached tier 1 — the tier with no audience that legitimately needs
+  // any of it — so the property is asserted per tier rather than on the D1 rule alone.
+  it.each([
+    ['git reset --hard \\\nHEAD~1', {}],
+    ['git clean \\\n-fd', {}],
+    ['git push --force \\\norigin develop', {}],
+    ['printenv \\\n| grep TOKEN', AGENT],
+    ['wrangler deploy \\\n--env production', AGENT],
+    ['wrangler d1 execute \\\nDB --remote --command "delete from trips" --env staging', AGENT],
+  ])('folds the continuation in %s before the rules read it', (command, env) => {
+    expect(bash(command, env).status).toBe(2)
+  })
+
+  // The fold must not undo what `unquote()` strips backslashes for: a backslash that is not
+  // escaping a newline still has to vanish, or the one rule standing between a crafted pull
+  // request and a self-approval stops matching.
+  it('still strips a backslash that is not a continuation', () => {
+    expect(bash('gh pr \\review 12 --approve', ACTIONS).status).toBe(2)
+    expect(bash('gh \\pr review 12 --approve', ACTIONS).status).toBe(2)
+  })
+
   it('leaves the local database alone in both modes', () => {
     for (const env of [{}, AGENT]) {
       expect(bash('pnpm db:migrate:local', env).status).toBe(0)
