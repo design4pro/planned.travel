@@ -9,7 +9,15 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// Every case here spawns a real `bash`, and the heaviest `it` spawns dozens of them in a loop -
+// which is the point, because a hook is only worth testing as the process the harness actually
+// runs. That makes this file's cost wall-clock rather than CPU, and the 5s default is a limit on
+// the machine's patience, not on the code: under `vitest run`'s full parallelism it expires on a
+// different test each time while every assertion still holds, and the same file passes in
+// isolation in a fraction of the budget. The assertions are unchanged - only the waiting is.
+vi.setConfig({ testTimeout: 30_000 })
 
 const HOOKS = resolve(__dirname, '..')
 const AGENT = { CEZ_TASK_ID: '0123456789ab-test' }
@@ -199,8 +207,12 @@ describe('git-guardrails.sh', () => {
     'wrangler d1 execute planned-travel-db-staging-old --remote --env staging --command "select 1"',
     'wrangler d1 execute PLANNED-TRAVEL-DB-STAGING --remote --env staging --command "select 1"',
     // The rule reads the sub-command, not the first word of the line, so a runner in front of
-    // wrangler changes nothing.
+    // wrangler changes nothing - and neither does anything between the runner and the
+    // sub-command. These two were invisible to the rule entirely: it opened on `wrangler d1`
+    // with the words adjacent, so a config flag or a version suffix meant it never fired.
     'npx wrangler d1 execute DB --remote --env staging --command "select 1"',
+    'wrangler -c wrangler.jsonc d1 execute planned-travel-db --remote --command "select 1"',
+    'npx wrangler@latest d1 execute planned-travel-db --remote --command "select 1"',
   ]
   it.each(PRODUCTION_D1)('blocks %s in an agent run', (command) => {
     expect(bash(command, AGENT).status).toBe(2)
@@ -236,6 +248,12 @@ describe('git-guardrails.sh', () => {
     // A production statement whose positional is pushed onto a continued line, so the statement
     // the extraction sees on the first line has no database of its own to read.
     'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 execute \\\nplanned-travel-db --remote --command "delete from trips"',
+    // A flag between `wrangler` and its sub-command. Nothing about these is exotic - `-c` picks a
+    // config file and `@latest` pins a version - but while the counter looked for the two words
+    // adjacent, neither statement existed as far as it was concerned: the line counted one D1
+    // sub-command, matched the one staging statement, and passed.
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler -c wrangler.jsonc d1 execute planned-travel-db --remote --command "drop table trips"',
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && npx wrangler@latest d1 execute planned-travel-db --remote --command "drop table trips"',
   ])('blocks a production statement riding along a staging line: %s', (command) => {
     expect(bash(command, AGENT).status).toBe(2)
     expect(bash(command).status).toBe(0)
@@ -253,6 +271,19 @@ describe('git-guardrails.sh', () => {
     ['wrangler deploy \\\n--env production', AGENT],
     ['wrangler d1 execute \\\nDB --remote --command "delete from trips" --env staging', AGENT],
   ])('folds the continuation in %s before the rules read it', (command, env) => {
+    expect(bash(command, env).status).toBe(2)
+  })
+
+  // Every case above breaks on a space, which is the half of the fold that is easy to get right.
+  // A continuation may also split a token in two, and the shell rejoins the halves into one
+  // word - so the pair has to be removed, not replaced with a space. Replacing it read
+  // `git reset --hard` as `git re set --hard` and matched no rule at all; each line below ran as
+  // written and was allowed.
+  it.each([
+    ['git re\\\nset --hard HEAD~1', {}],
+    ['git c\\\nlean -fd', {}],
+    ['wrangler d\\\n1 execute planned-travel-db --remote --command "select 1"', AGENT],
+  ])('folds a continuation that splits a token: %s', (command, env) => {
     expect(bash(command, env).status).toBe(2)
   })
 

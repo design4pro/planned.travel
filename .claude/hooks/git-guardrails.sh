@@ -38,7 +38,14 @@ command=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
 #
 # It has to happen here, before `unquote()`: that strips the backslash and would leave the
 # newline it was escaping behind, which is the split itself. Fold first, strip second.
-command=${command//\\$'\n'/ }
+#
+# The pair is removed, not replaced with a space, because that is what the shell does with it -
+# a continuation may split a token in half, and the shell rejoins the halves. Substituting a
+# space put the halves back as two tokens instead of one, so `git re\`+newline+`set --hard` read
+# as `git re set --hard` and matched no rule at all. The same shape hid `wrangler d\`+newline+`1`
+# from the remote-D1 gate. Every test written for this until now happened to break on a space,
+# where the two spellings agree.
+command=${command//\\$'\n'/}
 
 # A rule matches the command, not prose about it - and deciding which is which is the whole
 # problem. The first shape of this got it backwards: it listed the ways a string gets *executed*
@@ -174,27 +181,36 @@ echo "$scan" | grep -Eq 'wrangler\s+(deploy|rollback|versions\s+(deploy|upload)|
 # wrangler d1 export planned-travel-db --remote` passed, because `export` is not a sub-command the
 # extraction names; so did the same line with the production statement's positional pushed onto a
 # continued line. Both were refused outright before this rule existed, by the blanket block it
-# replaced. Counting asks a question the rule cannot be wrong about - is every `wrangler d1` on
-# this line the one allowed staging statement? - and treats any difference as production.
+# replaced. Counting asks a question the rule cannot be wrong about - is every `d1` sub-command
+# on this line the one allowed staging statement? - and treats any difference as production.
+#
+# It counts `d1`, not `wrangler d1`, and the difference is the whole guarantee. Requiring the two
+# words to be adjacent made a perfectly ordinary spelling invisible to the counter - `wrangler -c
+# wrangler.jsonc d1 execute ...`, `npx wrangler@latest d1 execute ...` - so a compound line whose
+# second statement carried a flag counted once, matched the one staging statement, and passed.
+# Anything between `wrangler` and its sub-command is the caller's business; what this rule needs
+# to know is how many D1 sub-commands are on the line, and that word is `d1`.
 #
 # Splitting the line into sub-commands was the other candidate and is worse: `$scan` has already
 # had its quotes stripped, so an `&&` inside a `--command` string would split a legitimate
-# statement into fragments carrying neither `wrangler d1` nor `--remote`, and the gate would stop
-# firing at all. Counting gets the per-statement guarantee without needing to know where the
-# statements begin.
+# statement into fragments carrying neither `d1` nor `--remote`, and the gate would stop firing
+# at all. Counting gets the per-statement guarantee without needing to know where the statements
+# begin.
 #
 # `--env staging` is still required on top of that, because it is what wrangler resolves bindings
 # from, and its absence is what production looks like on a command line. `-e` carries a left-hand
 # boundary like every other rule in this file, or `--file ./restore-e staging.sql` reads as a
 # selector that is not there.
-if echo "$scan" | grep -Eq 'wrangler\s+d1\s+(migrations\s+apply|execute)\b.*--remote'; then
+if echo "$scan" | grep -Eq '\bd1\s+(migrations\s+apply|execute)\b.*--remote'; then
   # Count, do not inspect. Reading the positionals the extraction happens to recognise and
   # allowing the line when all of them are staging is the shape that failed review: anything on
   # the line the extraction could *not* read stayed invisible and rode along - a `d1 export`
   # against production, a sub-command the pattern does not name, a statement the fold above did
-  # not reach. So the rule asks a question it cannot be wrong about: is every `wrangler d1` on
-  # this line the one staging statement that is allowed? If the two counts differ, something is
-  # here that this rule cannot account for, and unaccounted-for is the production path.
+  # not reach, a flag sitting between `wrangler` and `d1`. So the rule asks a question it cannot
+  # be wrong about: is every `d1` sub-command on this line the one staging statement that is
+  # allowed? If the two counts differ, something is here that this rule cannot account for, and
+  # unaccounted-for is the production path. A `d1` that is not a sub-command at all - one inside
+  # a SQL string, say - counts too and blocks the line, which is the direction this fails in.
   #
   # Only the staging `database_name` counts as allowed - the spelling package.json reaches
   # staging by. The staging `database_id` and the `DB` binding are refused too: an agent run has
@@ -203,12 +219,12 @@ if echo "$scan" | grep -Eq 'wrangler\s+d1\s+(migrations\s+apply|execute)\b.*--re
   # from vouching for `planned-travel-db-staging-old`.
   # `grep -c` counts matching *lines*, not matches, and two statements share a line here by
   # definition - `-o` piped into `wc -l` is what counts occurrences.
-  d1_total=$(echo "$scan" | grep -oE 'wrangler[[:space:]]+d1\b' | wc -l | tr -d '[:space:]') || true
+  d1_total=$(echo "$scan" | grep -oE '\bd1\b' | wc -l | tr -d '[:space:]') || true
   d1_staging=$(echo "$scan" | grep -oE \
-    'wrangler[[:space:]]+d1[[:space:]]+(migrations[[:space:]]+apply|execute)[[:space:]]+planned-travel-db-staging([^[:alnum:]_-]|$)' \
+    '\bd1[[:space:]]+(migrations[[:space:]]+apply|execute)[[:space:]]+planned-travel-db-staging([^[:alnum:]_-]|$)' \
     | wc -l | tr -d '[:space:]') || true
   [ "${d1_total:-0}" = "${d1_staging:-0}" ] \
-    || agent_block 'remote d1 access (production)' 'Only the staging database is open to an agent run, spelled the way package.json spells it - wrangler d1 ... planned-travel-db-staging --remote --env staging - and every wrangler d1 statement on the line has to be that one. Anything else is a human decision; end the run as blocked.'
+    || agent_block 'remote d1 access (production)' 'Only the staging database is open to an agent run, spelled the way package.json spells it - wrangler d1 ... planned-travel-db-staging --remote --env staging - and every d1 sub-command on the line has to be that one. Anything else is a human decision; end the run as blocked.'
   echo "$scan" | grep -Eq '(^|[^[:alnum:]_-])(--env[[:space:]=]+staging|-e[[:space:]]+staging)([^[:alnum:]_-]|$)' \
     || agent_block 'remote d1 access (production)' 'A remote D1 command without --env staging reaches production, which is a human decision; end the run as blocked.'
 fi
