@@ -518,6 +518,64 @@ describe('what the chain refuses to save', () => {
     expect(errors.stations?.[0]?.timezone).toBeDefined()
     expect(errors.stations?.[1]?.timezone).toBeUndefined()
   })
+
+  /** A leg's two stations each carry a zone, and the order is judged in them. */
+  function flight(
+    zones: readonly [string, string],
+    times: readonly [string, string],
+  ): ChainDraft {
+    const chain = chainFromTransport(
+      transport({
+        mode: 'flight',
+        departureDate: '2026-04-16',
+        departureTime: times[0],
+        arrivalDate: '2026-04-16',
+        arrivalTime: times[1],
+      }),
+    )
+    return {
+      ...chain,
+      stations: [
+        { ...chain.stations[0], timezone: zones[0] },
+        { ...chain.stations[1], timezone: zones[1] },
+      ],
+    }
+  }
+
+  /** 21:00 in Tokyo is 12:00Z and 09:00 in Honolulu is 19:00Z: a seven-hour flight. */
+  it('keeps a westbound leg that lands on an earlier clock', () => {
+    const errors = validateChain(
+      flight(['Asia/Tokyo', 'Pacific/Honolulu'], ['21:00', '09:00']),
+      'flight',
+      [],
+    )
+
+    expect(errors.legs?.[0]?.arrivalTime).toBeUndefined()
+  })
+
+  it('refuses a zoned leg that really does land before it leaves', () => {
+    const errors = validateChain(
+      flight(['Europe/London', 'America/New_York'], ['09:00', '03:00']),
+      'flight',
+      [],
+    )
+
+    expect(errors.legs?.[0]?.arrivalTime).toBe(
+      'modules.transports.error.arrivesBeforeDeparts',
+    )
+  })
+
+  it('judges a leg by wall clock while either station names no zone', () => {
+    const errors = validateChain(
+      flight(['Asia/Tokyo', ''], ['21:00', '09:00']),
+      'flight',
+      [],
+    )
+
+    expect(errors.legs?.[0]?.arrivalTime).toBe(
+      'modules.transports.error.arrivesBeforeDeparts',
+    )
+  })
 })
 
 describe('the payload the chain is saved as', () => {

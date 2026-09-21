@@ -2708,9 +2708,22 @@ describe('tenant isolation', () => {
     it('refuses every write against a B row from A’s scope', async () => {
       const scope = alpha.tenant.scope
       const before = await getTransport(beta.tenant.scope, beta.transportId)
+      const inverted = {
+        departureDate: '2026-04-16',
+        departureTime: '12:00',
+        arrivalDate: '2026-04-16',
+        arrivalTime: '08:00',
+      }
 
       const attempts: ReadonlyArray<() => Promise<unknown>> = [
         () => updateTransport(scope, beta.transportId, { title: 'Hijacked' }),
+        // An inverted write is still a row A cannot see, not a timing refusal that confirms it.
+        () => updateTransport(scope, beta.transportId, inverted),
+        () =>
+          replaceTransportChain(scope, beta.transportId, {
+            stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+            legs: [inverted],
+          }),
         () => setTransportStatus(scope, beta.transportId, 'cancelled'),
         () => deleteTransport(scope, beta.transportId),
       ]
