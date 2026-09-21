@@ -1,10 +1,27 @@
-import { spawnSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync, chmodSync, readFileSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import {
+  mkdtempSync,
+  writeFileSync,
+  chmodSync,
+  readFileSync,
+  symlinkSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const SCRIPT = resolve(import.meta.dirname, '../ensure-gh.sh')
+
+/** Where a tool really lives, resolved once against this process's own PATH. */
+const systemPath = (tool) =>
+  execFileSync('sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).trim()
+
+// The stub directory is the whole PATH the script runs under, so the handful of real tools it
+// and the stubs need are linked into it by hand. Leaving /usr/bin on the PATH instead would
+// hand the script whatever `gh` the runner image happens to carry - which is what the
+// "carries no gh" cases are supposed to be free of, and what an image that ships one
+// (Blacksmith's arm64 Ubuntu does) turns into a failure that says nothing about the script.
+const SYSTEM_TOOLS = ['bash', 'cat', 'chmod', 'head', 'sed', 'sort']
 
 /**
  * Run the script against a synthetic PATH: a `gh` that reports whatever version the case wants
@@ -14,6 +31,9 @@ const SCRIPT = resolve(import.meta.dirname, '../ensure-gh.sh')
 function run({ ghVersion, min }) {
   const dir = mkdtempSync(join(tmpdir(), 'ensure-gh-'))
   const log = join(dir, 'calls.log')
+
+  for (const tool of SYSTEM_TOOLS)
+    symlinkSync(systemPath(tool), join(dir, tool))
 
   const stub = (name, body) => {
     const path = join(dir, name)
@@ -43,11 +63,11 @@ function run({ ghVersion, min }) {
   stub('curl', `echo "curl $*" >> "${log}"; echo fake-key`)
   stub('dpkg', 'echo arm64')
 
-  const r = spawnSync('bash', [SCRIPT], {
+  const r = spawnSync(systemPath('bash'), [SCRIPT], {
     encoding: 'utf8',
     env: {
-      // `dir` first so the stubs win; the real coreutils still have to be reachable.
-      PATH: `${dir}:/usr/bin:/bin`,
+      // The stub directory and nothing else: what the script cannot find there, it cannot find.
+      PATH: dir,
       ...(min ? { GH_MIN_VERSION: min } : {}),
     },
   })
