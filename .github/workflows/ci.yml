@@ -331,13 +331,15 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2]
-    # No `container:`. The runner image is itself built FROM
-    # `mcr.microsoft.com/playwright:v1.62.1-noble`, so the browsers are already
-    # on the runner and pulling the same image again per job would buy nothing.
-    # The version coupling did not go away, it moved: keep
-    # `host/runner/Dockerfile` in design4pro/cezar in step with the `@playwright/test`
-    # devDependency in package.json, or a mismatch is reported as a missing
-    # executable rather than as a wrong one.
+    # No `container:`, on any runner. `../actions/e2e-env` installs the browsers
+    # itself, at the version `pnpm install` just resolved from the lockfile, so
+    # the job needs nothing from the image it lands on. The pool's image is
+    # still built FROM `mcr.microsoft.com/playwright` and that install is a
+    # no-op there, but it is no longer a requirement: the version coupling
+    # between `host/runner/Dockerfile` in design4pro/cezar and the
+    # `@playwright/test` devDependency is now corrected at the start of the job
+    # rather than kept in step by hand, and the same job runs green on a
+    # GitHub-hosted runner when `vars.RUNNER_CI` points there (ADR 0026).
 
     steps:
       - name: Check out

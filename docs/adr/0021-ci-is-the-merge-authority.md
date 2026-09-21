@@ -97,6 +97,11 @@ for a redeploy, or for shipping while CI is down.
   move the three shipping workflows - `deploy.yml`, `deploy-staging.yml` and `rollback.yml` - which
   read `vars.RUNNER_DEPLOY` and already default to GitHub-hosted runners. The lever in the other
   direction is `RUNNER_DEPLOY` set to `["self-hosted","linux","ARM64","ci"]`._
+  _Amended by ADR 0026: that lever now points the other way. `RUNNER_DEPLOY` defaults to the pool
+  like the other two, so the setting that matters during a host outage is `["ubuntu-latest"]`, and
+  it has to be set on all three to move everything - the gate, the agents and shipping. Since the
+  same record makes `.github/actions/e2e-env` install the browsers on any runner, that path now
+  brings back a green `e2e` too, which it did not under ADR 0023._
 - **Production ships a CI run later.** Merging the promotion pull request now deploys after the push
   run on `main`, about the length of the e2e shards, not at the moment of the push.
 - **A flake on `develop` holds that commit's staging deploy** until a rerun or the next merge. A

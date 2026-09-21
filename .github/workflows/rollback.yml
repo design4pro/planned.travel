@@ -50,20 +50,26 @@ permissions:
   contents: read
 
 # `runs-on` below reads through `vars.RUNNER_DEPLOY`, an organisation variable that
-# is deliberately unset: unset, the default here selects GitHub-hosted runners, so a
-# deploy never queues behind the self-hosted pool and still runs when the machine
-# behind it is down. Shipping is the one thing in this repository that does; ADR 0023
-# records why.
+# is deliberately unset: unset, the default here selects the self-hosted `ci` pool,
+# the same destination `vars.RUNNER_CI` and `vars.RUNNER_AGENT` default to. Shipping
+# stopped being the exception it was under ADR 0023; ADR 0026 records why, and what
+# it costs.
 #
-# The default is plan-dependent: it fits GitHub Team's 3,000 included minutes
-# (verified 2026-09-17), not GitHub Free's 2,000. If the organisation is ever
-# downgraded, set `RUNNER_DEPLOY` to `["self-hosted","linux","ARM64","ci"]` before
-# the next deploy - no pull request needed.
+# What it costs belongs at this line, not only in the record: a deploy now waits for
+# a pool slot shared with another repository, and it does not run at all while the
+# host is down. Both are one setting away - `RUNNER_DEPLOY` set to
+# `["ubuntu-latest"]` ships the next deploy from a GitHub-hosted runner, with no
+# pull request. That is the lever during a host outage, and the reason this stays a
+# variable of its own instead of folding into `RUNNER_CI`.
+#
+# This workflow is dispatched during an incident, and the incident may be the host
+# itself. If the pool is down, set the variable first: a rollback that queues
+# forever is production left on the bad version.
 
 jobs:
   rollback:
     name: Roll production back to ${{ inputs.version_id }}
-    runs-on: ${{ fromJSON(vars.RUNNER_DEPLOY || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_DEPLOY || '["self-hosted","linux","ARM64","ci"]') }}
     timeout-minutes: 10
     environment:
       name: production
@@ -92,9 +98,10 @@ jobs:
         uses: actions/checkout@v7
 
       # `wrangler-action` with `packageManager: pnpm` runs pnpm, it does not
-      # install it: the input only picks which binary to call. On the self-hosted
-      # pool that binary came from the runner image, so this step was not needed;
-      # `ubuntu-latest` ships none, and without it the rollback would have died on
+      # install it: the input only picks which binary to call. The pool's image
+      # happens to carry one and `ubuntu-latest` carries none, so this step is
+      # what makes the job independent of which of them `vars.RUNNER_DEPLOY`
+      # selected - without it the rollback would have died on
       # `pnpm: command not found` during the incident it exists for.
       #
       # The install runs even though nothing is built here, and it is the cheap

@@ -95,6 +95,9 @@ jobs:
       - name: Prepare the e2e environment
         uses: ./.github/actions/e2e-env
         with:
+          # `chromium` as well as `webkit`: the `mobile-safari` project depends on
+          # `setup`, which signs in through Desktop Chrome.
+          browsers: 'chromium webkit'
           # Both shards seed identical databases; auditing the seed once is proof
           # enough, and 25 s off the other shard's critical path.
           verify-seed: ${{ matrix.shard == 1 }}
