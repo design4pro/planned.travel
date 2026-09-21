@@ -538,6 +538,14 @@ describe("deleting the checkout", () => {
     expect(bash("rm -rf node_modules\npnpm install", AGENT).status).toBe(0);
   });
 
+  // ...but a backslash at the end of the line is not that newline: the shell joins the two into
+  // one command before it reads a word, so the target list continues rather than ending. Without
+  // the join, making the newline end an invocation would have dropped everything after it.
+  it("reads a target list continued onto the next line", () => {
+    expect(bash("rm -rf node_modules \\\n  src", AGENT).status).toBe(2);
+    expect(bash("rm -rf node_modules \\\n  dist", AGENT).status).toBe(0);
+  });
+
   it("still judges a second delete written on its own line", () => {
     const r = bash("rm -rf dist\nrm -rf src", AGENT);
     expect(r.status).toBe(2);
@@ -552,6 +560,12 @@ describe("deleting the checkout", () => {
     "git push --delete origin develop",
   ])("blocks the shared-branch delete %s", (command) => {
     expect(bash(command).status).toBe(2);
+  });
+
+  // Every rule in the file is line-oriented, so the join is what lets any of them see a command
+  // the author wrapped. This one is not about `rm` at all, which is the point.
+  it("blocks a shared-branch delete wrapped onto two lines", () => {
+    expect(bash("git push --delete \\\n  origin develop").status).toBe(2);
   });
 
   // Deleting a merged feature branch is routine, and `--delete-branch` on a merge needs it -

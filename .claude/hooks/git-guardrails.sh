@@ -48,7 +48,21 @@ command=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
 # Backslash is a quoting character too, and both audiences need it gone: the shell drops it and
 # keeps the character, so `gh pr \review 12 --approve` invokes `gh pr review` while a `tr` that
 # deletes only the two quote marks left it matching nothing.
-unquote() { printf '%s' "$1" | tr -d '"\047\\'; }
+#
+# A backslash at the end of a line is the one place it means something else, and it has to be read
+# before the rest are deleted: the shell joins the two lines into one command before it reads a
+# single word, so a hook that does not is reading a command the shell will never run. Every rule
+# below is line-oriented - `grep` matches within a line, and the `rm` tokenizer ends an invocation
+# at a newline - so a continued command used to have each of its halves judged as a command of its
+# own, and a target list split across the join lost everything after it.
+unquote() {
+  printf '%s' "$1" \
+    | awk '{ line = line $0
+             if (sub(/\\$/, "", line)) { line = line " "; next }
+             print line; line = "" }
+           END { if (line != "") print line }' \
+    | tr -d '"\047\\'
+}
 
 # Nothing on this list can execute a string it is handed: a message, a pattern, a heredoc written
 # to a file. `sed` (GNU `s///e`) and `awk` (`system()`) can, so they are deliberately absent even
