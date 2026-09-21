@@ -76,6 +76,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      # This job is the only thing that opens the release pull request, and it drives GitHub
+      # entirely through `gh`. ADR 0026 moved it to a Blacksmith image and CODE_REVIEW.md is
+      # what says a moved job installs what it calls; the failure it guards against is not a
+      # red job but `gh: command not found` inside a `set -e` block, which stops the promotion
+      # happening at all.
+      - name: Ensure the GitHub CLI
+        run: bash scripts/ci/ensure-gh.sh
+
       - name: Open it, or report the one already open
         env:
           GH_TOKEN: ${{ secrets.PROMOTE_PR_TOKEN || secrets.GITHUB_TOKEN }}

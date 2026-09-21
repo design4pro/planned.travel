@@ -99,6 +99,19 @@ jobs:
           git fetch --depth 1 origin "$BASE"
           git checkout FETCH_HEAD -- .claude/settings.json .claude/hooks scripts/ci .ai/agentic.config.json
 
+      # After the restore, never before it: this script comes from scripts/ci, so running it
+      # here is running the base branch's copy. A local composite action would have been the
+      # tidier spelling and the wrong one - it would resolve out of the branch under review and
+      # hand that branch this job's write token, which is what the step above exists to prevent.
+      #
+      # `gh` is load-bearing here twice and named in neither step: the review publishes through
+      # `gh pr comment`, and review-threads-label.mjs drives the issues API with it. This job
+      # moved to a Blacksmith image in ADR 0026 and `claude-review` is a required check, which
+      # CODE_REVIEW.md calls a blocker rather than a nit.
+      - name: Ensure the GitHub CLI
+        if: steps.gate.outputs.configured == 'true'
+        run: bash scripts/ci/ensure-gh.sh
+
       # `continue-on-error`, because the two steps that follow decide what the outcome meant: a
       # spent usage limit reviewed nothing and is not a finding, a review that was denied its tools
       # reviewed nothing either and must not pass as one.
