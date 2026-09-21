@@ -121,7 +121,14 @@ A Claude Code session is an agent run when `CEZ_TASK_ID` (cezar) or `GITHUB_ACTI
 hooks in `.claude/hooks/` then tighten:
 
 - `git-guardrails.sh` also blocks `pnpm add|remove|update` (the stack is pinned, docs/SPEC.md §3),
-  `printenv` and `env` dumps. Under cezar, GitHub mutations, `git add -A`, closing keywords and
+  `printenv` and `env` dumps, and a recursive delete of anything but build output and scratch
+  space - the target list is an allowlist, so a path it does not name ends the run as blocked
+  rather than being deleted, and `find -delete`, `find -exec rm`, `sudo` and
+  `git worktree remove --force` are refused with it. In every session, agent or not, the same hook
+  refuses the deletes and history rewrites that take the checkout itself: a recursive delete naming
+  the filesystem root, the home directory, the working directory or the worktree root,
+  `git reflog expire`, `git gc --prune`, `git filter-branch`, `gh repo delete`, and deleting
+  `develop` or `main` on the remote. Under cezar, GitHub mutations, `git add -A`, closing keywords and
   `pnpm exec` are open: the om-* skills perform them through `.ai/trackers/github.md` and `SDLC.md`
   governs them. Under GitHub Actions every `gh issue|pr` mutation, `gh label|release|repo|secret|
 variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-review.yml` reads
