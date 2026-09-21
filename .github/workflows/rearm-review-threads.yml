@@ -81,7 +81,25 @@ jobs:
       # job installs what it calls rather than assuming it from the image - the same gap that was
       # closed in promote-develop.yml and claude-code-review.yml, in the third place it occurs.
       - name: Ensure the GitHub CLI
-        run: bash scripts/ci/ensure-gh.sh
+        env:
+          # Through the environment, never interpolated into the shell: a branch name is
+          # attacker-controlled text on a fork, and `run:` splices it in before bash sees a quote.
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          # The script comes from the base branch, so the pull request that *introduces* it finds
+          # none there - the same one-time adoption window merge-gate.yml documents, measured here
+          # the same way: this step went red with exit 127 on the very run that added it. Until it
+          # lands on the base branch the job keeps whatever `gh` the image carries, which is the
+          # state this step exists to stop depending on rather than a new one.
+          #
+          # The window closes once and cannot reopen: merging this is the only thing that puts the
+          # script on the base branch, and a pull request removing it again would be running the
+          # copy still there.
+          if [ ! -f scripts/ci/ensure-gh.sh ]; then
+            echo "scripts/ci/ensure-gh.sh is not on $BASE_REF yet - keeping the image's gh until it lands there"
+            exit 0
+          fi
+          bash scripts/ci/ensure-gh.sh
 
       - name: Re-arm the review-thread autofix
         env:
