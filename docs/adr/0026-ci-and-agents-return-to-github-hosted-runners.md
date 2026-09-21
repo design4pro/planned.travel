@@ -77,25 +77,34 @@ shared with another repository, and a deploy has to run when the machine does no
 
 ## Consequences
 
-- **Hosted minutes are a cost again, and measured on this change it is roughly four times what ADR
-  0023's own figures suggested.** That record's 1,634 minutes per 144 runs extrapolates to about
-  12,000 minutes a month, and that is the number this record carried when it was drafted. It is
-  wrong, because the suite is not the one that was measured: e2e is sharded now and the unit suite
-  has grown. Measured instead:
+- **Hosted minutes are a cost again, and measured it is several times what ADR 0023's own figures
+  suggested.** That record's 1,634 minutes per 144 runs extrapolates to about 12,000 minutes a
+  month, and that is the number this record carried when it was drafted. It is wrong twice over: the
+  suite is not the one that was measured - e2e is sharded now and the unit suite has grown - and it
+  counts only `ci.yml`, while `RUNNER_AGENT` moves as well. Measured in the seven days to
+  2026-09-21:
 
-  | Measured                                                    |                                                                                       |
-  | ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-  | `ci.yml` runs, 7 days to 2026-09-21                         | 488, so ~2,100 a month                                                                |
-  | average per run on the pool, sample of 20                   | 11.5 job-minutes                                                                      |
-  | the same run hosted (PR #691) against a comparable pool run | 33.6 against 16 job-minutes, ~2.1x - matching the ~2.2x ADR 0023 stated independently |
-  | hosted minutes a month at that rate                         | ~50,000                                                                               |
-  | included on GitHub Team, less what the deploys already take | ~1,100                                                                                |
+  | Workflow                                 | Runs a month | Minutes a month, hosted |
+  | ---------------------------------------- | ------------ | ----------------------- |
+  | `ci.yml`                                 | ~2,100       | ~50,700                 |
+  | `claude-code-review.yml`                 | ~2,500       | ~16,300                 |
+  | `claude.yml` (almost all of them no-ops) | ~3,900       | ~3,900                  |
+  |                                          |              | **~71,000**             |
 
-  At the Linux 2-core rate that is on the order of **$400 a month**, not the $80-120 first written
-  here. It is the price of removing one machine from the merge path, it is a real invoice, and if it
-  stops being worth paying the lever is one variable rather than a pull request. Decision 2 is what
-  makes that lever safe to pull in either direction, so the cheap configuration remains reachable
-  without re-opening this record.
+  `ci.yml`'s figure is 11.5 job-minutes per run on the pool, averaged over a sample of twenty,
+  multiplied by 2.1 - the overhead measured by running this pull request's own suite on both, and
+  the same figure ADR 0023 arrived at independently. The agent workflows carry no such multiplier,
+  because those jobs spend their time waiting on the Claude API rather than on the processor.
+  `claude.yml` is almost entirely runs that gate themselves out in seconds, but a started job is
+  billed rounded up to the minute, so they are not free.
+
+  Against ~1,100 minutes still included on GitHub Team once the deploys have taken theirs, that is
+  on the order of **$550 a month**, not the $80-120 first written here. It grows with the rate of
+  work, because the agents set that rate. It is the price of removing one machine from the merge
+  path, it is a real invoice, and if it stops being worth paying the lever is one variable rather
+  than a pull request. Decision 2 is what makes that lever safe to pull in either direction, so the
+  cheap configuration remains reachable without re-opening this record - including one variable at a
+  time, since `ci.yml` is about three quarters of the total and `RUNNER_CI` moves it alone.
 
 - **A hosted e2e shard pays for its browsers on every run.** `--with-deps` is apt, not a tarball, so
   it is the half no cache restores; that is why the step is a plain install and not
