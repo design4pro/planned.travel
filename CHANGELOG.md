@@ -17,7 +17,11 @@ What the heading is actually used for:
 - `om-auto-update-changelog` reads it to resolve `--since last-release` when drafting the next entry;
 - `om-close-fixed-issues` reads it for the same argument, and it is how the housekeeping sweep knows
   how far back to look for issues whose `Closes #n` pull request merged into `develop` — GitHub does
-  not close those itself, because `develop` is not the default branch.
+  not close those itself, because `develop` is not the default branch. That boundary is a floor that
+  only moves forward: a new heading narrows the sweep's window rather than widening it, so anything
+  that merged before the topmost heading needs a one-time explicit backfill — `--since` set to the
+  oldest merge still unreconciled, and a `--limit` wide enough to reach it. The seed entry below
+  does not perform that backfill, and does not stand in for it.
 
 Bump **minor** for a promotion carrying user-visible features, **patch** for one that carries only
 fixes and internal work. **Major** is unused until `1.0` means something.

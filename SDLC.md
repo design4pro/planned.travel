@@ -244,9 +244,15 @@ Two amendment rules are specific to this document's shape:
   no `version` in `package.json` and no release tags, on purpose — the file's own header says why,
   and `om-auto-update-changelog`'s repo-local override says how to resolve `--version` without one.
   Two things read that heading: the changelog skill, and `om-close-fixed-issues`, whose default
-  `--since last-release` is how the housekeeping sweep knows how far back to look. Before the file
-  existed that lookup silently fell back to seven days, so issues whose PR merged earlier stayed
-  open — and GitHub would not close them either, because `develop` is not the default branch. Draft
+  `--since last-release` is how the housekeeping sweep knows how far back to look. **That boundary
+  is a floor, and it only ever moves forward.** Before the file existed the lookup fell back to the
+  last seven days, so anything older stayed open — and GitHub would not close it either, because
+  `develop` is not the default branch. A dated heading does not reach back past itself and recover
+  those: it swaps a rolling seven-day window for a fixed one, so the first sweep after a new heading
+  lands reads a _narrower_ window than the sweep before it did. Reconciling what merged before the
+  first heading is a one-time explicit backfill — `om-close-fixed-issues --since <date>` with a
+  `--limit` wide enough to reach that far back, because the default 50 is itself a shorter reach
+  than the date bound — and it is tracked as its own issue, not implied by this file existing. Draft
   the next entry by hand on the open promotion PR; it is deliberately not on a schedule, because a
   person writes the Highlights paragraph.
 - **CI is the merge authority** (ADR 0021). The local validation gate is the fast loop that keeps a
