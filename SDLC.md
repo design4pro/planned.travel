@@ -4,11 +4,11 @@
 
 This file documents how work flows from ticket to merged PR in this repository. The agent skills configured in `.ai/agentic.config.json` enforce the process; humans read it here. Issues and PRs live in GitHub, with every tracker operation the skills run defined in `.ai/trackers/github.md` (edit that file to extend or override tracker behavior).
 
-Everything above the `BEGIN per-repo` marker near the end of this file is shared, word for word, with the sibling repositories that run this pipeline; `## This repository`, below that marker, is the only section that differs. So this document never names the base branch, the merge mechanics, or the automations by hand: **the base branch is `.ai/agentic.config.json` → `baseBranch`, and it is named once, in `## This repository`.** Everything below that says "the base branch" means that value.
+This document is this repository's own. Until the agent kit was retired (ADR 0025) it was shared word for word with a sibling that runs the same pipeline, and a marker near the end cut the shared part from the local one. Nothing renders or enforces that parity now, and a fix that belongs in both repositories is written in both by hand — so the marker is gone, and with it the rules that protected it. What the split got right is kept: **the base branch is `.ai/agentic.config.json` → `baseBranch`**, it is named once under `## This repository`, and everything here that says "the base branch" means that value.
 
 Work enters through two paths: a free-form task brief handed to an agent, or a filed ticket. Both converge on the same review loop, the same validation gate, and the same merge gates.
 
-Before intake, the work is shaped: `om-discover` establishes the product context every later decision reads (`.ai/specs/product-brief.md` — who the users are, what hurts, what the product is not, which rules and decisions bind the work), `om-brainstorm` turns a single idea or question into a routing decision and a brief, and the spec skills (`om-spec-writing`, `om-auto-write-spec`) turn a feature into a design document before anything is built. Those steps feed the table below; they are not the ticket flow itself, and the Definition of Ready is the contract between them and Intake.
+Before intake, the work is shaped: `om-brainstorm` turns a single idea or question into a routing decision and a brief, and the spec skills (`om-spec-writing`, `om-auto-write-spec`) turn a feature into a design document before anything is built. Those steps feed the table below; they are not the ticket flow itself, and the Definition of Ready is the contract between them and Intake. A product-level step sits above both — `om-discover`, writing the brief every later decision reads — but it is **not enabled here**; see `## Product decisions as a protected contract`.
 
 ## Roles
 
@@ -19,18 +19,18 @@ Before intake, the work is shaped: `om-discover` establishes the product context
 
 ## Ticket lifecycle
 
-| Stage                   | What happens                                                                                                                                                                                                                                                                                                                                                                                                                                 | Driven by                                                                                        | Done when                                                                      |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Discovery               | The product context is established before any idea is weighed — problem and who has it, stakeholders, rules, flows, success criteria, scope — from material that exists, with every claim tagged by its evidence and every decision owned by a person. Then an idea, question, or itch is talked through: the problem is questioned, alternatives (including building nothing) are weighed, and the conversation ends in a routing decision. | `om-discover` (product level) and `om-brainstorm` (one idea), or a human                         | A product brief, or a routed conversation with a brief when the work continues |
-| Intake                  | A ticket or task brief is filed in GitHub and meets the Definition of Ready below. `om-prepare-issue` files it with SDLC labels and the ready sections; `om-auto-manage-issues` grooms what is already filed and reports what it still lacks. Agents file tickets too: `afk-to-tickets` slices a merged spec into tracer-bullet tickets, and `afk-architecture-review` files deepening candidates.                                           | Anyone, `om-prepare-issue`, `om-auto-manage-issues`, `afk-to-tickets`, `afk-architecture-review` | Ticket exists and is ready, or its gaps are named on the ticket                |
-| Triage                  | Confirm the issue is real, still unfixed on the base branch, and not already claimed or covered by an open PR. Then write an Agent Brief and set exactly one intake label (see Intake labels below). Read-only on code; stops the chain cleanly when there is nothing to do.                                                                                                                                                                 | `afk-triage`, `om-verify-in-repo`, or a human                                                    | One intake label set, or closed as no-action                                   |
-| Claim                   | The author claims the ticket so concurrent agents back off. See the claim protocol below.                                                                                                                                                                                                                                                                                                                                                    | `om-fix` / `om-auto-create-pr`, or a human                                                       | Claim visible on the ticket                                                    |
-| Implement               | Locate the minimal change surface (`om-root-cause`, read-only), then implement the change with regression tests and run the validation gate. Task briefs without a ticket go through `om-auto-create-pr`, which plans, implements phase by phase in an isolated worktree, and runs the same gate.                                                                                                                                            | `om-root-cause` + `om-fix`, `om-auto-create-pr`, or a human author                               | Change complete, validation gate green                                         |
-| PR                      | Commit, push, and open a PR against the base branch with normalized labels. On a hand-worked branch, `om-check-and-commit` runs the gate, fixes obvious drift, and pushes when green.                                                                                                                                                                                                                                                        | `om-open-pr`, `om-auto-create-pr`, or `om-check-and-commit`                                      | Open, labeled PR                                                               |
-| Review loop             | The reviewer reads the diff against the `om-code-review` checklist and approves or requests changes. Requested changes are addressed (`om-auto-continue-pr` resumes agent PRs from the tracking plan, and adopts a PR that has none by reconstructing the plan from the PR's own context) and the PR is re-reviewed until approved.                                                                                                          | `om-auto-review-pr` (single PR), `om-review-prs` (sweep), or a human                             | Approving review submitted                                                     |
-| QA                      | A PR carrying `needs-qa` waits for manual QA. A QA reviewer tests it and records the outcome. See the QA gate below.                                                                                                                                                                                                                                                                                                                         | QA reviewer (manual)                                                                             | `qa-approved` applied, or `qa-failed` routes it back                           |
-| Merge                   | `om-merge-buddy` reports, read-only, which PRs can merge now and which are close but blocked. `om-approve-merge-pr` re-checks every gate, approves, and merges by whatever mechanism `## This repository` names.                                                                                                                                                                                                                             | `om-merge-buddy` + `om-approve-merge-pr`, or a human                                             | PR merged into the base branch                                                 |
-| Post-merge housekeeping | Close issues the merged PR fixes; comment on issues whose PRs were closed without merging; turn leftover asks or review comments into tracked follow-up issues.                                                                                                                                                                                                                                                                              | `om-close-fixed-issues`, `om-followup-issue-from-pr`                                             | Tracker reconciled, follow-ups filed                                           |
+| Stage                   | What happens                                                                                                                                                                                                                                                                                                                                                                                       | Driven by                                                                                        | Done when                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Discovery               | An idea, question, or itch is talked through: the problem is questioned, alternatives (including building nothing) are weighed, and the conversation ends in a routing decision. The product-level half of this stage — establishing the context every later decision reads, from material that exists, with every claim tagged by its evidence — is `om-discover`, and it is not enabled here.    | `om-brainstorm` (one idea), or a human                                                           | A routed conversation, with a brief when the work continues     |
+| Intake                  | A ticket or task brief is filed in GitHub and meets the Definition of Ready below. `om-prepare-issue` files it with SDLC labels and the ready sections; `om-auto-manage-issues` grooms what is already filed and reports what it still lacks. Agents file tickets too: `afk-to-tickets` slices a merged spec into tracer-bullet tickets, and `afk-architecture-review` files deepening candidates. | Anyone, `om-prepare-issue`, `om-auto-manage-issues`, `afk-to-tickets`, `afk-architecture-review` | Ticket exists and is ready, or its gaps are named on the ticket |
+| Triage                  | Confirm the issue is real, still unfixed on the base branch, and not already claimed or covered by an open PR. Then write an Agent Brief and set exactly one intake label (see Intake labels below). Read-only on code; stops the chain cleanly when there is nothing to do.                                                                                                                       | `afk-triage`, `om-verify-in-repo`, or a human                                                    | One intake label set, or closed as no-action                    |
+| Claim                   | The author claims the ticket so concurrent agents back off. See the claim protocol below.                                                                                                                                                                                                                                                                                                          | `om-fix` / `om-auto-create-pr`, or a human                                                       | Claim visible on the ticket                                     |
+| Implement               | Locate the minimal change surface (`om-root-cause`, read-only), then implement the change with regression tests and run the validation gate. Task briefs without a ticket go through `om-auto-create-pr`, which plans, implements phase by phase in an isolated worktree, and runs the same gate.                                                                                                  | `om-root-cause` + `om-fix`, `om-auto-create-pr`, or a human author                               | Change complete, validation gate green                          |
+| PR                      | Commit, push, and open a PR against the base branch with normalized labels. On a hand-worked branch, `om-check-and-commit` runs the gate, fixes obvious drift, and pushes when green.                                                                                                                                                                                                              | `om-open-pr`, `om-auto-create-pr`, or `om-check-and-commit`                                      | Open, labeled PR                                                |
+| Review loop             | The reviewer reads the diff against the `om-code-review` checklist and approves or requests changes. Requested changes are addressed (`om-auto-continue-pr` resumes agent PRs from the tracking plan, and adopts a PR that has none by reconstructing the plan from the PR's own context) and the PR is re-reviewed until approved.                                                                | `om-auto-review-pr` (single PR), `om-review-prs` (sweep), or a human                             | Approving review submitted                                      |
+| QA                      | A PR carrying `needs-qa` waits for manual QA. A QA reviewer tests it and records the outcome. See the QA gate below.                                                                                                                                                                                                                                                                               | QA reviewer (manual)                                                                             | `qa-approved` applied, or `qa-failed` routes it back            |
+| Merge                   | `om-merge-buddy` reports, read-only, which PRs can merge now and which are close but blocked. `om-approve-merge-pr` re-checks every gate, approves, and merges by whatever mechanism `## This repository` names.                                                                                                                                                                                   | `om-merge-buddy` + `om-approve-merge-pr`, or a human                                             | PR merged into the base branch                                  |
+| Post-merge housekeeping | Close issues the merged PR fixes; comment on issues whose PRs were closed without merging; turn leftover asks or review comments into tracked follow-up issues.                                                                                                                                                                                                                                    | `om-close-fixed-issues`, `om-followup-issue-from-pr`                                             | Tracker reconciled, follow-ups filed                            |
 
 ## Definition of Ready
 
@@ -59,12 +59,9 @@ For a bug, ready means reproducible: `om-verify-in-repo` is that gate, and the l
 
 ## Product decisions as a protected contract
 
-When `om-discover` has written `.ai/specs/product-brief.md`, its **Non-goals**, **Business rules**, and **Decisions** tables are protected the way `BACKWARD_COMPATIBILITY.md` protects contract surfaces. Each entry carries a stable id (`N01`, `R03`, `D07`), an owner, a status (`active` or `superseded`), a review-by date, and a required path for changing it. The rules:
+**This section describes a layer that is not switched on here.** It rests on a product brief at `.ai/specs/product-brief.md` whose **Non-goals**, **Business rules** and **Decisions** tables carry stable ids (`N01`, `R03`, `D07`), an owner, a status and a review-by date, and are then protected in review the way `BACKWARD_COMPATIBILITY.md` protects contract surfaces — a PR contradicting an entry is a blocker until a superseding row lands with it.
 
-- A PR that builds something a non-goal excludes, or contradicts a business rule or a decision, without a superseding entry in the same PR is a **blocker** in review, quoting the entry and its id. The way out is never "delete the code": it is "change the decision explicitly" — a superseding row approved by the entry's owner, with the maintainer arbitrating a dispute, as in Roles.
-- The decisions in play are surfaced where people work, not remembered: `om-auto-manage-issues` lists them in its implementation-notes comment, `om-spec-writing` carries a _Decisions in play_ section, and every PR body carries _Decisions touched_. A newcomer or a new agent reads them at the issue, the spec, or the PR, not in a chat history.
-- An autonomous assumption a human confirmed on a spec PR (the resolved-assumptions comment) is recorded as a decision on the next `om-discover --refresh`, with the confirmer as owner, so the reason a thing is the way it is survives the people who decided it.
-- Decisions age: an entry past its review-by date is flagged in review as due for a look, not enforced blindly. Which entries block more than they protect is a retro question.
+There is no such file in this repository, the `discovery` block is absent from `.ai/agentic.config.json`, and the four skills the layer needs — `om-setup-discovery-pipeline`, which installs it, plus the feeders `om-synthetic-users`, `om-backlog` and `om-mockup-prototype` — are exactly the four the collection has and `skills-lock.json` does not (37 of 41). So nothing above is enforced today, and a reader should not go looking for decision ids that do not exist. Turning it on starts by installing those skills, because the setup skill is itself one of the missing ones; `## This repository` says so again where the rest of the local facts are.
 
 ## Scoping rule (SLC)
 
@@ -227,21 +224,22 @@ The intake and trigger labels must exist first (`gh label create <label>`). To s
 
 This document and `.ai/agentic.config.json` describe the same process: change them together, and re-run the `om-setup-agent-pipeline` skill when the toolchain or label taxonomy changes. Per-skill deviations — extra review rules, a different PR body template, an added gate step — belong in a repo-local skill of the same name at `.ai/skills/<skill-name>/SKILL.md`, which takes precedence over the installed skill (and can `@`-import or reference it to extend rather than replace it); local rules win, but a repo-local skill cannot grant what the installed skill's safety rules forbid.
 
-Three amendment rules are specific to this document's shape:
+Two amendment rules are specific to this document's shape:
 
-- **A change above the `BEGIN per-repo` marker is a change to every repository that shares this document.** Make it in all of them, or make it in `## This repository` instead. `diff` between two repositories' files, truncated at that marker, must be empty. The marker is the boundary — never a section count, which goes stale the first time a section is added, and was wrong here for as long as it was written down. Name the marker in prose the way this bullet does, without its comment syntax: a second literal copy of it above the real one is a false cut point, and truncating there silently drops every line between the two.
-- **A shared section may not point at a repo-relative path that is missing from any repository sharing it.** A bare path reads as "here", so a reader who follows it in a sibling finds nothing — that is how the intake-bridge spec, which exists in only one of these repositories, came to be cited as though it were local in every one of them. Name the repository that holds it, the way `## Intake labels` does, or move the sentence into `## This repository`. This binds a path a reader is sent to follow, not one named as an output the process writes or as a place that must _not_ repeat something.
-- **This file deliberately diverges from the `om-setup-agent-pipeline` SDLC template** by naming the base branch, the merge mechanics, the QA routing and the automations once, in `## This repository`, instead of rendering them throughout. Re-running that skill must not push those values back into the shared sections.
-
-<!-- BEGIN per-repo -->
+- **This file deliberately diverges from the `om-setup-agent-pipeline` SDLC template** by naming the base branch, the merge mechanics, the QA routing and the automations once, in `## This repository`, instead of rendering them throughout. Re-running that skill must not push those values back into the body.
+- **A fact about how this repository actually runs belongs wherever a reader will act on it, and it belongs there true.** Two of the three rules that used to stand here protected a word-for-word parity with a sibling repository; the kit that enforced it is retired (ADR 0025) and the parity with it, so they are gone. They are worth remembering for what they cost: the pressure to keep the body identical is what pushed a local fact into a general sentence, and the sentence then said that post-merge housekeeping does not run on a schedule here when a launchd agent had been running it three times a day the whole time. When a statement would only be true in some repository, name the repository — never soften the statement until it is true nowhere.
 
 ## This repository
 
 - **The base branch is `develop`.** Feature branches are squash-merged into it. The
   `develop` → `main` promotion is a separate PR merged with **a merge commit**, never squashed
   (ADR 0003): only a merge commit advances the merge base, and a squashed promotion compounds
-  conflicts on every promotion after it. `om-approve-merge-pr` does not read the base branch yet,
-  so **merge the promotion PR by hand** until the patch on #492 lands.
+  conflicts on every promotion after it. #492 merged on 2026-09-14 and wrote that rule down; it
+  taught no skill to follow it. `om-approve-merge-pr` still calls the descriptor's **merge-pr**,
+  whose strategy is `--squash` by default, and neither picks the merge strategy from _which_ base
+  branch a PR targets — the one place the descriptor reads the base branch is to ask whether it has
+  a merge queue, which is a different question. So **merge the promotion PR by hand**, and read
+  "the patch landed" as "the rule is written down", never as "the tooling now honours it".
 - **CI is the merge authority** (ADR 0021). The local validation gate is the fast loop that keeps a
   PR from wasting a CI run; the required checks on `develop` are what actually gate the merge, and
   a reviewer reads them rather than the agent's own report. The critical journeys run on **every**
@@ -266,6 +264,14 @@ Three amendment rules are specific to this document's shape:
 - **Sources of issues.** People, through the issue forms (blank issues are off, so every issue
   enters with a category); Sentry findings as `bug` + `priority-high` + `groom`, never `autofix`;
   and follow-ups from `om-followup-issue-from-pr` and `om-review-prs`.
+- **The product layer is off.** No `.ai/specs/product-brief.md`, no `discovery` block in
+  `.ai/agentic.config.json`, and the four skills it needs — `om-setup-discovery-pipeline`,
+  `om-synthetic-users`, `om-backlog`, `om-mockup-prototype` — are the four `skills-lock.json` is
+  missing (37 of the collection's 41). So `## Product decisions as a protected contract` describes
+  nothing that is enforced here, and no decision ids exist to quote in a review. Turning it on means
+  installing those four first — `om-setup-discovery-pipeline` cannot be run before it is installed —
+  then running it and `om-discover` (that one _is_ installed); until then the Definition of Ready's
+  ticket-level tier is the only product gate.
 
 ### Automations
 
@@ -286,11 +292,21 @@ Workflows live in `.ai/cezar/workflows/`; the committed definitions are
 | Weekly architecture review       | Mondays 06:00                         | `architecture-review` (`afk-architecture-review`) |
 | Weekly lessons                   | Fridays 16:00                         | `lessons` (`afk-lessons`)                         |
 
-Five workflows have **no automation and are started by hand** from the cockpit: `housekeeping`
-(`om-review-prs`, `om-merge-buddy` report, `om-close-fixed-issues`), `backlog`, `brainstorm`,
-`implement-spec` and `pr-review`. Post-merge housekeeping and the review sweep therefore do not run
-on a schedule here, whatever a schedule quoted elsewhere in the docs suggests — an issue whose PR
-merged stays open until someone runs it.
+Five workflows have **no cezar automation**: `housekeeping` (`om-review-prs`, `om-merge-buddy`
+report, `om-close-fixed-issues`), `backlog`, `brainstorm`, `implement-spec` and `pr-review`. Four
+of them are started by hand from the cockpit.
+
+`housekeeping` is the exception, and it matters because the sentence that used to stand here said
+the opposite: **it runs on a schedule, just not on cezar's.** A launchd agent on the cezar host —
+`dev.planned-travel.housekeeping`, template at `.ai/scripts/launchd/` — calls
+`.ai/scripts/housekeeping.sh` at 07:00, 12:00 and 17:00 on weekdays, and that script POSTs one
+`housekeeping` run to the cockpit's API. Cezar does have a scheduler — the table's last three rows
+are wall-clock schedules, not events — but it takes one occurrence per automation, in the shapes
+`weekdays` and `weekly`, each at a single time of day (`docs/agents/cezar-automations.json`). Three
+runs a weekday is not one of them, so this cadence lives outside it (`docs/agents/cezar.md`
+§ Housekeeping). So read "no automation" as "no row in the table above", never as "nothing starts
+it" — the earlier wording told a reader that an issue whose PR merged stays open until someone runs
+the sweep by hand, and that was wrong.
 
 The `authors: ["rafalwolak"]` filter on the two `opened` automations is a security gate, not a
 convenience: those runs read the issue or PR body as a prompt and hold Bash with no allowlist, so
@@ -324,6 +340,19 @@ One further exception is not ours: `.claude/skills/` is pinned by `skills-lock.j
 `open-mercato/skills`, to which we have no push rights. A repo-specific rule belongs in an
 `.ai/skills/<name>/SKILL.md` extension instead; an extension can never relax a skill's safety rules.
 
-`money-tracker.online` carries the same agent layer and is no longer kept in step by anything. A fix
-that belongs in both is written in both.
-<!-- END per-repo -->
+`money-tracker.online` carries an agent layer that started as a copy of this one. Nothing keeps the
+two in step, and nothing is meant to: each repository tunes its own. A fix that genuinely belongs in
+both is written in both, by hand, as two ordinary changes.
+
+### Known gaps in this pipeline
+
+Named here because an unstated gap is one a reader rediscovers by losing work to it.
+
+- **A dependabot pull request never enters the label state machine.** "Autopilot new pull requests"
+  filters on `authors`, so nothing labels one: no pipeline label, no category, no QA meta. The
+  `merge-gate` check passes it — it carries no hard block and no `needs-qa` — so an unlabeled
+  dependency bump can merge while `## Label state machine` says a ready PR carries `review`.
+  Labelling one is a human act today.
+- **`in-progress` has no exit that does not need a person.** `## The claim protocol` says a stale
+  claim "may be cleared by the maintainer", and no automation clears it. That is exactly the shape
+  `## Unattended decisions` forbids introducing, in the oldest state this process has.

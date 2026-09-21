@@ -320,7 +320,9 @@ brief to `om-auto-fix-issue` - the same hazard the automations avoid by sending
 
 ## Housekeeping
 
-Cezar has no scheduler. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
+Cezar's scheduler takes one occurrence per automation - `weekdays` or `weekly`, each at a single
+time of day - so three runs a weekday cannot be expressed as one, and this cadence lives outside
+it. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
 (`/api/v1/p/planned-travel/runs`) and falls back to a headless `cezar run` when the cockpit is
 down, or exits 1 when `cezar` is not on PATH - there is no npx fallback, since upstream lacks the
 fork's fixes; launchd calls it at 07:00, 12:00 and 17:00 on weekdays. Install (template in

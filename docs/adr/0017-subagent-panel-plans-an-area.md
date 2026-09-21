@@ -1,6 +1,6 @@
 # 0017. A subagent panel plans a docs/plans area without a human in the loop
 
-Status: accepted
+Status: superseded by ADR 0018
 Date: 2026-09-06
 Amends: ADR 0014 (the human gate of the `plan` workflow), ADR 0004 (how an area migrates).
 
