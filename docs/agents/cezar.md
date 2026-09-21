@@ -255,7 +255,8 @@ upstream poller scopes its label source to `is:issue` and then drops any hit car
 fires minutes before the review job posts anything. So the chain is:
 
 1. `.github/workflows/claude-code-review.yml` ends with `scripts/ci/review-threads-label.mjs`,
-   which applies `review-threads` when the PR has live threads opened by the review bot.
+   which applies `review-threads` when the PR has live threads opened by a review bot - the
+   `claude` review job or `chatgpt-codex-connector`, whichever left them.
 2. A commit on the design4pro/cezar fork
    (`feat(automations): filters.includePullRequests polls label events on pull requests`) teaches
    the poller to honour `filters.includePullRequests` on both gates. It is opt-in per automation -
@@ -292,8 +293,10 @@ the answer can be anything but "held".
 
 The gate is the same as for `groom` and `autofix`: only a collaborator or the Actions bot can set a
 label, so an outsider cannot start a run that holds an unrestricted Bash. A human's review thread is
-deliberately not a trigger - the script arms only on the review bot's threads, because a
-disagreement with a person is settled by talking. Rehearse the decision against any live PR with
+deliberately not a trigger - the script arms only on a review bot's threads, because a
+disagreement with a person is settled by talking. Which logins count is
+`DEFAULT_REVIEW_BOTS` in that script; a bot missing from it goes unnoticed rather than
+failing, because its threads simply never arm a run. Rehearse the decision against any live PR with
 `GH_REPO=… PR_NUMBER=… HEAD_SHA=… node scripts/ci/review-threads-label.mjs --dry-run`.
 
 ## Prompt templates (`docs/agents/cezar-prompt-templates.json`)
