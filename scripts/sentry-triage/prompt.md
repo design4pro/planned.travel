@@ -6,7 +6,7 @@ This is an ANALYSIS run. Do NOT modify any file. Do NOT commit. Do NOT create, e
 
 # CONTEXT
 
-Read CLAUDE.md first. The layering contract is docs/SPEC.md §6 — you need it to tell a frame in our code from a frame in a dependency. Domain vocabulary: CONTEXT.md.
+Read AGENTS.md first. The layering contract is docs/SPEC.md §6 — you need it to tell a frame in our code from a frame in a dependency. Domain vocabulary: CONTEXT.md.
 
 Sentry organisation: `{{ORG}}`. Projects: `{{PROJECTS}}`. Window: last `{{WINDOW}}`.
 
