@@ -32,6 +32,24 @@ command=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
 
 [ -z "$command" ] && exit 0
 
+# A backslash-newline is a line continuation: the shell joins the two lines into one statement
+# before running it, so this file has to join them before reading it. Every rule below greps a
+# possibly-multi-line `$scan`, and grep works a line at a time, so a continuation left in place
+# splits one statement into two lines that each carry only part of what a rule matches on. That
+# silently unblocks any rule whose pattern spans a space - `git reset --hard`, `git clean -fd`
+# and the remote-D1 gate below were all reachable that way.
+#
+# It has to happen here, before `unquote()`: that strips the backslash and would leave the
+# newline it was escaping behind, which is the split itself. Fold first, strip second.
+#
+# The pair is removed, not replaced with a space, because that is what the shell does with it -
+# a continuation may split a token in half, and the shell rejoins the halves. Substituting a
+# space put the halves back as two tokens instead of one, so `git re\`+newline+`set --hard` read
+# as `git re set --hard` and matched no rule at all. The same shape hid `wrangler d\`+newline+`1`
+# from the remote-D1 gate. Every test written for this until now happened to break on a space,
+# where the two spellings agree.
+command=${command//\\$'\n'/}
+
 # A rule matches the command, not prose about it - and deciding which is which is the whole
 # problem. The first shape of this got it backwards: it listed the ways a string gets *executed*
 # and read everything else as text. A denylist of ways to run a string is a list that is always
@@ -294,19 +312,85 @@ echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])sudo\s' \
   && agent_block 'sudo' 'A run holds exactly the permissions it was started with.'
 # Shipping is a human decision, and an unattended run has nobody to answer a prompt about it.
 # `deploy` is not the only way to ship: `versions upload` + `versions deploy` is the gradual
-# rollout, `rollback` and `triggers deploy` change what production serves, and `d1 execute
-# --remote` reaches the live database. `db:migrate:local` is the local D1 copy and stays open;
-# `--remote` is what names staging or production.
+# rollout, `rollback` and `triggers deploy` change what production serves. `db:migrate:local` is
+# the local D1 copy and stays open; `--remote` is what names staging or production.
 echo "$scan" | grep -Eq 'wrangler\s+(deploy|rollback|versions\s+(deploy|upload)|triggers\s+deploy)\b' \
   && agent_block 'wrangler deploy' 'Deploying is a human decision; end the run as blocked and say what is ready to ship.'
-echo "$scan" | grep -Eq 'wrangler\s+d1\s+(migrations\s+apply|execute)\b.*--remote' \
-  && agent_block 'remote d1 access' 'The staging and production databases are a human decision; end the run as blocked.'
+
+# Remote D1 is split by which database is at the other end, because that is what decides the cost
+# of a mistake. Staging is the half an agent run is *supposed* to reach - #582 is the shape of it: a
+# query plan is only worth reading against real data and real statistics, so a rule that refused
+# staging made a ticket unfinishable rather than safe, and the run ended as blocked on work nobody
+# else was going to do. A staging mistake is repaired by reloading staging. Production is not, and
+# stays a human decision exactly as before.
+#
+# The rule is an allowlist on the database each statement names, not a denylist of the production
+# one. `wrangler d1 execute` accepts a `database_id` or a binding name as readily as a
+# `database_name`, and the production id sits in plaintext in wrangler.jsonc, so denylisting the
+# production `database_name` left `wrangler d1 execute <production-id> --remote --env staging`
+# allowed: a bare id resolves through the D1 API without the config being consulted, so `--env`
+# never narrows it.
+#
+# The allowlist is counted, not inspected, and that distinction is the fix for a real regression
+# this rule shipped with in its first form. Reading the positionals a pattern recognises and
+# allowing the line when all of them are staging means anything the pattern could *not* read is
+# invisible - and invisible was allowed. `... planned-travel-db-staging --remote --env staging &&
+# wrangler d1 export planned-travel-db --remote` passed, because `export` is not a sub-command the
+# extraction names; so did the same line with the production statement's positional pushed onto a
+# continued line. Both were refused outright before this rule existed, by the blanket block it
+# replaced. Counting asks a question the rule cannot be wrong about - is every `d1` sub-command
+# on this line the one allowed staging statement? - and treats any difference as production.
+#
+# It counts `d1`, not `wrangler d1`, and the difference is the whole guarantee. Requiring the two
+# words to be adjacent made a perfectly ordinary spelling invisible to the counter - `wrangler -c
+# wrangler.jsonc d1 execute ...`, `npx wrangler@latest d1 execute ...` - so a compound line whose
+# second statement carried a flag counted once, matched the one staging statement, and passed.
+# Anything between `wrangler` and its sub-command is the caller's business; what this rule needs
+# to know is how many D1 sub-commands are on the line, and that word is `d1`.
+#
+# Splitting the line into sub-commands was the other candidate and is worse: `$scan` has already
+# had its quotes stripped, so an `&&` inside a `--command` string would split a legitimate
+# statement into fragments carrying neither `d1` nor `--remote`, and the gate would stop firing
+# at all. Counting gets the per-statement guarantee without needing to know where the statements
+# begin.
+#
+# `--env staging` is still required on top of that, because it is what wrangler resolves bindings
+# from, and its absence is what production looks like on a command line. `-e` carries a left-hand
+# boundary like every other rule in this file, or `--file ./restore-e staging.sql` reads as a
+# selector that is not there.
+if echo "$scan" | grep -Eq '\bd1\s+(migrations\s+apply|execute)\b.*--remote'; then
+  # Count, do not inspect. Reading the positionals the extraction happens to recognise and
+  # allowing the line when all of them are staging is the shape that failed review: anything on
+  # the line the extraction could *not* read stayed invisible and rode along - a `d1 export`
+  # against production, a sub-command the pattern does not name, a statement the fold above did
+  # not reach, a flag sitting between `wrangler` and `d1`. So the rule asks a question it cannot
+  # be wrong about: is every `d1` sub-command on this line the one staging statement that is
+  # allowed? If the two counts differ, something is here that this rule cannot account for, and
+  # unaccounted-for is the production path. A `d1` that is not a sub-command at all - one inside
+  # a SQL string, say - counts too and blocks the line, which is the direction this fails in.
+  #
+  # Only the staging `database_name` counts as allowed - the spelling package.json reaches
+  # staging by. The staging `database_id` and the `DB` binding are refused too: an agent run has
+  # no reason to spell the database any other way, and a second constant is a second thing to
+  # drift out of step with wrangler.jsonc. The trailing boundary keeps `planned-travel-db-staging`
+  # from vouching for `planned-travel-db-staging-old`.
+  # `grep -c` counts matching *lines*, not matches, and two statements share a line here by
+  # definition - `-o` piped into `wc -l` is what counts occurrences.
+  d1_total=$(echo "$scan" | grep -oE '\bd1\b' | wc -l | tr -d '[:space:]') || true
+  d1_staging=$(echo "$scan" | grep -oE \
+    '\bd1[[:space:]]+(migrations[[:space:]]+apply|execute)[[:space:]]+planned-travel-db-staging([^[:alnum:]_-]|$)' \
+    | wc -l | tr -d '[:space:]') || true
+  [ "${d1_total:-0}" = "${d1_staging:-0}" ] \
+    || agent_block 'remote d1 access (production)' 'Only the staging database is open to an agent run, spelled the way package.json spells it - wrangler d1 ... planned-travel-db-staging --remote --env staging - and every d1 sub-command on the line has to be that one. Anything else is a human decision; end the run as blocked.'
+  echo "$scan" | grep -Eq '(^|[^[:alnum:]_-])(--env[[:space:]=]+staging|-e[[:space:]]+staging)([^[:alnum:]_-]|$)' \
+    || agent_block 'remote d1 access (production)' 'A remote D1 command without --env staging reaches production, which is a human decision; end the run as blocked.'
+fi
 # The package scripts that reach staging or production, named as this repository spells them -
 # `db:migrate:remote` and `db:migrate:remote:staging`, not the `db:migrate:prod` of a sibling
 # repo. A list copied from elsewhere would match nothing here and look protective while being
 # inert. Longest alternative first, and flags and a filter argument are skipped over, so
 # `pnpm -s run deploy` and `pnpm --filter web deploy` are the same deploy.
-echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+((-{1,2}[^[:space:]]+|[a-z]+)\s+)*(deploy:staging|db:migrate:remote:staging|db:migrate:remote|deploy)(\s|$)' \
+echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+((-{1,2}[^[:space:]]+|[a-z]+)\s+)*(deploy:staging|db:migrate:remote|deploy)(\s|$)' \
   && agent_block 'pnpm deploy|remote migration' 'Deploys and remote migrations are a human decision; end the run as blocked.'
 
 # GitHub Actions only. .github/workflows/claude-code-review.yml runs on every pull_request
