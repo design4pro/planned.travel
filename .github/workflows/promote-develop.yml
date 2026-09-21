@@ -59,15 +59,15 @@ permissions:
   pull-requests: write
 
 # `runs-on` below reads through `vars.RUNNER_CI`, an organisation variable that is
-# deliberately unset: unset, the default here selects the self-hosted pool. Setting it
-# to `["ubuntu-latest"]` moves every job that reads it back to GitHub-hosted runners
-# without a pull request. Merging the promotion also needs the `claude-review` check,
-# which reads `vars.RUNNER_AGENT`, so a host outage needs both set. ADR 0023.
+# deliberately unset: unset, the default here selects a Blacksmith ARM runner. Setting
+# it moves every job that reads it elsewhere without a pull request. Merging the
+# promotion also needs the `claude-review` check, which reads `vars.RUNNER_AGENT`, so
+# moving the gate wholesale needs both set. ADR 0026.
 
 jobs:
   promote:
     name: Open the develop → main pull request
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["blacksmith-4vcpu-ubuntu-2404-arm"]') }}
     timeout-minutes: 5
 
     steps:

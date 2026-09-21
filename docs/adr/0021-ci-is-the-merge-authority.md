@@ -97,6 +97,10 @@ for a redeploy, or for shipping while CI is down.
   move the three shipping workflows - `deploy.yml`, `deploy-staging.yml` and `rollback.yml` - which
   read `vars.RUNNER_DEPLOY` and already default to GitHub-hosted runners. The lever in the other
   direction is `RUNNER_DEPLOY` set to `["self-hosted","linux","ARM64","ci"]`._
+  _Amended by ADR 0026: the defaults moved off the pool, so this consequence now reads the other
+  way. CI and the agents default to Blacksmith ARM runners, a merge no longer waits on the pool, and
+  the variables are what move jobs back onto it. The `e2e` gap the note above inherited from ADR
+  0023 is closed: `.github/actions/e2e-env` installs the browsers unconditionally, on every runner._
 - **Production ships a CI run later.** Merging the promotion pull request now deploys after the push
   run on `main`, about the length of the e2e shards, not at the moment of the push.
 - **A flake on `develop` holds that commit's staging deploy** until a rerun or the next merge. A

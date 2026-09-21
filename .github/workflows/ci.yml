@@ -34,11 +34,14 @@ env:
   VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
 # `runs-on` in every job below reads through `vars.RUNNER_CI`, an organisation
-# variable that is deliberately unset: unset, each job's own default selects the
-# self-hosted pool. Setting it to `["ubuntu-latest"]` moves every job in every
-# repository back to GitHub-hosted runners without a pull request, which is the
-# only recovery path that does not need the host to be up - together with
-# `vars.RUNNER_AGENT`, which the required `claude-review` check reads. ADR 0023.
+# variable that is deliberately unset: unset, each job's own default selects a
+# 4-vCPU Blacksmith ARM runner. The variable is the lever to the other two
+# destinations without a pull request - `["ubuntu-latest"]` for GitHub-hosted,
+# `["self-hosted","linux","ARM64","ci"]` for the pool - and moves every job in
+# every repository at once, so a wholesale move of the merge gate needs
+# `vars.RUNNER_AGENT` set with it, since the required `claude-review` check
+# reads that one. The indirection is unchanged; only which side it defaults to.
+# ADR 0026.
 
 jobs:
   verify:
@@ -48,7 +51,7 @@ jobs:
     # `e2e` job carries the same clause in its own `if`, since it does not wait
     # on this one.
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["blacksmith-4vcpu-ubuntu-2404-arm"]') }}
     timeout-minutes: 20
 
     steps:
@@ -172,12 +175,12 @@ jobs:
   # wall clock for three more jobs of fixed cost on a pool of three slots, which
   # queued longer than that (ADR 0021). One run also puts the per-glob coverage
   # thresholds over the whole suite directly, with no blob reports to count and
-  # merge. Moved back to GitHub-hosted runners (`vars.RUNNER_CI`, the recovery
-  # path) it takes minutes again, which that path can afford.
+  # merge. Off the pool (`vars.RUNNER_CI`) it takes minutes again, which the
+  # hosted paths can afford.
   test:
     name: unit tests
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["blacksmith-4vcpu-ubuntu-2404-arm"]') }}
     timeout-minutes: 15
 
     steps:
@@ -212,7 +215,7 @@ jobs:
   scope:
     name: change scope
     if: github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["blacksmith-4vcpu-ubuntu-2404-arm"]') }}
     timeout-minutes: 5
     outputs:
       e2e: ${{ steps.classify.outputs.e2e }}
@@ -288,7 +291,7 @@ jobs:
     name: e2e · critical journeys (${{ matrix.shard }}/2)
     needs: scope
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)) && needs.scope.outputs.e2e != 'false' }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["blacksmith-4vcpu-ubuntu-2404-arm"]') }}
     # Measured on the 2-vCPU runner, first green run (33806080237): 2-3 min of
     # fixed cost - image pull, checkout, install, migrations, seed - then 6m41s of
     # journeys on shard 1 and 9m59s on shard 2, for jobs of 9m44s and 11m58s. At
@@ -318,13 +321,12 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2]
-    # No `container:`. The runner image is itself built FROM
-    # `mcr.microsoft.com/playwright:v1.62.1-noble`, so the browsers are already
-    # on the runner and pulling the same image again per job would buy nothing.
-    # The version coupling did not go away, it moved: keep
-    # `host/runner/Dockerfile` in design4pro/cezar in step with the `@playwright/test`
-    # devDependency in package.json, or a mismatch is reported as a missing
-    # executable rather than as a wrong one.
+    # No `container:`, on any runner. `../actions/e2e-env` installs the browsers
+    # itself, unconditionally, at the version `pnpm install` just resolved from
+    # the lockfile - so no runner needs an image and the version follows the
+    # `@playwright/test` devDependency by construction, including on the pool,
+    # whose `host/runner/Dockerfile` no longer has to be kept in step by hand.
+    # ADR 0026.
 
     steps:
       - name: Check out
@@ -386,7 +388,7 @@ jobs:
     name: e2e · merged report
     needs: e2e
     if: ${{ !cancelled() && needs.e2e.result != 'skipped' }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["blacksmith-4vcpu-ubuntu-2404-arm"]') }}
     timeout-minutes: 10
 
     steps:

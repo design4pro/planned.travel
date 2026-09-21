@@ -35,12 +35,14 @@ jobs:
       contains(github.event.review.body, '@claude') ||
       contains(github.event.issue.body, '@claude') ||
       contains(github.event.issue.title, '@claude')
-    # The agent pool: a container that takes this one job and is then destroyed, mounting
-    # none of the caches the ci pool carries. This job holds `contents: write` for forty
-    # turns, so nothing it leaves behind should be able to reach the next job. Setting the
-    # `RUNNER_AGENT` organisation variable to `["ubuntu-latest"]` moves it back to
-    # GitHub-hosted runners without a pull request.
-    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["self-hosted","linux","ARM64","agent"]') }}
+    # A runner that takes this one job and is then destroyed. This job holds `contents: write`
+    # for forty turns, so nothing it leaves behind should be able to reach the next job. The
+    # default is a 2-vCPU Blacksmith ARM runner - an ephemeral Firecracker microVM with a
+    # just-in-time registration token, so the property is structural rather than a matter of
+    # housekeeping - and the job is API-bound, which is why it asks for the smallest size.
+    # Setting the `RUNNER_AGENT` organisation variable moves it elsewhere without a pull
+    # request; `["ubuntu-latest"]` and the `agent` pool both keep the same property.
+    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["blacksmith-2vcpu-ubuntu-2404-arm"]') }}
     timeout-minutes: 45
 
     permissions:

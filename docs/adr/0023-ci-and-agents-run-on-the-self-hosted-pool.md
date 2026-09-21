@@ -1,7 +1,11 @@
 # 0023. CI and the agents run on the self-hosted pool; shipping stays on GitHub-hosted runners
 
-Status: accepted
+Status: superseded by ADR 0026
 Date: 2026-09-19
+Superseded: 2026-09-21. Decision 2's two pool defaults are reversed - CI and the agents run on
+Blacksmith ARM runners. Decision 1 (the variable indirection) and decision 4 (shipping on a hosted
+default) survive, and the pool remains reachable by setting the variables. The consequence below
+that the fallback "still leaves `e2e` red" is what ADR 0026 repairs.
 Records: the runner migration of #495, #497, #498 and #563, which was decided in workflow comments
 and pull request descriptions and never written down as a decision.
 Amends: ADR 0021 (the variable half of its recovery path: `vars.RUNNER_CI` alone does not bring

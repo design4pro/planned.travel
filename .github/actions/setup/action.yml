@@ -25,6 +25,10 @@ runs:
     - name: Set up pnpm
       uses: pnpm/action-setup@v6
 
+    # Runs wherever `runner.environment` is not `github-hosted`, which covers both
+    # the pool and Blacksmith; only the pool has anything to find, and the
+    # `mountpoint` check below is what makes that safe to run on either.
+    #
     # The self-hosted CI pool mounts a persistent pnpm store at this path
     # (`host/runner/pool.sh` in design4pro/cezar, volume `gha-pnpm-store`), and pnpm never
     # used it: action-setup exports PNPM_HOME, pnpm's default store is
@@ -52,9 +56,13 @@ runs:
     # seconds and is deliberately not cached, so a corrupted tree can never be
     # restored from a previous run.
     #
-    # GitHub-hosted runners only. From the self-hosted pool the ~209 MB tarball
-    # came down at 3-6 MB/s, about 60 s a job, while filling an empty store
-    # straight from the registry measured 13-18 s on the same runner image.
+    # GitHub-hosted runners only, and off on the default Blacksmith runner for
+    # the same reason it is off on the pool: from outside GitHub's own network
+    # the ~209 MB tarball came down at 3-6 MB/s, about 60 s a job, while filling
+    # an empty store straight from the registry measured 13-18 s on the same
+    # runner image. Blacksmith sells a faster cache of its own
+    # (`useblacksmith/cache`); adopting it is a separate change with a
+    # measurement attached, not a side effect of moving the runner.
     - name: Set up Node
       uses: actions/setup-node@v7
       with:
