@@ -110,6 +110,24 @@ const optionalCurrency = z
     'must be an ISO-4217 alphabetic code',
   )
 
+/**
+ * An IANA zone name, or `''`.
+ *
+ * Asked of `Intl` rather than matched against a list this file would have to
+ * keep: `resolveTimeZone` answers `UTC` for anything the platform rejects, so a
+ * value that survives unchanged is a value the platform knows. Refused rather
+ * than rewritten — a zone silently turned into `UTC` is a departure time that
+ * reads an hour or nine wrong with nothing on screen to say so.
+ */
+const optionalTimeZone = z
+  .string()
+  .trim()
+  .max(64)
+  .refine(
+    (value) => value === '' || resolveTimeZone(value) === value,
+    'must be an IANA time zone name',
+  )
+
 const transportFields = {
   mode: z.enum(TRANSPORT_MODES),
   status: z.enum(TRANSPORT_STATUSES),
@@ -128,6 +146,12 @@ const transportFields = {
   arrivalCode: optionalCode,
   arrivalDate: optionalDate,
   arrivalTime: optionalTime,
+  /**
+   * Sent only while a chain owns the endpoints, so the record is ordered in the zones its clocks
+   * were validated in; absent, the zones already stored are kept.
+   */
+  departureTimezone: optionalTimeZone.optional(),
+  arrivalTimezone: optionalTimeZone.optional(),
   /** `0` means "not recorded" for both of these. */
   distanceMetres: z.number().int().min(0).max(100_000_000),
   priceMinor: optionalMinorAmount,
@@ -164,6 +188,12 @@ function payload(data: TransportInput) {
     arrivalCode: orNull(data.arrivalCode),
     arrivalDate: orNull(data.arrivalDate),
     arrivalTime: orNull(data.arrivalTime),
+    ...(data.departureTimezone === undefined
+      ? {}
+      : { departureTimezone: orNull(data.departureTimezone) }),
+    ...(data.arrivalTimezone === undefined
+      ? {}
+      : { arrivalTimezone: orNull(data.arrivalTimezone) }),
     distanceMetres: data.distanceMetres === 0 ? null : data.distanceMetres,
     priceMinor: data.priceMinor === 0 ? null : data.priceMinor,
     currency: orNull(data.currency),
@@ -172,24 +202,6 @@ function payload(data: TransportInput) {
 }
 
 /* ------------------------------------------------------------ chain inputs */
-
-/**
- * An IANA zone name, or `''`.
- *
- * Asked of `Intl` rather than matched against a list this file would have to
- * keep: `resolveTimeZone` answers `UTC` for anything the platform rejects, so a
- * value that survives unchanged is a value the platform knows. Refused rather
- * than rewritten — a zone silently turned into `UTC` is a departure time that
- * reads an hour or nine wrong with nothing on screen to say so.
- */
-const optionalTimeZone = z
-  .string()
-  .trim()
-  .max(64)
-  .refine(
-    (value) => value === '' || resolveTimeZone(value) === value,
-    'must be an IANA time zone name',
-  )
 
 const stationSchema = z.object({
   name: z.string().trim().min(1).max(200),

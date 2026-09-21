@@ -1111,6 +1111,9 @@ export interface TransportPayload {
   readonly arrivalDate: string
   readonly arrivalTime: string
   readonly arrivalDayId: string
+  /** Sent only while a chain owns the endpoints; see {@link recordZones}. */
+  readonly departureTimezone?: string
+  readonly arrivalTimezone?: string
   readonly distanceMetres: number
   readonly priceMinor: number
   readonly currency: string
@@ -1169,6 +1172,33 @@ function recordEndpoints(
 }
 
 /**
+ * The zones of the chain-owned endpoints, sent with the record they belong to.
+ *
+ * The record is written before its chain and the repository orders it in its own zones, so the
+ * clocks {@link recordEndpoints} copies from the outer legs have to travel with the zones they were
+ * validated in - without them a westbound flight reads as landing before it leaves. A journey
+ * nobody has broken up sends none, and the zones already stored stay as they are.
+ */
+function recordZones(
+  chain: ChainDraft,
+): Pick<TransportPayload, 'departureTimezone' | 'arrivalTimezone'> {
+  const first = chain.stations.at(0)
+  const last = chain.stations.at(-1)
+  if (
+    !chain.broken ||
+    first === undefined ||
+    last === undefined ||
+    chain.legs.length === 0
+  ) {
+    return {}
+  }
+  return {
+    departureTimezone: first.timezone.trim(),
+    arrivalTimezone: last.timezone.trim(),
+  }
+}
+
+/**
  * The draft as the record writers take it — the whole mapping, in one place.
  *
  * A pure function and not a closure over the dialog's state, because the one
@@ -1195,6 +1225,7 @@ export function transportPayload(
     bookingCode: draft.bookingCode,
     seat: draft.seat,
     ...recordEndpoints(draft, chain),
+    ...recordZones(chain),
     distanceMetres: kilometresToMetres(draft.distanceKm),
     priceMinor,
     /* An amount nobody recorded has no currency to be in. */
