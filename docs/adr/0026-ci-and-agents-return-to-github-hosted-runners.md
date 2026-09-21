@@ -77,12 +77,26 @@ shared with another repository, and a deploy has to run when the machine does no
 
 ## Consequences
 
-- **Hosted minutes are a cost again, and it is the cost ADR 0023 was avoiding.** At the rate that
-  record measured - 1,634 minutes per 144 runs - `ci.yml` alone is on the order of 12,000 minutes a
-  month. The plan is GitHub Team with 3,000 included (verified 2026-09-17), of which the deploy jobs
-  across both repositories already take roughly 1,900. Practically all of the CI load is therefore
-  overage. This is the price of the decision, it is not small, and if it stops being acceptable the
-  lever is one variable rather than a pull request.
+- **Hosted minutes are a cost again, and measured on this change it is roughly four times what ADR
+  0023's own figures suggested.** That record's 1,634 minutes per 144 runs extrapolates to about
+  12,000 minutes a month, and that is the number this record carried when it was drafted. It is
+  wrong, because the suite is not the one that was measured: e2e is sharded now and the unit suite
+  has grown. Measured instead:
+
+  | Measured                                                    |                                                                                       |
+  | ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+  | `ci.yml` runs, 7 days to 2026-09-21                         | 488, so ~2,100 a month                                                                |
+  | average per run on the pool, sample of 20                   | 11.5 job-minutes                                                                      |
+  | the same run hosted (PR #691) against a comparable pool run | 33.6 against 16 job-minutes, ~2.1x - matching the ~2.2x ADR 0023 stated independently |
+  | hosted minutes a month at that rate                         | ~50,000                                                                               |
+  | included on GitHub Team, less what the deploys already take | ~1,100                                                                                |
+
+  At the Linux 2-core rate that is on the order of **$400 a month**, not the $80-120 first written
+  here. It is the price of removing one machine from the merge path, it is a real invoice, and if it
+  stops being worth paying the lever is one variable rather than a pull request. Decision 2 is what
+  makes that lever safe to pull in either direction, so the cheap configuration remains reachable
+  without re-opening this record.
+
 - **A hosted e2e shard pays for its browsers on every run.** `--with-deps` is apt, not a tarball, so
   it is the half no cache restores; that is why the step is a plain install and not
   `actions/cache`. If the measured cost per shard turns out to justify caching the browser
