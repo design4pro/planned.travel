@@ -12,4 +12,4 @@ steps:
     name: om-pr-autopilot
     prompt: '/om-pr-autopilot {{task}}'
     model: opus
-    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite]
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]

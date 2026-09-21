@@ -3,7 +3,7 @@
  *
  * ## Which exception this is, and why it is the one being used
  *
- * `CLAUDE.md` and `docs/SPEC.md` §6 say all SQL lives in `src/server/repos` and goes through the
+ * `AGENTS.md` and `docs/SPEC.md` §6 say all SQL lives in `src/server/repos` and goes through the
  * tenant-scoped base repository, with `src/server/catalog` as the single stated exception. This
  * module uses that exception, and states which one it is because stating it is the price of using
  * it: `airports` carries no `organization_id`. It is platform reference data — a build-time cut of

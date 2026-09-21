@@ -103,11 +103,31 @@ describe(WORKFLOW, () => {
 
   describe(REARM_WORKFLOW, () => {
     // Its own file, so that the `unlabeled` it needs never starts claude-code-review.yml (#300).
-    it('starts only when a label comes off, and only for in-progress', () => {
+    it('starts on a label coming off only for in-progress', () => {
       expect(pullRequestTypes(rearmWorkflow)).toEqual(['unlabeled'])
       expect(rearmWorkflow).toMatch(
-        /if: github\.event\.action == 'unlabeled' && github\.event\.label\.name == 'in-progress'/,
+        /github\.event\.action == 'unlabeled' && github\.event\.label\.name == 'in-progress'/,
       )
+    })
+
+    // The other moment the answer can change. A review bot that reviews asynchronously can submit
+    // after every run that would have asked - claude-code-review.yml arms at the end of its own
+    // job, and on #692 and #695 that job had finished two and a half minutes before Codex posted.
+    // Without this trigger the thread holds the merge and nothing ever arms a run to clear it.
+    it('starts again when a review is submitted, whoever submitted it', () => {
+      expect(rearmWorkflow).toMatch(/\n {2}pull_request_review:\n {4}types: \[submitted\]/)
+      expect(rearmWorkflow).toMatch(/github\.event_name == 'pull_request_review'/)
+    })
+
+    // `pull_request_review` runs the workflow from the pull request's own merge ref, not from the
+    // base branch - #695's new trigger fired while neither `main` nor `develop` carried it yet - so
+    // the branch under review supplies this file and only the explicit `ref:` keeps the script it
+    // runs out of that branch's reach. Both events carry `pull_request`, so that one `ref:` covers
+    // the new trigger as well as the old, and this asserts it stays the only checkout.
+    it('keeps the base-branch checkout for the review trigger too', () => {
+      const job = rearmWorkflow.slice(rearmWorkflow.indexOf('\n  rearm-review-threads:'))
+      expect(job.match(/uses: actions\/checkout@v\d+/g)).toHaveLength(1)
+      expect(job).toMatch(/ref: \$\{\{ github\.event\.pull_request\.base\.ref \}\}/)
     })
 
     it('checks out the base branch rather than the pull request', () => {
