@@ -402,6 +402,185 @@ describe('git-guardrails.sh', () => {
       })
     })
   })
+// Deleting the checkout rather than a file in it. Nothing here read `rm` before: guard-generated.sh
+// confines Edit and Write to the worktree and says in its own header that a Bash redirect still
+// reaches outside, so `rm -rf src` in a run matched no rule in either hook.
+describe("deleting the checkout", () => {
+  it.each([
+    "rm -rf /",
+    "rm -rf ~",
+    "rm -rf .",
+    "rm -rf $HOME/dev",
+    "rm -rf *",
+    "git reflog expire --expire=now --all",
+    "git gc --prune=now",
+    "git filter-branch --tree-filter x HEAD",
+    "gh repo delete design4pro/planned.travel",
+    "git push origin --delete develop",
+    "git push origin :main",
+  ])("blocks %s in every session", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2);
+    }
+  });
+
+  // Build output and scratch space: every one of these is put back by a command in package.json
+  // or by the run itself, so a run may clear them and a developer is never asked about it.
+  it.each([
+    "rm -rf node_modules",
+    "rm -rf node_modules && pnpm install",
+    "rm -rf dist .wrangler",
+    "rm -rf playwright-report test-results",
+    "rm -rf /tmp/x",
+    "rm -rf .ai/tmp/run-1",
+    "rm .ai/qa/dev-server.pid",
+  ])("leaves %s alone in every session", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(0);
+    }
+  });
+
+  // The source tree is not disposable, but a developer deleting their own checkout is their
+  // business - so this tier splits the way the file's other agent rules do.
+  it.each(["rm -rf src", "rm -rf e2e/fixtures", "rm -rf docs"])(
+    "refuses %s in a run and allows it at the keyboard",
+    (command) => {
+      expect(bash(command).status).toBe(0);
+      expect(bash(command, AGENT).status).toBe(2);
+      expect(bash(command, ACTIONS).status).toBe(2);
+    },
+  );
+
+  // Each `rm` is judged on its own targets. A command that clears node_modules and then the
+  // source tree is not sheltered by the accepted word standing first in the string.
+  it("judges every rm in a command separately", () => {
+    expect(bash("rm -rf node_modules && rm -rf src").status).toBe(0);
+    expect(bash("rm -rf node_modules && rm -rf src", AGENT).status).toBe(2);
+    expect(bash("rm -rf dist && rm -rf /", AGENT).status).toBe(2);
+    expect(bash("rm -rf dist && rm -rf /").status).toBe(2);
+  });
+
+  // `rm node_modules -rf` is valid, so recursion is decided over the whole invocation rather
+  // than by the word that happens to follow `rm`.
+  it("reads a flag that follows the target", () => {
+    expect(bash("rm node_modules -rf", AGENT).status).toBe(0);
+    expect(bash("rm src -rf", AGENT).status).toBe(2);
+  });
+
+  // The same contract the rest of the file keeps: a quoted argument of a prose command is text.
+  it("reads a quoted delete as text, not as an invocation", () => {
+    expect(bash('echo "rm -rf /"').status).toBe(0);
+    expect(bash('git commit -m "guard the rm -rf / case"').status).toBe(0);
+    expect(bash('grep -rn "rm -rf" .claude/hooks').status).toBe(0);
+    // ...and an executor is still read as one, because nothing is stripped for it.
+    expect(bash('bash -lc "rm -rf /"').status).toBe(2);
+  });
+
+  // The two ways to spell the same delete without naming `rm`, plus the user boundary and the
+  // worktree the cockpit owns. All of them are a run's business only.
+  it.each([
+    "find . -name *.tmp -delete",
+    "find . -type f -exec rm {} +",
+    "sudo launchctl list",
+    "git worktree remove --force ../wt",
+  ])("refuses %s in a run only", (command) => {
+    expect(bash(command).status).toBe(0);
+    expect(bash(command, AGENT).status).toBe(2);
+  });
+
+  // A shell metacharacter glued to `rm` used to hide the invocation from every tier, the
+  // always-on one included: the tokenizer split on whitespace, so `$(rm` was one unknown word
+  // rather than an operator followed by `rm`. These are the strongest guarantee in the file, so
+  // they are pinned in all three tiers.
+  it.each([
+    "echo $(rm -rf /)",
+    "(rm -rf /)",
+    "true;rm -rf /",
+    "echo `rm -rf /`",
+    "rm -rf dist&&rm -rf /",
+  ])("reads %s as an invocation, not as one unknown word", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2);
+    }
+  });
+
+  // A `*` in a `case` glob matches `/` and `..` alike, so a path walking back up out of an
+  // accepted prefix was accepted along with it. Any `..` segment is refused before the allowlist
+  // is consulted; ordinary dotted paths are not, which the two counter-cases pin.
+  it.each([
+    "rm -rf node_modules/../src",
+    "rm -rf .ai/tmp/../../src",
+    "rm -rf /tmp/../home",
+    "rm -rf dist/../../elsewhere",
+  ])("refuses %s, which walks out of the allowlist", (command) => {
+    expect(bash(command, AGENT).status).toBe(2);
+  });
+
+  it("keeps dotted paths that stay inside an allowed root", () => {
+    expect(bash("rm -rf node_modules/.cache", AGENT).status).toBe(0);
+    expect(bash("rm -rf .ai/tmp/run-1/a..b", AGENT).status).toBe(0);
+  });
+
+  // A recursive `rm` whose targets come from a pipe names no path this hook can read, so there
+  // is nothing to match against the allowlist. It is refused and told to name the path rather
+  // than dropped - in a run only, which is where the allowlist applies at all.
+  it.each(["find . -name node_modules | xargs rm -rf", "ls | xargs rm -rf"])(
+    "refuses the target-less %s in a run only",
+    (command) => {
+      expect(bash(command).status).toBe(0);
+      expect(bash(command, AGENT).status).toBe(2);
+    },
+  );
+
+  // A newline ends a command as surely as a semicolon does. State surviving one used to carry a
+  // recursive-delete flag onto the next line and block it, naming a target it never had.
+  it("does not leak an invocation across a newline", () => {
+    expect(bash("rm -rf node_modules\npnpm install", AGENT).status).toBe(0);
+  });
+
+  // ...but a backslash at the end of the line is not that newline: the shell joins the two into
+  // one command before it reads a word, so the target list continues rather than ending. Without
+  // the join, making the newline end an invocation would have dropped everything after it.
+  it("reads a target list continued onto the next line", () => {
+    expect(bash("rm -rf node_modules \\\n  src", AGENT).status).toBe(2);
+    expect(bash("rm -rf node_modules \\\n  dist", AGENT).status).toBe(0);
+  });
+
+  it("still judges a second delete written on its own line", () => {
+    const r = bash("rm -rf dist\nrm -rf src", AGENT);
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("src");
+  });
+
+  // git-push(1) documents `-d, --delete` as one option, an exact synonym since 1.7.0, so the
+  // short spelling deletes a shared branch just as the long one does.
+  it.each([
+    "git push -d origin develop",
+    "git push origin -d main",
+    "git push --delete origin develop",
+  ])("blocks the shared-branch delete %s", (command) => {
+    expect(bash(command).status).toBe(2);
+  });
+
+  // Every rule in the file is line-oriented, so the join is what lets any of them see a command
+  // the author wrapped. This one is not about `rm` at all, which is the point.
+  it("blocks a shared-branch delete wrapped onto two lines", () => {
+    expect(bash("git push --delete \\\n  origin develop").status).toBe(2);
+  });
+
+  // Deleting a merged feature branch is routine, and `--delete-branch` on a merge needs it -
+  // in either spelling. `develop-foo` is a branch of its own: the rule ends on a word boundary
+  // that excludes `-`, so a name merely starting with a shared one is not swallowed.
+  it("leaves a feature branch deletable", () => {
+    for (const env of [{}, AGENT]) {
+      expect(bash("git push origin --delete fix/issue-12-x", env).status).toBe(
+        0,
+      );
+      expect(bash("git push -d origin fix/issue-12-x", env).status).toBe(0);
+      expect(bash("git push origin -d develop-foo", env).status).toBe(0);
+    }
+  });
+});
 })
 
 describe('guard-generated.sh', () => {

@@ -81,7 +81,7 @@ resolve() {
 }
 
 deny_outside() { # reason
-  echo "BLOCKED (agent run): '$file_path' $1. A run writes only inside the worktree it was given. A change that belongs to another repository - design4pro/agent-kit, say - is proposed there as a pull request from its own clone, never by editing a sibling working tree." >&2
+  echo "BLOCKED (agent run): '$file_path' $1. A run writes only inside the worktree it was given. A change that belongs to another repository - a sibling checkout on this machine, say - is proposed there as a pull request from its own clone, never by editing a sibling working tree." >&2
   exit 2
 }
 
