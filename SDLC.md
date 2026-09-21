@@ -252,7 +252,8 @@ Two amendment rules are specific to this document's shape:
   lands reads a _narrower_ window than the sweep before it did. Reconciling what merged before the
   first heading is a one-time explicit backfill — `om-close-fixed-issues --since <date>` with a
   `--limit` wide enough to reach that far back, because the default 50 is itself a shorter reach
-  than the date bound — and it is tracked as its own issue, not implied by this file existing. Draft
+  than the date bound — and it is tracked as its own issue (#697), not implied by this file
+  existing. Draft
   the next entry by hand on the open promotion PR; it is deliberately not on a schedule, because a
   person writes the Highlights paragraph.
 - **CI is the merge authority** (ADR 0021). The local validation gate is the fast loop that keeps a
