@@ -34,12 +34,12 @@ reported by `om-review-prs`, not repaired by a sweeper.
 An intake label is a state, and it is the ladder the pipeline walks by itself.
 
 - `needs-triage` - the issue is groomed and passes the Definition of Ready, and nobody has decided
-  yet whether an agent may take it. **Today a maintainer adds it, and `afk-architecture-review`
-  adds it to its own `Strong` candidates** - nothing else does, which is why this ladder has
-  launched almost nothing: grooming records `READY_STATUS` and stops. The edge that would make
-  the loop self-feeding - a groom ending `READY_STATUS=ready` applies `needs-triage` as its last
-  mutation - is designed and not yet wired (cezar `.ai/specs/2026-09-17-afk-intake-bridge.md`).
-  **Triage new issues** reacts to the label and runs `afk-triage`.
+  yet whether an agent may take it. **A maintainer adds it, `afk-architecture-review` adds it to
+  its own `Strong` candidates, and grooming adds it** to an issue that a maintainer opened and
+  that ended `READY_STATUS=ready` - the edge that makes this ladder self-feeding. Grooming's gate
+  is narrow and its conditions are in `.ai/skills/om-auto-manage-issues/SKILL.md`; an issue that
+  fails any of them still waits for a person. **Triage new issues** reacts to the label and runs
+  `afk-triage`.
 - `needs-info` - waiting on the reporter. `afk-triage` sets it; a human moves it back to
   `needs-triage` once the answer lands.
 - `ready-for-agent` - briefed, scoped by the SLC rule, and safe to implement unattended.
@@ -76,8 +76,8 @@ skill's repo-local override removes it first, so a command still present is a ru
 issue form ─► category;  Sentry sweep ─► bug + priority-high + groom
       ─(issue.opened by a maintainer, or the groom label)─► + priority, risk, Definition of Ready comment, implementation notes
 
-  the ladder (today: a human adds needs-triage; the dashed edge is designed, not wired):
-      groom ends READY_STATUS=ready ┄┄► needs-triage  ◄── human
+  the ladder (grooming feeds it within a narrow gate; a human may also add the label):
+      groom ends READY_STATUS=ready ───► needs-triage  ◄── human
             ─(Triage new issues)─► afk-triage: Agent Brief + SLC scope check
                   ├─► needs-info      ─► reporter answers ─► human: back to needs-triage
                   ├─► ready-for-human ─► a person picks it up (security, risk-high, spec, judgement)
@@ -90,7 +90,7 @@ human: spec (feature) ─► spec PR (documentation, skip-qa, Refs #n) ─► hu
       ─► human: autofix on it ─► om-auto-fix-issue's feature route ─► om-auto-implement-spec (cockpit: implement-spec is the same skill by hand)
 PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA, never merge
 claude-review leaves open threads ─► review-threads ─(Resolve blocking review threads)─► om-auto-fix-pr replies and resolves
-housekeeping (NO automation - started by hand): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
+housekeeping (no CEZAR automation; launchd runs it 07:00/12:00/17:00 on weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
       ─► issue closed when its `Closes #n` PR merged into develop
 human: om-approve-merge-pr from the cockpit; needs-qa merges only with qa-approved
 ```
