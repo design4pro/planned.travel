@@ -18,9 +18,19 @@ const template = readFileSync(
 // The instruction alone, and stopping short of the `docs/agents/cezar.md` pointer that follows
 // it: the header says "the cezar host" and names a path under .ai/cezar/, so a substring search
 // over anything wider passes on a template that never asks for the binary.
-const instruction =
-  template.match(/__PATH__ with a PATH that[\s\S]*?(?=, then install)/)?.[0] ??
-  ''
+const instruction = template.match(
+  /__PATH__ with a PATH that[\s\S]*?(?=, then install)/,
+)?.[0]
+
+// Both halves are read by their wording, so a rephrasing on either side stops the pattern
+// matching. That must be an error and not a fallback: `''` contains no binary name, so the
+// npx assertion below would pass on it and report a guard that is no longer guarding anything.
+if (!instruction) {
+  throw new Error(
+    'The __PATH__ instruction was not found in the plist header. If the comment was rephrased ' +
+      'on purpose, update the pattern in this test to match the new wording.',
+  )
+}
 
 const doc = readFileSync(
   resolve(__dirname, '../../../docs/agents/cezar.md'),
@@ -29,12 +39,19 @@ const doc = readFileSync(
 
 // `… /bin/bash -c 'command -v cezar node gh curl'` — the binaries the doc makes an operator
 // verify under the installed plist's own PATH.
-const required =
-  doc.match(/command -v ((?:[a-z0-9-]+ )+[a-z0-9-]+)'/)?.[1].split(' ') ?? []
+const required = doc
+  .match(/command -v ((?:[a-z0-9-]+ )+[a-z0-9-]+)'/)?.[1]
+  .split(' ')
+
+if (!required) {
+  throw new Error(
+    'The `command -v` check was not found in docs/agents/cezar.md § Housekeeping. If the check ' +
+      'was rewritten, update the pattern in this test to match it.',
+  )
+}
 
 describe('dev.planned-travel.housekeeping.plist', () => {
   it('names in its __PATH__ instruction every binary docs/agents/cezar.md makes the operator check', () => {
-    expect(required.length).toBeGreaterThan(0)
     for (const binary of required) {
       expect(instruction).toContain(binary)
     }
