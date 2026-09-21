@@ -5,10 +5,12 @@ description: >
   behind it. Optionally the PMTiles basemap in the local R2 simulator - see the
   `basemap` input, which is off.
 
-  Assumes a runner that already carries the browsers. That used to mean a job
-  running in `mcr.microsoft.com/playwright:v<version>-noble`; it now means the
-  self-hosted pool, whose image is built FROM exactly that. Installing them per
-  run costs a couple of minutes and pins nothing extra.
+  Brings its own browsers when the runner does not carry them. A GitHub-hosted
+  image ships none, so the step below installs exactly the projects the caller
+  asks for; the self-hosted pool's image is built FROM
+  `mcr.microsoft.com/playwright:v<version>-noble` and already has them, so the
+  step is skipped there. The version installed is the one `pnpm install` just
+  resolved from the lockfile, so nothing is pinned twice.
 
 inputs:
   basemap:
@@ -43,6 +45,14 @@ inputs:
       Dated and immutable by policy (docs/DEPLOY.md 7.4), which is what makes it
       a sound cache key.
     required: false
+  browsers:
+    description: >
+      Space-separated Playwright browsers to install when the runner carries
+      none. `chromium` covers the `setup` and `chromium` projects, which is what
+      the critical journeys run; the WebKit suite passes `chromium webkit`,
+      because its `mobile-safari` project still depends on `setup`.
+    required: false
+    default: 'chromium'
   verify-seed:
     description: >
       Run scripts/seed/verify.mjs after seeding. On by default; the sharded gate
@@ -56,6 +66,18 @@ runs:
   steps:
     - name: Set up the toolchain
       uses: ./.github/actions/setup
+
+    # The pool's image carries the browsers and the system libraries they link
+    # against; a GitHub-hosted image carries neither. The condition is on the
+    # environment rather than on a label, matching `../setup/action.yml`, so a
+    # job that falls back to the pool skips a download it already has.
+    #
+    # `--with-deps` is the half that cannot be cached - it is apt, not a
+    # tarball - which is why this step is a plain install rather than a restore.
+    - name: Install the browsers when the runner carries none
+      if: runner.environment == 'github-hosted'
+      shell: bash
+      run: pnpm exec playwright install --with-deps ${{ inputs.browsers }}
 
     - name: Generate route tree
       shell: bash

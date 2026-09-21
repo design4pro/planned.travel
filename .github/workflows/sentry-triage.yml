@@ -35,10 +35,11 @@ concurrency:
   cancel-in-progress: false
 
 # `runs-on` below reads through `vars.RUNNER_AGENT`, an organisation variable that is
-# deliberately unset: unset, the default here selects the self-hosted agent pool - no
-# mounted caches, one job per container, the container discarded afterwards. Setting it
-# to `["ubuntu-latest"]` moves the job back to a GitHub-hosted runner without a pull
-# request. ADR 0023.
+# deliberately unset: unset, the default here selects a GitHub-hosted runner, which is
+# discarded after the job by the platform - the disposability this job needs, since
+# `claude.ai/install.sh` writes into `$HOME` on every run. Setting it to
+# `["self-hosted","linux","ARM64","agent"]` moves it onto the ephemeral agent pool,
+# which provides the same property by configuration. ADR 0026 supersedes ADR 0023.
 #
 # The ephemeral pool is also what keeps the `claude.ai/install.sh` step below honest:
 # it installs into `$HOME/.local/bin` on every run, and on a runner that outlived its
@@ -49,7 +50,7 @@ jobs:
     # A fork inherits the cron, has none of the secrets, and would mail its owner a red run every
     # week forever. Pin it to this repository.
     if: github.repository == 'design4pro/planned.travel'
-    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["self-hosted","linux","ARM64","agent"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["ubuntu-latest"]') }}
     timeout-minutes: 30
 
     permissions:

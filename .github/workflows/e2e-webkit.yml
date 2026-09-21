@@ -77,7 +77,7 @@ jobs:
   # — which is why this job needs no timeout of its own beyond ci.yml's 20 minutes.
   e2e-webkit:
     name: e2e · webkit (${{ matrix.shard }}/2)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["ubuntu-latest"]') }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -95,6 +95,9 @@ jobs:
       - name: Prepare the e2e environment
         uses: ./.github/actions/e2e-env
         with:
+          # `mobile-safari` is WebKit, and it depends on the `setup` project,
+          # which signs in through Desktop Chrome - so this suite needs both.
+          browsers: chromium webkit
           # Both shards seed identical databases; auditing the seed once is proof
           # enough, and 25 s off the other shard's critical path.
           verify-seed: ${{ matrix.shard == 1 }}
@@ -134,7 +137,7 @@ jobs:
     name: e2e · webkit merged report
     needs: e2e-webkit
     if: ${{ !cancelled() }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["ubuntu-latest"]') }}
     timeout-minutes: 10
 
     steps:

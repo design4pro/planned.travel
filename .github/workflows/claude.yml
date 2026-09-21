@@ -40,7 +40,7 @@ jobs:
     # turns, so nothing it leaves behind should be able to reach the next job. Setting the
     # `RUNNER_AGENT` organisation variable to `["ubuntu-latest"]` moves it back to
     # GitHub-hosted runners without a pull request.
-    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["self-hosted","linux","ARM64","agent"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["ubuntu-latest"]') }}
     timeout-minutes: 45
 
     permissions:

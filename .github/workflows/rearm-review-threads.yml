@@ -26,7 +26,7 @@ jobs:
   rearm-review-threads:
     if: github.event.action == 'unlabeled' && github.event.label.name == 'in-progress'
     # The ci pool, not the agent pool: this job runs one repository script and spends no tokens.
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["ubuntu-latest"]') }}
     permissions:
       contents: read
       pull-requests: write

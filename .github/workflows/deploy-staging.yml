@@ -14,10 +14,11 @@ permissions:
   contents: read
 
 # `runs-on` below reads through `vars.RUNNER_DEPLOY`, an organisation variable that
-# is deliberately unset: unset, the default here selects GitHub-hosted runners, so a
-# deploy never queues behind the self-hosted pool and still runs when the machine
-# behind it is down. Shipping is the one thing in this repository that does; ADR 0023
-# records why.
+# is deliberately unset: unset, the default here selects GitHub-hosted runners - the
+# same side every other variable now defaults to (ADR 0026). It stays a variable of
+# its own so that moving CI onto the pool for cost never drags shipping with it: a
+# deploy must not queue behind the pool, and must still run when the machine behind
+# it is down. ADR 0023 recorded why, and ADR 0026 keeps that part intact.
 #
 # The default is plan-dependent: it fits GitHub Team's 3,000 included minutes
 # (verified 2026-09-17), not GitHub Free's 2,000. If the organisation is ever

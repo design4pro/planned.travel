@@ -34,7 +34,7 @@ jobs:
 
     # The agent pool, for the reason spelled out at "Run Claude Code Review" below: this job is
     # only safe to run with `bypassPermissions` because the runner does not outlive it.
-    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["self-hosted","linux","ARM64","agent"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_AGENT || '["ubuntu-latest"]') }}
     permissions:
       contents: read
       # The action authenticates as this job's GITHUB_TOKEN, so `read` here made both channels the

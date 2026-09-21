@@ -18,7 +18,7 @@ which is mostly a story about what the cloud VM cannot do.
 | ---------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | **Cloud session** (`claude --cloud`, claude.ai/code) | Anthropic VM: Ubuntu 24.04 x86_64, 4 vCPU, 16 GB RAM, 30 GB disk | You, from the CLI, the web, or the phone                                    |
 | **Routine**                                          | The same VM, unattended                                          | cron, an authenticated `POST`, or a GitHub `pull_request` / `release` event |
-| **`@claude` GitHub Action**                          | The self-hosted `agent` runner pool (ADR 0023)                   | `@claude` in an issue or a review                                           |
+| **`@claude` GitHub Action**                          | A GitHub-hosted runner (ADR 0026)                                | `@claude` in an issue or a review                                           |
 
 The distinction that matters most here: **routines have no `issues` trigger.**
 The supported GitHub events are pull requests and releases, and nothing else. So
