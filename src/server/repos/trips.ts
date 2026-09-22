@@ -14,7 +14,6 @@ import {
   desc,
   eq,
   exists,
-  getTableColumns,
   gte,
   inArray,
   isNull,
@@ -83,7 +82,10 @@ import {
 import type { SQL } from 'drizzle-orm'
 import type { ShareScopes } from '#/server/db/schema'
 import type { Day, ShareLink, Trip, TripMember } from '#/server/db/types'
-import type { ListOptions, TenantScope, TenantTable } from './base'
+import type { ListOptions, TenantScope } from './base'
+import { insertChunked } from './batch'
+
+export { MAX_BOUND_PARAMETERS, chunkFor } from './batch'
 
 /*
  * The imports above close two cycles — `places.ts` and `itinerary.ts` both import this module for
@@ -745,11 +747,16 @@ export async function createTrip(
     joinedAt: new Date(),
   })
 
-  if (trip.startDate && trip.endDate) {
-    await syncTripDays(scope, trip.id, {
-      startDate: trip.startDate,
-      endDate: trip.endDate,
-    })
+  try {
+    if (trip.startDate && trip.endDate) {
+      await syncTripDays(scope, trip.id, {
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+      })
+    }
+  } catch (error) {
+    await tripsRepository.requireRemove(scope, trip.id)
+    throw error
   }
 
   return trip
@@ -785,7 +792,15 @@ export async function updateTrip(
     ...(slug === undefined ? {} : { slug }),
   })
 
-  if (startDate !== existing.startDate || endDate !== existing.endDate) {
+  const needsDayRunRepair =
+    startDate !== null &&
+    endDate !== null &&
+    (await listTripDays(scope, tripId)).length === 0
+  if (
+    startDate !== existing.startDate ||
+    endDate !== existing.endDate ||
+    needsDayRunRepair
+  ) {
     await syncTripDays(scope, tripId, { startDate, endDate })
   }
 
@@ -856,63 +871,6 @@ function assertDateOrder(
  * Copying a trip (PRD #104 decisions 3, 4a, 4b, 6 and 9)
  * ---------------------------------------------------------------------------------------------- */
 
-/**
- * D1 refuses a statement carrying more than this many bound parameters.
- *
- * Cloudflare's limit, not a preference. It binds here rather than in `base.ts` because
- * `insertMany` does not chunk — measured, it is a single `.values(records).returning()` — so the
- * divisor belongs at the call site that applies it, and a constant in `base.ts` would read as a
- * promise that the primitive chunks on the caller's behalf.
- */
-export const MAX_BOUND_PARAMETERS = 100
-
-/** How many rows of `columns` bound parameters each fit in one statement. */
-export function chunkFor(columns: number): number {
-  return Math.max(1, Math.floor(MAX_BOUND_PARAMETERS / columns))
-}
-
-/**
- * How many parameters one inserted row of `table` binds.
- *
- * The table's whole column count, not the payload's key count — the payload is the number that
- * looks right and is wrong. Drizzle's insert builder walks *every* column of the table for every
- * row: a column the payload carries binds its value, and a column the payload omits binds its
- * `$defaultFn`/`$onUpdateFn` result, which on these tables means `id`, `created_at` and `updated_at`
- * bind a parameter each despite never appearing in a row object. `organization_id` is a column too,
- * so counting the table also covers the one `insertMany` stamps on.
- *
- * It is an upper bound: the columns Drizzle renders as a literal `null` are counted and bind
- * nothing. That only narrows a chunk, which is the safe direction to be wrong in.
- */
-function boundParametersPerRow(table: TenantTable): number {
-  return Object.keys(getTableColumns(table)).length
-}
-
-/**
- * Inserts `rows` into `table` through `insert`, in statements small enough for D1 to accept.
- *
- * `beforeChunk` runs immediately before each statement with the number of rows it carries. The
- * `places` pass uses it to re-assert the ceiling against the live count, because a copy long enough
- * to need several statements is long enough for another writer to cross that ceiling under it.
- */
-async function insertChunked<TRow extends object, TResult>(
-  table: TenantTable,
-  rows: ReadonlyArray<TRow>,
-  insert: (chunk: ReadonlyArray<TRow>) => Promise<Array<TResult>>,
-  beforeChunk?: (rowsInChunk: number) => Promise<void>,
-): Promise<Array<TResult>> {
-  if (rows.length === 0) {
-    return []
-  }
-  const size = chunkFor(boundParametersPerRow(table))
-  const inserted: Array<TResult> = []
-  for (let index = 0; index < rows.length; index += size) {
-    const chunk = rows.slice(index, index + size)
-    await beforeChunk?.(chunk.length)
-    inserted.push(...(await insert(chunk)))
-  }
-  return inserted
-}
 
 export interface StartTripCopyInput {
   readonly title: string

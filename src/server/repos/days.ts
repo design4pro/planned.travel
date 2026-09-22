@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { DAY_NOTE_ICONS } from '#/components/planner/types'
 import { dayNotes, days } from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
+import { chunkFor, insertChunked } from './batch'
 import { NotFoundError } from './context'
 import { unlinkTransportsFromDays } from './transports'
 import {
@@ -27,6 +28,9 @@ import type { Day, DayNote } from '#/server/db/types'
 
 export const daysRepository = createTenantRepository(days, 'day')
 export const dayNotesRepository = createTenantRepository(dayNotes, 'day note')
+
+// `inArray` binds one parameter per id and tenantFilter binds the organisation id as one more.
+const DAY_ID_CHUNK_SIZE = chunkFor(1) - 1
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -189,14 +193,14 @@ export async function syncTripDays(
     // No date range: keep whatever days exist but clear their stale dates.
     const dated = existing.filter((day) => day.date !== null)
     if (dated.length > 0) {
-      await daysRepository.updateWhere(
-        scope,
-        inArray(
-          days.id,
-          dated.map((day) => day.id),
-        ),
-        { date: null },
-      )
+      const datedIds = dated.map((day) => day.id)
+      for (let index = 0; index < datedIds.length; index += DAY_ID_CHUNK_SIZE) {
+        await daysRepository.updateWhere(
+          scope,
+          inArray(days.id, datedIds.slice(index, index + DAY_ID_CHUNK_SIZE)),
+          { date: null },
+        )
+      }
       return listTripDays(scope, tripId)
     }
     return existing
@@ -205,8 +209,11 @@ export async function syncTripDays(
   const surplus = existing.slice(wanted.length)
   if (surplus.length > 0) {
     const surplusIds = surplus.map((day) => day.id)
-    await unlinkTransportsFromDays(scope, surplusIds)
-    await daysRepository.removeWhere(scope, inArray(days.id, surplusIds))
+    for (let index = 0; index < surplusIds.length; index += DAY_ID_CHUNK_SIZE) {
+      const chunk = surplusIds.slice(index, index + DAY_ID_CHUNK_SIZE)
+      await unlinkTransportsFromDays(scope, chunk)
+      await daysRepository.removeWhere(scope, inArray(days.id, chunk))
+    }
   }
 
   const kept = existing.slice(0, wanted.length)
@@ -219,13 +226,14 @@ export async function syncTripDays(
 
   const missing = wanted.slice(kept.length)
   if (missing.length > 0) {
-    await daysRepository.insertMany(
-      scope,
+    await insertChunked(
+      days,
       missing.map((date, offset) => ({
         tripId,
         dayNumber: kept.length + offset + 1,
         date,
       })),
+      (chunk) => daysRepository.insertMany(scope, chunk),
     )
   }
 

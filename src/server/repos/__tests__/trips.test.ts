@@ -15,7 +15,9 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, expectTypeOf, it } from 'vitest'
 import { trips as demoTrips } from '#/routes/api/dev/-seed/dataset'
-import { trips } from '#/server/db/schema'
+import { days, trips } from '#/server/db/schema'
+import { MAX_BOUND_PARAMETERS } from '../batch'
+import { daysRepository, listTripDays } from '../days'
 import {
   createTrip,
   deleteTrip,
@@ -57,6 +59,43 @@ describe('trip identifiers', () => {
     harness = await createHarness()
     tenant = await harness.seedTenant('keys')
     await subscribeTenant(tenant.scope, 'crew')
+  })
+
+  it('creates a two-week dated run within D1’s bound-parameter ceiling', async () => {
+    harness.statements.length = 0
+
+    const trip = await createTrip(tenant.scope, {
+      title: 'Two weeks in Sardinia',
+      startDate: '2026-07-01',
+      endDate: '2026-07-14',
+    })
+
+    expect(await listTripDays(tenant.scope, trip.id)).toMatchObject(
+      Array.from({ length: 14 }, (_, offset) => ({
+        dayNumber: offset + 1,
+        date: `2026-07-${String(offset + 1).padStart(2, '0')}`,
+      })),
+    )
+    expect(
+      Math.max(
+        ...harness.statements.map((statement) =>
+          (statement.match(/\?/g) ?? []).length,
+        ),
+      ),
+    ).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+  })
+
+  it('rebuilds an empty dated run when the trip is saved again', async () => {
+    const trip = await createTrip(tenant.scope, {
+      title: 'Sardinia',
+      startDate: '2026-07-01',
+      endDate: '2026-07-14',
+    })
+    await daysRepository.removeWhere(tenant.scope, eq(days.tripId, trip.id))
+
+    await updateTrip(tenant.scope, trip.id, { title: 'Sardinia repaired' })
+
+    expect(await listTripDays(tenant.scope, trip.id)).toHaveLength(14)
   })
 
   describe('when the caller names no id', () => {
