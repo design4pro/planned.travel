@@ -70,3 +70,29 @@ The prompt is not the whole routine: the dedup, the caps and the body live in `p
 second copy of that policy through `claude_args` would give it two owners, which is what
 `docs/SPEC.md` §8 forbids. The script runs one `claude -p` session with Bash, Edit and Write removed
 from its tools, parses the `<sentry-triage>` block against `reportSchema`, and files from the result.
+
+## Connection preflight and failure evidence
+
+[Actions run 35721203345](https://github.com/design4pro/planned.travel/actions/runs/35721203345)
+failed on 2026-09-22 in `Sweep Sentry`: the agent reported `CONNECT_TIMEOUT` after 30000 ms,
+with `find_projects` and the other Sentry tools absent. This proves connection failure, not a
+specific cause such as a cold npm cache. The package was already pinned to `0.39.0`.
+
+Before either a local or scheduled sweep launches the agent, `mcp-preflight.ts` runs the same
+configured command with `--help` to populate the package cache (120-second ceiling), then performs
+an MCP stdio `initialize`, `notifications/initialized` and paginated `tools/list`. All six tools
+used by the prompt must be present. Each connection attempt has a 30-second total ceiling,
+including pagination. Only that read-only connection phase retries, at most once; package prewarm,
+the agent survey and issue filing are never retried. The child process group is terminated before
+the next attempt. Raw server output and credentials are not logged.
+
+`pnpm sentry-triage --check-mcp` runs only this preflight, without GitHub access, an agent session,
+Sentry tool calls or issue filing. It requires the same environment as the sweep. Discovery proves
+transport and tool availability, not token authorization against Sentry data; the agent still must
+successfully call `find_projects`. Either failure exits non-zero. Neither becomes an empty-findings
+report. Missing workflow credentials also fail instead of silently skipping the sweep. Diagnostic
+report uploads are best effort and expire after two days. The weekly schedule, selection policy and
+deduplication remain unchanged.
+
+Protocol reference: [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle)
+and [tools discovery](https://modelcontextprotocol.io/specification/2025-03-26/server/tools).
