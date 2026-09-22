@@ -153,11 +153,9 @@ describe('the two trip figures on one atlas screen', () => {
   it('names the panel tile as the trips the reader is on', () => {
     const trips = tile(renderPanel(), 'trips')
 
-    // The tile read as one run, in the order it prints: the figure stands under
-    // *this* label. That is the claim — not that a `0` and the words "Your
-    // trips" are each somewhere on the panel, which they would be however the
-    // six tiles were shuffled.
-    expect(said(trips.textContent)).toContain('your trips0')
+    // Scope both reads to this tile without depending on StatCard's print order.
+    expect(within(trips).getByText('Your trips', { exact: true })).toBeTruthy()
+    expect(within(trips).getByText('0', { exact: true })).toBeTruthy()
     expect(within(trips).getByText('Every trip you are on')).toBeTruthy()
   })
 
@@ -212,7 +210,10 @@ describe('the two place figures on one atlas screen', () => {
   it('names the panel tile as the places on the trips the reader is on', () => {
     const places = tile(renderPanel(), 'places')
 
-    expect(said(places.textContent)).toContain('your places7')
+    expect(
+      within(places).getByText('Your places', { exact: true }),
+    ).toBeTruthy()
+    expect(within(places).getByText('7', { exact: true })).toBeTruthy()
   })
 
   it("names the country card's tally as the workspace's", () => {

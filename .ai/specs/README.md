@@ -6,10 +6,11 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (3)
+## Draft — being written (4)
 
 | Spec                                                                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
 | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [Put a stay on the board and create it from an import](2026-09-22-stay-on-board-and-import.md)                                           | 2026-09-22 | [#180](https://github.com/design4pro/planned.travel/issues/180) | [#708](https://github.com/design4pro/planned.travel/issues/708) | —              |
 | [More than one workspace, and a way to move between them](2026-09-20-multiple-workspaces.md)                                             | 2026-09-20 | [#640](https://github.com/design4pro/planned.travel/issues/640) | —                                                               | —              |
 | [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627) | —              |
 | [Weather for every day of a trip, from free sources we are licensed to use](2026-09-19-per-day-weather.md)                               | 2026-09-19 | [#631](https://github.com/design4pro/planned.travel/issues/631) | [#636](https://github.com/design4pro/planned.travel/issues/636) | —              |
