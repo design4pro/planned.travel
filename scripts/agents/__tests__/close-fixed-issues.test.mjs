@@ -33,6 +33,10 @@ describe('parseCloseLinks', () => {
     ).toEqual([311])
   })
   it.each([
+    '    Closes #311',
+    '\tCloses #311',
+    '>     Closes #311',
+    '> \tCloses #311',
     'Refs #311',
     '#311',
     'prefixes #311',
@@ -70,6 +74,23 @@ describe('planClose', () => {
     'https://github.com/other/repo/issues/311',
   ])('skips non-local issue URLs: %s', (url) => {
     expect(planClose(pr, { ...issue, url }, options).action).toBe('skip')
+  })
+  it('leaves the implementation issue open after a design-only spec merge', () => {
+    expect(
+      planClose({ ...pr, headRefName: 'spec/map-style' }, issue, options),
+    ).toEqual({
+      action: 'skip',
+      reason: expect.stringContaining('design-only'),
+    })
+  })
+  it('allows ordinary documentation fixes to close their issue', () => {
+    expect(
+      planClose(
+        { ...pr, headRefName: 'fix/docs', labels: [{ name: 'documentation' }] },
+        issue,
+        options,
+      ).action,
+    ).toBe('close')
   })
   it('never closes a bare mention', () => {
     expect(planClose({ ...pr, body: 'Refs #311' }, issue, options).action).toBe(

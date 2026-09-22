@@ -13,9 +13,8 @@ function prose(text) {
   const lines = String(text ?? '')
     .split('\n')
     .map((line) => {
-      const delimiter = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(
-        line.replace(/^(?: {0,3}> ?)+/, ''),
-      )
+      const content = line.replace(/^(?: {0,3}> ?)+/, '')
+      const delimiter = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(content)
       if (fence) {
         if (
           delimiter &&
@@ -30,6 +29,7 @@ function prose(text) {
         fence = delimiter[1]
         return '\uFFFC'
       }
+      if (/^(?: {4}| *\t)/.test(content)) return '\uFFFC'
       return line
     })
     .join('\n')
@@ -74,6 +74,11 @@ export function planClose(pr, issue, { baseBranch, repo }) {
     return {
       action: 'skip',
       reason: 'The reference is not an issue in the selected repository.',
+    }
+  if (pr.headRefName?.startsWith('spec/'))
+    return {
+      action: 'skip',
+      reason: 'The PR is design-only; its implementation issue must stay open.',
     }
   if (!pr.mergedAt || pr.isDraft)
     return { action: 'skip', reason: 'The PR is not a merged, non-draft PR.' }
@@ -210,7 +215,7 @@ function main() {
       '--limit',
       options.limit,
       '--json',
-      'number,title,body,mergedAt,mergeCommit,baseRefName,isDraft',
+      'number,title,body,mergedAt,mergeCommit,baseRefName,headRefName,isDraft',
     ]),
   )
   if (prs.length === Number(options.limit))

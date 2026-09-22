@@ -13,6 +13,11 @@ they target `develop`, while the default branch is `main`. Step 3.1 therefore
 yields no links for those PRs. The explicit English closing keywords in the PR
 title and body (step 3.2) are the only live signal. `Refs`, bare mentions,
 cross-repository references and examples inside code do not authorize closing.
+Keep indented code (including quoted indented code) out of the parser too;
+removing code must never join a keyword to a distant issue number.
+PRs from `spec/` branches are design-only and never close implementation issues,
+even if a PR body mistakenly uses a closing keyword. The `documentation` label
+alone does not imply design-only work.
 The script reads `baseBranch` from `.ai/agentic.config.json`.
 
 Preview (the default is read-only):
