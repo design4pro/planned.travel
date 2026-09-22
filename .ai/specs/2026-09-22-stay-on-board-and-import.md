@@ -93,7 +93,6 @@ The day-panel action is available only where the existing plan write controls ar
 | `trips.plan.stay.checkIn` | Check in |
 | `trips.plan.stay.checkOut` | Check out |
 | `trips.plan.day.addStay` | Add a stay for {day} |
-| `trips.plan.stay.nights` | {count, plural, one {# night} other {# nights}} |
 
 The implementation adds each accepted key to all 23 locale catalogues in the same change. Existing `modules.book.*` stay vocabulary is reused when it expresses the same user-facing fact.
 
