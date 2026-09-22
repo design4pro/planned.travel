@@ -11,6 +11,7 @@ import {
   hasPlatformConsole,
 } from './helpers/admin.ts'
 import { visit, watchConsole } from './helpers/console.ts'
+import { restingCamera } from './helpers/places-and-maps.ts'
 import {
   APP_ROUTES,
   PUBLIC_ROUTES,
@@ -290,8 +291,8 @@ test.describe('authenticated routes', () => {
    * These are the same shape as the walks above and not the shape Playwright's
    * per-test default is sized for: an atlas journey settles one or two `/atlas`
    * documents with a live WebGL map to finish drawing, and then flies the camera
-   * once per country it opens - each flight paid for with the 1.5 s of rest
-   * `chooseCountry()` takes so the boxes it probes have stopped moving.
+   * once per country it opens. `chooseCountry()` waits for the camera and its
+   * anchored panel to stop moving before the journey probes their boxes.
    * Playwright's 30 s is one document's budget, which is what `WALK_TIMEOUT_MS`
    * above records for the walks and what `trips-core.spec.ts` records at its own
    * `test.setTimeout(90_000)` for the same reason.
@@ -339,7 +340,28 @@ test.describe('authenticated routes', () => {
     ).toBeVisible()
     // The camera frames it, and the anchor tracks the flight; the probes below
     // read boxes, so they wait for it to come to rest.
-    await page.waitForTimeout(1_500)
+    await restingCamera(page, () => null)
+    await expect
+      .poll(
+        () =>
+          page
+            .locator('[data-part="country-panel"]')
+            .evaluate(async (panel) => {
+              const box = () => {
+                const { x, y, width, height } = panel.getBoundingClientRect()
+                return JSON.stringify({ x, y, width, height })
+              }
+              const before = box()
+              await new Promise<void>((resolve) =>
+                requestAnimationFrame(() =>
+                  requestAnimationFrame(() => resolve()),
+                ),
+              )
+              return box() === before
+            }),
+        { message: 'the country panel has to stop tracking the camera flight' },
+      )
+      .toBe(true)
   }
 
   /** Every box the map surfaces are forbidden to land on. */

@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import viteReact from '@vitejs/plugin-react'
@@ -36,6 +37,9 @@ export default defineConfig({
     ],
   },
   test: {
+    // Leave one CPU for the coordinator and cap process pressure on larger hosts.
+    // Node 24 reads the container CPU quota through availableParallelism().
+    maxWorkers: Math.max(1, Math.min(4, availableParallelism() - 1)),
     projects: [
       {
         extends: true,

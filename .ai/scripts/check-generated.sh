@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Validation-gate step: the committed generated files match their sources.
-# Mirrors the three drift checks in .github/workflows/ci.yml. All three files are
+# Shared by the local validation gate and .github/workflows/ci.yml. All three files are
 # generated and committed; a hand edit or a forgotten regeneration is caught here
 # rather than as a mystery type error (route tree), a query against a column that
 # does not exist (migrations), or a spec index that quietly stops matching the
 # directory it describes.
 #
 # `worker-configuration.d.ts` is deliberately not here: it is generated and then
-# adjusted, so it has nothing to be diffed against. See ADR 0025.
+# adjusted to avoid circular imports. Binding/variable parity is checked by
+# src/server/__tests__/wrangler-config.test.ts instead of a raw typegen diff.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
