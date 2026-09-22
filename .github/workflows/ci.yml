@@ -58,59 +58,9 @@ jobs:
       - name: Set up the toolchain
         uses: ./.github/actions/setup
 
-      # `src/routeTree.gen.ts` is generated and committed. Regenerating it here
-      # proves the committed copy matches the route files in the same commit —
-      # a stale tree is otherwise only discovered as a mystery type error.
-      - name: Generate route tree
-        run: pnpm generate-routes
-
-      - name: Check the committed route tree is current
-        run: |
-          set -euo pipefail
-          # --intent-to-add first: `git diff` is blind to a file git has never
-          # seen, so without this a *new* generated file - a first route in a
-          # new directory - reports clean and the drift ships.
-          git add --intent-to-add -- src/routeTree.gen.ts
-          git diff --exit-code -- src/routeTree.gen.ts
-
-      # `drizzle/` is generated and committed the same way the route tree is, and
-      # a schema edit with no committed migration is caught here rather than in
-      # production, where it presents as a query against a column that does not
-      # exist.
-      #
-      # `< /dev/null` because drizzle-kit asks, on a rename it cannot infer,
-      # whether a column was created or renamed. On a runner there is nobody to
-      # answer, and a prompt with no stdin hangs until the job timeout instead of
-      # failing. Closed stdin turns that into an immediate, readable error.
-      - name: Generate migrations from the schema
-        run: pnpm db:generate < /dev/null
-
-      - name: Check every schema change has a committed migration
-        run: |
-          set -euo pipefail
-          git add --intent-to-add -- drizzle/
-          if ! git diff --exit-code -- drizzle/; then
-            echo "::error title=Uncommitted migration::The schema and drizzle/ disagree. Run 'pnpm db:generate' and commit the result - migrations are additive, and the running Worker has to survive the migrate-then-deploy window."
-            exit 1
-          fi
-
-      # `.ai/specs/README.md` is generated from the metadata table in each spec,
-      # and those tables are what say whether a designed change shipped, is
-      # waiting, or was dropped. The table is checked against the directory
-      # holding the file by scripts/specs/__tests__/spec-registry.test.ts; this
-      # step catches only the other half - an index nobody regenerated after
-      # moving a spec or appending a pull request to one.
-      - name: Generate the spec index
-        run: pnpm generate-spec-index
-
-      - name: Check the committed spec index is current
-        run: |
-          set -euo pipefail
-          git add --intent-to-add -- .ai/specs/README.md
-          if ! git diff --exit-code -- .ai/specs/README.md; then
-            echo "::error title=Stale spec index::.ai/specs/README.md no longer matches .ai/specs/. Run 'pnpm generate-spec-index' and commit the result."
-            exit 1
-          fi
+      # The local and CI gates share one implementation of generator drift checks.
+      - name: Check generated files
+        run: bash .ai/scripts/check-generated.sh
 
       # ESLint spends its time building a typed program and then walking it, and
       # on a pull request almost none of that work is new. `--cache` skips a file
