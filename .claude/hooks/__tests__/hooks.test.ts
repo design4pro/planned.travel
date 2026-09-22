@@ -83,6 +83,17 @@ describe('git-guardrails.sh', () => {
     expect(bash(`${command}\necho done`).status).toBe(2)
   })
 
+  it.each([
+    "cat <<'EOF'x\npayload\nEOFx\ngit reset --hard\nEOF",
+    "cat <<'EOF'\"x\"\npayload\nEOFx\ngit reset --hard\nEOF",
+  ])('does not truncate a concatenated heredoc delimiter: %s', (command) => {
+    expect(bash(command).status).toBe(2)
+  })
+
+  it('does not interpret a here-string as a heredoc body', () => {
+    expect(bash("cat <<<'EOF'\ngit reset --hard\nEOF").status).toBe(2)
+  })
+
   it('does not interpret a quoted marker as a shell heredoc', () => {
     expect(bash(`echo "<<'EOF'"\ngit reset --hard\nEOF`).status).toBe(2)
   })

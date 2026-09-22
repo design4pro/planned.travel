@@ -117,9 +117,14 @@ else
         }
         if (match($0, pattern)) {
           prefix = substr($0, 1, RSTART - 1)
+          # A third angle bracket makes this a here-string, with no body to discard.
+          if (prefix ~ /<$/) uncertain = 1
           if (prefix ~ ("[" quotes "#]") || index(prefix, sprintf("%c", 92))) uncertain = 1
           marker = substr($0, RSTART, RLENGTH)
           rest = substr($0, RSTART + RLENGTH)
+          # Shell words can concatenate quoted and unquoted parts: <<"EOF"x closes at
+          # EOFx, not EOF. Only a complete delimiter token is safe to strip.
+          if (rest != "" && rest !~ /^[[:space:];|&()<>]/) uncertain = 1
           if (rest ~ /<</) uncertain = 1
           tabs = substr(marker, 3, 1) == "-"
           offset = tabs ? 5 : 4
