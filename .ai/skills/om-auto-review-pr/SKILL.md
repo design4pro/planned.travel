@@ -15,10 +15,13 @@ Extends the installed skill: read `.claude/skills/om-auto-review-pr/SKILL.md` an
   thread blocks the merge and nothing but a human clicking will ever clear it, so a run that agrees
   and walks away has converted a one-line correction into a permanent stall. `changes-requested` is
   what says a human still owes something; the resolved thread carries what they owe.
-  Before you use this outcome, try the edit: since ADR 0025 a cezar run is refused no path at all,
-  so the reach that is actually missing is a credential, an upstream repository or a repository
-  setting - not a file the run is forbidden to open. A write outside the worktree is still refused,
-  and that one really is out of reach: it belongs in the other repository, as its own pull request.
+  Check intended write paths before implementation. ADR 0025 removes upstream ownership, not
+  runtime permissions: protected configuration can still require supervision. Declare known
+  protected writes in Cezar `writePaths` (or `cezar task --write-path`) so preflight can stop
+  before expensive work. After a denial, stop the unattended run once and hand the exact diff
+  and worktree to a supervised run with approval limited to those paths. Never enable global
+  `bypassPermissions`, switch tools to evade denial, or repeat diagnosis and tests for the same
+  refusal. Changes outside this repository belong in their own pull request.
 - On a pass without autofix (another author's PR, no `--autofix`) the threads are left as found; the report lists them by path so the autopilot's next chain can pick them up.
 
 ## Independent review and validation reuse
