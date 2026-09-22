@@ -27,20 +27,20 @@ Extend the board read model with a `PlannerStay` shape carrying the stay identit
 
 `DaySection` derives words with the existing total `stayDayWords` rule: the first day says check in, the last says check out, intermediate days show the property name, and a one-day stay renders both check-in and check-out. It renders those facts only in the header badge list, outside `SortableContext`, so a stay never becomes a planner item.
 
-`PlanScreen` adds a day-local action for an editable, non-archived trip. It opens `BookingDialog` in its accommodation branch with the clicked day as `startDayId`; saving still calls `createStayFn`. The dialog remains the sole owner of validation, reservation creation, stay creation, compensation, notices, and retry behaviour.
+`PlanScreen` adds a day-local action for an editable, non-archived trip. The plan payload supplies the trip currency and `BookingDayOption`-compatible days, including each stop's name and time, so it can mount the existing `BookingDialog` without a second loader. It opens that dialog in its accommodation branch with the clicked day as `initialStayDayId`; saving still calls `createStayFn`. The dialog remains the sole owner of validation, reservation creation, stay creation, compensation, notices, and retry behaviour.
 
-During `confirmBookingImport`, an accommodation row first creates the reservation exactly as it does today. The new branch resolves the imported start and end dates against this trip's loaded day run. When both resolve and are ordered, it calls the existing scoped accommodation writer with the new reservation id and the imported title and times. When neither date resolves, only one resolves, or the range is reversed, it leaves the reservation intact and records the existing import-review outcome rather than inventing a partial stay.
+During `confirmBookingImport`, an accommodation row first creates, records, and settles the reservation exactly as it does today. Only then does the new best-effort branch resolve the imported start and end dates against this trip's loaded day run. When both resolve and are ordered, it creates the linked accommodation with the new reservation id and the imported title and times. When neither date resolves, only one resolves, the range is reversed, or the accommodation write itself fails, the durable reservation remains recorded and is left for review rather than becoming a retryable failure or an invented partial stay.
 
 ## 📝 Architecture
 
 | Concept | Owner | Change |
 | --- | --- | --- |
-| Board stay projection | `src/routes/_app/trips/$tripId/-server/plan.ts` | Enrich `PlanBoardDay.stays` from `DayAccommodation`. |
+| Board and dialog projection | `src/routes/_app/trips/$tripId/-server/plan.ts` | Enrich `PlanBoardDay.stays`; supply currency and `BookingDayOption`-compatible days. |
 | Client planner stay shape | `src/components/planner/types.ts` | Add `PlannerStay`; replace name-only stays. |
 | Planner projection | `src/routes/_app/trips/$tripId/-ui/plan-model.ts` | Preserve the enriched shape. |
 | Day-header presentation | `src/components/planner/day-section.tsx` | Derive and render the per-day badges, outside the sequence. |
 | Day-panel entry point | `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` | Open the shared stay dialog with a selected first day. |
-| Shared dialog initial draft | `src/components/modules/book/booking-dialog.tsx` | Accept an opt-in initial stay draft without changing desk behaviour. |
+| Shared dialog initial draft | `src/components/modules/book/booking-dialog.tsx` | Accept creation-only `initialStayDayId` without changing desk behaviour. |
 | Imported stay creation | `src/server/fns/booking-import.ts` | Add the one post-reservation accommodation branch. |
 
 The existing owners remain unchanged: `src/server/fns/stay-writes.ts` owns the reservation-plus-stay write semantics, `src/server/repos/itinerary.ts` owns tenant-scoped accommodation access, and `BookingDialog` owns the user-facing stay form. No route queries a repository directly.
@@ -48,6 +48,8 @@ The existing owners remain unchanged: `src/server/fns/stay-writes.ts` owns the r
 ### Board contract
 
 `PlannerStay` is a projection, not a database type. It contains only the fields needed by the header: `id`, `name`, `startDayId`, `endDayId`, `checkInTime`, `checkInEndTime`, `checkOutTime`, `reservationId`, and the existing safe reservation URL when one is already exposed by the board. It does not duplicate a reservation record or load extra fields.
+
+The same payload adds `currency` and emits each day as the exact `BookingDayOption` shape: `id`, `dayNumber`, `date`, `title`, and stops with `assignmentId`, `placeName`, and `startTime`. Its existing board stop projection keeps `placeId` for planner behaviour; the dialog projection includes the name because the dialog's stop combobox renders names. This is one authorized plan read, not a second booking-desk fetch.
 
 The header labels are deterministic:
 
@@ -60,9 +62,9 @@ The header labels are deterministic:
 
 ### Import contract
 
-The imported accommodation branch does not call a server function from another server-function handler. It imports and calls the existing plain, scoped write helper at the appropriate boundary, keeping Zod validation at the public `confirmBookingImportFn` entry. It resolves dates only from the already authorized trip's day collection, never from client input or an unscoped lookup.
+The imported accommodation branch does not call a server function from another server-function handler. It imports and calls the existing plain, scoped itinerary writer at the appropriate boundary, keeping Zod validation at the public `confirmBookingImportFn` entry. It resolves dates only from the already authorized trip's day collection, never from client input or an unscoped lookup.
 
-A failed range resolution is deliberately not an error for the reservation: the reservation is written and remains available to review, while no `day_accommodations` row is created. A failure after a valid reservation write is logged with the import row and organization context and follows the existing per-row confirm isolation, so one malformed document does not abandon its neighbours.
+Immediately after `createReservation`, the branch appends the row to `written` and calls `settle`. It then attempts the accommodation work separately. A rejected range or accommodation write is deliberately not an error for the reservation: it has already been stamped and persisted in staged state, no `day_accommodations` row is created, and the warning carries the import row and organization context. It neither increments `failed` nor remains pending for another confirmation, so one malformed document does not create duplicate reservations on retry.
 
 ## 📝 Data Model
 
@@ -70,9 +72,9 @@ No schema change is required. `day_accommodations.reservation_id`, its index, an
 
 ## 📝 API Contracts
 
-`confirmBookingImportFn` retains its existing Zod-validated input and result. Its successful count still means reservations written; a stay range that cannot be resolved does not turn a recorded reservation into a failed import row. The observability warning distinguishes an unresolved or reversed stay range from a reservation write failure.
+`confirmBookingImportFn` retains its existing Zod-validated input and result. Its successful count still means reservations written; a stay range that cannot be resolved or a best-effort accommodation write that fails does not turn a recorded reservation into a failed import row. The observability warning distinguishes an unresolved/reversed range and an accommodation-write refusal from a reservation write failure.
 
-`BookingDialog` gains an optional, internal initial-stay input. When absent, its booking-desk behaviour and empty draft are unchanged. When supplied by the planner, it selects accommodation and the requested check-in day before the reader edits or saves anything.
+`BookingDialog` gains optional `initialStayDayId`. It is applied only when creating a new booking, selects accommodation plus the requested check-in day on every dialog open, and is ignored for edits. When absent, the booking desk keeps its existing empty draft. `PlanScreen` passes the plan payload's `currency` and `BookingDayOption` list explicitly; it does not reconstruct partial dialog data from `PlannerDay`.
 
 ## 📝 UI/UX
 
@@ -101,8 +103,8 @@ The implementation adds each accepted key to all 23 locale catalogues in the sam
 - A stay with no check-in or check-out time still renders its semantic label without an empty separator or time placeholder.
 - Multiple overlapping stays each remain a separate header fact; this feature does not impose a booking-conflict policy.
 - A viewer or archived trip sees neither the day-panel stay action nor an attempted write path.
-- An imported accommodation with dates outside the trip, only one matching date, or an end before its start writes its reservation only and is left for review.
-- An imported stay write rejected after reservation creation does not erase the reservation; it is logged and the import batch continues.
+- An imported accommodation with dates outside the trip, only one matching date, or an end before its start records, settles, stamps, and persists its reservation only, then is left for review.
+- An imported stay write rejected after reservation persistence leaves that reservation non-retryable; it is logged and the import batch continues without incrementing `failed`.
 
 ## 📝 Risks & Impact Review
 
@@ -116,7 +118,7 @@ Rollback is a normal code rollback: rows already created are valid reservations 
 | --- | --- | --- | --- |
 | 1 | What does a one-day stay say? | Render both check-in and check-out facts. | `stayDayWords` already defines both boundaries; suppressing either would lose a stated fact. |
 | 2 | Should the board add a second stay form? | No; reuse `BookingDialog` with an opt-in initial stay draft. | One dialog preserves one validation and write path. |
-| 3 | May the implementation edit the shared dialog although FR #180's owned-path list omits it? | Yes, minimally add the optional initial-stay input. ⚠ NEEDS HUMAN CONFIRMATION | The current dialog has no API that can preselect a day. Satisfying the requested same-dialog behaviour without this small shared-component change is not technically possible. |
+| 3 | May the implementation edit the shared dialog although FR #180's owned-path list omits it? | Yes, minimally add creation-only `initialStayDayId`; add the plan payload's currency and full `BookingDayOption` data. ⚠ NEEDS HUMAN CONFIRMATION | The current dialog has no API that can preselect a day, and the plan payload lacks the currency and stop names it needs. Satisfying the requested same-dialog behaviour without these small changes is not technically possible. |
 | 4 | What does import success count mean if the stay range is rejected? | Count the recorded reservation as written and leave it for review. | This preserves the existing confirm contract and the ticket explicitly requires the reservation to remain. |
 
 ## 📋 Phasing
@@ -133,6 +135,6 @@ Reuse the booking dialog from the day panel, then add the valid-range import bra
 
 1. Add `PlannerStay` and enrich the plan server/client projections. Verify typecheck and a plan-model test prove the shape reaches each covered day.
 2. Add a pure header-fact helper and render its badges in `DaySection`. Verify first, middle, last, and single-day labels; assert stays are absent from `PlannerDay.items` and `rows`.
-3. Extend `BookingDialog` with its optional initial stay draft and mount that one dialog from the editable day panel. Verify the desk's empty booking behaviour is unchanged and the planner opens accommodation with the clicked day selected.
-4. Add the accommodation branch to `confirmBookingImport`, resolving both dates against the authorized trip days before writing the stay. Verify valid creation plus all three refusal paths, each retaining the reservation.
+3. Add the plan payload's currency and full `BookingDayOption` data. Extend `BookingDialog` with creation-only `initialStayDayId`, reset it on every open, ignore it for edits, and mount that one dialog from the editable day panel. Verify the desk's empty booking behaviour is unchanged and the planner opens accommodation with the clicked day selected.
+4. Add the accommodation branch to `confirmBookingImport`. Immediately persist the new reservation in the written/settled state, then resolve both dates against authorized trip days and attempt the stay. Verify valid creation plus the three range refusals and an accommodation-write refusal: every case retains a non-retryable reservation and only the valid case creates a stay.
 5. Add the specified `e2e/journeys.spec.ts` journey for booking a multi-night stay and reading its plan headers with no console errors. Add approved copy to all 23 locales, then run the validation gate and UI evidence in light/dark, desktop/mobile.
