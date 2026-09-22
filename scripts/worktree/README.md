@@ -61,8 +61,12 @@ rounds, this one for working on the app.
 have it. The other end is fenced too, and harder: `playwright.config.ts` refuses to run non-CI
 against anything outside 3030-3040, a guard added after a round photographed a different
 worktree's application. That leaves 3001-3009, which is what this script allocates from, and it
-starts the server through `pnpm exec vite dev --port N --strictPort` so a taken port is an error
-rather than a silent drift to the next one.
+starts Vite directly with `node node_modules/vite/bin/vite.js dev --port N --strictPort`,
+so the recorded PID belongs to the server and a taken port is an error rather than a silent drift.
+Bootstrap and the test environment share `.ai/qa/dev-server-process.json`; a fresh boot stops
+only the verified predecessor from this checkout. PID reuse, another cwd or an unverifiable
+identity blocks replacement. Busy ports report their holders and cwd, including orphan markers;
+foreign processes are never terminated automatically.
 
 The port is written into `APP_URL` in the `.dev.vars` this script owns, because every auth URL is
 built from that value. A `.dev.vars` written by a person carries no marker of ours: it is left

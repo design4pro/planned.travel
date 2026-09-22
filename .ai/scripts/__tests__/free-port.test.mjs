@@ -85,6 +85,8 @@ describe('free-port.mjs', () => {
     expect(result.status).toBe(EXIT_POOL_FULL)
     expect(result.stdout).toBe('')
     expect(result.stderr).toContain('no free port')
+    expect(result.stderr).toContain(`pid ${process.pid}`)
+    expect(result.stderr).toContain(process.cwd())
   })
 
   it('prints a free port and exits 0', async () => {

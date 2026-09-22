@@ -430,11 +430,23 @@ fi
 # of a silent drift to the next one, which is how a seed ends up writing into
 # another checkout.
 
-if port_busy "$PORT"; then
-  say "a server is already answering on :${PORT}, reusing it"
+PROCESS_HELPER=".ai/scripts/dev-server-process.mjs"
+mkdir -p .ai/qa
+if [ "$FORCE" = 0 ] && port_busy "$PORT" && node "$PROCESS_HELPER" owned "$PORT"; then
+  say "this checkout's server is already answering on :${PORT}, reusing it"
 else
+  # Share ownership with the test environment so switching port pools never leaks a server.
+  node "$PROCESS_HELPER" stop || die "could not retire this checkout's previous server"
+  if port_busy "$PORT"; then
+    node "$PROCESS_HELPER" holders "$PORT"
+    die "port ${PORT} is held by an unowned server; refusing to seed it"
+  fi
   say "starting the dev server on :${PORT}"
-  pnpm exec vite dev --port "$PORT" --strictPort > dev-server.log 2>&1 &
+  node node_modules/vite/bin/vite.js dev --port "$PORT" --strictPort > dev-server.log 2>&1 &
+  APP_PID=$!
+  echo "$APP_PID" > .ai/qa/dev-server.pid
+  node "$PROCESS_HELPER" record "$APP_PID" "$PORT"
+
   for _ in $(seq 1 60); do
     curl --silent --fail --output /dev/null "${BASE_URL}/" && break
     sleep 2
