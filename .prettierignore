@@ -67,3 +67,6 @@ scripts/ci/claude-review-ran.mjs
 scripts/ci/claude-usage-limit.mjs
 scripts/ci/merge-gate.mjs
 scripts/ci/review-threads-label.mjs
+
+# Preserve Wrangler runtime declarations; only the environment header is adjusted.
+worker-configuration.d.ts
