@@ -31,8 +31,13 @@ two additions are what call it.
   because the sweep dispatched nothing: both bounds are mandatory and the script exits 2 rather
   than widening an unbounded window.
 
-  A PR the script released was **not** reviewed by this sweep. Never report it as reviewed: give it
-  its own row whose outcome states that no review was submitted and the lock was released, so the
-  summary distinguishes a review that ran from a claim that produced nothing. That is the in-repo
+  Report a released PR by what the script actually said about it, never by a blanket assumption.
+  The reconciler releases two different situations and distinguishes them in its own output: a
+  claim that produced nothing ends `no review submitted`, while a claim whose review landed but
+  whose release comment did not ends `<STATE> review submitted at <time>` - `planRelease` looks for
+  a review by this account after the claim precisely so the second case is not mislabelled. Give
+  every released PR its own row carrying that outcome verbatim. Only a PR the script reported as
+  `no review submitted` may be described as unreviewed; for the other, report the verdict it names,
+  because calling it unreviewed would contradict both the script and GitHub. That is the in-repo
   half of the second acceptance criterion on #551; what the cezar runner records as the step's
   status is its contract, not this repository's.

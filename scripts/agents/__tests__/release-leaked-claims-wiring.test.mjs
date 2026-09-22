@@ -6,6 +6,11 @@
 // tells the sweep to run is a file that is really there, and that it passes both of the bounds
 // that keep a release from becoming #490. Rename or move the script and this fails here, instead
 // of silently at 03:00 on the cezar host, where the symptom is a lock nobody releases.
+//
+// There are two entry points, and they have to agree. A sweep started from the cockpit is handed
+// `docs/agents/cezar-prompt-templates.json` as its task text, which used to say in as many words to
+// report a leaked claim "instead of repairing it" - the exact opposite of the override. One entry
+// point fixed and the other left alone is a wiring that works only when launched the right way.
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,11 +21,17 @@ import { describe, expect, it } from 'vitest'
 // `.mjs` test here uses.
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const OVERRIDE = '.ai/skills/om-review-prs/SKILL.md'
+const TEMPLATES = 'docs/agents/cezar-prompt-templates.json'
 
 // Read per test, not once in the describe body: deleting the override is the exact regression this
 // file exists to catch, and a throw during collection reports it as a broken test file rather than
 // as the wiring being gone.
 const read = () => readFileSync(resolve(repoRoot, OVERRIDE), 'utf8')
+
+const sweepTemplate = () =>
+  JSON.parse(readFileSync(resolve(repoRoot, TEMPLATES), 'utf8')).find(
+    (t) => t.id === 'om-review-prs',
+  )
 
 describe(`${OVERRIDE} wires the reconciler into the sweep`, () => {
   it('exists, because nothing else calls the reconciler', () => {
@@ -59,9 +70,24 @@ describe(`${OVERRIDE} wires the reconciler into the sweep`, () => {
     expect(read()).toMatch(/[Ss]kip the call only when the list is empty/)
   })
 
-  it('requires the call on every exit path and forbids reporting a released PR as reviewed', () => {
+  // `planRelease` deliberately reports the review when one landed but the release comment did not,
+  // and `releaseComment` names it. An override saying every released PR went unreviewed would
+  // contradict the script and GitHub both.
+  it('ties the no-review wording to what the script reported, not to the release itself', () => {
     const body = read()
     expect(body).toMatch(/every exit path/i)
-    expect(body).toMatch(/[Nn]ever report it as reviewed/)
+    expect(body).toMatch(/no review submitted/)
+    expect(body).toMatch(/review submitted at/)
+  })
+
+  it('has the cockpit prompt template agree with it', () => {
+    const template = sweepTemplate()
+    expect(
+      template,
+      `${TEMPLATES} must still define an om-review-prs entry`,
+    ).toBeDefined()
+    expect(template.text).toContain('scripts/agents/release-leaked-claims.mjs')
+    // The wording that made a template-launched sweep skip the repair.
+    expect(template.text).not.toMatch(/instead of repairing it/)
   })
 })

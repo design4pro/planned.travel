@@ -68,7 +68,7 @@
   {
     "id": "om-review-prs",
     "label": "om-review-prs - sweep every unreviewed open PR, newest first",
-    "text": "Flags: --autofix (pass it only when the sweep should also fix; by default other authors' PRs get a\nverdict and a handoff, nothing more).\nSkip drafts, PRs this account authored, and any PR another actor holds with in-progress - never\nforce-claim in a sweep. Report a claim that outlived its run instead of repairing it.",
+    "text": "Flags: --autofix (pass it only when the sweep should also fix; by default other authors' PRs get a\nverdict and a handoff, nothing more).\nSkip drafts, PRs this account authored, and any PR another actor holds with in-progress - never\nforce-claim in a sweep.\nAs the sweep's last act, on every exit path, release any claim one of its own reviews left behind:\nnode scripts/agents/release-leaked-claims.mjs --since <sweep start, ISO-8601 UTC> --prs <the PRs\nyou dispatched>. Copy its output into the report, and skip the call only when you dispatched\nnothing. Never report a released PR as reviewed unless the script named a review for it.",
     "skills": ["om-review-prs"]
   },
   {
