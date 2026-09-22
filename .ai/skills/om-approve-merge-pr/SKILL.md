@@ -16,6 +16,8 @@ Extends the installed skill: read `.claude/skills/om-approve-merge-pr/SKILL.md` 
 - Step 4: run the base-aware **merge-pr** operation in `.ai/trackers/github.md`.
   For a PR targeting `main`, it selects `--merge`; every other base keeps `--squash`.
   Re-read the base through that operation immediately before merging. Never replace
-  the selected method with the generic skill's former unconditional squash default.
+  the selected method with the generic skill's unconditional squash default.
   Keep the merge-queue exception: enqueue without a strategy or branch deletion and
   report **queued**, not merged. The queue's configured method remains authoritative.
+- Step 6: report the actual selected method (`merge commit` for `main`, `squash`
+  elsewhere), overriding the generic report template's unconditional `merged (squash)`.
