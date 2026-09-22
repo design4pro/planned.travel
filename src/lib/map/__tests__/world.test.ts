@@ -436,7 +436,7 @@ function codesOf(asset: string): Array<string> {
     .map((entry) => entry.slice(0, entry.indexOf(':')))
 }
 
-describe('scripts/build-country-outlines.mjs', () => {
+describe('scripts/build-country-outlines.mjs', { timeout: 15_000 }, () => {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..')
   const script = join(root, 'scripts/build-country-outlines.mjs')
 

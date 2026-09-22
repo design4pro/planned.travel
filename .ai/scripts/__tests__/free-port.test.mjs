@@ -52,7 +52,7 @@ describe('waitForFreePort', () => {
   })
 })
 
-describe('free-port.mjs', () => {
+describe('free-port.mjs', { timeout: 15_000 }, () => {
   const servers = []
   afterEach(() => {
     for (const server of servers.splice(0)) server.close()

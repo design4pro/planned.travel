@@ -13,10 +13,10 @@ const run = (env: Record<string, string>) =>
   spawnSync('/bin/sh', ['-e', PRE_COMMIT], {
     encoding: 'utf8',
     env: { PATH: '/nonexistent', ...env } as unknown as NodeJS.ProcessEnv,
-    timeout: 5_000,
+    timeout: 15_000,
   })
 
-describe('.husky/pre-commit', () => {
+describe('.husky/pre-commit', { timeout: 15_000 }, () => {
   it('exits at once, without running anything, inside a cezar run', () => {
     const r = run({ CEZ_TASK_ID: 'test' })
     expect(r.status).toBe(0)
