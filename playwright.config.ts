@@ -195,8 +195,7 @@ export default defineConfig({
     isCI ? ['github'] : ['list'],
     ['html', { open: 'never' }],
     // Written on every run that reaches it, so a red suite leaves a machine-readable
-    // verdict beside the HTML report. CI overrides the whole list with `--reporter=blob`
-    // and never gets here. Absent means "the run did not finish", never "nothing failed".
+    // verdict beside the HTML report. CI selects list/github/json reporters with an explicit JSON output path. Absent means "the run did not finish", never "nothing failed".
     ['json', { outputFile: 'test-results/results.json' }],
   ],
 
@@ -208,7 +207,7 @@ export default defineConfig({
     baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: isCI ? 'off' : 'retain-on-failure',
     actionTimeout: 10_000,
     navigationTimeout: 20_000,
     // Deterministic rendering: fixed locale, zone and theme keep both the

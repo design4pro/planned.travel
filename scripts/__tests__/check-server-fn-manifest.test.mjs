@@ -19,7 +19,10 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// Every case runs the manifest checker as a real Node process.
+vi.setConfig({ testTimeout: 15_000 })
 
 const SCRIPT = join(
   dirname(fileURLToPath(import.meta.url)),
