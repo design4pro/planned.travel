@@ -118,7 +118,7 @@ Rollback is a normal code rollback: rows already created are valid reservations 
 | --- | --- | --- | --- |
 | 1 | What does a one-day stay say? | Render both check-in and check-out facts. | `stayDayWords` already defines both boundaries; suppressing either would lose a stated fact. |
 | 2 | Should the board add a second stay form? | No; reuse `BookingDialog` with an opt-in initial stay draft. | One dialog preserves one validation and write path. |
-| 3 | May the implementation edit the shared dialog although FR #180's owned-path list omits it? | Yes, minimally add creation-only `initialStayDayId`; add the plan payload's currency and full `BookingDayOption` data. ⚠ NEEDS HUMAN CONFIRMATION | The current dialog has no API that can preselect a day, and the plan payload lacks the currency and stop names it needs. Satisfying the requested same-dialog behaviour without these small changes is not technically possible. |
+| 3 | May the implementation edit the shared dialog although FR #180's owned-path list omits it? | Yes, minimally add creation-only `initialStayDayId`; add the plan payload's currency and full `BookingDayOption` data. Confirmed 2026-09-22. | The current dialog has no API that can preselect a day, and the plan payload lacks the currency and stop names it needs. Satisfying the requested same-dialog behaviour without these small changes is not technically possible. |
 | 4 | What does import success count mean if the stay range is rejected? | Count the recorded reservation as written and leave it for review. | This preserves the existing confirm contract and the ticket explicitly requires the reservation to remain. |
 
 ## 📋 Phasing
