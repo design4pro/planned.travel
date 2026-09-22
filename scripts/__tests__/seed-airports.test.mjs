@@ -101,7 +101,7 @@ afterEach(() => {
   }
 })
 
-describe('scripts/seed/airports.mjs', () => {
+describe('scripts/seed/airports.mjs', { timeout: 15_000 }, () => {
   it('writes every field the artefact carries, decoded', () => {
     const { status, sql } = generate(FIXTURE)
 

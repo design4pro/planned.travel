@@ -5,8 +5,6 @@ import { env } from 'cloudflare:workers'
 
 import { serveSandcastleCoordinator } from './-lib/coordinator'
 
-import type { SandcastleCoordinatorBindings } from './-lib/coordinator'
-
 /**
  * `/api/sandcastle/*` — the door into the sandcastle run registry, where every run claims the
  * GitHub issues it is about to work on.
@@ -29,12 +27,7 @@ const handler = ({
 }: {
   request: Request
   params: { _splat?: string }
-}): Promise<Response> =>
-  serveSandcastleCoordinator(
-    env as SandcastleCoordinatorBindings,
-    request,
-    params._splat,
-  )
+}): Promise<Response> => serveSandcastleCoordinator(env, request, params._splat)
 
 export const Route = createFileRoute('/api/sandcastle/$')({
   server: { handlers: { GET: handler, POST: handler } },

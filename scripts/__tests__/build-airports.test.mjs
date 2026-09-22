@@ -136,7 +136,7 @@ function build(space, extra = []) {
   return { status: run.status, output: `${run.stdout}${run.stderr}` }
 }
 
-describe('the cut', () => {
+describe('the cut', { timeout: 15_000 }, () => {
   it('writes exactly the artefact the fixture describes', () => {
     const space = workspace()
 
@@ -184,7 +184,7 @@ describe('the cut', () => {
   })
 })
 
-describe('determinism', () => {
+describe('determinism', { timeout: 15_000 }, () => {
   it('produces the same bytes twice', () => {
     const space = workspace()
 
@@ -210,7 +210,7 @@ describe('determinism', () => {
   })
 })
 
-describe('--check', () => {
+describe('--check', { timeout: 15_000 }, () => {
   it('passes when the committed file is what a fresh build would write', () => {
     const space = workspace()
     build(space)

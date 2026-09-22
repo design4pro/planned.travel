@@ -2,10 +2,10 @@
 
 | Field              | Value       |
 | ------------------ | ----------- |
-| **Status**         | in-progress |
+| **Status**         | implemented |
 | **Issue**          | #175        |
-| **Spec PR**        | none        |
-| **Implementation** | none        |
+| **Spec PR**        | #426        |
+| **Implementation** | #438        |
 
 `03-S5` · FR #175 · Parent PRD #167 · Stage `03-S5` of `docs/plans/03-reservations-and-transport.md` (frozen), row `BKG-10`.
 
@@ -213,8 +213,8 @@ One more entry in the loader's existing `Promise.all`, so the third read costs n
 
 ## 📝 UI/UX
 
-- [A day that interleaves a stop, a note and a journey row, light and dark](assets/journey-in-its-day/mockup-01-day-sequence.html)
-- [One journey across three days, each labelled by the part that day sees](assets/journey-in-its-day/mockup-02-multi-day-journey.html)
+- [A day that interleaves a stop, a note and a journey row, light and dark](../assets/journey-in-its-day/mockup-01-day-sequence.html)
+- [One journey across three days, each labelled by the part that day sees](../assets/journey-in-its-day/mockup-02-multi-day-journey.html)
 
 Both are illustrative statics, not app code: dependency-free HTML that opens in any browser, whose colour and type values are copied from `src/styles/tokens.css` so the proportions are honest. Their rendered frames are attached to the spec PR as evidence and are not committed — `.ai/specs/AGENTS.md` keeps PNGs out of this directory. Current-state screenshots of `/trips/$tripId/plan` could not be taken — see the note under Visual change expected.
 
