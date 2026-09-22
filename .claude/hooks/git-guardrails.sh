@@ -393,28 +393,17 @@ fi
 echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+((-{1,2}[^[:space:]]+|[a-z]+)\s+)*(deploy:staging|db:migrate:remote|deploy)(\s|$)' \
   && agent_block 'pnpm deploy|remote migration' 'Deploys and remote migrations are a human decision; end the run as blocked.'
 
-# GitHub Actions only. .github/workflows/claude-code-review.yml runs on every pull_request
-# with `--permission-mode bypassPermissions` and a pull-requests:write token, so the diff it
-# reads is untrusted input and this hook is the only thing between a crafted PR and
-# `gh pr review --approve`. A Cezar run (CEZ_TASK_ID) is different: it runs on the
-# operator's host, on work the operator queued, and mutates GitHub through the tracker
-# descriptor by design, so these blocks do not apply there.
+# GitHub Actions may execute untrusted pull-request content. Keep tracker mutations blocked.
+# Cezar runs mutate GitHub through the tracker descriptor on work the operator queued.
 [ -n "${GITHUB_ACTIONS:-}" ] || exit 0
 
 actions_block() {
-  echo "BLOCKED (GitHub Actions): '$command' matches '$1'. The review job posts one comment and nothing else." >&2
+  echo "BLOCKED (GitHub Actions): '$command' matches '$1'. Tracker mutations are not allowed from this agent context." >&2
   exit 2
 }
 
 echo "$scan" | grep -Eq 'gh\s+(issue|pr)\s+(create|edit|close|reopen|delete|transfer|pin|unpin|lock|unlock|merge|review|ready|checkout)\b' && actions_block 'gh issue|pr mutation'
-# `comment` is the one verb with an exception. The code review posts its summary with
-# `gh pr comment`, and that job is the one agent run whose whole purpose is to write to a pull
-# request. Only .github/workflows/claude-code-review.yml sets the variable, and a pull request
-# cannot set it for itself: editing that workflow makes the action's OIDC exchange refuse to run
-# the review at all. `gh issue comment` stays blocked either way.
-comment_targets='issue|pr'
-[ "${CLAUDE_REVIEW_PR_COMMENT:-}" = 1 ] && comment_targets='issue'
-echo "$scan" | grep -Eq "gh\s+($comment_targets)\s+comment\b" && actions_block 'gh issue|pr mutation'
+echo "$scan" | grep -Eq 'gh\s+(issue|pr)\s+comment\b' && actions_block 'gh issue|pr mutation'
 echo "$scan" | grep -Eq 'gh\s+(label|release|repo|secret|variable|workflow|run)\s' && actions_block 'gh mutation surface'
 if echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])gh\s+api\b'; then
   echo "$scan" | grep -Eq '(--method|-X)[[:space:]=]*(POST|PATCH|PUT|DELETE)|(^|\s)(-f|-F|--field|--raw-field|--input)(\s|=)' && actions_block 'gh api non-GET'

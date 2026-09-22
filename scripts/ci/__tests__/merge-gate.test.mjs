@@ -1,6 +1,6 @@
 /**
  * `decide` is the whole script: everything around it is one env read and one exit code. It is
- * exported and tested directly, the same arrangement as `review-threads-label.test.mjs` next to it
+ * exported and tested directly
  * and for the same reason - what can go wrong is a judgement, not a crash.
  *
  * The judgement is one a human has already made by clicking a label, so the table below is just

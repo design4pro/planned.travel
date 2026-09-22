@@ -41,3 +41,5 @@ two additions are what call it.
   because calling it unreviewed would contradict both the script and GitHub. That is the in-repo
   half of the second acceptance criterion on #551; what the cezar runner records as the step's
   status is its contract, not this repository's.
+
+Before dispatching each PR, read its current head SHA and completed independent review reports. Skip another review when the same SHA already has a completed report, preserving its verdict and unresolved findings. Record the reused report and SHA in the sweep summary. Only dispatch on a changed SHA, missing report or an explicit request for another opinion. Do not add skipped PRs to the leaked-claim reconciler's dispatch list.

@@ -37,8 +37,7 @@ env:
 # variable that is deliberately unset: unset, each job's own default selects the
 # self-hosted pool. Setting it to `["ubuntu-latest"]` moves every job in every
 # repository back to GitHub-hosted runners without a pull request, which is the
-# only recovery path that does not need the host to be up - together with
-# `vars.RUNNER_AGENT`, which the required `claude-review` check reads. ADR 0023.
+# recovery path that does not need the host to be up. ADR 0023.
 
 jobs:
   verify:

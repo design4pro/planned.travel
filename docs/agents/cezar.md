@@ -130,10 +130,8 @@ hooks in `.claude/hooks/` then tighten:
   `git reflog expire`, `git gc --prune`, `git filter-branch`, `gh repo delete`, and deleting
   `develop` or `main` on the remote. Under cezar, GitHub mutations, `git add -A`, closing keywords and
   `pnpm exec` are open: the om-* skills perform them through `.ai/trackers/github.md` and `SDLC.md`
-  governs them. Under GitHub Actions every `gh issue|pr` mutation, `gh label|release|repo|secret|
-variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-review.yml` reads
-  untrusted pull-request content with a write token under `--permission-mode bypassPermissions` and
-  this hook is its only gate; `CLAUDE_REVIEW_PR_COMMENT=1` opens `gh pr comment` for that one job.
+  governs them. Under GitHub Actions, GitHub mutations remain guarded: CI can read untrusted
+  pull-request content. Retiring the review workflows does not relax those generic protections.
 - `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree and denies `.dev.vars`, `.env*`,
   `.e2e-tiles/`, cezar run state and `.ai/qa/test-env.env`.
 - `guard-generated.sh` (Edit, Write) refuses a write outside the worktree or through `..`. Its
@@ -149,13 +147,8 @@ variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-
   its own gate, its own skills and its own workflows, and review is what catches a diff that
   widens what a run may do.
 
-  **Under `GITHUB_ACTIONS` the block is unchanged and absolute.** There the diff is the attacker's:
-  `claude-code-review.yml` reads it with a write token under `--permission-mode bypassPermissions`,
-  and `git-guardrails.sh` is re-read on every `PreToolUse`, so a run able to write it disarms the
-  rest in one call. The workflow's base-ref re-checkout is the other half of that and covers four
-  paths only - `.claude/settings.json`, `.claude/hooks`, `scripts/ci`, `.ai/agentic.config.json`,
-  not all of `.claude/` and not `.claude/skills/` - and it restores rather than cleans, so a path
-  the pull request adds survives it. Both limits predate ADR 0025.
+  **Under `GITHUB_ACTIONS` the block remains unchanged.** CI executes pull-request content;
+  removing an agent workflow is not authorization to weaken the shared hooks.
 
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The hooks,
@@ -177,7 +170,7 @@ drops `Edit`/`Write` for the ones that must not.
 | `implement-spec`      | `/om-auto-implement-spec {{task}}`                                         | a human, from the cockpit, after the spec PR merged - or `autofix` on the FR issue, which reaches the same skill through `issue-autofix` |
 | `pr-autopilot`        | `/om-pr-autopilot {{task}}` (no `--allow-merge`)                           | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer)                                                 |
 | `pr-review`           | `/om-auto-review-pr {{task}} --autofix`                                    | a human, from the cockpit, on a PR number                                                                                                |
-| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                                 | automation **Resolve blocking review threads** (label `review-threads` on a PR)                                                          |
+| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                                 | manual request after assessing review findings                                                                                           |
 | `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50`   | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                    |
 | `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                              | a human, from the cockpit, with the idea as the task                                                                                     |
 | `triage`              | skill `afk-triage`                                                         | automation **Triage new issues** (label `needs-triage`)                                                                                  |
@@ -229,12 +222,11 @@ cockpit by `.name`, so a renamed definition is created beside the old one, which
 because it is still enabled. Rename in lockstep with the cockpit - disable the old name, then
 `--prune`, the drill step 2 of the host cutover below walks through.
 
-Eleven definitions, in two kinds. Eight are GitHub polls, started by an event:
+Ten definitions, in two kinds. Seven are GitHub polls, started by an event:
 **Groom new issues** on `issue.opened` with `authors` naming the human maintainers;
 **Re-groom on request**, **Fix issues on the autofix label**, **Write a spec for feature issues** on `issue.labeled` with `changedLabels` `groom` /
 `autofix` / `spec`; **Autopilot new pull requests** on `pull_request.opened`, again with `authors`;
-**Resolve blocking review threads** on `issue.labeled` with `changedLabels` `review-threads`, the one that reaches
-a pull request (next section); and the intake pair, **Triage new issues** and **Implement
+**Triage new issues** and **Implement
 ready-for-agent issues**, on `issue.labeled` with `changedLabels` `needs-triage` / `ready-for-agent`.
 Three are schedules (`kind: "schedule"`), started by the clock and by nobody's action:
 **Spec to tickets** on weekdays at 07:00, **Weekly architecture review** on Mondays at 06:00 and
@@ -257,76 +249,18 @@ A review or autopilot run checks out the PR's head, hooks and agent layer includ
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
 
-## Review threads that block a merge (Resolve blocking review threads)
+## One independent review per SHA
 
-The `develop` and `main` rulesets refuse a merge while a review thread is unresolved, and nothing
-resolves the threads the `claude-review` job opens. Until this automation a maintainer cleared them
-by running `om-auto-fix-pr` by hand on every PR the review job had commented on.
+Cezar reviews in a context separate from implementation and records the full assessed head SHA.
+Housekeeping reuses a completed report and validation for an unchanged SHA; a new diff, missing
+validation or a concrete concern requires fresh verification. A second opinion is requested
+explicitly through Cezar or `@codex review`.
 
-It cannot be a webhook. Cezar 0.11.0 knows four automation events - `issue.opened`,
-`issue.labeled`, `issue.unlabeled`, `pull_request.opened` - and none of them is a review; worse, the
-upstream poller scopes its label source to `is:issue` and then drops any hit carrying
-`pull_request`, so even a label on a PR is invisible to it. `pull_request.opened` is the only PR trigger there is, and it
-fires minutes before the review job posts anything. So the chain is:
-
-1. `.github/workflows/claude-code-review.yml` ends with `scripts/ci/review-threads-label.mjs`,
-   which applies `review-threads` when the PR has live threads opened by a review bot - the
-   `claude` review job or `chatgpt-codex-connector`, whichever left them.
-2. A commit on the design4pro/cezar fork
-   (`feat(automations): filters.includePullRequests polls label events on pull requests`) teaches
-   the poller to honour `filters.includePullRequests` on both gates. It is opt-in per automation -
-   the fork declares the key in the filter schema and it defaults to false - which is what keeps **Re-groom on request**,
-   **Fix issues on the autofix label** and **Write a spec for feature issues** from starting to fire on PRs that happen to carry their label.
-   **Without that commit this automation never fires and says nothing**; keep it through every
-   rebase onto an upstream release until upstream ships the filter.
-3. **Resolve blocking review threads** runs the `pr-fix` workflow, and `om-auto-fix-pr` replies in every thread and
-   resolves the ones it settles. A finding it agrees with but cannot act on - a guarded file it is
-   still refused, a change that belongs upstream - is **not** a decline: it replies with the exact
-   edit as a diff block, leaves `changes-requested`, and resolves the thread anyway
-   (`.ai/skills/om-auto-review-pr/SKILL.md`). Only a disagreement leaves a thread open.
-
-The loop is closed at the head, not at the thread. The run's first mutation takes `in-progress`
-and only then removes `review-threads` (`.ai/skills/om-auto-fix-pr/SKILL.md`), so the PR is never
-both untriggered and unclaimed while the run's own push moves the head (#490), and the labelling
-script keeps one marker comment naming the head it last armed, so the same head is never armed
-twice. That matters because a thread
-the run **declines** stays open on purpose - a disagreement is a human's to settle - and without the
-marker the `reopened` and `ready_for_review` triggers would restart the same run to reach the same
-conclusion forever. `in-progress`, `blocked` and `do-not-merge` stand the script down, and the
-automation excludes them again.
-
-**And the `in-progress` stand-down is why, for its first weeks, this chain never ran at all.**
-**Autopilot new pull requests** fires on `pull_request.opened` and takes `in-progress` within a minute; the review
-job needs five to eight, so step 1 above was never once asked at a moment when the claim was
-absent - `not arming - the PR carries in-progress` on #320, #321 and #322, and zero `pr-fix` runs
-in the cockpit's recorded history. The stand-down is right (a run that owns the PR should not have
-a second one started beside it); what was missing is a second ask. The workflow now also listens
-for `pull_request.unlabeled`, and a separate job re-runs the same script when the label removed is
-`in-progress`. Same decision, same head-keyed marker - so a run that declines every thread and
-pushes nothing cannot re-arm itself when it drops its own claim - only asked at the first moment
-the answer can be anything but "held".
-
-There is a third ask, and it exists because a review bot does not have to answer while anyone is
-listening. `chatgpt-codex-connector` reviews asynchronously, about three minutes after a pull
-request opens, while step 1 arms at the end of the Claude review job - so whether its thread is
-seen at all came down to how long that job happened to run. Measured on three pull requests the
-same morning: on #690 the review took seven and a half minutes and the thread landed inside the
-window, on #692 and #695 it took about thirty seconds and the thread arrived two and a half minutes
-after the arming step had already reported "no unresolved review-bot thread on this PR". Both
-carried a P1 finding that held the merge and that no run was ever armed to read. So
-`rearm-review-threads.yml` now also listens for `pull_request_review.submitted`, which is the one
-event that fires when a review exists rather than when someone hoped it would.
-
-The gate is the same as for `groom` and `autofix`: only a collaborator or the Actions bot can set a
-label, so an outsider cannot start a run that holds an unrestricted Bash. A human's review still
-never arms anything - it starts the workflow, since `pull_request_review` does not ask who
-submitted, and the script then declines it, because a disagreement with a person is settled by
-talking. Keeping that judgement in the script rather than in the trigger is deliberate: the
-workflow's condition can only ask what kind of event this is, while the script can see who opened
-each thread and whether it is still live. Which logins count is `DEFAULT_REVIEW_BOTS` in that
-script; a bot missing from it goes unnoticed rather than failing, because its threads simply never
-arm a run. Rehearse the decision against any live PR with
-`GH_REPO=… PR_NUMBER=… HEAD_SHA=… node scripts/ci/review-threads-label.mjs --dry-run`.
+`pr-fix` is manual. Claude review, `@claude`, `review-threads` and re-arm workflows are retired.
+Existing findings remain open until assessed, and conversation resolution plus process/QA checks
+still block merge. Before retiring live triggers, inventory active runs and unresolved threads,
+confirm Cezar review works, then remove only `claude-review` from both rulesets.
+Disable Codex automatic review and any configured Copilot automatic review in their settings.
 
 ## Prompt templates (`docs/agents/cezar-prompt-templates.json`)
 
