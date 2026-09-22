@@ -29,8 +29,10 @@ import type { Day, DayNote } from '#/server/db/types'
 export const daysRepository = createTenantRepository(days, 'day')
 export const dayNotesRepository = createTenantRepository(dayNotes, 'day note')
 
-// `inArray` binds one parameter per id and tenantFilter binds the organisation id as one more.
-const DAY_ID_CHUNK_SIZE = chunkFor(1) - 1
+// `DELETE` needs ids plus the tenant filter, while `UPDATE` also binds a patched value and
+// Drizzle's automatic `updated_at` value.
+const DELETE_DAY_ID_CHUNK_SIZE = chunkFor(1) - 1
+const UPDATE_DAY_ID_CHUNK_SIZE = chunkFor(1) - 3
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -194,10 +196,17 @@ export async function syncTripDays(
     const dated = existing.filter((day) => day.date !== null)
     if (dated.length > 0) {
       const datedIds = dated.map((day) => day.id)
-      for (let index = 0; index < datedIds.length; index += DAY_ID_CHUNK_SIZE) {
+      for (
+        let index = 0;
+        index < datedIds.length;
+        index += UPDATE_DAY_ID_CHUNK_SIZE
+      ) {
         await daysRepository.updateWhere(
           scope,
-          inArray(days.id, datedIds.slice(index, index + DAY_ID_CHUNK_SIZE)),
+          inArray(
+            days.id,
+            datedIds.slice(index, index + UPDATE_DAY_ID_CHUNK_SIZE),
+          ),
           { date: null },
         )
       }
@@ -209,9 +218,22 @@ export async function syncTripDays(
   const surplus = existing.slice(wanted.length)
   if (surplus.length > 0) {
     const surplusIds = surplus.map((day) => day.id)
-    for (let index = 0; index < surplusIds.length; index += DAY_ID_CHUNK_SIZE) {
-      const chunk = surplusIds.slice(index, index + DAY_ID_CHUNK_SIZE)
-      await unlinkTransportsFromDays(scope, chunk)
+    for (
+      let index = 0;
+      index < surplusIds.length;
+      index += UPDATE_DAY_ID_CHUNK_SIZE
+    ) {
+      await unlinkTransportsFromDays(
+        scope,
+        surplusIds.slice(index, index + UPDATE_DAY_ID_CHUNK_SIZE),
+      )
+    }
+    for (
+      let index = 0;
+      index < surplusIds.length;
+      index += DELETE_DAY_ID_CHUNK_SIZE
+    ) {
+      const chunk = surplusIds.slice(index, index + DELETE_DAY_ID_CHUNK_SIZE)
       await daysRepository.removeWhere(scope, inArray(days.id, chunk))
     }
   }

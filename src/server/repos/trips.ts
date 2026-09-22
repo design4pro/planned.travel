@@ -57,6 +57,7 @@ import { getMembership } from './members'
 import {
   dayNotesRepository,
   daysRepository,
+  datesBetween,
   listTripDays,
   syncTripDays,
 } from './days'
@@ -797,7 +798,8 @@ export async function updateTrip(
     !datesMoved &&
     startDate !== null &&
     endDate !== null &&
-    (await daysRepository.count(scope, eq(days.tripId, tripId))) === 0
+    (await daysRepository.count(scope, eq(days.tripId, tripId))) !==
+      datesBetween(startDate, endDate).length
   if (datesMoved || needsDayRunRepair) {
     await syncTripDays(scope, tripId, { startDate, endDate })
   }
