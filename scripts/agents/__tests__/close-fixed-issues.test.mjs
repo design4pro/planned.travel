@@ -6,6 +6,7 @@ import {
   planClose,
   reconcilePair,
   parseOptions,
+  latestReleaseDate,
 } from '../close-fixed-issues.mjs'
 
 const pr = JSON.parse(
@@ -195,5 +196,24 @@ describe('parseOptions', () => {
     ['--unexpected'],
   ])('rejects invalid options %s', (...args) => {
     expect(() => parseOptions(args)).toThrow()
+  })
+})
+
+describe('latestReleaseDate', () => {
+  it('uses the topmost release, even when it is older than seven days', () => {
+    expect(
+      latestReleaseDate(
+        '# Changelog\n\n# 0.2.0 (2026-08-01)\n\n# 0.1.0 (2026-07-01)',
+      ),
+    ).toBe('2026-08-01')
+    expect(parseOptions([]).since).toBe('last-release')
+    expect(parseOptions(['--since', '2026-07-01']).since).toBe('2026-07-01')
+  })
+  it.each([
+    '# Changelog',
+    '# 0.2.0 (unknown)\n# 0.1.0 (2026-07-01)',
+    '# 0.2.0 (2026-02-30)',
+  ])('never silently narrows a malformed release window', (text) => {
+    expect(() => latestReleaseDate(text)).toThrow('--since')
   })
 })

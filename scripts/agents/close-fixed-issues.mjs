@@ -137,6 +137,24 @@ export function reconcilePair(pr, number, options, tracker) {
   return { ...plan, commentNeeded: !posted }
 }
 
+function validDate(value) {
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    !Number.isNaN(Date.parse(value)) &&
+    new Date(value).toISOString().slice(0, 10) === value
+  )
+}
+
+export function latestReleaseDate(changelog) {
+  const heading = changelog.match(/^# \d+\.\d+\.\d+[^\n]*$/m)?.[0]
+  const date = heading?.match(/\((\d{4}-\d{2}-\d{2})\)\s*$/)?.[1]
+  if (!date || !validDate(date))
+    throw new Error(
+      'Cannot resolve the latest release date from CHANGELOG.md; pass --since YYYY-MM-DD explicitly.',
+    )
+  return date
+}
+
 export function parseOptions(args) {
   const { values } = parseArgs({
     args,
@@ -148,15 +166,9 @@ export function parseOptions(args) {
       repo: { type: 'string' },
     },
   })
-  const since =
-    values.since ??
-    new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
-  if (
-    !/^\d{4}-\d{2}-\d{2}$/.test(since) ||
-    Number.isNaN(Date.parse(since)) ||
-    new Date(since).toISOString().slice(0, 10) !== since
-  )
-    throw new Error('--since must be a valid YYYY-MM-DD date.')
+  const since = values.since ?? 'last-release'
+  if (since !== 'last-release' && !validDate(since))
+    throw new Error('--since must be last-release or a valid YYYY-MM-DD date.')
   if (
     !/^[1-9]\d*$/.test(values.limit) ||
     !Number.isSafeInteger(Number(values.limit))
@@ -174,6 +186,20 @@ export function parseOptions(args) {
 
 function main() {
   const options = parseOptions(process.argv.slice(2))
+  if (options.since === 'last-release') {
+    let changelog
+    try {
+      changelog = readFileSync(
+        new URL('../../CHANGELOG.md', import.meta.url),
+        'utf8',
+      )
+    } catch {
+      throw new Error(
+        'Cannot read CHANGELOG.md; pass --since YYYY-MM-DD explicitly.',
+      )
+    }
+    options.since = latestReleaseDate(changelog)
+  }
   const config = JSON.parse(
     readFileSync(
       new URL('../../.ai/agentic.config.json', import.meta.url),

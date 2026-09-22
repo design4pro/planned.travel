@@ -33,9 +33,11 @@ node scripts/agents/close-fixed-issues.mjs --apply --limit 50
 ```
 
 `--dry-run` overrides `--apply`. `--since YYYY-MM-DD` selects the lower bound;
-the default is seven days ago. `--repo owner/name` optionally selects the
-repository. Unlike the generic skill, the script does not resolve git refs or
-`last-release`, inspect unmerged PRs, or extend the built-in keyword vocabulary.
+the default `last-release` resolves the topmost release date in `CHANGELOG.md`.
+An unreadable or malformed latest release fails the run and requires an explicit
+`--since`; never replace that boundary with a moving seven-day window. `--repo owner/name` optionally selects the
+repository. Unlike the generic skill, the script does not resolve git refs, inspect unmerged
+PRs, or extend the built-in keyword vocabulary.
 
 Every pair re-reads the issue and skips closed issues and `do-not-close`,
 `blocked`, or `in-progress` labels. This bounded reconciler does not acquire
