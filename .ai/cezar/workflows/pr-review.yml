@@ -10,5 +10,4 @@ steps:
   - id: review
     name: om-auto-review-pr
     prompt: '/om-auto-review-pr {{task}} --autofix'
-    model: opus
     allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
