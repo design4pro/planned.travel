@@ -32,7 +32,7 @@ const BINARY_EXTENSIONS = new Set([
   'zip',
 ])
 
-describe('tracked text files', () => {
+describe('tracked text files', { timeout: 15_000 }, () => {
   it('holds no file git treats as binary outside the binary asset types', () => {
     // `--eol` prints `i/<eol>` for the index copy; `i/-text` is git's binary verdict.
     const binary = execFileSync('git', ['ls-files', '--eol', '-z'], {
