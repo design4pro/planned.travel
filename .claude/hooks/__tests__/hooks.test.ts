@@ -17,7 +17,7 @@ import { describe, expect, it, vi } from 'vitest'
 // the machine's patience, not on the code: under `vitest run`'s full parallelism it expires on a
 // different test each time while every assertion still holds, and the same file passes in
 // isolation in a fraction of the budget. The assertions are unchanged - only the waiting is.
-vi.setConfig({ testTimeout: 30_000 })
+vi.setConfig({ testTimeout: 15_000 })
 
 const HOOKS = resolve(__dirname, '..')
 const AGENT = { CEZ_TASK_ID: '0123456789ab-test' }
