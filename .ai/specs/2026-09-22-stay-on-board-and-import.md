@@ -4,7 +4,7 @@
 | ------------------ | ----- |
 | **Status**         | draft |
 | **Issue**          | #180 |
-| **Spec PR**        | none |
+| **Spec PR**        | #708 |
 | **Implementation** | none |
 
 `03-S8b` · FR #180 · Parent PRD #167 · the board and import half of `BKG-05` in `docs/plans/03-reservations-and-transport.md`.
