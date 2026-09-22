@@ -740,14 +740,13 @@ export async function createTrip(
     createdBy: scope.ctx.userId,
   })
 
-  await tripMembersRepository.insert(scope, {
-    tripId: trip.id,
-    userId: scope.ctx.userId,
-    role: 'owner',
-    joinedAt: new Date(),
-  })
-
   try {
+    await tripMembersRepository.insert(scope, {
+      tripId: trip.id,
+      userId: scope.ctx.userId,
+      role: 'owner',
+      joinedAt: new Date(),
+    })
     if (trip.startDate && trip.endDate) {
       await syncTripDays(scope, trip.id, {
         startDate: trip.startDate,
@@ -792,15 +791,14 @@ export async function updateTrip(
     ...(slug === undefined ? {} : { slug }),
   })
 
+  const datesMoved =
+    startDate !== existing.startDate || endDate !== existing.endDate
   const needsDayRunRepair =
+    !datesMoved &&
     startDate !== null &&
     endDate !== null &&
-    (await listTripDays(scope, tripId)).length === 0
-  if (
-    startDate !== existing.startDate ||
-    endDate !== existing.endDate ||
-    needsDayRunRepair
-  ) {
+    (await daysRepository.count(scope, eq(days.tripId, tripId))) === 0
+  if (datesMoved || needsDayRunRepair) {
     await syncTripDays(scope, tripId, { startDate, endDate })
   }
 
