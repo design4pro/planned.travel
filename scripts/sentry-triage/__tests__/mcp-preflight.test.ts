@@ -136,7 +136,7 @@ describe('scheduled Sentry credential gate', () => {
     ['', ''],
   ])('fails before the sweep when a credential is absent', (token, org) => {
     const workflow = readFileSync('.github/workflows/sentry-triage.yml', 'utf8')
-    const gate = /        run: \|\n([\s\S]+?)\n      - /.exec(workflow)?.[1]
+    const gate = / {8}run: \|\n([\s\S]+?)\n {6}- /.exec(workflow)?.[1]
     expect(gate).toBeDefined()
     const result = spawnSync('bash', ['-c', gate!], {
       encoding: 'utf8',
