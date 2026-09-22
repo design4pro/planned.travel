@@ -20,9 +20,10 @@ permissions:
 # records why.
 #
 # The default is plan-dependent: it fits GitHub Team's 3,000 included minutes
-# (verified 2026-09-17), not GitHub Free's 2,000. If the organisation is ever
-# downgraded, set `RUNNER_DEPLOY` to `["self-hosted","linux","ARM64","ci"]` before
-# the next deploy - no pull request needed.
+# (verified 2026-09-17), not GitHub Free's 2,000. Pointing `RUNNER_DEPLOY` at the
+# self-hosted `ci` pool is not the answer to a downgrade: that pool shares a pnpm
+# store, a Node toolcache and a restarted container with pull request code, and a
+# deploy holds production credentials (ADR 0026).
 
 jobs:
   deploy:
