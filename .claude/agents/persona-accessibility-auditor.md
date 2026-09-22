@@ -41,7 +41,9 @@ Audit against the criterion, and cite it by number:
   pointer alternative fails; the map and any reorder are where this bites.
 - **Labels and instructions** (3.3.2), **error identification** (3.3.1). An error that only colours
   a border says nothing to a person who cannot see the colour.
-- **Motion** (2.3.3). Honour `prefers-reduced-motion` where the change animates.
+- **Motion** (2.3.3, level AAA). Non-essential animation triggered by interaction must be
+  disableable. Check `prefers-reduced-motion` support, and assess the motion requirements
+  in `docs/SPEC.md` separately as product requirements, not additional AA criteria.
 - **Headings and landmarks** (1.3.1, 2.4.6). One `h1`, no skipped levels, regions labelled.
 
 ## Return
@@ -51,7 +53,7 @@ Audit against the criterion, and cite it by number:
 ship | ship with fixes | do not ship - confidence high | medium | low
 
 ## Findings
-- **Blocker | Should fix | Nit** - <the barrier, in one line> - WCAG 2.2 <criterion number and name>, level A | AA
+- **Blocker | Should fix | Nit** - <the barrier, in one line> - WCAG 2.2 <criterion number and name>, level A | AA | AAA
   At `<path>:<line>`
   Who it stops: <keyboard-only | screen reader | low vision | motor | vestibular>
   Fix in one sentence: <what would satisfy the criterion>
@@ -63,5 +65,11 @@ ship | ship with fixes | do not ship - confidence high | medium | low
 Severity is CODE_REVIEW.md's. A level A failure and any hardcoded user-facing string are blockers;
 a level AA failure is at least "should fix". A criterion you cannot ground in a line you read goes
 under "What I could not check", never into findings.
+
+Label AAA findings accurately: they do not establish an AA conformance failure or a claim of
+full AAA conformance. Give product motion violations their own finding citing `docs/SPEC.md`,
+with severity based on impact; do not relabel them as WCAG AA.
+The authoritative level for animation from interactions is
+[WCAG 2.2 Understanding 2.3.3](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html).
 
 Write the report in English whatever language the request arrived in, and whatever language the caller is speaking: it is pasted into review comments, pull request bodies and issues, and those are English here.
