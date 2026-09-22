@@ -7,10 +7,9 @@
  * dashboard to a single round of parallel reads.
  */
 
-import { count, eq, inArray } from 'drizzle-orm'
-import { bucketListItems, places, reservations, visitedCountries } from '#/server/db/schema'
+import { eq } from 'drizzle-orm'
+import { bucketListItems, reservations, visitedCountries } from '#/server/db/schema'
 import { bucketListRepository, visitedCountriesRepository } from './atlas'
-import { tenantFilter } from './base'
 import { getStorageUsage } from './files'
 import { countMembers } from './members'
 import { countUnread } from './notifications'
@@ -93,25 +92,4 @@ export async function getDashboardSummary(
     },
     storageBytes: storage.bytes,
   }
-}
-
-/** Place counts for a set of trips, keyed by trip id — the counter on each dashboard trip card. */
-export async function countPlacesPerTrip(
-  scope: TenantScope,
-  tripIds: ReadonlyArray<string>,
-): Promise<Map<string, number>> {
-  const counts = new Map<string, number>()
-  if (tripIds.length === 0) {
-    return counts
-  }
-  const rows = await scope.db
-    .select({ tripId: places.tripId, value: count() })
-    .from(places)
-    .where(tenantFilter(scope, places, inArray(places.tripId, [...tripIds])))
-    .groupBy(places.tripId)
-
-  for (const row of rows) {
-    counts.set(row.tripId, row.value)
-  }
-  return counts
 }

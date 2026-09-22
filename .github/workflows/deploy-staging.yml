@@ -20,9 +20,10 @@ permissions:
 # records why.
 #
 # The default is plan-dependent: it fits GitHub Team's 3,000 included minutes
-# (verified 2026-09-17), not GitHub Free's 2,000. If the organisation is ever
-# downgraded, set `RUNNER_DEPLOY` to `["self-hosted","linux","ARM64","ci"]` before
-# the next deploy - no pull request needed.
+# (verified 2026-09-17), not GitHub Free's 2,000. Pointing `RUNNER_DEPLOY` at the
+# self-hosted `ci` pool is not the answer to a downgrade: that pool shares a pnpm
+# store, a Node toolcache and a restarted container with pull request code, and a
+# deploy holds production credentials (ADR 0026).
 
 jobs:
   deploy:
@@ -131,8 +132,11 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
-          # Keep in step with the `wrangler` devDependency in package.json.
-          wranglerVersion: '4.70.0'
+          # No `wranglerVersion` on purpose, here or in any other call below.
+          # Unset, wrangler-action runs whatever `pnpm exec wrangler --version`
+          # reports, so pnpm-lock.yaml owns the version. What the old pin did
+          # and why it is not coming back is written down once, next to the test
+          # that holds it open: scripts/__tests__/wrangler-version-ownership.test.mjs (#567).
           command: d1 migrations apply planned-travel-db-staging --remote --env staging
 
       # The `airports` table is the one the migration above creates and does not
@@ -147,8 +151,8 @@ jobs:
       # table is never empty for a reader, and a deploy carrying an unchanged
       # artefact rewrites nine thousand rows to the values they already hold,
       # which costs seconds and changes nothing anyone can observe. The SQL is
-      # generated first so the execute below is the same wrangler-action, on the
-      # same pinned version, as every other call here.
+      # generated first so the execute below is the same wrangler-action, using
+      # the same wrangler as every other call here.
       - name: Load the airport catalogue
         if: steps.gate.outputs.configured == 'true'
         run: node scripts/seed/airports.mjs --sql-out airports.sql
@@ -160,7 +164,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
-          wranglerVersion: '4.70.0'
           command: d1 execute planned-travel-db-staging --remote --env staging --file airports.sql --yes
 
       - name: Deploy Worker
@@ -170,7 +173,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
-          wranglerVersion: '4.70.0'
           command: deploy
 
       # Cheap proof that the new version is actually serving: the tile endpoint

@@ -1,7 +1,13 @@
 # 0023. CI and the agents run on the self-hosted pool; shipping stays on GitHub-hosted runners
 
-Status: accepted
+Status: accepted, amended by ADR 0026
 Date: 2026-09-19
+Amended: 2026-09-21 by ADR 0026. The consequence below that the variable recovery path "still leaves
+`e2e` red" no longer holds: `.github/actions/e2e-env` installs the browsers itself on every runner.
+Decision 4 was reconsidered there and stands, on a further reason: the `ci` pool shares a pnpm
+store, a Node toolcache and a restarted container with pull request code, so it is no place for a
+job holding production credentials. The `RUNNER_DEPLOY` lever toward the pool named below is
+withdrawn. Decisions 1, 2 and 3 stand.
 Records: the runner migration of #495, #497, #498 and #563, which was decided in workflow comments
 and pull request descriptions and never written down as a decision.
 Amends: ADR 0021 (the variable half of its recovery path: `vars.RUNNER_CI` alone does not bring

@@ -30,8 +30,10 @@ import {
   listTransportLegs,
   listTripDayTransports,
   listTripLegs,
+  listTripTransports,
   reorderDayTransports,
   replaceTransportChain,
+  saveSearchedConnection,
   setTransportStatus,
   updateTransport,
 } from '../transports'
@@ -1044,5 +1046,221 @@ describe('a day deleted under a transport that arrives on it', () => {
     const survivor = await getTransport(tenant.scope, transportId)
     expect(survivor?.arrivalDayId).toBeNull()
     expect(survivor?.dayId).toBe(days[2].id)
+  })
+})
+
+/**
+ * The ordering rule at the one place every writer passes through.
+ *
+ * The rule is `arrivesBeforeDeparts` (`#/lib/transport-timing`), the same function the dialog
+ * asks: real instants when both ends name a zone, wall clocks otherwise. Each writer is asked
+ * twice - once with a journey that really lands before it leaves, once with the westbound flight
+ * whose wall clocks only *look* backwards - because a check that refuses both is as wrong as one
+ * that refuses neither.
+ */
+describe('a journey that arrives before it departs', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+  let tripId: string
+
+  const TOKYO = { name: 'Narita', code: 'NRT', timezone: 'Asia/Tokyo' }
+  const HONOLULU = {
+    name: 'Honolulu',
+    code: 'HNL',
+    timezone: 'Pacific/Honolulu',
+  }
+  const LONDON = { name: 'Heathrow', code: 'LHR', timezone: 'Europe/London' }
+  const NEW_YORK = { name: 'JFK', code: 'JFK', timezone: 'America/New_York' }
+
+  /** 21:00 in Tokyo is 12:00Z, 09:00 in Honolulu is 19:00Z: seven hours in the air. */
+  const WESTBOUND = {
+    departureDate: '2026-04-16',
+    departureTime: '21:00',
+    arrivalDate: '2026-04-16',
+    arrivalTime: '09:00',
+  }
+  /** 09:00 in London is 08:00Z, 03:00 in New York is 07:00Z: it really does land first. */
+  const INVERTED = {
+    departureDate: '2026-04-16',
+    departureTime: '09:00',
+    arrivalDate: '2026-04-16',
+    arrivalTime: '03:00',
+  }
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('timing')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Pacific crossing',
+      startDate: '2026-04-15',
+      endDate: '2026-04-18',
+      currency: 'USD',
+    })
+    tripId = trip.id
+  })
+
+  async function expectTimeOrder(write: () => Promise<unknown>) {
+    const error = await captureError(write)
+    expect(error).toBeInstanceOf(RepositoryError)
+    expect((error as RepositoryError).code).toBe('TIME_ORDER')
+  }
+
+  it('refuses to create a zoned journey that lands first, and writes nothing', async () => {
+    await expectTimeOrder(() =>
+      createTransport(tenant.scope, {
+        tripId,
+        title: 'BA 117',
+        mode: 'flight',
+        ...INVERTED,
+        departureTimezone: LONDON.timezone,
+        arrivalTimezone: NEW_YORK.timezone,
+      }),
+    )
+    expect(await listTripTransports(tenant.scope, tripId)).toEqual([])
+  })
+
+  it('creates the westbound journey its zones put in order', async () => {
+    const created = await createTransport(tenant.scope, {
+      tripId,
+      title: 'NH 184',
+      mode: 'flight',
+      ...WESTBOUND,
+      departureTimezone: TOKYO.timezone,
+      arrivalTimezone: HONOLULU.timezone,
+    })
+    expect(created.arrivalTime).toBe('09:00')
+  })
+
+  it('judges a journey with no zones by its wall clocks, as before', async () => {
+    await expectTimeOrder(() =>
+      createTransport(tenant.scope, {
+        tripId,
+        title: 'Typed by hand',
+        mode: 'flight',
+        ...WESTBOUND,
+      }),
+    )
+  })
+
+  it('reads a missing arrival time as the end of the day', async () => {
+    const created = await createTransport(tenant.scope, {
+      tripId,
+      title: 'Evening ferry',
+      mode: 'ferry',
+      departureDate: '2026-04-16',
+      departureTime: '18:00',
+      arrivalDate: '2026-04-16',
+    })
+    expect(created.arrivalTime).toBeNull()
+  })
+
+  /**
+   * On the row that results, not on the fields that arrived: the flat form sends clocks and no
+   * zones, so the zones are the ones already stored, and moving one end alone is ordered against
+   * the end already there.
+   */
+  it('orders an update against the zones and clocks already stored', async () => {
+    const created = await createTransport(tenant.scope, {
+      tripId,
+      title: 'NH 184',
+      mode: 'flight',
+      departureTimezone: TOKYO.timezone,
+      arrivalTimezone: HONOLULU.timezone,
+    })
+
+    const updated = await updateTransport(tenant.scope, created.id, WESTBOUND)
+    expect(updated.departureTime).toBe('21:00')
+
+    await expectTimeOrder(() =>
+      updateTransport(tenant.scope, created.id, { arrivalDate: '2026-04-15' }),
+    )
+    expect((await getTransport(tenant.scope, created.id))?.arrivalDate).toBe(
+      '2026-04-16',
+    )
+  })
+
+  /**
+   * The dialog's edit of a chain whose outer stations change: the record is written before the
+   * chain, so the patch carries the new zones, and the clocks are judged in them, not in the
+   * zones the chain is about to replace.
+   */
+  it('orders an update in the zones it sends, not the ones it replaces', async () => {
+    const created = await createTransport(tenant.scope, {
+      tripId,
+      title: 'Reversed',
+      mode: 'flight',
+      departureTimezone: HONOLULU.timezone,
+      arrivalTimezone: TOKYO.timezone,
+    })
+
+    const updated = await updateTransport(tenant.scope, created.id, {
+      ...WESTBOUND,
+      departureTimezone: TOKYO.timezone,
+      arrivalTimezone: HONOLULU.timezone,
+    })
+    expect(updated.departureTimezone).toBe(TOKYO.timezone)
+
+    await expectTimeOrder(() =>
+      updateTransport(tenant.scope, created.id, {
+        ...INVERTED,
+        departureTimezone: LONDON.timezone,
+        arrivalTimezone: NEW_YORK.timezone,
+      }),
+    )
+  })
+
+  it('refuses a chain with a leg that lands first, and leaves the chain as it was', async () => {
+    const created = await createTransport(tenant.scope, {
+      tripId,
+      title: 'Round the world',
+      mode: 'flight',
+    })
+
+    await expectTimeOrder(() =>
+      replaceTransportChain(tenant.scope, created.id, {
+        stations: [TOKYO, HONOLULU, LONDON, NEW_YORK],
+        legs: [WESTBOUND, {}, INVERTED],
+      }),
+    )
+    expect(await listTransportLegs(tenant.scope, created.id)).toEqual([])
+  })
+
+  it('writes a chain whose westbound leg lands on an earlier clock', async () => {
+    const created = await createTransport(tenant.scope, {
+      tripId,
+      title: 'NH 184',
+      mode: 'flight',
+    })
+
+    const legs = await replaceTransportChain(tenant.scope, created.id, {
+      stations: [TOKYO, HONOLULU],
+      legs: [WESTBOUND],
+    })
+    expect(legs).toHaveLength(1)
+  })
+
+  it('refuses a found connection with a leg that lands first, and creates no record', async () => {
+    await expectTimeOrder(() =>
+      saveSearchedConnection(tenant.scope, {
+        tripId,
+        mode: 'flight',
+        title: 'Tokyo to New York',
+        stations: [TOKYO, LONDON, NEW_YORK],
+        legs: [{}, INVERTED],
+      }),
+    )
+    expect(await listTripTransports(tenant.scope, tripId)).toEqual([])
+  })
+
+  it('saves the westbound connection a search found', async () => {
+    const saved = await saveSearchedConnection(tenant.scope, {
+      tripId,
+      mode: 'flight',
+      title: 'Tokyo to Honolulu',
+      stations: [TOKYO, HONOLULU],
+      legs: [WESTBOUND],
+    })
+    expect(saved.legs).toHaveLength(1)
+    expect(saved.transport.arrivalTime).toBe('09:00')
   })
 })

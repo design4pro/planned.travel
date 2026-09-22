@@ -14,6 +14,7 @@ import { ZodError } from 'zod'
 
 import { createLogger, createMemorySink } from '#/server/observability'
 import { NotFoundError } from '#/server/repos/context'
+import { ID_FILTER_CHUNK } from '#/server/repos/trips'
 import { createHarness } from '#/server/repos/__tests__/harness'
 
 import type * as Repos from '#/server/repos'
@@ -84,7 +85,6 @@ const {
   D1_MAX_BOUND_PARAMETERS,
   EMAIL_BODY_BYTE_CAP,
   EMAIL_CHUNK_SIZE,
-  ID_FILTER_CHUNK_SIZE,
   IN_APP_CHUNK_SIZE,
   NOTIFICATION_ROW_PARAMETERS,
   QUEUE_BATCH_BYTE_CAP,
@@ -560,19 +560,19 @@ describe('dispatch', () => {
       })
 
       expect(stubs.profileCalls).toHaveLength(
-        Math.ceil(CROWD / ID_FILTER_CHUNK_SIZE),
+        Math.ceil(CROWD / ID_FILTER_CHUNK),
       )
       for (const call of stubs.profileCalls) {
-        expect(call.length).toBeLessThanOrEqual(ID_FILTER_CHUNK_SIZE)
+        expect(call.length).toBeLessThanOrEqual(ID_FILTER_CHUNK)
       }
 
       // Both channels, each asked in chunks: an `IN (...)` list of 501 ids is a statement D1
       // refuses just as surely as a 501-row insert.
       expect(stubs.preferenceCalls).toHaveLength(
-        2 * Math.ceil(CROWD / ID_FILTER_CHUNK_SIZE),
+        2 * Math.ceil(CROWD / ID_FILTER_CHUNK),
       )
       for (const call of stubs.preferenceCalls) {
-        expect(call.length).toBeLessThanOrEqual(ID_FILTER_CHUNK_SIZE)
+        expect(call.length).toBeLessThanOrEqual(ID_FILTER_CHUNK)
       }
     })
   })

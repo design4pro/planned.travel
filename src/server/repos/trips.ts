@@ -1297,11 +1297,11 @@ async function copyPlaces(
 }
 
 /**
- * Ids per `IN (...)` list a copy pass hands a repository.
+ * Ids per `IN (...)` list — the one chunk size every id-list read uses: a copy pass here, the
+ * trip-card read model in `trip-cards.ts` and notification dispatch.
  *
  * A read binds one parameter per id, so this leaves {@link MAX_BOUND_PARAMETERS} room for the tenant
- * predicate and whatever else the query compares. The same reasoning, and the same ninety, as
- * `ID_FILTER_CHUNK_SIZE` in `src/server/notifications/dispatch.ts`.
+ * predicate and whatever else the query compares — with ADR 0007's read predicate, that is four.
  */
 export const ID_FILTER_CHUNK = 90
 

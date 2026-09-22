@@ -8,6 +8,8 @@
 
 import { z } from 'zod'
 
+import { DATE_PATTERN, TIME_PATTERN } from '#/lib/transport-timing'
+
 /** A generated identifier from `newId()`, or any Better Auth id. */
 export const idSchema = z.string().trim().min(1).max(64)
 
@@ -31,7 +33,7 @@ export const slugSchema = z
 /** Calendar date, `YYYY-MM-DD`, validated for real calendar existence. */
 export const dateSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'must be an ISO calendar date (YYYY-MM-DD)')
+  .regex(DATE_PATTERN, 'must be an ISO calendar date (YYYY-MM-DD)')
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00.000Z`)
     return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value)
@@ -40,7 +42,7 @@ export const dateSchema = z
 /** Wall-clock time of day, `HH:MM`. */
 export const timeSchema = z
   .string()
-  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'must be a 24-hour time (HH:MM)')
+  .regex(TIME_PATTERN, 'must be a 24-hour time (HH:MM)')
 
 /** Millisecond instant, accepted either as a `Date` or as an epoch number. */
 export const instantSchema = z.union([

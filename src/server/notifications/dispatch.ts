@@ -50,6 +50,7 @@ import { NOTIFICATION_CHANNELS, NOTIFICATION_TYPES } from '#/server/db/schema'
 import { createLogger, serializeError } from '#/server/observability'
 import { enqueueTasks } from '#/server/queue/jobs'
 import {
+  ID_FILTER_CHUNK,
   filterEnabledRecipients,
   getOrganizationSettings,
   idSchema,
@@ -127,17 +128,6 @@ export const IN_APP_CHUNK_SIZE = Math.floor(
  * Nothing to do with {@link D1_MAX_BOUND_PARAMETERS}: this batch goes to the queue, not to D1.
  */
 export const EMAIL_CHUNK_SIZE = 25
-
-/**
- * User ids per `IN (...)` list this module hands a repository — `listUserProfiles` and
- * `filterEnabledRecipients` both take one.
- *
- * A read binds one parameter per id plus the tenant predicate and whatever else the query
- * compares, so ninety leaves {@link D1_MAX_BOUND_PARAMETERS} room for the handful of columns
- * either query adds. Well under the `max(200)` `listUserProfiles` validates, which is the
- * validator that would otherwise look like the limit.
- */
-export const ID_FILTER_CHUNK_SIZE = 90
 
 /**
  * The rendered body an email envelope carries — `html` and `text` together — is held under this
@@ -476,7 +466,7 @@ async function emailsFor(
   userIds: ReadonlyArray<string>,
 ): Promise<Map<string, string>> {
   const byUser = new Map<string, string>()
-  for (const batch of chunk(userIds, ID_FILTER_CHUNK_SIZE)) {
+  for (const batch of chunk(userIds, ID_FILTER_CHUNK)) {
     for (const profile of await listUserProfiles(scope, batch)) {
       if (profile.email !== '') byUser.set(profile.userId, profile.email)
     }
@@ -497,7 +487,7 @@ async function acceptingRecipients(
   channel: NotificationChannel,
 ): Promise<Array<string>> {
   const accepting: Array<string> = []
-  for (const batch of chunk(recipients, ID_FILTER_CHUNK_SIZE)) {
+  for (const batch of chunk(recipients, ID_FILTER_CHUNK)) {
     accepting.push(
       ...(await filterEnabledRecipients(scope, batch, eventType, channel)),
     )

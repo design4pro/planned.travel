@@ -121,7 +121,14 @@ A Claude Code session is an agent run when `CEZ_TASK_ID` (cezar) or `GITHUB_ACTI
 hooks in `.claude/hooks/` then tighten:
 
 - `git-guardrails.sh` also blocks `pnpm add|remove|update` (the stack is pinned, docs/SPEC.md §3),
-  `printenv` and `env` dumps. Under cezar, GitHub mutations, `git add -A`, closing keywords and
+  `printenv` and `env` dumps, and a recursive delete of anything but build output and scratch
+  space - the target list is an allowlist, so a path it does not name ends the run as blocked
+  rather than being deleted, and `find -delete`, `find -exec rm`, `sudo` and
+  `git worktree remove --force` are refused with it. In every session, agent or not, the same hook
+  refuses the deletes and history rewrites that take the checkout itself: a recursive delete naming
+  the filesystem root, the home directory, the working directory or the worktree root,
+  `git reflog expire`, `git gc --prune`, `git filter-branch`, `gh repo delete`, and deleting
+  `develop` or `main` on the remote. Under cezar, GitHub mutations, `git add -A`, closing keywords and
   `pnpm exec` are open: the om-* skills perform them through `.ai/trackers/github.md` and `SDLC.md`
   governs them. Under GitHub Actions every `gh issue|pr` mutation, `gh label|release|repo|secret|
 variable|workflow|run` and non-GET `gh api` stays blocked, because `claude-code-review.yml` reads
@@ -162,22 +169,30 @@ prompt is the skill as a slash command (`/om-… {{task}}`; never `skill:`, whic
 thin `.ai/skills/` override alone). `allowedTools` is the full set for skills that write code and
 drops `Edit`/`Write` for the ones that must not.
 
-| Workflow              | Agent step                                                                 | Model                | Started by                                                                                                                               |
-| --------------------- | -------------------------------------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`                              | sonnet               | automation **Groom new issues** (`issue.opened`), **Re-groom on request** (label `groom`)                                                |
-| `issue-autofix`       | `/om-auto-fix-issue {{task}}`                                              | opus                 | automation **Fix issues on the autofix label** (label `autofix`)                                                                         |
-| `spec`                | `/om-auto-write-spec {{task}}`                                             | opus                 | automation **Write a spec for feature issues** (label `spec` on a `feature`)                                                             |
-| `implement-spec`      | `/om-auto-implement-spec {{task}}`                                         | opus                 | a human, from the cockpit, after the spec PR merged - or `autofix` on the FR issue, which reaches the same skill through `issue-autofix` |
-| `pr-autopilot`        | `/om-pr-autopilot {{task}}` (no `--allow-merge`)                           | opus                 | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer)                                                 |
-| `pr-review`           | `/om-auto-review-pr {{task}} --autofix`                                    | opus                 | a human, from the cockpit, on a PR number                                                                                                |
-| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                                 | opus                 | automation **Resolve blocking review threads** (label `review-threads` on a PR)                                                          |
-| `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50`   | opus, sonnet, sonnet | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                    |
-| `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                              | opus                 | a human, from the cockpit, with the idea as the task                                                                                     |
-| `triage`              | skill `afk-triage`                                                         | default              | automation **Triage new issues** (label `needs-triage`)                                                                                  |
-| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-auto-review-pr` | default              | automation **Implement ready-for-agent issues** (label `ready-for-agent`)                                                                |
-| `spec-to-tickets`     | skill `afk-to-tickets`                                                     | default              | automation **Spec to tickets** (schedule, weekdays 07:00)                                                                                |
-| `architecture-review` | skill `afk-architecture-review`                                            | default              | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                      |
-| `lessons`             | skill `afk-lessons`                                                        | default              | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                  |
+| Workflow              | Agent step                                                                 | Started by                                                                                                                               |
+| --------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`                              | automation **Groom new issues** (`issue.opened`), **Re-groom on request** (label `groom`)                                                |
+| `issue-autofix`       | `/om-auto-fix-issue {{task}}`                                              | automation **Fix issues on the autofix label** (label `autofix`)                                                                         |
+| `spec`                | `/om-auto-write-spec {{task}}`                                             | automation **Write a spec for feature issues** (label `spec` on a `feature`)                                                             |
+| `implement-spec`      | `/om-auto-implement-spec {{task}}`                                         | a human, from the cockpit, after the spec PR merged - or `autofix` on the FR issue, which reaches the same skill through `issue-autofix` |
+| `pr-autopilot`        | `/om-pr-autopilot {{task}}` (no `--allow-merge`)                           | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer)                                                 |
+| `pr-review`           | `/om-auto-review-pr {{task}} --autofix`                                    | a human, from the cockpit, on a PR number                                                                                                |
+| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                                 | automation **Resolve blocking review threads** (label `review-threads` on a PR)                                                          |
+| `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50`   | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                    |
+| `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                              | a human, from the cockpit, with the idea as the task                                                                                     |
+| `triage`              | skill `afk-triage`                                                         | automation **Triage new issues** (label `needs-triage`)                                                                                  |
+| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-auto-review-pr` | automation **Implement ready-for-agent issues** (label `ready-for-agent`)                                                                |
+| `spec-to-tickets`     | skill `afk-to-tickets`                                                     | automation **Spec to tickets** (schedule, weekdays 07:00)                                                                                |
+| `architecture-review` | skill `afk-architecture-review`                                            | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                      |
+| `lessons`             | skill `afk-lessons`                                                        | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                  |
+
+**No workflow names a model.** Until 2026-09-22 most agent steps carried a `model:` - `opus` on
+the ones that reason, `sonnet` on the ones that execute. A step `model:` wins over the model the
+run was started with, and it is a claim about one backend: a Claude alias handed to a codex run is
+a model the API refuses every request on, and cezar read the refusal off a channel that failure
+never uses, so the run recorded `done` having done nothing. The model now belongs to the run: the
+cockpit composer picks it for a run a human starts, and an automation run uses the backend CLI's
+own default unless the automation sets `task.model` in `.ai/cezar/automations.json`.
 
 The task text an automation sends is the issue or PR number alone (`{{github.number}}`); a second
 token would read as a brief to `om-auto-fix-issue`. From the cockpit type the same: a number, a
@@ -255,7 +270,8 @@ upstream poller scopes its label source to `is:issue` and then drops any hit car
 fires minutes before the review job posts anything. So the chain is:
 
 1. `.github/workflows/claude-code-review.yml` ends with `scripts/ci/review-threads-label.mjs`,
-   which applies `review-threads` when the PR has live threads opened by the review bot.
+   which applies `review-threads` when the PR has live threads opened by a review bot - the
+   `claude` review job or `chatgpt-codex-connector`, whichever left them.
 2. A commit on the design4pro/cezar fork
    (`feat(automations): filters.includePullRequests polls label events on pull requests`) teaches
    the poller to honour `filters.includePullRequests` on both gates. It is opt-in per automation -
@@ -290,10 +306,26 @@ for `pull_request.unlabeled`, and a separate job re-runs the same script when th
 pushes nothing cannot re-arm itself when it drops its own claim - only asked at the first moment
 the answer can be anything but "held".
 
+There is a third ask, and it exists because a review bot does not have to answer while anyone is
+listening. `chatgpt-codex-connector` reviews asynchronously, about three minutes after a pull
+request opens, while step 1 arms at the end of the Claude review job - so whether its thread is
+seen at all came down to how long that job happened to run. Measured on three pull requests the
+same morning: on #690 the review took seven and a half minutes and the thread landed inside the
+window, on #692 and #695 it took about thirty seconds and the thread arrived two and a half minutes
+after the arming step had already reported "no unresolved review-bot thread on this PR". Both
+carried a P1 finding that held the merge and that no run was ever armed to read. So
+`rearm-review-threads.yml` now also listens for `pull_request_review.submitted`, which is the one
+event that fires when a review exists rather than when someone hoped it would.
+
 The gate is the same as for `groom` and `autofix`: only a collaborator or the Actions bot can set a
-label, so an outsider cannot start a run that holds an unrestricted Bash. A human's review thread is
-deliberately not a trigger - the script arms only on the review bot's threads, because a
-disagreement with a person is settled by talking. Rehearse the decision against any live PR with
+label, so an outsider cannot start a run that holds an unrestricted Bash. A human's review still
+never arms anything - it starts the workflow, since `pull_request_review` does not ask who
+submitted, and the script then declines it, because a disagreement with a person is settled by
+talking. Keeping that judgement in the script rather than in the trigger is deliberate: the
+workflow's condition can only ask what kind of event this is, while the script can see who opened
+each thread and whether it is still live. Which logins count is `DEFAULT_REVIEW_BOTS` in that
+script; a bot missing from it goes unnoticed rather than failing, because its threads simply never
+arm a run. Rehearse the decision against any live PR with
 `GH_REPO=… PR_NUMBER=… HEAD_SHA=… node scripts/ci/review-threads-label.mjs --dry-run`.
 
 ## Prompt templates (`docs/agents/cezar-prompt-templates.json`)
@@ -320,7 +352,9 @@ brief to `om-auto-fix-issue` - the same hazard the automations avoid by sending
 
 ## Housekeeping
 
-Cezar has no scheduler. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
+Cezar's scheduler takes one occurrence per automation - `weekdays` or `weekly`, each at a single
+time of day - so three runs a weekday cannot be expressed as one, and this cadence lives outside
+it. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
 (`/api/v1/p/planned-travel/runs`) and falls back to a headless `cezar run` when the cockpit is
 down, or exits 1 when `cezar` is not on PATH - there is no npx fallback, since upstream lacks the
 fork's fixes; launchd calls it at 07:00, 12:00 and 17:00 on weekdays. Install (template in

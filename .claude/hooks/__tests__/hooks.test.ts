@@ -9,7 +9,15 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// Every case here spawns a real `bash`, and the heaviest `it` spawns dozens of them in a loop -
+// which is the point, because a hook is only worth testing as the process the harness actually
+// runs. That makes this file's cost wall-clock rather than CPU, and the 5s default is a limit on
+// the machine's patience, not on the code: under `vitest run`'s full parallelism it expires on a
+// different test each time while every assertion still holds, and the same file passes in
+// isolation in a fraction of the budget. The assertions are unchanged - only the waiting is.
+vi.setConfig({ testTimeout: 30_000 })
 
 const HOOKS = resolve(__dirname, '..')
 const AGENT = { CEZ_TASK_ID: '0123456789ab-test' }
@@ -136,7 +144,6 @@ describe('git-guardrails.sh', () => {
     'pnpm --filter web deploy',
     'pnpm deploy:staging',
     'pnpm db:migrate:remote',
-    'pnpm db:migrate:remote:staging',
   ]
   it.each(SHIPPING)('blocks %s in an agent run', (command) => {
     expect(bash(command, AGENT).status).toBe(2)
@@ -147,6 +154,146 @@ describe('git-guardrails.sh', () => {
       expect(bash(command).status).toBe(0)
     },
   )
+
+  // Staging is the half of `--remote` an agent run is meant to reach: a query plan is only worth
+  // reading against real data and real statistics, and a staging mistake is repaired by reloading
+  // staging. The rule allowlists the database each statement names - `planned-travel-db-staging`,
+  // the one spelling package.json uses - and requires `--env staging` on top of it, because its
+  // absence is what production looks like on a command line.
+  const STAGING_D1 = [
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "EXPLAIN QUERY PLAN select 1"',
+    'wrangler d1 execute planned-travel-db-staging --remote --env=staging --command "select count(*) from trips"',
+    'wrangler d1 migrations apply planned-travel-db-staging --remote --env staging',
+    'pnpm wrangler d1 execute planned-travel-db-staging --env staging --remote --file ./plan.sql',
+    'pnpm db:migrate:remote:staging',
+    // A selector spelled inside the SQL is neither here nor there once the database itself is
+    // what decides: this one is staging because the positional says so.
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1 -- -e staging"',
+  ]
+  it.each(STAGING_D1)('allows %s in an agent run', (command) => {
+    expect(bash(command, AGENT).status).toBe(0)
+  })
+
+  // Production stays refused however the command is dressed, which is what an allowlist on the
+  // positional buys over a denylist of one name. Every entry after the fourth was allowed while
+  // the rule denylisted `planned-travel-db`, and each names production a different way: by
+  // `database_id` (both ids sit in plaintext in wrangler.jsonc, and a bare one resolves through
+  // the D1 API without the config being consulted, so `--env` never narrows it), and by the `DB`
+  // binding, which wrangler resolves to the top-level - production - database.
+  //
+  // The selector is forged four different ways in here, and none of them matters any more: a
+  // second statement borrowing the first one's `--env staging`, a `-e` with no left-hand boundary
+  // (`./restore-e staging.sql`), and `-e staging` / `--env staging` sitting inertly inside the SQL
+  // or a trailing shell comment - `$scan` keeps quoted spans for `wrangler`, which is not on the
+  // `prose_command` list. The allowlist decides before any of that is read. The last one is the
+  // flags-first spelling, where the token after the subcommand is not the database at all: an
+  // unreadable positional takes the production path, because this file fails closed.
+  const PRODUCTION_D1 = [
+    'wrangler d1 execute planned-travel-db --remote --command "select 1"',
+    'wrangler d1 migrations apply planned-travel-db --remote',
+    'wrangler d1 execute planned-travel-db --remote --env staging --command "select 1"',
+    'wrangler d1 execute planned-travel-db --remote --command "select 1" && wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1"',
+    'wrangler d1 execute a9738748-8c2d-4e67-8e6d-8dc55171d219 --remote --env staging --command "select * from user"',
+    'wrangler d1 execute a9738748-8c2d-4e67-8e6d-8dc55171d219 --remote --file ./restore-e staging.sql',
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 execute DB --remote --command "delete from trips"',
+    'wrangler d1 execute DB --remote --command "delete from trips"',
+    'wrangler d1 execute DB --remote --command "drop table trips -- -e staging"',
+    'wrangler d1 execute DB --remote --command "drop table user" # --env staging',
+    'wrangler d1 execute --remote DB --command "drop table user" --env staging',
+    // The allowlist is an equality test, not a substring one, and these are the two ways that
+    // distinction is usually lost: a neighbouring database whose name merely starts with the
+    // allowed one, and the allowed name in another case. Both are the production path, because
+    // neither is the database package.json reaches staging by.
+    'wrangler d1 execute planned-travel-db-staging-old --remote --env staging --command "select 1"',
+    'wrangler d1 execute PLANNED-TRAVEL-DB-STAGING --remote --env staging --command "select 1"',
+    // The rule reads the sub-command, not the first word of the line, so a runner in front of
+    // wrangler changes nothing - and neither does anything between the runner and the
+    // sub-command. These two were invisible to the rule entirely: it opened on `wrangler d1`
+    // with the words adjacent, so a config flag or a version suffix meant it never fired.
+    'npx wrangler d1 execute DB --remote --env staging --command "select 1"',
+    'wrangler -c wrangler.jsonc d1 execute planned-travel-db --remote --command "select 1"',
+    'npx wrangler@latest d1 execute planned-travel-db --remote --command "select 1"',
+  ]
+  it.each(PRODUCTION_D1)('blocks %s in an agent run', (command) => {
+    expect(bash(command, AGENT).status).toBe(2)
+  })
+
+  // The staging database by id is refused too, and deliberately: an agent run has no reason to
+  // spell the database any way but the way package.json spells it, and an allowlist carrying a
+  // second constant is a second thing that drifts out of step with wrangler.jsonc.
+  it('refuses even the staging database named by id in an agent run', () => {
+    const byId =
+      'wrangler d1 execute 0a30dba4-6978-494c-b2f0-2d02ca9a153e --remote --env staging --command "select 1"'
+    expect(bash(byId, AGENT).status).toBe(2)
+    expect(bash(byId).status).toBe(0)
+  })
+  it.each([...STAGING_D1, ...PRODUCTION_D1])(
+    'leaves %s to the prompt outside an agent run',
+    (command) => {
+      expect(bash(command).status).toBe(0)
+    },
+  )
+
+  // A compound line is only as safe as the part of it the rule can read, and the first shape of
+  // this allowlist read only the positionals its pattern recognised — so anything it could not
+  // read rode along on a line that also carried one compliant staging statement. Both cases
+  // below were refused outright by the blanket rule this one replaced, which makes them
+  // regressions rather than gaps, and both are why the rule counts `wrangler d1` occurrences
+  // instead of inspecting the ones it happens to parse.
+  it.each([
+    // A sub-command the extraction never names. `export` is the quiet one: it is a read, so it
+    // trips no destructive instinct, and it moves every tenant's row out of production.
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 export planned-travel-db --remote --output ./dump.sql',
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 time-travel restore planned-travel-db --timestamp 2026-09-01T00:00:00Z',
+    // A production statement whose positional is pushed onto a continued line, so the statement
+    // the extraction sees on the first line has no database of its own to read.
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler d1 execute \\\nplanned-travel-db --remote --command "delete from trips"',
+    // A flag between `wrangler` and its sub-command. Nothing about these is exotic - `-c` picks a
+    // config file and `@latest` pins a version - but while the counter looked for the two words
+    // adjacent, neither statement existed as far as it was concerned: the line counted one D1
+    // sub-command, matched the one staging statement, and passed.
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler -c wrangler.jsonc d1 execute planned-travel-db --remote --command "drop table trips"',
+    'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && npx wrangler@latest d1 execute planned-travel-db --remote --command "drop table trips"',
+  ])('blocks a production statement riding along a staging line: %s', (command) => {
+    expect(bash(command, AGENT).status).toBe(2)
+    expect(bash(command).status).toBe(0)
+  })
+
+  // A backslash-newline is a line continuation, and every rule here greps a line at a time, so
+  // one has to be folded away before the rules run or it splits a statement into two halves that
+  // each match nothing. This reached tier 1 — the tier with no audience that legitimately needs
+  // any of it — so the property is asserted per tier rather than on the D1 rule alone.
+  it.each([
+    ['git reset --hard \\\nHEAD~1', {}],
+    ['git clean \\\n-fd', {}],
+    ['git push --force \\\norigin develop', {}],
+    ['printenv \\\n| grep TOKEN', AGENT],
+    ['wrangler deploy \\\n--env production', AGENT],
+    ['wrangler d1 execute \\\nDB --remote --command "delete from trips" --env staging', AGENT],
+  ])('folds the continuation in %s before the rules read it', (command, env) => {
+    expect(bash(command, env).status).toBe(2)
+  })
+
+  // Every case above breaks on a space, which is the half of the fold that is easy to get right.
+  // A continuation may also split a token in two, and the shell rejoins the halves into one
+  // word - so the pair has to be removed, not replaced with a space. Replacing it read
+  // `git reset --hard` as `git re set --hard` and matched no rule at all; each line below ran as
+  // written and was allowed.
+  it.each([
+    ['git re\\\nset --hard HEAD~1', {}],
+    ['git c\\\nlean -fd', {}],
+    ['wrangler d\\\n1 execute planned-travel-db --remote --command "select 1"', AGENT],
+  ])('folds a continuation that splits a token: %s', (command, env) => {
+    expect(bash(command, env).status).toBe(2)
+  })
+
+  // The fold must not undo what `unquote()` strips backslashes for: a backslash that is not
+  // escaping a newline still has to vanish, or the one rule standing between a crafted pull
+  // request and a self-approval stops matching.
+  it('still strips a backslash that is not a continuation', () => {
+    expect(bash('gh pr \\review 12 --approve', ACTIONS).status).toBe(2)
+    expect(bash('gh \\pr review 12 --approve', ACTIONS).status).toBe(2)
+  })
 
   it('leaves the local database alone in both modes', () => {
     for (const env of [{}, AGENT]) {
@@ -402,6 +549,185 @@ describe('git-guardrails.sh', () => {
       })
     })
   })
+// Deleting the checkout rather than a file in it. Nothing here read `rm` before: guard-generated.sh
+// confines Edit and Write to the worktree and says in its own header that a Bash redirect still
+// reaches outside, so `rm -rf src` in a run matched no rule in either hook.
+describe("deleting the checkout", () => {
+  it.each([
+    "rm -rf /",
+    "rm -rf ~",
+    "rm -rf .",
+    "rm -rf $HOME/dev",
+    "rm -rf *",
+    "git reflog expire --expire=now --all",
+    "git gc --prune=now",
+    "git filter-branch --tree-filter x HEAD",
+    "gh repo delete design4pro/planned.travel",
+    "git push origin --delete develop",
+    "git push origin :main",
+  ])("blocks %s in every session", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2);
+    }
+  });
+
+  // Build output and scratch space: every one of these is put back by a command in package.json
+  // or by the run itself, so a run may clear them and a developer is never asked about it.
+  it.each([
+    "rm -rf node_modules",
+    "rm -rf node_modules && pnpm install",
+    "rm -rf dist .wrangler",
+    "rm -rf playwright-report test-results",
+    "rm -rf /tmp/x",
+    "rm -rf .ai/tmp/run-1",
+    "rm .ai/qa/dev-server.pid",
+  ])("leaves %s alone in every session", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(0);
+    }
+  });
+
+  // The source tree is not disposable, but a developer deleting their own checkout is their
+  // business - so this tier splits the way the file's other agent rules do.
+  it.each(["rm -rf src", "rm -rf e2e/fixtures", "rm -rf docs"])(
+    "refuses %s in a run and allows it at the keyboard",
+    (command) => {
+      expect(bash(command).status).toBe(0);
+      expect(bash(command, AGENT).status).toBe(2);
+      expect(bash(command, ACTIONS).status).toBe(2);
+    },
+  );
+
+  // Each `rm` is judged on its own targets. A command that clears node_modules and then the
+  // source tree is not sheltered by the accepted word standing first in the string.
+  it("judges every rm in a command separately", () => {
+    expect(bash("rm -rf node_modules && rm -rf src").status).toBe(0);
+    expect(bash("rm -rf node_modules && rm -rf src", AGENT).status).toBe(2);
+    expect(bash("rm -rf dist && rm -rf /", AGENT).status).toBe(2);
+    expect(bash("rm -rf dist && rm -rf /").status).toBe(2);
+  });
+
+  // `rm node_modules -rf` is valid, so recursion is decided over the whole invocation rather
+  // than by the word that happens to follow `rm`.
+  it("reads a flag that follows the target", () => {
+    expect(bash("rm node_modules -rf", AGENT).status).toBe(0);
+    expect(bash("rm src -rf", AGENT).status).toBe(2);
+  });
+
+  // The same contract the rest of the file keeps: a quoted argument of a prose command is text.
+  it("reads a quoted delete as text, not as an invocation", () => {
+    expect(bash('echo "rm -rf /"').status).toBe(0);
+    expect(bash('git commit -m "guard the rm -rf / case"').status).toBe(0);
+    expect(bash('grep -rn "rm -rf" .claude/hooks').status).toBe(0);
+    // ...and an executor is still read as one, because nothing is stripped for it.
+    expect(bash('bash -lc "rm -rf /"').status).toBe(2);
+  });
+
+  // The two ways to spell the same delete without naming `rm`, plus the user boundary and the
+  // worktree the cockpit owns. All of them are a run's business only.
+  it.each([
+    "find . -name *.tmp -delete",
+    "find . -type f -exec rm {} +",
+    "sudo launchctl list",
+    "git worktree remove --force ../wt",
+  ])("refuses %s in a run only", (command) => {
+    expect(bash(command).status).toBe(0);
+    expect(bash(command, AGENT).status).toBe(2);
+  });
+
+  // A shell metacharacter glued to `rm` used to hide the invocation from every tier, the
+  // always-on one included: the tokenizer split on whitespace, so `$(rm` was one unknown word
+  // rather than an operator followed by `rm`. These are the strongest guarantee in the file, so
+  // they are pinned in all three tiers.
+  it.each([
+    "echo $(rm -rf /)",
+    "(rm -rf /)",
+    "true;rm -rf /",
+    "echo `rm -rf /`",
+    "rm -rf dist&&rm -rf /",
+  ])("reads %s as an invocation, not as one unknown word", (command) => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2);
+    }
+  });
+
+  // A `*` in a `case` glob matches `/` and `..` alike, so a path walking back up out of an
+  // accepted prefix was accepted along with it. Any `..` segment is refused before the allowlist
+  // is consulted; ordinary dotted paths are not, which the two counter-cases pin.
+  it.each([
+    "rm -rf node_modules/../src",
+    "rm -rf .ai/tmp/../../src",
+    "rm -rf /tmp/../home",
+    "rm -rf dist/../../elsewhere",
+  ])("refuses %s, which walks out of the allowlist", (command) => {
+    expect(bash(command, AGENT).status).toBe(2);
+  });
+
+  it("keeps dotted paths that stay inside an allowed root", () => {
+    expect(bash("rm -rf node_modules/.cache", AGENT).status).toBe(0);
+    expect(bash("rm -rf .ai/tmp/run-1/a..b", AGENT).status).toBe(0);
+  });
+
+  // A recursive `rm` whose targets come from a pipe names no path this hook can read, so there
+  // is nothing to match against the allowlist. It is refused and told to name the path rather
+  // than dropped - in a run only, which is where the allowlist applies at all.
+  it.each(["find . -name node_modules | xargs rm -rf", "ls | xargs rm -rf"])(
+    "refuses the target-less %s in a run only",
+    (command) => {
+      expect(bash(command).status).toBe(0);
+      expect(bash(command, AGENT).status).toBe(2);
+    },
+  );
+
+  // A newline ends a command as surely as a semicolon does. State surviving one used to carry a
+  // recursive-delete flag onto the next line and block it, naming a target it never had.
+  it("does not leak an invocation across a newline", () => {
+    expect(bash("rm -rf node_modules\npnpm install", AGENT).status).toBe(0);
+  });
+
+  // ...but a backslash at the end of the line is not that newline: the shell joins the two into
+  // one command before it reads a word, so the target list continues rather than ending. Without
+  // the join, making the newline end an invocation would have dropped everything after it.
+  it("reads a target list continued onto the next line", () => {
+    expect(bash("rm -rf node_modules \\\n  src", AGENT).status).toBe(2);
+    expect(bash("rm -rf node_modules \\\n  dist", AGENT).status).toBe(0);
+  });
+
+  it("still judges a second delete written on its own line", () => {
+    const r = bash("rm -rf dist\nrm -rf src", AGENT);
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("src");
+  });
+
+  // git-push(1) documents `-d, --delete` as one option, an exact synonym since 1.7.0, so the
+  // short spelling deletes a shared branch just as the long one does.
+  it.each([
+    "git push -d origin develop",
+    "git push origin -d main",
+    "git push --delete origin develop",
+  ])("blocks the shared-branch delete %s", (command) => {
+    expect(bash(command).status).toBe(2);
+  });
+
+  // Every rule in the file is line-oriented, so the join is what lets any of them see a command
+  // the author wrapped. This one is not about `rm` at all, which is the point.
+  it("blocks a shared-branch delete wrapped onto two lines", () => {
+    expect(bash("git push --delete \\\n  origin develop").status).toBe(2);
+  });
+
+  // Deleting a merged feature branch is routine, and `--delete-branch` on a merge needs it -
+  // in either spelling. `develop-foo` is a branch of its own: the rule ends on a word boundary
+  // that excludes `-`, so a name merely starting with a shared one is not swallowed.
+  it("leaves a feature branch deletable", () => {
+    for (const env of [{}, AGENT]) {
+      expect(bash("git push origin --delete fix/issue-12-x", env).status).toBe(
+        0,
+      );
+      expect(bash("git push -d origin fix/issue-12-x", env).status).toBe(0);
+      expect(bash("git push origin -d develop-foo", env).status).toBe(0);
+    }
+  });
+});
 })
 
 describe('guard-generated.sh', () => {

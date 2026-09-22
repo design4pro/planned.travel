@@ -28,7 +28,7 @@ import {
 
 import { modulesTranslate as t } from '#/lib/i18n/__tests__/modules-translate'
 
-import type { TransportDraft, TransportPayload } from '../leg-form'
+import type { ChainDraft, TransportDraft, TransportPayload } from '../leg-form'
 import type { TransportInput } from '#/server/fns/transports'
 
 function draft(overrides: Partial<TransportDraft> = {}): TransportDraft {
@@ -572,6 +572,44 @@ describe('the draft as the record writers take it', () => {
     expect(payload.departureName).toBe('Tokyo')
     expect(payload.arrivalName).toBe('Kyoto')
     expect(broken.stations).toHaveLength(3)
+  })
+
+  /**
+   * The record is written before its chain, and the repository orders it in its own zones: the
+   * westbound clocks copied from the outer legs are only in order in the zones they were
+   * validated in, so those zones travel with them.
+   */
+  it('sends the outer stations’ zones with the endpoints a chain owns', () => {
+    const chain = breakIntoLegs(emptyChain(), {
+      departureName: 'Narita',
+      departureCode: 'NRT',
+      departureDate: '2026-04-16',
+      departureTime: '21:00',
+      departureDayId: '',
+      arrivalName: 'Honolulu',
+      arrivalCode: 'HNL',
+      arrivalDate: '2026-04-16',
+      arrivalTime: '09:00',
+      arrivalDayId: '',
+      serviceNumber: null,
+      seat: null,
+    })
+    const zoned: ChainDraft = {
+      ...chain,
+      stations: chain.stations.map((station, index) => ({
+        ...station,
+        timezone: index === 0 ? ' Asia/Tokyo ' : 'Pacific/Honolulu',
+      })),
+    }
+    const payload = transportPayload(filled(), zoned, TRIP)
+    expect(payload.departureTimezone).toBe('Asia/Tokyo')
+    expect(payload.arrivalTimezone).toBe('Pacific/Honolulu')
+  })
+
+  it('sends no zones for a journey nobody has broken up', () => {
+    const payload = transportPayload(filled(), emptyChain(), TRIP)
+    expect(payload).not.toHaveProperty('departureTimezone')
+    expect(payload).not.toHaveProperty('arrivalTimezone')
   })
 
   /**

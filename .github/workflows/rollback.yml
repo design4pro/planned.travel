@@ -56,9 +56,10 @@ permissions:
 # records why.
 #
 # The default is plan-dependent: it fits GitHub Team's 3,000 included minutes
-# (verified 2026-09-17), not GitHub Free's 2,000. If the organisation is ever
-# downgraded, set `RUNNER_DEPLOY` to `["self-hosted","linux","ARM64","ci"]` before
-# the next deploy - no pull request needed.
+# (verified 2026-09-17), not GitHub Free's 2,000. Pointing `RUNNER_DEPLOY` at the
+# self-hosted `ci` pool is not the answer to a downgrade: that pool shares a pnpm
+# store, a Node toolcache and a restarted container with pull request code, and a
+# deploy holds production credentials (ADR 0026).
 
 jobs:
   rollback:
@@ -92,24 +93,25 @@ jobs:
         uses: actions/checkout@v7
 
       # `wrangler-action` with `packageManager: pnpm` runs pnpm, it does not
-      # install it: the input only picks which binary to call. On the self-hosted
-      # pool that binary came from the runner image, so this step was not needed;
-      # `ubuntu-latest` ships none, and without it the rollback would have died on
+      # install it: the input only picks which binary to call. The pool's image
+      # happens to carry one and `ubuntu-latest` carries none, so this step is
+      # what makes the job independent of which of them `vars.RUNNER_DEPLOY`
+      # selected - without it the rollback would have died on
       # `pnpm: command not found` during the incident it exists for.
       #
-      # `install` is off, and that is not the same as "no install happens here".
-      # wrangler-action resolves the wrangler it wants itself, and with pnpm that
-      # is `pnpm add wrangler@<wranglerVersion>` in the checkout root - which
-      # resolves this project's whole dependency graph, because that is what
-      # `pnpm add` does inside a package. A `pnpm install --frozen-lockfile` in
-      # front of it would be a *second* full resolve of a tree nothing but that
-      # `pnpm add` ever reads. What makes the one resolve cheap is the pnpm store
-      # `actions/setup-node` restores, and that happens with `install` either way.
+      # The install runs even though nothing is built here, and it is the cheap
+      # half of a choice rather than an oversight. wrangler-action resolves the
+      # wrangler it runs itself: with no `wranglerVersion` below it asks
+      # `pnpm exec wrangler --version`, which needs a node_modules, so this step
+      # provides one. The alternative is not "no install" - a pin makes the
+      # action run `pnpm add wrangler@<version>` in the checkout root, which
+      # resolves this project's whole dependency graph anyway, because that is
+      # what `pnpm add` does inside a package. A frozen-lockfile install is the
+      # same one resolve against the pnpm store `actions/setup-node` restores,
+      # and it installs the wrangler the lockfile names instead of a second one.
       - name: Set up the toolchain
         if: steps.gate.outputs.configured == 'true'
         uses: ./.github/actions/setup
-        with:
-          install: 'false'
 
       # `--yes` answers the confirmation prompt. Without it the command waits on
       # a stdin nobody is holding and the job sits until its timeout.
@@ -120,9 +122,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
-          # Keep in step with the `wrangler` devDependency in package.json, as
-          # both deploy workflows do.
-          wranglerVersion: '4.70.0'
+          # No `wranglerVersion`, as in both deploy workflows: pnpm-lock.yaml
+          # owns it, and the step above installed it (#567).
           command: >-
             rollback ${{ inputs.version_id }} --yes
             --message "Rollback from GitHub Actions: ${{ inputs.reason }}"

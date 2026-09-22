@@ -2,8 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- Housekeeping (.ai/cezar/workflows/housekeeping.yml) at 07:00, 12:00 and 17:00 on weekdays,
      on the cezar host. Replaces dev.planned-travel.sweeper (ADR 0018). Template: replace
-     __REPO_ROOT__ with the main checkout and __PATH__ with a PATH that holds node, npx, curl
-     and jq, then install per docs/agents/cezar.md. -->
+     __REPO_ROOT__ with the main checkout and __PATH__ with a PATH that resolves cezar, node,
+     gh and curl, then install per docs/agents/cezar.md. launchd hands the job this PATH and
+     nothing else, and the login shell below normally only extends it: with cezar missing from
+     it housekeeping.sh exits 1, three times a weekday, into the log and nowhere else. jq is
+     optional, and without it the log omits the queued run id. -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
