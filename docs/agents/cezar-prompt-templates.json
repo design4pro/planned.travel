@@ -201,6 +201,6 @@
   {
     "id": "om-followup-issue-from-pr",
     "label": "om-followup-issue-from-pr - turn a PR comment into tracked work",
-    "text": "<paste the PR or PR-comment URL on this line>\n\nNo flags. Accepts .../pull/<n>#issuecomment-<id>, .../pull/<n>#discussion_r<id>, or a plain\n.../pull/<n>. Parse the repo from the URL - do not assume the current one.\nExtract the actionable ask and file it against the @-mentioned person, or the PR author when\nnobody is named. For a PR that only adds a design document, open the missing `Implement:` tracking\nissue instead. Apply SDLC labels on creation; never add a command label."
+    "text": "<paste the PR or PR-comment URL on this line>\n\nNo flags. Accepts .../pull/<n>#issuecomment-<id>, .../pull/<n>#discussion_r<id>, or a plain\n.../pull/<n>. Parse the repo from the URL - do not assume the current one.\nExtract the actionable ask and file it against the @-mentioned person, or the PR author when\nnobody is named. For a PR that only adds a design document, resolve `Refs #n` first: an open\nreferenced issue is already the implementation ticket (ADR 0018), so do not create a duplicate\n`Implement:` issue. Open a missing implementation issue only when no `Refs #n` exists or its\nreferenced issue is closed. Apply SDLC labels on creation; never add a command label."
   }
 ]

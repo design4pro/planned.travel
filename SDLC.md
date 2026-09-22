@@ -276,6 +276,13 @@ Two amendment rules are specific to this document's shape:
 - **What a ticket contains** beyond the Definition of Ready: `docs/agents/issue-tracker.md`. The
   label page is `docs/agents/triage-labels.md`, and the live automation definitions are
   `docs/agents/cezar-automations.json` (see `docs/agents/cezar.md`).
+- **Merge decisions remain manual (#537, closed as not planned).** A maintainer merges directly
+  or invokes `om-approve-merge-pr`. The `merge-queue` label routes approved PRs to that decision;
+  it does not enable GitHub's native merge queue. Reconsider a native queue only after measured
+  merge contention justifies it. Before enabling one, every required check must run on
+  `merge_group`, with explicit scope/e2e conditions and non-colliding concurrency groups;
+  `develop` → `main` must retain merge commits, and the rollout must document a rollback to
+  manual merging. This decision adds no queue or workflow today.
 - **Sources of issues.** People, through the issue forms (blank issues are off, so every issue
   enters with a category); Sentry findings as `bug` + `priority-high` + `groom`, never `autofix`;
   and follow-ups from `om-followup-issue-from-pr` and `om-review-prs`.
@@ -368,6 +375,11 @@ Named here because an unstated gap is one a reader rediscovers by losing work to
   `merge-gate` check passes it — it carries no hard block and no `needs-qa` — so an unlabeled
   dependency bump can merge while `## Label state machine` says a ready PR carries `review`.
   Labelling one is a human act today.
-- **`in-progress` has no exit that does not need a person.** `## The claim protocol` says a stale
-  claim "may be cleared by the maintainer", and no automation clears it. That is exactly the shape
-  `## Unattended decisions` forbids introducing, in the oldest state this process has.
+- **Stale claims outside the bounded review sweep still need a maintainer.** `om-review-prs`
+  automatically ends its sweep with
+  `node scripts/agents/release-leaked-claims.mjs --since <sweep start> --prs <dispatched PRs>`
+  (#706). It only releases an `om-auto-review-pr` claim by the automation account when that is
+  the PR's only lock event since the sweep started, and reports whether a review was submitted.
+  Take-overs and newer claims after a release are left alone. The same bounded command with
+  `--dry-run` previews manual recovery; arbitrary stale issue or PR claims still follow
+  `## The claim protocol` and require the maintainer.
