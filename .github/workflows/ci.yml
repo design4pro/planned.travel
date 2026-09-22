@@ -57,59 +57,9 @@ jobs:
       - name: Set up the toolchain
         uses: ./.github/actions/setup
 
-      # `src/routeTree.gen.ts` is generated and committed. Regenerating it here
-      # proves the committed copy matches the route files in the same commit —
-      # a stale tree is otherwise only discovered as a mystery type error.
-      - name: Generate route tree
-        run: pnpm generate-routes
-
-      - name: Check the committed route tree is current
-        run: |
-          set -euo pipefail
-          # --intent-to-add first: `git diff` is blind to a file git has never
-          # seen, so without this a *new* generated file - a first route in a
-          # new directory - reports clean and the drift ships.
-          git add --intent-to-add -- src/routeTree.gen.ts
-          git diff --exit-code -- src/routeTree.gen.ts
-
-      # `drizzle/` is generated and committed the same way the route tree is, and
-      # a schema edit with no committed migration is caught here rather than in
-      # production, where it presents as a query against a column that does not
-      # exist.
-      #
-      # `< /dev/null` because drizzle-kit asks, on a rename it cannot infer,
-      # whether a column was created or renamed. On a runner there is nobody to
-      # answer, and a prompt with no stdin hangs until the job timeout instead of
-      # failing. Closed stdin turns that into an immediate, readable error.
-      - name: Generate migrations from the schema
-        run: pnpm db:generate < /dev/null
-
-      - name: Check every schema change has a committed migration
-        run: |
-          set -euo pipefail
-          git add --intent-to-add -- drizzle/
-          if ! git diff --exit-code -- drizzle/; then
-            echo "::error title=Uncommitted migration::The schema and drizzle/ disagree. Run 'pnpm db:generate' and commit the result - migrations are additive, and the running Worker has to survive the migrate-then-deploy window."
-            exit 1
-          fi
-
-      # `.ai/specs/README.md` is generated from the metadata table in each spec,
-      # and those tables are what say whether a designed change shipped, is
-      # waiting, or was dropped. The table is checked against the directory
-      # holding the file by scripts/specs/__tests__/spec-registry.test.ts; this
-      # step catches only the other half - an index nobody regenerated after
-      # moving a spec or appending a pull request to one.
-      - name: Generate the spec index
-        run: pnpm generate-spec-index
-
-      - name: Check the committed spec index is current
-        run: |
-          set -euo pipefail
-          git add --intent-to-add -- .ai/specs/README.md
-          if ! git diff --exit-code -- .ai/specs/README.md; then
-            echo "::error title=Stale spec index::.ai/specs/README.md no longer matches .ai/specs/. Run 'pnpm generate-spec-index' and commit the result."
-            exit 1
-          fi
+      # The local and CI gates share one implementation of generator drift checks.
+      - name: Check generated files
+        run: bash .ai/scripts/check-generated.sh
 
       # ESLint spends its time building a typed program and then walking it, and
       # on a pull request almost none of that work is new. `--cache` skips a file
@@ -190,28 +140,6 @@ jobs:
       - name: Run the suite
         run: pnpm exec vitest run --coverage --reporter=default --reporter=github-actions
 
-      # The thresholds are enforced by the step above, whose exit code is the
-      # job's verdict; nothing downstream reads this artifact, it is here for a
-      # human to open. So `continue-on-error`, for the same reason the e2e
-      # diagnostics carry `if-no-files-found: ignore` further down - an
-      # instrument must never be what reddens a run. Without it, an upload that
-      # fails for a reason having nothing to do with the code fails a required
-      # check while the suite is green: on 2026-09-21 the account's artifact
-      # storage quota filled and `unit tests` went red on three consecutive
-      # commits, each with all 6813 tests passing.
-      #
-      # Two days rather than seven: at ~14 MB a run this was 11.1 GB of the
-      # 21.1 GB in the store, and nobody opens a coverage report from last week.
-      - name: Upload coverage report
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage
-          path: coverage
-          retention-days: 2
-          if-no-files-found: ignore
-
   # Which parts of the pipeline this pull request's diff can reach. Only `e2e`
   # reads the answer: a diff that stops at documentation - a spec, an ADR, a
   # skill - cannot change what a browser sees, and two shards of it cost ~20 min
@@ -272,7 +200,7 @@ jobs:
   # four shards would halve the test time and pay the fixed cost twice more, for
   # about the same total.
   # Each shard is its own container with its own D1, so shards never share
-  # state; `e2e-report` below merges the blob reports into one HTML.
+  # state; `e2e-report` below checks the aggregate test outcome.
   # The price of not waiting on `verify` is a wasted run when a typecheck fails,
   # which is rare and cheap next to what this used to take.
   #
@@ -351,107 +279,56 @@ jobs:
           # proof enough, and 25 s off the other shard's critical path.
           verify-seed: ${{ matrix.shard == 1 }}
 
-      # `PLAYWRIGHT_BASE_URL` points the suite at the server the composite
-      # action already started and seeded, so the config starts none of its own.
-      # `--shard` splits per test (fullyParallel), and `--reporter=blob` replaces
-      # the config's reporters with the one `merge-reports` consumes — traces
-      # and screenshots of failures travel inside the blob.
       - name: Run this shard of the suite
+        id: tests
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=blob
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
+        run: pnpm exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json
 
-      - name: Upload the blob report
+      - name: Select failure and flaky diagnostics
+        id: diagnostics
         if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: blob-report-${{ matrix.shard }}
-          path: blob-report
-          retention-days: 1
-          if-no-files-found: ignore
+        continue-on-error: true
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: node scripts/ci/e2e-diagnostics.mjs >> "$GITHUB_OUTPUT"
 
-      # The other half of the instrumentation the composite action installs, and
-      # the half without which it is blind: the sampler writes to the runner's
-      # disk, and the runner is gone by the time anyone asks. `dev-server.log`
-      # has the same problem for a different reason - every run has always
-      # written it, and no run has ever kept it, which is why a red shard
-      # currently leaves no server-side evidence at all.
-      #
-      # `always()`, because the shard that fails is the only one worth reading.
-      # `if-no-files-found: ignore`, so an instrument can never be what reddens
-      # a run. Seven days rather than the blob's one: these are kilobytes, and
-      # the question they answer outlives the run that raised it.
-      - name: Upload the runtime diagnostics
-        if: always()
+      - name: Upload failure and flaky diagnostics
+        if: ${{ always() && (steps.tests.outcome != 'success' || steps.diagnostics.outputs.upload != 'false') }}
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-runtime-${{ matrix.shard }}
+          name: e2e-chromium-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          retention-days: 2
+          if-no-files-found: ignore
           path: |
+            test-results/results.json
+            test-results/**/trace.zip
+            test-results/**/*.png
+            test-results/**/error-context.md
             e2e-runtime.log
             dev-server.log
-          retention-days: 7
-          if-no-files-found: ignore
 
-  # One report for the two shards: the GitHub annotations and the HTML report
-  # (with the failing journeys' traces and videos) that a single job would give.
-  # Not behind shards that were skipped - by `scope` or on a develop→main PR -
-  # since there is nothing to merge and the toolchain alone is a minute of pool.
+  # Keep the required check name; reports are diagnostics, never the verdict.
   e2e-report:
     name: e2e · merged report
-    needs: e2e
-    if: ${{ !cancelled() && needs.e2e.result != 'skipped' }}
+    needs: [scope, e2e]
+    if: ${{ always() }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
-    timeout-minutes: 10
-
+    timeout-minutes: 2
     steps:
-      - name: Check out
-        uses: actions/checkout@v7
-
-      - name: Set up the toolchain
-        uses: ./.github/actions/setup
-
-      - name: Download the blob reports
-        uses: actions/download-artifact@v8
-        with:
-          pattern: blob-report-*
-          path: all-blob-reports
-          merge-multiple: true
-
-      # No blobs means the shards did not run — on a develop→main PR, which
-      # defers to the push run. A notice, not a failure.
-      - name: Merge the shard reports
+      - name: Require every expected shard to pass
+        env:
+          SHARDS_RESULT: ${{ needs.e2e.result }}
+          SKIP_ALLOWED: ${{ github.event_name == 'pull_request' && (contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref) || (needs.scope.result == 'success' && needs.scope.outputs.e2e == 'false')) }}
         run: |
-          set -euo pipefail
-          if [ -z "$(ls -A all-blob-reports 2>/dev/null)" ]; then
-            echo '::notice title=e2e report::no shard reports to merge — the journeys did not run.'
+          if [ "$SHARDS_RESULT" = success ]; then exit 0; fi
+          if [ "$SHARDS_RESULT" = skipped ] && [ "$SKIP_ALLOWED" = true ]; then
+            echo '::notice::E2E intentionally skipped for documentation or promotion.'
             exit 0
           fi
-          pnpm exec playwright merge-reports --reporter html,github ./all-blob-reports
-
-      # Evidence for a human, not an input to any later step - so an upload
-      # failure must not redden the job that carries the journeys' verdict.
-      # Three days rather than seven: 3.7 GB of the store was this artifact.
-      - name: Upload the Playwright report
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: playwright-report
-          retention-days: 3
-          if-no-files-found: ignore
-
-      # The verdict, which is why the rulesets require this job for the journeys
-      # and not the shards: a shard's check name moves with the shard count.
-      # `merge-reports` exits 0 whatever the shards found - PR #518's run
-      # 34956377809 shows both shards failed under a green merged report - so
-      # the result comes from `needs.e2e.result`, the aggregate over the matrix,
-      # which is not `success` when any shard failed, was cancelled or never ran.
-      - name: Fail unless every shard passed
-        if: ${{ !cancelled() && needs.e2e.result != 'success' }}
-        run: |
-          echo "::error title=e2e::the journeys did not pass on every shard (result: ${{ needs.e2e.result }}); the report above names the failures."
+          echo "::error::Required E2E shards did not pass: $SHARDS_RESULT"
           exit 1
 
   # The deploys, as the last jobs of a push run and only behind a green one.

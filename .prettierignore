@@ -56,3 +56,6 @@ yarn.lock
 docs/agents/cezar-automations.json
 scripts/ci/__tests__/merge-gate.test.mjs
 scripts/ci/merge-gate.mjs
+
+# Preserve Wrangler runtime declarations; only the environment header is adjusted.
+worker-configuration.d.ts

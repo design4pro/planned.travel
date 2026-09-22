@@ -335,9 +335,21 @@ gh pr review {prNumber} --request-changes --body "<body>"
 GitHub rejects self-approval (reviewing your own PR); surface that instead of working around it.
 
 #### merge-pr
-`{prNumber}`; squash is the default merge strategy. `--auto` merges when checks pass; `--delete-branch` only when asked.
+`{prNumber}`; read `baseRefName` before choosing the strategy: `main` requires a merge commit (`--merge`), while every other base uses `--squash`. This preserves the ancestry of `develop` → `main` promotions (ADR 0003). A missing base or failed rules lookup stops the operation; never guess squash. `--auto` merges when checks pass; `--delete-branch` only when asked and never for a merge queue.
 ```bash
-gh pr merge {prNumber} --squash
+merge_base=$(gh pr view {prNumber} --repo {owner}/{repo} --json baseRefName --jq .baseRefName) || exit 1
+case "$merge_base" in
+  ''|null) echo 'Cannot select a merge method without the PR base branch.' >&2; exit 1 ;;
+esac
+encoded_base=$(jq -rn --arg branch "$merge_base" '$branch | @uri') || exit 1
+branch_rules=$(gh api "repos/{owner}/{repo}/rules/branches/$encoded_base" --jq '.[].type') || exit 1
+if grep -qx merge_queue <<< "$branch_rules"; then
+  gh pr merge {prNumber} --repo {owner}/{repo}
+elif [ "$merge_base" = main ]; then
+  gh pr merge {prNumber} --repo {owner}/{repo} --merge
+else
+  gh pr merge {prNumber} --repo {owner}/{repo} --squash
+fi
 ```
 **When the base branch has a merge queue** — `gh api "repos/{owner}/{repo}/rules/branches/{baseBranch}" --jq '.[].type'` lists `merge_queue` — drop the strategy and run `gh pr merge {prNumber}`. That enqueues the PR (enabling auto-merge while checks are still pending); the queue's own method decides, so `--squash` / `--merge` / `--rebase` are ignored with a warning and `--delete-branch` is refused outright. The command means **queued**, not merged: report it that way, and expect the merge minutes later, once the queue has run the suite on the commit it built. Removing an entry is `gh api graphql -f query='mutation { dequeuePullRequest(input: {id: "<node id>"}) { clientMutationId } }'` — `gh pr merge --disable-auto` does not do it.
 

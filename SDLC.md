@@ -233,12 +233,11 @@ Two amendment rules are specific to this document's shape:
 - **The base branch is `develop`.** Feature branches are squash-merged into it. The
   `develop` → `main` promotion is a separate PR merged with **a merge commit**, never squashed
   (ADR 0003): only a merge commit advances the merge base, and a squashed promotion compounds
-  conflicts on every promotion after it. #492 merged on 2026-09-14 and wrote that rule down; it
-  taught no skill to follow it. `om-approve-merge-pr` still calls the descriptor's **merge-pr**,
-  whose strategy is `--squash` by default, and neither picks the merge strategy from _which_ base
-  branch a PR targets — the one place the descriptor reads the base branch is to ask whether it has
-  a merge queue, which is a different question. So **merge the promotion PR by hand**, and read
-  "the patch landed" as "the rule is written down", never as "the tooling now honours it".
+  conflicts on every promotion after it. The tracker **merge-pr** operation reads the PR's
+  current base: `main` uses `--merge`, other branches use `--squash`. The repo-local
+  `om-approve-merge-pr` override refuses an explicitly requested squash or rebase on `main`.
+  A merge queue still selects its own method; the operation enqueues without a strategy.
+  The `main` ruleset remains the independent server-side guard.
 - **The release log is `CHANGELOG.md`, and its topmost heading is the version of record.** There is
   no `version` in `package.json` and no release tags, on purpose — the file's own header says why,
   and `om-auto-update-changelog`'s repo-local override says how to resolve `--version` without one.
