@@ -10,14 +10,48 @@
  * itinerary belongs in a queue consumer, not in a request path.
  */
 
+import { getTableColumns } from 'drizzle-orm'
 import type { Database } from '#/server/db/types'
-import type { TenantScope } from './base'
+import type { TenantScope, TenantTable } from './base'
 
 /**
  * A prepared Drizzle write. Query builders are thenables, so the sequential fallback can simply
  * await them, and the D1 driver accepts the very same objects in `batch()`.
  */
 export type BatchStatement = PromiseLike<unknown>
+
+/** D1 refuses a statement carrying more than this many bound parameters. */
+export const MAX_BOUND_PARAMETERS = 100
+
+/** How many rows of `columns` bound parameters each fit in one statement. */
+export function chunkFor(columns: number): number {
+  return Math.max(1, Math.floor(MAX_BOUND_PARAMETERS / columns))
+}
+
+/** The safe upper bound of parameters Drizzle binds for one inserted row. */
+export function boundParametersPerRow(table: TenantTable): number {
+  return Object.keys(getTableColumns(table)).length
+}
+
+/** Inserts rows in statements small enough for D1's bound-parameter ceiling. */
+export async function insertChunked<TRow extends object, TResult>(
+  table: TenantTable,
+  rows: ReadonlyArray<TRow>,
+  insert: (chunk: ReadonlyArray<TRow>) => Promise<Array<TResult>>,
+  beforeChunk?: (rowsInChunk: number) => Promise<void>,
+): Promise<Array<TResult>> {
+  if (rows.length === 0) {
+    return []
+  }
+  const size = chunkFor(boundParametersPerRow(table))
+  const inserted: Array<TResult> = []
+  for (let index = 0; index < rows.length; index += size) {
+    const chunk = rows.slice(index, index + size)
+    await beforeChunk?.(chunk.length)
+    inserted.push(...(await insert(chunk)))
+  }
+  return inserted
+}
 
 /** The batch surface D1 (and the test proxy driver) add on top of the abstract Drizzle handle. */
 interface BatchCapableDatabase {
