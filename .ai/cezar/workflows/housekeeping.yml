@@ -1,4 +1,4 @@
-# The sweeper's successor (ADR 0018): three read-mostly passes over the open queue, started by
+# The sweeper's successor (ADR 0018): issue reconciliation and two read-mostly passes, started by
 # launchd three times a day on the cezar host (.ai/scripts/launchd/, .ai/scripts/housekeeping.sh).
 # om-review-prs reviews what waits for review, om-merge-buddy reports what could merge (it never
 # merges), close-fixed-issues.mjs closes issues whose `Closes #n` PR merged into the configured
@@ -6,6 +6,10 @@
 name: housekeeping
 description: Review the queue, report what can merge, close issues whose PR merged into develop.
 steps:
+  # Reconcile first: a later review permission denial must not strand merged issues.
+  - id: close-fixed
+    name: Reconcile issues fixed by merged PRs
+    command: node scripts/agents/close-fixed-issues.mjs --apply --limit 50
   - id: bootstrap
     name: Install dependencies and generate the route tree
     command: HUSKY=0 pnpm install --frozen-lockfile --prefer-offline && pnpm generate-routes
@@ -17,6 +21,3 @@ steps:
     name: om-merge-buddy (read-only)
     prompt: '/om-merge-buddy'
     allowedTools: [Read, Grep, Glob, Bash, Skill, TodoWrite]
-  - id: close-fixed
-    name: Reconcile issues fixed by merged PRs
-    command: node scripts/agents/close-fixed-issues.mjs --apply --limit 50
