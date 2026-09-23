@@ -62,14 +62,18 @@ export function decideMerge({
     if (issue.pull_request) reasons.push(`#${issue.number} is a pull request`)
     if (issue.state !== 'open') reasons.push(`#${issue.number} is not open`)
     for (const label of [
-      'blocked',
+      ...HARD_BLOCKS,
       'do-not-close',
-      'in-progress',
       'needs-info',
       'ready-for-human',
     ])
       if (issue.labels.some(({ name }) => name === label))
         reasons.push(`#${issue.number} carries ${label}`)
+    if (
+      issue.labels.some(({ name }) => name === 'needs-qa') &&
+      !labels.has('needs-qa')
+    )
+      reasons.push(`#${issue.number} requires PR-level QA`)
     if (issue.labels.some(({ name }) => name === 'security'))
       reasons.push(`#${issue.number} is security work`)
   }

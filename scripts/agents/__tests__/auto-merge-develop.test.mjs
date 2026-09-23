@@ -102,6 +102,18 @@ describe('auto-merge develop admission', () => {
     expect(
       decide({ pr: { ...pr, labels: labels(['risk-low', name]) } }).eligible,
     ).toBe(false)
+    expect(
+      decide({
+        issues: [{ ...issue, labels: labels(['risk-low', name]) }],
+      }).eligible,
+    ).toBe(false)
+  })
+  it('does not ignore needs-qa on the issue', () => {
+    expect(
+      decide({
+        issues: [{ ...issue, labels: labels(['risk-low', 'needs-qa']) }],
+      }).eligible,
+    ).toBe(false)
   })
   it('rejects missing or unlinked implementation issues', () => {
     expect(decide({ pr: { ...pr, body: 'Refs #42' } }).eligible).toBe(false)
