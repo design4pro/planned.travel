@@ -5,8 +5,9 @@ name: spec
 description: Human added `spec`; om-auto-write-spec turns the feature issue into a spec file on a design-only PR.
 steps:
   - id: bootstrap
-    name: Provision the worktree (deps, routes, secrets, D1, basemap)
-    command: bash scripts/worktree/bootstrap.sh --profile worktree --no-seed
+    name: Install dependencies and generate routes
+    # Design-only work needs no secrets, D1 or basemap; implementation and QA provision separately.
+    command: HUSKY=0 pnpm install --frozen-lockfile --prefer-offline && pnpm generate-routes
   - id: spec
     name: om-auto-write-spec
     prompt: '/om-auto-write-spec {{task}}'

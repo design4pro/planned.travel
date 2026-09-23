@@ -198,10 +198,11 @@ The task text an automation sends is the issue or PR number alone (`{{github.num
 token would read as a brief to `om-auto-fix-issue`. From the cockpit type the same: a number, a
 spec path, or for `brainstorm` the idea.
 
-Provisioning is `scripts/worktree/bootstrap.sh --profile worktree --no-seed` (deps, route tree,
-`.dev.vars`, local D1 with airports, basemap when cached; no server), or only `pnpm install` and
-`pnpm generate-routes` for the read-only workflows. The validation gate the skills run is
-`validation.commands` in `.ai/agentic.config.json`, which leaves the full journeys to CI (ADR 0021).
+Workflows that need a local app use `scripts/worktree/bootstrap.sh --profile worktree --no-seed`
+(deps, route tree, `.dev.vars`, local D1 with airports, basemap when cached; no server). The design-only
+`spec` and read-only workflows only install dependencies and generate routes. The validation gate the
+skills run is `validation.commands` in `.ai/agentic.config.json`, which leaves the full journeys to
+CI (ADR 0021).
 `bash .ai/scripts/e2e.sh`, which a run uses for the journeys its diff reaches, starts the app through
 `.ai/scripts/test-env-up.sh` on a free port from 3030-3040 (`om-prepare-test-env` contract). That
 server is deliberately left running for the rest of the run to reuse, so nothing else would ever
