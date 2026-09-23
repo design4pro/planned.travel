@@ -1,5 +1,5 @@
 {
-  "defaultRunner": "codex",
+  "defaultRunner": "claude",
   "reviewGate": false,
   "baseBranch": "develop",
   "worktreeRetention": 10,
