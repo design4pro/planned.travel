@@ -77,7 +77,7 @@ jobs:
   # — which is why this job needs no timeout of its own beyond ci.yml's 20 minutes.
   e2e-webkit:
     name: e2e · webkit (${{ matrix.shard }}/2)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -120,7 +120,7 @@ jobs:
       - name: Upload failure and flaky diagnostics
         if: ${{ always() && (steps.tests.outcome != 'success' || steps.diagnostics.outputs.upload != 'false') }}
         continue-on-error: true
-        uses: actions/upload-artifact@v7
+        uses: design4pro/.github/actions/artifact-upload@main
         with:
           name: e2e-webkit-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
           retention-days: 2
@@ -138,7 +138,7 @@ jobs:
     name: e2e · webkit merged report
     needs: e2e-webkit
     if: ${{ always() }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 2
     steps:
       - name: Require every WebKit shard to pass
