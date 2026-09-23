@@ -277,13 +277,13 @@ Two amendment rules are specific to this document's shape:
   label page is `docs/agents/triage-labels.md`, and the live automation definitions are
   `docs/agents/cezar-automations.json` (see `docs/agents/cezar.md`).
 - **Native merge queue remains off (#537, closed as not planned).** The `merge-queue` label is
-  a process marker, not a native GitHub merge queue. A separate deterministic controller may
-  merge eligible low- or medium-risk PRs into `develop` after current review, CI, and any required
-  manual QA, after a separately gated rollout. `risk-high`, security work,
-  and `develop` → `main` promotion remain manual. Reconsider a native queue only if measured merge
-  contention justifies it. Before enabling one, every required check must run on `merge_group`,
-  with explicit scope/e2e conditions and non-colliding concurrency groups; promotions must retain
-  merge commits, and the rollout must document a rollback to manual merging.
+  a process marker, not a native GitHub merge queue. A separate deterministic controller defaults
+  to dry-run and may merge eligible low- or medium-risk PRs into `develop` after current review, CI,
+  and any required manual QA; see `docs/agents/auto-merge.md` for the gated rollout. `risk-high`,
+  security work, and `develop` → `main` promotion remain manual. Reconsider a native queue only if
+  measured merge contention justifies it. Before enabling one, every required check must run on
+  `merge_group`, with explicit scope/e2e conditions and non-colliding concurrency groups;
+  promotions must retain merge commits, and the rollout must document a rollback to manual merging.
 - **Sources of issues.** People, through the issue forms (blank issues are off, so every issue
   enters with a category); Sentry findings as `bug` + `priority-high` + `groom`, never `autofix`;
   and follow-ups from `om-followup-issue-from-pr` and `om-review-prs`.
