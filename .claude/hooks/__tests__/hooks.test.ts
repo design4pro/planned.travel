@@ -2,8 +2,8 @@
 // Agent mode is CEZ_TASK_ID (cezar) or GITHUB_ACTIONS; without either a developer keeps pnpm and env.
 // The om-* skills mutate GitHub through .ai/trackers/github.md (`gh api`), stage with `git add -A`,
 // write `Closes #n` and run `pnpm exec`, so none of those is blocked under cezar; what is blocked
-// there is the pinned stack (`pnpm add`) and the environment dump. Under GitHub Actions the review
-// job reads untrusted PR content with a write token, so every gh mutation stays blocked there.
+// there is the pinned stack (`pnpm add`) and the environment dump. GitHub Actions can still
+// process untrusted PR content, so every gh mutation stays blocked there.
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
