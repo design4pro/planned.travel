@@ -158,7 +158,7 @@ describe('git-guardrails.sh', () => {
 
   it('blocks destructive git for everyone', () => {
     // Every mode, because this tier is the one that has no audience: nothing a developer,
-    // a cezar run or the review job legitimately does needs any of it.
+    // a cezar run or an Actions agent legitimately does needs any of it.
     for (const env of [{}, AGENT, ACTIONS]) {
       expect(bash('git reset --hard HEAD~1', env).status).toBe(2)
       expect(bash('git clean -fd', env).status).toBe(2)
@@ -838,11 +838,10 @@ describe('guard-generated.sh', () => {
     expect(edit(`${root}/src/x.ts`).status).toBe(0)
   })
 
-  // Tier 3, and the thing ADR 0025 changed. Under GitHub Actions the diff belongs to whoever
-  // opened the pull request and the review job reads it with a write token, so a run never edits
-  // the files that configure it. In a cezar run the diff is a human's, proposed as a pull request
-  // and read by a reviewer, and the block was pure friction: a correction to a skill or a workflow
-  // could not be written where the file is.
+  // Tier 3, and the thing ADR 0025 changed. Under GitHub Actions an agent may read untrusted
+  // pull-request content, so a run never edits the files that configure it. In a cezar run the
+  // diff is a human's, proposed as a pull request and read by a reviewer, and the block was pure
+  // friction: a correction to a skill or a workflow could not be written where the file is.
   it.each([
     '.github/workflows/ci.yml',
     '.claude/settings.json',
