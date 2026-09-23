@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Start one `housekeeping` run (.ai/cezar/workflows/housekeeping.yml) on the cezar cockpit of
 # this host. launchd calls it three times a day (.ai/scripts/launchd/); a human may call it any
-# time. Cezar has no scheduler of its own, so this POST is the schedule (ADR 0018).
+# time. A cezar schedule takes one occurrence per automation (`weekdays` / `weekly`, one time of
+# day), so three runs a weekday cannot be expressed as one and this cadence lives in launchd
+# instead (ADR 0018).
 #
 #   .ai/scripts/housekeeping.sh
 #
