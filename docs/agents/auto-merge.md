@@ -10,7 +10,7 @@ An approval must be a GitHub `APPROVED` review on the current head by an account
 Reviewed SHA: <full 40-character head SHA>
 ```
 
-An implementation self-check or a `COMMENTED` review does not qualify. Cezar's independent reviewer records that line already; its publishing identity must be separate from the author to produce the GitHub approval. Until such an identity is provisioned for agent-authored PRs, a trusted human approval can satisfy this gate. Keep the reviewer allowlist narrow and configure it as a comma-separated repository variable.
+An implementation self-check or a `COMMENTED` review does not qualify. The independent reviewer must include that line explicitly; the installed Cezar review skill does not yet guarantee it. Its publishing identity must also be separate from the author to produce the GitHub approval. Until the skill and identity are configured for agent-authored PRs, a trusted human approval can satisfy this gate. Keep the reviewer allowlist narrow and configure it as a comma-separated repository variable.
 
 For a PR labeled `needs-qa`, a person in the comma-separated `AUTO_MERGE_QA_REVIEWERS` variable must apply `qa-approved` and post this exact line in a PR comment:
 
@@ -18,7 +18,7 @@ For a PR labeled `needs-qa`, a person in the comma-separated `AUTO_MERGE_QA_REVI
 QA-approved SHA: <full 40-character head SHA>
 ```
 
-A new push changes the SHA and invalidates the evidence. Existing QA evidence without that line is sufficient for the manual merge path but cannot authorize the controller.
+A new push changes the SHA and invalidates the evidence. An active `qa` label blocks the controller even when earlier current-SHA approval remains. Existing QA evidence without that line is sufficient for the manual merge path but cannot authorize the controller.
 
 For write mode, install a dedicated GitHub App on this repository with Contents and Pull requests write, Issues and Checks read, and no ruleset bypass. Set `AUTO_MERGE_APP_ID` and the secret `AUTO_MERGE_APP_PRIVATE_KEY`. The workflow creates a short-lived installation token only in write mode. GitHub Actions' default token is used for dry-run. The App token also lets the merge's push start CI on `develop`.
 

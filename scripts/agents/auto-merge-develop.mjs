@@ -16,6 +16,7 @@ const HARD_BLOCKS = [
   'blocked',
   'do-not-merge',
   'changes-requested',
+  'qa',
   'qa-failed',
   'in-progress',
 ]
