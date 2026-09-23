@@ -378,10 +378,11 @@ describe('MapCanvas', () => {
       <MapCanvas label="Trip map" minZoom={3} maxZoom={17} />,
     )
     await mapMounted()
-    expect(lastMap().minZoom).toBe(3)
+    // The loading UI clears at commit; the zoom range is applied by a later effect.
+    await waitFor(() => expect(lastMap().minZoom).toBe(3))
 
     rerender(<MapCanvas label="Trip map" minZoom={5} maxZoom={17} />)
-    expect(lastMap().minZoom).toBe(5)
+    await waitFor(() => expect(lastMap().minZoom).toBe(5))
     expect(harness.maps).toHaveLength(1)
   })
 

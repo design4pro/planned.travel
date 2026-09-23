@@ -17,7 +17,7 @@ import { describe, expect, it, vi } from 'vitest'
 // the machine's patience, not on the code: under `vitest run`'s full parallelism it expires on a
 // different test each time while every assertion still holds, and the same file passes in
 // isolation in a fraction of the budget. The assertions are unchanged - only the waiting is.
-vi.setConfig({ testTimeout: 30_000 })
+vi.setConfig({ testTimeout: 15_000 })
 
 const HOOKS = resolve(__dirname, '..')
 const AGENT = { CEZ_TASK_ID: '0123456789ab-test' }
@@ -53,6 +53,109 @@ const bash = (command: string, env = {}) =>
   hook('git-guardrails.sh', { command }, env)
 
 describe('git-guardrails.sh', () => {
+  it.each(['export', 'insert', 'future-command', 'time-travel restore', 'create'])(
+    'guards remote D1 %s by database in every agent mode',
+    (operation) => {
+      const remote = operation.startsWith('time-travel') || operation === 'create' ? '' : ' --remote'
+      for (const env of [AGENT, ACTIONS]) {
+        expect(bash(`wrangler d1 ${operation} planned-travel-db${remote}`, env).status).toBe(2)
+        expect(bash(`wrangler d1 ${operation} planned-travel-db-staging${remote} --env staging`, env).status).toBe(0)
+        expect(bash(`wrangler d1 ${operation} planned-travel-db-staging${remote}`, env).status).toBe(2)
+      }
+      expect(bash(`wrangler d1 ${operation} planned-travel-db${remote}`).status).toBe(0)
+    },
+  )
+
+  it.each([
+    "cat <<'EOF'\nwrangler secret put TOKEN\nWRONG",
+    'cat <<"EOF"\nwrangler secret put TOKEN',
+    "cat <<'EOF'\nEOF \ngit reset --hard",
+  ])('keeps an unclosed heredoc visible: %s', (command) => {
+    expect(bash(command).status).toBe(2)
+  })
+
+  it.each([
+    "cat <<'EOF'\nwrangler secret put TOKEN\nEOF",
+    'cat <<"EOF"\nwrangler secret put TOKEN\nEOF',
+    "cat <<-'EOF'\n\twrangler secret put TOKEN\n\tEOF",
+  ])('shelters only a closed literal heredoc: %s', (command) => {
+    expect(bash(command).status).toBe(0)
+    expect(bash(`${command}\necho done`).status).toBe(2)
+  })
+
+  it.each([
+    "cat <<'EOF'x\npayload\nEOFx\ngit reset --hard\nEOF",
+    "cat <<'EOF'\"x\"\npayload\nEOFx\ngit reset --hard\nEOF",
+  ])('does not truncate a concatenated heredoc delimiter: %s', (command) => {
+    expect(bash(command).status).toBe(2)
+  })
+
+  it('does not interpret a here-string as a heredoc body', () => {
+    expect(bash("cat <<<'EOF'\ngit reset --hard\nEOF").status).toBe(2)
+  })
+
+  it('does not interpret a quoted marker as a shell heredoc', () => {
+    expect(bash(`echo "<<'EOF'"\ngit reset --hard\nEOF`).status).toBe(2)
+  })
+
+  it.each([
+    'rm -rf node_modules 2>/dev/null',
+    'rm -rf dist > /dev/null 2>&1',
+    'rm -rf dist 2> /dev/null',
+    'rm -rf dist 2>& 1',
+    'rm -rf dist &>/dev/null',
+    'rm -rf dist >| /dev/null',
+    'rm -rf dist>/dev/null',
+  ])('does not mistake a redirect for an rm target: %s', (command) => {
+    expect(bash(command, AGENT).status).toBe(0)
+  })
+
+  it.each([
+    'rm -rf src 2>/dev/null',
+    'rm -rf dist > /dev/null src',
+    'rm -rf dist 2>&1 src',
+    'rm -rf dist 2>& 1 src',
+    'rm -rf dist &>/dev/null src',
+    'rm -rf dist >| /dev/null src',
+    'rm -rf dist > /dev/null; rm -rf src',
+  ])('preserves real rm targets beside redirects: %s', (command) => {
+    const result = bash(command, AGENT)
+    expect(result.status).toBe(2)
+    expect(result.stderr).toContain("recursive delete of 'src'")
+  })
+
+  it.each([
+    'rm -rf dist >$(echo /dev/null) src',
+    'rm -rf dist 2>$(echo /dev/null) src',
+    'rm -rf dist >/dev/null$(true) src',
+    'rm -rf dist >`echo /dev/null` src',
+    'rm -rf dist > $(echo /dev/null) src',
+  ])('refuses ambiguous redirect substitutions: %s', (command) => {
+    for (const env of [AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2)
+    }
+  })
+
+  it.each([
+    "rm -rf 'dist>src'",
+    'rm -rf "dist>src"',
+    String.raw`rm -rf dist\>src`,
+  ])('does not mistake a quoted filename for a redirect: %s', (command) => {
+    expect(bash(command, AGENT).status).toBe(2)
+  })
+
+  it('does not consume a numeric target suffix as a file descriptor', () => {
+    const result = bash('rm -rf dist2>/dev/null', AGENT)
+    expect(result.status).toBe(2)
+    expect(result.stderr).toContain("recursive delete of 'dist2'")
+  })
+
+  it('keeps fatal rm targets protected beside redirects in every mode', () => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash('rm -rf / 2>/dev/null', env).status).toBe(2)
+    }
+  })
+
   it('blocks destructive git for everyone', () => {
     // Every mode, because this tier is the one that has no audience: nothing a developer,
     // a cezar run or the review job legitimately does needs any of it.
