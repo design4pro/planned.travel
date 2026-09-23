@@ -62,6 +62,9 @@ everywhere.
 This is what makes the hosted fallback a path rather than documentation: `vars.RUNNER_CI` and
 `vars.RUNNER_AGENT` set to `["ubuntu-latest"]` now run the whole gate green (run 35583369840).
 
+_Amended by #711: automatic Claude review is retired and `RUNNER_AGENT` is no longer needed
+for required checks. `RUNNER_CI` alone selects the hosted fallback for all four required checks._
+
 **2. `RUNNER_DEPLOY` keeps its GitHub-hosted default.** ADR 0023's decision 4 stands, and the
 expression is unchanged:
 
@@ -96,6 +99,7 @@ container recreated rather than restarted, which is work in design4pro/cezar.
 - **`e2e` is green on any runner.** The hosted escape hatch for the gate stops being fiction:
   `vars.RUNNER_CI` and `vars.RUNNER_AGENT` set to `["ubuntu-latest"]` bring back every required
   check, without an admin bypass, during a host outage.
+  _Amended by #711: `RUNNER_CI` alone now brings back the four required checks._
 - **An e2e shard pays for its browsers on every run, on the pool as well.** It used to inherit them
   from the image. That is seconds against a warm store, and the apt half is skipped exactly where
   there is no sudo, which is the pool. The exchange is a condition that cannot be wrong for a cost
@@ -127,6 +131,8 @@ container recreated rather than restarted, which is work in design4pro/cezar.
   its containers are restarted rather than recreated like the `ci` pool's, and it runs `claude.yml`
   with `contents: write` on untrusted input. It would also queue a deploy behind forty-turn agent
   runs on two slots.
+  _Amended by #711: `claude.yml` was retired. The persistent container layer and limited slots
+  remain reasons not to run production deploys on this pool._
 - **Blacksmith ARM runners for CI and the agents (#692), measured and not taken.** The gate was run
   green end to end on 4-vCPU Blacksmith ARM (run 35587121453) and on GitHub-hosted
   (run 35583369840):
@@ -155,3 +161,5 @@ container recreated rather than restarted, which is work in design4pro/cezar.
   `claude.yml` ~3,900, against the ~1,100 minutes Team still includes once the deploys have taken
   theirs. ADR 0016 puts the journeys on every pull request event and the agents set the rate of
   those events, so this is the workload hosted minutes price worst.
+  _Amended by #711: the two Claude workflows were retired, so this dated estimate does not
+  describe the current workload._

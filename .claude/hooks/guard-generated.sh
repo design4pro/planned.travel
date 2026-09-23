@@ -113,9 +113,8 @@ esac
 # out-of-scope.md are the clean-room rule and the product boundary, governance a run reads and
 # never edits.
 #
-# `.claude/hooks/` is the load-bearing entry. `git-guardrails.sh` is re-read on every PreToolUse
-# and its own header calls itself the only thing between a crafted pull request and
-# `gh pr review --approve`; a run able to write it disarms the rest of this file in one call.
+# `.claude/hooks/` is the load-bearing entry. `git-guardrails.sh` is re-read on every PreToolUse;
+# an Actions agent able to rewrite it could disable tracker-mutation checks mid-run.
 # scripts/ci/ and the two docs/agents/cezar-*.json extend the same boundary to CI verdicts and
 # the automations/prompts installed in the cockpit.
 rel="${abs#"$root"/}"

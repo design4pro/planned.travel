@@ -258,9 +258,10 @@ explicitly through Cezar or `@codex review`.
 
 `pr-fix` is manual. Claude review, `@claude`, `review-threads` and re-arm workflows are retired.
 Existing findings remain open until assessed, and conversation resolution plus process/QA checks
-still block merge. Before retiring live triggers, inventory active runs and unresolved threads,
-confirm Cezar review works, then remove only `claude-review` from both rulesets.
-Disable Codex automatic review and any configured Copilot automatic review in their settings.
+still block merge. The #711 cutover inventoried active runs and unresolved threads, disabled the
+three workflows and removed `claude-review` from both rulesets. The Codex automatic-review setting
+still requires an authenticated browser session; no repository ruleset requests automatic Copilot
+review. Check any account-level Copilot setting separately.
 
 ## Prompt templates (`docs/agents/cezar-prompt-templates.json`)
 

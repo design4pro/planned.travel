@@ -154,6 +154,8 @@ budget:
   agent-kit, so their comments change there. How the host and the pool are run is agent-kit's README,
   _- since ADR 0025, `design4pro/cezar`'s `docs/host/README.md`, which is where `host/` moved -_
   "The runner pool".
+  _Amended by #711: both Claude workflows were retired; `merge-gate.yml` remains in this
+  repository as an ordinary vendored file under ADR 0025._
 
 ## Alternatives rejected
 
