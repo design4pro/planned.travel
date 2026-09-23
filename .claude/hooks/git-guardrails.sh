@@ -218,9 +218,13 @@ echo "$scan" | grep -Eq 'git\s+push\b[^|;&]*[[:space:]]:(refs/heads/)?(develop|m
 # command in package.json can put back.
 rm_invocations() { # command
   # scan has lost its quotes. A quoted or escaped angle bracket may belong to a real
-  # filename, so do not interpret redirects at all when the original command is ambiguous.
+  # filename. Substitutions can be split by the tokenizer and hide subsequent targets.
+  # Keep ambiguous redirects visible so their operands fail the disposable-path allowlist.
   local strip_redirects=1
   if grep -Eq "\"[^\"]*[<>][^\"]*\"|'[^']*[<>][^']*'|\\\\[<>]" <<< "$command"; then
+    strip_redirects=0
+  fi
+  if grep -Eq '\$\(|`' <<< "$command"; then
     strip_redirects=0
   fi
   printf '%s\n' "$1" | awk -v strip_redirects="$strip_redirects" '
@@ -399,9 +403,9 @@ echo "$scan" | grep -Eq 'wrangler\s+(deploy|rollback|versions\s+(deploy|upload)|
 # from, and its absence is what production looks like on a command line. `-e` carries a left-hand
 # boundary like every other rule in this file, or `--file ./restore-e staging.sql` reads as a
 # selector that is not there.
-# Every remote operation is gated, including future sub-commands. Time travel always
-# reaches a remote database even though its CLI does not take --remote.
-if echo "$scan" | grep -Eq '\bd1\b.*--remote|\bd1[[:space:]]+time-travel\b'; then
+# Explicit remote operations are gated, including future sub-commands. Time travel
+# and database creation reach the remote API without taking --remote.
+if echo "$scan" | grep -Eq '\bd1\b.*--remote|\bd1[[:space:]]+(time-travel|create)\b'; then
   # Count, do not inspect. Reading the positionals the extraction happens to recognise and
   # allowing the line when all of them are staging is the shape that failed review: anything on
   # the line the extraction could *not* read stayed invisible and rode along - a `d1 export`

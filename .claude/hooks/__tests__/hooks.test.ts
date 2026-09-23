@@ -53,10 +53,10 @@ const bash = (command: string, env = {}) =>
   hook('git-guardrails.sh', { command }, env)
 
 describe('git-guardrails.sh', () => {
-  it.each(['export', 'insert', 'future-command', 'time-travel restore'])(
+  it.each(['export', 'insert', 'future-command', 'time-travel restore', 'create'])(
     'guards remote D1 %s by database in every agent mode',
     (operation) => {
-      const remote = operation.startsWith('time-travel') ? '' : ' --remote'
+      const remote = operation.startsWith('time-travel') || operation === 'create' ? '' : ' --remote'
       for (const env of [AGENT, ACTIONS]) {
         expect(bash(`wrangler d1 ${operation} planned-travel-db${remote}`, env).status).toBe(2)
         expect(bash(`wrangler d1 ${operation} planned-travel-db-staging${remote} --env staging`, env).status).toBe(0)
@@ -122,6 +122,18 @@ describe('git-guardrails.sh', () => {
     const result = bash(command, AGENT)
     expect(result.status).toBe(2)
     expect(result.stderr).toContain("recursive delete of 'src'")
+  })
+
+  it.each([
+    'rm -rf dist >$(echo /dev/null) src',
+    'rm -rf dist 2>$(echo /dev/null) src',
+    'rm -rf dist >/dev/null$(true) src',
+    'rm -rf dist >`echo /dev/null` src',
+    'rm -rf dist > $(echo /dev/null) src',
+  ])('refuses ambiguous redirect substitutions: %s', (command) => {
+    for (const env of [AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2)
+    }
   })
 
   it.each([
