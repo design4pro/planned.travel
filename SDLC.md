@@ -276,6 +276,14 @@ Two amendment rules are specific to this document's shape:
 - **What a ticket contains** beyond the Definition of Ready: `docs/agents/issue-tracker.md`. The
   label page is `docs/agents/triage-labels.md`, and the live automation definitions are
   `docs/agents/cezar-automations.json` (see `docs/agents/cezar.md`).
+- **Native merge queue remains off (#537, closed as not planned).** The `merge-queue` label is
+  a process marker, not a native GitHub merge queue. A separate deterministic controller defaults
+  to dry-run and may merge eligible low- or medium-risk PRs into `develop` after current review, CI,
+  and any required manual QA; see `docs/agents/auto-merge.md` for the gated rollout. `risk-high`,
+  security work, and `develop` → `main` promotion remain manual. Reconsider a native queue only if
+  measured merge contention justifies it. Before enabling one, every required check must run on
+  `merge_group`, with explicit scope/e2e conditions and non-colliding concurrency groups;
+  promotions must retain merge commits, and the rollout must document a rollback to manual merging.
 - **Sources of issues.** People, through the issue forms (blank issues are off, so every issue
   enters with a category); Sentry findings as `bug` + `priority-high` + `groom`, never `autofix`;
   and follow-ups from `om-followup-issue-from-pr` and `om-review-prs`.
@@ -368,6 +376,11 @@ Named here because an unstated gap is one a reader rediscovers by losing work to
   `merge-gate` check passes it — it carries no hard block and no `needs-qa` — so an unlabeled
   dependency bump can merge while `## Label state machine` says a ready PR carries `review`.
   Labelling one is a human act today.
-- **`in-progress` has no exit that does not need a person.** `## The claim protocol` says a stale
-  claim "may be cleared by the maintainer", and no automation clears it. That is exactly the shape
-  `## Unattended decisions` forbids introducing, in the oldest state this process has.
+- **Stale claims outside the bounded review sweep still need a maintainer.** `om-review-prs`
+  automatically ends its sweep with
+  `node scripts/agents/release-leaked-claims.mjs --since <sweep start> --prs <dispatched PRs>`
+  (#706). It only releases an `om-auto-review-pr` claim by the automation account when that is
+  the PR's only lock event since the sweep started, and reports whether a review was submitted.
+  Take-overs and newer claims after a release are left alone. The same bounded command with
+  `--dry-run` previews manual recovery; arbitrary stale issue or PR claims still follow
+  `## The claim protocol` and require the maintainer.
