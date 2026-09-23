@@ -47,7 +47,7 @@ jobs:
     # `e2e` job carries the same clause in its own `if`, since it does not wait
     # on this one.
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 20
 
     steps:
@@ -126,7 +126,7 @@ jobs:
   test:
     name: unit tests
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 15
 
     steps:
@@ -152,7 +152,7 @@ jobs:
   scope:
     name: change scope
     if: github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 5
     outputs:
       e2e: ${{ steps.classify.outputs.e2e }}
@@ -228,7 +228,7 @@ jobs:
     name: e2e · critical journeys (${{ matrix.shard }}/2)
     needs: scope
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)) && needs.scope.outputs.e2e != 'false' }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     # Measured on the 2-vCPU runner, first green run (33806080237): 2-3 min of
     # fixed cost - image pull, checkout, install, migrations, seed - then 6m41s of
     # journeys on shard 1 and 9m59s on shard 2, for jobs of 9m44s and 11m58s. At
@@ -297,7 +297,7 @@ jobs:
       - name: Upload failure and flaky diagnostics
         if: ${{ always() && (steps.tests.outcome != 'success' || steps.diagnostics.outputs.upload != 'false') }}
         continue-on-error: true
-        uses: actions/upload-artifact@v7
+        uses: design4pro/.github/actions/artifact-upload@main
         with:
           name: e2e-chromium-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
           retention-days: 2
@@ -315,7 +315,7 @@ jobs:
     name: e2e · merged report
     needs: [scope, e2e]
     if: ${{ always() }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 2
     steps:
       - name: Require every expected shard to pass
