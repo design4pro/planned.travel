@@ -1,7 +1,7 @@
 # Labels
 
 The label vocabulary is the SDLC taxonomy in `SDLC.md` (ADR 0018), read by every `om-*` skill from
-`.ai/agentic.config.json`. This page adds only what is specific to this repository: the four
+`.ai/agentic.config.json`. This page adds only what is specific to this repository: the three
 command labels, the intake ladder, the human holds, the escape hatch, and the map from the retired
 ADR 0015 vocabulary.
 
@@ -21,7 +21,7 @@ state for an issue: it says who acts next, and two of the four also start a run.
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                   |
 | Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | issues only, one at a time; humans and `afk-architecture-review` add `needs-triage`, `afk-triage` the rest  |
 | Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                             |
-| Command  | `groom`, `autofix`, `spec`, `review-threads`                                               | humans, except `review-threads` (the review job); the run consumes it in its claim step                     |
+| Command  | `groom`, `autofix`, `spec`                                                                 | humans; the run consumes it in its claim step                                                               |
 
 There is no `status:` axis. An open issue carries an **intake** label once it has been groomed, and
 the state of work in flight is the pipeline label on its PR; an open issue with neither, and without
@@ -65,10 +65,6 @@ skill's repo-local override removes it first, so a command still present is a ru
   a feature goes spec → implement. Excluded while `in-progress`, `blocked`, `do-not-merge` or `spec`.
 - `spec` - `om-auto-write-spec` on a `feature` issue: the spec lands in `.ai/specs/` on a
   design-only PR. Implementation is a separate, human-started run once that PR merges.
-- `review-threads` - the one command on a PR, and the one no human adds: the `claude-review` job
-  applies it when it leaves review threads the merge gate will hold, and `om-auto-fix-pr` clears
-  them. Once per head SHA, never while `in-progress`, `blocked` or `do-not-merge`
-  (docs/agents/cezar.md).
 
 ## Flow
 
@@ -89,7 +85,6 @@ human: autofix ─► in-progress ─► PR (review, category, needs-qa|skip-qa,
 human: spec (feature) ─► spec PR (documentation, skip-qa, Refs #n) ─► human merges ─► the same issue is the implementation ticket
       ─► human: autofix on it ─► om-auto-fix-issue's feature route ─► om-auto-implement-spec (cockpit: implement-spec is the same skill by hand)
 PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA, never merge
-claude-review leaves open threads ─► review-threads ─(Resolve blocking review threads)─► om-auto-fix-pr replies and resolves
 housekeeping (no CEZAR automation; launchd runs it 07:00/12:00/17:00 on weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
       ─► issue closed when its `Closes #n` PR merged into develop
 approved PR: gated auto-merge for eligible risk-low/risk-medium, otherwise human om-approve-merge-pr from the cockpit; needs-qa merges only with qa-approved
