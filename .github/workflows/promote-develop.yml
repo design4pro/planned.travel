@@ -9,40 +9,10 @@ name: Promote develop
 # always exists is what keeps that visible: the diff between staging and production is on screen
 # from the first merge into `develop`, not reconstructed the day someone decides to release.
 #
-# ── The token, and why there are two ──────────────────────────────────────────────────────────
-# A pull request opened with the default GITHUB_TOKEN does not trigger `pull_request` workflows,
-# so it shows no checks of its own. On `main` that is not survivable: the branch ruleset requires
-# the `claude-review` status check, which only claude-code-review.yml produces, so such a pull
-# request cannot be merged until something else brings the check in.
-#
-# The repository secret `PROMOTE_PR_TOKEN` - a fine-grained PAT or a GitHub App installation
-# token with `contents: read` and `pull requests: write` on this repository - is therefore the
-# expected configuration. With it the promotion pull request runs claude-code-review.yml, which
-# reviews the whole promotion diff in one pass and produces the required check. ci.yml is
-# triggered too but skips its jobs on a develop → main pull request on purpose: the push run on
-# `develop` is canonical for the exact commit being promoted.
-#
-# Without the secret the expression below falls back to GITHUB_TOKEN. The pull request still
-# opens, with no check of its own, and stays blocked until a later push to `develop` synchronizes
-# it under a human's credentials or someone with bypass merges it by hand.
-#
-# ── The label, and why the promotion opens carrying one ───────────────────────────────────────
-# Because PROMOTE_PR_TOKEN belongs to a maintainer, this pull request is indistinguishable, to the
-# cezar poller, from one that maintainer opened by hand: `pr-autopilot`
-# (docs/agents/cezar-automations.json) filters `pull_request.opened` by author and reads no base
-# branch. Every release cycle therefore spent one full agent run reaching the only conclusion
-# available to it - a promotion carries no change of its own, is not the automation's pull request
-# to fix, is already reviewed by claude-code-review.yml on the promotion diff, and merging it
-# deploys production, which the skill must never do (#380, first seen on #377).
-#
-# `--label merge-queue` below is the stand-down. That label is already in `pr-autopilot`'s
-# `excludeLabels`, and it is the honest one here: SDLC.md calls `merge-queue` routing rather than
-# proof of QA, and "green, waiting on a human" is what a promotion pull request is from the moment
-# it opens. Labelling a pull request goes through the issues endpoint, which GitHub grants to
-# `pull requests: write` as well as to `issues: write` - so it is covered by the permission this
-# token already needs to open the pull request at all, and by the job's `permissions:` block on
-# the GITHUB_TOKEN fallback path. Neither path needs a permission widened for it.
-# ──────────────────────────────────────────────────────────────────────────────────────────────
+# PROMOTE_PR_TOKEN lets pull_request checks run when the standing promotion opens.
+# GITHUB_TOKEN is a fallback, but does not itself trigger those workflows.
+# The merge-queue label is a process stand-down for Cezar, not a native GitHub queue:
+# promotions are reviewed and merged manually, without an automated repair run.
 
 on:
   push:
@@ -61,8 +31,7 @@ permissions:
 # `runs-on` below reads through `vars.RUNNER_CI`, an organisation variable that is
 # deliberately unset: unset, the default here selects the self-hosted pool. Setting it
 # to `["ubuntu-latest"]` moves every job that reads it back to GitHub-hosted runners
-# without a pull request. Merging the promotion also needs the `claude-review` check,
-# which reads `vars.RUNNER_AGENT`, so a host outage needs both set. ADR 0023.
+# without a pull request. ADR 0023.
 
 jobs:
   promote:
@@ -108,8 +77,8 @@ jobs:
             '<https://staging.planned.travel>.' \
             '' \
             'Every commit below has already passed the full gate on `develop`. Whether this pull' \
-            'request also runs a review of its own depends on the token that opened it - see the' \
-            'header of `.github/workflows/promote-develop.yml`.')
+            'request runs its own CI checks depends on the token that opened it - see the header' \
+            'of `.github/workflows/promote-develop.yml`. A human reviews the promotion before merging.')
 
           gh pr create \
             --base main \

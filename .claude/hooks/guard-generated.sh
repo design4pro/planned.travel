@@ -14,10 +14,8 @@
 # ADR 0025 removed that half. It was the whole of the edit friction the kit retirement was about -
 # a correction to a skill, a hook or a workflow became a two-repository round trip - and in a cezar
 # run the branch is a human's, proposed as a pull request and read by a reviewer before it merges.
-# Under GitHub Actions none of that holds: there the diff is the attacker's, `claude-code-review.yml`
-# reads it with a write token under bypassPermissions, and `git-guardrails.sh` - re-read on every
-# PreToolUse - is a file on disk that a run could otherwise rewrite mid-flight. So tier 3 stays
-# exactly where the trust does not.
+# GitHub Actions may execute untrusted pull-request content. A running agent must not rewrite
+# git-guardrails.sh, which is re-read on every PreToolUse. Tier 3 remains active in that context.
 #
 # Contract: exit 2 blocks the tool call and feeds stderr back to the model; exit 0 allows.
 set -euo pipefail
@@ -115,17 +113,10 @@ esac
 # out-of-scope.md are the clean-room rule and the product boundary, governance a run reads and
 # never edits.
 #
-# `.claude/hooks/` is the load-bearing entry. `git-guardrails.sh` is re-read on every PreToolUse
-# and its own header calls itself the only thing between a crafted pull request and
-# `gh pr review --approve`; a run able to write it disarms the rest of this file in one call.
-# `claude-code-review.yml` restores four paths from the base ref before the agent starts, which
-# stops the pull request supplying its judge - it does nothing about the running agent, and this
-# line is that half.
-#
-# scripts/ci/ and the two docs/agents/cezar-*.json are the same argument one step out:
-# review-threads-label.mjs is the single thing that arms "Resolve blocking review threads", and the two JSON files
-# are what the cockpit installs as this repository's automations and prompts - a run rewriting the
-# prompt it is about to be handed is the same act as a run rewriting .ai/cezar/.
+# `.claude/hooks/` is the load-bearing entry. `git-guardrails.sh` is re-read on every PreToolUse;
+# an Actions agent able to rewrite it could disable tracker-mutation checks mid-run.
+# scripts/ci/ and the two docs/agents/cezar-*.json extend the same boundary to CI verdicts and
+# the automations/prompts installed in the cockpit.
 rel="${abs#"$root"/}"
 
 if printf '%s' "$rel" | grep -Eq '^(\.github/|\.claude/|\.husky/|\.ai/cezar/|\.ai/agentic\.config\.json$|\.ai/trackers/|\.ai/browsers/|\.ai/skills/|\.ai/scripts/|scripts/ci/|docs/agents/cezar-(automations|prompt-templates)\.json$|\.npmrc$|pnpm-workspace\.yaml$|docs/agents/reference\.md$|docs/agents/out-of-scope\.md$)'; then

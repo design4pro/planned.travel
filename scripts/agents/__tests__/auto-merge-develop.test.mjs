@@ -96,6 +96,7 @@ describe('auto-merge develop admission', () => {
     'blocked',
     'do-not-merge',
     'changes-requested',
+    'qa',
     'qa-failed',
     'in-progress',
   ])('rejects the %s hold', (name) => {
@@ -180,6 +181,21 @@ describe('auto-merge develop admission', () => {
             body: `QA-approved SHA: ${baseSha}`,
           },
         ],
+      }).eligible,
+    ).toBe(false)
+  })
+  it('blocks a renewed QA pass despite earlier approval on the same SHA', () => {
+    const approved = {
+      user: { login: 'qa-maintainer' },
+      body: `QA-approved SHA: ${headSha}`,
+    }
+    expect(
+      decide({
+        pr: {
+          ...pr,
+          labels: labels(['risk-low', 'needs-qa', 'qa-approved', 'qa']),
+        },
+        qaComments: [approved],
       }).eligible,
     ).toBe(false)
   })

@@ -91,10 +91,10 @@ Pipeline labels are mutually exclusive: a PR carries at most one, and it names w
 | Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | one at a time; unset = medium | Urgency of the work                |
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | one at a time; unset = medium | Blast radius of the change         |
 | Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | one at a time; issues only    | Who acts on the issue next         |
-| Command  | `groom`, `autofix`, `spec`, `review-threads`                                               | additive; consumed by the run | Start one run now                  |
+| Command  | `groom`, `autofix`, `spec`                                                                 | additive; consumed by the run | Start one run now                  |
 | Outside  | `do-not-close`                                                                             | additive                      | A human hold no skill may override |
 
-The first five groups are a PR's; **Intake** is an issue's and **Command** is either's, and each has its own section below rather than a line here. A repository may add a switch of its own outside the taxonomy; `## This repository` names it. Every group is also `labels.*` in `.ai/agentic.config.json`, and that file is what the skills read — a label this document names and the config does not is a label no skill will apply.
+The first five groups are a PR's; **Intake** and **Command** are an issue's, and each has its own section below rather than a line here. A repository may add a switch of its own outside the taxonomy; `## This repository` names it. Every group is also `labels.*` in `.ai/agentic.config.json`, and that file is what the skills read — a label this document names and the config does not is a label no skill will apply.
 
 Priority is how urgent the work is; risk is how dangerous the change is to ship. A one-line fix for an outage can be `priority-extreme` and `risk-low`; a large auth refactor that can wait can be `priority-low` and `risk-high`. A PR inherits both from its source issue unless the scope clearly changed. When an automated skill adds or changes a pipeline or meta label, it leaves a short comment explaining why.
 
@@ -132,14 +132,13 @@ Intake labels go on issues only, one at a time, and say who acts on the issue ne
 
 ## Trigger labels
 
-A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human (or, for `review-threads`, a job) hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation — so a trigger label still present is a run nobody took.
+A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation — so a trigger label still present is a run nobody took.
 
-| Label            | Starts                                    | Notes                                                                                                                                |
-| ---------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `groom`          | `om-auto-manage-issues` on one issue      | Labels, Definition of Ready check, implementation notes. The way an issue from someone other than a maintainer is groomed at all.    |
-| `autofix`        | `om-auto-fix-issue`                       | A bug goes verify → root cause → fix → PR → review → QA; a feature goes spec → implement. The human express lane past triage.        |
-| `spec`           | `om-auto-write-spec` on a `feature` issue | The spec lands under `.ai/specs/` on a design-only PR. Implementation is a separate run once that PR merges.                         |
-| `review-threads` | `om-auto-fix-pr` on one PR                | The only trigger on a PR, and the only one no human adds: the review job applies it when it leaves threads the merge gate will hold. |
+| Label     | Starts                                    | Notes                                                                                                                             |
+| --------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `groom`   | `om-auto-manage-issues` on one issue      | Labels, Definition of Ready check, implementation notes. The way an issue from someone other than a maintainer is groomed at all. |
+| `autofix` | `om-auto-fix-issue`                       | A bug goes verify → root cause → fix → PR → review → QA; a feature goes spec → implement. The human express lane past triage.     |
+| `spec`    | `om-auto-write-spec` on a `feature` issue | The spec lands under `.ai/specs/` on a design-only PR. Implementation is a separate run once that PR merges.                      |
 
 Two rules hold wherever these are wired:
 
@@ -261,12 +260,10 @@ Two amendment rules are specific to this document's shape:
   PR in two shards (ADR 0016); WebKit runs nightly, not per PR (ADR 0022, #552). A PR whose diff
   stops at documentation skips them, on the `scope` job's word — there is no label that turns them
   on or off.
-- **Who starts a run.** `groom`, `autofix`, `spec` and `review-threads` are the trigger labels wired
-  here, and no skill adds one to its own input. `review-threads` is removed inside the claim step,
-  after `in-progress` is on, rather than before it (the `om-auto-fix-pr` override, #490), so the
-  PR is never observably free. Alongside them the intake ladder runs:
-  `needs-triage` starts triage, and `ready-for-agent` starts `implement-ticket`. A person can also
-  hand an issue to the agent directly from the cockpit.
+- **Who starts a run.** `groom`, `autofix` and `spec` are the command labels. No skill adds
+  one to its own input. `needs-triage` starts triage and `ready-for-agent` starts implementation.
+  PR repair and second opinions require an explicit request; review findings never re-arm a run.
+  A person can also hand work to the agent directly from the cockpit.
 - **Risk here.** `risk-high` means the diff touches `src/server/auth`, `src/server/repos/base.ts`,
   `src/server/billing`, `src/server/db/schema.ts`, `drizzle/` or `src/server/public`.
 - **QA routing.** A PR that reaches `src/routes`, `src/components`, `src/styles`,
@@ -308,7 +305,6 @@ Workflows live in `.ai/cezar/workflows/`; the committed definitions are
 | Fix issues on the autofix label  | `autofix` added                       | `issue-autofix` (`om-auto-fix-issue`)             |
 | Write a spec for feature issues  | `spec` added to a `feature`           | `spec` (`om-auto-write-spec`)                     |
 | Autopilot new pull requests      | `pull_request.opened` by a maintainer | `pr-autopilot`                                    |
-| Resolve blocking review threads  | `review-threads` added                | `pr-fix` (`om-auto-fix-pr`)                       |
 | Triage new issues                | `needs-triage` added                  | `triage` (`afk-triage`)                           |
 | Implement ready-for-agent issues | `ready-for-agent` added               | `implement-ticket`                                |
 | Spec to tickets                  | weekdays 07:00                        | `spec-to-tickets` (`afk-to-tickets`)              |
@@ -353,9 +349,8 @@ paths **in a cezar run**: no upstream issue, no sync pull request, no seed commi
 catches a change that should not have been made.
 
 Two things still refuse, and neither is negotiable. **Under `GITHUB_ACTIONS` the same block is
-absolute** — there the diff belongs to whoever opened the pull request, `claude-code-review.yml`
-reads it with a write token, and a run that could write `.claude/hooks/` would disarm the guards
-mid-flight. A finding on one of those paths is reported, not applied. And **a write outside the
+absolute**: CI executes pull-request content, and a run that could write `.claude/hooks/`
+would disarm the guards mid-flight. A finding on one of those paths is reported, not applied. And **a write outside the
 worktree is refused in either mode**: a change that belongs to another repository is a pull request
 there, from its own clone.
 
