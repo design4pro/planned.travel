@@ -87,7 +87,7 @@ human: spec (feature) ─► spec PR (documentation, skip-qa, Refs #n) ─► hu
 PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA, never merge
 housekeeping (no CEZAR automation; launchd runs it 07:00/12:00/17:00 on weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
       ─► issue closed when its `Closes #n` PR merged into develop
-human: om-approve-merge-pr from the cockpit; needs-qa merges only with qa-approved
+approved PR: gated auto-merge for eligible risk-low/risk-medium, otherwise human om-approve-merge-pr from the cockpit; needs-qa merges only with qa-approved
 ```
 
 ## Map from the ADR 0015 vocabulary
