@@ -2,8 +2,8 @@
 // Agent mode is CEZ_TASK_ID (cezar) or GITHUB_ACTIONS; without either a developer keeps pnpm and env.
 // The om-* skills mutate GitHub through .ai/trackers/github.md (`gh api`), stage with `git add -A`,
 // write `Closes #n` and run `pnpm exec`, so none of those is blocked under cezar; what is blocked
-// there is the pinned stack (`pnpm add`) and the environment dump. Under GitHub Actions the review
-// job reads untrusted PR content with a write token, so every gh mutation stays blocked there.
+// there is the pinned stack (`pnpm add`) and the environment dump. GitHub Actions can still
+// process untrusted PR content, so every gh mutation stays blocked there.
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -158,7 +158,7 @@ describe('git-guardrails.sh', () => {
 
   it('blocks destructive git for everyone', () => {
     // Every mode, because this tier is the one that has no audience: nothing a developer,
-    // a cezar run or the review job legitimately does needs any of it.
+    // a cezar run or an Actions agent legitimately does needs any of it.
     for (const env of [{}, AGENT, ACTIONS]) {
       expect(bash('git reset --hard HEAD~1', env).status).toBe(2)
       expect(bash('git clean -fd', env).status).toBe(2)
@@ -590,8 +590,7 @@ describe('git-guardrails.sh', () => {
     expect(bash('env', ACTIONS).status).toBe(2)
   })
 
-  // claude-code-review.yml runs with `--permission-mode bypassPermissions` on every pull request,
-  // which leaves this hook as the only gate between a crafted diff and `gh pr review --approve`.
+  // Pull-request content must not authorize tracker mutations in an Actions agent context.
   describe('GitHub Actions keeps every gh mutation blocked', () => {
     it.each([
       ['gh issue edit 1 --add-label x', 'gh issue|pr mutation'],
@@ -630,26 +629,8 @@ describe('git-guardrails.sh', () => {
       expect(bash(command, ACTIONS).status).toBe(0)
     })
 
-    // The review's one job is to post its summary on the pull request.
-    describe('the code review exception for gh pr comment', () => {
-      const REVIEW = { ...ACTIONS, CLAUDE_REVIEW_PR_COMMENT: '1' }
-
-      it('opens gh pr comment only when the review sets the variable', () => {
-        expect(bash('gh pr comment 12 -b hi', ACTIONS).status).toBe(2)
-        expect(bash('gh pr comment 12 -b hi', REVIEW).status).toBe(0)
-      })
-
-      it.each([
-        'gh issue comment 12 -b hi',
-        'gh pr create --draft',
-        'gh pr edit 12 --add-label x',
-        'gh pr review 12 --approve',
-        'gh pr merge 12',
-        'gh api --method POST repos/x/y/issues/1/comments',
-        'gh label delete x',
-      ])('leaves %s blocked', (command) => {
-        expect(bash(command, REVIEW).status).toBe(2)
-      })
+    it('does not restore the retired comment exception through an environment variable', () => {
+      expect(bash('gh pr comment 12 -b hi', { ...ACTIONS, CLAUDE_REVIEW_PR_COMMENT: '1' }).status).toBe(2)
     })
   })
 // Deleting the checkout rather than a file in it. Nothing here read `rm` before: guard-generated.sh
@@ -857,11 +838,10 @@ describe('guard-generated.sh', () => {
     expect(edit(`${root}/src/x.ts`).status).toBe(0)
   })
 
-  // Tier 3, and the thing ADR 0025 changed. Under GitHub Actions the diff belongs to whoever
-  // opened the pull request and the review job reads it with a write token, so a run never edits
-  // the files that configure it. In a cezar run the diff is a human's, proposed as a pull request
-  // and read by a reviewer, and the block was pure friction: a correction to a skill or a workflow
-  // could not be written where the file is.
+  // Tier 3, and the thing ADR 0025 changed. Under GitHub Actions an agent may read untrusted
+  // pull-request content, so a run never edits the files that configure it. In a cezar run the
+  // diff is a human's, proposed as a pull request and read by a reviewer, and the block was pure
+  // friction: a correction to a skill or a workflow could not be written where the file is.
   it.each([
     '.github/workflows/ci.yml',
     '.claude/settings.json',
@@ -882,9 +862,8 @@ describe('guard-generated.sh', () => {
     'docs/agents/out-of-scope.md',
     '.ai/scripts/test-env-up.sh',
     '.ai/scripts/__tests__/cezar-config.test.ts',
-    // review-threads-label.mjs is the single thing that arms "Resolve blocking review threads".
-    'scripts/ci/review-threads-label.mjs',
-    'scripts/ci/__tests__/review-threads-label.test.mjs',
+    'scripts/ci/merge-gate.mjs',
+    'scripts/ci/__tests__/merge-gate.test.mjs',
     // What the cockpit installs as this repository's automations and prompts: configuration a run
     // is handed and must not rewrite.
     'docs/agents/cezar-automations.json',
@@ -900,9 +879,7 @@ describe('guard-generated.sh', () => {
 
   // The single load-bearing case, stated on its own because the list above would still pass if
   // this one stopped working. git-guardrails.sh is re-read on every PreToolUse and calls itself
-  // the only thing between a crafted pull request and `gh pr review --approve`; the base-ref
-  // restore in claude-code-review.yml stops the pull request supplying it, and this stops the
-  // running agent replacing it.
+  // gate against tracker mutations; a running agent must not replace it.
   it('never lets a GitHub Actions run rewrite the guard that judges it', () => {
     expect(at('.claude/hooks/git-guardrails.sh', ACTIONS).status).toBe(2)
     expect(at('.claude/hooks/guard-generated.sh', ACTIONS).status).toBe(2)

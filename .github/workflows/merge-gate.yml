@@ -53,7 +53,7 @@ jobs:
     steps:
       # The base branch, never the pull request's own tree. This job decides whether the branch
       # under review may merge, so the branch under review must not be what supplies the script
-      # that decides - the same rule claude-code-review.yml spells out, and here it is the whole
+      # that decides - the workflow must trust the base implementation, and here it is the whole
       # point of the check. `sparse-checkout` keeps it to the one directory the step runs from.
       - uses: actions/checkout@v7
         with:

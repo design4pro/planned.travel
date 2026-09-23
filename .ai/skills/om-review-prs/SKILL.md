@@ -41,3 +41,5 @@ two additions are what call it.
   because calling it unreviewed would contradict both the script and GitHub. That is the in-repo
   half of the second acceptance criterion on #551; what the cezar runner records as the step's
   status is its contract, not this repository's.
+
+Before dispatching each queued PR, read its head SHA and completed independent review reports. Reuse an exact-SHA report's verdict, validation and unresolved findings inside `om-auto-review-pr`, but still dispatch until the matching GitHub review decision and pipeline label have been published. A read-only changes-requested report with empty `reviewDecision` and no `changes-requested` label must be dispatched for submission, not skipped. Record the reused report and SHA in the sweep summary, and put every dispatched PR in the leaked-claim reconciler's list.
