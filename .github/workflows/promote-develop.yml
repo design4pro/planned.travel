@@ -77,8 +77,8 @@ jobs:
             '<https://staging.planned.travel>.' \
             '' \
             'Every commit below has already passed the full gate on `develop`. Whether this pull' \
-            'request also runs a review of its own depends on the token that opened it - see the' \
-            'header of `.github/workflows/promote-develop.yml`.')
+            'request runs its own CI checks depends on the token that opened it - see the header' \
+            'of `.github/workflows/promote-develop.yml`. A human reviews the promotion before merging.')
 
           gh pr create \
             --base main \
