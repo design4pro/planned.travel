@@ -179,7 +179,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
-- **Nothing merges automatically.** No automation calls `om-approve-merge-pr`. The pipeline's output is a reviewed PR; the merge is a human act.
+- **The pipeline does not merge its own output.** A separate deterministic controller may merge a reviewed, current, low- or medium-risk PR into `develop` after CI and any required manual QA. Its exact gates and dry-run rollout are in `docs/agents/auto-merge.md`. `risk-high`, security work and promotion to `main` remain human merges.
 - **The cap is on inventory, not on rate.** The implementing skills stop when enough agent PRs already wait in `review`, so a burst of intake cannot outrun review capacity. Raising throughput means reviewing, not tuning the trigger.
 
 ## Unattended decisions
@@ -325,7 +325,7 @@ anything from anyone else waits for a maintainer to add a trigger label.
 
 **Guardrails:**
 
-- Nothing merges automatically: no automation calls `om-approve-merge-pr`.
+- Cezar never merges as part of implementation or review. The independent controller in `docs/agents/auto-merge.md` handles eligible `develop` PRs after the full gate.
 - `implement-ticket` stops when three or more agent PRs already wait in `review`, and that cap is
   shared — the `issue-autofix` output counts against it too, because both ladders publish under the
   same `gh` identity.
