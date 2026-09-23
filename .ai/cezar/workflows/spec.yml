@@ -7,7 +7,7 @@ steps:
   - id: bootstrap
     name: Install dependencies and generate routes
     # Design-only work needs no secrets, D1 or basemap; implementation and QA provision separately.
-    command: pnpm install --frozen-lockfile --prefer-offline && pnpm generate-routes
+    command: HUSKY=0 pnpm install --frozen-lockfile --prefer-offline && pnpm generate-routes
   - id: spec
     name: om-auto-write-spec
     prompt: '/om-auto-write-spec {{task}}'
