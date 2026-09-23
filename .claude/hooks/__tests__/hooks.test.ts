@@ -2,8 +2,8 @@
 // Agent mode is CEZ_TASK_ID (cezar) or GITHUB_ACTIONS; without either a developer keeps pnpm and env.
 // The om-* skills mutate GitHub through .ai/trackers/github.md (`gh api`), stage with `git add -A`,
 // write `Closes #n` and run `pnpm exec`, so none of those is blocked under cezar; what is blocked
-// there is the pinned stack (`pnpm add`) and the environment dump. Under GitHub Actions the review
-// job reads untrusted PR content with a write token, so every gh mutation stays blocked there.
+// there is the pinned stack (`pnpm add`) and the environment dump. GitHub Actions can still
+// process untrusted PR content, so every gh mutation stays blocked there.
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -17,7 +17,7 @@ import { describe, expect, it, vi } from 'vitest'
 // the machine's patience, not on the code: under `vitest run`'s full parallelism it expires on a
 // different test each time while every assertion still holds, and the same file passes in
 // isolation in a fraction of the budget. The assertions are unchanged - only the waiting is.
-vi.setConfig({ testTimeout: 30_000 })
+vi.setConfig({ testTimeout: 15_000 })
 
 const HOOKS = resolve(__dirname, '..')
 const AGENT = { CEZ_TASK_ID: '0123456789ab-test' }
@@ -53,9 +53,112 @@ const bash = (command: string, env = {}) =>
   hook('git-guardrails.sh', { command }, env)
 
 describe('git-guardrails.sh', () => {
+  it.each(['export', 'insert', 'future-command', 'time-travel restore', 'create'])(
+    'guards remote D1 %s by database in every agent mode',
+    (operation) => {
+      const remote = operation.startsWith('time-travel') || operation === 'create' ? '' : ' --remote'
+      for (const env of [AGENT, ACTIONS]) {
+        expect(bash(`wrangler d1 ${operation} planned-travel-db${remote}`, env).status).toBe(2)
+        expect(bash(`wrangler d1 ${operation} planned-travel-db-staging${remote} --env staging`, env).status).toBe(0)
+        expect(bash(`wrangler d1 ${operation} planned-travel-db-staging${remote}`, env).status).toBe(2)
+      }
+      expect(bash(`wrangler d1 ${operation} planned-travel-db${remote}`).status).toBe(0)
+    },
+  )
+
+  it.each([
+    "cat <<'EOF'\nwrangler secret put TOKEN\nWRONG",
+    'cat <<"EOF"\nwrangler secret put TOKEN',
+    "cat <<'EOF'\nEOF \ngit reset --hard",
+  ])('keeps an unclosed heredoc visible: %s', (command) => {
+    expect(bash(command).status).toBe(2)
+  })
+
+  it.each([
+    "cat <<'EOF'\nwrangler secret put TOKEN\nEOF",
+    'cat <<"EOF"\nwrangler secret put TOKEN\nEOF',
+    "cat <<-'EOF'\n\twrangler secret put TOKEN\n\tEOF",
+  ])('shelters only a closed literal heredoc: %s', (command) => {
+    expect(bash(command).status).toBe(0)
+    expect(bash(`${command}\necho done`).status).toBe(2)
+  })
+
+  it.each([
+    "cat <<'EOF'x\npayload\nEOFx\ngit reset --hard\nEOF",
+    "cat <<'EOF'\"x\"\npayload\nEOFx\ngit reset --hard\nEOF",
+  ])('does not truncate a concatenated heredoc delimiter: %s', (command) => {
+    expect(bash(command).status).toBe(2)
+  })
+
+  it('does not interpret a here-string as a heredoc body', () => {
+    expect(bash("cat <<<'EOF'\ngit reset --hard\nEOF").status).toBe(2)
+  })
+
+  it('does not interpret a quoted marker as a shell heredoc', () => {
+    expect(bash(`echo "<<'EOF'"\ngit reset --hard\nEOF`).status).toBe(2)
+  })
+
+  it.each([
+    'rm -rf node_modules 2>/dev/null',
+    'rm -rf dist > /dev/null 2>&1',
+    'rm -rf dist 2> /dev/null',
+    'rm -rf dist 2>& 1',
+    'rm -rf dist &>/dev/null',
+    'rm -rf dist >| /dev/null',
+    'rm -rf dist>/dev/null',
+  ])('does not mistake a redirect for an rm target: %s', (command) => {
+    expect(bash(command, AGENT).status).toBe(0)
+  })
+
+  it.each([
+    'rm -rf src 2>/dev/null',
+    'rm -rf dist > /dev/null src',
+    'rm -rf dist 2>&1 src',
+    'rm -rf dist 2>& 1 src',
+    'rm -rf dist &>/dev/null src',
+    'rm -rf dist >| /dev/null src',
+    'rm -rf dist > /dev/null; rm -rf src',
+  ])('preserves real rm targets beside redirects: %s', (command) => {
+    const result = bash(command, AGENT)
+    expect(result.status).toBe(2)
+    expect(result.stderr).toContain("recursive delete of 'src'")
+  })
+
+  it.each([
+    'rm -rf dist >$(echo /dev/null) src',
+    'rm -rf dist 2>$(echo /dev/null) src',
+    'rm -rf dist >/dev/null$(true) src',
+    'rm -rf dist >`echo /dev/null` src',
+    'rm -rf dist > $(echo /dev/null) src',
+  ])('refuses ambiguous redirect substitutions: %s', (command) => {
+    for (const env of [AGENT, ACTIONS]) {
+      expect(bash(command, env).status).toBe(2)
+    }
+  })
+
+  it.each([
+    "rm -rf 'dist>src'",
+    'rm -rf "dist>src"',
+    String.raw`rm -rf dist\>src`,
+  ])('does not mistake a quoted filename for a redirect: %s', (command) => {
+    expect(bash(command, AGENT).status).toBe(2)
+  })
+
+  it('does not consume a numeric target suffix as a file descriptor', () => {
+    const result = bash('rm -rf dist2>/dev/null', AGENT)
+    expect(result.status).toBe(2)
+    expect(result.stderr).toContain("recursive delete of 'dist2'")
+  })
+
+  it('keeps fatal rm targets protected beside redirects in every mode', () => {
+    for (const env of [{}, AGENT, ACTIONS]) {
+      expect(bash('rm -rf / 2>/dev/null', env).status).toBe(2)
+    }
+  })
+
   it('blocks destructive git for everyone', () => {
     // Every mode, because this tier is the one that has no audience: nothing a developer,
-    // a cezar run or the review job legitimately does needs any of it.
+    // a cezar run or an Actions agent legitimately does needs any of it.
     for (const env of [{}, AGENT, ACTIONS]) {
       expect(bash('git reset --hard HEAD~1', env).status).toBe(2)
       expect(bash('git clean -fd', env).status).toBe(2)
@@ -487,8 +590,7 @@ describe('git-guardrails.sh', () => {
     expect(bash('env', ACTIONS).status).toBe(2)
   })
 
-  // claude-code-review.yml runs with `--permission-mode bypassPermissions` on every pull request,
-  // which leaves this hook as the only gate between a crafted diff and `gh pr review --approve`.
+  // Pull-request content must not authorize tracker mutations in an Actions agent context.
   describe('GitHub Actions keeps every gh mutation blocked', () => {
     it.each([
       ['gh issue edit 1 --add-label x', 'gh issue|pr mutation'],
@@ -527,26 +629,8 @@ describe('git-guardrails.sh', () => {
       expect(bash(command, ACTIONS).status).toBe(0)
     })
 
-    // The review's one job is to post its summary on the pull request.
-    describe('the code review exception for gh pr comment', () => {
-      const REVIEW = { ...ACTIONS, CLAUDE_REVIEW_PR_COMMENT: '1' }
-
-      it('opens gh pr comment only when the review sets the variable', () => {
-        expect(bash('gh pr comment 12 -b hi', ACTIONS).status).toBe(2)
-        expect(bash('gh pr comment 12 -b hi', REVIEW).status).toBe(0)
-      })
-
-      it.each([
-        'gh issue comment 12 -b hi',
-        'gh pr create --draft',
-        'gh pr edit 12 --add-label x',
-        'gh pr review 12 --approve',
-        'gh pr merge 12',
-        'gh api --method POST repos/x/y/issues/1/comments',
-        'gh label delete x',
-      ])('leaves %s blocked', (command) => {
-        expect(bash(command, REVIEW).status).toBe(2)
-      })
+    it('does not restore the retired comment exception through an environment variable', () => {
+      expect(bash('gh pr comment 12 -b hi', { ...ACTIONS, CLAUDE_REVIEW_PR_COMMENT: '1' }).status).toBe(2)
     })
   })
 // Deleting the checkout rather than a file in it. Nothing here read `rm` before: guard-generated.sh
@@ -754,11 +838,10 @@ describe('guard-generated.sh', () => {
     expect(edit(`${root}/src/x.ts`).status).toBe(0)
   })
 
-  // Tier 3, and the thing ADR 0025 changed. Under GitHub Actions the diff belongs to whoever
-  // opened the pull request and the review job reads it with a write token, so a run never edits
-  // the files that configure it. In a cezar run the diff is a human's, proposed as a pull request
-  // and read by a reviewer, and the block was pure friction: a correction to a skill or a workflow
-  // could not be written where the file is.
+  // Tier 3, and the thing ADR 0025 changed. Under GitHub Actions an agent may read untrusted
+  // pull-request content, so a run never edits the files that configure it. In a cezar run the
+  // diff is a human's, proposed as a pull request and read by a reviewer, and the block was pure
+  // friction: a correction to a skill or a workflow could not be written where the file is.
   it.each([
     '.github/workflows/ci.yml',
     '.claude/settings.json',
@@ -779,9 +862,8 @@ describe('guard-generated.sh', () => {
     'docs/agents/out-of-scope.md',
     '.ai/scripts/test-env-up.sh',
     '.ai/scripts/__tests__/cezar-config.test.ts',
-    // review-threads-label.mjs is the single thing that arms "Resolve blocking review threads".
-    'scripts/ci/review-threads-label.mjs',
-    'scripts/ci/__tests__/review-threads-label.test.mjs',
+    'scripts/ci/merge-gate.mjs',
+    'scripts/ci/__tests__/merge-gate.test.mjs',
     // What the cockpit installs as this repository's automations and prompts: configuration a run
     // is handed and must not rewrite.
     'docs/agents/cezar-automations.json',
@@ -797,9 +879,7 @@ describe('guard-generated.sh', () => {
 
   // The single load-bearing case, stated on its own because the list above would still pass if
   // this one stopped working. git-guardrails.sh is re-read on every PreToolUse and calls itself
-  // the only thing between a crafted pull request and `gh pr review --approve`; the base-ref
-  // restore in claude-code-review.yml stops the pull request supplying it, and this stops the
-  // running agent replacing it.
+  // gate against tracker mutations; a running agent must not replace it.
   it('never lets a GitHub Actions run rewrite the guard that judges it', () => {
     expect(at('.claude/hooks/git-guardrails.sh', ACTIONS).status).toBe(2)
     expect(at('.claude/hooks/guard-generated.sh', ACTIONS).status).toBe(2)

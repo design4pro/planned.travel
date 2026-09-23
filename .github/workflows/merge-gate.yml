@@ -47,13 +47,13 @@ jobs:
     # What that costs: a hard-block label added while the pull request sits in the queue is not
     # read. Taking it out of the queue is what stops it then, not the label.
     if: github.event_name == 'pull_request'
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       # The base branch, never the pull request's own tree. This job decides whether the branch
       # under review may merge, so the branch under review must not be what supplies the script
-      # that decides - the same rule claude-code-review.yml spells out, and here it is the whole
+      # that decides - the workflow must trust the base implementation, and here it is the whole
       # point of the check. `sparse-checkout` keeps it to the one directory the step runs from.
       - uses: actions/checkout@v7
         with:

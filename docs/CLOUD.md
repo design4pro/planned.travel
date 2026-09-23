@@ -4,7 +4,7 @@ How to hand a task to an agent that runs somewhere other than your laptop, and
 what has to be true of that somewhere before the answer it gives is worth
 anything.
 
-The short version: three separate mechanisms share the Claude Code name and they
+The short version: cloud sessions and Cezar runs serve different purposes and they
 are not interchangeable. §1 tells them apart. §2 configures the one that needs
 configuring. §3 is the issue-to-pull-request path. §4 is the reason the visual
 suite needed changing before any of this was useful. §5 is the mobile story,
@@ -12,26 +12,17 @@ which is mostly a story about what the cloud VM cannot do.
 
 ---
 
-## 1. Three mechanisms
+## 1. Execution environments
 
 |                                                      | Where it runs                                                    | What starts it                                                              |
 | ---------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | **Cloud session** (`claude --cloud`, claude.ai/code) | Anthropic VM: Ubuntu 24.04 x86_64, 4 vCPU, 16 GB RAM, 30 GB disk | You, from the CLI, the web, or the phone                                    |
 | **Routine**                                          | The same VM, unattended                                          | cron, an authenticated `POST`, or a GitHub `pull_request` / `release` event |
-| **`@claude` GitHub Action**                          | The self-hosted `agent` runner pool (ADR 0023)                   | `@claude` in an issue or a review                                           |
 
-The distinction that matters most here: **routines have no `issues` trigger.**
-The supported GitHub events are pull requests and releases, and nothing else. So
-"open an issue and an agent picks it up" is a GitHub Action, not a routine:
-`.github/workflows/claude.yml` for `@claude` mentions, `.github/workflows/triage.yml`
-for the pre-triage of new `type: bug` / `type: maintenance` issues. Routines are
-for the things that happen _to_ a pull request - review it, port it, watch its
-CI.
-
-The second distinction: a cloud session runs on a machine Anthropic provisions,
-so it needs its own environment configuration (§2). The GitHub Action runs on a
-GitHub runner, so it uses the same `pnpm install` every other workflow does and
-needs nothing extra.
+Issue intake and pull-request review run through Cezar (see `docs/agents/cezar.md`).
+The `@claude` GitHub Action and automatic Claude review have been retired. Cloud sessions
+still need their own environment configuration (§2); Cezar provisions implementation worktrees
+through the repository bootstrap.
 
 ---
 
@@ -189,28 +180,10 @@ For anything with an architecture decision in it, the pattern that works is to
 plan locally and execute remotely: `claude --permission-mode plan`, commit the
 plan under `docs/`, then `claude --cloud "execute the plan in docs/….md"`.
 
-**`@claude` in the issue itself.** `.github/workflows/claude.yml` handles it.
-It needs one secret, `CLAUDE_CODE_OAUTH_TOKEN`, generated with:
-
-```sh
-claude setup-token
-```
-
-and the Claude GitHub App installed on the repository (`/install-github-app`
-from a local session does both, if you would rather not do it by hand).
-
-Note what this _is not_: it runs on a GitHub runner, so it does not touch the
-cloud environment from §2 at all. The basemap is not there, which means Claude
-cannot run the journeys from inside that job - it pushes a branch, and CI runs
-them on that branch like it would for anyone else. Since ADR 0016 the journeys
-need no basemap either, so this is a smaller gap than it was.
-
-**Routines, for the pull request side.** A `pull_request.opened` trigger for a
-review against your own checklist; **Auto-fix** on a specific pull request to have
-a session watch its CI and its review comments and push fixes. Auto-fix is worth
-knowing about before you turn it on: Claude replies to review threads _as you_,
-so any automation keyed on `issue_comment` in this repository would be triggered
-by it.
+**From the issue tracker.** Use the existing issue and the Cezar workflow in
+`docs/agents/issue-tracker.md`. Reviews run independently in Cezar and name the assessed SHA.
+Additional opinions and repairs are requested explicitly; do not configure a parallel automatic
+review or autofix loop.
 
 ---
 

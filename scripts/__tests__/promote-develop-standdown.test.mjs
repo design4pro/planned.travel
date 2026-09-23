@@ -2,8 +2,7 @@
  * The stand-down that keeps `pr-autopilot` off the standing `develop` → `main` promotion.
  *
  * `.github/workflows/promote-develop.yml` opens that pull request with `PROMOTE_PR_TOKEN`, a
- * maintainer's token, because only a maintainer-opened pull request runs claude-code-review.yml and
- * produces the `claude-review` check the `main` ruleset requires. The cost of that is that the
+ * maintainer's token so pull_request checks run. The cost of that is that the
  * cezar poller cannot tell the promotion apart from a pull request the same maintainer opened by
  * hand: `pr-autopilot` filters `pull_request.opened` by author and reads no base branch. So every
  * release cycle used to spend one full agent run on a pull request the skill can do nothing with -

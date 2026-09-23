@@ -31,6 +31,9 @@ import {
   selectionVerdict,
 } from './policy'
 
+import { prepareSentryMcp, resolveMcpCommand } from './mcp-preflight'
+import type { McpCommand } from './mcp-preflight'
+
 import type { Candidate, TrackedIssue } from './policy'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -217,6 +220,33 @@ function survey(prompt: string): Report {
       'the agent emitted no <sentry-triage> block; nothing was looked at',
     )
   return reportSchema.parse(JSON.parse(block[1]))
+}
+
+// Keep the preflight and agent on the same version, arguments and organization.
+process.env.SENTRY_ORG_SLUG = ORG
+const mcpConfig = JSON.parse(readFileSync(join(HERE, 'mcp.json'), 'utf8')) as {
+  mcpServers: { sentry: McpCommand }
+}
+console.log(
+  'Prewarming pinned Sentry MCP and checking handshake/tools (at most two connection attempts).',
+)
+try {
+  await prepareSentryMcp(
+    resolveMcpCommand(mcpConfig.mcpServers.sentry, process.env),
+  )
+} catch (error) {
+  console.error(
+    error instanceof Error
+      ? error.message
+      : 'Sentry MCP unavailable; nothing was looked at',
+  )
+  process.exit(1)
+}
+if (argv.includes('--check-mcp')) {
+  console.log(
+    'Sentry MCP handshake and required tools are available. No issues were read or filed.',
+  )
+  process.exit(0)
 }
 
 const tracked = buildTrackedIndex(trackedIssues())

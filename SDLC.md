@@ -91,10 +91,10 @@ Pipeline labels are mutually exclusive: a PR carries at most one, and it names w
 | Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | one at a time; unset = medium | Urgency of the work                |
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | one at a time; unset = medium | Blast radius of the change         |
 | Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | one at a time; issues only    | Who acts on the issue next         |
-| Command  | `groom`, `autofix`, `spec`, `review-threads`                                               | additive; consumed by the run | Start one run now                  |
+| Command  | `groom`, `autofix`, `spec`                                                                 | additive; consumed by the run | Start one run now                  |
 | Outside  | `do-not-close`                                                                             | additive                      | A human hold no skill may override |
 
-The first five groups are a PR's; **Intake** is an issue's and **Command** is either's, and each has its own section below rather than a line here. A repository may add a switch of its own outside the taxonomy; `## This repository` names it. Every group is also `labels.*` in `.ai/agentic.config.json`, and that file is what the skills read — a label this document names and the config does not is a label no skill will apply.
+The first five groups are a PR's; **Intake** and **Command** are an issue's, and each has its own section below rather than a line here. A repository may add a switch of its own outside the taxonomy; `## This repository` names it. Every group is also `labels.*` in `.ai/agentic.config.json`, and that file is what the skills read — a label this document names and the config does not is a label no skill will apply.
 
 Priority is how urgent the work is; risk is how dangerous the change is to ship. A one-line fix for an outage can be `priority-extreme` and `risk-low`; a large auth refactor that can wait can be `priority-low` and `risk-high`. A PR inherits both from its source issue unless the scope clearly changed. When an automated skill adds or changes a pipeline or meta label, it leaves a short comment explaining why.
 
@@ -132,14 +132,13 @@ Intake labels go on issues only, one at a time, and say who acts on the issue ne
 
 ## Trigger labels
 
-A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human (or, for `review-threads`, a job) hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation — so a trigger label still present is a run nobody took.
+A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation — so a trigger label still present is a run nobody took.
 
-| Label            | Starts                                    | Notes                                                                                                                                |
-| ---------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `groom`          | `om-auto-manage-issues` on one issue      | Labels, Definition of Ready check, implementation notes. The way an issue from someone other than a maintainer is groomed at all.    |
-| `autofix`        | `om-auto-fix-issue`                       | A bug goes verify → root cause → fix → PR → review → QA; a feature goes spec → implement. The human express lane past triage.        |
-| `spec`           | `om-auto-write-spec` on a `feature` issue | The spec lands under `.ai/specs/` on a design-only PR. Implementation is a separate run once that PR merges.                         |
-| `review-threads` | `om-auto-fix-pr` on one PR                | The only trigger on a PR, and the only one no human adds: the review job applies it when it leaves threads the merge gate will hold. |
+| Label     | Starts                                    | Notes                                                                                                                             |
+| --------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `groom`   | `om-auto-manage-issues` on one issue      | Labels, Definition of Ready check, implementation notes. The way an issue from someone other than a maintainer is groomed at all. |
+| `autofix` | `om-auto-fix-issue`                       | A bug goes verify → root cause → fix → PR → review → QA; a feature goes spec → implement. The human express lane past triage.     |
+| `spec`    | `om-auto-write-spec` on a `feature` issue | The spec lands under `.ai/specs/` on a design-only PR. Implementation is a separate run once that PR merges.                      |
 
 Two rules hold wherever these are wired:
 
@@ -180,7 +179,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
-- **Nothing merges automatically.** No automation calls `om-approve-merge-pr`. The pipeline's output is a reviewed PR; the merge is a human act.
+- **The pipeline does not merge its own output.** A separate deterministic controller may merge a reviewed, current, low- or medium-risk PR into `develop` after CI and any required manual QA. Its exact gates and dry-run rollout are in `docs/agents/auto-merge.md`. `risk-high`, security work and promotion to `main` remain human merges.
 - **The cap is on inventory, not on rate.** The implementing skills stop when enough agent PRs already wait in `review`, so a burst of intake cannot outrun review capacity. Raising throughput means reviewing, not tuning the trigger.
 
 ## Unattended decisions
@@ -234,12 +233,11 @@ Two amendment rules are specific to this document's shape:
 - **The base branch is `develop`.** Feature branches are squash-merged into it. The
   `develop` → `main` promotion is a separate PR merged with **a merge commit**, never squashed
   (ADR 0003): only a merge commit advances the merge base, and a squashed promotion compounds
-  conflicts on every promotion after it. #492 merged on 2026-09-14 and wrote that rule down; it
-  taught no skill to follow it. `om-approve-merge-pr` still calls the descriptor's **merge-pr**,
-  whose strategy is `--squash` by default, and neither picks the merge strategy from _which_ base
-  branch a PR targets — the one place the descriptor reads the base branch is to ask whether it has
-  a merge queue, which is a different question. So **merge the promotion PR by hand**, and read
-  "the patch landed" as "the rule is written down", never as "the tooling now honours it".
+  conflicts on every promotion after it. The tracker **merge-pr** operation reads the PR's
+  current base: `main` uses `--merge`, other branches use `--squash`. The repo-local
+  `om-approve-merge-pr` override refuses an explicitly requested squash or rebase on `main`.
+  A merge queue still selects its own method; the operation enqueues without a strategy.
+  The `main` ruleset remains the independent server-side guard.
 - **The release log is `CHANGELOG.md`, and its topmost heading is the version of record.** There is
   no `version` in `package.json` and no release tags, on purpose — the file's own header says why,
   and `om-auto-update-changelog`'s repo-local override says how to resolve `--version` without one.
@@ -262,12 +260,10 @@ Two amendment rules are specific to this document's shape:
   PR in two shards (ADR 0016); WebKit runs nightly, not per PR (ADR 0022, #552). A PR whose diff
   stops at documentation skips them, on the `scope` job's word — there is no label that turns them
   on or off.
-- **Who starts a run.** `groom`, `autofix`, `spec` and `review-threads` are the trigger labels wired
-  here, and no skill adds one to its own input. `review-threads` is removed inside the claim step,
-  after `in-progress` is on, rather than before it (the `om-auto-fix-pr` override, #490), so the
-  PR is never observably free. Alongside them the intake ladder runs:
-  `needs-triage` starts triage, and `ready-for-agent` starts `implement-ticket`. A person can also
-  hand an issue to the agent directly from the cockpit.
+- **Who starts a run.** `groom`, `autofix` and `spec` are the command labels. No skill adds
+  one to its own input. `needs-triage` starts triage and `ready-for-agent` starts implementation.
+  PR repair and second opinions require an explicit request; review findings never re-arm a run.
+  A person can also hand work to the agent directly from the cockpit.
 - **Risk here.** `risk-high` means the diff touches `src/server/auth`, `src/server/repos/base.ts`,
   `src/server/billing`, `src/server/db/schema.ts`, `drizzle/` or `src/server/public`.
 - **QA routing.** A PR that reaches `src/routes`, `src/components`, `src/styles`,
@@ -277,6 +273,14 @@ Two amendment rules are specific to this document's shape:
 - **What a ticket contains** beyond the Definition of Ready: `docs/agents/issue-tracker.md`. The
   label page is `docs/agents/triage-labels.md`, and the live automation definitions are
   `docs/agents/cezar-automations.json` (see `docs/agents/cezar.md`).
+- **Native merge queue remains off (#537, closed as not planned).** The `merge-queue` label is
+  a process marker, not a native GitHub merge queue. A separate deterministic controller defaults
+  to dry-run and may merge eligible low- or medium-risk PRs into `develop` after current review, CI,
+  and any required manual QA; see `docs/agents/auto-merge.md` for the gated rollout. `risk-high`,
+  security work, and `develop` → `main` promotion remain manual. Reconsider a native queue only if
+  measured merge contention justifies it. Before enabling one, every required check must run on
+  `merge_group`, with explicit scope/e2e conditions and non-colliding concurrency groups;
+  promotions must retain merge commits, and the rollout must document a rollback to manual merging.
 - **Sources of issues.** People, through the issue forms (blank issues are off, so every issue
   enters with a category); Sentry findings as `bug` + `priority-high` + `groom`, never `autofix`;
   and follow-ups from `om-followup-issue-from-pr` and `om-review-prs`.
@@ -301,7 +305,6 @@ Workflows live in `.ai/cezar/workflows/`; the committed definitions are
 | Fix issues on the autofix label  | `autofix` added                       | `issue-autofix` (`om-auto-fix-issue`)             |
 | Write a spec for feature issues  | `spec` added to a `feature`           | `spec` (`om-auto-write-spec`)                     |
 | Autopilot new pull requests      | `pull_request.opened` by a maintainer | `pr-autopilot`                                    |
-| Resolve blocking review threads  | `review-threads` added                | `pr-fix` (`om-auto-fix-pr`)                       |
 | Triage new issues                | `needs-triage` added                  | `triage` (`afk-triage`)                           |
 | Implement ready-for-agent issues | `ready-for-agent` added               | `implement-ticket`                                |
 | Spec to tickets                  | weekdays 07:00                        | `spec-to-tickets` (`afk-to-tickets`)              |
@@ -330,7 +333,7 @@ anything from anyone else waits for a maintainer to add a trigger label.
 
 **Guardrails:**
 
-- Nothing merges automatically: no automation calls `om-approve-merge-pr`.
+- Cezar never merges as part of implementation or review. The independent controller in `docs/agents/auto-merge.md` handles eligible `develop` PRs after the full gate.
 - `implement-ticket` stops when three or more agent PRs already wait in `review`, and that cap is
   shared — the `issue-autofix` output counts against it too, because both ladders publish under the
   same `gh` identity.
@@ -346,9 +349,8 @@ paths **in a cezar run**: no upstream issue, no sync pull request, no seed commi
 catches a change that should not have been made.
 
 Two things still refuse, and neither is negotiable. **Under `GITHUB_ACTIONS` the same block is
-absolute** — there the diff belongs to whoever opened the pull request, `claude-code-review.yml`
-reads it with a write token, and a run that could write `.claude/hooks/` would disarm the guards
-mid-flight. A finding on one of those paths is reported, not applied. And **a write outside the
+absolute**: CI executes pull-request content, and a run that could write `.claude/hooks/`
+would disarm the guards mid-flight. A finding on one of those paths is reported, not applied. And **a write outside the
 worktree is refused in either mode**: a change that belongs to another repository is a pull request
 there, from its own clone.
 
@@ -369,6 +371,11 @@ Named here because an unstated gap is one a reader rediscovers by losing work to
   `merge-gate` check passes it — it carries no hard block and no `needs-qa` — so an unlabeled
   dependency bump can merge while `## Label state machine` says a ready PR carries `review`.
   Labelling one is a human act today.
-- **`in-progress` has no exit that does not need a person.** `## The claim protocol` says a stale
-  claim "may be cleared by the maintainer", and no automation clears it. That is exactly the shape
-  `## Unattended decisions` forbids introducing, in the oldest state this process has.
+- **Stale claims outside the bounded review sweep still need a maintainer.** `om-review-prs`
+  automatically ends its sweep with
+  `node scripts/agents/release-leaked-claims.mjs --since <sweep start> --prs <dispatched PRs>`
+  (#706). It only releases an `om-auto-review-pr` claim by the automation account when that is
+  the PR's only lock event since the sweep started, and reports whether a review was submitted.
+  Take-overs and newer claims after a release are left alone. The same bounded command with
+  `--dry-run` previews manual recovery; arbitrary stale issue or PR claims still follow
+  `## The claim protocol` and require the maintainer.

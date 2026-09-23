@@ -52,7 +52,7 @@ describe('waitForFreePort', () => {
   })
 })
 
-describe('free-port.mjs', () => {
+describe('free-port.mjs', { timeout: 15_000 }, () => {
   const servers = []
   afterEach(() => {
     for (const server of servers.splice(0)) server.close()
@@ -85,6 +85,8 @@ describe('free-port.mjs', () => {
     expect(result.status).toBe(EXIT_POOL_FULL)
     expect(result.stdout).toBe('')
     expect(result.stderr).toContain('no free port')
+    expect(result.stderr).toContain(`pid ${process.pid}`)
+    expect(result.stderr).toContain(process.cwd())
   })
 
   it('prints a free port and exits 0', async () => {

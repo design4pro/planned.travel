@@ -67,6 +67,8 @@ full journeys leave it. A run whose diff reaches a screen still runs the journey
 `e2e · merged report` and `merge-gate`, next to `claude-review`. A job skipped by its `if` reports
 success to a required check, so neither a develop→main pull request (which defers to the push run)
 nor a documentation-only one (decision 4) is held by a check that did not run.
+_Amended by #711: automatic Claude review was retired; the four CI checks listed here are the
+complete required-check set on both branches._
 
 **3. `e2e · merged report` is the journeys' verdict.** It fails unless `needs.e2e.result` is
 `success`, the aggregate over the matrix, so a failed, cancelled or missing shard fails it. The ruleset
@@ -93,6 +95,8 @@ for a redeploy, or for shipping while CI is down.
   runners without a pull request, and organisation and repository admins bypass both rulesets.
   _Amended by ADR 0023: `vars.RUNNER_CI` alone brings CI back but not the required `claude-review`
   check, which runs on `vars.RUNNER_AGENT`; the variable path needs both set._
+  _Amended by #711: `claude-review` is no longer required, so `RUNNER_CI` alone restores the
+  required checks. This does not move deployment jobs._
   _Amended by ADR 0023 (#563): beyond the `RUNNER_AGENT` jobs above, `vars.RUNNER_CI` also does not
   move the three shipping workflows - `deploy.yml`, `deploy-staging.yml` and `rollback.yml` - which
   read `vars.RUNNER_DEPLOY` and already default to GitHub-hosted runners. The lever in the other

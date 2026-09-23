@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import viteReact from '@vitejs/plugin-react'
@@ -36,6 +37,9 @@ export default defineConfig({
     ],
   },
   test: {
+    // Leave one CPU for the coordinator and cap process pressure on larger hosts.
+    // Node 24 reads the container CPU quota through availableParallelism().
+    maxWorkers: Math.max(1, Math.min(4, availableParallelism() - 1)),
     projects: [
       {
         extends: true,
@@ -103,10 +107,9 @@ export default defineConfig({
             // is what keeps `pnpm lint` runnable while an agent run has scratch directories open,
             // and a missing entry there is silent until the tool that writes one is exercised.
             'eslint.config.test.ts',
-            // The Claude Code hooks. They are the only thing standing between the review job -
-            // which reads an attacker-authored diff under `--permission-mode bypassPermissions` -
-            // and the `gh` mutation surface, and their failure mode is silence: a hook that stops
-            // matching allows instead of erroring, and nothing anywhere says so.
+            // The Claude Code hooks guard GitHub Actions agent runs against tracker mutations
+            // and configuration writes. Their failure mode is silence: a hook that stops matching
+            // allows instead of erroring, and nothing anywhere says so.
             '.claude/hooks/__tests__/*.test.ts',
             // `.ai/cezar/config.json` is the run's own settings, and the cockpit's Settings
             // panel writes the same keys: clearing a field there deletes it and the next run

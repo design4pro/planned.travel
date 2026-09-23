@@ -335,9 +335,21 @@ gh pr review {prNumber} --request-changes --body "<body>"
 GitHub rejects self-approval (reviewing your own PR); surface that instead of working around it.
 
 #### merge-pr
-`{prNumber}`; squash is the default merge strategy. `--auto` merges when checks pass; `--delete-branch` only when asked.
+`{prNumber}`; read `baseRefName` before choosing the strategy: `main` requires a merge commit (`--merge`), while every other base uses `--squash`. This preserves the ancestry of `develop` → `main` promotions (ADR 0003). A missing base or failed rules lookup stops the operation; never guess squash. `--auto` merges when checks pass; `--delete-branch` only when asked and never for a merge queue.
 ```bash
-gh pr merge {prNumber} --squash
+merge_base=$(gh pr view {prNumber} --repo {owner}/{repo} --json baseRefName --jq .baseRefName) || exit 1
+case "$merge_base" in
+  ''|null) echo 'Cannot select a merge method without the PR base branch.' >&2; exit 1 ;;
+esac
+encoded_base=$(jq -rn --arg branch "$merge_base" '$branch | @uri') || exit 1
+branch_rules=$(gh api "repos/{owner}/{repo}/rules/branches/$encoded_base" --jq '.[].type') || exit 1
+if grep -qx merge_queue <<< "$branch_rules"; then
+  gh pr merge {prNumber} --repo {owner}/{repo}
+elif [ "$merge_base" = main ]; then
+  gh pr merge {prNumber} --repo {owner}/{repo} --merge
+else
+  gh pr merge {prNumber} --repo {owner}/{repo} --squash
+fi
 ```
 **When the base branch has a merge queue** — `gh api "repos/{owner}/{repo}/rules/branches/{baseBranch}" --jq '.[].type'` lists `merge_queue` — drop the strategy and run `gh pr merge {prNumber}`. That enqueues the PR (enabling auto-merge while checks are still pending); the queue's own method decides, so `--squash` / `--merge` / `--rebase` are ignored with a warning and `--delete-branch` is refused outright. The command means **queued**, not merged: report it that way, and expect the merge minutes later, once the queue has run the suite on the commit it built. Removing an entry is `gh api graphql -f query='mutation { dequeuePullRequest(input: {id: "<node id>"}) { clientMutationId } }'` — `gh pr merge --disable-auto` does not do it.
 
@@ -543,22 +555,18 @@ gh label create risk-high         --color b60205 --description "Wide blast radiu
 
 Four of those are load-bearing on a pull request rather than descriptive. `do-not-merge`, `blocked` and `qa-failed` block a merge on their own, and `needs-qa` blocks until `qa-approved` joins it; the `merge-gate` check reads them out of the event payload and fails the pull request, so applying one of them is the act that stops the merge — there is no second step, and removing it is what starts it again.
 
-The four command labels that start a Cezar automation (`docs/agents/cezar-automations.json`). A
-human sets three of them. `review-threads` is the exception: the `claude-review` job applies it
-from `scripts/ci/review-threads-label.mjs`, once per head SHA, when the review leaves threads open
-- `docs/agents/triage-labels.md` calls it the one label no human adds. Only a collaborator or an
-Actions token can set a label, which is what gates the `issue.labeled` triggers; the skill that
-reacts removes its own label as its first mutation, so a label still present means nobody picked
-the item up. No skill ever adds one.
+The three command labels start a Cezar automation (`docs/agents/cezar-automations.json`).
+A human sets them, and the skill consumes its own trigger on claim. Only a collaborator can
+set a label; no skill adds these commands to its own input. PR repair is requested directly in
+Cezar, without a review-thread label or re-arm trigger.
 
 `spec` is the exception to that last diagnosis. **Write a spec for feature issues** filters on `allLabels: ["feature"]`,
-alone among the four, so on an issue that is not labelled `feature` the label sits there because no
+alone among the three, so on an issue that is not labelled `feature` the label sits there because no
 run was ever going to start - not because one stalled, which is where the sentence above would
-otherwise send you looking. The first three go on an issue, `review-threads` on a pull request:
+otherwise send you looking. All three go on an issue:
 
 ```bash
 gh label create groom          --color 5319e7 --description "Human trigger: re-run om-auto-manage-issues on this issue (Cezar automation)"
 gh label create autofix        --color 5319e7 --description "Human trigger: start om-auto-fix-issue on this issue (Cezar automation)"
 gh label create spec           --color 5319e7 --description "Human trigger: write a spec PR with om-auto-write-spec (Cezar automation)"
-gh label create review-threads --color 5319e7 --description "Automated trigger: the review job left unresolved threads; starts om-auto-fix-pr (Cezar automation)"
 ```

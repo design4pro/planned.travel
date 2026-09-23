@@ -100,17 +100,44 @@ else
   # Here-strings, not pipes: `grep -q` closes early, and under `pipefail` that turns a match into
   # a non-zero pipeline - the one failure shape that would silently re-open the stripping.
   if grep -Eq "$prose_command" <<< "${command%%$'\n'*}"; then
+    # Buffer before stripping: an unclosed or ambiguous delimiter must preserve the whole
+    # command. Build the quote character portably rather than using octal regexp escapes.
     text=$(printf '%s' "$command" | awk '
-      skip { if ($0 == tag) skip = 0; next }
-      {
-        if (match($0, /<<-?["\047][A-Za-z_][A-Za-z0-9_]*["\047]/)) {
-          tag = substr($0, RSTART, RLENGTH)
-          gsub(/^<<-?["\047]|["\047]$/, "", tag)
-          skip = 1
-        }
-        print
+      BEGIN {
+        quotes = sprintf("%c%c", 34, 39)
+        pattern = "<<-?[" quotes "][A-Za-z_][A-Za-z0-9_]*[" quotes "]"
       }
-    ' | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
+      {
+        original = original $0 "\n"
+        if (skip) {
+          closing = $0
+          if (tabs) sub(/^\t+/, "", closing)
+          if (closing == tag) skip = 0
+          next
+        }
+        if (match($0, pattern)) {
+          prefix = substr($0, 1, RSTART - 1)
+          # A third angle bracket makes this a here-string, with no body to discard.
+          if (prefix ~ /<$/) uncertain = 1
+          if (prefix ~ ("[" quotes "#]") || index(prefix, sprintf("%c", 92))) uncertain = 1
+          marker = substr($0, RSTART, RLENGTH)
+          rest = substr($0, RSTART + RLENGTH)
+          # Shell words can concatenate quoted and unquoted parts: <<"EOF"x closes at
+          # EOFx, not EOF. Only a complete delimiter token is safe to strip.
+          if (rest != "" && rest !~ /^[[:space:];|&()<>]/) uncertain = 1
+          if (rest ~ /<</) uncertain = 1
+          tabs = substr(marker, 3, 1) == "-"
+          offset = tabs ? 5 : 4
+          if (substr(marker, offset - 1, 1) != substr(marker, length(marker), 1)) uncertain = 1
+          tag = substr(marker, offset, length(marker) - offset)
+          skip = 1
+        } else if ($0 ~ /<</) uncertain = 1
+        stripped = stripped $0 "\n"
+      }
+      END { printf "%s", (skip || uncertain) ? original "uncertain heredoc\n" : stripped }
+    ')
+    # An uncertain heredoc retains a newline, preventing this candidate from replacing scan.
+    text=$(printf '%s' "$text" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
     # A control operator means a second command hides behind the first, and the head word says
     # nothing about it: a `grep` chained by `&&` into a shell invocation would have had the
     # payload stripped as if it were the grep's own pattern. Only a lone simple command is text.
@@ -190,7 +217,17 @@ echo "$scan" | grep -Eq 'git\s+push\b[^|;&]*[[:space:]]:(refs/heads/)?(develop|m
 # this one refuses what has no caller anywhere, and the agent tier below accepts only what a
 # command in package.json can put back.
 rm_invocations() { # command
-  printf '%s\n' "$1" | awk '
+  # scan has lost its quotes. A quoted or escaped angle bracket may belong to a real
+  # filename. Substitutions can be split by the tokenizer and hide subsequent targets.
+  # Keep ambiguous redirects visible so their operands fail the disposable-path allowlist.
+  local strip_redirects=1
+  if grep -Eq "\"[^\"]*[<>][^\"]*\"|'[^']*[<>][^']*'|\\\\[<>]" <<< "$command"; then
+    strip_redirects=0
+  fi
+  if grep -Eq '\$\(|`' <<< "$command"; then
+    strip_redirects=0
+  fi
+  printf '%s\n' "$1" | awk -v strip_redirects="$strip_redirects" '
     function emit(   j) {
       if (!inrm) return
       # No literal target: the paths come from somewhere this hook cannot read, so there is
@@ -203,6 +240,14 @@ rm_invocations() { # command
     {
       # Space out the shell metacharacters before the fields are read, so a word one of them is
       # glued to is still that word: `;rm` is an operator followed by `rm`, not one unknown token.
+      # Strip exactly one redirection and its operand before spacing control operators.
+      # In particular, the ampersand in 2>&1 is not a command boundary. Attached targets
+      # such as dist>/dev/null keep their dist prefix; following targets remain visible.
+      redirect = "([&]>|[<>][<>|]?[&]?)[[:space:]]*[^[:space:];|&()`<>]+"
+      if (strip_redirects) {
+        gsub("(^|[[:space:]])[0-9]+" redirect, " ")
+        gsub(redirect, " ")
+      }
       gsub(/[;|&()`]/, " & ")
       # A newline ends a command as surely as a semicolon does, so no state survives one.
       inrm = 0; rec = 0; n = 0
@@ -358,7 +403,9 @@ echo "$scan" | grep -Eq 'wrangler\s+(deploy|rollback|versions\s+(deploy|upload)|
 # from, and its absence is what production looks like on a command line. `-e` carries a left-hand
 # boundary like every other rule in this file, or `--file ./restore-e staging.sql` reads as a
 # selector that is not there.
-if echo "$scan" | grep -Eq '\bd1\s+(migrations\s+apply|execute)\b.*--remote'; then
+# Explicit remote operations are gated, including future sub-commands. Time travel
+# and database creation reach the remote API without taking --remote.
+if echo "$scan" | grep -Eq '\bd1\b.*--remote|\bd1[[:space:]]+(time-travel|create)\b'; then
   # Count, do not inspect. Reading the positionals the extraction happens to recognise and
   # allowing the line when all of them are staging is the shape that failed review: anything on
   # the line the extraction could *not* read stayed invisible and rode along - a `d1 export`
@@ -378,7 +425,7 @@ if echo "$scan" | grep -Eq '\bd1\s+(migrations\s+apply|execute)\b.*--remote'; th
   # definition - `-o` piped into `wc -l` is what counts occurrences.
   d1_total=$(echo "$scan" | grep -oE '\bd1\b' | wc -l | tr -d '[:space:]') || true
   d1_staging=$(echo "$scan" | grep -oE \
-    '\bd1[[:space:]]+(migrations[[:space:]]+apply|execute)[[:space:]]+planned-travel-db-staging([^[:alnum:]_-]|$)' \
+    '\bd1[[:space:]]+(migrations[[:space:]]+[a-z-]+|time-travel[[:space:]]+[a-z-]+|[a-z-]+)[[:space:]]+planned-travel-db-staging([^[:alnum:]_-]|$)' \
     | wc -l | tr -d '[:space:]') || true
   [ "${d1_total:-0}" = "${d1_staging:-0}" ] \
     || agent_block 'remote d1 access (production)' 'Only the staging database is open to an agent run, spelled the way package.json spells it - wrangler d1 ... planned-travel-db-staging --remote --env staging - and every d1 sub-command on the line has to be that one. Anything else is a human decision; end the run as blocked.'
@@ -393,28 +440,17 @@ fi
 echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+((-{1,2}[^[:space:]]+|[a-z]+)\s+)*(deploy:staging|db:migrate:remote|deploy)(\s|$)' \
   && agent_block 'pnpm deploy|remote migration' 'Deploys and remote migrations are a human decision; end the run as blocked.'
 
-# GitHub Actions only. .github/workflows/claude-code-review.yml runs on every pull_request
-# with `--permission-mode bypassPermissions` and a pull-requests:write token, so the diff it
-# reads is untrusted input and this hook is the only thing between a crafted PR and
-# `gh pr review --approve`. A Cezar run (CEZ_TASK_ID) is different: it runs on the
-# operator's host, on work the operator queued, and mutates GitHub through the tracker
-# descriptor by design, so these blocks do not apply there.
+# GitHub Actions may execute untrusted pull-request content. Keep tracker mutations blocked.
+# Cezar runs mutate GitHub through the tracker descriptor on work the operator queued.
 [ -n "${GITHUB_ACTIONS:-}" ] || exit 0
 
 actions_block() {
-  echo "BLOCKED (GitHub Actions): '$command' matches '$1'. The review job posts one comment and nothing else." >&2
+  echo "BLOCKED (GitHub Actions): '$command' matches '$1'. Tracker mutations are not allowed from this agent context." >&2
   exit 2
 }
 
 echo "$scan" | grep -Eq 'gh\s+(issue|pr)\s+(create|edit|close|reopen|delete|transfer|pin|unpin|lock|unlock|merge|review|ready|checkout)\b' && actions_block 'gh issue|pr mutation'
-# `comment` is the one verb with an exception. The code review posts its summary with
-# `gh pr comment`, and that job is the one agent run whose whole purpose is to write to a pull
-# request. Only .github/workflows/claude-code-review.yml sets the variable, and a pull request
-# cannot set it for itself: editing that workflow makes the action's OIDC exchange refuse to run
-# the review at all. `gh issue comment` stays blocked either way.
-comment_targets='issue|pr'
-[ "${CLAUDE_REVIEW_PR_COMMENT:-}" = 1 ] && comment_targets='issue'
-echo "$scan" | grep -Eq "gh\s+($comment_targets)\s+comment\b" && actions_block 'gh issue|pr mutation'
+echo "$scan" | grep -Eq 'gh\s+(issue|pr)\s+comment\b' && actions_block 'gh issue|pr mutation'
 echo "$scan" | grep -Eq 'gh\s+(label|release|repo|secret|variable|workflow|run)\s' && actions_block 'gh mutation surface'
 if echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])gh\s+api\b'; then
   echo "$scan" | grep -Eq '(--method|-X)[[:space:]=]*(POST|PATCH|PUT|DELETE)|(^|\s)(-f|-F|--field|--raw-field|--input)(\s|=)' && actions_block 'gh api non-GET'
