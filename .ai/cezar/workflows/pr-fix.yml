@@ -1,7 +1,7 @@
 # Manual follow-up for assessed review findings. Never re-arm automatically.
 # The run claims the PR, fixes findings, reviews the resulting SHA and never merges.
 name: pr-fix
-description: Unresolved review threads on a PR; om-auto-fix-pr drives it to merge-ready and resolves them.
+description: Manual follow-up for assessed PR findings; om-auto-fix-pr resolves the threads it handles.
 steps:
   - id: bootstrap
     name: Provision the worktree (deps, routes, secrets, D1, basemap)

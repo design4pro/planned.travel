@@ -12,6 +12,8 @@ Records: the runner migration of #495, #497, #498 and #563, which was decided in
 and pull request descriptions and never written down as a decision.
 Amends: ADR 0021 (the variable half of its recovery path: `vars.RUNNER_CI` alone does not bring
 back the required `claude-review` check; `vars.RUNNER_AGENT` is needed too).
+Amended by #711: `claude-review` and `claude.yml` were retired, so `RUNNER_AGENT` is no longer
+required to recover merge checks. #702 separately tracks the runner isolation claim below.
 
 ## Context
 
@@ -62,6 +64,9 @@ the host that is down.
 | `RUNNER_AGENT`  | the pool's `agent` label | `claude.yml`, `claude-code-review.yml`'s `claude-review`, `sentry-triage.yml`'s `sweep`                                                 |
 | `RUNNER_DEPLOY` | `["ubuntu-latest"]`      | `deploy.yml`, `deploy-staging.yml`, `rollback.yml`                                                                                      |
 
+_Amended by #711: the Claude review and `@claude` jobs in this historical table were retired;
+`RUNNER_CI` now covers the four required checks, and `RUNNER_AGENT` remains for Sentry triage._
+
 **3. The pool is two pools, and a job that spends tokens goes to `agent`.** The `ci` pool mounts
 shared caches (the pnpm store) and is sized for throughput. The `agent` pool mounts nothing, takes
 one job per container, registers `--ephemeral`, and recreates the container from an unmodified
@@ -79,6 +84,10 @@ own:
 
 `rearm-review-threads` sits in `claude-code-review.yml` but runs on `ci`: it runs one repository
 script and spends no tokens.
+
+_Amended by #711: the Claude and re-arm jobs in decision 3 were retired. Their
+`bypassPermissions` isolation argument no longer applies to an active review job. #702 records
+that Docker restart retains the writable container layer until the host pool is fixed._
 
 **4. Shipping runs on GitHub-hosted runners by default** (#563). `RUNNER_DEPLOY` inverts the
 convention for the three jobs that change what users are served, for two reasons, neither of them
@@ -101,6 +110,7 @@ budget:
   `e2e · merged report` and `merge-gate` (on `RUNNER_CI`) **and** `claude-review` (on
   `RUNNER_AGENT`). The admin bypass ADR 0021 names is the other way through, and it skips the checks
   rather than running them.
+  _Amended by #711: `claude-review` is no longer required; the four `RUNNER_CI` checks remain._
 - **Recovering the checks during a host outage needs both pool variables, and still leaves `e2e`
   red.** Set `RUNNER_CI` and `RUNNER_AGENT` to `["ubuntu-latest"]`; with `RUNNER_CI` alone the
   required `claude-review` check stays queued against a dead `agent` pool. Neither brings browsers:
@@ -110,6 +120,8 @@ budget:
   skips `e2e` - the develop→main promotion, which defers it to the push run, and a
   documentation-only diff. A code pull request into `develop` still needs the admin bypass, and the
   push run's red `e2e` still holds the deploys behind it. Unset both once the host is back.
+  _Amended by #711 and ADR 0026: `RUNNER_CI` alone restores the required checks, and the E2E
+  action installs browsers on hosted runners. `RUNNER_AGENT` is not part of merge recovery._
 - **A merged commit still reaches production through the pool.** `ci.yml` calls `deploy.yml` and
   `deploy-staging.yml` as its last jobs, behind `verify`, `test` and `e2e-report` (ADR 0021), which
   run on `RUNNER_CI`. The hosted default keeps a deploy from queueing and lets `workflow_dispatch` on

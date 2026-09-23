@@ -42,8 +42,8 @@ in, then `pnpm db:migrate:local`, load the basemap, and seed.
 
 ## Working with agents
 
-- Mention `@claude` in a GitHub issue and the `claude.yml` workflow implements
-  it on a runner: branch cut from `develop`, pull request back to `develop`.
+- Hand an issue to the Cezar pipeline using the `autofix` label. It opens a
+  reviewed pull request against `develop`; see `docs/agents/cezar.md`.
 - Or hand a task to a cloud session: `claude --cloud "Implement issue #123"`
   (or from claude.ai/code). The committed SessionStart hook
   (`scripts/cloud/session-start.sh`) prepares the project automatically.
@@ -55,5 +55,5 @@ in, then `pnpm db:migrate:local`, load the basemap, and seed.
 - `docs/ARCHITECTURE.md` — system architecture
 - `docs/SPEC.md` — product spec
 - `docs/DEPLOY.md` — provisioning and deploy runbook (D1, R2, basemap, Stripe)
-- `docs/CLOUD.md` — working from the cloud (sessions, `@claude`, the journeys)
+- `docs/CLOUD.md` — working from the cloud (sessions and the journeys)
 - `docs/plans/` — implementation plans
