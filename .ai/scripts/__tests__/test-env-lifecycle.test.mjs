@@ -16,6 +16,8 @@ import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+// Not kill(pid, 0) alone: a killed child nobody reaps stays a zombie, and that still succeeds on it.
+import { live } from '../dev-server-process.mjs'
 
 // Each case boots real child processes; bounded CLI waits must finish before Vitest times out.
 vi.setConfig({ testTimeout: 15_000 })
@@ -24,14 +26,6 @@ const exec = promisify(execFile)
 const scripts = resolve('.ai/scripts')
 let root
 const children = new Set()
-const alive = (pid) => {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
-}
 const stub = (name, body) => {
   const path = join(root, 'bin', name)
   writeFileSync(path, `#!/bin/sh\n${body}\n`)
@@ -103,10 +97,10 @@ describe('test environment lifecycle', () => {
       await run()
       const previous = pid()
       children.add(previous)
-      expect(alive(previous)).toBe(true)
+      expect(live(previous)).toBe(true)
       await run(flag)
       expect(pid()).not.toBe(previous)
-      expect(alive(previous)).toBe(false)
+      expect(live(previous)).toBe(false)
     },
     15000,
   )
@@ -125,7 +119,7 @@ describe('test environment lifecycle', () => {
     children.add(previous)
     rmSync(join(root, '.ai/qa/test-env.json'))
     await run('--force')
-    expect(alive(previous)).toBe(false)
+    expect(live(previous)).toBe(false)
   })
 
   it('does not reuse an old descriptor after bootstrap changed the owned port', async () => {
@@ -138,7 +132,7 @@ describe('test environment lifecycle', () => {
     const result = await run()
     expect(result.stdout).toContain('TEST_ENV_REUSED=0')
     expect(pid()).not.toBe(previous)
-    expect(alive(previous)).toBe(false)
+    expect(live(previous)).toBe(false)
   })
 
   it('refuses a recycled PID whose process start time does not match', async () => {
@@ -151,7 +145,7 @@ describe('test environment lifecycle', () => {
       JSON.stringify({ ...record, started: 'a different process' }),
     )
     await expect(run('--force')).rejects.toThrow()
-    expect(alive(previous)).toBe(true)
+    expect(live(previous)).toBe(true)
     expect(pid()).toBe(previous)
   })
 
@@ -174,8 +168,8 @@ describe('test environment lifecycle', () => {
     children.add(child)
     writeFileSync(join(root, '.ai/qa/dev-server.pid'), `${wrapper.pid}\n`)
     await run('--force')
-    expect(alive(wrapper.pid)).toBe(false)
-    expect(alive(child)).toBe(false)
+    expect(live(wrapper.pid)).toBe(false)
+    expect(live(child)).toBe(false)
   })
 
   it('does not start a second server when its predecessor refuses SIGTERM', async () => {
@@ -188,7 +182,7 @@ describe('test environment lifecycle', () => {
     try {
       await expect(run('--force')).rejects.toThrow('did not stop')
       expect(pid()).toBe(previous)
-      expect(alive(previous)).toBe(true)
+      expect(live(previous)).toBe(true)
     } finally {
       process.kill(previous, 'SIGKILL')
     }
@@ -207,7 +201,7 @@ describe('test environment lifecycle', () => {
       JSON.stringify({ status: 'running', app: { pid: foreign.pid } }),
     )
     await expect(run('--force')).rejects.toThrow()
-    expect(alive(foreign.pid)).toBe(true)
+    expect(live(foreign.pid)).toBe(true)
     expect(pid()).toBe(foreign.pid)
   })
 })
