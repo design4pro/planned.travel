@@ -63,39 +63,10 @@ jobs:
       - name: Check generated files
         run: bash .ai/scripts/check-generated.sh
 
-      # ESLint spends its time building a typed program and then walking it, and
-      # on a pull request almost none of that work is new. `--cache` skips a file
-      # whose bytes have not changed since the last run: measured on this repo,
-      # 10.7 s cold against 0.6 s with nothing to redo.
-      #
-      # Pull requests only, and that restriction is the point. The typed rules
-      # mean a change to one file can change another file's verdict, and the
-      # cache cannot know that - it keys on each file's own content, so a lint
-      # can come back green over an error it simply did not look at. The
-      # uncached run on a push to `develop` or `main` is the canonical one, and
-      # it is the one that guards the shared branch.
-      - name: Restore the ESLint cache
-        if: github.event_name == 'pull_request'
-        uses: actions/cache@v6
-        with:
-          path: .eslintcache
-          # `github.sha` never hits, so every run saves a fresh entry and the
-          # `restore-keys` prefix picks up the most recent one. Changing the
-          # config, the tsconfig or a dependency starts a new lineage, because a
-          # cache from before any of those describes a different lint.
-          key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            eslint-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'pnpm-lock.yaml') }}-
-
-      # `--cache-strategy content` and not the default. ESLint decides a file is
-      # unchanged by size and mtime unless told otherwise, and a fresh checkout
-      # stamps every file with a new mtime - so the default strategy restored a
-      # perfectly good cache and then ignored all of it. Measured after touching
-      # every source file: 10.5 s on metadata, 0.7 s on content.
+      # oxlint walks the whole tree in a few seconds, so there is no cache to
+      # restore and a pull request lints every file, as a push does (ADR 0028).
       - name: Lint
-        run: >-
-          pnpm lint ${{ github.event_name == 'pull_request'
-          && '--cache --cache-strategy content' || '' }}
+        run: pnpm lint
 
       - name: Typecheck
         run: pnpm typecheck
