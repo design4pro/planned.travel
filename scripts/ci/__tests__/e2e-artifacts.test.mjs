@@ -42,7 +42,7 @@ describe.each(workflows)('%s artifact-independent verdict', (name) => {
     const id = name === 'ci.yml' ? 'e2e-report' : 'e2e-webkit-report'
     const job = source.split(`\n  ${id}:`)[1].split(/\n  [a-z][a-z-]*:/)[0]
     expect(job).not.toContain('uses:')
-    expect(job).toContain('if: ${{ always() }}')
+    expect(job).toContain('if: ${{ !cancelled() }}')
     const script = job
       .split('run: |\n')[1]
       .split('\n')

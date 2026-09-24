@@ -286,10 +286,12 @@ jobs:
             dev-server.log
 
   # Keep the required check name; reports are diagnostics, never the verdict.
+  # `!cancelled()`, not `always()`: a failed or skipped shard still gets a red verdict, but a
+  # cancelled run (superseded push, closed pull request) no longer takes a `ci` slot to report it.
   e2e-report:
     name: e2e · merged report
     needs: [scope, e2e]
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 2
     steps:
