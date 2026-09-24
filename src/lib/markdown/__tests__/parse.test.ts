@@ -452,7 +452,9 @@ describe('parse — outside the subset', () => {
     expect(parse(source).length).toBeGreaterThan(1_000)
   })
 
-  it('does not degrade into quadratic scanning on unmatched delimiters', () => {
+  // 7.1 s on the VPS CI pool against vitest's 5 s default, linear and all. A quadratic scan of
+  // the 100 000-character input is ~10^10 steps, far past 20 s, so the budget still separates them.
+  it('does not degrade into quadratic scanning on unmatched delimiters', { timeout: 20_000 }, () => {
     expect(() => parse('['.repeat(10_000))).not.toThrow()
     expect(() => parse('*'.repeat(10_000))).not.toThrow()
     expect(() => parse('`'.repeat(10_000))).not.toThrow()
