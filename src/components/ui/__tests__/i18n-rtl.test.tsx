@@ -4,7 +4,7 @@ import './test-env'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { addDays } from 'date-fns'
+import { addDays } from 'date-fns/addDays'
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

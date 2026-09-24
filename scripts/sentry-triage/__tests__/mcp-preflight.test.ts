@@ -57,9 +57,12 @@ describe('Sentry MCP preflight', () => {
     (mode) => {
       const { script, trace } = server(mode)
       const bin = join(script, '..', 'npx')
+      // Exec the .cjs fixture instead of copying its source into `npx`: an extensionless script
+      // takes its module type from the nearest package.json, and a tmpdir inside this repository
+      // (`"type": "module"`) turns its `require` into a ReferenceError.
       writeFileSync(
         bin,
-        `#!${process.execPath}\n${readFileSync(script, 'utf8')}`,
+        `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(script)} "$@"\n`,
       )
       chmodSync(bin, 0o755)
       const result = spawnSync(

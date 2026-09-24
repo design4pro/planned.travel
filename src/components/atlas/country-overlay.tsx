@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { Dialog as DialogPrimitive } from 'radix-ui'
+import * as DialogPrimitive from 'radix-ui/dialog'
 import { X } from 'lucide-react'
 
 import { IconButton, ScrollArea } from '#/components/ui'

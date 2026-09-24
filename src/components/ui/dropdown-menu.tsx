@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { DropdownMenu as MenuPrimitive } from 'radix-ui'
+import * as MenuPrimitive from 'radix-ui/dropdown-menu'
 import { Check, ChevronRight, Circle } from 'lucide-react'
 
 import { cn } from '#/lib/cn'

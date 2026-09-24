@@ -5,7 +5,7 @@ import '#/components/ui/__tests__/test-env'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { format } from 'date-fns'
+import { format } from 'date-fns/format'
 
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
