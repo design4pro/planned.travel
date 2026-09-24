@@ -19,16 +19,19 @@ import { fileURLToPath } from 'node:url'
 import { admin } from 'better-auth/plugins'
 import { defaultRoles } from 'better-auth/plugins/admin/access'
 import { describe, expect, it } from 'vitest'
-import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { ac, roles } from '../access'
 import {
+  BANNED_USER_MESSAGE,
   DISABLED_ADMIN_PATHS,
   IMPERSONATION_SESSION_SECONDS,
   adminOptions,
 } from '../admin-options'
 
 const SRC_DIR = fileURLToPath(new URL('../../../', import.meta.url))
-const ADMIN_OPTIONS_MODULE = resolvePath(SRC_DIR, 'server/auth/admin-options.ts')
+const ADMIN_OPTIONS_MODULE = resolvePath(
+  SRC_DIR,
+  'server/auth/admin-options.ts',
+)
 const AUTH_INDEX_MODULE = resolvePath(SRC_DIR, 'server/auth/index.ts')
 const AUTH_ENV_MODULE = resolvePath(SRC_DIR, 'server/auth/env.ts')
 const AUTH_CLIENT_MODULE = resolvePath(SRC_DIR, 'lib/auth/client.ts')
@@ -56,7 +59,9 @@ describe('adminOptions is the literal the production betterAuth() call receives'
   })
 
   it('registers disabledPaths as a top-level option, a sibling of plugins', () => {
-    const disabledAt = indexSource.indexOf('disabledPaths: DISABLED_ADMIN_PATHS')
+    const disabledAt = indexSource.indexOf(
+      'disabledPaths: DISABLED_ADMIN_PATHS',
+    )
     const pluginsAt = indexSource.indexOf('plugins: [')
     const optionsAt = indexSource.indexOf('betterAuth({')
     expect(optionsAt).toBeGreaterThan(-1)
@@ -225,7 +230,8 @@ function runtimeSpecifiers(source: string): Array<string> {
   const code = stripComments(source)
 
   const found: Array<string> = []
-  const withClause = /(?:^|\n)\s*(?:import|export)\s+([^'";]*?)from\s*['"]([^'"]+)['"]/g
+  const withClause =
+    /(?:^|\n)\s*(?:import|export)\s+([^'";]*?)from\s*['"]([^'"]+)['"]/g
   let match = withClause.exec(code)
   while (match) {
     if (!/^type\b/.test(match[1].trim())) found.push(match[2])
@@ -273,7 +279,9 @@ function reachableFrom(entry: string): Reach {
       if (specifier.startsWith('#/') || specifier.startsWith('@/')) {
         const resolved = probe(resolvePath(SRC_DIR, specifier.slice(2)))
         if (resolved === null) {
-          throw new Error(`unresolved first-party import ${specifier} in ${current}`)
+          throw new Error(
+            `unresolved first-party import ${specifier} in ${current}`,
+          )
         }
         queue.push(resolved)
         continue
@@ -281,7 +289,9 @@ function reachableFrom(entry: string): Reach {
       if (specifier.startsWith('.')) {
         const resolved = probe(resolvePath(dirname(current), specifier))
         if (resolved === null) {
-          throw new Error(`unresolved relative import ${specifier} in ${current}`)
+          throw new Error(
+            `unresolved relative import ${specifier} in ${current}`,
+          )
         }
         queue.push(resolved)
         continue
@@ -336,7 +346,10 @@ describe('admin-options.ts is binding-free', () => {
     // so the constant moved here, where the plugin option that needs it is configured. The graph
     // getting *smaller* is the point: a server module has no business importing from routes/.
     expect([...reach.files].sort()).toEqual(
-      [ADMIN_OPTIONS_MODULE, resolvePath(SRC_DIR, 'server/auth/access.ts')].sort(),
+      [
+        ADMIN_OPTIONS_MODULE,
+        resolvePath(SRC_DIR, 'server/auth/access.ts'),
+      ].sort(),
     )
     expect([...reach.files].some((f) => f.includes('/routes/'))).toBe(false)
   })
