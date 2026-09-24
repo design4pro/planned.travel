@@ -125,8 +125,9 @@ hooks in `.claude/hooks/` then tighten:
 - `git-guardrails.sh` also blocks `pnpm add|remove|update` (the stack is pinned, docs/SPEC.md §3),
   `printenv` and `env` dumps, and a recursive delete of anything but build output and scratch
   space - the target list is an allowlist, so a path it does not name ends the run as blocked
-  rather than being deleted, and `find -delete`, `find -exec rm`, `sudo` and
-  `git worktree remove --force` are refused with it. In every session, agent or not, the same hook
+  rather than being deleted (a variable counts only when the same command assigned it from
+  `mktemp` or to a path under the run's own scratch directory), and `find -delete`,
+  `find -exec rm`, `sudo` and `git worktree remove --force` are refused with it. In every session, agent or not, the same hook
   refuses the deletes and history rewrites that take the checkout itself: a recursive delete naming
   the filesystem root, the home directory, the working directory or the worktree root,
   `git reflog expire`, `git gc --prune`, `git filter-branch`, `gh repo delete`, and deleting
@@ -134,13 +135,15 @@ hooks in `.claude/hooks/` then tighten:
   `pnpm exec` are open: the om-* skills perform them through `.ai/trackers/github.md` and `SDLC.md`
   governs them. Under GitHub Actions, GitHub mutations remain guarded: CI can read untrusted
   pull-request content. Retiring the review workflows does not relax those generic protections.
-- `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree and denies `.dev.vars`, `.env*`,
-  `.e2e-tiles/`, cezar run state and `.ai/qa/test-env.env`.
-- `guard-generated.sh` (Edit, Write) refuses a write outside the worktree or through `..`. Its
-  header records what that is for: a `pr-autopilot` run reached `../agent-kit/templates/…` and
-  rewrote eight files in a sibling checkout a human was working in, and nothing downstream could
-  tell. Edit and Write only - a Bash redirect still reaches outside, which is `git-guardrails.sh`'s
-  problem and not a matcher's.
+- `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree - plus the run's own Claude Code
+  transcript directory, its scratch directory `<main>/.ai/cezar/tmp/$CEZ_TASK_ID`, and the main
+  checkout minus `.ai/cezar/` and `.git/` - and denies `.dev.vars`, `.env*`, `.e2e-tiles/`, cezar
+  run state and `.ai/qa/test-env.env`.
+- `guard-generated.sh` (Edit, Write) refuses a write outside the worktree or through `..`, bar the
+  run's own scratch directory `<main>/.ai/cezar/tmp/$CEZ_TASK_ID`. Its header records what that is
+  for: a `pr-autopilot` run reached `../agent-kit/templates/…` and rewrote eight files in a sibling
+  checkout a human was working in, and nothing downstream could tell. Edit and Write only - a Bash
+  redirect still reaches outside, which is `git-guardrails.sh`'s problem and not a matcher's.
 
   **It no longer refuses the paths that configure the agent - in a cezar run** (ADR 0025). That
   block was the edit friction the agent-kit retirement was about: `.github/`, `.claude/`, `.ai/`

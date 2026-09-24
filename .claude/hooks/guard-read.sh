@@ -11,7 +11,11 @@
 # and never another run's state or git internals, while a developer at the keyboard legitimately
 # reads outside the checkout. .ai/runs, .ai/analysis, .ai/qa and .ai/tmp stay readable either way -
 # the om-* skills write their artefacts there; only the test-env credentials file under .ai/qa/ is
-# denied.
+# denied. Three places outside the worktree are the run's own and stay readable: its Claude Code
+# transcript directory (`<config dir>/projects/<slug of the project dir>`, where oversized tool
+# output is parked), its scratch directory (`<main>/.ai/cezar/tmp/$CEZ_TASK_ID`, what cezar sets
+# TMPDIR to), and - for a cezar worktree at `<main>/.ai/cezar/worktrees/<id>` - the main checkout
+# it hangs off, minus `<main>/.ai/cezar/` (every other run's state) and `<main>/.git/`.
 #
 # Contract: exit 2 blocks the tool call and feeds stderr back to the model; exit 0 allows.
 set -euo pipefail
@@ -57,6 +61,31 @@ resolve() {
   fi
 }
 
+# What a run may read beyond its worktree. `main` is the checkout a cezar worktree hangs off, found
+# by stripping `/.ai/cezar/worktrees/<id>` from the root; anywhere else - GitHub Actions, a run in
+# the checkout itself - it is the root, which widens nothing. The scratch directory is derived from
+# `main` and CEZ_TASK_ID rather than taken from TMPDIR, which can name /tmp as readily as the run's
+# own directory; both sides are compared resolved, so a TMPDIR that spells it differently still
+# matches. The transcript slug is the project dir with every non-alphanumeric character turned into
+# `-`, which is how Claude Code names it - one run's slug, never a prefix of another's.
+main="$root"
+own_tmp=""
+if [ -n "${CEZ_TASK_ID:-}" ]; then
+  case "$root" in
+    */.ai/cezar/worktrees/*/*) ;;
+    */.ai/cezar/worktrees/?*) main="${root%/.ai/cezar/worktrees/*}" ;;
+  esac
+  case "$CEZ_TASK_ID" in
+    . | .. | *[!A-Za-z0-9._-]*) ;;
+    *) own_tmp=$(resolve "$main/.ai/cezar/tmp/$CEZ_TASK_ID") ;;
+  esac
+fi
+transcripts="${CLAUDE_CONFIG_DIR:-${HOME:-}/.claude}/projects"
+project_dir="${CLAUDE_PROJECT_DIR:-$root}"
+# Both spellings of the project dir: the one the harness was handed and the resolved one.
+own_transcripts=$(resolve "$transcripts/${project_dir//[!A-Za-z0-9]/-}")
+own_transcripts_resolved=$(resolve "$transcripts/${root//[!A-Za-z0-9]/-}")
+
 deny() {
   echo "BLOCKED: reading '$1' is not allowed ($2). The user has prevented you from doing this." >&2
   exit 2
@@ -89,8 +118,17 @@ check() { # path
   # A `..` component cannot be resolved lexically when the directory does not exist, so
   # it is refused outright; a run names files by their plain path.
   case "$1" in ..|../*|*/..|*/../*) deny_agent "$1" "outside the worktree" ;; esac
+  if [ -n "$own_tmp" ]; then
+    case "$abs" in "$own_tmp"|"$own_tmp"/*) return 0 ;; esac
+  fi
+  # First match wins, so the worktree - itself under `$main/.ai/cezar/` - is decided before the
+  # main checkout's run state is refused; with `main` equal to the root the last three never fire.
   case "$abs" in
+    "$own_transcripts"|"$own_transcripts"/*|"$own_transcripts_resolved"|"$own_transcripts_resolved"/*) return 0 ;;
     "$root"|"$root"/*) ;;
+    "$main"/.ai/cezar|"$main"/.ai/cezar/*) deny_agent "$1" "cezar run state" ;;
+    "$main"/.git|"$main"/.git/*) deny_agent "$1" "git internals" ;;
+    "$main"/*) return 0 ;;
     *) deny_agent "$1" "outside the worktree" ;;
   esac
   case "$rel" in
