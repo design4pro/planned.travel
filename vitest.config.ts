@@ -129,6 +129,7 @@ export default defineConfig({
           environment: 'node',
           globals: false,
           setupFiles: ['./vitest.setup.node.ts'],
+          globalSetup: ['./vitest.global-setup.server.ts'],
           include: [
             'src/server/**/*.test.{ts,tsx}',
             'src/routes/**/*.test.ts',
