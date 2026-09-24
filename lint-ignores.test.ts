@@ -13,8 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
  * oxlint reads `.gitignore` itself, the nested `.ai/cezar/.gitignore` included (ADR 0028), so that
  * list is gone and this file pins the premise instead: a file dropped into a gitignored directory
  * is never linted. The other half is `ignorePatterns` in `.oxlintrc.json`, which still names the
- * tracked paths that are not ours to lint - including the fragile `.claude` ladder that carves the
- * hook tests back in.
+ * tracked paths that are not ours to lint, `.claude` among them.
  *
  * Its failure mode is silence in both directions: nothing notices a directory that is linted when
  * it should not be until the tool that writes it runs, and nothing notices an ignore that grew too
@@ -40,8 +39,8 @@ const IGNORED = [
   '.ai/cezar/drafts/draft.ts',
   '.ai/cezar/runs/run.ts',
   '.ai/cezar/worktrees/lint-ignores-probe/src/routes/index.tsx',
-  // The other side of the `.claude` ladder. Hypothetical: the hooks themselves are shell today.
-  '.claude/hooks/guard-read.ts',
+  // Agent tooling, not application source. Hypothetical: the hooks themselves are shell today.
+  '.claude/hooks/probe.ts',
 ] as const
 
 /** Not tracked either, but not gitignored: the shared config the QA browser descriptor writes. */
@@ -92,8 +91,6 @@ describe('pnpm lint ignores', () => {
   })
 
   it.each([
-    // The list's one fragile entry: `.claude/*` plus a negation only works one level at a time.
-    '.claude/hooks/__tests__/hooks.test.ts',
     'src/routes/index.tsx',
     'src/server/repos/trips.ts',
     // One level up from the per-run QA scratch: only the `artifacts_*` directories are out.

@@ -1,11 +1,11 @@
 /**
  * Test harness: the whole relational model in an in-memory SQLite database.
  *
- * The DDL is generated from the Drizzle schema itself (`drizzle-kit/api`), so these tests exercise the
- * real column types, the real `CHECK` constraints and the real foreign keys — including
- * `ON DELETE CASCADE` — rather than a hand-written approximation that could drift. Pass
- * `{ ddl: 'migrations' }` to build the database D1 is running instead; see {@link HarnessOptions}
- * for when that difference matters.
+ * The DDL is generated from the Drizzle schema itself (`drizzle-kit/api`, once per run in the
+ * `server` project's global setup), so these tests exercise the real column types, the real
+ * `CHECK` constraints and the real foreign keys — including `ON DELETE CASCADE` — rather than a
+ * hand-written approximation that could drift. Pass `{ ddl: 'migrations' }` to build the database
+ * D1 is running instead; see {@link HarnessOptions} for when that difference matters.
  *
  * The database is reached through Drizzle's proxy driver, whose handle satisfies the same
  * {@link Database} type the Worker's D1 handle does. Both the single-statement and the `batch`
@@ -13,13 +13,9 @@
  */
 
 import { DatabaseSync } from 'node:sqlite'
-import {
-  generateSQLiteDrizzleJson,
-  generateSQLiteMigration,
-} from 'drizzle-kit/api'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
-import { authSchema, member, organization, user } from '#/server/db/auth-schema'
-import * as domainSchema from '#/server/db/schema'
+import { inject } from 'vitest'
+import { member, organization, user } from '#/server/db/auth-schema'
 import { newId } from '#/server/db/schema'
 import { ceilingsForPlan } from '#/server/billing/limits'
 import { ceilingColumns } from '#/server/billing/store'
@@ -34,18 +30,17 @@ import type { TripParticipant } from '../trips'
 /** The value types `node:sqlite` accepts as a bound parameter. */
 type SqliteValue = null | number | bigint | string | Uint8Array
 
-/** Generating the schema snapshot is the slow part, so it happens once per test process. */
-let ddl: Promise<Array<string>> | undefined
-
-function schemaStatements(): Promise<Array<string>> {
-  ddl ??= (async () => {
-    const empty = await generateSQLiteDrizzleJson({})
-    const current = await generateSQLiteDrizzleJson({
-      ...authSchema,
-      ...domainSchema,
-    })
-    return generateSQLiteMigration(empty, current)
-  })()
+/**
+ * The DDL is generated once per run by `vitest.global-setup.server.ts`, the `server` project's
+ * global setup: generating it here cost every test file a drizzle-kit import and a snapshot.
+ */
+function schemaStatements(): Array<string> {
+  const ddl = inject('schemaDdl')
+  if (!ddl) {
+    throw new Error(
+      'No schema DDL was provided. The harness runs in the `server` vitest project, whose global setup generates it.',
+    )
+  }
   return ddl
 }
 
@@ -149,7 +144,7 @@ export async function createHarness(
     sqlite = replayMigrations()
   } else {
     sqlite = new DatabaseSync(':memory:')
-    for (const statement of await schemaStatements()) {
+    for (const statement of schemaStatements()) {
       sqlite.exec(statement)
     }
   }
