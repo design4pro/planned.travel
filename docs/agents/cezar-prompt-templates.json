@@ -110,7 +110,7 @@
   {
     "id": "om-apply-upgrade-notes",
     "label": "om-apply-upgrade-notes - migrate after a skills-collection upgrade",
-    "text": "Flags: --dry-run · --tracker <name> · --browser <name> · --yes (apply purely additive changes).\nRead the collection's UPGRADE_NOTES.md and re-sync the installed tracker and browser descriptors\nwhile preserving local edits. Report every custom-provider gap rather than papering over it.\nTouch only .ai/ artifacts. The pin in .ai/cezar/config.json (skillsRepos[0].ref) and\nskills-lock.json must move in the same commit as the vendored .claude/skills/om-* files.",
+    "text": "Flags: --dry-run · --tracker <name> · --browser <name> · --yes (apply purely additive changes).\nRead the collection's UPGRADE_NOTES.md and re-sync the installed tracker and browser descriptors\nwhile preserving local edits. Report every custom-provider gap rather than papering over it.\nTouch only .ai/ artifacts. The pin line in docs/agents/cezar.md and skills-lock.json must\nmove in the same commit as the vendored .agents/skills/om-* files.",
     "skills": ["om-apply-upgrade-notes"]
   },
   {

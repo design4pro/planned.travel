@@ -23,7 +23,7 @@ the rules of `SDLC.md`.
   project entry in `~/.cezar/config.json` points at the main checkout; the versioned part is
   `.ai/cezar/config.json` (`baseBranch: develop`, `worktreeRetention: 10`, `maxParallel: 2`,
   `reviewGate: false` so a successful non-autonomous run settles at `done` and the automations
-  keep driving themselves, `skillsRepos: []` because the vendored `.claude/skills/om-*` copies are
+  keep driving themselves, `skillsRepos: []` because the vendored `.agents/skills/om-*` copies are
   the only source and cezar must not clone the upstream repository at run time).
   Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
   of git; `config.json` and `workflows/` are tracked.
@@ -35,11 +35,12 @@ the rules of `SDLC.md`.
     cross-reference (open-mercato/cezar#914), so **Re-groom on request**, **Fix issues on the autofix label** and **Write a spec for feature issues**
     never fire. The fork cherry-picks the fix, upstream PR #916.
   - On every cockpit start the skills coordinator runs `npx skills check <om-*> -p` in each project
-    root, and that command re-adds the skills from upstream HEAD: the vendored
-    `.claude/skills/om-*` directories become symlinks into an untracked `.agents/skills/`, which
-    shows as 400 deleted files in `git status`. `skillsAutoUpdate: false` (kept in
-    `~/.cezar/config.json`) gates only the update; the fork makes `CEZ_SKILLS_AUTO_UPDATE=0` skip
-    the check too. Recovery: remove the symlinks, `git checkout -- .claude/skills`, delete `.agents/`.
+    root, and that command re-adds the skills from upstream HEAD over the vendored
+    `.agents/skills/om-*`, which shows as modified files in `git status` once upstream has moved
+    past the pin. `skillsAutoUpdate: false` (kept in `~/.cezar/config.json`) gates only the update;
+    the fork makes `CEZ_SKILLS_AUTO_UPDATE=0` skip the check too. Recovery:
+    `git checkout -- .agents/skills .claude/skills skills-lock.json`. Never delete `.agents/`: it
+    is tracked, and `.claude/skills/om-*` are symlinks into it.
   - Two runs forking their worktree in the same moment lose the `.git/config` lock: `git worktree
 add -b` writes the new branch's upstream into the shared config, git's config lock has no
     retry, and the fork happens before cezar takes the repository-root lease, so `maxParallel`
@@ -75,8 +76,9 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
     moves `baselineAt` and the cursor to now. A baseline launches nothing from before it, so every
     issue labelled between the pinned cursor and the baseline is re-triggered by hand: remove the
     label and add it again.
-- Skills: `.claude/skills/om-*` are vendored files, byte-identical to
-  `open-mercato/skills@91f11c63721b5f7e17a859940b3e9c55ece698ee` - this line is the pin, because
+- Skills: `.agents/skills/om-*` are vendored files, byte-identical to
+  `open-mercato/skills@e886001ab1dea2123af79e52dcd175c36878dab1`, and each `.claude/skills/om-*`
+  is a relative symlink to its directory there - this line is the pin, because
   `skills-lock.json` records only a per-skill `computedHash` and `.ai/cezar/config.json` no longer
   carries a `skillsRepos` entry to hold a ref. `pnpm install-skills` re-installs and updates them;
   the diff is a PR, read with `/om-apply-upgrade-notes`, and the SHA on this line moves in the same
