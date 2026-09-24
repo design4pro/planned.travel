@@ -246,9 +246,9 @@ runs:
     # instrument does not perturb what it measures.
     #
     # `/proc` rather than `ps`, so nothing depends on procps being in the image,
-    # and `VmRSS` rather than `statm`, which counts pages: this pool is ARM64,
-    # where a 64 KiB page would make a 4 KiB assumption wrong by sixteen times
-    # without saying so. `nproc` because the first run of this sampler recorded a
+    # and `VmRSS` rather than `statm`, which counts pages: a runner with 64 KiB
+    # pages would make a 4 KiB assumption wrong by sixteen times without saying
+    # so. `nproc` because the first run of this sampler recorded a
     # `load1` of 17 and left the core count unknowable, which made the number
     # unreadable; `esbuild` in the match because that run terminated an esbuild
     # child the filter had not been counting.
