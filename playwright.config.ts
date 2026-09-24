@@ -187,7 +187,12 @@ export default defineConfig({
   // carry all 52 tests in 882 s and the other ran past 900 s. The nightly WebKit
   // run shards its own project the same way. The budget is unchanged on purpose
   // — it bounds a hung shard, and that job did not change.
-  globalTimeout: isCI ? 15 * 60_000 : undefined,
+  //
+  // Doubled when the CI pool moved to the OVH VPS (2026-09-24): its KVM Haswell vCPUs are about
+  // three times slower per core than the Mac pool, and the first run there cut both shards off at
+  // 900 s with 29 and 27 journeys passed (run 35965916602). The same shards took 310-640 s on the
+  // Mac. ci.yml's `timeout-minutes` moved with it and still fires second.
+  globalTimeout: isCI ? 30 * 60_000 : undefined,
   reporter: [
     // `github` writes GitHub annotations and is noise in a terminal; `list` is the
     // progressive output a human or an agent reads while the suite runs. That is the

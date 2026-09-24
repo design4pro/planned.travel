@@ -127,7 +127,7 @@ jobs:
     name: unit tests
     if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Check out
@@ -253,7 +253,7 @@ jobs:
     # journey rather than one heavy engine; Playwright offers no duration split,
     # and moving
     # a journey by hand drifts.
-    timeout-minutes: 20
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
