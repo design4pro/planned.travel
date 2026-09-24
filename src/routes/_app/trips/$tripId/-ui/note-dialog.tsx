@@ -19,7 +19,7 @@
  * typing is what the day will show.
  */
 import * as React from 'react'
-import { RadioGroup as RadioGroupPrimitive } from 'radix-ui'
+import * as RadioGroupPrimitive from 'radix-ui/radio-group'
 
 import { MEDIA_SM_UP } from '#/lib/breakpoints'
 import { cn } from '#/lib/cn'

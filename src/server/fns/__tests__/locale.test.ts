@@ -41,7 +41,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router'
-import { ToggleGroup } from 'radix-ui'
+import * as ToggleGroup from 'radix-ui/toggle-group'
 import { describe, expect, it, vi } from 'vitest'
 
 import { SUPPORTED_LOCALES, directionOf } from '#/lib/i18n'

@@ -1,20 +1,18 @@
 import * as React from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import {
-  addDays,
-  addMonths,
-  eachDayOfInterval,
-  endOfMonth,
-  endOfWeek,
-  isAfter,
-  isBefore,
-  isSameDay,
-  isSameMonth,
-  isToday,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from 'date-fns'
+import { addDays } from 'date-fns/addDays'
+import { addMonths } from 'date-fns/addMonths'
+import { eachDayOfInterval } from 'date-fns/eachDayOfInterval'
+import { endOfMonth } from 'date-fns/endOfMonth'
+import { endOfWeek } from 'date-fns/endOfWeek'
+import { isAfter } from 'date-fns/isAfter'
+import { isBefore } from 'date-fns/isBefore'
+import { isSameDay } from 'date-fns/isSameDay'
+import { isSameMonth } from 'date-fns/isSameMonth'
+import { isToday } from 'date-fns/isToday'
+import { startOfDay } from 'date-fns/startOfDay'
+import { startOfMonth } from 'date-fns/startOfMonth'
+import { startOfWeek } from 'date-fns/startOfWeek'
 
 import { cn } from '#/lib/cn'
 import { formatList, formatNumber, monthName, weekdayName } from '#/lib/format'

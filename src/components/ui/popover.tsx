@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Popover as PopoverPrimitive } from 'radix-ui'
+import * as PopoverPrimitive from 'radix-ui/popover'
 
 import { cn } from '#/lib/cn'
 import { popMotion } from './shared'

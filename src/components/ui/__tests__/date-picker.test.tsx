@@ -4,7 +4,7 @@ import './test-env'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { format } from 'date-fns'
+import { format } from 'date-fns/format'
 
 import { DatePicker } from '../date-picker'
 import { DateRangePicker } from '../date-range-picker'

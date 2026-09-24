@@ -69,6 +69,26 @@
         "no-misleading-character-class": "error",
         "no-nonoctal-decimal-escape": "error",
         "no-regex-spaces": "error",
+        // A package's root entry evaluates all of it. Tests pay for that per file, and components/ui
+        // hands it to every test through the barrel. Repeated in each override below that sets
+        // this rule, since an override replaces its options.
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "date-fns",
+                "allowTypeImports": true,
+                "message": "Import each function from its own entry, e.g. date-fns/addDays. The root loads every function: 1.7 s in every test file that reaches it."
+              },
+              {
+                "name": "radix-ui",
+                "allowTypeImports": true,
+                "message": "Import the primitive from its own entry, e.g. import * as Dialog from 'radix-ui/dialog'. The root loads every primitive."
+              }
+            ]
+          }
+        ],
         "no-self-assign": "error",
         "no-shadow": "warn",
         "no-shadow-restricted-names": "error",
@@ -131,6 +151,16 @@
               {
                 "name": "drizzle-orm",
                 "message": "SQL lives in server/repos via the tenant base repository (docs/SPEC.md §6). Call a server function instead."
+              },
+              {
+                "name": "date-fns",
+                "allowTypeImports": true,
+                "message": "Import each function from its own entry, e.g. date-fns/addDays. The root loads every function: 1.7 s in every test file that reaches it."
+              },
+              {
+                "name": "radix-ui",
+                "allowTypeImports": true,
+                "message": "Import the primitive from its own entry, e.g. import * as Dialog from 'radix-ui/dialog'. The root loads every primitive."
               }
             ],
             "patterns": [
@@ -162,6 +192,16 @@
               {
                 "name": "drizzle-orm",
                 "message": "SQL lives in server/repos via the tenant base repository (docs/SPEC.md §6). Call a server function instead."
+              },
+              {
+                "name": "date-fns",
+                "allowTypeImports": true,
+                "message": "Import each function from its own entry, e.g. date-fns/addDays. The root loads every function: 1.7 s in every test file that reaches it."
+              },
+              {
+                "name": "radix-ui",
+                "allowTypeImports": true,
+                "message": "Import the primitive from its own entry, e.g. import * as Dialog from 'radix-ui/dialog'. The root loads every primitive."
               }
             ],
             "patterns": [
