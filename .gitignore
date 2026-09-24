@@ -45,6 +45,9 @@ e2e/.auth
 
 # Local MCP server config. Developer-specific, never shared.
 .mcp.json
+# Claude Code per-developer overrides (which of those MCP servers to enable, extra
+# permission rules). Shared settings and hooks live in .claude/settings.json.
+.claude/settings.local.json
 
 # Scratch a browser agent drops in the working directory. The blind pairs belong
 # outside the repository entirely (the session scratchpad, or .sandcastle-shots/
