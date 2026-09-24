@@ -1,7 +1,7 @@
 /**
  * The dictionary, the grid, and the two invariants nothing in the toolchain enforces.
  *
- * `eslint.config.js` has no import-restriction rule and `ac.newRole()` validates nothing at run
+ * `.oxlintrc.json` has no import-restriction rule and `ac.newRole()` validates nothing at run
  * time, so both properties this file asserts are enforced here or nowhere:
  *
  * - **The import leaf.** `access.ts` is read by the console, the guard and Faza E's MCP server,
