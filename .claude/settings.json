@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "description": "Project-scoped Claude Code settings for planned.travel. The guardrails that must apply to every checkout live in .claude/hooks, and the allow list carries only the tracker operations the om-* pipeline cannot run without, plus the read-only queries it runs constantly. Nothing that refuses a command belongs in this file, and nothing that mutates belongs in it either unless a skill cannot proceed without it. A cezar run is not gated by this list at all - it runs autonomously with no bashAllowlist (ADR 0018), so the hooks are its boundary; this list is what keeps the local loop from prompting on every read. Every other permission rule stays per-developer in the gitignored .claude/settings.local.json.",
+  "description": "Project-scoped Claude Code settings for planned.travel. deny holds the few operations nothing recovers from - secrets, generated files, history rewrites, deleted Cloudflare stores - and applies in every session. ask holds what a developer approves at the keyboard; a cezar run uses --permission-mode dontAsk, so there it is refused (ADR 0030). The allow list carries only the tracker operations the om-* pipeline cannot run without, plus the read-only queries it runs constantly. Every other permission rule stays per-developer in the gitignored .claude/settings.local.json.",
   "env": {
     "CLAUDE_CODE_SUBAGENT_MODEL": "opus"
   },
@@ -17,6 +17,32 @@
       "Bash(gh label list:*)",
       "Bash(gh search:*)",
       "Bash(node .ai/scripts/backlog-status.mjs:*)"
+    ],
+    "ask": [
+      "Bash(*wrangler deploy*)",
+      "Bash(*wrangler versions deploy*)",
+      "Bash(*wrangler d1 * --remote*)"
+    ],
+    "deny": [
+      "Read(.dev.vars*)",
+      "Read(.env*)",
+      "Read(!*.example)",
+      "Read(.ai/qa/test-env.env)",
+      "Read(.e2e-tiles/**)",
+      "Edit(/src/routeTree.gen.ts)",
+      "Edit(/drizzle/**)",
+      "Edit(/worker-configuration.d.ts)",
+      "Bash(git push *--force*)",
+      "Bash(git push -f *)",
+      "Bash(git push * -f *)",
+      "Bash(git reset --hard*)",
+      "Bash(git *--no-verify*)",
+      "Bash(*wrangler secret put*)",
+      "Bash(*wrangler secret bulk*)",
+      "Bash(*wrangler d1 delete*)",
+      "Bash(*wrangler r2 bucket delete*)",
+      "Bash(*wrangler kv namespace delete*)",
+      "Bash(*wrangler delete*)"
     ]
   },
   "modelSettings": {
@@ -36,35 +62,6 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/scripts/cloud/session-start.sh",
             "timeout": 900
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-generated.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/git-guardrails.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Read|Glob|Grep",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-read.sh"
           }
         ]
       }
