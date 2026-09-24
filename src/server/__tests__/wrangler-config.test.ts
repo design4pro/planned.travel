@@ -1,39 +1,35 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import ts from 'typescript'
 import { bindingNamesIn, nodeAt, parseJsonc } from './wrangler-config'
 
 const config = parseJsonc(readFileSync('wrangler.jsonc', 'utf8'))
-const declarations = ts.createSourceFile(
-  'worker-configuration.d.ts',
-  readFileSync('worker-configuration.d.ts', 'utf8'),
-  ts.ScriptTarget.Latest,
-  true,
-)
+const declarations = readFileSync('worker-configuration.d.ts', 'utf8')
 
+// `wrangler types` writes one member per line inside a flat interface body, so
+// a line scan reads it without the compiler API (gone from the `typescript`
+// package since TypeScript 7). Anything it cannot read as a literal union comes
+// back empty and fails the parity check below instead of passing silently.
 function members(name: string) {
-  const result = new Map<string, ts.TypeNode>()
-  function visit(node: ts.Node) {
-    if (ts.isInterfaceDeclaration(node) && node.name.text === name) {
-      for (const member of node.members) {
-        if (ts.isPropertySignature(member) && member.type)
-          result.set(member.name.getText(declarations), member.type)
-      }
-    }
-    ts.forEachChild(node, visit)
+  const result = new Map<string, string>()
+  const body = new RegExp(
+    String.raw`\binterface ${name}\b[^{]*\{([^}]*)\}`,
+  ).exec(declarations)?.[1]
+  for (const line of body?.split('\n') ?? []) {
+    const member = /^\s*(\w+)\??:\s*(.+?);?\s*$/.exec(line)
+    if (member) result.set(member[1], member[2])
   }
-  visit(declarations)
   return result
 }
-function literals(type: ts.TypeNode | undefined): Array<unknown> {
+function literals(type: string | undefined): Array<unknown> {
   if (!type) return []
-  if (ts.isUnionTypeNode(type)) return type.types.flatMap(literals)
-  if (!ts.isLiteralTypeNode(type)) return []
-  if (ts.isStringLiteral(type.literal)) return [type.literal.text]
-  if (ts.isNumericLiteral(type.literal)) return [Number(type.literal.text)]
-  if (type.literal.kind === ts.SyntaxKind.TrueKeyword) return [true]
-  if (type.literal.kind === ts.SyntaxKind.FalseKeyword) return [false]
-  return []
+  return type.split('|').flatMap((part): Array<unknown> => {
+    const literal = part.trim()
+    if (/^"(?:[^"\\]|\\.)*"$/.test(literal)) return [JSON.parse(literal)]
+    if (/^-?\d+(?:\.\d+)?$/.test(literal)) return [Number(literal)]
+    if (literal === 'true') return [true]
+    if (literal === 'false') return [false]
+    return []
+  })
 }
 
 describe('JSONC reader', () => {
