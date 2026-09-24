@@ -343,16 +343,11 @@ anything from anyone else waits for a maintainer to add a trigger label.
 **Where an agent-layer file is fixed** (ADR 0025). Here, on the branch that needs it. The agent
 layer — `.ai/cezar/`, `.ai/skills/`, `.ai/scripts/`, `.ai/trackers/`, `.claude/hooks/`,
 `.claude/settings.json`, `scripts/ci/`, the Claude workflows — was rendered from
-`design4pro/agent-kit`, hashed in a lock file and refused to every agent run by
-`guard-generated.sh`. The kit is retired, the lock is gone, and the hook no longer refuses those
-paths **in a cezar run**: no upstream issue, no sync pull request, no seed commit. Review is what
-catches a change that should not have been made.
-
-Two things still refuse, and neither is negotiable. **Under `GITHUB_ACTIONS` the same block is
-absolute**: CI executes pull-request content, and a run that could write `.claude/hooks/`
-would disarm the guards mid-flight. A finding on one of those paths is reported, not applied. And **a write outside the
-worktree is refused in either mode** (the run's own scratch directory aside): a change that
-belongs to another repository is a pull request there, from its own clone.
+`design4pro/agent-kit` and hashed in a lock file. The kit is retired, the lock is gone, and
+nothing refuses those paths: no upstream issue, no sync pull request, no seed commit. Review is
+what catches a change that should not have been made. A change that belongs to another repository
+is a pull request there, from its own clone - nothing refuses a write outside the worktree any
+more (ADR 0030), so this is a rule the skills follow, not one a hook enforces.
 
 One further exception is not ours: `.claude/skills/` is pinned by `skills-lock.json` to
 `open-mercato/skills`, to which we have no push rights. A repo-specific rule belongs in an
