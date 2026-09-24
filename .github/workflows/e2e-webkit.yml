@@ -133,11 +133,12 @@ jobs:
             e2e-runtime.log
             dev-server.log
 
-  # This aggregate depends only on test outcomes, not artifact storage.
+  # This aggregate depends only on test outcomes, not artifact storage. A cancelled run has no
+  # outcome to aggregate, so it does not take a `ci` slot.
   e2e-webkit-report:
     name: e2e · webkit merged report
     needs: e2e-webkit
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 2
     steps:

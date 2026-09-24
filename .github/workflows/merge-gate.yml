@@ -45,11 +45,15 @@ jobs:
     # Only a pull request has labels to read. In a merge group this skips, and a skipped job is a
     # passing required check - the gate already had its say when the pull request was enqueued.
     # What that costs: a hard-block label added while the pull request sits in the queue is not
-    # read. Taking it out of the queue is what stops it then, not the label.
-    if: github.event_name == 'pull_request'
+    # read. Taking it out of the queue is what stops it then, not the label. A label changed on a
+    # closed pull request has nothing left to gate, so that run skips too.
+    if: github.event_name == 'pull_request' && github.event.pull_request.state == 'open'
     # The `gate` slot of the VPS pool: one small container for seconds-long jobs, so a merge
     # decision never waits behind an e2e shard. `vars.RUNNER_CI` is the kill switch (ADR 0027).
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","gate"]') }}
+    # Seconds-long (last 20 green runs: median 8.5 s, max 11 s); without this a hung step holds
+    # the only `gate` slot for the 360-minute default.
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
