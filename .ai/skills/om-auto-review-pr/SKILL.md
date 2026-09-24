@@ -34,4 +34,4 @@ Additional opinions are on demand through Cezar or `@codex review`. No bot findi
 
 ## Re-read the PR state before every push
 
-The claim step stops on a merged or closed PR only at the start. Immediately before each `git push` of an autofix commit to the PR head, run **get-pr** and read `state`, in the same command as the push. Anything other than `OPEN` stops the run: do not push, release the claim, post one comment saying why the run stopped, and report the commits that were not pushed. A push to a merged PR's head recreates the branch GitHub deleted on merge (money-tracker.online #447, 2026-09-24).
+The claim step stops on a merged or closed PR only at the start. Immediately before each `git push` of an autofix commit or a conflict-resolution merge to the PR head, run **get-pr** and read `state`, in the same command as the push. Anything other than `OPEN` stops the run: do not push, release the claim, post one comment saying why the run stopped, and report the commits that were not pushed. A push to a merged PR's head recreates the branch GitHub deleted on merge (money-tracker.online #447, 2026-09-24).

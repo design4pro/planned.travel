@@ -1,6 +1,6 @@
 ---
 name: om-auto-continue-pr
-description: planned.travel extension of the installed om-auto-continue-pr skill. Adds the repo's layering, localisation and generated-file gate steps; the installed workflow applies unchanged.
+description: planned.travel extension of the installed om-auto-continue-pr skill. Adds the repo's layering, localisation and generated-file gate steps, and a PR state check before every push.
 ---
 
 Extends the installed skill: read the installed `SKILL.md` of the same name under `.claude/skills/` and follow it. Repo gate steps, applied to every change (they are blockers in `CODE_REVIEW.md`):
@@ -15,4 +15,4 @@ Extends the installed skill: read the installed `SKILL.md` of the same name unde
 
 Before touching code read `AGENTS.md`, `CODE_REVIEW.md` and `BACKWARD_COMPATIBILITY.md`; the layout and ownership rules are docs/SPEC.md §6 to §8. The fast loop is `pnpm typecheck && pnpm lint && pnpm test`; the full gate is `validation.commands` in `.ai/agentic.config.json` (the e2e step needs a provisioned checkout: `scripts/worktree/bootstrap.sh --profile worktree --no-seed`).
 
-One addition to every push: the claim step stops on a merged or closed PR only at the start. Immediately before each `git push` to the PR head (after each Phase), run **get-pr** and read `state`, in the same command as the push. Anything other than `OPEN` stops the run: do not push, release the claim, post one comment saying why the run stopped, and report the commits that were not pushed. A push to a merged PR's head recreates the branch GitHub deleted on merge (money-tracker.online #447, 2026-09-24).
+One addition to every push: the claim step stops on a merged or closed PR only at the start. Immediately before each `git push` to the PR head (every one of them: the adopted plan commit, each Phase, review fixes, and the finalize push, including the one `om-open-pr` makes for this run), run **get-pr** and read `state`, in the same command as the push. Anything other than `OPEN` stops the run: do not push, release the claim, post one comment saying why the run stopped, and report the commits that were not pushed. A push to a merged PR's head recreates the branch GitHub deleted on merge (money-tracker.online #447, 2026-09-24).
