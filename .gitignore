@@ -120,5 +120,6 @@ airports.sql
 .ai/qa/test-env-build-cache.json
 .ai/qa/test-env.lock/
 .ai/qa/dev-server.pid
+.ai/qa/dev-server-process.json
 .ai/qa/artifacts_*/
 .ai/tmp/
