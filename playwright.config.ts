@@ -179,7 +179,7 @@ export default defineConfig({
   // against the ~3 min a local run at two workers suggested. 15 min leaves a
   // retry-heavy shard room to finish and report instead of being cut off — the
   // report is what tells load from regression — and stays under ci.yml's own
-  // `timeout-minutes: 20`, which must never be the one that fires first.
+  // `timeout-minutes` (20 then, 35 now), which must never be the one that fires first.
   //
   // Both sides of the split now sit well inside it, measured rather than hoped:
   // run 35250473957, the first without WebKit, took 285 s and 235 s of journeys
