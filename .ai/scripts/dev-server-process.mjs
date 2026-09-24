@@ -49,7 +49,7 @@ export const procFields = (stat) =>
     .trim()
     .split(/\s+/)
 const procStat = (pid) => procFields(read(`/proc/${pid}/stat`))
-const live = (pid) => {
+export const live = (pid) => {
   if (!Number.isInteger(pid) || pid <= 1) return false
   try {
     process.kill(pid, 0)
