@@ -3,7 +3,8 @@
 # (ADR 0018, narrowed by ADR 0025):
 #
 #   1. always  - a hand-edit of a generated file
-#   2. in an agent run (CEZ_TASK_ID or GITHUB_ACTIONS) - a write outside the worktree
+#   2. in an agent run (CEZ_TASK_ID or GITHUB_ACTIONS) - a write outside the worktree, bar the
+#      run's own scratch directory
 #   3. under GITHUB_ACTIONS only - a write to a path that configures the agent
 #
 # Each generated file has a generator, and the generator is the source of truth. A hand-edit
@@ -79,7 +80,7 @@ resolve() {
 }
 
 deny_outside() { # reason
-  echo "BLOCKED (agent run): '$file_path' $1. A run writes only inside the worktree it was given. A change that belongs to another repository - a sibling checkout on this machine, say - is proposed there as a pull request from its own clone, never by editing a sibling working tree." >&2
+  echo "BLOCKED (agent run): '$file_path' $1. A run writes only inside the worktree it was given and its own scratch directory. A change that belongs to another repository - a sibling checkout on this machine, say - is proposed there as a pull request from its own clone, never by editing a sibling working tree." >&2
   exit 2
 }
 
@@ -97,10 +98,30 @@ deny_outside() { # reason
 #
 # A `..` component is refused outright rather than resolved: it cannot be resolved lexically when
 # the directory does not exist, and a run names files by their plain path.
+#
+# The one directory outside the worktree a run does write is its own scratch space: cezar points
+# TMPDIR at `<main>/.ai/cezar/tmp/$CEZ_TASK_ID`, where `<main>` is the checkout the worktree
+# (`<main>/.ai/cezar/worktrees/<id>`) hangs off, and a review draft or a cloned upstream belongs
+# there. It is derived from the root and CEZ_TASK_ID, never read from TMPDIR, so another run's
+# directory - or /tmp, when a run has no directory of its own - stays outside.
 case "$file_path" in ..|../*|*/..|*/../*) deny_outside "walks through '..'" ;; esac
 abs=$(resolve "$file_path")
+own_tmp=""
+if [ -n "${CEZ_TASK_ID:-}" ]; then
+  main="$root"
+  case "$root" in
+    */.ai/cezar/worktrees/*/*) ;;
+    */.ai/cezar/worktrees/?*) main="${root%/.ai/cezar/worktrees/*}" ;;
+  esac
+  case "$CEZ_TASK_ID" in
+    . | .. | *[!A-Za-z0-9._-]*) ;;
+    *) own_tmp=$(resolve "$main/.ai/cezar/tmp/$CEZ_TASK_ID") ;;
+  esac
+fi
 case "$abs" in
   "$root" | "$root"/*) ;;
+  # With no directory of its own this arm reads `/*` and matches everything, hence the test.
+  "$own_tmp"/*) [ -n "$own_tmp" ] || deny_outside "is outside the worktree" ;;
   *) deny_outside "is outside the worktree" ;;
 esac
 

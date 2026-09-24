@@ -53,18 +53,36 @@ const bash = (command: string, env = {}) =>
   hook('git-guardrails.sh', { command }, env)
 
 describe('git-guardrails.sh', () => {
-  it.each(['export', 'insert', 'future-command', 'time-travel restore', 'create'])(
-    'guards remote D1 %s by database in every agent mode',
-    (operation) => {
-      const remote = operation.startsWith('time-travel') || operation === 'create' ? '' : ' --remote'
-      for (const env of [AGENT, ACTIONS]) {
-        expect(bash(`wrangler d1 ${operation} planned-travel-db${remote}`, env).status).toBe(2)
-        expect(bash(`wrangler d1 ${operation} planned-travel-db-staging${remote} --env staging`, env).status).toBe(0)
-        expect(bash(`wrangler d1 ${operation} planned-travel-db-staging${remote}`, env).status).toBe(2)
-      }
-      expect(bash(`wrangler d1 ${operation} planned-travel-db${remote}`).status).toBe(0)
-    },
-  )
+  it.each([
+    'export',
+    'insert',
+    'future-command',
+    'time-travel restore',
+    'create',
+  ])('guards remote D1 %s by database in every agent mode', (operation) => {
+    const remote =
+      operation.startsWith('time-travel') || operation === 'create'
+        ? ''
+        : ' --remote'
+    for (const env of [AGENT, ACTIONS]) {
+      expect(
+        bash(`wrangler d1 ${operation} planned-travel-db${remote}`, env).status,
+      ).toBe(2)
+      expect(
+        bash(
+          `wrangler d1 ${operation} planned-travel-db-staging${remote} --env staging`,
+          env,
+        ).status,
+      ).toBe(0)
+      expect(
+        bash(`wrangler d1 ${operation} planned-travel-db-staging${remote}`, env)
+          .status,
+      ).toBe(2)
+    }
+    expect(
+      bash(`wrangler d1 ${operation} planned-travel-db${remote}`).status,
+    ).toBe(0)
+  })
 
   it.each([
     "cat <<'EOF'\nwrangler secret put TOKEN\nWRONG",
@@ -85,7 +103,7 @@ describe('git-guardrails.sh', () => {
 
   it.each([
     "cat <<'EOF'x\npayload\nEOFx\ngit reset --hard\nEOF",
-    "cat <<'EOF'\"x\"\npayload\nEOFx\ngit reset --hard\nEOF",
+    'cat <<\'EOF\'"x"\npayload\nEOFx\ngit reset --hard\nEOF',
   ])('does not truncate a concatenated heredoc delimiter: %s', (command) => {
     expect(bash(command).status).toBe(2)
   })
@@ -357,10 +375,13 @@ describe('git-guardrails.sh', () => {
     // sub-command, matched the one staging statement, and passed.
     'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && wrangler -c wrangler.jsonc d1 execute planned-travel-db --remote --command "drop table trips"',
     'wrangler d1 execute planned-travel-db-staging --remote --env staging --command "select 1" && npx wrangler@latest d1 execute planned-travel-db --remote --command "drop table trips"',
-  ])('blocks a production statement riding along a staging line: %s', (command) => {
-    expect(bash(command, AGENT).status).toBe(2)
-    expect(bash(command).status).toBe(0)
-  })
+  ])(
+    'blocks a production statement riding along a staging line: %s',
+    (command) => {
+      expect(bash(command, AGENT).status).toBe(2)
+      expect(bash(command).status).toBe(0)
+    },
+  )
 
   // A backslash-newline is a line continuation, and every rule here greps a line at a time, so
   // one has to be folded away before the rules run or it splits a statement into two halves that
@@ -372,10 +393,16 @@ describe('git-guardrails.sh', () => {
     ['git push --force \\\norigin develop', {}],
     ['printenv \\\n| grep TOKEN', AGENT],
     ['wrangler deploy \\\n--env production', AGENT],
-    ['wrangler d1 execute \\\nDB --remote --command "delete from trips" --env staging', AGENT],
-  ])('folds the continuation in %s before the rules read it', (command, env) => {
-    expect(bash(command, env).status).toBe(2)
-  })
+    [
+      'wrangler d1 execute \\\nDB --remote --command "delete from trips" --env staging',
+      AGENT,
+    ],
+  ])(
+    'folds the continuation in %s before the rules read it',
+    (command, env) => {
+      expect(bash(command, env).status).toBe(2)
+    },
+  )
 
   // Every case above breaks on a space, which is the half of the fold that is easy to get right.
   // A continuation may also split a token in two, and the shell rejoins the halves into one
@@ -385,7 +412,10 @@ describe('git-guardrails.sh', () => {
   it.each([
     ['git re\\\nset --hard HEAD~1', {}],
     ['git c\\\nlean -fd', {}],
-    ['wrangler d\\\n1 execute planned-travel-db --remote --command "select 1"', AGENT],
+    [
+      'wrangler d\\\n1 execute planned-travel-db --remote --command "select 1"',
+      AGENT,
+    ],
   ])('folds a continuation that splits a token: %s', (command, env) => {
     expect(bash(command, env).status).toBe(2)
   })
@@ -630,188 +660,241 @@ describe('git-guardrails.sh', () => {
     })
 
     it('does not restore the retired comment exception through an environment variable', () => {
-      expect(bash('gh pr comment 12 -b hi', { ...ACTIONS, CLAUDE_REVIEW_PR_COMMENT: '1' }).status).toBe(2)
+      expect(
+        bash('gh pr comment 12 -b hi', {
+          ...ACTIONS,
+          CLAUDE_REVIEW_PR_COMMENT: '1',
+        }).status,
+      ).toBe(2)
     })
   })
-// Deleting the checkout rather than a file in it. Nothing here read `rm` before: guard-generated.sh
-// confines Edit and Write to the worktree and says in its own header that a Bash redirect still
-// reaches outside, so `rm -rf src` in a run matched no rule in either hook.
-describe("deleting the checkout", () => {
-  it.each([
-    "rm -rf /",
-    "rm -rf ~",
-    "rm -rf .",
-    "rm -rf $HOME/dev",
-    "rm -rf *",
-    "git reflog expire --expire=now --all",
-    "git gc --prune=now",
-    "git filter-branch --tree-filter x HEAD",
-    "gh repo delete design4pro/planned.travel",
-    "git push origin --delete develop",
-    "git push origin :main",
-  ])("blocks %s in every session", (command) => {
-    for (const env of [{}, AGENT, ACTIONS]) {
-      expect(bash(command, env).status).toBe(2);
-    }
-  });
+  // Deleting the checkout rather than a file in it. Nothing here read `rm` before: guard-generated.sh
+  // confines Edit and Write to the worktree and says in its own header that a Bash redirect still
+  // reaches outside, so `rm -rf src` in a run matched no rule in either hook.
+  describe('deleting the checkout', () => {
+    it.each([
+      'rm -rf /',
+      'rm -rf ~',
+      'rm -rf .',
+      'rm -rf $HOME/dev',
+      'rm -rf *',
+      'git reflog expire --expire=now --all',
+      'git gc --prune=now',
+      'git filter-branch --tree-filter x HEAD',
+      'gh repo delete design4pro/planned.travel',
+      'git push origin --delete develop',
+      'git push origin :main',
+    ])('blocks %s in every session', (command) => {
+      for (const env of [{}, AGENT, ACTIONS]) {
+        expect(bash(command, env).status).toBe(2)
+      }
+    })
 
-  // Build output and scratch space: every one of these is put back by a command in package.json
-  // or by the run itself, so a run may clear them and a developer is never asked about it.
-  it.each([
-    "rm -rf node_modules",
-    "rm -rf node_modules && pnpm install",
-    "rm -rf dist .wrangler",
-    "rm -rf playwright-report test-results",
-    "rm -rf /tmp/x",
-    "rm -rf .ai/tmp/run-1",
-    "rm .ai/qa/dev-server.pid",
-  ])("leaves %s alone in every session", (command) => {
-    for (const env of [{}, AGENT, ACTIONS]) {
-      expect(bash(command, env).status).toBe(0);
-    }
-  });
+    // Build output and scratch space: every one of these is put back by a command in package.json
+    // or by the run itself, so a run may clear them and a developer is never asked about it.
+    it.each([
+      'rm -rf node_modules',
+      'rm -rf node_modules && pnpm install',
+      'rm -rf dist .wrangler',
+      'rm -rf playwright-report test-results',
+      'rm -rf /tmp/x',
+      'rm -rf .ai/tmp/run-1',
+      'rm .ai/qa/dev-server.pid',
+    ])('leaves %s alone in every session', (command) => {
+      for (const env of [{}, AGENT, ACTIONS]) {
+        expect(bash(command, env).status).toBe(0)
+      }
+    })
 
-  // The source tree is not disposable, but a developer deleting their own checkout is their
-  // business - so this tier splits the way the file's other agent rules do.
-  it.each(["rm -rf src", "rm -rf e2e/fixtures", "rm -rf docs"])(
-    "refuses %s in a run and allows it at the keyboard",
-    (command) => {
-      expect(bash(command).status).toBe(0);
-      expect(bash(command, AGENT).status).toBe(2);
-      expect(bash(command, ACTIONS).status).toBe(2);
-    },
-  );
+    // The source tree is not disposable, but a developer deleting their own checkout is their
+    // business - so this tier splits the way the file's other agent rules do.
+    it.each(['rm -rf src', 'rm -rf e2e/fixtures', 'rm -rf docs'])(
+      'refuses %s in a run and allows it at the keyboard',
+      (command) => {
+        expect(bash(command).status).toBe(0)
+        expect(bash(command, AGENT).status).toBe(2)
+        expect(bash(command, ACTIONS).status).toBe(2)
+      },
+    )
 
-  // Each `rm` is judged on its own targets. A command that clears node_modules and then the
-  // source tree is not sheltered by the accepted word standing first in the string.
-  it("judges every rm in a command separately", () => {
-    expect(bash("rm -rf node_modules && rm -rf src").status).toBe(0);
-    expect(bash("rm -rf node_modules && rm -rf src", AGENT).status).toBe(2);
-    expect(bash("rm -rf dist && rm -rf /", AGENT).status).toBe(2);
-    expect(bash("rm -rf dist && rm -rf /").status).toBe(2);
-  });
+    // Each `rm` is judged on its own targets. A command that clears node_modules and then the
+    // source tree is not sheltered by the accepted word standing first in the string.
+    it('judges every rm in a command separately', () => {
+      expect(bash('rm -rf node_modules && rm -rf src').status).toBe(0)
+      expect(bash('rm -rf node_modules && rm -rf src', AGENT).status).toBe(2)
+      expect(bash('rm -rf dist && rm -rf /', AGENT).status).toBe(2)
+      expect(bash('rm -rf dist && rm -rf /').status).toBe(2)
+    })
 
-  // `rm node_modules -rf` is valid, so recursion is decided over the whole invocation rather
-  // than by the word that happens to follow `rm`.
-  it("reads a flag that follows the target", () => {
-    expect(bash("rm node_modules -rf", AGENT).status).toBe(0);
-    expect(bash("rm src -rf", AGENT).status).toBe(2);
-  });
+    // `rm node_modules -rf` is valid, so recursion is decided over the whole invocation rather
+    // than by the word that happens to follow `rm`.
+    it('reads a flag that follows the target', () => {
+      expect(bash('rm node_modules -rf', AGENT).status).toBe(0)
+      expect(bash('rm src -rf', AGENT).status).toBe(2)
+    })
 
-  // The same contract the rest of the file keeps: a quoted argument of a prose command is text.
-  it("reads a quoted delete as text, not as an invocation", () => {
-    expect(bash('echo "rm -rf /"').status).toBe(0);
-    expect(bash('git commit -m "guard the rm -rf / case"').status).toBe(0);
-    expect(bash('grep -rn "rm -rf" .claude/hooks').status).toBe(0);
-    // ...and an executor is still read as one, because nothing is stripped for it.
-    expect(bash('bash -lc "rm -rf /"').status).toBe(2);
-  });
+    // The same contract the rest of the file keeps: a quoted argument of a prose command is text.
+    it('reads a quoted delete as text, not as an invocation', () => {
+      expect(bash('echo "rm -rf /"').status).toBe(0)
+      expect(bash('git commit -m "guard the rm -rf / case"').status).toBe(0)
+      expect(bash('grep -rn "rm -rf" .claude/hooks').status).toBe(0)
+      // ...and an executor is still read as one, because nothing is stripped for it.
+      expect(bash('bash -lc "rm -rf /"').status).toBe(2)
+    })
 
-  // The two ways to spell the same delete without naming `rm`, plus the user boundary and the
-  // worktree the cockpit owns. All of them are a run's business only.
-  it.each([
-    "find . -name *.tmp -delete",
-    "find . -type f -exec rm {} +",
-    "sudo launchctl list",
-    "git worktree remove --force ../wt",
-  ])("refuses %s in a run only", (command) => {
-    expect(bash(command).status).toBe(0);
-    expect(bash(command, AGENT).status).toBe(2);
-  });
+    // The two ways to spell the same delete without naming `rm`, plus the user boundary and the
+    // worktree the cockpit owns. All of them are a run's business only.
+    it.each([
+      'find . -name *.tmp -delete',
+      'find . -type f -exec rm {} +',
+      'sudo launchctl list',
+      'git worktree remove --force ../wt',
+    ])('refuses %s in a run only', (command) => {
+      expect(bash(command).status).toBe(0)
+      expect(bash(command, AGENT).status).toBe(2)
+    })
 
-  // A shell metacharacter glued to `rm` used to hide the invocation from every tier, the
-  // always-on one included: the tokenizer split on whitespace, so `$(rm` was one unknown word
-  // rather than an operator followed by `rm`. These are the strongest guarantee in the file, so
-  // they are pinned in all three tiers.
-  it.each([
-    "echo $(rm -rf /)",
-    "(rm -rf /)",
-    "true;rm -rf /",
-    "echo `rm -rf /`",
-    "rm -rf dist&&rm -rf /",
-  ])("reads %s as an invocation, not as one unknown word", (command) => {
-    for (const env of [{}, AGENT, ACTIONS]) {
-      expect(bash(command, env).status).toBe(2);
-    }
-  });
+    // A shell metacharacter glued to `rm` used to hide the invocation from every tier, the
+    // always-on one included: the tokenizer split on whitespace, so `$(rm` was one unknown word
+    // rather than an operator followed by `rm`. These are the strongest guarantee in the file, so
+    // they are pinned in all three tiers.
+    it.each([
+      'echo $(rm -rf /)',
+      '(rm -rf /)',
+      'true;rm -rf /',
+      'echo `rm -rf /`',
+      'rm -rf dist&&rm -rf /',
+    ])('reads %s as an invocation, not as one unknown word', (command) => {
+      for (const env of [{}, AGENT, ACTIONS]) {
+        expect(bash(command, env).status).toBe(2)
+      }
+    })
 
-  // A `*` in a `case` glob matches `/` and `..` alike, so a path walking back up out of an
-  // accepted prefix was accepted along with it. Any `..` segment is refused before the allowlist
-  // is consulted; ordinary dotted paths are not, which the two counter-cases pin.
-  it.each([
-    "rm -rf node_modules/../src",
-    "rm -rf .ai/tmp/../../src",
-    "rm -rf /tmp/../home",
-    "rm -rf dist/../../elsewhere",
-  ])("refuses %s, which walks out of the allowlist", (command) => {
-    expect(bash(command, AGENT).status).toBe(2);
-  });
+    // A `*` in a `case` glob matches `/` and `..` alike, so a path walking back up out of an
+    // accepted prefix was accepted along with it. Any `..` segment is refused before the allowlist
+    // is consulted; ordinary dotted paths are not, which the two counter-cases pin.
+    it.each([
+      'rm -rf node_modules/../src',
+      'rm -rf .ai/tmp/../../src',
+      'rm -rf /tmp/../home',
+      'rm -rf dist/../../elsewhere',
+    ])('refuses %s, which walks out of the allowlist', (command) => {
+      expect(bash(command, AGENT).status).toBe(2)
+    })
 
-  it("keeps dotted paths that stay inside an allowed root", () => {
-    expect(bash("rm -rf node_modules/.cache", AGENT).status).toBe(0);
-    expect(bash("rm -rf .ai/tmp/run-1/a..b", AGENT).status).toBe(0);
-  });
+    it('keeps dotted paths that stay inside an allowed root', () => {
+      expect(bash('rm -rf node_modules/.cache', AGENT).status).toBe(0)
+      expect(bash('rm -rf .ai/tmp/run-1/a..b', AGENT).status).toBe(0)
+    })
 
-  // A recursive `rm` whose targets come from a pipe names no path this hook can read, so there
-  // is nothing to match against the allowlist. It is refused and told to name the path rather
-  // than dropped - in a run only, which is where the allowlist applies at all.
-  it.each(["find . -name node_modules | xargs rm -rf", "ls | xargs rm -rf"])(
-    "refuses the target-less %s in a run only",
-    (command) => {
-      expect(bash(command).status).toBe(0);
-      expect(bash(command, AGENT).status).toBe(2);
-    },
-  );
+    // A variable names no path this hook can read - unless the same command assigned it, once and
+    // before any use, from `mktemp` or to a path under the run's own scratch directory
+    // (`<main>/.ai/cezar/tmp/$CEZ_TASK_ID`, or `$TMPDIR`). Anything else that could have changed it,
+    // or a value whose quoting the shell would split, leaves it unreadable and refused.
+    describe('a recursive delete through a variable', () => {
+      const main = '/srv/planned.travel'
+      const scratch = `${main}/.ai/cezar/tmp/${AGENT.CEZ_TASK_ID}`
+      const run = {
+        ...AGENT,
+        CLAUDE_PROJECT_DIR: `${main}/.ai/cezar/worktrees/${AGENT.CEZ_TASK_ID}`,
+      }
 
-  // A newline ends a command as surely as a semicolon does. State surviving one used to carry a
-  // recursive-delete flag onto the next line and block it, naming a target it never had.
-  it("does not leak an invocation across a newline", () => {
-    expect(bash("rm -rf node_modules\npnpm install", AGENT).status).toBe(0);
-  });
+      it.each([
+        'd=$(mktemp -d); cd $d; rm -rf $d',
+        'd=$(mktemp -d) && cd "$d" && rm -rf "$d"',
+        'D=$(mktemp -d "$TMPDIR/x-XXXXXX"); ls "$D"; rm -rf "$D"',
+        'd="$(mktemp -d)"; rm -rf ${d}',
+        `T=${scratch}/upstream; rm -rf $T; git clone https://github.com/x/y $T`,
+        'T="$TMPDIR/upstream"; rm -rf "$T"',
+        `rm -rf ${scratch}/upstream`,
+      ])('allows %s in a run', (command) => {
+        expect(bash(command, run).status).toBe(0)
+      })
 
-  // ...but a backslash at the end of the line is not that newline: the shell joins the two into
-  // one command before it reads a word, so the target list continues rather than ending. Without
-  // the join, making the newline end an invocation would have dropped everything after it.
-  it("reads a target list continued onto the next line", () => {
-    expect(bash("rm -rf node_modules \\\n  src", AGENT).status).toBe(2);
-    expect(bash("rm -rf node_modules \\\n  dist", AGENT).status).toBe(0);
-  });
+      it.each([
+        'rm -rf $d',
+        'd=$(pwd); rm -rf $d',
+        'd=src; rm -rf $d',
+        'd=$(mktemp -d); d=src; rm -rf $d',
+        'rm -rf $d; d=$(mktemp -d)',
+        'd=$(mktemp -d); read d; rm -rf $d',
+        'd=$(mktemp -d); ${d:=src}; rm -rf $d',
+        'd=$(mktemp -d; echo /); rm -rf $d',
+        'd="$(mktemp -d); /home "; rm -rf $d',
+        'd=$(mktemp -d) & rm -rf $d',
+        'PWD=$(mktemp -d); cd /; rm -rf $PWD',
+        'd=$(mktemp -d); rm -rf $d/..',
+        `T="${scratch}/x /home"; rm -rf $T`,
+        `T=${scratch}/../other-run; rm -rf $T`,
+        `T=${main}/.ai/cezar/tmp/other-run/x; rm -rf $T`,
+        `T=${scratch}; rm -rf $T`,
+        `T=${main}/src; rm -rf $T`,
+        'T=$TMPDIR/../x; rm -rf $T',
+      ])('refuses %s in a run', (command) => {
+        expect(bash(command, run).status).toBe(2)
+      })
+    })
 
-  it("still judges a second delete written on its own line", () => {
-    const r = bash("rm -rf dist\nrm -rf src", AGENT);
-    expect(r.status).toBe(2);
-    expect(r.stderr).toContain("src");
-  });
+    // A recursive `rm` whose targets come from a pipe names no path this hook can read, so there
+    // is nothing to match against the allowlist. It is refused and told to name the path rather
+    // than dropped - in a run only, which is where the allowlist applies at all.
+    it.each(['find . -name node_modules | xargs rm -rf', 'ls | xargs rm -rf'])(
+      'refuses the target-less %s in a run only',
+      (command) => {
+        expect(bash(command).status).toBe(0)
+        expect(bash(command, AGENT).status).toBe(2)
+      },
+    )
 
-  // git-push(1) documents `-d, --delete` as one option, an exact synonym since 1.7.0, so the
-  // short spelling deletes a shared branch just as the long one does.
-  it.each([
-    "git push -d origin develop",
-    "git push origin -d main",
-    "git push --delete origin develop",
-  ])("blocks the shared-branch delete %s", (command) => {
-    expect(bash(command).status).toBe(2);
-  });
+    // A newline ends a command as surely as a semicolon does. State surviving one used to carry a
+    // recursive-delete flag onto the next line and block it, naming a target it never had.
+    it('does not leak an invocation across a newline', () => {
+      expect(bash('rm -rf node_modules\npnpm install', AGENT).status).toBe(0)
+    })
 
-  // Every rule in the file is line-oriented, so the join is what lets any of them see a command
-  // the author wrapped. This one is not about `rm` at all, which is the point.
-  it("blocks a shared-branch delete wrapped onto two lines", () => {
-    expect(bash("git push --delete \\\n  origin develop").status).toBe(2);
-  });
+    // ...but a backslash at the end of the line is not that newline: the shell joins the two into
+    // one command before it reads a word, so the target list continues rather than ending. Without
+    // the join, making the newline end an invocation would have dropped everything after it.
+    it('reads a target list continued onto the next line', () => {
+      expect(bash('rm -rf node_modules \\\n  src', AGENT).status).toBe(2)
+      expect(bash('rm -rf node_modules \\\n  dist', AGENT).status).toBe(0)
+    })
 
-  // Deleting a merged feature branch is routine, and `--delete-branch` on a merge needs it -
-  // in either spelling. `develop-foo` is a branch of its own: the rule ends on a word boundary
-  // that excludes `-`, so a name merely starting with a shared one is not swallowed.
-  it("leaves a feature branch deletable", () => {
-    for (const env of [{}, AGENT]) {
-      expect(bash("git push origin --delete fix/issue-12-x", env).status).toBe(
-        0,
-      );
-      expect(bash("git push -d origin fix/issue-12-x", env).status).toBe(0);
-      expect(bash("git push origin -d develop-foo", env).status).toBe(0);
-    }
-  });
-});
+    it('still judges a second delete written on its own line', () => {
+      const r = bash('rm -rf dist\nrm -rf src', AGENT)
+      expect(r.status).toBe(2)
+      expect(r.stderr).toContain('src')
+    })
+
+    // git-push(1) documents `-d, --delete` as one option, an exact synonym since 1.7.0, so the
+    // short spelling deletes a shared branch just as the long one does.
+    it.each([
+      'git push -d origin develop',
+      'git push origin -d main',
+      'git push --delete origin develop',
+    ])('blocks the shared-branch delete %s', (command) => {
+      expect(bash(command).status).toBe(2)
+    })
+
+    // Every rule in the file is line-oriented, so the join is what lets any of them see a command
+    // the author wrapped. This one is not about `rm` at all, which is the point.
+    it('blocks a shared-branch delete wrapped onto two lines', () => {
+      expect(bash('git push --delete \\\n  origin develop').status).toBe(2)
+    })
+
+    // Deleting a merged feature branch is routine, and `--delete-branch` on a merge needs it -
+    // in either spelling. `develop-foo` is a branch of its own: the rule ends on a word boundary
+    // that excludes `-`, so a name merely starting with a shared one is not swallowed.
+    it('leaves a feature branch deletable', () => {
+      for (const env of [{}, AGENT]) {
+        expect(
+          bash('git push origin --delete fix/issue-12-x', env).status,
+        ).toBe(0)
+        expect(bash('git push -d origin fix/issue-12-x', env).status).toBe(0)
+        expect(bash('git push origin -d develop-foo', env).status).toBe(0)
+      }
+    })
+  })
 })
 
 describe('guard-generated.sh', () => {
@@ -937,8 +1020,11 @@ describe('guard-generated.sh', () => {
   it('confines writes in agent runs only, and still takes a relative path', () => {
     const outside = '/elsewhere/agent-kit/templates/x.json'
     const w = (file_path: string, env: Record<string, string>) =>
-      hook('guard-generated.sh', { file_path }, { ...env, CLAUDE_PROJECT_DIR: root })
-        .status
+      hook(
+        'guard-generated.sh',
+        { file_path },
+        { ...env, CLAUDE_PROJECT_DIR: root },
+      ).status
     // A developer at the keyboard legitimately edits a sibling checkout; a run does not, in
     // either mode. This is the one tier ADR 0025 left reaching into cezar runs.
     expect(w(outside, {})).toBe(0)
@@ -952,6 +1038,32 @@ describe('guard-generated.sh', () => {
     expect(w('.claude/settings.json', AGENT)).toBe(0)
     expect(w('.claude/settings.json', ACTIONS)).toBe(2)
   })
+
+  // The one place outside the worktree a run writes: its own scratch directory, which cezar points
+  // TMPDIR at - `<main>/.ai/cezar/tmp/$CEZ_TASK_ID`, beside the worktree at
+  // `<main>/.ai/cezar/worktrees/<id>`. Another run's directory and the main checkout stay out.
+  it('lets a run write its own scratch directory and nothing beside it', () => {
+    const main = mkdtempSync(join(tmpdir(), 'guard-generated-'))
+    const worktree = join(main, '.ai', 'cezar', 'worktrees', AGENT.CEZ_TASK_ID)
+    const scratch = join(main, '.ai', 'cezar', 'tmp', AGENT.CEZ_TASK_ID)
+    mkdirSync(worktree, { recursive: true })
+    mkdirSync(scratch, { recursive: true })
+    const w = (file_path: string, env: Record<string, string> = AGENT) =>
+      hook(
+        'guard-generated.sh',
+        { file_path },
+        { ...env, CLAUDE_PROJECT_DIR: worktree },
+      ).status
+    expect(w(join(scratch, 'review-733.md'))).toBe(0)
+    expect(w(join(scratch, 'upstream', 'new', 'x.md'))).toBe(0)
+    expect(w(join(worktree, 'src', 'x.ts'))).toBe(0)
+    expect(w(join(main, '.ai', 'cezar', 'tmp', 'other-run', 'x.md'))).toBe(2)
+    expect(w(`${scratch}/../other-run/x.md`)).toBe(2)
+    expect(w(join(main, 'src', 'x.ts'))).toBe(2)
+    expect(w(join(main, '.ai', 'cezar', 'runs.json'))).toBe(2)
+    // GitHub Actions sets no CEZ_TASK_ID, so it has no scratch directory of its own either.
+    expect(w(join(scratch, 'x.md'), ACTIONS)).toBe(2)
+  })
 })
 
 describe('guard-read.sh', () => {
@@ -964,10 +1076,7 @@ describe('guard-read.sh', () => {
   writeFileSync(join(root, '.dev.vars'), 'SECRET=1')
   writeFileSync(join(root, '.dev.vars.example'), 'SECRET=')
   writeFileSync(join(root, 'src', 'a.ts'), '')
-  writeFileSync(
-    join(root, '.ai', 'qa', 'test-env.env'),
-    'TEST_DEMO_PASSWORD=x',
-  )
+  writeFileSync(join(root, '.ai', 'qa', 'test-env.env'), 'TEST_DEMO_PASSWORD=x')
   writeFileSync(join(root, '.ai', 'qa', 'test-env.json'), '{}')
   writeFileSync(join(root, '.ai', 'runs', 'x', 'HANDOFF.md'), '')
   const read = (
@@ -1085,6 +1194,91 @@ describe('guard-read.sh', () => {
       read({ path: root, pattern: '.ai/qa/test-env.env' }, AGENT, 'Glob')
         .status,
     ).toBe(2)
+  })
+
+  // A cezar run's worktree sits at `<main>/.ai/cezar/worktrees/<id>`, and three things outside it
+  // are the run's own: its Claude Code transcript directory (oversized tool output is parked
+  // there), its scratch directory `<main>/.ai/cezar/tmp/<id>`, and the main checkout itself. What
+  // stays out is every other run's state, git internals, and the secret files wherever they are.
+  describe('in a cezar worktree', () => {
+    const main = mkdtempSync(join(tmpdir(), 'guard-read-main-'))
+    const worktree = join(main, '.ai', 'cezar', 'worktrees', AGENT.CEZ_TASK_ID)
+    const scratch = join(main, '.ai', 'cezar', 'tmp', AGENT.CEZ_TASK_ID)
+    const home = mkdtempSync(join(tmpdir(), 'guard-read-home-'))
+    const projects = join(home, '.claude', 'projects')
+    // Claude Code's slug: the project dir with every non-alphanumeric character turned into `-`.
+    const slug = worktree.replace(/[^A-Za-z0-9]/g, '-')
+    for (const dir of [
+      join(worktree, 'src'),
+      scratch,
+      join(main, '.ai', 'cezar', 'tmp', 'other-run'),
+      join(main, '.ai', 'cezar', 'runs'),
+      join(main, '.git'),
+      join(main, 'src'),
+      join(projects, slug, 'tool-results'),
+      join(projects, `${slug}0`),
+    ]) {
+      mkdirSync(dir, { recursive: true })
+    }
+    const readAs = (file_path: string, env: Record<string, string> = AGENT) =>
+      hook('guard-read.sh', { file_path }, { ...env, HOME: home }, worktree)
+
+    it.each([
+      join(projects, slug, 'tool-results', 'b1.txt'),
+      join(scratch, 'review-733.md'),
+      join(main, 'src', 'a.ts'),
+      join(main, 'AGENTS.md'),
+      join(worktree, 'src', 'a.ts'),
+    ])('lets the run read %s', (file_path) => {
+      expect(readAs(file_path).status).toBe(0)
+    })
+
+    it.each([
+      [join(projects, `${slug}0`, 'b1.txt'), 'outside the worktree'],
+      [join(projects, 'other-project', 'x.jsonl'), 'outside the worktree'],
+      [
+        join(main, '.ai', 'cezar', 'tmp', 'other-run', 'x.md'),
+        'cezar run state',
+      ],
+      [`${scratch}/../other-run/x.md`, 'outside the worktree'],
+      [join(main, '.ai', 'cezar', 'runs', 'x.json'), 'cezar run state'],
+      [
+        join(main, '.ai', 'cezar', 'worktrees', 'other-run', 'a.ts'),
+        'cezar run state',
+      ],
+      [join(main, '.git', 'config'), 'git internals'],
+      [join(main, '.dev.vars'), 'environment file'],
+      [join(main, '.env.local'), 'environment file'],
+      [join(main, '.ai', 'qa', 'test-env.env'), 'test-env credential file'],
+      [join(main, '.e2e-tiles', 'basemap.pmtiles'), 'basemap cache'],
+      ['/etc/passwd', 'outside the worktree'],
+    ])('still denies %s', (file_path, reason) => {
+      const r = readAs(file_path)
+      expect(r.status).toBe(2)
+      expect(r.stderr).toContain(reason)
+    })
+
+    it('honours CLAUDE_CONFIG_DIR, which relocates the transcripts', () => {
+      const config = join(home, 'account')
+      mkdirSync(join(config, 'projects', slug), { recursive: true })
+      const env = { ...AGENT, CLAUDE_CONFIG_DIR: config }
+      expect(readAs(join(config, 'projects', slug, 'x.txt'), env).status).toBe(
+        0,
+      )
+      expect(
+        readAs(join(projects, slug, 'tool-results', 'b1.txt'), env).status,
+      ).toBe(2)
+    })
+
+    // Without CEZ_TASK_ID there is no main checkout and no scratch directory to widen onto; the
+    // transcript directory is the run's own in either mode.
+    it('widens nothing else under GitHub Actions', () => {
+      expect(readAs(join(main, 'src', 'a.ts'), ACTIONS).status).toBe(2)
+      expect(readAs(join(scratch, 'review-733.md'), ACTIONS).status).toBe(2)
+      expect(
+        readAs(join(projects, slug, 'tool-results', 'b1.txt'), ACTIONS).status,
+      ).toBe(0)
+    })
   })
 })
 
