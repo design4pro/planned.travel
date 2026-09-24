@@ -123,11 +123,13 @@ A Claude Code session is an agent run when `CEZ_TASK_ID` (cezar) or `GITHUB_ACTI
 hooks in `.claude/hooks/` then tighten:
 
 - `git-guardrails.sh` also blocks `pnpm add|remove|update` (the stack is pinned, docs/SPEC.md §3),
-  `printenv` and `env` dumps, and a recursive delete of anything but build output and scratch
-  space - the target list is an allowlist, so a path it does not name ends the run as blocked
-  rather than being deleted (a variable counts only when the same command assigned it from
-  `mktemp` or to a path under the run's own scratch directory), and `find -delete`,
-  `find -exec rm`, `sudo` and `git worktree remove --force` are refused with it. In every session, agent or not, the same hook
+  `printenv` and `env` dumps (`printenv NAME` for a named non-secret variable stays open), and a
+  recursive delete of anything but build output and scratch space - the target list is an
+  allowlist, so a path it does not name ends the run as blocked rather than being deleted (a
+  variable counts only when the same command assigned it from `mktemp` or to a path under the
+  run's own scratch directory), and `find -delete`, `find -exec rm`, `sudo` and
+  `git worktree remove --force` are refused with it - except for a worktree the run added itself,
+  named literally strictly below the worktree root or its own scratch directory. In every session, agent or not, the same hook
   refuses the deletes and history rewrites that take the checkout itself: a recursive delete naming
   the filesystem root, the home directory, the working directory or the worktree root,
   `git reflog expire`, `git gc --prune`, `git filter-branch`, `gh repo delete`, and deleting
