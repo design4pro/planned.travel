@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-const PRE_COMMIT = resolve(__dirname, '../../../.husky/pre-commit')
+const PRE_COMMIT = resolve(__dirname, '../../.husky/pre-commit')
 
 // `/bin/sh`, not `sh`: with PATH=/nonexistent a bare `sh` is not found and status is null.
 // no pnpm, no npx: a fall-through fails. The repo augments ProcessEnv with app variables.

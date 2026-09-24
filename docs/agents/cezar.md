@@ -119,48 +119,24 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
 
 ## Agent mode
 
-A Claude Code session is an agent run when `CEZ_TASK_ID` (cezar) or `GITHUB_ACTIONS` is set. The
-hooks in `.claude/hooks/` then tighten:
+cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The project's
+`.claude/settings.json` then decides, with no project hook in the way:
 
-- `git-guardrails.sh` also blocks `pnpm add|remove|update` (the stack is pinned, docs/SPEC.md §3),
-  `printenv` and `env` dumps (`printenv NAME` for a named non-secret variable stays open), and a
-  recursive delete of anything but build output and scratch space - the target list is an
-  allowlist, so a path it does not name ends the run as blocked rather than being deleted (a
-  variable counts only when the same command assigned it from `mktemp` or to a path under the
-  run's own scratch directory), and `find -delete`, `find -exec rm`, `sudo` and
-  `git worktree remove --force` are refused with it - except for a worktree the run added itself,
-  named literally strictly below the worktree root or its own scratch directory. In every session, agent or not, the same hook
-  refuses the deletes and history rewrites that take the checkout itself: a recursive delete naming
-  the filesystem root, the home directory, the working directory or the worktree root,
-  `git reflog expire`, `git gc --prune`, `git filter-branch`, `gh repo delete`, and deleting
-  `develop` or `main` on the remote. Under cezar, GitHub mutations, `git add -A`, closing keywords and
-  `pnpm exec` are open: the om-* skills perform them through `.ai/trackers/github.md` and `SDLC.md`
-  governs them. Under GitHub Actions, GitHub mutations remain guarded: CI can read untrusted
-  pull-request content. Retiring the review workflows does not relax those generic protections.
-- `guard-read.sh` (Read, Glob, Grep) confines reads to the worktree - plus the run's own Claude Code
-  transcript directory, its scratch directory `<main>/.ai/cezar/tmp/$CEZ_TASK_ID`, and the main
-  checkout minus `.ai/cezar/` and `.git/` - and denies `.dev.vars`, `.env*`, `.e2e-tiles/`, cezar
-  run state and `.ai/qa/test-env.env`.
-- `guard-generated.sh` (Edit, Write) refuses a write outside the worktree or through `..`, bar the
-  run's own scratch directory `<main>/.ai/cezar/tmp/$CEZ_TASK_ID`. Its header records what that is
-  for: a `pr-autopilot` run reached `../agent-kit/templates/…` and rewrote eight files in a sibling
-  checkout a human was working in, and nothing downstream could tell. Edit and Write only - a Bash
-  redirect still reaches outside, which is `git-guardrails.sh`'s problem and not a matcher's.
-
-  **It no longer refuses the paths that configure the agent - in a cezar run** (ADR 0025). That
-  block was the edit friction the agent-kit retirement was about: `.github/`, `.claude/`, `.ai/`
-  and a handful of named files could not be corrected on the branch that needed correcting. Here
-  the diff is a human's, proposed as a pull request and read by a reviewer, so a run may now edit
-  its own gate, its own skills and its own workflows, and review is what catches a diff that
-  widens what a run may do.
-
-  **Under `GITHUB_ACTIONS` the block remains unchanged.** CI executes pull-request content;
-  removing an agent workflow is not authorization to weaken the shared hooks.
+- `permissions.deny` is refused in every session, agent or not: reading `.dev.vars`, `.env*`,
+  `.ai/qa/test-env.env` and `.e2e-tiles/`; hand-editing `src/routeTree.gen.ts`, `drizzle/` and
+  `worker-configuration.d.ts` (run the generator); force-pushing, `git reset --hard` and
+  `--no-verify`; writing a Cloudflare secret and deleting a D1 database, R2 bucket, KV namespace or
+  the Worker.
+- `permissions.ask` - deploys and remote D1 commands - prompts a developer at the keyboard and is
+  refused in a cezar run, because `dontAsk` turns every prompt into a denial.
+- Everything else is open, including a write outside the worktree: a step that holds a bare
+  `Edit` or `Write` may write anywhere the user can. That is an accepted risk (ADR 0030); a run
+  that touches a sibling checkout shows up in that checkout's `git status`, not in its own PR.
 
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
-shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The hooks,
-the PAT scopes, one worktree per run and `maxParallel: 2` are the gate. After the first ten runs,
-read the transcripts for rules the hooks should learn.
+shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The
+permission rules above, branch protection on `develop` and `main`, the PAT scopes, one worktree per
+run, `maxParallel: 2` and review of every pull request are the gate.
 
 ## Workflows (`.ai/cezar/workflows/`)
 
