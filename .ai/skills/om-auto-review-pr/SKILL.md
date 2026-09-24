@@ -31,3 +31,7 @@ Run review in a separate context from implementation. Capture the PR head SHA be
 Before starting, inspect completed independent reviews for the current head. Reuse the existing report and validation for that exact SHA, unless the user explicitly requests another opinion or there is a concrete unresolved concern. Missing validation or a changed code SHA requires the applicable gate; unchanged SHA alone does not justify another full suite. A reused report is not a new review. Never count an implementation self-check as the independent review.
 
 Additional opinions are on demand through Cezar or `@codex review`. No bot finding starts an automatic repair loop. Preserve unresolved findings for assessment; removal of a bot integration never resolves its threads.
+
+## Re-read the PR state before every push
+
+The claim step stops on a merged or closed PR only at the start. Immediately before each `git push` of an autofix commit or a conflict-resolution merge to the PR head, run **get-pr** and read `state`, in the same command as the push. Anything other than `OPEN` stops the run: do not push, release the claim, post one comment saying why the run stopped, and report the commits that were not pushed. A push to a merged PR's head recreates the branch GitHub deleted on merge (money-tracker.online #447, 2026-09-24).
