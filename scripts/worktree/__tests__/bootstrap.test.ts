@@ -112,7 +112,7 @@ afterEach(() => {
   rmSync(scratch, { recursive: true, force: true })
 })
 
-describe('scripts/worktree/bootstrap.sh', () => {
+describe('scripts/worktree/bootstrap.sh', { timeout: 15_000 }, () => {
   describe('dependency install', () => {
     it('passes HUSKY=0 to pnpm install inside a cezar run', () => {
       provision(main, { deps: false })

@@ -15,7 +15,9 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, expectTypeOf, it } from 'vitest'
 import { trips as demoTrips } from '#/routes/api/dev/-seed/dataset'
-import { trips } from '#/server/db/schema'
+import { days, trips } from '#/server/db/schema'
+import { MAX_BOUND_PARAMETERS } from '../batch'
+import { daysRepository, listTripDays } from '../days'
 import {
   createTrip,
   deleteTrip,
@@ -57,6 +59,112 @@ describe('trip identifiers', () => {
     harness = await createHarness()
     tenant = await harness.seedTenant('keys')
     await subscribeTenant(tenant.scope, 'crew')
+  })
+
+  it('creates a two-week dated run within D1’s bound-parameter ceiling', async () => {
+    harness.statements.length = 0
+
+    const trip = await createTrip(tenant.scope, {
+      title: 'Two weeks in Sardinia',
+      startDate: '2026-07-01',
+      endDate: '2026-07-14',
+    })
+
+    expect(await listTripDays(tenant.scope, trip.id)).toMatchObject(
+      Array.from({ length: 14 }, (_, offset) => ({
+        dayNumber: offset + 1,
+        date: `2026-07-${String(offset + 1).padStart(2, '0')}`,
+      })),
+    )
+    expect(
+      Math.max(
+        ...harness.statements.map((statement) =>
+          (statement.match(/\?/g) ?? []).length,
+        ),
+      ),
+    ).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+  })
+
+  it('rebuilds an empty dated run when the trip is saved again', async () => {
+    const trip = await createTrip(tenant.scope, {
+      title: 'Sardinia',
+      startDate: '2026-07-01',
+      endDate: '2026-07-14',
+    })
+    await daysRepository.removeWhere(tenant.scope, eq(days.tripId, trip.id))
+
+    await updateTrip(tenant.scope, trip.id, { title: 'Sardinia repaired' })
+
+    expect(await listTripDays(tenant.scope, trip.id)).toHaveLength(14)
+  })
+
+  it('keeps update statements below D1’s bound-parameter ceiling', async () => {
+    const trip = await createTrip(tenant.scope, {
+      title: 'Long Sardinia',
+      startDate: '2026-01-01',
+      endDate: '2026-04-10',
+    })
+    harness.statements.length = 0
+
+    await updateTrip(tenant.scope, trip.id, {
+      startDate: null,
+      endDate: null,
+    })
+
+    const updates = harness.statements.filter((statement) =>
+      statement.startsWith('update "days"'),
+    )
+    expect(updates).not.toEqual([])
+    expect(
+      Math.max(
+        ...updates.map((statement) => (statement.match(/\?/g) ?? []).length),
+      ),
+    ).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+  })
+
+  it('keeps transport unlink updates below D1’s bound-parameter ceiling', async () => {
+    const trip = await createTrip(tenant.scope, {
+      title: 'Long Sardinia',
+      startDate: '2026-01-01',
+      endDate: '2026-04-10',
+    })
+    harness.statements.length = 0
+
+    await updateTrip(tenant.scope, trip.id, {
+      endDate: '2026-01-01',
+    })
+
+    const updates = harness.statements.filter((statement) =>
+      statement.startsWith('update "transports"'),
+    )
+    expect(updates).not.toEqual([])
+    expect(
+      Math.max(
+        ...updates.map((statement) => (statement.match(/\?/g) ?? []).length),
+      ),
+    ).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+  })
+
+  it('repairs a partial dated run when the trip is saved again', async () => {
+    const trip = await createTrip(tenant.scope, {
+      title: 'Partial Sardinia',
+      startDate: '2026-07-01',
+      endDate: '2026-07-14',
+    })
+    const missingDay = (await listTripDays(tenant.scope, trip.id)).at(6)
+    if (missingDay === undefined) {
+      throw new Error('The trip must have a seventh day.')
+    }
+    await daysRepository.removeWhere(tenant.scope, eq(days.id, missingDay.id))
+
+    await updateTrip(tenant.scope, trip.id, { title: 'Partial Sardinia repaired' })
+
+    expect(await listTripDays(tenant.scope, trip.id)).toMatchObject(
+      Array.from({ length: 14 }, (_, offset) => ({
+        dayNumber: offset + 1,
+        date: `2026-07-${String(offset + 1).padStart(2, '0')}`,
+      })),
+    )
   })
 
   describe('when the caller names no id', () => {

@@ -32,6 +32,7 @@ DESCRIPTOR="$QA_DIR/test-env.json"
 CREDS_FILE="$QA_DIR/test-env.env"
 LOCK_DIR="$QA_DIR/test-env.lock"
 PID_FILE="$QA_DIR/dev-server.pid"
+PROCESS_HELPER=".ai/scripts/dev-server-process.mjs"
 LOG_FILE="dev-server.log"
 
 FORCE=0
@@ -82,8 +83,8 @@ emit_result() {
 
 # ── Reuse check ──────────────────────────────────────────────────────────────
 if [ "$FORCE" = 0 ] && [ -f "$DESCRIPTOR" ] && [ "$(json_field status)" = "running" ]; then
-  OLD_PID=$(json_field pid)
   OLD_URL=$(json_field baseUrl)
+  OLD_PORT=$(json_field port)
   OLD_STARTED=$(json_field startedAt)
   fresh=1
   if [ -n "$OLD_STARTED" ]; then
@@ -96,13 +97,15 @@ if [ "$FORCE" = 0 ] && [ -f "$DESCRIPTOR" ] && [ "$(json_field status)" = "runni
   if [ "$fresh" = 1 ] && [ -n "$(find src -type f -newer "$DESCRIPTOR" 2>/dev/null | head -1)" ]; then
     fresh=0
   fi
-  if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null && [ -n "$OLD_URL" ] && healthy "$OLD_URL" && [ "$fresh" = 1 ]; then
+  if node "$PROCESS_HELPER" owned "$OLD_PORT" && [ -n "$OLD_URL" ] && healthy "$OLD_URL" && [ "$fresh" = 1 ]; then
     emit_result "$OLD_URL" 1
     exit 0
   fi
-  # Stale: stop what this repo started, then fall through to a fresh boot.
-  [ -n "$OLD_PID" ] && kill "$OLD_PID" 2>/dev/null || true
 fi
+
+# Superseding is independent of reuse: --force must retire its predecessor too.
+# A reused PID or a server from another checkout is never ours to terminate.
+node "$PROCESS_HELPER" stop
 
 # ── Precondition: provisioned checkout ───────────────────────────────────────
 if ! bash "$BOOTSTRAP" --check >/dev/null 2>&1; then
@@ -128,9 +131,10 @@ BASE_URL="http://$HOST:$PORT"
 # the default out (issue #117).
 echo "==> dev server on :$PORT"
 E2E=1 NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" \
-  nohup pnpm exec vite dev --port "$PORT" --strictPort --host "$HOST" > "$LOG_FILE" 2>&1 &
+  nohup node node_modules/vite/bin/vite.js dev --port "$PORT" --strictPort --host "$HOST" > "$LOG_FILE" 2>&1 &
 APP_PID=$!
 echo "$APP_PID" > "$PID_FILE"
+node "$PROCESS_HELPER" record "$APP_PID" "$PORT"
 
 i=0
 until healthy "$BASE_URL"; do
@@ -164,7 +168,7 @@ cat > "$DESCRIPTOR" <<JSON
   "startedByThisRepo": true,
   "startScript": ".ai/scripts/test-env-up.sh",
   "stopScript": ".ai/scripts/test-env-down.sh",
-  "app": { "startCommand": "pnpm exec vite dev --port $PORT --strictPort --host $HOST", "port": $PORT, "healthPath": "$HEALTH_PATH", "pid": $APP_PID },
+  "app": { "startCommand": "node node_modules/vite/bin/vite.js dev --port $PORT --strictPort --host $HOST", "port": $PORT, "healthPath": "$HEALTH_PATH", "pid": $APP_PID },
   "services": [],
   "credentials": [ { "role": "demo", "username": "$DEMO_EMAIL", "passwordEnv": "TEST_DEMO_PASSWORD" } ],
   "credentialsFile": "$CREDS_FILE",

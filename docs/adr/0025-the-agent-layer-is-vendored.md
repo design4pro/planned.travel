@@ -76,6 +76,10 @@ the rest in one call. Tier 4 is that half. (Two limits of the re-checkout are wo
 they are easy to overstate: it does **not** cover `.claude/skills/`, and it restores rather than
 cleans, so a path a pull request _adds_ survives it. Both predate this change; the first is filed.)
 
+_Amended by #711: `claude-code-review.yml` was retired. Tier 4 still protects agent
+configuration under `GITHUB_ACTIONS`, but the former review job no longer reads pull-request
+content with a write token._
+
 **Tier 2 is not redundant either.** Its header records a `pr-autopilot` run that reached
 `../agent-kit/templates/…` and rewrote eight files in a sibling checkout a human was working in,
 with nothing downstream able to tell. It costs a correct run nothing.

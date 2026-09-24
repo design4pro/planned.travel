@@ -77,7 +77,7 @@ jobs:
   # — which is why this job needs no timeout of its own beyond ci.yml's 20 minutes.
   e2e-webkit:
     name: e2e · webkit (${{ matrix.shard }}/2)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -103,79 +103,48 @@ jobs:
           verify-seed: ${{ matrix.shard == 1 }}
 
       - name: Run this shard of the WebKit journeys
+        id: tests
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
-        run: pnpm exec playwright test --project=mobile-safari --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=blob
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
+        run: pnpm exec playwright test --project=mobile-safari --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json
 
-      - name: Upload the blob report
+      - name: Select failure and flaky diagnostics
+        id: diagnostics
         if: always()
-        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: node scripts/ci/e2e-diagnostics.mjs >> "$GITHUB_OUTPUT"
+
+      - name: Upload failure and flaky diagnostics
+        if: ${{ always() && (steps.tests.outcome != 'success' || steps.diagnostics.outputs.upload != 'false') }}
+        continue-on-error: true
+        uses: design4pro/.github/actions/artifact-upload@main
         with:
-          name: blob-report-webkit-${{ matrix.shard }}
-          path: blob-report
-          retention-days: 1
+          name: e2e-webkit-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          retention-days: 2
           if-no-files-found: ignore
-
-      # The runner is gone by the time anyone reads the result, and a shard that dies on
-      # wall clock leaves no server-side evidence otherwise. Seven days rather than the
-      # blob's one: these are kilobytes, and the question they answer outlives the run.
-      - name: Upload the runtime diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: e2e-webkit-runtime-${{ matrix.shard }}
           path: |
+            test-results/results.json
+            test-results/**/trace.zip
+            test-results/**/*.png
+            test-results/**/error-context.md
             e2e-runtime.log
             dev-server.log
-          retention-days: 7
-          if-no-files-found: ignore
 
-  # One report for the two shards, and the verdict. `merge-reports` exits 0 whatever the
-  # shards found (ci.yml carries the run that proved it), so the result comes from
-  # `needs`, the aggregate over the matrix.
+  # This aggregate depends only on test outcomes, not artifact storage.
   e2e-webkit-report:
     name: e2e · webkit merged report
     needs: e2e-webkit
-    if: ${{ !cancelled() }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","ARM64","ci"]') }}
-    timeout-minutes: 10
-
+    if: ${{ always() }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
+    timeout-minutes: 2
     steps:
-      - name: Check out
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.ref || 'develop' }}
-
-      - name: Set up the toolchain
-        uses: ./.github/actions/setup
-
-      - name: Download the blob reports
-        uses: actions/download-artifact@v8
-        with:
-          pattern: blob-report-webkit-*
-          path: all-blob-reports
-          merge-multiple: true
-
-      - name: Merge the shard reports
+      - name: Require every WebKit shard to pass
+        env:
+          SHARDS_RESULT: ${{ needs.e2e-webkit.result }}
         run: |
-          set -euo pipefail
-          if [ -z "$(ls -A all-blob-reports 2>/dev/null)" ]; then
-            echo '::notice title=e2e webkit::no shard reports to merge — the journeys did not run.'
-            exit 0
-          fi
-          pnpm exec playwright merge-reports --reporter html,github ./all-blob-reports
-
-      - name: Upload the Playwright report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report-webkit
-          path: playwright-report
-          retention-days: 7
-          if-no-files-found: ignore
-
-      - name: Fail unless every shard passed
-        if: ${{ !cancelled() && needs.e2e-webkit.result != 'success' }}
-        run: |
-          echo "::error title=e2e webkit::the WebKit journeys did not pass on every shard (result: ${{ needs.e2e-webkit.result }}); the report above names the failures."
+          if [ "$SHARDS_RESULT" = success ]; then exit 0; fi
+          echo "::error::Required WebKit shards did not pass: $SHARDS_RESULT"
           exit 1

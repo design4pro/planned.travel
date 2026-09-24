@@ -16,6 +16,7 @@
 // Prints the port on stdout. TEST_ENV_PORT_WAIT_SECONDS (default 300) bounds the wait,
 // TEST_ENV_PORT_POLL_SECONDS (default 5) spaces the re-scans.
 import { connect } from 'node:net'
+import { describePortHolders } from './dev-server-process.mjs'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 
@@ -90,6 +91,9 @@ async function main([host, min, max]) {
     process.stderr.write(
       `ERROR: no free port in ${min}-${max} after waiting ${waitSeconds}s\n`,
     )
+    for (let candidate = Number(min); candidate <= Number(max); candidate++) {
+      process.stderr.write(describePortHolders(candidate))
+    }
     process.exit(EXIT_POOL_FULL)
   }
   process.stdout.write(`${port}\n`)

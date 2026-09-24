@@ -76,7 +76,7 @@ function main() {
 }
 
 // Importing this file for its `decide` table must not exit the test runner, so compare resolved
-// paths rather than basenames - the same guard, for the same reason, as `review-threads-label.mjs`.
+// paths rather than basenames so an unrelated script cannot trigger the CLI.
 if (
   process.argv[1] &&
   realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
