@@ -105,10 +105,10 @@ export default defineConfig({
             // watching Playwright spec, and nothing but a test holds that gate
             // shut. It sits at the repo root, so no `src/**` glob reaches it.
             'vite.config.test.ts',
-            // And `eslint.config.js`, for a narrower version of the same reason: its ignore list
-            // is what keeps `pnpm lint` runnable while an agent run has scratch directories open,
-            // and a missing entry there is silent until the tool that writes one is exercised.
-            'eslint.config.test.ts',
+            // And `.oxlintrc.json`, for a narrower version of the same reason: its ignore list
+            // is what keeps `pnpm lint` on our own sources, and a wrong entry there is silent
+            // until somebody notices a file that was never linted.
+            'lint-ignores.test.ts',
             // The Claude Code hooks guard GitHub Actions agent runs against tracker mutations
             // and configuration writes. Their failure mode is silence: a hook that stops matching
             // allows instead of erroring, and nothing anywhere says so.
