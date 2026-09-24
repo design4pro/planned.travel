@@ -33,11 +33,13 @@ env:
   VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
   VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
-# `runs-on` in every job below reads through `vars.RUNNER_CI`, an organisation
+# `runs-on` in every job below reads through `vars.RUNNER_CI`, a repository
 # variable that is deliberately unset: unset, each job's own default selects the
-# self-hosted pool. Setting it to `["ubuntu-latest"]` moves every job in every
-# repository back to GitHub-hosted runners without a pull request, which is the
-# recovery path that does not need the host to be up. ADR 0023.
+# `ci` slots of the VPS pool - two ephemeral x64 containers of 4 CPU / 8 GB on KVM
+# Haswell vCPUs, about three times slower per core than the machines most numbers
+# below were measured on. Setting it to `["ubuntu-latest"]` moves every job in this
+# repository to GitHub-hosted runners without a pull request, which is the recovery
+# path that does not need the host to be up. ADR 0027.
 
 jobs:
   verify:
@@ -116,10 +118,11 @@ jobs:
 
   # The unit suite, as one job. It was three shards and a merge job while the
   # runner was a 2-vCPU GitHub-hosted machine, where one job took 361 s. In the
-  # self-hosted pool's 3-CPU containers the whole suite with coverage measures
+  # self-hosted pool's 3-CPU containers the whole suite with coverage measured
   # 139 s (one shard alone 43 s, as in CI), so the shards bought about 45 s of
   # wall clock for three more jobs of fixed cost on a pool of three slots, which
-  # queued longer than that (ADR 0021). One run also puts the per-glob coverage
+  # queued longer than that (ADR 0021). On the VPS pool's 4-CPU slots it is 532 s
+  # (run 35968476152) - still one job, since the pool has two slots, not more. One run also puts the per-glob coverage
   # thresholds over the whole suite directly, with no blob reports to count and
   # merge. Moved back to GitHub-hosted runners (`vars.RUNNER_CI`, the recovery
   # path) it takes minutes again, which that path can afford.

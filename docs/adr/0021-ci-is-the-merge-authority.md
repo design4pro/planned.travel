@@ -1,6 +1,6 @@
 # 0021. CI is the merge authority, and the local gate is the fast loop
 
-Status: accepted
+Status: accepted; its runner operations (the Mac pool, its slot count, `RUNNER_DEPLOY` toward `ARM64`) are superseded by ADR 0027
 Date: 2026-09-15
 Amends: ADR 0016 (decision 6: which pull requests run the journeys, and where they run before one opens), ADR 0003 (staging and production deploy only behind a green CI run).
 

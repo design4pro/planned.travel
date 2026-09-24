@@ -17,9 +17,10 @@ runs:
     - name: Set up pnpm
       uses: pnpm/action-setup@v6
 
-    # The self-hosted CI pool mounts a persistent pnpm store at this path
-    # (`host/runner/pool.sh` in design4pro/cezar, volume `gha-pnpm-store`), and pnpm never
-    # used it: action-setup exports PNPM_HOME, pnpm's default store is
+    # A self-hosted pool may mount a persistent pnpm store at this path. The VPS
+    # pool (`host/runner/pool.sh` in design4pro/cezar) mounts none - its containers
+    # are disposable and share nothing but the artifact store - so today this step
+    # only reports. When a store was mounted, pnpm never used it without this step: action-setup exports PNPM_HOME, pnpm's default store is
     # $PNPM_HOME/store, and that lives in the disposable container. Pointed at
     # the volume, a warm install measured 11-12 s. The check is for a writable
     # mount rather than for `self-hosted`, because the agent pool carries no

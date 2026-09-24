@@ -17,7 +17,8 @@ permissions:
 
 jobs:
   inspect:
-    runs-on: ubuntu-latest
+    # The `gate` slot of the VPS pool; `vars.RUNNER_CI` is the kill switch (ADR 0027).
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","gate"]') }}
     timeout-minutes: 5
     steps:
       # Scheduled workflows run from the default branch. No pull-request content is executed.
