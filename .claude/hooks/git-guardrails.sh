@@ -337,9 +337,84 @@ disposable_rm_target() { # path
   return 1
 }
 
+# The run's own scratch directory, `<main>/.ai/cezar/tmp/$CEZ_TASK_ID` - what cezar sets TMPDIR to.
+# `<main>` is the checkout a cezar worktree (`<main>/.ai/cezar/worktrees/<id>`) hangs off, and the
+# root itself anywhere else. Derived, never read from TMPDIR, which can name /tmp just as well.
+scratch_dir=""
+scratch_dir_resolved=""
+case "${CEZ_TASK_ID:-}" in
+  '' | . | .. | *[!A-Za-z0-9._-]*) ;;
+  *)
+    scratch_main="$guard_root"
+    case "$guard_root" in
+      */.ai/cezar/worktrees/*/*) ;;
+      */.ai/cezar/worktrees/?*) scratch_main="${guard_root%/.ai/cezar/worktrees/*}" ;;
+    esac
+    scratch_dir="$scratch_main/.ai/cezar/tmp/$CEZ_TASK_ID"
+    # The path the run is handed is resolved; the root may not be. Accept either spelling.
+    if [ -d "$scratch_dir" ]; then scratch_dir_resolved=$(cd "$scratch_dir" && pwd -P); fi
+    ;;
+esac
+
+# A variable is a target this hook cannot read - except when the same command assigned it, once,
+# before any use, and nothing else in the command can have changed it. `d=$(mktemp -d); ...;
+# rm -rf "$d"` is the idiom for scratch space, and so is naming a path under the run's own scratch
+# directory: `T=$TMPDIR/upstream; rm -rf "$T"; git clone ... "$T"`.
+#
+# Everything is read from `$command`, not `$scan`, because quoting is what decides the value: with
+# the quotes stripped, `T="<scratch>/x /home"` reads as a path under scratch while an unquoted
+# `rm -rf $T` word-splits it into `/home`. So the value is accepted only in a spelling with no
+# whitespace, no substitution and no unpaired quote, followed by the end of its statement, and
+# anything else that mentions the name - a second assignment, `read`, `for`, `${d:=...}`, `unset` -
+# makes the variable unreadable again, and so does an assignment a pipe, a `&` or a closing `)`
+# confines to a subshell. Names the shell rewrites by itself (`cd` sets PWD) are never trusted.
+scratch_variable_target() { # target
+  local name nl=$'\n' lead tail word arg mk path lit re assign before rest value
+  name=${1%/}
+  case "$name" in
+    '${'*'}') name=${name#'${'}; name=${name%'}'} ;;
+    '$'*) name=${name#'$'} ;;
+    *) return 1 ;;
+  esac
+  case "$name" in
+    '' | [0-9]* | *[!A-Za-z0-9_]*) return 1 ;;
+    PWD | OLDPWD | REPLY | OPTARG | OPTIND | _ | BASH* | RANDOM | SRANDOM | SECONDS | LINENO) return 1 ;;
+  esac
+  lead='(^|[[:space:];&|(])'
+  tail="[[:space:]]*(;|&&|\\|\\||${nl}|\$)"
+  # A mention of the name as a word; a leading `-`, `/` or `.` is a flag or a path (`mktemp -d`).
+  word="(^|[^[:alnum:]_./-])${name}([^[:alnum:]_]|\$)"
+  arg="([^\"'[:space:];&|()\`<>]|\"[^\"[:space:]()\`]*\"|'[^'[:space:]]*')+"
+  mk="\\\$\\(mktemp([[:space:]]+${arg})*[[:space:]]*\\)"
+  path="(\\\$TMPDIR|\\\$\\{TMPDIR\\})?/[^\"'[:space:]\\\\\`\$;&|()<>]*"
+  lit="${path}|\"${path}\"|'/[^\"'[:space:]\\\\\`\$;&|()<>]*'"
+  re="${lead}${name}=(${mk}|\"${mk}\"|${lit})${tail}"
+  [[ $command =~ $re ]] || return 1
+  assign=${BASH_REMATCH[0]}
+  value=${BASH_REMATCH[2]}
+  before=${command%%"$assign"*}
+  rest=${command#*"$assign"}
+  rest=${rest//"\${$name}"/ }
+  rest=$(sed -E "s/\\\$${name}([^[:alnum:]_]|\$)/ \\1/g" <<< "$rest")
+  if grep -Eq "$word" <<< "$before" || grep -Eq "$word" <<< "$rest"; then return 1; fi
+  # Only a substitution starts this way; a literal starts with `/`, `$TMPDIR` or a quote before them.
+  case "$value" in '$(mktemp'* | '"$(mktemp'*) return 0 ;; esac
+  value=${value//[\"\']/}
+  case "/${value#/}/" in */../*) return 1 ;; esac
+  case "$value" in '$TMPDIR'/?* | '${TMPDIR}'/?*) return 0 ;; esac
+  if [ -n "$scratch_dir" ]; then
+    case "$value" in "$scratch_dir"/?*) return 0 ;; esac
+  fi
+  if [ -n "$scratch_dir_resolved" ]; then
+    case "$value" in "$scratch_dir_resolved"/?*) return 0 ;; esac
+  fi
+  return 1
+}
+
 while read -r rm_rec rm_target; do
   [ "$rm_rec" = 1 ] || continue
-  disposable_rm_target "$rm_target" || agent_block "recursive delete of '$rm_target'" \
+  disposable_rm_target "$rm_target" || scratch_variable_target "$rm_target" \
+    || agent_block "recursive delete of '$rm_target'" \
     'A run deletes only build output and scratch space. Delete the files you need one by one, or end the run as blocked and name the path.'
 done <<RM_AGENT_TIER
 $rm_seen

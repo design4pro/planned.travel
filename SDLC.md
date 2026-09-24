@@ -351,8 +351,8 @@ catches a change that should not have been made.
 Two things still refuse, and neither is negotiable. **Under `GITHUB_ACTIONS` the same block is
 absolute**: CI executes pull-request content, and a run that could write `.claude/hooks/`
 would disarm the guards mid-flight. A finding on one of those paths is reported, not applied. And **a write outside the
-worktree is refused in either mode**: a change that belongs to another repository is a pull request
-there, from its own clone.
+worktree is refused in either mode** (the run's own scratch directory aside): a change that
+belongs to another repository is a pull request there, from its own clone.
 
 One further exception is not ours: `.claude/skills/` is pinned by `skills-lock.json` to
 `open-mercato/skills`, to which we have no push rights. A repo-specific rule belongs in an
