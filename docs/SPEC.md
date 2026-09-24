@@ -176,6 +176,11 @@ precedent, a category, or a "while we are in there" install. That the freeze has
 twice is not evidence that it reopens easily; both times it was reopened for a capability the stack
 could not express at all, by an explicit decision recorded here.
 
+**A replacement, not an addition: `oxlint` for `eslint` and `@tanstack/eslint-config`.** ADR 0028.
+The linter is tooling that never reaches the bundle, and the swap removes two names for one; it was
+made to take the gate's heaviest process off the agents' VPS and to unblock TypeScript 7. Like the
+two exceptions above it is a decision about these names, not a category.
+
 **Email path, as built.** Transactional mail is wired end to end and needs no new integration.
 Phase A rewrote the bodies as React components and left the transport untouched, so the pipeline
 now has three parts and one seam between each:

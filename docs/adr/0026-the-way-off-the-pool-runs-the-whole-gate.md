@@ -1,6 +1,6 @@
 # 0026. The way off the pool runs the whole gate; shipping stays off the pool
 
-Status: accepted
+Status: superseded by ADR 0027 (2026-09-24: shipping moves onto the VPS pool, whose containers share nothing between jobs; Blacksmith is retired)
 Date: 2026-09-21
 Amends: ADR 0023. The consequence it recorded and left standing, that the variable recovery path
 still leaves `e2e` red, is repaired here (decision 1). Its decision 4 was reconsidered and stands,

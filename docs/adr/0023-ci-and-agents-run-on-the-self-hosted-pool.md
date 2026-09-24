@@ -1,6 +1,6 @@
 # 0023. CI and the agents run on the self-hosted pool; shipping stays on GitHub-hosted runners
 
-Status: accepted, amended by ADR 0026
+Status: superseded by ADR 0027 (2026-09-24: the Mac pool is retired; every job runs on the VPS pool)
 Date: 2026-09-19
 Amended: 2026-09-21 by ADR 0026. The consequence below that the variable recovery path "still leaves
 `e2e` red" no longer holds: `.github/actions/e2e-env` installs the browsers itself on every runner.

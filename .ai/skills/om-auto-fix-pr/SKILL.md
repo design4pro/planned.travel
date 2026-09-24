@@ -10,3 +10,7 @@ Start only from an explicit request in Cezar. Acquire the PR claim before any mu
 One addition to the stabilization loop's exit criteria:
 
 - Before declaring the review approvable, run **list-review-threads** and require zero threads that are unresolved and not outdated. An open thread that the `om-auto-review-pr --autofix` stage fixed but did not resolve is closed here with **reply-review-comment** and **resolve-review-thread** (the repo override of `om-auto-review-pr` says how). An open thread the stage declined stays open and ends the loop with `changes-requested`, never `merge-queue`; the final report names the thread and its reason so a human can settle it.
+
+One addition to every push:
+
+- The claim step stops on a merged or closed PR only at the start. Immediately before each `git push` to the PR head (base merge, CI fixes), run **get-pr** and read `state`, in the same command as the push. Anything other than `OPEN` stops the run: do not push, release the claim, post one comment saying why the run stopped, and report the commits that were not pushed. A push to a merged PR's head recreates the branch GitHub deleted on merge (money-tracker.online #447, 2026-09-24).
