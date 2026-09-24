@@ -39,7 +39,9 @@ export default defineConfig({
   test: {
     // Leave one CPU for the coordinator and cap process pressure on larger hosts.
     // Node 24 reads the container CPU quota through availableParallelism().
-    maxWorkers: Math.max(1, Math.min(4, availableParallelism() - 1)),
+    // Two, not four: the 4-vCPU VPS runs several agent gates side by side, and
+    // three workers per run pushed it into swap.
+    maxWorkers: Math.max(1, Math.min(2, availableParallelism() - 1)),
     projects: [
       {
         extends: true,
