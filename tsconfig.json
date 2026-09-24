@@ -2,7 +2,6 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "eslint.config.js",
     "prettier.config.js",
     "vite.config.js",
     /* Named explicitly because `**` does not descend into a dot-directory: without this line

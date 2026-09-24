@@ -97,10 +97,6 @@ dev-server.log
 # tracked and therefore has to come out of the diff by hand.
 src/impeccable/
 
-# ESLint's incremental cache, written by `pnpm lint --cache` in CI. A map from
-# file content to that file's last result, so an unchanged file is skipped -
-# per checkout, and meaningless in another one.
-.eslintcache
 
 # Per-run scratch of the retired repository-orchestrated workflows: port pin, ladder verdicts
 # and digests, handoff. Never committed; the agent's PR carries what matters.
