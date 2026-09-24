@@ -10,11 +10,12 @@
 # either, rewrites what somebody else has already pulled.
 #
 # Tier two - agent runs (CEZ_TASK_ID or GITHUB_ACTIONS): the things an om-* run never needs.
-# Dumping the environment (the worktree holds live secrets in .dev.vars), changing the pinned
-# stack (docs/SPEC.md §3), shipping - deploys and remote migrations - leaving the user the run was
-# started as, and deleting anything but build output and scratch space. GitHub mutations,
-# `git add -A`, closing keywords and `pnpm exec` are the om-* skills' ordinary tools (tracker
-# descriptor .ai/trackers/github.md, SDLC.md) and stay open under Cezar.
+# Dumping the environment (the worktree holds live secrets in .dev.vars; `printenv NAME` for a
+# named non-secret variable stays open), changing the pinned stack (docs/SPEC.md §3), shipping -
+# deploys and remote migrations - leaving the user the run was started as, and deleting anything
+# but build output and scratch space. GitHub mutations, `git add -A`, closing keywords and
+# `pnpm exec` are the om-* skills' ordinary tools (tracker descriptor .ai/trackers/github.md,
+# SDLC.md) and stay open under Cezar.
 #
 # Tier three - GitHub Actions only: the whole `gh` mutation surface. See the section itself.
 #
@@ -301,8 +302,29 @@ agent_block() {
 
 echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])pnpm\s+(add|remove|rm|uninstall|update|up|upgrade)\b' \
   && agent_block 'pnpm add|remove|update' 'The stack is pinned (docs/SPEC.md §3); end the run as blocked and name the dependency.'
-echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])printenv\b' && agent_block 'printenv' 'The environment holds secrets.'
-echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])env(\s*$|\s*\||\s+-0|\s*;|\s*&&)' && agent_block 'env dump' 'The environment holds secrets.'
+# The dump is what leaks, not a single value: `echo "$NAME"` already prints one and nothing here
+# refuses it, so refusing `printenv NAME` as well only sent runs looking for the git author, TMPDIR
+# or NODE_OPTIONS round the houses. `printenv` passes when every argument is a plain variable name
+# and none of them looks like a secret. Bare `printenv`, a flag, an expansion or a redirect after
+# it, and a name carrying TOKEN, KEY and the rest are refused - as are `env` and `env | grep`, which
+# print the whole environment before anything filters it.
+env_hint='The environment holds secrets. Read a named non-secret variable with `printenv NAME`.'
+while IFS= read -r env_command; do
+  grep -Eq '(^|[^[:alnum:]_/-])printenv\b' <<< "$env_command" || continue
+  # Everything after the first `printenv`, so a second one on the piece cannot hide an argument.
+  env_args="${env_command#*printenv}"
+  [[ "$env_args" =~ [^[:space:]] ]] || agent_block 'printenv' "$env_hint"
+  read -ra env_names <<< "$env_args"
+  for env_name in "${env_names[@]}"; do
+    [[ "$env_name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || agent_block 'printenv' "$env_hint"
+    # AUTHOR is a name, not a credential: GIT_AUTHOR_NAME is one of the values runs asked for. Only
+    # that word is set aside - AUTHORIZATION still carries AUTH, and so does AUTHOR_TOKEN's TOKEN.
+    env_upper=$(tr '[:lower:]' '[:upper:]' <<< "$env_name" | sed -E 's/AUTHOR([^I]|$)/\1/g')
+    grep -Eq 'TOKEN|SECRET|KEY|PASS|AUTH|CREDENTIAL|COOKIE|SESSION|PRIVATE|DSN' <<< "$env_upper" \
+      && agent_block 'printenv of a secret-looking name' "$env_hint"
+  done
+done <<< "$(tr ';&|()`' '\n' <<< "$scan")"
+echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])env(\s*$|\s*\||\s+-0|\s*;|\s*&&)' && agent_block 'env dump' "$env_hint"
 
 
 # A recursive delete in an agent run, judged against what a command in package.json can put back.
@@ -424,9 +446,70 @@ RM_AGENT_TIER
 echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])find\s[^|;&]*(-delete|-exec\s+rm)\b' \
   && agent_block 'find -delete' 'A run deletes only build output and scratch space, by naming the path.'
 # The worktree a run was given is the cockpit's to create and retire, and `--force` discards
-# uncommitted work in it - including a human's, when the path is wrong.
-echo "$scan" | grep -Eq 'git\s+worktree\s+remove\b[^|;&]*(--force|-f)\b' \
-  && agent_block 'git worktree remove --force' 'The cockpit owns the worktrees; end the run instead.'
+# uncommitted work in it - including a human's, when the path is wrong. A worktree the run added
+# itself is its own to retire: om-auto-fix-pr checks a PR out under `.ai/tmp/` or the run's scratch
+# directory, and a refused cleanup failed runs that had done everything else. So `--force` passes
+# when its one target is a literal path strictly below the run's root (`<main>/.ai/cezar/worktrees/`
+# excepted, when the root is the main checkout) or strictly below its own scratch directory.
+# The root itself, another run's scratch, `..`, a variable and anything else stay refused. A
+# relative target is read against the session's working directory, and only when nothing in the
+# command can have moved it; an existing target is resolved too, so a symlink cannot point out.
+wt_hint='The cockpit owns the worktrees; remove only one you added below the worktree or scratch directory.'
+wt_below() { # path root resolved-root
+  local root
+  for root in "$2" "$3"; do
+    [ -n "$root" ] || continue
+    case "$1" in "$root"/?*) ;; *) continue ;; esac
+    case "/${1#"$root"/}/" in */.ai/cezar/worktrees/*) continue ;; esac
+    return 0
+  done
+  return 1
+}
+wt_root_resolved=""
+if [ -d "$guard_root" ]; then wt_root_resolved=$(cd "$guard_root" && pwd -P); fi
+while IFS= read -r wt_command; do
+  [[ "$wt_command" =~ git[[:space:]]+worktree[[:space:]]+remove([[:space:]].*)?$ ]] || continue
+  # A redirect ends the argument list; what follows it names a file, not the worktree, and a
+  # descriptor number standing alone before it (`2>/dev/null`) belongs to the redirect.
+  wt_args="${BASH_REMATCH[1]%%[<>]*}"
+  if [ "$wt_args" != "${BASH_REMATCH[1]}" ] && [[ "$wt_args" =~ ^(.*[[:space:]])[0-9]+$ ]]; then
+    wt_args="${BASH_REMATCH[1]}"
+  fi
+  read -ra wt_words <<< "$wt_args"
+  wt_force=0 wt_targets=() wt_opts=1
+  for wt_word in "${wt_words[@]}"; do
+    if [ "$wt_opts" = 1 ]; then
+      case "$wt_word" in
+        --) wt_opts=0; continue ;;
+        --force | -f | -ff) wt_force=1; continue ;;
+        -*) wt_force=1; wt_targets+=('<unknown option>'); continue ;;
+      esac
+    fi
+    wt_targets+=("$wt_word")
+  done
+  [ "$wt_force" = 1 ] || continue
+  [ "${#wt_targets[@]}" = 1 ] || agent_block 'git worktree remove --force' "$wt_hint"
+  wt_target="${wt_targets[0]%/}"
+  wt_target="${wt_target#./}"
+  case "$wt_target" in
+    '' | *[\$\`~*?[]* | *'<'*) agent_block 'git worktree remove --force' "$wt_hint" ;;
+  esac
+  case "/$wt_target/" in */../* | */./*) agent_block 'git worktree remove --force' "$wt_hint" ;; esac
+  if [ "${wt_target#/}" = "$wt_target" ]; then
+    grep -Eq '(^|[^[:alnum:]_/-])(cd|pushd|popd)\b|git\s+-C\b' <<< "$scan" \
+      && agent_block 'git worktree remove --force' "$wt_hint"
+    wt_base=$(jq -r '.cwd // empty' <<< "$input")
+    wt_target="${wt_base:-$(pwd)}/$wt_target"
+  fi
+  wt_below "$wt_target" "$guard_root" "$wt_root_resolved" \
+    || wt_below "$wt_target" "$scratch_dir" "$scratch_dir_resolved" \
+    || agent_block 'git worktree remove --force' "$wt_hint"
+  if [ -d "$wt_target" ]; then
+    wt_real=$(cd "$wt_target" && pwd -P)
+    wt_below "$wt_real" "$wt_root_resolved" "" || wt_below "$wt_real" "$scratch_dir_resolved" "" \
+      || agent_block 'git worktree remove --force' "$wt_hint"
+  fi
+done <<< "$(tr ';&|()`' '\n' <<< "$scan")"
 # Nothing a run does needs to leave the user it was started as.
 echo "$scan" | grep -Eq '(^|[^[:alnum:]_/-])sudo\s' \
   && agent_block 'sudo' 'A run holds exactly the permissions it was started with.'

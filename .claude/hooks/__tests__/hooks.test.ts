@@ -5,7 +5,7 @@
 // there is the pinned stack (`pnpm add`) and the environment dump. GitHub Actions can still
 // process untrusted PR content, so every gh mutation stays blocked there.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -577,6 +577,45 @@ describe('git-guardrails.sh', () => {
     expect(r.stderr).toContain(pattern)
   })
 
+  // One named value is what `echo "$NAME"` already prints; the dump is what leaks. So `printenv`
+  // takes plain variable names that do not look like secrets, and nothing else.
+  it.each([
+    'printenv NODE_OPTIONS',
+    'printenv TMPDIR CI CLOUDFLARE_ENV',
+    'printenv GIT_AUTHOR_NAME GIT_COMMITTER_EMAIL',
+    'echo "$(printenv NODE_OPTIONS)"',
+    'printenv CI && pnpm test',
+  ])('agent mode allows the named non-secret read %s', (command) => {
+    expect(bash(command, AGENT).status).toBe(0)
+    expect(bash(command, ACTIONS).status).toBe(0)
+  })
+
+  it.each([
+    ['printenv', 'printenv'],
+    ['printenv -0', 'printenv'],
+    ['printenv "$NAME"', 'printenv'],
+    ['printenv CI > out.txt', 'printenv'],
+    ['printenv GITHUB_TOKEN', 'printenv of a secret-looking name'],
+    ['printenv CI cloudflare_api_token', 'printenv of a secret-looking name'],
+    ['printenv SENTRY_DSN', 'printenv of a secret-looking name'],
+    ['printenv MAPTILER_KEY', 'printenv of a secret-looking name'],
+    ['printenv DB_PASSWORD', 'printenv of a secret-looking name'],
+    ['printenv BETTER_AUTH_URL', 'printenv of a secret-looking name'],
+    ['printenv HTTP_AUTHORIZATION', 'printenv of a secret-looking name'],
+    ['printenv git_author_token', 'printenv of a secret-looking name'],
+    ['printenv SESSION_COOKIE', 'printenv of a secret-looking name'],
+    ['printenv CI; printenv PRIVATE_KEY', 'printenv of a secret-looking name'],
+    ['x=$(printenv CREDENTIALS_FILE)', 'printenv of a secret-looking name'],
+    ["env | grep -E '^GIT_(AUTHOR|COMMITTER)'", 'env dump'],
+    ['env | grep NODE_OPTIONS', 'env dump'],
+  ])('agent mode still blocks %s', (command, pattern) => {
+    const r = bash(command, AGENT)
+    expect(r.status).toBe(2)
+    expect(r.stderr).toContain(pattern)
+    // The refusal names the form that does work, so a run does not go looking for another route.
+    expect(r.stderr).toContain('printenv NAME')
+  })
+
   // Everything a run legitimately does, asserted in agent mode and in a developer's session
   // alike. The developer tier is the permissive one, so a command refused there is a rule that
   // has escaped its tier - which is why both tables run over the same list.
@@ -832,6 +871,67 @@ describe('git-guardrails.sh', () => {
         'T=$TMPDIR/../x; rm -rf $T',
       ])('refuses %s in a run', (command) => {
         expect(bash(command, run).status).toBe(2)
+      })
+    })
+
+    // A worktree the run added itself - a PR checked out under `.ai/tmp/` or the run's scratch
+    // directory - is the run's to retire. The worktree it was given, the cockpit's other worktrees,
+    // another run's scratch and anything the hook cannot read stay refused.
+    describe('git worktree remove --force', () => {
+      const main = '/srv/planned.travel'
+      const root = `${main}/.ai/cezar/worktrees/${AGENT.CEZ_TASK_ID}`
+      const scratch = `${main}/.ai/cezar/tmp/${AGENT.CEZ_TASK_ID}`
+      const run = { ...AGENT, CLAUDE_PROJECT_DIR: root }
+
+      it.each([
+        `git worktree remove --force ${root}/.ai/tmp/om-auto-fix-pr/pr-729`,
+        `git worktree remove --force ${scratch}/pr726`,
+        `git worktree remove -f -f ${scratch}/pr726/ && git worktree prune`,
+        `git worktree remove --force -- ${scratch}/pr726 2>/dev/null`,
+      ])('allows %s in a run', (command) => {
+        expect(bash(command, run).status).toBe(0)
+      })
+
+      it.each([
+        `git worktree remove --force ${root}`,
+        `git worktree remove --force ${root}/`,
+        `git worktree remove --force ${main}/.ai/cezar/worktrees/other-run`,
+        `git worktree remove --force ${root}/.ai/cezar/worktrees/x`,
+        `git worktree remove --force ${main}/.ai/cezar/tmp/other-run/pr1`,
+        `git worktree remove --force ${scratch}`,
+        `git worktree remove --force ${scratch}/../other-run/pr1`,
+        `git worktree remove --force ${root}/.ai/tmp/../../other-run`,
+        'git worktree remove --force $TMPDIR/pr726',
+        `git worktree remove --force ${root}/.ai/tmp/a ${root}/.ai/tmp/b`,
+        `git worktree remove --force --bogus ${root}/.ai/tmp/a`,
+        'git worktree remove --force',
+        'git worktree remove --force /tmp/wt',
+        `git worktree remove --force ${main}`,
+      ])('refuses %s in a run', (command) => {
+        const r = bash(command, run)
+        expect(r.status).toBe(2)
+        expect(r.stderr).toContain('git worktree remove --force')
+      })
+
+      // A relative target is read against the working directory, and only when nothing in the
+      // command can have moved it; a symlink below the root cannot point the removal elsewhere.
+      it('reads a relative target against the working directory', () => {
+        const base = mkdtempSync(join(tmpdir(), 'wt-remove-'))
+        const worktree = join(base, '.ai', 'cezar', 'worktrees', AGENT.CEZ_TASK_ID)
+        mkdirSync(join(worktree, '.ai', 'tmp', 'pr-729'), { recursive: true })
+        mkdirSync(join(base, '.ai', 'cezar', 'worktrees', 'other-run'))
+        symlinkSync(
+          join(base, '.ai', 'cezar', 'worktrees', 'other-run'),
+          join(worktree, '.ai', 'tmp', 'link'),
+        )
+        const rel = (command: string) =>
+          hook('git-guardrails.sh', { command }, AGENT, worktree).status
+        expect(rel('git worktree remove --force .ai/tmp/pr-729')).toBe(0)
+        expect(rel('git worktree remove ./.ai/tmp/pr-729/ --force')).toBe(0)
+        expect(rel('git worktree remove --force .ai/tmp/link')).toBe(2)
+        expect(rel('git worktree remove --force ../other-run')).toBe(2)
+        expect(rel('git worktree remove --force .')).toBe(2)
+        expect(rel('cd .. && git worktree remove --force other-run')).toBe(2)
       })
     })
 
