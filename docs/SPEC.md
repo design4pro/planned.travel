@@ -181,6 +181,10 @@ The linter is tooling that never reaches the bundle, and the swap removes two na
 made to take the gate's heaviest process off the agents' VPS and to unblock TypeScript 7. Like the
 two exceptions above it is a decision about these names, not a category.
 
+**An upgrade, not a new name: TypeScript 7.** ADR 0029. `typescript` moves from 6 to 7, the native
+compiler, which the `oxlint` swap unblocked. The one test that parsed source with the compiler API
+now reads `worker-configuration.d.ts` itself.
+
 **Email path, as built.** Transactional mail is wired end to end and needs no new integration.
 Phase A rewrote the bodies as React components and left the transport untouched, so the pipeline
 now has three parts and one seam between each:
