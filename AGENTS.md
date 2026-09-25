@@ -22,7 +22,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 - User-facing copy is never hardcoded — it lives in the 23-locale catalogue, and a new key lands in every locale in the same change (the parity test enforces this; procedure: the `i18n-messages` skill, contract: docs/SPEC.md §9).
 - A spec's directory is its state — `.ai/specs/` waiting, `implemented/`, `archived/` — and the table under its `H1` names the issue and the pull requests behind it. Move with `git mv`, change `Status` in the same commit, regenerate the index. Rules: `.ai/specs/AGENTS.md`; the guard: `scripts/specs/__tests__/spec-registry.test.ts`.
 - Commits: Conventional Commits, in English.
-- A change that retires, renames or re-routes a label, workflow, automation, skill, guard or gate step runs the grep from CODE_REVIEW.md "Docs and CI" itself before opening the PR, and again on every later head. Review is where that rule is checked, not where the grep is first done (#653, #657, #711, #717).
+- Run the grep that CODE_REVIEW.md "Docs and CI" asks for ("a change updates every document that states what it changes") yourself, before opening the PR and again on every later head. Review is where that rule is checked, not where the grep is first done (#653, #657, #711, #717).
 
 ## Domain
 
