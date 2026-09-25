@@ -88,9 +88,10 @@ time prefix, so their order is random: assert a set, or give the rows distinct i
 ## Docs and CI (should fix)
 
 - **A change updates every document that states what it changes.** A PR that adds, renames, retires
-  or re-routes a label, workflow, automation, skill, runner variable or gate step greps the old name
-  and count across `AGENTS.md`, `SDLC.md`, `docs/agents/`, `docs/adr/` and the workflow comments,
-  and fixes each statement it makes false in the same PR (#542, #543, #498, #563).
+  or re-routes a label, workflow, automation, skill, guard, runner variable or gate step greps the old
+  name and count across `AGENTS.md`, `SDLC.md`, `docs/agents/`, `docs/adr/` and the workflow
+  comments, and fixes each statement it makes false in the same PR (#542, #543, #498, #563, #653,
+  #657).
 - **A job moved to another runner is proven there.** A `runs-on` change shows a run of that job on
   the new runner, and every tool the job calls (`pnpm`, `gh`, what an action unpacks itself with) is
   installed by a step in the workflow rather than assumed from the image; for a required check or a
