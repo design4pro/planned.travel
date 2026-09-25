@@ -22,6 +22,14 @@
 
 set -euo pipefail
 
+# A cezar run (CEZ_TASK_ID is set) is provisioned by its workflow's own bootstrap step, so this hook
+# has nothing to add there. It still cost every session 2.5-10.6 minutes before the first turn: the
+# basemap check never passes on the host, so `--if-needed` never skips and each session restarted
+# vite, re-seeded and re-verified a server no automated flow uses (2026-09-24/25 run logs).
+if [ -n "${CEZ_TASK_ID-}" ]; then
+  exit 0
+fi
+
 cd "${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then

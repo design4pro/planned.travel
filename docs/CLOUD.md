@@ -46,7 +46,8 @@ reason a session starts slowly or starts broken:
   D1 migrations, the basemap. It runs on every start and resume, and each step
   skips itself when its result is already there.
 
-  `session-start.sh` only picks a profile off `CLAUDE_CODE_REMOTE`; the steps
+  `session-start.sh` only picks a profile off `CLAUDE_CODE_REMOTE` (and exits at once in a cezar
+  run, where `CEZ_TASK_ID` is set and the workflow bootstraps itself); the steps
   themselves live in `scripts/worktree/bootstrap.sh`, which the same hook uses to
   provision a local `git worktree`. That is deliberate: one owner means the cloud
   path cannot quietly drift from the local one. The `cloud` profile is what this
