@@ -22,6 +22,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 - User-facing copy is never hardcoded — it lives in the 23-locale catalogue, and a new key lands in every locale in the same change (the parity test enforces this; procedure: the `i18n-messages` skill, contract: docs/SPEC.md §9).
 - A spec's directory is its state — `.ai/specs/` waiting, `implemented/`, `archived/` — and the table under its `H1` names the issue and the pull requests behind it. Move with `git mv`, change `Status` in the same commit, regenerate the index. Rules: `.ai/specs/AGENTS.md`; the guard: `scripts/specs/__tests__/spec-registry.test.ts`.
 - Commits: Conventional Commits, in English.
+- Run the grep that CODE_REVIEW.md "Docs and CI" asks for ("a change updates every document that states what it changes") yourself, before opening the PR and again on every later head. Review is where that rule is checked, not where the grep is first done (#653, #657, #711, #717).
 
 ## Domain
 
@@ -47,6 +48,8 @@ New work flows (ADR 0018): issue form → the cezar `issue-groom` run adds SDLC 
 Every `afk-*` skill runs with no one to ask, so where a person would be consulted it picks the most reversible option and records it in a **Resolved assumptions** table (`# | Question | Applied default | Why`) in the brief, spec or PR body it writes. Overturning one of those rows is an ordinary review finding.
 
 The agent layer — the `afk-*` skills, `.ai/cezar/`, `.ai/scripts/`, `.claude/hooks/`, `.claude/settings.json`, `.ai/trackers/github.md`, `scripts/ci/`, the former Claude `.github/workflows/` — used to be rendered here from `design4pro/agent-kit` and hashed in a lock file, so a correction to any of it was a two-repository round trip. **It is vendored now** (ADR 0025): every one of those files is an ordinary file, editable on the branch that needs it, and the check that enforced the hashes is gone from the validation gate. Nothing detects a hand edit any more — review does. `money-tracker.online` carries a layer that started as a copy of this one and is no longer kept in step with it, by anything or on purpose: each repository tunes its own, and a fix that genuinely belongs in both is written in both as two ordinary changes.
+
+A fix to how one skill behaves (a push, a claim, a label) lands in every skill that behaves the same way. Before writing it, grep that behaviour across `.claude/skills/*/SKILL.md`, their `references/`, and the `.ai/skills/` overrides, then cover every hit or name the uncovered ones in a follow-up issue (#733, #735).
 
 ## Generated TanStack guidance
 

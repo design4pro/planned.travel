@@ -81,12 +81,17 @@ Component tests run in the `ui` vitest project, server code in `server`, and too
 files in `tooling` (vitest.config.ts). A new e2e journey belongs in `e2e/` and must run against the
 3030-3040 port range that `playwright.config.ts` insists on.
 
+An assertion on the order of rows a test wrote itself holds only if the query's `ORDER BY` puts
+those rows in that order. Rows written in the same millisecond tie on `created_at` and on `newId()`'s
+time prefix, so their order is random: assert a set, or give the rows distinct instants (#500, #510).
+
 ## Docs and CI (should fix)
 
 - **A change updates every document that states what it changes.** A PR that adds, renames, retires
-  or re-routes a label, workflow, automation, skill, runner variable or gate step greps the old name
-  and count across `AGENTS.md`, `SDLC.md`, `docs/agents/`, `docs/adr/` and the workflow comments,
-  and fixes each statement it makes false in the same PR (#542, #543, #498, #563).
+  or re-routes a label, workflow, automation, skill, guard, runner variable or gate step greps the old
+  name and count across `AGENTS.md`, `SDLC.md`, `docs/agents/`, `docs/adr/` and the workflow
+  comments, and fixes each statement it makes false in the same PR (#542, #543, #498, #563, #653,
+  #657).
 - **A job moved to another runner is proven there.** A `runs-on` change shows a run of that job on
   the new runner, and every tool the job calls (`pnpm`, `gh`, what an action unpacks itself with) is
   installed by a step in the workflow rather than assumed from the image; for a required check or a

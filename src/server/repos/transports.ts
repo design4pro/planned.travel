@@ -31,7 +31,7 @@ import {
   transports,
 } from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
-import { runBatch } from './batch'
+import { boundParametersPerRow, chunkFor, runBatch } from './batch'
 import { NotFoundError, RepositoryError } from './context'
 import { listDayNotes, requireTripDay } from './days'
 import { listDayAssignments } from './itinerary'
@@ -1034,7 +1034,14 @@ export async function replaceTransportChain(
   const first = rows.at(0)
   const last = rows.at(-1)
   if (first !== undefined && last !== undefined) {
-    statements.push(scope.db.insert(transportLegs).values(rows))
+    // One statement per chunk, still inside the one batch: a whole chain in one insert binds
+    // more parameters than D1 accepts from its fourth leg on.
+    const size = chunkFor(boundParametersPerRow(transportLegs))
+    for (let index = 0; index < rows.length; index += size) {
+      statements.push(
+        scope.db.insert(transportLegs).values(rows.slice(index, index + size)),
+      )
+    }
     statements.push(
       scope.db
         .update(transports)
