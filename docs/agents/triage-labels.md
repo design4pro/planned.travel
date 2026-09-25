@@ -84,10 +84,11 @@ issue form ─► category;  Sentry sweep ─► bug + priority-high + groom
 human: autofix ─► in-progress ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► human review
 human: spec (feature) ─► spec PR (documentation, skip-qa, Refs #n) ─► human merges ─► the same issue is the implementation ticket
       ─► human: autofix on it ─► om-auto-fix-issue's feature route ─► om-auto-implement-spec (cockpit: implement-spec is the same skill by hand)
-PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA, never merge
+PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA / merge into develop
+agent PR in merge-queue ─(pull_request.reviewed: Merge reviewed agent pull requests)─► om-pr-autopilot --allow-merge ─► merged into develop
 housekeeping (no CEZAR automation; launchd runs it 07:00/12:00/17:00 on weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
       ─► issue closed when its `Closes #n` PR merged into develop
-approved PR: a human merges it (om-approve-merge-pr from the cockpit); needs-qa merges only with qa-approved
+approved PR into develop: pr-autopilot merges it (om-approve-merge-pr); needs-qa merges only with qa-approved; the promotion to main is merged by a human
 ```
 
 ## Map from the ADR 0015 vocabulary

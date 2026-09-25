@@ -296,18 +296,19 @@ Two amendment rules are specific to this document's shape:
 Workflows live in `.ai/cezar/workflows/`; the committed definitions are
 `docs/agents/cezar-automations.json`, applied with `.ai/scripts/cez-automations.sh`.
 
-| Automation                       | Trigger                               | Workflow                                          |
-| -------------------------------- | ------------------------------------- | ------------------------------------------------- |
-| Groom new issues                 | `issue.opened` by a maintainer        | `issue-groom` (`om-auto-manage-issues`)           |
-| Re-groom on request              | `groom` added                         | `issue-groom`                                     |
-| Fix issues on the autofix label  | `autofix` added                       | `issue-autofix` (`om-auto-fix-issue`)             |
-| Write a spec for feature issues  | `spec` added to a `feature`           | `spec` (`om-auto-write-spec`)                     |
-| Autopilot new pull requests      | `pull_request.opened` by a maintainer | `pr-autopilot`                                    |
-| Triage new issues                | `needs-triage` added                  | `triage` (`afk-triage`)                           |
-| Implement ready-for-agent issues | `ready-for-agent` added               | `implement-ticket`                                |
-| Spec to tickets                  | weekdays 07:00                        | `spec-to-tickets` (`afk-to-tickets`)              |
-| Weekly architecture review       | Mondays 06:00                         | `architecture-review` (`afk-architecture-review`) |
-| Weekly lessons                   | Fridays 16:00                         | `lessons` (`afk-lessons`)                         |
+| Automation                         | Trigger                               | Workflow                                          |
+| ---------------------------------- | ------------------------------------- | ------------------------------------------------- |
+| Groom new issues                   | `issue.opened` by a maintainer        | `issue-groom` (`om-auto-manage-issues`)           |
+| Re-groom on request                | `groom` added                         | `issue-groom`                                     |
+| Fix issues on the autofix label    | `autofix` added                       | `issue-autofix` (`om-auto-fix-issue`)             |
+| Write a spec for feature issues    | `spec` added to a `feature`           | `spec` (`om-auto-write-spec`)                     |
+| Autopilot new pull requests        | `pull_request.opened` by a maintainer | `pr-autopilot`                                    |
+| Merge reviewed agent pull requests | agent PR reviewed into `merge-queue`  | `pr-autopilot`                                    |
+| Triage new issues                  | `needs-triage` added                  | `triage` (`afk-triage`)                           |
+| Implement ready-for-agent issues   | `ready-for-agent` added               | `implement-ticket`                                |
+| Spec to tickets                    | weekdays 07:00                        | `spec-to-tickets` (`afk-to-tickets`)              |
+| Weekly architecture review         | Mondays 06:00                         | `architecture-review` (`afk-architecture-review`) |
+| Weekly lessons                     | Fridays 16:00                         | `lessons` (`afk-lessons`)                         |
 
 Five workflows have **no cezar automation**: `housekeeping` (`om-review-prs`, `om-merge-buddy`
 report, `om-close-fixed-issues`), `backlog`, `brainstorm`, `implement-spec` and `pr-review`. Four
@@ -331,7 +332,9 @@ anything from anyone else waits for a maintainer to add a trigger label.
 
 **Guardrails:**
 
-- Cezar never merges as part of implementation or review. A person merges every PR.
+- Cezar never merges as part of implementation or review. `pr-autopilot` merges into `develop` with
+  `om-pr-autopilot --allow-merge`, through `om-approve-merge-pr` and its label and QA checks
+  (ADR 0031). A person merges the `develop` → `main` promotion.
 - `implement-ticket` stops when three or more agent PRs already wait in `review`, and that cap is
   shared — the `issue-autofix` output counts against it too, because both ladders publish under the
   same `gh` identity.
