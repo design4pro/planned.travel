@@ -108,9 +108,9 @@ jobs:
           packageManager: pnpm
           # No `wranglerVersion` on purpose, here or in any other call below.
           # Unset, wrangler-action runs whatever `pnpm exec wrangler --version`
-          # reports, so pnpm-lock.yaml owns the version. What the old pin did
-          # and why it is not coming back is written down once, next to the test
-          # that holds it open: scripts/__tests__/wrangler-version-ownership.test.mjs (#567).
+          # reports, so pnpm-lock.yaml owns the version. The old pin drifted from
+          # the lockfile and every deploy shipped an older wrangler than the one
+          # the repository tests against (#567).
           command: d1 migrations apply planned-travel-db --remote
 
       # The `airports` table is the one the migration above creates and does not

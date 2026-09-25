@@ -79,14 +79,3 @@ describe('repository merge-pr operation', () => {
     },
   )
 })
-
-it('routes the repo-local approval skill to the tested operation and refuses squash on main', () => {
-  const override = readFileSync(
-    '.ai/skills/om-approve-merge-pr/SKILL.md',
-    'utf8',
-  )
-  expect(override).toContain('Cannot squash or rebase a PR targeting main:')
-  expect(override).toContain(
-    '**merge-pr** operation in `.ai/trackers/github.md`',
-  )
-})

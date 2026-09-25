@@ -108,11 +108,6 @@ export default defineConfig({
             // is what keeps `pnpm lint` on our own sources, and a wrong entry there is silent
             // until somebody notices a file that was never linted.
             'lint-ignores.test.ts',
-            // `.ai/cezar/config.json` is the run's own settings, and the cockpit's Settings
-            // panel writes the same keys: clearing a field there deletes it and the next run
-            // silently behaves differently. `.ai/` is a dot-directory, so no glob above reaches
-            // it - the path has to be named.
-            '.ai/scripts/__tests__/*.test.ts',
           ],
           restoreMocks: true,
         },

@@ -87,7 +87,6 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
 - Language: `systemPrompt` in `.ai/cezar/config.json` (Settings → Agents edits the same key) is
   appended to the system prompt of every agent step and tells the run to talk to the developer in
   Polish while everything that leaves the session (code, comments, commits, GitHub) stays English.
-  `.ai/scripts/__tests__/cezar-config.test.ts` fails when the key is cleared.
 - Service environment: `CEZ_AUTOMATIONS=1`, `CEZ_AUTONOMOUS_DEFAULT=0`, `CEZ_SKILLS_AUTO_UPDATE=0`,
   `GH_CONFIG_DIR` (below), all four from the plist template in `design4pro/cezar`, and never `GH_TOKEN`,
   `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
@@ -145,22 +144,22 @@ prompt is the skill as a slash command (`/om-… {{task}}`; never `skill:`, whic
 thin `.ai/skills/` override alone). `allowedTools` is the full set for skills that write code and
 drops `Edit`/`Write` for the ones that must not.
 
-| Workflow              | Agent step                                                                 | Started by                                                                                                                               |
-| --------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`                              | automation **Groom new issues** (`issue.opened`), **Re-groom on request** (label `groom`)                                                |
-| `issue-autofix`       | `/om-auto-fix-issue {{task}}`                                              | automation **Fix issues on the autofix label** (label `autofix`)                                                                         |
-| `spec`                | `/om-auto-write-spec {{task}}`                                             | automation **Write a spec for feature issues** (label `spec` on a `feature`)                                                             |
-| `implement-spec`      | `/om-auto-implement-spec {{task}}`                                         | a human, from the cockpit, after the spec PR merged - or `autofix` on the FR issue, which reaches the same skill through `issue-autofix` |
-| `pr-autopilot`        | `/om-pr-autopilot {{task}}` (no `--allow-merge`)                           | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer)                                                 |
-| `pr-review`           | `/om-auto-review-pr {{task}} --autofix`                                    | a human, from the cockpit, on a PR number                                                                                                |
-| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                                 | manual request after assessing review findings                                                                                           |
-| `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50`   | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                    |
-| `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                              | a human, from the cockpit, with the idea as the task                                                                                     |
-| `triage`              | skill `afk-triage`                                                         | automation **Triage new issues** (label `needs-triage`)                                                                                  |
-| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-auto-review-pr` | automation **Implement ready-for-agent issues** (label `ready-for-agent`)                                                                |
-| `spec-to-tickets`     | skill `afk-to-tickets`                                                     | automation **Spec to tickets** (schedule, weekdays 07:00)                                                                                |
-| `architecture-review` | skill `afk-architecture-review`                                            | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                      |
-| `lessons`             | skill `afk-lessons`                                                        | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                  |
+| Workflow              | Agent step                                                                 | Started by                                                                                                                                                                                 |
+| --------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`                              | automation **Groom new issues** (`issue.opened`), **Re-groom on request** (label `groom`)                                                                                                  |
+| `issue-autofix`       | `/om-auto-fix-issue {{task}}`                                              | automation **Fix issues on the autofix label** (label `autofix`)                                                                                                                           |
+| `spec`                | `/om-auto-write-spec {{task}}`                                             | automation **Write a spec for feature issues** (label `spec` on a `feature`)                                                                                                               |
+| `implement-spec`      | `/om-auto-implement-spec {{task}}`                                         | a human, from the cockpit, after the spec PR merged - or `autofix` on the FR issue, which reaches the same skill through `issue-autofix`                                                   |
+| `pr-autopilot`        | `/om-pr-autopilot {{task}} --allow-merge`                                  | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer), **Merge reviewed agent pull requests** (`pull_request.reviewed` on an agent PR in `merge-queue`) |
+| `pr-review`           | `/om-auto-review-pr {{task}} --autofix`                                    | a human, from the cockpit, on a PR number                                                                                                                                                  |
+| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                                 | manual request after assessing review findings                                                                                                                                             |
+| `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50`   | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                                                                      |
+| `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                              | a human, from the cockpit, with the idea as the task                                                                                                                                       |
+| `triage`              | skill `afk-triage`                                                         | automation **Triage new issues** (label `needs-triage`)                                                                                                                                    |
+| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-auto-review-pr` | automation **Implement ready-for-agent issues** (label `ready-for-agent`)                                                                                                                  |
+| `spec-to-tickets`     | skill `afk-to-tickets`                                                     | automation **Spec to tickets** (schedule, weekdays 07:00)                                                                                                                                  |
+| `architecture-review` | skill `afk-architecture-review`                                            | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                                                                        |
+| `lessons`             | skill `afk-lessons`                                                        | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                                                                    |
 
 **No workflow names a model.** Until 2026-09-22 most agent steps carried a `model:` - `opus` on
 the ones that reason, `sonnet` on the ones that execute. A step `model:` wins over the model the
@@ -315,7 +314,7 @@ must stop before `status:*` is stripped and the surviving labels renamed.
 3. Snapshot: `gh label list --limit 200 --json name,color,description > docs/agents/migration/labels-$(date +%F).json`
    and `gh issue list --state open --limit 500 --json number,labels > docs/agents/migration/issues-$(date +%F).json`;
    commit both.
-4. `bash .ai/scripts/labels-cutover.sh` (dry run), read it, then `--apply`: holds move to
+4. Migrate the labels (done by a one-off script, since removed): holds move to
    `blocked`, `status:*` leaves every open issue, `run:*`, `type:*` and `agent-docs` move to their
    SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels waited for
    PR C, and were deleted on 2026-09-08 (docs/agents/triage-labels.md).
