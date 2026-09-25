@@ -887,10 +887,11 @@ export function NewTransportAction({ onClick }: { onClick: () => void }) {
     <Button
       data-part="new-transport"
       variant="primary"
+      size="sm"
       shape="pill"
+      icon={<Plus aria-hidden strokeWidth={2.5} />}
       onClick={onClick}
     >
-      <Plus aria-hidden strokeWidth={2.5} />
       {t('modules.transports.action.add')}
     </Button>
   )
