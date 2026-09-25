@@ -29,15 +29,14 @@ permissions:
   pull-requests: write
 
 # `runs-on` below reads through `vars.RUNNER_CI`, a repository variable that is
-# deliberately unset: unset, the default here selects the `gate` slot of the VPS pool -
-# one small container for jobs that take seconds, so they never queue behind an e2e
-# shard. Setting it to `["ubuntu-latest"]` moves every job that reads it to
-# GitHub-hosted runners without a pull request. ADR 0027.
+# deliberately unset: unset, the default here selects the VPS pool's `ci` slots, like
+# every other CI job (ADR 0031). Setting it to `["ubuntu-latest"]` moves every job that
+# reads it to GitHub-hosted runners without a pull request. ADR 0027.
 
 jobs:
   promote:
     name: Open the develop → main pull request
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","gate"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 5
 
     steps:

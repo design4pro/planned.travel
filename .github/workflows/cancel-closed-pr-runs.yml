@@ -1,6 +1,6 @@
 name: Cancel closed PR runs
 
-# A merged or closed pull request's CI and gate runs otherwise keep the VPS pool busy for hours:
+# A merged or closed pull request's CI runs otherwise keep the VPS pool busy for hours:
 # `cancel-in-progress` only fires on the next push. The logic lives in design4pro/.github so both
 # repositories cancel the same way.
 #

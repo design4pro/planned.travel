@@ -1,14 +1,5 @@
 {
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "prettier.config.js",
-    "vite.config.js",
-    /* Named explicitly because `**` does not descend into a dot-directory: without this line
-       the tests compile in no project at all, and vitest transpiles each file on its own,
-       so a type error there is never reported by anything. */
-    ".ai/scripts/__tests__/**/*.ts"
-  ],
+  "include": ["**/*.ts", "**/*.tsx", "prettier.config.js", "vite.config.js"],
 
   // Cezar's worktrees live under `.ai/cezar/worktrees/`, a dot-directory the wildcard
   // patterns above never enter, so the default exclude is all this needs.

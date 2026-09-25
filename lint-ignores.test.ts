@@ -95,7 +95,6 @@ describe('pnpm lint ignores', () => {
     'src/server/repos/trips.ts',
     // One level up from the per-run QA scratch: only the `artifacts_*` directories are out.
     ...WRITTEN_AND_LINTED,
-    '.ai/scripts/__tests__/cezar-config.test.ts',
   ])('still lints %s', (path) => {
     expect(linted.has(path)).toBe(true)
   })

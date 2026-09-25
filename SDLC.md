@@ -147,7 +147,7 @@ Two rules hold wherever these are wired:
 
 ## The QA gate
 
-The one hard rule of this process: **a PR carrying `needs-qa` must not merge until it also carries `qa-approved`, even when every other check is green.** `om-merge-buddy` classifies such a PR as blocked; `om-approve-merge-pr` refuses to merge it.
+The one hard rule of this process: **a PR carrying `needs-qa` must not merge until it also carries `qa-approved`, even when every other check is green.** `om-merge-buddy` classifies such a PR as blocked; `om-approve-merge-pr` refuses to merge it. The label rules in this section are a convention those merge skills read; no CI check enforces them (ADR 0031).
 
 - Apply `needs-qa` to UI changes, new features, and other user-facing behavior that needs manual exercise. Which paths make a PR `needs-qa` here is in `## This repository`.
 - `skip-qa` is the explicit opt-out for docs-only, dependency-only, CI-only, test-only, and similarly low-risk non-user-facing changes. Never combine it with `needs-qa`.
@@ -179,7 +179,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
-- **The pipeline does not merge its own output.** A separate deterministic controller may merge a reviewed, current, low- or medium-risk PR into `develop` after CI and any required manual QA. Its exact gates and dry-run rollout are in `docs/agents/auto-merge.md`. `risk-high`, security work and promotion to `main` remain human merges.
+- **The pipeline does not merge its own output.** A person merges every PR, into `develop` and into `main`; nothing merges automatically.
 - **The cap is on inventory, not on rate.** The implementing skills stop when enough agent PRs already wait in `review`, so a burst of intake cannot outrun review capacity. Raising throughput means reviewing, not tuning the trigger.
 
 ## Unattended decisions
@@ -274,10 +274,8 @@ Two amendment rules are specific to this document's shape:
   label page is `docs/agents/triage-labels.md`, and the live automation definitions are
   `docs/agents/cezar-automations.json` (see `docs/agents/cezar.md`).
 - **Native merge queue remains off (#537, closed as not planned).** The `merge-queue` label is
-  a process marker, not a native GitHub merge queue. A separate deterministic controller defaults
-  to dry-run and may merge eligible low- or medium-risk PRs into `develop` after current review, CI,
-  and any required manual QA; see `docs/agents/auto-merge.md` for the gated rollout. `risk-high`,
-  security work, and `develop` → `main` promotion remain manual. Reconsider a native queue only if
+  a process marker, not a native GitHub merge queue. Every merge, into `develop` and into `main`,
+  is manual (ADR 0031). Reconsider a native queue only if
   measured merge contention justifies it. Before enabling one, every required check must run on
   `merge_group`, with explicit scope/e2e conditions and non-colliding concurrency groups;
   promotions must retain merge commits, and the rollout must document a rollback to manual merging.
@@ -333,7 +331,7 @@ anything from anyone else waits for a maintainer to add a trigger label.
 
 **Guardrails:**
 
-- Cezar never merges as part of implementation or review. The independent controller in `docs/agents/auto-merge.md` handles eligible `develop` PRs after the full gate.
+- Cezar never merges as part of implementation or review. A person merges every PR.
 - `implement-ticket` stops when three or more agent PRs already wait in `review`, and that cap is
   shared — the `issue-autofix` output counts against it too, because both ladders publish under the
   same `gh` identity.
@@ -362,9 +360,9 @@ both is written in both, by hand, as two ordinary changes.
 Named here because an unstated gap is one a reader rediscovers by losing work to it.
 
 - **A dependabot pull request never enters the label state machine.** "Autopilot new pull requests"
-  filters on `authors`, so nothing labels one: no pipeline label, no category, no QA meta. The
-  `merge-gate` check passes it — it carries no hard block and no `needs-qa` — so an unlabeled
-  dependency bump can merge while `## Label state machine` says a ready PR carries `review`.
+  filters on `authors`, so nothing labels one: no pipeline label, no category, no QA meta. No CI
+  check reads labels, so an unlabeled dependency bump can merge once the required checks are green,
+  while `## Label state machine` says a ready PR carries `review`.
   Labelling one is a human act today.
 - **Stale claims outside the bounded review sweep still need a maintainer.** `om-review-prs`
   automatically ends its sweep with

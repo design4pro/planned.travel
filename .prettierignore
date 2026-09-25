@@ -42,10 +42,7 @@ yarn.lock
 .claude/hooks/format-file.sh
 .claude/settings.json
 .claude/skills/backlog/SKILL.md
-.github/workflows/merge-gate.yml
 docs/agents/cezar-automations.json
-scripts/ci/__tests__/merge-gate.test.mjs
-scripts/ci/merge-gate.mjs
 
 # Preserve Wrangler runtime declarations; only the environment header is adjusted.
 worker-configuration.d.ts

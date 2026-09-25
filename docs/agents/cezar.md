@@ -87,7 +87,6 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
 - Language: `systemPrompt` in `.ai/cezar/config.json` (Settings → Agents edits the same key) is
   appended to the system prompt of every agent step and tells the run to talk to the developer in
   Polish while everything that leaves the session (code, comments, commits, GitHub) stays English.
-  `.ai/scripts/__tests__/cezar-config.test.ts` fails when the key is cleared.
 - Service environment: `CEZ_AUTOMATIONS=1`, `CEZ_AUTONOMOUS_DEFAULT=0`, `CEZ_SKILLS_AUTO_UPDATE=0`,
   `GH_CONFIG_DIR` (below), all four from the plist template in `design4pro/cezar`, and never `GH_TOKEN`,
   `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
@@ -315,7 +314,7 @@ must stop before `status:*` is stripped and the surviving labels renamed.
 3. Snapshot: `gh label list --limit 200 --json name,color,description > docs/agents/migration/labels-$(date +%F).json`
    and `gh issue list --state open --limit 500 --json number,labels > docs/agents/migration/issues-$(date +%F).json`;
    commit both.
-4. `bash .ai/scripts/labels-cutover.sh` (dry run), read it, then `--apply`: holds move to
+4. Migrate the labels (done by a one-off script, since removed): holds move to
    `blocked`, `status:*` leaves every open issue, `run:*`, `type:*` and `agent-docs` move to their
    SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels waited for
    PR C, and were deleted on 2026-09-08 (docs/agents/triage-labels.md).
