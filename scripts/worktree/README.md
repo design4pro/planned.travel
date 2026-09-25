@@ -43,7 +43,9 @@ Anything else is a hard error rather than a silently ignored typo.
 | Basemap     | APFS clone of the main checkout's local R2, else pulled from R2 | pulled from R2              |
 | Seeds       | yes                                                             | no; prints the two commands |
 
-`scripts/cloud/session-start.sh` picks the profile off `CLAUDE_CODE_REMOTE` and does nothing else.
+`scripts/cloud/session-start.sh` picks the profile off `CLAUDE_CODE_REMOTE` and does nothing else,
+and in a cezar run (`CEZ_TASK_ID` is set), whose workflow bootstraps itself, only installs
+dependencies when `node_modules` is missing.
 `.claude/settings.json` runs it from the `SessionStart` hook on startup and on resume, with a
 generous timeout because the first run in a fresh worktree installs dependencies.
 

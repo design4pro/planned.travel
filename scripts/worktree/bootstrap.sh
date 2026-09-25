@@ -11,8 +11,9 @@
 # redirect nobody can satisfy. This script is the one command that fixes that.
 #
 # It owns local provisioning for every profile. `scripts/cloud/session-start.sh`
-# is a dispatcher that picks one and delegates here; `.claude/settings.json`
-# runs that dispatcher from the SessionStart hook, on startup and on resume.
+# is a dispatcher that picks one and delegates here (in a cezar run it only
+# installs missing dependencies); `.claude/settings.json` runs that dispatcher
+# from the SessionStart hook, on startup and on resume.
 #
 # Every step is skipped when its result is already on disk, because the hook
 # runs again on every resume and a resume must not cost two minutes.
