@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Avatar as AvatarPrimitive } from 'radix-ui'
+import * as AvatarPrimitive from 'radix-ui/avatar'
 import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'

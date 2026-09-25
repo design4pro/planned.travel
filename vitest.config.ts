@@ -90,9 +90,8 @@ export default defineConfig({
             'scripts/**/__tests__/*.test.{ts,mjs}',
             // `.ai/scripts` is the second home for a script that belongs to the
             // pipeline rather than to the application - the validation gate and the
-            // e2e entrypoint live there, and `guard-generated.sh` still refuses a
-            // GitHub Actions run any write to them. Their test companions run in
-            // the same project as `scripts/ci/__tests__`.
+            // e2e entrypoint live there. Their test companions run in the same
+            // project as `scripts/ci/__tests__`.
             '.ai/scripts/**/__tests__/*.test.mjs',
             // The e2e helpers that carry policy rather than plumbing. The console
             // classifier decides which browser output fails a run, is pure, and
@@ -109,15 +108,6 @@ export default defineConfig({
             // is what keeps `pnpm lint` on our own sources, and a wrong entry there is silent
             // until somebody notices a file that was never linted.
             'lint-ignores.test.ts',
-            // The Claude Code hooks guard GitHub Actions agent runs against tracker mutations
-            // and configuration writes. Their failure mode is silence: a hook that stops matching
-            // allows instead of erroring, and nothing anywhere says so.
-            '.claude/hooks/__tests__/*.test.ts',
-            // `.ai/cezar/config.json` is the run's own settings, and the cockpit's Settings
-            // panel writes the same keys: clearing a field there deletes it and the next run
-            // silently behaves differently. `.ai/` is a dot-directory, so no glob above reaches
-            // it - the path has to be named.
-            '.ai/scripts/__tests__/*.test.ts',
           ],
           restoreMocks: true,
         },
@@ -129,6 +119,7 @@ export default defineConfig({
           environment: 'node',
           globals: false,
           setupFiles: ['./vitest.setup.node.ts'],
+          globalSetup: ['./vitest.global-setup.server.ts'],
           include: [
             'src/server/**/*.test.{ts,tsx}',
             'src/routes/**/*.test.ts',

@@ -1,6 +1,8 @@
 import * as React from 'react'
 import { CalendarRange, X } from 'lucide-react'
-import { addDays, differenceInCalendarDays, startOfDay } from 'date-fns'
+import { addDays } from 'date-fns/addDays'
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays'
+import { startOfDay } from 'date-fns/startOfDay'
 
 import { cn } from '#/lib/cn'
 import { formatDayMonth, formatNumber } from '#/lib/format'

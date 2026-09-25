@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react'
-import { DropdownMenu } from 'radix-ui'
+import * as DropdownMenu from 'radix-ui/dropdown-menu'
 import { cn } from '#/lib/cn'
 
 import type { ComponentPropsWithoutRef } from 'react'

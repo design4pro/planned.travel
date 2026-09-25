@@ -67,8 +67,7 @@ function main() {
   console.log(`e2e=${e2e}`)
 }
 
-// Importing this file for `scope` must not read stdin inside the test runner - the same guard, for
-// the same reason, as `merge-gate.mjs`.
+// Importing this file for `scope` must not read stdin inside the test runner.
 if (
   process.argv[1] &&
   realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)

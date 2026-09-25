@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { CalendarDays, X } from 'lucide-react'
-import { isValid } from 'date-fns'
+import { isValid } from 'date-fns/isValid'
 
 import { cn } from '#/lib/cn'
 import { formatDate } from '#/lib/format'
