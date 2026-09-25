@@ -22,6 +22,18 @@ const messages = {
   'error.book': 'Не вдалося завантажити бронювання',
   'error.transports': 'Переїзди не завантажилися',
   'error.people': 'Не вдалося завантажити учасників',
+  'header.length': {
+    one: '{days} день',
+    few: '{days} дні',
+    many: '{days} днів',
+    other: '{days} дня',
+  },
+  'header.planned': {
+    one: '{days} день заплановано',
+    few: '{days} дні заплановано',
+    many: '{days} днів заплановано',
+    other: '{days} дня заплановано',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Маршрут',
   'plan.places': 'Місця',

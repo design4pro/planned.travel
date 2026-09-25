@@ -22,6 +22,18 @@ const messages = {
   'error.book': 'Nie udało się wczytać rezerwacji',
   'error.transports': 'Przejazdy się nie wczytały',
   'error.people': 'Nie udało się wczytać osób',
+  'header.length': {
+    one: '{days} dzień',
+    few: '{days} dni',
+    many: '{days} dni',
+    other: '{days} dnia',
+  },
+  'header.planned': {
+    one: '{days} dzień zaplanowany',
+    few: '{days} dni zaplanowane',
+    many: '{days} dni zaplanowanych',
+    other: '{days} dnia zaplanowanego',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Plan dnia',
   'plan.places': 'Miejsca',

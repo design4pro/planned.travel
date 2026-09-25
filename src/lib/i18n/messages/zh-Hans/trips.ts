@@ -22,6 +22,12 @@ const messages = {
   'error.book': '无法加载预订',
   'error.transports': '交通未能加载',
   'error.people': '无法加载成员',
+  'header.length': {
+    other: '{days} 天',
+  },
+  'header.planned': {
+    other: '已规划 {days} 天',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '行程',
   'plan.places': '地点',

@@ -22,6 +22,12 @@ const messages = {
   'error.book': '예약을 불러오지 못했습니다',
   'error.transports': '이동을 불러오지 못했습니다',
   'error.people': '참여자를 불러오지 못했습니다',
+  'header.length': {
+    other: '{days}일',
+  },
+  'header.planned': {
+    other: '{days}일 계획됨',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '일정',
   'plan.places': '장소',

@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'Die Buchungen konnten nicht geladen werden',
   'error.transports': 'Die Transfers konnten nicht geladen werden',
   'error.people': 'Die Personen konnten nicht geladen werden',
+  'header.length': {
+    one: '{days} Tag',
+    other: '{days} Tage',
+  },
+  'header.planned': {
+    one: '{days} Tag geplant',
+    other: '{days} Tage geplant',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reiseverlauf',
   'plan.places': 'Orte',

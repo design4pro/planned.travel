@@ -22,6 +22,12 @@ const messages = {
   'error.book': 'Không tải được các chỗ đã đặt',
   'error.transports': 'Không tải được các lượt di chuyển',
   'error.people': 'Không tải được danh sách người tham gia',
+  'header.length': {
+    other: '{days} ngày',
+  },
+  'header.planned': {
+    other: 'Đã lên kế hoạch {days} ngày',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Lịch trình',
   'plan.places': 'Địa điểm',

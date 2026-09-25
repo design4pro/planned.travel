@@ -22,6 +22,12 @@ const messages = {
   'error.book': '無法載入訂房',
   'error.transports': '交通未能載入',
   'error.people': '無法載入成員',
+  'header.length': {
+    other: '{days} 天',
+  },
+  'header.planned': {
+    other: '已規劃 {days} 天',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '行程',
   'plan.places': '地點',

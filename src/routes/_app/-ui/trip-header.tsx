@@ -6,18 +6,14 @@
  */
 import { useLoaderData } from '@tanstack/react-router'
 
-import { useLocale } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { AvatarStack, Badge } from '#/components/ui'
 import { PageHeader } from '#/components/layout/page-header'
-import {
-  daysBetween,
-  formatDateRange,
-  humaniseToken,
-  pluralise,
-} from '../-lib/format'
-import { TRIP_STATUS_TONE, toneFor } from '../-lib/tone'
+import { daysBetween, formatDateRange, formatNumber } from '../-lib/format'
+import { TRIP_STATUS_LABEL, TRIP_STATUS_TONE, toneFor } from '../-lib/tone'
 
 import type { ReactNode } from 'react'
+import type { Translate } from '#/lib/i18n'
 import type { TripHeaderPayload } from '../-server/trip'
 
 export function useTripHeader(): TripHeaderPayload {
@@ -45,6 +41,7 @@ export function TripModuleHeader({
   children,
 }: TripModuleHeaderProps) {
   const locale = useLocale()
+  const t = useTranslate()
   const { trip, people, dayCount } = useTripHeader()
   const range = formatDateRange(trip.startDate, trip.endDate, locale)
   const length = daysBetween(trip.startDate, trip.endDate)
@@ -53,14 +50,22 @@ export function TripModuleHeader({
     <PageHeader title={title} description={description} actions={actions}>
       <div className="flex flex-wrap items-center gap-2.5">
         <Badge tone={toneFor(TRIP_STATUS_TONE, trip.status)} size="lg">
-          {humaniseToken(trip.status)}
+          {t(TRIP_STATUS_LABEL[trip.status] ?? 'shell.tripStatus.draft')}
         </Badge>
         <span className="inline-flex h-7 items-center rounded-full bg-surface-2 px-3 text-caption font-medium tabular-nums text-ink-2">
-          {range ?? 'Dates not set'}
-          {length === null ? '' : ` · ${pluralise(length, 'day')}`}
+          {range ?? t('shell.trips.card.noDates')}
+          {length === null
+            ? ''
+            : ` · ${t('trips.header.length', {
+                count: length,
+                days: formatNumber(length, locale),
+              })}`}
         </span>
         <span className="inline-flex h-7 items-center rounded-full bg-surface-2 px-3 text-caption font-medium tabular-nums text-ink-2">
-          {pluralise(dayCount, 'day')} planned
+          {t('trips.header.planned', {
+            count: dayCount,
+            days: formatNumber(dayCount, locale),
+          })}
         </span>
         {people.length === 0 ? null : (
           <AvatarStack
@@ -71,7 +76,10 @@ export function TripModuleHeader({
               name: person.name,
               src: person.image,
             }))}
-            label={pluralise(people.length, 'traveller')}
+            label={t('costs.balances.count', {
+              count: people.length,
+              travellers: formatNumber(people.length, locale),
+            })}
           />
         )}
         {children}
@@ -84,12 +92,13 @@ export function TripModuleHeader({
 export function nameFor(
   people: ReadonlyArray<{ userId: string; name: string }>,
   userId: string | null,
+  t: Translate,
 ): string {
   if (userId === null) {
-    return 'Unassigned'
+    return t('modules.lists.unassigned')
   }
   return (
     people.find((person) => person.userId === userId)?.name ??
-    'Removed traveller'
+    t('costs.person.removed')
   )
 }

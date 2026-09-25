@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'Οι κρατήσεις δεν φορτώθηκαν',
   'error.transports': 'Οι μετακινήσεις δεν φορτώθηκαν',
   'error.people': 'Τα άτομα δεν φορτώθηκαν',
+  'header.length': {
+    one: '{days} ημέρα',
+    other: '{days} ημέρες',
+  },
+  'header.planned': {
+    one: '{days} ημέρα σχεδιασμένη',
+    other: '{days} ημέρες σχεδιασμένες',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Πρόγραμμα',
   'plan.places': 'Τοποθεσίες',
