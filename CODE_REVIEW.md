@@ -81,6 +81,10 @@ Component tests run in the `ui` vitest project, server code in `server`, and too
 files in `tooling` (vitest.config.ts). A new e2e journey belongs in `e2e/` and must run against the
 3030-3040 port range that `playwright.config.ts` insists on.
 
+An assertion on the order of rows a test wrote itself holds only if the query's `ORDER BY` puts
+those rows in that order. Rows written in the same millisecond tie on `created_at` and on `newId()`'s
+time prefix, so their order is random: assert a set, or give the rows distinct instants (#500, #510).
+
 ## Docs and CI (should fix)
 
 - **A change updates every document that states what it changes.** A PR that adds, renames, retires
