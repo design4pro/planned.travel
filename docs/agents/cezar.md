@@ -175,7 +175,9 @@ spec path, or for `brainstorm` the idea.
 
 Workflows that need a local app use `scripts/worktree/bootstrap.sh --profile worktree --no-seed`
 (deps, route tree, `.dev.vars`, local D1 with airports, basemap when cached; no server). The design-only
-`spec` and read-only workflows only install dependencies and generate routes. The validation gate the
+`spec` and read-only workflows only install dependencies and generate routes. In a run the
+`SessionStart` hook (`scripts/cloud/session-start.sh`) does no more than install dependencies when
+`node_modules` is missing, which is all the workflows without a bootstrap step get. The validation gate the
 skills run is `validation.commands` in `.ai/agentic.config.json`, which leaves the full journeys to
 CI (ADR 0021).
 `bash .ai/scripts/e2e.sh`, which a run uses for the journeys its diff reaches, starts the app through
