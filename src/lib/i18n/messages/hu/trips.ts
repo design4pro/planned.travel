@@ -76,7 +76,6 @@ const messages = {
   'plan.addPlace.label': 'Hely hozzáadása',
   'plan.addPlace.more': 'További módok hely hozzáadására',
   'plan.addPlace.option.map': 'Elhelyezés a térképen',
-  'plan.addPlace.forDay': 'Hely hozzáadása ehhez a naphoz',
   'plan.addPlace.forDayNamed': 'Hely hozzáadása: {day}',
   'plan.stay.checkIn': 'Bejelentkezés',
   'plan.stay.checkOut': 'Kijelentkezés',

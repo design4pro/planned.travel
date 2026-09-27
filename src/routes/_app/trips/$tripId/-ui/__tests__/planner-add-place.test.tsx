@@ -5,7 +5,7 @@ import { render as mount, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
-import { I18nProvider, loadCatalogue } from '#/lib/i18n'
+import { I18nProvider, LOCALE_TAGS, loadCatalogue } from '#/lib/i18n'
 import { PlannerAddPlace, placeWriteMessage } from '../planner-add-place'
 import { PlannerDayTools } from '../planner-day-tools'
 
@@ -46,11 +46,28 @@ describe('PlannerDayTools', () => {
     )
 
     const control = screen.getByRole('button', { name: 'Add a place to Day 3' })
-    expect(control.textContent).toBe('Add a place to this day')
+    // Label in Name (WCAG 2.5.3): a speech-input user says what they see.
+    expect(control.textContent).toBe('Add a place')
 
     await userEvent.click(control)
     expect(onAddPlace).toHaveBeenCalledExactlyOnceWith('d3')
   })
+
+  it.each(LOCALE_TAGS)(
+    'opens the place control’s name with its visible label in %s',
+    async (locale) => {
+      mount(
+        <I18nProvider locale={locale} messages={await loadCatalogue(locale)}>
+          <PlannerDayTools day={DAY} onAddPlace={vi.fn()} onAddStay={vi.fn()} />
+        </I18nProvider>,
+      )
+
+      const [control] = screen.getAllByRole('button')
+      const label = control.textContent ?? ''
+      expect(label).not.toBe('')
+      expect(control.getAttribute('aria-label')?.startsWith(label)).toBe(true)
+    },
+  )
 
   it('asks for a stay whose first night is its own day, and says which day that is', async () => {
     const onAddStay = vi.fn()

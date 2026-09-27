@@ -34,7 +34,7 @@ export function PlannerDayTools({
     <div className="flex flex-col gap-1.5 px-2 pb-2">
       <DayTool
         icon={MapPin}
-        label={t('trips.plan.addPlace.forDay')}
+        label={t('trips.plan.addPlace.label')}
         name={t('trips.plan.addPlace.forDayNamed', { day: day.title })}
         onClick={() => onAddPlace(day.dayId)}
       />

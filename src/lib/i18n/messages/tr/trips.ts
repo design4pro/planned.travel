@@ -72,7 +72,6 @@ const messages = {
   'plan.addPlace.label': 'Yer ekle',
   'plan.addPlace.more': 'Yer eklemenin diğer yolları',
   'plan.addPlace.option.map': 'Haritaya yerleştir',
-  'plan.addPlace.forDay': 'Bu güne yer ekle',
   'plan.addPlace.forDayNamed': 'Yer ekle: {day}',
   'plan.stay.checkIn': 'Giriş',
   'plan.stay.checkOut': 'Çıkış',

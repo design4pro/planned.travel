@@ -73,7 +73,6 @@ const messages = {
   'plan.addPlace.label': 'Přidat místo',
   'plan.addPlace.more': 'Další způsoby, jak přidat místo',
   'plan.addPlace.option.map': 'Umístit na mapu',
-  'plan.addPlace.forDay': 'Přidat místo do tohoto dne',
   'plan.addPlace.forDayNamed': 'Přidat místo: {day}',
   'plan.stay.checkIn': 'Příjezd',
   'plan.stay.checkOut': 'Odjezd',

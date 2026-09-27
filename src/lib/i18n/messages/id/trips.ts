@@ -76,7 +76,6 @@ const messages = {
   'plan.addPlace.label': 'Tambahkan tempat',
   'plan.addPlace.more': 'Cara lain menambahkan tempat',
   'plan.addPlace.option.map': 'Letakkan di peta',
-  'plan.addPlace.forDay': 'Tambahkan tempat ke hari ini',
   'plan.addPlace.forDayNamed': 'Tambahkan tempat, {day}',
   'plan.stay.checkIn': 'Check-in',
   'plan.stay.checkOut': 'Check-out',

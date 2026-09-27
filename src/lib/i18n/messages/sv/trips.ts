@@ -75,7 +75,6 @@ const messages = {
   'plan.addPlace.label': 'Lägg till en plats',
   'plan.addPlace.more': 'Fler sätt att lägga till en plats',
   'plan.addPlace.option.map': 'Placera den på kartan',
-  'plan.addPlace.forDay': 'Lägg till en plats på den här dagen',
   'plan.addPlace.forDayNamed': 'Lägg till en plats: {day}',
   'plan.stay.checkIn': 'Incheckning',
   'plan.stay.checkOut': 'Utcheckning',

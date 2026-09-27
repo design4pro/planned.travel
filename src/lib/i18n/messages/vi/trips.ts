@@ -74,7 +74,6 @@ const messages = {
   'plan.addPlace.label': 'Thêm địa điểm',
   'plan.addPlace.more': 'Các cách khác để thêm địa điểm',
   'plan.addPlace.option.map': 'Đặt lên bản đồ',
-  'plan.addPlace.forDay': 'Thêm địa điểm vào ngày này',
   'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
   'plan.stay.checkIn': 'Nhận phòng',
   'plan.stay.checkOut': 'Trả phòng',
