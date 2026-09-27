@@ -257,3 +257,59 @@ describe('BookingDialog — a stay', () => {
     expect(reservations.update).not.toHaveBeenCalled()
   })
 })
+
+/* ------------------------------------------------ opened from a day of the plan */
+
+function openFromDay(dayId: string, booking?: BookingRow): void {
+  render(
+    <I18nProvider locale="en" messages={EN}>
+      <BookingDialog
+        tripId="trip-1"
+        booking={booking}
+        days={DAYS}
+        currency="JPY"
+        initialStayDayId={dayId}
+        open
+        onOpenChange={() => {}}
+      />
+    </I18nProvider>,
+  )
+}
+
+/** What the check-in day's trigger shows — the chosen day, or the placeholder. */
+function checkInDay(): string | null | undefined {
+  return document.querySelector(
+    '[data-part="stay-check-in-day"] [role="combobox"]',
+  )?.textContent
+}
+
+describe('BookingDialog — opened from a day', () => {
+  it('opens a new stay with that day as its first night', () => {
+    openFromDay('day-3')
+
+    expect(checkInDay()).toBe('Day 3 — 2026-04-12')
+    expect(document.querySelector('input[type="date"]')).toBeNull()
+  })
+
+  it('asks for the check-out day and no longer for the check-in day', () => {
+    openFromDay('day-3')
+    submitTheForm()
+
+    expect(
+      screen.getAllByText('This booking needs a check-out day.').length,
+    ).toBeGreaterThan(0)
+    expect(screen.queryByText('This booking needs a check-in day.')).toBeNull()
+  })
+
+  it('leaves an existing stay’s own days alone', () => {
+    openFromDay('day-3', STAY)
+
+    expect(checkInDay()).toBe('Day 1 — 2026-04-10')
+  })
+
+  it('leaves the desk’s new booking empty when no day is named', () => {
+    openStay()
+
+    expect(checkInDay()).toBe('Choose a day')
+  })
+})

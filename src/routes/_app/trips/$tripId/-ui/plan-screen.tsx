@@ -135,6 +135,7 @@ import { reorderDayTransportsFn } from '../-server/plan-transports'
 import { PlannerAddPlace, placeWriteMessage } from './planner-add-place'
 import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
 import { PlannerDayTools } from './planner-day-tools'
+import { BookingDialog } from '#/components/modules/book'
 import {
   NoteDeleteDialog,
   NoteDialog,
@@ -378,6 +379,8 @@ type DialogState =
   | { readonly kind: 'note-create'; readonly dayId: string }
   | { readonly kind: 'note-edit'; readonly noteId: string }
   | { readonly kind: 'note-delete'; readonly noteId: string }
+  /** The booking desk's own dialog, as a stay whose first night is this day. */
+  | { readonly kind: 'stay'; readonly dayId: string }
   | null
 
 export interface PlanScreenProps {
@@ -1427,6 +1430,7 @@ export function PlanScreen({
                           draft: { ...emptyDraft, dayId },
                         })
                       }
+                      onAddStay={(dayId) => setDialog({ kind: 'stay', dayId })}
                     />
                   )
                 : undefined
@@ -1839,6 +1843,22 @@ export function PlanScreen({
         saving={saving}
         error={formError}
         onConfirm={confirmDeleteNote}
+      />
+
+      {/*
+       * The desk's dialog, not a second form: it owns the stay's validation, both of its writes,
+       * the compensation and the ledger line, and its save invalidates the router, so the board's
+       * own loader re-reads the new nights.
+       */}
+      <BookingDialog
+        tripId={payload.tripId}
+        days={payload.bookingDays}
+        currency={payload.currency}
+        initialStayDayId={dialog?.kind === 'stay' ? dialog.dayId : undefined}
+        open={dialog?.kind === 'stay'}
+        onOpenChange={(open) => {
+          if (!open) closeDialog()
+        }}
       />
 
       <DropTimeDialog

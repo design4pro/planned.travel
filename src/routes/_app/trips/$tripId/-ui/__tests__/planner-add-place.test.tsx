@@ -41,13 +41,28 @@ const DAY: PlannerDay = {
 describe('PlannerDayTools', () => {
   it('asks for a place on its own day, and says which day that is', async () => {
     const onAddPlace = vi.fn()
-    render(<PlannerDayTools day={DAY} onAddPlace={onAddPlace} />)
+    render(
+      <PlannerDayTools day={DAY} onAddPlace={onAddPlace} onAddStay={vi.fn()} />,
+    )
 
     const control = screen.getByRole('button', { name: 'Add a place to Day 3' })
     expect(control.textContent).toBe('Add a place to this day')
 
     await userEvent.click(control)
     expect(onAddPlace).toHaveBeenCalledExactlyOnceWith('d3')
+  })
+
+  it('asks for a stay whose first night is its own day, and says which day that is', async () => {
+    const onAddStay = vi.fn()
+    render(
+      <PlannerDayTools day={DAY} onAddPlace={vi.fn()} onAddStay={onAddStay} />,
+    )
+
+    const control = screen.getByRole('button', { name: 'Add a stay for Day 3' })
+    expect(control.textContent).toBe('Add a stay from this day')
+
+    await userEvent.click(control)
+    expect(onAddStay).toHaveBeenCalledExactlyOnceWith('d3')
   })
 })
 
