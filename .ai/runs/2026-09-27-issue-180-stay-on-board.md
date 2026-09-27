@@ -58,11 +58,11 @@ of this trip's days.
 
 ### Phase 1: Carry stays to the board
 
-- [ ] 1.1 PlannerStay and the enriched server and client projections
-- [ ] 1.2 Header facts in DaySection
+- [x] 1.1 PlannerStay and the enriched server and client projections — 997c5b85
+- [x] 1.2 Header facts in DaySection — 997c5b85
 
 ### Phase 2: Create stays from the plan and the import
 
-- [ ] 2.1 Plan payload, dialog initialStayDayId, day-panel entry
-- [ ] 2.2 Import accommodation branch
-- [ ] 2.3 Copy, e2e journey, full gate
+- [x] 2.1 Plan payload, dialog initialStayDayId, day-panel entry — ae4bf3b6
+- [x] 2.2 Import accommodation branch — 25b068bd
+- [x] 2.3 Copy, e2e journey, full gate — 4e8e726c

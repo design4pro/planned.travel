@@ -137,3 +137,15 @@ Reuse the booking dialog from the day panel, then add the valid-range import bra
 3. Add the plan payload's currency and full `BookingDayOption` data. Extend `BookingDialog` with creation-only `initialStayDayId`, reset it on every open, ignore it for edits, and mount that one dialog from the editable day panel. Verify the desk's empty booking behaviour is unchanged and the planner opens accommodation with the clicked day selected.
 4. Add the accommodation branch to `confirmBookingImport`. Immediately persist the new reservation in the written/settled state, then resolve both dates against authorized trip days and attempt the stay. Verify valid creation plus the three range refusals and an accommodation-write refusal: every case retains a non-retryable reservation and only the valid case creates a stay.
 5. Add the specified `e2e/journeys.spec.ts` journey for booking a multi-night stay and reading its plan headers with no console errors. Add approved copy to all 23 locales, then run the validation gate and UI evidence in light/dark, desktop/mobile.
+
+## Amendment
+
+What shipped in #757 differs from the design above in these places. Both phases shipped on that one pull request.
+
+1. **`PlannerStay` carries the times formatted, not raw.** The client shape holds `checkIn` (the check-in window, e.g. `15:00 – 18:00`) and `checkOut`, both `string | null`, in place of `checkInTime`, `checkInEndTime` and `checkOutTime`. The planner's contract is that view models arrive formatted, so `plan-model.ts` formats them in the reader's locale. The server payload (`PlanBoardStay`) keeps the three raw fields as designed.
+2. **Every covered day names the property, not only the middle ones.** A first day reads "Check in 15:00 – 18:00 · Hotel", a last day "Check out 11:00 · Hotel", and a middle day "Hotel". A boundary badge without the name leaves a reader with two stays on one day unable to tell which one arrives and which one leaves.
+3. **No reservation link is rendered.** The board exposes no safe reservation URL today. `reservationId` is carried on `PlannerStay`, but the badge draws no link for it.
+4. **`stayDayWords` is generic over the day key.** It compared day numbers. It now accepts any key it can compare for equality, so the header helper passes day ids and `PlannerStay` needs no day numbers.
+5. **One extra copy key: `trips.plan.day.addStayShort`** ("Add a stay from this day"). This is the visible label. `trips.plan.day.addStay` ("Add a stay for {day}") is the accessible name, following the pattern of the place control beside it.
+6. **The day-panel action lives in `PlannerDayTools`**, the documented owner of a day's footer controls, rather than in `plan-screen.tsx`. `plan-screen.tsx` only mounts the dialog.
+7. **An imported stay's name is the booking's written title.** An untitled row therefore gets the same catalogue fallback as its reservation. The stay's address is the imported location. The stay's `placeId` is not set, the same as `createStay`.
