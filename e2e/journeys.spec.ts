@@ -1456,6 +1456,23 @@ test.describe('the trip sections behind a route parameter', () => {
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 
+  /** Picks a day in one of the stay dialog's two day selects, by the day's number. */
+  async function chooseDay(
+    page: Page,
+    part: string,
+    dayNumber: number,
+  ): Promise<void> {
+    await page
+      .getByRole('dialog')
+      .locator(`[data-part="${part}"] button`)
+      .click()
+    await page
+      .getByRole('option', {
+        name: new RegExp(`^Day ${dayNumber}(?!\\d)`, 'u'),
+      })
+      .click()
+  }
+
   /**
    * A stay is chosen as the days it runs between, and the dialog says how many nights that is.
    *
@@ -1481,16 +1498,8 @@ test.describe('the trip sections behind a route parameter', () => {
     const dialog = page.getByRole('dialog')
     await dialog.locator('[data-part="type-accommodation"]').click()
 
-    async function chooseDay(part: string, dayNumber: number): Promise<void> {
-      await dialog.locator(`[data-part="${part}"] button`).click()
-      await page
-        .getByRole('option', {
-          name: new RegExp(`^Day ${dayNumber}(?!\\d)`, 'u'),
-        })
-        .click()
-    }
-    await chooseDay('stay-check-in-day', 1)
-    await chooseDay('stay-check-out-day', 4)
+    await chooseDay(page, 'stay-check-in-day', 1)
+    await chooseDay(page, 'stay-check-out-day', 4)
 
     const nights = dialog.locator('[data-part="stay-nights"]')
     await expect(nights).toHaveText(/^3 nights · Day 1\b.* to Day 4\b/u)
@@ -1503,6 +1512,102 @@ test.describe('the trip sections behind a route parameter', () => {
 
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * A stay booked from a day of the plan comes back as that run of days' header facts.
+   *
+   * Graded in a browser because the whole loop is only real here: the day's own control opens the
+   * desk's dialog with that day already the first night, the save goes through `createStayFn`, and
+   * the board's loader re-reads the nights. The header rule itself is `stayFactsOn`'s, graded by
+   * vitest. The walk writes to the shared demo trip, so it sweeps what it wrote before and after —
+   * the same way the import walk gives the fixture back.
+   */
+  test('a stay booked from a day of the plan heads every day it covers', async ({
+    page,
+    isMobile,
+  }) => {
+    test.setTimeout(90_000)
+    /** In the stay's name, and in nothing the seed writes. */
+    const STAY = 'Stay walk: Harbour Inn'
+    const tripId = await aTripToWalk(page, 'Tokyo & Kyoto')
+    const plan: RouteCase = {
+      name: 'trip-plan',
+      path: `/trips/${tripId}/plan`,
+      ready: TRIP_SECTIONS,
+      map: true,
+    }
+    const book: RouteCase = {
+      name: 'trip-book',
+      path: `/trips/${tripId}/book`,
+      ready: TRIP_SECTIONS,
+    }
+
+    /** Removes every booking the walk wrote, and its nights with it. */
+    async function sweep(): Promise<void> {
+      await visit(page, book, 'light')
+      const cards = page
+        .locator('article')
+        .filter({ has: page.locator('h4', { hasText: STAY }) })
+      for (
+        let left = await cards.count();
+        left > 0;
+        left = await cards.count()
+      ) {
+        await cards
+          .first()
+          .getByRole('button', { name: /^Actions for / })
+          .click()
+        await page
+          .getByRole('menuitem', { name: 'Remove booking and stay' })
+          .click()
+        await page
+          .getByRole('dialog', { name: /^Remove / })
+          .getByRole('button', { name: 'Remove booking and stay' })
+          .click()
+        await expect.poll(async () => cards.count()).toBeLessThan(left)
+      }
+    }
+
+    await sweep()
+
+    const report = watchConsole(page, plan)
+    await visit(page, plan, 'light')
+    if (isMobile) {
+      await page.getByRole('button', { name: 'Days' }).click()
+    }
+
+    await page
+      .getByRole('button', { name: /^Add a stay for / })
+      .first()
+      .click()
+    const dialog = page.getByRole('dialog')
+    await expect(
+      dialog.locator('[data-part="stay-check-in-day"] [role="combobox"]'),
+      'the day the dialog was opened from is the first night',
+    ).toHaveText(/^Day 1\b/u)
+    await dialog.getByRole('textbox', { name: /^Name/u }).fill(STAY)
+    await chooseDay(page, 'stay-check-out-day', 3)
+    await dialog.getByRole('button', { name: 'Add booking' }).click()
+    await expect(dialog).toBeHidden()
+
+    const facts = page
+      .locator('[data-part="day-stay"]')
+      .filter({ hasText: STAY })
+    await expect(facts).toHaveCount(3)
+    await expect(facts.nth(0)).toContainText('Check in')
+    await expect(facts.nth(0)).not.toContainText('Check out')
+    await expect(facts.nth(1)).toHaveText(STAY)
+    await expect(facts.nth(2)).toContainText('Check out')
+    await expect(facts.nth(2)).not.toContainText('Check in')
+
+    const keys = await rawMessageKeys(page)
+    expect(keys, `unresolved message keys on ${plan.path}`).toEqual([])
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+
+    await sweep()
   })
 })
 
