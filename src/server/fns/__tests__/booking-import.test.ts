@@ -13,7 +13,7 @@
  * does not resolve in the `server` project: `./context`, `#/server/auth/env` and
  * `#/server/geo/bindings`.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   NotFoundError,
@@ -36,6 +36,7 @@ import { geocodeRuntime } from '#/server/geo/bindings'
 import { createHarness, captureError } from '#/server/repos/__tests__/harness'
 import { stagedImportKey } from '#/server/queue/handlers/booking-import'
 
+import type { MockInstance } from 'vitest'
 import type * as Repos from '#/server/repos'
 import type { RepositoryError } from '#/server/repos'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
@@ -1150,6 +1151,28 @@ describe('confirmBookingImport', () => {
 })
 
 describe('confirmBookingImport — the stay an accommodation row becomes', () => {
+  let warn: MockInstance<typeof console.warn>
+
+  beforeEach(() => {
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    warn.mockRestore()
+  })
+
+  /** The stay warnings the confirm logged, by message, in order. */
+  function stayWarnings(): ReadonlyArray<string> {
+    return warn.mock.calls
+      .map(([line]) => String(line))
+      .flatMap((line) =>
+        [
+          'booking import stay range not resolved',
+          'booking import stay not written',
+        ].filter((message) => line.includes(`"${message}"`)),
+      )
+  }
+
   async function confirmFirst(world: World) {
     return confirmBookingImport(
       world.tenant.scope,
@@ -1183,6 +1206,7 @@ describe('confirmBookingImport — the stay an accommodation row becomes', () =>
     const dayOn = (date: string) => days.find((day) => day.date === date)?.id
     const stays = await listTripAccommodations(alpha.tenant.scope, alpha.tripId)
     expect(stays).toHaveLength(1)
+    expect(stayWarnings()).toEqual([])
     expect(stays[0]).toMatchObject({
       startDayId: dayOn('2026-03-04'),
       endDayId: dayOn('2026-03-07'),
@@ -1232,6 +1256,8 @@ describe('confirmBookingImport — the stay an accommodation row becomes', () =>
       expect(
         await listTripAccommodations(alpha.tenant.scope, alpha.tripId),
       ).toEqual([])
+      // Told apart from a refused write, which is a different thing to go and look at.
+      expect(stayWarnings()).toEqual(['booking import stay range not resolved'])
     },
   )
 
@@ -1246,5 +1272,6 @@ describe('confirmBookingImport — the stay an accommodation row becomes', () =>
     expect(
       await listTripAccommodations(alpha.tenant.scope, alpha.tripId),
     ).toEqual([])
+    expect(stayWarnings()).toEqual(['booking import stay not written'])
   })
 })
