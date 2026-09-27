@@ -78,6 +78,10 @@ const messages = {
   'plan.addPlace.option.map': 'Letakkan di peta',
   'plan.addPlace.forDay': 'Tambahkan tempat ke hari ini',
   'plan.addPlace.forDayNamed': 'Tambahkan tempat, {day}',
+  'plan.stay.checkIn': 'Check-in',
+  'plan.stay.checkOut': 'Check-out',
+  'plan.day.addStay': 'Tambahkan penginapan, {day}',
+  'plan.day.addStayShort': 'Tambahkan penginapan',
   'plan.drop.hint':
     'Klik kanan pada peta, atau tekan dan tahan, untuk menambahkan tempat tepat di sana.',
   'plan.drop.armed':

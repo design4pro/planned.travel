@@ -39,12 +39,14 @@ import type {
   PlannerItem,
   PlannerNote,
   PlannerRow,
+  PlannerStay,
 } from '#/components/planner'
 import type { PlanNotesPayload } from '../-server/day-notes'
 import type {
   PlanBoardDay,
   PlanBoardPayload,
   PlanBoardPlace,
+  PlanBoardStay,
 } from '../-server/plan'
 
 /** Minutes into the compact `2h 30m` the rails use. */
@@ -244,6 +246,22 @@ function rowIndexOf(payload: PlanBoardPayload): Map<string, PlannerRow> {
   return rows
 }
 
+/** A stay as a day header draws it: its times formatted once, here, like every other time. */
+function plannerStayOf(
+  stay: PlanBoardStay,
+  locale: Locale,
+): PlannerStay {
+  return {
+    id: stay.id,
+    name: stay.name,
+    startDayId: stay.startDayId,
+    endDayId: stay.endDayId,
+    checkIn: formatTimeRange(stay.checkInTime, stay.checkInEndTime, locale),
+    checkOut: formatTime(stay.checkOutTime),
+    reservationId: stay.reservationId,
+  }
+}
+
 export interface PlanModel {
   readonly days: ReadonlyArray<PlannerDay>
   readonly ideas: ReadonlyArray<PlannerRow>
@@ -317,7 +335,7 @@ export function planModel(
       dateLabel: formatWeekday(meta.date, locale),
       items,
       rows,
-      stays: meta.stays,
+      stays: meta.stays.map((stay) => plannerStayOf(stay, locale)),
     })
   }
 

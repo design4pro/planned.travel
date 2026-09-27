@@ -20,6 +20,7 @@ import type {
   PlannerItem,
   PlannerNote,
   PlannerRow,
+  PlannerStay,
   PlannerTransport,
 } from '../types'
 
@@ -114,12 +115,23 @@ const NOTE: PlannerNote = {
   icon: 'sticky-note',
 }
 
+/** Three nights in Shinjuku: in on day 1, out on day 4. */
+const STAY: PlannerStay = {
+  id: 's1',
+  name: 'Shinjuku Granbell Hotel',
+  startDayId: 'd1',
+  endDayId: 'd4',
+  checkIn: '15:00 – 18:00',
+  checkOut: '11:00',
+  reservationId: 'r1',
+}
+
 const DAY: PlannerDay = {
   dayId: 'd1',
   dayNumber: 1,
   title: 'Asakusa and the river',
   dateLabel: 'Fri, 9 Oct',
-  stays: ['Shinjuku Granbell Hotel'],
+  stays: [STAY],
   // An 08:00 note above a 09:00 stop: the merged order, which is what the day is
   // handed and what it must render.
   ...sequence([
@@ -221,6 +233,78 @@ describe('DaySection', () => {
     expect(within(section).getByText('Fri, 9 Oct')).toBeDefined()
     expect(within(section).getByText('3 stops')).toBeDefined()
     expect(within(section).getByText('Shinjuku Granbell Hotel')).toBeDefined()
+  })
+
+  /**
+   * "Where am I sleeping tonight", answered without opening the day: the first night says
+   * check in with its window, a night between names the property, the last says check out.
+   */
+  describe('its stay', () => {
+    function badgeOn(dayId: string, stay: PlannerStay = STAY): HTMLElement {
+      const { container } = render(
+        <Harness>
+          <DaySection
+            day={{ ...EMPTY_DAY, dayId, stays: [stay] }}
+            categoryFor={categoryFor}
+          />
+        </Harness>,
+      )
+      const badge = container.querySelector<HTMLElement>(
+        '[data-part="day-stay"]',
+      )
+      if (badge === null) throw new Error('the day drew no stay badge')
+      return badge
+    }
+
+    /** What assistive technology reads: the text without the parts drawn only for the eye. */
+    function spoken(badge: HTMLElement): string {
+      const copy = badge.cloneNode(true) as HTMLElement
+      for (const hidden of copy.querySelectorAll('[aria-hidden="true"]')) {
+        hidden.remove()
+      }
+      return copy.textContent ?? ''
+    }
+
+    it('reads check in with its window on the first day', () => {
+      expect(spoken(badgeOn('d1'))).toBe(
+        'Check in 15:00 – 18:00, Shinjuku Granbell Hotel',
+      )
+    })
+
+    it('names only the property on a night between', () => {
+      expect(spoken(badgeOn('d2'))).toBe('Shinjuku Granbell Hotel')
+    })
+
+    it('reads check out with its time on the last day', () => {
+      expect(spoken(badgeOn('d4'))).toBe(
+        'Check out 11:00, Shinjuku Granbell Hotel',
+      )
+    })
+
+    it('reads both on a stay that begins and ends on the same day', () => {
+      const badge = badgeOn('d1', { ...STAY, endDayId: 'd1' })
+      expect(spoken(badge)).toBe(
+        'Check in 15:00 – 18:00, Check out 11:00, Shinjuku Granbell Hotel',
+      )
+    })
+
+    it('prints no time and no gap for a boundary without one', () => {
+      const badge = badgeOn('d1', { ...STAY, checkIn: null })
+      expect(spoken(badge)).toBe('Check in, Shinjuku Granbell Hotel')
+    })
+
+    it('is a fact of the header and never a row of the day', () => {
+      render(
+        <Harness>
+          <DaySection day={DAY} categoryFor={categoryFor} />
+        </Harness>,
+      )
+      const stop = screen.getByText('Sensō-ji').closest('ul')
+      const stay = screen.getByText('Shinjuku Granbell Hotel').closest('ul')
+      expect(stop).not.toBeNull()
+      expect(stay).not.toBe(stop)
+      expect(stop?.contains(stay ?? null)).toBe(false)
+    })
   })
 
   it('numbers the stops in visiting order', () => {
