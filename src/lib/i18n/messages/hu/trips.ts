@@ -81,7 +81,7 @@ const messages = {
   'plan.stay.checkIn': 'Bejelentkezés',
   'plan.stay.checkOut': 'Kijelentkezés',
   'plan.day.addStay': 'Szállás hozzáadása: {day}',
-  'plan.day.addStayShort': 'Szállás hozzáadása ettől a naptól',
+  'plan.day.addStayShort': 'Szállás hozzáadása',
   'plan.drop.hint':
     'Kattints jobb gombbal a térképre, vagy tartsd rajta az ujjad, hogy pontosan oda adj hozzá egy helyet.',
   'plan.drop.armed':

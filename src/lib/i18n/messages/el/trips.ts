@@ -83,7 +83,7 @@ const messages = {
   'plan.stay.checkIn': 'Άφιξη',
   'plan.stay.checkOut': 'Αποχώρηση',
   'plan.day.addStay': 'Προσθήκη διαμονής, {day}',
-  'plan.day.addStayShort': 'Προσθήκη διαμονής από αυτή την ημέρα',
+  'plan.day.addStayShort': 'Προσθήκη διαμονής',
   'plan.drop.hint':
     'Κάντε δεξί κλικ στον χάρτη ή πατήστε παρατεταμένα για να προσθέσετε μια τοποθεσία ακριβώς εκεί.',
   'plan.drop.armed':

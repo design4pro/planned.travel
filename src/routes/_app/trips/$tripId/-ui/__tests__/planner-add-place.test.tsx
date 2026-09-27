@@ -59,7 +59,8 @@ describe('PlannerDayTools', () => {
     )
 
     const control = screen.getByRole('button', { name: 'Add a stay for Day 3' })
-    expect(control.textContent).toBe('Add a stay from this day')
+    // Label in Name (WCAG 2.5.3): a speech-input user says what they see.
+    expect(control.textContent).toBe('Add a stay')
 
     await userEvent.click(control)
     expect(onAddStay).toHaveBeenCalledExactlyOnceWith('d3')

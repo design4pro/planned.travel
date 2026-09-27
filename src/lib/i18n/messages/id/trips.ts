@@ -81,7 +81,7 @@ const messages = {
   'plan.stay.checkIn': 'Check-in',
   'plan.stay.checkOut': 'Check-out',
   'plan.day.addStay': 'Tambahkan penginapan, {day}',
-  'plan.day.addStayShort': 'Tambahkan penginapan mulai hari ini',
+  'plan.day.addStayShort': 'Tambahkan penginapan',
   'plan.drop.hint':
     'Klik kanan pada peta, atau tekan dan tahan, untuk menambahkan tempat tepat di sana.',
   'plan.drop.armed':

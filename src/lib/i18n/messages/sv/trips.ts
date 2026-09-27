@@ -80,7 +80,7 @@ const messages = {
   'plan.stay.checkIn': 'Incheckning',
   'plan.stay.checkOut': 'Utcheckning',
   'plan.day.addStay': 'Lägg till ett boende: {day}',
-  'plan.day.addStayShort': 'Lägg till ett boende från den här dagen',
+  'plan.day.addStayShort': 'Lägg till ett boende',
   'plan.drop.hint':
     'Högerklicka på kartan, eller tryck och håll, för att lägga till en plats precis där.',
   'plan.drop.armed':

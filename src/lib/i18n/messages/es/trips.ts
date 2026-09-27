@@ -78,7 +78,7 @@ const messages = {
   'plan.stay.checkIn': 'Entrada',
   'plan.stay.checkOut': 'Salida',
   'plan.day.addStay': 'Añadir un alojamiento, {day}',
-  'plan.day.addStayShort': 'Añadir un alojamiento desde este día',
+  'plan.day.addStayShort': 'Añadir un alojamiento',
   'plan.drop.hint':
     'Haz clic derecho en el mapa, o mantén pulsado, para añadir un lugar justo ahí.',
   'plan.drop.armed':

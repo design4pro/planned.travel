@@ -82,7 +82,7 @@ const messages = {
   'plan.stay.checkIn': 'Aankomst',
   'plan.stay.checkOut': 'Vertrek',
   'plan.day.addStay': 'Verblijf toevoegen: {day}',
-  'plan.day.addStayShort': 'Verblijf vanaf deze dag toevoegen',
+  'plan.day.addStayShort': 'Verblijf toevoegen',
   'plan.drop.hint':
     'Klik met de rechtermuisknop op de kaart, of houd je vinger erop, om precies daar een plek toe te voegen.',
   'plan.drop.armed':

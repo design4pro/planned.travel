@@ -77,7 +77,7 @@ const messages = {
   'plan.stay.checkIn': 'Giriş',
   'plan.stay.checkOut': 'Çıkış',
   'plan.day.addStay': 'Konaklama ekle: {day}',
-  'plan.day.addStayShort': 'Bu günden başlayan konaklama ekle',
+  'plan.day.addStayShort': 'Konaklama ekle',
   'plan.drop.hint':
     'Tam oraya bir yer eklemek için haritaya sağ tıklayın veya basılı tutun.',
   'plan.drop.armed':

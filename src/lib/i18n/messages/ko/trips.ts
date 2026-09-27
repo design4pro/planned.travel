@@ -80,7 +80,7 @@ const messages = {
   'plan.stay.checkIn': '체크인',
   'plan.stay.checkOut': '체크아웃',
   'plan.day.addStay': '숙소 추가 — {day}',
-  'plan.day.addStayShort': '이 날부터 숙소 추가',
+  'plan.day.addStayShort': '숙소 추가',
   'plan.drop.hint':
     '지도를 마우스 오른쪽 버튼으로 클릭하거나 길게 누르면 바로 그 위치에 장소가 추가됩니다.',
   'plan.drop.armed':

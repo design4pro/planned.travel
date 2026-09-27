@@ -81,7 +81,7 @@ const messages = {
   'plan.stay.checkIn': 'チェックイン',
   'plan.stay.checkOut': 'チェックアウト',
   'plan.day.addStay': '宿泊を追加 — {day}',
-  'plan.day.addStayShort': 'この日から宿泊を追加',
+  'plan.day.addStayShort': '宿泊を追加',
   'plan.drop.hint':
     '地図を右クリックするか長押しすると、その地点に場所を追加できます。',
   'plan.drop.armed':

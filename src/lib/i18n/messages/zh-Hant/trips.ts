@@ -72,7 +72,7 @@ const messages = {
   'plan.stay.checkIn': '入住',
   'plan.stay.checkOut': '退房',
   'plan.day.addStay': '新增住宿——{day}',
-  'plan.day.addStayShort': '從這一天起新增住宿',
+  'plan.day.addStayShort': '新增住宿',
   'plan.drop.hint': '在地圖上按右鍵或長按，即可在該處新增地點。',
   'plan.drop.armed':
     '在地圖上點選它所在的位置，或移動地圖後按 Enter 鍵，將其放在中央。',

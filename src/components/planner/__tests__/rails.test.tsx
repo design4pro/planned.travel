@@ -256,32 +256,41 @@ describe('DaySection', () => {
       return badge
     }
 
+    /** What assistive technology reads: the text without the parts drawn only for the eye. */
+    function spoken(badge: HTMLElement): string {
+      const copy = badge.cloneNode(true) as HTMLElement
+      for (const hidden of copy.querySelectorAll('[aria-hidden="true"]')) {
+        hidden.remove()
+      }
+      return copy.textContent ?? ''
+    }
+
     it('reads check in with its window on the first day', () => {
-      expect(badgeOn('d1').textContent).toBe(
-        'Check in15:00 – 18:00·Shinjuku Granbell Hotel',
+      expect(spoken(badgeOn('d1'))).toBe(
+        'Check in 15:00 – 18:00, Shinjuku Granbell Hotel',
       )
     })
 
     it('names only the property on a night between', () => {
-      expect(badgeOn('d2').textContent).toBe('Shinjuku Granbell Hotel')
+      expect(spoken(badgeOn('d2'))).toBe('Shinjuku Granbell Hotel')
     })
 
     it('reads check out with its time on the last day', () => {
-      expect(badgeOn('d4').textContent).toBe(
-        'Check out11:00·Shinjuku Granbell Hotel',
+      expect(spoken(badgeOn('d4'))).toBe(
+        'Check out 11:00, Shinjuku Granbell Hotel',
       )
     })
 
     it('reads both on a stay that begins and ends on the same day', () => {
       const badge = badgeOn('d1', { ...STAY, endDayId: 'd1' })
-      expect(badge.textContent).toBe(
-        'Check in15:00 – 18:00·Check out11:00·Shinjuku Granbell Hotel',
+      expect(spoken(badge)).toBe(
+        'Check in 15:00 – 18:00, Check out 11:00, Shinjuku Granbell Hotel',
       )
     })
 
     it('prints no time and no gap for a boundary without one', () => {
       const badge = badgeOn('d1', { ...STAY, checkIn: null })
-      expect(badge.textContent).toBe('Check in·Shinjuku Granbell Hotel')
+      expect(spoken(badge)).toBe('Check in, Shinjuku Granbell Hotel')
     })
 
     it('is a fact of the header and never a row of the day', () => {

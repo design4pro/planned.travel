@@ -78,7 +78,7 @@ const messages = {
   'plan.stay.checkIn': 'Příjezd',
   'plan.stay.checkOut': 'Odjezd',
   'plan.day.addStay': 'Přidat ubytování: {day}',
-  'plan.day.addStayShort': 'Přidat ubytování od tohoto dne',
+  'plan.day.addStayShort': 'Přidat ubytování',
   'plan.drop.hint':
     'Klikněte na mapu pravým tlačítkem nebo na ni dlouze podržte prst a místo se přidá přesně tam.',
   'plan.drop.armed':

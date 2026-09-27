@@ -184,20 +184,27 @@ export function DaySection({
             <li
               key={stay.id}
               data-part="day-stay"
-              className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-info-soft px-2 py-0.5 text-caption font-medium text-info"
+              // Wraps rather than overflowing: a one-day stay says both boundaries, which in a
+              // long locale is wider than a phone's rail (WCAG 1.4.10).
+              className="flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-lg bg-info-soft px-2 py-0.5 text-caption font-medium text-info"
             >
               <BedDouble size={11} strokeWidth={2} aria-hidden="true" />
               {stayFactsOn(day.dayId, stay).map((fact) => (
-                <span key={fact.word} className="shrink-0 font-semibold">
+                <span key={fact.word} className="font-semibold">
                   {t(fact.label)}
                   {fact.time === null ? null : (
-                    <span className="ms-1 font-medium tabular-nums">
-                      {fact.time}
-                    </span>
+                    <>
+                      {' '}
+                      <span className="font-medium tabular-nums">
+                        {fact.time}
+                      </span>
+                    </>
                   )}
+                  {/* The dot is drawn for the eye; assistive technology reads a pause instead. */}
                   <span aria-hidden="true" className="ms-1.5">
                     ·
                   </span>
+                  <span className="sr-only">, </span>
                 </span>
               ))}
               <span className="min-w-0 truncate">{stay.name}</span>

@@ -80,7 +80,7 @@ const messages = {
   'plan.stay.checkIn': 'Arrivée',
   'plan.stay.checkOut': 'Départ',
   'plan.day.addStay': 'Ajouter un hébergement, {day}',
-  'plan.day.addStayShort': 'Ajouter un hébergement à partir de ce jour',
+  'plan.day.addStayShort': 'Ajouter un hébergement',
   'plan.drop.hint':
     'Faites un clic droit sur la carte, ou maintenez-la enfoncée, pour ajouter un lieu à cet endroit précis.',
   'plan.drop.armed':

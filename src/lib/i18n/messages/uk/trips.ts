@@ -79,7 +79,7 @@ const messages = {
   'plan.stay.checkIn': 'Заїзд',
   'plan.stay.checkOut': 'Виїзд',
   'plan.day.addStay': 'Додати проживання, {day}',
-  'plan.day.addStayShort': 'Додати проживання з цього дня',
+  'plan.day.addStayShort': 'Додати проживання',
   'plan.drop.hint':
     'Клацніть мапу правою кнопкою миші або натисніть і утримуйте, щоб додати місце саме там.',
   'plan.drop.armed':
