@@ -1528,8 +1528,12 @@ test.describe('the trip sections behind a route parameter', () => {
     isMobile,
   }) => {
     test.setTimeout(90_000)
-    /** In the stay's name, and in nothing the seed writes. */
-    const STAY = 'Stay walk: Harbour Inn'
+    /**
+     * In the stay's name, and in nothing the seed writes. The project is part of it because
+     * both projects walk the same demo trip at once locally, and neither may sweep or count
+     * the other's stay.
+     */
+    const STAY = `Stay walk (${test.info().project.name}): Harbour Inn`
     const tripId = await aTripToWalk(page, 'Tokyo & Kyoto')
     const plan: RouteCase = {
       name: 'trip-plan',
