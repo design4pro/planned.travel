@@ -8,6 +8,7 @@ import { focusRing, transitionBase } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { NoteRow } from './note-row'
 import { noteItemId } from './ordering'
+import { stayFactsOn } from './stay-facts'
 import { StopRow } from './stop-row'
 import { TransportRow } from './transport-row'
 
@@ -176,15 +177,30 @@ export function DaySection({
         </span>
       </button>
 
+      {/* A stay is a fact of the header, never a row: it sits outside the sortable list below. */}
       {day.stays.length === 0 ? null : (
         <ul className="flex flex-wrap gap-1.5 px-2 pb-1.5">
           {day.stays.map((stay) => (
             <li
-              key={stay}
+              key={stay.id}
+              data-part="day-stay"
               className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-info-soft px-2 py-0.5 text-caption font-medium text-info"
             >
               <BedDouble size={11} strokeWidth={2} aria-hidden="true" />
-              <span className="min-w-0 truncate">{stay}</span>
+              {stayFactsOn(day.dayId, stay).map((fact) => (
+                <span key={fact.word} className="shrink-0 font-semibold">
+                  {t(fact.label)}
+                  {fact.time === null ? null : (
+                    <span className="ms-1 font-medium tabular-nums">
+                      {fact.time}
+                    </span>
+                  )}
+                  <span aria-hidden="true" className="ms-1.5">
+                    ·
+                  </span>
+                </span>
+              ))}
+              <span className="min-w-0 truncate">{stay.name}</span>
             </li>
           ))}
         </ul>

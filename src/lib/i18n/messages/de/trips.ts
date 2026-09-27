@@ -79,6 +79,10 @@ const messages = {
   'plan.addPlace.option.map': 'Auf der Karte platzieren',
   'plan.addPlace.forDay': 'Ort zu diesem Tag hinzufügen',
   'plan.addPlace.forDayNamed': 'Ort hinzufügen: {day}',
+  'plan.stay.checkIn': 'Anreise',
+  'plan.stay.checkOut': 'Abreise',
+  'plan.day.addStay': 'Unterkunft hinzufügen: {day}',
+  'plan.day.addStayShort': 'Unterkunft ab diesem Tag hinzufügen',
   'plan.drop.hint':
     'Klick mit der rechten Maustaste auf die Karte oder halte sie gedrückt, um genau dort einen Ort hinzuzufügen.',
   'plan.drop.armed':

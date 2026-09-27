@@ -75,6 +75,10 @@ const messages = {
   'plan.addPlace.option.map': 'Col·loca’l al mapa',
   'plan.addPlace.forDay': 'Afegeix un lloc a aquest dia',
   'plan.addPlace.forDayNamed': 'Afegeix un lloc, {day}',
+  'plan.stay.checkIn': 'Entrada',
+  'plan.stay.checkOut': 'Sortida',
+  'plan.day.addStay': 'Afegeix una estada, {day}',
+  'plan.day.addStayShort': 'Afegeix una estada des d’aquest dia',
   'plan.drop.hint':
     'Fes clic amb el botó dret al mapa, o mantén-lo premut, per afegir-hi un lloc just allà.',
   'plan.drop.armed':

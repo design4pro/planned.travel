@@ -75,6 +75,10 @@ const messages = {
   'plan.addPlace.option.map': 'Umístit na mapu',
   'plan.addPlace.forDay': 'Přidat místo do tohoto dne',
   'plan.addPlace.forDayNamed': 'Přidat místo: {day}',
+  'plan.stay.checkIn': 'Příjezd',
+  'plan.stay.checkOut': 'Odjezd',
+  'plan.day.addStay': 'Přidat ubytování: {day}',
+  'plan.day.addStayShort': 'Přidat ubytování od tohoto dne',
   'plan.drop.hint':
     'Klikněte na mapu pravým tlačítkem nebo na ni dlouze podržte prst a místo se přidá přesně tam.',
   'plan.drop.armed':

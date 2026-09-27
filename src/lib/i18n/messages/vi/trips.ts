@@ -76,6 +76,10 @@ const messages = {
   'plan.addPlace.option.map': 'Đặt lên bản đồ',
   'plan.addPlace.forDay': 'Thêm địa điểm vào ngày này',
   'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
+  'plan.stay.checkIn': 'Nhận phòng',
+  'plan.stay.checkOut': 'Trả phòng',
+  'plan.day.addStay': 'Thêm chỗ ở, {day}',
+  'plan.day.addStayShort': 'Thêm chỗ ở từ ngày này',
   'plan.drop.hint':
     'Nhấp chuột phải vào bản đồ, hoặc nhấn giữ, để thêm một địa điểm ngay tại đó.',
   'plan.drop.armed':

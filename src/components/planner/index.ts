@@ -90,6 +90,7 @@ export type {
   PlannerItem,
   PlannerNote,
   PlannerRow,
+  PlannerStay,
   PlannerTransport,
 } from './types'
 

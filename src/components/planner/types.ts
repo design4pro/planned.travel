@@ -99,8 +99,34 @@ export interface PlannerDay {
    * this and nothing else.
    */
   readonly rows: ReadonlyArray<PlannerRow>
-  /** Accommodation names covering this day. */
-  readonly stays: ReadonlyArray<string>
+  /**
+   * The stays covering this day — header facts, never a member of {@link items}.
+   *
+   * A stay is not something the day does in order; it is where the day ends. One fact, one
+   * representation: it is drawn beside the day's title and contributes no row to its sequence.
+   */
+  readonly stays: ReadonlyArray<PlannerStay>
+}
+
+/**
+ * One stay, as every day it covers shows it.
+ *
+ * The same value on each of those days: which of them this day is — the first, a night between,
+ * the last — is read off {@link startDayId} and {@link endDayId} by the header, so the rule lives
+ * once rather than being baked into a copy per day.
+ */
+export interface PlannerStay {
+  readonly id: string
+  /** The property, as the stay names it. */
+  readonly name: string
+  readonly startDayId: string
+  readonly endDayId: string
+  /** Already formatted, e.g. `15:00 – 18:00` or `15:00`. `null` when no check-in time is set. */
+  readonly checkIn: string | null
+  /** Already formatted, e.g. `11:00`. `null` when no check-out time is set. */
+  readonly checkOut: string | null
+  /** The booking the stay was made under. `null` for a stay recorded without one. */
+  readonly reservationId: string | null
 }
 
 /** The stops of a sequence, for a caller that wants only places. */

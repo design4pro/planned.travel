@@ -76,6 +76,10 @@ const messages = {
   'plan.addPlace.option.map': 'Поставить на карту',
   'plan.addPlace.forDay': 'Добавить место в этот день',
   'plan.addPlace.forDayNamed': 'Добавить место, {day}',
+  'plan.stay.checkIn': 'Заезд',
+  'plan.stay.checkOut': 'Выезд',
+  'plan.day.addStay': 'Добавить проживание, {day}',
+  'plan.day.addStayShort': 'Добавить проживание с этого дня',
   'plan.drop.hint':
     'Щёлкните по карте правой кнопкой мыши или нажмите и удерживайте, чтобы добавить место именно там.',
   'plan.drop.armed':
