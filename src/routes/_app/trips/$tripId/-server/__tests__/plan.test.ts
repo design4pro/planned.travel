@@ -19,8 +19,10 @@ import {
   RepositoryError,
   addTripMember,
   archiveTrip,
+  createAccommodation,
   createAssignment,
   createPlace,
+  createReservation,
   createTrip,
   listDayAssignments,
   listTripDays,
@@ -231,6 +233,58 @@ describe('readPlanBoard', () => {
     const payload = await readPlanBoard(stranger, shared.id)
 
     expect(payload).toMatchObject({ editable: false, archived: false })
+  })
+
+  it('carries a stay under every day it covers, with its days, its times and its booking', async () => {
+    const days = await listTripDays(owner, fixture.tripId)
+    const booking = await createReservation(owner, {
+      tripId: fixture.tripId,
+      type: 'accommodation',
+      title: 'Hotel Sacher',
+    })
+    const stay = await createAccommodation(owner, {
+      tripId: fixture.tripId,
+      startDayId: days[0].id,
+      endDayId: days[2].id,
+      name: 'Hotel Sacher',
+      checkInTime: '15:00',
+      checkInEndTime: '18:00',
+      checkOutTime: '11:00',
+      reservationId: booking.id,
+    })
+
+    const payload = await readPlanBoard(viewer, fixture.tripId)
+
+    for (const day of payload.days) {
+      expect(day.stays).toEqual([
+        {
+          id: stay.id,
+          name: 'Hotel Sacher',
+          startDayId: days[0].id,
+          endDayId: days[2].id,
+          checkInTime: '15:00',
+          checkInEndTime: '18:00',
+          checkOutTime: '11:00',
+          reservationId: booking.id,
+        },
+      ])
+    }
+  })
+
+  it('hands the stay dialog the trip’s currency and its days with the stops named', async () => {
+    const payload = await readPlanBoard(owner, fixture.tripId)
+
+    expect(payload.currency).toBe('EUR')
+    expect(payload.bookingDays.map((day) => day.id)).toEqual(
+      payload.days.map((day) => day.dayId),
+    )
+    expect(payload.bookingDays[0].stops).toEqual([
+      {
+        assignmentId: fixture.stopId,
+        placeName: 'Staatsoper',
+        startTime: null,
+      },
+    ])
   })
 
   it('takes writes away from everyone on an archived trip, and says it is the archive', async () => {

@@ -13,7 +13,7 @@
  * does not resolve in the `server` project: `./context`, `#/server/auth/env` and
  * `#/server/geo/bindings`.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   NotFoundError,
@@ -24,6 +24,8 @@ import {
   getFile,
   getPlace,
   getReservation,
+  listTripAccommodations,
+  listTripDays,
   listTripPlaces,
   listTripReservations,
   recordFile,
@@ -34,6 +36,8 @@ import { geocodeRuntime } from '#/server/geo/bindings'
 import { createHarness, captureError } from '#/server/repos/__tests__/harness'
 import { stagedImportKey } from '#/server/queue/handlers/booking-import'
 
+import type { MockInstance } from 'vitest'
+import type * as Repos from '#/server/repos'
 import type { RepositoryError } from '#/server/repos'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type {
@@ -52,6 +56,8 @@ import type { ConfirmBookingImportPorts } from '../booking-import'
 const stubs = vi.hoisted(() => ({
   /** When `false`, the deployment holds no geocoding credential. */
   geocodingConfigured: true,
+  /** When `true`, the stay an accommodation row would get is refused at its write. */
+  failStayWrite: false,
   /** Every patch the confirm's `announce` port was handed. */
   mirrored: [] as Array<unknown>,
   /**
@@ -124,6 +130,22 @@ vi.mock('#/server/geo/bindings', () => {
       ceiling: options.ceiling,
       now: () => new Date('2026-09-11T10:00:00Z'),
     }),
+  }
+})
+
+/** One seam in the real repositories: `createAccommodation` refuses when asked to. */
+vi.mock('#/server/repos', async (importOriginal) => {
+  const real = await importOriginal<typeof Repos>()
+  return {
+    ...real,
+    createAccommodation: async (
+      ...args: Parameters<typeof real.createAccommodation>
+    ) => {
+      if (stubs.failStayWrite) {
+        throw new Error('the stay write failed')
+      }
+      return real.createAccommodation(...args)
+    },
   }
 })
 
@@ -308,6 +330,7 @@ beforeEach(async () => {
   beta = await seedWorld(await harness.seedTenant('beta'), 'beta')
   store = memoryStore()
   stubs.geocodingConfigured = true
+  stubs.failStayWrite = false
   stubs.mirrored.length = 0
   stubs.geoEntries.clear()
 })
@@ -1124,5 +1147,131 @@ describe('confirmBookingImport', () => {
     expect(written.priceMinor).toBe(42_000)
     expect(written.expenseId).not.toBeNull()
     expect(await getReservation(alpha.tenant.scope, written.id)).not.toBeNull()
+  })
+})
+
+describe('confirmBookingImport — the stay an accommodation row becomes', () => {
+  let warn: MockInstance<typeof console.warn>
+
+  beforeEach(() => {
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    warn.mockRestore()
+  })
+
+  /** The stay warnings the confirm logged, by message, in order. */
+  function stayWarnings(): ReadonlyArray<string> {
+    return warn.mock.calls
+      .map(([line]) => String(line))
+      .flatMap((line) =>
+        [
+          'booking import stay range not resolved',
+          'booking import stay not written',
+        ].filter((message) => line.includes(`"${message}"`)),
+      )
+  }
+
+  async function confirmFirst(world: World) {
+    return confirmBookingImport(
+      world.tenant.scope,
+      store,
+      { tripId: world.tripId, jobId: world.jobId, accept: [0] },
+      ports,
+    )
+  }
+
+  /** The booking a confirm wrote was kept, marked, and is no longer offered for another try. */
+  async function expectBookingKeptForReview(world: World) {
+    const bookings = await listTripReservations(world.tenant.scope, {
+      tripId: world.tripId,
+    })
+    expect(bookings).toHaveLength(1)
+    expect(bookings[0].importedAt).toBeInstanceOf(Date)
+    expect(store.entries.has(stagedImportKey(world.jobId))).toBe(false)
+  }
+
+  it('writes the run of nights beside the booking, linked to it, in the trip’s zone', async () => {
+    // 14:00Z on the 4th is 23:00 in Tokyo; 10:00Z on the 7th is 19:00.
+    await stage(alpha)
+
+    const result = await confirmFirst(alpha)
+
+    expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
+    const [booking] = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    const days = await listTripDays(alpha.tenant.scope, alpha.tripId)
+    const dayOn = (date: string) => days.find((day) => day.date === date)?.id
+    const stays = await listTripAccommodations(alpha.tenant.scope, alpha.tripId)
+    expect(stays).toHaveLength(1)
+    expect(stayWarnings()).toEqual([])
+    expect(stays[0]).toMatchObject({
+      startDayId: dayOn('2026-03-04'),
+      endDayId: dayOn('2026-03-07'),
+      name: 'Hotel Roma',
+      address: 'Via del Corso 1, Rome',
+      checkInTime: '23:00',
+      checkOutTime: '19:00',
+      reservationId: booking.id,
+    })
+  })
+
+  it('writes no stay for a booking that is not one', async () => {
+    await stage(alpha, { reservations: [stagedRow({ kind: 'activity' })] })
+
+    await confirmFirst(alpha)
+
+    expect(
+      await listTripAccommodations(alpha.tenant.scope, alpha.tripId),
+    ).toEqual([])
+  })
+
+  it.each([
+    {
+      range: 'lies outside the trip',
+      startsAt: '2026-04-01T01:00:00Z',
+      endsAt: '2026-04-03T01:00:00Z',
+    },
+    {
+      range: 'ends after the trip does',
+      startsAt: '2026-03-09T01:00:00Z',
+      endsAt: '2026-03-12T01:00:00Z',
+    },
+    {
+      range: 'ends before it starts',
+      startsAt: '2026-03-07T01:00:00Z',
+      endsAt: '2026-03-04T01:00:00Z',
+    },
+  ])(
+    'keeps the booking for review and invents no stay when the range $range',
+    async ({ startsAt, endsAt }) => {
+      await stage(alpha, { reservations: [stagedRow({ startsAt, endsAt })] })
+
+      const result = await confirmFirst(alpha)
+
+      expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
+      await expectBookingKeptForReview(alpha)
+      expect(
+        await listTripAccommodations(alpha.tenant.scope, alpha.tripId),
+      ).toEqual([])
+      // Told apart from a refused write, which is a different thing to go and look at.
+      expect(stayWarnings()).toEqual(['booking import stay range not resolved'])
+    },
+  )
+
+  it('keeps the booking for review when the stay write is refused, and never writes it twice', async () => {
+    stubs.failStayWrite = true
+    await stage(alpha)
+
+    const result = await confirmFirst(alpha)
+
+    expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
+    await expectBookingKeptForReview(alpha)
+    expect(
+      await listTripAccommodations(alpha.tenant.scope, alpha.tripId),
+    ).toEqual([])
+    expect(stayWarnings()).toEqual(['booking import stay not written'])
   })
 })

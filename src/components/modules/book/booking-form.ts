@@ -629,17 +629,20 @@ export type StayDayWord = 'checkIn' | 'checkOut'
 /**
  * What one day of a stay is to the reader: _check in_ on the first, _check out_ on the last, nothing
  * on the nights between — and **both** on a stay that begins and ends on the same day.
+ *
+ * Generic over how a day is named, because only equality is asked of it: the plan board's day
+ * header knows the stay's first and last day by id, not by number, and the rule is one rule.
  */
-export function stayDayWords(
-  dayNumber: number,
-  firstDayNumber: number,
-  lastDayNumber: number,
+export function stayDayWords<TDay extends number | string>(
+  day: TDay,
+  firstDay: TDay,
+  lastDay: TDay,
 ): ReadonlyArray<StayDayWord> {
   const words: Array<StayDayWord> = []
-  if (dayNumber === firstDayNumber) {
+  if (day === firstDay) {
     words.push('checkIn')
   }
-  if (dayNumber === lastDayNumber) {
+  if (day === lastDay) {
     words.push('checkOut')
   }
   return words

@@ -78,6 +78,10 @@ const messages = {
   'plan.addPlace.option.map': 'Elhelyezés a térképen',
   'plan.addPlace.forDay': 'Hely hozzáadása ehhez a naphoz',
   'plan.addPlace.forDayNamed': 'Hely hozzáadása: {day}',
+  'plan.stay.checkIn': 'Bejelentkezés',
+  'plan.stay.checkOut': 'Kijelentkezés',
+  'plan.day.addStay': 'Szállás hozzáadása: {day}',
+  'plan.day.addStayShort': 'Szállás hozzáadása',
   'plan.drop.hint':
     'Kattints jobb gombbal a térképre, vagy tartsd rajta az ujjad, hogy pontosan oda adj hozzá egy helyet.',
   'plan.drop.armed':

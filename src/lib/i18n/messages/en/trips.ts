@@ -135,6 +135,19 @@ const messages = {
   'plan.addPlace.option.map': 'Place it on the map',
   'plan.addPlace.forDay': 'Add a place to this day',
   'plan.addPlace.forDayNamed': 'Add a place to {day}',
+  /* ---------------------------------------------- a stay on the day */
+  /**
+   * What a day header says about a stay covering it: `checkIn` on its first
+   * day, `checkOut` on its last, both on a one-day stay, and the property's
+   * own name on every day. `addStay` is the day panel's accessible name for
+   * the control whose visible label is `addStayShort`, so ten days are ten
+   * distinguishable buttons. The visible label is the name's own opening words
+   * in every locale — WCAG 2.5.3, Label in Name — the note control's pattern.
+   */
+  'plan.stay.checkIn': 'Check in',
+  'plan.stay.checkOut': 'Check out',
+  'plan.day.addStay': 'Add a stay for {day}',
+  'plan.day.addStayShort': 'Add a stay',
   /**
    * Dropping a pin on the map: the empty map's hint, the arming banner and its
    * stop button, the provisional pin's name, and what a refused drop says.
