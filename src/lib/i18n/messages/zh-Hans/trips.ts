@@ -67,7 +67,6 @@ const messages = {
   'plan.addPlace.label': '添加地点',
   'plan.addPlace.more': '添加地点的其他方式',
   'plan.addPlace.option.map': '放到地图上',
-  'plan.addPlace.forDay': '在这一天添加地点',
   'plan.addPlace.forDayNamed': '添加地点——{day}',
   'plan.stay.checkIn': '入住',
   'plan.stay.checkOut': '退房',

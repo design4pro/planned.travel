@@ -73,7 +73,6 @@ const messages = {
   'plan.addPlace.label': 'Añadir un lugar',
   'plan.addPlace.more': 'Más formas de añadir un lugar',
   'plan.addPlace.option.map': 'Colocarlo en el mapa',
-  'plan.addPlace.forDay': 'Añadir un lugar a este día',
   'plan.addPlace.forDayNamed': 'Añadir un lugar, {day}',
   'plan.stay.checkIn': 'Entrada',
   'plan.stay.checkOut': 'Salida',

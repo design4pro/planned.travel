@@ -76,7 +76,6 @@ const messages = {
   'plan.addPlace.label': '場所を追加',
   'plan.addPlace.more': '場所を追加するほかの方法',
   'plan.addPlace.option.map': '地図上に配置',
-  'plan.addPlace.forDay': 'この日に場所を追加',
   'plan.addPlace.forDayNamed': '場所を追加 — {day}',
   'plan.stay.checkIn': 'チェックイン',
   'plan.stay.checkOut': 'チェックアウト',

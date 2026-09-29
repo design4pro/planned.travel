@@ -128,12 +128,12 @@ const messages = {
   /**
    * The rail's add control and its menu, the day footer's own add control
    * (`forDayNamed` is its accessible name, so ten days are ten distinguishable
-   * buttons).
+   * buttons). The footer control shows `label`, which is the name's own opening
+   * words in every locale — WCAG 2.5.3, Label in Name — the note control's pattern.
    */
   'plan.addPlace.label': 'Add a place',
   'plan.addPlace.more': 'More ways to add a place',
   'plan.addPlace.option.map': 'Place it on the map',
-  'plan.addPlace.forDay': 'Add a place to this day',
   'plan.addPlace.forDayNamed': 'Add a place to {day}',
   /* ---------------------------------------------- a stay on the day */
   /**

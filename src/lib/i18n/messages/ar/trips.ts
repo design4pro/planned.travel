@@ -70,7 +70,6 @@ const messages = {
   'plan.addPlace.label': 'إضافة مكان',
   'plan.addPlace.more': 'طرق أخرى لإضافة مكان',
   'plan.addPlace.option.map': 'ضعه على الخريطة',
-  'plan.addPlace.forDay': 'إضافة مكان إلى هذا اليوم',
   'plan.addPlace.forDayNamed': 'إضافة مكان، {day}',
   'plan.stay.checkIn': 'تسجيل الوصول',
   'plan.stay.checkOut': 'تسجيل المغادرة',

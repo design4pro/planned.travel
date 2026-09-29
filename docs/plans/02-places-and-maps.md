@@ -1217,7 +1217,7 @@ inherited:
 - `src/routes/_app/trips/$tripId/-ui/planner-map-layer.tsx` — new. Everything this area draws inside
   the map canvas, starting with the drop gesture and its crosshair.
 - `src/routes/_app/trips/$tripId/-ui/planner-day-tools.tsx` — new. Everything this area offers in a
-  day's footer, starting with **Add a place to this day**.
+  day's footer, starting with **Add a place**.
 - `src/routes/_app/trips/$tripId/-ui/planner-add-place.tsx` — new. The rail's add control, moved
   behind a component this plan owns so that every later way of adding a place is a menu entry here
   rather than another edit to the contended host file.
