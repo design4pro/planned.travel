@@ -74,7 +74,6 @@ const messages = {
   'plan.addPlace.label': 'Добавить место',
   'plan.addPlace.more': 'Другие способы добавить место',
   'plan.addPlace.option.map': 'Поставить на карту',
-  'plan.addPlace.forDay': 'Добавить место в этот день',
   'plan.addPlace.forDayNamed': 'Добавить место, {day}',
   'plan.stay.checkIn': 'Заезд',
   'plan.stay.checkOut': 'Выезд',
