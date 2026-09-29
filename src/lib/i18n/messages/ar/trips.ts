@@ -86,8 +86,11 @@ const messages = {
   'plan.addPlace.label': 'إضافة مكان',
   'plan.addPlace.more': 'طرق أخرى لإضافة مكان',
   'plan.addPlace.option.map': 'ضعه على الخريطة',
-  'plan.addPlace.forDay': 'إضافة مكان إلى هذا اليوم',
   'plan.addPlace.forDayNamed': 'إضافة مكان، {day}',
+  'plan.stay.checkIn': 'تسجيل الوصول',
+  'plan.stay.checkOut': 'تسجيل المغادرة',
+  'plan.day.addStay': 'إضافة إقامة، {day}',
+  'plan.day.addStayShort': 'إضافة إقامة',
   'plan.drop.hint':
     'انقر بزر الفأرة الأيمن على الخريطة، أو اضغط مطوّلًا، لإضافة مكان في ذلك الموضع تمامًا.',
   'plan.drop.armed':

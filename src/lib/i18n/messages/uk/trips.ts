@@ -86,8 +86,11 @@ const messages = {
   'plan.addPlace.label': 'Додати місце',
   'plan.addPlace.more': 'Інші способи додати місце',
   'plan.addPlace.option.map': 'Поставити на мапу',
-  'plan.addPlace.forDay': 'Додати місце до цього дня',
   'plan.addPlace.forDayNamed': 'Додати місце, {day}',
+  'plan.stay.checkIn': 'Заїзд',
+  'plan.stay.checkOut': 'Виїзд',
+  'plan.day.addStay': 'Додати проживання, {day}',
+  'plan.day.addStayShort': 'Додати проживання',
   'plan.drop.hint':
     'Клацніть мапу правою кнопкою миші або натисніть і утримуйте, щоб додати місце саме там.',
   'plan.drop.armed':

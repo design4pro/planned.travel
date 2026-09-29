@@ -113,7 +113,7 @@ The **arming banner** reuses the existing picking banner's recipe (`plan-screen.
 
 ### `planner-day-tools.tsx`
 
-`PlannerDayTools({ day, onAddPlace })` renders one footer control, **Add a place to this day**, which opens the create form with `dayId` preset. `PlaceDialog` already offers the day select only when creating (`PlaceDraft.dayId`), so this is a draft, not a form change. `02-S7`, `02-S9` and `02-S12` add their controls here.
+`PlannerDayTools({ day, onAddPlace })` renders one footer control, **Add a place** (named **Add a place to {day}**, so its visible label opens its accessible name — WCAG 2.5.3), which opens the create form with `dayId` preset. `PlaceDialog` already offers the day select only when creating (`PlaceDraft.dayId`), so this is a draft, not a form change. `02-S7`, `02-S9` and `02-S12` add their controls here.
 
 ### `day-section.tsx`
 
@@ -175,7 +175,7 @@ The drop's form submits through `submitPlace` → `createPlanPlaceFn` with `{ tr
 
 | State     | What is on screen                                                                                                                    |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| resting   | **Add a place** pill with a menu trigger beside it; each day footer offers **Add a place to this day**; credit line gains `Geoapify` |
+| resting   | **Add a place** pill with a menu trigger beside it; each day footer offers **Add a place**; credit line gains `Geoapify`             |
 | menu-open | One option, **Place it on the map**                                                                                                  |
 | armed     | Crosshair cursor, arming banner at the top of the map with a stop button, map region focused                                         |
 | dropped   | Provisional pin at the point; after ≤ 1.5 s the **Add a place to this trip** dialog, name focused, latitude/longitude/address filled |
@@ -199,7 +199,7 @@ Route `/trips/$tripId`, light and dark, desktop (≥ `lg`) and mobile:
 - **menu-open** — a menu under the trigger with one option, **Place it on the map**.
 - **armed** — the arming banner (same glass pill as today's reposition banner) with the drop copy; crosshair cursor on desktop.
 - **dropped** — the provisional pin with its dashed ring; then the existing **Add a place to this trip** dialog, prefilled.
-- **day footer** — each day gains an **Add a place to this day** control below **Add a note**, in the same dashed style.
+- **day footer** — each day gains an **Add a place** control below **Add a note**, in the same dashed style.
 - **empty map** — a one-line hint pill over an empty map, for editors only.
 - **credit line** — on the planner and on `/atlas`, `Geoapify` appended to the existing pill; with no basemap archive, a pill carrying `OpenStreetMap · Geoapify` where none showed before.
 
@@ -214,7 +214,6 @@ Every key lands in all 23 locales in the same change (`i18n-messages` skill). `e
 | `trips.plan.addPlace.label`       | Add a place                                                                            |
 | `trips.plan.addPlace.more`        | More ways to add a place                                                               |
 | `trips.plan.addPlace.option.map`  | Place it on the map                                                                    |
-| `trips.plan.addPlace.forDay`      | Add a place to this day                                                                |
 | `trips.plan.addPlace.forDayNamed` | Add a place to {day}                                                                   |
 | `trips.plan.addPlace.quota`       | This workspace has used every place its plan includes.                                 |
 | `trips.plan.addPlace.quotaAction` | See plans                                                                              |

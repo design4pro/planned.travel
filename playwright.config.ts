@@ -124,12 +124,16 @@ export default defineConfig({
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
   // Parallel workers share one dev server and one D1 file, and that is safe
-  // because the suite writes to the fixture from exactly three places: the
-  // sign-in and the language pin (setup project only, which finishes before
-  // the browser projects start), and the impersonation fixture — whose session
-  // lives in its own test's cookie jar and whose audit rows no photographed
-  // console screen renders. The real contention is the auth rate limiter's
-  // single per-path bucket, which `hasSession()` now asks once per worker.
+  // because every write the suite makes to the fixture is accounted for: the
+  // sign-in and the language pin (setup project only, which finishes before the browser
+  // projects start), and the impersonation fixture — whose session lives in its
+  // own test's cookie jar and whose audit rows no photographed console screen
+  // renders. Two journeys also write bookings to the demo trip (the
+  // confirmation import and the stay booked from the plan), each under a title
+  // marker the seed never writes, and each sweeps its own before and after the
+  // walk; the stay walk puts the project in its marker, so its two projects
+  // never count each other's badges. The real contention is the auth rate
+  // limiter's single per-path bucket, which `hasSession()` now asks once per worker.
   // One per CI shard, measured: two workers on the 2-vCPU runner starved the
   // atlas tests — MapLibre renders through software WebGL there, and with two
   // browsers plus Vite SSR competing, React hydration outran the 10 s action

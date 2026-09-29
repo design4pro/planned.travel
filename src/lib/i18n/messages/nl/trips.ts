@@ -85,8 +85,11 @@ const messages = {
   'plan.addPlace.label': 'Plek toevoegen',
   'plan.addPlace.more': 'Meer manieren om een plek toe te voegen',
   'plan.addPlace.option.map': 'Op de kaart plaatsen',
-  'plan.addPlace.forDay': 'Plek aan deze dag toevoegen',
   'plan.addPlace.forDayNamed': 'Plek toevoegen: {day}',
+  'plan.stay.checkIn': 'Aankomst',
+  'plan.stay.checkOut': 'Vertrek',
+  'plan.day.addStay': 'Verblijf toevoegen: {day}',
+  'plan.day.addStayShort': 'Verblijf toevoegen',
   'plan.drop.hint':
     'Klik met de rechtermuisknop op de kaart, of houd je vinger erop, om precies daar een plek toe te voegen.',
   'plan.drop.armed':

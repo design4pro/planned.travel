@@ -81,8 +81,11 @@ const messages = {
   'plan.addPlace.label': '장소 추가',
   'plan.addPlace.more': '장소를 추가하는 다른 방법',
   'plan.addPlace.option.map': '지도에 배치',
-  'plan.addPlace.forDay': '이 날에 장소 추가',
   'plan.addPlace.forDayNamed': '장소 추가 — {day}',
+  'plan.stay.checkIn': '체크인',
+  'plan.stay.checkOut': '체크아웃',
+  'plan.day.addStay': '숙소 추가 — {day}',
+  'plan.day.addStayShort': '숙소 추가',
   'plan.drop.hint':
     '지도를 마우스 오른쪽 버튼으로 클릭하거나 길게 누르면 바로 그 위치에 장소가 추가됩니다.',
   'plan.drop.armed':
