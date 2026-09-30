@@ -229,7 +229,8 @@ never enter the autopilot. Every filter excludes `in-progress`; `lookbackDays: 3
 work, and no skill adds them (the overrides say so), so no om run can start another. The intake
 ladder is the deliberate exception: its runs do set its labels - `afk-triage` sets
 `ready-for-agent`, `afk-to-tickets` sets it on the ticket frontier, `afk-architecture-review` sets
-`needs-triage` on its own issues - and that is how one of them starts the next.
+`needs-triage` on its own issues, `afk-triage` on the follow-ups of a split - and that is how one
+of them starts the next.
 A review or autopilot run checks out the PR's head, hooks and agent layer included: a branch
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
