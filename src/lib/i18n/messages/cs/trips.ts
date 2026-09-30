@@ -22,6 +22,18 @@ const messages = {
   'error.book': 'Rezervace se nepodařilo načíst',
   'error.transports': 'Přesuny se nenačetly',
   'error.people': 'Lidi se nepodařilo načíst',
+  'header.length': {
+    one: '{days} den',
+    few: '{days} dny',
+    many: '{days} dne',
+    other: '{days} dní',
+  },
+  'header.planned': {
+    one: '{days} den naplánován',
+    few: '{days} dny naplánovány',
+    many: '{days} dne naplánováno',
+    other: '{days} dní naplánováno',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Místa',

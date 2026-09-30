@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'Rezervasyonlar yüklenemedi',
   'error.transports': 'Yolculuklar yüklenemedi',
   'error.people': 'Kişiler yüklenemedi',
+  'header.length': {
+    one: '{days} gün',
+    other: '{days} gün',
+  },
+  'header.planned': {
+    one: '{days} gün planlandı',
+    other: '{days} gün planlandı',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Yerler',

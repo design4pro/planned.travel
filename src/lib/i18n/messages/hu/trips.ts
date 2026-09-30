@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'A foglalásokat nem sikerült betölteni',
   'error.transports': 'Az utak nem töltődtek be',
   'error.people': 'A résztvevőket nem sikerült betölteni',
+  'header.length': {
+    one: '{days} nap',
+    other: '{days} nap',
+  },
+  'header.planned': {
+    one: '{days} nap megtervezve',
+    other: '{days} nap megtervezve',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Útiterv',
   'plan.places': 'Helyek',

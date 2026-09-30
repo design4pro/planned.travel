@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'Bokningarna kunde inte läsas in',
   'error.transports': 'Färderna kunde inte laddas',
   'error.people': 'Personerna kunde inte läsas in',
+  'header.length': {
+    one: '{days} dag',
+    other: '{days} dagar',
+  },
+  'header.planned': {
+    one: '{days} dag planerad',
+    other: '{days} dagar planerade',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Resplan',
   'plan.places': 'Platser',
