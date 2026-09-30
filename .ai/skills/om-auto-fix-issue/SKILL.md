@@ -24,8 +24,7 @@ and nothing else - the bug route, the lock check and the already-implemented che
    verdict: reuse it and do not run the verifier again.
 3. Otherwise delegate to `readiness-verifier` with the issue number, title, body, labels, author,
    every comment (author, timestamp, whether it is an agent's) and the missing items. The verifier
-   refuses `risk-high`, `security`, out-of-scope asks and a vetoed verdict itself, so pass every
-   issue and let it decide. With no sub-agent tool on this backend, skip it and stop as the
+   refuses out-of-scope asks and a vetoed verdict itself, so pass every issue and let it decide. With no sub-agent tool on this backend, skip it and stop as the
    installed skill says - never verify your own triage.
 4. `READINESS: VERIFIED` - post the table as one idempotent comment (find the marker via
    **list-issue-comments**, update it in place via **update-comment** when the table changed), treat
@@ -42,5 +41,9 @@ and nothing else - the bug route, the lock check and the already-implemented che
    Reply `veto` to revoke this and send the issue back to a human.
    ```
 
-5. `READINESS: NEEDS_HUMAN` - post the installed skill's not-ready comment listing only the
-   `NEEDS_HUMAN` rows, with both readings where the verifier named two, and stop with `NOT_READY`.
+5. `READINESS: NEEDS_HUMAN` - settle each `NEEDS_HUMAN` row that is a missing out-of-scope section or an
+   open question through `.ai/skills/afk-decide/SKILL.md`, exactly as `.ai/skills/om-auto-manage-issues/SKILL.md`
+   does, and record the verdicts as non-blocking Resolved assumptions rows. Never do this when the
+   verifier stopped on a `veto`, on `docs/agents/out-of-scope.md` or on an ADR contradiction: those stay
+   with a human. Post the installed skill's not-ready comment listing only the rows nothing settled,
+   with both readings where the verifier named two, and stop with `NOT_READY`.

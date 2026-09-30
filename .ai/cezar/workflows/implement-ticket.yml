@@ -24,7 +24,7 @@ steps:
       - Build one complete vertical slice, inside the acceptance criteria and "Out of scope".
       - Use CONTEXT.md terms. Add or update entries for any concept you introduce or rename (afk-domain-modeling).
       - Settle each decision the brief left open through `.ai/skills/afk-decide/SKILL.md` instead of stopping, and record each verdict as a Resolved assumptions row in the handoff file, for the PR body.
-      - For a `risk-high` or `security` issue, the brief must carry the security and tenancy specialist's approving verdict; meet its CONDITIONS as acceptance criteria. Without that verdict, get one through `afk-decide` before claiming.
+      - For a `risk-high` or `security` issue, the brief must carry the security and tenancy specialist's approving verdict; meet its CONDITIONS as acceptance criteria. Without that verdict, get one through `afk-decide` before claiming. If the specialist does not approve, STOP: do not claim, and label the issue `ready-for-human` with the verdict.
       - A lesson worth keeping goes in a `## Lessons` section of the handoff file and the PR body, never into files outside the repository; `afk-lessons` collects it.
   - id: gate
     name: Validation gate

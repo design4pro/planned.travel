@@ -64,7 +64,7 @@ The configuration guardian also checks that a configuration change grants no mor
 
 - `ESCALATE: no`: act on the verdict now, in this same run, and meet its CONDITIONS.
 - `CONFIDENCE: low`: ask a second specialist from a different row. When the two disagree, take the more reversible option.
-- `ESCALATE: yes` is valid only for the cases in step 5. Otherwise treat it as `no` and apply the verdict.
+- `ESCALATE: yes` is valid only for the cases in step 5 (a guardian escalation and a withheld security approval included). Otherwise treat it as `no` and apply the verdict.
 
 Record every verdict as a row in the Resolved assumptions table of the brief, spec, PR body or handoff you are writing:
 
@@ -81,6 +81,8 @@ Only what no agent in this pipeline can do:
 - merging a PR, closing an issue, or removing a label a human set;
 - information only the reporter has (`needs-info`): a repro, a version, what they expected;
 - a platform limit, such as GitHub refusing to let the author approve their own PR;
+- a configuration guardian verdict of `ESCALATE: yes`: the change weakens a guard or removes a deny rule, so it is not applied; label the issue `ready-for-human` and state the verdict;
+- a security and tenancy specialist that does not approve `risk-high` or `security` work for unattended implementation: it does not get `ready-for-agent`; label it `ready-for-human` and state the verdict and its reasons;
 - a write Claude Code refuses under `dontAsk` (protected configuration). Put the exact patch and the guardian's verdict in the report or PR, so applying it is one step for a human.
 
 Everything else is decided here.
