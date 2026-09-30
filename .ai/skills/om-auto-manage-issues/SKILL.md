@@ -9,7 +9,13 @@ Extends the installed skill: read `.claude/skills/om-auto-manage-issues/SKILL.md
 - `groom` is the human "re-groom" trigger label: remove it from an issue as the first mutation when present. Never add `groom`, `autofix` or `spec`; a human decides when an issue starts implementation.
 - Category comes from the issue form (`.github/ISSUE_TEMPLATE`): a bug report is `bug`, an enhancement or idea is `feature`, a maintenance item is `refactor`; Dependabot is `dependencies`; Sentry-filed issues (`pnpm sentry-triage`) are `bug` and keep the `priority-high` the filer set.
 - The Definition of Ready is in `SDLC.md`; the not-ready comment names the missing ticket-level items and points at the issue form section that holds each.
-- **Settle what an agent can settle before you call an issue not-ready** (`SDLC.md` § Delegated decisions). This narrows the installed skill's "readiness is reported, never invented" to the two items a human does not have to supply: the problem, who has it and the expected outcome still come only from a person.
+- **Run the readiness verifier before recording `not-ready`.** When step 6 of the installed
+  skill (`references/enrich-existing-issue.md`) finds a ticket-level item missing, follow
+  `.ai/skills/om-auto-fix-issue/SKILL.md` § Readiness verifier: `READINESS: VERIFIED` records
+  `READY_STATUS=ready` and posts the `readiness verified` comment instead of the not-ready one;
+  `NEEDS_HUMAN` records `not-ready` and the not-ready comment lists only the `NEEDS_HUMAN` rows.
+  A verified issue is ready for every rule below, including the hand-on to `needs-triage`.
+- **After the readiness verifier, settle what an agent can still settle before you call an issue not-ready** (`SDLC.md` § Delegated decisions). This narrows the installed skill's "readiness is reported, never invented" to the two items a human does not have to supply: the problem, who has it and the expected outcome still come only from a person.
   - A missing **Out of scope** section is not a reason for `not-ready`: write it yourself from the issue, its linked spec and `docs/agents/out-of-scope.md`, into the clarified description (the reporter's text stays verbatim beside it), and settle any boundary you are unsure of through `.ai/skills/afk-decide/SKILL.md` (the product owner). Seen on #734 and #736.
   - An **open question** is not addressed to the author. Settle it through `afk-decide`, record the verdict as a **non-blocking** row of a Resolved assumptions table (`# | Question | Applied default | Why`) in the implementation-notes comment, and count the question as answered. Only a question that needs information only the reporter has (a repro, a version, what they expected) stays blocking. Seen on #763.
   - "A human's call", "Decision for the implementer" or a list of options copied into a ticket from a brief, spec or review is an open question like any other: settle it through `afk-decide`, never treat it as blocking.
