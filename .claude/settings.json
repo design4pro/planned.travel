@@ -1,9 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "description": "Project-scoped Claude Code settings for planned.travel. deny holds the few operations nothing recovers from - secrets, generated files, history rewrites, deleted Cloudflare stores - and applies in every session. ask holds what a developer approves at the keyboard; a cezar run uses --permission-mode dontAsk, so there it is refused (ADR 0030). The allow list carries only the tracker operations the om-* pipeline cannot run without, plus the read-only queries it runs constantly. Every other permission rule stays per-developer in the gitignored .claude/settings.local.json.",
-  "env": {
-    "CLAUDE_CODE_SUBAGENT_MODEL": "opus"
-  },
   "permissions": {
     "allow": [
       "Bash(gh pr review:*)",
@@ -50,6 +47,9 @@
       "effortLevel": "medium"
     },
     "claude-opus-5-5": {
+      "effortLevel": "high"
+    },
+    "claude-sonet-5-5": {
       "effortLevel": "high"
     }
   },
