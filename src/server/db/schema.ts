@@ -75,7 +75,9 @@ let supplied: SuppliedRowDefaults | null = null
 /**
  * Time-sortable, URL-safe, 25 character identifier: a base-36 millisecond timestamp followed by
  * 16 random characters. Sorting by `id` is therefore sorting by creation time, which lets every
- * paginated list use the primary key as a stable cursor.
+ * paginated list use the primary key as a stable cursor - but only to the millisecond: ids minted
+ * in the same millisecond order by their random tail, so rows written together have no creation
+ * order to assert (#462, #472).
  */
 export function newId(): string {
   if (supplied !== null) {

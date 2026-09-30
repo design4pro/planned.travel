@@ -51,6 +51,7 @@ import { appScope } from '../../../-server/context'
 
 import type { TenantScope, TimelineItemInput } from '#/server/repos'
 import type { Trip } from '#/server/db/types'
+import type { BookingDayOption } from '#/server/fns/reservations'
 
 /**
  * Booking states a stop can be in.
@@ -135,14 +136,32 @@ export interface PlanBoardStop {
   readonly notes: string | null
 }
 
+/**
+ * One stay covering a day: its nights, its times and the booking it was made under.
+ *
+ * The same record under every day it covers, as `getTripItinerary` already files it. Only what a
+ * day header draws — the price, the address and the confirmation stay on the booking desk.
+ */
+export interface PlanBoardStay {
+  readonly id: string
+  readonly name: string
+  readonly startDayId: string
+  readonly endDayId: string
+  /** `HH:MM`, as stored. */
+  readonly checkInTime: string | null
+  readonly checkInEndTime: string | null
+  readonly checkOutTime: string | null
+  readonly reservationId: string | null
+}
+
 export interface PlanBoardDay {
   readonly dayId: string
   readonly dayNumber: number
   readonly date: string | null
   readonly title: string | null
   readonly stops: ReadonlyArray<PlanBoardStop>
-  /** Accommodation names covering this day. */
-  readonly stays: ReadonlyArray<string>
+  /** The stays covering this day. */
+  readonly stays: ReadonlyArray<PlanBoardStay>
 }
 
 export interface PlanBoardCategory {
@@ -174,6 +193,16 @@ export interface PlanBoardPayload {
   /** Ids of places with no day yet, in board order. */
   readonly unscheduledIds: ReadonlyArray<string>
   readonly categories: ReadonlyArray<PlanBoardCategory>
+  /** The trip's currency, which the stay dialog prices a new booking in. */
+  readonly currency: string
+  /**
+   * The days as the booking dialog takes them, stop names included.
+   *
+   * A second projection of {@link days} on purpose: the board's stops point at places by id, and
+   * the dialog's stop picker renders names. Built from the same itinerary read, so opening the
+   * dialog from a day costs no second fetch of the booking desk.
+   */
+  readonly bookingDays: ReadonlyArray<BookingDayOption>
 }
 
 export const loadPlanBoard = createServerFn({ method: 'GET' })
@@ -237,7 +266,16 @@ export async function readPlanBoard(
       dayNumber: entry.day.dayNumber,
       date: entry.day.date,
       title: entry.day.title,
-      stays: entry.accommodations.map((stay) => stay.name),
+      stays: entry.accommodations.map((stay) => ({
+        id: stay.id,
+        name: stay.name,
+        startDayId: stay.startDayId,
+        endDayId: stay.endDayId,
+        checkInTime: stay.checkInTime,
+        checkInEndTime: stay.checkInEndTime,
+        checkOutTime: stay.checkOutTime,
+        reservationId: stay.reservationId,
+      })),
       stops: entry.stops.map((stop) => ({
         assignmentId: stop.assignment.id,
         placeId: stop.place.id,
@@ -249,6 +287,18 @@ export async function readPlanBoard(
           stop.assignment.reservationStatus,
         ),
         notes: stop.assignment.notes,
+      })),
+    })),
+    currency: trip.currency,
+    bookingDays: itinerary.map(({ day, stops }) => ({
+      id: day.id,
+      dayNumber: day.dayNumber,
+      date: day.date,
+      title: day.title,
+      stops: stops.map((stop) => ({
+        assignmentId: stop.assignment.id,
+        placeName: stop.place.name,
+        startTime: stop.assignment.startTime,
       })),
     })),
   }

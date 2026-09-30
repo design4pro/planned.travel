@@ -22,6 +22,18 @@ const messages = {
   'error.book': 'Rezervace se nepodařilo načíst',
   'error.transports': 'Přesuny se nenačetly',
   'error.people': 'Lidi se nepodařilo načíst',
+  'header.length': {
+    one: '{days} den',
+    few: '{days} dny',
+    many: '{days} dne',
+    other: '{days} dní',
+  },
+  'header.planned': {
+    one: '{days} den naplánován',
+    few: '{days} dny naplánovány',
+    many: '{days} dne naplánováno',
+    other: '{days} dní naplánováno',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Program',
   'plan.places': 'Místa',
@@ -73,8 +85,11 @@ const messages = {
   'plan.addPlace.label': 'Přidat místo',
   'plan.addPlace.more': 'Další způsoby, jak přidat místo',
   'plan.addPlace.option.map': 'Umístit na mapu',
-  'plan.addPlace.forDay': 'Přidat místo do tohoto dne',
   'plan.addPlace.forDayNamed': 'Přidat místo: {day}',
+  'plan.stay.checkIn': 'Příjezd',
+  'plan.stay.checkOut': 'Odjezd',
+  'plan.day.addStay': 'Přidat ubytování: {day}',
+  'plan.day.addStayShort': 'Přidat ubytování',
   'plan.drop.hint':
     'Klikněte na mapu pravým tlačítkem nebo na ni dlouze podržte prst a místo se přidá přesně tam.',
   'plan.drop.armed':

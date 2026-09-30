@@ -195,11 +195,26 @@ function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
   }
 }
 
+/**
+ * A new booking's first draft: empty, or a stay whose first night the caller already knows — the
+ * plan board opening this dialog from one of its days.
+ */
+function newDraft(
+  currency: string,
+  stayDayId: string | undefined,
+): BookingDraft {
+  const draft = emptyBookingDraft(currency)
+  return stayDayId === undefined
+    ? draft
+    : { ...draft, type: 'accommodation', startDayId: stayDayId }
+}
+
 export function BookingDialog({
   tripId,
   booking,
   days,
   currency,
+  initialStayDayId,
   open,
   onOpenChange,
 }: {
@@ -209,6 +224,11 @@ export function BookingDialog({
   days: ReadonlyArray<BookingDayOption>
   /** The trip's currency, used when the booking does not carry its own. */
   currency: string
+  /**
+   * Opens a new booking as a stay checking in on this day. Applied on every open, and ignored when
+   * editing: an existing booking's days are its own.
+   */
+  initialStayDayId?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -219,7 +239,7 @@ export function BookingDialog({
   const formId = useId()
 
   const [draft, setDraft] = useState<BookingDraft>(() =>
-    emptyBookingDraft(currency),
+    newDraft(currency, initialStayDayId),
   )
   const [touched, setTouched] = useState(false)
   /**
@@ -240,14 +260,14 @@ export function BookingDialog({
     }
     setDraft(
       booking === undefined
-        ? emptyBookingDraft(currency)
+        ? newDraft(currency, initialStayDayId)
         : draftFrom(booking, currency),
     )
     setTouched(false)
     setSavedId(null)
     setSavedStayId(null)
     setLedgerRefused(false)
-  }, [open, booking, currency])
+  }, [open, booking, currency, initialStayDayId])
 
   const create = useAction(createBookingFn, {
     success: t('modules.book.toast.added'),

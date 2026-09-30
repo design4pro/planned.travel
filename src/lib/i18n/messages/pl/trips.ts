@@ -22,6 +22,18 @@ const messages = {
   'error.book': 'Nie udało się wczytać rezerwacji',
   'error.transports': 'Przejazdy się nie wczytały',
   'error.people': 'Nie udało się wczytać osób',
+  'header.length': {
+    one: '{days} dzień',
+    few: '{days} dni',
+    many: '{days} dni',
+    other: '{days} dnia',
+  },
+  'header.planned': {
+    one: '{days} dzień zaplanowany',
+    few: '{days} dni zaplanowane',
+    many: '{days} dni zaplanowanych',
+    other: '{days} dnia zaplanowanego',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Plan dnia',
   'plan.places': 'Miejsca',
@@ -74,8 +86,11 @@ const messages = {
   'plan.addPlace.label': 'Dodaj miejsce',
   'plan.addPlace.more': 'Więcej sposobów dodania miejsca',
   'plan.addPlace.option.map': 'Umieść na mapie',
-  'plan.addPlace.forDay': 'Dodaj miejsce do tego dnia',
   'plan.addPlace.forDayNamed': 'Dodaj miejsce: {day}',
+  'plan.stay.checkIn': 'Zameldowanie',
+  'plan.stay.checkOut': 'Wymeldowanie',
+  'plan.day.addStay': 'Dodaj nocleg: {day}',
+  'plan.day.addStayShort': 'Dodaj nocleg',
   'plan.drop.hint':
     'Kliknij mapę prawym przyciskiem albo przytrzymaj na niej palec, aby dodać miejsce dokładnie tam.',
   'plan.drop.armed':

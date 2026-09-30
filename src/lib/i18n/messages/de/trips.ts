@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'Die Buchungen konnten nicht geladen werden',
   'error.transports': 'Die Transfers konnten nicht geladen werden',
   'error.people': 'Die Personen konnten nicht geladen werden',
+  'header.length': {
+    one: '{days} Tag',
+    other: '{days} Tage',
+  },
+  'header.planned': {
+    one: '{days} Tag geplant',
+    other: '{days} Tage geplant',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reiseverlauf',
   'plan.places': 'Orte',
@@ -77,8 +85,11 @@ const messages = {
   'plan.addPlace.label': 'Ort hinzufügen',
   'plan.addPlace.more': 'Weitere Wege, einen Ort hinzuzufügen',
   'plan.addPlace.option.map': 'Auf der Karte platzieren',
-  'plan.addPlace.forDay': 'Ort zu diesem Tag hinzufügen',
   'plan.addPlace.forDayNamed': 'Ort hinzufügen: {day}',
+  'plan.stay.checkIn': 'Anreise',
+  'plan.stay.checkOut': 'Abreise',
+  'plan.day.addStay': 'Unterkunft hinzufügen: {day}',
+  'plan.day.addStayShort': 'Unterkunft hinzufügen',
   'plan.drop.hint':
     'Klick mit der rechten Maustaste auf die Karte oder halte sie gedrückt, um genau dort einen Ort hinzuzufügen.',
   'plan.drop.armed':

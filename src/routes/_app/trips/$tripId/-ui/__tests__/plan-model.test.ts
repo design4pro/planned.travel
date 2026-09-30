@@ -28,6 +28,7 @@ import type {
   PlanBoardDay,
   PlanBoardPayload,
   PlanBoardPlace,
+  PlanBoardStay,
   PlanBoardStop,
 } from '../../-server/plan'
 
@@ -132,6 +133,8 @@ function board(days: ReadonlyArray<PlanBoardDay>): PlanBoardPayload {
     places: placeIds.map((id) => place(id)),
     unscheduledIds: [],
     categories: [],
+    currency: 'JPY',
+    bookingDays: [],
   }
 }
 
@@ -288,5 +291,48 @@ describe('planModel', () => {
     it('never overrides the title a day carries of its own', () => {
       expect(renderedTitle('Kyoto on foot', pl, 'pl')).toBe('Kyoto on foot')
     })
+  })
+})
+
+describe('planModel — a stay', () => {
+  /** In on day 1, out on day 3, as `getTripItinerary` files it: under every day it covers. */
+  const STAY: PlanBoardStay = {
+    id: 's1',
+    name: 'Hotel Gracery Shinjuku',
+    startDayId: 'd1',
+    endDayId: 'd3',
+    checkInTime: '15:00:00',
+    checkInEndTime: '18:00',
+    checkOutTime: '11:00',
+    reservationId: 'r1',
+  }
+  const PAYLOAD = board(
+    [1, 2, 3].map((n) => ({
+      ...day(`d${n}`, n, n === 1 ? [stop('a1', 'p1', 0)] : []),
+      stays: [STAY],
+    })),
+  )
+  const EMPTY = notes([])
+  const days = planModel(PAYLOAD, orderFromPayload(PAYLOAD, EMPTY), en).days
+
+  it('reaches every day it covers, carrying its days, its times and its booking', () => {
+    for (const entry of days) {
+      expect(entry.stays).toEqual([
+        {
+          id: 's1',
+          name: 'Hotel Gracery Shinjuku',
+          startDayId: 'd1',
+          endDayId: 'd3',
+          checkIn: '15:00 – 18:00',
+          checkOut: '11:00',
+          reservationId: 'r1',
+        },
+      ])
+    }
+  })
+
+  it('contributes no row to any day’s sequence', () => {
+    expect(days.map((entry) => entry.items.length)).toEqual([1, 0, 0])
+    expect(days.map((entry) => entry.rows.length)).toEqual([1, 0, 0])
   })
 })

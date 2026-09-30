@@ -22,6 +22,16 @@ const messages = {
   'error.book': 'No s’han pogut carregar les reserves',
   'error.transports': 'Els trajectes no s’han carregat',
   'error.people': 'No s’han pogut carregar les persones',
+  'header.length': {
+    one: '{days} dia',
+    many: '{days} dies',
+    other: '{days} dies',
+  },
+  'header.planned': {
+    one: '{days} dia planificat',
+    many: '{days} dies planificats',
+    other: '{days} dies planificats',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerari',
   'plan.places': 'Llocs',
@@ -73,8 +83,11 @@ const messages = {
   'plan.addPlace.label': 'Afegeix un lloc',
   'plan.addPlace.more': 'Més maneres d’afegir un lloc',
   'plan.addPlace.option.map': 'Col·loca’l al mapa',
-  'plan.addPlace.forDay': 'Afegeix un lloc a aquest dia',
   'plan.addPlace.forDayNamed': 'Afegeix un lloc, {day}',
+  'plan.stay.checkIn': 'Entrada',
+  'plan.stay.checkOut': 'Sortida',
+  'plan.day.addStay': 'Afegeix una estada, {day}',
+  'plan.day.addStayShort': 'Afegeix una estada',
   'plan.drop.hint':
     'Fes clic amb el botó dret al mapa, o mantén-lo premut, per afegir-hi un lloc just allà.',
   'plan.drop.armed':

@@ -22,6 +22,16 @@ const messages = {
   'error.book': 'No se pudieron cargar las reservas',
   'error.transports': 'Los trayectos no se cargaron',
   'error.people': 'No se pudieron cargar las personas',
+  'header.length': {
+    one: '{days} día',
+    many: '{days} días',
+    other: '{days} días',
+  },
+  'header.planned': {
+    one: '{days} día planificado',
+    many: '{days} días planificados',
+    other: '{days} días planificados',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerario',
   'plan.places': 'Lugares',
@@ -73,8 +83,11 @@ const messages = {
   'plan.addPlace.label': 'Añadir un lugar',
   'plan.addPlace.more': 'Más formas de añadir un lugar',
   'plan.addPlace.option.map': 'Colocarlo en el mapa',
-  'plan.addPlace.forDay': 'Añadir un lugar a este día',
   'plan.addPlace.forDayNamed': 'Añadir un lugar, {day}',
+  'plan.stay.checkIn': 'Entrada',
+  'plan.stay.checkOut': 'Salida',
+  'plan.day.addStay': 'Añadir un alojamiento, {day}',
+  'plan.day.addStayShort': 'Añadir un alojamiento',
   'plan.drop.hint':
     'Haz clic derecho en el mapa, o mantén pulsado, para añadir un lugar justo ahí.',
   'plan.drop.armed':

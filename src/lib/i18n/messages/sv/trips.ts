@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'Bokningarna kunde inte läsas in',
   'error.transports': 'Färderna kunde inte laddas',
   'error.people': 'Personerna kunde inte läsas in',
+  'header.length': {
+    one: '{days} dag',
+    other: '{days} dagar',
+  },
+  'header.planned': {
+    one: '{days} dag planerad',
+    other: '{days} dagar planerade',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Resplan',
   'plan.places': 'Platser',
@@ -75,8 +83,11 @@ const messages = {
   'plan.addPlace.label': 'Lägg till en plats',
   'plan.addPlace.more': 'Fler sätt att lägga till en plats',
   'plan.addPlace.option.map': 'Placera den på kartan',
-  'plan.addPlace.forDay': 'Lägg till en plats på den här dagen',
   'plan.addPlace.forDayNamed': 'Lägg till en plats: {day}',
+  'plan.stay.checkIn': 'Incheckning',
+  'plan.stay.checkOut': 'Utcheckning',
+  'plan.day.addStay': 'Lägg till ett boende: {day}',
+  'plan.day.addStayShort': 'Lägg till ett boende',
   'plan.drop.hint':
     'Högerklicka på kartan, eller tryck och håll, för att lägga till en plats precis där.',
   'plan.drop.armed':

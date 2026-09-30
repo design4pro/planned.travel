@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
+import { inArray } from 'drizzle-orm'
+import { trips } from '#/server/db/schema'
 import { createScope } from '../base'
+import { MAX_BOUND_PARAMETERS } from '../batch'
 import { MissingTenantContextError } from '../context'
 import * as repos from '..'
-import { createHarness } from './harness'
+import { captureError, constraintName, createHarness } from './harness'
 
 describe('smoke', () => {
   it('runs sqlite', () => {
@@ -44,13 +47,43 @@ describe('smoke', () => {
     }
   })
 
+  it('refuses a statement D1 would refuse for its bound parameters', async () => {
+    const harness = await createHarness()
+    const ids = (count: number) =>
+      Array.from({ length: count }, (_, index) => `trip-${index}`)
+    try {
+      const atCeiling = harness.db
+        .select({ id: trips.id })
+        .from(trips)
+        .where(inArray(trips.id, ids(MAX_BOUND_PARAMETERS)))
+      await expect(atCeiling).resolves.toEqual([])
+
+      const overCeiling = harness.db
+        .select({ id: trips.id })
+        .from(trips)
+        .where(inArray(trips.id, ids(MAX_BOUND_PARAMETERS + 1)))
+      const error = await captureError(() => overCeiling)
+      expect(constraintName(error)).toMatch(/101 bound parameters/)
+    } finally {
+      harness.close()
+    }
+  })
+
   it('refuses to build a scope without a tenant context', async () => {
     const harness = await createHarness()
     try {
-      expect(() => createScope(harness.db, null)).toThrow(MissingTenantContextError)
-      expect(() => createScope(harness.db, { userId: 'u1' })).toThrow(MissingTenantContextError)
+      expect(() => createScope(harness.db, null)).toThrow(
+        MissingTenantContextError,
+      )
+      expect(() => createScope(harness.db, { userId: 'u1' })).toThrow(
+        MissingTenantContextError,
+      )
       expect(() =>
-        createScope(harness.db, { userId: 'u1', organizationId: 'o1', role: 'superuser' }),
+        createScope(harness.db, {
+          userId: 'u1',
+          organizationId: 'o1',
+          role: 'superuser',
+        }),
       ).toThrow(MissingTenantContextError)
 
       const scope = createScope(harness.db, {

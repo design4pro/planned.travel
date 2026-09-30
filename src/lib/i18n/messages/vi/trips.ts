@@ -22,6 +22,12 @@ const messages = {
   'error.book': 'Không tải được các chỗ đã đặt',
   'error.transports': 'Không tải được các lượt di chuyển',
   'error.people': 'Không tải được danh sách người tham gia',
+  'header.length': {
+    other: '{days} ngày',
+  },
+  'header.planned': {
+    other: 'Đã lên kế hoạch {days} ngày',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Lịch trình',
   'plan.places': 'Địa điểm',
@@ -74,8 +80,11 @@ const messages = {
   'plan.addPlace.label': 'Thêm địa điểm',
   'plan.addPlace.more': 'Các cách khác để thêm địa điểm',
   'plan.addPlace.option.map': 'Đặt lên bản đồ',
-  'plan.addPlace.forDay': 'Thêm địa điểm vào ngày này',
   'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
+  'plan.stay.checkIn': 'Nhận phòng',
+  'plan.stay.checkOut': 'Trả phòng',
+  'plan.day.addStay': 'Thêm chỗ ở, {day}',
+  'plan.day.addStayShort': 'Thêm chỗ ở',
   'plan.drop.hint':
     'Nhấp chuột phải vào bản đồ, hoặc nhấn giữ, để thêm một địa điểm ngay tại đó.',
   'plan.drop.armed':

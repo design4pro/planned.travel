@@ -22,6 +22,18 @@ const messages = {
   'error.book': 'Не удалось загрузить брони',
   'error.transports': 'Переезды не загрузились',
   'error.people': 'Не удалось загрузить участников',
+  'header.length': {
+    one: '{days} день',
+    few: '{days} дня',
+    many: '{days} дней',
+    other: '{days} дня',
+  },
+  'header.planned': {
+    one: '{days} день запланирован',
+    few: '{days} дня запланировано',
+    many: '{days} дней запланировано',
+    other: '{days} дня запланировано',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Маршрут',
   'plan.places': 'Места',
@@ -74,8 +86,11 @@ const messages = {
   'plan.addPlace.label': 'Добавить место',
   'plan.addPlace.more': 'Другие способы добавить место',
   'plan.addPlace.option.map': 'Поставить на карту',
-  'plan.addPlace.forDay': 'Добавить место в этот день',
   'plan.addPlace.forDayNamed': 'Добавить место, {day}',
+  'plan.stay.checkIn': 'Заезд',
+  'plan.stay.checkOut': 'Выезд',
+  'plan.day.addStay': 'Добавить проживание, {day}',
+  'plan.day.addStayShort': 'Добавить проживание',
   'plan.drop.hint':
     'Щёлкните по карте правой кнопкой мыши или нажмите и удерживайте, чтобы добавить место именно там.',
   'plan.drop.armed':

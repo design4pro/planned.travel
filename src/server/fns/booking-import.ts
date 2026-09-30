@@ -43,11 +43,13 @@ import { enqueueTask } from '#/server/queue/jobs'
 import {
   NotFoundError,
   assertBookingRole,
+  createAccommodation,
   createPlace,
   createReservation,
   getFile,
   getOrganizationSettings,
   getSubscription,
+  listTripDays,
   listTripPlaces,
   markReservationsImported,
   requireTrip,
@@ -59,7 +61,7 @@ import { MAX_IMPORT_FILES, importFormatFor } from './file-policy'
 import { syncReservationExpense } from './reservations'
 
 import type { RESERVATION_TYPES } from '#/server/db/schema'
-import type { Reservation, Trip } from '#/server/db/types'
+import type { Day, Reservation, Trip } from '#/server/db/types'
 import type { TripPatch } from '#/server/do'
 import type { ImportRefusalCode } from '#/server/extract/document'
 import type { GeocodeRuntimeOptions } from '#/server/geo/bindings'
@@ -674,6 +676,72 @@ async function settle(
 }
 
 /**
+ * The run of nights an imported accommodation booking covers, written beside it when its dates say.
+ *
+ * Only after the booking is written, recorded and settled, and **never throws**: the booking is
+ * durable by then, and a retry must not write it twice. A range this trip's days cannot hold —
+ * either date outside the trip, or an end before its start — and a refused stay write each leave
+ * the booking alone for the reader to review, with a warning of their own that is not the one a
+ * failed row gets. The days are read from the trip the caller was just authorised for, once per
+ * confirm and only when an accommodation row arrives.
+ */
+function stayWriter(
+  scope: TenantScope,
+  forTrip: string,
+): (draft: BookingImportDraft, reservation: Reservation) => Promise<void> {
+  let dayByDate: Promise<Map<string, Day>> | null = null
+
+  return async (draft, reservation) => {
+    try {
+      dayByDate ??= listTripDays(scope, forTrip).then(
+        // An undated day (a trip with no dates) is one no imported date can name.
+        (days) =>
+          new Map(
+            days.flatMap((day) =>
+              day.date === null ? [] : [[day.date, day] as const],
+            ),
+          ),
+      )
+      const days = await dayByDate
+      const start =
+        draft.startDate === null ? undefined : days.get(draft.startDate)
+      const end = draft.endDate === null ? undefined : days.get(draft.endDate)
+      if (
+        start === undefined ||
+        end === undefined ||
+        end.dayNumber < start.dayNumber
+      ) {
+        log().warn('booking import stay range not resolved', {
+          tripId: forTrip,
+          index: draft.index,
+          reservationId: reservation.id,
+          organizationId: scope.ctx.organizationId,
+        })
+        return
+      }
+      await createAccommodation(scope, {
+        tripId: forTrip,
+        startDayId: start.id,
+        endDayId: end.id,
+        name: reservation.title,
+        address: draft.location,
+        checkInTime: draft.startTime,
+        checkOutTime: draft.endTime,
+        reservationId: reservation.id,
+      })
+    } catch (cause) {
+      log().warn('booking import stay not written', {
+        tripId: forTrip,
+        index: draft.index,
+        reservationId: reservation.id,
+        organizationId: scope.ctx.organizationId,
+        ...serializeError(cause),
+      })
+    }
+  }
+}
+
+/**
  * Writes every accepted row it can, reports the ones it cannot, and never writes one twice.
  *
  * The staged record is the retry's only memory, so it is extended with what was written **before**
@@ -716,6 +784,7 @@ export async function confirmBookingImport(
 
   const timeZone = resolveTimeZone(trip.timezone)
   const placeFor = placeResolver(scope, ports.geocoding, trip.id)
+  const stayFor = stayWriter(scope, trip.id)
   /*
    * The name a row the source never titled is written under.
    *
@@ -769,6 +838,7 @@ export async function confirmBookingImport(
       })
       written.push({ index, reservationId: reservation.id })
       await settle(scope, trip, reservation, fileId)
+      if (draft.type === 'accommodation') await stayFor(draft, reservation)
     } catch (cause) {
       log().warn('booking import row not written', {
         tripId: trip.id,

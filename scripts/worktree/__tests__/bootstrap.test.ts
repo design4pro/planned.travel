@@ -135,6 +135,45 @@ describe('scripts/worktree/bootstrap.sh', { timeout: 15_000 }, () => {
       expect(r.stdout).toContain('dependencies present')
     })
 
+    // The regression behind the TypeScript 6.0.3 checkout: `node_modules/.bin` was there, the
+    // lockfile had moved on to TypeScript 7, and the script reported "dependencies present".
+    // pnpm keeps the lockfile it last installed from at node_modules/.pnpm/lock.yaml.
+    const lockfiles = (dir: string, wanted: string, installed: string) => {
+      writeFileSync(join(dir, 'pnpm-lock.yaml'), wanted)
+      mkdirSync(join(dir, 'node_modules/.pnpm'), { recursive: true })
+      writeFileSync(join(dir, 'node_modules/.pnpm/lock.yaml'), installed)
+    }
+
+    it('skips the install when node_modules was installed from the current lockfile', () => {
+      provision(main, { deps: true })
+      lockfiles(main, 'typescript: 7.0.2\n', 'typescript: 7.0.2\n')
+      const r = bootstrap(main)
+      expect(installs()).toEqual([])
+      expect(r.stdout).toContain('dependencies present')
+    })
+
+    it('reinstalls when node_modules was installed from an older lockfile', () => {
+      provision(main, { deps: true })
+      lockfiles(main, 'typescript: 7.0.2\n', 'typescript: 6.0.3\n')
+      bootstrap(main)
+      expect(installs()).toEqual(['install --frozen-lockfile HUSKY=unset'])
+    })
+
+    it('reports a stale node_modules under --check', () => {
+      provision(main, { deps: true })
+      lockfiles(main, 'typescript: 7.0.2\n', 'typescript: 6.0.3\n')
+      const r = spawnSync('bash', [BOOTSTRAP, '--check'], {
+        cwd: main,
+        encoding: 'utf8',
+        env: {
+          ...baseEnv(),
+          CLAUDE_PROJECT_DIR: main,
+        } as unknown as NodeJS.ProcessEnv,
+      })
+      expect(r.status).toBe(1)
+      expect(r.stderr).toContain('node_modules')
+    })
+
     it('installs anyway under --force', () => {
       provision(main, { deps: true })
       bootstrap(main, ['--force'])

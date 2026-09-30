@@ -22,6 +22,12 @@ const messages = {
   'error.book': '予約を読み込めませんでした',
   'error.transports': '移動を読み込めませんでした',
   'error.people': 'メンバーを読み込めませんでした',
+  'header.length': {
+    other: '{days}日間',
+  },
+  'header.planned': {
+    other: '{days}日分を計画済み',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '旅程',
   'plan.places': '場所',
@@ -76,8 +82,11 @@ const messages = {
   'plan.addPlace.label': '場所を追加',
   'plan.addPlace.more': '場所を追加するほかの方法',
   'plan.addPlace.option.map': '地図上に配置',
-  'plan.addPlace.forDay': 'この日に場所を追加',
   'plan.addPlace.forDayNamed': '場所を追加 — {day}',
+  'plan.stay.checkIn': 'チェックイン',
+  'plan.stay.checkOut': 'チェックアウト',
+  'plan.day.addStay': '宿泊を追加 — {day}',
+  'plan.day.addStayShort': '宿泊を追加',
   'plan.drop.hint':
     '地図を右クリックするか長押しすると、その地点に場所を追加できます。',
   'plan.drop.armed':

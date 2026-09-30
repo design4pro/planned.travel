@@ -22,6 +22,12 @@ const messages = {
   'error.book': 'Pemesanan tidak dapat dimuat',
   'error.transports': 'Transportasi tidak dapat dimuat',
   'error.people': 'Daftar orang tidak dapat dimuat',
+  'header.length': {
+    other: '{days} hari',
+  },
+  'header.planned': {
+    other: '{days} hari direncanakan',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Rencana perjalanan',
   'plan.places': 'Tempat',
@@ -76,8 +82,11 @@ const messages = {
   'plan.addPlace.label': 'Tambahkan tempat',
   'plan.addPlace.more': 'Cara lain menambahkan tempat',
   'plan.addPlace.option.map': 'Letakkan di peta',
-  'plan.addPlace.forDay': 'Tambahkan tempat ke hari ini',
   'plan.addPlace.forDayNamed': 'Tambahkan tempat, {day}',
+  'plan.stay.checkIn': 'Check-in',
+  'plan.stay.checkOut': 'Check-out',
+  'plan.day.addStay': 'Tambahkan penginapan, {day}',
+  'plan.day.addStayShort': 'Tambahkan penginapan',
   'plan.drop.hint':
     'Klik kanan pada peta, atau tekan dan tahan, untuk menambahkan tempat tepat di sana.',
   'plan.drop.armed':

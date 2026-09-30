@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'Οι κρατήσεις δεν φορτώθηκαν',
   'error.transports': 'Οι μετακινήσεις δεν φορτώθηκαν',
   'error.people': 'Τα άτομα δεν φορτώθηκαν',
+  'header.length': {
+    one: '{days} ημέρα',
+    other: '{days} ημέρες',
+  },
+  'header.planned': {
+    one: '{days} ημέρα σχεδιασμένη',
+    other: '{days} ημέρες σχεδιασμένες',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Πρόγραμμα',
   'plan.places': 'Τοποθεσίες',
@@ -78,8 +86,11 @@ const messages = {
   'plan.addPlace.label': 'Προσθήκη τοποθεσίας',
   'plan.addPlace.more': 'Περισσότεροι τρόποι προσθήκης τοποθεσίας',
   'plan.addPlace.option.map': 'Τοποθέτηση στον χάρτη',
-  'plan.addPlace.forDay': 'Προσθήκη τοποθεσίας σε αυτή την ημέρα',
   'plan.addPlace.forDayNamed': 'Προσθήκη τοποθεσίας, {day}',
+  'plan.stay.checkIn': 'Άφιξη',
+  'plan.stay.checkOut': 'Αποχώρηση',
+  'plan.day.addStay': 'Προσθήκη διαμονής, {day}',
+  'plan.day.addStayShort': 'Προσθήκη διαμονής',
   'plan.drop.hint':
     'Κάντε δεξί κλικ στον χάρτη ή πατήστε παρατεταμένα για να προσθέσετε μια τοποθεσία ακριβώς εκεί.',
   'plan.drop.armed':

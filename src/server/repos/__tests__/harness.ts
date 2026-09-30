@@ -9,7 +9,8 @@
  *
  * The database is reached through Drizzle's proxy driver, whose handle satisfies the same
  * {@link Database} type the Worker's D1 handle does. Both the single-statement and the `batch`
- * callbacks are wired, so `runBatch()` takes its real batching path here too.
+ * callbacks are wired, so `runBatch()` takes its real batching path here too. Like D1, it refuses a
+ * statement carrying more than `MAX_BOUND_PARAMETERS` bound parameters.
  */
 
 import { DatabaseSync } from 'node:sqlite'
@@ -21,6 +22,7 @@ import { ceilingsForPlan } from '#/server/billing/limits'
 import { ceilingColumns } from '#/server/billing/store'
 import { replayMigrations } from '#/server/db/__tests__/migration-files'
 import { createScope } from '../base'
+import { MAX_BOUND_PARAMETERS } from '../batch'
 import { upsertSubscription } from '../billing'
 import type { PlanId } from '#/lib/plans'
 import type { Database, OrganizationRole } from '#/server/db/types'
@@ -75,6 +77,13 @@ function runStatement(
   params: ReadonlyArray<unknown>,
   method: ProxyMethod,
 ): { rows: Array<unknown> } {
+  // SQLite accepts far more bound parameters than D1 does, so without this a read that binds one
+  // parameter per id passes here and is refused in production (#448, #620, #687).
+  if (params.length > MAX_BOUND_PARAMETERS) {
+    throw new Error(
+      `D1 refuses a statement with ${params.length} bound parameters (at most ${MAX_BOUND_PARAMETERS}): ${query}`,
+    )
+  }
   const statement = sqlite.prepare(query)
   const bound = toSqliteParams(params)
 

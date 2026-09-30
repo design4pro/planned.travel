@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'A foglalásokat nem sikerült betölteni',
   'error.transports': 'Az utak nem töltődtek be',
   'error.people': 'A résztvevőket nem sikerült betölteni',
+  'header.length': {
+    one: '{days} nap',
+    other: '{days} nap',
+  },
+  'header.planned': {
+    one: '{days} nap megtervezve',
+    other: '{days} nap megtervezve',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Útiterv',
   'plan.places': 'Helyek',
@@ -76,8 +84,11 @@ const messages = {
   'plan.addPlace.label': 'Hely hozzáadása',
   'plan.addPlace.more': 'További módok hely hozzáadására',
   'plan.addPlace.option.map': 'Elhelyezés a térképen',
-  'plan.addPlace.forDay': 'Hely hozzáadása ehhez a naphoz',
   'plan.addPlace.forDayNamed': 'Hely hozzáadása: {day}',
+  'plan.stay.checkIn': 'Bejelentkezés',
+  'plan.stay.checkOut': 'Kijelentkezés',
+  'plan.day.addStay': 'Szállás hozzáadása: {day}',
+  'plan.day.addStayShort': 'Szállás hozzáadása',
   'plan.drop.hint':
     'Kattints jobb gombbal a térképre, vagy tartsd rajta az ujjad, hogy pontosan oda adj hozzá egy helyet.',
   'plan.drop.armed':
