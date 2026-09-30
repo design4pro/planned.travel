@@ -468,7 +468,9 @@ with exact, small, fast movements.
 ### Buttons
 
 - **Shape:** softly rounded (12px at `md`/`lg`, 8px at `sm`); `pill` shape available.
-- **Sizes:** 32 / 40 / 48px tall, at Caption / Label / Body.
+- **Sizes:** 32 / 40 / 48px tall, at Label / Body / Subtitle.
+- **Page-header action:** `size="sm" shape="pill"`, on every screen, so the header never changes
+  height between tabs. `md` is for an empty state's call to action.
 - **Primary:** Ink Black fill on white text, resting `shadow-card`, hover to `accent-hover` plus
   `shadow-elevated`. The one loud button on a screen.
 - **Secondary (the default):** `edge-strong` hairline on a white sheet; hover deepens the border to

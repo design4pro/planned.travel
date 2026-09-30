@@ -136,7 +136,15 @@ allocate_port() {
 D1_DIR=.wrangler/state/v3/d1/miniflare-D1DatabaseObject
 TILES_BLOBS=.wrangler/state/v3/r2/planned-travel-tiles/blobs
 
-have_deps() { [ -d node_modules/.bin ]; }
+# node_modules/.bin alone says an install happened once, not that it matches the lockfile: after a
+# pull that bumps a dependency (TypeScript 6 -> 7) it stays put and the old version keeps running.
+# pnpm keeps the lockfile it last installed from at node_modules/.pnpm/lock.yaml, so a difference
+# from pnpm-lock.yaml means the install is stale. A mismatch only ever costs a frozen-lockfile
+# install, which is a no-op when nothing changed.
+have_deps() {
+  [ -d node_modules/.bin ] || return 1
+  [ ! -f pnpm-lock.yaml ] || cmp -s pnpm-lock.yaml node_modules/.pnpm/lock.yaml
+}
 have_dev_vars() { [ -f .dev.vars ]; }
 
 # Gated on the schema actually being there, never on the directory existing:
@@ -190,7 +198,7 @@ have_schema() {
 have_basemap() { [ -d "$TILES_BLOBS" ] && [ -n "$(ls -A "$TILES_BLOBS" 2>/dev/null)" ]; }
 
 missing_list() {
-  have_deps      || echo "node_modules (pnpm install)"
+  have_deps      || echo "node_modules (absent or older than pnpm-lock.yaml; pnpm install)"
   have_dev_vars  || echo ".dev.vars (BETTER_AUTH_SECRET; without it /login answers 500)"
   have_schema    || echo "local D1 schema (pnpm db:migrate:local)"
   have_airports  || echo "airport catalogue in local D1 (pnpm db:airports:local)"
