@@ -22,6 +22,12 @@ const messages = {
   'error.book': 'Pemesanan tidak dapat dimuat',
   'error.transports': 'Transportasi tidak dapat dimuat',
   'error.people': 'Daftar orang tidak dapat dimuat',
+  'header.length': {
+    other: '{days} hari',
+  },
+  'header.planned': {
+    other: '{days} hari direncanakan',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Rencana perjalanan',
   'plan.places': 'Tempat',

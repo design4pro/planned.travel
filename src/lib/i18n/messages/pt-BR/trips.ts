@@ -22,6 +22,16 @@ const messages = {
   'error.book': 'Não foi possível carregar as reservas',
   'error.transports': 'Os deslocamentos não carregaram',
   'error.people': 'Não foi possível carregar as pessoas',
+  'header.length': {
+    one: '{days} dia',
+    many: '{days} dias',
+    other: '{days} dias',
+  },
+  'header.planned': {
+    one: '{days} dia planejado',
+    many: '{days} dias planejados',
+    other: '{days} dias planejados',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Roteiro',
   'plan.places': 'Lugares',

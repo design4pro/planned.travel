@@ -22,6 +22,18 @@ const messages = {
   'error.book': 'Не удалось загрузить брони',
   'error.transports': 'Переезды не загрузились',
   'error.people': 'Не удалось загрузить участников',
+  'header.length': {
+    one: '{days} день',
+    few: '{days} дня',
+    many: '{days} дней',
+    other: '{days} дня',
+  },
+  'header.planned': {
+    one: '{days} день запланирован',
+    few: '{days} дня запланировано',
+    many: '{days} дней запланировано',
+    other: '{days} дня запланировано',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Маршрут',
   'plan.places': 'Места',

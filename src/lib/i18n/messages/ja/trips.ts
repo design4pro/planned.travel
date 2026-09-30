@@ -22,6 +22,12 @@ const messages = {
   'error.book': '予約を読み込めませんでした',
   'error.transports': '移動を読み込めませんでした',
   'error.people': 'メンバーを読み込めませんでした',
+  'header.length': {
+    other: '{days}日間',
+  },
+  'header.planned': {
+    other: '{days}日分を計画済み',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': '旅程',
   'plan.places': '場所',

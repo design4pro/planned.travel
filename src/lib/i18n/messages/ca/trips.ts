@@ -22,6 +22,16 @@ const messages = {
   'error.book': 'No s’han pogut carregar les reserves',
   'error.transports': 'Els trajectes no s’han carregat',
   'error.people': 'No s’han pogut carregar les persones',
+  'header.length': {
+    one: '{days} dia',
+    many: '{days} dies',
+    other: '{days} dies',
+  },
+  'header.planned': {
+    one: '{days} dia planificat',
+    many: '{days} dies planificats',
+    other: '{days} dies planificats',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerari',
   'plan.places': 'Llocs',

@@ -22,6 +22,22 @@ const messages = {
   'error.book': 'تعذّر تحميل الحجوزات',
   'error.transports': 'لم تُحمَّل التنقلات',
   'error.people': 'تعذّر تحميل الأشخاص',
+  'header.length': {
+    zero: '{days} يوم',
+    one: '{days} يوم',
+    two: '{days} يومان',
+    few: '{days} أيام',
+    many: '{days} يومًا',
+    other: '{days} يوم',
+  },
+  'header.planned': {
+    zero: '{days} يوم في الخطة',
+    one: '{days} يوم في الخطة',
+    two: '{days} يومان في الخطة',
+    few: '{days} أيام في الخطة',
+    many: '{days} يومًا في الخطة',
+    other: '{days} يوم في الخطة',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'البرنامج',
   'plan.places': 'الأماكن',

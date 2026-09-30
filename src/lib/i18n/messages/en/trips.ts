@@ -31,6 +31,20 @@ const messages = {
   'error.book': 'The bookings did not load',
   'error.transports': 'The transports did not load',
   'error.people': 'The people did not load',
+  /* ------------------------------------ the band every trip tab opens with */
+  /**
+   * The trip's length beside its dates, and how many days the itinerary holds.
+   * `{days}` arrives already grouped for the locale; `count` only selects the
+   * plural branch.
+   */
+  'header.length': {
+    one: '{days} day',
+    other: '{days} days',
+  },
+  'header.planned': {
+    one: '{days} day planned',
+    other: '{days} days planned',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Itinerary',
   'plan.places': 'Places',

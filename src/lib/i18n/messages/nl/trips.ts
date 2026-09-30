@@ -22,6 +22,14 @@ const messages = {
   'error.book': 'De boekingen konden niet worden geladen',
   'error.transports': 'De trajecten zijn niet geladen',
   'error.people': 'De personen konden niet worden geladen',
+  'header.length': {
+    one: '{days} dag',
+    other: '{days} dagen',
+  },
+  'header.planned': {
+    one: '{days} dag gepland',
+    other: '{days} dagen gepland',
+  },
   /* ------------------------------------------------- the itinerary tab */
   'plan.title': 'Reisroute',
   'plan.places': 'Plekken',
