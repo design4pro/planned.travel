@@ -9,6 +9,12 @@ Extends the installed skill: read `.claude/skills/om-auto-manage-issues/SKILL.md
 - `groom` is the human "re-groom" trigger label: remove it from an issue as the first mutation when present. Never add `groom`, `autofix` or `spec`; a human decides when an issue starts implementation.
 - Category comes from the issue form (`.github/ISSUE_TEMPLATE`): a bug report is `bug`, an enhancement or idea is `feature`, a maintenance item is `refactor`; Dependabot is `dependencies`; Sentry-filed issues (`pnpm sentry-triage`) are `bug` and keep the `priority-high` the filer set.
 - The Definition of Ready is in `SDLC.md`; the not-ready comment names the missing ticket-level items and points at the issue form section that holds each.
+- **Run the readiness verifier before recording `not-ready`.** When step 6 of the installed
+  skill (`references/enrich-existing-issue.md`) finds a ticket-level item missing, follow
+  `.ai/skills/om-auto-fix-issue/SKILL.md` § Readiness verifier: `READINESS: VERIFIED` records
+  `READY_STATUS=ready` and posts the `readiness verified` comment instead of the not-ready one;
+  `NEEDS_HUMAN` records `not-ready` and the not-ready comment lists only the `NEEDS_HUMAN` rows.
+  A verified issue is ready for every rule below, including the hand-on to `needs-triage`.
 - **Hand a ready issue on, and only then.** As the **last** mutation of a groom that ends `READY_STATUS=ready`, add `needs-triage`. That label is what starts `afk-triage`, and adding it here is the one step that was missing between the issue form and the unattended ladder (`SDLC.md` § Intake labels). The bridge is deliberately narrow - skip it, leaving the issue for a human, when any of these hold:
   - `READY_STATUS` is anything but `ready`;
   - the issue already carries `needs-triage`, `needs-info`, `ready-for-agent` or `ready-for-human` - a decision exists, or triage is already pending, and `afk-triage` owns both;
