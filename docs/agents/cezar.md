@@ -88,8 +88,8 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
   appended to the system prompt of every agent step and tells the run to talk to the developer in
   Polish while everything that leaves the session (code, comments, commits, GitHub) stays English.
 - Service environment: `CEZ_AUTOMATIONS=1`, `CEZ_AUTONOMOUS_DEFAULT=0`, `CEZ_SKILLS_AUTO_UPDATE=0`,
-  `GH_CONFIG_DIR` (below), all four from the plist template in `design4pro/cezar`, and never `GH_TOKEN`,
-  `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
+  all three from the plist template in `design4pro/cezar`; `GH_TOKEN` only as the fine-grained PAT
+  under Host identity below, never `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
   builds the agent's env from an allowlist (`PATH`, `HOME`, toolchain prefixes such as
   `NODE_*`/`PNPM_*`, `GH_TOKEN`, `GH_CONFIG_DIR`, `ANTHROPIC_*`, `CLAUDE_*`, `CEZ_*`), so a token
   in the service env is a token in every run, and any other variable set there (`HUSKY=0` for
@@ -98,19 +98,17 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
   `prepare` from rewriting `core.hooksPath` in the host clone's shared config, and
   `.husky/pre-commit` exits at once when `CEZ_TASK_ID` is set; the gate a run passes is
   `validation.commands` in `.ai/agentic.config.json`.
-- Host identity: the cockpit acts as `design4pro-agent` (bot@design4.pro), a member of the
-  `design4pro` organisation with Write on this repository and on `money-tracker.online`, nothing
-  else. Its `gh` login lives in its own config directory, next to the developer's
-  (`~/.config/gh-agent`, `GH_CONFIG_DIR=~/.config/gh-agent gh auth login --with-token` with a
-  fine-grained PAT owned by that account: resource owner `design4pro`, only the two repositories,
-  Contents, Issues and Pull requests read/write; **no Workflows, no Administration**: a run cannot
-  push under `.github/workflows/` or delete a label; the organisation approves the token once).
-  The cockpit plist sets `GH_CONFIG_DIR` and cezar forwards it, so `gh` inside a run and
-  `git push` over HTTPS (the global credential helper is `gh auth git-credential`, which reads
-  the same variable) both act as the bot, while `~/.config/gh` and the developer's terminal stay the
-  developer's. Commits carry `user.name design4pro-agent` and `user.email bot@design4.pro` from
-  the host clone's local git config, which every worktree shares. Re-login the bot only with an
-  empty run queue: a run whose `gh` loses its login mid-way stops with a blocked handoff. The
+- Host identity (2026-10-01, owner decision): one GitHub identity. The cockpit acts as the owner,
+  `rafalwolak`, like his own terminal; there is no bot account. Agent work is told apart by its
+  pipeline labels and its `cez/` branch, never by author, and the `develop` ruleset needs no
+  approving review, so self-authored PRs merge. The scope guard the bot's token used to give - a
+  fine-grained PAT for only the two repositories with Contents, Issues and Pull requests
+  read/write and **no Workflows, no Administration** - should stay: give the cockpit, and only
+  the cockpit, such a PAT for `rafalwolak` through `GH_TOKEN` in its service environment, so a
+  run cannot push under `.github/workflows/` or change a ruleset while the owner's interactive
+  `gh` keeps its full OAuth scopes. Until that token is in place, runs hold the host's OAuth
+  token (`repo, workflow, admin:org`). Swap the token only with an empty run queue: a run whose
+  `gh` loses its login mid-way stops with a blocked handoff. The
   main checkout's `.dev.vars` holds sandbox values only: `scripts/worktree/bootstrap.sh` copies
   it into every worktree.
 - Basemap: CI needs none since ADR 0016, and `pnpm e2e` does not either. `bootstrap.sh` clones the
@@ -207,10 +205,10 @@ cockpit by `.name`, so a renamed definition is created beside the old one, which
 because it is still enabled. Rename in lockstep with the cockpit - disable the old name, then
 `--prune`, the drill step 2 of the host cutover below walks through.
 
-Ten definitions, in two kinds. Seven are GitHub polls, started by an event:
+Eleven definitions, in two kinds. Eight are GitHub polls, started by an event:
 **Groom new issues** on `issue.opened` with `authors` naming the human maintainers;
 **Re-groom on request**, **Fix issues on the autofix label**, **Write a spec for feature issues** on `issue.labeled` with `changedLabels` `groom` /
-`autofix` / `spec`; **Autopilot new pull requests** on `pull_request.opened`, again with `authors`;
+`autofix` / `spec`; **Autopilot new pull requests** on `pull_request.opened`, again with `authors`; **Merge reviewed agent pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`;
 **Triage new issues** and **Implement
 ready-for-agent issues**, on `issue.labeled` with `changedLabels` `needs-triage` / `ready-for-agent`.
 Three are schedules (`kind: "schedule"`), started by the clock and by nobody's action:
@@ -222,10 +220,10 @@ author, the label events because only a collaborator can set a label. This matte
 the issue body is its prompt: an issue anyone on GitHub can open must not start a run by itself,
 so an external report is groomed when a maintainer adds `groom`, and the Sentry sweep (which files
 as the Actions bot, a login the poller's author filter cannot express) files with `groom`
-already on. Agent PRs (authored by `design4pro-agent`, already reviewed inside their chain) and dependabot
-never enter the autopilot. Every filter excludes `in-progress`; `lookbackDays: 3` and
-`maxRecords` 5-10 bound a mistaken mass relabel to a handful of runs (the intake pair looks back
-`7` days). The three command labels are the only things a human uses to start om code-writing
+already on. Agent PRs (opened carrying `review` and driven to the merge inside their own chain) enter only the
+merge automation, dependabot enters none, and the promotion PR (`promotion`) enters no automation.
+Every filter excludes `in-progress`; `lookbackDays: 7` and `maxRecords: 25` bound a mistaken mass
+relabel while still reaching a week of events. The three command labels are the only things a human uses to start om code-writing
 work, and no skill adds them (the overrides say so), so no om run can start another. The intake
 ladder is the deliberate exception: its runs do set its labels - `afk-triage` sets
 `ready-for-agent`, `afk-to-tickets` sets it on the ticket frontier, `afk-architecture-review` sets

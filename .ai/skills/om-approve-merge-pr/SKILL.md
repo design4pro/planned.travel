@@ -10,6 +10,10 @@ Extends the installed skill: read `.claude/skills/om-approve-merge-pr/SKILL.md` 
 - Step 3: an approving review is required only when the base branch's ruleset asks for one. Read it before approving: `gh api "repos/{owner}/{repo}/rules/branches/<baseRefName>" --jq '[.[] | select(.type == "pull_request") | .parameters] | {approvals: (map(.required_approving_review_count) | max // 0), codeOwners: (map(.require_code_owner_review) | any)}'`. When it answers `approvals: 0` and `codeOwners: false` (true for `develop` today), an approval is not a merge requirement: submit it when GitHub accepts it, and when GitHub rejects self-approval (the run uses the PR author's account), go straight to step 4 without asking. Never report "needs an approving review from someone other than the author" as a blocker then - that is not what the ruleset says, and it stalled #770. Only when the ruleset requires approvals or code-owner review and none exists is a missing approval a real blocker: report it and stop.
 - Step 1: request `baseRefName` as well as `headRefName`. An unreadable or missing base
   blocks merging; do not infer it from the source branch or the configured feature base.
+- An unattended run (`CEZ_TASK_ID` is set, or no person is in the session) merges only a PR
+  whose `baseRefName` is `develop`. Any other base - above all the `develop` -> `main`
+  promotion, which carries `promotion` - is reported as merge-ready and left for the owner:
+  merging it deploys production. The `main` rules below apply when the owner drives the merge.
 - Before approval and again at step 4, reject an explicitly requested squash or rebase
   when `baseRefName` is `main`: "Cannot squash or rebase a PR targeting main: a merge
   commit is required to preserve develop/main ancestry (ADR 0003)." Do not issue that

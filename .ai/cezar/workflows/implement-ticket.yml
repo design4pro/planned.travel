@@ -1,5 +1,5 @@
 name: implement-ticket
-description: Implement one ready-for-agent issue test-first from its Agent Brief, pass the validation gate, open a PR and review it. Never merges.
+description: Implement one ready-for-agent issue test-first from its Agent Brief, pass the validation gate, open a PR and drive it through review, QA and CI to the squash-merge into develop.
 steps:
   - id: implement
     name: Check readiness and implement
@@ -41,9 +41,14 @@ steps:
       If the first progress-log line of this run's handoff file starts with `STOP:`, end at once with CEZ:DONE.
 
       Otherwise open the PR per om-open-pr, with the issue number from the task as the issue id. Put the Resolved assumptions table from the handoff file in the PR body, and reference the issue with `Fixes #<number>`.
-  - id: review
-    name: Review the PR
-    skill: om-auto-review-pr
+  # The chain does not stop at an open PR: om-pr-autopilot reviews, fixes, runs QA, waits for CI and
+  # squash-merges into develop (ADR 0031) - the develop ruleset requires no approving review. It
+  # never merges the develop -> main promotion, and a `risk-high` PR waits for the owner's
+  # `qa-approved`.
+  - id: merge
+    name: Drive the PR to the merge into develop
+    # mcp__plugin_playwright_playwright: the QA step drives a browser; without it runs try to install one.
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent, mcp__plugin_playwright_playwright]
     prompt: |
       {{task}}
 
@@ -51,7 +56,7 @@ steps:
       - the first progress-log line of this run's handoff file starts with `STOP:`;
       - no PR is open for this branch (`gh pr list --head "$(git branch --show-current)"`).
 
-      Otherwise review that PR per om-auto-review-pr:
-      - Report the Standards axis and the Spec axis separately (CODE_REVIEW.md).
-      - On the Spec axis, check each acceptance criterion from the issue's Agent Brief.
-      - Never merge, and never run om-approve-merge-pr.
+      Otherwise run `/om-pr-autopilot <that PR number> --allow-merge`:
+      - Before QA needs the app, provision the worktree with `bash scripts/worktree/bootstrap.sh --profile worktree --no-seed`.
+      - Review reports the Standards axis and the Spec axis separately (CODE_REVIEW.md), and the Spec axis checks each acceptance criterion from the issue's Agent Brief.
+      - Merge only into `develop`.
