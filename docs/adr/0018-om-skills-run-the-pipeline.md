@@ -84,7 +84,8 @@ end to end (PR C).
   is the hooks in `.claude/hooks/` (destructive git, environment dumps, the pinned stack,
   protected paths, secrets), a fine-grained PAT without the Workflows and Administration scopes
   (held by the dedicated `design4pro-agent` account and reached through `GH_CONFIG_DIR` in the
-  cockpit's service environment; amended 2026-09-07, `docs/agents/cezar.md`, Host identity),
+  cockpit's service environment; amended 2026-09-07, `docs/agents/cezar.md`, Host identity; the
+  account was retired 2026-10-01 and the PAT moves to the owner's identity, ADR 0031 Amendment),
   one worktree per run, and `maxParallel: 2`. The eight workflows: `issue-groom`, `issue-autofix`,
   `spec`, `implement-spec`, `pr-autopilot`, `pr-review`, `housekeeping`, `brainstorm`.
 - **Automations are the schedule; launchd is the clock.** `issue.opened` by a maintainer grooms
@@ -141,7 +142,7 @@ skill's `trap`, and `om-review-prs` reports a stale claim), `needs-info` and `ba
 (a not-ready issue gets a Definition of Ready comment instead), and the sweeper's report of a
 `status:` that contradicts the tracker (there is no `status:` to contradict). The cost is tokens:
 a fix chain runs the full validation gate two to four times, and grooming runs on every new
-issue; `maxRecords`, `lookbackDays: 3` and `maxParallel: 2` bound a mistake, and
+issue; `maxRecords`, `lookbackDays: 7` and `maxParallel: 2` bound a mistake, and
 `om-pipeline-retro` after two weeks decides whether `pnpm build` and e2e stay in every checkpoint
 or only in the final gate.
 

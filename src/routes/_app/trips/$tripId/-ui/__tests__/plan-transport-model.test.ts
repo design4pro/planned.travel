@@ -1,414 +1,71 @@
 /**
- * The journeys, folded into a board that was already built without them.
+ * The journeys' write half: what a landed write owes the server.
  *
- * The arithmetic under test is a single sentence — a journey's `sort_order` is where it sits
- * among its **departure** day's stops and notes — and every case here is that sentence meeting
- * something the day already does: a fraction inside a gap, a number outside the day entirely, two
- * journeys in one gap, a clock that outranks both, and the renumbering `reorderPlanFn` performs
- * behind this module's back.
- *
- * The last case is the one that measures the design. The two writes are not atomic with each
- * other, so the only thing that keeps a journey beside its neighbours across a reorder is that the
- * run `journeyWrites` produces names those neighbours by id rather than by number.
+ * The last case of `journeyWrites` is the one that measures the design. The two writes are not
+ * atomic with each other, so the only thing that keeps a journey beside its neighbours across a
+ * reorder is that the run `journeyWrites` produces names those neighbours by id rather than by
+ * number.
  */
 import { describe, expect, it } from 'vitest'
 
 import { ideaItemId, legItemId } from '#/components/planner'
+import { planBoard } from '../plan-board'
+import { journeyWrites, journeyWritesFor } from '../plan-transport-model'
 import {
-  journeyWrites,
-  journeyWritesFor,
-  timeOfTransports,
-  transportRowsOf,
-  withTransportItems,
-  withTransports,
-} from '../plan-transport-model'
+  board,
+  day,
+  journey,
+  note,
+  notes,
+  stop,
+  transports,
+} from './plan-board-fixtures'
 
-import type { PlanOrder, PlannerRow } from '#/components/planner'
-import type {
-  PlanTransport,
-  PlanTransportsPayload,
-} from '../../-server/plan-transports'
-import type { PlanModel } from '../plan-model'
+import type { PlanOrder } from '#/components/planner'
+import type { PlanTransport } from '../../-server/plan-transports'
 
 const DAY_IDS = ['d1', 'd2', 'd3']
 
-const journey = (
-  id: string,
-  extra: Partial<PlanTransport> = {},
-): PlanTransport => ({
-  kind: 'transport',
-  id,
-  mode: 'train',
-  status: 'confirmed',
-  serviceNumber: 'Nozomi 21',
-  fromName: 'Tokyo',
-  toName: 'Kyoto',
-  departureDayId: 'd1',
-  arrivalDayId: 'd1',
-  departureTime: null,
-  arrivalTime: null,
-  priceMinor: null,
-  currency: null,
-  position: 0,
-  ...extra,
-})
-
-const payload = (
-  transports: ReadonlyArray<PlanTransport>,
-): PlanTransportsPayload => ({ tripId: 't1', transports })
-
-/** The board as `orderFromPayload` leaves it: stops and notes, and no journeys. */
-const order = (days: Record<string, ReadonlyArray<string>>): PlanOrder => ({
-  days: Object.entries(days).map(([dayId, itemIds]) => ({ dayId, itemIds })),
-  ideaIds: [],
-})
-
 /**
- * The stored positions the board's rows stand at.
- *
- * `0..n-1` is the day straight after a reorder renumbered it — the common case, and the one every
- * assertion here that says nothing about positions relies on. `stored` names the rows that have
- * drifted off it, which is what a scheduled stop or a deleted one leaves behind.
+ * The board the reader sees: one stop per id on each day (stored `0..n-1`), the journeys, and
+ * the day-one notes — read through `planBoard`, the way the screen reads them.
  */
-const positionsOf = (
-  itemIds: ReadonlyArray<string>,
-  stored: ReadonlyMap<string, number> = new Map(),
-): ReadonlyMap<string, number> =>
-  new Map(itemIds.map((id, index) => [id, stored.get(id) ?? index]))
-
-/** The ids of one day, after the journeys have been threaded in. */
-function readDay(next: PlanOrder, dayId: string): ReadonlyArray<string> {
-  return next.days.find((day) => day.dayId === dayId)?.itemIds ?? []
+function boardOf(
+  days: Record<string, ReadonlyArray<string>>,
+  journeys: ReadonlyArray<PlanTransport>,
+  noteRows: ReadonlyArray<ReturnType<typeof note>> = [],
+) {
+  return planBoard(
+    board(
+      DAY_IDS.map((dayId, index) =>
+        day(
+          dayId,
+          index + 1,
+          (days[dayId] ?? []).map((id, at) => stop(id, `p-${id}`, at)),
+        ),
+      ),
+    ),
+    notes(noteRows),
+    transports(journeys),
+  )
 }
 
-/** The board with one journey at `position`, and that journey's draggable id. */
-function threaded(
-  itemIds: ReadonlyArray<string>,
-  transports: ReadonlyArray<PlanTransport>,
-) {
-  const rows = transportRowsOf(payload(transports), DAY_IDS)
-  return {
-    rows,
-    itemIds: readDay(
-      withTransports(order({ d1: itemIds }), rows, positionsOf(itemIds)),
-      'd1',
-    ),
-  }
+/** The ids of one day, as the board reads it. */
+function readDay(next: PlanOrder, dayId: string): ReadonlyArray<string> {
+  return next.days.find((entry) => entry.dayId === dayId)?.itemIds ?? []
 }
 
 const leg = (id: string, dayId = 'd1') => legItemId('transport', dayId, id)
 
-describe('transportRowsOf', () => {
-  it('formats each end once, and the range when the journey lands the same day', () => {
-    const rows = transportRowsOf(
-      payload([
-        journey('j1', {
-          departureTime: '09:00',
-          arrivalTime: '12:30',
-          priceMinor: 13320,
-          currency: 'JPY',
-        }),
-        journey('j2', {
-          arrivalDayId: 'd3',
-          departureTime: '22:10',
-          arrivalTime: '06:45',
-        }),
-      ]),
-      DAY_IDS,
-    )
-
-    expect(rows.map((row) => [row.itemId, row.time])).toEqual([
-      [leg('j1'), '09:00 – 12:30'],
-      [leg('j2'), '22:10'],
-      [leg('j2', 'd2'), null],
-      [leg('j2', 'd3'), '06:45'],
-    ])
-    expect(rows[0].price).toBe('¥13,320')
-    // A leg of a chain carries no fare of its own, and neither does a journey priced nowhere.
-    expect(rows[1].price).toBeNull()
-  })
-
-  /**
-   * The overnight flight into a trip's first day, which is how the flagship trip opens: the
-   * journey is drawn on the day it leaves from, and printing its arrival clock after its
-   * departure clock would read as a flight that lands before it takes off.
-   */
-  it('shows the departure alone rather than a range that runs backwards', () => {
-    const rows = transportRowsOf(
-      payload([
-        journey('j1', { departureTime: '13:20', arrivalTime: '09:35' }),
-        journey('j2', { departureTime: '09:00', arrivalTime: '09:00' }),
-      ]),
-      DAY_IDS,
-    )
-
-    expect(rows.map((row) => row.time)).toEqual(['13:20', '09:00'])
-  })
-})
-
-describe('timeOfTransports', () => {
-  /**
-   * The clock rule compares instants, and a one-day journey *renders* a range — so the index the
-   * merge and the move guard read is built from the payload, never from the rendered row.
-   */
-  it('gives each end its own instant, and a crossed day none at all', () => {
-    const byItem = timeOfTransports(
-      payload([
-        journey('j1', {
-          arrivalDayId: 'd3',
-          departureTime: '22:10',
-          arrivalTime: '06:45',
-        }),
-        journey('j2', { departureTime: '09:00', arrivalTime: '12:30' }),
-      ]),
-    )
-
-    expect([...byItem.entries()]).toEqual([
-      [leg('j1'), '22:10'],
-      [leg('j1', 'd3'), '06:45'],
-      // One day, one row: the arrival never mints a second entry that would outrank its own
-      // departure on the same id.
-      [leg('j2'), '09:00'],
-    ])
-  })
-})
-
-describe('withTransports', () => {
-  it('threads a journey into the gap its fraction names', () => {
-    expect(
-      threaded(['a1', 'a2'], [journey('j1', { position: 0.5 })]).itemIds,
-    ).toEqual(['a1', leg('j1'), 'a2'])
-  })
-
-  it('puts a journey below zero ahead of every stop', () => {
-    expect(
-      threaded(['a1', 'a2'], [journey('j1', { position: -0.5 })]).itemIds,
-    ).toEqual([leg('j1'), 'a1', 'a2'])
-  })
-
-  it('puts a journey past the last stop last', () => {
-    expect(
-      threaded(['a1', 'a2'], [journey('j1', { position: 9 })]).itemIds,
-    ).toEqual(['a1', 'a2', leg('j1')])
-  })
-
-  it('keeps two journeys in one gap in their stored order', () => {
-    expect(
-      threaded(
-        ['a1', 'a2'],
-        [journey('j1', { position: 0.75 }), journey('j2', { position: 0.25 })],
-      ).itemIds,
-    ).toEqual(['a1', leg('j2'), leg('j1'), 'a2'])
-  })
-
-  /**
-   * `sort_order` defaults to `0`, so this is the resting state of every journey nobody has
-   * dragged: it sits behind the stop that opens its day rather than in front of it.
-   */
-  it('puts a journey whose number equals a stop position after that stop', () => {
-    expect(
-      threaded(['a1', 'a2', 'a3'], [journey('j1', { position: 1 })]).itemIds,
-    ).toEqual(['a1', 'a2', leg('j1'), 'a3'])
-  })
-
-  it('renders a day whose only rows are journeys', () => {
-    expect(threaded([], [journey('j1', { position: 0 })]).itemIds).toEqual([
-      leg('j1'),
-    ])
-  })
-
-  it('leaves a day with no journeys exactly as it was', () => {
-    const before = order({ d1: ['a1', 'a2'], d2: ['a3'] })
-    const rows = transportRowsOf(payload([journey('j1')]), DAY_IDS)
-
-    const positions = positionsOf(['a1', 'a2', 'a3'])
-
-    expect(readDay(withTransports(before, rows, positions), 'd2')).toEqual([
-      'a3',
-    ])
-    // Nothing to thread anywhere is the same board, not a rebuilt one.
-    expect(withTransports(before, [], positions)).toBe(before)
-  })
-
-  /**
-   * The day's rows are not numbered `0..n-1` between reorders, and the journey's fraction was
-   * measured against the numbers the server actually wrote.
-   *
-   * `schedulePlaceFn` puts a new stop at the midpoint of its neighbours without renumbering the
-   * day, so a day of `0, 1` becomes `0, 0.5, 1`. A journey stored at `1.5` belongs behind all
-   * three; read against the rows' *ordinals* it would land between the second and the third.
-   */
-  it('reads the positions the server wrote, not the row ordinals', () => {
-    const itemIds = ['a1', 'c1', 'a2']
-    const rows = transportRowsOf(
-      payload([journey('j1', { position: 1.5 })]),
-      DAY_IDS,
-    )
-    const positions = positionsOf(
-      itemIds,
-      new Map([
-        ['c1', 0.5],
-        ['a2', 1],
-      ]),
-    )
-
-    expect(
-      readDay(withTransports(order({ d1: itemIds }), rows, positions), 'd1'),
-    ).toEqual(['a1', 'c1', 'a2', leg('j1')])
-  })
-
-  /**
-   * The other direction off `0..n-1`, and the one an ordinal can never express: a stored position
-   * below zero.
-   *
-   * `indexBetween` in `-server/plan.ts` gives a front insert `after − 1`, so scheduling a place
-   * ahead of a day numbered `0, 1` stores it at `−1` rather than renumbering the day. The rows then
-   * read `−1, 0, 1` while their ordinals read `0, 1, 2`, and a journey stored at `0.5` belongs
-   * between the second and the third — where the ordinals would put it after all three.
-   */
-  it('reads a position the server wrote below zero', () => {
-    const itemIds = ['c1', 'a1', 'a2']
-    const rows = transportRowsOf(
-      payload([journey('j1', { position: 0.5 })]),
-      DAY_IDS,
-    )
-    const positions = positionsOf(
-      itemIds,
-      new Map([
-        ['c1', -1],
-        ['a1', 0],
-        ['a2', 1],
-      ]),
-    )
-
-    expect(
-      readDay(withTransports(order({ d1: itemIds }), rows, positions), 'd1'),
-    ).toEqual(['c1', 'a1', leg('j1'), 'a2'])
-  })
-
-  describe('a journey that spans the days between its ends', () => {
-    const SPAN = payload([
-      journey('j1', {
-        arrivalDayId: 'd3',
-        departureTime: '22:10',
-        arrivalTime: '06:45',
-        position: 0.5,
-      }),
-    ])
-    const rows = transportRowsOf(SPAN, DAY_IDS)
-    const times = timeOfTransports(SPAN)
-    const STOPS = new Map([
-      ['a3', '08:00'],
-      ['a4', '10:00'],
-    ])
-    const timeOfItem = (itemId: string) =>
-      times.get(itemId) ?? STOPS.get(itemId) ?? null
-
-    const next = withTransports(
-      order({ d1: ['a1', 'a2'], d2: ['b1'], d3: ['a3', 'a4'] }),
-      rows,
-      positionsOf(['a1', 'a2', 'b1', 'a3', 'a4']),
-      timeOfItem,
-    )
-
-    /** A crossed day is not the day the number was measured against, so it opens the day. */
-    it('opens a crossed day with the travelling row', () => {
-      expect(readDay(next, 'd2')).toEqual([leg('j1', 'd2'), 'b1'])
-    })
-
-    /** The arrival has a clock of its own, and a time outranks a position. */
-    it('places the arriving row by its arrival time', () => {
-      expect(readDay(next, 'd3')).toEqual([leg('j1', 'd3'), 'a3', 'a4'])
-    })
-
-    it('still places the departing row by its stored fraction', () => {
-      expect(readDay(next, 'd1')).toEqual(['a1', leg('j1'), 'a2'])
-    })
-  })
-})
-
-describe('withTransportItems', () => {
-  const row = (itemId: string): PlannerRow => ({
-    itemId,
-    placeId: `p-${itemId}`,
-    assignmentId: itemId,
-    name: `Place ${itemId}`,
-    location: null,
-    time: null,
-    duration: null,
-    categoryId: null,
-    imageUrl: null,
-    rating: null,
-    note: null,
-    reservationStatus: 'none',
-    lng: 139.79,
-    lat: 35.71,
-    visited: false,
-    dayNumber: 1,
-  })
-
-  const model = (itemIds: ReadonlyArray<string>): PlanModel => ({
-    days: [
-      {
-        dayId: 'd1',
-        dayNumber: 1,
-        title: 'Day 1',
-        dateLabel: null,
-        items: itemIds.map((itemId) => ({ kind: 'stop', row: row(itemId) })),
-        rows: itemIds.map(row),
-        stays: [],
-      },
-    ],
-    ideas: [],
-    categories: [],
-    rowsByItem: new Map(),
-    rowsByPlace: new Map(),
-    dayNumberByPlace: new Map(),
-    scheduledCount: itemIds.length,
-    stopCountByCategory: {},
-  })
-
-  const rows = transportRowsOf(
-    payload([journey('j1', { position: 0.5 })]),
-    DAY_IDS,
-  )
-  const next = withTransportItems(
-    model(['a1', 'a2']),
-    withTransports(
-      order({ d1: ['a1', 'a2'] }),
-      rows,
-      positionsOf(['a1', 'a2']),
-    ),
-    rows,
-  )
-
-  it('puts the journey back into the sequence the arrangement names', () => {
-    expect(
-      next.days[0].items.map((item) => {
-        if (item.kind === 'transport') return item.transport.itemId
-        if (item.kind === 'note') return item.note.id
-        return item.row.itemId
-      }),
-    ).toEqual(['a1', leg('j1'), 'a2'])
-  })
-
-  /** The map's route line draws every row it is handed, and a journey is not a place. */
-  it('leaves the rows the route line reads untouched', () => {
-    expect(next.days[0].rows.map((entry) => entry.itemId)).toEqual(['a1', 'a2'])
-  })
-})
-
 describe('journeyWrites', () => {
-  const SPAN = payload([journey('j1', { arrivalDayId: 'd3', position: 0.5 })])
-  const rows = transportRowsOf(SPAN, DAY_IDS)
-  const board = withTransports(
-    order({ d1: ['a1', 'a2'], d2: ['b1'], d3: ['c1'] }),
-    rows,
-    positionsOf(['a1', 'a2', 'b1', 'c1']),
-  )
+  const result = boardOf({ d1: ['a1', 'a2'], d2: ['b1'], d3: ['c1'] }, [
+    journey('j1', { arrivalDayId: 'd3', position: 0.5 }),
+  ])
+  const rows = result.transportRows
+  const order = result.serverOrder
 
   it('writes the day a journey departs from and no other day it covers', () => {
-    expect(journeyWrites(board, DAY_IDS, rows)).toEqual([
+    expect(journeyWrites(order, DAY_IDS, rows)).toEqual([
       {
         dayId: 'd1',
         items: [
@@ -421,18 +78,15 @@ describe('journeyWrites', () => {
   })
 
   it('names a note by its own id rather than by its draggable one', () => {
-    const withNote = withTransports(
-      order({ d1: ['a1', 'note:n1'] }),
-      transportRowsOf(payload([journey('j1', { position: 9 })]), DAY_IDS),
-      positionsOf(['a1', 'note:n1']),
+    const withNote = boardOf(
+      { d1: ['a1'] },
+      [journey('j1', { position: 9 })],
+      [note('n1', 'd1', 1)],
     )
 
     expect(
-      journeyWrites(
-        withNote,
-        ['d1'],
-        transportRowsOf(payload([journey('j1', { position: 9 })]), DAY_IDS),
-      )[0].items,
+      journeyWrites(withNote.serverOrder, ['d1'], withNote.transportRows)[0]
+        .items,
     ).toEqual([
       { kind: 'stop', id: 'a1' },
       { kind: 'note', id: 'n1' },
@@ -441,7 +95,7 @@ describe('journeyWrites', () => {
   })
 
   it('writes nothing for days that hold no departure', () => {
-    expect(journeyWrites(board, ['d2', 'd3'], rows)).toEqual([])
+    expect(journeyWrites(order, ['d2', 'd3'], rows)).toEqual([])
   })
 
   /**
@@ -453,25 +107,25 @@ describe('journeyWrites', () => {
    * dropped the journey after `a2`, and after the renumbering the payload still says so.
    */
   it('restores a journey to the neighbours it had before a reorder renumbered the day', () => {
-    const before = withTransports(
-      order({ d1: ['a1', 'a2', 'a3'] }),
-      transportRowsOf(payload([journey('j1', { position: 1.5 })]), DAY_IDS),
-      positionsOf(['a1', 'a2', 'a3']),
-    )
-    expect(readDay(before, 'd1')).toEqual(['a1', 'a2', leg('j1'), 'a3'])
+    const restored = boardOf({ d1: ['a1', 'a2', 'a3'] }, [
+      journey('j1', { position: 1.5 }),
+    ])
+    expect(readDay(restored.serverOrder, 'd1')).toEqual([
+      'a1',
+      'a2',
+      leg('j1'),
+      'a3',
+    ])
 
     // The reader drags `a3` to the front. `reorderPlanFn` renumbers the stops 0..2 and knows
     // nothing about the journey, whose stored 1.5 now names an entirely different gap.
-    const after: PlanOrder = order({ d1: ['a3', 'a1', 'a2', leg('j1')] })
+    const after: PlanOrder = {
+      days: [{ dayId: 'd1', itemIds: ['a3', 'a1', 'a2', leg('j1')] }],
+      ideaIds: [],
+    }
 
     expect(journeyWrites(after, ['d1'], [])).toEqual([])
-    expect(
-      journeyWrites(
-        after,
-        ['d1'],
-        transportRowsOf(payload([journey('j1', { position: 1.5 })]), DAY_IDS),
-      ),
-    ).toEqual([
+    expect(journeyWrites(after, ['d1'], restored.transportRows)).toEqual([
       {
         dayId: 'd1',
         items: [
@@ -490,26 +144,22 @@ describe('journeyWrites', () => {
  * `plan-screen.tsx` used to make inline, where no test could reach it.
  */
 describe('journeyWritesFor', () => {
-  const rows = transportRowsOf(
-    payload([journey('j1', { position: 1.5 })]),
-    DAY_IDS,
-  )
   // a1 · a2 · j1 · a3 on the first day, one stop on the second.
-  const before = withTransports(
-    order({ d1: ['a1', 'a2', 'a3'], d2: ['b1'] }),
-    rows,
-    positionsOf(['a1', 'a2', 'a3', 'b1']),
-  )
+  const result = boardOf({ d1: ['a1', 'a2', 'a3'], d2: ['b1'] }, [
+    journey('j1', { position: 1.5 }),
+  ])
+  const rows = result.transportRows
+  const before = result.serverOrder
   const d1 = (...items: ReadonlyArray<{ kind: string; id: string }>) => [
     { dayId: 'd1', items },
   ]
-  const stop = (id: string) => ({ kind: 'stop', id })
+  const stopRef = (id: string) => ({ kind: 'stop', id })
   const j1 = { kind: 'transport', id: 'j1' }
 
   it('restates the day a deleted stop left, against the day without it', () => {
     expect(
       journeyWritesFor({ kind: 'delete', before, itemId: 'a2' }, rows),
-    ).toEqual(d1(stop('a1'), j1, stop('a3')))
+    ).toEqual(d1(stopRef('a1'), j1, stopRef('a3')))
   })
 
   it('writes nothing when the deleted place was only an idea', () => {
@@ -537,7 +187,7 @@ describe('journeyWritesFor', () => {
         { kind: 'unschedule', before, next, itemId: 'a2' },
         rows,
       ),
-    ).toEqual(d1(stop('a1'), j1, stop('a3')))
+    ).toEqual(d1(stopRef('a1'), j1, stopRef('a3')))
   })
 
   it('names a scheduled stop by the assignment the write created', () => {
@@ -563,7 +213,9 @@ describe('journeyWritesFor', () => {
         },
         rows,
       ),
-    ).toEqual(d1(stop('a1'), stop('a2'), j1, stop('asg9'), stop('a3')))
+    ).toEqual(
+      d1(stopRef('a1'), stopRef('a2'), j1, stopRef('asg9'), stopRef('a3')),
+    )
   })
 
   it('restates every day a reorder touched that a journey departs from', () => {
@@ -572,6 +224,6 @@ describe('journeyWritesFor', () => {
         { kind: 'reorder', next: before, dayIds: ['d1', 'd2'] },
         rows,
       ),
-    ).toEqual(d1(stop('a1'), stop('a2'), j1, stop('a3')))
+    ).toEqual(d1(stopRef('a1'), stopRef('a2'), j1, stopRef('a3')))
   })
 })

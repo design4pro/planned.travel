@@ -2,8 +2,8 @@ name: Promote develop
 
 # Git Flow's promotion leg, kept open automatically: after every push to `develop` - which is
 # every merge into staging - this opens the `develop` → `main` pull request if one is not already
-# open, and otherwise leaves the existing one alone. It never merges anything; a human still
-# reviews and merges, and merging is what deploys production (deploy.yml).
+# open, and otherwise leaves the existing one alone. It never merges anything; the owner
+# reviews and merges it, and merging is what deploys production (deploy.yml).
 #
 # ADR 0003 makes `main` receive only what staging has already run. A promotion pull request that
 # always exists is what keeps that visible: the diff between staging and production is on screen
@@ -13,6 +13,14 @@ name: Promote develop
 # GITHUB_TOKEN is a fallback, but does not itself trigger those workflows.
 # The merge-queue label is a process stand-down for Cezar, not a native GitHub queue:
 # promotions are reviewed and merged manually, without an automated repair run.
+#
+# The `promotion` label is what keeps the pipeline's own merge away from this pull request.
+# Every pull request here - agent or human, this one included - is authored by the owner's one
+# account, and the pipeline squash-merges into `develop` on its own (ADR 0031, amended
+# 2026-10-01), so neither the author nor `merge-queue` tells the release apart. Every Cezar PR
+# automation excludes `promotion` (docs/agents/cezar-automations.json), and the merge skills
+# merge unattended only into `develop`. The label is created here when missing and put on an
+# already open promotion as well, so the guard holds from the first run after this change.
 
 on:
   push:
@@ -26,6 +34,8 @@ concurrency:
 
 permissions:
   contents: read
+  # issues: write - labels are an issues resource; creating `promotion` needs it.
+  issues: write
   pull-requests: write
 
 # `runs-on` below reads through `vars.RUNNER_CI`, a repository variable that is
@@ -51,8 +61,15 @@ jobs:
         run: |
           set -euo pipefail
 
+          # --force makes the call idempotent: it updates the label when it already exists.
+          gh label create promotion --force --color 5319e7 \
+            --description "develop -> main release: merged by the owner, never by an unattended run"
+
           existing=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then
+            # REST, not `gh pr edit`: that one also queries the retired Projects (classic) API and
+            # fails on some gh versions, which under `set -e` would fail the whole job.
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${existing}/labels" -f 'labels[]=promotion' > /dev/null
             echo "::notice title=Promotion pull request::#${existing} is already open and now carries this commit."
             exit 0
           fi
@@ -70,7 +87,7 @@ jobs:
             'Automated promotion pull request, opened by `.github/workflows/promote-develop.yml`.' \
             '' \
             'Merging this deploys **production**: <https://planned.travel>. It stays open and keeps' \
-            'collecting commits until a human merges it, so the diff between staging and production' \
+            'collecting commits until the owner merges it, so the diff between staging and production' \
             'is always one click away.' \
             '' \
             'Before merging, check that staging has actually been exercised:' \
@@ -78,11 +95,13 @@ jobs:
             '' \
             'Every commit below has already passed the full gate on `develop`. Whether this pull' \
             'request runs its own CI checks depends on the token that opened it - see the header' \
-            'of `.github/workflows/promote-develop.yml`. A human reviews the promotion before merging.')
+            'of `.github/workflows/promote-develop.yml`. The owner reviews the promotion before merging;' \
+            'it carries `promotion`, so no unattended pipeline run merges it.')
 
           gh pr create \
             --base main \
             --head develop \
             --title 'chore(release): promote develop to main' \
             --label merge-queue \
+            --label promotion \
             --body "$body"

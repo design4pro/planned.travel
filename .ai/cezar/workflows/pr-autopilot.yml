@@ -3,7 +3,7 @@
 # om-pr-autopilot diagnoses it and runs the right chain: continue, fix, review, QA, and with
 # `--allow-merge` the final om-approve-merge-pr squash-merge, which still refuses on a failed QA gate
 # or `qa-failed` / `do-not-merge` / `blocked` (ADR 0031). The develop-to-main promotion PR never
-# reaches this workflow: it is authored by a maintainer and opened carrying `merge-queue`.
+# reaches this workflow: it carries `promotion`, which every PR automation excludes.
 name: pr-autopilot
 description: om-pr-autopilot on one PR - diagnose, then continue / fix / review / QA / merge to develop.
 steps:
@@ -13,4 +13,5 @@ steps:
   - id: autopilot
     name: om-pr-autopilot
     prompt: '/om-pr-autopilot {{task}} --allow-merge'
-    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
+    # mcp__plugin_playwright_playwright: the QA step drives a browser; without it runs try to install one.
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent, mcp__plugin_playwright_playwright]

@@ -1,9 +1,9 @@
 /**
  * From the trip's rows to the planner's view models.
  *
- * The one adapter between the loader's normalised payload and the three surfaces
- * that draw it — the itinerary rail, the ideas rail and the map. Keeping it pure and
- * in one file buys two things: every date and duration is formatted exactly once, and
+ * The materialiser behind `plan-board.ts`, which owns what order a Day reads in: this
+ * file turns an arrangement into the view models the three surfaces draw — the itinerary
+ * rail, the ideas rail and the map. Keeping it pure buys two things: every date and duration is formatted exactly once, and
  * the optimistic board is derived from an arrangement (`PlanOrder`) rather than
  * patched in place, so an in-flight drag and the loader's truth cannot diverge into
  * two half-correct lists.
@@ -14,12 +14,7 @@
  * optimistic render never has to invent a row.
  */
 
-import {
-  ideaItemId,
-  isNoteItemId,
-  mergeDayTimeline,
-  noteItemId,
-} from '#/components/planner'
+import { ideaItemId, isLegItemId, isNoteItemId } from '#/components/planner'
 import {
   formatNumber,
   formatTime,
@@ -40,8 +35,8 @@ import type {
   PlannerNote,
   PlannerRow,
   PlannerStay,
+  PlannerTransport,
 } from '#/components/planner'
-import type { PlanNotesPayload } from '../-server/day-notes'
 import type {
   PlanBoardDay,
   PlanBoardPayload,
@@ -63,101 +58,6 @@ export function formatMetres(metres: number): string {
   if (metres < 1000) return `${Math.round(metres / 10) * 10} m`
   const km = metres / 1000
   return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`
-}
-
-/**
- * Every note the board can show, keyed by its **draggable** id.
- *
- * By item id rather than by day because after the merge a day is a list of ids and
- * nothing else: resolving one costs a lookup, and grouping by day would only rebuild
- * the second projection of the notes that `PlannerDay.items` exists to replace.
- */
-export function notesByItem(
-  payload: PlanNotesPayload,
-): ReadonlyMap<string, PlannerNote> {
-  const byItem = new Map<string, PlannerNote>()
-  for (const note of payload.notes) {
-    byItem.set(noteItemId(note.id), {
-      id: note.id,
-      dayId: note.dayId,
-      body: note.body,
-      detail: note.detail,
-      time: formatTime(note.time),
-      icon: note.icon,
-    })
-  }
-  return byItem
-}
-
-/**
- * The `HH:MM` each item carries, by draggable id — `movePlanItem`'s `timeOfItem`.
- *
- * Read from the payload rather than from the view models because a stop's rendered
- * time is a *range* (`10:00 – 12:00`) and the clock rule compares single instants. A
- * stop is at its start time; an item with no time is simply absent from the map.
- */
-export function timeByItem(
-  payload: PlanBoardPayload,
-  notes: PlanNotesPayload,
-): ReadonlyMap<string, string> {
-  const byItem = new Map<string, string>()
-  for (const day of payload.days) {
-    for (const stop of day.stops) {
-      const time = formatTime(stop.startTime)
-      if (time !== null) byItem.set(stop.assignmentId, time)
-    }
-  }
-  for (const note of notes.notes) {
-    const time = formatTime(note.time)
-    if (time !== null) byItem.set(noteItemId(note.id), time)
-  }
-  return byItem
-}
-
-/**
- * One day's items as the merge reads them: an id, a stored position, a time.
- *
- * The stop's position is `day_assignments.order_index` and the note's is
- * `day_notes.sort_order` — one number line across two columns (PRD #104 decision 9).
- */
-function timelineOf(
-  day: PlanBoardDay,
-  notes: PlanNotesPayload,
-): Array<{ id: string; position: number; time: string | null }> {
-  return [
-    ...day.stops.map((stop) => ({
-      id: stop.assignmentId,
-      position: stop.position,
-      time: formatTime(stop.startTime),
-    })),
-    ...notes.notes
-      .filter((note) => note.dayId === day.dayId)
-      .map((note) => ({
-        id: noteItemId(note.id),
-        position: note.sortOrder,
-        time: formatTime(note.time),
-      })),
-  ]
-}
-
-/**
- * The arrangement the board starts from: the server's own order, merged.
- *
- * The one place the two sources meet. Everything downstream — the optimistic move, the
- * render, the write — reads a single sequence per day and never learns that it came
- * from two tables.
- */
-export function orderFromPayload(
-  payload: PlanBoardPayload,
-  notes: PlanNotesPayload,
-): PlanOrder {
-  return {
-    days: payload.days.map((day) => ({
-      dayId: day.dayId,
-      itemIds: mergeDayTimeline(timelineOf(day, notes)).map((item) => item.id),
-    })),
-    ideaIds: payload.unscheduledIds.map((placeId) => ideaItemId(placeId)),
-  }
 }
 
 /**
@@ -247,10 +147,7 @@ function rowIndexOf(payload: PlanBoardPayload): Map<string, PlannerRow> {
 }
 
 /** A stay as a day header draws it: its times formatted once, here, like every other time. */
-function plannerStayOf(
-  stay: PlanBoardStay,
-  locale: Locale,
-): PlannerStay {
+function plannerStayOf(stay: PlanBoardStay, locale: Locale): PlannerStay {
   return {
     id: stay.id,
     name: stay.name,
@@ -289,6 +186,7 @@ export function planModel(
   t: Translate,
   locale: Locale = DEFAULT_LOCALE,
   notes: ReadonlyMap<string, PlannerNote> = new Map(),
+  journeys: ReadonlyMap<string, PlannerTransport> = new Map(),
 ): PlanModel {
   const rowsByItem = rowIndexOf(payload)
   const dayMeta = new Map(payload.days.map((day) => [day.dayId, day]))
@@ -310,6 +208,14 @@ export function planModel(
       if (isNoteItemId(itemId)) {
         const note = notes.get(itemId)
         if (note !== undefined) items.push({ kind: 'note', note })
+        continue
+      }
+      // A journey is not a place: it is a row of the day and never of `rows`, which
+      // is what the map's route line is drawn from.
+      if (isLegItemId(itemId)) {
+        const transport = journeys.get(itemId)
+        if (transport !== undefined)
+          items.push({ kind: 'transport', transport })
         continue
       }
 
