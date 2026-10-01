@@ -208,7 +208,7 @@ because it is still enabled. Rename in lockstep with the cockpit - disable the o
 Eleven definitions, in two kinds. Eight are GitHub polls, started by an event:
 **Groom new issues** on `issue.opened` with `authors` naming the human maintainers;
 **Re-groom on request**, **Fix issues on the autofix label**, **Write a spec for feature issues** on `issue.labeled` with `changedLabels` `groom` /
-`autofix` / `spec`; **Autopilot new pull requests** on `pull_request.opened`, again with `authors`;
+`autofix` / `spec`; **Autopilot new pull requests** on `pull_request.opened`, again with `authors`; **Merge reviewed agent pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`;
 **Triage new issues** and **Implement
 ready-for-agent issues**, on `issue.labeled` with `changedLabels` `needs-triage` / `ready-for-agent`.
 Three are schedules (`kind: "schedule"`), started by the clock and by nobody's action:

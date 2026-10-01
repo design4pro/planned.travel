@@ -79,7 +79,7 @@ That changes how decision 3 tells pull requests apart, not what it decides:
 - The promotion PR can no longer be told apart by author. `promote-develop.yml` opens it with
   `promotion` as well as `merge-queue`, every PR automation excludes `promotion`, and
   `om-approve-merge-pr` merges unattended only into `develop`. A person still merges the
-  promotion.
+  promotion, and spec-only PRs (`om-pr-autopilot` stops them at merge-ready).
 - QA below `risk-high` is signed off by the run on a specialist's verdict (`SDLC.md`, QA gate);
   `risk-high` QA stays with the owner.
 - The scope guard ADR 0018 placed on the bot's token moves to the cockpit's own token
