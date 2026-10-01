@@ -19,7 +19,7 @@ state for an issue: it says who acts next, and two of the four also start a run.
 | Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | skills; `qa-approved` by a human (or self-QA with evidence)                                                 |
 | Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | issue grooming, Sentry sweep (`priority-high`), PR skills                                                   |
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                   |
-| Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | issues only, one at a time; humans and `afk-architecture-review` add `needs-triage`, `afk-triage` the rest  |
+| Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | issues only, one at a time; humans, grooming, `afk-architecture-review` and `afk-triage` (split follow-ups) add `needs-triage`, `afk-triage` the rest |
 | Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                             |
 | Command  | `groom`, `autofix`, `spec`                                                                 | humans; the run consumes it in its claim step                                                               |
 
@@ -35,7 +35,7 @@ An intake label is a state, and it is the ladder the pipeline walks by itself.
 
 - `needs-triage` - the issue is groomed and passes the Definition of Ready, and nobody has decided
   yet whether an agent may take it. **A maintainer adds it, `afk-architecture-review` adds it to
-  its own `Strong` candidates, and grooming adds it** to an issue that a maintainer opened and
+  its own candidates and security defects, `afk-triage` to the follow-ups of a split, and grooming adds it** to an issue that a maintainer opened and
   that ended `READY_STATUS=ready` - the edge that makes this ladder self-feeding. Grooming's gate
   is narrow and its conditions are in `.ai/skills/om-auto-manage-issues/SKILL.md`; an issue that
   fails any of them still waits for a person. **Triage new issues** reacts to the label and runs
@@ -44,10 +44,13 @@ An intake label is a state, and it is the ladder the pipeline walks by itself.
   `needs-triage` once the answer lands.
 - `ready-for-agent` - briefed, scoped by the SLC rule, and safe to implement unattended.
   **Implement ready-for-agent issues** reacts to it and runs `implement-ticket`. The automation's
-  `excludeLabels` stands down on `risk-high`, `security`, `blocked`, `do-not-merge`, `needs-info`,
-  `ready-for-human` and `in-progress`, so the reserved categories are unreachable from this trigger.
-- `ready-for-human` - briefed, but it needs a person: security, `risk-high`, a spec, a duplicate, a
-  decline, or a judgement call. Nothing reacts to it; it is a queue a human reads.
+  `excludeLabels` stands down on `blocked`, `do-not-merge`, `needs-info`, `ready-for-human` and
+  `in-progress`. `risk-high` and `security` work reaches it only on the security and tenancy
+  specialist's approving verdict (`SDLC.md` § Delegated decisions).
+- `ready-for-human` - briefed, but it needs a person: only the cases `.ai/skills/afk-decide/SKILL.md`
+  § 5 reserves (credentials, a merge or close, a platform limit, a protected-configuration write),
+  or an issue that should be closed. A judgement call, a spec or `risk-high` is settled by a
+  specialist sub-agent instead. Nothing reacts to it; it is a queue a human reads.
 
 Exactly one at a time, and re-triaging a decided issue means removing `ready-for-agent` or
 `ready-for-human` first, then adding `needs-triage`.
@@ -76,7 +79,7 @@ issue form ─► category;  Sentry sweep ─► bug + priority-high + groom
       groom ends READY_STATUS=ready ───► needs-triage  ◄── human
             ─(Triage new issues)─► afk-triage: Agent Brief + SLC scope check
                   ├─► needs-info      ─► reporter answers ─► human: back to needs-triage
-                  ├─► ready-for-human ─► a person picks it up (security, risk-high, spec, judgement)
+                  ├─► ready-for-human ─► a person picks it up (credentials, close, platform limit)
                   └─► ready-for-agent ─(Implement ready-for-agent issues)─► implement-ticket
                               ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► human review
 
