@@ -61,9 +61,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Create the label once; "already exists" is the normal case, not a failure.
-          gh label create promotion --color 5319e7 \
-            --description "develop -> main release: merged by the owner, never by an unattended run" 2>/dev/null || true
+          # --force makes the call idempotent: it updates the label when it already exists.
+          gh label create promotion --force --color 5319e7 \
+            --description "develop -> main release: merged by the owner, never by an unattended run"
 
           existing=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then

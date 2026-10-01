@@ -81,10 +81,10 @@ issue form ─► category;  Sentry sweep ─► bug + priority-high + groom
                   ├─► needs-info      ─► reporter answers ─► human: back to needs-triage
                   ├─► ready-for-human ─► a person picks it up (credentials, close, platform limit)
                   └─► ready-for-agent ─(Implement ready-for-agent issues)─► implement-ticket
-                              ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► human review
+                              ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► om-pr-autopilot --allow-merge ─► develop
 
   the express lane (a human labels one issue):
-human: autofix ─► in-progress ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► human review
+human: autofix ─► in-progress ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► merge-queue ─► develop
 human: spec (feature) ─► spec PR (documentation, skip-qa, Refs #n) ─► human merges ─► the same issue is the implementation ticket
       ─► human: autofix on it ─► om-auto-fix-issue's feature route ─► om-auto-implement-spec (cockpit: implement-spec is the same skill by hand)
 PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA / merge into develop

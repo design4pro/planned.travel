@@ -180,7 +180,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
-- **The pipeline does not merge its own output.** A person merges every PR, into `develop` and into `main`; nothing merges automatically.
+- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` by `om-pr-autopilot --allow-merge` behind the ruleset and the QA gate (ADR 0031); a spec PR, the `develop` -> `main` promotion (`promotion`) and `risk-high` QA stay with a person.
 - **The cap is on inventory, not on rate.** The implementing skills stop when enough agent PRs already wait in `review`, so a burst of intake cannot outrun review capacity. Raising throughput means reviewing, not tuning the trigger.
 
 ## Unattended decisions
@@ -279,8 +279,8 @@ Two amendment rules are specific to this document's shape:
   label page is `docs/agents/triage-labels.md`, and the live automation definitions are
   `docs/agents/cezar-automations.json` (see `docs/agents/cezar.md`).
 - **Native merge queue remains off (#537, closed as not planned).** The `merge-queue` label is
-  a process marker, not a native GitHub merge queue. Every merge, into `develop` and into `main`,
-  is manual (ADR 0031). Reconsider a native queue only if
+  a process marker, not a native GitHub merge queue. A merge into `develop` is
+  automatic once reviewed and green, a merge into `main` is manual (ADR 0031). Reconsider a native queue only if
   measured merge contention justifies it. Before enabling one, every required check must run on
   `merge_group`, with explicit scope/e2e conditions and non-colliding concurrency groups;
   promotions must retain merge commits, and the rollout must document a rollback to manual merging.
@@ -308,7 +308,7 @@ Workflows live in `.ai/cezar/workflows/`; the committed definitions are
 | Fix issues on the autofix label    | `autofix` added                       | `issue-autofix` (`om-auto-fix-issue`)             |
 | Write a spec for feature issues    | `spec` added to a `feature`           | `spec` (`om-auto-write-spec`)                     |
 | Autopilot new pull requests        | `pull_request.opened` by a maintainer | `pr-autopilot`                                    |
-| Merge reviewed agent pull requests | agent PR reviewed into `merge-queue`  | `pr-autopilot`                                    |
+| Merge reviewed agent pull requests | `merge-queue` by `rafalwolak`         | `pr-autopilot`                                    |
 | Triage new issues                  | `needs-triage` added                  | `triage` (`afk-triage`)                           |
 | Implement ready-for-agent issues   | `ready-for-agent` added               | `implement-ticket`                                |
 | Spec to tickets                    | weekdays 07:00                        | `spec-to-tickets` (`afk-to-tickets`)              |

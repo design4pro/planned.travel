@@ -16,6 +16,10 @@ GitHub deletes a merged PR's head branch, and a push to it recreates that branch
 
 **`--allow-merge` means a merge into `develop` only.** Every PR here, agent or human, is authored by the owner's one account, so the author tells nothing apart. A PR whose base is not `develop`, or that carries `promotion`, ends at merge-ready under `--allow-merge` too: the `develop` -> `main` promotion deploys production and is the owner's to merge (`.ai/skills/om-approve-merge-pr/SKILL.md`).
 
+- **QA runs through the unattended sign-off.** Where the chain reaches the QA stage (state matrix rows 7 and 10) of a PR that touches a user-facing surface, run `om-auto-qa-pr {pr} --self-qa-signoff` (the repo override of `om-auto-qa-pr` says how the sign-off is decided) instead of the evidence-only call. The installed "never applies the QA-approval label" rule binds the orchestrator itself, not the QA skill it dispatches; a `risk-high` PR still ends at merge-ready with the evidence posted, and `qa-approved` is the owner's.
+
+- **A spec-only PR ends at merge-ready.** A diff that touches only `paths.specs` is merged by a person, whatever `--allow-merge` says: the spec flow is "a human merges it" (AGENTS.md, `docs/agents/issue-tracker.md`).
+
 Three more rules cover the run and every chained skill, whether or not their own overrides were read:
 
 - **A lesson stays in the worktree.** A lesson worth keeping goes in a `## Lessons` section of the PR body or the run's handoff file, where `afk-lessons` collects it. Never write it to `~/.claude/CLAUDE.md` or any other file outside the worktree: the write is refused under `dontAsk` and fails the run (runs b9d6b3a5, c9625ca3).

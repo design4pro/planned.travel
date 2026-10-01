@@ -71,8 +71,9 @@ The owner retired the `design4pro-agent` account: every agent action runs as `ra
 pipeline decides its own open questions through specialist sub-agents (`.ai/skills/afk-decide`).
 That changes how decision 3 tells pull requests apart, not what it decides:
 
-- **Merge reviewed agent pull requests** drops its `authors` filter, which named the retired
-  account and so never fired; `merge-queue` is the signal.
+- **Merge reviewed agent pull requests** swaps its `authors` filter, which named the retired
+  account and so never fired, for `rafalwolak`; `merge-queue` is the signal, and dependabot and
+  outsider PRs stay out of the unattended merge.
 - `implement-ticket` no longer stops at an open PR: its last step runs
   `om-pr-autopilot --allow-merge`, so a ticket goes from `ready-for-agent` to `develop` in one run.
 - The promotion PR can no longer be told apart by author. `promote-develop.yml` opens it with
@@ -83,3 +84,8 @@ That changes how decision 3 tells pull requests apart, not what it decides:
   `risk-high` QA stays with the owner.
 - The scope guard ADR 0018 placed on the bot's token moves to the cockpit's own token
   (`docs/agents/cezar.md`, Host identity).
+- Known gap: both rulesets list the organisation and repository Admin role as `bypass_actors`
+  (`bypass_mode: always`), and the owner is an admin, so with one identity a run could push or merge
+  past the ruleset. Nothing in the repository closes this: the owner sets the bypass mode to
+  `pull_request`, or a supervised run adds a `PreToolUse` hook (a protected path) that blocks
+  `gh pr merge` off `develop` and a `git push` to `main` or `develop` while `CEZ_TASK_ID` is set.

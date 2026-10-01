@@ -88,8 +88,8 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
   appended to the system prompt of every agent step and tells the run to talk to the developer in
   Polish while everything that leaves the session (code, comments, commits, GitHub) stays English.
 - Service environment: `CEZ_AUTOMATIONS=1`, `CEZ_AUTONOMOUS_DEFAULT=0`, `CEZ_SKILLS_AUTO_UPDATE=0`,
-  `GH_CONFIG_DIR` (below), all four from the plist template in `design4pro/cezar`, and never `GH_TOKEN`,
-  `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
+  all three from the plist template in `design4pro/cezar`; `GH_TOKEN` only as the fine-grained PAT
+  under Host identity below, never `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
   builds the agent's env from an allowlist (`PATH`, `HOME`, toolchain prefixes such as
   `NODE_*`/`PNPM_*`, `GH_TOKEN`, `GH_CONFIG_DIR`, `ANTHROPIC_*`, `CLAUDE_*`, `CEZ_*`), so a token
   in the service env is a token in every run, and any other variable set there (`HUSKY=0` for
@@ -205,7 +205,7 @@ cockpit by `.name`, so a renamed definition is created beside the old one, which
 because it is still enabled. Rename in lockstep with the cockpit - disable the old name, then
 `--prune`, the drill step 2 of the host cutover below walks through.
 
-Ten definitions, in two kinds. Seven are GitHub polls, started by an event:
+Eleven definitions, in two kinds. Eight are GitHub polls, started by an event:
 **Groom new issues** on `issue.opened` with `authors` naming the human maintainers;
 **Re-groom on request**, **Fix issues on the autofix label**, **Write a spec for feature issues** on `issue.labeled` with `changedLabels` `groom` /
 `autofix` / `spec`; **Autopilot new pull requests** on `pull_request.opened`, again with `authors`;
@@ -220,8 +220,8 @@ author, the label events because only a collaborator can set a label. This matte
 the issue body is its prompt: an issue anyone on GitHub can open must not start a run by itself,
 so an external report is groomed when a maintainer adds `groom`, and the Sentry sweep (which files
 as the Actions bot, a login the poller's author filter cannot express) files with `groom`
-already on. Agent PRs (opened carrying `review` and driven to the merge inside their own chain) and
-dependabot never enter the autopilot, and the promotion PR (`promotion`) enters no automation.
+already on. Agent PRs (opened carrying `review` and driven to the merge inside their own chain) enter only the
+merge automation, dependabot enters none, and the promotion PR (`promotion`) enters no automation.
 Every filter excludes `in-progress`; `lookbackDays: 7` and `maxRecords: 25` bound a mistaken mass
 relabel while still reaching a week of events. The three command labels are the only things a human uses to start om code-writing
 work, and no skill adds them (the overrides say so), so no om run can start another. The intake
