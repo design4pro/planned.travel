@@ -14,6 +14,8 @@ GitHub deletes a merged PR's head branch, and a push to it recreates that branch
 
 **"Approvable" in the state matrix follows the ruleset, not a habit.** A PR is approvable (row 9) when no review requests changes, no review thread is unresolved, and the base branch's ruleset requirements for approvals and code-owner review are met - with `required_approving_review_count: 0` and no code-owner review, that holds without any approving review. Read the ruleset exactly as `.ai/skills/om-approve-merge-pr/SKILL.md` step 3 says. A missing approval on a PR this run cannot approve itself (its own account authored it) is not a reason to stop at merge-ready under `--allow-merge` when the ruleset requires none.
 
+**`--allow-merge` means a merge into `develop` only.** Every PR here, agent or human, is authored by the owner's one account, so the author tells nothing apart. A PR whose base is not `develop`, or that carries `promotion`, ends at merge-ready under `--allow-merge` too: the `develop` -> `main` promotion deploys production and is the owner's to merge (`.ai/skills/om-approve-merge-pr/SKILL.md`).
+
 Three more rules cover the run and every chained skill, whether or not their own overrides were read:
 
 - **A lesson stays in the worktree.** A lesson worth keeping goes in a `## Lessons` section of the PR body or the run's handoff file, where `afk-lessons` collects it. Never write it to `~/.claude/CLAUDE.md` or any other file outside the worktree: the write is refused under `dontAsk` and fails the run (runs b9d6b3a5, c9625ca3).

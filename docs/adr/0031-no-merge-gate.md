@@ -64,3 +64,22 @@ Mercato, has none of this layer.
 - The `gate` container on the VPS host now receives no job; retiring it is a host change, outside
   this repository.
 - Bringing any of this back is a new ADR, not a revert.
+
+## Amendment (2026-10-01)
+
+The owner retired the `design4pro-agent` account: every agent action runs as `rafalwolak`, and the
+pipeline decides its own open questions through specialist sub-agents (`.ai/skills/afk-decide`).
+That changes how decision 3 tells pull requests apart, not what it decides:
+
+- **Merge reviewed agent pull requests** drops its `authors` filter, which named the retired
+  account and so never fired; `merge-queue` is the signal.
+- `implement-ticket` no longer stops at an open PR: its last step runs
+  `om-pr-autopilot --allow-merge`, so a ticket goes from `ready-for-agent` to `develop` in one run.
+- The promotion PR can no longer be told apart by author. `promote-develop.yml` opens it with
+  `promotion` as well as `merge-queue`, every PR automation excludes `promotion`, and
+  `om-approve-merge-pr` merges unattended only into `develop`. A person still merges the
+  promotion.
+- QA below `risk-high` is signed off by the run on a specialist's verdict (`SDLC.md`, QA gate);
+  `risk-high` QA stays with the owner.
+- The scope guard ADR 0018 placed on the bot's token moves to the cockpit's own token
+  (`docs/agents/cezar.md`, Host identity).

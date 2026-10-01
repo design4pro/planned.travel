@@ -12,6 +12,7 @@ An unattended run has no human to ask. A choice between options is not a reason 
 ## 1. When to use it
 
 Use it every time you are about to do any of these:
+
 - post options, a "Decision for the implementer", a "human's call" or a "Why not an agent" line;
 - pick `ready-for-human`, `needs-info` or `not-ready` for any reason other than those in step 5;
 - stop a run because a product, design, architecture, scope, risk or security question is open.
@@ -21,6 +22,7 @@ Do not use it for a question that has one defensible answer in the code, the spe
 ## 2. Frame the question
 
 Write a decision brief, neutral and self-contained, into the run's scratch directory (`$TMPDIR`):
+
 - **Question:** one sentence.
 - **Context:** the issue, spec or PR, and the constraints you verified, with file paths and the ADRs in play.
 - **Options:** two to four, each with its consequence and how reversible it is. Include "do less now, file the rest as a follow-up" when a smaller slice is possible.
@@ -32,20 +34,21 @@ Do **not** state which option you prefer. The specialist is independent only if 
 
 Spawn **one** sub-agent with the `Agent` tool. Pick the specialist by the question:
 
-| Question | Specialist | `subagent_type` |
-|---|---|---|
-| Product scope, what the user was promised, splitting a ticket, a category or priority | product owner | `persona-product-owner` |
-| Module shape, seams, test deletion, ADR conflict, a dependency | software architect | `general-purpose` |
-| `risk-high`, `security`, tenancy, roles, sharing, auth, secrets, data loss | security and tenancy reviewer | `persona-workspace-owner` |
-| Accessibility (WCAG 2.2 AA, keyboard, screen reader) | accessibility specialist | `persona-accessibility-auditor` |
-| Copy, UX, i18n, a default a traveller meets | UX specialist | `persona-traveller` |
-| Test strategy, which tests to keep or delete | test engineer | `general-purpose` |
-| Reproducibility, untested states, QA coverage | manual tester | `persona-manual-tester` |
-| A change to agent or project configuration (workflows, automations, skills, `.claude/`, hooks, `.husky/`) | configuration guardian | `general-purpose` |
+| Question                                                                                                  | Specialist                    | `subagent_type`                 |
+| --------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------- |
+| Product scope, what the user was promised, splitting a ticket, a category or priority                     | product owner                 | `persona-product-owner`         |
+| Module shape, seams, test deletion, ADR conflict, a dependency                                            | software architect            | `general-purpose`               |
+| `risk-high`, `security`, tenancy, roles, sharing, auth, secrets, data loss                                | security and tenancy reviewer | `persona-workspace-owner`       |
+| Accessibility (WCAG 2.2 AA, keyboard, screen reader)                                                      | accessibility specialist      | `persona-accessibility-auditor` |
+| Copy, UX, i18n, a default a traveller meets                                                               | UX specialist                 | `persona-traveller`             |
+| Test strategy, which tests to keep or delete                                                              | test engineer                 | `general-purpose`               |
+| Reproducibility, untested states, QA coverage                                                             | manual tester                 | `persona-manual-tester`         |
+| A change to agent or project configuration (workflows, automations, skills, `.claude/`, hooks, `.husky/`) | configuration guardian        | `general-purpose`               |
 
 The `persona-*` agents live in `.claude/agents/`. Their own instructions say they recommend rather than decide: here, the recommendation they give in the verdict shape below is the verdict you apply. For a `general-purpose` specialist, open the prompt with the role, for example: "You are an independent senior software architect reviewing a decision for an unattended pipeline."
 
 The prompt carries the path to the decision brief, and it asks the specialist to:
+
 1. verify the brief's claims against the repository read-only, and name any it finds wrong;
 2. choose exactly one option, or a better one it names, applying `SDLC.md` § Unattended decisions: prefer the most reversible reasonable option that still ships a complete slice;
 3. answer in this shape:
@@ -68,19 +71,21 @@ The configuration guardian also checks that a configuration change grants no mor
 
 Record every verdict as a row in the Resolved assumptions table of the brief, spec, PR body or handoff you are writing:
 
-| # | Question | Applied default | Why |
-|---|---|---|---|
-| n | <question> | <verdict> | Decided by <specialist> sub-agent (confidence <level>): <why> |
+| #   | Question   | Applied default | Why                                                           |
+| --- | ---------- | --------------- | ------------------------------------------------------------- |
+| n   | <question> | <verdict>       | Decided by <specialist> sub-agent (confidence <level>): <why> |
 
 A human who disagrees overturns the row in review. That is an ordinary review finding, and it costs less than a stalled queue.
 
 ## 5. What still goes to a human
 
 Only what no agent in this pipeline can do:
+
 - an action that needs a person's own credentials, account settings, payment, or a legal commitment;
-- merging a PR, closing an issue, or removing a label a human set;
+- merging the `develop` -> `main` promotion (a merge into `develop` is the pipeline's own, `om-pr-autopilot --allow-merge`), closing an issue, or removing a label a human set;
+- QA sign-off on a `risk-high` PR: the run attaches the evidence and the specialist's verdict, and the owner applies `qa-approved`;
 - information only the reporter has (`needs-info`): a repro, a version, what they expected;
-- a platform limit, such as GitHub refusing to let the author approve their own PR;
+- a platform limit, such as a ruleset that requires a review the run's own account cannot give (the `develop` ruleset requires none, so self-approval is never a blocker there);
 - a configuration guardian verdict of `ESCALATE: yes`: the change weakens a guard or removes a deny rule, so it is not applied; label the issue `ready-for-human` and state the verdict;
 - a security and tenancy specialist that does not approve `risk-high` or `security` work for unattended implementation: it does not get `ready-for-agent`; label it `ready-for-human` and state the verdict and its reasons;
 - a write Claude Code refuses under `dontAsk` (protected configuration). Put the exact patch and the guardian's verdict in the report or PR, so applying it is one step for a human.

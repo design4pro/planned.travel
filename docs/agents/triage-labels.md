@@ -12,16 +12,16 @@ state for an issue: it says who acts next, and two of the four also start a run.
 
 ## Vocabulary
 
-| Group    | Labels                                                                                     | Written by                                                                                                  |
-| -------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Pipeline | `review`, `changes-requested`, `qa`, `qa-failed`, `merge-queue`, `blocked`, `do-not-merge` | PRs only; skills move the first five, humans set `blocked` and `do-not-merge`, only a QA reviewer sets `qa` |
-| Category | `bug`, `feature`, `refactor`, `security`, `dependencies`, `documentation`                  | issue forms, Sentry sweep, `om-auto-manage-issues`, PR skills                                               |
-| Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | skills; `qa-approved` by a human (or self-QA with evidence)                                                 |
-| Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | issue grooming, Sentry sweep (`priority-high`), PR skills                                                   |
-| Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                   |
+| Group    | Labels                                                                                     | Written by                                                                                                                                            |
+| -------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pipeline | `review`, `changes-requested`, `qa`, `qa-failed`, `merge-queue`, `blocked`, `do-not-merge` | PRs only; skills move the first five, humans set `blocked` and `do-not-merge`, only a QA reviewer sets `qa`                                           |
+| Category | `bug`, `feature`, `refactor`, `security`, `dependencies`, `documentation`                  | issue forms, Sentry sweep, `om-auto-manage-issues`, PR skills                                                                                         |
+| Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | skills; `qa-approved` by the unattended sign-off below `risk-high`, by the owner on `risk-high`                                                       |
+| Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | issue grooming, Sentry sweep (`priority-high`), PR skills                                                                                             |
+| Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                                                             |
 | Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | issues only, one at a time; humans, grooming, `afk-architecture-review` and `afk-triage` (split follow-ups) add `needs-triage`, `afk-triage` the rest |
-| Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                             |
-| Command  | `groom`, `autofix`, `spec`                                                                 | humans; the run consumes it in its claim step                                                               |
+| Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                                                                       |
+| Command  | `groom`, `autofix`, `spec`                                                                 | humans; the run consumes it in its claim step                                                                                                         |
 
 There is no `status:` axis. An open issue carries an **intake** label once it has been groomed, and
 the state of work in flight is the pipeline label on its PR; an open issue with neither, and without
