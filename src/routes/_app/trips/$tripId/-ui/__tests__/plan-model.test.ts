@@ -1,13 +1,8 @@
 /**
- * The planner's adapter, where two tables become one sequence.
+ * The planner's materialiser.
  *
- * `orderFromPayload` is the single place `day_assignments.order_index` and
- * `day_notes.sort_order` are read as one number line (PRD #104 decision 9), so the
- * merge's observable promises are asserted here rather than reasoned about: a day that
- * carries times reads in clock order, a day that carries none reads in stored order.
- *
- * `planModel` then owes the map a guarantee the type system cannot state — that
- * `PlannerDay.rows` is stops and only stops, because the route line draws every row it
+ * Where a Day's order comes from is `plan-board.test.ts`. `planModel` owes the
+ * map a guarantee the type system cannot state — that `PlannerDay.rows` is stops and only stops, because the route line draws every row it
  * is handed and a note has no coordinate to draw.
  */
 import { describe, expect, it } from 'vitest'
@@ -15,22 +10,20 @@ import { describe, expect, it } from 'vitest'
 import { createTranslator } from '#/lib/i18n'
 import englishAtlas from '#/lib/i18n/messages/en/atlas'
 import polishAtlas from '#/lib/i18n/messages/pl/atlas'
+import { planBoard } from '../plan-board'
+import { planModel } from '../plan-model'
 import {
-  notesByItem,
-  orderFromPayload,
-  planModel,
-  timeByItem,
-} from '../plan-model'
+  board,
+  day,
+  note,
+  notes,
+  stop,
+  transports,
+} from './plan-board-fixtures'
 
 import type { Locale, NamespaceMessages, Translate } from '#/lib/i18n'
 import type { PlanNotesPayload } from '../../-server/day-notes'
-import type {
-  PlanBoardDay,
-  PlanBoardPayload,
-  PlanBoardPlace,
-  PlanBoardStay,
-  PlanBoardStop,
-} from '../../-server/plan'
+import type { PlanBoardPayload, PlanBoardStay } from '../../-server/plan'
 
 /**
  * The shipped `atlas` catalogue of one locale, bound the way the screen binds it.
@@ -51,163 +44,16 @@ function translator(locale: Locale, source: NamespaceMessages) {
 const en = translator('en', englishAtlas)
 const pl = translator('pl', polishAtlas)
 
-function notes(
-  entries: PlanNotesPayload['notes'],
-  canWrite = true,
-): PlanNotesPayload {
-  return { tripId: 't1', canWrite, notes: entries }
+/** The board as the screen first draws it: the server's own arrangement, no journeys. */
+function modelOf(
+  payload: PlanBoardPayload,
+  noteRows: PlanNotesPayload,
+  t: Translate,
+  locale?: Locale,
+) {
+  const read = planBoard(payload, noteRows, transports(), locale)
+  return read.model(read.serverOrder, t)
 }
-
-const note = (
-  id: string,
-  dayId: string,
-  sortOrder: number,
-  extra: Partial<PlanNotesPayload['notes'][number]> = {},
-): PlanNotesPayload['notes'][number] => ({
-  id,
-  dayId,
-  body: `Note ${id}`,
-  detail: null,
-  time: null,
-  icon: 'sticky-note',
-  sortOrder,
-  ...extra,
-})
-
-const stop = (
-  assignmentId: string,
-  placeId: string,
-  position: number,
-  startTime: string | null = null,
-): PlanBoardStop => ({
-  assignmentId,
-  placeId,
-  position,
-  startTime,
-  endTime: null,
-  durationMinutes: null,
-  reservationStatus: 'none',
-  notes: null,
-})
-
-const place = (id: string): PlanBoardPlace => ({
-  id,
-  name: `Place ${id}`,
-  address: null,
-  city: null,
-  categoryId: 'c1',
-  imageUrl: null,
-  website: null,
-  description: null,
-  rating: null,
-  lat: 35.71,
-  lng: 139.79,
-  isVisited: false,
-  durationMinutes: 60,
-})
-
-const day = (
-  dayId: string,
-  dayNumber: number,
-  stops: ReadonlyArray<PlanBoardStop>,
-  title: string | null = `Day ${dayNumber}`,
-): PlanBoardDay => ({
-  dayId,
-  dayNumber,
-  date: null,
-  title,
-  stops,
-  stays: [],
-})
-
-/** A board carrying exactly the places its days point at. */
-function board(days: ReadonlyArray<PlanBoardDay>): PlanBoardPayload {
-  const placeIds = [
-    ...new Set(days.flatMap((entry) => entry.stops.map((one) => one.placeId))),
-  ]
-  return {
-    tripId: 't1',
-    editable: true,
-    archived: false,
-    days,
-    places: placeIds.map((id) => place(id)),
-    unscheduledIds: [],
-    categories: [],
-    currency: 'JPY',
-    bookingDays: [],
-  }
-}
-
-describe('notesByItem', () => {
-  it('keys every note by its draggable id, and prints the time without seconds', () => {
-    const byItem = notesByItem(
-      notes([
-        // As D1 hands it back: seconds included, which the row must not print.
-        note('n1', 'd1', 0, {
-          time: '18:30:00',
-          detail: '## Later\n\nBring the tickets.',
-          icon: 'ticket',
-        }),
-        note('n2', 'd2', 0),
-      ]),
-    )
-
-    expect([...byItem.keys()]).toEqual(['note:n1', 'note:n2'])
-    expect(byItem.get('note:n1')).toEqual({
-      id: 'n1',
-      dayId: 'd1',
-      body: 'Note n1',
-      detail: '## Later\n\nBring the tickets.',
-      time: '18:30',
-      icon: 'ticket',
-    })
-  })
-})
-
-describe('timeByItem', () => {
-  it('reads a stop at its start time and skips everything untimed', () => {
-    const byItem = timeByItem(
-      board([
-        day('d1', 1, [stop('a1', 'p1', 0, '09:00:00'), stop('a2', 'p2', 1)]),
-      ]),
-      notes([note('n1', 'd1', 2, { time: '13:15:00' }), note('n2', 'd1', 3)]),
-    )
-
-    expect([...byItem.entries()]).toEqual([
-      ['a1', '09:00'],
-      ['note:n1', '13:15'],
-    ])
-  })
-})
-
-describe('orderFromPayload', () => {
-  it('reads a day that carries times in clock order, note among stops', () => {
-    const order = orderFromPayload(
-      board([
-        day('d1', 1, [
-          stop('a1', 'p1', 0, '09:00'),
-          stop('a2', 'p2', 2, '08:00'),
-        ]),
-      ]),
-      // Untimed and stored after the 09:00 stop, so it inherits 09:00 and travels
-      // with it rather than floating to the top of the day.
-      notes([note('n1', 'd1', 1)]),
-    )
-
-    expect(order.days).toEqual([
-      { dayId: 'd1', itemIds: ['a2', 'a1', 'note:n1'] },
-    ])
-  })
-
-  it('leaves a day with no times in the order the two tables stored it', () => {
-    const order = orderFromPayload(
-      board([day('d1', 1, [stop('a1', 'p1', 0), stop('a2', 'p2', 2)])]),
-      notes([note('n1', 'd1', 1), note('n2', 'd1', 3)]),
-    )
-
-    expect(order.days[0].itemIds).toEqual(['a1', 'note:n1', 'a2', 'note:n2'])
-  })
-})
 
 describe('planModel', () => {
   const PAYLOAD = board([
@@ -217,13 +63,7 @@ describe('planModel', () => {
   const NOTES = notes([note('n1', 'd1', 1), note('n2', 'd2', 0)])
 
   function model() {
-    return planModel(
-      PAYLOAD,
-      orderFromPayload(PAYLOAD, NOTES),
-      en,
-      undefined,
-      notesByItem(NOTES),
-    )
+    return modelOf(PAYLOAD, NOTES, en)
   }
 
   it('renders each day as one sequence of stops and notes', () => {
@@ -256,10 +96,11 @@ describe('planModel', () => {
   it('skips a note the payload no longer carries', () => {
     const day1 = planModel(
       PAYLOAD,
-      orderFromPayload(PAYLOAD, NOTES),
+      planBoard(PAYLOAD, NOTES, transports()).serverOrder,
       en,
       undefined,
-      notesByItem(notes([note('n2', 'd2', 0)])),
+      planBoard(PAYLOAD, notes([note('n2', 'd2', 0)]), transports())
+        .notesByItem,
     ).days[0]
 
     expect(day1.items.map((item) => item.kind)).toEqual(['stop', 'stop'])
@@ -279,8 +120,7 @@ describe('planModel', () => {
       locale: Locale,
     ): string => {
       const payload = board([day('d1', 3, [], title)])
-      return planModel(payload, orderFromPayload(payload, EMPTY), t, locale)
-        .days[0].title
+      return modelOf(payload, EMPTY, t, locale).days[0].title
     }
 
     it('names itself from the catalogue, in the language on screen', () => {
@@ -313,7 +153,7 @@ describe('planModel — a stay', () => {
     })),
   )
   const EMPTY = notes([])
-  const days = planModel(PAYLOAD, orderFromPayload(PAYLOAD, EMPTY), en).days
+  const days = modelOf(PAYLOAD, EMPTY, en).days
 
   it('reaches every day it covers, carrying its days, its times and its booking', () => {
     for (const entry of days) {

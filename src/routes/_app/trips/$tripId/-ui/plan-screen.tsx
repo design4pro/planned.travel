@@ -101,20 +101,10 @@ import {
   formatMetres,
   mapCategories,
   mapPlacesOf,
-  notesByItem,
-  orderFromPayload,
-  planModel,
   routeDaysOf,
-  timeByItem,
 } from './plan-model'
-import {
-  journeyWritesFor,
-  positionByItem,
-  timeOfTransports,
-  transportRowsOf,
-  withTransportItems,
-  withTransports,
-} from './plan-transport-model'
+import { planBoard } from './plan-board'
+import { journeyWritesFor } from './plan-transport-model'
 import { planMoveOutcome, refusalCopy, reorderPayload } from './plan-move'
 import {
   createPlanPlaceFn,
@@ -407,54 +397,18 @@ export function PlanScreen({
 
   /* ------------------------------------------------------------------ state */
 
-  /** The trip's days in order — the ruler a journey's range is expanded against. */
-  const dayIds = React.useMemo(
-    () => payload.days.map((day) => day.dayId),
-    [payload.days],
+  /** The three payloads, read once: the server's arrangement and every lookup off it. */
+  const board = React.useMemo(
+    () => planBoard(payload, notes, transports, locale),
+    [payload, notes, transports, locale],
   )
-
-  /** Every journey row the board can draw, one per day each journey covers. */
-  const transportRows = React.useMemo(
-    () => transportRowsOf(transports, dayIds, locale),
-    [transports, dayIds, locale],
-  )
-
-  /**
-   * Times come from the payloads rather than from `model`, because the merged
-   * sequence only ever shows a time — the clock rule needs the item that *owns*
-   * one, and an untimed row that merely sits under a timed one owns nothing. A
-   * journey's ends are read the same way: the row renders a range on a one-day
-   * journey, and a range is not an instant.
-   */
-  const timeIndex = React.useMemo(() => {
-    const byItem = new Map(timeByItem(payload, notes))
-    for (const [itemId, time] of timeOfTransports(transports)) {
-      byItem.set(itemId, time)
-    }
-    return byItem
-  }, [payload, notes, transports])
-
-  const timeOfItem = React.useCallback(
-    (itemId: string) => timeIndex.get(itemId) ?? null,
-    [timeIndex],
-  )
-
-  /** The stored positions a journey's `sort_order` was measured against. */
-  const positionIndex = React.useMemo(
-    () => positionByItem(payload, notes),
-    [payload, notes],
-  )
-
-  const serverOrder = React.useMemo(
-    () =>
-      withTransports(
-        orderFromPayload(payload, notes),
-        transportRows,
-        positionIndex,
-        timeOfItem,
-      ),
-    [notes, payload, positionIndex, transportRows, timeOfItem],
-  )
+  const {
+    serverOrder,
+    transportRows,
+    notesByItem: noteIndex,
+    journeysByItem: journeyIndex,
+    timeOfItem,
+  } = board
   const [order, setOrder] = React.useState<PlanOrder>(serverOrder)
 
   // The server's arrangement always wins. An optimistic order lives only for as long
@@ -516,23 +470,7 @@ export function PlanScreen({
 
   /* ------------------------------------------------------------------ model */
 
-  const noteIndex = React.useMemo(() => notesByItem(notes), [notes])
-
-  const model = React.useMemo(
-    () =>
-      withTransportItems(
-        planModel(payload, order, t, locale, noteIndex),
-        order,
-        transportRows,
-      ),
-    [payload, order, t, locale, noteIndex, transportRows],
-  )
-
-  /** Journeys by draggable id, for the drag overlay. */
-  const journeyIndex = React.useMemo(
-    () => new Map(transportRows.map((row) => [row.itemId, row])),
-    [transportRows],
-  )
+  const model = React.useMemo(() => board.model(order, t), [board, order, t])
 
   /**
    * What each journey row is called in a sentence — "Tokyo to Kyoto".
