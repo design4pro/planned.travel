@@ -15,11 +15,14 @@ Extends the installed skill: read `.claude/skills/om-auto-manage-issues/SKILL.md
   `READY_STATUS=ready` and posts the `readiness verified` comment instead of the not-ready one;
   `NEEDS_HUMAN` records `not-ready` and the not-ready comment lists only the `NEEDS_HUMAN` rows.
   A verified issue is ready for every rule below, including the hand-on to `needs-triage`.
+- **After the readiness verifier, settle what an agent can still settle before you call an issue not-ready** (`SDLC.md` § Delegated decisions). Take only the `NEEDS_HUMAN` rows that are a missing out-of-scope section or an open question, and never when the verifier stopped on a `veto`, on `docs/agents/out-of-scope.md` or on an ADR contradiction: a maintainer's revocation and a product boundary are not settled by an agent. This narrows the installed skill's "readiness is reported, never invented" to the two items a human does not have to supply: the problem statement still comes only from a person, and the verifier's rules cover the rest.
+  - A missing **Out of scope** section is not a reason for `not-ready`: write it yourself from the issue, its linked spec and `docs/agents/out-of-scope.md`, into the clarified description (the reporter's text stays verbatim beside it), and settle any boundary you are unsure of through `.ai/skills/afk-decide/SKILL.md` (the product owner). Seen on #734 and #736.
+  - An **open question** is not addressed to the author. Settle it through `afk-decide`, record the verdict as a **non-blocking** row of a Resolved assumptions table (`# | Question | Applied default | Why`) in the implementation-notes comment, and count the question as answered. Only a question that needs information only the reporter has (a repro, a version, what they expected) stays blocking. Seen on #763.
+  - "A human's call", "Decision for the implementer" or a list of options copied into a ticket from a brief, spec or review is an open question like any other: settle it through `afk-decide`, never treat it as blocking.
 - **Hand a ready issue on, and only then.** As the **last** mutation of a groom that ends `READY_STATUS=ready`, add `needs-triage`. That label is what starts `afk-triage`, and adding it here is the one step that was missing between the issue form and the unattended ladder (`SDLC.md` § Intake labels). The bridge is deliberately narrow - skip it, leaving the issue for a human, when any of these hold:
   - `READY_STATUS` is anything but `ready`;
   - the issue already carries `needs-triage`, `needs-info`, `ready-for-agent` or `ready-for-human` - a decision exists, or triage is already pending, and `afk-triage` owns both;
   - it carries a trigger label (`autofix`, `spec`, `groom`) - a human already routed it;
-  - it carries `risk-high` or `security` - that work is out of the unattended ladder by design, and this is the first of the two locks on that door;
   - it carries `dependencies`;
   - it was not opened by a maintainer.
 

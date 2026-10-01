@@ -28,7 +28,6 @@ its Definition of Ready check found missing.
 
 Return `NEEDS_HUMAN` for **every** item, without further analysis, when any of these holds:
 
-- the issue carries `risk-high` or `security` - that work is out of every unattended lane;
 - a human comment containing the word `veto` is newer than the last `readiness verified` comment -
   a maintainer revoked an earlier verdict, and only a human waiver or new answers move it now;
 - the ask is listed in `docs/agents/out-of-scope.md` or contradicts an accepted ADR in

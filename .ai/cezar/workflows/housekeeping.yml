@@ -20,4 +20,5 @@ steps:
   - id: merge-buddy
     name: om-merge-buddy (read-only)
     prompt: '/om-merge-buddy'
-    allowedTools: [Read, Grep, Glob, Bash, Skill, TodoWrite]
+    # Write: comment bodies go to a file for `gh --body-file`.
+    allowedTools: [Read, Write, Grep, Glob, Bash, Skill, TodoWrite]
