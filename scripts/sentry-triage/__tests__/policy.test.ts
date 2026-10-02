@@ -380,8 +380,9 @@ describe('the ticket', () => {
   })
 
   it('never promotes itself', () => {
-    // Promotion is ADR 0006's, earned by a reproduction this routine cannot perform.
-    expect(body).not.toContain('ready-for-agent')
+    // Promotion is ADR 0006's, earned by a reproduction this routine cannot perform. An Agent
+    // Brief is what makes an issue ready (ADR 0032), so the body must never carry one.
+    expect(body).not.toContain('Agent Brief')
     expect(body).not.toContain('Closes #')
   })
 

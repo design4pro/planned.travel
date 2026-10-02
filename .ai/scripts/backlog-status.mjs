@@ -1,17 +1,21 @@
 #!/usr/bin/env node
 // Was rendered from design4pro/agent-kit until the kit was retired (ADR 0025). Edit it here.
 //
-// Reports where every open issue sits in the SDLC flow and the single next step that moves it.
-// Read-only: it never applies a label, because the labels that start an agent run are human
-// triggers (SDLC.md), and a report that could start work would be a different kind of tool.
+// Reports where every open issue sits in the SDLC flow and the single next step that moves it,
+// and - with `--next` - names the one issue the scheduled implement-ticket run takes next.
+// Read-only: it never applies a label. No label marks an issue ready (ADR 0032); readiness is the
+// rule in `classify`, so the report a person reads and the pick a run makes cannot disagree.
 //
 // It keeps no knowledge of its own that another file already holds:
-//   - the trigger labels, their required labels and their stand-down labels come from
-//     docs/agents/cezar-automations.json, the same file the cockpit polls;
-//   - "groomed" and "not ready" are read through the 🤖 comment marker every skill writes
-//     (.ai/trackers/github.md), so a human comment newer than a not-ready marker is the answer;
-//   - the run queue comes from .ai/cezar/runs.json when the host has one, which is what tells a
-//     queued issue apart from one whose trigger label no run ever picked up.
+//   - the category, priority and risk labels come from .ai/agentic.config.json;
+//   - the trusted authors are the `authors` gates of the issue automations in
+//     docs/agents/cezar-automations.json: an issue anyone else opened is never auto-implemented,
+//     and neither is one scripts/sentry-triage filed (its `sentry-issue` marker), whoever ran it;
+//   - "not ready" is read through the 🤖 comment marker every skill writes
+//     (.ai/trackers/github.md) - a groom's not-ready comment, or the `STOP:` comment implement-ticket
+//     leaves on an issue it would not take - so a human comment newer than it is the answer, and the
+//     schedule never picks the same refused issue every tick;
+//   - the run queue comes from .ai/cezar/runs.json when the host has one.
 //
 // Why it parses pull-request linkage itself rather than asking the tracker: pull requests here
 // target the base branch while the repository's default branch is another, and GitHub populates
@@ -20,15 +24,20 @@
 // closing keyword report an empty list, including one whose body opens with `Closes #163`. Reading
 // that field would mean the IN_REVIEW state could never once fire.
 //
-// Usage: node .ai/scripts/backlog-status.mjs [--json] [--stale-hours N]
+// Usage: node .ai/scripts/backlog-status.mjs [--json | --next] [--stale-hours N]
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const AUTOMATIONS = "docs/agents/cezar-automations.json";
+const CONFIG = ".ai/agentic.config.json";
 const RUNS = ".ai/cezar/runs.json";
 const ACTIVE_RUN_STATES = new Set(["queued", "running", "review"]);
+
+/** Open agent PRs at which `--next` stops handing out work, so the queue never outruns review. */
+export const WIP_LIMIT = 3;
+const HOLD_LABELS = ["blocked", "do-not-merge", "do-not-close"];
 
 export const PRIORITY_ORDER = [
   "priority-extreme",
@@ -43,9 +52,11 @@ export const STATE_ORDER = [
   "QUEUED",
   "STUCK",
   "IN_REVIEW",
+  "TRACKING",
+  "WAITING",
   "NOT_READY",
-  "NEEDS_SPEC",
-  "NEEDS_GROOM",
+  "EXTERNAL",
+  "NEEDS_TRIAGE",
   "READY",
 ];
 
@@ -90,6 +101,17 @@ export function branchIssue(headRefName) {
 }
 
 /**
+ * The issues listed under a `## Blocked by` heading (the afk-to-tickets ticket shape), read up to
+ * the next heading. "None - can start immediately" lists nothing.
+ */
+export function blockedBy(body) {
+  const section = /^#{2,3}\s*Blocked by[ \t]*$([\s\S]*?)(?=^#{1,3}\s|(?![\s\S]))/im.exec(
+    stripCode(body),
+  );
+  return section ? [...section[1].matchAll(/#(\d+)/g)].map((match) => Number(match[1])) : [];
+}
+
+/**
  * Open pull requests keyed by the issue each one addresses.
  *
  * Two signals, and which one matched is kept rather than collapsed: a keyword is the author saying
@@ -121,49 +143,69 @@ export function linkOpenPrs(prs) {
   return byIssue;
 }
 
-/** The label → workflow map the cockpit polls, plus what requires and what voids each trigger. */
-export function readTriggers(automations) {
-  const triggers = new Map();
+/**
+ * The logins the issue automations trust: the union of their `authors` gates. An automation with
+ * no gate adds nobody, so a missing gate makes nothing ready rather than everything.
+ */
+export function readTrusted(automations) {
+  const trusted = new Set();
   for (const automation of automations) {
-    if (automation.filters?.includePullRequests) continue;
-    for (const label of automation.filters?.changedLabels ?? []) {
-      triggers.set(label, {
-        workflow: automation.task?.workflow ?? automation.name,
-        requires: automation.filters?.allLabels ?? [],
-        excludes: automation.filters?.excludeLabels ?? [],
-      });
-    }
+    if (!(automation.events ?? []).some((event) => event.startsWith("issue."))) continue;
+    for (const login of automation.filters?.authors ?? []) trusted.add(login);
   }
-  return triggers;
+  return trusted;
 }
+
+/**
+ * Every open PR by a trusted author - draft, unlabelled or blocked alike - is WIP `--next` counts;
+ * counting only the ones in `review` would let a stalled draft escape the cap. The promotion
+ * (`do-not-merge`) is the release, not work in flight, and dependabot is not a trusted author.
+ */
+export const countWip = (prs, trusted) =>
+  prs.filter(
+    (pr) =>
+      trusted.has(pr.author?.login) &&
+      !pr.labels.some((label) => label.name === "do-not-merge"),
+  ).length;
 
 // A 🤖-prefixed comment is a skill's; anything else is a human's (.ai/trackers/github.md).
 const isAgentComment = (comment) => String(comment.body).trimStart().startsWith("🤖");
+const hasBrief = (text) => /^#{2,3}\s*Agent Brief\b/m.test(stripCode(text));
 
 /** One issue's state and the single next step that moves it. Pure: every input is passed in. */
-export function classify(issue, { triggers, runs, prLinks, staleHours, now }) {
+export function classify(
+  issue,
+  { trusted, sdlcLabels, openIssues, runs, prLinks, staleHours, now },
+) {
   const labels = issue.labels.map((label) => label.name);
   const has = (label) => labels.includes(label);
   const comments = issue.comments ?? [];
   const run = runs.get(issue.number);
   const prs = prLinks.get(issue.number) ?? [];
-  const trigger = labels.find((label) => triggers.has(label));
 
   const notReady = comments
-    .filter((c) => isAgentComment(c) && c.body.includes("not ready"))
+    .filter((c) => isAgentComment(c) && (c.body.includes("not ready") || /\bSTOP:/.test(c.body)))
     .at(-1);
-  const groomed = comments.some(
-    (c) => isAgentComment(c) && c.body.includes("implementation notes"),
-  );
   const answered =
     notReady &&
     comments.some(
       (c) =>
         c.createdAt > notReady.createdAt &&
-        // A human's reply, or the readiness verifier resolving the gap in the human's place
-        // (SDLC.md § Definition of Ready).
-        (!isAgentComment(c) || c.body.includes("readiness verified")),
+        // A human's reply, the readiness verifier resolving the gap in the human's place
+        // (SDLC.md § Definition of Ready), or afk-triage settling it into an Agent Brief.
+        (!isAgentComment(c) ||
+          c.body.includes("readiness verified") ||
+          (trusted.has(c.author?.login) && hasBrief(c.body))),
     );
+  // Only a trusted author's brief counts: the body is the reporter's, so for an issue someone
+  // else opened, a brief they wrote into it would be a self-approval.
+  const briefed =
+    hasBrief(issue.body) ||
+    comments.some((c) => trusted.has(c.author?.login) && hasBrief(c.body));
+  const missingLabels = Object.entries(sdlcLabels)
+    .filter(([, names]) => !names.some(has))
+    .map(([group]) => group);
+  const waitingOn = blockedBy(issue.body).filter((number) => openIssues.has(number));
   const hoursIdle = (now - Date.parse(issue.updatedAt)) / 36e5;
 
   const state = (name, next, warning) => ({
@@ -172,14 +214,14 @@ export function classify(issue, { triggers, runs, prLinks, staleHours, now }) {
     state: name,
     next,
     warning: warning ?? null,
-    trigger: trigger ?? null,
     prs,
   });
 
-  if (has("blocked") || has("do-not-merge"))
+  const hold = HOLD_LABELS.filter(has);
+  if (hold.length)
     return state(
       "BLOCKED",
-      "A human clears `blocked` / `do-not-merge` when the dependency lands.",
+      `A person clears \`${hold.join("`, `")}\`: the 🤖 comment names what they must do first.`,
     );
 
   if (has("in-progress"))
@@ -190,27 +232,8 @@ export function classify(issue, { triggers, runs, prLinks, staleHours, now }) {
         )
       : state("RUNNING", `A run holds the claim (${run?.workflow ?? "cockpit"}). Wait.`);
 
-  if (trigger) {
-    const rule = triggers.get(trigger);
-    const standDown = rule.excludes.filter(has);
-    const missing = rule.requires.filter((label) => !has(label));
-    if (standDown.length)
-      return state(
-        "BLOCKED",
-        `\`${trigger}\` cannot fire while \`${standDown.join("`, `")}\` is set.`,
-      );
-    if (missing.length)
-      return state(
-        "STUCK",
-        `\`${trigger}\` needs \`${missing.join("`, `")}\` too: \`gh issue edit ${issue.number} --add-label ${missing.join(",")}\`.`,
-      );
-    if (run)
-      return state("QUEUED", `Cezar has a ${run.status} \`${run.workflow}\` run for it. Wait.`);
-    return state(
-      "STUCK",
-      `\`${trigger}\` is set but no run picked it up. Check the cockpit, or re-apply the label.`,
-    );
-  }
+  if (run)
+    return state("QUEUED", `Cezar has a ${run.status} \`${run.workflow}\` run for it. Wait.`);
 
   if (prs.length) {
     const numbers = prs.map((pr) => `#${pr.number}`).join(", ");
@@ -225,27 +248,49 @@ export function classify(issue, { triggers, runs, prLinks, staleHours, now }) {
     );
   }
 
+  // The parent afk-to-tickets files for a spec: its tickets carry the work, it carries none.
+  if (/^Spec: \.ai\/specs\//.test(issue.body ?? ""))
+    return state("TRACKING", "A spec parent: its tickets carry the work. Nothing to do.");
+
+  if (waitingOn.length)
+    return state(
+      "WAITING",
+      `Blocked by open ${waitingOn.map((n) => `#${n}`).join(", ")} - the schedule takes it once they close.`,
+    );
+
   if (notReady && !answered)
     return state(
       "NOT_READY",
-      `Answer the not-ready comment, then \`gh issue edit ${issue.number} --add-label groom\`.`,
+      "Answer the not-ready or `STOP:` comment, then start `issue-groom` on it from the cockpit.",
     );
 
-  if (has("feature") && !/\.ai\/specs\//.test(issue.body ?? ""))
+  // The body quotes production error data, which anyone who can make the app fail can write -
+  // and a local `pnpm sentry-triage --file-issues` files it as the maintainer.
+  if (/<!--\s*sentry-issue:/.test(issue.body ?? ""))
     return state(
-      "NEEDS_SPEC",
-      `A feature with no covering spec: \`gh issue edit ${issue.number} --add-label spec\`.`,
+      "EXTERNAL",
+      "Filed by sentry-triage from production error data: read it, then start `issue-groom` or `implement-ticket` on it from the cockpit.",
     );
 
-  if (!groomed)
+  if (!trusted.has(issue.author?.login))
     return state(
-      "NEEDS_GROOM",
-      `Never groomed: \`gh issue edit ${issue.number} --add-label groom\`.`,
+      "EXTERNAL",
+      `Opened by ${issue.author?.login ?? "an unknown author"}, whom no automation trusts: read it, then start \`issue-groom\` or \`implement-ticket\` on it from the cockpit, or open it again yourself.`,
+    );
+
+  const missing = [
+    ...(briefed ? [] : ["Agent Brief"]),
+    ...missingLabels.map((group) => `${group} label`),
+  ];
+  if (missing.length)
+    return state(
+      "NEEDS_TRIAGE",
+      `No ${missing.join(", ")} yet: start \`issue-groom\` on it from the cockpit.`,
     );
 
   return state(
     "READY",
-    `Definition of Ready met: \`gh issue edit ${issue.number} --add-label autofix\`.`,
+    "Ready: the scheduled `implement-ticket` run takes it, or start one on it from the cockpit.",
   );
 }
 
@@ -261,6 +306,15 @@ export const sortIssues = (issues) =>
       priorityRank(a.labels) - priorityRank(b.labels) ||
       a.number - b.number,
   );
+
+/**
+ * The issue the scheduled run takes: the first READY one in report order (highest priority, then
+ * oldest), or null while `WIP_LIMIT` agent PRs are open or nothing is ready.
+ */
+export function pickNext(sortedIssues, wip) {
+  if (wip >= WIP_LIMIT) return null;
+  return sortedIssues.find((issue) => issue.state === "READY")?.number ?? null;
+}
 
 const gh = (args) =>
   JSON.parse(
@@ -283,16 +337,18 @@ function readRuns() {
  * argument it does not know: a typo must be as red as a real failure, never a silent default.
  */
 export function parseArgs(argv) {
-  const options = { asJson: false, staleHours: 24 };
+  const options = { asJson: false, next: false, staleHours: 24 };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--json") options.asJson = true;
+    else if (argv[i] === "--next") options.next = true;
     else if (argv[i] === "--stale-hours") {
       const value = argv[++i];
       if (!/^\d+$/.test(value ?? "") || Number(value) === 0)
         throw new Error(`--stale-hours needs a positive whole number of hours, got ${value ?? "nothing"}`);
       options.staleHours = Number(value);
-    } else throw new Error(`unknown argument ${argv[i]} - usage: [--json] [--stale-hours N]`);
+    } else throw new Error(`unknown argument ${argv[i]} - usage: [--json | --next] [--stale-hours N]`);
   }
+  if (options.asJson && options.next) throw new Error("--json and --next are separate outputs - pick one");
   return options;
 }
 
@@ -304,33 +360,41 @@ function main(argv) {
     console.error(`backlog-status: ${error.message}`);
     process.exit(2);
   }
-  const { asJson, staleHours } = options;
+  const { asJson, next, staleHours } = options;
+
+  const { labels } = JSON.parse(readFileSync(CONFIG, "utf8"));
+  const trusted = readTrusted(JSON.parse(readFileSync(AUTOMATIONS, "utf8")));
+  const prs = gh([
+    "pr", "list", "--state", "open", "--limit", "200",
+    "--json", "number,title,body,headRefName,author,labels",
+  ]);
+  const openIssues = gh([
+    "issue", "list", "--state", "open", "--limit", "200",
+    "--json", "number,title,url,labels,updatedAt,body,comments,author",
+  ]);
 
   const context = {
-    triggers: readTriggers(JSON.parse(readFileSync(AUTOMATIONS, "utf8"))),
+    trusted,
+    sdlcLabels: { category: labels.category, priority: labels.priority, risk: labels.risk },
+    openIssues: new Set(openIssues.map((issue) => issue.number)),
     runs: readRuns(),
-    prLinks: linkOpenPrs(
-      gh([
-        "pr", "list", "--state", "open", "--limit", "200",
-        "--json", "number,title,body,headRefName",
-      ]),
-    ),
+    prLinks: linkOpenPrs(prs),
     staleHours,
     now: Date.now(),
   };
+  const issues = sortIssues(openIssues.map((issue) => classify(issue, context)));
 
-  const issues = sortIssues(
-    gh([
-      "issue", "list", "--state", "open", "--limit", "200",
-      "--json", "number,title,url,labels,updatedAt,body,comments",
-    ]).map((issue) => classify(issue, context)),
-  );
+  if (next) {
+    const picked = pickNext(issues, countWip(prs, trusted));
+    if (picked !== null) console.log(picked);
+    return;
+  }
 
   if (asJson) {
     console.log(
       JSON.stringify(
-        issues.map(({ number, title, url, labels, state, next, warning, trigger, prs }) => ({
-          number, title, url, labels, state, next, warning, trigger, prs,
+        issues.map(({ number, title, url, labels, state, next, warning, prs }) => ({
+          number, title, url, labels, state, next, warning, prs,
         })),
         null,
         2,

@@ -23,12 +23,12 @@ Before intake, the work is shaped: `om-brainstorm` turns a single idea or questi
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
 | Discovery               | An idea, question, or itch is talked through: the problem is questioned, alternatives (including building nothing) are weighed, and the conversation ends in a routing decision. The product-level half of this stage — establishing the context every later decision reads, from material that exists, with every claim tagged by its evidence — is `om-discover`, and it is not enabled here.    | `om-brainstorm` (one idea), or a human                                                           | A routed conversation, with a brief when the work continues     |
 | Intake                  | A ticket or task brief is filed in GitHub and meets the Definition of Ready below. `om-prepare-issue` files it with SDLC labels and the ready sections; `om-auto-manage-issues` grooms what is already filed and reports what it still lacks. Agents file tickets too: `afk-to-tickets` slices a merged spec into tracer-bullet tickets, and `afk-architecture-review` files deepening candidates. | Anyone, `om-prepare-issue`, `om-auto-manage-issues`, `afk-to-tickets`, `afk-architecture-review` | Ticket exists and is ready, or its gaps are named on the ticket |
-| Triage                  | Confirm the issue is real, still unfixed on the base branch, and not already claimed or covered by an open PR. Then write an Agent Brief and set exactly one intake label (see Intake labels below). Read-only on code; stops the chain cleanly when there is nothing to do.                                                                                                                       | `afk-triage`, `om-verify-in-repo`, or a human                                                    | One intake label set, or closed as no-action                    |
+| Triage                  | Confirm the issue is real, still unfixed on the base branch, and not already claimed or covered by an open PR. Then write an Agent Brief, or put a `blocked` hold on it naming what a person must do (see Readiness below). Read-only on code; stops the chain cleanly when there is nothing to do.                                                                                                | `afk-triage`, `om-verify-in-repo`, or a human                                                    | An Agent Brief posted or a hold set, or stopped as no-action    |
 | Claim                   | The author claims the ticket so concurrent agents back off. See the claim protocol below.                                                                                                                                                                                                                                                                                                          | `om-fix` / `om-auto-create-pr`, or a human                                                       | Claim visible on the ticket                                     |
 | Implement               | Locate the minimal change surface (`om-root-cause`, read-only), then implement the change with regression tests and run the validation gate. Task briefs without a ticket go through `om-auto-create-pr`, which plans, implements phase by phase in an isolated worktree, and runs the same gate.                                                                                                  | `om-root-cause` + `om-fix`, `om-auto-create-pr`, or a human author                               | Change complete, validation gate green                          |
 | PR                      | Commit, push, and open a PR against the base branch with normalized labels. On a hand-worked branch, `om-check-and-commit` runs the gate, fixes obvious drift, and pushes when green.                                                                                                                                                                                                              | `om-open-pr`, `om-auto-create-pr`, or `om-check-and-commit`                                      | Open, labeled PR                                                |
 | Review loop             | The reviewer reads the diff against the `om-code-review` checklist and approves or requests changes. Requested changes are addressed (`om-auto-continue-pr` resumes agent PRs from the tracking plan, and adopts a PR that has none by reconstructing the plan from the PR's own context) and the PR is re-reviewed until approved.                                                                | `om-auto-review-pr` (single PR), `om-review-prs` (sweep), or a human                             | Approving review submitted                                      |
-| QA                      | A PR carrying `needs-qa` waits for manual QA. A QA reviewer, or below `risk-high` the unattended sign-off, records the outcome. See the QA gate below.                                                                                                                                                                                                                                                                               | QA reviewer (manual)                                                                             | `qa-approved` applied, or `qa-failed` routes it back            |
+| QA                      | A PR carrying `needs-qa` waits for manual QA. A QA reviewer, or below `risk-high` the unattended sign-off, records the outcome. See the QA gate below.                                                                                                                                                                                                                                             | QA reviewer (manual)                                                                             | `qa-approved` applied, or `qa-failed` routes it back            |
 | Merge                   | `om-merge-buddy` reports, read-only, which PRs can merge now and which are close but blocked. `om-approve-merge-pr` re-checks every gate, approves, and merges by whatever mechanism `## This repository` names.                                                                                                                                                                                   | `om-merge-buddy` + `om-approve-merge-pr`, or a human                                             | PR merged into the base branch                                  |
 | Post-merge housekeeping | Close issues the merged PR fixes; comment on issues whose PRs were closed without merging; turn leftover asks or review comments into tracked follow-up issues.                                                                                                                                                                                                                                    | `om-close-fixed-issues`, `om-followup-issue-from-pr`                                             | Tracker reconciled, follow-ups filed                            |
 
@@ -55,7 +55,7 @@ A ticket is ready for implementation when the answers below are on the ticket or
 
 For a bug, ready means reproducible: `om-verify-in-repo` is that gate, and the list above applies only to its ticket-level items. Enforcement: `om-prepare-issue` files tickets with these sections; `om-auto-manage-issues` records `READY_STATUS` per issue and posts a not-ready comment naming what is missing; `om-auto-fix-issue`'s feature route stops on a ticket that fails the ticket-level tier instead of speccing around the gap, the way `om-verify-in-repo` stops on a bug that is not real. Spec-level gaps are not a stop — the spec is authored. A maintainer may waive an item by saying so on the ticket. Before either skill stops on a missing ticket-level item, the `readiness-verifier` sub-agent (`.claude/agents/readiness-verifier.md`) reads the ticket, its thread and the repository, and resolves each item from evidence or with a documented assumption; when it resolves them all, its table goes on the ticket as a `readiness verified` comment and the ticket is ready, and a maintainer revokes that with a `veto` reply. It never decides a blocking question nobody answered, a product choice the repository has not made, or a problem statement it would have to invent; those go to the specialist sub-agent of § Delegated decisions, and only what that leaves open waits for a human. `risk-high` and `security` work is not refused here: the security and tenancy specialist rules on it at triage.
 
-**The Definition of Ready is the gate an unattended pipeline is built on.** `READY_STATUS` is the one machine-readable verdict that says a ticket can be worked without asking a person a question, so every automatic hand-off from grooming to triage reads it and nothing downstream re-derives it. A ticket that is not ready is commented on and left alone; it is never handed to an implementing agent on the theory that the agent will work the gap out.
+**The Definition of Ready is the gate an unattended pipeline is built on.** `READY_STATUS` is the one machine-readable verdict that says a ticket can be worked without asking a person a question, so the triage step that follows grooming in the same run reads it and nothing downstream re-derives it. A ticket that is not ready is commented on and left alone; it is never handed to an implementing agent on the theory that the agent will work the gap out.
 
 ## Product decisions as a protected contract
 
@@ -71,7 +71,7 @@ Every spec, ticket and agent-sized issue is scoped **Simple, Lovable, Complete**
 - **Lovable**: no rough edge is left "for later" inside that scope. Error states, empty states, docs and tests ship with the change.
 - **Complete**: the slice is useful and verifiable on its own. A change that only works once a later ticket lands is a layer, not a slice: merge it into the slice it serves.
 
-A request that fails the rule is re-scoped (a spec, or tickets), not implemented partially. `afk-triage` and `afk-to-tickets` both gate on this rule: a ticket too large for one fresh agent context is never `ready-for-agent` as it stands. The skill splits it, on a product owner specialist's verdict (§ Delegated decisions), into a first slice it briefs and follow-up issues it files.
+A request that fails the rule is re-scoped (a spec, or tickets), not implemented partially. `afk-triage` and `afk-to-tickets` both gate on this rule: a ticket too large for one fresh agent context never gets an Agent Brief as it stands. The skill splits it, on a product owner specialist's verdict (§ Delegated decisions), into a first slice it briefs and follow-up issues it files.
 
 ## Label state machine
 
@@ -81,7 +81,7 @@ Pipeline labels are mutually exclusive: a PR carries at most one, and it names w
 - The reviewer moves it: request changes → `changes-requested`; after fixes it returns to `review`; approval → `merge-queue`.
 - `merge-queue` is routing, not proof of QA: a `needs-qa` PR legitimately sits there until QA signs off. The label is this state machine's and is not GitHub's merge queue: a PR carrying it is waiting for the merge step `## This repository` describes, and only that step puts it in whatever queue GitHub runs.
 - Only a QA reviewer sets the `qa` pipeline label. They move a queued `needs-qa` PR from `merge-queue` to `qa` while testing, then back to `merge-queue` with `qa-approved` on pass, or to `qa-failed` on failure. Automated skills request QA with `needs-qa`; they never set `qa`.
-- `blocked` and `do-not-merge` are set and cleared by humans and stop the flow wherever it is.
+- `blocked` and `do-not-merge` stop the flow wherever it is. A skill may set `blocked` with a 🤖 comment naming what a person must do, and the promotion workflow sets `do-not-merge` on the `develop` -> `main` PR; only a person clears either.
 
 | Group    | Labels                                                                                     | Exclusivity                   | Meaning                            |
 | -------- | ------------------------------------------------------------------------------------------ | ----------------------------- | ---------------------------------- |
@@ -90,11 +90,9 @@ Pipeline labels are mutually exclusive: a PR carries at most one, and it names w
 | Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | additive                      | Process signals                    |
 | Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | one at a time; unset = medium | Urgency of the work                |
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | one at a time; unset = medium | Blast radius of the change         |
-| Intake   | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`                         | one at a time; issues only    | Who acts on the issue next         |
-| Command  | `groom`, `autofix`, `spec`                                                                 | additive; consumed by the run | Start one run now                  |
 | Outside  | `do-not-close`                                                                             | additive                      | A human hold no skill may override |
 
-The first five groups are a PR's; **Intake** and **Command** are an issue's, and each has its own section below rather than a line here. A repository may add a switch of its own outside the taxonomy; `## This repository` names it. Every group is also `labels.*` in `.ai/agentic.config.json`, and that file is what the skills read — a label this document names and the config does not is a label no skill will apply.
+An issue carries the category, priority and risk groups and the holds, and nothing else: no label says an issue is ready or starts a run (§ Readiness, ADR 0032). `do-not-close` is the one label outside the Open Mercato taxonomy, and no other is created. Every group is also `labels.*` in `.ai/agentic.config.json`, and that file is what the skills read — a label this document names and the config does not is a label no skill will apply.
 
 Priority is how urgent the work is; risk is how dangerous the change is to ship. A one-line fix for an outage can be `priority-extreme` and `risk-low`; a large auth refactor that can wait can be `priority-low` and `risk-high`. A PR inherits both from its source issue unless the scope clearly changed. When an automated skill adds or changes a pipeline or meta label, it leaves a short comment explaining why.
 
@@ -113,37 +111,16 @@ When no risk label is set, infer one:
 
 When signals conflict, pick the higher label and say why in the label comment. A `risk-high` PR strengthens the case for `needs-qa` and deeper review even when it would otherwise look routine, and it sends the issue past a security and tenancy specialist (§ Delegated decisions) before any unattended implementing skill may take it.
 
-## Intake labels
+## Readiness
 
-Intake labels go on issues only, one at a time, and say who acts on the issue next. They come before the PR pipeline above. The list lives in `.ai/agentic.config.json` as `labels.intake`.
+No label says an issue is ready, and no label starts a run (ADR 0032). The taxonomy above is the whole vocabulary; readiness is computed.
 
-| Label             | Meaning                                                                                                                       | Set by                                                                                                       |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `needs-triage`    | Groomed and ready by the Definition of Ready, but not yet evaluated for an agent                                              | Humans; `afk-architecture-review` for its candidates and security defects; `afk-triage` for split follow-ups |
-| `needs-info`      | Waiting on the reporter                                                                                                       | `afk-triage`, humans                                                                                         |
-| `ready-for-agent` | Briefed and safe to implement unattended. Where `## This repository` says so, adding it launches the implementing automation. | `afk-triage`, `afk-to-tickets` (frontier tickets only), humans                                               |
-| `ready-for-human` | Briefed, but needs a person: only the cases `.ai/skills/afk-decide/SKILL.md` § 5 reserves, or an issue that should be closed  | `afk-triage`, `afk-to-tickets`, humans                                                                       |
+An issue is **ready** when all of these hold: it is open; a maintainer opened it (the `authors` gate of the issue automations) and `sentry-triage` did not file it; its body or a maintainer's comment carries an `## Agent Brief`; it has a category, a priority and a risk label; every issue under its `Blocked by` is closed; no open PR addresses it; no 🤖 not-ready or `STOP:` comment waits for an answer; and it carries none of `blocked`, `do-not-merge`, `do-not-close` or `in-progress`. `.ai/scripts/backlog-status.mjs` is the one implementation of that rule. It prints the report a person reads, and with `--next` it picks the issue the scheduled `implement-ticket` run takes: highest priority first, then oldest, and nothing while three agent PRs are open - every open PR a maintainer authored except the `do-not-merge` promotion, drafts and blocked ones included, so a stalled PR cannot slip past the cap.
 
-- **Transitions:** an issue labeled `needs-triage` moves to exactly one of `needs-info`, `ready-for-agent` or `ready-for-human`. When the reporter answers a `needs-info` issue, a human moves it back to `needs-triage`, and triage runs again. Re-triaging a decided issue means removing `ready-for-agent` or `ready-for-human` first, then adding `needs-triage`.
-- **Grooming comes first.** `om-auto-manage-issues` owns `issue.opened` and adds the SDLC labels and the Definition of Ready check. `afk-triage` answers the `needs-triage` label instead, so the two never groom one issue at the same time.
-- **Grooming hands a ready issue on, within a narrow gate.** A finished groom records `READY_STATUS`, and when that status is `ready` it adds `needs-triage` as its last mutation — which is what starts `afk-triage`. This was the open gap in this process: grooming used to record the status and stop, so an issue arriving through the issue form waited for a human to add an intake or trigger label before anything else happened. The gate is narrow on purpose, and the conditions are in `.ai/skills/om-auto-manage-issues/SKILL.md`: the issue must be maintainer-opened and `ready`, must carry no intake label already, no trigger label, and not `dependencies`; `risk-high` and `security` issues cross it, because triage passes them to a security and tenancy specialist (§ Delegated decisions). Anything else still waits for a person. The reason the gate is not wider is written in the `Triage new issues` automation itself — it treats `needs-triage` as a label only a collaborator can set, and grooming is not a collaborator; what crosses it is an issue a maintainer already opened and that already passed the Definition of Ready. `afk-architecture-review` also sets the label, on the candidates and security defects it raises itself, and `afk-triage` on the follow-up issues of a split.
-- **Limits on skills:** automated skills add `ready-for-agent` to `risk-high` or `security` work only on a security and tenancy specialist's approving verdict, recorded in the brief with its conditions as acceptance criteria. They never close an issue. Consuming `needs-triage` is exactly what `afk-triage` is for, so that one label it may remove; `ready-for-agent` and `ready-for-human` are terminal, and a skill never removes either once a human set it.
-- **Human override:** a human may move any issue to any intake label at any time.
-
-## Trigger labels
-
-A trigger label is not a state: it is an instruction to start one run now. Adding one is how a human hands a specific piece of work to the pipeline out of band, and the skill's repo-local override removes the label as its first mutation — so a trigger label still present is a run nobody took.
-
-| Label     | Starts                                    | Notes                                                                                                                             |
-| --------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `groom`   | `om-auto-manage-issues` on one issue      | Labels, Definition of Ready check, implementation notes. The way an issue from someone other than a maintainer is groomed at all. |
-| `autofix` | `om-auto-fix-issue`                       | A bug goes verify → root cause → fix → PR → review → QA; a feature goes spec → implement. The human express lane past triage.     |
-| `spec`    | `om-auto-write-spec` on a `feature` issue | The spec lands under `.ai/specs/` on a design-only PR. Implementation is a separate run once that PR merges.                      |
-
-Two rules hold wherever these are wired:
-
-- **A trigger label is never filed with the issue.** An issue created with its own trigger already attached produces two distinct events in one poll batch — the opened event and the label event — and launches two concurrent runs on the same ticket. File the issue bare and add the label afterwards.
-- **No skill adds a trigger label to its own input.** Trigger labels are the human's lever; the intake ladder above is the pipeline's. Which triggers this repository actually wires is in `## This repository`.
+- **How an issue gets there.** Opening it starts `issue-groom`: `om-auto-manage-issues` adds the SDLC labels, the Definition of Ready check and implementation notes, then `afk-triage` writes the Agent Brief, or puts a `blocked` hold on it with a comment naming the one thing a person must do. One run, two steps, so the two never race on the same labels. `afk-to-tickets` files tickets whose body is their brief.
+- **How it leaves a hold.** A person removes `blocked`, and that event grooms and triages the issue again.
+- **Limits on skills:** an implementing run takes `risk-high` or `security` work only on a security and tenancy specialist's approving verdict, recorded with its conditions as acceptance criteria, and it re-derives the risk from the area the brief touches rather than trusting the label. Skills never close an issue and never remove a hold a person set.
+- **Human override:** a person starts any workflow on any issue from the cockpit at any time: `issue-groom`, `issue-autofix`, `spec`, `implement-ticket`.
 
 ## The QA gate
 
@@ -180,8 +157,8 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
-- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` by `om-pr-autopilot --allow-merge` behind the ruleset and the QA gate (ADR 0031); a spec PR, the `develop` -> `main` promotion (`promotion`) and `risk-high` QA stay with a person.
-- **The cap is on inventory, not on rate.** The implementing skills stop when enough agent PRs already wait in `review`, so a burst of intake cannot outrun review capacity. Raising throughput means reviewing, not tuning the trigger.
+- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` by `om-pr-autopilot --allow-merge` behind the ruleset and the QA gate (ADR 0031); a spec PR, the `develop` -> `main` promotion (it carries `do-not-merge`) and `risk-high` QA stay with a person.
+- **The cap is on inventory, not on rate.** The scheduled pick takes nothing while three agent PRs are open, so a burst of intake cannot outrun review capacity. Raising throughput means reviewing, not tuning the schedule.
 
 ## Unattended decisions
 
@@ -191,7 +168,7 @@ A state an unattended pipeline can enter needs an exit that does not require a h
 
 ### Delegated decisions
 
-A choice between options is not a reason to stop or to hand an issue to a person. An unattended skill that would present options, a "Decision for the implementer", a "human's call" or a `ready-for-human` label hands the question to an **independent specialist sub-agent** instead (product owner, software architect, security and tenancy, accessibility, UX, test engineer, manual tester, or configuration guardian; the `persona-*` agents in `.claude/agents/` where one fits), applies the verdict, records it as a Resolved assumptions row, and continues the work in the same run. The protocol, the verdict format and the short list of cases that still need a person are in `.ai/skills/afk-decide/SKILL.md`. A skill that stops on a question this protocol could settle is a defect to fix in the skill.
+A choice between options is not a reason to stop or to hand an issue to a person. An unattended skill that would present options, a "Decision for the implementer", a "human's call" or a `blocked` hold hands the question to an **independent specialist sub-agent** instead (product owner, software architect, security and tenancy, accessibility, UX, test engineer, manual tester, or configuration guardian; the `persona-*` agents in `.claude/agents/` where one fits), applies the verdict, records it as a Resolved assumptions row, and continues the work in the same run. The protocol, the verdict format and the short list of cases that still need a person are in `.ai/skills/afk-decide/SKILL.md`. A skill that stops on a question this protocol could settle is a defect to fix in the skill.
 
 ## Validation gate
 
@@ -222,7 +199,7 @@ These operating rules were learned the hard way and apply to every repository ru
 3. `cez automation enable <id>`.
 4. After editing a definition, run `cez automation update <id> --file ...`.
 
-The intake and trigger labels must exist first (`gh label create <label>`). To stop it all, `cez automation pause <id>`, or start the cockpit with `CEZ_AUTOMATIONS=0`.
+The labels in `.ai/agentic.config.json` must exist first (`gh label create <label>`). To stop it all, `cez automation pause <id>`, or start the cockpit with `CEZ_AUTOMATIONS=0`.
 
 ## Amending this process
 
@@ -265,10 +242,10 @@ Two amendment rules are specific to this document's shape:
   PR in two shards (ADR 0016); WebKit runs nightly, not per PR (ADR 0022, #552). A PR whose diff
   stops at documentation skips them, on the `scope` job's word — there is no label that turns them
   on or off.
-- **Who starts a run.** `groom`, `autofix` and `spec` are the command labels. No skill adds
-  one to its own input. `needs-triage` starts triage and `ready-for-agent` starts implementation.
-  PR repair and second opinions require an explicit request; review findings never re-arm a run.
-  A person can also hand work to the agent directly from the cockpit.
+- **Who starts a run.** No label does (ADR 0032). An issue a maintainer opens is groomed and
+  triaged on the event; a ready issue is implemented by the two-hour schedule; a PR is driven by
+  its own automations. PR repair and second opinions require an explicit request; review findings
+  never re-arm a run. A person can start any workflow from the cockpit.
 - **Risk here.** `risk-high` means the diff touches `src/server/auth`, `src/server/repos/base.ts`,
   `src/server/billing`, `src/server/db/schema.ts`, `drizzle/` or `src/server/public`.
 - **QA routing.** A PR that reaches `src/routes`, `src/components`, `src/styles`,
@@ -285,7 +262,7 @@ Two amendment rules are specific to this document's shape:
   `merge_group`, with explicit scope/e2e conditions and non-colliding concurrency groups;
   promotions must retain merge commits, and the rollout must document a rollback to manual merging.
 - **Sources of issues.** People, through the issue forms (blank issues are off, so every issue
-  enters with a category); Sentry findings as `bug` + `priority-high` + `groom`, never `autofix`;
+  enters with a category); Sentry findings as `bug` + `priority-high`, which no unattended run implements;
   and follow-ups from `om-followup-issue-from-pr` and `om-review-prs`.
 - **The product layer is off.** No `.ai/specs/product-brief.md`, no `discovery` block in
   `.ai/agentic.config.json`, and the four skills it needs — `om-setup-discovery-pipeline`,
@@ -301,48 +278,47 @@ Two amendment rules are specific to this document's shape:
 Workflows live in `.ai/cezar/workflows/`; the committed definitions are
 `docs/agents/cezar-automations.json`, applied with `.ai/scripts/cez-automations.sh`.
 
-| Automation                         | Trigger                               | Workflow                                          |
-| ---------------------------------- | ------------------------------------- | ------------------------------------------------- |
-| Groom new issues                   | `issue.opened` by a maintainer        | `issue-groom` (`om-auto-manage-issues`)           |
-| Re-groom on request                | `groom` added                         | `issue-groom`                                     |
-| Fix issues on the autofix label    | `autofix` added                       | `issue-autofix` (`om-auto-fix-issue`)             |
-| Write a spec for feature issues    | `spec` added to a `feature`           | `spec` (`om-auto-write-spec`)                     |
-| Autopilot new pull requests        | `pull_request.opened` by a maintainer | `pr-autopilot`                                    |
-| Merge reviewed agent pull requests | `merge-queue` by `rafalwolak`         | `pr-autopilot`                                    |
-| Triage new issues                  | `needs-triage` added                  | `triage` (`afk-triage`)                           |
-| Implement ready-for-agent issues   | `ready-for-agent` added               | `implement-ticket`                                |
-| Spec to tickets                    | weekdays 07:00                        | `spec-to-tickets` (`afk-to-tickets`)              |
-| Weekly architecture review         | Mondays 06:00                         | `architecture-review` (`afk-architecture-review`) |
-| Weekly lessons                     | Fridays 16:00                         | `lessons` (`afk-lessons`)                         |
+| Automation                         | Trigger                               | Workflow                                               |
+| ---------------------------------- | ------------------------------------- | ------------------------------------------------------ |
+| Groom and triage new issues        | `issue.opened` by a maintainer        | `issue-groom` (`om-auto-manage-issues` + `afk-triage`) |
+| Re-triage when a hold is cleared   | `blocked` removed                     | `issue-groom`                                          |
+| Implement the next ready issue     | every 2 hours                         | `implement-ticket` (`backlog-status.mjs --next`)       |
+| Autopilot new pull requests        | `pull_request.opened` by a maintainer | `pr-autopilot`                                         |
+| Merge reviewed agent pull requests | `merge-queue` by `rafalwolak`         | `pr-autopilot`                                         |
+| Spec to tickets                    | weekdays 07:00                        | `spec-to-tickets` (`afk-to-tickets`)                   |
+| Weekly architecture review         | Mondays 06:00                         | `architecture-review` (`afk-architecture-review`)      |
+| Weekly lessons                     | Fridays 16:00                         | `lessons` (`afk-lessons`)                              |
 
-Five workflows have **no cezar automation**: `housekeeping` (`om-review-prs`, `om-merge-buddy`
-report, `om-close-fixed-issues`), `backlog`, `brainstorm`, `implement-spec` and `pr-review`. Four
-of them are started by hand from the cockpit.
+Eight workflows have **no cezar automation**: `housekeeping` (`om-review-prs`, `om-merge-buddy`
+report, `om-close-fixed-issues`), `backlog`, `brainstorm`, `implement-spec`, `pr-review`,
+`issue-autofix`, `spec` and `triage`. Seven of them are started by hand from the cockpit.
 
 `housekeeping` is the exception, and it matters because the sentence that used to stand here said
 the opposite: **it runs on a schedule, just not on cezar's.** A launchd agent on the cezar host —
 `dev.planned-travel.housekeeping`, template at `.ai/scripts/launchd/` — calls
 `.ai/scripts/housekeeping.sh` at 07:00, 12:00 and 17:00 on weekdays, and that script POSTs one
-`housekeeping` run to the cockpit's API. Cezar does have a scheduler — the table's last three rows
-are wall-clock schedules, not events — but it takes one occurrence per automation, in the shapes
-`weekdays` and `weekly`, each at a single time of day (`docs/agents/cezar-automations.json`). Three
-runs a weekday is not one of them, so this cadence lives outside it (`docs/agents/cezar.md`
+`housekeeping` run to the cockpit's API. Cezar does have a scheduler — four rows of the table are
+schedules, not events — but it takes one occurrence per automation, in the shapes `daily`,
+`weekdays` and `weekly` at a single time of day, or `hours` around the clock
+(`docs/agents/cezar-automations.json`). Three runs a weekday at fixed hours is none of them, so this cadence lives outside it (`docs/agents/cezar.md`
 § Housekeeping). So read "no automation" as "no row in the table above", never as "nothing starts
 it" — the earlier wording told a reader that an issue whose PR merged stays open until someone runs
 the sweep by hand, and that was wrong.
 
-The `authors: ["rafalwolak"]` filter on the two `opened` automations is a security gate, not a
+The `authors: ["rafalwolak"]` filter on the issue and PR automations is a security gate, not a
 convenience: those runs read the issue or PR body as a prompt and hold Bash with no allowlist, so
-anything from anyone else waits for a maintainer to add a trigger label.
+anything from anyone else waits for a maintainer to start a run from the cockpit. The same list is
+what `backlog-status.mjs` trusts, so such an issue is never picked by the schedule either.
 
 **Guardrails:**
 
 - Cezar merges into `develop` only through `om-pr-autopilot --allow-merge` - the last step of
   `implement-ticket`, and the `pr-autopilot` workflow - through `om-approve-merge-pr` and its label
   and QA checks (ADR 0031, amended 2026-10-01). It never merges into `main`: a person merges the
-  `develop` → `main` promotion, which carries `promotion`.
-- `implement-ticket` stops when three or more agent PRs already wait in `review`, and that cap is
-  shared — the `issue-autofix` output counts against it too, because both ladders publish under the
+  `develop` → `main` promotion, which carries `do-not-merge`.
+- `backlog-status.mjs --next` picks nothing while three agent PRs are open
+  (`review`, `changes-requested`, `qa`, `qa-failed`, `merge-queue`), and that cap is shared — a
+  cockpit-started `issue-autofix` PR counts against it too, because every run publishes under the
   same `gh` identity.
 - Triage and implementation take `risk-high` or `security` work only on a security and tenancy
   specialist's approving verdict (§ Delegated decisions); the PR still goes through review, QA and
