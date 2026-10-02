@@ -224,7 +224,8 @@ ready issue** every two hours, **Spec to tickets** on weekdays at 07:00, **Weekl
 review** on Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. A schedule has no
 issue author of its own to gate; `.ai/scripts/backlog-status.mjs --next` applies the `authors` gate to the issue it
 picks, and what bounds the run is that script and its skill - one issue
-implemented and nothing while three PRs are waiting for a person, at most one spec sliced, three refactor
+implemented and nothing while three PRs are waiting for a person (`needs-qa` without `qa-approved`, `risk-high`, `security`,
+`blocked`, or `changes-requested` untouched for 24 hours), at most one spec sliced, three refactor
 issues or one pull request per run.
 
 No label starts a run (ADR 0032). Every event trigger is gated on who can produce it: the open

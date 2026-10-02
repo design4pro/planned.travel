@@ -21,6 +21,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PARKED_HOURS,
   PLAN_WORKFLOWS,
   RETIRED_AGENT_LOGINS,
   WIP_LIMIT,
@@ -449,6 +450,28 @@ describe("waitsForPerson", () => {
   it("still waits for a person when a high-risk PR also has QA approved", () => {
     expect(waitsForPerson(pr("risk-high", "needs-qa", "qa-approved"))).toBe(true);
   });
+
+  describe("a changes-requested PR", () => {
+    const now = Date.parse("2026-10-03T12:00:00Z");
+    const idle = (hours, ...names) => ({
+      ...pr(...names),
+      updatedAt: new Date(now - hours * 36e5).toISOString(),
+    });
+
+    it("is on its way to a merge while it is fresh, and parked on a person once it has sat for 24 h", () => {
+      expect(PARKED_HOURS).toBe(24);
+      expect(waitsForPerson(idle(1, "changes-requested"), now)).toBe(false);
+      expect(waitsForPerson(idle(23.9, "changes-requested"), now)).toBe(false);
+      expect(waitsForPerson(idle(24, "changes-requested"), now)).toBe(true);
+      expect(waitsForPerson(idle(72, "changes-requested", "risk-low"), now)).toBe(true);
+    });
+
+    it("is judged by the label, not by age alone, and a PR with no updatedAt is never parked", () => {
+      expect(waitsForPerson(idle(72, "review"), now)).toBe(false);
+      expect(waitsForPerson(pr("changes-requested"), now)).toBe(false);
+      expect(waitsForPerson(pr("changes-requested"))).toBe(false);
+    });
+  });
 });
 
 describe("countWip", () => {
@@ -469,6 +492,16 @@ describe("countWip", () => {
       pr(["needs-qa", "qa-approved"]),
     ];
     expect(countWip(prs, trusted)).toBe(4);
+  });
+
+  it("counts a trusted changes-requested PR only once it has sat for 24 h", () => {
+    const now = Date.parse("2026-10-03T12:00:00Z");
+    const aged = (hours) => ({
+      ...pr(["changes-requested"]),
+      updatedAt: new Date(now - hours * 36e5).toISOString(),
+    });
+    expect(countWip([aged(2), aged(30), aged(48)], trusted, now)).toBe(2);
+    expect(countWip([{ ...aged(30), author: { login: "dependabot[bot]" } }], trusted, now)).toBe(0);
   });
 
   it("skips the promotion and another author's PR, and counts the retired agent's once it is trusted", () => {

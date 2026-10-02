@@ -158,7 +158,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
 - **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` by `om-pr-autopilot --allow-merge` behind the ruleset and the QA gate (ADR 0031); the `develop` -> `main` promotion (it carries `do-not-merge`), `risk-high` QA and a spec PR a person wrote stay with a person. A spec PR an agent wrote (`afk-plan-to-spec`) is reviewed by an independent specialist panel (§ Delegated decisions), its verdicts are recorded in the PR body, and the pipeline merges it once CI is green (ADR 0033); a panel that does not approve leaves it `blocked` for a person.
-- **The cap is on inventory, not on rate.** `--next` and `--plan` start no implementation while three PRs wait for a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`), so a burst of intake cannot outrun the review only a person can give. Raising throughput means reviewing those PRs, not tuning the schedule.
+- **The cap is on inventory, not on rate.** `--next` and `--plan` start no implementation while three PRs wait for a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`, or `changes-requested` untouched for 24 hours, which is an autopilot parked on a decision), so a burst of intake cannot outrun the review only a person can give. Raising throughput means reviewing those PRs, not tuning the schedule.
 
 ## Unattended decisions
 
@@ -350,7 +350,8 @@ what `backlog-status.mjs` trusts, so such an issue is never picked by the schedu
   and QA checks (ADR 0031, amended 2026-10-01). It never merges into `main`: a person merges the
   `develop` → `main` promotion, which carries `do-not-merge`.
 - `backlog-status.mjs --next` and `--plan` pick no implementation while three PRs are waiting for
-  a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`), and that cap is
+  a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`, or `changes-requested` untouched for
+  24 hours), and that cap is
   shared — a cockpit-started `issue-autofix` PR counts against it too, because every run publishes
   under the same `gh` identity. A PR the pipeline merges by itself does not count (ADR 0033).
 - Triage and implementation take `risk-high` or `security` work only on a security and tenancy

@@ -196,14 +196,24 @@ export function trustedAuthors(automations) {
 const hasLabel = (pr, name) => pr.labels.some((label) => label.name === name);
 
 /**
- * A PR sits with a person when no run can move it: QA the unattended sign-off may not give
- * (`needs-qa` still without `qa-approved`), a diff the owner signs off (`risk-high`, `security`), or
- * a hold. Everything else - `review`, `changes-requested`, `merge-queue`, a plain draft - is on its
- * way to `om-pr-autopilot --allow-merge`, which merges it into `develop` without anyone.
+ * How long a PR labelled `changes-requested` may sit untouched before it counts as parked: a run
+ * that is still fixing the review pushes within that time, so a PR idle past it is one the autopilot
+ * stopped on a decision only a person takes (its result comment says so).
  */
-export const waitsForPerson = (pr) =>
+export const PARKED_HOURS = 24;
+
+/**
+ * A PR sits with a person when no run can move it: QA the unattended sign-off may not give
+ * (`needs-qa` still without `qa-approved`), a diff the owner signs off (`risk-high`, `security`), a
+ * hold, or `changes-requested` left untouched for `PARKED_HOURS`. Everything else - `review`, a
+ * fresh `changes-requested`, `merge-queue`, a plain draft - is on its way to
+ * `om-pr-autopilot --allow-merge`, which merges it into `develop` without anyone. `now` is passed in
+ * (epoch ms) so the rule stays pure; a PR with no `updatedAt` is never taken for parked.
+ */
+export const waitsForPerson = (pr, now) =>
   (hasLabel(pr, "needs-qa") && !hasLabel(pr, "qa-approved")) ||
-  ["risk-high", "security", "blocked"].some((label) => hasLabel(pr, label));
+  ["risk-high", "security", "blocked"].some((label) => hasLabel(pr, label)) ||
+  (hasLabel(pr, "changes-requested") && (now - Date.parse(pr.updatedAt)) / 36e5 >= PARKED_HOURS);
 
 /**
  * The WIP the cap counts: open PRs by a trusted author that wait for a person. Counting every agent
@@ -211,10 +221,10 @@ export const waitsForPerson = (pr) =>
  * cap has to protect - what only a person can clear - is exactly this set. The promotion
  * (`do-not-merge`) is the release, not work in flight, and dependabot is not a trusted author.
  */
-export const countWip = (prs, trusted) =>
+export const countWip = (prs, trusted, now) =>
   prs.filter(
     (pr) =>
-      trusted.has(pr.author?.login) && !hasLabel(pr, "do-not-merge") && waitsForPerson(pr),
+      trusted.has(pr.author?.login) && !hasLabel(pr, "do-not-merge") && waitsForPerson(pr, now),
   ).length;
 
 // A 🤖-prefixed comment is a skill's; anything else is a human's (.ai/trackers/github.md).
@@ -710,7 +720,7 @@ function main(argv) {
   const trusted = trustedAuthors(JSON.parse(readFileSync(AUTOMATIONS, "utf8")));
   const prs = gh([
     "pr", "list", "--state", "open", "--limit", "200",
-    "--json", `number,title,body,headRefName,author,labels${plan ? ",files" : ""}`,
+    "--json", `number,title,body,headRefName,author,labels,updatedAt${plan ? ",files" : ""}`,
   ]);
   const openIssues = gh([
     "issue", "list", "--state", "open", "--limit", "200",
@@ -730,7 +740,7 @@ function main(argv) {
   const issues = sortIssues(openIssues.map((issue) => classify(issue, context)));
 
   if (next) {
-    const picked = pickNext(issues, countWip(prs, trusted));
+    const picked = pickNext(issues, countWip(prs, trusted, context.now));
     if (picked !== null) console.log(picked);
     return;
   }
@@ -753,7 +763,7 @@ function main(argv) {
       JSON.stringify(
         buildPlan({
           issues,
-          wip: countWip(prs, trusted),
+          wip: countWip(prs, trusted, context.now),
           runs: context.runs,
           activeTasks: records.filter(isAlive).map((run) => String(run.task ?? "")),
           specs,

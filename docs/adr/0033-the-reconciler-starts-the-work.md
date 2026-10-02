@@ -41,8 +41,10 @@ exists, and a trigger per event cannot see a difference.
    `docs/agents/cezar-automations.json` are left as they are until the Reconciler has run alone for a
    while.
 2. **WIP counts what only a person can clear.** Open PRs by a trusted author, except the `do-not-merge`
-   promotion, that are `needs-qa` without `qa-approved`, or `risk-high`, `security` or `blocked`. The
-   limit stays three. A PR the pipeline merges by itself is not inventory.
+   promotion, that are `needs-qa` without `qa-approved`, or `risk-high`, `security` or `blocked`, or
+   `changes-requested` and untouched for 24 hours (an autopilot that stopped there is parked on a decision
+   only a person takes; a fresh one is a run still fixing the review). The limit stays three. A PR the
+   pipeline merges by itself is not inventory.
 3. **An agent lifts what an agent set, on a specialist's verdict.** `afk-unblock` takes a `blocked`
    hold, or an unanswered not-ready or `STOP:` comment, and asks an independent specialist
    (`afk-decide`) whether it can be lifted; it lifts it with a `🤖 RESOLVED:` comment, which
