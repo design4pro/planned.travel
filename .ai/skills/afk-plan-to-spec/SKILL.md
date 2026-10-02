@@ -24,7 +24,7 @@ The task names a stage id and its plan file (`Write the spec for plan stage 04-S
 - the stage heading `## Stage <id>` is not in that file;
 - the plan file is **frozen**: `docs/plans/README.md` lists it as migrated to a PRD, so the tracker is the authority and a spec here would contradict it. The file takes no edits either, so you do not mark its stages: `backlog-status.mjs --plan` never names one, and a person who did gets this answer;
 - the stage is already covered. A stage is covered when its id appears in any file under `.ai/specs/` (any depth), in the title or body of any issue, open or closed (**search-issues**), or in an open PR (**search-prs**; a branch `spec/<slug>` for it counts), or when its section in the plan has a line starting `Delivered:`. For an id two plan files share (`13-S1` is in two), the mention must also name the plan file;
-- an open PR already adds a spec: one spec is in flight at a time, so the review order and the plan's wave order stay the same thing.
+- an open PR already adds a spec, or marks delivered stages (its branch starts `docs/plan-delivered-`): one spec is in flight at a time, so the review order and the plan's wave order stay the same thing, and a docs PR for the plan that has not merged yet leaves the stages it marks looking uncovered. A person's own edit to `docs/plans/` is on another branch and does not stop you.
 
 A spec for this stage, or a `Delivered:` line for it, that exists only in your own worktree (uncommitted, or on the branch this run made) is the previous attempt of this run, not a reason to stop: when the gate step failed, the run starts this step again. Read the handoff file, and continue from that spec or mark, fixing what the gate reported.
 

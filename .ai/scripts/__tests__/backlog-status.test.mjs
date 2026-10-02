@@ -35,7 +35,7 @@ import {
   coversStage,
   frozenPlans,
   isAlive,
-  marksDelivered,
+  marksDeliveredStages,
   linkOpenPrs,
   parseArgs,
   pickNext,
@@ -842,6 +842,19 @@ describe("addsSpec", () => {
   });
 });
 
+describe("marksDeliveredStages", () => {
+  it("is true for the branch afk-plan-to-spec opens to mark delivered stages", () => {
+    expect(marksDeliveredStages({ headRefName: "docs/plan-delivered-budget-and-currencies" })).toBe(true);
+  });
+
+  it("is false for any other branch, a plan edit by a person included, and for a PR with no branch", () => {
+    expect(marksDeliveredStages({ headRefName: "docs/plans-typo" })).toBe(false);
+    expect(marksDeliveredStages({ headRefName: "spec/budget-split" })).toBe(false);
+    expect(marksDeliveredStages({ headRefName: "feat/plan-delivered-x" })).toBe(false);
+    expect(marksDeliveredStages({})).toBe(false);
+  });
+});
+
 describe("buildPlan", () => {
   const row = (number, state, over = {}) => ({ number, state, labels: ["priority-medium"], canUnblock: false, ...over });
   const spec = (name) => ({ path: `.ai/specs/${name}.md`, text: "| **Status** | ready |\n" });
@@ -967,7 +980,7 @@ describe("buildPlan", () => {
     expect(buildPlan({ ...base, stages: [stage], activeTasks: writing }).actions).toEqual([]);
   });
 
-  it("waits for the open PR that marks delivered stages, but not for any other PR touching the plans", () => {
+  it("waits for the open PR that marks delivered stages, but not for a person's edit on another branch", () => {
     const marking = { headRefName: "docs/plan-delivered-budget-and-currencies", files: [] };
     expect(buildPlan({ ...base, stages: [stage], openPrs: [marking] }).actions).toEqual([]);
     const personEdit = {
@@ -977,9 +990,6 @@ describe("buildPlan", () => {
     expect(buildPlan({ ...base, stages: [stage], openPrs: [personEdit] }).actions.map((a) => a.target)).toEqual([
       "04-S3",
     ]);
-    expect(marksDelivered(marking)).toBe(true);
-    expect(marksDelivered(personEdit)).toBe(false);
-    expect(marksDelivered({})).toBe(false);
   });
 
   it("counts a spec or an issue that mentions the stage as covering it", () => {
