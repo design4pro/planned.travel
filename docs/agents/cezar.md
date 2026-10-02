@@ -279,8 +279,10 @@ time of day - so three runs a weekday cannot be expressed as one, and this caden
 it. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
 (`/api/v1/p/planned-travel/runs`) and falls back to a headless `cezar run` when the cockpit is
 down, or exits 1 when `cezar` is not on PATH - there is no npx fallback, since upstream lacks the
-fork's fixes; launchd calls it at 07:00, 12:00 and 17:00 on weekdays. Install (template in
-`.ai/scripts/launchd/`):
+fork's fixes; launchd calls it at 07:30, 12:30 and 17:30 on weekdays. The half hour keeps it off
+money-tracker.online's housekeeping, which the same cockpit starts on the hour: two runs started
+together take both of the host's `maxParallel` slots and start Claude in the same seconds.
+Install (template in `.ai/scripts/launchd/`):
 
 ```bash
 sed -e "s|__REPO_ROOT__|$PWD|g" -e "s|__PATH__|$(dirname "$(command -v cezar)"):$(dirname "$(command -v node)"):$(dirname "$(command -v gh)"):/usr/bin:/bin|g" \

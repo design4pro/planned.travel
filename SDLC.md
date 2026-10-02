@@ -296,7 +296,7 @@ report, `om-close-fixed-issues`), `backlog`, `brainstorm`, `implement-spec`, `pr
 `housekeeping` is the exception, and it matters because the sentence that used to stand here said
 the opposite: **it runs on a schedule, just not on cezar's.** A launchd agent on the cezar host —
 `dev.planned-travel.housekeeping`, template at `.ai/scripts/launchd/` — calls
-`.ai/scripts/housekeeping.sh` at 07:00, 12:00 and 17:00 on weekdays, and that script POSTs one
+`.ai/scripts/housekeeping.sh` at 07:30, 12:30 and 17:30 on weekdays, and that script POSTs one
 `housekeeping` run to the cockpit's API. Cezar does have a scheduler — four rows of the table are
 schedules, not events — but it takes one occurrence per automation, in the shapes `daily`,
 `weekdays` and `weekly` at a single time of day, or `hours` around the clock
