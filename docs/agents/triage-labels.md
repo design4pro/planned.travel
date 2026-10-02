@@ -25,11 +25,13 @@ outlives its run is reported by `om-review-prs`, not repaired by a sweeper.
 
 ## Holds
 
-- `blocked` - nothing starts while it is there. A person sets it, or a skill does with a 🤖 comment
-  naming the one thing a person must do: `afk-triage` for what only the reporter or the owner can
-  supply, `implement-ticket` when the security and tenancy specialist does not approve `risk-high`
-  work. Only a person removes it, and removing it re-grooms the issue (**Re-triage when a hold is
-  cleared**).
+- `blocked` - nothing starts while it is there. A person sets it, or a skill does with a comment that
+  starts `🤖 HUMAN-ONLY:` and names the one thing a person must do: `afk-triage` for what only the
+  reporter or the owner can supply, `implement-ticket` when the security and tenancy specialist does
+  not approve `risk-high` work. A person removes that one, and removing it re-grooms the issue
+  (**Re-triage when a hold is cleared**). A `blocked` an agent set without `HUMAN-ONLY:` is offered
+  to `afk-unblock`, which lifts it on a specialist's verdict (`🤖 RESOLVED:`) or marks it
+  `HUMAN-ONLY:`; a hold a person set or commented on last is never lifted by an agent (ADR 0033).
 - `do-not-merge` - a PR never merges unattended while it is there. The `develop` -> `main`
   promotion carries it from the moment `.github/workflows/promote-develop.yml` opens it, and every
   PR automation excludes it; `set_pipeline_label` never removes it (`.ai/trackers/github.md`).
@@ -43,10 +45,12 @@ issue form ─► category;  Sentry sweep ─► bug + priority-high (EXTERNAL: 
             om-auto-manage-issues: + priority, risk, Definition of Ready, implementation notes
             afk-triage: Agent Brief + SLC scope check
                   ├─► Agent Brief ─► ready once its Blocked by issues close
-                  └─► blocked + 🤖 comment ─► a person answers and removes blocked ─► issue-groom again
-merged spec ─(weekdays: Spec to tickets)─► afk-to-tickets: tickets whose body is their Agent Brief
+                  └─► blocked + 🤖 HUMAN-ONLY comment ─► a person answers and removes blocked ─► issue-groom again
+agent-set blocked or STOP ─(Reconciler: backlog-status.mjs --plan)─► unblock ─► 🤖 RESOLVED (lifted) | 🤖 HUMAN-ONLY
+plan stage nothing covers ─(Reconciler)─► plan-to-spec ─► specialist panel ─► spec PR ─► merged by the pipeline
+merged spec ─(Reconciler, or weekdays: Spec to tickets)─► afk-to-tickets: tickets whose body is their Agent Brief
 
-ready issue ─(every 2 h: Implement the next ready issue; backlog-status.mjs --next, WIP limit 3)─► implement-ticket
+ready issue ─(Reconciler, or every 2 h: Implement the next ready issue; backlog-status.mjs --next, WIP limit 3 PRs waiting for a person)─► implement-ticket
       ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► om-pr-autopilot --allow-merge ─► develop
 
 a person, from the cockpit, on any issue: issue-groom · issue-autofix · spec · implement-ticket · triage
