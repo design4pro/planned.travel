@@ -42,8 +42,10 @@ in, then `pnpm db:migrate:local`, load the basemap, and seed.
 
 ## Working with agents
 
-- Hand an issue to the Cezar pipeline using the `autofix` label. It opens a
-  reviewed pull request against `develop`; see `docs/agents/cezar.md`.
+- Open an issue: the Cezar pipeline grooms it, writes an Agent Brief and, on
+  its two-hour schedule, implements it on a reviewed pull request against
+  `develop`. To start one now, run `issue-autofix` on it from the cockpit; see
+  `docs/agents/cezar.md`.
 - Or hand a task to a cloud session: `claude --cloud "Implement issue #123"`
   (or from claude.ai/code). The committed SessionStart hook
   (`scripts/cloud/session-start.sh`) prepares the project automatically.

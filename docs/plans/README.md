@@ -1,8 +1,8 @@
 # planned.travel — implementation plans
 
 > **This directory is being retired** (docs/adr/0004): the backlog is migrating, area by area, to
-> GitHub Issues. An area migrates by opening an issue that names its plan file in the body and
-> adding the `spec` label: the **Write a spec for feature issues** run writes the spec (`om-auto-write-spec`, ADR 0018).
+> GitHub Issues. An area migrates by opening an issue that names its plan file in the body; triage
+> briefs it as a spec task and the scheduled implement-ticket run writes the spec (ADR 0018, ADR 0032).
 > The `/plan-area` and `/plan-feature` skills that used to do this were retired with the rest of
 > the repository-orchestrated pipeline. Until an area migrates, its plan file below remains the
 > authority for that area.

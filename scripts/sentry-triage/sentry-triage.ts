@@ -1,7 +1,8 @@
-// Sentry → GitHub issues. Recurring, high-impact errors become `bug` + `priority-high` + `groom`
-// tickets; the `groom` label starts the cezar groom run, which adds risk and implementation
-// notes, and a human decides whether to add `autofix` (ADR 0008 as amended by ADR 0018). This
-// routine never applies `autofix`: it has reproduced nothing.
+// Sentry → GitHub issues. Recurring, high-impact errors become `bug` + `priority-high` tickets,
+// and a person decides whether one is groomed and fixed, from the cezar cockpit (ADR 0008 as
+// amended by ADR 0018 and ADR 0032). Nothing here starts a run: the body quotes production data,
+// so .ai/scripts/backlog-status.mjs never lets an unattended run implement a ticket carrying the
+// `sentry-issue` marker, and the routine has reproduced nothing.
 //
 //   pnpm sentry-triage                      # report only — files nothing
 //   pnpm sentry-triage --file-issues        # also file, capped
@@ -25,6 +26,7 @@ import {
   buildTrackedIndex,
   dedupeVerdict,
   filingOrder,
+  parseMarkers,
   renderIssueBody,
   renderTitle,
   reportSchema,
@@ -47,10 +49,9 @@ const DEFAULT_MAX_FILED = 3
 
 /**
  * The backlog is the scarce resource, and this routine can only add to it. Past this many open
- * bugs still waiting for their groom run (`groom` is the label this routine files with, and the
- * run removes it as its first mutation, so the count drains as issues are looked at), filing more
- * is not help — every one of them also starts a groom run. This is the brake that matters: the
- * per-run cap is per run, and a misconfigured schedule still runs.
+ * tickets it filed itself (read by the `sentry-issue` marker; the count drains as a person closes
+ * them), filing more is not help - every one of them waits for a person. This is the brake that
+ * matters: the per-run cap is per run, and a misconfigured schedule still runs.
  */
 const BACKLOG_PRESSURE_LIMIT = 10
 
@@ -136,22 +137,6 @@ function trackedIssues(): ReadonlyArray<TrackedIssue> {
     closedAt: row.closedAt,
     body: row.body ?? '',
   }))
-}
-
-function openUntriagedBugs(): number {
-  const raw = gh([
-    'issue',
-    'list',
-    '--state',
-    'open',
-    '--label',
-    'bug',
-    '--label',
-    'groom',
-    '--json',
-    'number',
-  ])
-  return (JSON.parse(raw) as Array<unknown>).length
 }
 
 /**
@@ -249,7 +234,8 @@ if (argv.includes('--check-mcp')) {
   process.exit(0)
 }
 
-const tracked = buildTrackedIndex(trackedIssues())
+const trackedRows = trackedIssues()
+const tracked = buildTrackedIndex(trackedRows)
 const trackedSummary =
   tracked.size === 0
     ? '(none yet)'
@@ -320,10 +306,12 @@ if (!fileIssues) {
   process.exit(0)
 }
 
-const pressure = openUntriagedBugs()
+const pressure = trackedRows.filter(
+  (issue) => issue.state === 'OPEN' && parseMarkers(issue.body).length > 0,
+).length
 if (pressure >= BACKLOG_PRESSURE_LIMIT) {
   console.log(
-    `\n${String(pressure)} untriaged bugs are already open (limit ${String(BACKLOG_PRESSURE_LIMIT)}). Filing nothing.`,
+    `\n${String(pressure)} Sentry tickets are already open (limit ${String(BACKLOG_PRESSURE_LIMIT)}). Filing nothing.`,
   )
   process.exit(0)
 }
@@ -378,18 +366,14 @@ for (const candidate of filingOrder(report.candidates, forced)) {
       'create',
       '--title',
       title,
-      // Exactly these three labels and no others: the category and the priority a Sentry finding
-      // earns by clearing the threshold, and `groom`, the command that starts the groom run.
-      // `issue.opened` alone would not: that automation is gated on maintainer authors because
-      // the run holds an unrestricted shell, and this routine files as the Actions bot. `autofix`
-      // is a human's to add, after the groom run has added risk and implementation notes; this
-      // routine has reproduced nothing.
+      // Exactly these two labels and no others: the category and the priority a Sentry finding
+      // earns by clearing the threshold. No run starts from it: `issue.opened` is gated on
+      // maintainer authors because the groom run holds an unrestricted shell, and this routine
+      // files as the Actions bot. A person reads it and starts a run from the cockpit (ADR 0032).
       '--label',
       'bug',
       '--label',
       'priority-high',
-      '--label',
-      'groom',
       '--body-file',
       '-',
     ],
