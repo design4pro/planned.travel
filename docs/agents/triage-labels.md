@@ -52,7 +52,7 @@ ready issue ─(every 2 h: Implement the next ready issue; backlog-status.mjs --
 a person, from the cockpit, on any issue: issue-groom · issue-autofix · spec · implement-ticket · triage
 PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA / merge into develop
 agent PR in merge-queue ─(pull_request.reviewed: Merge reviewed agent pull requests)─► om-pr-autopilot --allow-merge ─► merged into develop
-housekeeping (no CEZAR automation; launchd runs it 07:00/12:00/17:00 on weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
+housekeeping (no CEZAR automation; launchd runs it 07:30/12:30/17:30 on weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
       ─► issue closed when its `Closes #n` PR merged into develop
 develop ─(promote-develop.yml)─► promotion PR to main, do-not-merge ─► merged by the owner
 ```
