@@ -91,7 +91,14 @@ time prefix, so their order is random: assert a set, or give the rows distinct i
   or re-routes a label, workflow, automation, skill, guard, runner variable or gate step greps the old
   name and count across `AGENTS.md`, `SDLC.md`, `docs/agents/`, `docs/adr/` and the workflow
   comments, and fixes each statement it makes false in the same PR (#542, #543, #498, #563, #653,
-  #657).
+  #657, #772, #775). The PR body's "Docs grep" box lists the terms searched; a ticked box with
+  no terms counts as unchecked.
+- **Widening what an unattended run accepts names every input it now admits.** A PR that drops or
+  loosens a filter, trusted-author list or trigger of an automation, schedule or `afk-*` skill
+  (`authors`, labels, who may comment, which issue sources) lists the input classes the old filter
+  excluded - bot and dependency PRs, a stranger's comment, a Sentry-filed issue, a spec-only diff -
+  and shows each is still refused or handled. An input that can then reach Bash or a merge without a
+  person is a blocker (#772 a blocker, #775 majors; the `authors` gate is a security gate, SDLC.md § Automations).
 - **A job moved to another runner is proven there.** A `runs-on` change shows a run of that job on
   the new runner, and every tool the job calls (`pnpm`, `gh`, what an action unpacks itself with) is
   installed by a step in the workflow rather than assumed from the image; for a required check or a
