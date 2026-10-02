@@ -173,6 +173,63 @@ describe('auditSpecs', () => {
     expect(details(root)).toEqual([expect.stringContaining('Issue is empty')])
   })
 
+  it('accepts a spec waiting for a build whose plan stage stands in for the issue', () => {
+    const root = tree({
+      '': {
+        '2026-01-01-a-spec.md': spec({
+          Issue: 'none',
+          Plan: '04-S3 (docs/plans/04-budget-and-currencies.md)',
+        }),
+      },
+    })
+
+    expect(details(root)).toEqual([])
+    expect(auditSpecs(root).specs[0].plan).toBe(
+      '04-S3 (docs/plans/04-budget-and-currencies.md)',
+    )
+  })
+
+  it('accepts `Plan` before `Superseded by` on an archived spec', () => {
+    const root = tree({
+      archived: {
+        '2026-01-01-a-spec.md': spec({
+          Status: 'archived',
+          Plan: '04-S3a (docs/plans/04-budget.md)',
+          'Superseded by': '#5',
+        }),
+      },
+    })
+
+    expect(details(root)).toEqual([])
+  })
+
+  it.each([
+    ['a stage with no plan file', '04-S3'],
+    ['a plan file with no stage', '(docs/plans/04-budget.md)'],
+    ['an empty cell', ''],
+    ['a path outside docs/plans', '04-S3 (README.md)'],
+  ])('rejects a `Plan` row with %s', (_name, plan) => {
+    const root = tree({
+      '': { '2026-01-01-a-spec.md': spec({ Plan: plan }) },
+    })
+
+    expect(details(root)).toEqual([expect.stringContaining('**Plan** is')])
+  })
+
+  it('rejects `Plan` after `Superseded by`, which is the one order the shape allows', () => {
+    const root = tree({
+      archived: {
+        '2026-01-01-a-spec.md': spec({
+          Status: 'archived',
+          'Superseded by': '#5',
+          Plan: '04-S3 (docs/plans/04-budget.md)',
+        }),
+      },
+    })
+
+    expect(details(root)).toEqual([expect.stringContaining('exactly')])
+  })
+
   it('rejects a missing metadata table', () => {
     const root = tree({
       '': { '2026-01-01-a-spec.md': `${HEADING}\n\nBody.\n` },
@@ -296,6 +353,7 @@ describe('renderIndex', () => {
         issue: 1,
         specPr: 2,
         implementation: [],
+        plan: null,
         supersededBy: [],
       } satisfies Spec,
     ])
