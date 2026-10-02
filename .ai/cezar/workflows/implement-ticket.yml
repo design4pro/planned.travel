@@ -1,8 +1,10 @@
 name: implement-ticket
 description: Implement one ready issue test-first from its Agent Brief, pass the validation gate, open a PR and drive it through review, QA and CI to the squash-merge into develop.
-# Started every two hours by "Implement the next ready issue" with no issue in the task, or by a
-# person from the cockpit with one. There is no label that marks an issue ready (ADR 0032):
-# readiness is computed by .ai/scripts/backlog-status.mjs, the same rule the backlog report shows.
+# Started by the Reconciler (docs/agents/cezar.md, ADR 0033) with `Implement issue #<n>.` when
+# `node .ai/scripts/backlog-status.mjs --plan` lists an `implement` action, by the "Implement the next
+# ready issue" automation with no issue in the task, or by a person from the cockpit with one. There is
+# no label that marks an issue ready (ADR 0032): readiness is computed by .ai/scripts/backlog-status.mjs,
+# the same rule the backlog report shows.
 steps:
   - id: implement
     name: Pick the issue, check readiness and implement
@@ -14,7 +16,7 @@ steps:
 
       This workflow has no om-root-cause step: the issue's `## Agent Brief` (a triage comment, or the body of a ticket `afk-to-tickets` filed) is your brief.
 
-      Pick the issue. When the task names an issue number, that is the issue. Otherwise run `node .ai/scripts/backlog-status.mjs --next`: it prints the number of the one issue to implement, or nothing when no issue is ready or three agent PRs are already open (the WIP limit). Write `ISSUE: #<number>` as the first progress-log line of this run's handoff file; later steps read it.
+      Pick the issue. When the task names an issue number, that is the issue. Otherwise run `node .ai/scripts/backlog-status.mjs --next`: it prints the number of the one issue to implement, or nothing when no issue is ready or three PRs are already waiting for a person (the WIP limit: `needs-qa` without `qa-approved`, `risk-high`, `security` or `blocked`; a PR the pipeline merges itself does not count). Write `ISSUE: #<number>` as the first progress-log line of this run's handoff file; later steps read it.
 
       Check readiness before claiming. Stop without changing anything if any of these hold:
       - `--next` printed nothing;
@@ -25,22 +27,25 @@ steps:
       To stop: write `STOP: <reason>` as a progress-log line of this run's handoff file, right after the `ISSUE:` line when there is one, then end with CEZ:DONE. Later steps read that line and skip. When you stop on an issue that `--next` picked, also post a 🤖 comment on it containing `STOP: <reason>`: `backlog-status.mjs` reads it as not ready until a person answers, so the schedule does not pick the same issue every tick.
 
       Otherwise implement per om-fix, with these rules:
-      - When the brief's deliverable is a spec (afk-triage briefs a request too large for a few slices that way), write that spec under `.ai/specs/` in the shape of the existing specs instead of code; `afk-to-tickets` slices it once it merges.
+      - When the brief's deliverable is a spec (afk-triage briefs a request too large for a few slices that way), write that spec under `.ai/specs/` in the shape of the existing specs instead of code, with `Status` `ready` and `Issue` naming this issue: the pipeline merges the spec PR itself, so nobody flips the status afterwards, and `afk-to-tickets` slices it once it merges.
       - Test first at the brief's Test seam, through the module's interface: write the failing test, see it fail, then make it pass (afk-codebase-design).
       - Build one complete vertical slice, inside the acceptance criteria and "Out of scope".
       - Use CONTEXT.md terms. Add or update entries for any concept you introduce or rename (afk-domain-modeling).
       - Settle each decision the brief left open through `.ai/skills/afk-decide/SKILL.md` instead of stopping, and record each verdict as a Resolved assumptions row in the handoff file, for the PR body.
-      - Re-derive the risk before claiming, from the area the brief touches rather than from the label: authentication and sessions, tenant scoping, money, schema migrations, CI and `.github/`, `.claude/`, hooks and shared contracts make it `risk-high` whatever the label says, because the label was set by a run that read the untrusted issue body. For a `risk-high` or `security` issue, the brief must carry the security and tenancy specialist's approving verdict; meet its CONDITIONS as acceptance criteria. Without that verdict, get one through `afk-decide` before claiming. If the specialist does not approve, STOP: do not claim; add `blocked` to the issue and post a 🤖 comment with the verdict and the one thing a person has to decide.
+      - Re-derive the risk before claiming, from the area the brief touches rather than from the label: authentication and sessions, tenant scoping, money, schema migrations, CI and `.github/`, `.claude/`, hooks and shared contracts make it `risk-high` whatever the label says, because the label was set by a run that read the untrusted issue body. For a `risk-high` or `security` issue, the brief must carry the security and tenancy specialist's approving verdict; meet its CONDITIONS as acceptance criteria. Without that verdict, get one through `afk-decide` before claiming. If the specialist does not approve, STOP: do not claim; add `blocked` to the issue and post a comment whose first line is `🤖 HUMAN-ONLY: <the one thing a person has to decide>`, then the verdict.
       - A lesson worth keeping goes in a `## Lessons` section of the handoff file and the PR body, never into files outside the repository; `afk-lessons` collects it.
   - id: gate
     name: Validation gate
-    command: (test -d node_modules || pnpm install --frozen-lockfile) && pnpm typecheck && pnpm lint && pnpm test && bash .ai/scripts/check-generated.sh && pnpm build
+    # bootstrap.sh installs with retries: a registry blip must not fail the run before the gate has
+    # said anything about the change. It is a no-op when node_modules is current.
+    command: bash .ai/scripts/bootstrap.sh && pnpm typecheck && pnpm lint && pnpm test && bash .ai/scripts/check-generated.sh && pnpm build
     onFail:
       retry: implement
-      max: 2
+      max: 3
   - id: pr
     name: Open the PR
     skill: om-open-pr
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
     prompt: |
       {{task}}
 
@@ -63,6 +68,6 @@ steps:
       - no PR is open for this branch (`gh pr list --head "$(git branch --show-current)"`).
 
       Otherwise run `/om-pr-autopilot <that PR number> --allow-merge`:
-      - Before QA needs the app, provision the worktree with `bash scripts/worktree/bootstrap.sh --profile worktree --no-seed`.
+      - Before QA needs the app, provision the worktree with `bash .ai/scripts/bootstrap.sh --profile worktree --no-seed`.
       - Review reports the Standards axis and the Spec axis separately (CODE_REVIEW.md), and the Spec axis checks each acceptance criterion from the issue's Agent Brief.
       - Merge only into `develop`.

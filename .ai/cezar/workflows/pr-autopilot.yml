@@ -9,7 +9,7 @@ description: om-pr-autopilot on one PR - diagnose, then continue / fix / review 
 steps:
   - id: bootstrap
     name: Provision the worktree (deps, routes, secrets, D1, basemap)
-    command: bash scripts/worktree/bootstrap.sh --profile worktree --no-seed
+    command: bash .ai/scripts/bootstrap.sh --profile worktree --no-seed
   - id: autopilot
     name: om-pr-autopilot
     prompt: '/om-pr-autopilot {{task}} --allow-merge'
