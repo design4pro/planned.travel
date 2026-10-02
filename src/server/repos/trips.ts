@@ -25,6 +25,7 @@ import {
   sql,
 } from 'drizzle-orm'
 import { z } from 'zod'
+import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import {
   TRIP_MEMBER_ROLES,
   TRIP_STATUSES,
@@ -57,6 +58,7 @@ import { getMembership } from './members'
 import {
   dayNotesRepository,
   daysRepository,
+  createUndatedDays,
   datesBetween,
   listTripDays,
   syncTripDays,
@@ -173,6 +175,11 @@ export const createTripInput = z.object({
    * creation. It is deliberately not in `tripFields`, so {@link updateTripInput} cannot patch it.
    */
   isFavourite: z.boolean().optional(),
+  /**
+   * A length for a trip with no dates: this many undated days are created with it. Refused beside a
+   * date, because a range and a duration are one fact and a request may state it once.
+   */
+  dayCount: z.number().int().min(1).max(TRIP_DAY_COUNT_MAX).optional(),
 })
 export type CreateTripInput = z.infer<typeof createTripInput>
 
@@ -718,7 +725,7 @@ function todayIso(): string {
 
 /**
  * The one place a trip comes into being: the row, the caller's `owner` membership and, when the trip
- * is dated, its day run. Every minting path ({@link createTrip}, {@link startTripCopy}) goes
+ * is dated or given a length, its day run. Every minting path ({@link createTrip}, {@link startTripCopy}) goes
  * through it, so the outcome is all-or-nothing for each of them.
  *
  * D1 has no interactive transactions and the day run is chunked to fit the bound-parameter ceiling
@@ -730,6 +737,7 @@ function todayIso(): string {
 async function mintTrip(
   scope: TenantScope,
   values: Parameters<typeof tripsRepository.insert>[1],
+  dayCount?: number,
 ): Promise<Trip> {
   const trip = await tripsRepository.insert(scope, values)
 
@@ -745,6 +753,8 @@ async function mintTrip(
         startDate: trip.startDate,
         endDate: trip.endDate,
       })
+    } else if (dayCount !== undefined) {
+      await createUndatedDays(scope, trip.id, dayCount)
     }
   } catch (error) {
     await tripsRepository.requireRemove(scope, trip.id)
@@ -766,18 +776,28 @@ export async function createTrip(
   scope: TenantScope,
   input: CreateTripInput,
 ): Promise<Trip> {
-  const { id, ...values } = createTripInput.parse(input)
+  const { id, dayCount, ...values } = createTripInput.parse(input)
   assertDateOrder(values.startDate, values.endDate)
+  if (dayCount !== undefined && (values.startDate || values.endDate)) {
+    throw new RepositoryError(
+      'A trip is given dates or a number of days, not both.',
+      'INVALID_DATE_RANGE',
+    )
+  }
 
   await assertQuota(scope, 'trips', await tripsRepository.count(scope))
 
   const slug = await reserveTripSlug(scope, values.slug ?? values.title)
-  return mintTrip(scope, {
-    ...values,
-    ...(id === undefined ? {} : { id }),
-    slug,
-    createdBy: scope.ctx.userId,
-  })
+  return mintTrip(
+    scope,
+    {
+      ...values,
+      ...(id === undefined ? {} : { id }),
+      slug,
+      createdBy: scope.ctx.userId,
+    },
+    dayCount,
+  )
 }
 
 /**
