@@ -17,13 +17,14 @@ gh pr list --state open --json number,title,labels,isDraft
 
 ## Writing
 
-Three labels are commands; adding one is how a human starts work (docs/agents/cezar-automations.json):
+No label starts work (ADR 0032). Opening an issue grooms and triages it; an issue with an Agent
+Brief is implemented by the two-hour schedule (`node .ai/scripts/backlog-status.mjs --next` says
+which one is next); a person starts any run now from the Cezar cockpit (docs/agents/cezar.md). The
+labels a person sets by hand are holds:
 
 ```bash
-gh issue edit <n> --add-label autofix          # fix or implement this issue (om-auto-fix-issue)
-gh issue edit <n> --add-label spec             # feature only: write the spec first (om-auto-write-spec)
-gh issue edit <n> --add-label groom            # re-run the issue manager after an edit or a reply
 gh issue edit <n> --add-label blocked          # human hold; nothing starts while it is there
+gh issue edit <n> --remove-label blocked       # clear it: the issue is groomed and triaged again
 gh issue edit <n> --add-label do-not-close     # housekeeping must never close this one
 ```
 
@@ -42,13 +43,13 @@ PR says `Refs #n`. `do-not-close` on the issue wins over both.
 
 ## Specs
 
-A feature is specified before it is built. `om-auto-write-spec` (command label `spec`) writes
+A feature is specified before it is built. `om-auto-write-spec` (the `spec` workflow, from the cockpit) writes
 `.ai/specs/<YYYY-MM-DD>-<slug>.md` on a design-only PR (`spec/<slug>`, `documentation`,
 `skip-qa`) that references the issue; the sections a spec must carry here are in
 `.ai/skills/om-auto-write-spec/SKILL.md` ("Visual change expected", "Copy"). That PR says
 `Refs #n`, never a closing keyword, so the issue stays open and **is** the implementation ticket -
 no second issue is filed for building what the spec describes (ADR 0018). A human merges the spec
-PR, then adds `autofix` to that same issue, and `om-auto-fix-issue`'s feature route resolves the
+PR, then starts `issue-autofix` on that same issue from the cockpit, and `om-auto-fix-issue`'s feature route resolves the
 merged spec and hands it to `om-auto-implement-spec`; starting `implement-spec` from the cockpit
 with the spec path, its issue number or the spec-PR number is that same skill by hand. Either way
 the implementation ships on its own PR with `Closes #n`. Interactive thinking
