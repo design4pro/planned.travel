@@ -28,6 +28,9 @@ gh issue edit <n> --remove-label blocked       # clear it: the issue is groomed 
 gh issue edit <n> --add-label do-not-close     # housekeeping must never close this one
 ```
 
+On a `gh` below 2.82.1 (the VPS has 2.46.0) these abort with a `Projects (classic)` error; use the
+REST form, `gh api -X POST repos/design4pro/planned.travel/issues/<n>/labels -f 'labels[]=blocked'`.
+
 A skill claims with assignee + `in-progress` + a 🤖 comment and releases both on exit, including on
 error. A skill that acts on an inline review thread replies in it and resolves it (the `develop`
 ruleset merges nothing with an open thread); a thread it declines stays open for a human.

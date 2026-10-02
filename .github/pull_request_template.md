@@ -17,6 +17,7 @@ documentation), one priority-*, one risk-*, and `needs-qa` when a screen changes
 - [ ] No TODOs, placeholder copy, `console.log` or commented-out code
 - [ ] Only files the issue or spec names were touched
 - [ ] User-facing copy landed in all 23 locales (`i18n-messages`)
+- [ ] Docs grep run on this head (CODE_REVIEW.md "Docs and CI"): every document that states what this change changes was searched for the old name and count, and fixed. Terms searched: <list them, or `none: no label, workflow, automation, skill, guard, runner variable or gate step changed`>
 
 ## Noticed but not touching
 

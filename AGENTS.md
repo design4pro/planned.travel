@@ -22,7 +22,8 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 - User-facing copy is never hardcoded — it lives in the 23-locale catalogue, and a new key lands in every locale in the same change (the parity test enforces this; procedure: the `i18n-messages` skill, contract: docs/SPEC.md §9).
 - A spec's directory is its state — `.ai/specs/` waiting, `implemented/`, `archived/` — and the table under its `H1` names the issue and the pull requests behind it. Move with `git mv`, change `Status` in the same commit, regenerate the index. Rules: `.ai/specs/AGENTS.md`; the guard: `scripts/specs/__tests__/spec-registry.test.ts`.
 - Commits: Conventional Commits, in English.
-- Run the grep that CODE_REVIEW.md "Docs and CI" asks for ("a change updates every document that states what it changes") yourself, before opening the PR and again on every later head. Review is where that rule is checked, not where the grep is first done (#653, #657, #711, #717).
+- Run the grep that CODE_REVIEW.md "Docs and CI" asks for ("a change updates every document that states what it changes") yourself, before opening the PR and again on every later head. Review is where that rule is checked, not where the grep is first done (#653, #657, #711, #717). The PR template's last Definition-of-done box asks for the terms you searched; the grep was skipped again on #772 and #775.
+- An agent run changes a PR or issue (labels, title, body, assignees) through the `gh api` REST calls in `.ai/trackers/github.md`, never `gh pr edit` or `gh issue edit`. While `gh --version` is below 2.82.1 (this host: 2.46.0) those abort before writing with a `Projects (classic)` error, and `--json closingIssuesReferences` is an unknown field; four runs rediscovered it (#750, #756, #757, #779). The `gh issue edit` hold-label commands in docs/agents/issue-tracker.md are a person's, on a current `gh`.
 
 ## Domain
 

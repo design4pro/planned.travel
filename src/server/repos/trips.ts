@@ -717,29 +717,21 @@ function todayIso(): string {
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Creates a trip, its unique slug, its owner membership and its day run in one flow. Quota is
- * checked first so a tenant at its plan ceiling never gets a half-built trip.
+ * The one place a trip comes into being: the row, the caller's `owner` membership and, when the trip
+ * is dated, its day run. Every minting path ({@link createTrip}, {@link startTripCopy}) goes
+ * through it, so the outcome is all-or-nothing for each of them.
  *
- * `id` is left off the insert unless the caller named one, so the column's own default generator
- * fires exactly as it does for every real user rather than being handed an `undefined` to fall
- * back from.
+ * D1 has no interactive transactions and the day run is chunked to fit the bound-parameter ceiling
+ * (`insertChunked`), so the write cannot be one batch; a failure after the row landed removes it
+ * again instead. The row's foreign keys cascade whatever membership or days were written before the
+ * failure. Without this a trip could be left with no owner - invisible to everyone (ADR 0007) yet
+ * still counted by the quota - or with a `copy_pending_at` nothing will clear.
  */
-export async function createTrip(
+async function mintTrip(
   scope: TenantScope,
-  input: CreateTripInput,
+  values: Parameters<typeof tripsRepository.insert>[1],
 ): Promise<Trip> {
-  const { id, ...values } = createTripInput.parse(input)
-  assertDateOrder(values.startDate, values.endDate)
-
-  await assertQuota(scope, 'trips', await tripsRepository.count(scope))
-
-  const slug = await reserveTripSlug(scope, values.slug ?? values.title)
-  const trip = await tripsRepository.insert(scope, {
-    ...values,
-    ...(id === undefined ? {} : { id }),
-    slug,
-    createdBy: scope.ctx.userId,
-  })
+  const trip = await tripsRepository.insert(scope, values)
 
   try {
     await tripMembersRepository.insert(scope, {
@@ -760,6 +752,32 @@ export async function createTrip(
   }
 
   return trip
+}
+
+/**
+ * Creates a trip, its unique slug, its owner membership and its day run in one flow. Quota is
+ * checked first so a tenant at its plan ceiling never gets a half-built trip.
+ *
+ * `id` is left off the insert unless the caller named one, so the column's own default generator
+ * fires exactly as it does for every real user rather than being handed an `undefined` to fall
+ * back from.
+ */
+export async function createTrip(
+  scope: TenantScope,
+  input: CreateTripInput,
+): Promise<Trip> {
+  const { id, ...values } = createTripInput.parse(input)
+  assertDateOrder(values.startDate, values.endDate)
+
+  await assertQuota(scope, 'trips', await tripsRepository.count(scope))
+
+  const slug = await reserveTripSlug(scope, values.slug ?? values.title)
+  return mintTrip(scope, {
+    ...values,
+    ...(id === undefined ? {} : { id }),
+    slug,
+    createdBy: scope.ctx.userId,
+  })
 }
 
 /**
@@ -938,7 +956,7 @@ export async function startTripCopy(
   )
 
   const slug = await reserveTripSlug(scope, values.title)
-  const trip = await tripsRepository.insert(scope, {
+  const trip = await mintTrip(scope, {
     title: values.title,
     slug,
     createdBy: scope.ctx.userId,
@@ -950,20 +968,6 @@ export async function startTripCopy(
     endDate: values.endDate ?? null,
     copyPendingAt: new Date(),
   })
-
-  await tripMembersRepository.insert(scope, {
-    tripId: trip.id,
-    userId: scope.ctx.userId,
-    role: 'owner',
-    joinedAt: new Date(),
-  })
-
-  if (trip.startDate && trip.endDate) {
-    await syncTripDays(scope, trip.id, {
-      startDate: trip.startDate,
-      endDate: trip.endDate,
-    })
-  }
 
   return trip.id
 }
