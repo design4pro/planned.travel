@@ -50,7 +50,8 @@ exists, and a trigger per event cannot see a difference.
    What stays with a person is what `afk-decide` § 5 lists, any hold a person set or took over, and
    everything marked `HUMAN-ONLY:`. Whoever sets a label is not recoverable - every run acts as the
    maintainer - so the evidence of ownership is the comment: a hold whose last word is a person's is
-   theirs, and `do-not-merge` and `do-not-close` are never offered. `afk-triage` and `afk-decide` write
+   theirs, a hold no comment explains is handed back with `HUMAN-ONLY:` rather than lifted, and
+   `do-not-merge` and `do-not-close` are never offered. `afk-triage` and `afk-decide` write
    `🤖 HUMAN-ONLY:` on every hold that is a person's, so the Reconciler does not spend a run on it.
 4. **An agent writes the spec for a plan stage, and a panel reviews it.** `afk-plan-to-spec` takes the
    first stage of `docs/plans/` that no spec and no issue mentions, verifies it against the code, settles
