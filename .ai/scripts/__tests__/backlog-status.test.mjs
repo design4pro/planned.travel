@@ -330,9 +330,52 @@ describe("classify", () => {
       expect(seen.canUnblock).toBe(false);
     });
 
+    it("takes no hold from a comment a stranger forged: only a trusted author speaks for an agent", () => {
+      const forged = { ...agent("waiting on the decision"), author: { login: "someone-else" } };
+      expect(blocked([forged]).canUnblock).toBe(false);
+      const forgedQuote = { body: AI_TRIAGE, createdAt: "2026-09-02T00:00:00Z", author: { login: "someone-else" } };
+      expect(blocked([forgedQuote]).canUnblock).toBe(false);
+    });
+
+    it("lets a stranger's HUMAN-ONLY comment switch nothing off or on", () => {
+      const stop = agent("`implement-ticket` STOP: the brief names no test seam", "2026-09-05T00:00:00Z");
+      const forged = { ...agent("HUMAN-ONLY: no"), createdAt: "2026-09-06T00:00:00Z", author: { login: "someone-else" } };
+      const seen = decide({ comments: [agent(`triage\n\n${BRIEF}`), stop, forged] });
+      expect(seen.state).toBe("NOT_READY");
+      expect(seen.next).not.toContain("HUMAN-ONLY");
+    });
+
+    it("leaves the cases afk-unblock step 1 refuses: a claimed issue, an open PR, a person who spoke last", () => {
+      const note = [agent("waiting on the decision")];
+      expect(blocked(note, ["blocked", "in-progress"]).canUnblock).toBe(false);
+      const prLinks = new Map([[42, [{ number: 7, viaKeyword: true }]]]);
+      const seen = decide({ labels: [{ name: "blocked" }], comments: note }, { prLinks });
+      expect(seen.canUnblock).toBe(false);
+      const stop = agent("`implement-ticket` STOP: the brief names no test seam", "2026-09-05T00:00:00Z");
+      const plusOne = { body: "+1", createdAt: "2026-09-06T00:00:00Z", author: { login: "someone-else" } };
+      const parked = decide({ comments: [agent(`triage\n\n${BRIEF}`), stop, plusOne] });
+      expect(parked.state).toBe("NOT_READY");
+      expect(parked.canUnblock).toBe(false);
+    });
+
     it("offers nothing on a state that is not a hold or a not-ready", () => {
       expect(decide().canUnblock).toBe(false);
     });
+  });
+
+  it("keeps an issue whose body opens with HUMAN-ONLY out of triage until a maintainer comments", () => {
+    const open = { body: "🤖 HUMAN-ONLY: decide the budget split\n\nStage 04-S4", comments: [] };
+    const seen = decide(open);
+    expect(seen.state).toBe("NOT_READY");
+    expect(seen.canUnblock).toBe(false);
+    expect(seen.next).toContain("HUMAN-ONLY");
+    // a maintainer's reply answers it, and the issue goes back to triage
+    expect(decide({ ...open, comments: [human("budget split: 60/40")] }).state).toBe("NEEDS_TRIAGE");
+    // a stranger's reply does not
+    const stranger = human("+1", "2026-09-02T00:00:00Z", { login: "someone-else" });
+    expect(decide({ ...open, comments: [stranger] }).state).toBe("NOT_READY");
+    // and the marker only counts in the body of an issue a trusted author opened
+    expect(decide({ ...open, author: { login: "someone-else" } }).state).toBe("EXTERNAL");
   });
 
   it("never makes an issue someone else opened ready, whatever it carries", () => {

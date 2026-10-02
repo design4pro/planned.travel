@@ -229,6 +229,8 @@ const speaksForAgent = (comment) =>
 const isResolved = (comment) => /^🤖\s*RESOLVED:/.test(String(comment.body).trimStart());
 // What only a person can do (afk-decide § 5); no run is started on an issue whose comment says so.
 const HUMAN_ONLY = /\bHUMAN-ONLY:/;
+// An issue `afk-plan-to-spec` files for a stage only a person can decide opens its body with it.
+const HUMAN_ONLY_BODY = /^🤖\s*HUMAN-ONLY:/;
 const hasBrief = (text) => /^#{2,3}\s*Agent Brief\b/m.test(stripCode(text));
 const SENTRY_MARKER = /<!--\s*sentry-issue:/;
 
@@ -284,6 +286,10 @@ export function classify(
   // may read at all: its author is trusted and it is no Sentry ticket (the same gate that keeps such
   // an issue out of READY). The rest is what separates a hold an agent set from one a person did.
   const unblockable = trusted.has(issue.author?.login) && !SENTRY_MARKER.test(issue.body ?? "");
+  // Every run acts as the maintainer, so a comment speaks for an agent only when a trusted author
+  // wrote it: anyone else's `🤖` line is a stranger's text, and must neither start an `unblock` run
+  // nor switch one off (afk-unblock reads the same comments as data).
+  const agentVoice = (c) => trusted.has(c.author?.login) && speaksForAgent(c);
   const state = (name, next, warning, canUnblock = false) => ({
     ...issue,
     labels,
@@ -300,12 +306,16 @@ export function classify(
     // commented after it has taken the hold over, and one who set the label without a comment left
     // no explanation to lift. `blocked` alone: `do-not-merge` and `do-not-close` are always a
     // person's.
+    // The rest is what afk-unblock step 1 refuses outright, so no run is started for it: a claim
+    // on the issue, or an open PR that names it.
     const last = comments.at(-1);
     const agentHold =
       hold.length === 1 &&
       hold[0] === "blocked" &&
+      !has("in-progress") &&
+      prs.length === 0 &&
       last !== undefined &&
-      speaksForAgent(last) &&
+      agentVoice(last) &&
       !HUMAN_ONLY.test(last.body);
     return state(
       "BLOCKED",
@@ -355,16 +365,17 @@ export function classify(
     // A `HUMAN-ONLY:` comment at or after the unanswered one is `unblock` (or the skill that
     // stopped) saying no agent can answer it.
     const humanOnly = comments.some(
-      (c) =>
-        isAgentComment(c) && c.createdAt >= notReady.createdAt && HUMAN_ONLY.test(c.body),
+      (c) => agentVoice(c) && c.createdAt >= notReady.createdAt && HUMAN_ONLY.test(c.body),
     );
+    // A comment of anyone else's that came last is a person speaking: afk-unblock step 1 leaves it.
+    const lastIsAgent = agentVoice(comments.at(-1));
     return state(
       "NOT_READY",
       humanOnly
         ? "Answer the not-ready or `STOP:` comment: a `HUMAN-ONLY:` comment names what only a person can do."
         : "Answer the not-ready or `STOP:` comment, or let the `unblock` run settle it, then start `issue-groom` on it from the cockpit.",
       undefined,
-      !humanOnly,
+      !humanOnly && lastIsAgent,
     );
   }
 
@@ -380,6 +391,18 @@ export function classify(
     return state(
       "EXTERNAL",
       `Opened by ${issue.author?.login ?? "an unknown author"}, whom no automation trusts: read it, then start \`issue-groom\` or \`implement-ticket\` on it from the cockpit, or open it again yourself.`,
+    );
+
+  // `afk-plan-to-spec` files a stage only a person can decide as an issue whose body opens with
+  // `HUMAN-ONLY:`. Without this it has no brief and reads NEEDS_TRIAGE, and a triage run would then
+  // settle the decision it was filed to hand over. A maintainer's comment is the answer.
+  if (
+    HUMAN_ONLY_BODY.test((issue.body ?? "").trimStart()) &&
+    !comments.some((c) => trusted.has(c.author?.login) && !isAgentComment(c))
+  )
+    return state(
+      "NOT_READY",
+      "Decide what the `HUMAN-ONLY:` line in the body names, then comment on the issue: triage takes it from there.",
     );
 
   const missing = [

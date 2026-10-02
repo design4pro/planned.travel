@@ -36,7 +36,7 @@ The plan was written before the code. Read the stage block (`docs/plans/TEMPLATE
 
 For every product, design, scope, naming, risk or security question the stage leaves open, run `afk-decide` and record the verdict as a Resolved assumptions row in the spec. A question is never left as options for the implementer.
 
-Only what `afk-decide` § 5 reserves for a person is not settled here. When the stage cannot be specified without one of those, **do not write the spec**: file one issue with **create-issue**, titled `<stage id>: <the question>`, its first line `🤖 HUMAN-ONLY: <the one thing a person must decide>`, then the stage, what you established, and the options. The stage id in it covers the stage, so it is not picked again until a person answers. End with `Issue: #<n> -> human-only`.
+Only what `afk-decide` § 5 reserves for a person is not settled here. When the stage cannot be specified without one of those, **do not write the spec**: file one issue with **create-issue**, titled `<stage id>: <the question>`, its body opening with `🤖 HUMAN-ONLY: <the one thing a person must decide>` (`backlog-status.mjs` reads that body line, and keeps triage away until a maintainer comments), then the stage, what you established, and the options. The stage id in it covers the stage, so it is not picked again until a person answers. End with `Issue: #<n> -> human-only`.
 
 ## 4. Write the spec
 
