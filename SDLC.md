@@ -157,7 +157,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
-- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` by `om-pr-autopilot --allow-merge` behind the ruleset and the QA gate (ADR 0031); the `develop` -> `main` promotion (it carries `do-not-merge`), `risk-high` QA and a spec PR a person wrote stay with a person. A spec PR an agent wrote (`afk-plan-to-spec`) is reviewed by an independent specialist panel (§ Delegated decisions), its verdicts are recorded in the PR body, and the pipeline merges it once CI is green (ADR 0033); a panel that does not approve leaves it `blocked` for a person.
+- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` by `om-pr-autopilot --allow-merge` behind the ruleset and the QA gate (ADR 0031); the `develop` -> `main` promotion (it carries `do-not-merge`), `risk-high` QA and every spec PR but one stay with a person: the `om-auto-write-spec` flow, and the spec task `implement-ticket` writes. The one is a spec PR `afk-plan-to-spec` wrote: it is reviewed by an independent specialist panel (§ Delegated decisions), its verdicts are recorded in the PR body, and the pipeline merges it once CI is green (ADR 0033); a panel that does not approve leaves it `blocked` for a person.
 - **The cap is on inventory, not on rate.** `--next` and `--plan` start no implementation while three PRs wait for a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`, or `changes-requested` untouched for 24 hours, which is an autopilot parked on a decision), so a burst of intake cannot outrun the review only a person can give. Raising throughput means reviewing those PRs, not tuning the schedule.
 
 ## Unattended decisions
@@ -348,7 +348,7 @@ what `backlog-status.mjs` trusts, so such an issue is never picked by the schedu
 - Cezar merges into `develop` only through `om-pr-autopilot --allow-merge` - the last step of
   `implement-ticket`, and the `pr-autopilot` workflow - through `om-approve-merge-pr` and its label
   and QA checks (ADR 0031, amended 2026-10-01, and by ADR 0033 for a spec PR `afk-plan-to-spec` wrote: it merges on
-  its specialist panel's verdicts, while a spec PR a person wrote still ends at merge-ready). It never merges into `main`: a person merges the
+  its specialist panel's verdicts, while every other spec PR still ends at merge-ready). It never merges into `main`: a person merges the
   `develop` → `main` promotion, which carries `do-not-merge`.
 - `backlog-status.mjs --next` and `--plan` pick no implementation while three PRs are waiting for
   a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`, or `changes-requested` untouched for

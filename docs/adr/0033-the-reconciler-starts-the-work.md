@@ -3,7 +3,7 @@
 Status: accepted
 Date: 2026-10-02
 Amends: ADR 0032 (the schedule that starts implementation, the WIP limit, and who clears a hold),
-ADR 0031 (a spec PR an agent wrote merges without a person).
+ADR 0031 (a spec PR `afk-plan-to-spec` wrote merges without a person; every other spec PR is still merged by a person).
 
 ## Context
 
@@ -88,6 +88,10 @@ exists, and a trigger per event cannot see a difference.
   design-only and changes no behaviour, the panel's verdicts are Resolved assumptions rows in the PR and
   the spec, and overturning one is an ordinary review finding; a panel that does not approve leaves the PR
   `blocked` for a person, and a security reviewer that does not approve always does.
+- Only a spec `afk-plan-to-spec` wrote merges by itself (a `Plan` row, panel verdicts in the PR body). The
+  spec task `implement-ticket` writes for a request too large for a few slices has an `Issue` row and no
+  `Plan` row, so its PR still ends at merge-ready and a person merges it; while it is open it also holds
+  `write-spec` (`addsSpec`), like any open PR that adds a spec.
 - A hold lifted wrongly costs one `implement-ticket` run that ends in `STOP:` or in review. `risk-high`
   and `security` work still needs the security and tenancy specialist's approving verdict before any run
   claims it, whoever lifted the hold.
