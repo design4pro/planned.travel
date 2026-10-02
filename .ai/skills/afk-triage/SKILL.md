@@ -21,6 +21,7 @@ Load `.ai/agentic.config.json` and the tracker descriptor `.ai/trackers/github.m
 
 Resolve the issue number from the task. **get-issue** with its body, labels, assignees and comments. Stop with `NO_ACTION_NEEDED` and a one-line reason when any of these hold:
 - it is closed;
+- its body carries a `<!-- sentry-issue:` marker: `scripts/sentry-triage` filed it, and production data in the body is never groomed, briefed or auto-picked, whoever ran the script (`.ai/scripts/backlog-status.mjs` reports it EXTERNAL);
 - it carries `in-progress`, `do-not-close`, `blocked` or `do-not-merge`;
 - its body starts with `Spec: .ai/specs/` (a parent afk-to-tickets filed: its tickets carry the work);
 - its body or a comment already has an `## Agent Brief` and no 🤖 not-ready comment is newer than it (when one is, settle that gap and post a new brief);

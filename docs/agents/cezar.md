@@ -212,8 +212,9 @@ Eight definitions, in two kinds. Four are GitHub polls, started by an event:
 reviewed agent pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`. Four are
 schedules (`kind: "schedule"`), started by the clock and by nobody's action: **Implement the next
 ready issue** every two hours, **Spec to tickets** on weekdays at 07:00, **Weekly architecture
-review** on Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. A schedule reads the
-repository, not an issue body, so it has no author to gate; what bounds it is its skill - one issue
+review** on Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. A schedule has no
+issue author of its own to gate; `.ai/scripts/backlog-status.mjs --next` applies the `authors` gate to the issue it
+picks, and what bounds the run is that script and its skill - one issue
 implemented and nothing while three agent PRs are open, at most one spec sliced, three refactor
 issues or one pull request per run.
 

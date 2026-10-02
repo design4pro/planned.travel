@@ -222,6 +222,12 @@ describe("classify", () => {
     ).toBe("READY");
   });
 
+  it("does not take an untrusted reply as the answer to a STOP", () => {
+    const stop = agent("`implement-ticket` STOP: the brief names no test seam", "2026-09-05T00:00:00Z");
+    const stranger = human("+1", "2026-09-06T00:00:00Z", { login: "someone-else" });
+    expect(decide({ comments: [agent(`triage\n\n${BRIEF}`), stop, stranger] }).state).toBe("NOT_READY");
+  });
+
   it("takes a newer Agent Brief as the answer, since afk-triage settles the gap into one", () => {
     const comments = [agent("not ready", "2026-09-03T00:00:00Z"), agent(`triage\n\n${BRIEF}`, "2026-09-04T00:00:00Z")];
     expect(decide({ comments }).state).toBe("READY");

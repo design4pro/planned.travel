@@ -193,9 +193,10 @@ export function classify(
         c.createdAt > notReady.createdAt &&
         // A human's reply, the readiness verifier resolving the gap in the human's place
         // (SDLC.md § Definition of Ready), or afk-triage settling it into an Agent Brief.
-        (!isAgentComment(c) ||
-          c.body.includes("readiness verified") ||
-          (trusted.has(c.author?.login) && hasBrief(c.body))),
+        // Only a trusted author answers: READY starts an unattended run, so a stranger's "+1" must
+        // not re-open an issue whose last run stopped.
+        trusted.has(c.author?.login) &&
+        (!isAgentComment(c) || c.body.includes("readiness verified") || hasBrief(c.body)),
     );
   // Only a trusted author's brief counts: the body is the reporter's, so for an issue someone
   // else opened, a brief they wrote into it would be a self-approval.
