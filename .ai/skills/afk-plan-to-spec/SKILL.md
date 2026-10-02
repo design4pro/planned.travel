@@ -82,7 +82,7 @@ Before the PR is opened, put the spec in front of independent specialists throug
 
 ## 6. Open the PR
 
-The workflow's gate step runs first and its `pr` step opens the PR; run on its own, do it yourself, the same way. Open it as `om-open-pr` and the extension of `om-auto-write-spec` say: design-only, labels `review`, `documentation`, `skip-qa`, one priority, one risk (`risk-low` unless the panel said otherwise). The body carries the stage, the panel's verdicts and the Resolved assumptions table. Then put the PR number in the spec's `Spec PR` row, run `pnpm generate-spec-index`, and push that as a second commit.
+The workflow's gate step runs first and its `pr` step opens the PR; run on its own, do it yourself, the same way. Open it as `om-open-pr` and the extension of `om-auto-write-spec` say, but **ready for review, not as a draft**: the pipeline merges it (ADR 0033), and a draft cannot be. Design-only, labels `review`, `documentation`, `skip-qa`, one priority, one risk (`risk-low` unless the panel said otherwise). The body carries the stage, the panel's verdicts and the Resolved assumptions table. Then put the PR number in the spec's `Spec PR` row, run `pnpm generate-spec-index`, and push that as a second commit.
 
 ## Done when
 
