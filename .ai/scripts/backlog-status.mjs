@@ -569,6 +569,17 @@ export const addsSpec = (pr) =>
       file.deletions === 0,
   );
 
+/**
+ * The branch prefix of the docs-only PR `afk-plan-to-spec` opens to mark delivered stages. Until it
+ * merges, the stages it marks are still uncovered on the base branch, so the next tick would start
+ * the same run on the first of them again. The prefix names that one PR: a person's own edit to
+ * `docs/plans/` has some other branch and holds nothing.
+ */
+export const DELIVERED_BRANCH_PREFIX = "docs/plan-delivered-";
+
+/** Whether an open PR is the one that marks delivered plan stages. */
+export const marksDelivered = (pr) => String(pr.headRefName ?? "").startsWith(DELIVERED_BRANCH_PREFIX);
+
 /** The workflow each kind of action starts, in the order `--plan` lists them. */
 export const PLAN_WORKFLOWS = {
   implement: "implement-ticket",
@@ -587,8 +598,8 @@ export const PLAN_WORKFLOWS = {
  * - triage: the first NEEDS_TRIAGE issue in report order;
  * - slice: the oldest `ready` spec with no parent issue (`unslicedSpecs`);
  * - write-spec: the first stage of `docs/plans/` nothing covers (`pickStage`: no mention, not marked
- *   `Delivered:`, not in a frozen plan), but only while no PR
- *   adds a spec and there is no slice candidate. A spec a run is already slicing is not a
+ *   `Delivered:`, not in a frozen plan), but only while no PR adds a spec or marks delivered
+ *   stages (`marksDelivered`) and there is no slice candidate. A spec a run is already slicing is not a
  *   candidate, so the next stage is written meanwhile; a spec that waits for a run is, and holds it
  *   back. One spec ahead of the slicing at a time keeps the review panel's merge order and the
  *   plan's wave order the same thing.
@@ -632,7 +643,7 @@ export function buildPlan({
     });
 
   const stage =
-    slice === undefined && !openPrs.some(addsSpec)
+    slice === undefined && !openPrs.some((pr) => addsSpec(pr) || marksDelivered(pr))
       ? pickStage({ stages, corpus: [...specCorpus, ...allIssues.map(issueText)], activeTasks })
       : null;
   if (stage)

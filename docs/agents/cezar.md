@@ -284,7 +284,9 @@ candidate is left out, and a repository with nothing to do prints `"actions": []
 `write-spec` names the first stage of `docs/plans/` that no spec and no issue mentions, unless the plan marks it with a
 line starting `Delivered:` in the stage's own section (`plan-to-spec` writes it when the code already does what the
 stage asks) or the plan is one the `docs/plans/README.md` table lists as migrated. Without that, a stage the skill can
-only end on stays the first candidate and is named again on every tick.
+only end on stays the first candidate and is named again on every tick. It waits while an open PR adds a spec or comes
+from a branch `docs/plan-delivered-*` (the docs-only PR that marks delivered stages: until it merges, the stages it marks
+are still uncovered on the base branch); a person's own edit to `docs/plans/` holds nothing.
 
 Everything the rules need is in the output of two `gh` list calls, the specs and plans in the checkout, and
 `.ai/cezar/runs.json`; it reads no network beyond that and writes nothing. A candidate is dropped while a

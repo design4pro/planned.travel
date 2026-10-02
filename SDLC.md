@@ -281,13 +281,13 @@ run that failed by continuing it. What there is to do is not decided in the cron
 `node .ai/scripts/backlog-status.mjs --plan`, which prints at most one action per kind, in this order, each with the
 workflow and task text to send:
 
-| Kind         | Candidate                                                                                                                                                                                      | Workflow           |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `implement`  | the issue `--next` picks (nothing at the WIP limit)                                                                                                                                            | `implement-ticket` |
-| `unblock`    | the first issue whose `blocked` hold, or unanswered not-ready or `STOP:` comment, an agent left and that does not say `HUMAN-ONLY:`                                                            | `unblock`          |
-| `triage`     | the first issue that needs an Agent Brief or a category, priority or risk label                                                                                                                | `triage`           |
-| `slice`      | the oldest `ready` spec directly in `.ai/specs/` that no issue (open or closed) opens with `Spec: <path>`                                                                                      | `spec-to-tickets`  |
-| `write-spec` | the first stage of `docs/plans/` no spec and no issue mentions and its plan does not mark `Delivered:` (a frozen plan is skipped), only while no PR adds a spec and no spec waits to be sliced | `plan-to-spec`     |
+| Kind         | Candidate                                                                                                                                                                                                                                                 | Workflow           |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `implement`  | the issue `--next` picks (nothing at the WIP limit)                                                                                                                                                                                                       | `implement-ticket` |
+| `unblock`    | the first issue whose `blocked` hold, or unanswered not-ready or `STOP:` comment, an agent left and that does not say `HUMAN-ONLY:`                                                                                                                       | `unblock`          |
+| `triage`     | the first issue that needs an Agent Brief or a category, priority or risk label                                                                                                                                                                           | `triage`           |
+| `slice`      | the oldest `ready` spec directly in `.ai/specs/` that no issue (open or closed) opens with `Spec: <path>`                                                                                                                                                 | `spec-to-tickets`  |
+| `write-spec` | the first stage of `docs/plans/` no spec and no issue mentions and its plan does not mark `Delivered:` (a frozen plan is skipped), only while no PR adds a spec or marks delivered stages (branch `docs/plan-delivered-*`) and no spec waits to be sliced | `plan-to-spec`     |
 
 A stage is covered by a mention in a spec or an issue, or by a line starting `Delivered: <date> - <evidence>` in its own
 section of the plan. `plan-to-spec` writes that line, on a docs-only PR, when the code already does what a stage asks

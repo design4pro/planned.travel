@@ -35,6 +35,7 @@ import {
   coversStage,
   frozenPlans,
   isAlive,
+  marksDelivered,
   linkOpenPrs,
   parseArgs,
   pickNext,
@@ -964,6 +965,21 @@ describe("buildPlan", () => {
     expect(buildPlan({ ...base, stages: [stage], openPrs: [adding] }).actions).toEqual([]);
     const writing = ["Write the spec for plan stage 04-S3 (docs/plans/04-budget.md)."];
     expect(buildPlan({ ...base, stages: [stage], activeTasks: writing }).actions).toEqual([]);
+  });
+
+  it("waits for the open PR that marks delivered stages, but not for any other PR touching the plans", () => {
+    const marking = { headRefName: "docs/plan-delivered-budget-and-currencies", files: [] };
+    expect(buildPlan({ ...base, stages: [stage], openPrs: [marking] }).actions).toEqual([]);
+    const personEdit = {
+      headRefName: "docs/plans-typo",
+      files: [{ path: "docs/plans/04-budget.md", additions: 2, deletions: 1 }],
+    };
+    expect(buildPlan({ ...base, stages: [stage], openPrs: [personEdit] }).actions.map((a) => a.target)).toEqual([
+      "04-S3",
+    ]);
+    expect(marksDelivered(marking)).toBe(true);
+    expect(marksDelivered(personEdit)).toBe(false);
+    expect(marksDelivered({})).toBe(false);
   });
 
   it("counts a spec or an issue that mentions the stage as covering it", () => {

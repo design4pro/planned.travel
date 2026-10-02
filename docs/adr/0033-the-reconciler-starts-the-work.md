@@ -68,7 +68,10 @@ exists, and a trigger per event cannot see a difference.
    PR, and `--plan` treats a marked stage as covered. A stage the skill can only end on would stay the first
    candidate, be named every six hours (the Reconciler's cooldown after a finished run) and keep every stage
    behind it from ever being reached. A plan the `docs/plans/README.md` table lists as migrated is skipped
-   by `--plan` itself, so it needs no mark and takes no edit.
+   by `--plan` itself, so it needs no mark and takes no edit. Until the docs PR merges, its stages are
+   still uncovered on the base branch, so `write-spec` also waits while an open PR comes from a branch
+   `docs/plan-delivered-*`, as it does while a PR adds a spec; the prefix names that one PR, so a person's
+   edit to `docs/plans/` does not stall the queue.
 5. **Slicing has no age window.** The oldest `ready` spec directly in `.ai/specs/` that no issue, open or
    closed, opens with `Spec: <path>` is sliced.
 6. **The retired agent account is trusted.** `design4pro-agent` can file nothing new (ADR 0031,
