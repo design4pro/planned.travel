@@ -1689,3 +1689,137 @@ test.describe('01-S7 — Reading a list of trips two ways, and finding the archi
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 })
+
+test.describe('01-S8a — One trip form for creating and editing', () => {
+  /** One route: the index carries both the create button and every tile's Edit sheet. */
+  const TRIPS: RouteCase = {
+    name: 'trips',
+    path: '/trips',
+    ready: 'main',
+  }
+
+  const CARD = '[data-part="trip-tile"]:visible, [data-part="trip-row"]:visible'
+  const TRIGGER = '[data-part="trip-actions-trigger"]:visible'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * Nothing here saves: a created trip would be one more row in the demo workspace and a quota the
+   * other blocks count on. The dialog is opened, read, driven and cancelled; the write path is
+   * covered where the repository lives.
+   */
+  test('the create dialog derives the duration from two dates, keeps it when the start moves, and offers the whole currency list', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    await page
+      .getByRole('button', { name: 'New trip' })
+      .filter({ visible: true })
+      .first()
+      .click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByLabel('Summary')).toBeVisible()
+    await expect(
+      dialog.getByRole('radiogroup', { name: 'Reminder before departure' }),
+    ).toBeVisible()
+
+    // Neither date: the duration is the reader's to type.
+    const duration = dialog.getByLabel('Duration in days')
+    await expect(duration).toBeEditable()
+    await duration.fill('5')
+    await expect(duration).toHaveValue('5')
+
+    // Both dates: it is read-only and derived; moving the start keeps it and moves the end.
+    await dialog.getByLabel('Departure').fill('2030-06-01')
+    await dialog.getByLabel('Return').fill('2030-06-04')
+    await expect(duration).not.toBeEditable()
+    await expect(duration).toHaveValue('4')
+    await dialog.getByLabel('Departure').fill('2030-06-10')
+    await expect(dialog.getByLabel('Return')).toHaveValue('2030-06-13')
+    await expect(duration).toHaveValue('4')
+
+    // The return date moves the duration instead.
+    await dialog.getByLabel('Return').fill('2030-06-12')
+    await expect(duration).toHaveValue('3')
+
+    // An inverted range is named on the Return field and disarms the save.
+    await dialog.getByLabel('Return').fill('2030-06-01')
+    await expect(
+      dialog.getByText('The return date is before departure.'),
+    ).toBeVisible()
+    await expect(
+      dialog.getByRole('button', { name: 'Create trip' }),
+    ).toBeDisabled()
+
+    // The currency list is searchable on a name the nine curated codes do not include.
+    await dialog.getByRole('button', { name: 'Budget currency' }).click()
+    await page.getByRole('combobox').fill('norwegian')
+    await expect(page.getByRole('option', { name: /NOK/ })).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the save button is in view on a 360-pixel phone, without scrolling the form', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 640 })
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    await page
+      .getByRole('button', { name: 'New trip' })
+      .filter({ visible: true })
+      .first()
+      .click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(
+      dialog.getByRole('button', { name: 'Create trip' }),
+    ).toBeInViewport()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the edit sheet renders the same field set, the reminder as the owner’s, seeded from the trip', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    await page.locator(CARD).first().locator(TRIGGER).click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
+
+    const sheet = page.locator('[data-part="trip-edit-sheet"]')
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByLabel('Summary')).toBeVisible()
+    await expect(sheet.getByLabel('Departure')).toBeVisible()
+    await expect(sheet.getByLabel('Budget currency')).toBeVisible()
+    // Exactly one radio is checked: the trip's stored reminder, never an unseeded group.
+    await expect(
+      sheet
+        .getByRole('radiogroup', { name: 'Reminder before departure' })
+        .getByRole('radio', { checked: true }),
+    ).toHaveCount(1)
+
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})

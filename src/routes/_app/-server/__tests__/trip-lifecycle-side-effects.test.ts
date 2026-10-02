@@ -43,6 +43,7 @@ import {
   MAX_PURGE_KEYS,
   taskEnvelopeSchema,
 } from '#/server/queue/types'
+import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
 import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 
@@ -537,6 +538,54 @@ describe('the lifecycle verbs', () => {
       startDate: null,
       endDate: null,
     })
+  })
+
+  it('carries the summary, a day count and the reminder days through the strict create schema', () => {
+    expect(
+      createTripInputSchema.parse({
+        title: 'Open-ended',
+        summary: ' Two weeks. ',
+        destination: '',
+        startDate: '',
+        endDate: '',
+        dayCount: 14,
+        currency: 'eur',
+        reminderDays: 9,
+      }),
+    ).toMatchObject({ summary: 'Two weeks.', dayCount: 14, reminderDays: 9 })
+  })
+
+  it('refuses a day count beside either date, and one outside its range', () => {
+    const base = { title: 'x', destination: '', currency: 'EUR' }
+    const dated = [
+      { startDate: '2026-06-01', endDate: '' },
+      { startDate: '', endDate: '2026-06-03' },
+      { startDate: '2026-06-01', endDate: '2026-06-03' },
+    ]
+    for (const dates of dated) {
+      expect(() =>
+        createTripInputSchema.parse({ ...base, ...dates, dayCount: 3 }),
+      ).toThrow()
+    }
+    for (const dayCount of [0, -1, 1.5, TRIP_DAY_COUNT_MAX + 1]) {
+      expect(() =>
+        createTripInputSchema.parse({
+          ...base,
+          startDate: '',
+          endDate: '',
+          dayCount,
+        }),
+      ).toThrow()
+    }
+  })
+
+  it('takes reminder days on an edit and refuses a day count there', () => {
+    expect(
+      updateTripInputSchema.parse({ tripId: 'trip-1', reminderDays: 0 }),
+    ).toEqual({ tripId: 'trip-1', reminderDays: 0 })
+    expect(() =>
+      updateTripInputSchema.parse({ tripId: 'trip-1', dayCount: 3 }),
+    ).toThrow()
   })
 
   it('refuses a backwards date range at the boundary, before any write', () => {

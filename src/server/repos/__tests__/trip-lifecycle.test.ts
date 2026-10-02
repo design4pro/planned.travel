@@ -60,12 +60,7 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
-import {
-  createDayNote,
-  daysRepository,
-  listTripDays,
-  updateDay,
-} from '../days'
+import { createDayNote, daysRepository, listTripDays, updateDay } from '../days'
 import { createExpense } from '../expenses'
 import { recordFile } from '../files'
 import { createAssignment } from '../itinerary'
@@ -833,6 +828,48 @@ describe('trip lifecycle', () => {
         before.map((row) => row.id),
       )
       expect(await tripsRepository.count(tenant.scope)).toBe(before.length)
+    })
+
+    it('creates a duration as that many undated days, numbered from 1', async () => {
+      const trip = await createTrip(tenant.scope, {
+        title: 'Open-ended',
+        dayCount: 4,
+      })
+
+      const run = await listTripDays(tenant.scope, trip.id)
+      expect(run.map((day) => day.dayNumber)).toEqual([1, 2, 3, 4])
+      expect(run.every((day) => day.date === null)).toBe(true)
+    })
+
+    it('refuses a day count beside a date, and out of range, before any write', async () => {
+      const before = await tripsRepository.count(tenant.scope)
+
+      await expect(
+        createTrip(tenant.scope, {
+          title: 'Both',
+          startDate: '2026-06-01',
+          dayCount: 3,
+        }),
+      ).rejects.toThrow()
+      await expect(
+        createTrip(tenant.scope, { title: 'Too long', dayCount: 366 }),
+      ).rejects.toThrow()
+
+      expect(await tripsRepository.count(tenant.scope)).toBe(before)
+    })
+
+    it('leaves no trip behind when the undated day run fails', async () => {
+      const before = await tripsRepository.count(tenant.scope)
+      const insertDays = vi
+        .spyOn(daysRepository, 'insertMany')
+        .mockRejectedValue(new Error('d1 down'))
+
+      await expect(
+        createTrip(tenant.scope, { title: 'Open-ended', dayCount: 3 }),
+      ).rejects.toThrow('d1 down')
+      insertDays.mockRestore()
+
+      expect(await tripsRepository.count(tenant.scope)).toBe(before)
     })
 
     /* -------------------------------------------- the asynchronous half */
