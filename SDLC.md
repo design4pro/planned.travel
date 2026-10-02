@@ -348,7 +348,7 @@ what `backlog-status.mjs` trusts, so such an issue is never picked by the schedu
 - Cezar merges into `develop` only through `om-pr-autopilot --allow-merge` - the last step of
   `implement-ticket`, and the `pr-autopilot` workflow - through `om-approve-merge-pr` and its label
   and QA checks (ADR 0031, amended 2026-10-01, and by ADR 0033 for a spec PR `afk-plan-to-spec` wrote: it merges on
-  its specialist panel's verdicts, while every other spec PR still ends at merge-ready). It never merges into `main`: a person merges the
+  its specialist panel's verdicts, while every other spec PR, the one `implement-ticket` writes for a spec task among them, still ends at merge-ready). It never merges into `main`: a person merges the
   `develop` → `main` promotion, which carries `do-not-merge`.
 - `backlog-status.mjs --next` and `--plan` pick no implementation while three PRs are waiting for
   a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`, or `changes-requested` untouched for

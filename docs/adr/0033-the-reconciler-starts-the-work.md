@@ -61,7 +61,8 @@ exists, and a trigger per event cannot see a difference.
    every open question through a specialist, writes a `ready` spec, and has a panel (product owner,
    software architect, and the security, accessibility, UX and configuration specialists where the spec
    touches them) approve it before the PR is opened. The pipeline merges the design-only PR once CI is
-   green. A spec so written has no issue yet, so the spec registry accepts a `Plan` row
+   green. The spec PR of the `om-auto-write-spec` flow and the one `implement-ticket` writes for a spec task
+   keep their human merge: neither carries a `Plan` row. A spec so written has no issue yet, so the spec registry accepts a `Plan` row
    (`<stage> (docs/plans/<file>.md)`) in place of the `Issue` a `ready` spec otherwise needs. The next tick
    slices it. A stage the code already delivers is no spec: the skill writes `Delivered: <date> - <evidence>`
    under its heading, and under every other delivered uncovered stage of the same plan file, on a docs-only
