@@ -12,7 +12,7 @@ Extends the installed skill: read `.claude/skills/om-approve-merge-pr/SKILL.md` 
   blocks merging; do not infer it from the source branch or the configured feature base.
 - An unattended run (`CEZ_TASK_ID` is set, or no person is in the session) merges only a PR
   whose `baseRefName` is `develop`. Any other base - above all the `develop` -> `main`
-  promotion, which carries `promotion` - is reported as merge-ready and left for the owner:
+  promotion, which carries `do-not-merge` - is reported as merge-ready and left for the owner:
   merging it deploys production. The `main` rules below apply when the owner drives the merge.
 - Before approval and again at step 4, reject an explicitly requested squash or rebase
   when `baseRefName` is `main`: "Cannot squash or rebase a PR targeting main: a merge

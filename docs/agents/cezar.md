@@ -31,9 +31,9 @@ the rules of `SDLC.md`.
   drops the ones that release carries. They were string patches on an npm install's `dist/` until
   September 2026 (`.ai/scripts/cezar-host-patch.sh`, since deleted). `GH_CONFIG_DIR` forwarding
   needs no commit: 0.11.0 forwards it.
-  - In upstream, `issue.labeled` polls fail as soon as one recently updated issue has a comment or a
-    cross-reference (open-mercato/cezar#914), so **Re-groom on request**, **Fix issues on the autofix label** and **Write a spec for feature issues**
-    never fire. The fork cherry-picks the fix, upstream PR #916.
+  - In upstream, label-event polls (`issue.labeled`, `issue.unlabeled`) fail as soon as one
+    recently updated issue has a comment or a cross-reference (open-mercato/cezar#914), so
+    **Re-triage when a hold is cleared** would never fire. The fork cherry-picks the fix, upstream PR #916.
   - On every cockpit start the skills coordinator runs `npx skills check <om-*> -p` in each project
     root, and that command re-adds the skills from upstream HEAD over the vendored
     `.agents/skills/om-*`, which shows as modified files in `git status` once upstream has moved
@@ -142,22 +142,22 @@ prompt is the skill as a slash command (`/om-… {{task}}`; never `skill:`, whic
 thin `.ai/skills/` override alone). `allowedTools` is the full set for skills that write code and
 drops `Edit`/`Write` for the ones that must not.
 
-| Workflow              | Agent step                                                                 | Started by                                                                                                                                                                                 |
-| --------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`                              | automation **Groom new issues** (`issue.opened`), **Re-groom on request** (label `groom`)                                                                                                  |
-| `issue-autofix`       | `/om-auto-fix-issue {{task}}`                                              | automation **Fix issues on the autofix label** (label `autofix`)                                                                                                                           |
-| `spec`                | `/om-auto-write-spec {{task}}`                                             | automation **Write a spec for feature issues** (label `spec` on a `feature`)                                                                                                               |
-| `implement-spec`      | `/om-auto-implement-spec {{task}}`                                         | a human, from the cockpit, after the spec PR merged - or `autofix` on the FR issue, which reaches the same skill through `issue-autofix`                                                   |
-| `pr-autopilot`        | `/om-pr-autopilot {{task}} --allow-merge`                                  | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer), **Merge reviewed agent pull requests** (`pull_request.reviewed` on an agent PR in `merge-queue`) |
-| `pr-review`           | `/om-auto-review-pr {{task}} --autofix`                                    | a human, from the cockpit, on a PR number                                                                                                                                                  |
-| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                                 | manual request after assessing review findings                                                                                                                                             |
-| `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50`   | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                                                                      |
-| `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                              | a human, from the cockpit, with the idea as the task                                                                                                                                       |
-| `triage`              | skill `afk-triage`                                                         | automation **Triage new issues** (label `needs-triage`)                                                                                                                                    |
-| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-auto-review-pr` | automation **Implement ready-for-agent issues** (label `ready-for-agent`)                                                                                                                  |
-| `spec-to-tickets`     | skill `afk-to-tickets`                                                     | automation **Spec to tickets** (schedule, weekdays 07:00)                                                                                                                                  |
-| `architecture-review` | skill `afk-architecture-review`                                            | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                                                                        |
-| `lessons`             | skill `afk-lessons`                                                        | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                                                                    |
+| Workflow              | Agent step                                                               | Started by                                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`, then skill `afk-triage`   | automation **Groom and triage new issues** (`issue.opened`), **Re-triage when a hold is cleared** (`blocked` removed)                                                                      |
+| `issue-autofix`       | `/om-auto-fix-issue {{task}}`                                            | a human, from the cockpit, on an issue number                                                                                                                                              |
+| `spec`                | `/om-auto-write-spec {{task}}`                                           | a human, from the cockpit, on a `feature` issue                                                                                                                                            |
+| `implement-spec`      | `/om-auto-implement-spec {{task}}`                                       | a human, from the cockpit, after the spec PR merged - or `issue-autofix` on the FR issue, which reaches the same skill                                                                     |
+| `pr-autopilot`        | `/om-pr-autopilot {{task}} --allow-merge`                                | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer), **Merge reviewed agent pull requests** (`pull_request.reviewed` on an agent PR in `merge-queue`) |
+| `pr-review`           | `/om-auto-review-pr {{task}} --autofix`                                  | a human, from the cockpit, on a PR number                                                                                                                                                  |
+| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                               | manual request after assessing review findings                                                                                                                                             |
+| `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50` | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                                                                      |
+| `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                            | a human, from the cockpit, with the idea as the task                                                                                                                                       |
+| `triage`              | skill `afk-triage`                                                       | a human, from the cockpit; the automations run it as the second step of `issue-groom`                                                                                                      |
+| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-pr-autopilot` | automation **Implement the next ready issue** (schedule, every 2 hours), or a human with an issue number                                                                                   |
+| `spec-to-tickets`     | skill `afk-to-tickets`                                                   | automation **Spec to tickets** (schedule, weekdays 07:00)                                                                                                                                  |
+| `architecture-review` | skill `afk-architecture-review`                                          | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                                                                        |
+| `lessons`             | skill `afk-lessons`                                                      | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                                                                    |
 
 **No workflow names a model.** Until 2026-09-22 most agent steps carried a `model:` - `opus` on
 the ones that reason, `sonnet` on the ones that execute. A step `model:` wins over the model the
@@ -167,8 +167,9 @@ never uses, so the run recorded `done` having done nothing. The model now belong
 cockpit composer picks it for a run a human starts, and an automation run uses the backend CLI's
 own default unless the automation sets `task.model` in `.ai/cezar/automations.json`.
 
-The task text an automation sends is the issue or PR number alone (`{{github.number}}`); a second
-token would read as a brief to `om-auto-fix-issue`. From the cockpit type the same: a number, a
+The task text an event automation sends is the issue or PR number alone (`{{github.number}}`); a
+second token would read as a brief to `om-auto-fix-issue`. The implement schedule sends no number:
+`implement-ticket` asks `node .ai/scripts/backlog-status.mjs --next` for one. From the cockpit type the same: a number, a
 spec path, or for `brainstorm` the idea.
 
 Workflows that need a local app use `scripts/worktree/bootstrap.sh --profile worktree --no-seed`
@@ -189,8 +190,7 @@ The four older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`), th
 `scripts/agent/` they called and the four process skills built on them are gone (PR C, ADR 0018).
 The automations that used to start them (`triage-opened`, `triage-relabel`, `implement`) had
 already been removed from the cockpit. `triage` and `implement-ticket` are names reused by the
-kit's unattended intake ladder (the last five rows, `SDLC.md` § Intake labels), not those workflows
-restored: `triage` and the three schedule workflows run the `afk-*` skills, `implement-ticket` chains
+unattended lane (`SDLC.md` § Readiness), not those workflows restored: `triage` and the three schedule workflows run the `afk-*` skills, `implement-ticket` chains
 `om-*` steps from the Agent Brief instead; none of the five name a model, so they run on the
 cockpit's default.
 
@@ -205,30 +205,33 @@ cockpit by `.name`, so a renamed definition is created beside the old one, which
 because it is still enabled. Rename in lockstep with the cockpit - disable the old name, then
 `--prune`, the drill step 2 of the host cutover below walks through.
 
-Eleven definitions, in two kinds. Eight are GitHub polls, started by an event:
-**Groom new issues** on `issue.opened` with `authors` naming the human maintainers;
-**Re-groom on request**, **Fix issues on the autofix label**, **Write a spec for feature issues** on `issue.labeled` with `changedLabels` `groom` /
-`autofix` / `spec`; **Autopilot new pull requests** on `pull_request.opened`, again with `authors`; **Merge reviewed agent pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`;
-**Triage new issues** and **Implement
-ready-for-agent issues**, on `issue.labeled` with `changedLabels` `needs-triage` / `ready-for-agent`.
-Three are schedules (`kind: "schedule"`), started by the clock and by nobody's action:
-**Spec to tickets** on weekdays at 07:00, **Weekly architecture review** on Mondays at 06:00 and
-**Weekly lessons** on Fridays at 16:00. A schedule reads the repository, not an issue body, so it
-has no author to gate; what bounds it is its skill - at most one spec sliced, three refactor issues
-or one pull request per run. Every event trigger is gated on who can produce it: the open events by
-author, the label events because only a collaborator can set a label. This matters because the agent step holds Bash with no allowlist and
-the issue body is its prompt: an issue anyone on GitHub can open must not start a run by itself,
-so an external report is groomed when a maintainer adds `groom`, and the Sentry sweep (which files
-as the Actions bot, a login the poller's author filter cannot express) files with `groom`
-already on. Agent PRs (opened carrying `review` and driven to the merge inside their own chain) enter only the
-merge automation, dependabot enters none, and the promotion PR (`promotion`) enters no automation.
-Every filter excludes `in-progress`; `lookbackDays: 7` and `maxRecords: 25` bound a mistaken mass
-relabel while still reaching a week of events. The three command labels are the only things a human uses to start om code-writing
-work, and no skill adds them (the overrides say so), so no om run can start another. The intake
-ladder is the deliberate exception: its runs do set its labels - `afk-triage` sets
-`ready-for-agent`, `afk-to-tickets` sets it on the ticket frontier, `afk-architecture-review` sets
-`needs-triage` on its own issues, `afk-triage` on the follow-ups of a split - and that is how one
-of them starts the next.
+Eight definitions, in two kinds. Four are GitHub polls, started by an event:
+**Groom and triage new issues** on `issue.opened` and **Re-triage when a hold is cleared** on
+`issue.unlabeled` with `changedLabels` `blocked`, both with `authors` naming the maintainer;
+**Autopilot new pull requests** on `pull_request.opened`, again with `authors`; and **Merge
+reviewed agent pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`. Four are
+schedules (`kind: "schedule"`), started by the clock and by nobody's action: **Implement the next
+ready issue** every two hours, **Spec to tickets** on weekdays at 07:00, **Weekly architecture
+review** on Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. A schedule has no
+issue author of its own to gate; `.ai/scripts/backlog-status.mjs --next` applies the `authors` gate to the issue it
+picks, and what bounds the run is that script and its skill - one issue
+implemented and nothing while three agent PRs are open, at most one spec sliced, three refactor
+issues or one pull request per run.
+
+No label starts a run (ADR 0032). Every event trigger is gated on who can produce it: the open
+events by author, and the unlabel event both by author and because only a collaborator can remove
+a label. This matters because the agent step holds Bash with no allowlist and the issue body is its
+prompt: an issue anyone on GitHub can open must not start a run by itself, so an external report,
+and every Sentry finding (filed as the Actions bot, or as the maintainer by a local
+`pnpm sentry-triage`), waits for a person to start a run from the cockpit - `backlog-status.mjs`
+applies the same `authors` list and the `sentry-issue` marker, so the implement schedule never picks
+one either. Agent PRs (opened carrying `review` and driven to the merge inside their own chain)
+enter only the merge automation, dependabot enters none, and the promotion PR (`do-not-merge`)
+enters no automation. Every filter excludes `in-progress`; `lookbackDays: 7` and `maxRecords: 25`
+bound a mistaken mass relabel while still reaching a week of events. One run does start another,
+deliberately and only through GitHub: an issue `afk-triage`, `afk-to-tickets` or
+`afk-architecture-review` files is opened as the maintainer, so it is groomed and triaged like any
+other, and a ticket it briefs is picked by the schedule once its blockers close.
 A review or autopilot run checks out the PR's head, hooks and agent layer included: a branch
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
@@ -303,7 +306,9 @@ newer claim after a release, belongs to a live run and is left alone. Run it by 
 ## Host cutover (operator, once, after PR B merges)
 
 The order is fixed by the labels: the SDLC taxonomy already exists (PR A); the old automations
-must stop before `status:*` is stripped and the surviving labels renamed.
+must stop before `status:*` is stripped and the surviving labels renamed. Steps 1-7 are the record
+of that cutover, and the command labels step 2 names were retired since (ADR 0032); step 8 is the
+end-to-end check as it stands now.
 
 1. Unload the sweeper: `launchctl bootout gui/$(id -u)/dev.planned-travel.sweeper` and delete
    `~/Library/LaunchAgents/dev.planned-travel.sweeper.plist`.
@@ -329,13 +334,13 @@ must stop before `status:*` is stripped and the surviving labels renamed.
 6. `bash .ai/scripts/cez-automations.sh --dry-run`, then without the flag: the five new automations
    are created enabled.
 7. Install the housekeeping plist (above) and run `bash .ai/scripts/housekeeping.sh` once by hand.
-8. Verify end to end on a test issue: open it with the Bug form (as a maintainer) → within two minutes an
-   **Groom new issues** run adds priority and risk and posts the Definition of Ready and implementation
-   notes → add `autofix` → the run removes the label, claims with `in-progress`, opens a draft PR on
-   develop and ends with it ready, labelled `review` + category + `needs-qa|skip-qa` + priority +
-   risk, with a run-summary comment and the `PR: #n` line in the cezar run → merge it → the next
-   housekeeping closes the issue. Then open a PR by hand: **Autopilot new pull requests** reviews it and does not
-   merge.
+8. Verify end to end on a test issue: open it with the Bug form (as a maintainer) → within two
+   minutes a **Groom and triage new issues** run adds priority and risk, posts the Definition of
+   Ready and implementation notes, then an Agent Brief → `node .ai/scripts/backlog-status.mjs`
+   reports it `READY` → the next **Implement the next ready issue** tick (or `cez automation run
+<id>`) claims it with `in-progress`, opens a PR on develop labelled `review` + category +
+   `needs-qa|skip-qa` + priority + risk, and drives it to the squash-merge → the next housekeeping
+   closes the issue. Then open a PR by hand: **Autopilot new pull requests** reviews it.
 
 ## Local use
 

@@ -290,8 +290,8 @@ export function selectionVerdict(
   // surface - src/server/observability/sentry.ts calls that half "often the more interesting
   // one" - and left only what leaked past the middleware. What remains below still has to be
   // unresolved, at error level, recurring, over threshold and owned by a frame under src/, and
-  // whatever clears all of that is filed `bug` + `priority-high` for the groom run to annotate
-  // and a human to accept or reject (ADR 0018). A handled error that clears those bars is a defect.
+  // whatever clears all of that is filed `bug` + `priority-high` for a person to accept or reject
+  // (ADR 0018, ADR 0032). A handled error that clears those bars is a defect.
 
   const haystack = `${candidate.errorType} ${candidate.errorValue}`
   const denied = DENYLIST.find((entry) => haystack.includes(entry))
