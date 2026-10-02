@@ -158,7 +158,7 @@ drops `Edit`/`Write` for the ones that must not.
 | `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                            | a human, from the cockpit, with the idea as the task                                                                                                                                       |
 | `triage`              | skill `afk-triage`                                                       | the Reconciler (`triage` action) or a human, from the cockpit; the automations run it as the second step of `issue-groom`                                                                  |
 | `unblock`             | skill `afk-unblock`                                                      | the Reconciler (`unblock` action), or a human, from the cockpit, on an issue number                                                                                                        |
-| `plan-to-spec`        | skill `afk-plan-to-spec`, the spec gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`write-spec` action), or a human with a stage id                                                                                                                           |
+| `plan-to-spec`        | skill `afk-plan-to-spec`, the spec gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`write-spec` action; a `DELIVERED:` outcome opens a docs-only PR instead), or a human with a stage id                                                                      |
 | `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`implement` action), automation **Implement the next ready issue** (schedule, every 2 hours), or a human with an issue number                                              |
 | `spec-to-tickets`     | skill `afk-to-tickets`                                                   | the Reconciler (`slice` action), automation **Spec to tickets** (schedule, weekdays 07:00), or a human with a spec path                                                                    |
 | `architecture-review` | skill `afk-architecture-review`                                          | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                                                                        |
@@ -279,6 +279,11 @@ At most one action per kind, in the order implement, unblock, triage, slice, wri
 candidate is left out, and a repository with nothing to do prints `"actions": []`. `target` is an issue
 (`#123`), a spec path (`.ai/specs/<file>.md`) or a plan stage id (`02-S3`). `--plan` is a separate output from
 `--json` and `--next`, and combining them is an error. The Reconciler sends `workflow` and `task` as they are.
+
+`write-spec` names the first stage of `docs/plans/` that no spec and no issue mentions, unless the plan marks it with a
+line starting `Delivered:` in the stage's own section (`plan-to-spec` writes it when the code already does what the
+stage asks) or the plan is one the `docs/plans/README.md` table lists as migrated. Without that, a stage the skill can
+only end on stays the first candidate and is named again on every tick.
 
 Everything the rules need is in the output of two `gh` list calls, the specs and plans in the checkout, and
 `.ai/cezar/runs.json`; it reads no network beyond that and writes nothing. A candidate is dropped while a

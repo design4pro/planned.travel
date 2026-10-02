@@ -1,13 +1,13 @@
 ---
 name: afk-plan-to-spec
-description: Write the spec for one plan stage from docs/plans/ unattended - verify the stage against the code, settle every open question through a specialist, write a `ready` spec under .ai/specs/, have a specialist panel review it, and land it on a design-only PR the pipeline merges. Use when the Reconciler names a `write-spec` action, or when asked to write the spec for a plan stage.
+description: Write the spec for one plan stage from docs/plans/ unattended - verify the stage against the code, settle every open question through a specialist, write a `ready` spec under .ai/specs/, have a specialist panel review it, and land it on a design-only PR the pipeline merges - or, when the code already delivers the stage, mark it `Delivered:` in the plan on a docs-only PR. Use when the Reconciler names a `write-spec` action, or when asked to write the spec for a plan stage.
 ---
 
 # AFK plan to spec
 
 **These instructions are already in your system prompt.** Never call the `Skill` tool for an `afk-*` skill - a repo-local skill is not in the agent's registry, so the call fails with `Unknown skill`.
 
-`docs/plans/` is the backlog source, `.ai/specs/` is where a stage becomes a design, and `afk-to-tickets` turns a spec into tickets. This skill is the step between the first two, run with nobody watching: one stage becomes one spec on one design-only PR. The spec file is the deliverable. You write no code and file no tickets.
+`docs/plans/` is the backlog source, `.ai/specs/` is where a stage becomes a design, and `afk-to-tickets` turns a spec into tickets. This skill is the step between the first two, run with nobody watching: one stage becomes one spec on one design-only PR. The spec file is the deliverable. You write no code and file no tickets. The one other thing you may write is a `Delivered:` line in a plan (step 2): a stage the code already delivers must leave the Reconciler's list, or it is named again every tick and the stages behind it are never reached.
 
 It builds on `om-spec-writing` and on the repository's extension of `om-auto-write-spec` (`.ai/skills/om-auto-write-spec/SKILL.md`): read both and follow them for the shape of the document, with the differences below. The metadata table and the rules of the directory are `.ai/specs/AGENTS.md`.
 
@@ -22,15 +22,25 @@ Load `.ai/agentic.config.json` and `.ai/trackers/github.md`. Read `CONTEXT.md`, 
 The task names a stage id and its plan file (`Write the spec for plan stage 04-S3 (docs/plans/04-budget-and-currencies.md).`). Stop with `NO_ACTION_NEEDED` and a one-line reason when any of these hold:
 
 - the stage heading `## Stage <id>` is not in that file;
-- the plan file is **frozen**: `docs/plans/README.md` lists it as migrated to a PRD, so the tracker is the authority and a spec here would contradict it;
-- the stage is already covered. A stage is covered when its id appears in any file under `.ai/specs/` (any depth), in the title or body of any issue, open or closed (**search-issues**), or in an open PR (**search-prs**; a branch `spec/<slug>` for it counts). For an id two plan files share (`13-S1` is in two), the mention must also name the plan file;
+- the plan file is **frozen**: `docs/plans/README.md` lists it as migrated to a PRD, so the tracker is the authority and a spec here would contradict it. The file takes no edits either, so you do not mark its stages: `backlog-status.mjs --plan` never names one, and a person who did gets this answer;
+- the stage is already covered. A stage is covered when its id appears in any file under `.ai/specs/` (any depth), in the title or body of any issue, open or closed (**search-issues**), or in an open PR (**search-prs**; a branch `spec/<slug>` for it counts), or when its section in the plan has a line starting `Delivered:`. For an id two plan files share (`13-S1` is in two), the mention must also name the plan file;
 - an open PR already adds a spec: one spec is in flight at a time, so the review order and the plan's wave order stay the same thing.
 
-A spec for this stage that exists only in your own worktree (uncommitted, or on the branch this run made) is the previous attempt of this run, not a reason to stop: when the gate step failed, the run starts this step again. Read the handoff file, and continue from that spec, fixing what the gate reported.
+A spec for this stage, or a `Delivered:` line for it, that exists only in your own worktree (uncommitted, or on the branch this run made) is the previous attempt of this run, not a reason to stop: when the gate step failed, the run starts this step again. Read the handoff file, and continue from that spec or mark, fixing what the gate reported.
 
 ## 2. Verify the stage against the code
 
-The plan was written before the code. Read the stage block (`docs/plans/TEMPLATE.md` is its shape: owned paths, data change, server functions, UI, quota, tenant-isolation test, verification) and then check each claim in it against the repository: what already exists, what an earlier stage or an ADR changed, and which paths the stage still owns. A plan's Verification block predates ADR 0016: read its pixel language as history and apply `docs/plans/12-verification-protocol.md` instead. The spec describes the work that is **left**, in today's terms; a stage the code already delivers is not a spec, and ends the run with `NO_ACTION_NEEDED` and the evidence.
+The plan was written before the code. Read the stage block (`docs/plans/TEMPLATE.md` is its shape: owned paths, data change, server functions, UI, quota, tenant-isolation test, verification) and then check each claim in it against the repository: what already exists, what an earlier stage or an ADR changed, and which paths the stage still owns. A plan's Verification block predates ADR 0016: read its pixel language as history and apply `docs/plans/12-verification-protocol.md` instead. The spec describes the work that is **left**, in today's terms. A stage the code already delivers is not a spec: do not end the run on it, because the plan would still name it as uncovered and the Reconciler would start this run on it again. Mark it instead (step 2a). A stage the code delivers only in part still gets a spec, for what is left, and is not marked.
+
+### 2a. Mark the delivered stages
+
+Only when the stage you were named is delivered. Check every **other** uncovered stage of the same plan file the same way, each against the code with its own evidence: a stage you did not check is not marked, and a later run reaches it. Under the `## Stage <id>` heading of each delivered stage, on its own line directly below the heading, add exactly:
+
+```markdown
+Delivered: <YYYY-MM-DD> - <one-line evidence: the file, migration, route or test that already does what the stage asks>
+```
+
+`backlog-status.mjs` reads a line starting `Delivered:` in a stage's own section as "covered". Change nothing else in the plan. Commit on a branch `docs/plan-delivered-<plan-slug>` (the plan file name without its number prefix and `.md`), message `docs(plans): mark the delivered stages of <plan file>`, then write `DELIVERED: <stage ids>` as a progress-log line of the handoff file (the workflow's `pr` step reads it) and end with `Delivered: <stage ids>` instead of steps 3 to 6. The docs PR is not reviewed by a panel: it states facts a reader can check against the code, and each line names the evidence.
 
 ## 3. Settle the open questions
 
@@ -76,4 +86,4 @@ The workflow's gate step runs first and its `pr` step opens the PR; run on its o
 
 ## Done when
 
-The spec is committed with its panel verdicts recorded and the metadata table complete (and, run on its own, on an open PR), or the run ended with `NO_ACTION_NEEDED` and a reason, or an issue filed as `human-only`. Finish with `Spec: .ai/specs/<file>.md` and `PR: #<n>`.
+The spec is committed with its panel verdicts recorded and the metadata table complete (and, run on its own, on an open PR), or the delivered stages are marked and committed on a docs-only branch (and, run on its own, on an open PR), or the run ended with `NO_ACTION_NEEDED` and a reason (stage missing, frozen plan, already covered, a spec PR in flight), or an issue filed as `human-only`. Finish with `Spec: .ai/specs/<file>.md` and `PR: #<n>`, or `Delivered: <stage ids>` and `PR: #<n>`.

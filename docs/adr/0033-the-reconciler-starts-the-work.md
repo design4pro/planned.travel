@@ -54,13 +54,19 @@ exists, and a trigger per event cannot see a difference.
    `do-not-merge` and `do-not-close` are never offered. `afk-triage` and `afk-decide` write
    `🤖 HUMAN-ONLY:` on every hold that is a person's, so the Reconciler does not spend a run on it.
 4. **An agent writes the spec for a plan stage, and a panel reviews it.** `afk-plan-to-spec` takes the
-   first stage of `docs/plans/` that no spec and no issue mentions, verifies it against the code, settles
+   first stage of `docs/plans/` that no spec and no issue mentions and that its plan does not mark
+   `Delivered:`, verifies it against the code, settles
    every open question through a specialist, writes a `ready` spec, and has a panel (product owner,
    software architect, and the security, accessibility, UX and configuration specialists where the spec
    touches them) approve it before the PR is opened. The pipeline merges the design-only PR once CI is
    green. A spec so written has no issue yet, so the spec registry accepts a `Plan` row
    (`<stage> (docs/plans/<file>.md)`) in place of the `Issue` a `ready` spec otherwise needs. The next tick
-   slices it.
+   slices it. A stage the code already delivers is no spec: the skill writes `Delivered: <date> - <evidence>`
+   under its heading, and under every other delivered uncovered stage of the same plan file, on a docs-only
+   PR, and `--plan` treats a marked stage as covered. A stage the skill can only end on would stay the first
+   candidate, be named every six hours (the Reconciler's cooldown after a finished run) and keep every stage
+   behind it from ever being reached. A plan the `docs/plans/README.md` table lists as migrated is skipped
+   by `--plan` itself, so it needs no mark and takes no edit.
 5. **Slicing has no age window.** The oldest `ready` spec directly in `.ai/specs/` that no issue, open or
    closed, opens with `Spec: <path>` is sliced.
 6. **The retired agent account is trusted.** `design4pro-agent` can file nothing new (ADR 0031,

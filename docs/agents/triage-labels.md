@@ -48,6 +48,7 @@ issue form ─► category;  Sentry sweep ─► bug + priority-high (EXTERNAL: 
                   └─► blocked + 🤖 HUMAN-ONLY comment ─► a person answers and removes blocked ─► issue-groom again
 agent-set blocked or STOP ─(Reconciler: backlog-status.mjs --plan)─► unblock ─► 🤖 RESOLVED (lifted) | 🤖 HUMAN-ONLY
 plan stage nothing covers ─(Reconciler)─► plan-to-spec ─► specialist panel ─► spec PR ─► merged by the pipeline
+                                                        └─► already delivered ─► `Delivered:` line in the plan (docs-only PR)
 merged spec ─(Reconciler, or weekdays: Spec to tickets)─► afk-to-tickets: tickets whose body is their Agent Brief
 
 ready issue ─(Reconciler, or every 2 h: Implement the next ready issue; backlog-status.mjs --next, WIP limit 3 PRs waiting for a person)─► implement-ticket
