@@ -464,20 +464,50 @@ export function unslicedSpecs(specs, issues) {
 }
 
 /**
+ * The plan files `docs/plans/README.md` lists as migrated to the tracker (`**Migrated -> PRD #N;
+ * frozen.**` in the file's table row). The tracker is their authority and the file takes no
+ * further edits, so a spec written from one of its stages would contradict the tracker.
+ */
+export function frozenPlans(readme) {
+  const table = String(readme ?? "").replace(/```[\s\S]*?```/g, " ");
+  return new Set(
+    [...table.matchAll(/^\|\s*`(\d{2}-[a-z0-9-]+\.md)`\s*\|\s*\*\*Migrated\b/gm)].map((m) => m[1]),
+  );
+}
+
+/**
  * Every `## Stage NN-SM` of the plans in `docs/plans/`, in file-name order and then document order:
  * the sequence the plan was written to be built in. Only `NN-area.md` files are plans (the README,
  * the TEMPLATE and the generated findings register are not), and a heading inside a code sample is
  * a quotation. `ambiguous` marks an id two plan files both use (`13-S1` is in two of them today):
  * for those an id alone does not say which stage a mention covers.
+ *
+ * `delivered` is set when the stage's own section - its heading to the next `## ` heading - has a
+ * line starting `Delivered:`, which `afk-plan-to-spec` writes when the code already does what the
+ * stage asks. `frozen` is set for every stage of a plan the README lists as migrated. Neither kind
+ * of stage can ever get a spec, so `pickStage` must not name it.
  */
 export function planStages(planFiles) {
   const stages = [];
+  const frozen = frozenPlans(planFiles.find((file) => file.name === "README.md")?.text);
   const plans = planFiles
     .filter((file) => /^\d{2}-[a-z0-9-]+\.md$/.test(file.name))
     .sort((a, b) => a.name.localeCompare(b.name));
-  for (const plan of plans)
-    for (const match of stripCode(plan.text).matchAll(/^##\s+Stage\s+(\d{2}-S\d+[a-z]?)\b/gm))
-      stages.push({ id: match[1], file: `${PLANS}/${plan.name}`, ambiguous: false });
+  for (const plan of plans) {
+    const text = stripCode(plan.text);
+    for (const match of text.matchAll(/^##\s+Stage\s+(\d{2}-S\d+[a-z]?)\b/gm)) {
+      const rest = text.slice(match.index + match[0].length);
+      const end = rest.search(/^##\s/m);
+      const section = end < 0 ? rest : rest.slice(0, end);
+      stages.push({
+        id: match[1],
+        file: `${PLANS}/${plan.name}`,
+        ambiguous: false,
+        delivered: /^Delivered:/m.test(section),
+        frozen: frozen.has(plan.name),
+      });
+    }
+  }
   for (const stage of stages)
     stage.ambiguous = stages.some((other) => other.id === stage.id && other.file !== stage.file);
   return stages;
@@ -497,12 +527,17 @@ export function coversStage(text, stage) {
  * The first plan stage no spec and no issue, open or closed, mentions, and no run is writing: the
  * next stage whose spec nobody has started. An issue counts because a stage held back by a decision
  * only a person can take is filed as one (afk-plan-to-spec), and that is as covered as a spec.
+ * A stage marked `Delivered:` in its plan is covered too, and so is one in a frozen plan: without
+ * that, a stage `afk-plan-to-spec` can only end with `NO_ACTION_NEEDED` stays the first candidate,
+ * is named on every tick, and the stages behind it are never reached.
  * `corpus` is the text of every spec at any depth plus every issue's title and body.
  */
 export function pickStage({ stages, corpus, activeTasks }) {
   return (
     stages.find(
       (stage) =>
+        !stage.delivered &&
+        !stage.frozen &&
         !corpus.some((text) => coversStage(text, stage)) &&
         !activeTasks.some((task) => coversStage(task, stage)),
     ) ?? null
@@ -541,7 +576,8 @@ export const PLAN_WORKFLOWS = {
  * - unblock: the first issue in report order whose hold or not-ready comment an agent may lift;
  * - triage: the first NEEDS_TRIAGE issue in report order;
  * - slice: the oldest `ready` spec with no parent issue (`unslicedSpecs`);
- * - write-spec: the first stage of `docs/plans/` nothing covers (`pickStage`), but only while no PR
+ * - write-spec: the first stage of `docs/plans/` nothing covers (`pickStage`: no mention, not marked
+ *   `Delivered:`, not in a frozen plan), but only while no PR
  *   adds a spec and there is no slice candidate. A spec a run is already slicing is not a
  *   candidate, so the next stage is written meanwhile; a spec that waits for a run is, and holds it
  *   back. One spec ahead of the slicing at a time keeps the review panel's merge order and the

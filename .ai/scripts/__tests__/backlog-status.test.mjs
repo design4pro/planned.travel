@@ -32,6 +32,7 @@ import {
   closeKeywordTargets,
   countWip,
   coversStage,
+  frozenPlans,
   isAlive,
   linkOpenPrs,
   parseArgs,
@@ -625,6 +626,92 @@ describe("planStages", () => {
     expect(stages.map((stage) => stage.id)).toEqual(["03-S1"]);
   });
 
+  describe("a Delivered: line", () => {
+    const withBody = (name, ...sections) => ({ name, text: sections.join("\n") });
+    const stageText = (id, body) => `## Stage ${id} - something\n\n${body}\n`;
+    const deliveredIds = (stages) => stages.filter((stage) => stage.delivered).map((stage) => stage.id);
+
+    it("marks the stage whose own section has a line starting Delivered:", () => {
+      const stages = planStages([
+        withBody(
+          "04-b.md",
+          stageText("04-S1", "Delivered: 2026-10-03 - the column ships in 0042."),
+          stageText("04-S2", "Owned paths, nothing delivered yet."),
+        ),
+      ]);
+      expect(stages.map((stage) => [stage.id, stage.delivered])).toEqual([
+        ["04-S1", true],
+        ["04-S2", false],
+      ]);
+    });
+
+    it("counts a line under a ### subheading, and ends the section at the next ## heading", () => {
+      const stages = planStages([
+        withBody(
+          "04-b.md",
+          stageText("04-S1", "### Verification\n\nDelivered: 2026-10-03 - done."),
+          "## Appendix\n\nDelivered: not a stage\n",
+          stageText("04-S2", "open"),
+        ),
+      ]);
+      expect(deliveredIds(stages)).toEqual(["04-S1"]);
+    });
+
+    it("ignores the marker in another stage's section, in a code fence, mid-line and in an inline span", () => {
+      const stages = planStages([
+        withBody(
+          "04-b.md",
+          stageText("04-S1", "```md\nDelivered: 2026-10-03 - a sample\n```"),
+          stageText("04-S2", "The line `Delivered: x` and then Delivered: mid-line text"),
+          stageText("04-S3", "open"),
+        ),
+      ]);
+      expect(deliveredIds(stages)).toEqual([]);
+    });
+
+    it("is per plan file: the same id in another file is not delivered with it", () => {
+      const stages = planStages([
+        withBody("13-a.md", stageText("13-S1", "Delivered: 2026-10-03 - done.")),
+        withBody("13-b.md", stageText("13-S1", "open")),
+      ]);
+      expect(stages.map((stage) => [stage.file, stage.delivered])).toEqual([
+        ["docs/plans/13-a.md", true],
+        ["docs/plans/13-b.md", false],
+      ]);
+    });
+  });
+
+  describe("frozen plans", () => {
+    const readme = {
+      name: "README.md",
+      text: [
+        "| File | Scope |",
+        "| --- | --- |",
+        "| `01-a.md` | **Migrated -> PRD #104; frozen.** Trips. |",
+        "| `02-b.md` | Places and maps. |",
+        "| `03-c.md` | **Migrated → PRD #167; frozen.** Reservations. |",
+        "```md",
+        "| `04-d.md` | **Migrated -> PRD #1; frozen.** a sample |",
+        "```",
+      ].join("\n"),
+    };
+
+    it("marks every stage of a plan the README lists as migrated", () => {
+      const stages = planStages([readme, plan("01-a.md", "01-S1"), plan("02-b.md", "02-S1"), plan("03-c.md", "03-S1"), plan("04-d.md", "04-S1")]);
+      expect(stages.map((stage) => [stage.id, stage.frozen])).toEqual([
+        ["01-S1", true],
+        ["02-S1", false],
+        ["03-S1", true],
+        ["04-S1", false],
+      ]);
+    });
+
+    it("freezes nothing when the README is absent or lists no migration", () => {
+      expect(planStages([plan("01-a.md", "01-S1")])[0].frozen).toBe(false);
+      expect(frozenPlans(undefined).size).toBe(0);
+    });
+  });
+
   it("marks an id two plan files both use as ambiguous", () => {
     const stages = planStages([plan("13-gallery.md", "13-S1", "13-S2"), plan("13-studio.md", "13-S1")]);
     expect(stages.map((stage) => [stage.id, stage.ambiguous])).toEqual([
@@ -675,6 +762,26 @@ describe("pickStage", () => {
 
   it("is null once every stage is covered", () => {
     expect(pickStage({ stages, corpus: ["01-S1 01-S2 02-S1"], activeTasks: [] })).toBeNull();
+  });
+
+  it("skips a stage marked Delivered: and picks the next uncovered one", () => {
+    const marked = stages.map((stage) => (stage.id === "01-S1" ? { ...stage, delivered: true } : stage));
+    expect(pickStage({ stages: marked, corpus: [], activeTasks: [] })?.id).toBe("01-S2");
+  });
+
+  it("skips the stages of a frozen plan, and is null when only those are left", () => {
+    const frozen = stages.map((stage) => (stage.file.includes("01-a") ? { ...stage, frozen: true } : stage));
+    expect(pickStage({ stages: frozen, corpus: [], activeTasks: [] })?.id).toBe("02-S1");
+    expect(pickStage({ stages: frozen, corpus: ["02-S1"], activeTasks: [] })).toBeNull();
+  });
+
+  it("still needs the plan file in a mention to cover an ambiguous id, whatever the other file marks", () => {
+    const shared = [
+      { id: "13-S1", file: "docs/plans/13-a.md", ambiguous: true, delivered: true },
+      { id: "13-S1", file: "docs/plans/13-b.md", ambiguous: true, delivered: false },
+    ];
+    expect(pickStage({ stages: shared, corpus: ["Stage 13-S1"], activeTasks: [] })?.file).toBe("docs/plans/13-b.md");
+    expect(pickStage({ stages: shared, corpus: ["13-S1 of docs/plans/13-b.md"], activeTasks: [] })).toBeNull();
   });
 
   it("is null for a repository without plans", () => {
@@ -799,6 +906,14 @@ describe("buildPlan", () => {
       stages: [stage],
     });
     expect(plan.actions.map((a) => a.target)).toEqual([".ai/specs/2026-09-20-b.md"]);
+  });
+
+  it("converges: a delivered first stage is not named again, the next uncovered stage is", () => {
+    const delivered = { id: "00-S4", file: "docs/plans/00-f.md", ambiguous: false, delivered: true };
+    const next = { id: "00-S5", file: "docs/plans/00-f.md", ambiguous: false, delivered: false };
+    const plan = buildPlan({ ...base, stages: [delivered, next] });
+    expect(plan.actions.map((a) => a.target)).toEqual(["00-S5"]);
+    expect(buildPlan({ ...base, stages: [delivered] }).actions).toEqual([]);
   });
 
   it("writes the next spec while a run slices the only unsliced one, which is no longer a candidate", () => {
