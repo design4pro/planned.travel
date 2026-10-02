@@ -49,7 +49,9 @@ import {
   restoreTrip,
   startTripCopy,
   TripArchivedError,
+  tripMembersRepository,
   tripRolesFor,
+  tripsRepository,
   updateTrip,
   updateTripMember,
 } from '../trips'
@@ -58,7 +60,12 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
-import { createDayNote, listTripDays, updateDay } from '../days'
+import {
+  createDayNote,
+  daysRepository,
+  listTripDays,
+  updateDay,
+} from '../days'
 import { createExpense } from '../expenses'
 import { recordFile } from '../files'
 import { createAssignment } from '../itinerary'
@@ -794,6 +801,38 @@ describe('trip lifecycle', () => {
           roles.get(targetId),
         ),
       ).toBe('owner')
+    })
+
+    it('leaves no trip behind when the mint fails part-way, for create and copy alike', async () => {
+      const source = await createTrip(tenant.scope, { title: 'Lisbon' })
+      const before = await listTrips(tenant.scope)
+      const dates = { startDate: '2026-06-01', endDate: '2026-06-03' }
+
+      // The owner membership fails: without the compensation this is a Trip nobody can see.
+      const insertMember = vi
+        .spyOn(tripMembersRepository, 'insert')
+        .mockRejectedValueOnce(new Error('d1 down'))
+      await expect(
+        startTripCopy(tenant.scope, source.id, { title: 'Copy', ...dates }),
+      ).rejects.toThrow('d1 down')
+      insertMember.mockRestore()
+
+      // The day run fails after the owner landed: the row, its owner and the flag all go together.
+      const insertDays = vi
+        .spyOn(daysRepository, 'insertMany')
+        .mockRejectedValue(new Error('d1 down'))
+      await expect(
+        startTripCopy(tenant.scope, source.id, { title: 'Copy', ...dates }),
+      ).rejects.toThrow('d1 down')
+      await expect(
+        createTrip(tenant.scope, { title: 'Fresh', ...dates }),
+      ).rejects.toThrow('d1 down')
+      insertDays.mockRestore()
+
+      expect((await listTrips(tenant.scope)).map((row) => row.id)).toEqual(
+        before.map((row) => row.id),
+      )
+      expect(await tripsRepository.count(tenant.scope)).toBe(before.length)
     })
 
     /* -------------------------------------------- the asynchronous half */
