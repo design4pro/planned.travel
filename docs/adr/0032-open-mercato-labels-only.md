@@ -5,6 +5,8 @@ Date: 2026-10-01
 Amends: ADR 0018 (the `groom` / `autofix` / `spec` command labels are gone), ADR 0031 (the
 promotion carries `do-not-merge`). Retires the intake labels, which arrived with the agent kit and
 were never recorded in an ADR.
+Amended by: ADR 0033 (the Reconciler starts implementation; the WIP limit counts only PRs that wait for
+a person; an agent may lift a hold an agent set).
 
 ## Context
 

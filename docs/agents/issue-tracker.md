@@ -57,4 +57,6 @@ merged spec and hands it to `om-auto-implement-spec`; starting `implement-spec` 
 with the spec path, its issue number or the spec-PR number is that same skill by hand. Either way
 the implementation ships on its own PR with `Closes #n`. Interactive thinking
 before an issue exists is `brainstorm` (`om-brainstorm`), which ends by filing the issue through
-`om-prepare-issue`.
+`om-prepare-issue`. A spec that `afk-plan-to-spec` writes for a plan stage of `docs/plans/` is the exception to "a
+human merges the spec PR": the pipeline merges it on its specialist panel's verdicts (ADR 0033), and the Reconciler
+slices it. The feature-spec flow above is unchanged, and so is the spec task `implement-ticket` writes: a person merges both of those spec PRs.

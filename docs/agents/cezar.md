@@ -137,7 +137,10 @@ run, `maxParallel: 2` and review of every pull request are the gate.
 
 ## Workflows (`.ai/cezar/workflows/`)
 
-Every om workflow is a `command` step that provisions the worktree, then one agent step whose
+Every om workflow is a `command` step that provisions the worktree - always through
+`.ai/scripts/bootstrap.sh`, which installs dependencies with up to three attempts (30 and 60 seconds
+apart) because a check step cannot retry itself and one registry error used to end a run before any
+agent started - then one agent step whose
 prompt is the skill as a slash command (`/om-… {{task}}`; never `skill:`, which would load the
 thin `.ai/skills/` override alone). `allowedTools` is the full set for skills that write code and
 drops `Edit`/`Write` for the ones that must not.
@@ -153,9 +156,11 @@ drops `Edit`/`Write` for the ones that must not.
 | `pr-fix`              | `/om-auto-fix-pr {{task}}`                                               | manual request after assessing review findings                                                                                                                                             |
 | `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50` | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                                                                      |
 | `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                            | a human, from the cockpit, with the idea as the task                                                                                                                                       |
-| `triage`              | skill `afk-triage`                                                       | a human, from the cockpit; the automations run it as the second step of `issue-groom`                                                                                                      |
-| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-pr-autopilot` | automation **Implement the next ready issue** (schedule, every 2 hours), or a human with an issue number                                                                                   |
-| `spec-to-tickets`     | skill `afk-to-tickets`                                                   | automation **Spec to tickets** (schedule, weekdays 07:00)                                                                                                                                  |
+| `triage`              | skill `afk-triage`                                                       | the Reconciler (`triage` action) or a human, from the cockpit; the automations run it as the second step of `issue-groom`                                                                  |
+| `unblock`             | skill `afk-unblock`                                                      | the Reconciler (`unblock` action), or a human, from the cockpit, on an issue number                                                                                                        |
+| `plan-to-spec`        | skill `afk-plan-to-spec`, the spec gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`write-spec` action; a `DELIVERED:` outcome opens a docs-only PR instead), or a human with a stage id                                                                      |
+| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`implement` action), automation **Implement the next ready issue** (schedule, every 2 hours), or a human with an issue number                                              |
+| `spec-to-tickets`     | skill `afk-to-tickets`                                                   | the Reconciler (`slice` action), automation **Spec to tickets** (schedule, weekdays 07:00), or a human with a spec path                                                                    |
 | `architecture-review` | skill `afk-architecture-review`                                          | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                                                                        |
 | `lessons`             | skill `afk-lessons`                                                      | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                                                                    |
 
@@ -169,12 +174,16 @@ own default unless the automation sets `task.model` in `.ai/cezar/automations.js
 
 The task text an event automation sends is the issue or PR number alone (`{{github.number}}`); a
 second token would read as a brief to `om-auto-fix-issue`. The implement schedule sends no number:
-`implement-ticket` asks `node .ai/scripts/backlog-status.mjs --next` for one. From the cockpit type the same: a number, a
-spec path, or for `brainstorm` the idea.
+`implement-ticket` asks `node .ai/scripts/backlog-status.mjs --next` for one. The Reconciler sends the
+task text `--plan` prints (`Implement issue #123.`, `Resolve the hold on issue #45.`, `Triage issue #67.`,
+`Slice the spec .ai/specs/<file>.md into tickets.`, `Write the spec for plan stage 02-S3 (docs/plans/02-places-and-maps.md).`).
+From the cockpit type the same: a number, a spec path, a stage id, or for `brainstorm` the idea.
 
-Workflows that need a local app use `scripts/worktree/bootstrap.sh --profile worktree --no-seed`
-(deps, route tree, `.dev.vars`, local D1 with airports, basemap when cached; no server). The design-only
-`spec` and read-only workflows only install dependencies and generate routes. In a run the
+Workflows that need a local app use `bash .ai/scripts/bootstrap.sh --profile worktree --no-seed`
+(the retrying install, then `scripts/worktree/bootstrap.sh`: route tree, `.dev.vars`, local D1 with airports,
+basemap when cached; no server). The design-only `spec` and read-only workflows run
+`bash .ai/scripts/bootstrap.sh`, which only installs dependencies and generates routes. The
+`implement-ticket` gate starts with it too. In a run the
 `SessionStart` hook (`scripts/cloud/session-start.sh`) does no more than install dependencies when
 `node_modules` is missing, which is all the workflows without a bootstrap step get. The validation gate the
 skills run is `validation.commands` in `.ai/agentic.config.json`, which leaves the full journeys to
@@ -215,7 +224,8 @@ ready issue** every two hours, **Spec to tickets** on weekdays at 07:00, **Weekl
 review** on Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. A schedule has no
 issue author of its own to gate; `.ai/scripts/backlog-status.mjs --next` applies the `authors` gate to the issue it
 picks, and what bounds the run is that script and its skill - one issue
-implemented and nothing while three agent PRs are open, at most one spec sliced, three refactor
+implemented and nothing while three PRs are waiting for a person (`needs-qa` without `qa-approved`, `risk-high`, `security`,
+`blocked`, or `changes-requested` untouched for 24 hours), at most one spec sliced, three refactor
 issues or one pull request per run.
 
 No label starts a run (ADR 0032). Every event trigger is gated on who can produce it: the open
@@ -235,6 +245,54 @@ other, and a ticket it briefs is picked by the schedule once its blockers close.
 A review or autopilot run checks out the PR's head, hooks and agent layer included: a branch
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
+
+## The Reconciler
+
+The schedules above start a job on a clock. The Reconciler starts a job when there is one: a host cron, every
+ten minutes, that asks `node .ai/scripts/backlog-status.mjs --plan` what there is to start and starts it, inside
+`maxParallel`. ADR 0033 records why; `SDLC.md` § The Reconciler is the table of what it may start. This
+repository owns the contract and the workflows it names; the cron and the repair of failed runs live on the
+host, in `design4pro/cezar` (`host/`), with no Cezar engine change.
+
+`--plan` prints one JSON document and exits 0, whatever it finds:
+
+```json
+{
+  "wip": { "waitingForPerson": 1, "limit": 3 },
+  "actions": [
+    {
+      "kind": "unblock",
+      "target": "#45",
+      "workflow": "unblock",
+      "task": "Resolve the hold on issue #45."
+    },
+    {
+      "kind": "triage",
+      "target": "#67",
+      "workflow": "triage",
+      "task": "Triage issue #67."
+    }
+  ]
+}
+```
+
+At most one action per kind, in the order implement, unblock, triage, slice, write-spec; a kind with no
+candidate is left out, and a repository with nothing to do prints `"actions": []`. `target` is an issue
+(`#123`), a spec path (`.ai/specs/<file>.md`) or a plan stage id (`02-S3`). `--plan` is a separate output from
+`--json` and `--next`, and combining them is an error. The Reconciler sends `workflow` and `task` as they are.
+
+`write-spec` names the first stage of `docs/plans/` that no spec and no issue mentions, unless the plan marks it with a
+line starting `Delivered:` in the stage's own section (`plan-to-spec` writes it when the code already does what the
+stage asks) or the plan is one the `docs/plans/README.md` table lists as migrated. Without that, a stage the skill can
+only end on stays the first candidate and is named again on every tick. It waits while an open PR adds a spec or comes
+from a branch `docs/plan-delivered-*` (the docs-only PR that marks delivered stages: until it merges, the stages it marks
+are still uncovered on the base branch); a person's own edit to `docs/plans/` holds nothing.
+
+Everything the rules need is in the output of two `gh` list calls, the specs and plans in the checkout, and
+`.ai/cezar/runs.json`; it reads no network beyond that and writes nothing. A candidate is dropped while a
+cockpit run holds it (`queued`, `running`, `waiting` or `review`, or `failed` with `autoResumeAt`): an issue by
+its `issueNumber`, a spec path or a stage id by the run's task text. Because `runs.json` is gitignored, run it
+from the main checkout, as the cron does, not from a worktree.
 
 ## One independent review per SHA
 
