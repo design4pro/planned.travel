@@ -17,7 +17,13 @@
 
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -120,7 +126,12 @@ function run(definitions, holding, args = []) {
   )
   return new Promise((resolve, reject) => {
     const child = spawn('bash', [script, ...args], {
-      env: { ...process.env, CEZ_API: baseUrl, CEZ_PROJECT: PROJECT, NO_PROXY: '127.0.0.1' },
+      env: {
+        ...process.env,
+        CEZ_API: baseUrl,
+        CEZ_PROJECT: PROJECT,
+        NO_PROXY: '127.0.0.1',
+      },
     })
     let stdout = ''
     let stderr = ''

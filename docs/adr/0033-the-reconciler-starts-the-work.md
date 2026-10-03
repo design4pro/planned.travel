@@ -38,8 +38,8 @@ exists, and a trigger per event cannot see a difference.
    per kind - implement, unblock, triage, slice, write-spec, in that order - each carrying the workflow
    and the task text to send. No Cezar engine change: the cron, the cockpit API, and the scripts and
    workflows in this repository are all there is. The three schedules in
-   `docs/agents/cezar-automations.json` (implement, slice and the issue pair) are left as they are until the Reconciler has run alone for a
-   while.
+   `docs/agents/cezar-automations.json` (implement, slice and the issue pair) are left as they are
+   until the Reconciler has run alone for a while.
 2. **WIP counts what only a person can clear.** Open PRs by a trusted author, except the `do-not-merge`
    promotion, that are `needs-qa` without `qa-approved`, or `risk-high`, `security` or `blocked`, or
    `changes-requested` and untouched for 24 hours (an autopilot that stopped there is parked on a decision
@@ -103,8 +103,8 @@ exists, and a trigger per event cannot see a difference.
 - A plan stage id is not unique: `13-S1` to `13-S4` are in two files, so a mention of one of them covers
   the stage only when it also names the plan file. A migrated plan is frozen, and `afk-plan-to-spec`
   refuses its stages.
-- Until the three schedules (implement, slice and the issue pair) are removed, `implement-ticket` and `spec-to-tickets` can be started by a
-  schedule and by the Reconciler. Both check what holds an issue before they claim it, and the
+- Until the three schedules (implement, slice and the issue pair) are removed, `implement-ticket`
+  and `spec-to-tickets` can be started by a schedule and by the Reconciler. Both check what holds an issue before they claim it, and the
   Reconciler drops a candidate a live run already holds, so the worst case is a run that stops.
   Amended 2026-10-03: the implement and slice schedules are removed from `docs/agents/cezar-automations.json`, and the
   two issue-event automations that ran `issue-groom` are kept with `"enabled": false` only for their `authors` gates,
