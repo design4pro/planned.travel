@@ -1,11 +1,11 @@
 # Who is on this trip: the people route, the membership guards, and the visibility switch
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | in-progress |
-| **Issue**          | #118  |
-| **Spec PR**        | #436  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #118        |
+| **Spec PR**        | #436        |
+| **Implementation** | #453, #458  |
 
 `01-S6a` · FR #118 · Parent PRD #104 · Stage `01-S6` of `docs/plans/01-trips-core.md` (frozen), its **first slice**; PRD decisions 1b, 6, 11 and 16.
 
@@ -420,7 +420,7 @@ module, so it would have hit the same wall.
 - `trip-lifecycle.ts` imports the two functions it still uses. It is 145 lines lighter and its
   behaviour is identical.
 
-A2's *reasoning* stands and is what the outcome honours: one concept, one owner (`docs/SPEC.md` §8),
+A2's _reasoning_ stands and is what the outcome honours: one concept, one owner (`docs/SPEC.md` §8),
 no second copy of the envelope arithmetic. Only its placement was wrong, and the constraint that
 made it wrong is worth stating plainly for the next spec that reaches for a route `-server` module:
 **anything exported from `src/routes/**` must be resolvable in the browser bundle, transitively.**
