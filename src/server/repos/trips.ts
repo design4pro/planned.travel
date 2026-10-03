@@ -903,6 +903,7 @@ function assertDateOrder(
  * Copying a trip (PRD #104 decisions 3, 4a, 4b, 6 and 9)
  * ---------------------------------------------------------------------------------------------- */
 
+
 export interface StartTripCopyInput {
   readonly title: string
   /** ISO date. Both dates present or both absent — a half-open range is a mistake, not a template. */

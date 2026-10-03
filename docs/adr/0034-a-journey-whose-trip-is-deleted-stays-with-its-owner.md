@@ -44,7 +44,9 @@ Rejected: **Option C, accepting the leak.** It keeps on purpose what ADR 0007 fo
 
 - **Forward-only.** Trip deletion nulls both `journeys.trip_id` and `journey_entries.source_trip_id`, so
   an orphan made before this change cannot be told apart from a journey that never had a trip. Those
-  rows are not backfilled and stay readable by the whole workspace.
+  rows are not backfilled and stay readable by the whole workspace. The same holds for a trip deleted
+  by a Worker that still runs the old code between the migration and the deploy: it removes the trip
+  without stamping its journeys.
 - **An orphan whose owner leaves the workspace becomes unreadable**, and still counts against the
   journeys quota (`assertQuota` counts the tenant's rows). Fixing that is a follow-up issue, not part
   of this record.
