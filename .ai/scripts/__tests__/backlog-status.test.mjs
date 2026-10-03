@@ -18,6 +18,8 @@
  * hold a person set.
  */
 
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -112,6 +114,15 @@ describe("trustedAuthors", () => {
 
   it("still trusts nobody when no issue automation is gated", () => {
     expect(trustedAuthors([AUTOMATIONS[1]]).size).toBe(0);
+  });
+
+  // The issue pair is kept disabled in the committed file for this gate alone (ADR 0033): removing
+  // it would leave every issue EXTERNAL and the Reconciler nothing to start.
+  it("trusts the maintainer through the committed definitions", () => {
+    const committed = JSON.parse(
+      readFileSync(new URL("../../../docs/agents/cezar-automations.json", import.meta.url), "utf8"),
+    );
+    expect(trustedAuthors(committed).has("rafalwolak")).toBe(true);
   });
 });
 

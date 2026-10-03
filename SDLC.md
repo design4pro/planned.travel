@@ -117,8 +117,8 @@ No label says an issue is ready, and no label starts a run (ADR 0032). The taxon
 
 An issue is **ready** when all of these hold: it is open; a maintainer opened it (the `authors` gate of the issue automations) and `sentry-triage` did not file it; its body or a maintainer's comment carries an `## Agent Brief`; it has a category, a priority and a risk label; every issue under its `Blocked by` is closed; no open PR addresses it; no 🤖 not-ready or `STOP:` comment waits for an answer; and it carries none of `blocked`, `do-not-merge`, `do-not-close` or `in-progress`. A later trusted `🤖 RESOLVED:` comment (what `afk-unblock` posts) answers a not-ready or `STOP:` comment, as a human reply does. A trusted author's comment that says `HUMAN-ONLY:`, or an issue body that opens with it (what `afk-plan-to-spec` files for a stage only a person can decide), names what only a person can do, and no run is started on that issue until a maintainer comments. `.ai/scripts/backlog-status.mjs` is the one implementation of that rule. It prints the report a person reads, with `--next` it picks the issue the next `implement-ticket` run takes: highest priority first, then oldest, and nothing while three PRs are **waiting for a person**, and with `--plan` it lists everything the Reconciler may start right now (§ Repo automations, ADR 0033). A PR waits for a person when it is open, by a maintainer, not the `do-not-merge` promotion, and it is `needs-qa` without `qa-approved`, `risk-high`, `security` or `blocked`: those are the PRs only a person can move. A PR the pipeline merges by itself (`review`, `changes-requested`, `merge-queue`, a plain draft) is not inventory, so it does not hold back the next implementation. Trusted authors are the `authors` gates of the issue automations plus the retired `design4pro-agent`, every issue of which came out of an agent run (ADR 0031, amendment of 2026-10-01).
 
-- **How an issue gets there.** Opening it starts `issue-groom`: `om-auto-manage-issues` adds the SDLC labels, the Definition of Ready check and implementation notes, then `afk-triage` writes the Agent Brief, or puts a `blocked` hold on it with a comment that starts `🤖 HUMAN-ONLY:` and names the one thing a person must do. One run, two steps, so the two never race on the same labels. `afk-to-tickets` files tickets whose body is their brief; `afk-plan-to-spec` writes the spec for a stage of `docs/plans/` that nothing covers yet, which `afk-to-tickets` then slices.
-- **How it leaves a hold.** A hold an agent set that does not say `HUMAN-ONLY:` is offered to `afk-unblock`, which asks a specialist (§ Delegated decisions): on a verdict it removes `blocked` and posts `🤖 RESOLVED:`, otherwise it posts `🤖 HUMAN-ONLY:` and leaves the hold. A hold a person set, or a person commented on last, and a `HUMAN-ONLY:` one stay until a person removes `blocked`; that event grooms and triages the issue again.
+- **How an issue gets there.** The Reconciler's next tick starts `triage` on it: `afk-triage` sets the category, priority and risk and writes the Agent Brief, or puts a `blocked` hold on it with a comment that starts `🤖 HUMAN-ONLY:` and names the one thing a person must do. A person who wants the Definition of Ready check and implementation notes first starts `issue-groom` from the cockpit: `om-auto-manage-issues`, then `afk-triage`, in one run so the two never race on the same labels. `afk-to-tickets` files tickets whose body is their brief; `afk-plan-to-spec` writes the spec for a stage of `docs/plans/` that nothing covers yet, which `afk-to-tickets` then slices.
+- **How it leaves a hold.** A hold an agent set that does not say `HUMAN-ONLY:` is offered to `afk-unblock`, which asks a specialist (§ Delegated decisions): on a verdict it removes `blocked` and posts `🤖 RESOLVED:`, otherwise it posts `🤖 HUMAN-ONLY:` and leaves the hold. A hold a person set, or a person commented on last, and a `HUMAN-ONLY:` one stay until a person removes `blocked`; the issue still has no Agent Brief, so the Reconciler triages it again.
 - **Limits on skills:** an implementing run takes `risk-high` or `security` work only on a security and tenancy specialist's approving verdict, recorded with its conditions as acceptance criteria, and it re-derives the risk from the area the brief touches rather than trusting the label. Skills never close an issue and never remove a hold a person set or took over; they lift only what an agent set, and only on a specialist's verdict or a checked fact.
 - **Human override:** a person starts any workflow on any issue from the cockpit at any time: `issue-groom`, `issue-autofix`, `spec`, `implement-ticket`.
 
@@ -158,7 +158,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
 - **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` by `om-pr-autopilot --allow-merge` behind the ruleset and the QA gate (ADR 0031); the `develop` -> `main` promotion (it carries `do-not-merge`), `risk-high` QA and every spec PR but one stay with a person: the `om-auto-write-spec` flow, and the spec task `implement-ticket` writes. The one is a spec PR `afk-plan-to-spec` wrote: it is reviewed by an independent specialist panel (§ Delegated decisions), its verdicts are recorded in the PR body, and the pipeline merges it once CI is green (ADR 0033); a panel that does not approve leaves it `blocked` for a person.
-- **The cap is on inventory, not on rate.** `--next` and `--plan` start no implementation while three PRs wait for a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`, or `changes-requested` untouched for 24 hours, which is an autopilot parked on a decision), so a burst of intake cannot outrun the review only a person can give. Raising throughput means reviewing those PRs, not tuning the schedule.
+- **The cap is on inventory, not on rate.** `--next` and `--plan` start no implementation while three PRs wait for a person (`needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`, or `changes-requested` untouched for 24 hours, which is an autopilot parked on a decision), so a burst of intake cannot outrun the review only a person can give. Raising throughput means reviewing those PRs, not tuning the Reconciler.
 
 ## Unattended decisions
 
@@ -242,8 +242,8 @@ Two amendment rules are specific to this document's shape:
   PR in two shards (ADR 0016); WebKit runs nightly, not per PR (ADR 0022, #552). A PR whose diff
   stops at documentation skips them, on the `scope` job's word — there is no label that turns them
   on or off.
-- **Who starts a run.** No label does (ADR 0032). An issue a maintainer opens is groomed and
-  triaged on the event; a ready issue is implemented by the two-hour schedule; a PR is driven by
+- **Who starts a run.** No label does (ADR 0032). The Reconciler triages an issue a maintainer
+  opens, implements a ready one and slices a merged spec (§ The Reconciler); a PR is driven by
   its own automations. PR repair and second opinions require an explicit request; review findings
   never re-arm a run. A person can start any workflow from the cockpit.
 - **Risk here.** `risk-high` means the diff touches `src/server/auth`, `src/server/repos/base.ts`,
@@ -311,26 +311,30 @@ Workflows live in `.ai/cezar/workflows/`; the committed definitions are
 
 | Automation                         | Trigger                               | Workflow                                               |
 | ---------------------------------- | ------------------------------------- | ------------------------------------------------------ |
-| Groom and triage new issues        | `issue.opened` by a maintainer        | `issue-groom` (`om-auto-manage-issues` + `afk-triage`) |
-| Re-triage when a hold is cleared   | `blocked` removed                     | `issue-groom`                                          |
-| Implement the next ready issue     | every 2 hours                         | `implement-ticket` (`backlog-status.mjs --next`)       |
+| Groom and triage new issues        | disabled (was `issue.opened`)         | `issue-groom` (`om-auto-manage-issues` + `afk-triage`) |
+| Re-triage when a hold is cleared   | disabled (was `blocked` removed)      | `issue-groom`                                          |
 | Autopilot new pull requests        | `pull_request.opened` by a maintainer | `pr-autopilot`                                         |
 | Merge reviewed agent pull requests | `merge-queue` by `rafalwolak`         | `pr-autopilot`                                         |
-| Spec to tickets                    | weekdays 07:00                        | `spec-to-tickets` (`afk-to-tickets`)                   |
 | Weekly architecture review         | Mondays 06:00                         | `architecture-review` (`afk-architecture-review`)      |
 | Weekly lessons                     | Fridays 16:00                         | `lessons` (`afk-lessons`)                              |
 
-Ten workflows have **no cezar automation**: `housekeeping` (`om-review-prs`, `om-merge-buddy`
+Thirteen workflows have **no enabled cezar automation**: `housekeeping` (`om-review-prs`, `om-merge-buddy`
 report, `om-close-fixed-issues`), `backlog`, `brainstorm`, `implement-spec`, `pr-review`,
-`issue-autofix`, `spec`, `triage`, `unblock` and `plan-to-spec`. The Reconciler (§ The Reconciler)
-starts `triage`, `unblock` and `plan-to-spec`, and `implement-ticket` and `spec-to-tickets` too; a
-person starts any of them, and every other workflow on that list but `housekeeping`, from the cockpit.
+`issue-autofix`, `issue-groom`, `spec`, `triage`, `unblock`, `plan-to-spec`, `implement-ticket` and
+`spec-to-tickets`. The Reconciler (§ The Reconciler) starts the last five; a person starts any of
+them, and every other workflow on that list but `housekeeping`, from the cockpit. The implement and
+slice schedules were removed, because beside the Reconciler one issue could be started twice (ADR
+0033). The two `issue-groom` automations are disabled for the same reason and stay in the file only
+because `backlog-status.mjs` and `afk-unblock` read the trusted authors from the `authors` gates of
+the issue automations: removing them would trust nobody. So a new issue gets `afk-triage` from the
+Reconciler but no automatic `om-auto-manage-issues` groom; `issue-groom` stays available from the
+cockpit.
 
 `housekeeping` is the exception, and it matters because the sentence that used to stand here said
 the opposite: **it runs on a schedule, just not on cezar's.** A launchd agent on the cezar host —
 `dev.planned-travel.housekeeping`, template at `.ai/scripts/launchd/` — calls
 `.ai/scripts/housekeeping.sh` at 07:30, 12:30 and 17:30 on weekdays, and that script POSTs one
-`housekeeping` run to the cockpit's API. Cezar does have a scheduler — four rows of the table are
+`housekeeping` run to the cockpit's API. Cezar does have a scheduler — two rows of the table are
 schedules, not events — but it takes one occurrence per automation, in the shapes `daily`,
 `weekdays` and `weekly` at a single time of day, or `hours` around the clock
 (`docs/agents/cezar-automations.json`). Three runs a weekday at fixed hours is none of them, so this cadence lives outside it (`docs/agents/cezar.md`
@@ -341,7 +345,7 @@ the sweep by hand, and that was wrong.
 The `authors: ["rafalwolak"]` filter on the issue and PR automations is a security gate, not a
 convenience: those runs read the issue or PR body as a prompt and hold Bash with no allowlist, so
 anything from anyone else waits for a maintainer to start a run from the cockpit. The same list is
-what `backlog-status.mjs` trusts, so such an issue is never picked by the schedule either.
+what `backlog-status.mjs` trusts, so the Reconciler never starts a run on such an issue either.
 
 **Guardrails:**
 

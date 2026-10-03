@@ -9,7 +9,7 @@ description: Triage one GitHub issue unattended - verify it, then either write t
 
 Adapted from mattpocock/skills `triage` for unattended runs. One issue per run. You change labels, post one comment, and may file the follow-up issues of a split (step 3). You never edit code, commit, close an issue or remove a human's label.
 
-No label marks an issue ready (ADR 0032): the Agent Brief does. `.ai/scripts/backlog-status.mjs` reads it, together with the category, priority and risk labels, and the scheduled implement-ticket run takes the issue from there.
+No label marks an issue ready (ADR 0032): the Agent Brief does. `.ai/scripts/backlog-status.mjs` reads it, together with the category, priority and risk labels, and the Reconciler's implement-ticket run takes the issue from there.
 
 A hold is the one outcome that needs a person, so it is written to say so: the Reconciler (ADR 0033) launches `afk-unblock` on any hold whose last comment is an agent's and does not say `HUMAN-ONLY:`, and a hold that does not carry the marker is therefore one more run on a question you already decided only a person can answer.
 

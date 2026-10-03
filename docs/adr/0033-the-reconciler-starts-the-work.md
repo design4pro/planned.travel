@@ -106,3 +106,6 @@ exists, and a trigger per event cannot see a difference.
 - Until the three schedules are removed, `implement-ticket` and `spec-to-tickets` can be started by a
   schedule and by the Reconciler. Both check what holds an issue before they claim it, and the
   Reconciler drops a candidate a live run already holds, so the worst case is a run that stops.
+  Amended 2026-10-03: the implement and slice schedules are removed from `docs/agents/cezar-automations.json`, and the
+  two issue-event automations that ran `issue-groom` are kept with `"enabled": false` only for their `authors` gates,
+  which `backlog-status.mjs` and `afk-unblock` read as the trusted authors, so the trust gate is unchanged.

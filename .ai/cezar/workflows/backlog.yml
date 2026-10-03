@@ -1,6 +1,6 @@
 # Started by a human from the cockpit, or `cezar run "<filter>" --workflow backlog`. The `backlog`
 # skill (.claude/skills/backlog/SKILL.md) runs .ai/scripts/backlog-status.mjs and reads the result:
-# the counts per state, the READY set in the order the scheduled implement-ticket run takes it, and
+# the counts per state, the READY set in the order the Reconciler's implement-ticket run takes it, and
 # the one step that moves each issue. It never applies a label - no label starts work (ADR 0032) -
 # so the step holds Bash but neither Edit nor Write (ADR 0018).
 #
