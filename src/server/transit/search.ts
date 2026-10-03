@@ -5,25 +5,34 @@
  * three rules this module applies are the ones that make an outbound, metered, third-party call
  * safe to expose to a browser, and a second door past them would be a second policy.
  *
- * ## The cache is shared across tenants by construction
+ * ## A cached answer belongs to the member whose Request fetched it
  *
- * {@link transitCacheKey} is built from the normalised query and nothing else — origin stop,
- * destination stop, date, mode filter. It holds no trip id, no day id, no member id and no
- * organization id, so two workspaces asking the same question of the same timetable are one
- * question. **That two stops connect on a date is a public fact about a timetable, not a fact
- * about anybody's trip**, and a key that quietly acquired a tenant id would leak nothing while
- * multiplying the provider bill by the number of workspaces. `__tests__/search.test.ts` asserts
- * the two keys are the same string, because that failure is invisible from every screen.
+ * {@link transitCacheKey} is built from the organization, the member and the normalised query -
+ * origin stop, destination stop, date, clock, mode filter. HERE's Platform Terms forbid "scaling
+ * one Request to serve multiple End Users" (§6.4 l) and "Provid[ing] Results and/or HERE Content to
+ * another person or entity" (§6.4 h), and an End User is every person who uses the Application
+ * (§21.7), not the workspace. So two members asking the same question of the same timetable are
+ * two Requests, whether they share a workspace or not. ADR 0011 recorded the opposite and was
+ * amended for it; ADR 0019 made the same reading for road routing first.
  *
- * The stop's *name* is deliberately not in the key either. A name is the label the traveller
- * typed; the stop is where it is. Two people who call one platform "Santa Apolónia station" and
- * "Lisboa Sta. Apolónia" are asking about the same platform, and a key built from their words
- * would buy the same answer twice.
+ * Both ids come from the server-side scope the caller holds (`scope.ctx`), never from request
+ * input, so a caller cannot ask for somebody else's entry by naming it.
+ *
+ * The stop's *name* is deliberately not in the key. A name is the label the traveller typed; the
+ * stop is where it is. Two spellings of one platform are one question, and a key built from the
+ * words would buy the same answer twice for the same member.
+ *
+ * ## An answer is stored only when HERE's headers say it may be
+ *
+ * Exhibit 2 §1.3 allows caching "only as explicitly allowed by the caching headers". The provider
+ * client hands the response's headers up with the connections, {@link storableLifetimeSeconds}
+ * reads them, and an answer with no permitting header is returned and not stored. The lifetime is
+ * the lesser of the header's and {@link TRANSIT_CACHE_MAX_TTL_SECONDS}.
  *
  * ## The ceiling is checked after the cache and before the call
  *
- * A cache hit spends nothing, because it costs nothing. A miss spends one unit of the workspace's
- * `transit_searches_per_month` allowance through `#/server/metering/rate`, and the ceiling itself is resolved by
+ * A cache hit spends nothing, because it costs nothing. A miss - and so a first search by every
+ * member - spends one unit of the workspace's `transit_searches_per_month` allowance through `#/server/metering/rate`, and the ceiling itself is resolved by
  * the caller from `resolveLimits()` — the published number is the enforced number.
  *
  * ## Failure is typed
@@ -36,8 +45,10 @@
 import { z } from 'zod'
 
 import { TRANSPORT_MODES } from '#/server/db/schema'
+import { storableLifetimeSeconds } from '#/lib/http-cache'
 import { RateCeilingError, spendRateUnit } from '#/server/metering/rate'
 
+import type { CachingHeaders } from '#/lib/http-cache'
 import type { RateCounterStore } from '#/server/metering/rate'
 
 /* ---------------------------------------------------------------- vocabulary */
@@ -246,39 +257,54 @@ export interface TransitCache {
 }
 
 /**
- * How long an answer is served from the cache.
+ * The longest an answer is ever kept, whatever HERE's headers allow.
  *
- * Six hours: long enough that a planner comparing two dates back and forth pays for each question
- * once, short enough that a cancellation or a timetable amendment is never a day stale. The real
- * bound is the provider's own retention term rather than this number — ADR 0011 carries it, and
- * that document is not on disk at this HEAD (reported on #173) — so this is the conservative side
- * of every term such an agreement usually carries.
+ * A flat 24 hours covers both retention limits in the Platform Terms with one number: 30 days for
+ * Results in general (§6.4 j) and 24 hours for Results in Japan (§6.4 k), without a detector for
+ * which side of that border a search is on. The real lifetime is the header's, when it is shorter.
  */
-export const TRANSIT_CACHE_TTL_SECONDS = 6 * 60 * 60
+export const TRANSIT_CACHE_MAX_TTL_SECONDS = 24 * 60 * 60
 
-/** Bumped when the stored shape changes, so warm entries are ignored rather than misread. */
-const CACHE_VERSION = 'v1'
+/**
+ * Bumped when the key's shape changes, so warm entries are ignored rather than misread.
+ *
+ * `v2` is the first key that names an owner: no entry written under the shared `v1` key is ever
+ * read again, and each ages out of KV within its own six hours.
+ */
+const CACHE_VERSION = 'v2'
 
-/** Four decimal places is about eleven metres: the same platform, whoever pinned it. */
+/** Four decimal places is about eleven metres: the same platform, however it was pinned. */
 function atCoordinates(place: TransitPlace): string {
   return `${place.lat.toFixed(4)},${place.lng.toFixed(4)}`
 }
 
+/** Whose Request an entry is: one member, inside one workspace. */
+export interface TransitCacheOwner {
+  readonly organizationId: string
+  readonly memberId: string
+}
+
 /**
- * The cache key: the normalised query and nothing else.
+ * The cache key: the owner and the normalised query.
  *
- * Bounded by construction — two coordinate pairs, a date, a clock and at most five mode names — so
- * no traveller's typing can push it past KV's 512-byte key limit.
+ * Bounded by construction - two ids of at most 64 characters (`requireTenantContext` refuses
+ * longer), two coordinate pairs, a date, a clock and at most five mode names - so no traveller's
+ * typing can push it past KV's 512-byte key limit. The ids are generated, never typed, and carry
+ * no `:`, so the segments cannot run together.
  *
  * The clock is part of it, and has to be: the provider answers with the services after the instant
  * it is given, so two searches of the same day at two different hours are two different questions
- * with two different answers. Keyed on the date alone, the first search of the day would be served
- * to everyone asking about it for the next six hours.
+ * with two different answers.
  */
-export function transitCacheKey(query: TransitQuery): string {
+export function transitCacheKey(
+  owner: TransitCacheOwner,
+  query: TransitQuery,
+): string {
   const modes = [...new Set(query.modes)].sort()
   return [
     `transit:${CACHE_VERSION}`,
+    owner.organizationId,
+    owner.memberId,
     atCoordinates(query.origin),
     atCoordinates(query.destination),
     `${query.date}T${query.time}`,
@@ -288,13 +314,23 @@ export function transitCacheKey(query: TransitQuery): string {
 
 /* -------------------------------------------------------------------- proxy */
 
+/**
+ * What the provider answered: the connections, and the headers that say whether and for how long
+ * the answer may be stored. The client reports them as they arrived and decides nothing; whether
+ * to keep an answer is this module's call, through {@link storableLifetimeSeconds}.
+ */
+export interface TransitAnswer {
+  readonly connections: ReadonlyArray<TransitConnection>
+  readonly caching: CachingHeaders
+}
+
 /** The provider seam. `./here` implements it; a test hands over a stub. */
 export interface TransitClient {
-  search: (query: TransitQuery) => Promise<ReadonlyArray<TransitConnection>>
+  search: (query: TransitQuery) => Promise<TransitAnswer>
 }
 
 export interface TransitSearchRuntime {
-  /** Where answers are kept — shared across every tenant, on purpose. */
+  /** Where answers are kept - each one under the member whose Request fetched it. */
   readonly cache: TransitCache
   /** Where allowances are tallied — per workspace, on purpose. */
   readonly counters: RateCounterStore
@@ -307,7 +343,10 @@ export interface TransitSearchRuntime {
    * one line earlier - see {@link searchTransitConnections}.
    */
   readonly client: TransitClient | null
+  /** Whose allowance a miss is spent against, and the first half of every cache key. */
   readonly organizationId: string
+  /** The member searching, from the server-side scope: the second half of every cache key. */
+  readonly memberId: string
   /** `resolveLimits().rates.transit_searches_per_month` for this workspace. */
   readonly ceiling: number
   readonly now: () => Date
@@ -359,12 +398,12 @@ async function cached(
  * not charged for a search that never leaves the Worker.
  *
  * A ceiling of zero is not part of that trade, and is answered before anything else. It is a plan
- * boundary rather than a rate limit — the workspace may make no search at all, ever — and
- * `transitCacheKey` deliberately carries no organization, so entries are shared across tenants.
- * Left behind the cache, a Free workspace would get real results for any route a paying one had
- * asked about in the last six hours, and see neither a meter nor a refusal. Nothing leaks and
+ * boundary rather than a rate limit - the workspace may make no search at all, ever. Left behind
+ * the cache, a workspace downgraded to such a plan would keep getting real results from its own
+ * members' old entries, with neither a meter nor a refusal, until they expired. Nothing leaks and
  * nothing is spent, but the boundary stops being one, so it is enforced where the cache cannot
- * reach around it.
+ * reach around it. That protects a member from their own old entries; other tenants' entries are
+ * unreachable by construction, since the key names its owner.
  */
 export async function searchTransitConnections(
   runtime: TransitSearchRuntime,
@@ -374,7 +413,7 @@ export async function searchTransitConnections(
     throw new RateCeilingError('transit_searches_per_month', runtime.ceiling, 0)
   }
 
-  const key = transitCacheKey(query)
+  const key = transitCacheKey(runtime, query)
 
   const hit = await cached(runtime, key)
   if (hit !== null) {
@@ -405,15 +444,17 @@ export async function searchTransitConnections(
     logger: runtime.logger,
   })
 
-  const connections = await runtime.client.search(query)
+  const { connections, caching } = await runtime.client.search(query)
 
-  // An empty answer is not cached. "No connection was found" is far more likely to be a bad date
-  // or a provider having a moment than a fact about the timetable, and six hours is a long time to
-  // keep telling a traveller their train does not exist.
-  if (connections.length > 0) {
+  // Stored only when HERE's headers permit it, and no longer than they say (Exhibit 2 §1.3). An
+  // empty answer is not stored either: "No connection was found" is far more likely to be a bad
+  // date or a provider having a moment than a fact about the timetable, and an hour is a long time
+  // to keep telling a traveller their train does not exist.
+  const lifetime = storableLifetimeSeconds(caching)
+  if (connections.length > 0 && lifetime !== null) {
     try {
       await runtime.cache.put(key, JSON.stringify({ v: 1, connections }), {
-        expirationTtl: TRANSIT_CACHE_TTL_SECONDS,
+        expirationTtl: Math.min(lifetime, TRANSIT_CACHE_MAX_TTL_SECONDS),
       })
     } catch (cause) {
       runtime.logger?.warn('transit.cache.write_failed', {

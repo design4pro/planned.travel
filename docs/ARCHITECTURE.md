@@ -505,7 +505,7 @@ What the model actually says:
   fee" is a claim with a scale attached, and the scale changes the answer by two orders of
   magnitude — so it is set out below rather than asserted.
 
-**Metered outbound calls, and what the shared caches are worth.** Everything above is
+**Metered outbound calls, and what the caches are worth.** Everything above is
 Cloudflare's own meter, where the marginal request is a fraction of a cent and the bill is
 dominated by storage. ADR 0011, 0012 and 0013 added three dependencies that are not: each one
 is a call to a third party at a published per-call rate, and the ceilings that bound them live
@@ -514,19 +514,28 @@ feature module.
 
 Two columns, because the caches are the argument. **Cold** is every user-initiated call
 reaching the provider, which is the ceiling. **Cached** applies an assumed hit rate — 70% for
-geocoding, 40% for transit, 0% for extraction — and those three numbers are assumptions to
-argue with, not measurements. They differ because the keys differ: a geocoding key is an
-address string, shared across every tenant and stored permanently under ADR 0013's storage
-right, so it accumulates; a transit key carries a **date**, so it is shared only among people
-searching the same route on the same day and goes stale by construction; and a confirmation
-file is unique to the traveller who uploaded it, so there is nothing to cache at all.
+geocoding, 0% for transit, 0% for extraction — and those numbers are assumptions to argue
+with, not measurements. They differ because the keys differ: a geocoding key is an address
+string, shared across every tenant and stored permanently under ADR 0013's storage right, so
+it accumulates; a transit key names the **member** whose Request fetched the answer, because
+HERE's Platform Terms forbid one Request serving more than one End User (§6.4 l, §6.4 h; ADR
+0011 as amended, ADR 0019), so it is never shared and is stored only when HERE's caching
+headers permit and for the lesser of their lifetime and 24 hours; and a confirmation file is
+unique to the traveller who uploaded it, so there is nothing to cache at all.
+
+Transit's cached column equals its cold one **until somebody records the caching headers a
+live HERE Public Transit v8 response carries**, as ADR 0019 does for routing. A response with
+no permitting header is not cached at all, and one that does permit it can only absorb the
+same member repeating the same search inside the lifetime, which is a smaller hit rate than
+the 40% a shared key was assumed to earn. Nothing here is measured; `/console/providers`
+reports the real figure.
 
 | Dependency         | Calls / user / mo | Free allowance / mo | Rate above it    | 1 000 users, cached | 10 000 users, cached | 10 000 users, cold |
 | ------------------ | ----------------- | ------------------- | ---------------- | ------------------- | -------------------- | ------------------ |
 | Geoapify geocoding | 100               | 90 000 credits      | $59/mo per tier  | $0                  | $59.00               | beyond tier 1      |
-| HERE transit       | 20                | 30 000 requests     | $0.75 / 1 000    | $0                  | $67.50               | $127.50            |
+| HERE transit       | 20                | 30 000 requests     | $0.75 / 1 000    | $0                  | $127.50              | $127.50            |
 | Workers AI         | 5 files ≈ 575 N   | 300 000 Neurons     | $0.011 / 1 000 N | $3.03               | $59.95               | $59.95             |
-| **Total**          |                   |                     |                  | **$3.03**           | **$186.45**          | **> $187**         |
+| **Total**          |                   |                     |                  | **$3.03**           | **$246.45**          | **> $246**         |
 
 One extraction is taken as ~3 000 input and ~500 output tokens against
 `@cf/meta/llama-3.1-8b-instruct` (25 608 and 75 147 Neurons per million), so ~115 Neurons a
@@ -538,14 +547,17 @@ What that table says, and it is the reason this section exists:
 
 - **Below about a thousand users the outbound bill is still nothing**, exactly like the
   Cloudflare bill. Under 100 users all three sit inside their free allowances.
-- **At ten thousand users the outbound calls are roughly four times the entire Cloudflare
-  bill** — $186 against $46 — and the Workers AI line alone ($59.95) exceeds it. This is what
+- **At ten thousand users the outbound calls are more than five times the entire Cloudflare
+  bill** — $246 against $46 — and the Workers AI line alone ($59.95) exceeds it. This is what
   "a per-use binding is a larger change to the economics than its unit price suggests" means
   in numbers: it inverts which meter matters.
-- **The caches are worth real money on exactly one line.** Transit halves, $127.50 to $67.50.
-  Geocoding's cache is what keeps the tier from escalating. Extraction has none and never
-  will, so it is the line that grows purely linearly and the one whose per-tenant ceiling is
-  therefore load-bearing rather than defensive.
+- **The caches are worth real money on exactly one line.** Geocoding's cache is what keeps the
+  tier from escalating. Transit has no cache worth pricing: it used to halve ($127.50 to
+  $67.50) while one workspace's answer served another's, and the Platform Terms do not allow
+  that, so its meter grows with members searching rather than with distinct routes. Extraction
+  has none and never will, so it is the line that grows purely linearly and the one whose
+  per-tenant ceiling is therefore load-bearing rather than defensive. Transit's ceiling is
+  load-bearing now too: ten members of one workspace repeating a route each spend a unit.
 - **Two of the three are elastic under a ceiling and one is not.** A noisy tenant can be
   refused a search or an extraction; the refusal is a designed state, not a failure. That is
   why ADR 0011 and 0012 both put the limit in `resolveLimits()` — the published number is the

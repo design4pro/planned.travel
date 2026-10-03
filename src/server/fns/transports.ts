@@ -651,8 +651,9 @@ async function transitCeiling(scope: TenantScope): Promise<number> {
  *
  * `POST`, although it reads: a miss spends real money on the workspace's allowance, and a `GET`
  * is the shape a browser, a prefetch or an intermediary feels free to repeat. The proxy behind it
- * decides everything else — the cache is consulted first and is shared across every workspace, the
- * allowance is spent only on a miss, and the provider is reached only after that.
+ * decides everything else - the cache is consulted first and holds only the answer this member's
+ * own earlier Request fetched, the allowance is spent only on a miss, and the provider is reached
+ * only after that.
  *
  * `requireTrip` is what makes this a trip member's search rather than anybody's: the query itself
  * carries no tenant data, but the *spending* is the workspace's, and only somebody who can see the
@@ -675,7 +676,11 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
 
     try {
       const result = await searchTransitConnections(
-        transitRuntime({ organizationId: scope.ctx.organizationId, ceiling }),
+        transitRuntime({
+          organizationId: scope.ctx.organizationId,
+          memberId: scope.ctx.userId,
+          ceiling,
+        }),
         query,
       )
       return {

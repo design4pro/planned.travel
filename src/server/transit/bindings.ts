@@ -28,8 +28,10 @@ import { createHereClient } from './here'
 import type { TransitSearchRuntime } from './search'
 
 export interface TransitRuntimeOptions {
-  /** Whose allowance a miss is spent against. The cache is not keyed on it — see `./search`. */
+  /** Whose allowance a miss is spent against, and the first half of every cache key. */
   readonly organizationId: string
+  /** The member searching: the second half of every cache key. From the server-side scope. */
+  readonly memberId: string
   /** `resolveLimits().rates.transit_searches_per_month` for that workspace. */
   readonly ceiling: number
 }
@@ -37,8 +39,9 @@ export interface TransitRuntimeOptions {
 /**
  * The transit proxy's runtime, bound to this Worker.
  *
- * **One namespace, two roles, and they must not be confused**: the answers are keyed on the query
- * alone and shared by every tenant, while the tallies are keyed per organization.
+ * **One namespace, two roles, and they must not be confused**: the answers are keyed per member
+ * within a workspace (HERE's terms forbid one Request serving more than one End User), while the
+ * tallies are keyed per organization.
  *
  * **A deployment with no credential gets no client, rather than one that throws when called.**
  * `createHereClient` refuses an empty key, and a refusal raised from inside `search` is raised
@@ -54,6 +57,7 @@ export function transitRuntime(
     counters: env.KV,
     client: hereClient(),
     organizationId: options.organizationId,
+    memberId: options.memberId,
     ceiling: options.ceiling,
     now: () => new Date(),
   }
