@@ -1811,6 +1811,41 @@ describe('tenant isolation', () => {
       expect(await expensesRepository.count(beta.tenant.scope)).toBe(1)
     })
 
+    it('marks the journey of a deleted trip inside its own tenant only (#520)', async () => {
+      await deleteTrip(alpha.tenant.scope, alpha.tripId)
+
+      const marked = await journeysRepository.requireById(
+        alpha.tenant.scope,
+        alpha.journeyId,
+      )
+      expect(marked.tripId).toBeNull()
+      expect(marked.tripDeletedAt).toBeInstanceOf(Date)
+      const untouched = await journeysRepository.requireById(
+        beta.tenant.scope,
+        beta.journeyId,
+      )
+      expect(untouched.tripId).toBe(beta.tripId)
+      expect(untouched.tripDeletedAt).toBeNull()
+
+      // B's trip goes too: its orphan is B's owner's, and A cannot see it through either door.
+      await deleteTrip(beta.tenant.scope, beta.tripId)
+      expect(
+        (
+          await journeysRepository.requireById(
+            beta.tenant.scope,
+            beta.journeyId,
+          )
+        ).tripDeletedAt,
+      ).toBeInstanceOf(Date)
+      expect(await getJourney(alpha.tenant.scope, beta.journeyId)).toBeNull()
+      expect(
+        (await listJourneys(alpha.tenant.scope)).map((row) => row.id),
+      ).toEqual([alpha.journeyId])
+      expect(
+        (await listJourneys(beta.tenant.scope)).map((row) => row.id),
+      ).toEqual([beta.journeyId])
+    })
+
     it('shares app settings across the deployment by design', async () => {
       await appSettingsStore.set(
         harness.db,
