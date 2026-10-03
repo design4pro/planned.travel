@@ -48,7 +48,7 @@ question: the readers landed first (#456), and the writes and the journey-id-key
 replacing it, and that is a new record.
 
 Deleting a trip does not delete the journey written about it: `journeys.trip_id` is
-`ON DELETE SET NULL`, so the journey becomes one tied to no trip and, under this rule, readable by the
-whole organization. That is no wider than before this record, when every journey was, but it is a gap
-in the rule rather than a choice: whether a deleted trip takes its journal with it, or the orphaned
-journey stays with its author, is decided separately (#520).
+`ON DELETE SET NULL`, so the journey becomes one tied to no trip. Read plainly, this rule would make it
+readable by the whole organization, which is a gap in the rule rather than a choice; ADR 0034 closes it
+(#520): such a journey stays with its owner, marked by `journeys.trip_deleted_at`, and a journey that
+never had a trip stays the organization's.
