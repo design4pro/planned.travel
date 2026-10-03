@@ -285,7 +285,9 @@ export function TransportDialog({
 
   async function submit(): Promise<void> {
     setTouched(true)
-    if (invalid) {
+    // Enter in a field submits the form without the button, which is only `loading`: a second
+    // call while one is in flight would race the first on the same id.
+    if (invalid || save.pending) {
       return
     }
     /*

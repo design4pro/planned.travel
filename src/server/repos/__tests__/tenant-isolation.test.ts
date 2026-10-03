@@ -3050,7 +3050,8 @@ describe('tenant isolation', () => {
       const before = await betaWorld()
 
       // A's scope cannot see B's row, so the id reads as unused. The primary key refuses the
-      // insert, and the batch takes the chain with it.
+      // insert, the batch takes the chain with it, and the refusal is a NotFoundError like any
+      // other foreign id.
       expect(
         await captureError(() =>
           saveTransport(alpha.tenant.scope, {
@@ -3060,7 +3061,7 @@ describe('tenant isolation', () => {
             chain: CHAIN,
           }),
         ),
-      ).not.toBeNull()
+      ).toBeInstanceOf(NotFoundError)
 
       expect(await betaWorld()).toEqual(before)
       expect(await listTripLegs(alpha.tenant.scope, alpha.tripId)).toEqual([])

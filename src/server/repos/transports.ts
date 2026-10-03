@@ -33,7 +33,11 @@ import {
 } from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
 import { boundParametersPerRow, chunkFor, runBatch } from './batch'
-import { NotFoundError, RepositoryError } from './context'
+import {
+  isUniqueConstraintViolation,
+  NotFoundError,
+  RepositoryError,
+} from './context'
 import { listDayNotes, requireTripDay } from './days'
 import { listDayAssignments } from './itinerary'
 import { assertTripRole, requireTrip } from './trips'
@@ -839,7 +843,7 @@ const chainLegSchema = z.object({
 export type ChainLegInput = z.infer<typeof chainLegSchema>
 
 /**
- * A whole chain, as the one writer accepts it.
+ * A whole chain, as the chain writers accept it.
  *
  * Stations and legs arrive apart rather than as legs carrying two endpoints each, and that is the
  * whole of the join guarantee: the station two legs meet at is written once and read into both
@@ -1199,22 +1203,32 @@ export async function saveTransport(
   })
 
   // The record goes first: the legs reference it.
-  await runBatch(scope, [
-    existing === null
-      ? scope.db.insert(transports).values({
-          ...values,
-          id: transportId,
-          tripId,
-          organizationId: scope.ctx.organizationId,
-        })
-      : scope.db
-          .update(transports)
-          .set(values)
-          .where(
-            tenantFilter(scope, transports, eq(transports.id, transportId)),
-          ),
-    ...statements,
-  ])
+  try {
+    await runBatch(scope, [
+      existing === null
+        ? scope.db.insert(transports).values({
+            ...values,
+            id: transportId,
+            tripId,
+            organizationId: scope.ctx.organizationId,
+          })
+        : scope.db
+            .update(transports)
+            .set(values)
+            .where(
+              tenantFilter(scope, transports, eq(transports.id, transportId)),
+            ),
+      ...statements,
+    ])
+  } catch (cause) {
+    // The scope sees no row under this id, so a primary-key refusal on the insert means the id
+    // belongs to a row outside the scope: answer it like every other foreign id, not as a raw
+    // database failure. The batch has rolled back, so nothing of either row has changed.
+    if (existing === null && isUniqueConstraintViolation(cause)) {
+      throw new NotFoundError('transport', transportId)
+    }
+    throw cause
+  }
 
   return {
     transport: await transportsRepository.requireById(scope, transportId),

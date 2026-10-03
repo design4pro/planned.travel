@@ -1045,13 +1045,13 @@ export interface ChainPayload {
 }
 
 /**
- * The chain as the one writer takes it — or nothing at all.
+ * The chain as the writers take it — or nothing at all.
  *
  * A journey nobody broke up sends an **empty** chain, which is not "no change"
  * but "this transport has no legs": the record's own endpoints are the journey,
  * exactly as they were before this stage existed, and any rows it used to have
  * are removed. That is the same statement the migration made by backfilling
- * nothing, made once more at the only place that writes.
+ * nothing, made once more where the save is sent.
  */
 export function chainPayload(chain: ChainDraft): ChainPayload {
   if (!chain.broken || chain.stations.length < 2) {
