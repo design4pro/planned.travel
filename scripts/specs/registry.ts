@@ -70,6 +70,22 @@ export const FIELDS = ['Status', 'Issue', 'Spec PR', 'Implementation'] as const
  */
 export const SUPERSEDED_FIELD = 'Superseded by'
 
+/**
+ * The optional row a spec written from a plan stage carries, ahead of {@link SUPERSEDED_FIELD}:
+ * `04-S3 (docs/plans/04-budget-and-currencies.md)`.
+ *
+ * A spec that `afk-plan-to-spec` writes is `ready` the moment its pull request merges and has no
+ * issue yet: `afk-to-tickets` files the parent issue when it slices the spec, which is the next
+ * run. Requiring an `Issue` there would make the writer invent a ticket nobody asked for, or leave
+ * the spec in `draft` for a person to flip. The stage names where the work is scheduled from
+ * instead - `docs/plans/` is the backlog source - so a `Plan` row satisfies assertion 6 in the
+ * place of an `Issue`. It is optional in the shape because every older spec was made without one.
+ */
+export const PLAN_FIELD = 'Plan'
+
+/** `NN-SM`, with the plan file that holds the stage: the id alone is not unique (`13-S1`). */
+const PLAN_REFERENCE = /^\d{2}-S\d+[a-z]? \(docs\/plans\/[a-z0-9-]+\.md\)$/
+
 export type Spec = {
   /** Repository-relative path, e.g. `.ai/specs/implemented/2026-09-09-….md`. */
   path: string
@@ -86,6 +102,8 @@ export type Spec = {
   specPr: number | null
   /** The pull requests that built it, in the order they merged. */
   implementation: Array<number>
+  /** The plan stage a spec was written from, or `null` for a spec made without one. */
+  plan: string | null
   /** The issues and pull requests that replaced an archived spec; empty for every other status. */
   supersededBy: Array<number>
 }
@@ -188,17 +206,17 @@ const references = (value: string): Array<number> =>
  * 1. A `.md` in a spec directory is named `YYYY-MM-DD-kebab-case.md`, or is `README.md` /
  *    `AGENTS.md`. The date prefix is what orders the index and what dates a decision.
  * 2. The metadata table carries exactly {@link FIELDS}, in that order, and may end with
- *    {@link SUPERSEDED_FIELD} when and only when the status is `archived`. One shape, so a reader
- *    and a parser see the same thing - the prior art's three shapes are how its fourth document
- *    came to have no block at all.
+ *    {@link PLAN_FIELD} (a well-formed plan stage) and then {@link SUPERSEDED_FIELD} when and only
+ *    when the status is `archived`. One shape, so a reader and a parser see the same thing - the
+ *    prior art's three shapes are how its fourth document came to have no block at all.
  * 3. `Status` is one the document's directory admits ({@link STATUSES_BY_DIRECTORY}). This is the
  *    assertion the whole module exists for.
  * 4. `implemented` names at least one implementation pull request. "Shipped" with nothing that
  *    shipped it is the claim nobody can check later, and will not.
  * 5. `archived` names at least one issue or pull request that replaced it. A dropped design that
  *    does not say what happened instead leaves the reader exactly where they started.
- * 6. `ready` and `in-progress` name an issue. A merged spec nobody can schedule is a decision with
- *    no way to reach it.
+ * 6. `ready` and `in-progress` name an issue or a plan stage. A merged spec nobody can schedule is a
+ *    decision with no way to reach it.
  * 7. Every relative markdown link resolves from the document's own directory. Moving a file between
  *    status directories is the operation this convention adds, and a silently broken link is what
  *    it costs when nobody re-checks. Links inside code - fenced or inline - are syntax being shown
@@ -238,7 +256,11 @@ export const auditSpecs = (
     // comparing keeps one message per mistake, so an archived spec that forgot it is told that and
     // not also told its table is the wrong shape.
     const carriesSuperseded = fields.at(-1) === SUPERSEDED_FIELD
-    const core = carriesSuperseded ? fields.slice(0, -1) : fields
+    const withoutSuperseded = carriesSuperseded ? fields.slice(0, -1) : fields
+    const carriesPlan = withoutSuperseded.at(-1) === PLAN_FIELD
+    const core = carriesPlan
+      ? withoutSuperseded.slice(0, -1)
+      : withoutSuperseded
 
     if (core.join('|') !== FIELDS.join('|')) {
       violations.push({
@@ -249,6 +271,14 @@ export const auditSpecs = (
       violations.push({
         path,
         detail: `**${SUPERSEDED_FIELD}** belongs to an archived spec and to nothing else; Status is \`${status}\``,
+      })
+    }
+
+    const plan = carriesPlan ? (values.get(PLAN_FIELD) ?? '') : null
+    if (plan !== null && !PLAN_REFERENCE.test(plan)) {
+      violations.push({
+        path,
+        detail: `**${PLAN_FIELD}** is \`${plan || '(empty)'}\`; write the stage and its plan file, e.g. \`04-S3 (docs/plans/04-budget-and-currencies.md)\``,
       })
     }
 
@@ -279,10 +309,14 @@ export const auditSpecs = (
       })
     }
 
-    if ((status === 'ready' || status === 'in-progress') && issue === null) {
+    if (
+      (status === 'ready' || status === 'in-progress') &&
+      issue === null &&
+      plan === null
+    ) {
       violations.push({
         path,
-        detail: `Status is \`${status}\` and Issue is empty; a spec waiting for a build needs a ticket somebody can schedule`,
+        detail: `Status is \`${status}\` and Issue is empty; a spec waiting for a build needs a ticket somebody can schedule, or the plan stage it was written from`,
       })
     }
 
@@ -306,6 +340,7 @@ export const auditSpecs = (
       issue,
       specPr: references(values.get('Spec PR') ?? 'none').at(0) ?? null,
       implementation,
+      plan,
       supersededBy,
     })
   }

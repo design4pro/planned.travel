@@ -12,6 +12,9 @@
 > further edits and is kept only as the evidence un-migrated siblings cite when they establish which
 > stage holds a file in which wave.
 >
+> `.ai/scripts/backlog-status.mjs` reads the **Migrated** rows of the table below to skip a frozen plan's
+> stages, so a migrated plan keeps its `**Migrated -> PRD #N; frozen.**` prefix in its row.
+>
 > **A migrated plan file is frozen, not deleted** — ADR 0004 originally said deleted, and its
 > Consequences record why that was suspended and the condition under which deletion becomes safe
 > again.

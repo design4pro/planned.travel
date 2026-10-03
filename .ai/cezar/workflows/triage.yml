@@ -1,13 +1,18 @@
 # `steps` form rather than the `skills:` shorthand, because the shorthand runs with the default
 # tool list, which has no `Agent`: the skill settles open questions through an independent
 # specialist sub-agent (.ai/skills/afk-decide/SKILL.md, SDLC.md § Delegated decisions).
-# Started by a person from the cockpit; the automations run afk-triage as the second step of
-# issue-groom (ADR 0032).
+# Started by the Reconciler (docs/agents/cezar.md, ADR 0033) with `Triage issue #<n>.` when
+# `node .ai/scripts/backlog-status.mjs --plan` lists a `triage` action - the first issue that has no
+# Agent Brief or no category, priority or risk label - or by a person from the cockpit; the automations
+# run afk-triage as the second step of issue-groom (ADR 0032).
 name: triage
 description: Triage one GitHub issue unattended - verify, then write an Agent Brief or put a hold on it (afk-triage).
 steps:
   - id: afk-triage
     name: afk-triage
     skill: afk-triage
-    prompt: '{{task}}'
+    prompt: |
+      {{task}}
+
+      Triage that one issue and no other. Settle every judgement call through a specialist (afk-decide), and put a hold only on what afk-decide § 5 reserves for a person, in a comment whose first line is `🤖 HUMAN-ONLY: <what a person must do>`. The skill lists when to stop; stop with NO_ACTION_NEEDED rather than guess.
     allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
