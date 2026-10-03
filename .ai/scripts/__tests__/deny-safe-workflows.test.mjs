@@ -2,6 +2,7 @@
 // ends it. Run d232173a (money-tracker.online, 2026-10-02) died on an improvised
 // `git reset --hard origin/<branch>`. No workflow step may prescribe such a command: this guard
 // reads the `Bash(...)` deny patterns and checks every step's `command:` and `prompt:` against them.
+// A skill a step invokes is not scanned: its own text carries the rule (AGENTS.md).
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
