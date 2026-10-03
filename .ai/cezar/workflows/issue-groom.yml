@@ -1,13 +1,13 @@
-# Every issue a maintainer opens, and every issue a person takes `blocked` off, is groomed and
-# triaged in one run (ADR 0032): om-auto-manage-issues adds the SDLC labels (category, priority,
-# risk), the Definition of Ready check and a read-only implementation-prep comment (ADR 0018), then
-# afk-triage writes the Agent Brief that makes it ready - or `blocked` with a comment naming the
-# one thing a person must do. One run, two steps, because two automations on the same event would
-# race on the same labels. Both agent steps hold Bash without an allowlist (the tracker descriptor
-# needs it), and the issue body is the prompt, so both triggers are filtered to maintainers
-# (docs/agents/cezar-automations.json). Neither step edits source files; they hold Write and Edit
-# for the comment-body drafts and scratch notes they hand to `gh --body-file`, and Agent to settle
-# open questions through a specialist (.ai/skills/afk-decide/SKILL.md).
+# Started by a person from the cockpit on one issue; its two automations are disabled, and the
+# Reconciler runs `triage` alone (ADR 0033). It grooms and triages the issue in one run (ADR 0032):
+# om-auto-manage-issues adds the SDLC labels (category, priority, risk), the Definition of Ready
+# check and a read-only implementation-prep comment (ADR 0018), then afk-triage writes the Agent
+# Brief that makes it ready - or `blocked` with a comment naming the one thing a person must do.
+# One run, two steps, because two runs on the same issue would race on the same labels. Both agent
+# steps hold Bash without an allowlist (the tracker descriptor needs it), and the issue body is the
+# prompt, so a person reads the issue before starting it. Neither step edits source files; they
+# hold Write and Edit for the comment-body drafts and scratch notes they hand to `gh --body-file`,
+# and Agent to settle open questions through a specialist (.ai/skills/afk-decide/SKILL.md).
 # The bootstrap is deps and the route tree only, no D1 and no basemap.
 name: issue-groom
 description: Groom and triage one issue - labels, Definition of Ready, implementation notes, then an Agent Brief or a hold; never code.

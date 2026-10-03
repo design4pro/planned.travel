@@ -367,9 +367,9 @@ for (const candidate of filingOrder(report.candidates, forced)) {
       '--title',
       title,
       // Exactly these two labels and no others: the category and the priority a Sentry finding
-      // earns by clearing the threshold. No run starts from it: `issue.opened` is gated on
-      // maintainer authors because the groom run holds an unrestricted shell, and this routine
-      // files as the Actions bot. A person reads it and starts a run from the cockpit (ADR 0032).
+      // earns by clearing the threshold. No run starts from it: the Reconciler trusts maintainer
+      // authors only because its runs hold an unrestricted shell, and this routine files as the
+      // Actions bot. A person reads it and starts a run from the cockpit (ADR 0032).
       '--label',
       'bug',
       '--label',

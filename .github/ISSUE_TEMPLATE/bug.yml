@@ -5,9 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        A groom run reads this issue, adds the SDLC labels (priority, risk), posts implementation
-        notes and writes the Agent Brief that queues it for the fix (SDLC.md). The more of the
-        evidence below is concrete (a route, a command, a failing expectation), the shorter that run is.
+        The Reconciler triages this issue: it adds the SDLC labels (priority, risk) and writes the
+        Agent Brief that queues it for the fix (SDLC.md). The more of the evidence below is concrete
+        (a route, a command, a failing expectation), the shorter that run is.
   - type: textarea
     id: current
     attributes:

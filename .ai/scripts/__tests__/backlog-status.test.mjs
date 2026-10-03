@@ -9,7 +9,7 @@
  * Both of those shipped once and are pinned below: `linkOpenPrs` keeps *which* signal matched, and
  * a branch-only link is a question rather than an instruction.
  *
- * Since ADR 0032 the same judgement is also a pick: `--next` names the issue a scheduled run
+ * Since ADR 0032 the same judgement is also a pick: `--next` names the issue the Reconciler's run
  * implements with nobody watching, so the cases that keep an issue OUT of READY - an author no
  * automation trusts, a brief a stranger wrote, an open blocker, the WIP limit - matter most.
  *
@@ -17,6 +17,8 @@
  * the ones that would start a second run on work a run already holds, slice a spec twice, or lift a
  * hold a person set.
  */
+
+import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -112,6 +114,15 @@ describe("trustedAuthors", () => {
 
   it("still trusts nobody when no issue automation is gated", () => {
     expect(trustedAuthors([AUTOMATIONS[1]]).size).toBe(0);
+  });
+
+  // The issue pair is kept disabled in the committed file for this gate alone (ADR 0033): removing
+  // it would leave every issue EXTERNAL and the Reconciler nothing to start.
+  it("trusts the maintainer through the committed definitions", () => {
+    const committed = JSON.parse(
+      readFileSync(new URL("../../../docs/agents/cezar-automations.json", import.meta.url), "utf8"),
+    );
+    expect(trustedAuthors(committed).has("rafalwolak")).toBe(true);
   });
 });
 

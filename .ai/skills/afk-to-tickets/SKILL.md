@@ -9,7 +9,7 @@ description: Slice a merged spec into tracer-bullet GitHub tickets with blocking
 
 Adapted from mattpocock/skills `to-tickets` for unattended runs. The spec file stays the source of truth: tickets link to it and never copy it.
 
-No label marks a ticket ready (ADR 0032). Each ticket's body is its Agent Brief, and `.ai/scripts/backlog-status.mjs` treats it as ready once every issue under its `### Blocked by` is closed; the scheduled implement-ticket run takes it from there, in priority order.
+No label marks a ticket ready (ADR 0032). Each ticket's body is its Agent Brief, and `.ai/scripts/backlog-status.mjs` treats it as ready once every issue under its `### Blocked by` is closed; the Reconciler's implement-ticket run takes it from there, in priority order.
 
 **Caps:** at most one spec and eight tickets per run. Never close, retitle or re-scope an existing issue.
 

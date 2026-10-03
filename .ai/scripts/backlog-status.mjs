@@ -2,7 +2,7 @@
 // Was rendered from design4pro/agent-kit until the kit was retired (ADR 0025). Edit it here.
 //
 // Reports where every open issue sits in the SDLC flow and the single next step that moves it,
-// with `--next` names the one issue the scheduled implement-ticket run takes next, and with `--plan`
+// with `--next` names the one issue the Reconciler's implement-ticket run takes next, and with `--plan`
 // prints everything the Reconciler (docs/agents/cezar.md, ADR 0033) may start right now, at most one
 // action per kind.
 // Read-only: it never applies a label. No label marks an issue ready (ADR 0032); readiness is the
@@ -17,7 +17,7 @@
 //   - "not ready" is read through the 🤖 comment marker every skill writes
 //     (.ai/trackers/github.md) - a groom's not-ready comment, or the `STOP:` comment implement-ticket
 //     leaves on an issue it would not take - so a human comment newer than it is the answer, and the
-//     schedule never picks the same refused issue every tick. So is a later trusted `🤖 RESOLVED:`
+//     Reconciler never picks the same refused issue every tick. So is a later trusted `🤖 RESOLVED:`
 //     comment, which is how `unblock` answers one on a specialist's verdict. A comment that says
 //     `HUMAN-ONLY:` names what only a person can do, and no run is started on that issue;
 //   - the run queue comes from .ai/cezar/runs.json when the host has one.
@@ -368,7 +368,7 @@ export function classify(
   if (waitingOn.length)
     return state(
       "WAITING",
-      `Blocked by open ${waitingOn.map((n) => `#${n}`).join(", ")} - the schedule takes it once they close.`,
+      `Blocked by open ${waitingOn.map((n) => `#${n}`).join(", ")} - the Reconciler takes it once they close.`,
     );
 
   if (notReady && !answered) {
@@ -422,12 +422,12 @@ export function classify(
   if (missing.length)
     return state(
       "NEEDS_TRIAGE",
-      `No ${missing.join(", ")} yet: start \`issue-groom\` on it from the cockpit.`,
+      `No ${missing.join(", ")} yet: the Reconciler's \`triage\` run takes it, or start \`issue-groom\` on it from the cockpit.`,
     );
 
   return state(
     "READY",
-    "Ready: the scheduled `implement-ticket` run takes it, or start one on it from the cockpit.",
+    "Ready: the Reconciler's `implement-ticket` run takes it, or start one on it from the cockpit.",
   );
 }
 
@@ -445,7 +445,7 @@ export const sortIssues = (issues) =>
   );
 
 /**
- * The issue the scheduled run takes: the first READY one in report order (highest priority, then
+ * The issue the Reconciler's implement run takes: the first READY one in report order (highest priority, then
  * oldest), or null while `WIP_LIMIT` PRs wait for a person or nothing is ready.
  */
 export function pickNext(sortedIssues, wip) {
