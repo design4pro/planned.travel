@@ -667,9 +667,6 @@ const messages = {
     'Dzień przyjazdu wypada przed dniem wyjazdu.',
   'transports.error.returnDayBeforePickUp':
     'Dzień zwrotu wypada przed dniem odbioru.',
-  'transports.toast.chainFailed': 'Odcinki nie zostały zapisane',
-  'transports.toast.chainFallback':
-    'Podróż została zapisana, ale jej odcinki nie.',
   'transports.field.noDay': 'Jeszcze bez dnia',
   'transports.fill.legend': 'Jak to wypełnić',
   'transports.fill.manual': 'Wpisz samodzielnie',

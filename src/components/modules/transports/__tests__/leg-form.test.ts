@@ -575,6 +575,35 @@ describe('the draft as the record writers take it', () => {
   })
 
   /**
+   * The server decides no day: the pair this builds is the pair that is stored. From the first
+   * and the last leg once the journey is broken, from the draft otherwise.
+   */
+  it('takes the record’s days from the first and last leg of a broken chain', () => {
+    const broken = splitLegAt(
+      breakIntoLegs(emptyChain(), {
+        departureName: 'Tokyo',
+        departureCode: 'TYO',
+        departureDate: '2026-10-09',
+        departureTime: '21:30',
+        departureDayId: 'leg-day-1',
+        arrivalName: 'Kyoto',
+        arrivalCode: 'KYO',
+        arrivalDate: '2026-10-10',
+        arrivalTime: '06:45',
+        arrivalDayId: 'leg-day-2',
+        serviceNumber: null,
+        seat: null,
+      }),
+      0,
+    )
+    const payload = transportPayload(filled(), broken, TRIP)
+    expect(payload.departureDayId).toBe(broken.legs.at(0)?.departureDayId)
+    expect(payload.arrivalDayId).toBe(broken.legs.at(-1)?.arrivalDayId)
+    expect(payload.departureDayId).toBe('leg-day-1')
+    expect(payload.arrivalDayId).toBe('leg-day-2')
+  })
+
+  /**
    * The record is written before its chain, and the repository orders it in its own zones: the
    * westbound clocks copied from the outer legs are only in order in the zones they were
    * validated in, so those zones travel with them.

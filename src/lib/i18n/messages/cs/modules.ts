@@ -655,8 +655,6 @@ const messages = {
     'Den příjezdu předchází dni odjezdu.',
   'transports.error.returnDayBeforePickUp':
     'Den vrácení předchází dni vyzvednutí.',
-  'transports.toast.chainFailed': 'Úseky se neuložily',
-  'transports.toast.chainFallback': 'Cesta se uložila, její úseky ne.',
   'transports.field.noDay': 'Zatím bez dne',
   'transports.fill.legend': 'Jak tohle vyplnit',
   'transports.fill.manual': 'Zadejte sami',
