@@ -8,7 +8,7 @@ description: om-auto-fix-issue drives one issue to a reviewed draft-then-ready P
 steps:
   - id: bootstrap
     name: Provision the worktree (deps, routes, secrets, D1, basemap)
-    command: bash scripts/worktree/bootstrap.sh --profile worktree --no-seed
+    command: bash .ai/scripts/bootstrap.sh --profile worktree --no-seed
   - id: fix
     name: om-auto-fix-issue
     prompt: '/om-auto-fix-issue {{task}}'

@@ -18,6 +18,13 @@ ultrabuild artifact that no longer exists anywhere — row ids like `MNY-07` sur
 historical identifiers only. Do not go looking for the file; verify a row's real status against the
 code.)
 
+One line is allowed beneath a stage's `## Stage` heading, and only one: `Delivered: <YYYY-MM-DD> -
+<one-line evidence>`. It says the code already does what the stage asks, so no spec will be written
+for it; `.ai/scripts/backlog-status.mjs --plan` reads a line starting `Delivered:` in a stage's own
+section (the heading to the next `## ` heading) as "covered", and the `plan-to-spec` workflow adds it
+on a docs-only PR (`.ai/skills/afk-plan-to-spec/SKILL.md` § 2a). A stage delivered only in part gets
+no such line.
+
 ## Rules that bind every stage
 
 - **The eleven `###` headings below are required, in that order, and no others appear at that

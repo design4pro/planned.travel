@@ -1,11 +1,18 @@
 # `steps` form rather than the `skills:` shorthand, because the shorthand runs with the default
 # tool list, which has no `Agent`: the skill settles open questions through an independent
 # specialist sub-agent (.ai/skills/afk-decide/SKILL.md, SDLC.md § Delegated decisions).
+# Started by the Reconciler (docs/agents/cezar.md, ADR 0033) with `Slice the spec <path> into
+# tickets.` when `node .ai/scripts/backlog-status.mjs --plan` lists a `slice` action - the oldest
+# `ready` spec directly in .ai/specs/ that no issue's body opens with `Spec: <path>` - or by a person
+# from the cockpit.
 name: spec-to-tickets
 description: Slice at most one merged spec into tracer-bullet tickets, each carrying its Agent Brief (afk-to-tickets).
 steps:
   - id: afk-to-tickets
     name: afk-to-tickets
     skill: afk-to-tickets
-    prompt: '{{task}}'
+    prompt: |
+      {{task}}
+
+      Slice that one spec and no other. The parent issue's body must open with `Spec: <spec path>` on its first line: that line is how the Reconciler knows the spec is sliced, and a spec without it is sliced again on the next tick. Settle every judgement call through a specialist (afk-decide); the skill lists when to stop, and `NO_ACTION_NEEDED` is the right ending when the spec already has a parent.
     allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
