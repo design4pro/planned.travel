@@ -124,6 +124,9 @@ cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The projec
   `worker-configuration.d.ts` (run the generator); force-pushing, `git reset --hard` and
   `--no-verify`; writing a Cloudflare secret and deleting a D1 database, R2 bucket, KV namespace or
   the Worker.
+  A denial ends a cezar run, so a run never tries one: AGENTS.md names the allowed equivalents,
+  and `.ai/scripts/__tests__/deny-safe-workflows.test.mjs` keeps every workflow step clear of a
+  denied command.
 - `permissions.ask` - deploys and remote D1 commands - prompts a developer at the keyboard and is
   refused in a cezar run, because `dontAsk` turns every prompt into a denial.
 - Everything else is open, including a write outside the worktree: a step that holds a bare
