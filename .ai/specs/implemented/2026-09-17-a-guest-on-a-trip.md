@@ -9,7 +9,7 @@
 
 `01-S6b` · FR #119 · Parent PRD #104 · Stage `01-S6` of `docs/plans/01-trips-core.md` (frozen), its **second slice**; PRD decisions 7 and 7b.
 
-Source plan: `docs/plans/01-trips-core.md`, stage `01-S6` — "Who is on this trip, including the people without accounts". The stage is cut in two. `01-S6a` (#118, spec `.ai/specs/implemented/2026-09-11-who-is-on-this-trip.md`, shipped) built the member half: the `/trips/$tripId/people` route, the three membership guards, the visibility switch, and `listTripParticipants` with a `guest` variant **declared and never produced**. This spec is the guest half, and it fills that variant.
+Source plan: `docs/plans/01-trips-core.md`, stage `01-S6` — "Who is on this trip, including the people without accounts". The stage is cut in two. `01-S6a` (#118, spec `.ai/specs/2026-09-11-who-is-on-this-trip.md`, shipped) built the member half: the `/trips/$tripId/people` route, the three membership guards, the visibility switch, and `listTripParticipants` with a `guest` variant **declared and never produced**. This spec is the guest half, and it fills that variant.
 
 ## 📝 TLDR
 
