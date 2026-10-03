@@ -652,8 +652,6 @@ const messages = {
     'Η ημέρα άφιξης προηγείται της ημέρας αναχώρησης.',
   'transports.error.returnDayBeforePickUp':
     'Η ημέρα παράδοσης προηγείται της ημέρας παραλαβής.',
-  'transports.toast.chainFailed': 'Τα σκέλη δεν αποθηκεύτηκαν',
-  'transports.toast.chainFallback': 'Το ταξίδι αποθηκεύτηκε, τα σκέλη του όχι.',
   'transports.field.noDay': 'Χωρίς ημέρα ακόμη',
   'transports.fill.legend': 'Πώς να το συμπληρώσετε',
   'transports.fill.manual': 'Γράψτε το μόνοι σας',

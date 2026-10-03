@@ -1045,13 +1045,13 @@ export interface ChainPayload {
 }
 
 /**
- * The chain as the one writer takes it — or nothing at all.
+ * The chain as the writers take it — or nothing at all.
  *
  * A journey nobody broke up sends an **empty** chain, which is not "no change"
  * but "this transport has no legs": the record's own endpoints are the journey,
  * exactly as they were before this stage existed, and any rows it used to have
  * are removed. That is the same statement the migration made by backfilling
- * nothing, made once more at the only place that writes.
+ * nothing, made once more where the save is sent.
  */
 export function chainPayload(chain: ChainDraft): ChainPayload {
   if (!chain.broken || chain.stations.length < 2) {
@@ -1082,15 +1082,15 @@ export function chainPayload(chain: ChainDraft): ChainPayload {
 /* ------------------------------------------------------------- record wire */
 
 /**
- * The transport record as the two writers take it.
+ * The transport record as the save takes it.
  *
  * Declared structurally rather than imported from `#/server/fns/transports`, for
  * the same reason {@link StationLookup} gives: this module states the fields it
  * fills in, and does not take a dependency on one endpoint's wire format. The
  * binding to the real contract is asserted where an assertion belongs — the unit
- * test parses this through `transportInputSchema` and `transportUpdateSchema`, so
- * a field this builder sets that the schema would silently strip fails there
- * rather than in a browser.
+ * test checks this against `TransportInput`, the type of the record half of the
+ * save's validator, so a field this builder sets that the schema would silently
+ * strip fails there rather than in a browser.
  */
 export interface TransportPayload {
   readonly tripId: string
@@ -1124,10 +1124,9 @@ export interface TransportPayload {
  * The record's own endpoints and days, which a chain owns once there is one.
  *
  * The repository rewrites the endpoints from the outer stations in the same batch
- * that writes the legs, so this is not the source of truth — it is what keeps the
- * record correct for the moment between the two writes, and for a save whose
- * second half never lands. The two day references have no such second writer, so
- * this is the only place they are decided.
+ * that writes the legs, so for the endpoints this is not the source of truth. The
+ * two day references have no such writer — the server decides no day — so this is
+ * the only place they are decided.
  */
 function recordEndpoints(
   draft: TransportDraft,
@@ -1174,10 +1173,10 @@ function recordEndpoints(
 /**
  * The zones of the chain-owned endpoints, sent with the record they belong to.
  *
- * The record is written before its chain and the repository orders it in its own zones, so the
- * clocks {@link recordEndpoints} copies from the outer legs have to travel with the zones they were
- * validated in - without them a westbound flight reads as landing before it leaves. A journey
- * nobody has broken up sends none, and the zones already stored stay as they are.
+ * The record is ordered in its own zones, so the clocks {@link recordEndpoints} copies from the
+ * outer legs have to travel with the zones they were validated in - without them a westbound
+ * flight reads as landing before it leaves. A journey nobody has broken up sends none, and the
+ * zones already stored stay as they are.
  */
 function recordZones(
   chain: ChainDraft,
@@ -1206,8 +1205,7 @@ function recordZones(
  * and a mapping that only exists inside a submit handler can only be checked by
  * rendering the dialog and pressing the button. Here it is a call.
  *
- * `create` and `update` take the same shape; the update adds nothing to it but
- * the id of the row being rewritten.
+ * The save adds nothing to this shape but the id of the row and the chain.
  */
 export function transportPayload(
   draft: TransportDraft,

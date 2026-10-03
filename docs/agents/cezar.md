@@ -33,7 +33,7 @@ the rules of `SDLC.md`.
   needs no commit: 0.11.0 forwards it.
   - In upstream, label-event polls (`issue.labeled`, `issue.unlabeled`) fail as soon as one
     recently updated issue has a comment or a cross-reference (open-mercato/cezar#914), so
-    **Re-triage when a hold is cleared** would never fire. The fork cherry-picks the fix, upstream PR #916.
+    **Re-triage when a hold is cleared** (now disabled) would never fire. The fork cherry-picks the fix, upstream PR #916.
   - On every cockpit start the skills coordinator runs `npx skills check <om-*> -p` in each project
     root, and that command re-adds the skills from upstream HEAD over the vendored
     `.agents/skills/om-*`, which shows as modified files in `git status` once upstream has moved
@@ -124,6 +124,9 @@ cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The projec
   `worker-configuration.d.ts` (run the generator); force-pushing, `git reset --hard` and
   `--no-verify`; writing a Cloudflare secret and deleting a D1 database, R2 bucket, KV namespace or
   the Worker.
+  A denial ends a cezar run, so a run never tries one: AGENTS.md names the allowed equivalents,
+  and `.ai/scripts/__tests__/deny-safe-workflows.test.mjs` keeps every workflow step clear of a
+  denied command.
 - `permissions.ask` - deploys and remote D1 commands - prompts a developer at the keyboard and is
   refused in a cezar run, because `dontAsk` turns every prompt into a denial.
 - Everything else is open, including a write outside the worktree: a step that holds a bare
@@ -147,7 +150,7 @@ drops `Edit`/`Write` for the ones that must not.
 
 | Workflow              | Agent step                                                               | Started by                                                                                                                                                                                 |
 | --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`, then skill `afk-triage`   | automation **Groom and triage new issues** (`issue.opened`), **Re-triage when a hold is cleared** (`blocked` removed)                                                                      |
+| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`, then skill `afk-triage`   | a human, from the cockpit, on an issue number; its two automations are disabled (§ Automations)                                                                                            |
 | `issue-autofix`       | `/om-auto-fix-issue {{task}}`                                            | a human, from the cockpit, on an issue number                                                                                                                                              |
 | `spec`                | `/om-auto-write-spec {{task}}`                                           | a human, from the cockpit, on a `feature` issue                                                                                                                                            |
 | `implement-spec`      | `/om-auto-implement-spec {{task}}`                                       | a human, from the cockpit, after the spec PR merged - or `issue-autofix` on the FR issue, which reaches the same skill                                                                     |
@@ -156,11 +159,11 @@ drops `Edit`/`Write` for the ones that must not.
 | `pr-fix`              | `/om-auto-fix-pr {{task}}`                                               | manual request after assessing review findings                                                                                                                                             |
 | `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50` | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                                                                      |
 | `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                            | a human, from the cockpit, with the idea as the task                                                                                                                                       |
-| `triage`              | skill `afk-triage`                                                       | the Reconciler (`triage` action) or a human, from the cockpit; the automations run it as the second step of `issue-groom`                                                                  |
+| `triage`              | skill `afk-triage`                                                       | the Reconciler (`triage` action) or a human, from the cockpit; `issue-groom` runs it as its second step                                                                                    |
 | `unblock`             | skill `afk-unblock`                                                      | the Reconciler (`unblock` action), or a human, from the cockpit, on an issue number                                                                                                        |
 | `plan-to-spec`        | skill `afk-plan-to-spec`, the spec gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`write-spec` action; a `DELIVERED:` outcome opens a docs-only PR instead), or a human with a stage id                                                                      |
-| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`implement` action), automation **Implement the next ready issue** (schedule, every 2 hours), or a human with an issue number                                              |
-| `spec-to-tickets`     | skill `afk-to-tickets`                                                   | the Reconciler (`slice` action), automation **Spec to tickets** (schedule, weekdays 07:00), or a human with a spec path                                                                    |
+| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`implement` action), or a human with an issue number                                                                                                                       |
+| `spec-to-tickets`     | skill `afk-to-tickets`                                                   | the Reconciler (`slice` action), or a human with a spec path                                                                                                                               |
 | `architecture-review` | skill `afk-architecture-review`                                          | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                                                                        |
 | `lessons`             | skill `afk-lessons`                                                      | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                                                                    |
 
@@ -173,8 +176,7 @@ cockpit composer picks it for a run a human starts, and an automation run uses t
 own default unless the automation sets `task.model` in `.ai/cezar/automations.json`.
 
 The task text an event automation sends is the issue or PR number alone (`{{github.number}}`); a
-second token would read as a brief to `om-auto-fix-issue`. The implement schedule sends no number:
-`implement-ticket` asks `node .ai/scripts/backlog-status.mjs --next` for one. The Reconciler sends the
+second token would read as a brief to `om-auto-fix-issue`. The Reconciler sends the
 task text `--plan` prints (`Implement issue #123.`, `Resolve the hold on issue #45.`, `Triage issue #67.`,
 `Slice the spec .ai/specs/<file>.md into tickets.`, `Write the spec for plan stage 02-S3 (docs/plans/02-places-and-maps.md).`).
 From the cockpit type the same: a number, a spec path, a stage id, or for `brainstorm` the idea.
@@ -199,14 +201,15 @@ The four older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`), th
 `scripts/agent/` they called and the four process skills built on them are gone (PR C, ADR 0018).
 The automations that used to start them (`triage-opened`, `triage-relabel`, `implement`) had
 already been removed from the cockpit. `triage` and `implement-ticket` are names reused by the
-unattended lane (`SDLC.md` § Readiness), not those workflows restored: `triage` and the three schedule workflows run the `afk-*` skills, `implement-ticket` chains
+unattended lane (`SDLC.md` § Readiness), not those workflows restored: `triage`, `spec-to-tickets` and the two schedule workflows run the `afk-*` skills, `implement-ticket` chains
 `om-*` steps from the Agent Brief instead; none of the five name a model, so they run on the
 cockpit's default.
 
 ## Automations (`docs/agents/cezar-automations.json`)
 
 Registered with the running cockpit by `.ai/scripts/cez-automations.sh` (idempotent: update in
-place or create enabled; it lists definitions the cockpit holds that the file no longer names, and
+place or create, enabled unless the definition says `"enabled": false`, which the script then
+applies; a definition that does not say keeps the cockpit's pause; it lists definitions the cockpit holds that the file no longer names, and
 `--prune` deletes them, so this file is the whole truth about what can start a run - it refuses to
 delete an enabled stray, which is somebody's deliberate act, not a leftover).
 Renaming a definition is the one change that idempotency does not cover: the script matches the
@@ -214,19 +217,36 @@ cockpit by `.name`, so a renamed definition is created beside the old one, which
 because it is still enabled. Rename in lockstep with the cockpit - disable the old name, then
 `--prune`, the drill step 2 of the host cutover below walks through.
 
-Eight definitions, in two kinds. Four are GitHub polls, started by an event:
-**Groom and triage new issues** on `issue.opened` and **Re-triage when a hold is cleared** on
-`issue.unlabeled` with `changedLabels` `blocked`, both with `authors` naming the maintainer;
-**Autopilot new pull requests** on `pull_request.opened`, again with `authors`; and **Merge
-reviewed agent pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`. Four are
-schedules (`kind: "schedule"`), started by the clock and by nobody's action: **Implement the next
-ready issue** every two hours, **Spec to tickets** on weekdays at 07:00, **Weekly architecture
-review** on Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. A schedule has no
-issue author of its own to gate; `.ai/scripts/backlog-status.mjs --next` applies the `authors` gate to the issue it
-picks, and what bounds the run is that script and its skill - one issue
-implemented and nothing while three PRs are waiting for a person (`needs-qa` without `qa-approved`, `risk-high`, `security`,
-`blocked`, or `changes-requested` untouched for 24 hours), at most one spec sliced, three refactor
-issues or one pull request per run.
+Six definitions, in three kinds. Two are GitHub polls, started by an event: **Autopilot new pull
+requests** on `pull_request.opened` with `authors` naming the maintainer, and **Merge reviewed agent
+pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`. Two are schedules
+(`kind: "schedule"`), started by the clock and by nobody's action: **Weekly architecture review** on
+Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. What bounds a schedule is its skill:
+three refactor issues or one pull request per run. Two are disabled (`"enabled": false`): **Groom
+and triage new issues** (`issue.opened`) and **Re-triage when a hold is cleared** (`issue.unlabeled`
+with `changedLabels` `blocked`), both with `authors` naming the maintainer.
+
+Triage, implement, slice and unblock are started by the Reconciler (below), not by an automation.
+The **Implement the next ready issue** (every two hours) and **Spec to tickets** (weekdays 07:00)
+schedules started the same work, so beside the Reconciler one issue could be started twice; they are
+removed (ADR 0033). The issue pair would start triage a second time too, so it is disabled, and it
+stays in the file only because `backlog-status.mjs` and `afk-unblock` read the trusted authors from
+the `authors` gates of the issue automations: a repository whose automations gate nobody trusts
+nobody, and the Reconciler would start nothing (`backlog-status.test.mjs` pins the committed file to
+trusting the maintainer). The trust gate is unchanged. What is lost is the automatic groom: a new
+issue, and one whose `blocked` a person removed, gets `afk-triage` from the Reconciler's next tick
+but no `om-auto-manage-issues` step (the Definition of Ready check and implementation notes);
+`issue-groom` stays available from the cockpit.
+
+Applying this on the host, from the main checkout once it is merged:
+
+1. `bash .ai/scripts/cez-automations.sh` (the Reconciler's sync runs it too when the file changes):
+   it updates the issue pair to disabled and lists every automation the file does not name as
+   `not in file` - the two schedules, and any older stray.
+2. In the cockpit (Automations), disable each automation listed as `not in file`: `--prune` refuses
+   an enabled stray.
+3. `bash .ai/scripts/cez-automations.sh --prune --dry-run` must say `would delete` for each of them,
+   then run it with `--prune` alone.
 
 No label starts a run (ADR 0032). Every event trigger is gated on who can produce it: the open
 events by author, and the unlabel event both by author and because only a collaborator can remove
@@ -234,21 +254,21 @@ a label. This matters because the agent step holds Bash with no allowlist and th
 prompt: an issue anyone on GitHub can open must not start a run by itself, so an external report,
 and every Sentry finding (filed as the Actions bot, or as the maintainer by a local
 `pnpm sentry-triage`), waits for a person to start a run from the cockpit - `backlog-status.mjs`
-applies the same `authors` list and the `sentry-issue` marker, so the implement schedule never picks
-one either. Agent PRs (opened carrying `review` and driven to the merge inside their own chain)
+applies the same `authors` list and the `sentry-issue` marker, so the Reconciler never starts one
+either. Agent PRs (opened carrying `review` and driven to the merge inside their own chain)
 enter only the merge automation, dependabot enters none, and the promotion PR (`do-not-merge`)
 enters no automation. Every filter excludes `in-progress`; `lookbackDays: 7` and `maxRecords: 25`
 bound a mistaken mass relabel while still reaching a week of events. One run does start another,
 deliberately and only through GitHub: an issue `afk-triage`, `afk-to-tickets` or
-`afk-architecture-review` files is opened as the maintainer, so it is groomed and triaged like any
-other, and a ticket it briefs is picked by the schedule once its blockers close.
+`afk-architecture-review` files is opened as the maintainer, so the Reconciler triages it like any
+other, and implements a ticket it briefs once its blockers close.
 A review or autopilot run checks out the PR's head, hooks and agent layer included: a branch
 cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
 before opening the PR (money-tracker.online PR #67, 2026-09-07).
 
 ## The Reconciler
 
-The schedules above start a job on a clock. The Reconciler starts a job when there is one: a host cron, every
+An automation starts a job on an event or a clock. The Reconciler starts a job when there is one: a host cron, every
 ten minutes, that asks `node .ai/scripts/backlog-status.mjs --plan` what there is to start and starts it, inside
 `maxParallel`. ADR 0033 records why; `SDLC.md` § The Reconciler is the table of what it may start. This
 repository owns the contract and the workflows it names; the cron and the repair of failed runs live on the
@@ -392,13 +412,12 @@ end-to-end check as it stands now.
    `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.cezar.cockpit.plist`) so it reloads
    the workflows.
 6. `bash .ai/scripts/cez-automations.sh --dry-run`, then without the flag: the five new automations
-   are created enabled.
+   are created, enabled unless their definition says `"enabled": false`.
 7. Install the housekeeping plist (above) and run `bash .ai/scripts/housekeeping.sh` once by hand.
-8. Verify end to end on a test issue: open it with the Bug form (as a maintainer) → within two
-   minutes a **Groom and triage new issues** run adds priority and risk, posts the Definition of
-   Ready and implementation notes, then an Agent Brief → `node .ai/scripts/backlog-status.mjs`
-   reports it `READY` → the next **Implement the next ready issue** tick (or `cez automation run
-<id>`) claims it with `in-progress`, opens a PR on develop labelled `review` + category +
+8. Verify end to end on a test issue: open it with the Bug form (as a maintainer) → within ten
+   minutes the Reconciler starts a `triage` run, which adds the category, priority and risk and
+   posts an Agent Brief → `node .ai/scripts/backlog-status.mjs` reports it `READY` → a later tick
+   starts `implement-ticket` on it, which claims it with `in-progress`, opens a PR on develop labelled `review` + category +
    `needs-qa|skip-qa` + priority + risk, and drives it to the squash-merge → the next housekeeping
    closes the issue. Then open a PR by hand: **Autopilot new pull requests** reviews it.
 

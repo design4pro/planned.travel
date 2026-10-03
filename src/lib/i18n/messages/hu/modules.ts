@@ -646,8 +646,6 @@ const messages = {
     'Az érkezés napja megelőzi az indulás napját.',
   'transports.error.returnDayBeforePickUp':
     'A leadás napja megelőzi az átvétel napját.',
-  'transports.toast.chainFailed': 'A szakaszok nem mentődtek el',
-  'transports.toast.chainFallback': 'Az utazás elmentődött, a szakaszai nem.',
   'transports.field.noDay': 'Még nincs nap',
   'transports.fill.legend': 'Hogyan töltse ki',
   'transports.fill.manual': 'Írja be maga',

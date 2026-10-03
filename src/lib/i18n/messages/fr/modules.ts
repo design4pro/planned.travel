@@ -664,9 +664,6 @@ const messages = {
     'Le jour d’arrivée précède le jour de départ.',
   'transports.error.returnDayBeforePickUp':
     'Le jour de restitution précède le jour de prise en charge.',
-  'transports.toast.chainFailed': 'Les tronçons n’ont pas été enregistrés',
-  'transports.toast.chainFallback':
-    'Le voyage a été enregistré, mais pas ses tronçons.',
   'transports.field.noDay': 'Aucun jour pour l’instant',
   'transports.fill.legend': 'Comment remplir ceci',
   'transports.fill.manual': 'Saisir vous-même',

@@ -656,9 +656,6 @@ const messages = {
     'O dia da chegada vem antes do dia da partida.',
   'transports.error.returnDayBeforePickUp':
     'O dia da devolução vem antes do dia da retirada.',
-  'transports.toast.chainFailed': 'Os trechos não foram salvos',
-  'transports.toast.chainFallback':
-    'A viagem foi salva, mas os trechos dela não.',
   'transports.field.noDay': 'Ainda sem dia',
   'transports.fill.legend': 'Como preencher isto',
   'transports.fill.manual': 'Digitar você mesmo',

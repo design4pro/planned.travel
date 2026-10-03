@@ -635,9 +635,6 @@ const messages = {
     'Hari kedatangan jatuh sebelum hari keberangkatan.',
   'transports.error.returnDayBeforePickUp':
     'Hari pengembalian jatuh sebelum hari pengambilan.',
-  'transports.toast.chainFailed': 'Ruas tidak tersimpan',
-  'transports.toast.chainFallback':
-    'Perjalanan tersimpan, tetapi ruasnya tidak.',
   'transports.field.noDay': 'Belum ada hari',
   'transports.fill.legend': 'Cara mengisinya',
   'transports.fill.manual': 'Isi sendiri',

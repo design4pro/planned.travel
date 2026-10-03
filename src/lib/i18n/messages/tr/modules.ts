@@ -632,9 +632,6 @@ const messages = {
     'Varış günü kalkış gününden önce geliyor.',
   'transports.error.returnDayBeforePickUp':
     'Teslim etme günü teslim alma gününden önce geliyor.',
-  'transports.toast.chainFailed': 'Etaplar kaydedilmedi',
-  'transports.toast.chainFallback':
-    'Yolculuk kaydedildi, etapları kaydedilmedi.',
   'transports.field.noDay': 'Henüz gün yok',
   'transports.fill.legend': 'Bunu nasıl doldurursunuz',
   'transports.fill.manual': 'Kendiniz girin',

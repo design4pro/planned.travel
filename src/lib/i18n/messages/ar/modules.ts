@@ -660,8 +660,6 @@ const messages = {
     'حرّك أحدهما ليصبح بالإمكان فعلًا إدراك هذا التنقل.',
   'transports.error.arrivalDayBeforeDeparture': 'يوم الوصول يسبق يوم المغادرة.',
   'transports.error.returnDayBeforePickUp': 'يوم التسليم يسبق يوم الاستلام.',
-  'transports.toast.chainFailed': 'لم تُحفظ المراحل',
-  'transports.toast.chainFallback': 'حُفظت الرحلة، لكن مراحلها لم تُحفظ.',
   'transports.field.noDay': 'بلا يوم بعد',
   'transports.fill.legend': 'كيف تملأ هذا',
   'transports.fill.manual': 'أدخلها بنفسك',

@@ -18,18 +18,16 @@ import { z } from 'zod'
 import { TRANSPORT_MODES, TRANSPORT_STATUSES } from '#/server/db/schema'
 import {
   CHAIN_MAX_LEGS,
-  createTransport,
   deleteTransport,
   listTripDays,
   listTripLegs,
   listTripTransports,
-  replaceTransportChain,
   requireTrip,
   saveSearchedConnection,
+  saveTransport,
   setTransportStatus,
   summariseTripTransports,
   totalTripDistanceMetres,
-  updateTransport,
 } from '#/server/repos'
 import { findAirportByCode, searchAirports } from '#/server/catalog/airports'
 import {
@@ -160,11 +158,6 @@ const transportFields = {
 }
 
 export const transportInputSchema = z.object({ tripId, ...transportFields })
-export const transportUpdateSchema = z.object({
-  tripId,
-  transportId: rowId,
-  ...transportFields,
-})
 
 export type TransportInput = z.infer<typeof transportInputSchema>
 
@@ -228,7 +221,7 @@ const chainLegSchema = z.object({
  *
  * Both writers send the same two arrays and both mean the same thing by `''` — "not stated" — so
  * the translation is written once. It is a mapping and nothing else: what a chain has to satisfy
- * is stated by {@link transportChainSchema} on the way in and by `replaceTransportChain` at the write.
+ * is stated by {@link saveTransportSchema} on the way in and by the repository at the write.
  */
 function chainInput(data: {
   readonly stations: ReadonlyArray<z.infer<typeof stationSchema>>
@@ -257,17 +250,22 @@ function chainInput(data: {
 }
 
 /**
- * The chain writer's validator.
+ * The validator of the one save behind the Transport dialog: the record, the id it is saved under,
+ * and its chain.
+ *
+ * `transportId` is minted by the dialog for a new transport and is the row's identity from then
+ * on: pressing save twice on one draft is an edit of the row the first press wrote, not a second
+ * row. Whether the row exists is the repository's to say, inside the caller's scope.
  *
  * `stations` is capped one above `legs` because that is the arithmetic: thirteen
  * stations is twelve legs, and twelve is the payload bound the repository states
  * and enforces. Both empty is legal and means "this journey has no legs" — the
  * record's own endpoints are the journey, which is what every transport written
- * before this stage already is.
+ * before chains existed already is.
  */
-export const transportChainSchema = z
+export const saveTransportSchema = z
   .object({
-    tripId,
+    ...transportInputSchema.shape,
     transportId: rowId,
     stations: z.array(stationSchema).max(CHAIN_MAX_LEGS + 1),
     legs: z.array(chainLegSchema).max(CHAIN_MAX_LEGS),
@@ -521,51 +519,44 @@ export const findStationFn = createServerFn({ method: 'GET' })
 
 /* ------------------------------------------------------------------ writes */
 
-export const createTransportFn = createServerFn({ method: 'POST' })
-  .validator(transportInputSchema)
+/**
+ * Save a transport and its legs in one call.
+ *
+ * `requireTrip` first, so a trip id from another tenant is a 404 before any row is touched; the
+ * repository then resolves the transport id inside the same scope and writes the record and the
+ * chain in a single batch, because a well-formed id from a client is not an authorised one and a
+ * half-saved transport is not a state worth recovering from.
+ *
+ * The mirror carries the leg count and the two outer endpoints rather than the chain: a patch is
+ * a notification here and D1 is the record, so a room that hears "this journey now has four legs"
+ * refetches rather than trying to apply twelve rows through a 32 KiB frame.
+ */
+export const saveTransportFn = createServerFn({ method: 'POST' })
+  .validator(saveTransportSchema)
   .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
 
-    const transport = await createTransport(scope, {
+    const { transport, legs } = await saveTransport(scope, {
       tripId: data.tripId,
-      ...payload(data),
+      transportId: data.transportId,
+      record: payload(data),
+      chain: chainInput(data),
     })
 
     await mirrorToRoom(scope, data.tripId, [
       patch('route', transport.id, {
-        title: data.title,
-        mode: data.mode,
-        status: data.status,
+        title: transport.title,
+        mode: transport.mode,
+        status: transport.status,
         departureDayId: transport.dayId,
         arrivalDayId: transport.arrivalDayId,
+        legs: legs.length,
+        departureName: transport.departureName,
+        arrivalName: transport.arrivalName,
       }),
     ])
     return { transportId: transport.id }
-  })
-
-export const updateTransportFn = createServerFn({ method: 'POST' })
-  .validator(transportUpdateSchema)
-  .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
-    const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-
-    const transport = await updateTransport(
-      scope,
-      data.transportId,
-      payload(data),
-    )
-
-    await mirrorToRoom(scope, data.tripId, [
-      patch('route', data.transportId, {
-        title: data.title,
-        mode: data.mode,
-        status: data.status,
-        departureDayId: transport.dayId,
-        arrivalDayId: transport.arrivalDayId,
-      }),
-    ])
-    return { transportId: data.transportId }
   })
 
 export const setTransportStatusFn = createServerFn({ method: 'POST' })
@@ -585,44 +576,6 @@ export const setTransportStatusFn = createServerFn({ method: 'POST' })
       patch('route', data.transportId, { status: data.status }),
     ])
     return { status: data.status }
-  })
-
-/**
- * The one writer for a whole chain.
- *
- * `requireTrip` first, so a trip id from another tenant is a 404 before any row
- * is touched; the repository then re-resolves the parent transport inside the
- * same scope, because a well-formed transport id from a client is not an
- * authorised transport id and the chain writer never trusts the one it was
- * handed.
- *
- * The mirror carries the leg count and the two outer endpoints rather than the
- * chain: a patch is a notification here and D1 is the record, so a room that
- * hears "this journey now has four legs" refetches rather than trying to apply
- * twelve rows through a 32 KiB frame.
- */
-export const saveTransportChainFn = createServerFn({ method: 'POST' })
-  .validator(transportChainSchema)
-  .handler(async ({ data }): Promise<{ readonly legs: number }> => {
-    const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-
-    const legs = await replaceTransportChain(
-      scope,
-      data.transportId,
-      chainInput(data),
-    )
-
-    const first = legs.at(0)
-    const last = legs.at(-1)
-    await mirrorToRoom(scope, data.tripId, [
-      patch('route', data.transportId, {
-        legs: legs.length,
-        departureName: first?.fromName ?? null,
-        arrivalName: last?.toName ?? null,
-      }),
-    ])
-    return { legs: legs.length }
   })
 
 export const deleteTransportFn = createServerFn({ method: 'POST' })
@@ -753,7 +706,7 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
  * status and booking fields are left exactly where they were.
  *
  * The mirror carries the leg count and the two outer endpoints rather than the chain, for the
- * reason `saveTransportChainFn` gives: a patch is a notification and D1 is the record.
+ * reason `saveTransportFn` gives: a patch is a notification and D1 is the record.
  */
 export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
   .validator(

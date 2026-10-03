@@ -606,9 +606,6 @@ const messages = {
     '둘 중 하나를 옮겨서 이 이동을 실제로 탈 수 있게 해 주세요.',
   'transports.error.arrivalDayBeforeDeparture': '도착일이 출발일보다 앞섭니다.',
   'transports.error.returnDayBeforePickUp': '반납일이 수령일보다 앞섭니다.',
-  'transports.toast.chainFailed': '구간이 저장되지 않았습니다',
-  'transports.toast.chainFallback':
-    '여정은 저장되었지만 구간은 저장되지 않았습니다.',
   'transports.field.noDay': '아직 날짜 없음',
   'transports.fill.legend': '작성 방법',
   'transports.fill.manual': '직접 입력',
