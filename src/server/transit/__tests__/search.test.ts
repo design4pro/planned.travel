@@ -143,7 +143,7 @@ function runtime(
     counters: memoryStore(),
     client: stubClient(),
     organizationId: 'org-alpha',
-    memberId: 'user-ana',
+    userId: 'user-ana',
     ceiling: 250,
     now: () => new Date('2026-09-01T10:00:00Z'),
     ...overrides,
@@ -152,7 +152,7 @@ function runtime(
 
 /* --------------------------------------------------------------- the key */
 
-const ALPHA_ANA = { organizationId: 'org-alpha', memberId: 'user-ana' }
+const ALPHA_ANA = { organizationId: 'org-alpha', userId: 'user-ana' }
 
 describe('transitCacheKey', () => {
   /**
@@ -162,7 +162,7 @@ describe('transitCacheKey', () => {
    */
   it('is a different string for another member of the same workspace', () => {
     expect(transitCacheKey(ALPHA_ANA, QUERY)).not.toBe(
-      transitCacheKey({ ...ALPHA_ANA, memberId: 'user-ben' }, QUERY),
+      transitCacheKey({ ...ALPHA_ANA, userId: 'user-ben' }, QUERY),
     )
   })
 
@@ -224,7 +224,7 @@ describe('transitCacheKey', () => {
   it('stays inside a KV key, whatever the traveller typed and whatever the ids', () => {
     // 64 is the longest id `requireTenantContext` accepts; five modes is the longest filter.
     const key = transitCacheKey(
-      { organizationId: 'o'.repeat(64), memberId: 'm'.repeat(64) },
+      { organizationId: 'o'.repeat(64), userId: 'm'.repeat(64) },
       {
         origin: { name: 'x'.repeat(4000), lat: -89.999_9, lng: -179.999_9 },
         destination: { name: 'y', lat: -89.999_9, lng: -179.999_9 },
@@ -302,11 +302,11 @@ describe('searchTransitConnections', () => {
     const client = stubClient()
 
     await searchTransitConnections(
-      runtime({ cache, counters, client, memberId: 'user-ana' }),
+      runtime({ cache, counters, client, userId: 'user-ana' }),
       QUERY,
     )
     const ben = await searchTransitConnections(
-      runtime({ cache, counters, client, memberId: 'user-ben' }),
+      runtime({ cache, counters, client, userId: 'user-ben' }),
       QUERY,
     )
 
@@ -321,15 +321,15 @@ describe('searchTransitConnections', () => {
   it('never reads an entry written for another member or another workspace', async () => {
     const cache = memoryStore()
     await searchTransitConnections(
-      runtime({ cache, organizationId: 'org-alpha', memberId: 'user-ana' }),
+      runtime({ cache, organizationId: 'org-alpha', userId: 'user-ana' }),
       QUERY,
     )
     const written = new Set(cache.entries.keys())
     cache.reads.length = 0
 
     for (const other of [
-      { organizationId: 'org-alpha', memberId: 'user-ben' },
-      { organizationId: 'org-beta', memberId: 'user-ana' },
+      { organizationId: 'org-alpha', userId: 'user-ben' },
+      { organizationId: 'org-beta', userId: 'user-ana' },
     ]) {
       await searchTransitConnections(runtime({ cache, ...other }), QUERY)
       expect(cache.reads.some((key) => written.has(key))).toBe(false)

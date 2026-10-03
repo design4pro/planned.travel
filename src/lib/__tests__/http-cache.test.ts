@@ -181,6 +181,74 @@ describe('storableLifetimeSeconds', () => {
     ).toBeNull()
   })
 
+  it('does not take the more permissive of two conflicting max-age directives', () => {
+    // `Headers.get` joins two Cache-Control lines into one comma-separated value.
+    expect(
+      storableLifetimeSeconds(
+        headers({ cacheControl: 'max-age=60, max-age=86400' }),
+      ),
+    ).toBeNull()
+    expect(
+      storableLifetimeSeconds(
+        headers({ cacheControl: 'max-age=86400, max-age=60' }),
+      ),
+    ).toBeNull()
+  })
+
+  it('reads a directive repeated with the same value once', () => {
+    expect(
+      storableLifetimeSeconds(
+        headers({ cacheControl: 'max-age=300, max-age=300' }),
+      ),
+    ).toBe(300)
+  })
+
+  it('does not read s-maxage=abc as a reason to fall back to max-age', () => {
+    expect(
+      storableLifetimeSeconds(
+        headers({ cacheControl: 's-maxage=abc, max-age=300' }),
+      ),
+    ).toBeNull()
+  })
+
+  it('accepts a quoted max-age, which RFC 9111 asks a recipient to accept', () => {
+    expect(
+      storableLifetimeSeconds(headers({ cacheControl: 'max-age="3600"' })),
+    ).toBe(3600)
+  })
+
+  it('does not read a directive out of a quoted value', () => {
+    expect(
+      storableLifetimeSeconds(
+        headers({ cacheControl: 'foo="a, max-age=86400, b"' }),
+      ),
+    ).toBeNull()
+    expect(
+      storableLifetimeSeconds(
+        headers({ cacheControl: 'foo="a, b", max-age=300' }),
+      ),
+    ).toBe(300)
+  })
+
+  it('does not guess when two Expires lines were joined into one value', () => {
+    expect(
+      storableLifetimeSeconds(
+        headers({
+          expires:
+            'Thu, 01 Oct 2026 10:05:00 GMT, Thu, 01 Oct 2026 12:00:00 GMT',
+        }),
+      ),
+    ).toBeNull()
+  })
+
+  it('is not storable when Age is greater than the lifetime', () => {
+    expect(
+      storableLifetimeSeconds(
+        headers({ cacheControl: 'max-age=300', age: '900' }),
+      ),
+    ).toBeNull()
+  })
+
   it('is not storable below the 60 seconds KV will hold an entry for', () => {
     expect(KV_MIN_TTL_SECONDS).toBe(60)
     expect(

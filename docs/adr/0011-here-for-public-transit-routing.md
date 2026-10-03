@@ -113,6 +113,10 @@ effective 18 September 2023 and their Exhibit 2, as ADR 0019 quotes them.
   combined with our own trip fields is one of those uses has **not been read against this module**,
   and this amendment neither refuses Japanese searches nor permits them: it is **open**, for a
   person to rule. The 24-hour cap means §6.4 k is not the open part.
+- **An operator acting as a member.** An impersonated session carries the target's user id, so
+  an operator impersonating a member is served that member's cached answers and spends the
+  workspace's allowance. Whether an operator acting as a member is a second End User is a reading
+  for a person; the key is by user id and does not tell the two apart. It is **open**.
 - **Saved connections.** `saveSearchedConnection` writes the stations and wall clocks of a
   connection a member confirmed into D1 as an ordinary journey, with no expiry, visible to the
   trip's other members. ADR 0019 says §6.4 j and §6.4 h "reach as well" such rows, and this

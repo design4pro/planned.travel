@@ -527,8 +527,9 @@ Transit's cached column equals its cold one **until somebody records the caching
 live HERE Public Transit v8 response carries**, as ADR 0019 does for routing. A response with
 no permitting header is not cached at all, and one that does permit it can only absorb the
 same member repeating the same search inside the lifetime, which is a smaller hit rate than
-the 40% a shared key was assumed to earn. Nothing here is measured; `/console/providers`
-reports the real figure.
+the 40% a shared key was assumed to earn. Nothing here is measured, and nothing records HERE
+transit calls yet: `here` is still a planned provider rather than a metered one
+(`PLANNED_PROVIDERS`), so `/console/providers` shows no figure for it until a client adopts it.
 
 | Dependency         | Calls / user / mo | Free allowance / mo | Rate above it    | 1 000 users, cached | 10 000 users, cached | 10 000 users, cold |
 | ------------------ | ----------------- | ------------------- | ---------------- | ------------------- | -------------------- | ------------------ |

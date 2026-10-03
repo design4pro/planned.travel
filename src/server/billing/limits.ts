@@ -141,7 +141,10 @@ export type RateMetric = (typeof RATE_METRICS)[number]
  * the seats: a fortnight abroad with a dozen journeys, searched and searched again, is
  * comfortably under a hundred, so Solo's 250 is a month of real planning with head-room,
  * and Crew's 1,000 is the same trip planned by up to ten people who are mostly searching
- * the *same* journeys — which is why it is four times Solo's and not ten.
+ * the *same* journeys — which is why it is four times Solo's and not ten. The answers are no
+ * longer shared between those people (each member's search is its own Request and its own unit,
+ * ADR 0011 as amended), so that reasoning no longer holds; resizing the figure is a pricing
+ * decision for a person, and it is left as it was.
  *
  * `extraction_calls_per_month` — a confirmation file turned into a draft booking, on our
  * own `AI` binding (`docs/adr/0012-workers-ai-for-confirmation-extraction.md`). It is the

@@ -678,7 +678,7 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
       const result = await searchTransitConnections(
         transitRuntime({
           organizationId: scope.ctx.organizationId,
-          memberId: scope.ctx.userId,
+          userId: scope.ctx.userId,
           ceiling,
         }),
         query,

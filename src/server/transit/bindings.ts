@@ -30,8 +30,8 @@ import type { TransitSearchRuntime } from './search'
 export interface TransitRuntimeOptions {
   /** Whose allowance a miss is spent against, and the first half of every cache key. */
   readonly organizationId: string
-  /** The member searching: the second half of every cache key. From the server-side scope. */
-  readonly memberId: string
+  /** The searching member's user id (server-side scope): the second half of every cache key. */
+  readonly userId: string
   /** `resolveLimits().rates.transit_searches_per_month` for that workspace. */
   readonly ceiling: number
 }
@@ -57,7 +57,7 @@ export function transitRuntime(
     counters: env.KV,
     client: hereClient(),
     organizationId: options.organizationId,
-    memberId: options.memberId,
+    userId: options.userId,
     ceiling: options.ceiling,
     now: () => new Date(),
   }

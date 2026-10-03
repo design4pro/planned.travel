@@ -32,8 +32,9 @@
  * ## The ceiling is checked after the cache and before the call
  *
  * A cache hit spends nothing, because it costs nothing. A miss - and so a first search by every
- * member - spends one unit of the workspace's `transit_searches_per_month` allowance through `#/server/metering/rate`, and the ceiling itself is resolved by
- * the caller from `resolveLimits()` — the published number is the enforced number.
+ * member - spends one unit of the workspace's `transit_searches_per_month` allowance through
+ * `#/server/metering/rate`, and the ceiling itself is resolved by the caller from
+ * `resolveLimits()` — the published number is the enforced number.
  *
  * ## Failure is typed
  *
@@ -278,10 +279,10 @@ function atCoordinates(place: TransitPlace): string {
   return `${place.lat.toFixed(4)},${place.lng.toFixed(4)}`
 }
 
-/** Whose Request an entry is: one member, inside one workspace. */
+/** Whose Request an entry is: one member, named by their user id, inside one workspace. */
 export interface TransitCacheOwner {
   readonly organizationId: string
-  readonly memberId: string
+  readonly userId: string
 }
 
 /**
@@ -304,7 +305,7 @@ export function transitCacheKey(
   return [
     `transit:${CACHE_VERSION}`,
     owner.organizationId,
-    owner.memberId,
+    owner.userId,
     atCoordinates(query.origin),
     atCoordinates(query.destination),
     `${query.date}T${query.time}`,
@@ -345,8 +346,8 @@ export interface TransitSearchRuntime {
   readonly client: TransitClient | null
   /** Whose allowance a miss is spent against, and the first half of every cache key. */
   readonly organizationId: string
-  /** The member searching, from the server-side scope: the second half of every cache key. */
-  readonly memberId: string
+  /** The searching member's user id (server-side scope): the second half of every cache key. */
+  readonly userId: string
   /** `resolveLimits().rates.transit_searches_per_month` for this workspace. */
   readonly ceiling: number
   readonly now: () => Date

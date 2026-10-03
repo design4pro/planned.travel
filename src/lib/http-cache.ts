@@ -39,16 +39,67 @@ const FORBIDDEN_DIRECTIVES: ReadonlySet<string> = new Set([
   'private',
 ])
 
-/** `name` and `name=value` directives, lower-cased, the value unquoted. */
+/** Splits on the commas outside a quoted-string, so a quoted value cannot smuggle a directive in. */
+function splitDirectives(cacheControl: string): Array<string> {
+  const parts: Array<string> = []
+  let current = ''
+  let quoted = false
+  for (let index = 0; index < cacheControl.length; index += 1) {
+    const char = cacheControl.charAt(index)
+    if (quoted && char === '\\') {
+      current += char + cacheControl.charAt(index + 1)
+      index += 1
+      continue
+    }
+    if (char === '"') {
+      quoted = !quoted
+    }
+    if (char === ',' && !quoted) {
+      parts.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  parts.push(current)
+  return parts
+}
+
+/** A directive value without the quotes of a quoted-string, which RFC 9111 §4.2.1 asks to accept. */
+function unquoted(value: string): string {
+  return value.length >= 2 && value.startsWith('"') && value.endsWith('"')
+    ? value.slice(1, -1)
+    : value
+}
+
+/**
+ * A directive name that appears twice with two different values. It is stored in place of either
+ * value and is no delta-seconds, so a lifetime read from it is unreadable and nothing is stored.
+ */
+const CONFLICTING = 'conflicting'
+
+/**
+ * `name` and `name=value` directives, lower-cased, the value unquoted.
+ *
+ * A directive given twice with different values keeps neither: RFC 9111 §4.2.1 lets a cache use
+ * the first or treat the response as stale, and the permissive pick (`max-age=60, max-age=86400`
+ * read as a day) is the one Exhibit 2 §1.3 cannot afford.
+ */
 function directivesOf(cacheControl: string): Map<string, string | null> {
   const directives = new Map<string, string | null>()
-  for (const part of cacheControl.split(',')) {
+  for (const part of splitDirectives(cacheControl)) {
     const [name, ...rest] = part.trim().split('=')
     if (name === '') {
       continue
     }
-    const value = rest.length === 0 ? null : rest.join('=').trim()
-    directives.set(name.toLowerCase(), value)
+    const key = name.toLowerCase()
+    const value = rest.length === 0 ? null : unquoted(rest.join('=').trim())
+    directives.set(
+      key,
+      directives.has(key) && directives.get(key) !== value
+        ? CONFLICTING
+        : value,
+    )
   }
   return directives
 }
