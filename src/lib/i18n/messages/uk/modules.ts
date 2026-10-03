@@ -658,8 +658,6 @@ const messages = {
     'День прибуття настає раніше за день відправлення.',
   'transports.error.returnDayBeforePickUp':
     'День повернення настає раніше за день отримання.',
-  'transports.toast.chainFailed': 'Ділянки не збереглися',
-  'transports.toast.chainFallback': 'Подорож збережено, а її ділянки ні.',
   'transports.field.noDay': 'Поки без дня',
   'transports.fill.legend': 'Як це заповнити',
   'transports.fill.manual': 'Ввести самому',

@@ -624,9 +624,6 @@ const messages = {
     'Ngày đến rơi vào trước ngày khởi hành.',
   'transports.error.returnDayBeforePickUp':
     'Ngày trả xe rơi vào trước ngày nhận xe.',
-  'transports.toast.chainFailed': 'Các chặng chưa được lưu',
-  'transports.toast.chainFallback':
-    'Chuyến đi đã được lưu, nhưng các chặng thì chưa.',
   'transports.field.noDay': 'Chưa có ngày',
   'transports.fill.legend': 'Cách điền phần này',
   'transports.fill.manual': 'Tự nhập',

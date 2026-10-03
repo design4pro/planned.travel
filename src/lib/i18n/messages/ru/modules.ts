@@ -657,8 +657,6 @@ const messages = {
     'День прибытия наступает раньше дня отправления.',
   'transports.error.returnDayBeforePickUp':
     'День возврата наступает раньше дня получения.',
-  'transports.toast.chainFailed': 'Участки не сохранились',
-  'transports.toast.chainFallback': 'Поездка сохранена, а её участки нет.',
   'transports.field.noDay': 'Пока без дня',
   'transports.fill.legend': 'Как это заполнить',
   'transports.fill.manual': 'Ввести самому',

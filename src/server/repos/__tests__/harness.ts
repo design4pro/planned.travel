@@ -165,11 +165,22 @@ export async function createHarness(
       statements.push(query)
       return runStatement(sqlite, query, params, method)
     },
-    async (queries) =>
-      queries.map((entry) => {
-        statements.push(entry.sql)
-        return runStatement(sqlite, entry.sql, entry.params, entry.method)
-      }),
+    async (queries) => {
+      // D1 runs a batch as one transaction: a statement that fails rolls the earlier ones back.
+      // Without the same here, a test of an all-or-nothing write would pass on a half-applied one.
+      sqlite.exec('BEGIN')
+      try {
+        const results = queries.map((entry) => {
+          statements.push(entry.sql)
+          return runStatement(sqlite, entry.sql, entry.params, entry.method)
+        })
+        sqlite.exec('COMMIT')
+        return results
+      } catch (cause) {
+        sqlite.exec('ROLLBACK')
+        throw cause
+      }
+    },
   )
 
   async function insertUser(name: string): Promise<string> {

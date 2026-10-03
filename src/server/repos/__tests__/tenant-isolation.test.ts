@@ -210,6 +210,7 @@ import {
   reorderDayTransports,
   replaceTransportChain,
   saveSearchedConnection,
+  saveTransport,
   setTransportStatus,
   summariseTripTransports,
   totalTripDistanceMetres,
@@ -2986,6 +2987,161 @@ describe('tenant isolation', () => {
           { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
         ),
       ).toHaveLength(1)
+    })
+  })
+  /**
+   * Saving a transport and its legs in one call: three ids arrive from the browser (trip,
+   * transport, and the days inside the chain) and none of them is trusted.
+   *
+   * B's journey is read back before and after every attempt and must be identical, chain
+   * included: the writer deletes before it inserts, so "refused" alone would not show that B's
+   * legs survived.
+   */
+  describe('saving a transport together with its legs', () => {
+    const CHAIN = {
+      stations: [{ name: 'Lisbon' }, { name: 'Porto' }],
+      legs: [{}],
+    }
+
+    async function betaWorld() {
+      return {
+        record: await getTransport(beta.tenant.scope, beta.transportId),
+        legs: await listTripLegs(beta.tenant.scope, beta.tripId),
+        transports: await listTripTransports(beta.tenant.scope, beta.tripId),
+      }
+    }
+
+    beforeEach(async () => {
+      await replaceTransportChain(beta.tenant.scope, beta.transportId, {
+        stations: [{ name: 'Shin-Osaka' }, { name: 'Tokyo' }],
+        legs: [{ serviceNumber: 'Nozomi 24' }],
+      })
+    })
+
+    it('refuses B’s trip from A’s scope and writes nothing', async () => {
+      const before = await betaWorld()
+
+      expect(
+        await captureError(() =>
+          saveTransport(alpha.tenant.scope, {
+            tripId: beta.tripId,
+            transportId: 'brand-new',
+            record: { title: 'Hijacked', mode: 'train' },
+            chain: CHAIN,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          saveTransport(alpha.tenant.scope, {
+            tripId: beta.tripId,
+            transportId: beta.transportId,
+            record: { title: 'Hijacked', mode: 'train' },
+            chain: CHAIN,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await betaWorld()).toEqual(before)
+      expect(await getTransport(alpha.tenant.scope, 'brand-new')).toBeNull()
+    })
+
+    it('does not touch B’s transport when A names it under A’s own trip', async () => {
+      const before = await betaWorld()
+
+      // A's scope cannot see B's row, so the id reads as unused. The primary key refuses the
+      // insert, the batch takes the chain with it, and the refusal is a NotFoundError like any
+      // other foreign id.
+      expect(
+        await captureError(() =>
+          saveTransport(alpha.tenant.scope, {
+            tripId: alpha.tripId,
+            transportId: beta.transportId,
+            record: { title: 'Hijacked', mode: 'train' },
+            chain: CHAIN,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await betaWorld()).toEqual(before)
+      expect(await listTripLegs(alpha.tenant.scope, alpha.tripId)).toEqual([])
+    })
+
+    it('refuses a leg day or a record day belonging to B, and writes nothing', async () => {
+      const scope = alpha.tenant.scope
+      const alphaBefore = await listTripTransports(scope, alpha.tripId)
+
+      for (const draft of [
+        { record: { dayId: beta.dayId }, chain: CHAIN },
+        { record: { arrivalDayId: beta.lastDayId }, chain: CHAIN },
+        {
+          record: {},
+          chain: {
+            stations: CHAIN.stations,
+            legs: [{ departureDayId: beta.dayId }],
+          },
+        },
+      ]) {
+        expect(
+          await captureError(() =>
+            saveTransport(scope, {
+              tripId: alpha.tripId,
+              transportId: 'cross-parented',
+              ...draft,
+              record: {
+                title: 'Cross-parented',
+                mode: 'train',
+                ...draft.record,
+              },
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await listTripTransports(scope, alpha.tripId)).toEqual(alphaBefore)
+      expect(await getTransport(scope, 'cross-parented')).toBeNull()
+    })
+
+    it('refuses A’s transport named under another trip of A', async () => {
+      const otherTrip = await createTrip(alpha.tenant.scope, {
+        title: 'Second trip of A',
+      })
+      const before = await listTransportLegs(
+        alpha.tenant.scope,
+        alpha.transportId,
+      )
+
+      expect(
+        await captureError(() =>
+          saveTransport(alpha.tenant.scope, {
+            tripId: otherTrip.id,
+            transportId: alpha.transportId,
+            record: { title: 'Moved', mode: 'train' },
+            chain: CHAIN,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        await listTransportLegs(alpha.tenant.scope, alpha.transportId),
+      ).toEqual(before)
+      expect(
+        (await getTransport(alpha.tenant.scope, alpha.transportId))?.tripId,
+      ).toBe(alpha.tripId)
+    })
+
+    it('saves on A’s own trip without disturbing B', async () => {
+      const before = await betaWorld()
+
+      const saved = await saveTransport(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        transportId: alpha.transportId,
+        record: { title: 'Lisbon to Porto', mode: 'train' },
+        chain: CHAIN,
+      })
+
+      expect(saved.legs).toHaveLength(1)
+      expect(await betaWorld()).toEqual(before)
     })
   })
   /**
