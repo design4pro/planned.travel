@@ -18,8 +18,8 @@ gh pr list --state open --json number,title,labels,isDraft
 ## Writing
 
 No label starts work (ADR 0032). The Reconciler triages an issue you open and implements one with an
-Agent Brief (`node .ai/scripts/backlog-status.mjs --next` says which one is next); a person starts any run now from the Cezar cockpit (docs/agents/cezar.md). The
-labels a person sets by hand are holds:
+Agent Brief (`node .ai/scripts/backlog-status.mjs --next` says which one is next); a person starts any
+run now from the Cezar cockpit (docs/agents/cezar.md). The labels a person sets by hand are holds:
 
 ```bash
 gh issue edit <n> --add-label blocked          # human hold; nothing starts while it is there

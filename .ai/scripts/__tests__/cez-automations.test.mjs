@@ -17,7 +17,7 @@
 
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
-import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -55,6 +55,8 @@ let baseUrl
 let requests
 /** What GET /automations answers with on the next run. */
 let automations
+/** Every throwaway checkout `run` made, removed in afterAll. */
+const roots = []
 
 beforeAll(async () => {
   server = createServer((req, res) => {
@@ -93,6 +95,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await new Promise((resolve) => server.close(resolve))
+  for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
 
 /**
@@ -106,6 +109,7 @@ function run(definitions, holding, args = []) {
   requests = []
   automations = holding
   const root = mkdtempSync(join(tmpdir(), 'cez-automations-'))
+  roots.push(root)
   mkdirSync(join(root, '.ai', 'scripts'), { recursive: true })
   mkdirSync(join(root, 'docs', 'agents'), { recursive: true })
   const script = join(root, '.ai', 'scripts', 'cez-automations.sh')
@@ -116,7 +120,7 @@ function run(definitions, holding, args = []) {
   )
   return new Promise((resolve, reject) => {
     const child = spawn('bash', [script, ...args], {
-      env: { ...process.env, CEZ_API: baseUrl, CEZ_PROJECT: PROJECT },
+      env: { ...process.env, CEZ_API: baseUrl, CEZ_PROJECT: PROJECT, NO_PROXY: '127.0.0.1' },
     })
     let stdout = ''
     let stderr = ''

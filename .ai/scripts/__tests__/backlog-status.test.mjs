@@ -9,7 +9,7 @@
  * Both of those shipped once and are pinned below: `linkOpenPrs` keeps *which* signal matched, and
  * a branch-only link is a question rather than an instruction.
  *
- * Since ADR 0032 the same judgement is also a pick: `--next` names the issue a scheduled run
+ * Since ADR 0032 the same judgement is also a pick: `--next` names the issue the Reconciler's run
  * implements with nobody watching, so the cases that keep an issue OUT of READY - an author no
  * automation trusts, a brief a stranger wrote, an open blocker, the WIP limit - matter most.
  *

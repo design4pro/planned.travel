@@ -1,6 +1,6 @@
 ---
 name: afk-triage
-description: Triage one GitHub issue unattended - verify it, then either write the durable Agent Brief that makes it ready or put a `blocked` hold on it with a comment naming what a person must do. Runs as the second step of issue-groom, or when asked to triage an issue by number.
+description: Triage one GitHub issue unattended - verify it, then either write the durable Agent Brief that makes it ready or put a `blocked` hold on it with a comment naming what a person must do. Started by the Reconciler (`triage` workflow), runs as the second step of issue-groom, or when asked to triage an issue by number.
 ---
 
 # AFK triage
