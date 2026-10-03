@@ -1,11 +1,11 @@
 # Put a stay on the board and create it from an import
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | in-progress |
-| **Issue**          | #180 |
-| **Spec PR**        | #708 |
-| **Implementation** | none |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #180        |
+| **Spec PR**        | #708        |
+| **Implementation** | #757        |
 
 `03-S8b` · FR #180 · Parent PRD #167 · the board and import half of `BKG-05` in `docs/plans/03-reservations-and-transport.md`.
 
@@ -33,15 +33,15 @@ During `confirmBookingImport`, an accommodation row first creates, records, and 
 
 ## 📝 Architecture
 
-| Concept | Owner | Change |
-| --- | --- | --- |
-| Board and dialog projection | `src/routes/_app/trips/$tripId/-server/plan.ts` | Enrich `PlanBoardDay.stays`; supply currency and `BookingDayOption`-compatible days. |
-| Client planner stay shape | `src/components/planner/types.ts` | Add `PlannerStay`; replace name-only stays. |
-| Planner projection | `src/routes/_app/trips/$tripId/-ui/plan-model.ts` | Preserve the enriched shape. |
-| Day-header presentation | `src/components/planner/day-section.tsx` | Derive and render the per-day badges, outside the sequence. |
-| Day-panel entry point | `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` | Open the shared stay dialog with a selected first day. |
-| Shared dialog initial draft | `src/components/modules/book/booking-dialog.tsx` | Accept creation-only `initialStayDayId` without changing desk behaviour. |
-| Imported stay creation | `src/server/fns/booking-import.ts` | Add the one post-reservation accommodation branch. |
+| Concept                     | Owner                                               | Change                                                                               |
+| --------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Board and dialog projection | `src/routes/_app/trips/$tripId/-server/plan.ts`     | Enrich `PlanBoardDay.stays`; supply currency and `BookingDayOption`-compatible days. |
+| Client planner stay shape   | `src/components/planner/types.ts`                   | Add `PlannerStay`; replace name-only stays.                                          |
+| Planner projection          | `src/routes/_app/trips/$tripId/-ui/plan-model.ts`   | Preserve the enriched shape.                                                         |
+| Day-header presentation     | `src/components/planner/day-section.tsx`            | Derive and render the per-day badges, outside the sequence.                          |
+| Day-panel entry point       | `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` | Open the shared stay dialog with a selected first day.                               |
+| Shared dialog initial draft | `src/components/modules/book/booking-dialog.tsx`    | Accept creation-only `initialStayDayId` without changing desk behaviour.             |
+| Imported stay creation      | `src/server/fns/booking-import.ts`                  | Add the one post-reservation accommodation branch.                                   |
 
 The existing owners remain unchanged: `src/server/fns/stay-writes.ts` owns the reservation-plus-stay write semantics, `src/server/repos/itinerary.ts` owns tenant-scoped accommodation access, and `BookingDialog` owns the user-facing stay form. No route queries a repository directly.
 
@@ -53,12 +53,12 @@ The same payload adds `currency` and emits each day as the exact `BookingDayOpti
 
 The header labels are deterministic:
 
-| Covered day | Rendered fact |
-| --- | --- |
-| First only | Check in, with its window when present. |
-| Middle | Property name. |
-| Last only | Check out, with its time when present. |
-| First and last | Both check in and check out. |
+| Covered day    | Rendered fact                           |
+| -------------- | --------------------------------------- |
+| First only     | Check in, with its window when present. |
+| Middle         | Property name.                          |
+| Last only      | Check out, with its time when present.  |
+| First and last | Both check in and check out.            |
 
 ### Import contract
 
@@ -88,11 +88,11 @@ The day-panel action is available only where the existing plan write controls ar
 
 ## Copy
 
-| Key | English text |
-| --- | --- |
-| `trips.plan.stay.checkIn` | Check in |
-| `trips.plan.stay.checkOut` | Check out |
-| `trips.plan.day.addStay` | Add a stay for {day} |
+| Key                        | English text         |
+| -------------------------- | -------------------- |
+| `trips.plan.stay.checkIn`  | Check in             |
+| `trips.plan.stay.checkOut` | Check out            |
+| `trips.plan.day.addStay`   | Add a stay for {day} |
 
 The implementation adds each accepted key to all 23 locale catalogues in the same change. Existing `modules.book.*` stay vocabulary is reused when it expresses the same user-facing fact.
 
@@ -113,12 +113,12 @@ Rollback is a normal code rollback: rows already created are valid reservations 
 
 ## Resolved assumptions (autonomous defaults)
 
-| # | Question | Applied default | Why |
-| --- | --- | --- | --- |
-| 1 | What does a one-day stay say? | Render both check-in and check-out facts. | `stayDayWords` already defines both boundaries; suppressing either would lose a stated fact. |
-| 2 | Should the board add a second stay form? | No; reuse `BookingDialog` with an opt-in initial stay draft. | One dialog preserves one validation and write path. |
-| 3 | May the implementation edit the shared dialog although FR #180's owned-path list omits it? | Yes, minimally add creation-only `initialStayDayId`; add the plan payload's currency and full `BookingDayOption` data. Confirmed 2026-09-22. | The current dialog has no API that can preselect a day, and the plan payload lacks the currency and stop names it needs. Satisfying the requested same-dialog behaviour without these small changes is not technically possible. |
-| 4 | What does import success count mean if the stay range is rejected? | Count the recorded reservation as written and leave it for review. | This preserves the existing confirm contract and the ticket explicitly requires the reservation to remain. |
+| #   | Question                                                                                   | Applied default                                                                                                                              | Why                                                                                                                                                                                                                              |
+| --- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | What does a one-day stay say?                                                              | Render both check-in and check-out facts.                                                                                                    | `stayDayWords` already defines both boundaries; suppressing either would lose a stated fact.                                                                                                                                     |
+| 2   | Should the board add a second stay form?                                                   | No; reuse `BookingDialog` with an opt-in initial stay draft.                                                                                 | One dialog preserves one validation and write path.                                                                                                                                                                              |
+| 3   | May the implementation edit the shared dialog although FR #180's owned-path list omits it? | Yes, minimally add creation-only `initialStayDayId`; add the plan payload's currency and full `BookingDayOption` data. Confirmed 2026-09-22. | The current dialog has no API that can preselect a day, and the plan payload lacks the currency and stop names it needs. Satisfying the requested same-dialog behaviour without these small changes is not technically possible. |
+| 4   | What does import success count mean if the stay range is rejected?                         | Count the recorded reservation as written and leave it for review.                                                                           | This preserves the existing confirm contract and the ticket explicitly requires the reservation to remain.                                                                                                                       |
 
 ## 📋 Phasing
 
