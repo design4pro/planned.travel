@@ -613,9 +613,6 @@ const messages = {
     '到着日が出発日より前になっています。',
   'transports.error.returnDayBeforePickUp':
     '返却日が受取日より前になっています。',
-  'transports.toast.chainFailed': '区間を保存できませんでした',
-  'transports.toast.chainFallback':
-    '旅程は保存されましたが、その区間は保存されていません。',
   'transports.field.noDay': '日付はまだ未定',
   'transports.fill.legend': '入力のしかた',
   'transports.fill.manual': '自分で入力する',

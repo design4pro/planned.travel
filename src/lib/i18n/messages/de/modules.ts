@@ -657,9 +657,6 @@ const messages = {
     'Der Ankunftstag liegt vor dem Abfahrtstag.',
   'transports.error.returnDayBeforePickUp':
     'Der Rückgabetag liegt vor dem Abholtag.',
-  'transports.toast.chainFailed': 'Die Etappen wurden nicht gespeichert',
-  'transports.toast.chainFallback':
-    'Die Reise wurde gespeichert, ihre Etappen nicht.',
   'transports.field.noDay': 'Noch kein Tag',
   'transports.fill.legend': 'Wie du das ausfüllst',
   'transports.fill.manual': 'Selbst eintragen',

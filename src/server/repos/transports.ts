@@ -7,7 +7,8 @@
  *
  * A long-distance journey is a **chain of stations** rather than a pair of them, and the part
  * between two consecutive stations is a **leg** (`CONTEXT.md`). Legs are rows in `transport_legs`
- * and are written only by {@link replaceTransportChain}; a transport with no rows there is read as
+ * and are written only by {@link saveTransport} and {@link replaceTransportChain}, which share one
+ * planner for the rows; a transport with no rows there is read as
  * the one-leg chain its own flat endpoints already describe, which is why nothing was backfilled
  * and why every journey recorded before chains existed keeps reading exactly as it did.
  */
@@ -945,42 +946,46 @@ async function requireChainDays(
   }
 }
 
+/** The record columns a chain owns: the flat form of its outer stations and their clocks. */
+type ChainEndpoints = Pick<
+  typeof transports.$inferInsert,
+  | 'departureName'
+  | 'departureCode'
+  | 'departureLat'
+  | 'departureLng'
+  | 'departureTimezone'
+  | 'departureDate'
+  | 'departureTime'
+  | 'arrivalName'
+  | 'arrivalCode'
+  | 'arrivalLat'
+  | 'arrivalLng'
+  | 'arrivalTimezone'
+  | 'arrivalDate'
+  | 'arrivalTime'
+>
+
 /**
- * The only writer of `transport_legs`.
+ * The statements that put a chain in place of whatever the transport had, and the endpoints the
+ * record takes from it.
  *
- * It resolves the parent inside the caller's own scope first — a well-formed transport id from a
- * client is not an authorised transport id — then resolves every day reference against *that
- * record's* trip, then deletes and re-inserts the whole chain in **one batch**. `db.batch()` is a
- * real transaction on D1: statements run in order and a failure rolls the sequence back, which is
- * the property a chain needs, because a half-replaced chain is a journey with two station threes.
+ * Shared by the two writers of `transport_legs` so that "the outer stations are the record's
+ * endpoints" is stated once. `endpoints` is `null` for an empty chain: the record's own endpoints
+ * are then the journey and are left as they were.
  *
- * The parent's flat `departure_*` / `arrival_*` columns are rewritten from the first and last
- * station in that same batch, so the two representations of one journey cannot drift apart and a
- * reader that knows nothing about legs still sees where the journey starts and ends.
+ * The chain is rewritten by delete-and-reinsert, so a leg's day position would be lost on every
+ * edit — and since the planner reads `sort_order`, renaming a service number would throw the whole
+ * journey to the head of its day. The previous row at the same `position` hands its value on when
+ * it departed from the same day; identity by position is a heuristic, and what a station inserted
+ * mid-chain mis-carries, the next reorder of that day re-places.
  */
-export async function replaceTransportChain(
+function planChain(
   scope: TenantScope,
-  transportId: string,
-  input: TransportChainInput,
-): Promise<Array<TransportLeg>> {
-  const { stations, legs } = transportChainInput.parse(input)
-  const parent = await transportsRepository.requireById(scope, transportId)
-  await assertTripRole(scope, parent.tripId, WRITERS)
-
-  requireLegOrder(stations, legs)
-  await requireChainDays(scope, parent.tripId, legs)
-
-  // The chain is rewritten by delete-and-reinsert, so a leg's day position would be lost on every
-  // edit — and since the planner reads `sort_order`, renaming a service number would throw the
-  // whole journey to the head of its day. The previous row at the same `position` hands its value
-  // on when it departed from the same day; identity by position is a heuristic, and what a station
-  // inserted mid-chain mis-carries, the next reorder of that day re-places.
-  const previous = new Map(
-    (await listTransportLegs(scope, parent.id)).map((row) => [
-      row.position,
-      row,
-    ]),
-  )
+  parent: { readonly id: string; readonly tripId: string },
+  { stations, legs }: z.output<typeof transportChainInput>,
+  previousLegs: ReadonlyArray<TransportLeg>,
+): { statements: Array<BatchStatement>; endpoints: ChainEndpoints | null } {
+  const previous = new Map(previousLegs.map((row) => [row.position, row]))
 
   const rows = legs.map((leg, index) => {
     // `stations[index + 1]` exists for every leg: the refinement above fixed the arithmetic.
@@ -1033,40 +1038,188 @@ export async function replaceTransportChain(
   ]
   const first = rows.at(0)
   const last = rows.at(-1)
-  if (first !== undefined && last !== undefined) {
-    // One statement per chunk, still inside the one batch: a whole chain in one insert binds
-    // more parameters than D1 accepts from its fourth leg on.
-    const size = chunkFor(boundParametersPerRow(transportLegs))
-    for (let index = 0; index < rows.length; index += size) {
-      statements.push(
-        scope.db.insert(transportLegs).values(rows.slice(index, index + size)),
-      )
-    }
+  if (first === undefined || last === undefined) {
+    return { statements, endpoints: null }
+  }
+
+  // One statement per chunk, still inside the one batch: a whole chain in one insert binds
+  // more parameters than D1 accepts from its fourth leg on.
+  const size = chunkFor(boundParametersPerRow(transportLegs))
+  for (let index = 0; index < rows.length; index += size) {
+    statements.push(
+      scope.db.insert(transportLegs).values(rows.slice(index, index + size)),
+    )
+  }
+  return {
+    statements,
+    endpoints: {
+      departureName: first.fromName,
+      departureCode: first.fromCode,
+      departureLat: first.fromLat,
+      departureLng: first.fromLng,
+      departureTimezone: first.fromTimezone,
+      departureDate: first.departureDate,
+      departureTime: first.departureTime,
+      arrivalName: last.toName,
+      arrivalCode: last.toCode,
+      arrivalLat: last.toLat,
+      arrivalLng: last.toLng,
+      arrivalTimezone: last.toTimezone,
+      arrivalDate: last.arrivalDate,
+      arrivalTime: last.arrivalTime,
+    },
+  }
+}
+
+/**
+ * Replaces the chain of a transport that already exists.
+ *
+ * It resolves the parent inside the caller's own scope first — a well-formed transport id from a
+ * client is not an authorised transport id — then resolves every day reference against *that
+ * record's* trip, then deletes and re-inserts the whole chain in **one batch**. `db.batch()` is a
+ * real transaction on D1: statements run in order and a failure rolls the sequence back, which is
+ * the property a chain needs, because a half-replaced chain is a journey with two station threes.
+ *
+ * The parent's flat `departure_*` / `arrival_*` columns are rewritten from the first and last
+ * station in that same batch, so the two representations of one journey cannot drift apart and a
+ * reader that knows nothing about legs still sees where the journey starts and ends.
+ *
+ * The hand-typed path does not come through here: {@link saveTransport} writes the record in the
+ * same batch. This is the found-connection path's writer.
+ */
+export async function replaceTransportChain(
+  scope: TenantScope,
+  transportId: string,
+  input: TransportChainInput,
+): Promise<Array<TransportLeg>> {
+  const chain = transportChainInput.parse(input)
+  const parent = await transportsRepository.requireById(scope, transportId)
+  await assertTripRole(scope, parent.tripId, WRITERS)
+
+  requireLegOrder(chain.stations, chain.legs)
+  await requireChainDays(scope, parent.tripId, chain.legs)
+
+  const { statements, endpoints } = planChain(
+    scope,
+    parent,
+    chain,
+    await listTransportLegs(scope, parent.id),
+  )
+  if (endpoints !== null) {
     statements.push(
       scope.db
         .update(transports)
-        .set({
-          departureName: first.fromName,
-          departureCode: first.fromCode,
-          departureLat: first.fromLat,
-          departureLng: first.fromLng,
-          departureTimezone: first.fromTimezone,
-          departureDate: first.departureDate,
-          departureTime: first.departureTime,
-          arrivalName: last.toName,
-          arrivalCode: last.toCode,
-          arrivalLat: last.toLat,
-          arrivalLng: last.toLng,
-          arrivalTimezone: last.toTimezone,
-          arrivalDate: last.arrivalDate,
-          arrivalTime: last.arrivalTime,
-        })
+        .set(endpoints)
         .where(tenantFilter(scope, transports, eq(transports.id, parent.id))),
     )
   }
 
   await runBatch(scope, statements)
   return listTransportLegs(scope, parent.id)
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * A transport and its legs, saved as one
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * One Transport with its chain, as the dialog saves it.
+ *
+ * `transportId` is the row's identity and the caller mints it for a new transport: saving the same
+ * draft twice is then an edit of the row the first press wrote, not a second row. Whether the row
+ * exists is decided here, inside the caller's scope, and never from the caller's say-so.
+ */
+export const saveTransportInput = z.object({
+  tripId: idSchema,
+  transportId: idSchema,
+  record: z.object(transportFields),
+  chain: transportChainInput,
+})
+export type SaveTransportInput = z.input<typeof saveTransportInput>
+
+/** What a save answers: the record as written, and the chain it now has. */
+export interface SavedTransport {
+  readonly transport: Transport
+  readonly legs: Array<TransportLeg>
+}
+
+/**
+ * Saves a Transport and its Legs in **one batch**: the record is created or updated, the chain
+ * replaced, and the record's endpoints taken from the chain's outer stations — all or nothing, so
+ * a half-saved transport is not a state this path can leave behind.
+ *
+ * **The record's day pair is the caller's.** Nothing here derives a day from the legs: a night
+ * train leaves on one day and lands on another and only the traveller knows which. Each leg's days
+ * are resolved against the trip like the chain writer's, and the record's pair is ordered over the
+ * row that results, as {@link updateTransport} does.
+ *
+ * **Every refusal comes before the batch.** The trip, the role, the agreement of an existing
+ * record with that trip, both orderings and every day reference are checked first, so a refused
+ * save has written nothing; the batch then covers what only the database can refuse.
+ */
+export async function saveTransport(
+  scope: TenantScope,
+  input: SaveTransportInput,
+): Promise<SavedTransport> {
+  const { tripId, transportId, record, chain } = saveTransportInput.parse(input)
+  await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, WRITERS)
+
+  const existing = await transportsRepository.findById(scope, transportId)
+  if (existing !== null && existing.tripId !== tripId) {
+    throw new NotFoundError('transport', transportId)
+  }
+
+  requireLegOrder(chain.stations, chain.legs)
+  await requireChainDays(scope, tripId, chain.legs)
+
+  const previousLegs =
+    existing === null ? [] : await listTransportLegs(scope, transportId)
+  const { statements, endpoints } = planChain(
+    scope,
+    { id: transportId, tripId },
+    chain,
+    previousLegs,
+  )
+  // `definedOnly` widens `title` to optional; it is required, and an insert needs it typed so.
+  const values = { ...definedOnly(record), title: record.title, ...endpoints }
+
+  await requireDayPair(
+    scope,
+    tripId,
+    'dayId' in values ? (values.dayId ?? null) : (existing?.dayId ?? null),
+    'arrivalDayId' in values
+      ? (values.arrivalDayId ?? null)
+      : (existing?.arrivalDayId ?? null),
+  )
+  const resulting = { ...existing, ...values }
+  requireTimeOrder('transport', resulting, {
+    from: resulting.departureTimezone,
+    to: resulting.arrivalTimezone,
+  })
+
+  // The record goes first: the legs reference it.
+  await runBatch(scope, [
+    existing === null
+      ? scope.db.insert(transports).values({
+          ...values,
+          id: transportId,
+          tripId,
+          organizationId: scope.ctx.organizationId,
+        })
+      : scope.db
+          .update(transports)
+          .set(values)
+          .where(
+            tenantFilter(scope, transports, eq(transports.id, transportId)),
+          ),
+    ...statements,
+  ])
+
+  return {
+    transport: await transportsRepository.requireById(scope, transportId),
+    legs: await listTransportLegs(scope, transportId),
+  }
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -1107,10 +1260,7 @@ export const searchedConnectionInput = z
 export type SearchedConnectionInput = z.input<typeof searchedConnectionInput>
 
 /** What the save answers: the record, and the chain it now has. */
-export interface SavedConnection {
-  readonly transport: Transport
-  readonly legs: Array<TransportLeg>
-}
+export type SavedConnection = SavedTransport
 
 /**
  * The record a found connection is first written as.

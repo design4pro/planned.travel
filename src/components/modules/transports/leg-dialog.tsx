@@ -27,14 +27,14 @@
  * **replaces its route in place**: the record keeps its identity, its status and its booking
  * fields, which is the whole point of re-searching rather than starting again.
  *
- * The save is two writes, in this order: the record, then its chain. They are
- * separate because they are separate rules — a transport is a row and a chain is
- * a set of rows with an invariant — and the second failing leaves the dialog open
- * with the whole chain exactly as typed. A chain is expensive to retype and
- * losing it to a network blip is unforgivable.
+ * The save is one call: the record and its chain go to the server together and land together or
+ * not at all, so a failed save leaves the dialog open with the whole chain exactly as typed and
+ * nothing half-written behind it. A chain is expensive to retype and losing it to a network blip
+ * is unforgivable.
  */
 import { useEffect, useId, useMemo, useState } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
+import { nanoid } from 'nanoid'
 
 import {
   Alert,
@@ -53,11 +53,7 @@ import {
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
-import {
-  createTransportFn,
-  saveTransportChainFn,
-  updateTransportFn,
-} from '#/server/fns/transports'
+import { saveTransportFn } from '#/server/fns/transports'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import { ChainEditor } from './chain-editor'
 import { ConnectionSearch } from './connection-search'
@@ -181,15 +177,14 @@ export function TransportDialog({
   const [touched, setTouched] = useState(false)
   const [fillMode, setFillMode] = useState<DialogMode>('form')
   /**
-   * The transport this dialog has already written, when it wrote one and stayed open.
+   * The id a new transport is saved under, minted when the dialog opens and kept until it closes.
    *
-   * A new transport is saved in two calls — the record, then its chain — and only the first can
-   * succeed alone. When the chain write fails the dialog stays open with the traveller's stops
-   * still in it, which is the point; but the record now exists, so the retry has to be an
-   * *update* of that row. Without this the second press creates a second transport and abandons
-   * the first with no legs. `BookingDialog` keeps the same note for the same reason.
+   * The server treats an id it has seen as an edit of that row, so a second press on the same
+   * draft - a double click, Enter after the button, a retry after a failure - rewrites the
+   * transport the first press wrote instead of creating another.
    */
-  const [savedId, setSavedId] = useState<string | null>(null)
+  const [draftId, setDraftId] = useState(() => nanoid())
+  const transportId = transport?.id ?? draftId
 
   useEffect(() => {
     if (!open) {
@@ -203,7 +198,7 @@ export function TransportDialog({
     setChain(chainFor(transport))
     setTouched(false)
     setFillMode('form')
-    setSavedId(null)
+    setDraftId(nanoid())
   }, [open, transport, currency])
 
   /**
@@ -216,20 +211,19 @@ export function TransportDialog({
    */
   const searchable = days.some((day) => day.date !== null)
 
-  const create = useAction(createTransportFn, {
-    success: t('modules.transports.toast.added'),
-    description: t('modules.transports.toast.addedBody'),
-    failure: t('modules.transports.toast.addFailed'),
-  })
-  const update = useAction(updateTransportFn, {
-    success: t('modules.transports.toast.updated'),
-    failure: t('modules.transports.toast.updateFailed'),
-  })
-  const saveChain = useAction(saveTransportChainFn, {
-    failure: t('modules.transports.toast.chainFailed'),
-    fallback: t('modules.transports.toast.chainFallback'),
-  })
-  const action = editing || savedId !== null ? update : create
+  const save = useAction(
+    saveTransportFn,
+    editing
+      ? {
+          success: t('modules.transports.toast.updated'),
+          failure: t('modules.transports.toast.updateFailed'),
+        }
+      : {
+          success: t('modules.transports.toast.added'),
+          description: t('modules.transports.toast.addedBody'),
+          failure: t('modules.transports.toast.addFailed'),
+        },
+  )
 
   const errors = useMemo(
     () => validateTransportDraft(draft, days),
@@ -294,33 +288,19 @@ export function TransportDialog({
     if (invalid) {
       return
     }
-    const payload = transportPayload(draft, chain, tripId)
-    const existingId = transport?.id ?? savedId
-    const result =
-      existingId === null
-        ? await create.run({ data: payload })
-        : await update.run({ data: { ...payload, transportId: existingId } })
-    if (result === null) {
-      return
-    }
-
     /*
-     * The chain is written after the record, because it needs the record's id
-     * and because a leg parented onto nothing is not a thing this model can
-     * express. An unbroken journey still posts — an empty chain is the statement
-     * "this transport has no legs", which is what removes the rows a journey
-     * used to have when the traveller puts it back together.
+     * An unbroken journey still sends its chain, empty: that is the statement "this transport has
+     * no legs", which removes the rows a journey used to have when the traveller puts it back
+     * together.
      */
-    // Remembered here rather than on the failure below. From the moment the record exists this
-    // dialog is editing it, and every way out - a chain that does not land, a press that arrives
-    // while one is in flight - has to finish that transport rather than start a second one.
-    const transportId = result.transportId
-    setSavedId(transportId)
-
-    const chained = await saveChain.run({
-      data: { tripId, transportId, ...chainPayload(chain) },
+    const saved = await save.run({
+      data: {
+        ...transportPayload(draft, chain, tripId),
+        transportId,
+        ...chainPayload(chain),
+      },
     })
-    if (chained === null) {
+    if (saved === null) {
       return
     }
     onOpenChange(false)
@@ -397,15 +377,9 @@ export function TransportDialog({
                 void submit()
               }}
             >
-              {/*
-                Both writes, because they are two calls behind one button. The chain is written
-                after the record, so a chain that fails leaves the record saved and the dialog
-                open - and rendering only the record's error would leave that state with nothing
-                on screen to explain it, which is the state that invites a second press.
-              */}
-              {(action.error ?? saveChain.error) === null ? null : (
+              {save.error === null ? null : (
                 <Alert tone="danger" title={t('modules.form.saveError')}>
-                  {action.error ?? saveChain.error}
+                  {save.error}
                 </Alert>
               )}
 
@@ -853,14 +827,7 @@ export function TransportDialog({
               variant="primary"
               shape="pill"
               disabled={touched && invalid}
-              /*
-                Both writes. `useAction` clears its own `pending` in a `finally`, so the record's
-                clears the moment it resolves - while the chain write it is followed by is still in
-                flight. Reading only the record's would re-enable the button inside that window,
-                and `savedId` is not set until the chain write *fails*, so a press there starts a
-                second transport rather than finishing this one.
-              */
-              loading={action.pending || saveChain.pending}
+              loading={save.pending}
               loadingLabel={t('modules.transports.action.saving')}
             >
               {editing
