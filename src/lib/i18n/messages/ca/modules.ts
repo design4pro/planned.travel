@@ -658,9 +658,6 @@ const messages = {
     'El dia d’arribada és anterior al dia de sortida.',
   'transports.error.returnDayBeforePickUp':
     'El dia de devolució és anterior al dia de recollida.',
-  'transports.toast.chainFailed': 'Els trams no s’han desat',
-  'transports.toast.chainFallback':
-    'El viatge s’ha desat, però els seus trams no.',
   'transports.field.noDay': 'Encara sense dia',
   'transports.fill.legend': 'Com omplir això',
   'transports.fill.manual': 'Escriu-ho tu',

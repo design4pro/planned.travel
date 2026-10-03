@@ -585,8 +585,6 @@ const messages = {
   'transports.error.timingHint': '把其中一个时刻挪一下，这段交通才真的赶得上。',
   'transports.error.arrivalDayBeforeDeparture': '到达日早于出发日。',
   'transports.error.returnDayBeforePickUp': '还车日早于取车日。',
-  'transports.toast.chainFailed': '路段未保存',
-  'transports.toast.chainFallback': '行程已保存，但其路段未保存。',
   'transports.field.noDay': '尚未指定日期',
   'transports.fill.legend': '如何填写',
   'transports.fill.manual': '自己填写',

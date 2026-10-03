@@ -664,9 +664,6 @@ const messages = {
     'Il giorno di arrivo precede il giorno di partenza.',
   'transports.error.returnDayBeforePickUp':
     'Il giorno di riconsegna precede il giorno di ritiro.',
-  'transports.toast.chainFailed': 'Le tratte non sono state salvate',
-  'transports.toast.chainFallback':
-    'Il viaggio è stato salvato, le sue tratte no.',
   'transports.field.noDay': 'Ancora nessun giorno',
   'transports.fill.legend': 'Come compilare questo',
   'transports.fill.manual': 'Inseriscilo tu',

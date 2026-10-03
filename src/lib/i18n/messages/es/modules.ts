@@ -659,8 +659,6 @@ const messages = {
     'El día de llegada es anterior al día de salida.',
   'transports.error.returnDayBeforePickUp':
     'El día de devolución es anterior al día de recogida.',
-  'transports.toast.chainFailed': 'Los tramos no se guardaron',
-  'transports.toast.chainFallback': 'El viaje se guardó, pero sus tramos no.',
   'transports.field.noDay': 'Todavía sin día',
   'transports.fill.legend': 'Cómo rellenar esto',
   'transports.fill.manual': 'Escríbelo tú',

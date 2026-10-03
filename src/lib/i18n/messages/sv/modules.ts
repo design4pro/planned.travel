@@ -636,8 +636,6 @@ const messages = {
     'Ankomstdagen ligger före avresedagen.',
   'transports.error.returnDayBeforePickUp':
     'Återlämningsdagen ligger före upphämtningsdagen.',
-  'transports.toast.chainFailed': 'Etapperna sparades inte',
-  'transports.toast.chainFallback': 'Resan sparades, men inte dess etapper.',
   'transports.field.noDay': 'Ingen dag än',
   'transports.fill.legend': 'Så fyller du i det här',
   'transports.fill.manual': 'Skriv in själv',

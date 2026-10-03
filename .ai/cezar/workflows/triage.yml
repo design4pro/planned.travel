@@ -3,8 +3,8 @@
 # specialist sub-agent (.ai/skills/afk-decide/SKILL.md, SDLC.md § Delegated decisions).
 # Started by the Reconciler (docs/agents/cezar.md, ADR 0033) with `Triage issue #<n>.` when
 # `node .ai/scripts/backlog-status.mjs --plan` lists a `triage` action - the first issue that has no
-# Agent Brief or no category, priority or risk label - or by a person from the cockpit; the automations
-# run afk-triage as the second step of issue-groom (ADR 0032).
+# Agent Brief or no category, priority or risk label - or by a person from the cockpit;
+# issue-groom runs afk-triage as its second step (ADR 0032).
 name: triage
 description: Triage one GitHub issue unattended - verify, then write an Agent Brief or put a hold on it (afk-triage).
 steps:

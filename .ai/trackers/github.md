@@ -561,4 +561,4 @@ gh label create risk-high         --color b60205 --description "Wide blast radiu
 
 Four of those are load-bearing on a pull request rather than descriptive. `do-not-merge`, `blocked` and `qa-failed` block a merge on their own, and `needs-qa` blocks until `qa-approved` joins it. They are a convention the merge skills (`om-merge-buddy`, `om-approve-merge-pr`) read before merging, not a CI check (ADR 0031): applying one stops a skill-driven merge, and a person merging by hand reads them too.
 
-That list is the whole vocabulary: no intake, trigger or command label exists beside it (ADR 0032). A label no Open Mercato skill reads is never created. A run is started by an event or a schedule in `docs/agents/cezar-automations.json`, or by a person from the Cezar cockpit.
+That list is the whole vocabulary: no intake, trigger or command label exists beside it (ADR 0032). A label no Open Mercato skill reads is never created. A run is started by an event or a schedule in `docs/agents/cezar-automations.json`, by the Reconciler (ADR 0033), or by a person from the Cezar cockpit.

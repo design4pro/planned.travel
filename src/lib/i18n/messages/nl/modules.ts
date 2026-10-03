@@ -648,8 +648,6 @@ const messages = {
     'De aankomstdag ligt vóór de vertrekdag.',
   'transports.error.returnDayBeforePickUp':
     'De inleverdag ligt vóór de ophaaldag.',
-  'transports.toast.chainFailed': 'De etappes zijn niet opgeslagen',
-  'transports.toast.chainFallback': 'De reis is opgeslagen, de etappes niet.',
   'transports.field.noDay': 'Nog geen dag',
   'transports.fill.legend': 'Hoe je dit invult',
   'transports.fill.manual': 'Zelf invoeren',

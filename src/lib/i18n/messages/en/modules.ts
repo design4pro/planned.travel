@@ -792,8 +792,6 @@ const messages = {
     'The arrival day comes before the departure day.',
   'transports.error.returnDayBeforePickUp':
     'The return day comes before the pick-up day.',
-  'transports.toast.chainFailed': 'The legs were not saved',
-  'transports.toast.chainFallback': 'The journey was saved; its legs were not.',
   'transports.field.noDay': 'No day yet',
   'transports.fill.legend': 'How to fill this in',
   'transports.fill.manual': 'Enter it yourself',

@@ -1,12 +1,12 @@
 name: Idea
-description: A new capability. Gets groomed, then a human adds `spec` for a spec PR before any code.
+description: A new capability. Gets triaged, then a human adds `spec` for a spec PR before any code.
 labels: ['feature']
 body:
   - type: markdown
     attributes:
       value: |
-        A groom run labels the idea and checks it against the Definition of Ready (SDLC.md). When it
-        is time, a human adds `spec`: the spec lands in `.ai/specs/` on a design-only PR, and only a
+        The Reconciler triages the idea: it adds the SDLC labels and writes the Agent Brief (SDLC.md).
+        When it is time, a human adds `spec`: the spec lands in `.ai/specs/` on a design-only PR, and only a
         merged spec gets built. Write what you know; leave the rest.
   - type: textarea
     id: problem

@@ -1,10 +1,10 @@
 name: Sentry triage
 
 # Weekly sweep of Sentry for recurring, high-impact errors, filing the ones that clear the
-# threshold as `bug` + `priority-high`. No cezar run starts from it: the `issue.opened` automation
-# is gated on maintainer authors and this job files as the Actions bot, and backlog-status.mjs
-# never hands a ticket carrying the `sentry-issue` marker to an unattended run, because its body
-# quotes production data. A person reads it and starts a run from the cockpit (ADR 0018, ADR 0032).
+# threshold as `bug` + `priority-high`. No cezar run starts from it: backlog-status.mjs trusts
+# maintainer authors only and this job files as the Actions bot, and it never hands a ticket
+# carrying the `sentry-issue` marker to an unattended run, because its body quotes production data.
+# A person reads it and starts a run from the cockpit (ADR 0018, ADR 0032).
 #
 # It runs the SAME script as `pnpm sentry-triage`, on the runner: the thresholds, the dedup index
 # and the issue body live in scripts/sentry-triage/policy.ts, so the local run and this one cannot
