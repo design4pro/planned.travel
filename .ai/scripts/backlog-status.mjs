@@ -3,8 +3,8 @@
 //
 // Reports where every open issue sits in the SDLC flow and the single next step that moves it,
 // with `--next` names the one issue the Reconciler's implement-ticket run takes next, and with `--plan`
-// prints everything the Reconciler (docs/agents/cezar.md, ADR 0033) may start right now, at most one
-// action per kind.
+// prints everything the Reconciler (docs/agents/cezar.md, ADR 0033) may start right now, up to
+// `PLAN_CANDIDATES` ranked candidates per issue kind.
 // Read-only: it never applies a label. No label marks an issue ready (ADR 0032); readiness is the
 // rule in `classify`, so the report a person reads and the pick a run makes cannot disagree.
 //
@@ -445,12 +445,15 @@ export const sortIssues = (issues) =>
   );
 
 /**
- * The issue the Reconciler's implement run takes: the first READY one in report order (highest priority, then
- * oldest), or null while `WIP_LIMIT` PRs wait for a person or nothing is ready.
+ * The READY issues an implement run may take, in report order (highest priority, then oldest), or
+ * none while `WIP_LIMIT` PRs wait for a person.
  */
+const readyIssues = (sortedIssues, wip) =>
+  wip >= WIP_LIMIT ? [] : sortedIssues.filter((issue) => issue.state === "READY").map((issue) => issue.number);
+
+/** The issue the Reconciler's implement run takes: the first of `readyIssues`, or null. */
 export function pickNext(sortedIssues, wip) {
-  if (wip >= WIP_LIMIT) return null;
-  return sortedIssues.find((issue) => issue.state === "READY")?.number ?? null;
+  return readyIssues(sortedIssues, wip)[0] ?? null;
 }
 
 /** The `Status` row of a spec's metadata table (.ai/specs/AGENTS.md), or null without one. */
@@ -589,13 +592,18 @@ export const PLAN_WORKFLOWS = {
   "write-spec": "plan-to-spec",
 };
 
+/** How many candidates `--plan` ranks for an issue kind (implement, unblock, triage). */
+export const PLAN_CANDIDATES = 3;
+
 /**
- * What the Reconciler may start right now: at most one action per kind, in `PLAN_WORKFLOWS` order,
- * a kind with no candidate left out. Pure, and the only place the five candidate rules live:
+ * What the Reconciler may start right now, in `PLAN_WORKFLOWS` order, a kind with no candidate left
+ * out. An issue kind ranks up to `PLAN_CANDIDATES` candidates, best first, so the Reconciler can fall
+ * back to the next when one cannot start (a cooldown); slice and write-spec keep one at a time.
+ * Pure, and the only place the five candidate rules live:
  *
- * - implement: `pickNext`, so the pick and `--next` cannot disagree;
- * - unblock: the first issue in report order whose hold or not-ready comment an agent may lift;
- * - triage: the first NEEDS_TRIAGE issue in report order;
+ * - implement: `readyIssues`, the first being `pickNext`, so the plan and `--next` cannot disagree;
+ * - unblock: issues in report order whose hold or not-ready comment an agent may lift;
+ * - triage: NEEDS_TRIAGE issues in report order;
  * - slice: the oldest `ready` spec with no parent issue (`unslicedSpecs`);
  * - write-spec: the first stage of `docs/plans/` nothing covers (`pickStage`: no mention, not marked
  *   `Delivered:`, not in a frozen plan), but only while no PR adds a spec or marks delivered
@@ -623,14 +631,14 @@ export function buildPlan({
     actions.push({ kind, target: `#${number}`, workflow: PLAN_WORKFLOWS[kind], task });
   const idle = (issue) => !runs.has(issue.number);
 
-  const implement = pickNext(issues, wip);
-  if (implement !== null) onIssue("implement", implement, `Implement issue #${implement}.`);
+  for (const number of readyIssues(issues, wip).slice(0, PLAN_CANDIDATES))
+    onIssue("implement", number, `Implement issue #${number}.`);
 
-  const unblock = issues.find((issue) => issue.canUnblock && idle(issue));
-  if (unblock) onIssue("unblock", unblock.number, `Resolve the hold on issue #${unblock.number}.`);
-
-  const triage = issues.find((issue) => issue.state === "NEEDS_TRIAGE" && idle(issue));
-  if (triage) onIssue("triage", triage.number, `Triage issue #${triage.number}.`);
+  const candidates = (keep) => issues.filter((issue) => keep(issue) && idle(issue)).slice(0, PLAN_CANDIDATES);
+  for (const { number } of candidates((issue) => issue.canUnblock))
+    onIssue("unblock", number, `Resolve the hold on issue #${number}.`);
+  for (const { number } of candidates((issue) => issue.state === "NEEDS_TRIAGE"))
+    onIssue("triage", number, `Triage issue #${number}.`);
 
   const unsliced = unslicedSpecs(specs, allIssues);
   const slice = unsliced.find((spec) => !activeTasks.some((task) => task.includes(spec.path)));

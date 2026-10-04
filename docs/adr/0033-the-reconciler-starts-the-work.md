@@ -40,6 +40,10 @@ exists, and a trigger per event cannot see a difference.
    workflows in this repository are all there is. The three schedules in
    `docs/agents/cezar-automations.json` (implement, slice and the issue pair) are left as they are
    until the Reconciler has run alone for a while.
+   Amended 2026-10-04: `--plan` ranks up to three candidates each of implement, unblock and triage, best first, and
+   keeps at most one of slice and write-spec. On 2026-10-04 the single implement candidate sat in the six-hour
+   cooldown after a finished run while a ready issue behind it never started; the Reconciler now hands the turn to
+   the next candidate of a kind when the first cannot start (design4pro/cezar#55).
 2. **WIP counts what only a person can clear.** Open PRs by a trusted author, except the `do-not-merge`
    promotion, that are `needs-qa` without `qa-approved`, or `risk-high`, `security` or `blocked`, or
    `changes-requested` and untouched for 24 hours (an autopilot that stopped there is parked on a decision
