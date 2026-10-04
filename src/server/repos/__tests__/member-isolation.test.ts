@@ -44,7 +44,29 @@ import {
   updateEntry,
   updateJourney,
 } from '../journey'
+import {
+  createBudgetItem,
+  createExpense,
+  createSettlement,
+  deleteBudgetItem,
+  deleteExpense,
+  deleteSettlement,
+  expenseSharesRepository,
+  getExpenseWithShares,
+  getMemberBalances,
+  listBudgetItems,
+  listSettlements,
+  markShareSettled,
+  setExpenseShares,
+  updateBudgetItem,
+  updateExpense,
+} from '../expenses'
 import { createPlace } from '../places'
+import {
+  createReservation,
+  getReservation,
+  linkReservationExpense,
+} from '../reservations'
 import {
   addTripMember,
   archiveTrip,
@@ -1127,6 +1149,228 @@ describe('member isolation', () => {
         ).toEqual([untied.id, onShared.id].sort())
         expect(await getJourney(reader, onPrivate.id)).toBeNull()
       }
+    })
+  })
+
+  /**
+   * An id names a row; the trip in the request names what the caller is working in. A money writer
+   * that finds the row by id alone lets someone who may read *any* trip rewrite or remove another
+   * trip's ledger, so every one of them is asked for the pair, and a row of some other trip answers
+   * exactly as a row that is not there.
+   */
+  describe('the money writers', () => {
+    interface Ledger {
+      readonly tripId: string
+      readonly expenseId: string
+      readonly shareId: string
+      readonly budgetItemId: string
+      readonly settlementId: string
+      readonly reservationId: string
+    }
+
+    let payerId: string
+    let victim: Ledger
+    let mine: string
+
+    async function seedLedger(
+      tripId: string,
+      scope: TenantScope,
+      ids: { readonly payer: string; readonly other: string },
+    ): Promise<Ledger> {
+      const { expense, shares } = await createExpense(scope, {
+        tripId,
+        title: 'Dinner',
+        amountMinor: 6_000,
+        spentOn: '2026-04-10',
+        paidBy: ids.payer,
+        participants: [{ userId: ids.payer }, { userId: ids.other }],
+      })
+      const share = shares.at(0)
+      if (share === undefined) {
+        throw new Error('A split expense must have share rows.')
+      }
+      const budgetItem = await createBudgetItem(scope, {
+        tripId,
+        name: 'Food',
+        plannedAmountMinor: 20_000,
+      })
+      const settlement = await createSettlement(scope, {
+        tripId,
+        fromUserId: ids.other,
+        toUserId: ids.payer,
+        amountMinor: 1_000,
+        settledOn: '2026-04-11',
+      })
+      const booking = await createReservation(scope, {
+        tripId,
+        title: 'Table for four',
+      })
+      await linkReservationExpense(scope, booking.id, expense.id)
+      return {
+        tripId,
+        expenseId: expense.id,
+        shareId: share.id,
+        budgetItemId: budgetItem.id,
+        settlementId: settlement.id,
+        reservationId: booking.id,
+      }
+    }
+
+    /** Everything an attack on the victim could change, read back as the owner. */
+    async function ledgerOf(ledger: Ledger): Promise<unknown> {
+      return {
+        expense: await getExpenseWithShares(alpha.scope, ledger.expenseId),
+        budgetItems: await listBudgetItems(alpha.scope, ledger.tripId),
+        settlements: await listSettlements(alpha.scope, ledger.tripId),
+        balances: await getMemberBalances(alpha.scope, ledger.tripId),
+        bookingLink: (await getReservation(alpha.scope, ledger.reservationId))
+          ?.expenseId,
+      }
+    }
+
+    function attacksVia(
+      tripId: string,
+    ): ReadonlyArray<readonly [string, () => Promise<unknown>]> {
+      return [
+        [
+          'editing the expense',
+          () =>
+            updateExpense(stranger, tripId, victim.expenseId, {
+              title: 'Rewritten',
+              amountMinor: 1,
+              participants: [{ userId: strangerId }],
+            }),
+        ],
+        [
+          'deleting the expense',
+          () => deleteExpense(stranger, tripId, victim.expenseId),
+        ],
+        [
+          'resplitting the expense',
+          () =>
+            setExpenseShares(stranger, tripId, victim.expenseId, [
+              { userId: strangerId },
+            ]),
+        ],
+        [
+          'settling a share',
+          () => markShareSettled(stranger, tripId, victim.shareId, true),
+        ],
+        [
+          'editing a planned item',
+          () =>
+            updateBudgetItem(stranger, tripId, victim.budgetItemId, {
+              name: 'Rewritten',
+            }),
+        ],
+        [
+          'deleting a planned item',
+          () => deleteBudgetItem(stranger, tripId, victim.budgetItemId),
+        ],
+        [
+          'deleting a payment',
+          () => deleteSettlement(stranger, tripId, victim.settlementId),
+        ],
+      ]
+    }
+
+    beforeEach(async () => {
+      payerId = await alpha.addUser('Alpha the payer')
+      victim = await seedLedger(fixture.tripId, alpha.scope, {
+        payer: alpha.ownerUserId,
+        other: payerId,
+      })
+      mine = (
+        await createTrip(stranger, {
+          title: 'Porto, my side',
+          slug: 'porto-my-side',
+          startDate: '2026-05-01',
+          endDate: '2026-05-04',
+        })
+      ).id
+    })
+
+    async function expectRefusedAndUntouched(
+      namedTripId: string,
+    ): Promise<void> {
+      const before = await ledgerOf(victim)
+      for (const [, attack] of attacksVia(namedTripId)) {
+        const error = await captureError(attack)
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect((error as NotFoundError).code).toBe('NOT_FOUND')
+      }
+      expect(await ledgerOf(victim)).toEqual(before)
+    }
+
+    it('refuse an expense of a private trip the caller is not on, named through the caller’s own trip', async () => {
+      await expectRefusedAndUntouched(mine)
+    })
+
+    it('refuse an expense of an organization-visible trip, named through the caller’s own trip', async () => {
+      await updateTrip(alpha.scope, victim.tripId, {
+        visibility: 'organization',
+      })
+      await expectRefusedAndUntouched(mine)
+    })
+
+    it('refuse an expense of another trip the caller is a member of', async () => {
+      const shared = await createTrip(alpha.scope, {
+        title: 'Faro, together',
+        slug: 'faro-together',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+      })
+      await addTripMember(alpha.scope, {
+        tripId: shared.id,
+        userId: strangerId,
+        role: 'editor',
+      })
+      await expectRefusedAndUntouched(shared.id)
+    })
+
+    it('answers an id that does not exist as it answers an id of another trip', async () => {
+      const missing = await captureError(() =>
+        deleteExpense(stranger, mine, 'no-such-expense'),
+      )
+      const foreign = await captureError(() =>
+        deleteExpense(stranger, mine, victim.expenseId),
+      )
+      expect(missing).toBeInstanceOf(NotFoundError)
+      expect(foreign).toBeInstanceOf(NotFoundError)
+      expect((foreign as NotFoundError).code).toBe(
+        (missing as NotFoundError).code,
+      )
+    })
+
+    it('leave the booking link and the share rows alone when the expense is not the trip’s', async () => {
+      await captureError(() => deleteExpense(stranger, mine, victim.expenseId))
+      expect(
+        (await getReservation(alpha.scope, victim.reservationId))?.expenseId,
+      ).toBe(victim.expenseId)
+      expect(await expenseSharesRepository.count(alpha.scope)).toBeGreaterThan(
+        0,
+      )
+    })
+
+    it('still edit and delete an expense of the trip they name', async () => {
+      const own = await createExpense(stranger, {
+        tripId: mine,
+        title: 'Taxi',
+        amountMinor: 1_200,
+        spentOn: '2026-05-01',
+      })
+
+      const edited = await updateExpense(stranger, mine, own.expense.id, {
+        title: 'Taxi to the airport',
+      })
+      expect(edited.expense.title).toBe('Taxi to the airport')
+
+      await deleteExpense(stranger, mine, own.expense.id)
+      expect(
+        await captureError(() =>
+          updateExpense(stranger, mine, own.expense.id, { title: 'Gone' }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
     })
   })
 })

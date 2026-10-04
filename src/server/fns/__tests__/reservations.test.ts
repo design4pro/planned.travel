@@ -779,7 +779,7 @@ describe('deleting an expense a booking points at, as deployed', () => {
       created.expense.id,
     )
 
-    await deleteExpense(deployedScope, created.expense.id)
+    await deleteExpense(deployedScope, deployedTrip.id, created.expense.id)
 
     expect(await getExpense(deployedScope, created.expense.id)).toBeNull()
     const kept = await getReservation(deployedScope, reservation.id)
@@ -818,7 +818,7 @@ describe('deleting an expense a booking points at, as deployed', () => {
       amountMinor: 500,
       spentOn: '2026-04-11',
     })
-    await deleteExpense(deployedScope, mine.expense.id)
+    await deleteExpense(deployedScope, deployedTrip.id, mine.expense.id)
 
     expect(
       (await getReservation(other.scope, otherReservation.id))?.expenseId,
