@@ -2113,6 +2113,12 @@ export const journeys = sqliteTable(
     tripId: text('trip_id').references(() => trips.id, {
       onDelete: 'set null',
     }),
+    /**
+     * When the trip this journey was written about was deleted (ADR 0034). `trip_id` is nulled by
+     * `ON DELETE SET NULL` at that moment and says nothing about why; this is what tells a journey
+     * that lost its trip from one that never had one. No foreign key: there is nothing left to point at.
+     */
+    tripDeletedAt: integer('trip_deleted_at', { mode: 'timestamp_ms' }),
     ownerUserId: userRef('owner_user_id').notNull(),
     title: text('title').notNull(),
     slug: text('slug').notNull(),

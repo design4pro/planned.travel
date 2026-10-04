@@ -30,3 +30,4 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Reminder** — a pre-departure notice delivered to a trip's members ahead of the start date, honouring each member's channel preferences; its lead time is counted in days, and zero means off.
 - **System event** — a notification event with no acting user (a reminder, a billing follow-up); nobody is excluded from its recipients.
 - **Entity history** — the per-entity view of a tenant's audit trail.
+- **Orphaned journey** — a journey whose trip was deleted: it is kept and readable by its owner only. A journey that never had a trip is not an orphan and stays readable by the whole organization.
