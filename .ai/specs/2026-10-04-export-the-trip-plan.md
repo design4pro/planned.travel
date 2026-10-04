@@ -67,23 +67,23 @@ makes "send me the file" impossible. We already render on the server, off the re
 
 ### What the stage owns and what it does not
 
-| Owned (this stage writes it)                                                                                                                                                                                                              | Not owned (read only, or left alone)                                                                                          |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `src/server/storage/export-artifacts.ts` - new, pure: the `exports/` key family, the grouping of a listing into artifacts, the prune, `listExportKeys`                                                                                    | `src/server/db/schema.ts`, `drizzle/` - **no schema change, no migration**                                                    |
-| `src/server/storage/__tests__/export-artifacts.test.ts` - new; `fake-bucket.ts` - edit: a `list` verb with a page size                                                                                                                    | `src/server/worker.ts`, `wrangler.jsonc` (the weekly cron half stays unwritten, Out of scope)                                 |
-| `src/server/queue/handlers/pdf-export.ts` - edit: scope re-check, locale, working ready link, document accessibility, completion order, prune; key helpers move out to the storage module                                                 | `src/server/queue/consumer.ts`, `src/server/queue/jobs.ts`                                                                    |
-| `src/server/queue/types.ts` - edit: **one** optional `locale` field on `pdfExportPayloadSchema`                                                                                                                                           | `src/server/queue/handlers/trip-purge.ts` - unchanged: its namespace guard already admits `exports/<org>/...`                 |
-| `src/server/queue/handlers/__tests__/pdf-export.test.ts` - new; `metering.test.ts` - edit: its `FILES` fake gains `list` and its environment gains what the scope re-check reads                                                          | `src/server/repos/files.ts`, `src/server/fns/files.ts` (`06-S2` and `06-S1`'s paths; no export row is a `trip_files` row)     |
-| `src/server/repos/exports.ts` - new: reserve and release one unit of the monthly allowance, and the display-only allowance; `repos/index.ts` - append one export line                                                                     | `src/server/repos/billing.ts`, `transports.ts`, `reservations.ts` - used as they are                                          |
-| `src/server/repos/__tests__/exports.test.ts` - new; `tenant-isolation.test.ts` - append one `describe`                                                                                                                                    | `src/styles/tokens.css`, `src/components/ui/**` - no token and no primitive is missing                                        |
-| `src/server/fns/export-document.ts` - new, pure: trip data to `ExportDocument`, in the requester's language                                                                                                                               | `package.json`, `pnpm-lock.yaml` (frozen, `docs/SPEC.md` §3)                                                                  |
-| `src/server/fns/exports.ts` - new: request, list, download; `src/server/fns/__tests__/export-document.test.ts`, `exports.test.ts` - new                                                                                                   | `src/routes/_app/trips/$tripId/-ui/**`, the planner screen (held by `01-S2`, `01-S4`, `07-S1`)                                |
-| `src/routes/_app/-server/trip-lifecycle.ts` - edit, **additive**: `deleteTripFn` also hands a deleted trip's export keys to `trip-purge`                                                                                                  | `src/routes/_app/-server/trip.ts` (`loadTripFiles`) - the panel loads its own list after hydration                            |
-| `src/components/modules/files/export-panel.tsx` (and a small `export-pending.ts` for the persisted pending row) - new; `files/index.ts` - append                                                                                          | `src/components/modules/files/file-library.tsx`, `download.ts`, `upload-queue.ts`, `screening.ts` (`06-S1`, `06-S2`, `06-S4`) |
-| `src/routes/_app/trips/$tripId/files.tsx` - edit: mounts the panel, reads the `export` search parameter, one header action                                                                                                                | `src/routeTree.gen.ts` - no route file is added, so `pnpm generate-routes` does not run                                       |
-| `src/lib/i18n/messages/<locale>/modules.ts` - edit, **all 23 locales**                                                                                                                                                                    | The hardcoded English elsewhere on the Files screen (`06-S1` files one issue for it)                                          |
-| `e2e/documents-and-media.spec.ts` - a `06-S3` describe block (the file is this plan's spec file; whichever of `06-S1` and this stage lands first creates it, the other appends)                                                           |                                                                                                                               |
-| `docs/ACCESS.md` - one line in §3 (a trip export carries confirmation codes only when asked); `CONTEXT.md` - the **Trip export** glossary entry; this spec's `Status` and `Implementation` rows and the regenerated `.ai/specs/README.md` |                                                                                                                               |
+| Owned (this stage writes it)                                                                                                                                                                                                                       | Not owned (read only, or left alone)                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `src/server/storage/export-artifacts.ts` - new, pure: the `exports/` key family, the grouping of a listing into artifacts, the prune, `listExportKeys`                                                                                             | `src/server/db/schema.ts`, `drizzle/` - **no schema change, no migration**                                                    |
+| `src/server/storage/__tests__/export-artifacts.test.ts` - new; `fake-bucket.ts` - edit: a `list` verb with a page size                                                                                                                             | `src/server/worker.ts`, `wrangler.jsonc` (the weekly cron half stays unwritten, Out of scope)                                 |
+| `src/server/queue/handlers/pdf-export.ts` - edit: scope re-check, locale, working ready link, document accessibility, completion order, prune; key helpers move out to the storage module                                                          | `src/server/queue/consumer.ts`, `src/server/queue/jobs.ts`                                                                    |
+| `src/server/queue/types.ts` - edit: **one** optional `locale` field on `pdfExportPayloadSchema`                                                                                                                                                    | `src/server/queue/handlers/trip-purge.ts` - unchanged: its namespace guard already admits `exports/<org>/...`                 |
+| `src/server/queue/handlers/__tests__/pdf-export.test.ts` - new; `metering.test.ts` - edit: its `FILES` fake gains `list` and its environment gains what the scope re-check reads                                                                   | `src/server/repos/files.ts`, `src/server/fns/files.ts` (`06-S2` and `06-S1`'s paths; no export row is a `trip_files` row)     |
+| `src/server/repos/exports.ts` - new: reserve and release one unit of the monthly allowance, and the display-only allowance; `repos/index.ts` - append one export line                                                                              | `src/server/repos/billing.ts`, `transports.ts`, `reservations.ts` - used as they are                                          |
+| `src/server/repos/__tests__/exports.test.ts` - new; `tenant-isolation.test.ts` - append one `describe`                                                                                                                                             | `src/styles/tokens.css`, `src/components/ui/**` - no token and no primitive is missing                                        |
+| `src/server/fns/export-document.ts` - new, pure: trip data to `ExportDocument`, in the requester's language                                                                                                                                        | `package.json`, `pnpm-lock.yaml` (frozen, `docs/SPEC.md` §3)                                                                  |
+| `src/server/fns/exports.ts` - new: request, list, download; `src/server/fns/__tests__/export-document.test.ts`, `exports.test.ts` - new                                                                                                            | `src/routes/_app/trips/$tripId/-ui/**`, the planner screen (held by `01-S2`, `01-S4`, `07-S1`)                                |
+| `src/routes/_app/-server/trip-lifecycle.ts` - edit, **additive**: `deleteTripFn` also hands a deleted trip's export keys to `trip-purge`                                                                                                           | `src/routes/_app/-server/trip.ts` (`loadTripFiles`) - the panel loads its own list after hydration                            |
+| `src/components/modules/files/export-panel.tsx` (and a small `export-pending.ts` for the persisted pending row) - new; `files/index.ts` - append; `src/components/modules/shared/panel.tsx` - additive `headingProps` passthrough on `ModulePanel` | `src/components/modules/files/file-library.tsx`, `download.ts`, `upload-queue.ts`, `screening.ts` (`06-S1`, `06-S2`, `06-S4`) |
+| `src/routes/_app/trips/$tripId/files.tsx` - edit: mounts the panel, reads the `export` search parameter, one header action                                                                                                                         | `src/routeTree.gen.ts` - no route file is added, so `pnpm generate-routes` does not run                                       |
+| `src/lib/i18n/messages/<locale>/modules.ts` - edit, **all 23 locales**                                                                                                                                                                             | The hardcoded English elsewhere on the Files screen (`06-S1` files one issue for it)                                          |
+| `e2e/documents-and-media.spec.ts` - a `06-S3` describe block (the file is this plan's spec file; whichever of `06-S1` and this stage lands first creates it, the other appends)                                                                    |                                                                                                                               |
+| `docs/ACCESS.md` - one line in §3 (a trip export carries confirmation codes only when asked); `CONTEXT.md` - the **Trip export** glossary entry; this spec's `Status` and `Implementation` rows and the regenerated `.ai/specs/README.md`          |                                                                                                                               |
 
 Three plan statements are stale at HEAD and the spec does not repeat them. `src/server/queue/handlers/__tests__/`
 **exists** (seven files already, including the handler's current tests in `metering.test.ts`). The weekly cron is **partly
@@ -181,7 +181,7 @@ the port: it streams through the real `R2Bucket` from `filesBucket()`, because `
   translated footer as arguments, so it stays a pure function. The footer's time goes through the locale formatters of
   `src/lib/format.ts`, not an ISO slice.
 - **The document is accessible.** `td.meta` and `footer` move to `#6e6d65` (about 5.2:1, a colour the sheet already uses);
-  the bold label cell is a `<th scope="row" class="label">`; `td.meta` is `text-align: end`; one `<h1>`, one `<h2>` per
+  the bold label cell is a `<th scope="row" class="label">` and the stylesheet selects `th, td` and `th.label { text-align: start; font-weight: 500 }` (a `th` is centred and bold by default, which would centre the label column in both directions); `td.meta` is `text-align: end`; one `<h1>`, one `<h2>` per
   section; and `tagged: true` is passed explicitly in the Browser Rendering `pdfOptions` instead of relying on a library
   default.
 - **The ready link is a route that exists:** `${APP_URL}/trips/<tripId>/files?export=<taskId>`, with `encodeURIComponent` on
@@ -268,13 +268,17 @@ up to 500 `label` / `value` / `meta` rows. **It does not add a second payload sh
 - _Reservations_ section (**not** "Bookings": `CONTEXT.md` says to avoid that word for a Reservation): one row per
   reservation in date order, `label` the title, `value` the provider and location, `meta` the date and time. **`cancelled`
   reservations are left out.** `Ref. <confirmation number>` is appended to `value` **only when `includeReferences` is true.**
-- _Transport_ section: one row per transport record from `listTripTransports(scope, tripId)` (travel order, dated first,
-  ideas last), `label` the title, carrier and service number, `value` from to (`departureName` to `arrivalName`) and the
-  seat, `meta` the departure date and time. **`cancelled` transports are left out.** `Ref. <booking code>` is appended only
+- _Transport_ section: one row per transport record from `listTripTransports(scope, tripId)` (travel order, dated first),
+  `label` the title, carrier and service number, `value` the route and the seat, `meta` the departure date and time. The route
+  is joined through the catalogue key `files.export.doc.route` (`{from} to {to}`), **never a literal arrow or an English "to"**:
+  an arrow is not mirrored and points the wrong way in an Arabic document. **`cancelled` and `idea` transports are left out**:
+  there is no status row, so a reader could not tell a flight someone only considered from a booked one. `Ref. <booking code>` is appended only
   when `includeReferences` is true. A chained journey is one record in this section: its legs are not listed. A flight on a
   trip must not export without the flight, and a day plan that leaves out the train a driver must meet is the half of the
   document the reader came for.
 - _Where we are staying_ section: one row per stay, `label` the name, `value` the address, `meta` the nights.
+  `Ref. <confirmation number>` (the stay's `confirmationNumber`) is appended to `value` **only when `includeReferences` is
+  true**, so the checkbox covers every code in the file, the hotel's included.
 - **Sizes are held by construction, and a cut is said out loud.** The schema allows 60 sections and 500 rows per section;
   every string is sliced to its bound. A plan longer than 56 days (60 minus overview, reservations, transport and stays) keeps
   its first 56 days and says so in the overview note; a list longer than 500 rows keeps its first 500 and its section note
@@ -287,11 +291,11 @@ up to 500 `label` / `value` / `meta` rows. **It does not add a second payload sh
 
 **`src/server/fns/exports.ts` (new).** Three functions; **none of them renders anything**, and each starts at `appScope()`.
 
-| Function               | Method | Input                                   | Returns                                                                                                            |
-| ---------------------- | ------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `requestTripExportFn`  | POST   | `{ tripId, notify, includeReferences }` | `{ ok: true, taskId, queuedAt }` or `{ ok: false, reason: 'quota', limit, used, resetsOn }`                        |
-| `listTripExportsFn`    | GET    | `{ tripId }`                            | `{ artifacts: [{ taskId, format, sizeBytes, createdAt }], canRequest, allowance: { used, limit \| null, month } }` |
-| `downloadTripExportFn` | GET    | `{ tripId, taskId }`                    | a raw `Response` streamed from R2, or a 404 `Response` with the JSON code `{ error: 'missing' }`                   |
+| Function               | Method | Input                                   | Returns                                                                                                                      |
+| ---------------------- | ------ | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `requestTripExportFn`  | POST   | `{ tripId, notify, includeReferences }` | `{ ok: true, taskId, queuedAt }` or `{ ok: false, reason: 'quota', limit, used, resetsOn }`                                  |
+| `listTripExportsFn`    | GET    | `{ tripId }`                            | `{ artifacts: [{ taskId, format, sizeBytes, createdAt }], canRequest, allowance: { used, limit \| null, month, resetsOn } }` |
+| `downloadTripExportFn` | GET    | `{ tripId, taskId }`                    | a raw `Response` streamed from R2, or a 404 `Response` with the JSON code `{ error: 'missing' }`                             |
 
 - **`requestTripExportFn`** in this order, each step before the next can cost anything: `requireTrip`; `reserveExport` (trip
   visibility, role, the reserve, the ceiling); build the document from tenant-scoped repository reads (`getTripItinerary`,
@@ -328,8 +332,10 @@ payload })` with **no `id`**, so the queue assigns a fresh UUID; return as soon 
     inline and the follow-up is a one-line swap. The two must not diverge, and a test asserts the headers.
     A task id from another workspace resolves to a key inside the caller's own prefix, which does not exist: a 404. **There is
     no id-shaped path into another tenant's artifact.**
-- **Zod (v4 idiom).** `z.strictObject()` with the `error` parameter; ids as the existing trimmed bounded string; `notify` and
-  `includeReferences` as `z.boolean()`. Validation is shape and decides nothing about permission.
+- **Zod (v4 idiom).** `z.strictObject()` with the `error` parameter; ids as the existing trimmed bounded string (`taskId`
+  `z.string().trim().min(1).max(128)`: **the id pattern is checked in the handler and answers the 404, not in the schema**, so
+  a malformed id and a foreign one are the same answer); `notify` and `includeReferences` as `z.boolean()`. Validation is shape
+  and decides nothing about permission.
 - **Authorisation is decided in the handler**: `appScope()` then `requireTrip()` before anything is read, built or enqueued.
   `beforeLoad` is UX and is not a data boundary here or anywhere.
 
@@ -345,11 +351,16 @@ ticket; 06-S3c adds the notify checkbox, the allowance line, the viewer view, th
 ### Phase 3 (06-S3c) - everyone else on the trip, and the email
 
 - **The allowance line** ("2 of 3 exports used this month") from `exportAllowance`. When `used >= limit` the panel shows the
-  quota sentence and **disables the request button before the traveller presses it**; the server stays the gate.
+  quota sentence **as plain text linked to the disabled request button with `aria-describedby`**, using the `resetsOn` the list
+  returns (so the client does no date arithmetic), and **disables the request button before the traveller presses it**; the
+  server stays the gate. The `danger` `Alert` (`role="alert"`) is kept for a refusal **after** a press, otherwise it would be
+  announced on every page load.
 - **The notify checkbox** ("Email me when it is ready") sets `notify`; the handler's email (Phase 1) is what arrives.
 - **A viewer** sees the list, the download actions and one sentence ("Only owners and editors can create an export. You can
-  download the ones that exist."), and no request button, no checkboxes. The server refuses the request regardless
-  (`canRequest` only draws the affordance). A viewer's empty state has no action and says an owner or editor can make one.
+  download the ones that exist."), **shown only when at least one artifact exists** (the empty state carries its own line),
+  and no request button, no checkboxes. The server refuses the request regardless (`canRequest` only draws the affordance). A
+  viewer's empty state has no action and says an owner or editor can make one. **A viewer is never told to do what they
+  cannot:** the `missing` and `linkGone` sentences have viewer variants without "export again" / "make a new one".
 - **`?export=<taskId>`.** The route gains `validateSearch` for `export` with the same `^[A-Za-z0-9-]{1,128}$` pattern and a
   `.catch` so a damaged link yields no search value instead of the English route error. The panel matches the value **against
   the list it holds**, never puts it into a selector or into markup. On a match the row gets the text badge "From your link",
@@ -357,10 +368,14 @@ ticket; 06-S3c adds the notify checkbox, the allowance line, the viewer view, th
   `html` is smooth-scrolled outside reduced motion and a long smooth scroll breaks the 400 ms rule) with a `scroll-mt-*` that
   clears the sticky top nav and the trip sub-nav. An id that is **not** in the list shows one line, "That export is no longer
   kept. Make a new one below.", because the email's link may outlive the artifact and saying nothing would look like a broken
-  page.
+  page. **The line appears only after a list has loaded successfully**: never while the skeleton is up and never after a failed
+  first load, or every email link would briefly say the export is gone. It goes through the **same `role="status"` region**, so
+  it is announced; the e2e asserts the region's text both when the id matches and when it does not.
 - **A secondary header action** in `TripModuleHeader`'s `actions` slot ("Go to exports") scrolls to the panel and focuses its
-  heading, because under a long file list on a 360 px phone nobody would find it. It is a navigation aid, not a second request
-  control, and its name differs from the request button's.
+  heading, because under a long file list on a 360 px phone nobody would find it. It calls `focus({ preventScroll: true })` and
+  then `scrollIntoView({ behavior: 'instant', block: 'start' })`, and the heading carries the same `scroll-mt-*` as the marked
+  row so it lands below the sticky header (the e2e asserts the heading's top edge is below the header's bottom edge). It is a
+  navigation aid, not a second request control, and its name differs from the request button's.
 - **A reload while an export is pending keeps the pending row.** The panel keeps pending `{ taskId, queuedAt }` pairs per trip
   in `sessionStorage` (`export-pending.ts`) and restores them on mount while they are inside the 90 s window, with the request
   button still disabled: a traveller who reloads must not spend one of the free plan's three exports to find out.
@@ -383,8 +398,9 @@ its artifacts are not in that list: today a deleted trip's whole plan would stay
 - **What remains is stated, not hidden:** a trip exported once and never touched keeps its (unreadable, past seven days)
   artifact until the weekly retention cron half is written. This ticket files **two follow-up issues**: the cron half (it needs
   `worker.ts`, a shared entry, and prunes `exports/` prefix-wide and the orphaned upload objects the plan's area brief names,
-  labelled for the foundations plan), and the **journey book** (see Out of scope). The in-flight case is closed by Phase 1's
-  scope re-check.
+  labelled for the foundations plan), and the **journey book** (see Out of scope). The in-flight case is narrowed by Phase 1's
+  scope re-check to a short window (a job that passed the re-check just before the delete can still write an artifact the purge
+  never listed); that artifact is unreadable once `requireTrip` refuses the trip, and the cron half frees its bytes.
 
 ### The panel's states, focus and announcements (applies from 06-S3b)
 
@@ -397,7 +413,13 @@ and `07-S1`, so a trigger there would be a same-wave claim on a file another sta
 
 - **The list is read after hydration** through `listTripExportsFn` (the Files loader is untouched), so the list has a genuine
   pending state. Sizes are `formatStorageSize(bytes, locale)` (`src/components/layout/storage-size.ts`), ages `formatRelative`,
-  `resetsOn` and artifact dates `formatDate` (not `formatStorage` in `src/lib/plans.ts`, which prints English units).
+  `resetsOn` `formatDate` (not `formatStorage` in `src/lib/plans.ts`, which prints English units). **A time reaches the
+  traveller through one catalogue key**, `files.export.madeAt` (`{date}, {time}`): `{date}` is `formatDate` of the instant and
+  `{time}` its clock time **in the reader's browser time zone** through `zoneClockTime(zone, atMs, locale)`
+  (`src/lib/clock-zones.ts`), because `formatDate` alone prints the date only and a Worker clock in UTC would print a UTC time
+  for a traveller in Tokyo. The download label's and the artifact label's `{date}` are this string, so **two exports made the
+  same day have different names** (a test asserts it). The document footer's `{when}` is the same key with the generation date
+  and clock time **in the trip's time zone**.
 - **Waiting, without a spinner that lies.** The artifact does not exist when the button returns; it exists when the consumer
   has written the `.html`. The panel holds the returned `taskId` as a **pending row** and polls the list every
   `EXPORT_POLL_MS = 3000` for at most `EXPORT_POLL_WINDOW_MS = 90000`; both are named constants beside the reason. When the
@@ -406,9 +428,11 @@ and `07-S1`, so a trigger there would be a same-wave claim on a file another sta
   again**. The poll **stops when the tab is hidden** (`document.visibilityState`) and resumes, with a fresh window, when it is
   shown. **A failed poll keeps the rows and the pending row** and retries on the next tick; only a failure of the **first**
   load shows the list-error `Alert`. The pending text says the traveller can leave the page.
-- **States, named.** _Empty_ (owner or editor): an `EmptyState` on `--color-surface-2` with the `FileDown` icon and one
-  sentence about handing the trip to somebody without an account; its action **is the one request button**, not a second
-  control with the same name. _Empty_ (viewer): the same without an action. _Skeleton_: three `Skeleton` rows at the artifact
+- **States, named.** The request button is **drawn once, in one fixed place above the list, in every state**, so the focused
+  control is never unmounted and mounted again when the pending row replaces the empty state. _Empty_ (owner or editor): an
+  `EmptyState` on `--color-surface-2` with the `FileDown` icon and one sentence about handing the trip to somebody without an
+  account, **with no action of its own** (the one request button above it is the action; a second control with the same name
+  would break the `count() === 1` selector check). _Empty_ (viewer): the same, naming who can make one. _Skeleton_: three `Skeleton` rows at the artifact
   row's exact height on `--color-surface-2`, the list container `aria-busy`, so the panel does not change height when the list
   lands. _Pending_, _slow_, _ready_ as above. _Error_: a failed **first load** is an `Alert tone="danger"` with a Retry; a
   failed **request** is the failure toast of `useAction`; a failed **download** reuses `files.error.downloadFailed` and a
@@ -417,8 +441,9 @@ and `07-S1`, so a trigger there would be a same-wave claim on a file another sta
   `Button` carries `loading` while the enqueue is in flight and is `disabled` while a pending row exists.
 - **`useAction` is configured, not defaulted.** The request and download actions pass `invalidate: false` (otherwise the button
   stays loading while the whole Files loader reruns, and if that rerun fails the pending row is replaced by the route error),
-  and pass `fallback` and `failure` from the catalogue so the English defaults never appear. An `{ ok: false }` result shows no
-  success toast.
+  and pass `fallback` and `failure` from the catalogue so the English defaults never appear (the request's toast title is
+  `files.export.error.request`, its description `files.export.error.requestBody`, which also answers the free-plan traveller's
+  first question: was one of my three lost?). An `{ ok: false }` result shows no success toast.
 - **Download** is a `fetch` into a blob saved through a hidden link, written as a small function in the panel's own module
   (`download.ts` is `06-S1`'s and is not edited). Each row's control carries `loading` and is `disabled` while its fetch runs, so
   a slow connection cannot double-download. The saved file name is read from the response's `content-disposition`
@@ -437,10 +462,17 @@ and `07-S1`, so a trigger there would be a same-wave claim on a file another sta
   `aria-hidden`. The quota refusal and the list error use `Alert tone="danger"` (`role="alert"`); a `warning` or `info` Alert
   is inserted already holding its text and is not reliably announced.
 - **Focus is named for every case.** When the focused request button becomes `disabled` for up to 90 s, focus moves to the
-  pending row (`tabIndex={-1}`) and returns to the button when it re-enables. When Retry, Refresh or a `404` re-read unmounts the
-  focused control, focus moves to the panel's heading (`tabIndex={-1}`). The polling never moves focus.
+  pending row (`tabIndex={-1}`, with the same `scroll-mt-*` as the marked row) and returns to the button when it re-enables
+  **only if focus is still on the pending row or on `body`**; otherwise it is left where it is. When Retry, Refresh or a `404`
+  re-read unmounts the focused control, focus moves to the panel's heading (`tabIndex={-1}`, same `scroll-mt-*`). A Download
+  control loses focus while it is `loading` (`Button` sets native `disabled`); when its fetch ends and focus is on `body`, focus
+  goes back to that control, and the e2e checks `document.activeElement` after a download. The polling never moves focus.
+  `ModulePanel` renders its `h2` with no way to give it `tabIndex={-1}` or a ref, so this ticket adds an **additive
+  `headingProps` passthrough** to `ModulePanel` in `src/components/modules/shared/panel.tsx` (named under Owned).
 - **Table is not used.** `Table` wraps its rows in `overflow-x-auto`, which contradicts "nothing scrolls sideways", and stacking
-  cells at 360 px strips table semantics. The list is a `ul` of `ModuleRow`.
+  cells at 360 px strips table semantics. `ModuleRow` renders a `div`, so the list is a `div role="list"` whose rows, the
+  pending row included, are `ModuleRow`s with `role="listitem"` (a `ul` would hold `div` children); a component test counts the
+  `listitem` elements.
 - **Tokens.** None missing. Sizes, ages and the allowance carry `tabular-nums`. Motion 150-260 ms on `--ease-out-quint`,
   transform and opacity only, `prefers-reduced-motion: reduce` honoured, for the pending row settling into a real row.
 
@@ -512,10 +544,10 @@ output: { ok: true; taskId: string; queuedAt: number }
 input:  { tripId: string }
 output: { artifacts: Array<{ taskId: string; format: 'pdf' | 'html'; sizeBytes: number; createdAt: number }>;
           canRequest: boolean;
-          allowance: { used: number; limit: number | null; month: string /* YYYY-MM */ } }
+          allowance: { used: number; limit: number | null; month: string /* YYYY-MM */; resetsOn: string /* YYYY-MM-DD, the first of next month */ } }
 
 // download
-input:  { tripId: string; taskId: string /* ^[A-Za-z0-9-]{1,128}$ */ }
+input:  { tripId: string; taskId: string /* trimmed, 1..128; the ^[A-Za-z0-9-]{1,128}$ pattern is checked in the handler and answers the 404 */ }
 output: Response  // 200 attachment | 404 { error: 'missing' }
 ```
 
@@ -565,42 +597,46 @@ the plural turns on.
 
 Panel (ticket 06-S3b unless marked 06-S3c):
 
-| Key                                        | `en`                                                                                                                                                                                                                                                                       |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `files.export.label`                       | `Export the trip`                                                                                                                                                                                                                                                          |
-| `files.export.description`                 | `A printable copy of the trip: days, stops, reservations, transport and stays. Hand it to someone who has no account.`                                                                                                                                                     |
-| `files.export.kept`                        | `{ one: 'Each export is kept for {count} day.', other: 'Each export is kept for {count} days.' }`                                                                                                                                                                          |
-| `files.export.request`                     | `Export the trip`                                                                                                                                                                                                                                                          |
-| `files.export.includeReferences`           | `Include confirmation codes`                                                                                                                                                                                                                                               |
-| `files.export.includeReferencesHint`       | `Leave this off if you will send the file to someone outside your workspace.`                                                                                                                                                                                              |
-| `files.export.notify` (06-S3c)             | `Email me when it is ready`                                                                                                                                                                                                                                                |
-| `files.export.allowance` (06-S3c)          | `{ one: '{used} of {count} export used this month', other: '{used} of {count} exports used this month' }` (`{count}` is the limit)                                                                                                                                         |
-| `files.export.allowanceUnlimited` (06-S3c) | `{ one: '{count} export this month', other: '{count} exports this month' }` (`{count}` is the number used)                                                                                                                                                                 |
-| `files.export.empty.title`                 | `No exports yet`                                                                                                                                                                                                                                                           |
-| `files.export.empty.body`                  | `Make a printable copy of the trip to send to someone who has no account.`                                                                                                                                                                                                 |
-| `files.export.empty.bodyViewer` (06-S3c)   | `No exports yet. An owner or editor of this trip can make one.`                                                                                                                                                                                                            |
-| `files.export.pending`                     | `Preparing your export. You can leave this page; it will be in this list when it is ready.`                                                                                                                                                                                |
-| `files.export.pendingSlow`                 | `This is taking longer than usual. It will appear here when it is ready. If it does not, export again.`                                                                                                                                                                    |
-| `files.export.refresh`                     | `Refresh`                                                                                                                                                                                                                                                                  |
-| `files.export.ready`                       | `Your export is ready`                                                                                                                                                                                                                                                     |
-| `files.export.format.pdf`                  | `PDF`                                                                                                                                                                                                                                                                      |
-| `files.export.format.html`                 | `Printable page`                                                                                                                                                                                                                                                           |
-| `files.export.artifact`                    | `Trip export, {date}`                                                                                                                                                                                                                                                      |
-| `files.export.download`                    | `Download`                                                                                                                                                                                                                                                                 |
-| `files.export.downloadLabelPdf`            | `Download the PDF made {date}` (`{date}` carries the time, so two exports of one day have different names)                                                                                                                                                                 |
-| `files.export.downloadLabelHtml`           | `Download the printable page made {date}`                                                                                                                                                                                                                                  |
-| `files.export.error.list`                  | `The list of exports did not load.`                                                                                                                                                                                                                                        |
-| `files.export.retry`                       | `Try again`                                                                                                                                                                                                                                                                |
-| `files.export.error.quota`                 | `{ one: "This workspace's subscription includes {count} export a month, and all of it is used. The count starts again on {date}.", other: "This workspace's subscription includes {count} exports a month, and all of them are used. The count starts again on {date}." }` |
-| `files.export.error.request`               | `The export was not started`                                                                                                                                                                                                                                               |
-| `files.export.error.missing`               | `That export is no longer kept. Export the trip again.`                                                                                                                                                                                                                    |
-| `files.export.viewer` (06-S3c)             | `Only owners and editors can create an export. You can download the ones that exist.`                                                                                                                                                                                      |
-| `files.export.jump` (06-S3c)               | `Go to exports`                                                                                                                                                                                                                                                            |
-| `files.export.fromLink` (06-S3c)           | `From your link`                                                                                                                                                                                                                                                           |
-| `files.export.linkGone` (06-S3c)           | `That export is no longer kept. Make a new one below.`                                                                                                                                                                                                                     |
+| Key                                         | `en`                                                                                                                                                                                                                                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `files.export.label`                        | `Export the trip`                                                                                                                                                                                                                                                          |
+| `files.export.description`                  | `A printable copy of the trip: days, stops, reservations, transport and stays. Hand it to someone who has no account.`                                                                                                                                                     |
+| `files.export.kept`                         | `{ one: 'Each export is kept for {count} day.', other: 'Each export is kept for {count} days.' }`                                                                                                                                                                          |
+| `files.export.request`                      | `Export the trip`                                                                                                                                                                                                                                                          |
+| `files.export.includeReferences`            | `Include confirmation codes`                                                                                                                                                                                                                                               |
+| `files.export.includeReferencesHint`        | `Leave this off if you will send the file to someone outside your workspace.`                                                                                                                                                                                              |
+| `files.export.notify` (06-S3c)              | `Email me when it is ready`                                                                                                                                                                                                                                                |
+| `files.export.allowance` (06-S3c)           | `{ one: '{used} of {count} export used this month', other: '{used} of {count} exports used this month' }` (`{count}` is the limit)                                                                                                                                         |
+| `files.export.allowanceUnlimited` (06-S3c)  | `{ one: '{count} export this month', other: '{count} exports this month' }` (`{count}` is the number used)                                                                                                                                                                 |
+| `files.export.empty.title`                  | `No exports yet`                                                                                                                                                                                                                                                           |
+| `files.export.empty.body`                   | `Make a printable copy of the trip to send to someone who has no account.`                                                                                                                                                                                                 |
+| `files.export.empty.bodyViewer` (06-S3c)    | `An owner or editor of this trip can make one.` (the title already says "No exports yet")                                                                                                                                                                                  |
+| `files.export.pending`                      | `Preparing your export. You can leave this page; it will be in this list when it is ready.`                                                                                                                                                                                |
+| `files.export.pendingSlow`                  | `This is taking longer than usual. It will appear here when it is ready. If it does not, export again.`                                                                                                                                                                    |
+| `files.export.refresh`                      | `Refresh`                                                                                                                                                                                                                                                                  |
+| `files.export.ready`                        | `Your export is ready`                                                                                                                                                                                                                                                     |
+| `files.export.format.pdf`                   | `PDF`                                                                                                                                                                                                                                                                      |
+| `files.export.format.html`                  | `Printable page`                                                                                                                                                                                                                                                           |
+| `files.export.madeAt`                       | `{date}, {time}` (`{date}` is `formatDate`, `{time}` the clock time in the reader's time zone; the one place a time reaches the traveller)                                                                                                                                 |
+| `files.export.artifact`                     | `Trip export, {date}` (`{date}` is the `madeAt` string)                                                                                                                                                                                                                    |
+| `files.export.download`                     | `Download`                                                                                                                                                                                                                                                                 |
+| `files.export.downloadLabelPdf`             | `Download the PDF made {date}` (`{date}` is the `madeAt` string, so two exports of one day have different names)                                                                                                                                                           |
+| `files.export.downloadLabelHtml`            | `Download the printable page made {date}` (`{date}` is the `madeAt` string)                                                                                                                                                                                                |
+| `files.export.error.list`                   | `The list of exports did not load.`                                                                                                                                                                                                                                        |
+| `files.export.retry`                        | `Try again`                                                                                                                                                                                                                                                                |
+| `files.export.error.quota`                  | `{ one: "This workspace's subscription includes {count} export a month, and all of it is used. The count starts again on {date}.", other: "This workspace's subscription includes {count} exports a month, and all of them are used. The count starts again on {date}." }` |
+| `files.export.error.request`                | `The export was not started`                                                                                                                                                                                                                                               |
+| `files.export.error.requestBody`            | `This attempt was not counted. Try again in a moment.`                                                                                                                                                                                                                     |
+| `files.export.error.missing`                | `That export is no longer kept. Export the trip again.`                                                                                                                                                                                                                    |
+| `files.export.error.missingViewer` (06-S3c) | `That export is no longer kept.`                                                                                                                                                                                                                                           |
+| `files.export.viewer` (06-S3c)              | `Only owners and editors can create an export. You can download the ones that exist.` (shown only when at least one artifact exists)                                                                                                                                       |
+| `files.export.jump` (06-S3c)                | `Go to exports`                                                                                                                                                                                                                                                            |
+| `files.export.fromLink` (06-S3c)            | `From your link`                                                                                                                                                                                                                                                           |
+| `files.export.linkGone` (06-S3c)            | `That export is no longer kept. Make a new one below.`                                                                                                                                                                                                                     |
+| `files.export.linkGoneViewer` (06-S3c)      | `That export is no longer kept.`                                                                                                                                                                                                                                           |
 
-Document and email (read by the builder and the handler, in the requester's locale; the email keys land with 06-S3a, the
-document keys with 06-S3b):
+Document and email (read by the builder and the handler, in the requester's locale; the email keys and
+`files.export.doc.footer` land with 06-S3a, the other document keys with 06-S3b):
 
 | Key                              | `en`                                                                                                                                                                                         |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -613,10 +649,11 @@ document keys with 06-S3b):
 | `files.export.doc.reservations`  | `Reservations`                                                                                                                                                                               |
 | `files.export.doc.transport`     | `Transport`                                                                                                                                                                                  |
 | `files.export.doc.reference`     | `Ref. {code}`                                                                                                                                                                                |
+| `files.export.doc.route`         | `{from} to {to}` (never a literal arrow: it is not mirrored in a right-to-left document)                                                                                                     |
 | `files.export.doc.stays`         | `Where we are staying`                                                                                                                                                                       |
 | `files.export.doc.nights`        | `{ one: '{count} night', other: '{count} nights' }`                                                                                                                                          |
 | `files.export.doc.truncatedDays` | `{ one: 'This plan has more days than fit in one document. The first {count} day is shown.', other: 'This plan has more days than fit in one document. The first {count} days are shown.' }` |
-| `files.export.doc.truncatedRows` | `Showing the first {count} of {total}.` (a plural object where a locale's grammar needs one)                                                                                                 |
+| `files.export.doc.truncatedRows` | `{ one: 'Showing the first {count} of {total}.', other: 'Showing the first {count} of {total}.' }` (a plural object in every locale, `en` included, turning on `{count}`)                    |
 | `files.export.doc.footer`        | `{app} - generated {when}`                                                                                                                                                                   |
 | `files.export.email.subject`     | `{title} is ready`                                                                                                                                                                           |
 | `files.export.email.body`        | `{ one: 'Your trip export is ready. It is kept for {count} day.', other: 'Your trip export is ready. It is kept for {count} days.' }`                                                        |
@@ -628,35 +665,35 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
 
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                                           | What happens                                                                                                                                                                                                                     |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The free plan's fourth export of a month                                       | Refused; the unit reserved is released once inside `reserveExport`; the panel shows the sentence with the limit and the first of next month. The counter is unchanged. Three refusals in a row at 3 of 3 leave the counter at 3. |
-| Two simultaneous requests at two of three                                      | Exactly one passes: the second reserve returns four, fails the ceiling and is released.                                                                                                                                          |
-| Two simultaneous first exports of a month                                      | The loser's insert hits the unique index; the bump is retried once and succeeds, so neither is a redacted failure.                                                                                                               |
-| A viewer calls `requestTripExportFn` directly                                  | `TripRoleError` after `requireTrip` and before any bump; the counter does not move.                                                                                                                                              |
-| A caller names a trip in another workspace, or a private trip they are not on  | `NotFoundError` from `requireTrip`, never `TripRoleError`; the counter does not move.                                                                                                                                            |
-| The enqueue throws                                                             | The unit is released with the reserve's month and the error is rethrown; the toast says the export was not started.                                                                                                              |
-| The release itself fails                                                       | Logged; the unit leaks. A lost unit is the safe direction.                                                                                                                                                                       |
-| The job dead-letters after it was accepted                                     | The unit stays spent. The pending row ends in the "taking longer" state after 90 s and the traveller can ask again.                                                                                                              |
-| The trip is deleted, or the requester leaves, while the job is queued          | The handler's scope re-check ends the job with `TaskPermanentError` before anything is written or emailed.                                                                                                                       |
-| `BROWSER_RENDERING_API_TOKEN` absent, or the provider over its ceiling         | The handler writes the HTML artifact only; the panel labels it "Printable page", never "PDF".                                                                                                                                    |
-| The poll lands between the `.pdf` and the `.html`                              | The artifact is not listed yet: the `.html` is the completion marker, so "ready" never precedes the file or changes format afterwards.                                                                                           |
-| An artifact is older than seven days, or was pruned between the list and click | The list omits it; a download is the same 404 `missing`, which the panel says in the traveller's language and then re-reads the list.                                                                                            |
-| A task id from another workspace, or `../`                                     | Fails the id pattern or resolves inside the caller's own prefix to nothing: a 404, indistinguishable from "not there".                                                                                                           |
-| A trip with 90 days, or 700 reservations                                       | The document is cut to the schema's bounds and says so in a note; the request does not fail.                                                                                                                                     |
-| A cancelled reservation or transport                                           | Left out of the document.                                                                                                                                                                                                        |
-| A title containing `<script>`                                                  | Escaped through `escapeHtml` in the title, the headings, every row and the email (after interpolation); the artifact carries no script.                                                                                          |
-| A trip exported with `includeReferences` off                                   | Reservations and transport are listed without `Ref.` codes.                                                                                                                                                                      |
-| An archived trip                                                               | Exportable; the request button is available to owner and editor.                                                                                                                                                                 |
-| A tab goes to the background mid-poll                                          | The poll stops; it resumes with a fresh 90 s window when the tab is shown, and the list is reread immediately.                                                                                                                   |
-| A poll request fails                                                           | The rows and the pending row stay; the next tick retries; no error `Alert` after the first load.                                                                                                                                 |
-| The traveller reloads while pending                                            | The pending row is restored from `sessionStorage` while inside the window, with the button still disabled.                                                                                                                       |
-| The traveller leaves the page while pending                                    | The job completes anyway; the artifact is in the list on the next visit, and the email, if asked for, carries a working link.                                                                                                    |
-| The email link names an artifact that has been pruned, or is damaged           | The Files screen loads; the panel shows the one "no longer kept" line; a malformed `export` value is dropped, not an English route error.                                                                                        |
-| A member is removed from the trip after exporting                              | `requireTrip` refuses their next list or download; the artifact stays for the others.                                                                                                                                            |
-| A locale tag the catalogue does not carry                                      | The handler and the builder fall back to `en`; nothing dead-letters.                                                                                                                                                             |
-| Right-to-left locale                                                           | `<html lang dir="rtl">` on the artifact; the panel uses logical properties.                                                                                                                                                      |
-| A trip deleted with no attachments and one export                              | The export keys are listed before the empty-list early return, so the purge still runs; a failed listing logs and the attachment purge continues.                                                                                |
+| Case                                                                           | What happens                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The free plan's fourth export of a month                                       | Refused; the unit reserved is released once inside `reserveExport`; the panel shows the sentence with the limit and the first of next month. The counter is unchanged. Three refusals in a row at 3 of 3 leave the counter at 3.                                                              |
+| Two simultaneous requests at two of three                                      | Exactly one passes: the second reserve returns four, fails the ceiling and is released.                                                                                                                                                                                                       |
+| Two simultaneous first exports of a month                                      | The loser's insert hits the unique index; the bump is retried once and succeeds, so neither is a redacted failure.                                                                                                                                                                            |
+| A viewer calls `requestTripExportFn` directly                                  | `TripRoleError` after `requireTrip` and before any bump; the counter does not move.                                                                                                                                                                                                           |
+| A caller names a trip in another workspace, or a private trip they are not on  | `NotFoundError` from `requireTrip`, never `TripRoleError`; the counter does not move.                                                                                                                                                                                                         |
+| The enqueue throws                                                             | The unit is released with the reserve's month and the error is rethrown; the toast says the export was not started.                                                                                                                                                                           |
+| The release itself fails                                                       | Logged; the unit leaks. A lost unit is the safe direction.                                                                                                                                                                                                                                    |
+| The job dead-letters after it was accepted                                     | The unit stays spent. The pending row ends in the "taking longer" state after 90 s and the traveller can ask again.                                                                                                                                                                           |
+| The trip is deleted, or the requester leaves, while the job is queued          | The handler's scope re-check ends the job with `TaskPermanentError` before anything is written or emailed; a job that passed the re-check just before the delete can still write an artifact the purge never listed, which is unreadable once the trip is gone and is freed by the cron half. |
+| `BROWSER_RENDERING_API_TOKEN` absent, or the provider over its ceiling         | The handler writes the HTML artifact only; the panel labels it "Printable page", never "PDF".                                                                                                                                                                                                 |
+| The poll lands between the `.pdf` and the `.html`                              | The artifact is not listed yet: the `.html` is the completion marker, so "ready" never precedes the file or changes format afterwards.                                                                                                                                                        |
+| An artifact is older than seven days, or was pruned between the list and click | The list omits it; a download is the same 404 `missing`, which the panel says in the traveller's language and then re-reads the list.                                                                                                                                                         |
+| A task id from another workspace, or `../`                                     | Fails the id pattern or resolves inside the caller's own prefix to nothing: a 404, indistinguishable from "not there".                                                                                                                                                                        |
+| A trip with 90 days, or 700 reservations                                       | The document is cut to the schema's bounds and says so in a note; the request does not fail.                                                                                                                                                                                                  |
+| A cancelled reservation or transport                                           | Left out of the document.                                                                                                                                                                                                                                                                     |
+| A title containing `<script>`                                                  | Escaped through `escapeHtml` in the title, the headings, every row and the email (after interpolation); the artifact carries no script.                                                                                                                                                       |
+| A trip exported with `includeReferences` off                                   | Reservations and transport are listed without `Ref.` codes.                                                                                                                                                                                                                                   |
+| An archived trip                                                               | Exportable; the request button is available to owner and editor.                                                                                                                                                                                                                              |
+| A tab goes to the background mid-poll                                          | The poll stops; it resumes with a fresh 90 s window when the tab is shown, and the list is reread immediately.                                                                                                                                                                                |
+| A poll request fails                                                           | The rows and the pending row stay; the next tick retries; no error `Alert` after the first load.                                                                                                                                                                                              |
+| The traveller reloads while pending                                            | The pending row is restored from `sessionStorage` while inside the window, with the button still disabled.                                                                                                                                                                                    |
+| The traveller leaves the page while pending                                    | The job completes anyway; the artifact is in the list on the next visit, and the email, if asked for, carries a working link.                                                                                                                                                                 |
+| The email link names an artifact that has been pruned, or is damaged           | The Files screen loads; the panel shows the one "no longer kept" line; a malformed `export` value is dropped, not an English route error.                                                                                                                                                     |
+| A member is removed from the trip after exporting                              | `requireTrip` refuses their next list or download; the artifact stays for the others.                                                                                                                                                                                                         |
+| A locale tag the catalogue does not carry                                      | The handler and the builder fall back to `en`; nothing dead-letters.                                                                                                                                                                                                                          |
+| Right-to-left locale                                                           | `<html lang dir="rtl">` on the artifact; the panel uses logical properties.                                                                                                                                                                                                                   |
+| A trip deleted with no attachments and one export                              | The export keys are listed before the empty-list early return, so the purge still runs; a failed listing logs and the attachment purge continues.                                                                                                                                             |
 
 ## 📝 Observability
 
@@ -694,7 +731,8 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
    `{ ok: false, reason: 'quota', ... }` instead of throwing, and takes the `notify` address from the session and never from
    the input.
 10. The built document stays inside the schema's bounds for a 90-day trip and a 700-reservation trip and says it was cut; it
-    lists transport, leaves out cancelled reservations and transports, and carries `Ref.` codes only with `includeReferences`.
+    lists transport, leaves out cancelled reservations and cancelled and `idea` transports, and carries `Ref.` codes on
+    reservations, transport and stays only with `includeReferences`.
 11. `downloadTripExportFn` derives its key from the caller's organization id and the resolved trip id and ignores any other
     value; a malformed, foreign, expired or incomplete task id is the same 404 `{ error: 'missing' }`; the content type comes from
     the fixed map, the `.html` response carries the sandbox `content-security-policy`, and the headers are the ones listed.
@@ -720,7 +758,7 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
 | Two requests overshoot the ceiling                                               | Reserve first, check the returned value; a concurrency test. The first-bump race is retried once.                                                                                                                                                                                                             |
 | Confirmation codes leave the workspace                                           | Off by default, a request-time checkbox, recorded in `docs/ACCESS.md` §3; the document is a snapshot the traveller chose to make and hand over.                                                                                                                                                               |
 | Generated markup is an XSS carrier                                               | Every value goes through `escapeHtml` (the email after interpolation); locale-derived attributes come from a closed set; the stylesheet is literal; served as `attachment` with `nosniff`, a fixed content type and a sandbox CSP; the panel re-types an `.html` blob before it gets a URL.                   |
-| A deleted trip's plan stays in R2                                                | Phase 4 hands the export keys to `trip-purge`; the handler's scope re-check closes the in-flight case; the one remaining gap (a trip exported once) is unreadable after seven days and has a follow-up issue for the cron half.                                                                               |
+| A deleted trip's plan stays in R2                                                | Phase 4 hands the export keys to `trip-purge`; the handler's scope re-check narrows the in-flight case to a short window; the one remaining gap (a trip exported once) is unreadable after seven days and has a follow-up issue for the cron half.                                                            |
 | An unlimited (`business`) workspace can request without a rate limit             | Every export can spend the platform-wide Browser Rendering and Resend ceilings (`provider_registry`), which degrade the artifact to HTML and withhold the email rather than failing. Whether to cap exports in flight per trip is **a person's call and is not blocking**; this spec does not invent a limit. |
 | The edit to `trip-lifecycle.ts` and `queue/types.ts` collides with another stage | Both are one additive hunk in a region the other stages do not touch; named as departures; the ticket merges the base before it pushes.                                                                                                                                                                       |
 | A prune deletes something it should not                                          | It lists only the prefix of one organization and one trip, ends in `/`, ignores names that do not parse as `<taskId>.html\|pdf`, and runs after the new artifact is durable.                                                                                                                                  |
@@ -825,7 +863,7 @@ the phase that reads it (marked in the Copy table), each key in all 23 locales, 
   works.
 - `repos/__tests__/exports.test.ts` (new): criteria 7 and 8.
 - `fns/__tests__/export-document.test.ts` (new): bounds for a 90-day and a 700-reservation fixture; the truncation notes; the
-  transport rows and the cancelled rules; `Ref.` only with `includeReferences`; dates through the format helpers; the built
+  transport rows and the cancelled and `idea` rules; `Ref.` on reservations, transport and stays only with `includeReferences`; dates through the format helpers; the built
   value parses with `exportDocumentSchema`.
 - `fns/__tests__/exports.test.ts` (new): criteria 9, 11 and 12, with the queue and the bucket faked and the real repositories;
   the download key ignores an organization id supplied in the input; the headers and the sandbox CSP.
@@ -875,7 +913,14 @@ retired (ADR 0016), and nothing is compared to a stored pixel.
     and an unknown id gives none and shows the "no longer kept" line;
   - `scrollWidth <= clientWidth` at 320 CSS px and under `ar` with `html[dir="rtl"]`;
   - one pass under `page.emulateMedia({ reducedMotion: 'reduce' })`, following the precedent at `e2e/journeys.spec.ts:1229`;
-  - a reload during pending restores the pending row and keeps the request button disabled.
+  - a reload during pending restores the pending row and keeps the request button disabled;
+  - the status region's text is asserted both when `?export=` matches (the ready text naming the export) and when it does not
+    (the "no longer kept" line), and the line is absent while the skeleton is up and after a failed first load;
+  - after "Go to exports" the panel heading's top edge is below the sticky header's bottom edge and holds focus;
+  - after a download finishes, `document.activeElement` is that Download control, not `body`;
+  - with the allowance used up, the request button is disabled, the quota text is linked to it with `aria-describedby`, and no
+    `role="alert"` is present until a refused press;
+  - two artifacts made the same day expose different accessible download names.
     `axe` is not a dependency and `package.json` is frozen, so these role and state assertions are the proof.
 - **Frames**, read by a human, outside the repository: `scripts/visual/capture.mjs` for the resting route in the empty state and
   with one artifact (light and dark at 360x800, 1280x900, 2560x1440, `--auth`, `PT_SERVER_TODAY=2026-08-20`, the command quoted
