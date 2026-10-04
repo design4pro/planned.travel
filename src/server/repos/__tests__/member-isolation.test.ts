@@ -1328,18 +1328,42 @@ describe('member isolation', () => {
       await expectRefusedAndUntouched(shared.id)
     })
 
-    it('answers an id that does not exist as it answers an id of another trip', async () => {
-      const missing = await captureError(() =>
-        deleteExpense(stranger, mine, 'no-such-expense'),
-      )
-      const foreign = await captureError(() =>
-        deleteExpense(stranger, mine, victim.expenseId),
-      )
-      expect(missing).toBeInstanceOf(NotFoundError)
-      expect(foreign).toBeInstanceOf(NotFoundError)
-      expect((foreign as NotFoundError).code).toBe(
-        (missing as NotFoundError).code,
-      )
+    it('answer an id that does not exist as they answer an id of another trip', async () => {
+      const missingIds = {
+        expense: 'no-such-expense',
+        share: 'no-such-share',
+        budgetItem: 'no-such-planned-item',
+        settlement: 'no-such-payment',
+      }
+      const withMissing: ReadonlyArray<() => Promise<unknown>> = [
+        () => updateExpense(stranger, mine, missingIds.expense, { title: 'x' }),
+        () => deleteExpense(stranger, mine, missingIds.expense),
+        () =>
+          setExpenseShares(stranger, mine, missingIds.expense, [
+            { userId: strangerId },
+          ]),
+        () => markShareSettled(stranger, mine, missingIds.share, true),
+        () =>
+          updateBudgetItem(stranger, mine, missingIds.budgetItem, {
+            name: 'x',
+          }),
+        () => deleteBudgetItem(stranger, mine, missingIds.budgetItem),
+        () => deleteSettlement(stranger, mine, missingIds.settlement),
+      ]
+      const foreign = attacksVia(mine)
+      expect(withMissing).toHaveLength(foreign.length)
+
+      for (const [index, missing] of withMissing.entries()) {
+        const missingError = await captureError(missing)
+        const foreignError = await captureError(
+          foreign[index]?.[1] ?? (() => Promise.resolve()),
+        )
+        expect(missingError).toBeInstanceOf(NotFoundError)
+        expect(foreignError).toBeInstanceOf(NotFoundError)
+        expect((foreignError as NotFoundError).code).toBe(
+          (missingError as NotFoundError).code,
+        )
+      }
     })
 
     it('leave the booking link and the share rows alone when the expense is not the trip’s', async () => {
@@ -1350,6 +1374,30 @@ describe('member isolation', () => {
       expect(await expenseSharesRepository.count(alpha.scope)).toBeGreaterThan(
         0,
       )
+    })
+
+    it('still write the rows of the trip they name, every one of the writers', async () => {
+      const own = await seedLedger(mine, stranger, {
+        payer: strangerId,
+        other: payerId,
+      })
+
+      await updateExpense(stranger, mine, own.expenseId, { title: 'Supper' })
+      const settled = await markShareSettled(stranger, mine, own.shareId, true)
+      expect(settled.isSettled).toBe(true)
+      const resplit = await setExpenseShares(stranger, mine, own.expenseId, [
+        { userId: strangerId },
+      ])
+      expect(resplit).toHaveLength(1)
+      const item = await updateBudgetItem(stranger, mine, own.budgetItemId, {
+        name: 'Meals',
+      })
+      expect(item.name).toBe('Meals')
+
+      await deleteBudgetItem(stranger, mine, own.budgetItemId)
+      await deleteSettlement(stranger, mine, own.settlementId)
+      expect(await listBudgetItems(stranger, mine)).toEqual([])
+      expect(await listSettlements(stranger, mine)).toEqual([])
     })
 
     it('still edit and delete an expense of the trip they name', async () => {

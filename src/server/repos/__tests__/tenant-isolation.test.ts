@@ -99,6 +99,8 @@ import {
   getExpenseWithShares,
   getMemberBalances,
   getTripSpendSummary,
+  listBudgetItems,
+  listSettlements,
   markShareSettled,
   setExpenseShares,
   settlementsRepository,
@@ -3194,10 +3196,12 @@ describe('tenant isolation', () => {
   describe('the money writers', () => {
     it('refuse every B ledger row named through A’s own trip, and change nothing', async () => {
       const scope = alpha.tenant.scope
-      const before = await getExpenseWithShares(
-        beta.tenant.scope,
-        beta.expenseId,
-      )
+      const ledgerOfB = async (): Promise<unknown> => ({
+        expense: await getExpenseWithShares(beta.tenant.scope, beta.expenseId),
+        budgetItems: await listBudgetItems(beta.tenant.scope, beta.tripId),
+        settlements: await listSettlements(beta.tenant.scope, beta.tripId),
+      })
+      const before = await ledgerOfB()
 
       const attempts: ReadonlyArray<() => Promise<unknown>> = [
         () =>
@@ -3228,9 +3232,7 @@ describe('tenant isolation', () => {
         expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
       }
 
-      expect(
-        await getExpenseWithShares(beta.tenant.scope, beta.expenseId),
-      ).toEqual(before)
+      expect(await ledgerOfB()).toEqual(before)
     })
   })
 

@@ -481,6 +481,43 @@ describe('syncReservationExpense', () => {
   })
 })
 
+/**
+ * Booking sync updates the ledger line the booking points at, inside the booking's own trip. A link
+ * that somehow names another trip's expense must be refused and reported, not written through.
+ */
+describe('syncReservationExpense with a link to another trip’s expense', () => {
+  it('reports the refusal and leaves the other trip’s expense alone', async () => {
+    const other = await createTrip(scope, {
+      title: 'Osaka later',
+      startDate: '2026-06-01',
+      endDate: '2026-06-03',
+      currency: 'JPY',
+    })
+    const elsewhere = await createExpense(scope, {
+      tripId: other.id,
+      title: 'A cost on the other trip',
+      amountMinor: 1_000,
+      spentOn: '2026-06-01',
+    })
+    const reservation = await createReservation(scope, {
+      tripId: trip.id,
+      title: 'Dinner at Den',
+      startDate: '2026-04-11',
+      priceMinor: 9_000,
+    })
+
+    expect(
+      await syncReservationExpense(scope, {
+        reservation: { ...reservation, expenseId: elsewhere.expense.id },
+        trip,
+      }),
+    ).toBe('failed')
+    const [line] = await listTripExpenses(scope, other.id)
+    expect(line?.title).toBe('A cost on the other trip')
+    expect(line?.amountMinor).toBe(1_000)
+  })
+})
+
 describe('linkReservationExpense across two trips of one workspace', () => {
   it('refuses a cost line belonging to another trip', async () => {
     const other = await createTrip(scope, {

@@ -279,8 +279,8 @@ currency they throw `CurrencyRefusalError('costs.refusal.tripCurrencyChanged')` 
 (and before `writeShares`), nothing written. `assertExpectedTripCurrency(trip, expected)` and the
 error class live in `trips.ts`, which `expenses.ts` already imports (`requireTrip`) and which
 imports nothing from `expenses.ts`, so there is no cycle with `trip-currency.ts` (which imports
-`computeShares` from `expenses.ts`). `updateExpense` / `updateBudgetItem` resolve the trip from the
-stored row. The guard is keyed on the **client's belief about the trip**, not on the row's own
+`computeShares` from `expenses.ts`). `updateExpense` / `updateBudgetItem` take the trip id from the
+caller (#836) and look the row up inside that trip. The guard is keyed on the **client's belief about the trip**, not on the row's own
 `currency`, because booking sync legitimately writes a booking's own currency
 (`fns/reservations.ts:312`) and passes no assertion (it is server-derived and cannot be stale).
 `createExpenseFn` / `updateExpenseFn` pass `body.currency`, which the expense dialog already sends;
@@ -620,7 +620,8 @@ with amounts.
   checking the expense belongs to that trip (`src/server/fns/costs.ts:482-504`;
   `updateExpense` / `deleteExpense` at `expenses.ts:390-403`, `:497-503`), so a member of one trip
   with an expense id can edit or delete an expense on another trip of the workspace, a private one
-  included. Needs a `security` issue of its own, filed alongside this spec's PR.
+  included. Filed as #836 and fixed in #880: every money writer now takes the trip id and looks the
+  row up as (trip, row).
 - No money writer calls `assertTripRole`, so a viewer can log, edit and delete expenses and record
   payments, against `CONTEXT.md` ("a viewer reads").
 - `getTripSpendSummary` sums `amount_minor` across currencies, so a booking-synced yen line is added
