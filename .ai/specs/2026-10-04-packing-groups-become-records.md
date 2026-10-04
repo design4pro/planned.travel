@@ -4,7 +4,7 @@
 | ------------------ | ------------------------------------------ |
 | **Status**         | ready                                      |
 | **Issue**          | none                                       |
-| **Spec PR**        | #TBD                                       |
+| **Spec PR**        | #846                                       |
 | **Implementation** | none                                       |
 | **Plan**           | 05-S1 (docs/plans/05-packing-and-todos.md) |
 
