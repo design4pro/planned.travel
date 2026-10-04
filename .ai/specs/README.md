@@ -17,7 +17,7 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 
 | Spec                                                                                                              | Date       | Issue                                                           | Spec PR                                                         | Implementation |
 | ----------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
-| [Show where the money went, drawn by hand](2026-10-04-show-where-the-money-went.md)                               | 2026-10-04 | —                                                               | —                                                               | —              |
+| [Show where the money went, drawn by hand](2026-10-04-show-where-the-money-went.md)                               | 2026-10-04 | —                                                               | [#827](https://github.com/design4pro/planned.travel/issues/827) | —              |
 | [Weather for every day of a trip, from free sources we are licensed to use](2026-09-19-per-day-weather.md)        | 2026-09-19 | [#631](https://github.com/design4pro/planned.travel/issues/631) | [#636](https://github.com/design4pro/planned.travel/issues/636) | —              |
 | [Document the ON DELETE rule D1 enforces, not the one schema.ts declares](2026-09-19-deployed-on-delete-rules.md) | 2026-09-19 | [#192](https://github.com/design4pro/planned.travel/issues/192) | [#626](https://github.com/design4pro/planned.travel/issues/626) | —              |
 
