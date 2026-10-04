@@ -276,14 +276,21 @@ up to 500 `label` / `value` / `meta` rows. **It does not add a second payload sh
   when `includeReferences` is true. A chained journey is one record in this section: its legs are not listed. A flight on a
   trip must not export without the flight, and a day plan that leaves out the train a driver must meet is the half of the
   document the reader came for.
-- _Where we are staying_ section: one row per stay, `label` the name, `value` the address, `meta` the nights.
+- _Where we are staying_ section: one row per stay **by stay id** (`getTripItinerary` repeats an accommodation on every day it
+  spans, so the builder keeps the first occurrence), `label` the name, `value` the address, `meta` the nights.
   `Ref. <confirmation number>` (the stay's `confirmationNumber`) is appended to `value` **only when `includeReferences` is
   true**, so the checkbox covers every code in the file, the hotel's included.
 - **Sizes are held by construction, and a cut is said out loud.** The schema allows 60 sections and 500 rows per section;
   every string is sliced to its bound. A plan longer than 56 days (60 minus overview, reservations, transport and stays) keeps
   its first 56 days and says so in the overview note; a list longer than 500 rows keeps its first 500 and its section note
-  says "Showing the first 500 of N". A document that would fail the schema at the enqueue is a failed request with the
-  traveller's plan in it, which is the worse outcome.
+  says "Showing the first 500 of N". **The schema's bounds are not the real ceiling: the document travels inside the queue
+  message, and a Queues message body is capped at 128 KB** (`src/server/queue/types.ts`, which says so for `trip-purge` too).
+  500 rows of 175 bytes is already 88 KB, and Arabic, Japanese or Polish text costs two to three bytes a character. So the
+  builder also holds a **serialised-size budget of 100 KB** (`new TextEncoder().encode(JSON.stringify(document)).length`): when
+  the document is over it, the builder drops rows from the end of the longest section, one at a time, until it fits, and the
+  same truncation note says how many were shown. The test uses a multibyte fixture (a 700-reservation trip with Japanese
+  titles). A document that would fail the schema, or the queue's cap, at the enqueue is a failed request with the traveller's
+  plan in it, which is the worse outcome.
 - **The locale is the requester's:** `getEffectiveSettings(scope).locale` through `negotiate`, the same chain the shell uses,
   and the headings come from the catalogue through `loadCatalogue` and `createTranslator`, with `en` as the fallback for a
   locale tag the catalogue does not carry. User-entered text (titles, notes, place names) is copied as entered and never
@@ -346,7 +353,9 @@ foundations. It sits under the file library as its own `ModulePanel` and holds, 
 `kept` line, the request `Button` (`data-part="export-request"`), the confirmation-codes `CheckboxField` (off by default),
 the artifact list as a `div role="list"` of `ModuleRow`, the pending row, and the empty, skeleton, list-error and quota-refusal states. The
 state design, focus and live-region rules are under "The panel's states, focus and announcements" below and apply from this
-ticket; 06-S3c adds the notify checkbox, the allowance line, the viewer view, the email and the link.
+ticket; 06-S3c adds the notify checkbox, the allowance line, the viewer view, the email and the link. **The request button
+and the confirmation-codes checkbox are drawn only when `canRequest` is true from this ticket**, so a viewer never meets a
+button that always answers `TripRoleError`; the viewer's sentence and empty state arrive in 06-S3c.
 
 ### Phase 3 (06-S3c) - everyone else on the trip, and the email
 
@@ -414,12 +423,14 @@ and `07-S1`, so a trigger there would be a same-wave claim on a file another sta
 - **The list is read after hydration** through `listTripExportsFn` (the Files loader is untouched), so the list has a genuine
   pending state. Sizes are `formatStorageSize(bytes, locale)` (`src/components/layout/storage-size.ts`), ages `formatRelative`,
   `resetsOn` `formatDate` (not `formatStorage` in `src/lib/plans.ts`, which prints English units). **A time reaches the
-  traveller through one catalogue key**, `files.export.madeAt` (`{date}, {time}`): `{date}` is `formatDate` of the instant and
-  `{time}` its clock time **in the reader's browser time zone** through `zoneClockTime(zone, atMs, locale)`
-  (`src/lib/clock-zones.ts`), because `formatDate` alone prints the date only and a Worker clock in UTC would print a UTC time
-  for a traveller in Tokyo. The download label's and the artifact label's `{date}` are this string, so **two exports made the
+  traveller through one catalogue key**, `files.export.madeAt` (`{date}, {time}`): `{date}` and
+  `{time}` are **both read in the same zone**, the reader's browser time zone: `{time}` through `zoneClockTime(zone, atMs, locale)`
+  (`src/lib/clock-zones.ts`), and `{date}` as `formatDate` of the **local calendar date in that zone** (`YYYY-MM-DD` taken from
+  `Intl.DateTimeFormat` with the zone, not from the instant), because `formatDate` reads the UTC fields and would print
+  "4 Oct" beside "8:05 AM" for a traveller in Tokyo at 08:05 on the 5th. A zone the runtime cannot format (`zoneClockTime`
+  returns `null`) falls back to UTC for both halves, so the two are never in different zones. The download label's and the artifact label's `{date}` are this string, so **two exports made the
   same day have different names** (a test asserts it). The document footer's `{when}` is the same key with the generation date
-  and clock time **in the trip's time zone**.
+  and clock time **in the trip's time zone**, both halves in it, and in UTC when `trips.timezone` is null or unformattable.
 - **Waiting, without a spinner that lies.** The artifact does not exist when the button returns; it exists when the consumer
   has written the `.html`. The panel holds the returned `taskId` as a **pending row** and polls the list every
   `EXPORT_POLL_MS = 3000` for at most `EXPORT_POLL_WINDOW_MS = 90000`; both are named constants beside the reason. When the
@@ -680,7 +691,7 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
 | The poll lands between the `.pdf` and the `.html`                              | The artifact is not listed yet: the `.html` is the completion marker, so "ready" never precedes the file or changes format afterwards.                                                                                                                                                        |
 | An artifact is older than seven days, or was pruned between the list and click | The list omits it; a download is the same 404 `missing`, which the panel says in the traveller's language and then re-reads the list.                                                                                                                                                         |
 | A task id from another workspace, or `../`                                     | Fails the id pattern or resolves inside the caller's own prefix to nothing: a 404, indistinguishable from "not there".                                                                                                                                                                        |
-| A trip with 90 days, or 700 reservations                                       | The document is cut to the schema's bounds and says so in a note; the request does not fail.                                                                                                                                                                                                  |
+| A trip with 90 days, or 700 reservations, or a long plan in a multibyte script | The document is cut to the schema's bounds and to the 100 KB queue budget and says so in a note; the request does not fail.                                                                                                                                                                   |
 | A cancelled reservation or transport                                           | Left out of the document.                                                                                                                                                                                                                                                                     |
 | A title containing `<script>`                                                  | Escaped through `escapeHtml` in the title, the headings, every row and the email (after interpolation); the artifact carries no script.                                                                                                                                                       |
 | A trip exported with `includeReferences` off                                   | Reservations and transport are listed without `Ref.` codes.                                                                                                                                                                                                                                   |
@@ -730,7 +741,8 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
    (with the reserve's month) when the enqueue throws and never when the reserve refused, returns
    `{ ok: false, reason: 'quota', ... }` instead of throwing, and takes the `notify` address from the session and never from
    the input.
-10. The built document stays inside the schema's bounds for a 90-day trip and a 700-reservation trip and says it was cut; it
+10. The built document stays inside the schema's bounds **and under 100 KB serialised** for a 90-day trip and a
+    700-reservation trip, the second with multibyte titles, and says it was cut; it
     lists transport, leaves out cancelled reservations and cancelled and `idea` transports, and carries `Ref.` codes on
     reservations, transport and stays only with `includeReferences`.
 11. `downloadTripExportFn` derives its key from the caller's organization id and the resolved trip id and ignores any other
@@ -745,7 +757,9 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
 15. All new keys exist in all 23 locales, every number-bearing key is a plural object, and the parity test and the dead-key
     census pass.
 16. `pnpm typecheck`, `pnpm lint`, `pnpm test`, `bash .ai/scripts/check-generated.sh`, `pnpm build` are green; the existing
-    `metering.test.ts` pdf-export tests pass with only their fakes extended.
+    `metering.test.ts` pdf-export tests pass with their fakes extended **and the handler built through a
+    `createPdfExportHandler(databaseFor)` seam**, the way `trip-copy.ts:336-345` does it, because the scope re-check reads D1
+    and `db/client.ts` reads the ambient environment, which `consumer.ts` must not need to load in Node.
 17. The `06-S3` block of `e2e/documents-and-media.spec.ts` is green on `chromium` and `mobile-safari` (layout-shift skipped,
     stated, on WebKit) with a silent console.
 
@@ -794,8 +808,10 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
 | 3     | 06-S3c | Everyone else on the trip and the email: allowance line and pre-disable, viewer view, notify checkbox, `?export=` marking and header action, pending survives a reload         | Phase 2 |
 | 4     | 06-S3d | A deleted trip's exports leave with it; the two follow-up issues (the cron half, the journey book)                                                                             | Phase 1 |
 
-Four tickets, inside the eight a slicing run may file, each ending in something visible: a document that is right, a button
-that works, the same button for everyone and an email that opens, a deletion that deletes. Phase 2 is the largest; if a slicing
+Four tickets, inside the eight a slicing run may file, each ending in something a test can show: a document that is right (06-S3a, proved by the
+handler and document tests, because nothing calls it until 06-S3b), a button that works, the same button for everyone and an
+email that opens, a deletion that deletes (06-S3d, which lands after 06-S3b in practice, since nothing can make an export
+before it). Phase 2 is the largest; if a slicing
 run finds it does not fit one context it cuts along a user-visible seam (the request and the pending row, then the list and the
 download), never along a layer. Phases 2 and 4 are independent of each other and both need only Phase 1. The copy lands with
 the phase that reads it (marked in the Copy table), each key in all 23 locales, so the parity test is green after every merge.
@@ -891,10 +907,15 @@ allowed to list and download. Functions covered: `reserveExport`, `releaseExport
 retired (ADR 0016), and nothing is compared to a stored pixel.
 
 - **Nothing here writes to the shared demo workspace.** A real request would spend the demo workspace's monthly allowance and
-  write R2, and the local dev server runs no queue consumer. The tests intercept the three server functions with
-  `page.route(...)` and fulfil them with fixtures (an empty list, a list with one artifact, a `quota` refusal, a failed list); they
-  assert on the requests the browser made (the request body carries `notify` and `includeReferences` and no email address), not
-  on a stored artifact. The server behaviour is proved by the unit and isolation tests above, which is where it can be.
+  write R2, and the local dev server runs no queue consumer. **No server-function frame is forged**: `e2e/journeys.spec.ts` records that "seroval frames are not a format to forge, and
+  a fabricated one deserialises to `undefined` rather than failing". The tests intercept `requestTripExportFn` with
+  `page.route(...)` and assert on the request the browser made (the body carries `notify` and `includeReferences` and no email
+  address), answering the real server's own response fetched with `intercepted.fetch()` and rewritten only where the code is a
+  plain value. The states the browser can reach honestly are asserted in e2e: the empty list, a list that fails (a status-500
+  response), and the raw download `Response` (headers, a 404). The states that need a populated list (the pending row turning
+  into a real one, `aria-current` on the marked row, the Download names, focus after a download, the quota sentence) are
+  **component tests of `export-panel.tsx`** with the server functions mocked at the module boundary, where a hand-made
+  value is a typed value and not a wire frame. The server behaviour is proved by the unit and isolation tests above.
 - **Selectors** (`[data-part="export-request"]`, the pending row's `data-state`) are verified against a running server with
   `page.locator(sel).count()` returning `1` before any frame is filed.
 - **Console silent.** `watchConsole(page, route)` before navigation, `fatal` asserted empty at the end of every test in the
@@ -959,3 +980,5 @@ retired (ADR 0016), and nothing is compared to a stored pixel.
 | 23  | What is the term, and what is the panel called?                                         | **Trip export**, the panel "Export the trip"; the reservations section is "Reservations".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Panel (UX): `CONTEXT.md` defines a trip's plan as excluding its record and says to avoid "booking" for a Reservation.                                                                                                                                                                                          |
 | 24  | Panel verdicts, round 1                                                                 | Product owner, software architect, security and tenancy, accessibility and UX each answered **approve with conditions** (no `revise`, no `ESCALATE`). Every condition is applied in this revision.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Round 2 is row 25.                                                                                                                                                                                                                                                                                             |
 | 25  | Panel verdicts, round 2 (final)                                                         | Software architect **approve**; security and tenancy **approve** (no conditions; two nits applied: the in-flight window is "narrowed" not "closed", and the task-id pattern is checked in the handler so a malformed id is the same 404). Product owner, accessibility and UX each answered **approve with conditions**, every one applied in the follow-up commit: stays carry `Ref.` only with `includeReferences`; the footer key lands with 06-S3a; the list is `div role="list"` of `listitem` rows; named focus targets and an additive `ModulePanel` `headingProps`; `linkGone` announced through the status region and shown only after a successful load; a time reaches the traveller through one `madeAt` key; `th`/`td` styles; one fixed request button and no `EmptyState` action; `truncatedRows` and every number-bearing key a plural object; a request-failure body key; `resetsOn` in the list answer and the pre-press quota text with `aria-describedby`; a `route` key instead of an arrow; `idea` transports left out; viewer variants of the copy. | No `revise` and no `ESCALATE`; the two-round limit is reached and every condition is met, so the spec is mergeable by this pipeline.                                                                                                                                                                           |
+| 26  | Independent review of this PR (om-auto-review-pr, specification review)                 | Three majors and seven minors, all applied in the spec text: a 100 KB serialised-size budget for the document (the queue message cap is 128 KB); `{date}` and `{time}` of `madeAt` read in the same zone, UTC when the zone is null; no forged server-function frames in e2e (populated-list states are component tests); the stay list is de-duplicated by id; the button is gated on `canRequest` from 06-S3b; the ticket wording says what each ticket shows; the handler is built through a `createPdfExportHandler(databaseFor)` seam.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Decided by an independent reviewer sub-agent (verdict: request changes on the head `13749077`; each finding checked against the code before it was applied).                                                                                                                                                   |
+| 27  | Which governs the Free plan: the `pdfExport` module flag or `PLAN_QUOTAS`?              | `PLAN_QUOTAS` (3 exports a month on Free): nothing else enforces the `pdfExport` flag today, and the quota is what the ticket meters and shows. A dead-lettered job keeps its unit (the refund trade-off in the failure rows stays as written), and the Phase 4 listing is tested with `#/server/auth/env` mocked and `filesBucket()` imported dynamically, as `trip-lifecycle-side-effects.test.ts` does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Decided on the reviewer's evidence (`src/lib/plans.ts`, the existing purge test): the smaller, reversible reading.                                                                                                                                                                                             |
