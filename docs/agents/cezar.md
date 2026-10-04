@@ -136,7 +136,7 @@ cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The projec
 Protected configuration is a second boundary the repository's hooks do not move: Claude Code refuses an
 `Edit` or `Write` under `.claude/**` and `.husky/*` in a `dontAsk` run, and a pull request whose diff is
 only that configuration cannot be fixed unattended (#670). The cezar runner declares and preflights
-`writePaths`; here, every override of a skill that edits files or pushes a branch carries one rule: declare the
+`writePaths`; here, the nine overrides of the skills that fix, continue, create or implement a pull request carry one rule: declare the
 protected writes up front when the dispatch allows it, stop once after the first refusal, hand the exact
 diff, worktree and paths to a supervised run with a configuration guardian verdict, and never enable
 `bypassPermissions` or switch tools to get around a denial.

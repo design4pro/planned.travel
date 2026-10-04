@@ -28,7 +28,8 @@ const COVERED = [
 // Overrides without the rule. The `afk-*` skills and the review, merge and housekeeping skills
 // write no protected configuration. `om-fix`, `om-open-pr`, `om-auto-write-spec` and
 // `om-auto-update-changelog` do edit or push, but only as a step of a covered skill or the `spec`
-// workflow, which writes under `.ai/specs`; the pull request that added this guard names them.
+// workflow, which writes under `.ai/specs`. `om-setup-agent-pipeline` is a skill, not an override, and
+// is a one-time configurator a person runs, so it has no entry here.
 const NOT_COVERED = [
   'afk-architecture-review',
   'afk-codebase-design',
@@ -74,6 +75,17 @@ const STATEMENTS = {
     /belong in their own pull request/,
 }
 
+// What the paragraph written for #670 adds to the `om-auto-review-pr` wording (the brief leaves that
+// override as it is): the paths it covers, the point it is declared, and who gives the verdict.
+const BEYOND_REVIEW_PR = {
+  'names the protected paths':
+    /protected configuration \(`\.claude\/\*\*`, `\.husky\/\*`\)/,
+  'declares them before bootstrap or diagnosis':
+    /before bootstrap or diagnosis/,
+  'hands over the paths with the guardian verdict':
+    /the paths, with the configuration guardian verdict from `\.ai\/skills\/afk-decide\/SKILL\.md`/,
+}
+
 const read = (name) =>
   readFileSync(new URL(`${name}/SKILL.md`, SKILLS), 'utf8').replace(/\s+/g, ' ')
 
@@ -93,6 +105,15 @@ describe('protected writes rule', () => {
       expect(read(name)).toMatch(pattern)
     })
   })
+
+  describe.each(COVERED.filter((name) => name !== 'om-auto-review-pr'))(
+    '%s',
+    (name) => {
+      it.each(Object.entries(BEYOND_REVIEW_PR))('%s', (_label, pattern) => {
+        expect(read(name)).toMatch(pattern)
+      })
+    },
+  )
 
   it.each(['om-auto-fix-pr', 'om-pr-autopilot'])(
     '%s keeps the handover line the rule sits beside',
