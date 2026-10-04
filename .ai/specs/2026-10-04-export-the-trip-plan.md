@@ -4,7 +4,7 @@
 | ------------------ | -------------------------------------------- |
 | **Status**         | ready                                        |
 | **Issue**          | none                                         |
-| **Spec PR**        | none                                         |
+| **Spec PR**        | #875                                         |
 | **Implementation** | none                                         |
 | **Plan**           | 06-S3 (docs/plans/06-documents-and-media.md) |
 
