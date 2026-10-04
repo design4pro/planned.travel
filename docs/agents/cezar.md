@@ -133,6 +133,16 @@ cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The projec
   `Edit` or `Write` may write anywhere the user can. That is an accepted risk (ADR 0030); a run
   that touches a sibling checkout shows up in that checkout's `git status`, not in its own PR.
 
+Protected configuration is a second boundary the repository's hooks do not move: Claude Code refuses an
+`Edit` or `Write` under `.claude/**` and `.husky/*` in a `dontAsk` run, and a pull request whose diff is
+only that configuration cannot be fixed unattended (#670). The cezar runner declares and preflights
+`writePaths`; here, every override of a skill that edits files or pushes a branch carries one rule: declare the
+protected writes up front when the dispatch allows it, stop once after the first refusal, hand the exact
+diff, worktree and paths to a supervised run with a configuration guardian verdict, and never enable
+`bypassPermissions` or switch tools to get around a denial.
+`.ai/scripts/__tests__/protected-writes-rule.test.mjs` keeps that rule in every listed override and fails
+on a new override that is in neither of its lists.
+
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The
 permission rules above, branch protection on `develop` and `main`, the PAT scopes, one worktree per

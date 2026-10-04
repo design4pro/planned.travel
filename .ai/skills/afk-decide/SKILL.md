@@ -88,7 +88,7 @@ Only what no agent in this pipeline can do:
 - a platform limit, such as a ruleset that requires a review the run's own account cannot give (the `develop` ruleset requires none, so self-approval is never a blocker there);
 - a configuration guardian verdict of `ESCALATE: yes`: the change weakens a guard or removes a deny rule, so it is not applied; add `blocked` to the issue and state the verdict in a 🤖 comment;
 - a security and tenancy specialist that does not approve `risk-high` or `security` work for unattended implementation: it gets no Agent Brief and no claim; add `blocked` and state the verdict and its reasons in a 🤖 comment;
-- a write Claude Code refuses under `dontAsk` (protected configuration). Put the exact patch and the guardian's verdict in the report or PR, so applying it is one step for a human.
+- a write Claude Code refuses under `dontAsk` (protected configuration). Put the exact patch and the guardian's verdict in the report or PR, so applying it is one step for a human. Stop once after the first refusal: the rule every skill that edits or pushes carries is `.ai/scripts/__tests__/protected-writes-rule.test.mjs`.
 
 Every comment that hands a matter to a person starts with `🤖 HUMAN-ONLY: <the one thing a person must do>`. That marker is what stops the Reconciler (ADR 0033) from launching `afk-unblock` on the hold again: an agent-set `blocked` without it is offered to a specialist, which is a wasted run when the matter is one of these. A hold or a `STOP:` an agent set for any other reason is lifted by `afk-unblock` on a specialist's verdict.
 
