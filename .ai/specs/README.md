@@ -13,10 +13,11 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 | [More than one workspace, and a way to move between them](2026-09-20-multiple-workspaces.md)                                             | 2026-09-20 | [#640](https://github.com/design4pro/planned.travel/issues/640) | —                                                               | —              |
 | [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627) | —              |
 
-## Ready — merged, waiting for a build (2)
+## Ready — merged, waiting for a build (3)
 
 | Spec                                                                                                              | Date       | Issue                                                           | Spec PR                                                         | Implementation |
 | ----------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [Change a trip's accounting currency without moving any money](2026-10-04-change-a-trips-accounting-currency.md)  | 2026-10-04 | —                                                               | —                                                               | —              |
 | [Weather for every day of a trip, from free sources we are licensed to use](2026-09-19-per-day-weather.md)        | 2026-09-19 | [#631](https://github.com/design4pro/planned.travel/issues/631) | [#636](https://github.com/design4pro/planned.travel/issues/636) | —              |
 | [Document the ON DELETE rule D1 enforces, not the one schema.ts declares](2026-09-19-deployed-on-delete-rules.md) | 2026-09-19 | [#192](https://github.com/design4pro/planned.travel/issues/192) | [#626](https://github.com/design4pro/planned.travel/issues/626) | —              |
 
