@@ -929,4 +929,204 @@ describe('member isolation', () => {
       expect(await listTripGuests(alpha.scope, fixture.tripId)).toEqual([guest])
     })
   })
+
+  describe('once the trip a journey was written about is deleted (#520)', () => {
+    /** On none of the workspace's trips, and so a stranger before and after the deletion. */
+    let outsiderId: string
+    let outsider: TenantScope
+    let moodId: string
+    let journeyId: string
+    let journeySlug: string
+    let entryId: string
+    let photoId: string
+
+    beforeEach(async () => {
+      outsiderId = await alpha.addUser('Alpha the third')
+      outsider = alpha.scopeFor(outsiderId)
+      await addTripMember(alpha.scope, {
+        tripId: fixture.tripId,
+        userId: strangerId,
+        role: 'editor',
+      })
+
+      moodId = (
+        await createMood(alpha.scope, {
+          key: 'quiet',
+          label: 'Quiet',
+          emoji: '🌿',
+        })
+      ).id
+      const journey = await createJourney(alpha.scope, {
+        tripId: fixture.tripId,
+        title: 'Lisbon, written up',
+      })
+      journeyId = journey.id
+      journeySlug = journey.slug
+      entryId = (
+        await createEntry(alpha.scope, {
+          journeyId,
+          entryDate: '2026-04-10',
+          title: 'Custard tarts, twice',
+          moodId,
+        })
+      ).id
+      photoId = (
+        await addPhoto(alpha.scope, {
+          journeyId,
+          storageKey: 'journeys/lisbon/tram.jpg',
+          contentType: 'image/jpeg',
+        })
+      ).id
+      // A co-traveller's entry in the owner's journey: it goes with the journey, not with its author.
+      await createEntry(stranger, {
+        journeyId,
+        entryDate: '2026-04-11',
+        title: 'The funicular',
+      })
+
+      await deleteTrip(alpha.scope, fixture.tripId)
+    })
+
+    it.each([
+      ['a former member of the trip who did not write it', () => stranger],
+      ['a stranger to the workspace’s trips', () => outsider],
+    ])('is out of every reader and writer for %s', async (_who, pick) => {
+      const reader = pick()
+
+      expect(await listJourneys(reader)).toEqual([])
+      expect(await listJourneysWithCounts(reader)).toEqual([])
+      expect(await getJourney(reader, journeyId)).toBeNull()
+      expect(await getJourneyBySlug(reader, journeySlug)).toBeNull()
+      expect(
+        await captureError(() => getJourneyStory(reader, journeyId)),
+      ).toBeInstanceOf(NotFoundError)
+      expect(await listRecentEntries(reader)).toEqual([])
+      expect(await tallyMoods(reader)).toEqual([])
+      expect(await countEntriesByMood(reader, journeyId)).toEqual([])
+      expect(await listEntriesByIds(reader, [entryId])).toEqual([])
+      expect(await listJourneyEntries(reader, journeyId)).toEqual([])
+      expect(await listUnattachedPhotos(reader, journeyId)).toEqual([])
+
+      for (const attempt of [
+        () => updateJourney(reader, journeyId, { title: 'Hijacked' }),
+        () => deleteJourney(reader, journeyId),
+        () =>
+          createEntry(reader, {
+            journeyId,
+            entryDate: '2026-04-12',
+            title: 'Planted',
+          }),
+        () => updateEntry(reader, entryId, { title: 'Hijacked' }),
+        () =>
+          addPhoto(reader, {
+            journeyId,
+            storageKey: 'journeys/lisbon/planted.jpg',
+            contentType: 'image/jpeg',
+          }),
+        () => deletePhoto(reader, photoId),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+    })
+
+    it('stays readable in full by the person who wrote it', async () => {
+      expect((await listJourneys(alpha.scope)).map((row) => row.id)).toEqual([
+        journeyId,
+      ])
+      expect(
+        (await listJourneysWithCounts(alpha.scope)).map((row) => row.id),
+      ).toEqual([journeyId])
+      expect((await getJourney(alpha.scope, journeyId))?.tripId).toBeNull()
+      expect((await getJourneyBySlug(alpha.scope, journeySlug))?.id).toBe(
+        journeyId,
+      )
+      const story = await getJourneyStory(alpha.scope, journeyId)
+      expect(story.entries.map((row) => row.entry.title)).toEqual([
+        'Custard tarts, twice',
+        'The funicular',
+      ])
+      expect(
+        (await listRecentEntries(alpha.scope)).map((row) => row.journeyId),
+      ).toEqual([journeyId, journeyId])
+      expect(
+        (await tallyMoods(alpha.scope)).map((row) => [row.mood.key, row.value]),
+      ).toEqual([['quiet', 1]])
+      expect(await countEntriesByMood(alpha.scope, journeyId)).toEqual([
+        { moodId, value: 1 },
+      ])
+      expect(
+        (await listEntriesByIds(alpha.scope, [entryId])).map((row) => row.id),
+      ).toEqual([entryId])
+      expect(
+        (await updateJourney(alpha.scope, journeyId, { title: 'Lisbon' }))
+          .title,
+      ).toBe('Lisbon')
+    })
+
+    it('is not opened to the trip’s owner when somebody else wrote it', async () => {
+      // The reader to refuse is whoever is *not* `owner_user_id`, whatever else they were: here it is
+      // the person who owned the deleted trip, and the journey's owner is the editor they invited.
+      const own = await createTrip(alpha.scope, {
+        title: 'Porto together',
+        slug: 'porto-together',
+        startDate: '2026-05-01',
+        endDate: '2026-05-04',
+      })
+      await addTripMember(alpha.scope, {
+        tripId: own.id,
+        userId: strangerId,
+        role: 'editor',
+      })
+      const written = await createJourney(stranger, {
+        tripId: own.id,
+        title: 'Porto, my side',
+      })
+      expect((await getJourney(alpha.scope, written.id))?.id).toBe(written.id)
+
+      await deleteTrip(alpha.scope, own.id)
+
+      expect(await getJourney(alpha.scope, written.id)).toBeNull()
+      expect(
+        (await listJourneys(alpha.scope)).map((row) => row.id),
+      ).not.toContain(written.id)
+      expect((await getJourney(stranger, written.id))?.id).toBe(written.id)
+    })
+
+    it('leaves a journey tied to no trip, and one on a live trip, as they were', async () => {
+      const untied = await createJourney(alpha.scope, {
+        title: 'A weekend walk',
+      })
+      const shared = await createTrip(alpha.scope, {
+        title: 'Porto for everyone',
+        slug: 'porto-for-everyone',
+        startDate: '2026-05-01',
+        endDate: '2026-05-04',
+      })
+      await updateTrip(alpha.scope, shared.id, { visibility: 'organization' })
+      const onShared = await createJourney(alpha.scope, {
+        tripId: shared.id,
+        title: 'Porto, written up',
+      })
+      const priv = await createTrip(alpha.scope, {
+        title: 'Faro, quietly',
+        slug: 'faro-quietly',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+      })
+      const onPrivate = await createJourney(alpha.scope, {
+        tripId: priv.id,
+        title: 'Faro, written up',
+      })
+
+      // Deleting a different trip marked none of these: the marker is per trip, not per workspace.
+      await deleteTrip(alpha.scope, priv.id)
+
+      for (const reader of [stranger, outsider]) {
+        expect(
+          (await listJourneys(reader)).map((row) => row.id).sort(),
+        ).toEqual([untied.id, onShared.id].sort())
+        expect(await getJourney(reader, onPrivate.id)).toBeNull()
+      }
+    })
+  })
 })

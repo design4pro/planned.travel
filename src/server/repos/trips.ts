@@ -32,6 +32,7 @@ import {
   dayAssignments,
   dayNotes,
   days,
+  journeys,
   newId,
   placeTags,
   places,
@@ -84,7 +85,7 @@ import type { SQL } from 'drizzle-orm'
 import type { ShareScopes } from '#/server/db/schema'
 import type { Day, ShareLink, Trip, TripMember } from '#/server/db/types'
 import type { ListOptions, TenantScope } from './base'
-import { insertChunked } from './batch'
+import { insertChunked, runBatch } from './batch'
 
 export { MAX_BOUND_PARAMETERS, chunkFor } from './batch'
 
@@ -864,13 +865,26 @@ export async function restoreTrip(
   })
 }
 
-/** Deletes the trip; every child row goes with it through `ON DELETE CASCADE`. */
+/**
+ * Deletes the trip. Its itinerary, expenses and the rest go with it through `ON DELETE CASCADE`; a
+ * journey written about it does not — `journeys.trip_id` is `ON DELETE SET NULL`, so it stays and
+ * would read as a journey that never had a trip, which ADR 0020 makes readable by the whole workspace.
+ * It is marked in the same batch as the removal instead, so it stays its owner's (ADR 0034).
+ */
 export async function deleteTrip(
   scope: TenantScope,
   tripId: string,
 ): Promise<void> {
   await requireOwnedTrip(scope, tripId)
-  await tripsRepository.requireRemove(scope, tripId)
+  await runBatch(scope, [
+    scope.db
+      .update(journeys)
+      .set({ tripDeletedAt: new Date() })
+      .where(tenantFilter(scope, journeys, eq(journeys.tripId, tripId))),
+    scope.db
+      .delete(trips)
+      .where(tenantFilter(scope, trips, eq(trips.id, tripId))),
+  ])
 }
 
 function assertDateOrder(
