@@ -4,7 +4,7 @@
 | ------------------ | ---------------------------------------------- |
 | **Status**         | ready                                          |
 | **Issue**          | none                                           |
-| **Spec PR**        | none                                           |
+| **Spec PR**        | #828                                           |
 | **Implementation** | none                                           |
 | **Plan**           | 04-S5 (docs/plans/04-budget-and-currencies.md) |
 
