@@ -574,15 +574,14 @@ acceptance:**
 
 ## 📋 Phasing
 
-| Phase | Slice                                                  | Blocked by                                                                                          | Demoable on its own                                                                        |
-| ----- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 1     | The D1 fix: chunked, atomic `createTemplate` and apply | none                                                                                                | Applying a template of 30 items works through the existing "From a template" dialog        |
-| 2     | Delete: author rule, function, library button          | none (Phase 1 is not required: the files it touches do not overlap)                                 | A template can be deleted from the library, with a confirmation, by its author or an admin |
+| Phase | Slice                                                  | Blocked by                                                                                                                                    | Demoable on its own                                                                        |
+| ----- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 1     | The D1 fix: chunked, atomic `createTemplate` and apply | none                                                                                                                                          | Applying a template of 30 items works through the existing "From a template" dialog        |
+| 2     | Delete: author rule, function, library button          | none                                                                                                                                          | A template can be deleted from the library, with a confirmation, by its author or an admin |
 | 3     | Save: limits, function, dialog, menu entry, glossary   | Phases 1 and 2 (a 30-item save needs the fix; Phase 2 creates or extends the shared files); every `05-S1` ticket **if** any exist when sliced | A list can be saved, copied under a new name, and found in the library                     |
 
 Three tickets for `afk-to-tickets`, each a vertical slice a person can use: Phase 1 repairs a feature that
-exists, Phase 2 and Phase 3 each add one traveller-visible capability. Phase 3's block on Phase 1 is
-implicit through its tests (a 30-item save needs the fix), so its ticket lists **Phase 1 and Phase 2**.
+exists, Phase 2 and Phase 3 each add one traveller-visible capability.
 "Every `05-S1` ticket" means the tickets sliced from the spec whose `Plan` row is `05-S1`.
 
 ## 📋 Implementation Plan
