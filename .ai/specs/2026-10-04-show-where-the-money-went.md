@@ -219,12 +219,19 @@ loading and is `04-S2`'s file.
 
 `MemberBar` sits in the footer of the inverse "Total trip spend" tile, above the existing
 "Your share / You paid" pair, which stays. It divides the trip's spend by **each member's
-`shareMinor`** (`snapshot.balances`) — who the money was spent on — not by what each paid, which
-the "Outstanding" tile and the Balances panel already say.
+share** (the sum of their `shares[].shareMinor` over `snapshot.expenses`) — who the money was spent
+on — not by what each paid, which the "Outstanding" tile and the Balances panel already say.
 
-**Contract.** `stat-tiles.tsx` builds `members: ReadonlyArray<{ userId, name, shareMinor }>` from
-`snapshot.balances`, in `balances` order (that order is the deterministic tie-break), with the name
-already resolved: the viewer is `t('costs.person.you')`, a removed traveller is
+The source is `snapshot.expenses`, **not** `snapshot.balances[].shareMinor`: while a write is in
+flight the optimistic overlay (`data.ts`, `mergeBalances`) folds the write into `balanceMinor` only
+and leaves `shareMinor` at the loader's value, and it re-sorts `balances` by `balanceMinor`. Reading
+`balances[].shareMinor` would show the new expense's whole amount as "Not assigned to anyone" until
+the refetch lands. The expense rows carry the overlay (created, updated and deleted rows), and with
+no write in flight the per-member sums equal `balances[].shareMinor`.
+
+**Contract.** `stat-tiles.tsx` builds `members: ReadonlyArray<{ userId, name, shareMinor }>` from the per-member
+sums over `snapshot.expenses`, in ascending `userId` order (the one key no write changes, so it is
+the deterministic tie-break), with the name already resolved: the viewer is `t('costs.person.you')`, a removed traveller is
 `t('costs.person.removed')`. `nameOf` in `stat-tiles.tsx:44-46` returns a hardcoded
 `'Removed traveller'` today and switches to the catalogue key, so the file gains `useTranslate` and
 the new list and `PeopleLine` share one resolver (this one change reaches the other tiles and is the
@@ -237,15 +244,16 @@ percents, no amounts.
 - Widths are measured against `spentMinor`, never against the sum of shares. When shares fall short
   (an expense can have no participants, `src/server/fns/costs.ts:197`), the gap is one neutral
   **"Not assigned to anyone"** segment, so the bar never overstates anyone. Should shares ever exceed
-  the spend (an optimistic overlay mid-write), the widths are measured against the sum instead.
+  the spend (inconsistent data, never the overlay: the source is the overlaid expense rows), the
+  widths are measured against the sum instead.
 - Members with `shareMinor === 0` are left out. Past four people the bar shows the top three by
   share and one **"N other travellers"** segment, so the bar has at most five segments: four tinted
   ones and the outline remainder.
 - The bar is not drawn when fewer than two segments result: a bar of one colour says nothing. Its
   visible heading and its list go with it: all three are absent together, so there is never a
   "Who it was spent on" heading over a single "You 100%".
-- Segment order, for the bar and the list alike: members by share descending, ties in `balances`
-  order, then "N other travellers", then "Not assigned to anyone" last. Tints are assigned in that
+- Segment order, for the bar and the list alike: members by share descending, ties by ascending
+  `userId`, then "N other travellers", then "Not assigned to anyone" last. Tints are assigned in that
   order, so the largest share is the brightest.
 - Segments are monochrome tints of `--color-inverse-on` at the stepped opacities exported as
   `MEMBER_TINTS = [1, 0.7, 0.52, 0.4]` from `member-bar.tsx` (the contrast test imports it), with a
@@ -396,7 +404,7 @@ plan's "Food, 32 percent, 412 euros") is added.
 | Shares sum to less than the spend / more than it      | "Not assigned to anyone" segment / widths measured against the sum.                               |
 | A member with `shareMinor === 0`; one member only     | Left out; with fewer than two segments there is no bar, no heading and no list.                   |
 | Two categories share a hue (until `04-S2`)            | They touch only when the category between them has no spend; text and the link disambiguate.      |
-| Optimistic write in flight                            | Rows come from `snapshot.byCategory` / `snapshot.balances`, so the chart follows the overlay.     |
+| Optimistic write in flight                            | Rows come from `snapshot.byCategory` and the member sums from `snapshot.expenses`, both overlaid. |
 
 ## 📝 Observability
 
@@ -526,8 +534,9 @@ data-part="donut-legend-row">` inside its `<li>`; `pinned`, `hovered` and `focus
 
 1. `chart-geometry.ts`: `memberSegments(members, spentMinor)` — drop zero shares, top three plus
    "others" past four members, a remainder segment, widths against `spentMinor` (or the sum when
-   shares exceed it), `balances`-order tie-break, whole percents through `allocatePercents`; tests
-   for each case in Edge Cases.
+   shares exceed it), ascending-`userId` tie-break, whole percents through `allocatePercents`; tests
+   for each case in Edge Cases, and one that folds an in-flight create into a snapshot (the
+   per-member sums follow it and no "Not assigned to anyone" segment appears).
 2. `member-bar.tsx` (exporting `MEMBER_TINTS`, and exported with it through the barrel) and
    `stat-tiles.tsx`: the bar, its visible label (a non-heading `<p id>`), the mirrored `ul`, the tints, the outline remainder, logical properties only, hidden below two
    segments; `nameOf` switches to the catalogue keys and the tile's own strings move into
