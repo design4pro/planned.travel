@@ -13,7 +13,7 @@
  * implements with nobody watching, so the cases that keep an issue OUT of READY - an author no
  * automation trusts, a brief a stranger wrote, an open blocker, the WIP limit - matter most.
  *
- * Since ADR 0033 `--plan` is five picks at once, for the Reconciler: the cases that matter there are
+ * Since ADR 0033 `--plan` is five kinds of pick at once, for the Reconciler: the cases that matter there are
  * the ones that would start a second run on work a run already holds, slice a spec twice, or lift a
  * hold a person set.
  */
@@ -24,6 +24,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   PARKED_HOURS,
+  PLAN_CANDIDATES,
   PLAN_WORKFLOWS,
   RETIRED_AGENT_LOGINS,
   WIP_LIMIT,
@@ -886,7 +887,7 @@ describe("buildPlan", () => {
     expect(buildPlan(base)).toEqual({ wip: { waitingForPerson: 0, limit: WIP_LIMIT }, actions: [] });
   });
 
-  it("names the five kinds in order, one action each, with the workflow and task text the Reconciler runs", () => {
+  it("names the five kinds in order, candidates of a kind together, with the workflow and task text the Reconciler runs", () => {
     const plan = buildPlan({
       ...base,
       issues: sortIssues([
@@ -902,6 +903,7 @@ describe("buildPlan", () => {
       { kind: "implement", target: "#7", workflow: "implement-ticket", task: "Implement issue #7." },
       { kind: "unblock", target: "#45", workflow: "unblock", task: "Resolve the hold on issue #45." },
       { kind: "triage", target: "#67", workflow: "triage", task: "Triage issue #67." },
+      { kind: "triage", target: "#68", workflow: "triage", task: "Triage issue #68." },
       {
         kind: "write-spec",
         target: "04-S3",
@@ -926,6 +928,46 @@ describe("buildPlan", () => {
     });
     expect(plan.wip).toEqual({ waitingForPerson: WIP_LIMIT, limit: WIP_LIMIT });
     expect(plan.actions.map((a) => a.kind)).toEqual(["triage"]);
+  });
+
+  // 2026-10-04: one implement candidate (#516) sat in the Reconciler's cooldown for six hours while
+  // #121, READY behind it, never started. The Reconciler needs the next candidates to fall back on.
+  it("ranks up to PLAN_CANDIDATES ready issues in pick order, the first one `--next`", () => {
+    const issues = sortIssues([
+      row(30, "READY"),
+      row(20, "READY", { labels: ["priority-high"] }),
+      row(10, "READY"),
+      row(40, "READY"),
+    ]);
+    const plan = buildPlan({ ...base, issues });
+    expect(PLAN_CANDIDATES).toBe(3);
+    expect(plan.actions.map((a) => [a.kind, a.target])).toEqual([
+      ["implement", "#20"],
+      ["implement", "#10"],
+      ["implement", "#30"],
+    ]);
+    expect(plan.actions[0].target).toBe(`#${pickNext(issues, 0)}`);
+  });
+
+  it("ranks no implement candidate at the WIP limit", () => {
+    const issues = sortIssues([row(10, "READY"), row(20, "READY"), row(30, "READY")]);
+    expect(buildPlan({ ...base, wip: WIP_LIMIT, issues }).actions).toEqual([]);
+  });
+
+  it("ranks up to PLAN_CANDIDATES triage candidates, leaving out one a live run holds", () => {
+    const issues = sortIssues([67, 68, 69, 70].map((number) => row(number, "NEEDS_TRIAGE")));
+    expect(buildPlan({ ...base, issues }).actions.map((a) => a.target)).toEqual(["#67", "#68", "#69"]);
+    const runs = new Map([[68, { status: "running", workflow: "triage" }]]);
+    expect(buildPlan({ ...base, issues, runs }).actions.map((a) => a.target)).toEqual(["#67", "#69", "#70"]);
+  });
+
+  it("ranks up to PLAN_CANDIDATES unblock candidates", () => {
+    const issues = sortIssues([45, 46, 47, 48].map((number) => row(number, "BLOCKED", { canUnblock: true })));
+    expect(buildPlan({ ...base, issues }).actions.map((a) => [a.kind, a.target])).toEqual([
+      ["unblock", "#45"],
+      ["unblock", "#46"],
+      ["unblock", "#47"],
+    ]);
   });
 
   it("never starts a second run on an issue a run already holds", () => {

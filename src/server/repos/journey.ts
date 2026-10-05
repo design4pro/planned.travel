@@ -208,8 +208,10 @@ async function reserveSlug(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Who may read a journey (ADR 0020): whoever may read the trip it names, and every member of the
- * workspace when it names none.
+ * Who may read a journey (ADR 0020, narrowed by ADR 0034): whoever may read the trip it names, and
+ * every member of the workspace when it names none — except a journey whose trip was deleted, which
+ * is its owner's alone. `trip_id` is nulled by that deletion and cannot tell the two apart, so
+ * `trip_deleted_at` does.
  *
  * A journey is reachable without its trip ever being read — by id, from the journal index, from the
  * recent-entries strip — so ADR 0007 does not reach it on its own, and until #456 a member who could
@@ -234,7 +236,14 @@ function readableJourneyFilter(scope: TenantScope): SQL {
         ),
       ),
   )
-  return anyOf(isNull(journeys.tripId), tripIsReadable)
+  const tripless = allOf(
+    isNull(journeys.tripId),
+    anyOf(
+      isNull(journeys.tripDeletedAt),
+      eq(journeys.ownerUserId, scope.ctx.userId),
+    ),
+  )
+  return anyOf(tripless, tripIsReadable)
 }
 
 /**

@@ -1,0 +1,1 @@
+ALTER TABLE `journeys` ADD `trip_deleted_at` integer;
