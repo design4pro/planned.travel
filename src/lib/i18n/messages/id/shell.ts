@@ -405,6 +405,26 @@ const messages = {
   'newTrip.currency': 'Mata uang anggaran',
   'newTrip.currencyHint':
     'Setiap pengeluaran perjalanan ini dijumlahkan dalam mata uang itu.',
+  'newTrip.currencySearch': 'Cari berdasarkan kode atau nama',
+  'newTrip.currencyEmpty': 'Tidak ada mata uang yang cocok.',
+  'newTrip.currencyFavourites': 'Favorit',
+  'newTrip.currencyAll': 'Semua mata uang',
+  'newTrip.summary': 'Ringkasan',
+  'newTrip.summaryPlaceholder': 'Dua minggu penuh kuil, kereta, dan ramen.',
+  'newTrip.duration': 'Durasi dalam hari',
+  'newTrip.durationHint':
+    'Tanpa tanggal, perjalanan dimulai dengan sejumlah hari tanpa tanggal ini.',
+  'newTrip.durationDerived': 'Dihitung dari kedua tanggal.',
+  'newTrip.reminder': 'Pengingat sebelum keberangkatan',
+  'newTrip.reminderNone': 'Tidak ada',
+  'newTrip.reminderBefore': {
+    other: '{count} hari sebelumnya',
+  },
+  'newTrip.reminderCustom': 'Kustom',
+  'newTrip.reminderCustomDays': 'Hari sebelum keberangkatan',
+  'newTrip.reminderOn': 'Pengingat pada {date}',
+  'newTrip.reminderNoDeparture':
+    'Pilih tanggal keberangkatan untuk melihat harinya.',
   'newTrip.submit': 'Buat perjalanan',
   'newTrip.creating': 'Membuat perjalanan',
   'newTrip.error': 'Perjalanan tidak bisa dibuat. Coba lagi sebentar.',
