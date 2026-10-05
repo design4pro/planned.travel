@@ -12,6 +12,7 @@ export function tripCard(patch: Partial<TripCard> = {}): TripCard {
     title: 'Lisbon in April',
     slug: 'lisbon-in-april',
     summary: null,
+    reminderDays: 3,
     destination: 'Lisbon',
     status: 'planning',
     startDate: '2026-04-01',

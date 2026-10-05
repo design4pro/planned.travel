@@ -53,6 +53,7 @@ import {
 import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
 import { MAX_PURGE_KEYS } from '#/server/queue/types'
+import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import { appScope } from './context'
 
 import type { Logger } from '#/server/observability'
@@ -162,15 +163,41 @@ const datesOutOfOrder = {
   path: ['endDate'],
 }
 
+/**
+ * A date range and a duration are one fact with two faces, so a request carries one of them: a day
+ * count beside either date is refused. The form never sends both; this is what stops a hand-rolled
+ * request from making the trip's length ambiguous.
+ */
+function durationXorDates(value: {
+  startDate?: string | null
+  endDate?: string | null
+  dayCount?: number
+}): boolean {
+  return value.dayCount === undefined || (!value.startDate && !value.endDate)
+}
+
+const durationWithDates = {
+  error: 'Give either dates or a number of days, not both.',
+  path: ['dayCount'],
+}
+
+/** Days before departure, as the trip row stores them; `0` is no reminder. */
+const reminderDaysSchema = z.number().int().min(0).max(365)
+
 export const createTripInputSchema = z
   .strictObject({
     title: titleSchema,
+    summary: textOrBlankSchema(280).optional(),
     destination: textOrBlankSchema(160),
     startDate: dateOrBlankSchema,
     endDate: dateOrBlankSchema,
+    /** How many undated days to create; refused when either date is present. */
+    dayCount: z.number().int().min(1).max(TRIP_DAY_COUNT_MAX).optional(),
     currency: currencySchema,
+    reminderDays: reminderDaysSchema.optional(),
   })
   .refine(datesInOrder, datesOutOfOrder)
+  .refine(durationXorDates, durationWithDates)
 
 /**
  * The edit patch. **Blank clears, `undefined` leaves** — the convention `-server/plan.ts` established
@@ -186,6 +213,7 @@ export const updateTripInputSchema = z
     startDate: dateOrBlankSchema.optional(),
     endDate: dateOrBlankSchema.optional(),
     currency: currencySchema.optional(),
+    reminderDays: reminderDaysSchema.optional(),
   })
   .refine(datesInOrder, datesOutOfOrder)
 
