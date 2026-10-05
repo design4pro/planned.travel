@@ -123,3 +123,16 @@ describe('the trip edit sheet when the budget currency cannot change', () => {
     expect(alert.textContent).not.toContain('shell.editTrip')
   })
 })
+
+describe('what the trip edit sheet sends', () => {
+  it('leaves the budget currency out of a save that did not change it', async () => {
+    server.update.mockResolvedValue(undefined)
+
+    await save('en', EN)
+
+    expect(server.update).toHaveBeenCalledTimes(1)
+    const { data } = server.update.mock.calls[0][0]
+    expect(data).toMatchObject({ tripId: expect.any(String) })
+    expect(data).not.toHaveProperty('currency')
+  })
+})

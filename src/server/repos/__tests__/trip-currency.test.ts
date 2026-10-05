@@ -274,9 +274,9 @@ describe('changing a trip’s budget currency', () => {
     })
   })
 
-  describe('a stale tab that sends the currency on every save', () => {
-    it('does not put back a currency that changed after the tab loaded', async () => {
-      // The tab loaded the trip in EUR and sends EUR; the stored value has meanwhile moved on.
+  describe('a tab that sends the currency on every save', () => {
+    it('does not put back a currency that changed between the read and the write', async () => {
+      // The save sends EUR, the value the trip had when it was read; the stored value moves on before the write.
       const racing = scopeWithRaceBeforeTripUpdate(tenant.scope, () => {
         harness.sqlite.exec(
           `UPDATE trips SET currency = 'USD' WHERE id = '${tripId}'`,

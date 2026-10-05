@@ -100,9 +100,11 @@ export interface TripEditSheetProps {
  *
  * The fields are `./trip-form`'s — the same ones the creation dialog asks for, because they are the
  * same questions — and this contributes the chrome, the patch and where the answer lands. Blank
- * clears and an untouched field is left alone, but the sheet shows all five and so sends all five:
- * "untouched" is a property of the *patch*, not of the form, and a sheet that omitted an empty field
- * could never clear a destination.
+ * clears and an untouched field is left alone, but the sheet shows all five and so sends the four
+ * free ones always: "untouched" is a property of the *patch*, not of the form, and a sheet that
+ * omitted an empty field could never clear a destination. The budget currency is the exception - it
+ * is sent only when the reader picked another one, so a tab left open across somebody else's change
+ * of it cannot put the old value back with an unrelated save.
  */
 export function TripEditSheet({
   trip,
@@ -130,8 +132,13 @@ export function TripEditSheet({
     setSaving(true)
     setError(null)
     try {
+      const { currency, ...fields } = tripFormPayload(form)
       await updateTripFn({
-        data: { tripId: trip.id, ...tripFormPayload(form) },
+        data: {
+          tripId: trip.id,
+          ...fields,
+          ...(currency === trip.currency ? {} : { currency }),
+        },
       })
       await router.invalidate()
       onOpenChange(false)
