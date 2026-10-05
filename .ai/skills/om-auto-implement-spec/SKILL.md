@@ -35,3 +35,5 @@ top:
   holding it.
 - The implementation PR is the one that carries all of this. The spec PR stays design-only, exactly as
   the installed skill says.
+
+**Protected writes are declared up front, and a refusal is handed over once.** Check the intended write paths before diagnosis or implementation. ADR 0025 removes upstream ownership, not runtime permissions: protected configuration (`.claude/**`, `.husky/*`) can still require supervision. Declare known protected writes in Cezar `writePaths` (or `cezar task --write-path`) before bootstrap or diagnosis, when the dispatch mechanism allows it, so preflight can stop before expensive work. After a denial, stop the unattended run once and hand the exact diff, the worktree and the paths, with the configuration guardian verdict from `.ai/skills/afk-decide/SKILL.md`, to a supervised run with approval limited to those paths. Never enable global `bypassPermissions`, switch tools to evade denial, or repeat diagnosis and tests for the same refusal. Changes outside this repository belong in their own pull request.
