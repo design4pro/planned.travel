@@ -133,6 +133,16 @@ cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The projec
   `Edit` or `Write` may write anywhere the user can. That is an accepted risk (ADR 0030); a run
   that touches a sibling checkout shows up in that checkout's `git status`, not in its own PR.
 
+Protected configuration is a second boundary the repository's hooks do not move: Claude Code refuses an
+`Edit` or `Write` under `.claude/**` and `.husky/*` in a `dontAsk` run, and a pull request whose diff is
+only that configuration cannot be fixed unattended (#670). The cezar runner declares and preflights
+`writePaths`; here, the nine overrides of the skills that fix, continue, create or implement a pull request carry one rule: declare the
+protected writes up front when the dispatch allows it, stop once after the first refusal, hand the exact
+diff, worktree and paths to a supervised run with a configuration guardian verdict, and never enable
+`bypassPermissions` or switch tools to get around a denial.
+`.ai/scripts/__tests__/protected-writes-rule.test.mjs` keeps that rule in every listed override and fails
+on a new override that is in neither of its lists.
+
 Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
 shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The
 permission rules above, branch protection on `develop` and `main`, the PAT scopes, one worktree per
@@ -296,8 +306,9 @@ host, in `design4pro/cezar` (`host/`), with no Cezar engine change.
 }
 ```
 
-At most one action per kind, in the order implement, unblock, triage, slice, write-spec; a kind with no
-candidate is left out, and a repository with nothing to do prints `"actions": []`. `target` is an issue
+Up to three actions each of implement, unblock and triage, best first, and at most one each of slice and
+write-spec, in the order implement, unblock, triage, slice, write-spec; a kind with no candidate is left out, and a
+repository with nothing to do prints `"actions": []`. `target` is an issue
 (`#123`), a spec path (`.ai/specs/<file>.md`) or a plan stage id (`02-S3`). `--plan` is a separate output from
 `--json` and `--next`, and combining them is an error. The Reconciler sends `workflow` and `task` as they are.
 
