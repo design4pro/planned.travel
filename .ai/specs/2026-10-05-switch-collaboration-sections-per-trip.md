@@ -73,6 +73,9 @@ way?_ and _On my phone I want the notes, not the transcript above them._
 | `src/lib/collab-sections.ts` - new: the closed vocabulary, `resolveCollabSections`, `enabledCollabSections`, `visibleCollabSections`, `collabLayout`, `activeCollabSection` (the last two take the visible ids), the Zod schemas; `src/lib/__tests__/collab-sections.test.ts` - new                                                                                                                                                                                                                                                                                                                                                              | `drizzle/`, `src/server/db/schema.ts` columns - **no migration**; only the column's docblock sentence is updated |
 | `src/server/repos/collab.ts` - edit: `setTripCollabSections`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `src/server/repos/trips.ts` (read only: the guards are imported, not edited)                                     |
 | `src/server/repos/__tests__/collab-sections.test.ts` - new; `tenant-isolation.test.ts` - append                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `src/server/do/protocol.ts` - no new entity kind; the signal is a field on the existing `trip` kind              |
+| `src/server/fns/__tests__/collab-payloads.test.ts` - new (Phase 1); `src/routes/_app/trips/$tripId/-server/__tests__/collab.test.ts` - new: the handler-level test of `setCollabSectionFn` (the refusal as data, the guard order), next to `-server/__tests__/people.test.ts` as its precedent                                                                                                                                                                                                                                                                                                                                                   |
+| `src/server/serialise.ts` - moved from `src/routes/_app/-server/serialise.ts`, with the comment path in `src/server/clock.ts` and the imports in `trip.ts`, `library.ts`, `overview.ts` and `settings.ts` repointed (Phase 1)                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `src/components/modules/collab/__tests__/collab-peers.test.tsx` - new: focus repair, the announcement and draft retention when a peer switches a section off (Phases 3 and 4)                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `src/server/fns/collab-thread.ts`, `collab-notes.ts`, `collab-polls.ts` - new (the server functions, moved unchanged), `collab-inputs.ts` (the shared Zod inputs, one owner), and the plain modules `collab-thread-writes.ts` (`postTripMessage`, `notifyTripMessage`) and `collab-payloads.ts` (the three builders and the row types) that no client imports; `src/server/fns/collab.ts` - **delete**; `src/server/serialise.ts` - `git mv` from `src/routes/_app/-server/serialise.ts` (the four route consumers repointed)                                                                                                                    | The behaviour of every writer: unchanged, including the notification and the room mirror                         |
 | `src/routes/_app/trips/$tripId/-server/collab.ts` - new: `loadTripCollab`, `setCollabSectionFn`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `src/routes/_app/trips/$tripId/-server/plan.ts` and the other trip tabs                                          |
 | `src/routes/_app/-server/trip.ts` - edit: the moved loader and its types, the duplicate `postMessageFn` and orphaned imports leave; `loadPeople` and `tripInput` gain `export`                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `src/components/ui/**`, `src/styles/**` (no token or primitive is added)                                         |
@@ -179,8 +182,8 @@ repair and announcement, copy in 23 locales, glossary), which is **blocked by th
 retention is what makes the peer signal safe to ship.
 
 **The vocabulary** (`src/lib/collab-sections.ts`, pure and isomorphic, one owner; imported by the repository, the
-server function and the UI - `src/lib/plans.ts` and `src/lib/map/basemap.ts` are the precedents for a repository
-importing a `src/lib` vocabulary):
+server function and the UI - `src/lib/map/basemap.ts` (its `BASEMAP_IDS` is imported by `src/server/repos/settings.ts`) is the precedent for a
+repository importing a `src/lib` vocabulary):
 
 ```ts
 export const COLLAB_SECTIONS = [
@@ -261,9 +264,10 @@ the client that the trip's members could already read.
 - Header actions: the `CollabSectionsMenu` (below), rendered only when `canConfigure`. The `PresenceBar` stays
   where it is: presence is not a section.
 - The header's description lists the counts of the **enabled** sections only, joined by the middle dot as today.
-  When any section is off, **everyone** (a viewer and a traveller arriving from a notification link included) sees
+  When the **stored** record has any section off, **everyone** (a viewer and a traveller arriving from a notification link included) sees
   one quiet line, a `<p>` that is the first element of the screen's body, directly under the header (`TripModuleHeader`
-  takes only a `description: string` and puts `children` in its badge row, so the header is not edited),
+  takes its `description` as a `string` with no slot for a node, so the line cannot live in the header and the header is
+  not edited),
   `trips.collab.sections.someHidden` ("Some sections are hidden on this trip."), so a
   missing section is explained and not mistaken for lost data. `trips.collab.empty` ("Nothing shared yet") shows
   only when every enabled section is empty **and** no section is hidden.
@@ -302,10 +306,15 @@ calls `preventDefault`).
   never be reached. `onCheckedChange` ignores it (it still fires after `preventDefault`), the style comes from
   `aria-disabled:` variants, and `aria-describedby` points at a persistent footer line, `trips.collab.sections.keepOne`
   ("At least one section stays on."). A test asserts ArrowDown reaches the item and its description is the footer.
-- **A failed write** (a refusal answered as data, or a thrown error) is a toast through `useAction`: title
-  `collab.sections.failed` ("That change did not save"), body `collab.sections.failedBody` ("The menu shows what is
-  saved now."). On failure the action also invalidates the router, so the menu shows the server's real state (on a
-  dropped connection the write may have saved).
+- **A failed write** (a refusal answered as data, or a thrown error) is a toast with title `collab.sections.failed`
+  ("That change did not save") and body `collab.sections.failedBody` ("The menu shows what is saved now."), and the
+  menu then invalidates the router so it shows the server's real state (on a dropped connection the write may have
+  saved). `useAction` does none of that by itself: it toasts only a _thrown_ error, with the server's authored
+  sentence (or its own fallback) as the body, and it invalidates only after a _success_. So the menu branches on the
+  result itself: `ok: false` calls `toast.error(t('failed'), { description: t('failedBody') })` and
+  `router.invalidate()`; a thrown error is handled in `useAction`'s `onError`, which calls `router.invalidate()` and
+  passes `failure: t('failed')` and `fallback: t('failedBody')` (an authored `TripRoleError` or `TripArchivedError`
+  sentence stays as the body, because it says why). Both paths are asserted in the menu test.
 - A `Switch` is not used: a nested interactive control inside a menu item is invalid ARIA.
 
 **Peers.** `PresenceBar`'s `onCommit` already invalidates the router on any `trip` patch, so a peer's loader re-reads
@@ -365,7 +374,7 @@ Tests, first:
   an editor may; a viewer gets `TripRoleError`; **a workspace member who is not on a `private` trip gets `NotFoundError`, and one who is not on an
   `organization`-visible trip gets `TripRoleError` (and `canWritePlan(trip, await tripRoleFor(...))` is false for them - the harness
   drives plain functions, not the loader)**; an archived trip gets `TripArchivedError`;
-  turning off the last enabled section is refused with `CollabSectionsError` and the row is unchanged (and `setCollabSectionFn` returns the refusal as data, not as a throw, in a handler-level test); turning a section back on round-trips.
+  turning off the last enabled section is refused with `CollabSectionsError` and the row is unchanged (and `setCollabSectionFn` returns the refusal as data, not as a throw, in a handler-level test in `src/routes/_app/trips/$tripId/-server/__tests__/collab.test.ts`); turning a section back on round-trips.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` (append one `describe`): in A's scope, `setTripCollabSections` on B's trip id is a
   `NotFoundError` and B's row is byte-identical afterwards (`collab_modules` and `updated_at` included). The refusals above run in A's own scope
   so a validation failure can never be mistaken for an isolation pass.
