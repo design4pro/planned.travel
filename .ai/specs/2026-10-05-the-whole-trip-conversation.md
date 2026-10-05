@@ -92,8 +92,7 @@ and the client can tell "a full window, there may be more" from "fewer than a pa
 
 ### Dependency on plan stage `07-S2`
 
-`07-S2` ("Switch a trip's collaboration sections on and off", its spec is being written in the same wave
-and is not merged when this one is written) is the stage that splits `src/server/fns/collab.ts` into
+`07-S2` ("Switch a trip's collaboration sections on and off", its spec, `.ai/specs/2026-10-05-switch-collaboration-sections-per-trip.md`, merged on PR #903 while this one was in review; its tickets may not exist yet) is the stage that splits `src/server/fns/collab.ts` into
 `collab-thread.ts`, `collab-notes.ts` and `collab-polls.ts`, moves `loadTripCollab` into
 `src/routes/_app/trips/$tripId/-server/collab.ts`, and repoints `thread.tsx`'s import paths. Its draft also
 makes `Thread` and `Composer` report a dirty state upward (`onDirtyChange(sectionId, dirty)`), so a switch
