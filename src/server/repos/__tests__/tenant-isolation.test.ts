@@ -284,6 +284,7 @@ import { createLogger, createMemorySink } from '#/server/observability'
 import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
 import { captureError, createHarness } from './harness'
+import { PRICED_KINDS } from './priced-rows'
 import type {
   KeyedTenantTable,
   TenantPatch,
@@ -5007,5 +5008,115 @@ describe('tenant isolation', () => {
         )
       }
     })
+  })
+
+  /**
+   * The changed-currency `UPDATE` embeds a priced-rows test, so a subquery that forgot the trip, or
+   * the tenant, would let somebody else's prices decide whether this trip's currency may change -
+   * in one direction a refusal that is not the caller's to receive, in the other a relabel that
+   * should have been refused. One kind of price at a time on the other trips, so that a single
+   * missing predicate cannot hide behind the kinds that are filtered correctly.
+   */
+  describe('a trip’s budget currency', () => {
+    const CHANGE = { currency: 'JPY' } as const
+
+    it('is not found, and unchanged, for another workspace’s trip', async () => {
+      const before = await tripsRepository.findById(
+        beta.tenant.scope,
+        beta.tripId,
+      )
+
+      const failure = await captureError(() =>
+        updateTrip(alpha.tenant.scope, beta.tripId, CHANGE),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(
+        await tripsRepository.findById(beta.tenant.scope, beta.tripId),
+      ).toEqual(before)
+    })
+
+    it('is not found, and unchanged, for a private trip the caller is not on', async () => {
+      const privateTrip = await createTrip(alpha.tenant.scope, {
+        title: 'Private to A’s owner',
+        currency: 'EUR',
+      })
+      const colleague = alpha.tenant.scopeFor(alpha.secondUserId)
+
+      const failure = await captureError(() =>
+        updateTrip(colleague, privateTrip.id, CHANGE),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(
+        (await requireTrip(alpha.tenant.scope, privateTrip.id)).currency,
+      ).toBe('EUR')
+    })
+
+    it('is refused to an editor and to a viewer, who see the trip but do not own it', async () => {
+      const trip = await createTrip(alpha.tenant.scope, {
+        title: 'Shared with two',
+        currency: 'EUR',
+      })
+      const viewerId = await alpha.tenant.addUser('Viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: trip.id,
+        userId: alpha.secondUserId,
+        role: 'editor',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: trip.id,
+        userId: viewerId,
+        role: 'viewer',
+      })
+
+      for (const userId of [alpha.secondUserId, viewerId]) {
+        const failure = await captureError(() =>
+          updateTrip(alpha.tenant.scopeFor(userId), trip.id, CHANGE),
+        )
+        expect(failure).toBeInstanceOf(TripRoleError)
+      }
+      expect((await requireTrip(alpha.tenant.scope, trip.id)).currency).toBe(
+        'EUR',
+      )
+    })
+
+    it.each(PRICED_KINDS.map((kind) => [kind.name, kind] as const))(
+      'is not decided by %s on a sibling trip or on another workspace’s trip',
+      async (_name, kind) => {
+        const empty = await createTrip(alpha.tenant.scope, {
+          title: 'Empty one',
+          startDate: '2026-05-01',
+          endDate: '2026-05-02',
+          currency: 'EUR',
+        })
+        const sibling = await createTrip(alpha.tenant.scope, {
+          title: 'Sibling with prices',
+          startDate: '2026-05-01',
+          endDate: '2026-05-02',
+          currency: 'EUR',
+        })
+        const foreign = await createTrip(beta.tenant.scope, {
+          title: 'Foreign with prices',
+          startDate: '2026-05-01',
+          endDate: '2026-05-02',
+          currency: 'EUR',
+        })
+        await kind.seed(alpha.tenant.scope, sibling.id, alpha.secondUserId)
+        await kind.seed(beta.tenant.scope, foreign.id, beta.secondUserId)
+        const siblingBefore = await requireTrip(alpha.tenant.scope, sibling.id)
+        const foreignBefore = await requireTrip(beta.tenant.scope, foreign.id)
+
+        const saved = await updateTrip(alpha.tenant.scope, empty.id, CHANGE)
+
+        expect(saved.currency).toBe('JPY')
+        expect(await requireTrip(alpha.tenant.scope, sibling.id)).toEqual(
+          siblingBefore,
+        )
+        expect(await requireTrip(beta.tenant.scope, foreign.id)).toEqual(
+          foreignBefore,
+        )
+      },
+    )
   })
 })

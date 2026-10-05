@@ -467,6 +467,8 @@ const messages = {
   'editTrip.errorTitle': 'Bu kaydedilmedi',
   'editTrip.retry': 'Yeniden dene',
   'editTrip.error': 'Gezi kaydedilemedi. Birazdan yeniden deneyin.',
+  'editTrip.currencyLocked':
+    'Bu gezide zaten fiyatlar var, bu yüzden bütçe para birimi burada değiştirilemez. Diğer değişiklikleri kaydetmek için {current} değerine geri döndürün.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}” kalıcı olarak silinsin mi?',
   'deleteTrip.description':

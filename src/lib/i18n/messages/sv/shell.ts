@@ -472,6 +472,8 @@ const messages = {
   'editTrip.errorTitle': 'Det sparades inte',
   'editTrip.retry': 'Försök igen',
   'editTrip.error': 'Resan kunde inte sparas. Försök igen om en stund.',
+  'editTrip.currencyLocked':
+    'Resan har redan priser, så budgetvalutan kan inte ändras här. Ställ tillbaka den på {current} för att spara dina övriga ändringar.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Ta bort ”{title}” för gott?',
   'deleteTrip.description':

@@ -68,6 +68,7 @@ import {
   useAction,
   useOptimistic,
 } from '#/components/modules/shared'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatNumber } from '../-lib/format'
 import {
@@ -136,7 +137,14 @@ export function TripEditSheet({
       onOpenChange(false)
       toast.success(t('shell.editTrip.saved'))
     } catch (cause) {
-      setError(messageOf(cause, t('shell.editTrip.error')))
+      // A refused currency change arrives as a catalogue key, not a sentence, so it reads in the
+      // language of the screen it lands on. `current` is the currency the trip still has.
+      const refusal = currencyRefusalOf(cause)
+      setError(
+        refusal === null
+          ? messageOf(cause, t('shell.editTrip.error'))
+          : t(refusal, { current: trip.currency }),
+      )
     } finally {
       setSaving(false)
     }

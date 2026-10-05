@@ -559,6 +559,8 @@ const messages = {
   'editTrip.errorTitle': 'That did not save',
   'editTrip.retry': 'Try again',
   'editTrip.error': 'The trip could not be saved. Try again in a moment.',
+  'editTrip.currencyLocked':
+    'This trip already has prices in it, so its budget currency can’t be changed here. Set it back to {current} to save your other changes.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Delete “{title}” for good?',
   'deleteTrip.description':

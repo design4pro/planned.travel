@@ -519,6 +519,8 @@ const messages = {
   'editTrip.errorTitle': 'Neuložilo se to',
   'editTrip.retry': 'Zkusit znovu',
   'editTrip.error': 'Cestu se nepodařilo uložit. Zkuste to za chvíli znovu.',
+  'editTrip.currencyLocked':
+    'Tato cesta už obsahuje ceny, proto tady nejde změnit měnu rozpočtu. Nastavte zpět {current} a uložte ostatní změny.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Smazat „{title}“ nadobro?',
   'deleteTrip.description':

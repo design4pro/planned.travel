@@ -501,6 +501,8 @@ const messages = {
   'editTrip.retry': 'Tentar de novo',
   'editTrip.error':
     'Não foi possível salvar a viagem. Tente de novo em instantes.',
+  'editTrip.currencyLocked':
+    'Esta viagem já tem preços, então a moeda do orçamento não pode ser alterada aqui. Volte para {current} para salvar as outras alterações.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Excluir “{title}” para sempre?',
   'deleteTrip.description':
