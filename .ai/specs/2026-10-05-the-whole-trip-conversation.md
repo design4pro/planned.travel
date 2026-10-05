@@ -4,7 +4,7 @@
 | ------------------ | -------------------------------------------------- |
 | **Status**         | ready                                              |
 | **Issue**          | none                                               |
-| **Spec PR**        | #<pr, filled in step 6>                            |
+| **Spec PR**        | #904                                               |
 | **Implementation** | none                                               |
 | **Plan**           | 07-S3 (docs/plans/07-collaboration-and-sharing.md) |
 
