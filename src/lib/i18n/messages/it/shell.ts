@@ -468,6 +468,28 @@ const messages = {
   'newTrip.returnError': 'La data di ritorno precede la partenza.',
   'newTrip.currency': 'Valuta del budget',
   'newTrip.currencyHint': 'In essa viene sommata ogni spesa di questo viaggio.',
+  'newTrip.currencySearch': 'Cerca per codice o nome',
+  'newTrip.currencyEmpty': 'Nessuna valuta corrisponde.',
+  'newTrip.currencyFavourites': 'Preferite',
+  'newTrip.currencyAll': 'Tutte le valute',
+  'newTrip.summary': 'Riepilogo',
+  'newTrip.summaryPlaceholder': 'Due settimane di templi, treni e ramen.',
+  'newTrip.duration': 'Durata in giorni',
+  'newTrip.durationHint':
+    'Senza date, il viaggio parte con questo numero di giorni senza data.',
+  'newTrip.durationDerived': 'Calcolata dalle due date.',
+  'newTrip.reminder': 'Promemoria prima della partenza',
+  'newTrip.reminderNone': 'Nessuno',
+  'newTrip.reminderBefore': {
+    one: '{count} giorno prima',
+    many: '{count} di giorni prima',
+    other: '{count} giorni prima',
+  },
+  'newTrip.reminderCustom': 'Personalizzato',
+  'newTrip.reminderCustomDays': 'Giorni prima della partenza',
+  'newTrip.reminderOn': 'Promemoria il {date}',
+  'newTrip.reminderNoDeparture':
+    'Scegli una data di partenza per vedere il giorno.',
   'newTrip.submit': 'Crea viaggio',
   'newTrip.creating': 'Creazione del viaggio',
   'newTrip.error':

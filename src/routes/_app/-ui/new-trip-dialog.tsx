@@ -25,7 +25,12 @@ import {
 import { messageOf } from '#/components/modules/shared'
 import { useTranslate } from '#/lib/i18n'
 import { createTripFn } from '../-server/trip-lifecycle'
-import { TripFormFields, tripFormPayload, useTripForm } from './trip-form'
+import {
+  DEFAULT_REMINDER_DAYS,
+  TripFormFields,
+  tripFormPayload,
+  useTripForm,
+} from './trip-form'
 
 export interface NewTripDialogProps {
   /** The workspace default currency, pre-selected for a new trip. */
@@ -50,10 +55,13 @@ export function NewTripDialog({
   const form = useTripForm(
     {
       title: '',
+      summary: '',
       destination: '',
       startDate: '',
       endDate: '',
+      duration: '',
       currency: defaultCurrency,
+      reminderDays: DEFAULT_REMINDER_DAYS,
     },
     saving,
   )
@@ -67,7 +75,9 @@ export function NewTripDialog({
     setSaving(true)
     setError(null)
     try {
-      const { tripId } = await createTripFn({ data: tripFormPayload(form) })
+      const { tripId } = await createTripFn({
+        data: tripFormPayload(form, { creating: true, owner: true }),
+      })
       await router.invalidate()
       setOpen(false)
       reset()
@@ -86,6 +96,8 @@ export function NewTripDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        // A save in flight owns the dialog: closing it would wipe the form the answer is for.
+        if (saving) return
         setOpen(next)
         if (!next) {
           reset()
@@ -138,6 +150,7 @@ export function NewTripDialog({
             type="button"
             variant="ghost"
             shape="pill"
+            disabled={saving}
             onClick={() => {
               setOpen(false)
             }}
