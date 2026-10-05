@@ -452,6 +452,27 @@ const messages = {
   'newTrip.returnError': 'A visszaút dátuma az indulás előtt van.',
   'newTrip.currency': 'Költségvetés pénzneme',
   'newTrip.currencyHint': 'Ebben összegzünk minden kiadást az utazáson.',
+  'newTrip.currencySearch': 'Keresés kód vagy név szerint',
+  'newTrip.currencyEmpty': 'Nincs ilyen pénznem.',
+  'newTrip.currencyFavourites': 'Kedvencek',
+  'newTrip.currencyAll': 'Összes pénznem',
+  'newTrip.summary': 'Összefoglaló',
+  'newTrip.summaryPlaceholder': 'Két hét templomokkal, vonatokkal és ramennel.',
+  'newTrip.duration': 'Időtartam napokban',
+  'newTrip.durationHint':
+    'Dátumok nélkül az utazás ennyi dátum nélküli nappal indul.',
+  'newTrip.durationDerived': 'A két dátumból számolva.',
+  'newTrip.reminder': 'Emlékeztető indulás előtt',
+  'newTrip.reminderNone': 'Nincs',
+  'newTrip.reminderBefore': {
+    one: '{count} nappal előtte',
+    other: '{count} nappal előtte',
+  },
+  'newTrip.reminderCustom': 'Egyéni',
+  'newTrip.reminderCustomDays': 'Napok indulás előtt',
+  'newTrip.reminderOn': 'Emlékeztető: {date}',
+  'newTrip.reminderNoDeparture':
+    'Válasszon indulási dátumot, hogy lássa a napot.',
   'newTrip.submit': 'Utazás létrehozása',
   'newTrip.creating': 'Utazás létrehozása folyamatban',
   'newTrip.error':

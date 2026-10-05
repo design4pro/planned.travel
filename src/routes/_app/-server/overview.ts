@@ -67,6 +67,8 @@ export interface TripCard {
   readonly title: string
   readonly slug: string
   readonly summary: string | null
+  /** Days before departure a reminder is due; `0` is none. Seeds the edit sheet's reminder control. */
+  readonly reminderDays: number
   readonly destination: string | null
   readonly status: string
   readonly startDate: string | null
@@ -208,6 +210,7 @@ export function toTripCard(
     title: trip.title,
     slug: trip.slug,
     summary: trip.summary,
+    reminderDays: trip.reminderDays,
     destination: trip.destination,
     status: trip.status,
     startDate: trip.startDate,
