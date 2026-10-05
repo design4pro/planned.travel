@@ -69,6 +69,7 @@ import {
   useOptimistic,
 } from '#/components/modules/shared'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { inclusiveDays } from '#/lib/trip-dates'
 import { formatNumber } from '../-lib/format'
 import {
   archiveTripFn,
@@ -99,7 +100,7 @@ export interface TripEditSheetProps {
  *
  * The fields are `./trip-form`'s — the same ones the creation dialog asks for, because they are the
  * same questions — and this contributes the chrome, the patch and where the answer lands. Blank
- * clears and an untouched field is left alone, but the sheet shows all five and so sends all five:
+ * clears and an untouched field is left alone, but the sheet shows every field and so sends every one:
  * "untouched" is a property of the *patch*, not of the form, and a sheet that omitted an empty field
  * could never clear a destination.
  */
@@ -112,15 +113,22 @@ export function TripEditSheet({
   const router = useRouter()
   const direction = useSheetDirection('end')
 
+  // The sheet renders owner-only fields, and sends them, only when the payload's role says owner.
+  const isOwner = trip.role === 'owner'
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const form = useTripForm(
     {
       title: trip.title,
+      summary: trip.summary ?? '',
       destination: trip.destination ?? '',
       startDate: trip.startDate ?? '',
       endDate: trip.endDate ?? '',
+      duration:
+        inclusiveDays(trip.startDate ?? '', trip.endDate ?? '')?.toString() ??
+        '',
       currency: trip.currency,
+      reminderDays: trip.reminderDays,
     },
     saving,
   )
@@ -130,7 +138,10 @@ export function TripEditSheet({
     setError(null)
     try {
       await updateTripFn({
-        data: { tripId: trip.id, ...tripFormPayload(form) },
+        data: {
+          tripId: trip.id,
+          ...tripFormPayload(form, { creating: false, owner: isOwner }),
+        },
       })
       await router.invalidate()
       onOpenChange(false)
@@ -195,7 +206,7 @@ export function TripEditSheet({
               </Alert>
             )}
 
-            <TripFormFields form={form} />
+            <TripFormFields form={form} undatedDays={false} owner={isOwner} />
           </form>
         </SheetBody>
 

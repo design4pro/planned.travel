@@ -177,6 +177,25 @@ export async function deleteDay(
 }
 
 /**
+ * A trip's day run when it has a length and no dates: `count` days numbered from 1, each undated.
+ * The same chunked insert as {@link syncTripDays}, so a long run stays under the bound-parameter ceiling.
+ */
+export async function createUndatedDays(
+  scope: TenantScope,
+  tripId: string,
+  count: number,
+): Promise<void> {
+  await insertChunked(
+    days,
+    Array.from({ length: count }, (_, offset) => ({
+      tripId,
+      dayNumber: offset + 1,
+    })),
+    (chunk) => daysRepository.insertMany(scope, chunk),
+  )
+}
+
+/**
  * Reconciles a trip's day run with its date range: appends missing days, deletes trailing ones and
  * re-stamps the dates of the days that remain. Returns the resulting run in order.
  */
