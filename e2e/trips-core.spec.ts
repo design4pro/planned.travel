@@ -1739,20 +1739,22 @@ test.describe('01-S8a — One trip form for creating and editing', () => {
     await expect(duration).toHaveValue('5')
 
     // Both dates: it is read-only and derived; moving the start keeps it and moves the end.
-    await dialog.getByLabel('Departure').fill('2030-06-01')
-    await dialog.getByLabel('Return').fill('2030-06-04')
+    await dialog.getByLabel('Departure', { exact: true }).fill('2030-06-01')
+    await dialog.getByLabel('Return', { exact: true }).fill('2030-06-04')
     await expect(duration).not.toBeEditable()
     await expect(duration).toHaveValue('4')
-    await dialog.getByLabel('Departure').fill('2030-06-10')
-    await expect(dialog.getByLabel('Return')).toHaveValue('2030-06-13')
+    await dialog.getByLabel('Departure', { exact: true }).fill('2030-06-10')
+    await expect(dialog.getByLabel('Return', { exact: true })).toHaveValue(
+      '2030-06-13',
+    )
     await expect(duration).toHaveValue('4')
 
     // The return date moves the duration instead.
-    await dialog.getByLabel('Return').fill('2030-06-12')
+    await dialog.getByLabel('Return', { exact: true }).fill('2030-06-12')
     await expect(duration).toHaveValue('3')
 
     // An inverted range is named on the Return field and disarms the save.
-    await dialog.getByLabel('Return').fill('2030-06-01')
+    await dialog.getByLabel('Return', { exact: true }).fill('2030-06-01')
     await expect(
       dialog.getByText('The return date is before departure.'),
     ).toBeVisible()
@@ -1807,8 +1809,10 @@ test.describe('01-S8a — One trip form for creating and editing', () => {
     const sheet = page.locator('[data-part="trip-edit-sheet"]')
     await expect(sheet).toBeVisible()
     await expect(sheet.getByLabel('Summary')).toBeVisible()
-    await expect(sheet.getByLabel('Departure')).toBeVisible()
-    await expect(sheet.getByLabel('Budget currency')).toBeVisible()
+    await expect(sheet.getByLabel('Departure', { exact: true })).toBeVisible()
+    await expect(
+      sheet.getByRole('button', { name: 'Budget currency' }),
+    ).toBeVisible()
     // Exactly one radio is checked: the trip's stored reminder, never an unseeded group.
     await expect(
       sheet
