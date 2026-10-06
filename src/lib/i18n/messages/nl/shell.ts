@@ -505,6 +505,8 @@ const messages = {
   'editTrip.retry': 'Opnieuw proberen',
   'editTrip.error':
     'De reis kon niet worden opgeslagen. Probeer het zo nog eens.',
+  'editTrip.currencyLocked':
+    'Deze reis bevat al prijzen, dus de valuta van het budget kan hier niet worden gewijzigd. Zet het terug op {current} om je andere wijzigingen op te slaan.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}” voorgoed verwijderen?',
   'deleteTrip.description':

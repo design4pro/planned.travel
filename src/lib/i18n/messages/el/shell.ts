@@ -486,6 +486,8 @@ const messages = {
   'editTrip.errorTitle': 'Αυτό δεν αποθηκεύτηκε',
   'editTrip.retry': 'Δοκιμάστε ξανά',
   'editTrip.error': 'Το ταξίδι δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο.',
+  'editTrip.currencyLocked':
+    'Αυτό το ταξίδι έχει ήδη τιμές, γι’ αυτό το νόμισμα προϋπολογισμού δεν μπορεί να αλλάξει εδώ. Ορίστε ξανά {current} για να αποθηκευτούν οι υπόλοιπες αλλαγές σας.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Οριστική διαγραφή του «{title}»;',
   'deleteTrip.description':

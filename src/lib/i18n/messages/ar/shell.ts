@@ -581,6 +581,8 @@ const messages = {
   'editTrip.errorTitle': 'لم يُحفَظ ذلك',
   'editTrip.retry': 'حاول مرة أخرى',
   'editTrip.error': 'تعذّر حفظ الرحلة. حاول مرة أخرى بعد قليل.',
+  'editTrip.currencyLocked':
+    'لهذه الرحلة أسعار مسجَّلة بالفعل، لذا لا يمكن تغيير عملة الميزانية من هنا. أعِد ضبطها على {current} لحفظ تغييراتك الأخرى.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'حذف «{title}» نهائيًا؟',
   'deleteTrip.description':

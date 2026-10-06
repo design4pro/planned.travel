@@ -542,6 +542,8 @@ const messages = {
   'editTrip.errorTitle': 'Це не збереглося',
   'editTrip.retry': 'Спробувати ще раз',
   'editTrip.error': 'Не вдалося зберегти поїздку. Спробуйте ще раз за мить.',
+  'editTrip.currencyLocked':
+    'У цій поїздці вже є ціни, тому валюту бюджету тут змінити не можна. Поверніть {current}, щоб зберегти решту змін.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Видалити «{title}» назавжди?',
   'deleteTrip.description':

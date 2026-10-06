@@ -389,6 +389,8 @@ const messages = {
   'editTrip.errorTitle': '未能保存',
   'editTrip.retry': '重试',
   'editTrip.error': '行程保存失败。请稍后重试。',
+  'editTrip.currencyLocked':
+    '这趟行程已经有价格，所以不能在这里更改预算货币。请改回 {current}，再保存其他修改。',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '永久删除“{title}”？',
   'deleteTrip.description':

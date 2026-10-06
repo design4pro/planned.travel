@@ -34,6 +34,7 @@ import ui from '#/lib/i18n/messages/en/ui'
 
 const LAYOUT_DIR = join(process.cwd(), 'src', 'components', 'layout')
 const APP_DIR = join(process.cwd(), 'src', 'routes', '_app')
+const LIB_DIR = join(process.cwd(), 'src', 'lib')
 
 /**
  * The shell's own screens and helpers, which live under `src/routes/_app`.
@@ -66,6 +67,13 @@ const APP_FILES = [
   join('-server', 'overview.ts'),
 ]
 
+/**
+ * The lists of message keys a failure travels as, which live in `src/lib` because the server
+ * classifies them and the shell resolves them. The shell is what reads them, so the keys they name
+ * are read here like the two `SHELL_STATE_KEYS` in `session.ts`.
+ */
+const LIB_FILES = ['currency-refusals.ts']
+
 interface Source {
   readonly name: string
   readonly text: string
@@ -90,6 +98,10 @@ function shippedSources(): ReadonlyArray<Source> {
       name: relative,
       text: readFileSync(join(APP_DIR, relative), 'utf8'),
     })
+  }
+
+  for (const name of LIB_FILES) {
+    files.push({ name, text: readFileSync(join(LIB_DIR, name), 'utf8') })
   }
 
   return files

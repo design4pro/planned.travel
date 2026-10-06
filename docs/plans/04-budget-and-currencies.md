@@ -1915,9 +1915,11 @@ the trip edit surface, but this stage ships its own entry point and closes witho
 ### Reference rows
 
 - `MNY-06` partial → **done**. `trips.currency` exists, defaults to `EUR` and is set at creation in
-  `-ui/new-trip-dialog.tsx`; nothing can change it afterwards, and nothing would re-base the trip's
-  data if it did. This stage makes the change safe, which is the whole of the work: a currency change
-  is a re-basing, not a relabel.
+  `-ui/new-trip-dialog.tsx`. The trip edit sheet could also change it afterwards, and nothing would
+  re-base the trip's data when it did; since #838 `updateTrip` applies a different currency only to
+  a trip with nothing priced in it and refuses it, whole save included, on any other. This stage
+  makes the change safe for a trip that has money in it, which is the whole of the work: a currency
+  change is a re-basing, not a relabel.
 
 Five rules, each of which prevents a specific silent corruption:
 
