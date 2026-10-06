@@ -85,6 +85,9 @@ const messages = {
   'plan.addPlace.more': 'További módok hely hozzáadására',
   'plan.addPlace.option.map': 'Elhelyezés a térképen',
   'plan.addPlace.forDayNamed': 'Hely hozzáadása: {day}',
+  'plan.addPlace.quota':
+    'Elérted a csomagod helyekre vonatkozó korlátját. Válts magasabb csomagra, hogy többet adhass hozzá.',
+  'plan.addPlace.quotaAction': 'Csomagok megtekintése',
   'plan.stay.checkIn': 'Bejelentkezés',
   'plan.stay.checkOut': 'Kijelentkezés',
   'plan.day.addStay': 'Szállás hozzáadása: {day}',

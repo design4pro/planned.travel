@@ -83,6 +83,9 @@ const messages = {
   'plan.addPlace.more': 'Cara lain menambahkan tempat',
   'plan.addPlace.option.map': 'Letakkan di peta',
   'plan.addPlace.forDayNamed': 'Tambahkan tempat, {day}',
+  'plan.addPlace.quota':
+    'Anda telah mencapai batas tempat pada paket Anda. Tingkatkan paket untuk menambah lebih banyak.',
+  'plan.addPlace.quotaAction': 'Lihat paket',
   'plan.stay.checkIn': 'Check-in',
   'plan.stay.checkOut': 'Check-out',
   'plan.day.addStay': 'Tambahkan penginapan, {day}',

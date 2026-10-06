@@ -19,6 +19,13 @@
  * the classification travels *inside* that message, as the envelope below, rather than as a
  * property that would not survive.
  *
+ * A third thing travels beside the kind: a **code**, for the one diagnostic whose cause the reader
+ * is owed a way out of - a workspace that has reached its plan's quota. It is a constant, never
+ * data: the literal below says "this workspace is out of room" and nothing else, so what the
+ * server knows (the metric, the ceiling, the plan, the message) stays on the server. It is the
+ * "message key the client resolves" route of `docs/SPEC.md` §9 rule 10, carried as a code rather
+ * than as a sentence, so the kind stays `unexpected` and no English text is added to the envelope.
+ *
  * `readPublicFailure` therefore fails closed: anything it does not recognise is `unexpected`, and
  * `unexpected` carries no message. A path that bypasses the middleware leaks nothing; it just loses
  * a sentence it could have shown.
@@ -32,10 +39,25 @@ export type PublicFailureKind =
   /** A diagnostic. The reader gets a generic sentence and a reference, never the text. */
   | 'unexpected'
 
+/**
+ * The codes an envelope may carry, and the only values `readPublicFailure` will hand to a screen.
+ *
+ * Closed on purpose: a repository error's own `code` is a maintainer's vocabulary (`NOT_FOUND`,
+ * `FORBIDDEN`, `TENANT_ISOLATION`) and never crosses. A code is added here with a reader that
+ * resolves it to localised copy, in the same change.
+ */
+export type PublicFailureCode = 'QUOTA_EXCEEDED'
+
 export interface PublicFailure {
   readonly kind: PublicFailureKind
   /** Present only for `refusal` and `validation`. Never a raw diagnostic. */
   readonly message?: string
+  /**
+   * Present only for an `unexpected` failure that has a name the reader can act on. The diagnostic
+   * is still withheld and still carries its `reference`; the code only says which localised
+   * sentence the caller may show instead of its generic fallback.
+   */
+  readonly code?: PublicFailureCode
   /**
    * Correlates what the reader saw with the server's log line and its Sentry event.
    *
@@ -61,6 +83,10 @@ function messageOf(cause: unknown): string | null {
   if (cause instanceof Error && cause.message.length > 0) return cause.message
   if (typeof cause === 'string' && cause.length > 0) return cause
   return null
+}
+
+function isCode(value: unknown): value is PublicFailureCode {
+  return value === 'QUOTA_EXCEEDED'
 }
 
 function isKind(value: unknown): value is PublicFailureKind {
@@ -90,7 +116,7 @@ export function readPublicFailure(cause: unknown): PublicFailure {
     return { kind: 'unexpected' }
   }
 
-  const { kind, message, reference } = parsed as Record<string, unknown>
+  const { kind, message, code, reference } = parsed as Record<string, unknown>
   if (!isKind(kind)) {
     return { kind: 'unexpected' }
   }
@@ -104,6 +130,10 @@ export function readPublicFailure(cause: unknown): PublicFailure {
     message.length > 0
       ? { message }
       : {}),
+    // Honoured only for the kind that has no sentence of its own, and only as the allow-listed
+    // literal: an unknown value - a newer server's code, a hostile envelope - is dropped, and the
+    // caller's fallback is what the reader sees.
+    ...(kind === 'unexpected' && isCode(code) ? { code } : {}),
     ...(typeof reference === 'string' && reference.length > 0
       ? { reference }
       : {}),

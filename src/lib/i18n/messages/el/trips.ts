@@ -87,6 +87,9 @@ const messages = {
   'plan.addPlace.more': 'Περισσότεροι τρόποι προσθήκης τοποθεσίας',
   'plan.addPlace.option.map': 'Τοποθέτηση στον χάρτη',
   'plan.addPlace.forDayNamed': 'Προσθήκη τοποθεσίας, {day}',
+  'plan.addPlace.quota':
+    'Φτάσατε το όριο τοποθεσιών του πακέτου σας. Αναβαθμίστε για να προσθέσετε περισσότερες.',
+  'plan.addPlace.quotaAction': 'Δείτε τα πακέτα',
   'plan.stay.checkIn': 'Άφιξη',
   'plan.stay.checkOut': 'Αποχώρηση',
   'plan.day.addStay': 'Προσθήκη διαμονής, {day}',
