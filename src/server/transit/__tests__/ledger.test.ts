@@ -375,6 +375,24 @@ describe('the provider ledger around a connection search', () => {
       expect(spentBy(shared, 'org-alpha')).toBe(1)
     })
 
+    it('spends a unit on every retry while the block lasts', async () => {
+      const shared = freshStores()
+      const vendor = vendorFetch(answers)
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        await searchTransitConnections(
+          runtime('org-alpha', shared, vendor),
+          LISBON_PORTO,
+        ).catch(() => undefined)
+      }
+
+      expect(vendor.calls).toEqual([])
+      expect(spentBy(shared, 'org-alpha')).toBe(2)
+      const rows = await ledger()
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ calls: 0, blocked: 2 })
+    })
+
     it('still serves an answer the cache already holds', async () => {
       const shared = freshStores()
       // Warm the cache while the gate is open, then shut it.
@@ -393,16 +411,20 @@ describe('the provider ledger around a connection search', () => {
       })
       resetProviderLimitMemo()
 
+      const bravo = { cache: shared.cache, counters: memoryStore() }
+      const vendor = vendorFetch(answers)
+      const rowsBefore = await ledger()
+
       const served = await searchTransitConnections(
-        runtime(
-          'org-bravo',
-          { cache: shared.cache, counters: memoryStore() },
-          null,
-        ),
+        runtime('org-bravo', bravo, vendor),
         LISBON_PORTO,
       )
 
       expect(served.cached).toBe(true)
+      // A live vendor that is never asked, no allowance spent and no new row, blocked or not.
+      expect(vendor.calls).toEqual([])
+      expect(spentBy(bravo, 'org-bravo')).toBe(0)
+      expect(await ledger()).toEqual(rowsBefore)
     })
   })
 })

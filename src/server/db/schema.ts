@@ -409,8 +409,8 @@ export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
  *
  * Five, because five clients exist: `src/server/queue/handlers/email.ts`,
  * `src/server/queue/handlers/pdf-export.ts`, the injected `fetch` of
- * `src/server/billing/polar.ts`, `src/server/geo/geoapify.ts` and `src/server/transit/here.ts`. A slug earns a place here when a
- * call site can name it, never before — {@link PLANNED_PROVIDERS} is where an intention lives, and
+ * `src/server/billing/polar.ts`, `src/server/geo/geoapify.ts` and `src/server/transit/here.ts`. A
+ * slug earns a place here when a call site can name it, never before — {@link PLANNED_PROVIDERS} is where an intention lives, and
  * moving a slug across is what adopting a provider looks like.
  */
 export const METERED_PROVIDERS = [
@@ -437,8 +437,8 @@ export const METERED_PROVIDERS = [
  *
  * **No allowance figure is stored in code**, and the reason has changed since these slugs first
  * appeared here. It was that the provider decision was open. It is now that an allowance is a term
- * of a contract that an operator renegotiates without a deploy: the figures above are context for a
- * reader, and the enforced number is the one typed into `provider_registry`.
+ * of a contract that an operator renegotiates without a deploy: the figures in the ADRs are context for
+ * a reader, and the enforced number is the one typed into `provider_registry`.
  *
  * Moving a slug from here to {@link METERED_PROVIDERS} is what adopting a provider looks like; both
  * are waiting on a client rather than on a decision. `geoapify` made that move when

@@ -87,8 +87,8 @@ export interface ProvidersView {
  * The counts are structurally zero rather than measured — nothing can have called a service nothing
  * calls — which is what `integrated: false` tells the screen so it draws an empty state instead of
  * a `0`. The *limit* is read like any other, because agreeing a ceiling before the first call is
- * the whole reason these slugs are listed: ADR 0013 gives Geoapify 3,000 credits a day and ADR 0011
- * gives HERE 30,000 a month, and an operator can enter either today.
+ * the whole reason these slugs are listed: an operator can enter one for `workers-ai` or
+ * `d1-export` today, and it binds from the first call that names the slug.
  */
 function plannedPanel(
   slug: string,

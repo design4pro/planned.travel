@@ -33,8 +33,8 @@
  * it will bill. The **provider ledger** is the platform's: every call that leaves the Worker goes
  * through `callProvider` (`#/server/metering/outbound`), lands in `provider_usage` under the `here`
  * slug and the workspace that made it, and is what an operator's `provider_registry` policy can
- * stop. Neither replaces the other — a cache hit spends the first and records the second not at
- * all, and a call a `block` policy refuses has still spent its workspace's unit, as geocoding does
+ * stop. Neither replaces the other — a cache hit spends the first and writes the second not at
+ * all, a call a `block` policy refuses has still spent its workspace's unit, as geocoding does
  * (`src/server/geo/geocode.ts`), so the two modules follow one rule.
  *
  * ## Failure is typed
@@ -42,6 +42,9 @@
  * Nothing here throws a bare `fetch` rejection at a server function. A provider that is
  * unconfigured, unreachable, refusing or answering nonsense produces a {@link TransitProviderError}
  * with a reason on it, so the screen can say which of those happened instead of showing a stack.
+ * An operator's `block` policy is the one refusal that is not one of those: it is a
+ * {@link ProviderBlockedError} from the ledger wrapper, and {@link refusalReason} reads it as
+ * `unreachable`.
  */
 
 import { z } from 'zod'
@@ -222,7 +225,7 @@ const cachedSchema = z.object({
 export type TransitFailureReason =
   /** No credential is set on this deployment, so no call was attempted. */
   | 'unconfigured'
-  /** The request never produced a response — DNS, timeout, connection reset. */
+  /** No answer came — DNS, timeout, connection reset, or an operator's block, which asks no one. */
   | 'unreachable'
   /** The provider answered, and the answer was a refusal. */
   | 'refused'

@@ -620,8 +620,7 @@ export type ConnectionSearchOutcome =
        * A refusal carries the two facts the screen needs and no sentence.
        *
        * `RateCeilingError`, `TransitProviderError` and `ProviderBlockedError` each hold an English
-       * message, and it is
-       * written for the log rather than for a reader: sending it here would put untranslated
+       * message, and it is written for the log rather than for a reader: sending it here would put untranslated
        * English in front of twenty-two other languages, and the parity gate could not see it
        * because it would never be a key. The screen reads `reason` - and `ceiling`, which
        * separates an allowance that has to be bought from one that has to be waited out - and
