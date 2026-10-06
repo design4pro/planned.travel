@@ -162,7 +162,10 @@ export interface PlaceWriteReport {
  * code (`src/lib/errors.ts`): it carries no sentence, so the sentence is ours and in the reader's
  * locale. The way out is a link in the form's own error slot, not a toast: the form traps
  * focus and, on a phone, sits under a modal sheet, so a toast beside it cannot be reached until
- * both are gone. The caller opens it in a new tab, so the draft the form holds survives the visit. Any other failure is `placeWriteMessage`, unchanged, with no action.
+ * both are gone. The caller opens it in a new tab,
+ * so the draft the form holds survives the visit. A failure that settles after the form was closed
+ * has no form to sit in: the caller shows the sentence as a toast, without the link. Any other
+ * failure is `placeWriteMessage`, unchanged, with no action.
  */
 export function reportPlaceWriteFailure(
   cause: unknown,

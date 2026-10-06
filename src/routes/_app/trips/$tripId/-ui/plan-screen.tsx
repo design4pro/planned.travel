@@ -123,6 +123,7 @@ import {
 } from '../-server/day-notes'
 import { reorderDayTransportsFn } from '../-server/plan-transports'
 import { PlannerAddPlace, reportPlaceWriteFailure } from './planner-add-place'
+import { useDialogOwnership } from './use-dialog-ownership'
 import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
 import { PlannerDayTools } from './planner-day-tools'
 import { BookingDialog } from '#/components/modules/book'
@@ -1002,25 +1003,31 @@ export function PlanScreen({
 
   /* ------------------------------------------------------------------ forms */
 
-  // Bumped whenever a dialog closes, so a write that settles after its dialog is gone cannot leave
-  // its sentence in, or close, whichever dialog opens next.
-  const dialogEpoch = React.useRef(0)
-  const openDialogRef = React.useRef(dialog)
-  openDialogRef.current = dialog
+  const { claim: claimWrite, release: releaseDialog } = useDialogOwnership(dialog)
 
   const closeDialog = React.useCallback((): void => {
-    dialogEpoch.current += 1
+    releaseDialog()
     setDialog(null)
     setFormError(null)
     setFormErrorAction(null)
-  }, [])
+  }, [releaseDialog])
 
+  /**
+   * Runs a write and reports whether it landed. The form that was open when it started (if any)
+   * owns it: its error slot shows a failure and `closeOnLanded` closes it. When that form is gone,
+   * or the write never had one (a pin drop), a failure is a toast and nothing is closed, so the
+   * result can never reach a dialog opened while the write was in flight.
+   */
   const runWrite = React.useCallback(
     async (
       work: () => Promise<unknown>,
-      options: { readonly fallback: string; readonly success?: string },
+      options: {
+        readonly fallback: string
+        readonly success?: string
+        readonly closeOnLanded?: boolean
+      },
     ): Promise<boolean> => {
-      const epoch = dialogEpoch.current
+      const stillOwned = claimWrite()
       setSaving(true)
       setFormError(null)
       setFormErrorAction(null)
@@ -1028,29 +1035,26 @@ export function PlanScreen({
         await work()
         await router.invalidate()
         if (options.success !== undefined) toast.success(options.success)
-        // Its dialog was closed while it ran: the caller's "close the dialog" is not for the one
-        // open now.
-        return epoch === dialogEpoch.current
+        if (options.closeOnLanded === true && stillOwned()) closeDialog()
+        return true
       } catch (cause) {
         const report = reportPlaceWriteFailure(cause, {
           fallback: options.fallback,
           quota: t('trips.plan.addPlace.quota'),
           seePlans: t('trips.plan.addPlace.quotaAction'),
         })
-        if (epoch !== dialogEpoch.current || openDialogRef.current === null) {
-          // No form is showing this write (it was closed mid-save, or the write had no form), so
-          // the form's error slot would either not exist or belong to another dialog.
-          toast.error(report.message)
-        } else {
+        if (stillOwned()) {
           setFormError(report.message)
           setFormErrorAction(report.action)
+        } else {
+          toast.error(report.message)
         }
         return false
       } finally {
         setSaving(false)
       }
     },
-    [router, t],
+    [claimWrite, closeDialog, router, t],
   )
 
   const submitPlace = React.useCallback(
@@ -1084,12 +1088,11 @@ export function PlanScreen({
         {
           fallback: 'The place could not be saved. Try again in a moment.',
           success: editing === null ? 'Place added' : 'Place updated',
+          closeOnLanded: true,
         },
-      ).then((ok) => {
-        if (ok) closeDialog()
-      })
+      )
     },
-    [closeDialog, dialog, payload.tripId, runWrite],
+    [dialog, payload.tripId, runWrite],
   )
 
   const submitTiming = React.useCallback(
@@ -1113,12 +1116,11 @@ export function PlanScreen({
         {
           fallback: 'The times could not be saved. Try again in a moment.',
           success: 'Times saved',
+          closeOnLanded: true,
         },
-      ).then((ok) => {
-        if (ok) closeDialog()
-      })
+      )
     },
-    [closeDialog, dialog, payload.tripId, runWrite],
+    [dialog, payload.tripId, runWrite],
   )
 
   const confirmDelete = React.useCallback((): void => {
@@ -1143,15 +1145,13 @@ export function PlanScreen({
       {
         fallback: 'The place could not be deleted. Try again in a moment.',
         success: 'Place deleted',
+        closeOnLanded: true,
       },
-    ).then((ok) => {
-      if (ok) {
-        dispatch({ type: 'forget', placeId })
-        closeDialog()
-      }
+    ).then((landed) => {
+      // The place is gone whether or not its dialog still is.
+      if (landed) dispatch({ type: 'forget', placeId })
     })
   }, [
-    closeDialog,
     dialog,
     model.rowsByPlace,
     order,
@@ -1211,12 +1211,11 @@ export function PlanScreen({
             state.kind === 'note-create'
               ? t('trips.plan.note.toast.created')
               : t('trips.plan.note.toast.updated'),
+          closeOnLanded: true,
         },
-      ).then((ok) => {
-        if (ok) closeDialog()
-      })
+      )
     },
-    [closeDialog, dialog, payload.tripId, runWrite, t],
+    [dialog, payload.tripId, runWrite, t],
   )
 
   const confirmDeleteNote = React.useCallback((): void => {
@@ -1228,11 +1227,10 @@ export function PlanScreen({
       {
         fallback: t('trips.plan.note.error.retry'),
         success: t('trips.plan.note.toast.deleted'),
+        closeOnLanded: true,
       },
-    ).then((ok) => {
-      if (ok) closeDialog()
-    })
-  }, [closeDialog, dialog, payload.tripId, runWrite, t])
+    )
+  }, [dialog, payload.tripId, runWrite, t])
 
   /**
    * Moves a note one place within its day.
@@ -1285,8 +1283,8 @@ export function PlanScreen({
           fallback: 'The pin could not be moved. Try again in a moment.',
           success: `${place.name} pinned`,
         },
-      ).then((ok) => {
-        if (ok) {
+      ).then((landed) => {
+        if (landed) {
           dispatch({
             type: 'pin-click',
             placeId: place.id,
