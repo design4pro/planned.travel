@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { render as mount, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import { PlaceDialog, emptyDraft } from '../plan-actions'
@@ -36,24 +35,24 @@ function render(props: Pick<PlaceDialogProps, 'error' | 'errorAction'>) {
 }
 
 describe('PlaceDialog — error action', () => {
-  it('offers the action beside the message and runs it on press', async () => {
-    const onSelect = vi.fn()
+  it('offers a link beside the message that opens in a new tab, keeping the form', () => {
     render({
       error: 'Limit reached.',
-      errorAction: { label: 'See plans', onSelect },
+      errorAction: { label: 'See plans', href: '/settings/billing' },
     })
 
     const alert = screen.getByRole('alert')
     expect(alert.textContent).toContain('Limit reached.')
-    await userEvent.click(screen.getByRole('button', { name: 'See plans' }))
-
-    expect(onSelect).toHaveBeenCalledOnce()
+    const link = screen.getByRole('link', { name: 'See plans' })
+    expect(link.getAttribute('href')).toBe('/settings/billing')
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(link.getAttribute('rel')).toContain('noopener')
   })
 
-  it('shows no button for an error without an action', () => {
+  it('shows no link for an error without an action', () => {
     render({ error: 'Try again.', errorAction: null })
 
     expect(screen.getByRole('alert').textContent).toContain('Try again.')
-    expect(screen.queryByRole('button', { name: 'See plans' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'See plans' })).toBeNull()
   })
 })

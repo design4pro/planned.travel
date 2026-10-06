@@ -144,17 +144,15 @@ export interface PlaceWriteFailureCopy {
   readonly quota: string
   /** The label of the way out of a places-limit refusal, already localised. */
   readonly seePlans: string
-  /** Takes the reader to the screen where the plan can be changed. */
-  readonly onSeePlans: () => void
 }
+
+/** Where a places-limit refusal sends the reader: the screen where the plan can be changed. */
+export const PLANS_HREF = '/settings/billing'
 
 /** What a failed place write shows in the form: a sentence, and sometimes a way out of it. */
 export interface PlaceWriteReport {
   readonly message: string
-  readonly action: {
-    readonly label: string
-    readonly onSelect: () => void
-  } | null
+  readonly action: { readonly label: string; readonly href: string } | null
 }
 
 /**
@@ -162,9 +160,9 @@ export interface PlaceWriteReport {
  *
  * A places-limit refusal reaches the browser as an `unexpected` failure with the one constant
  * code (`src/lib/errors.ts`): it carries no sentence, so the sentence is ours and in the reader's
- * locale. The way out is an action of the form's own error slot, not a toast: the form traps
+ * locale. The way out is a link in the form's own error slot, not a toast: the form traps
  * focus and, on a phone, sits under a modal sheet, so a toast beside it cannot be reached until
- * both are gone. Any other failure is `placeWriteMessage`, unchanged, with no action.
+ * both are gone. The caller opens it in a new tab, so the draft the form holds survives the visit. Any other failure is `placeWriteMessage`, unchanged, with no action.
  */
 export function reportPlaceWriteFailure(
   cause: unknown,
@@ -177,6 +175,6 @@ export function reportPlaceWriteFailure(
 
   return {
     message: copy.quota,
-    action: { label: copy.seePlans, onSelect: copy.onSeePlans },
+    action: { label: copy.seePlans, href: PLANS_HREF },
   }
 }

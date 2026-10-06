@@ -336,10 +336,13 @@ export interface PlaceDialogProps {
   readonly initial: PlaceDraft
   readonly saving: boolean
   readonly error: string | null
-  /** A way out of `error`, shown inside the same alert so it stays within the form. */
+  /**
+   * A way out of `error`, shown inside the same alert so it stays within the form. It opens in a
+   * new tab: following it in this one would unmount the form and lose the draft.
+   */
   readonly errorAction?: {
     readonly label: string
-    readonly onSelect: () => void
+    readonly href: string
   } | null
   readonly onSubmit: (values: PlaceFormValues) => void
 }
@@ -456,13 +459,14 @@ export function PlaceDialog({
                 title="That did not save"
                 actions={
                   errorAction === null ? undefined : (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={errorAction.onSelect}
-                    >
-                      {errorAction.label}
+                    <Button asChild variant="secondary" size="sm">
+                      <a
+                        href={errorAction.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {errorAction.label}
+                      </a>
                     </Button>
                   )
                 }

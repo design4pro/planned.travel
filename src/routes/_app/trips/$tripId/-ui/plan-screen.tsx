@@ -1002,7 +1002,12 @@ export function PlanScreen({
 
   /* ------------------------------------------------------------------ forms */
 
+  // Bumped whenever a dialog closes, so a write that fails after its dialog is gone cannot leave
+  // its sentence (or the quota action) in whichever dialog opens next.
+  const dialogEpoch = React.useRef(0)
+
   const closeDialog = React.useCallback((): void => {
+    dialogEpoch.current += 1
     setDialog(null)
     setFormError(null)
     setFormErrorAction(null)
@@ -1013,6 +1018,7 @@ export function PlanScreen({
       work: () => Promise<unknown>,
       options: { readonly fallback: string; readonly success?: string },
     ): Promise<boolean> => {
+      const epoch = dialogEpoch.current
       setSaving(true)
       setFormError(null)
       setFormErrorAction(null)
@@ -1022,11 +1028,11 @@ export function PlanScreen({
         if (options.success !== undefined) toast.success(options.success)
         return true
       } catch (cause) {
+        if (epoch !== dialogEpoch.current) return false
         const report = reportPlaceWriteFailure(cause, {
           fallback: options.fallback,
           quota: t('trips.plan.addPlace.quota'),
           seePlans: t('trips.plan.addPlace.quotaAction'),
-          onSeePlans: () => void router.navigate({ to: '/settings/billing' }),
         })
         setFormError(report.message)
         setFormErrorAction(report.action)

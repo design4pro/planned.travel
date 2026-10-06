@@ -198,17 +198,12 @@ describe('reportPlaceWriteFailure', () => {
   }
 
   it('answers a quota refusal with the quota sentence and an action that leads to the plans', () => {
-    const seePlans = vi.fn()
-
-    const report = reportPlaceWriteFailure(quotaRefusal(), {
-      ...copy,
-      onSeePlans: seePlans,
-    })
+    const report = reportPlaceWriteFailure(quotaRefusal(), copy)
 
     expect(report.message).toBe(copy.quota)
     expect(report.action).toEqual({
       label: copy.seePlans,
-      onSelect: seePlans,
+      href: '/settings/billing',
     })
   })
 
@@ -227,9 +222,10 @@ describe('reportPlaceWriteFailure', () => {
     ]) {
       const expected = placeWriteMessage(cause, copy.fallback)
 
-      expect(
-        reportPlaceWriteFailure(cause, { ...copy, onSeePlans: vi.fn() }),
-      ).toEqual({ message: expected, action: null })
+      expect(reportPlaceWriteFailure(cause, copy)).toEqual({
+        message: expected,
+        action: null,
+      })
     }
   })
 
@@ -242,8 +238,9 @@ describe('reportPlaceWriteFailure', () => {
       }),
     )
 
-    expect(
-      reportPlaceWriteFailure(cause, { ...copy, onSeePlans: vi.fn() }),
-    ).toEqual({ message: 'This trip is archived.', action: null })
+    expect(reportPlaceWriteFailure(cause, copy)).toEqual({
+      message: 'This trip is archived.',
+      action: null,
+    })
   })
 })
