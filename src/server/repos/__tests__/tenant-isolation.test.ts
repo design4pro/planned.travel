@@ -285,6 +285,7 @@ import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
+import { classifyFailure } from '#/server/errors/public'
 import type {
   KeyedTenantTable,
   TenantPatch,
@@ -3333,7 +3334,7 @@ describe('tenant isolation', () => {
       const scope = alpha.tenant.scope
 
       expect(
-        await markReservationsImported(scope, [
+        await markReservationsImported(scope, alpha.tripId, [
           alpha.reservationId,
           beta.reservationId,
         ]),
@@ -3348,9 +3349,46 @@ describe('tenant isolation', () => {
       ).toBeNull()
     })
 
+    it('answers NotFoundError for B\u2019s trip id, and leaves B\u2019s row unmarked', async () => {
+      const scope = alpha.tenant.scope
+
+      for (const ids of [[beta.reservationId], [alpha.reservationId]]) {
+        expect(
+          await captureError(() =>
+            markReservationsImported(scope, beta.tripId, ids),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        (await getReservation(beta.tenant.scope, beta.reservationId))
+          ?.importedAt,
+      ).toBeNull()
+      expect(
+        (await getReservation(scope, alpha.reservationId))?.importedAt,
+      ).toBeNull()
+    })
+
+    it('marks nothing on a trip other than the one it was handed', async () => {
+      const scope = alpha.tenant.scope
+      const other = await createTrip(scope, { title: 'Another alpha trip' })
+      const elsewhere = await createReservation(scope, {
+        tripId: other.id,
+        title: 'Booked on the other trip',
+      })
+
+      expect(
+        await markReservationsImported(scope, alpha.tripId, [
+          alpha.reservationId,
+          elsewhere.id,
+        ]),
+      ).toBe(1)
+      expect((await getReservation(scope, elsewhere.id))?.importedAt).toBeNull()
+    })
+
     it('clears its own marker twice without complaining', async () => {
       const scope = alpha.tenant.scope
-      await markReservationsImported(scope, [alpha.reservationId])
+      await markReservationsImported(scope, alpha.tripId, [alpha.reservationId])
 
       expect(
         (await clearReservationImported(scope, alpha.reservationId)).importedAt,
@@ -3409,12 +3447,26 @@ describe('tenant isolation', () => {
       })
       expect(written.tripId).toBe(alpha.tripId)
 
-      // `FORBIDDEN` is the code every caller maps to a 403, so it is the code that
-      // is asserted rather than the class or the sentence.
+      // The marker writers are a booking write like any other: an editor is let
+      // through on both, and a viewer is refused on both with the marker untouched.
+      expect(
+        await markReservationsImported(editor, alpha.tripId, [
+          alpha.reservationId,
+        ]),
+      ).toBe(1)
+      expect(
+        (await clearReservationImported(editor, alpha.reservationId))
+          .importedAt,
+      ).toBeNull()
+
+      // Every refusal below is the one class `assertTripRole` throws, under the
+      // code `FORBIDDEN`, and the classifier shows it to the reader as a refusal.
       const refusalCode = async (
         run: () => Promise<unknown>,
       ): Promise<string> => {
         const error = await captureError(run)
+        expect(error).toBeInstanceOf(TripRoleError)
+        expect(classifyFailure(error).kind).toBe('refusal')
         return error instanceof RepositoryError ? error.code : error.name
       }
 
@@ -3435,9 +3487,28 @@ describe('tenant isolation', () => {
         () => deleteReservation(viewer, alpha.reservationId),
         () =>
           linkReservationExpense(viewer, alpha.reservationId, alpha.expenseId),
+        () =>
+          markReservationsImported(viewer, alpha.tripId, [alpha.reservationId]),
+        () => clearReservationImported(viewer, alpha.reservationId),
       ]) {
         expect(await refusalCode(attempt)).toBe('FORBIDDEN')
       }
+
+      // A refused viewer changed nothing: not marked, and not cleared once marked.
+      expect(
+        (await getReservation(alpha.tenant.scope, alpha.reservationId))
+          ?.importedAt,
+      ).toBeNull()
+      await markReservationsImported(alpha.tenant.scope, alpha.tripId, [
+        alpha.reservationId,
+      ])
+      await captureError(() =>
+        clearReservationImported(viewer, alpha.reservationId),
+      )
+      expect(
+        (await getReservation(alpha.tenant.scope, alpha.reservationId))
+          ?.importedAt,
+      ).toBeInstanceOf(Date)
     })
   })
 
