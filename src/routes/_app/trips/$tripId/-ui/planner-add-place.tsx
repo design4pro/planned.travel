@@ -8,7 +8,6 @@
 
 import * as React from 'react'
 import { ChevronDown, Crosshair, Plus } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { readPublicFailure } from '#/lib/errors'
 import { useTranslate } from '#/lib/i18n'
@@ -143,10 +142,19 @@ export interface PlaceWriteFailureCopy {
   readonly fallback: string
   /** The places-limit sentence, already localised. */
   readonly quota: string
-  /** The toast action's label, already localised. */
+  /** The label of the way out of a places-limit refusal, already localised. */
   readonly seePlans: string
   /** Takes the reader to the screen where the plan can be changed. */
   readonly onSeePlans: () => void
+}
+
+/** What a failed place write shows in the form: a sentence, and sometimes a way out of it. */
+export interface PlaceWriteReport {
+  readonly message: string
+  readonly action: {
+    readonly label: string
+    readonly onSelect: () => void
+  } | null
 }
 
 /**
@@ -154,25 +162,21 @@ export interface PlaceWriteFailureCopy {
  *
  * A places-limit refusal reaches the browser as an `unexpected` failure with the one constant
  * code (`src/lib/errors.ts`): it carries no sentence, so the sentence is ours and in the reader's
- * locale. It lands in the form's error slot like every other write failure, and a toast beside it
- * leads to the plans, because the form alone offers nothing to do about it. Any other failure is
- * `placeWriteMessage`, unchanged.
+ * locale. The way out is an action of the form's own error slot, not a toast: the form traps
+ * focus and, on a phone, sits under a modal sheet, so a toast beside it cannot be reached until
+ * both are gone. Any other failure is `placeWriteMessage`, unchanged, with no action.
  */
 export function reportPlaceWriteFailure(
   cause: unknown,
   copy: PlaceWriteFailureCopy,
-): string {
+): PlaceWriteReport {
   const failure = readPublicFailure(cause)
   if (failure.code !== 'QUOTA_EXCEEDED') {
-    return placeWriteMessage(cause, copy.fallback)
+    return { message: placeWriteMessage(cause, copy.fallback), action: null }
   }
 
-  // The form is still open and traps focus, so the action cannot be reached until it closes:
-  // the toast stays (and can be dismissed) rather than timing out first (WCAG 2.2.1).
-  toast.error(copy.quota, {
-    action: { label: copy.seePlans, onClick: copy.onSeePlans },
-    duration: Infinity,
-    closeButton: true,
-  })
-  return copy.quota
+  return {
+    message: copy.quota,
+    action: { label: copy.seePlans, onSelect: copy.onSeePlans },
+  }
 }

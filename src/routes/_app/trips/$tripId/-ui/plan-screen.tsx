@@ -149,6 +149,7 @@ import type { PlanTransportsPayload } from '../-server/plan-transports'
 import type { PlaceDraft, PlaceFormValues, TimingDraft } from './plan-actions'
 import type { JourneyRestatement } from './plan-transport-model'
 import type { NoteDraft } from './note-dialog'
+import type { PlaceWriteReport } from './planner-add-place'
 
 /* -------------------------------------------------------------------------------------------------
  * Layout constants
@@ -431,6 +432,8 @@ export function PlanScreen({
   const [dialog, setDialog] = React.useState<DialogState>(null)
   const [saving, setSaving] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
+  const [formErrorAction, setFormErrorAction] =
+    React.useState<PlaceWriteReport['action']>(null)
   const [picking, setPicking] = React.useState<PlannerRow | null>(null)
   /** A pin dropped on the map; it opens the create form with a draft. Never while repositioning. */
   const mapDrop = usePlannerDrop({
@@ -1002,6 +1005,7 @@ export function PlanScreen({
   const closeDialog = React.useCallback((): void => {
     setDialog(null)
     setFormError(null)
+    setFormErrorAction(null)
   }, [])
 
   const runWrite = React.useCallback(
@@ -1011,20 +1015,21 @@ export function PlanScreen({
     ): Promise<boolean> => {
       setSaving(true)
       setFormError(null)
+      setFormErrorAction(null)
       try {
         await work()
         await router.invalidate()
         if (options.success !== undefined) toast.success(options.success)
         return true
       } catch (cause) {
-        setFormError(
-          reportPlaceWriteFailure(cause, {
-            fallback: options.fallback,
-            quota: t('trips.plan.addPlace.quota'),
-            seePlans: t('trips.plan.addPlace.quotaAction'),
-            onSeePlans: () => void router.navigate({ to: '/settings/billing' }),
-          }),
-        )
+        const report = reportPlaceWriteFailure(cause, {
+          fallback: options.fallback,
+          quota: t('trips.plan.addPlace.quota'),
+          seePlans: t('trips.plan.addPlace.quotaAction'),
+          onSeePlans: () => void router.navigate({ to: '/settings/billing' }),
+        })
+        setFormError(report.message)
+        setFormErrorAction(report.action)
         return false
       } finally {
         setSaving(false)
@@ -1718,6 +1723,7 @@ export function PlanScreen({
         }
         saving={saving}
         error={formError}
+        errorAction={formErrorAction}
         onSubmit={submitPlace}
       />
 

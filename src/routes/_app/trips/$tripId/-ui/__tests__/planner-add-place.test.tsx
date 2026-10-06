@@ -22,10 +22,6 @@ import type { PlannerDay } from '#/components/planner'
  * they are asserted from the DOM rather than read off the JSX.
  */
 
-const toasts = vi.hoisted(() => ({ error: vi.fn() }))
-
-vi.mock('sonner', () => ({ toast: toasts }))
-
 const MESSAGES = await loadCatalogue('en')
 
 function render(ui: React.ReactElement) {
@@ -201,24 +197,22 @@ describe('reportPlaceWriteFailure', () => {
     )
   }
 
-  it('answers a quota refusal with the quota sentence and a toast that leads to the plans', () => {
-    toasts.error.mockClear()
+  it('answers a quota refusal with the quota sentence and an action that leads to the plans', () => {
     const seePlans = vi.fn()
 
-    const message = reportPlaceWriteFailure(quotaRefusal(), {
+    const report = reportPlaceWriteFailure(quotaRefusal(), {
       ...copy,
       onSeePlans: seePlans,
     })
 
-    expect(message).toBe(copy.quota)
-    expect(toasts.error).toHaveBeenCalledExactlyOnceWith(copy.quota, {
-      action: { label: copy.seePlans, onClick: seePlans },
-      duration: Infinity,
-      closeButton: true,
+    expect(report.message).toBe(copy.quota)
+    expect(report.action).toEqual({
+      label: copy.seePlans,
+      onSelect: seePlans,
     })
   })
 
-  it('keeps today’s answer for every other failure, and raises no toast', () => {
+  it('keeps today’s answer for every other failure, with no action', () => {
     for (const cause of [
       new Error(
         encodePublicFailure({ kind: 'unexpected', reference: 'ref-1' }),
@@ -231,21 +225,15 @@ describe('reportPlaceWriteFailure', () => {
       ),
       new Error('Failed to fetch'),
     ]) {
-      toasts.error.mockClear()
-
       const expected = placeWriteMessage(cause, copy.fallback)
-      const message = reportPlaceWriteFailure(cause, {
-        ...copy,
-        onSeePlans: vi.fn(),
-      })
 
-      expect(message).toBe(expected)
-      expect(toasts.error).not.toHaveBeenCalled()
+      expect(
+        reportPlaceWriteFailure(cause, { ...copy, onSeePlans: vi.fn() }),
+      ).toEqual({ message: expected, action: null })
     }
   })
 
   it('does not treat a code on a refusal as a quota hit', () => {
-    toasts.error.mockClear()
     const cause = new Error(
       encodePublicFailure({
         kind: 'refusal',
@@ -256,7 +244,6 @@ describe('reportPlaceWriteFailure', () => {
 
     expect(
       reportPlaceWriteFailure(cause, { ...copy, onSeePlans: vi.fn() }),
-    ).toBe('This trip is archived.')
-    expect(toasts.error).not.toHaveBeenCalled()
+    ).toEqual({ message: 'This trip is archived.', action: null })
   })
 })
