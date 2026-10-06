@@ -2519,8 +2519,10 @@ test.describe('switching workspace', () => {
     await expectActive(page, FIRST.name)
 
     // Switch from a trip's own page: invalidating there, before the dashboard, would re-run the
-    // trip loader against the second workspace and show its error panel.
-    await page.goto(`/trips/${firstTripId}/plan`)
+    // trip loader against the second workspace and show its error panel. Reached by clicking, not
+    // `goto`: a press on the account menu before hydration opens nothing.
+    await page.locator(`a[href="/trips/${firstTripId}/plan"]`).first().click()
+    await expect(page).toHaveURL(new RegExp(`/trips/${firstTripId}/plan$`))
     await switchTo(page, SECOND.name)
     await expect(
       page.getByText(FIRST.trip),
