@@ -4,7 +4,7 @@ Closes #<issue>
 close on merge into develop; the housekeeping run (om-close-fixed-issues) reads this line and
 does. Labels, per SDLC.md: one category (bug / feature / refactor / security / dependencies /
 documentation), one priority-*, one risk-*, and `needs-qa` when a screen changes, otherwise
-`skip-qa`. `review` is the pipeline label a PR wears while it waits for a human. -->
+`skip-qa`. `review` is the pipeline label a PR wears while an agent reviews it. -->
 
 ## What
 

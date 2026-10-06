@@ -5,7 +5,8 @@ Date: 2026-09-25
 Amends: ADR 0018 (`pr-autopilot` runs with `--allow-merge`), ADR 0021 (the rulesets require three
 checks, not four: `merge-gate` is gone), ADR 0027 (the `gate` runner slot is folded into `ci`).
 Amended by: ADR 0033 (a spec PR `afk-plan-to-spec` wrote merges unattended on its specialist panel's
-verdicts; every other spec PR still ends at merge-ready).
+verdicts; every other spec PR still ends at merge-ready), ADR 0035 (`risk-high` QA is the agents'
+too, and a `risk-high` or `security` PR merges on a security reviewer's verdict).
 
 ## Context
 

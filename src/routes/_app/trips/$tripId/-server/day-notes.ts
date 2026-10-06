@@ -9,7 +9,7 @@
  *
  * **The day is one number line, and this module does not write it.** Since `01-S4a`,
  * `day_assignments.order_index` and `day_notes.sort_order` are two halves of one sequence per day,
- * owned by `reorderDayTimeline`. Moving a note is therefore expressed as the whole day's sequence
+ * owned by `reorderDayTimelines`. Moving a note is therefore expressed as the whole day's sequence
  * with the note slots refilled — {@link noteSlotOrder} — and handed to that one writer. Renumbering
  * the notes `0..n-1` on their own would land note *k* on top of stop *k*.
  *
@@ -31,7 +31,7 @@ import {
   listDayAssignments,
   listDayNotes,
   listTripDayNotes,
-  reorderDayTimeline,
+  reorderDayTimelines,
   requireDayNote,
   requireTrip,
   requireTripDay,
@@ -144,7 +144,7 @@ export function nextNotePosition(positions: ReadonlyArray<number>): number {
  * The day's sequence with its note slots refilled in the requested order.
  *
  * The stops keep the slots they hold; the notes are permuted among the slots that are theirs. The
- * result names every row of the day exactly once, so `reorderDayTimeline` writes `position = index`
+ * result names every row of the day exactly once, so `reorderDayTimelines` writes `position = index`
  * and its own dedupe and splice branches are no-ops.
  *
  * Three rules, each mirroring what that function already does to a client's list, because the day it
@@ -195,7 +195,7 @@ export function noteSlotOrder(
   })
 }
 
-/** The day as one line, in the order `reorderDayTimeline` itself reads it. */
+/** The day as one line, in the order `reorderDayTimelines` itself reads it. */
 async function dayTimeline(
   scope: TenantScope,
   dayId: string,
@@ -357,7 +357,7 @@ export const deleteDayNoteFn = createServerFn({ method: 'POST' })
  *
  * The client sends the note order it wants and nothing else: it cannot build the day's merged
  * sequence, because the board publishes no stop positions. The sequence is rebuilt here and written
- * by `reorderDayTimeline`, which stays the only writer of the day's number line.
+ * by `reorderDayTimelines`, which stays the only writer of the day's number line.
  */
 export const reorderDayNotesFn = createServerFn({ method: 'POST' })
   .validator(
@@ -372,10 +372,9 @@ export const reorderDayNotesFn = createServerFn({ method: 'POST' })
     await writableTripDay(scope, data.tripId, data.dayId)
 
     const { items } = await dayTimeline(scope, data.dayId)
-    await reorderDayTimeline(scope, {
+    await reorderDayTimelines(scope, {
       tripId: data.tripId,
-      dayId: data.dayId,
-      items: noteSlotOrder(items, data.noteIds),
+      days: [{ dayId: data.dayId, items: noteSlotOrder(items, data.noteIds) }],
     })
 
     return { dayId: data.dayId }
