@@ -84,6 +84,9 @@ const messages = {
   'plan.addPlace.more': 'Más formas de añadir un lugar',
   'plan.addPlace.option.map': 'Colocarlo en el mapa',
   'plan.addPlace.forDayNamed': 'Añadir un lugar, {day}',
+  'plan.addPlace.quota':
+    'Has alcanzado el límite de lugares de tu plan. Mejora tu plan para añadir más.',
+  'plan.addPlace.quotaAction': 'Ver planes',
   'plan.stay.checkIn': 'Entrada',
   'plan.stay.checkOut': 'Salida',
   'plan.day.addStay': 'Añadir un alojamiento, {day}',

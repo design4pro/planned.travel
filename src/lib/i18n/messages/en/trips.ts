@@ -149,6 +149,9 @@ const messages = {
   'plan.addPlace.more': 'More ways to add a place',
   'plan.addPlace.option.map': 'Place it on the map',
   'plan.addPlace.forDayNamed': 'Add a place to {day}',
+  'plan.addPlace.quota':
+    'You’ve reached your plan’s limit on places. Upgrade to add more.',
+  'plan.addPlace.quotaAction': 'See plans',
   /* ---------------------------------------------- a stay on the day */
   /**
    * What a day header says about a stay covering it: `checkIn` on its first

@@ -14,6 +14,7 @@ import { z } from 'zod'
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
 import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
 import { AuthRequirementError } from '#/server/auth/tenant'
+import { QuotaExceededError as BillingQuotaExceededError } from '#/server/billing/types'
 import {
   ConsoleActionError,
   ConsoleUnattributableError,
@@ -210,15 +211,14 @@ describe('everything else is a diagnostic', () => {
 
   /**
    * The negative half of the two additions above. Naming two `RepositoryError` subclasses authored
-   * must not make the base class authored - these four are the siblings that would have come along
+   * must not make the base class authored - these three are the siblings that would have come along
    * for free had the list grown by a base name, and each of them has a message written for a
-   * maintainer: a row id, a quota reading, a tenant-context complaint.
+   * maintainer: a row id, a role requirement, a tenant-context complaint.
    */
   it('withholds every repository error that was not named authored', () => {
     for (const cause of [
       new NotFoundError('trip', 'trip_01HZY3'),
       new ForbiddenError('archive this trip', ['owner']),
-      new QuotaExceededError('trips', 10, 10),
       new MissingTenantContextError('no organization on the session'),
     ]) {
       expect(classifyFailure(cause)).toEqual({ kind: 'unexpected' })
@@ -237,5 +237,51 @@ describe('everything else is a diagnostic', () => {
       kind: 'unexpected',
     })
     expect(classifyFailure({ issues: [] })).toEqual({ kind: 'unexpected' })
+  })
+})
+
+describe('a quota refusal carries one constant code', () => {
+  /**
+   * Two classes are called `QuotaExceededError`: the repository's, which a place write throws, and
+   * billing's. The classifier recognises the name, so both are constructed here - a rename of
+   * either is a failing test rather than a quota hit going back to the generic fallback.
+   */
+  it.each([
+    ['the repository class', () => new QuotaExceededError('places', 50, 50)],
+    [
+      'the billing class',
+      () =>
+        new BillingQuotaExceededError(
+          {
+            key: 'trips',
+            planId: 'free',
+            limit: 2,
+            used: 2,
+            requested: 1,
+          },
+          'The Free plan allows 2 trips and you are using 2. Upgrade to add more.',
+        ),
+    ],
+  ])('classifies %s as unexpected with the quota code', (_label, build) => {
+    expect(classifyFailure(build())).toEqual({
+      kind: 'unexpected',
+      code: 'QUOTA_EXCEEDED',
+    })
+  })
+
+  it('does not widen the authored set: a quota refusal is still no sentence', () => {
+    expect(AUTHORED_ERROR_NAMES.has('QuotaExceededError')).toBe(false)
+  })
+
+  it('never copies a repository error code to the browser', () => {
+    // `RepositoryError.code` is the maintainer's vocabulary; only the quota literal is public.
+    for (const cause of [
+      new NotFoundError('trip', 'trip_01HZY3'),
+      new ForbiddenError('archive this trip', ['owner']),
+      new MissingTenantContextError('no organization on the session'),
+      new RepositoryError('boom', 'QUOTA_EXCEEDED'),
+    ]) {
+      expect(classifyFailure(cause)).toEqual({ kind: 'unexpected' })
+    }
   })
 })

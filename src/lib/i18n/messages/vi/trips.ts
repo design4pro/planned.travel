@@ -81,6 +81,9 @@ const messages = {
   'plan.addPlace.more': 'Các cách khác để thêm địa điểm',
   'plan.addPlace.option.map': 'Đặt lên bản đồ',
   'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
+  'plan.addPlace.quota':
+    'Bạn đã đạt giới hạn số địa điểm của gói hiện tại. Hãy nâng cấp để thêm nữa.',
+  'plan.addPlace.quotaAction': 'Xem các gói',
   'plan.stay.checkIn': 'Nhận phòng',
   'plan.stay.checkOut': 'Trả phòng',
   'plan.day.addStay': 'Thêm chỗ ở, {day}',

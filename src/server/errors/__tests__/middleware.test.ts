@@ -10,6 +10,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { readPublicFailure } from '#/lib/errors'
+import { QuotaExceededError as BillingQuotaExceededError } from '#/server/billing/types'
+import { QuotaExceededError } from '#/server/repos/context'
 
 const captureException = vi.hoisted(() => vi.fn(() => 'sentry-event-id'))
 const count = vi.hoisted(() => vi.fn())
@@ -149,6 +151,79 @@ describe('authored copy crosses intact', () => {
 
     expect(failure.message).toBe('shell.session.noWorkspace')
     expect(captureException).not.toHaveBeenCalled()
+  })
+})
+
+describe('a quota refusal keeps its code and nothing else', () => {
+  const QUOTA_REFUSAL = new QuotaExceededError('places', 50, 49)
+
+  it('lets the code cross together with the reference', async () => {
+    dsn.configured = 'https://k@o.ingest.sentry.io/1'
+
+    expect(readPublicFailure(await throughBoundary(QUOTA_REFUSAL))).toEqual({
+      kind: 'unexpected',
+      code: 'QUOTA_EXCEEDED',
+      reference: 'sentry-event-id',
+    })
+  })
+
+  it('does not put the metric, the numbers or the message text on the wire', async () => {
+    dsn.configured = 'https://k@o.ingest.sentry.io/1'
+    const billing = new BillingQuotaExceededError(
+      {
+        key: 'trips',
+        planId: 'free',
+        limit: 2,
+        used: 2,
+        requested: 1,
+      },
+      'The Free plan allows 2 trips and you are using 2. Upgrade to add more.',
+    )
+
+    for (const cause of [QUOTA_REFUSAL, billing]) {
+      const wire = ((await throughBoundary(cause)) as Error).message
+
+      for (const leak of [
+        'places',
+        'trips',
+        'metric',
+        'limit',
+        'used',
+        'current',
+        'requested',
+        'planId',
+        'free',
+        'Free',
+        'Upgrade',
+        'reached',
+        '49',
+        '50',
+      ]) {
+        expect(wire).not.toContain(leak)
+      }
+    }
+  })
+
+  it('is still reported and logged, as before', async () => {
+    dsn.configured = 'https://k@o.ingest.sentry.io/1'
+    captureException.mockClear()
+    logged.length = 0
+
+    await throughBoundary(QUOTA_REFUSAL)
+
+    expect(captureException).toHaveBeenCalledWith(QUOTA_REFUSAL)
+    expect(logged).toHaveLength(1)
+  })
+
+  it('is counted as unexpected, as before', async () => {
+    dsn.configured = 'https://k@o.ingest.sentry.io/1'
+    count.mockClear()
+
+    await throughBoundary(QUOTA_REFUSAL)
+
+    expect(count.mock.calls.map((call) => call[2]?.attributes?.kind)).toEqual([
+      'unexpected',
+    ])
   })
 })
 

@@ -80,9 +80,12 @@ export const failureRedactionMiddleware = createMiddleware({
       throw new Error(encodePublicFailure(failure))
     }
 
+    // A diagnostic stays withheld: what crosses is the reference, plus the constant code the
+    // classifier attached when the reader is owed a way out (a quota refusal), and nothing else.
     throw new Error(
       encodePublicFailure({
         kind: 'unexpected',
+        ...(failure.code === undefined ? {} : { code: failure.code }),
         reference: recordDiagnostic(cause),
       }),
     )
