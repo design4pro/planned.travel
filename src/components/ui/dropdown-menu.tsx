@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as MenuPrimitive from 'radix-ui/dropdown-menu'
-import { Check, ChevronRight, Circle } from 'lucide-react'
+import { Check, ChevronRight, Circle, ExternalLink } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import {
@@ -102,6 +102,54 @@ export const DropdownMenuItem = React.forwardRef<
   ),
 )
 DropdownMenuItem.displayName = 'DropdownMenuItem'
+
+export type DropdownMenuLinkItemProps = Omit<
+  React.ComponentPropsWithoutRef<'a'>,
+  'href' | 'target' | 'rel'
+> & {
+  href: string
+  icon?: React.ReactNode
+}
+
+/**
+ * An item that is a real link out of the app, for the reader's browser and OS to route.
+ *
+ * It always opens a new tab with `noopener noreferrer`, so the current URL — a trip's —
+ * never leaves in a referrer, and it always draws the external-link mark. That mark is
+ * decoration: the caller's `aria-label` is what says a new tab opens, in words. Radix
+ * gives the anchor `role="menuitem"`, so Enter and Space activate it like a click.
+ */
+export const DropdownMenuLinkItem = React.forwardRef<
+  HTMLAnchorElement,
+  DropdownMenuLinkItemProps
+>(({ className, icon, children, ...props }, ref) => (
+  <MenuPrimitive.Item asChild>
+    <a
+      ref={ref}
+      className={cn(menuItemBase, className)}
+      {...props}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {icon ? (
+        <span
+          className="grid size-4 shrink-0 place-items-center opacity-70 [&_svg]:size-4"
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+      ) : null}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      <ExternalLink
+        size={12}
+        strokeWidth={2}
+        className="shrink-0 text-ink-4"
+        aria-hidden="true"
+      />
+    </a>
+  </MenuPrimitive.Item>
+))
+DropdownMenuLinkItem.displayName = 'DropdownMenuLinkItem'
 
 export type DropdownMenuCheckboxItemProps = React.ComponentPropsWithoutRef<
   typeof MenuPrimitive.CheckboxItem

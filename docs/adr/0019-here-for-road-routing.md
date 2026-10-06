@@ -118,8 +118,8 @@ Price was never going to decide this; the terms below do, and each one binds the
 - **What is shown follows the same line.** A routed time, road distance or line appears only to the
   member whose Request produced it. Another member looking at the same day makes their own Request
   when they open it. The `07-S6` guest viewer, anything printed or exported as a document, and the
-  day's copy-out in `02-S9` carry no routed number or geometry; they show the great-circle distance
-  and the arc. When the day's order changes after a member's Request, their routed numbers give way
+  day's map hand-off (issue #663; `02-S9` first planned a copy-out) carry no routed number or
+  geometry; they show the great-circle distance and the arc. When the day's order changes after a member's Request, their routed numbers give way
   to great-circle distance. The member's own reorder requests again; after another member's reorder,
   arriving live, a new Request is made only when this member reopens the day or asks for times again,
   never by the live update itself. Print is excluded on a second ground as well: "Unless otherwise
