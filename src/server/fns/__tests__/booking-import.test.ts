@@ -61,6 +61,8 @@ const stubs = vi.hoisted(() => ({
   failStayWrite: false,
   /** Every patch the confirm's `announce` port was handed. */
   mirrored: [] as Array<unknown>,
+  /** How many lookups the geocoding vendor was asked for. */
+  vendorCalls: 0,
   /**
    * The proxy's cache and its tallies, in memory.
    *
@@ -112,7 +114,10 @@ vi.mock('#/server/geo/bindings', () => {
       provider: stubs.geocodingConfigured
         ? {
             ...vendor,
-            forward: () => Promise.resolve([stubs.candidate]),
+            forward: () => {
+              stubs.vendorCalls += 1
+              return Promise.resolve([stubs.candidate])
+            },
             reverse: () => Promise.resolve([]),
           }
         : null,
@@ -333,6 +338,7 @@ beforeEach(async () => {
   stubs.geocodingConfigured = true
   stubs.failStayWrite = false
   stubs.mirrored.length = 0
+  stubs.vendorCalls = 0
   stubs.geoEntries.clear()
 })
 
@@ -1007,6 +1013,85 @@ describe('confirmBookingImport', () => {
       await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
     ).toEqual([])
     expect(stubs.mirrored).toEqual([])
+  })
+
+  /*
+   * The confirm creates a place and pins it through the geocoder before the reservation write, and
+   * only that write asks the trip role; its refusal is caught per row, so a viewer used to see a
+   * result with failed rows after the places quota and the geocoding allowance were spent.
+   */
+  it('refuses a trip viewer before any place is created or the geocoder is called', async () => {
+    const staged = await stage(alpha, {
+      reservations: [stagedRow({ kind: 'lodging' })],
+    })
+    const viewerId = await alpha.tenant.addUser('viewer')
+    await addTripMember(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+      userId: viewerId,
+      role: 'viewer',
+    })
+    const viewer = alpha.tenant.scopeFor(viewerId)
+    const placesBefore = await countTripPlaces(alpha.tenant.scope, alpha.tripId)
+
+    const error = await captureError(() =>
+      confirmBookingImport(
+        viewer,
+        store,
+        { tripId: alpha.tripId, jobId: alpha.jobId, accept: [0] },
+        ports,
+      ),
+    )
+
+    expect(error).toBeInstanceOf(TripRoleError)
+    expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(
+      placesBefore,
+    )
+    expect(stubs.vendorCalls).toBe(0)
+    expect(
+      await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
+    ).toEqual([])
+    expect(store.entries.get(stagedImportKey(alpha.jobId))).toBe(
+      JSON.stringify(staged),
+    )
+    expect(stubs.mirrored).toEqual([])
+  })
+
+  it('lets a trip editor confirm the same import, so the refusal is about the role only', async () => {
+    await stage(alpha, { reservations: [stagedRow({ kind: 'lodging' })] })
+    const editorId = await alpha.tenant.addUser('editor')
+    await addTripMember(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+      userId: editorId,
+      role: 'editor',
+    })
+
+    const result = await confirmBookingImport(
+      alpha.tenant.scopeFor(editorId),
+      store,
+      { tripId: alpha.tripId, jobId: alpha.jobId, accept: [0] },
+      ports,
+    )
+
+    expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
+    expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(1)
+    expect(stubs.vendorCalls).toBe(1)
+  })
+
+  it('answers not found, not a role refusal, to a user who cannot see the trip', async () => {
+    await stage(alpha, { reservations: [stagedRow({ kind: 'lodging' })] })
+
+    const error = await captureError(() =>
+      confirmBookingImport(
+        beta.tenant.scope,
+        store,
+        { tripId: alpha.tripId, jobId: alpha.jobId, accept: [0] },
+        ports,
+      ),
+    )
+
+    expect(error).toBeInstanceOf(NotFoundError)
+    expect(stubs.vendorCalls).toBe(0)
   })
 
   it('refuses a job id staged by another workspace, and writes nothing', async () => {
