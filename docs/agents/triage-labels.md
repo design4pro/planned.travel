@@ -12,7 +12,7 @@ retired vocabularies.
 | -------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | Pipeline | `review`, `changes-requested`, `qa`, `qa-failed`, `merge-queue`, `blocked`, `do-not-merge` | skills move the first five on PRs, only a QA reviewer sets `qa`; the holds are below                     |
 | Category | `bug`, `feature`, `refactor`, `security`, `dependencies`, `documentation`                  | issue forms, Sentry sweep, Dependabot (`dependencies`), `om-auto-manage-issues`, `afk-triage`, PR skills |
-| Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | skills; `qa-approved` by the unattended sign-off below `risk-high`, by the owner on `risk-high`          |
+| Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | skills; `qa-approved` by the unattended sign-off (a specialist panel), `risk-high` included (ADR 0035)   |
 | Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | issue grooming, Sentry sweep (`priority-high`), PR skills                                                |
 | Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                |
 | Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                          |

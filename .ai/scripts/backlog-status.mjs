@@ -203,16 +203,15 @@ const hasLabel = (pr, name) => pr.labels.some((label) => label.name === name);
 export const PARKED_HOURS = 24;
 
 /**
- * A PR sits with a person when no run can move it: QA the unattended sign-off may not give
- * (`needs-qa` still without `qa-approved`), a diff the owner signs off (`risk-high`, `security`), a
- * hold, or `changes-requested` left untouched for `PARKED_HOURS`. Everything else - `review`, a
- * fresh `changes-requested`, `merge-queue`, a plain draft - is on its way to
- * `om-pr-autopilot --allow-merge`, which merges it into `develop` without anyone. `now` is passed in
- * (epoch ms) so the rule stays pure; a PR with no `updatedAt` is never taken for parked.
+ * A PR sits with a person when no run can move it: a hold (`blocked`, which `om-pr-autopilot` sets
+ * after three fix-and-QA rounds its agents could not close), or `changes-requested` left untouched
+ * for `PARKED_HOURS`. QA and risk labels are not a person's (owner decision 2026-10-06): the
+ * agents judge them and `om-pr-autopilot --allow-merge` merges the PR into `develop` without
+ * anyone. `now` is passed in (epoch ms) so the rule stays pure; a PR with no `updatedAt` is never
+ * taken for parked.
  */
 export const waitsForPerson = (pr, now) =>
-  (hasLabel(pr, "needs-qa") && !hasLabel(pr, "qa-approved")) ||
-  ["risk-high", "security", "blocked"].some((label) => hasLabel(pr, label)) ||
+  hasLabel(pr, "blocked") ||
   (hasLabel(pr, "changes-requested") && (now - Date.parse(pr.updatedAt)) / 36e5 >= PARKED_HOURS);
 
 /**

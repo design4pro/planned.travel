@@ -1,12 +1,12 @@
 ---
 name: om-auto-review-pr
-description: planned.travel extension of the installed om-auto-review-pr skill. Every INHERITED finding ends with a reply in its thread, and only a disagreement leaves it open; the develop ruleset merges nothing with an open thread.
+description: planned.travel extension of the installed om-auto-review-pr skill. Every INHERITED finding ends with a reply in its thread, and a specialist settles a disagreement; the develop ruleset merges nothing with an open thread.
 ---
 
 Extends the installed skill: read `.claude/skills/om-auto-review-pr/SKILL.md` and follow it. The `develop` and `main` rulesets require every review thread to be resolved before a merge, and the threads other reviewers leave (a human, an on-demand reviewer, an earlier agent pass) are resolved by nobody unless this skill does it. Three additions to step 2 and step 11:
 
 - Step 2, collecting `INHERITED` findings: take the open set from **list-review-threads** (unresolved and not outdated), not from **list-review-comments** alone; keep each thread's `id` and its first comment's `id` with the finding.
-- Step 11, accounting: a finding **fixed** in this run ends with **reply-review-comment** (what changed, in which commit) followed by **resolve-review-thread**. A finding **filed as a follow-up** ends with a reply naming the follow-up issue, then resolve. A finding **declined** ends with a reply giving the reason and the thread stays open, the verdict stays `changes-requested`, and the report names it: a human, not the pipeline, closes a disagreement. Never resolve a thread without replying in it first, and never resolve one this run did not act on.
+- Step 11, accounting: a finding **fixed** in this run ends with **reply-review-comment** (what changed, in which commit) followed by **resolve-review-thread**. A finding **filed as a follow-up** ends with a reply naming the follow-up issue, then resolve. A finding **declined** goes to an independent specialist through `.ai/skills/afk-decide/SKILL.md` (picked by what the finding is about), with the finding and the reason to decline: when it sides with the finding, fix it as above; when it sides with the decline, reply with the reason and its verdict, then resolve. The pipeline, not a person, closes a disagreement on a PR into `develop` (owner decision 2026-10-06, ADR 0035). Never resolve a thread without replying in it first, and never resolve one this run did not act on.
 - Step 11, the fourth outcome: **agreed but out of the run's reach.** Declining is for a
   disagreement, and only a disagreement. A finding you agree with but cannot act on - a hook
   refuses the file, the change belongs upstream, the fix needs a credential a run does not hold -

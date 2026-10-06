@@ -14,6 +14,15 @@ Extends the installed skill: read `.claude/skills/om-approve-merge-pr/SKILL.md` 
   whose `baseRefName` is `develop`. Any other base - above all the `develop` -> `main`
   promotion, which carries `do-not-merge` - is reported as merge-ready and left for the owner:
   merging it deploys production. The `main` rules below apply when the owner drives the merge.
+- In that unattended run into `develop`, a gate that would ask a person routes back to
+  `om-pr-autopilot`'s agents instead (owner decision 2026-10-06, ADR 0035), overriding the
+  installed "never resolve a merge gate autonomously" and "the QA gate never routes to
+  automation" rules: report the PR not mergeable now and name the route. `needs-qa` without
+  `qa-approved`, a stale `QA head:`, and `needs-qa` beside `skip-qa` route to
+  `om-auto-qa-pr <number> --self-qa-signoff` on the current head (treat the pair as `needs-qa`);
+  `changes-requested` and a `qa-failed` the QA panel set route to `om-auto-fix-pr <number>`. Never
+  merge past one of them in this run. A `qa-failed` a person set, an active `qa`, `blocked` and
+  `do-not-merge` still stop and report.
 - Before approval and again at step 4, reject an explicitly requested squash or rebase
   when `baseRefName` is `main`: "Cannot squash or rebase a PR targeting main: a merge
   commit is required to preserve develop/main ancestry (ADR 0003)." Do not issue that
