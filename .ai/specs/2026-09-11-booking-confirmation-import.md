@@ -31,7 +31,7 @@ No column is declared, no second parsing engine is written, and no dependency is
 - `grep -rn "enqueueTask" src/` reaches exactly two live producers — `src/server/auth/email.ts:289` (`kind: 'email'`) and `src/server/fns/atlas.ts:441` (`kind: 'travel-stats'`). **No call site anywhere passes `kind: 'booking-import'`.** The handler has never executed in this product.
 - `src/server/extract/` does not exist. `src/components/modules/book/` holds `booking-dialog.tsx`, `booking-form.ts`, `bookings-timeline.tsx`, `grouping.ts` and `index.ts` — no import dialog, no widget, no drafts module.
 - `src/server/fns/file-policy.ts` accepts `.ics` (`:80`, `:104`) and `.json` (`:86`, `:108`) — the two formats a _machine_ exports. It also already accepts `.pdf`, the raster images, `.txt` and the two Office types as _documents_; what it has no notion of is which of them an **import** can read, which is a different question from which of them may be **stored**.
-- The writer this spec confirms into is on disk: `markReservationsImported` (`src/server/repos/reservations.ts:444`), `clearReservationImported` (`:464`), `reservations.imported_at` (`src/server/db/schema.ts:1286`) and its index (`:1318`), and `syncReservationExpense` (`src/server/fns/reservations.ts:279`). All landed in `03-S4` (#176).
+- The writer this spec confirms into is on disk: `markReservationsImported` (`src/server/repos/reservations.ts:470`), `clearReservationImported` (`:495`), `reservations.imported_at` (`src/server/db/schema.ts:1286`) and its index (`:1318`), and `syncReservationExpense` (`src/server/fns/reservations.ts:279`). All landed in `03-S4` (#176).
 
 **What it costs.** The most expensive machinery in this feature — a queue, an envelope schema, a consumer registry, a parser, a stager, a room notification — is built, tested and completely unreachable. A reader cannot get a single booking into the desk without typing it.
 
@@ -88,7 +88,7 @@ confirmBookingImportFn ────► createReservation × n
                               ├─ syncReservationExpense
                               ├─ updateFile({ reservationId })
                               ├─ createPlace + forwardGeocode (lodging only)
-                              ├─ markReservationsImported(scope, writtenIds)   ← one statement
+                              ├─ markReservationsImported(scope, tripId, writtenIds) ← one statement
                               └─ KV.delete  ── only when every accepted row was written
 ```
 
@@ -110,11 +110,11 @@ All five are enqueued **at drop time**, staggered by `delaySeconds = index × EX
 
 Everything it writes already exists:
 
-| Column                      | Declared by       | Written here                                             |
-| --------------------------- | ----------------- | -------------------------------------------------------- |
-| `reservations.imported_at`  | `03-S4` (#176)    | `markReservationsImported(scope, ids)` — one statement   |
-| `trip_files.reservation_id` | on disk (`:1653`) | `updateFile(scope, fileId, { reservationId })`           |
-| `places.*`                  | on disk           | `createPlace` — lodging only, and only when none matches |
+| Column                      | Declared by       | Written here                                                   |
+| --------------------------- | ----------------- | -------------------------------------------------------------- |
+| `reservations.imported_at`  | `03-S4` (#176)    | `markReservationsImported(scope, tripId, ids)` — one statement |
+| `trip_files.reservation_id` | on disk (`:1653`) | `updateFile(scope, fileId, { reservationId })`                 |
+| `places.*`                  | on disk           | `createPlace` — lodging only, and only when none matches       |
 
 **The staged import stays in KV.** An unreviewed import is not durable state, and a table for it would be something a tenant has to clean up. `STAGED_IMPORT_TTL_SECONDS` (24 h) expires it whether it is confirmed or not.
 
@@ -238,7 +238,7 @@ const parsed =
 
 - **`startBookingImportFn`.** The **only** enqueue site. `getFile(scope, fileId)` supplies the storage key and the filename, and its `tripId` is compared with the trip; the format is derived server-side from the stored filename through the new `importFormatFor()` in `file-policy.ts`, not taken from the client. The envelope id is **`booking-import:${tripId}:${fileId}`** — 15 + 25 + 1 + 25 + 1 = 67 characters, inside the envelope's `max(128)`. Three properties follow from that one choice: a double submit is one job, because a completed job's marker lives under `task:done:<id>` for 24 hours; a corrected file is a different job, because it is a new upload with a new id; and the staged result is findable without a second identifier, because the handler stages under `stagedImportKey(context.taskId)`. **The trip id is in the key on purpose** — keyed on the file alone, one uploaded confirmation could be imported into exactly one trip ever.
 - **`getBookingImportFn`.** Returns `working` while nothing is staged, `ready` with the staged record, or `refused` with a typed code (`ceiling`, `unreadable`, `empty`, `too-large`). It never forwards a raw `Error.message`: the reader's words come from the catalogue.
-- **`confirmBookingImportFn`.** Re-reads the staged record, re-checks the scope, skips any index already in `written`, and for each remaining accepted row: `createReservation` → `syncReservationExpense` → `updateFile(scope, fileId, { reservationId })` → for an `accommodation`, `createPlace` when the trip holds no place of that name, then `forwardGeocode` for the pin. It then stamps **one** `markReservationsImported(scope, writtenIds)` for the whole batch and asserts the returned count equals the number it wrote — a shortfall is an id that did not resolve inside its own scope, which is a bug and is logged as one. One `trip` patch is mirrored into the room, so other tabs refresh once rather than five hundred times.
+- **`confirmBookingImportFn`.** Re-reads the staged record, re-checks the scope, skips any index already in `written`, and for each remaining accepted row: `createReservation` → `syncReservationExpense` → `updateFile(scope, fileId, { reservationId })` → for an `accommodation`, `createPlace` when the trip holds no place of that name, then `forwardGeocode` for the pin. It then stamps **one** `markReservationsImported(scope, trip.id, writtenIds)` for the whole batch and asserts the returned count equals the number it wrote — a shortfall is an id that did not resolve inside its own scope, which is a bug and is logged as one. One `trip` patch is mirrored into the room, so other tabs refresh once rather than five hundred times.
 
 **The geocoding proxy is called and not re-minted, and the call site is this module.** The frozen plan puts the proxy behind `src/routes/_app/trips/$tripId/-server/geocode.ts`; **that file does not exist** — `grep -rn "forwardGeocode" src/` reaches `src/server/geo/geocode.ts` and three test files and nothing else, so this spec is the proxy's first production caller. It assembles the runtime with `geocodeRuntime()` from `src/server/geo/bindings.ts` and calls `forwardGeocode`, exactly as a route-local module would. **A failed lookup is not a failed import**: `GeoProviderError`, `RateCeilingError` and `ProviderBlockedError` are all caught around the lookup alone, the place is written without coordinates, and the map already filters those rows.
 

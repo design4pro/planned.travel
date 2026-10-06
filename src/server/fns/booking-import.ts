@@ -851,7 +851,7 @@ export async function confirmBookingImport(
   }
 
   const fresh = written.slice(already.length)
-  await stamp(scope, fresh)
+  await stamp(scope, trip.id, fresh)
   await persist(store, staged, written, {
     asked: pending.length,
     remaining: pending.length - fresh.length,
@@ -883,12 +883,14 @@ export async function confirmBookingImport(
  */
 async function stamp(
   scope: TenantScope,
+  owningTripId: string,
   fresh: ReadonlyArray<{ readonly reservationId: string }>,
 ): Promise<void> {
   if (fresh.length === 0) return
   try {
     const marked = await markReservationsImported(
       scope,
+      owningTripId,
       fresh.map((row) => row.reservationId),
     )
     if (marked !== fresh.length) {

@@ -457,6 +457,8 @@ const messages = {
   'editTrip.errorTitle': 'Chưa lưu được',
   'editTrip.retry': 'Thử lại',
   'editTrip.error': 'Không lưu được chuyến đi. Hãy thử lại sau giây lát.',
+  'editTrip.currencyLocked':
+    'Chuyến đi này đã có giá, nên không thể đổi tiền tệ của ngân sách tại đây. Hãy đặt lại {current} để lưu các thay đổi khác.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Xóa vĩnh viễn “{title}”?',
   'deleteTrip.description':

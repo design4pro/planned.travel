@@ -18,6 +18,7 @@
  */
 
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
+import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
 
 import type { PublicFailure } from '#/lib/errors'
 
@@ -113,10 +114,15 @@ export function classifyFailure(cause: unknown): PublicFailure {
   // blocked traveller it is written for is not an incident - redacting it would replace the one
   // screen that explains their situation with a generic failure, and file a Sentry issue for each
   // of them.
+  //
+  // A currency refusal (`src/lib/currency-refusals.ts`) is the same shape and is let through the
+  // same way: an exact match against a closed list of keys, never a prefix or a pattern, so any
+  // other repository message - a database diagnostic included - is still redacted below.
   const thrown = cause instanceof Error ? cause.message : cause
   if (
     typeof thrown === 'string' &&
-    SHELL_STATE_KEYS.some((key) => key === thrown)
+    (SHELL_STATE_KEYS.some((key) => key === thrown) ||
+      CURRENCY_REFUSAL_KEYS.some((key) => key === thrown))
   ) {
     return { kind: 'refusal', message: thrown }
   }
