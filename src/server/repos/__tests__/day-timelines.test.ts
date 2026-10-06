@@ -21,6 +21,7 @@ import {
   createAssignment,
   listDayAssignments,
   reorderDayTimelines,
+  reorderDayTimelinesInput,
 } from '../itinerary'
 import { createPlace } from '../places'
 import { addTripMember, createTrip } from '../trips'
@@ -472,28 +473,91 @@ describe('a drag across days', () => {
     expect(await lineOf(dayB)).toEqual(before.b)
   })
 
-  it('bounds the batch: at most four days and 200 items a day', async () => {
-    const five = [dayA, dayB, dayA, dayB, dayA].map((dayId) => ({
-      dayId,
-      items: [],
-    }))
-    expect(
-      await captureError(() =>
-        reorderDayTimelines(tenant.scope, { tripId, days: five }),
-      ),
-    ).toBeInstanceOf(Error)
+  it('leaves the rows of another trip of the same workspace where they are', async () => {
+    const other = await createTrip(tenant.scope, {
+      title: 'Elsewhere',
+      startDate: '2026-11-01',
+      endDate: '2026-11-02',
+    })
+    const otherDay = (await listTripDays(tenant.scope, other.id)).at(0)
+    if (otherDay === undefined) {
+      throw new Error('A dated trip must have a day run.')
+    }
+    const harbour = await createPlace(tenant.scope, {
+      tripId: other.id,
+      name: 'Harbour',
+    })
+    const foreignStop = await createAssignment(tenant.scope, {
+      tripId: other.id,
+      dayId: otherDay.id,
+      placeId: harbour.id,
+      orderIndex: 0,
+      startTime: '10:00',
+    })
+    const foreignNote = await createDayNote(tenant.scope, {
+      tripId: other.id,
+      dayId: otherDay.id,
+      body: 'Not this trip.',
+      sortOrder: 1,
+    })
 
-    const tooMany = Array.from({ length: 201 }, () => ({
-      kind: 'stop' as const,
-      id: stopA1,
-    }))
-    expect(
-      await captureError(() =>
-        reorderDayTimelines(tenant.scope, {
-          tripId,
-          days: [{ dayId: dayA, items: tooMany }],
-        }),
-      ),
-    ).toBeInstanceOf(Error)
+    const result = await reorderDayTimelines(tenant.scope, {
+      tripId,
+      days: [
+        {
+          dayId: dayA,
+          items: [
+            { kind: 'stop', id: foreignStop.id },
+            { kind: 'note', id: foreignNote.id },
+            { kind: 'stop', id: stopA2 },
+            { kind: 'stop', id: stopA1 },
+          ],
+          clearTime: [{ kind: 'stop', id: foreignStop.id }],
+        },
+      ],
+    })
+
+    expect(result).toEqual([
+      {
+        dayId: dayA,
+        items: [
+          { kind: 'stop', id: stopA2 },
+          { kind: 'note', id: noteA },
+          { kind: 'stop', id: stopA1 },
+        ],
+      },
+    ])
+    expect(await lineOf(otherDay.id)).toEqual([
+      { id: foreignStop.id, position: 0 },
+      { id: foreignNote.id, position: 1 },
+    ])
+    const [stillThere] = await listDayAssignments(tenant.scope, otherDay.id)
+    expect(stillThere?.startTime).toBe('10:00')
+  })
+
+  it('bounds the batch: at most four days and 200 items a day', () => {
+    const dayEntries = (count: number) => ({
+      tripId,
+      days: Array.from({ length: count }, (_, index) => ({
+        dayId: `day-${index}`,
+        items: [],
+      })),
+    })
+    expect(reorderDayTimelinesInput.safeParse(dayEntries(4)).success).toBe(true)
+    expect(reorderDayTimelinesInput.safeParse(dayEntries(5)).success).toBe(
+      false,
+    )
+
+    const items = (count: number) =>
+      Array.from({ length: count }, () => ({
+        kind: 'stop' as const,
+        id: stopA1,
+      }))
+    const oneDay = (count: number) => ({
+      tripId,
+      days: [{ dayId: dayA, items: items(count) }],
+    })
+    expect(reorderDayTimelinesInput.safeParse(oneDay(200)).success).toBe(true)
+    expect(reorderDayTimelinesInput.safeParse(oneDay(201)).success).toBe(false)
   })
 })

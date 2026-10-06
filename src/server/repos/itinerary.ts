@@ -460,10 +460,10 @@ function refKey(ref: TimelineItemInput): string {
  * All of it — every day, every position and every `NULL` time — goes out as one
  * {@link runBatch}, which on D1 is one transaction: a half-applied reorder is a day
  * whose two columns disagree about one number line, and there is no honest way to
- * render that. That atomicity, not the order of the statements, is what keeps a
- * payload that would put one place on a day twice from writing anything:
- * `day_assignments_day_place_unq` is checked per statement, so it refuses a same-place
- * swap in either order, and the whole batch rolls back with it. The batch is bounded
+ * render that. That atomicity is what keeps a payload that would put one place
+ * on a day twice from writing anything: `day_assignments_day_place_unq` is checked per
+ * statement, so it refuses a swap of one place in either order, and the whole batch
+ * rolls back with it. (A swap of two different places never collides.) The batch is bounded
  * by {@link MAX_DAYS_PER_MOVE} days of at most 200 rows, one `UPDATE` per row.
  *
  * Returns each day's sequence as written, in the order the days were named, which is
@@ -510,6 +510,9 @@ export async function reorderDayTimelines(
   ].sort((a, b) => a.position - b.position || a.ref.id.localeCompare(b.ref.id))
 
   const known = new Map(current.map((entry) => [refKey(entry.ref), entry.ref]))
+  const heldBy = new Map(
+    current.map((entry) => [refKey(entry.ref), entry.dayId]),
+  )
 
   // First every day takes what it names, so that the splice below can tell a row the
   // client left out from a row another day took.
@@ -556,6 +559,11 @@ export async function reorderDayTimelines(
   const statements = lines.flatMap((line) =>
     line.wanted.map((ref, position) => {
       const dropTime = line.cleared.has(refKey(ref))
+      // Only a row that changes day is given one. A row that stays — a spliced-back
+      // omission above all — must not have its day rewritten from this read, or a move
+      // another editor committed in between would be silently undone.
+      const day =
+        heldBy.get(refKey(ref)) === line.dayId ? {} : { dayId: line.dayId }
       if (ref.kind === 'stop') {
         return scope.db
           .update(dayAssignments)
@@ -565,13 +573,8 @@ export async function reorderDayTimelines(
             // was just told it had lost — and the board's time index reads `start_time` alone, so
             // from then on the clock rule cannot see it and never asks about it again.
             dropTime
-              ? {
-                  dayId: line.dayId,
-                  orderIndex: position,
-                  startTime: null,
-                  endTime: null,
-                }
-              : { dayId: line.dayId, orderIndex: position },
+              ? { ...day, orderIndex: position, startTime: null, endTime: null }
+              : { ...day, orderIndex: position },
           )
           .where(
             tenantFilter(scope, dayAssignments, eq(dayAssignments.id, ref.id)),
@@ -581,8 +584,8 @@ export async function reorderDayTimelines(
         .update(dayNotes)
         .set(
           dropTime
-            ? { dayId: line.dayId, sortOrder: position, time: null }
-            : { dayId: line.dayId, sortOrder: position },
+            ? { ...day, sortOrder: position, time: null }
+            : { ...day, sortOrder: position },
         )
         .where(tenantFilter(scope, dayNotes, eq(dayNotes.id, ref.id)))
     }),
