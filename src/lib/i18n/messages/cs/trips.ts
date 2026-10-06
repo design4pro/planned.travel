@@ -86,6 +86,9 @@ const messages = {
   'plan.addPlace.more': 'Další způsoby, jak přidat místo',
   'plan.addPlace.option.map': 'Umístit na mapu',
   'plan.addPlace.forDayNamed': 'Přidat místo: {day}',
+  'plan.addPlace.quota':
+    'Dosáhli jste limitu míst ve svém tarifu. Přejděte na vyšší tarif a přidejte další.',
+  'plan.addPlace.quotaAction': 'Zobrazit tarify',
   'plan.stay.checkIn': 'Příjezd',
   'plan.stay.checkOut': 'Odjezd',
   'plan.day.addStay': 'Přidat ubytování: {day}',

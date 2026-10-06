@@ -81,6 +81,9 @@ const messages = {
   'plan.addPlace.more': 'Yer eklemenin diğer yolları',
   'plan.addPlace.option.map': 'Haritaya yerleştir',
   'plan.addPlace.forDayNamed': 'Yer ekle: {day}',
+  'plan.addPlace.quota':
+    'Planınızdaki yer sınırına ulaştınız. Daha fazla eklemek için planınızı yükseltin.',
+  'plan.addPlace.quotaAction': 'Planları gör',
   'plan.stay.checkIn': 'Giriş',
   'plan.stay.checkOut': 'Çıkış',
   'plan.day.addStay': 'Konaklama ekle: {day}',

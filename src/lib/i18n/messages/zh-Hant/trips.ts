@@ -74,6 +74,9 @@ const messages = {
   'plan.addPlace.more': '新增地點的其他方式',
   'plan.addPlace.option.map': '放到地圖上',
   'plan.addPlace.forDayNamed': '新增地點——{day}',
+  'plan.addPlace.quota':
+    '你已達到目前方案的地點數量上限。升級方案即可新增更多。',
+  'plan.addPlace.quotaAction': '查看方案',
   'plan.stay.checkIn': '入住',
   'plan.stay.checkOut': '退房',
   'plan.day.addStay': '新增住宿——{day}',

@@ -179,8 +179,9 @@ export const createWorkspace = createServerFn({ method: 'POST' })
 
 **The refusal is returned, not thrown, and that is a deliberate contract choice.** `src/lib/errors.ts`
 documents that by the time a failure reaches the browser it is _"an `Error` with a `message` and
-nothing else"_, and `readPublicFailure` decodes only `{ kind, message?, reference? }`. There is no
-channel for a structured code plus parameters. Throwing would leave two bad options: send an English
+nothing else"_, and `readPublicFailure` decodes only `{ kind, message?, code?, reference? }`, where `code` is
+the single allow-listed literal `QUOTA_EXCEEDED` (#621). There is no channel for a structured code
+plus parameters (the one `code` it carries is a bare constant). Throwing would leave two bad options: send an English
 sentence from the server (forbidden - CLAUDE.md: user-facing copy is never hardcoded), or send a key
 the client must then map anyway. A discriminated result keeps the refusal machine-readable, lets the
 client render catalogue copy, and needs no new error machinery.

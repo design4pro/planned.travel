@@ -338,8 +338,10 @@ coordination.
 Enforcement lives in `src/server/repos/base.ts` (`resolveQuotas`, `assertQuota`) and
 `src/server/billing/entitlements.ts`, and nowhere else. Every repository that creates a row a
 plan can run out of calls `assertQuota(scope, metric, currentUsage)` _before_ it writes; the
-call throws `QuotaExceededError`, which the server-function layer maps to a 402/409 with a
-human message naming the metric and the ceiling.
+call throws `QuotaExceededError`. The failure-redaction middleware sends the browser one constant,
+`code: 'QUOTA_EXCEEDED'`, beside the usual reference (`src/lib/errors.ts`); the metric, the
+ceiling, the plan and the message stay on the server. A screen that owns a quota-limited write
+resolves the code to a localised sentence and a way to the billing page.
 
 ### One resolver, one answer
 
