@@ -49,7 +49,8 @@ import type { PublicFailure } from '#/lib/errors'
  * whatever sentences they carry. A new refusal class does not join this list: it travels as a
  * message key the client resolves, the shape `SHELL_STATE_KEYS` already has, or it stays a
  * diagnostic and the caller's localised fallback is what the reader sees. `ForbiddenError` is the
- * standing example of the second.
+ * standing example of the second. A quota refusal is the third shape, below: still a diagnostic,
+ * with a constant code beside its reference.
  */
 export const AUTHORED_ERROR_NAMES: ReadonlySet<string> = new Set([
   'AuthRequirementError',
@@ -92,6 +93,14 @@ function validationIssues(cause: unknown): ReadonlyArray<IssueLike> | null {
   }
   return readable
 }
+
+/**
+ * Both classes called `QuotaExceededError` - the repository's (`src/server/repos/context.ts`),
+ * which a write past a countable limit throws, and billing's (`src/server/billing/types.ts`) -
+ * are told apart from nothing else by their name, for the reason this module gives above.
+ * `__tests__/public.test.ts` constructs both.
+ */
+const QUOTA_ERROR_NAME = 'QuotaExceededError'
 
 function nameOf(cause: unknown): string | null {
   if (typeof cause !== 'object' || cause === null || !('name' in cause)) {
@@ -140,6 +149,14 @@ export function classifyFailure(cause: unknown): PublicFailure {
     if (message.length > 0) {
       return { kind: 'refusal', message }
     }
+  }
+
+  // Not authored copy: the message names the metric and the ceiling, which are for a maintainer.
+  // What the reader is owed is the fact, so the one constant code crosses and nothing the error
+  // carries does - never `RepositoryError.code` in general, which would send `NOT_FOUND` and
+  // `TENANT_ISOLATION` to the browser. The caller attaches the reference, as for any diagnostic.
+  if (name === QUOTA_ERROR_NAME) {
+    return { kind: 'unexpected', code: 'QUOTA_EXCEEDED' }
   }
 
   return { kind: 'unexpected' }

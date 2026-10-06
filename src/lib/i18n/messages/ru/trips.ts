@@ -87,6 +87,9 @@ const messages = {
   'plan.addPlace.more': 'Другие способы добавить место',
   'plan.addPlace.option.map': 'Поставить на карту',
   'plan.addPlace.forDayNamed': 'Добавить место, {day}',
+  'plan.addPlace.quota':
+    'Вы достигли лимита мест в вашем тарифе. Перейдите на более высокий тариф, чтобы добавить ещё.',
+  'plan.addPlace.quotaAction': 'Посмотреть тарифы',
   'plan.stay.checkIn': 'Заезд',
   'plan.stay.checkOut': 'Выезд',
   'plan.day.addStay': 'Добавить проживание, {day}',
