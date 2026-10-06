@@ -4,8 +4,8 @@
 | ------------------ | ----- |
 | **Status**         | in-progress |
 | **Issue**          | #640  |
-| **Spec PR**        | none  |
-| **Implementation** | none  |
+| **Spec PR**        | #643  |
+| **Implementation** | #939  |
 
 ## 📝 TLDR
 
