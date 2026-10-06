@@ -231,10 +231,11 @@ const BOOKING_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
  * The third layer, after the tenant filter and after `requireTrip`: {@link assertTripRole} with the
  * booking writers' role list.
  *
- * Exported because one writer of this trip's bookings does not live in this file: the confirmation
- * import spends a metered extraction unit the moment it enqueues, long before `createReservation`
- * is reached, so `startBookingImport` has to ask the same question this early. It asks it through
- * this function so the role list stays declared once.
+ * Exported because the confirmation import, which writes this trip's bookings from outside this
+ * file, spends before `createReservation` is reached: `startBookingImport` spends a metered
+ * extraction unit the moment it enqueues, and `confirmBookingImport` creates a place and calls the
+ * geocoder for an accommodation row before its reservation write. Both ask the same question this
+ * early, through this function, so the role list stays declared once.
  */
 export async function assertBookingRole(
   scope: TenantScope,
