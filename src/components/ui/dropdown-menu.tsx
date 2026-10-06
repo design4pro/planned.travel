@@ -145,6 +145,7 @@ export const DropdownMenuLinkItem = React.forwardRef<
         strokeWidth={2}
         className="shrink-0 text-ink-4"
         aria-hidden="true"
+        data-mirror-rtl
       />
     </a>
   </MenuPrimitive.Item>

@@ -121,7 +121,7 @@ const DAY_TOOL_CLASS = cn(
   'text-caption text-ink-3',
   transitionBase,
   focusRing,
-  'hover:border-edge-strong hover:bg-hover hover:text-ink-2',
+  'hover:border-edge-strong hover:bg-hover hover:text-ink-2 active:bg-active',
 )
 
 /**
@@ -181,10 +181,15 @@ function DayLink({
       <span className="flex items-center gap-1.5">
         <Icon size={12} strokeWidth={2} aria-hidden="true" />
         {label}
-        <ExternalLink size={10} strokeWidth={2} aria-hidden="true" />
+        <ExternalLink
+          size={10}
+          strokeWidth={2}
+          aria-hidden="true"
+          data-mirror-rtl
+        />
       </span>
       {note === null ? null : (
-        <span className="text-micro text-ink-4">{note}</span>
+        <span className="text-micro text-ink-3">{note}</span>
       )}
     </a>
   )

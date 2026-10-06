@@ -100,6 +100,10 @@ describe('dayHandoff — the day, in visiting order', () => {
     expect(four?.href).toContain('waypoints=35.0394%2C135.7292%7C35.0094')
   })
 
+  it('counts a stop at 0,0 as placed', () => {
+    expect(dayHandoff([{ lat: 0, lng: 0 }])?.kind).toBe('point')
+  })
+
   it('skips a stop without coordinates without shifting the others', () => {
     const withGap = dayHandoff([
       FUSHIMI,

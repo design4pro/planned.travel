@@ -2512,8 +2512,8 @@ What ships today: one dashed line per day in visiting order (`src/components/map
 lock a stop against being moved. Getting a day out of the product and into whatever the reader
 navigates with is not this stage's: issue #663 owns it (third divergence below).
 
-Behaviour sourced as `wiki: Route-Optimization` and `wiki: Map-Features`. Three divergences, each
-stated with its reason rather than carried across:
+Behaviour sourced as `wiki: Route-Optimization` and `wiki: Map-Features`. Two divergences, each
+stated with its reason rather than carried across, and a third that is superseded:
 
 - **The reference's segment pills claim a walking and a driving time.** Both come from a routing
   service, which is **Gate B**. Ours show a **distance** — great-circle, computed here, claimed as
