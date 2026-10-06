@@ -355,3 +355,7 @@ Any third assertion that needs changing is a regression, not an adjustment, and 
 - The third item kind (transport rows), which arrives from `BKG-10` through the extension point this change declares.
 - Translating `plan-dnd.ts`'s four existing drag announcements; see the Copy section's debt note.
 - Removing the now-callerless `reorderDayNotesFn`; see A6.
+
+## 🔧 Amendment
+
+**`reorderDayTimeline` was replaced by `reorderDayTimelines` (#212).** A2 above, and the spec bodies that name the old verb, describe the one-day writer. It now takes every day a drag touched (`{ tripId, days: [{ dayId, items, clearTime }] }`), reads the whole trip's stops and notes, and writes each row's `day_id` with its position in one batch, so a note or a stop that changes day is persisted by the same write that numbers it; `moveAssignment` and the route's pre-move loop are gone. What A2 refuses on the screen is unchanged: lifting the `not-in-another-day` refusal is #801.
