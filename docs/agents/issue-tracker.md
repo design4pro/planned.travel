@@ -32,7 +32,7 @@ REST form, `gh api -X POST repos/design4pro/planned.travel/issues/<n>/labels -f 
 
 A skill claims with assignee + `in-progress` + a 🤖 comment and releases both on exit, including on
 error. A skill that acts on an inline review thread replies in it and resolves it (the `develop`
-ruleset merges nothing with an open thread); a thread it declines stays open for a human.
+ruleset merges nothing with an open thread); a thread it declines goes to a specialist, which settles it (ADR 0035).
 Everything else it writes (category, priority, risk, pipeline labels, review, QA request, run
 summary) follows `SDLC.md` and is explained in a comment.
 

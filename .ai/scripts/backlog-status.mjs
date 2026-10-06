@@ -52,7 +52,7 @@ const ACTIVE_RUN_STATES = new Set(["queued", "running", "waiting", "review"]);
 
 /**
  * Open PRs waiting for a person at which `--next` and `--plan` stop handing out implementation, so
- * the queue never outruns the review only a person can give. PRs the pipeline merges by itself do
+ * the queue never outruns what only a person can clear (a hold, a parked review). PRs the pipeline merges by itself do
  * not count (ADR 0033).
  */
 export const WIP_LIMIT = 3;
@@ -198,7 +198,7 @@ const hasLabel = (pr, name) => pr.labels.some((label) => label.name === name);
 /**
  * How long a PR labelled `changes-requested` may sit untouched before it counts as parked: a run
  * that is still fixing the review pushes within that time, so a PR idle past it is one the autopilot
- * stopped on a decision only a person takes (its result comment says so).
+ * stopped or died before the pipeline could close it, and a person has to look.
  */
 export const PARKED_HOURS = 24;
 

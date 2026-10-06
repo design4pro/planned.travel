@@ -14,7 +14,7 @@ Extends the installed skill: read `.claude/skills/om-auto-review-pr/SKILL.md` an
   on the PR, and the thread **resolved**. Resolving is what makes the state terminal: an open
   thread blocks the merge and nothing but a human clicking will ever clear it, so a run that agrees
   and walks away has converted a one-line correction into a permanent stall. `changes-requested` is
-  what says a human still owes something; the resolved thread carries what they owe.
+  what says something is still owed, and on a PR into `develop` the run that finds it adds `blocked` and the `🤖 HUMAN-ONLY:` comment of the `om-pr-autopilot` override at once, since no agent can act on it; the resolved thread carries what a person owes.
   Check intended write paths before implementation. ADR 0025 removes upstream ownership, not
   runtime permissions: protected configuration can still require supervision. Declare known
   protected writes in Cezar `writePaths` (or `cezar task --write-path`) so preflight can stop

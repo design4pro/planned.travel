@@ -20,8 +20,8 @@ Extends the installed skill: read `.claude/skills/om-approve-merge-pr/SKILL.md` 
   automation" rules: report the PR not mergeable now and name the route. `needs-qa` without
   `qa-approved`, a stale `QA head:`, and `needs-qa` beside `skip-qa` route to
   `om-auto-qa-pr <number> --self-qa-signoff` on the current head (treat the pair as `needs-qa`);
-  `changes-requested` and a `qa-failed` the QA panel set route to `om-auto-fix-pr <number>`. Never
-  merge past one of them in this run. A `qa-failed` a person set, an active `qa`, `blocked` and
+  `changes-requested` and a `qa-failed` the QA panel set (a `🤖 QA-PANEL: FAIL head=<sha>` comment for the current head marks it) route to `om-auto-fix-pr <number>`. A `risk-high` or `security` PR without an approving security verdict on the current head (`om-pr-autopilot` override) routes back to `om-pr-autopilot <number> --allow-merge`. Never
+  merge past one of them in this run. A `qa-failed` without that comment (a person set it), an active `qa`, `blocked` and
   `do-not-merge` still stop and report.
 - Before approval and again at step 4, reject an explicitly requested squash or rebase
   when `baseRefName` is `main`: "Cannot squash or rebase a PR targeting main: a merge
