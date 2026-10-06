@@ -948,12 +948,6 @@ export async function ensureWorkspacePeople(
   return { ids, created, scopes }
 }
 
-/** What the second workspace came to hold, for the seed report. */
-export interface SecondWorkspaceResult {
-  readonly organizationId: string
-  readonly tripId: string
-}
-
 /**
  * Gives the demo owner a second workspace, so the workspace switcher has somewhere to go.
  *
@@ -970,21 +964,28 @@ export interface SecondWorkspaceResult {
 export async function ensureSecondWorkspace(
   db: Database,
   workspace: ResolvedWorkspace,
-): Promise<SecondWorkspaceResult> {
+): Promise<void> {
   const auth = authDb()
   const { name, slug, trip } = secondWorkspace
   const founded = SEED_ANCHOR_INSTANT
   const joined = instantOn(1)
 
-  let organizationId = (
+  const organizationId = demoAuthId('organization', slug)
+  const existing = (
     await auth
       .select({ id: organization.id })
       .from(organization)
       .where(eq(organization.slug, slug))
       .limit(1)
-  ).at(0)?.id
-  if (organizationId === undefined) {
-    organizationId = demoAuthId('organization', slug)
+  ).at(0)
+  if (existing !== undefined && existing.id !== organizationId) {
+    // A workspace somebody made by hand under the demo slug: adding the demo owner to it as
+    // `owner` would be the seed reaching into data it did not write.
+    throw new Error(
+      `A workspace with the slug "${slug}" already exists and is not the demo's; rename or remove it.`,
+    )
+  }
+  if (existing === undefined) {
     await auth.insert(organization).values({
       id: organizationId,
       name,
@@ -1017,7 +1018,7 @@ export async function ensureSecondWorkspace(
   if (stale !== null) {
     await deleteTrip(scope, stale.id)
   }
-  const created = await createTrip(scope, {
+  await createTrip(scope, {
     id: trip.id,
     title: trip.title,
     slug: trip.slug,
@@ -1032,6 +1033,4 @@ export async function ensureSecondWorkspace(
     visibility: trip.visibility,
     accentColour: trip.accentColour,
   })
-
-  return { organizationId, tripId: created.id }
 }

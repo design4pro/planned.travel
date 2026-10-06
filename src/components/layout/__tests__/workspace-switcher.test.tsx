@@ -25,7 +25,11 @@ import type { ShellOrganization, ShellSession } from '../session'
  * because how a failed call is read is part of what is under test.
  */
 const auth = vi.hoisted(() => ({ setActive: vi.fn() }))
-const router = vi.hoisted(() => ({ invalidate: vi.fn(), navigate: vi.fn() }))
+const router = vi.hoisted(() => ({
+  clearCache: vi.fn(),
+  invalidate: vi.fn(),
+  navigate: vi.fn(),
+}))
 const notify = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 
 vi.mock('#/lib/auth/client', async (importOriginal) => ({
@@ -129,6 +133,7 @@ function workspaces(): Array<[string, boolean]> {
 
 beforeEach(() => {
   auth.setActive.mockReset()
+  router.clearCache.mockReset()
   router.invalidate.mockReset()
   router.navigate.mockReset()
   notify.error.mockReset()
@@ -181,6 +186,9 @@ describe('switching', () => {
       calls.push('setActive')
       return { data: {}, error: null }
     })
+    router.clearCache.mockImplementation(() => {
+      calls.push('clearCache')
+    })
     router.navigate.mockImplementation(async () => {
       calls.push('navigate')
     })
@@ -194,20 +202,22 @@ describe('switching', () => {
     expect(auth.setActive).toHaveBeenCalledExactlyOnceWith({
       organizationId: 'org_b',
     })
+    // `replace`: Back must not return to a trip that belongs to the workspace just left.
     expect(router.navigate).toHaveBeenCalledExactlyOnceWith({
       to: '/dashboard',
+      replace: true,
     })
-    expect(calls).toEqual(['setActive', 'navigate', 'invalidate'])
+    // The previous workspace's cached `/dashboard` is dropped before the navigation can show it.
+    expect(calls).toEqual(['setActive', 'clearCache', 'navigate', 'invalidate'])
     expect(notify.error).not.toHaveBeenCalled()
   })
 
   it('does not move the check, or leave the page, until the switch has resolved', async () => {
     const pending = deferred<{ data: object; error: null }>()
     auth.setActive.mockReturnValue(pending.promise)
-    const { user, open } = await mount(sessionOf([ALPHA, BETA]))
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
 
     await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
-    await open()
 
     expect(workspaces()).toEqual([
       ['Alpha Travel', true],
@@ -220,6 +230,45 @@ describe('switching', () => {
     await vi.waitFor(() => {
       expect(router.invalidate).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('keeps the menu open and busy while in flight, ignores a second choice, then closes', async () => {
+    const pending = deferred<{ data: object; error: null }>()
+    auth.setActive.mockReturnValue(pending.promise)
+    const { user } = await mount(sessionOf([ALPHA, BETA, GAMMA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+
+    // The reader can see something is happening, instead of a menu that vanished and did nothing.
+    expect(screen.getByRole('menu')).not.toBeNull()
+    expect(
+      screen
+        .getByRole('group', { name: 'Workspace' })
+        .getAttribute('aria-busy'),
+    ).toBe('true')
+
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Gamma Clients' }),
+    )
+    expect(auth.setActive).toHaveBeenCalledExactlyOnceWith({
+      organizationId: 'org_b',
+    })
+
+    pending.resolve({ data: {}, error: null })
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull()
+    })
+    expect(auth.setActive).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the menu when the active workspace is chosen again', async () => {
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Alpha Travel' }),
+    )
+
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 })
 
@@ -270,6 +319,9 @@ describe('a switch that fails', () => {
       },
     })
     notify.error.mockImplementation(() => calls.push('toast'))
+    router.clearCache.mockImplementation(() => {
+      calls.push('clearCache')
+    })
     router.navigate.mockImplementation(async () => {
       calls.push('navigate')
     })
@@ -281,9 +333,32 @@ describe('a switch that fails', () => {
     await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
 
     await vi.waitFor(() => {
-      expect(calls).toEqual(['toast', 'navigate', 'invalidate'])
+      expect(calls).toEqual(['toast', 'clearCache', 'navigate', 'invalidate'])
     })
-    expect(router.navigate).toHaveBeenCalledWith({ to: '/dashboard' })
+    expect(router.navigate).toHaveBeenCalledWith({
+      to: '/dashboard',
+      replace: true,
+    })
+    // The refusal is not a connection problem, so the toast does not say it is one.
+    expect(notify.error).toHaveBeenCalledExactlyOnceWith(
+      'Could not switch workspace',
+      undefined,
+    )
+  })
+
+  it('re-syncs after a 401 too, so the shell can send the reader to sign in', async () => {
+    auth.setActive.mockResolvedValue({
+      data: null,
+      error: { status: 401, code: 'UNAUTHORIZED', message: 'Unauthorized' },
+    })
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+
+    await vi.waitFor(() => {
+      expect(router.invalidate).toHaveBeenCalledTimes(1)
+    })
+    expect(router.navigate).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -294,7 +369,7 @@ describe('a long list', () => {
     slug: `workspace-${index + 1}`,
   }))
 
-  it('scrolls inside its own bounded container and leaves the menu unbounded', async () => {
+  it('scrolls inside its own bounded container and bounds the account menu to the viewport', async () => {
     await mount(sessionOf(TEN))
 
     const scroller = screen.getByRole('group', {
@@ -304,10 +379,13 @@ describe('a long list', () => {
     expect(scroller?.classList.contains('overflow-y-auto')).toBe(true)
     expect(screen.getAllByRole('menuitemradio')).toHaveLength(10)
 
-    // The shared menu surface is untouched: the bound belongs to the list, not to every menu.
+    // The account menu cannot outgrow the viewport, so Sign out stays reachable at 400% zoom or in
+    // landscape. The bound is set on this menu only: the shared `contentClass` stays untouched.
     const menu = screen.getByRole('menu')
-    expect(menu.classList.contains('max-h-64')).toBe(false)
-    expect(menu.classList.contains('overflow-y-auto')).toBe(false)
+    expect(menu.className).toContain(
+      'max-h-[var(--radix-dropdown-menu-content-available-height)]',
+    )
+    expect(menu.className).toContain('overflow-y-auto')
   })
 
   it('reaches the last workspace from the keyboard', async () => {

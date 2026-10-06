@@ -2505,10 +2505,12 @@ test.describe('switching workspace', () => {
   }) => {
     test.setTimeout(120_000)
     await context.clearCookies()
-    test.skip(
-      !(await signIn(page, baseURL)),
+    // Not a skip: this is the only browser proof that a switch follows the reader's data, and a
+    // sign-in that failed (the rate limit, an unseeded database) must fail it, not report it green.
+    expect(
+      await signIn(page, baseURL),
       `${DEMO_EMAIL} could not sign in - run \`node scripts/seed/seed.mjs\``,
-    )
+    ).toBe(true)
     if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
 
     const firstTripId = await aTripToWalk(page, FIRST.trip)
@@ -2516,7 +2518,17 @@ test.describe('switching workspace', () => {
     await expect(page.getByText(SECOND.trip)).toHaveCount(0)
     await expectActive(page, FIRST.name)
 
+    // Switch from a trip's own page: invalidating there, before the dashboard, would re-run the
+    // trip loader against the second workspace and show its error panel.
+    await page.goto(`/trips/${firstTripId}/plan`)
     await switchTo(page, SECOND.name)
+    await expect(
+      page.getByText(FIRST.trip),
+      'the dashboard the switch lands on must not show the first workspace’s trips',
+    ).toHaveCount(0)
+    await expect(
+      page.getByRole('heading', { name: 'This trip did not load' }),
+    ).toHaveCount(0)
 
     await visit(page, TRIPS, 'light')
     await expect(page.getByText(SECOND.trip).first()).toBeVisible()
@@ -2535,6 +2547,7 @@ test.describe('switching workspace', () => {
 
     await visit(page, TRIPS, 'light')
     await switchTo(page, FIRST.name)
+    await expect(page.getByText(SECOND.trip)).toHaveCount(0)
     await visit(page, TRIPS, 'light')
     await expect(page.getByText(FIRST.trip).first()).toBeVisible()
     await expect(page.getByText(SECOND.trip)).toHaveCount(0)

@@ -3,6 +3,8 @@
 A rich, believable demo workspace for `rafal@planned.travel`: six trips in six different states, one
 of them fully furnished, plus the journal, atlas, vacation planner, collections and inbox that hang off
 them. Without it every screen renders an empty state and nothing can be judged against the design bar.
+The same owner also belongs to a second, minimal workspace with one trip of its own, so the workspace
+switcher in the account menu has somewhere to go.
 
 There is no `pnpm seed` script; the commands below are the interface. `pnpm worktree:bootstrap`
 runs the seed for you as its last step, and is the shorter road on a checkout that has none of the
@@ -110,8 +112,11 @@ The seed runs **inside the Worker**, at `POST /api/dev/seed`, and the script abo
 That is not a workaround: the D1 binding, the Drizzle client and the tenant repositories only all exist
 inside the Worker runtime, and going through the repositories is the whole point.
 
-Every row is written by a function in `src/server/repos`. Nothing here writes SQL, stamps an
-`organization_id` by hand, or reaches around a Zod schema — so seeding exercises tenant scoping, input
+Every tenant row is written by a function in `src/server/repos`. Nothing here writes SQL against a
+tenant table, stamps an `organization_id` by hand, or reaches around a Zod schema (the auth tables belong
+to the auth module: `bootstrap.ts` writes the `user` and `account` rows, and the second workspace's
+`organization` and `member` rows, through `authDb()`, the seam `src/server/auth/provisioning.ts` uses
+too) — so seeding exercises tenant scoping, input
 validation, slug reservation, the contiguous day-run invariant, the plan quota guards and the split
 arithmetic exactly as a real user would. A dataset that survives that is worth trusting as a fixture.
 
@@ -124,7 +129,9 @@ src/routes/api/dev/-seed/
   dataset/workspace.ts              people, atlas, journal, collections, vacay, inbox
   apply-trip.ts                     one generic pass that writes any trip
   apply.ts                          orchestration, idempotence, the report
+  dataset/second-workspace.ts       the second workspace's name, slug and one trip
   bootstrap.ts                      owner lookup by email + the collaborator user rows
+                                    + `ensureSecondWorkspace`
 scripts/seed/seed.mjs               trigger
 scripts/seed/verify.mjs             read-back and consistency checks
 ```
@@ -192,8 +199,9 @@ seeds from scratch renders the same cards the baselines were photographed agains
   database, and `src/server/repos/__tests__/trips.test.ts` restates them again against the dataset.
   Editing one without editing both turns the suite red before it turns a screenshot red.
 - Because the keys are constants rather than per-workspace values, **one database holds one demo
-  workspace.** Seeding a second owner with `--email` into the same D1 file collides on the trips
-  table's primary key. That is the deliberate trade: a key derived from the workspace would be stable
+  workspace of six trips.** (The second workspace's one trip has a key of its own,
+  `demo-trip-07-sopot-family-weekend`.) Seeding a second owner with `--email` into the same D1 file
+  collides on the trips table's primary key. That is the deliberate trade: a key derived from the workspace would be stable
   across `--force` but not across a fresh database, which is precisely the failure being fixed here.
 - Only trips are pinned. Everything else the seed writes still takes a generated key, because
   nothing else is drawn from its own identifier.

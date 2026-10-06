@@ -34,6 +34,7 @@ import type { ShellSession } from './session'
 export function UserMenu({ session }: { session: ShellSession }) {
   const router = useRouter()
   const t = useTranslate()
+  const [open, setOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const { user, organization, organizations } = session
 
@@ -59,7 +60,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
   }
 
   return (
-    <MenuRoot>
+    <MenuRoot open={open} onOpenChange={setOpen}>
       <MenuTrigger
         className={cn(
           'group inline-flex max-w-56 items-center gap-2 rounded-full border border-transparent p-1 text-label font-medium text-ink focus-ring',
@@ -77,7 +78,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
         />
       </MenuTrigger>
 
-      <MenuContent className="min-w-64">
+      <MenuContent className="max-h-[var(--radix-dropdown-menu-content-available-height)] max-w-[min(20rem,var(--radix-dropdown-menu-content-available-width))] min-w-64 overflow-y-auto">
         <div className="flex items-center gap-3 px-2.5 py-2.5">
           <Avatar name={user.name} src={user.image} size="lg" />
           <div className="min-w-0">
@@ -91,6 +92,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
         <WorkspaceSwitcher
           organizations={organizations}
           activeId={organization?.id ?? null}
+          onSettled={() => setOpen(false)}
         />
 
         <MenuSeparator />

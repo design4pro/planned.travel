@@ -45,6 +45,22 @@ export function bookImportsKey(userId: string): string {
   return `${BOOK_IMPORTS_PREFIX}:${userId}`
 }
 
+/**
+ * Who a register belongs to: the account and the workspace it is working in.
+ *
+ * A job is staged against one workspace's trip, and the poll refuses it from any other. Keyed by the
+ * account alone, a reader who switched workspaces kept seeing the previous workspace's jobs, every
+ * poll was refused, the row went stalled, and Dismiss then forgot a reading that was still staged.
+ * The shell and the dialog both pass this as their `userId`, so a register is only ever read by the
+ * workspace that wrote it, and switching back finds it where it was left.
+ */
+export function bookImportsOwner(
+  userId: string,
+  organizationId: string | null,
+): string {
+  return `${userId}:${organizationId ?? ''}`
+}
+
 export const POLL_INTERVAL_MS = 2_000
 /**
  * Per job, and generous against the extraction budget the queue handler works to. Counted from the
@@ -292,8 +308,9 @@ export function useBookImportPoll(
  * component for it — in the render and in the bundle: the server function it polls is imported
  * dynamically, on the first ask, so its schema graph stays out of the shell's chunk.
  *
- * `userId` comes from the shell's session rather than from a read of its own, because the register
- * is keyed by it — see {@link bookImportsKey}.
+ * `userId` is the register's owner, a {@link bookImportsOwner} of the shell's account and
+ * workspace, so it comes from the shell's session rather than from a read of its own — see
+ * {@link bookImportsKey}.
  */
 export function BookImportWidget({ userId }: { readonly userId: string }) {
   const t = useTranslate()
