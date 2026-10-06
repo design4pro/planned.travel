@@ -112,6 +112,11 @@ export interface SeededTenant {
   scopeFor: (userId: string, role?: OrganizationRole) => TenantScope
   /** Adds a user row plus a `member` row and returns the user id. */
   addUser: (name: string, role?: OrganizationRole) => Promise<string>
+  /**
+   * Adds a `member` row for a user that already exists - one person in two workspaces, which
+   * `addUser` cannot express because it always mints a new user.
+   */
+  addMembership: (userId: string, role?: OrganizationRole) => Promise<void>
 }
 
 export interface Harness {
@@ -241,6 +246,15 @@ export async function createHarness(
           createdAt: new Date(),
         })
         return userId
+      },
+      async addMembership(userId, role = 'member') {
+        await db.insert(member).values({
+          id: newId(),
+          organizationId,
+          userId,
+          role,
+          createdAt: new Date(),
+        })
       },
     }
   }

@@ -85,6 +85,11 @@ const messages = {
   'account.signOutFailed': 'Chưa đăng xuất được',
   'account.signOutFailedBody': 'Kiểm tra kết nối rồi thử lại.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Không gian',
+  'workspace.switchFailed': 'Chưa chuyển được không gian',
+  'workspace.switchFailedBody': 'Kiểm tra kết nối rồi thử lại.',
+
   'theme.label': 'Giao diện',
   'theme.light': 'Sáng',
   'theme.dark': 'Tối',

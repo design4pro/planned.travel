@@ -69,6 +69,11 @@ const messages = {
   'account.signOutFailed': 'Odhlášení se nepovedlo',
   'account.signOutFailedBody': 'Zkontrolujte připojení a zkuste to znovu.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Prostor',
+  'workspace.switchFailed': 'Prostor se nepodařilo přepnout',
+  'workspace.switchFailedBody': 'Zkontrolujte připojení a zkuste to znovu.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Vzhled',
   'theme.light': 'Světlý',

@@ -2,7 +2,7 @@
 
 | Field              | Value |
 | ------------------ | ----- |
-| **Status**         | draft |
+| **Status**         | in-progress |
 | **Issue**          | #640  |
 | **Spec PR**        | none  |
 | **Implementation** | none  |
@@ -484,3 +484,13 @@ separate fix makes the reader land in it.
   create-time plan gate.
 - **Moving or copying a trip between workspaces.**
 - **Raising `organizationLimit: 20`.**
+
+## Amendment
+
+Phase 1 (issue #640) shipped differently from the design above in these places. Phase 2 is unbuilt.
+
+1. **No create item.** Creation is split out to #804, so Phase 1 renders the radio list and nothing else. The step 3 assertion that pinned an inert create item became "the menu offers no way to create a workspace".
+2. **A refused switch re-syncs when it is a 403.** Better Auth clears `session.activeOrganizationId` before it refuses a non-member, so after the toast the screen navigates to `/dashboard` and invalidates exactly as for a success. Any other failure leaves the screen where it was. `auth-handler-closure.test.ts` pins both answers of `organization/set-active`.
+3. **The second seed workspace is an addition, not a plural resolver.** `ResolvedWorkspace` stays singular. `ensureSecondWorkspace` in `bootstrap.ts` and `dataset/second-workspace.ts` add a second workspace for the demo user as a new fixture section at the end of `writeSeed`, so every existing id stays stable, and `DATASET_VERSION` moves to 5 so a seeded database is re-seeded. The personal workspace stays the oldest membership, which `firstOrganizationIdFor` relies on.
+4. **A trip of the other workspace shows the trip error panel, not not-found.** `loadTripHeader` does not map `NotFoundError` to a router not-found, so the journey asserts the existing "This trip did not load" panel and that no data of the first workspace is on screen. Mapping it is a separate change.
+5. **The journey signs in on its own.** The active workspace lives on the session row and the cached session cookie is shared by every worker, so the journey clears cookies and signs in again rather than switching the shared session.

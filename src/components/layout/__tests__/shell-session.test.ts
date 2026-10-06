@@ -149,6 +149,34 @@ describe('the shell session', () => {
   })
 })
 
+describe('the workspaces the shell carries', () => {
+  const SECOND: ShellOrganization = {
+    id: 'org_2',
+    name: 'Nowak Family',
+    slug: 'nowak-family',
+  }
+
+  it('carries every workspace through and marks the active one', () => {
+    // The switcher renders `organizations` and checks the one equal to `organization`; a payload
+    // that dropped an entry would strand the reader out of a workspace they belong to.
+    const shell = buildShellSession({
+      session: authSession({}),
+      organization: SECOND,
+      organizations: [ORGANIZATION, SECOND],
+      organizationRole: 'member',
+      operator: null,
+    })
+
+    expect(shell.organizations).toEqual([ORGANIZATION, SECOND])
+    expect(shell.organization).toEqual(SECOND)
+    expect(
+      shell.organizations.filter(
+        (entry) => entry.id === shell.organization?.id,
+      ),
+    ).toEqual([SECOND])
+  })
+})
+
 describe('naming the operator behind an impersonated session', () => {
   /**
    * Asserted from the source rather than by calling it.

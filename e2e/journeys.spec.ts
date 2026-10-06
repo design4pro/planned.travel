@@ -19,7 +19,12 @@ import {
   applyTheme,
 } from './helpers/routes.ts'
 import type { RouteCase, Theme } from './helpers/routes.ts'
-import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
+import {
+  DEMO_EMAIL,
+  hasSession,
+  signIn,
+  useSession,
+} from './helpers/session.ts'
 import {
   FROZEN_NOW,
   readCaptureState,
@@ -2453,5 +2458,85 @@ test.describe('a confirmation file read into the booking desk', () => {
     // The refusal comes back after the upload has already been stored, so this
     // walk leaves a file behind even though it wrote no booking.
     await sweepFiles(page, tripId)
+  })
+})
+
+/**
+ * 640 - switching workspace from the account menu.
+ *
+ * The demo owner belongs to two workspaces (`ensureSecondWorkspace` in the seed): the first holds
+ * the six demo trips, the second holds one of its own.
+ *
+ * The walk signs in again instead of using the cached session, and that is the whole reason this
+ * block is not under `useSession`. The active workspace is a column on the *session row*, and the
+ * cached cookie is one session shared by every worker, so a switch made with it would move every
+ * other test in the run into the second workspace while it was still reading the first. A session of
+ * its own is dropped with the context and leaves the fixture exactly where it found it.
+ */
+test.describe('switching workspace', () => {
+  const FIRST = { name: "Rafal's Travel", trip: 'Lisbon, slowly' }
+  const SECOND = { name: 'Wolak Family Trips', trip: 'Sopot, a family weekend' }
+
+  /**
+   * Asserted on the open menu and retried, not read once: the check moves when the router has
+   * re-read the shell, which is the step after the navigation the URL assertion waits for.
+   */
+  async function expectActive(page: Page, workspace: string): Promise<void> {
+    await page.getByRole('button', { name: 'Account menu' }).click()
+    await expect(
+      page.getByRole('menuitemradio', { name: workspace }),
+    ).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('Escape')
+  }
+
+  async function switchTo(page: Page, workspace: string): Promise<void> {
+    await page.getByRole('button', { name: 'Account menu' }).click()
+    await page.getByRole('menuitemradio', { name: workspace }).click()
+    // The switch lands on the dashboard before it drops the cached loaders, so a detail route
+    // belonging to the workspace just left is never re-run against the new one.
+    await expect(page).toHaveURL(/\/dashboard$/)
+    await expectActive(page, workspace)
+  }
+
+  test('a reader sees only the workspace they are in, and gets the first one back', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000)
+    await context.clearCookies()
+    test.skip(
+      !(await signIn(page, baseURL)),
+      `${DEMO_EMAIL} could not sign in - run \`node scripts/seed/seed.mjs\``,
+    )
+    if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
+
+    const firstTripId = await aTripToWalk(page, FIRST.trip)
+    await expect(page.getByText(FIRST.trip).first()).toBeVisible()
+    await expect(page.getByText(SECOND.trip)).toHaveCount(0)
+    await expectActive(page, FIRST.name)
+
+    await switchTo(page, SECOND.name)
+
+    await visit(page, TRIPS, 'light')
+    await expect(page.getByText(SECOND.trip).first()).toBeVisible()
+    await expect(
+      page.getByText(FIRST.trip),
+      'the first workspace’s trips must not follow the reader into the second',
+    ).toHaveCount(0)
+
+    // The first workspace's trip, asked for by id while the second is active: the trip does not
+    // load, and none of its data is on screen.
+    await page.goto(`/trips/${firstTripId}/plan`)
+    await expect(
+      page.getByRole('heading', { name: 'This trip did not load' }),
+    ).toBeVisible()
+    await expect(page.getByText(FIRST.trip)).toHaveCount(0)
+
+    await visit(page, TRIPS, 'light')
+    await switchTo(page, FIRST.name)
+    await visit(page, TRIPS, 'light')
+    await expect(page.getByText(FIRST.trip).first()).toBeVisible()
+    await expect(page.getByText(SECOND.trip)).toHaveCount(0)
   })
 })

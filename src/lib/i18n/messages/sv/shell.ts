@@ -63,6 +63,11 @@ const messages = {
   'account.signOutFailed': 'Utloggningen gick inte igenom',
   'account.signOutFailedBody': 'Kontrollera din uppkoppling och försök igen.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Arbetsyta',
+  'workspace.switchFailed': 'Det gick inte att byta arbetsyta',
+  'workspace.switchFailedBody': 'Kontrollera din uppkoppling och försök igen.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Utseende',
   'theme.light': 'Ljust',
