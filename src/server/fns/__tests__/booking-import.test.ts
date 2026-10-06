@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   NotFoundError,
+  TripRoleError,
   addTripMember,
   countTripPlaces,
   createPlace,
@@ -501,6 +502,7 @@ describe('startBookingImport', () => {
       }),
     )
 
+    expect(error).toBeInstanceOf(TripRoleError)
     expect((error as RepositoryError).code).toBe('FORBIDDEN')
     expect(queue.sent).toEqual([])
   })
