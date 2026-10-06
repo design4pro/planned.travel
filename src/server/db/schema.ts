@@ -407,9 +407,9 @@ export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
 /**
  * Providers whose outbound calls this repository actually makes, and can therefore count.
  *
- * Four, because four clients exist: `src/server/queue/handlers/email.ts`,
+ * Five, because five clients exist: `src/server/queue/handlers/email.ts`,
  * `src/server/queue/handlers/pdf-export.ts`, the injected `fetch` of
- * `src/server/billing/polar.ts` and `src/server/geo/geoapify.ts`. A slug earns a place here when a
+ * `src/server/billing/polar.ts`, `src/server/geo/geoapify.ts` and `src/server/transit/here.ts`. A slug earns a place here when a
  * call site can name it, never before — {@link PLANNED_PROVIDERS} is where an intention lives, and
  * moving a slug across is what adopting a provider looks like.
  */
@@ -418,6 +418,7 @@ export const METERED_PROVIDERS = [
   'browser-rendering',
   'polar',
   'geoapify',
+  'here',
 ] as const
 
 /**
@@ -431,7 +432,6 @@ export const METERED_PROVIDERS = [
  * - `d1-export` — the backup cron's unwritten half. `readCloudflareApi` in
  *   `src/server/queue/http.ts` has no caller and the `BACKUP_CRON` branch of `src/server/worker.ts`
  *   logs that it has no handler.
- * - `here` — public-transit routing, bought under ADR 0011 (30,000 requests a month included).
  * - `workers-ai` — confirmation extraction, bound under ADR 0012, whose decision text asks for a
  *   per-tenant ceiling in the same breath.
  *
@@ -440,11 +440,13 @@ export const METERED_PROVIDERS = [
  * of a contract that an operator renegotiates without a deploy: the figures above are context for a
  * reader, and the enforced number is the one typed into `provider_registry`.
  *
- * Moving a slug from here to {@link METERED_PROVIDERS} is what adopting a provider looks like; all
- * three are waiting on a client rather than on a decision. `geoapify` made that move when
- * `src/server/geo/` was minted, which is the shape the remaining three are waiting for.
+ * Moving a slug from here to {@link METERED_PROVIDERS} is what adopting a provider looks like; both
+ * are waiting on a client rather than on a decision. `geoapify` made that move when
+ * `src/server/geo/` was minted and `here` when `src/server/transit/` routed its call through
+ * `callProvider` (public-transit routing, bought under ADR 0011 with 30,000 requests a month
+ * included), which is the shape the remaining two are waiting for.
  */
-export const PLANNED_PROVIDERS = ['d1-export', 'here', 'workers-ai'] as const
+export const PLANNED_PROVIDERS = ['d1-export', 'workers-ai'] as const
 
 /**
  * The two resolutions `provider_usage` stores. `hour` is the write shape; `month` is the archive
@@ -2985,9 +2987,9 @@ export const platformAuditLog = sqliteTable(
  *
  * **`slug` carries no `CHECK`**, unlike almost every other vocabulary column in this file. An
  * operator agrees a ceiling with a vendor before we write the client — that is the whole point of
- * naming `here` and `workers-ai` in {@link PLANNED_PROVIDERS} — and a constraint generated from a
+ * naming `d1-export` and `workers-ai` in {@link PLANNED_PROVIDERS} — and a constraint generated from a
  * tuple in this file would make the configuration step wait on a deploy. It is also what makes
- * adopting a slug free: `geoapify` moved lists with no migration behind it.
+ * adopting a slug free: `geoapify` and `here` moved lists with no migration behind it.
  *
  * **`blockable` is a safety interlock, not a preference.** A provider whose feature has no fallback
  * must not be stoppable by a control on a settings screen: blocking `polar` would stop checkout, so

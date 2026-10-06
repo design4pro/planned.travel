@@ -646,36 +646,36 @@ describe('updateProviderLimit', () => {
    * the path used to cast the slug to a metered one, which sent it into a
    * `z.enum(METERED_PROVIDERS)` parse.
    *
-   * The pair was written against `geoapify`, which has since been adopted into
-   * {@link METERED_PROVIDERS} and would no longer exercise the cast at all. `here` is the planned
-   * slug that stands in its place; ADR 0011 gives it 30,000 requests a month.
+   * The pair was written against `geoapify` and then `here`, both since adopted into
+   * {@link METERED_PROVIDERS}, which would no longer exercise the cast at all. `workers-ai` is the
+   * planned slug that stands in their place (`d1-export` is the other one left).
    */
   it('accepts a ceiling for a provider that has no client yet', async () => {
     const { after } = await updateProviderLimit(tables.db, operator('admin'), {
       ...LIMIT_INPUT,
-      slug: 'here',
-      label: 'HERE',
+      slug: 'workers-ai',
+      label: 'Workers AI',
       limitWindow: 'month',
-      callLimit: 30_000,
+      callLimit: 5000,
     })
 
     expect(after).toMatchObject({
-      slug: 'here',
+      slug: 'workers-ai',
       limitWindow: 'month',
-      callLimit: 30_000,
+      callLimit: 5000,
     })
   })
 
   it('reads that ceiling back through the same door a metered one uses', async () => {
     await updateProviderLimit(tables.db, operator('admin'), {
       ...LIMIT_INPUT,
-      slug: 'here',
+      slug: 'workers-ai',
       limitWindow: 'month',
-      callLimit: 30_000,
+      callLimit: 5000,
     })
 
-    expect(await readProviderLimit(tables.db, 'here')).toMatchObject({
-      callLimit: 30_000,
+    expect(await readProviderLimit(tables.db, 'workers-ai')).toMatchObject({
+      callLimit: 5000,
     })
   })
 

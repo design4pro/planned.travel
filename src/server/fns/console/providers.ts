@@ -192,7 +192,7 @@ export async function readProviders(): Promise<ProvidersView> {
  * usage read — so a ceiling saved for a planned slug would have reached a
  * `z.enum(METERED_PROVIDERS)` parse and thrown, on the first save anybody made for the very
  * providers the planned list exists to let them configure early. `geoapify` was that example until
- * it was adopted; `here` and `workers-ai` still are.
+ * it was adopted, and `here` after it; `d1-export` and `workers-ai` still are.
  */
 const configurableSlug = z.enum([...METERED_PROVIDERS, ...PLANNED_PROVIDERS])
 

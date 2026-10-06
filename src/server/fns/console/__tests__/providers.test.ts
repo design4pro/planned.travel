@@ -140,21 +140,22 @@ describe('saveProviderLimit', () => {
   })
 
   it('saves a ceiling for a provider that has no client, without reading usage it cannot have', async () => {
-    // `here` rather than `geoapify`, which used to stand here: geoapify was adopted into
-    // METERED_PROVIDERS when `src/server/geo/` was minted, so it now has a client and reads real
-    // counters. The property is about the *state*, not the vendor, and `here` is still in it.
+    // `workers-ai` rather than `geoapify` or `here`, which used to stand here: both were adopted
+    // into METERED_PROVIDERS when their call sites went through `callProvider`, so they now have a
+    // client and read real counters. The property is about the *state*, not the vendor, and
+    // `workers-ai` is still in it (so is `d1-export`).
     const panel = await saveProviderLimit({
       ...INPUT,
-      slug: 'here',
-      label: 'HERE',
-      callLimit: 30_000,
+      slug: 'workers-ai',
+      label: 'Workers AI',
+      callLimit: 5000,
     })
 
     expect(panel).toMatchObject({
-      slug: 'here',
+      slug: 'workers-ai',
       integrated: false,
       limitWindow: 'month',
-      callLimit: 30_000,
+      callLimit: 5000,
     })
     // Structurally zero rather than measured, which is what `integrated: false` tells the screen.
     expect(panel.series).toEqual([])

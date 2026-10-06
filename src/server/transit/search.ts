@@ -1,5 +1,5 @@
 /**
- * The transit proxy — cache read, meter, provider call, cache write, in that order.
+ * The transit proxy — cache read, meter, ledgered provider call, cache write, in that order.
  *
  * Every caller goes through here and none reaches `./here` directly. That is not tidiness: the
  * three rules this module applies are the ones that make an outbound, metered, third-party call
@@ -26,6 +26,17 @@
  * `transit_searches_per_month` allowance through `#/server/metering/rate`, and the ceiling itself is resolved by
  * the caller from `resolveLimits()` — the published number is the enforced number.
  *
+ * ## Two meters, and they are complements
+ *
+ * The allowance above is the **plan's**: a per-workspace tally in KV, spent on a miss, that decides
+ * how many searches a workspace may make. It says nothing about what the vendor was asked or what
+ * it will bill. The **provider ledger** is the platform's: every call that leaves the Worker goes
+ * through `callProvider` (`#/server/metering/outbound`), lands in `provider_usage` under the `here`
+ * slug and the workspace that made it, and is what an operator's `provider_registry` policy can
+ * stop. Neither replaces the other — a cache hit spends the first and records the second not at
+ * all, and a call a `block` policy refuses has still spent its workspace's unit, as geocoding does
+ * (`src/server/geo/geocode.ts`), so the two modules follow one rule.
+ *
  * ## Failure is typed
  *
  * Nothing here throws a bare `fetch` rejection at a server function. A provider that is
@@ -36,8 +47,11 @@
 import { z } from 'zod'
 
 import { TRANSPORT_MODES } from '#/server/db/schema'
+import { ProviderBlockedError } from '#/server/metering/errors'
+import { callProvider } from '#/server/metering/outbound'
 import { RateCeilingError, spendRateUnit } from '#/server/metering/rate'
 
+import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { RateCounterStore } from '#/server/metering/rate'
 
 /* ---------------------------------------------------------------- vocabulary */
@@ -233,6 +247,30 @@ export class TransitProviderError extends Error {
   }
 }
 
+/**
+ * The reason a refused search carries over the wire, or `null` for a fault that is thrown instead.
+ *
+ * **An operator's block reads as a provider failure, never as `ceiling`.** `ceiling` tells a
+ * traveller to buy or wait out an allowance, and the allowance that ran out is the deployment's,
+ * not theirs. Nothing else of {@link ProviderBlockedError} crosses either: its `callLimit` and
+ * `used` are deployment-wide counts that must not reach a workspace, and its message is English
+ * written for the log.
+ */
+export function refusalReason(
+  cause: unknown,
+): 'ceiling' | TransitFailureReason | null {
+  if (cause instanceof RateCeilingError) {
+    return 'ceiling'
+  }
+  if (cause instanceof TransitProviderError) {
+    return cause.reason
+  }
+  if (cause instanceof ProviderBlockedError) {
+    return 'unreachable'
+  }
+  return null
+}
+
 /* -------------------------------------------------------------------- cache */
 
 /** The slice of Workers KV the proxy uses. A real `KVNamespace` satisfies it; so does a map. */
@@ -307,6 +345,8 @@ export interface TransitSearchRuntime {
    * one line earlier - see {@link searchTransitConnections}.
    */
   readonly client: TransitClient | null
+  /** Where the provider ledger is written — see {@link searchTransitConnections}. */
+  readonly outbound: OutboundRuntime
   readonly organizationId: string
   /** `resolveLimits().rates.transit_searches_per_month` for this workspace. */
   readonly ceiling: number
@@ -405,7 +445,16 @@ export async function searchTransitConnections(
     logger: runtime.logger,
   })
 
-  const connections = await runtime.client.search(query)
+  const { client } = runtime
+  const connections = await callProvider(
+    runtime.outbound,
+    {
+      provider: 'here',
+      operation: 'transit.search',
+      organizationId: runtime.organizationId,
+    },
+    () => client.search(query),
+  )
 
   // An empty answer is not cached. "No connection was found" is far more likely to be a bad date
   // or a provider having a moment than a fact about the timetable, and six hours is a long time to
