@@ -1002,9 +1002,11 @@ export function PlanScreen({
 
   /* ------------------------------------------------------------------ forms */
 
-  // Bumped whenever a dialog closes, so a write that fails after its dialog is gone cannot leave
-  // its sentence (or the quota action) in whichever dialog opens next.
+  // Bumped whenever a dialog closes, so a write that settles after its dialog is gone cannot leave
+  // its sentence in, or close, whichever dialog opens next.
   const dialogEpoch = React.useRef(0)
+  const openDialogRef = React.useRef(dialog)
+  openDialogRef.current = dialog
 
   const closeDialog = React.useCallback((): void => {
     dialogEpoch.current += 1
@@ -1026,16 +1028,23 @@ export function PlanScreen({
         await work()
         await router.invalidate()
         if (options.success !== undefined) toast.success(options.success)
-        return true
+        // Its dialog was closed while it ran: the caller's "close the dialog" is not for the one
+        // open now.
+        return epoch === dialogEpoch.current
       } catch (cause) {
-        if (epoch !== dialogEpoch.current) return false
         const report = reportPlaceWriteFailure(cause, {
           fallback: options.fallback,
           quota: t('trips.plan.addPlace.quota'),
           seePlans: t('trips.plan.addPlace.quotaAction'),
         })
-        setFormError(report.message)
-        setFormErrorAction(report.action)
+        if (epoch !== dialogEpoch.current || openDialogRef.current === null) {
+          // No form is showing this write (it was closed mid-save, or the write had no form), so
+          // the form's error slot would either not exist or belong to another dialog.
+          toast.error(report.message)
+        } else {
+          setFormError(report.message)
+          setFormErrorAction(report.action)
+        }
         return false
       } finally {
         setSaving(false)
