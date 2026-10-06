@@ -122,7 +122,7 @@ import {
   updateDayNoteFn,
 } from '../-server/day-notes'
 import { reorderDayTransportsFn } from '../-server/plan-transports'
-import { PlannerAddPlace, placeWriteMessage } from './planner-add-place'
+import { PlannerAddPlace, reportPlaceWriteFailure } from './planner-add-place'
 import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
 import { PlannerDayTools } from './planner-day-tools'
 import { BookingDialog } from '#/components/modules/book'
@@ -1017,13 +1017,20 @@ export function PlanScreen({
         if (options.success !== undefined) toast.success(options.success)
         return true
       } catch (cause) {
-        setFormError(placeWriteMessage(cause, options.fallback))
+        setFormError(
+          reportPlaceWriteFailure(cause, {
+            fallback: options.fallback,
+            quota: t('trips.plan.addPlace.quota'),
+            seePlans: t('trips.plan.addPlace.quotaAction'),
+            onSeePlans: () => void router.navigate({ to: '/settings/billing' }),
+          }),
+        )
         return false
       } finally {
         setSaving(false)
       }
     },
-    [router],
+    [router, t],
   )
 
   const submitPlace = React.useCallback(

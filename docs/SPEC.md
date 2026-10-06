@@ -814,7 +814,12 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
     `src/server/errors/__tests__/public.test.ts` pins it, so growing it is a change to this rule,
     not an edit. A new refusal class travels as a message key the client resolves in the reader's
     locale, the shape `SHELL_STATE_KEYS` (`src/components/layout/session.ts`) already has, or stays
-    a diagnostic whose screen shows the localised fallback. Generalising that key
+    a diagnostic whose screen shows the localised fallback. The failure envelope's `code` field
+    (`PublicFailure.code`, `src/lib/errors.ts`) is another instance of that route: today its one
+    value is the literal `QUOTA_EXCEEDED`, which `classifyFailure` attaches to an `unexpected`
+    failure for either `QuotaExceededError` class, so a screen can say "your plan's limit is
+    reached" in the reader's locale. It is a constant, never an error's own `code`, and
+    `AUTHORED_ERROR_NAMES` stays as it is. Generalising that key
     resolution to the whole `refusal` channel, with the existing sentences moved into the
     catalogue, is the work that retires this exception.
 

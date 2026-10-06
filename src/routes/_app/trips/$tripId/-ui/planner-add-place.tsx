@@ -8,6 +8,7 @@
 
 import * as React from 'react'
 import { ChevronDown, Crosshair, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { readPublicFailure } from '#/lib/errors'
 import { useTranslate } from '#/lib/i18n'
@@ -135,4 +136,39 @@ export function PlannerAddPlace({
 export function placeWriteMessage(cause: unknown, fallback: string): string {
   const failure = readPublicFailure(cause)
   return failure.message ?? fallback
+}
+
+export interface PlaceWriteFailureCopy {
+  /** What any failure without a sentence of its own says. */
+  readonly fallback: string
+  /** The places-limit sentence, already localised. */
+  readonly quota: string
+  /** The toast action's label, already localised. */
+  readonly seePlans: string
+  /** Takes the reader to the screen where the plan can be changed. */
+  readonly onSeePlans: () => void
+}
+
+/**
+ * What a failed place write says, and - for a quota refusal - the way out.
+ *
+ * A places-limit refusal reaches the browser as an `unexpected` failure with the one constant
+ * code (`src/lib/errors.ts`): it carries no sentence, so the sentence is ours and in the reader's
+ * locale. It lands in the form's error slot like every other write failure, and a toast beside it
+ * leads to the plans, because the form alone offers nothing to do about it. Any other failure is
+ * `placeWriteMessage`, unchanged.
+ */
+export function reportPlaceWriteFailure(
+  cause: unknown,
+  copy: PlaceWriteFailureCopy,
+): string {
+  const failure = readPublicFailure(cause)
+  if (failure.code !== 'QUOTA_EXCEEDED') {
+    return placeWriteMessage(cause, copy.fallback)
+  }
+
+  toast.error(copy.quota, {
+    action: { label: copy.seePlans, onClick: copy.onSeePlans },
+  })
+  return copy.quota
 }

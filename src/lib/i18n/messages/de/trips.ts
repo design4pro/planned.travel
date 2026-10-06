@@ -86,6 +86,9 @@ const messages = {
   'plan.addPlace.more': 'Weitere Wege, einen Ort hinzuzufügen',
   'plan.addPlace.option.map': 'Auf der Karte platzieren',
   'plan.addPlace.forDayNamed': 'Ort hinzufügen: {day}',
+  'plan.addPlace.quota':
+    'Du hast das Limit für Orte in deinem Tarif erreicht. Wechsle auf einen größeren Tarif, um weitere hinzuzufügen.',
+  'plan.addPlace.quotaAction': 'Tarife ansehen',
   'plan.stay.checkIn': 'Anreise',
   'plan.stay.checkOut': 'Abreise',
   'plan.day.addStay': 'Unterkunft hinzufügen: {day}',

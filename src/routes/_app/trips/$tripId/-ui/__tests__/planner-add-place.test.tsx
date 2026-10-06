@@ -6,7 +6,11 @@ import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider, LOCALE_TAGS, loadCatalogue } from '#/lib/i18n'
-import { PlannerAddPlace, placeWriteMessage } from '../planner-add-place'
+import {
+  PlannerAddPlace,
+  placeWriteMessage,
+  reportPlaceWriteFailure,
+} from '../planner-add-place'
 import { PlannerDayTools } from '../planner-day-tools'
 
 import type { PlannerDay } from '#/components/planner'
@@ -17,6 +21,10 @@ import type { PlannerDay } from '#/components/planner'
  * The published `data-part` hooks are what later stages and the journey address, so
  * they are asserted from the DOM rather than read off the JSX.
  */
+
+const toasts = vi.hoisted(() => ({ error: vi.fn() }))
+
+vi.mock('sonner', () => ({ toast: toasts }))
 
 const MESSAGES = await loadCatalogue('en')
 
@@ -160,8 +168,8 @@ describe('placeWriteMessage', () => {
   })
 
   it('shows the fallback for a diagnostic the server withheld', () => {
-    // A places quota refusal arrives exactly like this: `QuotaExceededError` is not
-    // authored copy, so the redaction middleware sends a reference and no code.
+    // Any diagnostic arrives like this. A quota refusal is the one that also carries a code,
+    // which `reportPlaceWriteFailure` below reads.
     const cause = new Error(
       encodePublicFailure({ kind: 'unexpected', reference: 'ref-1' }),
     )
@@ -173,5 +181,80 @@ describe('placeWriteMessage', () => {
     expect(placeWriteMessage(new Error('Failed to fetch'), 'Try again.')).toBe(
       'Try again.',
     )
+  })
+})
+
+describe('reportPlaceWriteFailure', () => {
+  const copy = {
+    fallback: 'Try again.',
+    quota: 'Your plan’s places limit is reached.',
+    seePlans: 'See plans',
+  }
+
+  function quotaRefusal(): Error {
+    return new Error(
+      encodePublicFailure({
+        kind: 'unexpected',
+        code: 'QUOTA_EXCEEDED',
+        reference: 'ref-1',
+      }),
+    )
+  }
+
+  it('answers a quota refusal with the quota sentence and a toast that leads to the plans', () => {
+    toasts.error.mockClear()
+    const seePlans = vi.fn()
+
+    const message = reportPlaceWriteFailure(quotaRefusal(), {
+      ...copy,
+      onSeePlans: seePlans,
+    })
+
+    expect(message).toBe(copy.quota)
+    expect(toasts.error).toHaveBeenCalledExactlyOnceWith(copy.quota, {
+      action: { label: copy.seePlans, onClick: seePlans },
+    })
+  })
+
+  it('keeps today’s answer for every other failure, and raises no toast', () => {
+    for (const cause of [
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'ref-1' }),
+      ),
+      new Error(
+        encodePublicFailure({
+          kind: 'refusal',
+          message: 'This trip is archived.',
+        }),
+      ),
+      new Error('Failed to fetch'),
+    ]) {
+      toasts.error.mockClear()
+
+      const expected = placeWriteMessage(cause, copy.fallback)
+      const message = reportPlaceWriteFailure(cause, {
+        ...copy,
+        onSeePlans: vi.fn(),
+      })
+
+      expect(message).toBe(expected)
+      expect(toasts.error).not.toHaveBeenCalled()
+    }
+  })
+
+  it('does not treat a code on a refusal as a quota hit', () => {
+    toasts.error.mockClear()
+    const cause = new Error(
+      encodePublicFailure({
+        kind: 'refusal',
+        message: 'This trip is archived.',
+        code: 'QUOTA_EXCEEDED',
+      }),
+    )
+
+    expect(
+      reportPlaceWriteFailure(cause, { ...copy, onSeePlans: vi.fn() }),
+    ).toBe('This trip is archived.')
+    expect(toasts.error).not.toHaveBeenCalled()
   })
 })
