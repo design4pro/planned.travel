@@ -111,7 +111,7 @@ import {
   getTripItinerary,
   listDayAssignments,
   listTripAccommodations,
-  reorderDayTimeline,
+  reorderDayTimelines,
   setAssignmentParticipants,
   updateAccommodation,
 } from '../itinerary'
@@ -4091,7 +4091,7 @@ describe('tenant isolation', () => {
    * `01-S4a`: one number line per day, written across two tables in one batch.
    *
    * The batch is the reason this block exists rather than riding on the generic
-   * per-repository cases above. `reorderDayTimeline` is the only write in the
+   * per-repository cases above. `reorderDayTimelines` is the only write in the
    * product that touches two tables at once, and a tenant filter that held on one of
    * them and not the other would renumber a stranger's day at the moment a reader
    * dragged their own.
@@ -4117,10 +4117,14 @@ describe('tenant isolation', () => {
 
       expect(
         await captureError(() =>
-          reorderDayTimeline(scope, {
+          reorderDayTimelines(scope, {
             tripId: beta.tripId,
-            dayId: beta.dayId,
-            items: [{ kind: 'stop', id: beta.assignmentId }],
+            days: [
+              {
+                dayId: beta.dayId,
+                items: [{ kind: 'stop', id: beta.assignmentId }],
+              },
+            ],
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
@@ -4129,13 +4133,43 @@ describe('tenant isolation', () => {
       // has already proved they own a trip could otherwise reach through.
       expect(
         await captureError(() =>
-          reorderDayTimeline(scope, {
+          reorderDayTimelines(scope, {
             tripId: alpha.tripId,
-            dayId: beta.dayId,
-            items: [],
+            days: [{ dayId: beta.dayId, items: [] }],
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('refuses B’s day named beside A’s own, and writes nothing to either', async () => {
+      const scope = alpha.tenant.scope
+      const before = {
+        alpha: await positionsOf(scope, alpha.dayId),
+        beta: await positionsOf(beta.tenant.scope, beta.dayId),
+      }
+
+      expect(
+        await captureError(() =>
+          reorderDayTimelines(scope, {
+            tripId: alpha.tripId,
+            days: [
+              {
+                dayId: alpha.dayId,
+                items: [{ kind: 'note', id: alpha.dayNoteId }],
+              },
+              {
+                dayId: beta.dayId,
+                items: [{ kind: 'stop', id: alpha.assignmentId }],
+              },
+            ],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await positionsOf(scope, alpha.dayId)).toEqual(before.alpha)
+      expect(await positionsOf(beta.tenant.scope, beta.dayId)).toEqual(
+        before.beta,
+      )
     })
 
     it('drops B’s ids and renumbers A over its own items only', async () => {
@@ -4157,25 +4191,34 @@ describe('tenant isolation', () => {
         body: 'Book the tram tickets.',
       })
 
-      const written = await reorderDayTimeline(scope, {
+      const written = await reorderDayTimelines(scope, {
         tripId: alpha.tripId,
-        dayId: alpha.dayId,
-        items: [
-          { kind: 'stop', id: beta.assignmentId },
-          { kind: 'note', id: alpha.dayNoteId },
-          { kind: 'note', id: beta.dayNoteId },
-          { kind: 'stop', id: extraStop.id },
-          { kind: 'note', id: extraNote.id },
-          { kind: 'stop', id: alpha.assignmentId },
+        days: [
+          {
+            dayId: alpha.dayId,
+            items: [
+              { kind: 'stop', id: beta.assignmentId },
+              { kind: 'note', id: alpha.dayNoteId },
+              { kind: 'note', id: beta.dayNoteId },
+              { kind: 'stop', id: extraStop.id },
+              { kind: 'note', id: extraNote.id },
+              { kind: 'stop', id: alpha.assignmentId },
+            ],
+          },
         ],
       })
 
       // B's two ids are gone from the write, and A's four are numbered 0..3.
       expect(written).toEqual([
-        { kind: 'note', id: alpha.dayNoteId },
-        { kind: 'stop', id: extraStop.id },
-        { kind: 'note', id: extraNote.id },
-        { kind: 'stop', id: alpha.assignmentId },
+        {
+          dayId: alpha.dayId,
+          items: [
+            { kind: 'note', id: alpha.dayNoteId },
+            { kind: 'stop', id: extraStop.id },
+            { kind: 'note', id: extraNote.id },
+            { kind: 'stop', id: alpha.assignmentId },
+          ],
+        },
       ])
       expect(await positionsOf(scope, alpha.dayId)).toEqual({
         [alpha.dayNoteId]: 0,
@@ -4194,12 +4237,16 @@ describe('tenant isolation', () => {
 
       // Nothing addressable is left after the drop, so the day is rewritten from its
       // own current order: a whole 0..n-1, never half a batch.
-      await reorderDayTimeline(scope, {
+      await reorderDayTimelines(scope, {
         tripId: alpha.tripId,
-        dayId: alpha.dayId,
-        items: [
-          { kind: 'stop', id: beta.assignmentId },
-          { kind: 'note', id: beta.dayNoteId },
+        days: [
+          {
+            dayId: alpha.dayId,
+            items: [
+              { kind: 'stop', id: beta.assignmentId },
+              { kind: 'note', id: beta.dayNoteId },
+            ],
+          },
         ],
       })
 
@@ -4221,11 +4268,15 @@ describe('tenant isolation', () => {
         beta.assignmentId,
       )
 
-      await reorderDayTimeline(scope, {
+      await reorderDayTimelines(scope, {
         tripId: alpha.tripId,
-        dayId: alpha.dayId,
-        items: [{ kind: 'stop', id: beta.assignmentId }],
-        clearTime: [{ kind: 'stop', id: beta.assignmentId }],
+        days: [
+          {
+            dayId: alpha.dayId,
+            items: [{ kind: 'stop', id: beta.assignmentId }],
+            clearTime: [{ kind: 'stop', id: beta.assignmentId }],
+          },
+        ],
       })
 
       expect(
