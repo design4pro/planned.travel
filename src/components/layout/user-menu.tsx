@@ -22,7 +22,7 @@ import {
   MenuTrigger,
 } from './menu'
 import { SIGN_OUT_ENDPOINT } from './session'
-import { WorkspaceSwitcher } from './workspace-switcher'
+import { useWorkspaceSwitch, WorkspaceSwitcher } from './workspace-switcher'
 
 import type { ShellSession } from './session'
 
@@ -37,6 +37,10 @@ export function UserMenu({ session }: { session: ShellSession }) {
   const [open, setOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const { user, organization, organizations } = session
+  const { pendingId, switchTo } = useWorkspaceSwitch({
+    activeId: organization?.id ?? null,
+    onSettled: () => setOpen(false),
+  })
 
   async function signOut(): Promise<void> {
     setSigningOut(true)
@@ -92,7 +96,8 @@ export function UserMenu({ session }: { session: ShellSession }) {
         <WorkspaceSwitcher
           organizations={organizations}
           activeId={organization?.id ?? null}
-          onSettled={() => setOpen(false)}
+          pendingId={pendingId}
+          onSwitch={switchTo}
         />
 
         <MenuSeparator />

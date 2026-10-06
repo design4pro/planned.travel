@@ -246,6 +246,14 @@ describe('switching', () => {
         .getByRole('group', { name: 'Workspace' })
         .getAttribute('aria-busy'),
     ).toBe('true')
+    // A spinner is hidden from a screen reader, so a status region says the switch is running.
+    expect(screen.getByRole('status').textContent).toBe('Loading')
+    // The other choices say they are unavailable instead of silently doing nothing.
+    expect(
+      screen
+        .getByRole('menuitemradio', { name: 'Gamma Clients' })
+        .getAttribute('aria-disabled'),
+    ).toBe('true')
 
     await user.click(
       screen.getByRole('menuitemradio', { name: 'Gamma Clients' }),
@@ -259,6 +267,30 @@ describe('switching', () => {
       expect(screen.queryByRole('menu')).toBeNull()
     })
     expect(auth.setActive).toHaveBeenCalledTimes(1)
+  })
+
+  it('still refuses a second switch after the menu was closed and reopened mid-flight', async () => {
+    const pending = deferred<{ data: object; error: null }>()
+    auth.setActive.mockReturnValue(pending.promise)
+    const { user, open } = await mount(sessionOf([ALPHA, BETA, GAMMA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+    // Escape closes the menu and unmounts its content, which used to take the guard with it.
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).toBeNull()
+    await open()
+
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Gamma Clients' }),
+    )
+    expect(auth.setActive).toHaveBeenCalledExactlyOnceWith({
+      organizationId: 'org_b',
+    })
+
+    pending.resolve({ data: {}, error: null })
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull()
+    })
   })
 
   it('closes the menu when the active workspace is chosen again', async () => {

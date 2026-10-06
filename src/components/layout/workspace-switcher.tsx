@@ -18,7 +18,7 @@ const FORBIDDEN = 403
 const UNAUTHORIZED = 401
 
 /**
- * The workspaces a reader belongs to, as a radio list inside the account menu.
+ * The switch itself, owned by a component that outlives the menu.
  *
  * The workspace is not in the URL: it is `session.activeOrganizationId`, so switching is a mutation
  * and the checked item follows `activeId`, which only moves once the router has re-read the shell.
@@ -32,22 +32,20 @@ const UNAUTHORIZED = 401
  * re-synced after the toast, exactly as for a success, rather than left showing the old workspace.
  * A 401 is re-synced too: the shell's `beforeLoad` then redirects to sign in.
  *
- * The menu stays open while a switch is in flight, as the sign-out item does: the chosen item shows
- * a spinner, other choices are ignored, and `onSettled` closes the menu once the screen has been
- * re-synced. Closing on selection would unmount this component and lose the in-flight guard.
+ * The guard and the pending id live here, not in the list: the menu's content unmounts whenever the
+ * menu closes (Escape, an outside click), and a guard that went with it would let a reopened menu
+ * start a second switch while the first is still running. `onSettled` runs once the screen has been
+ * re-synced.
  */
-export function WorkspaceSwitcher({
-  organizations,
+export function useWorkspaceSwitch({
   activeId,
   onSettled,
 }: {
-  organizations: ReadonlyArray<ShellOrganization>
   activeId: string | null
   onSettled: () => void
-}) {
+}): { pendingId: string | null; switchTo: (organizationId: string) => void } {
   const router = useRouter()
   const t = useTranslate()
-  const labelId = useId()
   const switching = useRef(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
 
@@ -60,7 +58,7 @@ export function WorkspaceSwitcher({
     await router.invalidate()
   }
 
-  async function switchTo(organizationId: string): Promise<void> {
+  async function run(organizationId: string): Promise<void> {
     if (organizationId === activeId || switching.current) return
     switching.current = true
     setPendingId(organizationId)
@@ -91,6 +89,36 @@ export function WorkspaceSwitcher({
     }
   }
 
+  return {
+    pendingId,
+    switchTo: (organizationId) => {
+      void run(organizationId)
+    },
+  }
+}
+
+/**
+ * The workspaces a reader belongs to, as a radio list inside the account menu.
+ *
+ * The menu stays open while a switch is in flight, as the sign-out item does: the chosen item shows
+ * a spinner and the others are disabled. The pending state is announced by a status region inside
+ * the menu: an item's own children are presentational to a screen reader, and the open menu is
+ * modal, so a region outside it would be hidden from assistive technology.
+ */
+export function WorkspaceSwitcher({
+  organizations,
+  activeId,
+  pendingId,
+  onSwitch,
+}: {
+  organizations: ReadonlyArray<ShellOrganization>
+  activeId: string | null
+  pendingId: string | null
+  onSwitch: (organizationId: string) => void
+}) {
+  const t = useTranslate()
+  const labelId = useId()
+
   if (organizations.length === 0) return null
 
   return (
@@ -101,20 +129,21 @@ export function WorkspaceSwitcher({
           aria-labelledby={labelId}
           aria-busy={pendingId !== null}
           value={activeId ?? ''}
-          onValueChange={(organizationId) => {
-            void switchTo(organizationId)
-          }}
+          onValueChange={onSwitch}
         >
           {organizations.map((organization) => (
             <MenuRadioItem
               key={organization.id}
               value={organization.id}
+              disabled={pendingId !== null && pendingId !== organization.id}
               onSelect={(event) => {
                 // Choosing the active workspace changes nothing, so the menu may close as usual.
                 if (organization.id !== activeId) event.preventDefault()
               }}
             >
-              <span className="min-w-0 break-words">{organization.name}</span>
+              <span className="min-w-0 break-words" dir="auto">
+                {organization.name}
+              </span>
               {pendingId === organization.id ? (
                 <span className="absolute end-2.5 flex items-center">
                   <Spinner size="sm" label={null} />
@@ -123,6 +152,10 @@ export function WorkspaceSwitcher({
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
+      </div>
+      {/* Always mounted, so the text change is what a screen reader announces. */}
+      <div role="status" className="sr-only">
+        {pendingId === null ? '' : t('ui.status.loading')}
       </div>
     </>
   )
