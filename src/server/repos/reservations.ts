@@ -15,7 +15,6 @@ import {
   inArray,
   isNull,
   lte,
-  sql,
 } from 'drizzle-orm'
 import { z } from 'zod'
 import {
@@ -25,7 +24,7 @@ import {
   reservations,
   transports,
 } from '#/server/db/schema'
-import { createTenantRepository, tenantFilter } from './base'
+import { allOf, createTenantRepository, tenantFilter } from './base'
 import { NotFoundError } from './context'
 import { requireTripDay } from './days'
 import { getExpense } from './expenses'
@@ -479,7 +478,7 @@ export async function markReservationsImported(
   const markedAt = new Date()
   const rows = await reservationsRepository.updateWhere(
     scope,
-    sql`${eq(reservations.tripId, trip.id)} and ${inArray(reservations.id, ids)}`,
+    allOf(eq(reservations.tripId, trip.id), inArray(reservations.id, ids)),
     { importedAt: markedAt },
   )
   return rows.length
