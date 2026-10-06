@@ -507,7 +507,7 @@ describe('a journey with more than two stations', () => {
 /**
  * A day is one number line, and a journey's place on it.
  *
- * The writer that renumbers a day's stops and notes — `reorderDayTimeline` — belongs to another
+ * The writer that renumbers a day's stops and notes — `reorderDayTimelines` — belongs to another
  * module, so a journey cannot be inside that renumbering and expresses where it sits *between* two
  * of its positions instead, through the fractional key `sort_order` was declared to be. These cases
  * are about that arithmetic and about the three rules the payload is read under; the client half

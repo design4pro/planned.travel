@@ -37,8 +37,7 @@ import {
   listTripAssignments,
   listTripPlaces,
   listUnscheduledPlaces,
-  moveAssignment,
-  reorderDayTimeline,
+  reorderDayTimelines,
   reorderPlaces,
   requireTrip,
   requireTripDay,
@@ -464,22 +463,16 @@ export const reorderPlanInputSchema = z.strictObject({
  * repository layer would refuse them anyway, and a stale tab whose board is one
  * delete behind should still be able to reorder the rows that do exist.
  *
- * Two writes, in this order and for one reason each:
+ * One write: `reorderDayTimelines` takes every touched day and, in one batch, gives each
+ * row the day it was named under next to its position — `day_assignments.order_index`
+ * and `day_notes.sort_order` as a single number line — plus a `NULL` time for every
+ * `clearTime` entry. A stop or a note that changed day is therefore moved by the same
+ * statement that numbers it, and the reader's "drop its time and move it" is one
+ * transaction, never a moment in which the row has a time and the wrong position. A
+ * forged day id fails before any position is written.
  *
- * - **A stop that changed day moves first.** `moveAssignment` re-checks that the
- *   target day belongs to the same trip, so a forged day id fails before any
- *   position is written — and by the time the renumber runs, both the day that lost
- *   the row and the day that gained it hold exactly the rows they are about to be
- *   numbered over.
- * - **Then one `reorderDayTimeline` per day**, which is one batch per day writing
- *   `day_assignments.order_index` and `day_notes.sort_order` as a single number line,
- *   plus a `NULL` time for every `clearTime` entry. The reader's "drop its time and
- *   move it" is therefore one transaction, never a moment in which the row has a
- *   time and the wrong position.
- *
- * The plan's content is the editor's (PRD #104 decision 6), and the role is asserted
- * once here rather than only inside the per-day write, because the cross-day step
- * happens before that write and `moveAssignment` guards the trip but not the role.
+ * The plan's content is the editor's (PRD #104 decision 6): the repository asserts the
+ * role itself, after the trip and before any day.
  *
  * The result is mirrored to the trip room as one `day` upsert per touched day, so
  * every other viewer's board catches up without polling — see {@link mirrorDayOrder},
@@ -490,39 +483,11 @@ export const reorderPlanFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly moved: number }> => {
     const scope = await appScope()
     const trip = await requireWritableTrip(scope, data.tripId)
-    // `reorderDayTimeline` asserts this itself, but the cross-day step below runs
-    // first and `moveAssignment` carries no role guard of its own — so a viewer would
-    // otherwise get one stop onto another day before being refused (decision 6).
-    await assertTripRole(scope, trip.id, ['owner', 'editor'])
 
-    const existing = await listTripAssignments(scope, trip.id)
-    const dayById = new Map(existing.map((row) => [row.id, row.dayId]))
-
-    for (const day of data.days) {
-      for (const [index, item] of day.items.entries()) {
-        if (item.kind !== 'stop') continue
-        const currentDayId = dayById.get(item.id)
-        if (currentDayId === undefined || currentDayId === day.dayId) continue
-        await moveAssignment(scope, item.id, {
-          dayId: day.dayId,
-          orderIndex: index,
-        })
-      }
-    }
-
-    const rearranged: Array<{
-      dayId: string
-      items: ReadonlyArray<TimelineItemInput>
-    }> = []
-    for (const day of data.days) {
-      const written = await reorderDayTimeline(scope, {
-        tripId: trip.id,
-        dayId: day.dayId,
-        items: day.items,
-        clearTime: day.clearTime,
-      })
-      rearranged.push({ dayId: day.dayId, items: written })
-    }
+    const rearranged = await reorderDayTimelines(scope, {
+      tripId: trip.id,
+      days: data.days,
+    })
 
     await mirrorDayOrder(scope, trip.id, rearranged)
 

@@ -16,7 +16,7 @@ steps:
 
       This workflow has no om-root-cause step: the issue's `## Agent Brief` (a triage comment, or the body of a ticket `afk-to-tickets` filed) is your brief.
 
-      Pick the issue. When the task names an issue number, that is the issue. Otherwise run `node .ai/scripts/backlog-status.mjs --next`: it prints the number of the one issue to implement, or nothing when no issue is ready or three PRs are already waiting for a person (the WIP limit: `needs-qa` without `qa-approved`, `risk-high`, `security`, `blocked`, or `changes-requested` untouched for 24 hours; a PR the pipeline merges itself does not count). Write `ISSUE: #<number>` as the first progress-log line of this run's handoff file; later steps read it.
+      Pick the issue. When the task names an issue number, that is the issue. Otherwise run `node .ai/scripts/backlog-status.mjs --next`: it prints the number of the one issue to implement, or nothing when no issue is ready or three PRs are already waiting for a person (the WIP limit: `blocked`, or `changes-requested` untouched for 24 hours; a PR the pipeline merges itself does not count). Write `ISSUE: #<number>` as the first progress-log line of this run's handoff file; later steps read it.
 
       Check readiness before claiming. Stop without changing anything if any of these hold:
       - `--next` printed nothing;
@@ -54,8 +54,8 @@ steps:
       Otherwise open the PR per om-open-pr, with the issue number from the handoff file's `ISSUE:` line as the issue id. Put the Resolved assumptions table from the handoff file in the PR body, and reference the issue with `Fixes #<number>`.
   # The chain does not stop at an open PR: om-pr-autopilot reviews, fixes, runs QA, waits for CI and
   # squash-merges into develop (ADR 0031) - the develop ruleset requires no approving review. It
-  # never merges the develop -> main promotion, and a `risk-high` PR waits for the owner's
-  # `qa-approved`.
+  # never merges the develop -> main promotion. QA, `risk-high` and `security` are judged by
+  # specialist sub-agents; three failed fix rounds leave the PR `blocked` (ADR 0035).
   - id: merge
     name: Drive the PR to the merge into develop
     # mcp__plugin_playwright_playwright: the QA step drives a browser; without it runs try to install one.

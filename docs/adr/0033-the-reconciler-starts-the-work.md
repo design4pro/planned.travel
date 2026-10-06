@@ -4,6 +4,7 @@ Status: accepted
 Date: 2026-10-02
 Amends: ADR 0032 (the schedule that starts implementation, the WIP limit, and who clears a hold),
 ADR 0031 (a spec PR `afk-plan-to-spec` wrote merges without a person; every other spec PR is still merged by a person).
+Amended by: ADR 0035 (only `blocked` and a parked `changes-requested` count as waiting for a person).
 
 ## Context
 

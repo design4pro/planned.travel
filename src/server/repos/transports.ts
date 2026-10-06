@@ -461,7 +461,7 @@ export async function unlinkTransportsFromDays(
  * One row of a day's resulting run, as the reorder names it.
  *
  * The stops and the notes are the **ruler**: they are read to find the gap a journey was dropped
- * into and are never written by this path — `reorderDayTimeline` owns their two columns.
+ * into and are never written by this path — `reorderDayTimelines` owns their two columns.
  */
 export const dayRunItemInput = z.strictObject(
   {
@@ -635,13 +635,13 @@ function splitGap(
 /**
  * Places one day's journey rows between the stops and notes the run names.
  *
- * A day is one number line, and the writer that renumbers it — `reorderDayTimeline` — is owned by
+ * A day is one number line, and the writer that renumbers it — `reorderDayTimelines` — is owned by
  * another module this stage may not edit. A journey therefore cannot be *inside* that renumbering
  * and expresses where it sits **between** two of its positions, through the fractional key
  * `sort_order` was declared to be (`schema.ts`). The server derives the fraction; the client sends
  * only which stop or note each journey follows.
  *
- * The three rules about the list the client sends are `reorderDayTimeline`'s, for the same reasons:
+ * The three rules about the list the client sends are `reorderDayTimelines`'s, for the same reasons:
  *
  * - **Unknown ids are dropped, not rejected.** A tab one delete behind must still be able to
  *   reorder the rows that do exist. A forged id therefore moves nothing, and a real stop id placed
@@ -655,7 +655,7 @@ function splitGap(
  *   D1, because half a day's journeys re-placed is not a state anything can render honestly.
  *
  * Returns the journeys as written, in the order they were written, which is what the caller mirrors
- * to the trip room — `reorderDayTimeline`'s contract, for its reason: a dropped id and a re-inserted
+ * to the trip room — `reorderDayTimelines`'s contract, for its reason: a dropped id and a re-inserted
  * one both make the request a different day from the one on disk, and the room must hear the disk.
  */
 export async function reorderDayTransports(
@@ -665,7 +665,7 @@ export async function reorderDayTransports(
 ): Promise<Array<DayRunItemInput>> {
   const values = reorderDayTransportsInput.parse(input)
 
-  // Trip, then role, then day — the order `reorderDayTimeline` records: a caller who may not see
+  // Trip, then role, then day — the order `reorderDayTimelines` records: a caller who may not see
   // the trip learns nothing beyond `NotFoundError`.
   //
   // The trip is the one of the three a caller can hand in already proved, and `resolvedTrip` is
