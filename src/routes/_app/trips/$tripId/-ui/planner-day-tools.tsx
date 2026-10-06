@@ -176,7 +176,7 @@ function DayLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={name}
-      className={cn(DAY_TOOL_CLASS, 'flex-col')}
+      className={cn(DAY_TOOL_CLASS, 'flex-col items-center')}
     >
       <span className="flex items-center gap-1.5">
         <Icon size={12} strokeWidth={2} aria-hidden="true" />
