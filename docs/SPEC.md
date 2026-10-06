@@ -819,9 +819,9 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
     value is the literal `QUOTA_EXCEEDED`, which `classifyFailure` attaches to an `unexpected`
     failure for either `QuotaExceededError` class, so a screen can say "your plan's limit is
     reached" in the reader's locale. It is a constant, never an error's own `code`, and
-    `AUTHORED_ERROR_NAMES` stays as it is. Generalising that key
-    resolution to the whole `refusal` channel, with the existing sentences moved into the
-    catalogue, is the work that retires this exception.
+    `AUTHORED_ERROR_NAMES` stays as it is. Generalising client-side key resolution to the whole
+    `refusal` channel, with the existing sentences moved into the catalogue, is the work that
+    retires this exception.
 
 ### Catalogue layout (fixed — every i18n item builds against this)
 

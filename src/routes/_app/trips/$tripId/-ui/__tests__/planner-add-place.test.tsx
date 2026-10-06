@@ -213,6 +213,8 @@ describe('reportPlaceWriteFailure', () => {
     expect(message).toBe(copy.quota)
     expect(toasts.error).toHaveBeenCalledExactlyOnceWith(copy.quota, {
       action: { label: copy.seePlans, onClick: seePlans },
+      duration: Infinity,
+      closeButton: true,
     })
   })
 

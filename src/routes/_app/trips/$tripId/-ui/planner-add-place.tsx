@@ -167,8 +167,12 @@ export function reportPlaceWriteFailure(
     return placeWriteMessage(cause, copy.fallback)
   }
 
+  // The form is still open and traps focus, so the action cannot be reached until it closes:
+  // the toast stays (and can be dismissed) rather than timing out first (WCAG 2.2.1).
   toast.error(copy.quota, {
     action: { label: copy.seePlans, onClick: copy.onSeePlans },
+    duration: Infinity,
+    closeButton: true,
   })
   return copy.quota
 }
