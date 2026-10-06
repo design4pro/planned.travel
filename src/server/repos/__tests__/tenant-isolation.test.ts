@@ -284,6 +284,8 @@ import { createLogger, createMemorySink } from '#/server/observability'
 import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
 import { captureError, createHarness } from './harness'
+import { PRICED_KINDS } from './priced-rows'
+import { classifyFailure } from '#/server/errors/public'
 import type {
   KeyedTenantTable,
   TenantPatch,
@@ -3332,7 +3334,7 @@ describe('tenant isolation', () => {
       const scope = alpha.tenant.scope
 
       expect(
-        await markReservationsImported(scope, [
+        await markReservationsImported(scope, alpha.tripId, [
           alpha.reservationId,
           beta.reservationId,
         ]),
@@ -3347,9 +3349,46 @@ describe('tenant isolation', () => {
       ).toBeNull()
     })
 
+    it('answers NotFoundError for B\u2019s trip id, and leaves B\u2019s row unmarked', async () => {
+      const scope = alpha.tenant.scope
+
+      for (const ids of [[beta.reservationId], [alpha.reservationId]]) {
+        expect(
+          await captureError(() =>
+            markReservationsImported(scope, beta.tripId, ids),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        (await getReservation(beta.tenant.scope, beta.reservationId))
+          ?.importedAt,
+      ).toBeNull()
+      expect(
+        (await getReservation(scope, alpha.reservationId))?.importedAt,
+      ).toBeNull()
+    })
+
+    it('marks nothing on a trip other than the one it was handed', async () => {
+      const scope = alpha.tenant.scope
+      const other = await createTrip(scope, { title: 'Another alpha trip' })
+      const elsewhere = await createReservation(scope, {
+        tripId: other.id,
+        title: 'Booked on the other trip',
+      })
+
+      expect(
+        await markReservationsImported(scope, alpha.tripId, [
+          alpha.reservationId,
+          elsewhere.id,
+        ]),
+      ).toBe(1)
+      expect((await getReservation(scope, elsewhere.id))?.importedAt).toBeNull()
+    })
+
     it('clears its own marker twice without complaining', async () => {
       const scope = alpha.tenant.scope
-      await markReservationsImported(scope, [alpha.reservationId])
+      await markReservationsImported(scope, alpha.tripId, [alpha.reservationId])
 
       expect(
         (await clearReservationImported(scope, alpha.reservationId)).importedAt,
@@ -3408,12 +3447,26 @@ describe('tenant isolation', () => {
       })
       expect(written.tripId).toBe(alpha.tripId)
 
-      // `FORBIDDEN` is the code every caller maps to a 403, so it is the code that
-      // is asserted rather than the class or the sentence.
+      // The marker writers are a booking write like any other: an editor is let
+      // through on both, and a viewer is refused on both with the marker untouched.
+      expect(
+        await markReservationsImported(editor, alpha.tripId, [
+          alpha.reservationId,
+        ]),
+      ).toBe(1)
+      expect(
+        (await clearReservationImported(editor, alpha.reservationId))
+          .importedAt,
+      ).toBeNull()
+
+      // Every refusal below is the one class `assertTripRole` throws, under the
+      // code `FORBIDDEN`, and the classifier shows it to the reader as a refusal.
       const refusalCode = async (
         run: () => Promise<unknown>,
       ): Promise<string> => {
         const error = await captureError(run)
+        expect(error).toBeInstanceOf(TripRoleError)
+        expect(classifyFailure(error).kind).toBe('refusal')
         return error instanceof RepositoryError ? error.code : error.name
       }
 
@@ -3434,9 +3487,28 @@ describe('tenant isolation', () => {
         () => deleteReservation(viewer, alpha.reservationId),
         () =>
           linkReservationExpense(viewer, alpha.reservationId, alpha.expenseId),
+        () =>
+          markReservationsImported(viewer, alpha.tripId, [alpha.reservationId]),
+        () => clearReservationImported(viewer, alpha.reservationId),
       ]) {
         expect(await refusalCode(attempt)).toBe('FORBIDDEN')
       }
+
+      // A refused viewer changed nothing: not marked, and not cleared once marked.
+      expect(
+        (await getReservation(alpha.tenant.scope, alpha.reservationId))
+          ?.importedAt,
+      ).toBeNull()
+      await markReservationsImported(alpha.tenant.scope, alpha.tripId, [
+        alpha.reservationId,
+      ])
+      await captureError(() =>
+        clearReservationImported(viewer, alpha.reservationId),
+      )
+      expect(
+        (await getReservation(alpha.tenant.scope, alpha.reservationId))
+          ?.importedAt,
+      ).toBeInstanceOf(Date)
     })
   })
 
@@ -5007,5 +5079,115 @@ describe('tenant isolation', () => {
         )
       }
     })
+  })
+
+  /**
+   * The changed-currency `UPDATE` embeds a priced-rows test, so a subquery that forgot the trip, or
+   * the tenant, would let somebody else's prices decide whether this trip's currency may change -
+   * in one direction a refusal that is not the caller's to receive, in the other a relabel that
+   * should have been refused. One kind of price at a time on the other trips, so that a single
+   * missing predicate cannot hide behind the kinds that are filtered correctly.
+   */
+  describe('a trip’s budget currency', () => {
+    const CHANGE = { currency: 'JPY' } as const
+
+    it('is not found, and unchanged, for another workspace’s trip', async () => {
+      const before = await tripsRepository.findById(
+        beta.tenant.scope,
+        beta.tripId,
+      )
+
+      const failure = await captureError(() =>
+        updateTrip(alpha.tenant.scope, beta.tripId, CHANGE),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(
+        await tripsRepository.findById(beta.tenant.scope, beta.tripId),
+      ).toEqual(before)
+    })
+
+    it('is not found, and unchanged, for a private trip the caller is not on', async () => {
+      const privateTrip = await createTrip(alpha.tenant.scope, {
+        title: 'Private to A’s owner',
+        currency: 'EUR',
+      })
+      const colleague = alpha.tenant.scopeFor(alpha.secondUserId)
+
+      const failure = await captureError(() =>
+        updateTrip(colleague, privateTrip.id, CHANGE),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(
+        (await requireTrip(alpha.tenant.scope, privateTrip.id)).currency,
+      ).toBe('EUR')
+    })
+
+    it('is refused to an editor and to a viewer, who see the trip but do not own it', async () => {
+      const trip = await createTrip(alpha.tenant.scope, {
+        title: 'Shared with two',
+        currency: 'EUR',
+      })
+      const viewerId = await alpha.tenant.addUser('Viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: trip.id,
+        userId: alpha.secondUserId,
+        role: 'editor',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: trip.id,
+        userId: viewerId,
+        role: 'viewer',
+      })
+
+      for (const userId of [alpha.secondUserId, viewerId]) {
+        const failure = await captureError(() =>
+          updateTrip(alpha.tenant.scopeFor(userId), trip.id, CHANGE),
+        )
+        expect(failure).toBeInstanceOf(TripRoleError)
+      }
+      expect((await requireTrip(alpha.tenant.scope, trip.id)).currency).toBe(
+        'EUR',
+      )
+    })
+
+    it.each(PRICED_KINDS.map((kind) => [kind.name, kind] as const))(
+      'is not decided by %s on a sibling trip or on another workspace’s trip',
+      async (_name, kind) => {
+        const empty = await createTrip(alpha.tenant.scope, {
+          title: 'Empty one',
+          startDate: '2026-05-01',
+          endDate: '2026-05-02',
+          currency: 'EUR',
+        })
+        const sibling = await createTrip(alpha.tenant.scope, {
+          title: 'Sibling with prices',
+          startDate: '2026-05-01',
+          endDate: '2026-05-02',
+          currency: 'EUR',
+        })
+        const foreign = await createTrip(beta.tenant.scope, {
+          title: 'Foreign with prices',
+          startDate: '2026-05-01',
+          endDate: '2026-05-02',
+          currency: 'EUR',
+        })
+        await kind.seed(alpha.tenant.scope, sibling.id, alpha.secondUserId)
+        await kind.seed(beta.tenant.scope, foreign.id, beta.secondUserId)
+        const siblingBefore = await requireTrip(alpha.tenant.scope, sibling.id)
+        const foreignBefore = await requireTrip(beta.tenant.scope, foreign.id)
+
+        const saved = await updateTrip(alpha.tenant.scope, empty.id, CHANGE)
+
+        expect(saved.currency).toBe('JPY')
+        expect(await requireTrip(alpha.tenant.scope, sibling.id)).toEqual(
+          siblingBefore,
+        )
+        expect(await requireTrip(beta.tenant.scope, foreign.id)).toEqual(
+          foreignBefore,
+        )
+      },
+    )
   })
 })

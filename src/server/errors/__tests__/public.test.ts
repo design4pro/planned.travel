@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
+import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
 import { AuthRequirementError } from '#/server/auth/tenant'
 import {
   ConsoleActionError,
@@ -22,8 +23,13 @@ import {
   MissingTenantContextError,
   NotFoundError,
   QuotaExceededError,
+  RepositoryError,
 } from '#/server/repos/context'
-import { TripArchivedError, TripRoleError } from '#/server/repos/trips'
+import {
+  CurrencyRefusalError,
+  TripArchivedError,
+  TripRoleError,
+} from '#/server/repos/trips'
 
 import { AUTHORED_ERROR_NAMES, classifyFailure } from '../public'
 
@@ -41,6 +47,45 @@ describe('the English refusal set is closed', () => {
       'TripArchivedError',
       'TripRoleError',
     ])
+  })
+})
+
+describe('the currency refusal keys are closed', () => {
+  /**
+   * A refusal that travels as a message key is let through by exact match on the key, so the set of
+   * keys is what a reader can be told without redaction. A key added to the list fails here, and
+   * the author has to look at the line that says what that means.
+   */
+  it('names exactly the keys a changed budget currency may be refused with', () => {
+    expect([...CURRENCY_REFUSAL_KEYS]).toEqual([
+      'shell.editTrip.currencyLocked',
+    ])
+  })
+
+  it('is not an authored class: its name stays out of the English exception', () => {
+    expect(AUTHORED_ERROR_NAMES.has('CurrencyRefusalError')).toBe(false)
+  })
+
+  it('lets each key through as a refusal that carries the key itself', () => {
+    for (const key of CURRENCY_REFUSAL_KEYS) {
+      expect(classifyFailure(new CurrencyRefusalError(key))).toEqual({
+        kind: 'refusal',
+        message: key,
+      })
+    }
+  })
+
+  it.each([
+    ['a database diagnostic', 'NOT NULL constraint failed: trips.currency'],
+    ['a key with a suffix', 'shell.editTrip.currencyLockedAgain'],
+    ['a key with a prefix', 'x.shell.editTrip.currencyLocked'],
+    ['a key with padding', ' shell.editTrip.currencyLocked '],
+    ['a key of the same family', 'shell.editTrip.currency'],
+    ['a key a later ticket adds', 'costs.refusal.tripCurrencyChanged'],
+  ])('still redacts %s thrown as a repository error', (_name, message) => {
+    expect(classifyFailure(new RepositoryError(message, 'ANY'))).toEqual({
+      kind: 'unexpected',
+    })
   })
 })
 

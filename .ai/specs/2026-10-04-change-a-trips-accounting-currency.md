@@ -2,10 +2,10 @@
 
 | Field              | Value                                          |
 | ------------------ | ---------------------------------------------- |
-| **Status**         | ready                                          |
+| **Status**         | in-progress                                    |
 | **Issue**          | none                                           |
 | **Spec PR**        | #828                                           |
-| **Implementation** | none                                           |
+| **Implementation** | #896                                           |
 | **Plan**           | 04-S5 (docs/plans/04-budget-and-currencies.md) |
 
 ## 📝 TLDR

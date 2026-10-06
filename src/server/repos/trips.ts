@@ -16,6 +16,7 @@ import {
   exists,
   gte,
   inArray,
+  isNotNull,
   isNull,
   like,
   lte,
@@ -25,19 +26,27 @@ import {
   sql,
 } from 'drizzle-orm'
 import { z } from 'zod'
+import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
 import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import {
   TRIP_MEMBER_ROLES,
   TRIP_STATUSES,
   TRIP_VISIBILITIES,
+  budgetItems,
+  dayAccommodations,
   dayAssignments,
   dayNotes,
   days,
+  expenseShares,
+  expenses,
   journeys,
   newId,
   placeTags,
   places,
+  reservations,
+  settlements,
   shareLinks,
+  transports,
   tripFavourites,
   tripMembers,
   trips,
@@ -84,9 +93,11 @@ import {
   urlSchema,
 } from './validation'
 import type { SQL } from 'drizzle-orm'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
+import type { CurrencyRefusalKey } from '#/lib/currency-refusals'
 import type { ShareScopes } from '#/server/db/schema'
 import type { Day, ShareLink, Trip, TripMember } from '#/server/db/types'
-import type { ListOptions, TenantScope } from './base'
+import type { ListOptions, TenantScope, TenantTable } from './base'
 import { insertChunked, runBatch } from './batch'
 
 export { MAX_BOUND_PARAMETERS, chunkFor } from './batch'
@@ -536,6 +547,161 @@ async function requireOwnedTrip(
 }
 
 /* -------------------------------------------------------------------------------------------------
+ * Budget currency
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Thrown when a change of a trip's budget currency is refused.
+ *
+ * The `message` is a catalogue key from `CURRENCY_REFUSAL_KEYS`, never a sentence, and the class is
+ * deliberately **not** in `AUTHORED_ERROR_NAMES` (`src/server/errors/public.ts`): that list is
+ * closed by `docs/SPEC.md` §9 rule 10 because each of its entries reaches the reader in English.
+ * A key is resolved by the screen in the reader's own locale instead, and `classifyFailure` lets it
+ * through by exact match on the key, not on this class.
+ */
+export class CurrencyRefusalError extends RepositoryError {
+  constructor(key: CurrencyRefusalKey) {
+    super(key, 'CURRENCY_REFUSED')
+  }
+}
+
+/**
+ * True when some row of `table` belongs to the trip (`also` narrows which rows count).
+ *
+ * `tenantFilter` and the trip are both inside the subquery: the statement that embeds it is
+ * tenant-filtered too, but a subquery that forgot either would count a sibling trip's rows, or
+ * another workspace's, and a refusal triggered by somebody else's data is a leak of its own.
+ */
+function tripHoldsRow(
+  scope: TenantScope,
+  table: TenantTable & { readonly tripId: SQLiteColumn },
+  tripId: string,
+  also?: SQL,
+): SQL {
+  return exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(table)
+      .where(tenantFilter(scope, table, eq(table.tripId, tripId), also)),
+  )
+}
+
+/**
+ * Whether anything on the trip carries a price: the one definition behind "this trip has money in
+ * it", as a predicate the changed-currency `UPDATE` embeds so the test and the write are one
+ * statement and cannot see different data.
+ *
+ * Priced means, counting a row whose `currency` is `NULL` (that `NULL` reads as "the trip's own", so
+ * a relabel would silently move it): any expense, expense share, payment or planned item; a budget
+ * target, a target of 0 included; a place, booking, transport or stay with a price; and a trip copy
+ * still in progress, which looks empty until the queue copier adds its priced places.
+ */
+function pricedRowsExistSql(scope: TenantScope, tripId: string): SQL {
+  return anyOf(
+    tripHoldsRow(scope, expenses, tripId),
+    tripHoldsRow(scope, expenseShares, tripId),
+    tripHoldsRow(scope, settlements, tripId),
+    tripHoldsRow(scope, budgetItems, tripId),
+    tripHoldsRow(scope, places, tripId, isNotNull(places.priceMinor)),
+    tripHoldsRow(
+      scope,
+      reservations,
+      tripId,
+      isNotNull(reservations.priceMinor),
+    ),
+    tripHoldsRow(scope, transports, tripId, isNotNull(transports.priceMinor)),
+    tripHoldsRow(
+      scope,
+      dayAccommodations,
+      tripId,
+      isNotNull(dayAccommodations.priceMinor),
+    ),
+    exists(
+      scope.db
+        .select({ present: sql`1` })
+        .from(trips)
+        .where(
+          tenantFilter(
+            scope,
+            trips,
+            eq(trips.id, tripId),
+            anyOf(
+              isNotNull(trips.budgetTargetMinor),
+              isNotNull(trips.copyPendingAt),
+            ),
+          ),
+        ),
+    ),
+  )
+}
+
+/** How far down a `cause` chain {@link isCurrencyNotNullFailure} will look. */
+const CAUSE_DEPTH = 8
+
+/**
+ * True when `cause` is the database refusing to store `NULL` in `trips.currency`.
+ *
+ * Both runtimes say it, in different places: the proxy driver the tests run on wraps SQLite's error
+ * as the `cause` of a "Failed query" one, and D1 throws `D1_ERROR: NOT NULL constraint failed:
+ * trips.currency: SQLITE_CONSTRAINT` itself. Matching the sentence along the chain covers both, and
+ * matching it to this one column means any other failure of the same statement is rethrown.
+ */
+function isCurrencyNotNullFailure(cause: unknown): boolean {
+  let current: unknown = cause
+  for (let depth = 0; depth < CAUSE_DEPTH; depth += 1) {
+    if (!(current instanceof Error)) {
+      return false
+    }
+    if (
+      current.message.includes('NOT NULL constraint failed: trips.currency')
+    ) {
+      return true
+    }
+    current = current.cause
+  }
+  return false
+}
+
+/**
+ * Writes the patch and a changed currency in one statement, applying the currency only while
+ * nothing on the trip is priced.
+ *
+ * `requireUpdate` cannot express this - it types `currency` as a string - so the statement is
+ * written out. The priced-rows test is evaluated by the database as part of the `UPDATE` itself:
+ * when it holds, the `CASE` yields `NULL` into a `NOT NULL` column, the statement fails, and
+ * nothing in it (the other fields of the save included) is applied. A price that arrived after
+ * this save read the trip is therefore caught too, which a check made beforehand could not do.
+ * The conflict clause stays the default `ABORT`; `OR REPLACE` would write the column's default
+ * instead of raising.
+ */
+async function updateTripWithCurrency(
+  scope: TenantScope,
+  tripId: string,
+  patch: Omit<Partial<typeof trips.$inferInsert>, 'currency'>,
+  currency: string,
+): Promise<Trip> {
+  try {
+    const [row] = await scope.db
+      .update(trips)
+      .set({
+        ...patch,
+        currency: sql`CASE WHEN ${pricedRowsExistSql(scope, tripId)} THEN NULL ELSE ${currency} END`,
+      })
+      .where(tenantFilter(scope, trips, eq(trips.id, tripId)))
+      .returning()
+    if (row === undefined) {
+      throw new NotFoundError('trip', tripId)
+    }
+    return row
+  } catch (error) {
+    if (isCurrencyNotNullFailure(error)) {
+      throw new CurrencyRefusalError(CURRENCY_REFUSAL_KEYS[0])
+    }
+    throw error
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
  * Slugs
  * ---------------------------------------------------------------------------------------------- */
 
@@ -806,6 +972,12 @@ export async function createTrip(
  *
  * A trip's metadata is its owner's (PRD #104 decision 6): moving the dates moves every member's day
  * run, so an editor — who owns the plan's *content* — is refused here.
+ *
+ * **The budget currency is the one field that is not simply patched.** A different currency is
+ * applied only while nothing on the trip is priced - relabelling a trip that has money in it would
+ * keep every figure and change what it is in - and is refused with a {@link CurrencyRefusalError},
+ * the whole save included, otherwise. It is one of exactly two code paths that write
+ * `trips.currency` after creation; the other is the re-basing a later ticket adds.
  */
 export async function updateTrip(
   scope: TenantScope,
@@ -813,7 +985,18 @@ export async function updateTrip(
   input: UpdateTripInput,
 ): Promise<Trip> {
   const existing = await requireOwnedTrip(scope, tripId)
-  const values = definedOnly(updateTripInput.parse(input))
+  const { currency, ...values } = definedOnly(updateTripInput.parse(input))
+
+  // A tab on the previous bundle sends the currency on every save, so only a *different* one is a
+  // change. An equal one is left out of the patch altogether rather than written back, so a change
+  // that lands between this read and the write is not restored. A tab that was already stale when
+  // the request arrived still reads as a change: the server cannot tell that from a deliberate pick,
+  // which is why the current sheet sends the currency only when the reader changed it.
+  const currencyChanged =
+    currency !== undefined && currency !== existing.currency
+  if (currencyChanged && existing.isArchived) {
+    throw new TripArchivedError()
+  }
 
   const startDate =
     values.startDate === undefined ? existing.startDate : values.startDate
@@ -826,10 +1009,10 @@ export async function updateTrip(
       ? undefined
       : await reserveTripSlug(scope, values.slug, tripId)
 
-  const trip = await tripsRepository.requireUpdate(scope, tripId, {
-    ...values,
-    ...(slug === undefined ? {} : { slug }),
-  })
+  const patch = { ...values, ...(slug === undefined ? {} : { slug }) }
+  const trip = currencyChanged
+    ? await updateTripWithCurrency(scope, tripId, patch, currency)
+    : await tripsRepository.requireUpdate(scope, tripId, patch)
 
   const datesMoved =
     startDate !== existing.startDate || endDate !== existing.endDate
@@ -922,7 +1105,6 @@ function assertDateOrder(
 /* -------------------------------------------------------------------------------------------------
  * Copying a trip (PRD #104 decisions 3, 4a, 4b, 6 and 9)
  * ---------------------------------------------------------------------------------------------- */
-
 
 export interface StartTripCopyInput {
   readonly title: string
