@@ -82,6 +82,9 @@ const messages = {
   'plan.addPlace.more': '장소를 추가하는 다른 방법',
   'plan.addPlace.option.map': '지도에 배치',
   'plan.addPlace.forDayNamed': '장소 추가 — {day}',
+  'plan.addPlace.quota':
+    '요금제의 장소 한도에 도달했습니다. 더 추가하려면 요금제를 업그레이드하세요.',
+  'plan.addPlace.quotaAction': '요금제 보기',
   'plan.stay.checkIn': '체크인',
   'plan.stay.checkOut': '체크아웃',
   'plan.day.addStay': '숙소 추가 — {day}',

@@ -84,6 +84,9 @@ const messages = {
   'plan.addPlace.more': 'Fler sätt att lägga till en plats',
   'plan.addPlace.option.map': 'Placera den på kartan',
   'plan.addPlace.forDayNamed': 'Lägg till en plats: {day}',
+  'plan.addPlace.quota':
+    'Du har nått gränsen för platser i din plan. Uppgradera för att lägga till fler.',
+  'plan.addPlace.quotaAction': 'Visa planer',
   'plan.stay.checkIn': 'Incheckning',
   'plan.stay.checkOut': 'Utcheckning',
   'plan.day.addStay': 'Lägg till ett boende: {day}',
