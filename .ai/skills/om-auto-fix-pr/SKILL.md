@@ -9,7 +9,7 @@ Start only from an explicit request in Cezar. Acquire the PR claim before any mu
 
 One addition to the stabilization loop's exit criteria:
 
-- Before declaring the review approvable, run **list-review-threads** and require zero threads that are unresolved and not outdated. An open thread that the `om-auto-review-pr --autofix` stage fixed but did not resolve is closed here with **reply-review-comment** and **resolve-review-thread** (the repo override of `om-auto-review-pr` says how). An open thread the stage declined stays open and ends the loop with `changes-requested`, never `merge-queue`; the final report names the thread and its reason so a human can settle it.
+- Before declaring the review approvable, run **list-review-threads** and require zero threads that are unresolved and not outdated. An open thread that the `om-auto-review-pr --autofix` stage fixed but did not resolve is closed here with **reply-review-comment** and **resolve-review-thread** (the repo override of `om-auto-review-pr` says how). An open thread the stage declined is settled the way that override says, by a specialist's verdict, before the loop ends; only a thread still open after that ends it with `changes-requested`, never `merge-queue`, and counts as a failed round of `om-pr-autopilot`'s loop.
 
 One addition to every push:
 
@@ -26,4 +26,4 @@ Six rules for the whole run:
 
 One addition to the UI verification stage:
 
-- **QA runs through the unattended sign-off.** Where the chain reaches the QA stage of a PR that touches a user-facing surface, run `om-auto-qa-pr {prNumber} --self-qa-signoff` (the repo override of `om-auto-qa-pr` says how the sign-off is decided) instead of the evidence-only call. The installed "evidence-only" call and "never adds `qa-approved`" rule bind this orchestrator, not the QA skill it dispatches; a `risk-high` PR still ends at merge-ready with the evidence posted, and `qa-approved` is the owner's.
+- **QA runs through the unattended sign-off.** Where the chain reaches the QA stage of a PR that touches a user-facing surface, run `om-auto-qa-pr {prNumber} --self-qa-signoff` (the repo override of `om-auto-qa-pr` says how the sign-off is decided) instead of the evidence-only call. The installed "evidence-only" call and "never adds `qa-approved`" rule bind this orchestrator, not the QA skill it dispatches; `risk-high` and `security` PRs go through it too (ADR 0035). After a fix for a `qa-failed` the QA panel set (a `🤖 QA-PANEL: FAIL head=<sha>` comment for the PR's current head marks it) is pushed, remove that label so QA runs again on the new head; a `qa-failed` without that comment is a person's and is left alone.

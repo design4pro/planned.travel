@@ -7,6 +7,8 @@ promotion carries `do-not-merge`). Retires the intake labels, which arrived with
 were never recorded in an ADR.
 Amended by: ADR 0033 (the Reconciler starts implementation; the WIP limit counts only PRs that wait for
 a person; an agent may lift a hold an agent set).
+Amended by: ADR 0035 (the owner's `qa-approved` on `risk-high` is no longer a brake: agents judge QA
+and risk).
 
 ## Context
 
