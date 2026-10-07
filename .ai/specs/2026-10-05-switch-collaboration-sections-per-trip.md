@@ -51,7 +51,8 @@ Measured at HEAD:
   trip tab). Three wave-2 stages would name all four.
 - `src/routes/_app/-server/trip.ts:753` holds a **second** `postMessageFn`: no `requireTrip`, no room
   mirror, no notification. Its only caller is `src/routes/_app/-ui/message-composer.tsx`, which nothing
-  imports (`grep -rn MessageComposer src` returns the definition only). The real writer is in
+  imports (`grep -rn MessageComposer src` returns the definition only; #682 has since deleted both the
+  composer and this duplicate, so Phase 1 step 5 only confirms it). The real writer is in
   `src/server/fns/collab.ts` and already carries the notification (`notifyTripMessage`, plan stage
   `00-S2` landed). `grep postMessageFn` therefore answers with two writers, which is the shape
   `docs/SPEC.md` §8 forbids and the exact trap the plan warns about when a message writer is moved.
@@ -142,8 +143,8 @@ Behaviour is held constant; the ticket is verified by the existing gate plus the
    modules). Remove the loader, `CollabPayload` and the imports their removal orphaned from
    `src/routes/_app/-server/trip.ts`; **export `loadPeople` and `tripInput`** from it (the other loaders still use
    both; copying them would be two owners of one function).
-5. Delete the duplicate `postMessageFn` in `trip.ts` and the unreferenced `message-composer.tsx`
-   (`grep -rn "MessageComposer\|message-composer" src` must return nothing). The writer that remains mirrors to the
+5. Confirm the duplicate `postMessageFn` in `trip.ts` and the unreferenced `message-composer.tsx` are gone (#682
+   deleted them; `grep -rn "MessageComposer\|message-composer" src` must return nothing). The writer that remains mirrors to the
    room and notifies the members.
 6. Repoint every consumer of the old module: `thread.tsx`, `collab-board.tsx` and `collab-dialogs.tsx` (which Phase 2
    then moves), and `collab.tsx`'s loader import.
@@ -541,7 +542,7 @@ Each gap names where it goes:
 
 - **Authorisation of the moved writers.** A trip `viewer` can post messages, notes and polls today: no collab writer checks a trip role. Further, the writers that act on a `noteId`, `pollId` or `messageId` (`updateCollabNote`, `deleteCollabNote`, `closePoll`, `deletePoll`, `castVote`, `editMessage`, `deleteMessage`, `toggleReaction` in `src/server/repos/collab.ts`) check the workspace only: neither that the row belongs to `data.tripId` nor that the caller can see that trip (ADR 0007), so a workspace member holding an id from a private trip can change or delete that row. Phase 1 moves these writers verbatim, which does not make it worse, and removes the unguarded duplicate `postMessageFn`. **Owner: a follow-up issue filed by the Phase 1 ticket** (acceptance criterion 1); no stage of plan 07 owns it today.
 - The "What's next" section and its toggle: `07-S9`. The thread's paging and keys: `07-S3`. Notes categories and the notes board's per-board empty states and error `Alert`: `07-S4`. Poll deadlines and the polls board's empty state and error `Alert`: `07-S5`. (The plan's per-board empty-state copy and per-panel error `Alert` of this stage are re-owned by those three stages, plan 07 lines 812, 1016-1021 and 1197-1199.)
-- The hardcoded composer placeholder `'Say something to the group…'` in `thread.tsx` (an existing key, `modules.collab.compose.placeholder`, is unused there) and the route error title `trips.error.collab` ("The conversation did not load"): `07-S3`, which owns the thread. The `cs` and `uk` wording of the polls heading as a menu/tab label is a locale-review note for `07-S5`.
+- The route error title `trips.error.collab` ("The conversation did not load"): `07-S3`, which owns the thread. (The composer's hardcoded placeholder was localised by #682 as `collab.compose.placeholderText`.) The `cs` and `uk` wording of the polls heading as a menu/tab label is a locale-review note for `07-S5`.
 - The abbreviated-month formatting in the notes board (`07-S4`); any migration (none is needed).
 
 ## 📋 Phasing

@@ -791,6 +791,7 @@ const messages = {
   'collab.compose.cancelReply': 'Batalkan balasan',
   'collab.compose.cancelEdit': 'Batalkan perubahan',
   'collab.compose.placeholder': 'Tulis untuk perjalanan',
+  'collab.compose.placeholderText': 'Tulis sesuatu untuk grup…',
   'collab.compose.editPlaceholder': 'Ubah pesanmu',
   'collab.compose.editPlaceholderText': 'Ganti apa yang kamu bilang…',
   'collab.compose.send': 'Kirim pesan',

@@ -759,6 +759,7 @@ const messages = {
   'collab.compose.cancelReply': '답글 취소',
   'collab.compose.cancelEdit': '편집 취소',
   'collab.compose.placeholder': '여행에 남기기',
+  'collab.compose.placeholderText': '그룹에 한마디 남기기…',
   'collab.compose.editPlaceholder': '내 메시지 편집',
   'collab.compose.editPlaceholderText': '쓴 내용 바꾸기…',
   'collab.compose.send': '메시지 보내기',
