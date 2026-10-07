@@ -602,6 +602,7 @@ const messages = {
     'Две остановки и дата — расписание ответит. Ничего не сохраняется, пока вы не выберете.',
   'transports.connection.empty':
     'Между этими двумя остановками на эту дату маршрут не найден. Попробуйте соседнюю станцию или расширьте фильтр.',
+  'transports.connection.credit': 'Данные расписания от',
   'transports.connection.searchFailed': 'Поиск не выполнился',
   'transports.connection.searchFailedBody':
     'Попробуйте ещё раз через мгновение.',

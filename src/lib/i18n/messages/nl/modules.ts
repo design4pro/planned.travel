@@ -592,6 +592,7 @@ const messages = {
     'Twee haltes en een datum, en de dienstregeling antwoordt. Er wordt niets bewaard tot je er een kiest.',
   'transports.connection.empty':
     'Er is op die datum geen verbinding gevonden tussen die twee haltes. Probeer een naburig station, of verbreed het modusfilter.',
+  'transports.connection.credit': 'Dienstregelingen van',
   'transports.connection.searchFailed': 'De zoekopdracht liep niet',
   'transports.connection.searchFailedBody': 'Probeer het zo nog eens.',
   'transports.connection.saved': 'Verbinding bewaard',

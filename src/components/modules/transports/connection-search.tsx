@@ -43,7 +43,9 @@ import {
   Input,
   Skeleton,
 } from '#/components/ui'
+import { MapCreditList } from '#/components/map/map-attribution'
 import { cn } from '#/lib/cn'
+import { HERE_CREDITS } from '#/lib/geo/credits'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
@@ -69,6 +71,17 @@ import type {
   TransitMode,
 } from '#/server/fns/transports'
 import type { TransportDayData } from './types'
+
+/**
+ * The HERE credit as the map's credit list takes it.
+ *
+ * The list is the one implementation of "a credit link" (`MapCreditList`), so the connection search
+ * discharges its obligation through it rather than through a second mechanism.
+ */
+const HERE_CREDIT_LINKS = HERE_CREDITS.map((credit) => ({
+  label: credit.name,
+  href: credit.url,
+}))
 
 /* ------------------------------------------------------------------- filter */
 
@@ -594,8 +607,14 @@ export function refusalBody(
  * before anything was asked, a refusal, an answer with nothing in it, and the list. The skeleton is
  * the same three rows at the same height the results occupy, so an answer landing changes what is
  * in the box and never how tall it is.
+ *
+ * **The HERE credit belongs to the last state only.** It is owed where a routed answer is shown
+ * (ADR 0019), and only the list shows one. It sits after the last row, inside the dialog's
+ * scrolling body, so no footer or other control covers it. The skeleton reserves no line for it:
+ * the list already grows past the skeleton's three rows when the answer has more, so one caption
+ * line at the end of the scroll body is no new shift.
  */
-function SearchOutcome({
+export function SearchOutcome({
   pending,
   outcome,
   results,
@@ -656,18 +675,24 @@ function SearchOutcome({
   }
 
   return (
-    <ul className="flex flex-col gap-2">
-      {results.map((connection) => (
-        <ConnectionRow
-          key={connection.id}
-          connection={connection}
-          expanded={expanded === connection.id}
-          saving={saving}
-          onToggle={() => onToggle(connection.id)}
-          onSave={() => onSave(connection)}
-        />
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-2">
+        {results.map((connection) => (
+          <ConnectionRow
+            key={connection.id}
+            connection={connection}
+            expanded={expanded === connection.id}
+            saving={saving}
+            onToggle={() => onToggle(connection.id)}
+            onSave={() => onSave(connection)}
+          />
+        ))}
+      </ul>
+      <p data-part="connection-credit" className="mt-3 text-caption text-ink-3">
+        {t('modules.transports.connection.credit')}{' '}
+        <MapCreditList credits={HERE_CREDIT_LINKS} />
+      </p>
+    </>
   )
 }
 
