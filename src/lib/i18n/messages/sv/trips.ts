@@ -84,10 +84,23 @@ const messages = {
   'plan.addPlace.more': 'Fler sätt att lägga till en plats',
   'plan.addPlace.option.map': 'Placera den på kartan',
   'plan.addPlace.forDayNamed': 'Lägg till en plats: {day}',
+  'plan.addPlace.quota':
+    'Du har nått gränsen för platser i din plan. Uppgradera för att lägga till fler.',
+  'plan.addPlace.quotaAction': 'Visa planer',
   'plan.stay.checkIn': 'Incheckning',
   'plan.stay.checkOut': 'Utcheckning',
   'plan.day.addStay': 'Lägg till ett boende: {day}',
   'plan.day.addStayShort': 'Lägg till ett boende',
+  'plan.handoff.stop': 'Öppna {place} i {service} (öppnas i en ny flik)',
+  'plan.handoff.day.directions': 'Vägbeskrivning i {service}',
+  'plan.handoff.day.directionsName':
+    'Vägbeskrivning i {service}: {day} (öppnas i en ny flik)',
+  'plan.handoff.day.directionsPartial': 'Stopp: de första {carried} av {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Vägbeskrivning i {service}: {day}, stopp: de första {carried} av {total} (öppnas i en ny flik)',
+  'plan.handoff.day.point': 'Visa i {service}',
+  'plan.handoff.day.pointName':
+    'Visa i {service}: det enda stoppet med position på {day} (öppnas i en ny flik)',
   'plan.drop.hint':
     'Högerklicka på kartan, eller tryck och håll, för att lägga till en plats precis där.',
   'plan.drop.armed':

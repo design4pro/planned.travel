@@ -71,6 +71,11 @@ const messages = {
   'account.signOutFailed': 'Не удалось выйти',
   'account.signOutFailedBody': 'Проверьте соединение и попробуйте снова.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Пространство',
+  'workspace.switchFailed': 'Не удалось переключить пространство',
+  'workspace.switchFailedBody': 'Проверьте соединение и попробуйте снова.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Оформление',
   'theme.light': 'Светлая',
@@ -550,6 +555,8 @@ const messages = {
   'editTrip.retry': 'Повторить',
   'editTrip.error':
     'Не удалось сохранить поездку. Попробуйте ещё раз через мгновение.',
+  'editTrip.currencyLocked':
+    'В этой поездке уже есть цены, поэтому валюту бюджета здесь изменить нельзя. Верните {current}, чтобы сохранить остальные изменения.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Удалить «{title}» навсегда?',
   'deleteTrip.description':

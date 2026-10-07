@@ -2,6 +2,7 @@
 
 Status: accepted
 Date: 2026-09-15
+See also: ADR 0036 (a second routing vendor and vendor keys in the console, asked again and answered the same way)
 
 ## Context
 
@@ -117,9 +118,10 @@ Price was never going to decide this; the terms below do, and each one binds the
   rule `02-S1` and `11-S3` state, applied rather than merely respected.
 - **What is shown follows the same line.** A routed time, road distance or line appears only to the
   member whose Request produced it. Another member looking at the same day makes their own Request
-  when they open it. The `07-S6` guest viewer, anything printed or exported as a document, and the
-  day's copy-out in `02-S9` carry no routed number or geometry; they show the great-circle distance
-  and the arc. When the day's order changes after a member's Request, their routed numbers give way
+  when they open it. The `07-S6` guest viewer and anything printed or exported as a document carry
+  no routed number or geometry; they show the great-circle distance and the arc. The day's map
+  hand-off (issue #663) carries stored coordinates only: no routed number, no geometry. When the
+  day's order changes after a member's Request, their routed numbers give way
   to great-circle distance. The member's own reorder requests again; after another member's reorder,
   arriving live, a new Request is made only when this member reopens the day or asks for times again,
   never by the live update itself. Print is excluded on a second ground as well: "Unless otherwise

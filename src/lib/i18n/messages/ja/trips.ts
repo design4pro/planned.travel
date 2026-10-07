@@ -83,10 +83,24 @@ const messages = {
   'plan.addPlace.more': '場所を追加するほかの方法',
   'plan.addPlace.option.map': '地図上に配置',
   'plan.addPlace.forDayNamed': '場所を追加 — {day}',
+  'plan.addPlace.quota':
+    'ご利用のプランの場所の上限に達しました。さらに追加するにはプランをアップグレードしてください。',
+  'plan.addPlace.quotaAction': 'プランを見る',
   'plan.stay.checkIn': 'チェックイン',
   'plan.stay.checkOut': 'チェックアウト',
   'plan.day.addStay': '宿泊を追加 — {day}',
   'plan.day.addStayShort': '宿泊を追加',
+  'plan.handoff.stop': '{place}を{service}で開く（新しいタブで開きます）',
+  'plan.handoff.day.directions': '{service}でルートを見る',
+  'plan.handoff.day.directionsName':
+    '{service}でルートを見る：{day}（新しいタブで開きます）',
+  'plan.handoff.day.directionsPartial':
+    '立ち寄り先：最初の{carried}件／全{total}件',
+  'plan.handoff.day.directionsPartialName':
+    '{service}でルートを見る：{day}、立ち寄り先：最初の{carried}件／全{total}件（新しいタブで開きます）',
+  'plan.handoff.day.point': '{service}で表示',
+  'plan.handoff.day.pointName':
+    '{service}で表示：{day}で位置が分かる唯一の立ち寄り先（新しいタブで開きます）',
   'plan.drop.hint':
     '地図を右クリックするか長押しすると、その地点に場所を追加できます。',
   'plan.drop.armed':

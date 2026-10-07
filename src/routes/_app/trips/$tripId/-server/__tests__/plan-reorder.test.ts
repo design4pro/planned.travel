@@ -328,6 +328,45 @@ describe('the merged day reaches both position columns', () => {
   })
 })
 
+describe('a note that changes day', () => {
+  it('lands on the day it was named under and is not spliced back', async () => {
+    await reorderPlan({
+      tripId: fixture.tripId,
+      days: [
+        {
+          dayId: fixture.otherDayId,
+          items: [{ kind: 'note', id: fixture.firstNoteId }],
+        },
+        {
+          dayId: fixture.dayId,
+          items: [
+            { kind: 'stop', id: fixture.morningId },
+            { kind: 'stop', id: fixture.eveningId },
+            { kind: 'note', id: fixture.secondNoteId },
+          ],
+        },
+      ],
+    })
+
+    expect(await sequenceOf(fixture.otherDayId)).toEqual([
+      [fixture.firstNoteId, 0],
+    ])
+    expect(await sequenceOf(fixture.dayId)).toEqual([
+      [fixture.morningId, 0],
+      [fixture.eveningId, 1],
+      [fixture.secondNoteId, 2],
+    ])
+    expect(
+      (await listDayNotes(tenant.scope, fixture.otherDayId)).map(
+        (row) => row.id,
+      ),
+    ).toEqual([fixture.firstNoteId])
+    expect(stubs.mirrored.at(0)?.patches.at(0)?.fields).toEqual({
+      items: [{ kind: 'note', id: fixture.firstNoteId }],
+    })
+  })
+})
+
 describe('dropping a time as part of the move', () => {
   it('nulls the stop’s time and writes the order together', async () => {
     await reorderPlan({
@@ -540,9 +579,8 @@ describe('who may rearrange a day', () => {
     const before = await sequenceOf(fixture.dayId)
     stubs.scope = tenant.scopeFor(viewerId)
 
-    // A cross-day move, which is the step that runs *before* the per-day write: the
-    // one place a role check the handler forgot would have let a read-only member
-    // through.
+    // A cross-day move, the write that changes the most: the one place a role check
+    // the repository forgot would have let a read-only member through.
     const refusal = await reorderPlan({
       tripId: fixture.tripId,
       days: [

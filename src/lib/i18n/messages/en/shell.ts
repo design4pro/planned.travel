@@ -111,6 +111,11 @@ const messages = {
   'account.signOutFailed': 'Could not sign you out',
   'account.signOutFailedBody': 'Check your connection and try again.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Workspace',
+  'workspace.switchFailed': 'Could not switch workspace',
+  'workspace.switchFailedBody': 'Check your connection and try again.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Appearance',
   'theme.light': 'Light',
@@ -579,6 +584,8 @@ const messages = {
   'editTrip.errorTitle': 'That did not save',
   'editTrip.retry': 'Try again',
   'editTrip.error': 'The trip could not be saved. Try again in a moment.',
+  'editTrip.currencyLocked':
+    'This trip already has prices in it, so its budget currency can’t be changed here. Set it back to {current} to save your other changes.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Delete “{title}” for good?',
   'deleteTrip.description':

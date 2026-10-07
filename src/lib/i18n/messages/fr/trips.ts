@@ -86,10 +86,25 @@ const messages = {
   'plan.addPlace.more': 'Autres façons d’ajouter un lieu',
   'plan.addPlace.option.map': 'Le placer sur la carte',
   'plan.addPlace.forDayNamed': 'Ajouter un lieu, {day}',
+  'plan.addPlace.quota':
+    'Vous avez atteint la limite de lieux de votre formule. Passez à une formule supérieure pour en ajouter.',
+  'plan.addPlace.quotaAction': 'Voir les formules',
   'plan.stay.checkIn': 'Arrivée',
   'plan.stay.checkOut': 'Départ',
   'plan.day.addStay': 'Ajouter un hébergement, {day}',
   'plan.day.addStayShort': 'Ajouter un hébergement',
+  'plan.handoff.stop':
+    'Ouvrir {place} dans {service} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.directions': 'Itinéraire dans {service}',
+  'plan.handoff.day.directionsName':
+    'Itinéraire dans {service} : {day} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.directionsPartial':
+    'Étapes : les {carried} premières sur {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Itinéraire dans {service} : {day}, étapes : les {carried} premières sur {total} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.point': 'Afficher dans {service}',
+  'plan.handoff.day.pointName':
+    'Afficher dans {service} : la seule étape localisée de {day} (s’ouvre dans un nouvel onglet)',
   'plan.drop.hint':
     'Faites un clic droit sur la carte, ou maintenez-la enfoncée, pour ajouter un lieu à cet endroit précis.',
   'plan.drop.armed':

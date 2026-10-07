@@ -152,6 +152,14 @@ export class ImportFormatError extends Error {
 
 export interface StartedBookingImport {
   readonly jobId: string
+  /**
+   * How many seconds after the start the queue was told to hold this job: `0` for the first file of
+   * a drop, `index * EXTRACTION_BUDGET_SECONDS` for the rest.
+   *
+   * Relative rather than an absolute start time, so the client's stall budget stays on its own
+   * clock and a skewed one cannot make a job look late. The stagger is stated here and nowhere else.
+   */
+  readonly delaySeconds: number
 }
 
 export type BookingImportStatus = 'working' | 'ready' | 'refused'
@@ -463,13 +471,11 @@ export async function startBookingImport(
   input: StartBookingImportInput,
 ): Promise<StartedBookingImport> {
   const trip = await requireTrip(scope, input.tripId)
-  // Here and not only at the confirm. `confirmBookingImport` reaches `createReservation`, which
-  // asks this same question — but by then the reading has been paid for: starting a job spends a
-  // metered `extraction_calls_per_month` unit and sends a document to Workers AI as soon as the
-  // queue handler runs, with nothing between the enqueue and the spend. Without this a trip
-  // `viewer` — who may see the desk and may never write to it — could drain the workspace's whole
-  // monthly allowance a file at a time, and be refused only at the confirm they were never going
-  // to reach.
+  // Here as well as at the confirm, and for a different spend: starting a job spends a metered
+  // `extraction_calls_per_month` unit and sends a document to Workers AI as soon as the queue
+  // handler runs, with nothing between the enqueue and the spend. Without this a trip `viewer` — who
+  // may see the desk and may never write to it — could drain the workspace's whole monthly
+  // allowance a file at a time, and be refused only at the confirm they were never going to reach.
   await assertBookingRole(scope, trip.id)
   const file = await getFile(scope, input.fileId)
   if (file === null || file.tripId !== trip.id) {
@@ -500,7 +506,7 @@ export async function startBookingImport(
     ...(delaySeconds === 0 ? {} : { delaySeconds }),
   })
 
-  return { jobId: id }
+  return { jobId: id, delaySeconds }
 }
 
 /* ---------------------------------------------------------------------- get */
@@ -766,6 +772,12 @@ export async function confirmBookingImport(
   ports: ConfirmBookingImportPorts,
 ): Promise<ConfirmedBookingImport> {
   const trip = await requireTrip(scope, input.tripId)
+  // Before anything is read, created or spent. The rows below reach `createReservation`, which asks
+  // this same question — but an accommodation row first creates a place (a `places` quota unit) and
+  // pins it through the geocoder (a metered monthly lookup), and the refusal at the reservation is
+  // caught per row and counted as a failed one. Without this a trip `viewer` who opened an import
+  // an editor staged would spend both and be handed a result, not a refusal.
+  await assertBookingRole(scope, trip.id)
   const staged = await readStaged(scope, store, input)
   if (staged === null) {
     throw new NotFoundError('staged import', input.jobId)
@@ -851,7 +863,7 @@ export async function confirmBookingImport(
   }
 
   const fresh = written.slice(already.length)
-  await stamp(scope, fresh)
+  await stamp(scope, trip.id, fresh)
   await persist(store, staged, written, {
     asked: pending.length,
     remaining: pending.length - fresh.length,
@@ -883,12 +895,14 @@ export async function confirmBookingImport(
  */
 async function stamp(
   scope: TenantScope,
+  owningTripId: string,
   fresh: ReadonlyArray<{ readonly reservationId: string }>,
 ): Promise<void> {
   if (fresh.length === 0) return
   try {
     const marked = await markReservationsImported(
       scope,
+      owningTripId,
       fresh.map((row) => row.reservationId),
     )
     if (marked !== fresh.length) {

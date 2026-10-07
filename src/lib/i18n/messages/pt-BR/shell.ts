@@ -66,6 +66,11 @@ const messages = {
   'account.signOutFailed': 'Não foi possível sair',
   'account.signOutFailedBody': 'Confira sua conexão e tente de novo.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Espaço',
+  'workspace.switchFailed': 'Não foi possível trocar de espaço',
+  'workspace.switchFailedBody': 'Confira sua conexão e tente de novo.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Aparência',
   'theme.light': 'Claro',
@@ -522,6 +527,8 @@ const messages = {
   'editTrip.retry': 'Tentar de novo',
   'editTrip.error':
     'Não foi possível salvar a viagem. Tente de novo em instantes.',
+  'editTrip.currencyLocked':
+    'Esta viagem já tem preços, então a moeda do orçamento não pode ser alterada aqui. Volte para {current} para salvar as outras alterações.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Excluir “{title}” para sempre?',
   'deleteTrip.description':

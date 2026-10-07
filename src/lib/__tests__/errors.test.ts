@@ -79,6 +79,46 @@ describe('readPublicFailure', () => {
     })
   })
 
+  it('round-trips the quota code alongside the reference', () => {
+    const encoded = encodePublicFailure({
+      kind: 'unexpected',
+      code: 'QUOTA_EXCEEDED',
+      reference: 'abc123',
+    })
+
+    expect(readPublicFailure(new Error(encoded))).toEqual({
+      kind: 'unexpected',
+      code: 'QUOTA_EXCEEDED',
+      reference: 'abc123',
+    })
+  })
+
+  it('drops a code that is not the allow-listed literal, however the envelope is dressed', () => {
+    // The code is the one thing besides a message the UI branches on, so a hostile or newer-server
+    // value must not reach a screen: every other repository code, a near-miss and a wrong type.
+    for (const code of [
+      'NOT_FOUND',
+      'FORBIDDEN',
+      'TENANT_ISOLATION',
+      'quota_exceeded',
+      'QUOTA_EXCEEDED ',
+      42,
+      null,
+      { QUOTA_EXCEEDED: true },
+    ]) {
+      const envelope = `planned-travel/failure/1 ${JSON.stringify({
+        kind: 'unexpected',
+        code,
+        reference: 'abc123',
+      })}`
+
+      expect(readPublicFailure(new Error(envelope))).toEqual({
+        kind: 'unexpected',
+        reference: 'abc123',
+      })
+    }
+  })
+
   it('never returns a message for an unexpected failure, however the envelope is dressed', () => {
     // A hostile or buggy envelope must not be able to talk the UI into rendering a diagnostic.
     const smuggled =

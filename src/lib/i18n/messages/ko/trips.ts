@@ -82,10 +82,24 @@ const messages = {
   'plan.addPlace.more': '장소를 추가하는 다른 방법',
   'plan.addPlace.option.map': '지도에 배치',
   'plan.addPlace.forDayNamed': '장소 추가 — {day}',
+  'plan.addPlace.quota':
+    '요금제의 장소 한도에 도달했습니다. 더 추가하려면 요금제를 업그레이드하세요.',
+  'plan.addPlace.quotaAction': '요금제 보기',
   'plan.stay.checkIn': '체크인',
   'plan.stay.checkOut': '체크아웃',
   'plan.day.addStay': '숙소 추가 — {day}',
   'plan.day.addStayShort': '숙소 추가',
+  'plan.handoff.stop': '{service}에서 {place} 열기(새 탭에서 열림)',
+  'plan.handoff.day.directions': '{service}에서 길찾기',
+  'plan.handoff.day.directionsName':
+    '{service}에서 길찾기: {day}(새 탭에서 열림)',
+  'plan.handoff.day.directionsPartial':
+    '방문지: 처음 {carried}곳 / 전체 {total}곳',
+  'plan.handoff.day.directionsPartialName':
+    '{service}에서 길찾기: {day}, 방문지: 처음 {carried}곳 / 전체 {total}곳(새 탭에서 열림)',
+  'plan.handoff.day.point': '{service}에서 보기',
+  'plan.handoff.day.pointName':
+    '{service}에서 보기: {day}에서 위치가 있는 유일한 방문지(새 탭에서 열림)',
   'plan.drop.hint':
     '지도를 마우스 오른쪽 버튼으로 클릭하거나 길게 누르면 바로 그 위치에 장소가 추가됩니다.',
   'plan.drop.armed':

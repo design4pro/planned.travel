@@ -72,6 +72,11 @@ const messages = {
   'account.signOutFailed': 'Nie udało się wylogować',
   'account.signOutFailedBody': 'Sprawdź połączenie i spróbuj ponownie.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Przestrzeń',
+  'workspace.switchFailed': 'Nie udało się przełączyć przestrzeni',
+  'workspace.switchFailedBody': 'Sprawdź połączenie i spróbuj ponownie.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Wygląd',
   'theme.light': 'Jasny',
@@ -555,6 +560,8 @@ const messages = {
   'editTrip.retry': 'Spróbuj ponownie',
   'editTrip.error':
     'Nie udało się zapisać wyjazdu. Spróbuj ponownie za chwilę.',
+  'editTrip.currencyLocked':
+    'Ten wyjazd ma już ceny, więc nie można tu zmienić waluty budżetu. Ustaw z powrotem {current}, aby zapisać pozostałe zmiany.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Usunąć „{title}” na zawsze?',
   'deleteTrip.description':

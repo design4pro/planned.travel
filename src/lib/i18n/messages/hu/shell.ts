@@ -66,6 +66,12 @@ const messages = {
   'account.signOutFailed': 'Nem sikerült kijelentkeztetni',
   'account.signOutFailedBody': 'Ellenőrizze a kapcsolatot, majd próbálja újra.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Munkaterület',
+  'workspace.switchFailed': 'Nem sikerült munkaterületet váltani',
+  'workspace.switchFailedBody':
+    'Ellenőrizze a kapcsolatot, majd próbálja újra.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Megjelenés',
   'theme.light': 'Világos',
@@ -506,6 +512,8 @@ const messages = {
   'editTrip.retry': 'Újra',
   'editTrip.error':
     'Az utazást nem sikerült menteni. Próbáld újra egy pillanat múlva.',
+  'editTrip.currencyLocked':
+    'Ennek az utazásnak már vannak árai, ezért a költségvetés pénznemét itt nem lehet módosítani. Állítsd vissza {current} értékre, hogy a többi módosításod mentődjön.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Véglegesen törlöd ezt: „{title}”?',
   'deleteTrip.description':

@@ -87,10 +87,23 @@ const messages = {
   'plan.addPlace.more': 'طرق أخرى لإضافة مكان',
   'plan.addPlace.option.map': 'ضعه على الخريطة',
   'plan.addPlace.forDayNamed': 'إضافة مكان، {day}',
+  'plan.addPlace.quota':
+    'وصلت إلى الحد الأقصى للأماكن في خطتك. قم بالترقية لإضافة المزيد.',
+  'plan.addPlace.quotaAction': 'عرض الخطط',
   'plan.stay.checkIn': 'تسجيل الوصول',
   'plan.stay.checkOut': 'تسجيل المغادرة',
   'plan.day.addStay': 'إضافة إقامة، {day}',
   'plan.day.addStayShort': 'إضافة إقامة',
+  'plan.handoff.stop': 'فتح {place} في {service} (يفتح في علامة تبويب جديدة)',
+  'plan.handoff.day.directions': 'الاتجاهات في {service}',
+  'plan.handoff.day.directionsName':
+    'الاتجاهات في {service}، {day} (يفتح في علامة تبويب جديدة)',
+  'plan.handoff.day.directionsPartial': 'المحطات: أول {carried} من {total}',
+  'plan.handoff.day.directionsPartialName':
+    'الاتجاهات في {service}، {day}، المحطات: أول {carried} من {total} (يفتح في علامة تبويب جديدة)',
+  'plan.handoff.day.point': 'عرض في {service}',
+  'plan.handoff.day.pointName':
+    'عرض في {service}، المحطة الوحيدة المحددة على الخريطة في {day} (يفتح في علامة تبويب جديدة)',
   'plan.drop.hint':
     'انقر بزر الفأرة الأيمن على الخريطة، أو اضغط مطوّلًا، لإضافة مكان في ذلك الموضع تمامًا.',
   'plan.drop.armed':

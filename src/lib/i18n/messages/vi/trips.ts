@@ -81,10 +81,24 @@ const messages = {
   'plan.addPlace.more': 'Các cách khác để thêm địa điểm',
   'plan.addPlace.option.map': 'Đặt lên bản đồ',
   'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
+  'plan.addPlace.quota':
+    'Bạn đã đạt giới hạn số địa điểm của gói hiện tại. Hãy nâng cấp để thêm nữa.',
+  'plan.addPlace.quotaAction': 'Xem các gói',
   'plan.stay.checkIn': 'Nhận phòng',
   'plan.stay.checkOut': 'Trả phòng',
   'plan.day.addStay': 'Thêm chỗ ở, {day}',
   'plan.day.addStayShort': 'Thêm chỗ ở',
+  'plan.handoff.stop': 'Mở {place} trong {service} (mở trong tab mới)',
+  'plan.handoff.day.directions': 'Chỉ đường trong {service}',
+  'plan.handoff.day.directionsName':
+    'Chỉ đường trong {service}: {day} (mở trong tab mới)',
+  'plan.handoff.day.directionsPartial':
+    'Điểm dừng: {carried} đầu tiên trong {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Chỉ đường trong {service}: {day}, điểm dừng: {carried} đầu tiên trong {total} (mở trong tab mới)',
+  'plan.handoff.day.point': 'Xem trong {service}',
+  'plan.handoff.day.pointName':
+    'Xem trong {service}: điểm dừng duy nhất có vị trí của {day} (mở trong tab mới)',
   'plan.drop.hint':
     'Nhấp chuột phải vào bản đồ, hoặc nhấn giữ, để thêm một địa điểm ngay tại đó.',
   'plan.drop.armed':

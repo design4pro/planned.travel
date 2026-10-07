@@ -48,6 +48,11 @@ const messages = {
   'account.signingOut': '로그아웃하는 중…',
   'account.signOutFailed': '로그아웃하지 못했어요',
   'account.signOutFailedBody': '연결을 확인하고 다시 시도해 주세요.',
+
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': '워크스페이스',
+  'workspace.switchFailed': '워크스페이스를 전환하지 못했어요',
+  'workspace.switchFailedBody': '연결을 확인하고 다시 시도해 주세요.',
   'theme.label': '화면',
   'theme.light': '라이트',
   'theme.dark': '다크',
@@ -406,6 +411,8 @@ const messages = {
   'editTrip.errorTitle': '저장되지 않았습니다',
   'editTrip.retry': '다시 시도',
   'editTrip.error': '여행을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'editTrip.currencyLocked':
+    '이 여행에는 이미 금액이 있어서 여기서는 예산 통화를 바꿀 수 없습니다. 다른 변경 사항을 저장하려면 통화를 {current}(으)로 되돌려 주세요.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}”을(를) 영구 삭제할까요?',
   'deleteTrip.description':

@@ -149,6 +149,9 @@ const messages = {
   'plan.addPlace.more': 'More ways to add a place',
   'plan.addPlace.option.map': 'Place it on the map',
   'plan.addPlace.forDayNamed': 'Add a place to {day}',
+  'plan.addPlace.quota':
+    'You’ve reached your plan’s limit on places. Upgrade to add more.',
+  'plan.addPlace.quotaAction': 'See plans',
   /* ---------------------------------------------- a stay on the day */
   /**
    * What a day header says about a stay covering it: `checkIn` on its first
@@ -162,6 +165,23 @@ const messages = {
   'plan.stay.checkOut': 'Check out',
   'plan.day.addStay': 'Add a stay for {day}',
   'plan.day.addStayShort': 'Add a stay',
+  /**
+   * The map hand-off: links from a stop and from a day's footer into the reader's own
+   * map application. `{service}` is a brand name carried as data (`MAP_SERVICE_NAME`), never
+   * translated. Every name opens with its control's visible label (WCAG 2.5.3) and says it
+   * opens a new tab. `directionsPartial` is shown when a day is over the link's waypoint
+   * limit, in words that need no plural so no locale has to branch on `{total}`.
+   */
+  'plan.handoff.stop': 'Open {place} in {service} (opens in a new tab)',
+  'plan.handoff.day.directions': 'Directions in {service}',
+  'plan.handoff.day.directionsName':
+    'Directions in {service} for {day} (opens in a new tab)',
+  'plan.handoff.day.directionsPartial': 'Stops: first {carried} of {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Directions in {service} for {day}, stops: first {carried} of {total} (opens in a new tab)',
+  'plan.handoff.day.point': 'Show on {service}',
+  'plan.handoff.day.pointName':
+    'Show on {service}: the one mapped stop of {day} (opens in a new tab)',
   /**
    * Dropping a pin on the map: the empty map's hint, the arming banner and its
    * stop button, the provisional pin's name, and what a refused drop says.

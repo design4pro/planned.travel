@@ -87,10 +87,24 @@ const messages = {
   'plan.addPlace.more': 'Altri modi per aggiungere un luogo',
   'plan.addPlace.option.map': 'Posizionalo sulla mappa',
   'plan.addPlace.forDayNamed': 'Aggiungi un luogo, {day}',
+  'plan.addPlace.quota':
+    'Hai raggiunto il limite di luoghi del tuo piano. Passa a un piano superiore per aggiungerne altri.',
+  'plan.addPlace.quotaAction': 'Vedi i piani',
   'plan.stay.checkIn': 'Check-in',
   'plan.stay.checkOut': 'Check-out',
   'plan.day.addStay': 'Aggiungi un alloggio, {day}',
   'plan.day.addStayShort': 'Aggiungi un alloggio',
+  'plan.handoff.stop':
+    'Apri {place} in {service} (si apre in una nuova scheda)',
+  'plan.handoff.day.directions': 'Indicazioni in {service}',
+  'plan.handoff.day.directionsName':
+    'Indicazioni in {service}: {day} (si apre in una nuova scheda)',
+  'plan.handoff.day.directionsPartial': 'Tappe: le prime {carried} su {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Indicazioni in {service}: {day}, tappe: le prime {carried} su {total} (si apre in una nuova scheda)',
+  'plan.handoff.day.point': 'Mostra in {service}',
+  'plan.handoff.day.pointName':
+    'Mostra in {service}: l’unica tappa con posizione di {day} (si apre in una nuova scheda)',
   'plan.drop.hint':
     'Fai clic destro sulla mappa, o tieni premuto, per aggiungere un luogo proprio lì.',
   'plan.drop.armed':

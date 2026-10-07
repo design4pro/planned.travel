@@ -71,6 +71,12 @@ const messages = {
   'account.signOutFailedBody':
     'Prüfe deine Verbindung und versuche es noch einmal.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Arbeitsbereich',
+  'workspace.switchFailed': 'Der Arbeitsbereich konnte nicht gewechselt werden',
+  'workspace.switchFailedBody':
+    'Prüfe deine Verbindung und versuche es noch einmal.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Darstellung',
   'theme.light': 'Hell',
@@ -515,6 +521,8 @@ const messages = {
   'editTrip.retry': 'Erneut versuchen',
   'editTrip.error':
     'Die Reise konnte nicht gespeichert werden. Versuche es gleich noch einmal.',
+  'editTrip.currencyLocked':
+    'Diese Reise enthält bereits Preise, deshalb lässt sich die Budgetwährung hier nicht ändern. Stelle wieder {current} ein, um deine übrigen Änderungen zu speichern.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '„{title}“ endgültig löschen?',
   'deleteTrip.description':

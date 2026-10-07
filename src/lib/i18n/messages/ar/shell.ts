@@ -70,6 +70,11 @@ const messages = {
   'account.signOutFailed': 'تعذّر تسجيل خروجك',
   'account.signOutFailedBody': 'تحقق من اتصالك ثم أعد المحاولة.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'مساحة العمل',
+  'workspace.switchFailed': 'تعذّر تبديل مساحة العمل',
+  'workspace.switchFailedBody': 'تحقق من اتصالك ثم أعد المحاولة.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'المظهر',
   'theme.light': 'فاتح',
@@ -581,6 +586,8 @@ const messages = {
   'editTrip.errorTitle': 'لم يُحفَظ ذلك',
   'editTrip.retry': 'حاول مرة أخرى',
   'editTrip.error': 'تعذّر حفظ الرحلة. حاول مرة أخرى بعد قليل.',
+  'editTrip.currencyLocked':
+    'لهذه الرحلة أسعار مسجَّلة بالفعل، لذا لا يمكن تغيير عملة الميزانية من هنا. أعِد ضبطها على {current} لحفظ تغييراتك الأخرى.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'حذف «{title}» نهائيًا؟',
   'deleteTrip.description':

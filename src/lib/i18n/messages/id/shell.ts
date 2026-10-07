@@ -78,6 +78,11 @@ const messages = {
   'account.signOutFailed': 'Anda tidak jadi keluar',
   'account.signOutFailedBody': 'Periksa koneksi Anda lalu coba lagi.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Ruang kerja',
+  'workspace.switchFailed': 'Tidak bisa berpindah ruang kerja',
+  'workspace.switchFailedBody': 'Periksa koneksi Anda lalu coba lagi.',
+
   'theme.label': 'Tampilan',
   'theme.light': 'Terang',
   'theme.dark': 'Gelap',
@@ -456,6 +461,8 @@ const messages = {
   'editTrip.errorTitle': 'Itu tidak tersimpan',
   'editTrip.retry': 'Coba lagi',
   'editTrip.error': 'Perjalanan tidak dapat disimpan. Coba lagi sebentar.',
+  'editTrip.currencyLocked':
+    'Perjalanan ini sudah memiliki harga, sehingga mata uang anggarannya tidak dapat diubah di sini. Kembalikan ke {current} untuk menyimpan perubahan lainnya.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Hapus “{title}” selamanya?',
   'deleteTrip.description':

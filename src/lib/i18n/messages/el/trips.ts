@@ -87,10 +87,25 @@ const messages = {
   'plan.addPlace.more': 'Περισσότεροι τρόποι προσθήκης τοποθεσίας',
   'plan.addPlace.option.map': 'Τοποθέτηση στον χάρτη',
   'plan.addPlace.forDayNamed': 'Προσθήκη τοποθεσίας, {day}',
+  'plan.addPlace.quota':
+    'Φτάσατε το όριο τοποθεσιών του πακέτου σας. Αναβαθμίστε για να προσθέσετε περισσότερες.',
+  'plan.addPlace.quotaAction': 'Δείτε τα πακέτα',
   'plan.stay.checkIn': 'Άφιξη',
   'plan.stay.checkOut': 'Αποχώρηση',
   'plan.day.addStay': 'Προσθήκη διαμονής, {day}',
   'plan.day.addStayShort': 'Προσθήκη διαμονής',
+  'plan.handoff.stop':
+    'Άνοιγμα του {place} στο {service} (ανοίγει σε νέα καρτέλα)',
+  'plan.handoff.day.directions': 'Οδηγίες στο {service}',
+  'plan.handoff.day.directionsName':
+    'Οδηγίες στο {service}: {day} (ανοίγει σε νέα καρτέλα)',
+  'plan.handoff.day.directionsPartial':
+    'Στάσεις: οι πρώτες {carried} από {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Οδηγίες στο {service}: {day}, στάσεις: οι πρώτες {carried} από {total} (ανοίγει σε νέα καρτέλα)',
+  'plan.handoff.day.point': 'Εμφάνιση στο {service}',
+  'plan.handoff.day.pointName':
+    'Εμφάνιση στο {service}: η μοναδική στάση με θέση στον χάρτη, {day} (ανοίγει σε νέα καρτέλα)',
   'plan.drop.hint':
     'Κάντε δεξί κλικ στον χάρτη ή πατήστε παρατεταμένα για να προσθέσετε μια τοποθεσία ακριβώς εκεί.',
   'plan.drop.armed':

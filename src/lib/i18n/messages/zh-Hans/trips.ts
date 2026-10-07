@@ -74,10 +74,24 @@ const messages = {
   'plan.addPlace.more': '添加地点的其他方式',
   'plan.addPlace.option.map': '放到地图上',
   'plan.addPlace.forDayNamed': '添加地点——{day}',
+  'plan.addPlace.quota':
+    '你已达到当前套餐的地点数量上限。升级套餐即可添加更多。',
+  'plan.addPlace.quotaAction': '查看套餐',
   'plan.stay.checkIn': '入住',
   'plan.stay.checkOut': '退房',
   'plan.day.addStay': '添加住宿——{day}',
   'plan.day.addStayShort': '添加住宿',
+  'plan.handoff.stop': '在{service}中打开{place}（在新标签页中打开）',
+  'plan.handoff.day.directions': '在{service}中查看路线',
+  'plan.handoff.day.directionsName':
+    '在{service}中查看路线：{day}（在新标签页中打开）',
+  'plan.handoff.day.directionsPartial':
+    '停留点：前 {carried} 个，共 {total} 个',
+  'plan.handoff.day.directionsPartialName':
+    '在{service}中查看路线：{day}，停留点：前 {carried} 个，共 {total} 个（在新标签页中打开）',
+  'plan.handoff.day.point': '在{service}中查看',
+  'plan.handoff.day.pointName':
+    '在{service}中查看：{day}中唯一有位置的停留点（在新标签页中打开）',
   'plan.drop.hint': '在地图上点击右键或长按，即可在该处添加地点。',
   'plan.drop.armed':
     '在地图上点击它所在的位置，或移动地图后按 Enter 键，将其放在中央。',

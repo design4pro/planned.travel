@@ -24,13 +24,13 @@ import {
   reservations,
   transports,
 } from '#/server/db/schema'
-import { createTenantRepository, tenantFilter } from './base'
-import { NotFoundError, RepositoryError } from './context'
+import { allOf, createTenantRepository, tenantFilter } from './base'
+import { NotFoundError } from './context'
 import { requireTripDay } from './days'
 import { getExpense } from './expenses'
 import { unlinkAccommodationsFromReservation } from './itinerary'
 import { placesRepository } from './places'
-import { requireTrip, tripRoleFor } from './trips'
+import { assertTripRole, requireTrip } from './trips'
 import {
   currencySchema,
   dateSchema,
@@ -45,8 +45,9 @@ import {
   titleSchema,
   urlSchema,
 } from './validation'
-import type { Reservation, TripMember } from '#/server/db/types'
+import type { Reservation } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { TripRole } from './trips'
 
 export const reservationsRepository = createTenantRepository(
   reservations,
@@ -220,48 +221,33 @@ export async function totalTripReservationsMinor(
 /**
  * Trip roles that may change a trip's bookings. A `viewer` reads the desk and writes nothing.
  *
- * The refusal is raised as {@link RepositoryError} under the `FORBIDDEN` code rather than as
- * `ForbiddenError`, whose `required` list is typed to the *organization* roles — `owner`, `admin`,
- * `member`. A trip role is a different vocabulary and `editor` is not in it, and widening that
- * constructor means editing `context.ts`, which this change does not own. `FORBIDDEN` is the code
- * every caller maps to a 403, so nothing downstream can tell the difference.
+ * The one place the booking writers' role list is declared. Whether a caller holds one of them is
+ * not decided here: that is {@link assertTripRole}, the trip's own guard, so a booking refusal is
+ * the same `TripRoleError` every other trip writer raises and reaches the reader as a refusal.
  */
-const BOOKING_WRITE_ROLES: ReadonlyArray<TripMember['role']> = [
-  'owner',
-  'editor',
-]
+const BOOKING_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
 
 /**
- * The third layer, after the tenant filter and after `requireTrip`.
+ * The third layer, after the tenant filter and after `requireTrip`: {@link assertTripRole} with the
+ * booking writers' role list.
  *
- * It is the only one that can see whether the caller is allowed to *change* this trip rather than
- * merely reach it: a member of the workspace who is a `viewer` on the trip passes both of the
- * others. Every writer in this file resolves its trip first, so the id handed here is always one
- * the caller could already read.
- *
- * Exported because one writer of this trip's bookings does not live in this file: the confirmation
- * import spends a metered extraction unit the moment it enqueues, long before `createReservation`
- * is reached, so `startBookingImport` has to ask the same question this early. It asks it through
- * this function rather than through its own copy of the role list, because two implementations of
- * an access rule is the class of defect `docs/SPEC.md` §8 exists to prevent.
+ * Exported because the confirmation import, which writes this trip's bookings from outside this
+ * file, spends before `createReservation` is reached: `startBookingImport` spends a metered
+ * extraction unit the moment it enqueues, and `confirmBookingImport` creates a place and calls the
+ * geocoder for an accommodation row before its reservation write. Both ask the same question this
+ * early, through this function, so the role list stays declared once.
  */
 export async function assertBookingRole(
   scope: TenantScope,
   tripId: string,
 ): Promise<void> {
-  const role = await tripRoleFor(scope, tripId, scope.ctx.userId)
-  if (role === null || !BOOKING_WRITE_ROLES.includes(role)) {
-    throw new RepositoryError(
-      `Trip role ${role ?? 'none'} may not change this trip’s bookings; requires one of: ${BOOKING_WRITE_ROLES.join(', ')}.`,
-      'FORBIDDEN',
-    )
-  }
+  await assertTripRole(scope, tripId, BOOKING_WRITE_ROLES)
 }
 
 /**
  * The booking a writer is about to change, once the caller has been shown to be allowed to change
- * it: `NotFoundError` when the row is not theirs, `FORBIDDEN` when it is theirs to read and not to
- * edit. Every writer below that starts from a booking id starts here, so the two refusals cannot
+ * it: `NotFoundError` when the row is not theirs, `TripRoleError` when it is theirs to read and not
+ * to edit. Every writer below that starts from a booking id starts here, so the two refusals cannot
  * drift apart between them.
  */
 async function requireWritableReservation(
@@ -466,41 +452,52 @@ const IMPORT_BATCH_LIMIT = 500
 const importedIdsSchema = z.array(idSchema).min(1).max(IMPORT_BATCH_LIMIT)
 
 /**
- * Marks a batch of bookings as machine-written and unchecked, returning how many rows it marked.
+ * Marks a batch of one trip's bookings as machine-written and unchecked, returning how many rows it
+ * marked.
+ *
+ * A booking write like any other, so it runs the same three layers in the same order: the trip
+ * resolved inside the tenant (`NotFoundError` for a trip that is not the caller's), the trip role
+ * (`TripRoleError` for a viewer), and only then the write. The batch is bounded to that one trip, so
+ * no row of a trip the caller may not write can be marked by being named.
  *
  * One statement for the whole batch, and its `where` begins at `tenantFilter()` like every other
- * statement in this file — so an id belonging to another organization matches no row rather than
- * raising, and the count is the number of rows that were genuinely the caller's. That count is the
- * reason this returns a number and not `void`: without it a silent no-op on a foreign id is
- * indistinguishable from success.
+ * statement in this file - so an id belonging to another organization, or to another trip, matches
+ * no row rather than raising, and the count is the number of rows that were genuinely the caller's
+ * to mark. That count is the reason this returns a number and not `void`: without it a silent no-op
+ * on a foreign id is indistinguishable from success.
  *
  * The clock is read once, so every row of one import carries the same instant.
  */
 export async function markReservationsImported(
   scope: TenantScope,
+  tripId: string,
   reservationIds: ReadonlyArray<string>,
 ): Promise<number> {
   const ids = importedIdsSchema.parse([...reservationIds])
+  const trip = await requireTrip(scope, tripId)
+  await assertBookingRole(scope, trip.id)
   const markedAt = new Date()
   const rows = await reservationsRepository.updateWhere(
     scope,
-    inArray(reservations.id, ids),
+    allOf(eq(reservations.tripId, trip.id), inArray(reservations.id, ids)),
     { importedAt: markedAt },
   )
   return rows.length
 }
 
 /**
- * Clears the import marker — the first time a person opens an imported booking and saves it.
+ * Clears the import marker - the first time a person opens an imported booking and saves it.
  *
  * Idempotent by construction: clearing a marker that is already null writes null again and returns
  * the row, so the desk never has to ask first. A booking id that is not the caller's is a
- * `NotFoundError` from the same scoped read every other writer here uses.
+ * `NotFoundError` from the same scoped read every other writer here uses, and a viewer is refused
+ * before the write like on every other one.
  */
 export async function clearReservationImported(
   scope: TenantScope,
   reservationId: string,
 ): Promise<Reservation> {
+  await requireWritableReservation(scope, reservationId)
   return reservationsRepository.requireUpdate(scope, reservationId, {
     importedAt: null,
   })

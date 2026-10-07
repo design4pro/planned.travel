@@ -84,10 +84,25 @@ const messages = {
   'plan.addPlace.more': 'Más formas de añadir un lugar',
   'plan.addPlace.option.map': 'Colocarlo en el mapa',
   'plan.addPlace.forDayNamed': 'Añadir un lugar, {day}',
+  'plan.addPlace.quota':
+    'Has alcanzado el límite de lugares de tu plan. Mejora tu plan para añadir más.',
+  'plan.addPlace.quotaAction': 'Ver planes',
   'plan.stay.checkIn': 'Entrada',
   'plan.stay.checkOut': 'Salida',
   'plan.day.addStay': 'Añadir un alojamiento, {day}',
   'plan.day.addStayShort': 'Añadir un alojamiento',
+  'plan.handoff.stop':
+    'Abrir {place} en {service} (se abre en una pestaña nueva)',
+  'plan.handoff.day.directions': 'Cómo llegar en {service}',
+  'plan.handoff.day.directionsName':
+    'Cómo llegar en {service}: {day} (se abre en una pestaña nueva)',
+  'plan.handoff.day.directionsPartial':
+    'Paradas: las primeras {carried} de {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Cómo llegar en {service}: {day}, paradas: las primeras {carried} de {total} (se abre en una pestaña nueva)',
+  'plan.handoff.day.point': 'Ver en {service}',
+  'plan.handoff.day.pointName':
+    'Ver en {service}: la única parada con ubicación de {day} (se abre en una pestaña nueva)',
   'plan.drop.hint':
     'Haz clic derecho en el mapa, o mantén pulsado, para añadir un lugar justo ahí.',
   'plan.drop.armed':

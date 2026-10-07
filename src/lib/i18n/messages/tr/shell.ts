@@ -67,6 +67,11 @@ const messages = {
   'account.signOutFailed': 'Çıkış yapılamadı',
   'account.signOutFailedBody': 'Bağlantınızı kontrol edip yeniden deneyin.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Çalışma alanı',
+  'workspace.switchFailed': 'Çalışma alanı değiştirilemedi',
+  'workspace.switchFailedBody': 'Bağlantınızı kontrol edip yeniden deneyin.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Görünüm',
   'theme.light': 'Açık',
@@ -486,6 +491,8 @@ const messages = {
   'editTrip.errorTitle': 'Bu kaydedilmedi',
   'editTrip.retry': 'Yeniden dene',
   'editTrip.error': 'Gezi kaydedilemedi. Birazdan yeniden deneyin.',
+  'editTrip.currencyLocked':
+    'Bu gezide zaten fiyatlar var, bu yüzden bütçe para birimi burada değiştirilemez. Diğer değişiklikleri kaydetmek için {current} değerine geri döndürün.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}” kalıcı olarak silinsin mi?',
   'deleteTrip.description':

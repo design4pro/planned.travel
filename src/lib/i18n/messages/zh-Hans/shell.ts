@@ -48,6 +48,11 @@ const messages = {
   'account.signingOut': '正在退出登录…',
   'account.signOutFailed': '没能退出登录',
   'account.signOutFailedBody': '请检查网络后再试一次。',
+
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': '工作区',
+  'workspace.switchFailed': '没能切换工作区',
+  'workspace.switchFailedBody': '请检查网络后再试一次。',
   'theme.label': '外观',
   'theme.light': '浅色',
   'theme.dark': '深色',
@@ -389,6 +394,8 @@ const messages = {
   'editTrip.errorTitle': '未能保存',
   'editTrip.retry': '重试',
   'editTrip.error': '行程保存失败。请稍后重试。',
+  'editTrip.currencyLocked':
+    '这趟行程已经有价格，所以不能在这里更改预算货币。请改回 {current}，再保存其他修改。',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '永久删除“{title}”？',
   'deleteTrip.description':

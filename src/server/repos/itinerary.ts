@@ -25,7 +25,7 @@ import {
 } from './base'
 import { runBatch } from './batch'
 import { NotFoundError } from './context'
-import { listDayNotes, listTripDays, requireTripDay } from './days'
+import { listTripDayNotes, listTripDays, requireTripDay } from './days'
 import { placesRepository } from './places'
 import { requireReservationOfTrip } from './reservations'
 import { assertTripRole, requireTrip } from './trips'
@@ -87,12 +87,6 @@ export type CreateAssignmentInput = z.infer<typeof createAssignmentInput>
 export const updateAssignmentInput = z.object(assignmentFields)
 export type UpdateAssignmentInput = z.infer<typeof updateAssignmentInput>
 
-export const moveAssignmentInput = z.object({
-  dayId: idSchema,
-  orderIndex: sortOrderSchema,
-})
-export type MoveAssignmentInput = z.infer<typeof moveAssignmentInput>
-
 export const reorderAssignmentsInput = z
   .array(z.object({ assignmentId: idSchema, orderIndex: sortOrderSchema }))
   .min(1)
@@ -113,8 +107,11 @@ export const timelineItemInput = z.object({
 })
 export type TimelineItemInput = z.infer<typeof timelineItemInput>
 
-export const reorderDayTimelineInput = z.object({
-  tripId: idSchema,
+/** The most days one drag can touch: the day a row leaves and the day it lands on, with room to spare. */
+const MAX_DAYS_PER_MOVE = 4
+
+/** One day of a drag: the whole sequence the day should end up with. */
+export const dayTimelineInput = z.object({
   dayId: idSchema,
   items: z.array(timelineItemInput).max(200),
   /**
@@ -124,7 +121,26 @@ export const reorderDayTimelineInput = z.object({
    */
   clearTime: z.array(timelineItemInput).max(200).optional(),
 })
-export type ReorderDayTimelineInput = z.infer<typeof reorderDayTimelineInput>
+export type DayTimelineInput = z.infer<typeof dayTimelineInput>
+
+export const reorderDayTimelinesInput = z.object({
+  tripId: idSchema,
+  days: z
+    .array(dayTimelineInput)
+    .min(1)
+    .max(MAX_DAYS_PER_MOVE)
+    .refine(
+      (days) => new Set(days.map((day) => day.dayId)).size === days.length,
+      { error: 'A day is named once per move.' },
+    ),
+})
+export type ReorderDayTimelinesInput = z.infer<typeof reorderDayTimelinesInput>
+
+/** A day's sequence as written: what the caller mirrors to the trip room. */
+export interface WrittenDayTimeline {
+  readonly dayId: string
+  readonly items: ReadonlyArray<TimelineItemInput>
+}
 
 export const createAccommodationInput = z.object({
   tripId: idSchema,
@@ -349,24 +365,6 @@ export async function updateAssignment(
   )
 }
 
-/** Drags a stop onto another day. The target day must belong to the same trip. */
-export async function moveAssignment(
-  scope: TenantScope,
-  assignmentId: string,
-  input: MoveAssignmentInput,
-): Promise<DayAssignment> {
-  const values = moveAssignmentInput.parse(input)
-  const assignment = await dayAssignmentsRepository.requireById(
-    scope,
-    assignmentId,
-  )
-  await requireTripDay(scope, assignment.tripId, values.dayId)
-  return dayAssignmentsRepository.requireUpdate(scope, assignmentId, {
-    dayId: values.dayId,
-    orderIndex: values.orderIndex,
-  })
-}
-
 /** Applies a whole day's new order in one batch. */
 export async function reorderAssignments(
   scope: TenantScope,
@@ -422,8 +420,8 @@ function refKey(ref: TimelineItemInput): string {
 }
 
 /**
- * Writes one day's stops and notes as a single sequence of positions `0..n-1`
- * (PRD #104 decision 9).
+ * Writes every day a drag touched as a single sequence of positions `0..n-1` per day
+ * (PRD #104 decision 9), moving the rows that changed day in the same write.
  *
  * The merged position space is not a new column; it is the agreement that for one
  * day `day_assignments.order_index` and `day_notes.sort_order` are read and written
@@ -432,18 +430,25 @@ function refKey(ref: TimelineItemInput): string {
  * survives a move, and a client can only ever send a permutation of ids it can
  * already see — never an index of its own choosing.
  *
- * Three rules about the list the client sends, each of which exists because a board
+ * The rows are read for the whole trip rather than for one day, so a stop or a note
+ * named under a day other than the one that holds it is found, and it is written with
+ * the day it was named under next to its position. A cross-day move is therefore the
+ * same write as a reorder, for both tables, and there is no step in front of it.
+ *
+ * Four rules about the lists the client sends, each of which exists because a board
  * can be stale:
  *
  * - **Unknown ids are dropped, not rejected.** A tab one delete behind should still
  *   be able to reorder the rows that do exist, which is the rule
  *   `reorderPlanFn` has always stated. A foreign tenant's id is unknown here for the
  *   same reason it is unknown everywhere else: the two reads below are scoped.
+ * - **A row named under two days is applied once, under the first day that names it.**
  * - **Known ids the client omitted go back behind the row they currently follow**,
- *   so a partial list cannot silently unposition an item somebody else added
- *   between the client's read and its write.
- * - **`clearTime` must be a subset of `items`.** An entry outside it is dropped with
- *   everything else that names a row this day does not hold.
+ *   on the day that still holds them, so a partial list cannot silently unposition
+ *   an item somebody else added between the client's read and its write — and a row
+ *   another day claimed is not taken back.
+ * - **`clearTime` must be a subset of the same day's `items`.** An entry outside it is
+ *   dropped with everything else that names a row this day does not take.
  *
  * The statements are built against the tables directly rather than through the two
  * repository handles, for the reason {@link reorderAssignments} beside it already
@@ -452,109 +457,142 @@ function refKey(ref: TimelineItemInput): string {
  * `organization_id` predicate a handle would have applied, and both tables carry the
  * column and lead a composite index with it.
  *
- * All of it — every position and every `NULL` time — goes out as one {@link runBatch},
- * which on D1 is one transaction: a half-applied reorder is a day whose two columns
- * disagree about one number line, and there is no honest way to render that. The
- * batch is bounded by one day at one `UPDATE` per row, so it stays inside D1's
- * per-statement parameter ceiling and stays in the request path.
+ * All of it — every day, every position and every `NULL` time — goes out as one
+ * {@link runBatch}, which on D1 is one transaction: a half-applied reorder is a day
+ * whose two columns disagree about one number line, and there is no honest way to
+ * render that. That atomicity is what keeps a payload that would put one place
+ * on a day twice from writing anything: `day_assignments_day_place_unq` is checked per
+ * statement, so it refuses a swap of one place in either order, and the whole batch
+ * rolls back with it. (A swap of two different places never collides.) The batch is bounded
+ * by {@link MAX_DAYS_PER_MOVE} days of at most 200 rows, one `UPDATE` per row.
  *
- * Returns the sequence as written, which is what the caller mirrors to the trip room.
+ * Returns each day's sequence as written, in the order the days were named, which is
+ * what the caller mirrors to the trip room.
  */
-export async function reorderDayTimeline(
+export async function reorderDayTimelines(
   scope: TenantScope,
-  input: ReorderDayTimelineInput,
-): Promise<Array<TimelineItemInput>> {
-  const values = reorderDayTimelineInput.parse(input)
+  input: ReorderDayTimelinesInput,
+): Promise<Array<WrittenDayTimeline>> {
+  const values = reorderDayTimelinesInput.parse(input)
 
-  // Read first, then role, then day: a caller who may not see the trip learns nothing
-  // beyond `NotFoundError`, and only a reader who has proved they may see it can be
-  // told `FORBIDDEN` (PRD #104 decisions 1 and 6).
+  // Read first, then role, then every named day: a caller who may not see the trip
+  // learns nothing beyond `NotFoundError`, and only a reader who has proved they may
+  // see it can be told `FORBIDDEN` (PRD #104 decisions 1 and 6). Nothing is written
+  // until all of them have passed.
   await requireTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, ['owner', 'editor'])
-  await requireTripDay(scope, values.tripId, values.dayId)
+  await Promise.all(
+    values.days.map((day) => requireTripDay(scope, values.tripId, day.dayId)),
+  )
 
   const [stops, notes] = await Promise.all([
-    listDayAssignments(scope, values.dayId),
-    listDayNotes(scope, values.dayId),
+    listTripAssignments(scope, values.tripId),
+    listTripDayNotes(scope, values.tripId),
   ])
 
-  // The day as it stands, both tables on one line. Positions are the sort key because
-  // that is what the line *is*; the id breaks a tie two rows should never have.
-  const current: Array<{ ref: TimelineItemInput; position: number }> = [
+  // The trip as it stands, both tables on one line per day. Positions are the sort key
+  // because that is what the line *is*; the id breaks a tie two rows should never have.
+  const current: Array<{
+    ref: TimelineItemInput
+    dayId: string
+    position: number
+  }> = [
     ...stops.map((row) => ({
       ref: { kind: 'stop' as const, id: row.id },
+      dayId: row.dayId,
       position: row.orderIndex,
     })),
     ...notes.map((row) => ({
       ref: { kind: 'note' as const, id: row.id },
+      dayId: row.dayId,
       position: row.sortOrder,
     })),
   ].sort((a, b) => a.position - b.position || a.ref.id.localeCompare(b.ref.id))
 
   const known = new Map(current.map((entry) => [refKey(entry.ref), entry.ref]))
-  const wanted: Array<TimelineItemInput> = []
-  const seen = new Set<string>()
-  for (const ref of values.items) {
-    const key = refKey(ref)
-    const row = known.get(key)
-    if (row === undefined || seen.has(key)) continue
-    seen.add(key)
-    wanted.push(row)
-  }
-  // Resolved here, while `seen` still holds exactly what the caller asked to move:
-  // the loop below adds the rows the caller left out, and those may not lose a time.
-  const cleared = new Set(
-    values.clearTime?.map(refKey).filter((key) => seen.has(key)) ?? [],
+  const heldBy = new Map(
+    current.map((entry) => [refKey(entry.ref), entry.dayId]),
   )
 
-  // Anything the client left out goes back in behind the row it currently follows,
-  // so an omission moves nothing rather than sending a row to the end. Every earlier
-  // entry of `current` is already in `wanted` — it either came from the client's list
-  // or was spliced in by an earlier turn — so that row is always the anchor.
-  let previousKey: string | null = null
-  for (const entry of current) {
-    const key = refKey(entry.ref)
-    if (!seen.has(key)) {
-      const anchor =
-        previousKey === null
-          ? -1
-          : wanted.findIndex((ref) => refKey(ref) === previousKey)
-      seen.add(key)
-      wanted.splice(anchor + 1, 0, entry.ref)
+  // First every day takes what it names, so that the splice below can tell a row the
+  // client left out from a row another day took.
+  const claimed = new Set<string>()
+  const lines = values.days.map((day) => {
+    const wanted: Array<TimelineItemInput> = []
+    for (const ref of day.items) {
+      const key = refKey(ref)
+      const row = known.get(key)
+      if (row === undefined || claimed.has(key)) continue
+      claimed.add(key)
+      wanted.push(row)
     }
-    previousKey = key
-  }
-
-  const statements = wanted.map((ref, position) => {
-    const dropTime = cleared.has(refKey(ref))
-    if (ref.kind === 'stop') {
-      return scope.db
-        .update(dayAssignments)
-        .set(
-          // Both columns, not just the start. A stop keeping its `end_time` renders
-          // as an open-start range — a row still visibly wearing the time the reader
-          // was just told it had lost — and the board's time index reads `start_time` alone, so
-          // from then on the clock rule cannot see it and never asks about it again.
-          dropTime
-            ? { orderIndex: position, startTime: null, endTime: null }
-            : { orderIndex: position },
-        )
-        .where(
-          tenantFilter(scope, dayAssignments, eq(dayAssignments.id, ref.id)),
-        )
-    }
-    return scope.db
-      .update(dayNotes)
-      .set(
-        dropTime
-          ? { sortOrder: position, time: null }
-          : { sortOrder: position },
-      )
-      .where(tenantFilter(scope, dayNotes, eq(dayNotes.id, ref.id)))
+    // Resolved here, while `wanted` holds exactly what the caller asked to move: the
+    // splice below adds the rows the caller left out, and those may not lose a time.
+    const moving = new Set(wanted.map(refKey))
+    const cleared = new Set(
+      day.clearTime?.map(refKey).filter((key) => moving.has(key)) ?? [],
+    )
+    return { dayId: day.dayId, wanted, held: moving, cleared }
   })
 
+  // Anything the client left out goes back in behind the row it currently follows,
+  // so an omission moves nothing rather than sending a row to the end. A row that
+  // another day took is skipped and is not an anchor: it is no longer on this line.
+  for (const line of lines) {
+    let previousKey: string | null = null
+    for (const entry of current) {
+      if (entry.dayId !== line.dayId) continue
+      const key = refKey(entry.ref)
+      if (!line.held.has(key)) {
+        if (claimed.has(key)) continue
+        const anchor =
+          previousKey === null
+            ? -1
+            : line.wanted.findIndex((ref) => refKey(ref) === previousKey)
+        line.held.add(key)
+        line.wanted.splice(anchor + 1, 0, entry.ref)
+      }
+      previousKey = key
+    }
+  }
+
+  const statements = lines.flatMap((line) =>
+    line.wanted.map((ref, position) => {
+      const dropTime = line.cleared.has(refKey(ref))
+      // Only a row that changes day is given one. A row that stays — a spliced-back
+      // omission above all — must not have its day rewritten from this read, or a move
+      // another editor committed in between would be silently undone.
+      const day =
+        heldBy.get(refKey(ref)) === line.dayId ? {} : { dayId: line.dayId }
+      if (ref.kind === 'stop') {
+        return scope.db
+          .update(dayAssignments)
+          .set(
+            // Both columns, not just the start. A stop keeping its `end_time` renders
+            // as an open-start range — a row still visibly wearing the time the reader
+            // was just told it had lost — and the board's time index reads `start_time` alone, so
+            // from then on the clock rule cannot see it and never asks about it again.
+            dropTime
+              ? { ...day, orderIndex: position, startTime: null, endTime: null }
+              : { ...day, orderIndex: position },
+          )
+          .where(
+            tenantFilter(scope, dayAssignments, eq(dayAssignments.id, ref.id)),
+          )
+      }
+      return scope.db
+        .update(dayNotes)
+        .set(
+          dropTime
+            ? { ...day, sortOrder: position, time: null }
+            : { ...day, sortOrder: position },
+        )
+        .where(tenantFilter(scope, dayNotes, eq(dayNotes.id, ref.id)))
+    }),
+  )
+
   await runBatch(scope, statements)
-  return wanted
+  return lines.map((line) => ({ dayId: line.dayId, items: line.wanted }))
 }
 
 /** Replaces the participant set of one stop. */

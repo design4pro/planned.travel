@@ -15,6 +15,7 @@ import {
   Crosshair,
   MapPin,
   MoreHorizontal,
+  Navigation,
   PencilLine,
   Trash2,
   Undo2,
@@ -33,6 +34,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -45,6 +47,12 @@ import {
   Switch,
   Textarea,
 } from '#/components/ui'
+import {
+  MAP_SERVICE_NAME,
+  POINT_SERVICES,
+  pointLink,
+  positionOf,
+} from '#/lib/geo/handoff'
 import { formatCoordinate, parsePosition } from '#/lib/geo/position'
 import { useTranslate } from '#/lib/i18n'
 
@@ -183,7 +191,9 @@ export function StopMenu({
   onUnschedule,
   onDelete,
 }: StopMenuProps) {
+  const t = useTranslate()
   const elsewhere = days.filter((day) => day.dayNumber !== row.dayNumber)
+  const position = positionOf(row)
 
   return (
     <DropdownMenu>
@@ -210,6 +220,22 @@ export function StopMenu({
         <DropdownMenuItem icon={<Crosshair />} onSelect={onPickPosition}>
           {row.lat === null ? 'Place it on the map' : 'Move its pin'}
         </DropdownMenuItem>
+
+        {position === null
+          ? null
+          : POINT_SERVICES.map((service) => (
+              <DropdownMenuLinkItem
+                key={service}
+                href={pointLink(service, position)}
+                icon={<Navigation />}
+                aria-label={t('trips.plan.handoff.stop', {
+                  place: row.name,
+                  service: MAP_SERVICE_NAME[service],
+                })}
+              >
+                {MAP_SERVICE_NAME[service]}
+              </DropdownMenuLinkItem>
+            ))}
 
         {elsewhere.length === 0 ? null : (
           <>
@@ -336,6 +362,14 @@ export interface PlaceDialogProps {
   readonly initial: PlaceDraft
   readonly saving: boolean
   readonly error: string | null
+  /**
+   * A way out of `error`, shown inside the same alert so it stays within the form. It opens in a
+   * new tab: following it in this one would unmount the form and lose the draft.
+   */
+  readonly errorAction?: {
+    readonly label: string
+    readonly href: string
+  } | null
   readonly onSubmit: (values: PlaceFormValues) => void
 }
 
@@ -361,6 +395,7 @@ export function PlaceDialog({
   initial,
   saving,
   error,
+  errorAction = null,
   onSubmit,
 }: PlaceDialogProps) {
   const t = useTranslate()
@@ -445,7 +480,23 @@ export function PlaceDialog({
             }}
           >
             {error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert
+                tone="danger"
+                title="That did not save"
+                actions={
+                  errorAction === null ? undefined : (
+                    <Button asChild variant="secondary" size="sm">
+                      <a
+                        href={errorAction.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {errorAction.label}
+                      </a>
+                    </Button>
+                  )
+                }
+              >
                 {error}
               </Alert>
             )}

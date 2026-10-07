@@ -87,10 +87,24 @@ const messages = {
   'plan.addPlace.more': 'Інші способи додати місце',
   'plan.addPlace.option.map': 'Поставити на мапу',
   'plan.addPlace.forDayNamed': 'Додати місце, {day}',
+  'plan.addPlace.quota':
+    'Ви досягли ліміту місць у вашому тарифі. Перейдіть на вищий тариф, щоб додати більше.',
+  'plan.addPlace.quotaAction': 'Переглянути тарифи',
   'plan.stay.checkIn': 'Заїзд',
   'plan.stay.checkOut': 'Виїзд',
   'plan.day.addStay': 'Додати проживання, {day}',
   'plan.day.addStayShort': 'Додати проживання',
+  'plan.handoff.stop':
+    'Відкрити {place} у {service} (відкриється в новій вкладці)',
+  'plan.handoff.day.directions': 'Маршрут у {service}',
+  'plan.handoff.day.directionsName':
+    'Маршрут у {service}: {day} (відкриється в новій вкладці)',
+  'plan.handoff.day.directionsPartial': 'Зупинки: перші {carried} із {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Маршрут у {service}: {day}, зупинки: перші {carried} із {total} (відкриється в новій вкладці)',
+  'plan.handoff.day.point': 'Показати у {service}',
+  'plan.handoff.day.pointName':
+    'Показати у {service}: єдина зупинка на мапі, {day} (відкриється в новій вкладці)',
   'plan.drop.hint':
     'Клацніть мапу правою кнопкою миші або натисніть і утримуйте, щоб додати місце саме там.',
   'plan.drop.armed':

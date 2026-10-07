@@ -6,7 +6,11 @@ import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider, LOCALE_TAGS, loadCatalogue } from '#/lib/i18n'
-import { PlannerAddPlace, placeWriteMessage } from '../planner-add-place'
+import {
+  PlannerAddPlace,
+  placeWriteMessage,
+  reportPlaceWriteFailure,
+} from '../planner-add-place'
 import { PlannerDayTools } from '../planner-day-tools'
 
 import type { PlannerDay } from '#/components/planner'
@@ -160,8 +164,8 @@ describe('placeWriteMessage', () => {
   })
 
   it('shows the fallback for a diagnostic the server withheld', () => {
-    // A places quota refusal arrives exactly like this: `QuotaExceededError` is not
-    // authored copy, so the redaction middleware sends a reference and no code.
+    // Any diagnostic arrives like this. A quota refusal is the one that also carries a code,
+    // which `reportPlaceWriteFailure` below reads.
     const cause = new Error(
       encodePublicFailure({ kind: 'unexpected', reference: 'ref-1' }),
     )
@@ -173,5 +177,70 @@ describe('placeWriteMessage', () => {
     expect(placeWriteMessage(new Error('Failed to fetch'), 'Try again.')).toBe(
       'Try again.',
     )
+  })
+})
+
+describe('reportPlaceWriteFailure', () => {
+  const copy = {
+    fallback: 'Try again.',
+    quota: 'Your plan’s places limit is reached.',
+    seePlans: 'See plans',
+  }
+
+  function quotaRefusal(): Error {
+    return new Error(
+      encodePublicFailure({
+        kind: 'unexpected',
+        code: 'QUOTA_EXCEEDED',
+        reference: 'ref-1',
+      }),
+    )
+  }
+
+  it('answers a quota refusal with the quota sentence and an action that leads to the plans', () => {
+    const report = reportPlaceWriteFailure(quotaRefusal(), copy)
+
+    expect(report.message).toBe(copy.quota)
+    expect(report.action).toEqual({
+      label: copy.seePlans,
+      href: '/settings/billing',
+    })
+  })
+
+  it('keeps today’s answer for every other failure, with no action', () => {
+    for (const cause of [
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'ref-1' }),
+      ),
+      new Error(
+        encodePublicFailure({
+          kind: 'refusal',
+          message: 'This trip is archived.',
+        }),
+      ),
+      new Error('Failed to fetch'),
+    ]) {
+      const expected = placeWriteMessage(cause, copy.fallback)
+
+      expect(reportPlaceWriteFailure(cause, copy)).toEqual({
+        message: expected,
+        action: null,
+      })
+    }
+  })
+
+  it('does not treat a code on a refusal as a quota hit', () => {
+    const cause = new Error(
+      encodePublicFailure({
+        kind: 'refusal',
+        message: 'This trip is archived.',
+        code: 'QUOTA_EXCEEDED',
+      }),
+    )
+
+    expect(reportPlaceWriteFailure(cause, copy)).toEqual({
+      message: 'This trip is archived.',
+      action: null,
+    })
   })
 })

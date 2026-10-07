@@ -86,10 +86,24 @@ const messages = {
   'plan.addPlace.more': 'Meer manieren om een plek toe te voegen',
   'plan.addPlace.option.map': 'Op de kaart plaatsen',
   'plan.addPlace.forDayNamed': 'Plek toevoegen: {day}',
+  'plan.addPlace.quota':
+    'Je hebt de limiet voor plaatsen van je abonnement bereikt. Upgrade om er meer toe te voegen.',
+  'plan.addPlace.quotaAction': 'Abonnementen bekijken',
   'plan.stay.checkIn': 'Aankomst',
   'plan.stay.checkOut': 'Vertrek',
   'plan.day.addStay': 'Verblijf toevoegen: {day}',
   'plan.day.addStayShort': 'Verblijf toevoegen',
+  'plan.handoff.stop': 'Open {place} in {service} (opent in een nieuw tabblad)',
+  'plan.handoff.day.directions': 'Route in {service}',
+  'plan.handoff.day.directionsName':
+    'Route in {service}: {day} (opent in een nieuw tabblad)',
+  'plan.handoff.day.directionsPartial':
+    'Stops: de eerste {carried} van {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Route in {service}: {day}, stops: de eerste {carried} van {total} (opent in een nieuw tabblad)',
+  'plan.handoff.day.point': 'Toon in {service}',
+  'plan.handoff.day.pointName':
+    'Toon in {service}: de enige stop met locatie op {day} (opent in een nieuw tabblad)',
   'plan.drop.hint':
     'Klik met de rechtermuisknop op de kaart, of houd je vinger erop, om precies daar een plek toe te voegen.',
   'plan.drop.armed':

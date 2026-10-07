@@ -63,6 +63,11 @@ const messages = {
   'account.signOutFailed': 'Utloggningen gick inte igenom',
   'account.signOutFailedBody': 'Kontrollera din uppkoppling och försök igen.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Arbetsyta',
+  'workspace.switchFailed': 'Det gick inte att byta arbetsyta',
+  'workspace.switchFailedBody': 'Kontrollera din uppkoppling och försök igen.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Utseende',
   'theme.light': 'Ljust',
@@ -492,6 +497,8 @@ const messages = {
   'editTrip.errorTitle': 'Det sparades inte',
   'editTrip.retry': 'Försök igen',
   'editTrip.error': 'Resan kunde inte sparas. Försök igen om en stund.',
+  'editTrip.currencyLocked':
+    'Resan har redan priser, så budgetvalutan kan inte ändras här. Ställ tillbaka den på {current} för att spara dina övriga ändringar.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Ta bort ”{title}” för gott?',
   'deleteTrip.description':

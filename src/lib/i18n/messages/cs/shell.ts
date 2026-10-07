@@ -69,6 +69,11 @@ const messages = {
   'account.signOutFailed': 'Odhlášení se nepovedlo',
   'account.signOutFailedBody': 'Zkontrolujte připojení a zkuste to znovu.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Prostor',
+  'workspace.switchFailed': 'Prostor se nepodařilo přepnout',
+  'workspace.switchFailedBody': 'Zkontrolujte připojení a zkuste to znovu.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Vzhled',
   'theme.light': 'Světlý',
@@ -540,6 +545,8 @@ const messages = {
   'editTrip.errorTitle': 'Neuložilo se to',
   'editTrip.retry': 'Zkusit znovu',
   'editTrip.error': 'Cestu se nepodařilo uložit. Zkuste to za chvíli znovu.',
+  'editTrip.currencyLocked':
+    'Tato cesta už obsahuje ceny, proto tady nejde změnit měnu rozpočtu. Nastavte zpět {current} a uložte ostatní změny.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Smazat „{title}“ nadobro?',
   'deleteTrip.description':

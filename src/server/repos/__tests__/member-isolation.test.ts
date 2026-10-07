@@ -16,7 +16,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { NotFoundError, RepositoryError } from '../context'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
-import { createAssignment, reorderDayTimeline } from '../itinerary'
+import { createAssignment, reorderDayTimelines } from '../itinerary'
 import {
   addPhoto,
   attachPhotoToEntry,
@@ -481,14 +481,18 @@ describe('member isolation', () => {
     })
 
     it('refuses to reorder a day of a trip it cannot see', async () => {
-      // `reorderDayTimeline` names a trip id and a day id, so it answers the same way
+      // `reorderDayTimelines` names a trip id and day ids, so it answers the same way
       // every other trip-scoped writer does: not found, and nothing about the day.
       expect(
         await captureError(() =>
-          reorderDayTimeline(stranger, {
+          reorderDayTimelines(stranger, {
             tripId: fixture.tripId,
-            dayId: fixture.dayId,
-            items: [{ kind: 'note', id: fixture.noteId }],
+            days: [
+              {
+                dayId: fixture.dayId,
+                items: [{ kind: 'note', id: fixture.noteId }],
+              },
+            ],
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
@@ -722,10 +726,14 @@ describe('member isolation', () => {
 
     it('and the day timeline is FORBIDDEN, because reading is not editing', async () => {
       const error = await captureError(() =>
-        reorderDayTimeline(stranger, {
+        reorderDayTimelines(stranger, {
           tripId: fixture.tripId,
-          dayId: fixture.dayId,
-          items: [{ kind: 'note', id: fixture.noteId }],
+          days: [
+            {
+              dayId: fixture.dayId,
+              items: [{ kind: 'note', id: fixture.noteId }],
+            },
+          ],
         }),
       )
       expect(error).toBeInstanceOf(RepositoryError)
@@ -810,12 +818,16 @@ describe('member isolation', () => {
       )
 
       const error = await captureError(() =>
-        reorderDayTimeline(stranger, {
+        reorderDayTimelines(stranger, {
           tripId: fixture.tripId,
-          dayId: fixture.dayId,
-          items: [
-            { kind: 'note', id: fixture.noteId },
-            { kind: 'stop', id: fixture.assignmentId },
+          days: [
+            {
+              dayId: fixture.dayId,
+              items: [
+                { kind: 'note', id: fixture.noteId },
+                { kind: 'stop', id: fixture.assignmentId },
+              ],
+            },
           ],
         }),
       )

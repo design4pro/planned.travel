@@ -68,6 +68,7 @@ import {
   useAction,
   useOptimistic,
 } from '#/components/modules/shared'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { inclusiveDays } from '#/lib/trip-dates'
 import { formatNumber } from '../-lib/format'
@@ -102,7 +103,9 @@ export interface TripEditSheetProps {
  * same questions — and this contributes the chrome, the patch and where the answer lands. Blank
  * clears and an untouched field is left alone, but the sheet shows every field and so sends every one:
  * "untouched" is a property of the *patch*, not of the form, and a sheet that omitted an empty field
- * could never clear a destination.
+ * could never clear a destination. The budget currency is the exception - it is sent only when the
+ * reader picked another one, so a tab left open across somebody else's change of it cannot put the
+ * old value back with an unrelated save.
  */
 export function TripEditSheet({
   trip,
@@ -137,17 +140,29 @@ export function TripEditSheet({
     setSaving(true)
     setError(null)
     try {
+      const { currency, ...fields } = tripFormPayload(form, {
+        creating: false,
+        owner: isOwner,
+      })
       await updateTripFn({
         data: {
           tripId: trip.id,
-          ...tripFormPayload(form, { creating: false, owner: isOwner }),
+          ...fields,
+          ...(currency === trip.currency ? {} : { currency }),
         },
       })
       await router.invalidate()
       onOpenChange(false)
       toast.success(t('shell.editTrip.saved'))
     } catch (cause) {
-      setError(messageOf(cause, t('shell.editTrip.error')))
+      // A refused currency change arrives as a catalogue key, not a sentence, so it reads in the
+      // language of the screen it lands on. `current` is the currency the trip still has.
+      const refusal = currencyRefusalOf(cause)
+      setError(
+        refusal === null
+          ? messageOf(cause, t('shell.editTrip.error'))
+          : t(refusal, { current: trip.currency }),
+      )
     } finally {
       setSaving(false)
     }

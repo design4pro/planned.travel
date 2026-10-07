@@ -49,6 +49,11 @@ const messages = {
   'account.signingOut': 'サインアウト中…',
   'account.signOutFailed': 'サインアウトできませんでした',
   'account.signOutFailedBody': '通信状況を確認して、もう一度お試しください。',
+
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'ワークスペース',
+  'workspace.switchFailed': 'ワークスペースを切り替えられませんでした',
+  'workspace.switchFailedBody': '通信状況を確認して、もう一度お試しください。',
   'theme.label': '表示',
   'theme.light': 'ライト',
   'theme.dark': 'ダーク',
@@ -417,6 +422,8 @@ const messages = {
   'editTrip.retry': '再試行',
   'editTrip.error':
     '旅行を保存できませんでした。しばらくしてからもう一度お試しください。',
+  'editTrip.currencyLocked':
+    'この旅行にはすでに金額が入っているため、予算の通貨はここでは変更できません。ほかの変更を保存するには、通貨を {current} に戻してください。',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '「{title}」を完全に削除しますか？',
   'deleteTrip.description':

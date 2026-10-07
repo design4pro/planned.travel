@@ -60,6 +60,11 @@ const messages = {
   'account.signOutFailed': 'Δεν μπορέσαμε να σας αποσυνδέσουμε',
   'account.signOutFailedBody': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Χώρος εργασίας',
+  'workspace.switchFailed': 'Δεν μπορέσαμε να αλλάξουμε χώρο εργασίας',
+  'workspace.switchFailedBody': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Εμφάνιση',
   'theme.light': 'Φωτεινό',
@@ -486,6 +491,8 @@ const messages = {
   'editTrip.errorTitle': 'Αυτό δεν αποθηκεύτηκε',
   'editTrip.retry': 'Δοκιμάστε ξανά',
   'editTrip.error': 'Το ταξίδι δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο.',
+  'editTrip.currencyLocked':
+    'Αυτό το ταξίδι έχει ήδη τιμές, γι’ αυτό το νόμισμα προϋπολογισμού δεν μπορεί να αλλάξει εδώ. Ορίστε ξανά {current} για να αποθηκευτούν οι υπόλοιπες αλλαγές σας.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Οριστική διαγραφή του «{title}»;',
   'deleteTrip.description':

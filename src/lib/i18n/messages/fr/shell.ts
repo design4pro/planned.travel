@@ -64,6 +64,11 @@ const messages = {
   'account.signOutFailed': 'Impossible de vous déconnecter',
   'account.signOutFailedBody': 'Vérifiez votre connexion et réessayez.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Espace',
+  'workspace.switchFailed': 'Impossible de changer d’espace',
+  'workspace.switchFailedBody': 'Vérifiez votre connexion et réessayez.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Apparence',
   'theme.light': 'Clair',
@@ -524,6 +529,8 @@ const messages = {
   'editTrip.retry': 'Réessayer',
   'editTrip.error':
     'Le voyage n’a pas pu être enregistré. Réessayez dans un instant.',
+  'editTrip.currencyLocked':
+    'Ce voyage contient déjà des prix : la devise du budget ne peut donc pas être modifiée ici. Remettez {current} pour enregistrer vos autres modifications.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Supprimer « {title} » définitivement ?',
   'deleteTrip.description':

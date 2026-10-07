@@ -14,6 +14,7 @@ import {
   POLL_BUDGET_MS,
   POLL_INTERVAL_MS,
   bookImportsKey,
+  bookImportsOwner,
   readBookImports,
 } from '../import-widget'
 
@@ -222,6 +223,40 @@ describe('the global import widget', () => {
     expect(stubs.view).not.toHaveBeenCalled()
     // And the register it could not see is still intact for the account that owns it.
     expect(readBookImports(USER)).toHaveLength(1)
+  })
+
+  /**
+   * ...and per workspace. A job is staged against one workspace's trip and refused from any other,
+   * so the same account in another workspace must neither see it nor be able to Dismiss it.
+   */
+  it('never shows one workspace the file the same account dropped in another', async () => {
+    stubs.view.mockResolvedValue({
+      status: 'working',
+    } satisfies BookingImportView)
+    const inFirst = bookImportsOwner(USER, 'org_a')
+    const inSecond = bookImportsOwner(USER, 'org_b')
+    expect(inSecond).not.toBe(inFirst)
+    window.localStorage.setItem(
+      bookImportsKey(inFirst),
+      JSON.stringify([
+        {
+          jobId: 'booking-import:trip-1:file-1',
+          tripId: 'trip-1',
+          filename: 'confirmation.pdf',
+        },
+      ]),
+    )
+
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <BookImportWidget userId={inSecond} />
+      </I18nProvider>,
+    )
+    await tick(POLL_INTERVAL_MS)
+
+    expect(screen.queryByText(/confirmation\.pdf/)).toBeNull()
+    expect(stubs.view).not.toHaveBeenCalled()
+    expect(readBookImports(inFirst)).toHaveLength(1)
   })
 
   it('stops asking when every call is rejected, rather than polling a dead job forever', async () => {

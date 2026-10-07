@@ -85,6 +85,11 @@ const messages = {
   'account.signOutFailed': 'Chưa đăng xuất được',
   'account.signOutFailedBody': 'Kiểm tra kết nối rồi thử lại.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Không gian',
+  'workspace.switchFailed': 'Chưa chuyển được không gian',
+  'workspace.switchFailedBody': 'Kiểm tra kết nối rồi thử lại.',
+
   'theme.label': 'Giao diện',
   'theme.light': 'Sáng',
   'theme.dark': 'Tối',
@@ -457,6 +462,8 @@ const messages = {
   'editTrip.errorTitle': 'Chưa lưu được',
   'editTrip.retry': 'Thử lại',
   'editTrip.error': 'Không lưu được chuyến đi. Hãy thử lại sau giây lát.',
+  'editTrip.currencyLocked':
+    'Chuyến đi này đã có giá, nên không thể đổi tiền tệ của ngân sách tại đây. Hãy đặt lại {current} để lưu các thay đổi khác.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Xóa vĩnh viễn “{title}”?',
   'deleteTrip.description':

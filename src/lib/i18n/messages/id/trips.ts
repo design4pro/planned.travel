@@ -83,10 +83,24 @@ const messages = {
   'plan.addPlace.more': 'Cara lain menambahkan tempat',
   'plan.addPlace.option.map': 'Letakkan di peta',
   'plan.addPlace.forDayNamed': 'Tambahkan tempat, {day}',
+  'plan.addPlace.quota':
+    'Anda telah mencapai batas tempat pada paket Anda. Tingkatkan paket untuk menambah lebih banyak.',
+  'plan.addPlace.quotaAction': 'Lihat paket',
   'plan.stay.checkIn': 'Check-in',
   'plan.stay.checkOut': 'Check-out',
   'plan.day.addStay': 'Tambahkan penginapan, {day}',
   'plan.day.addStayShort': 'Tambahkan penginapan',
+  'plan.handoff.stop': 'Buka {place} di {service} (terbuka di tab baru)',
+  'plan.handoff.day.directions': 'Petunjuk arah di {service}',
+  'plan.handoff.day.directionsName':
+    'Petunjuk arah di {service}: {day} (terbuka di tab baru)',
+  'plan.handoff.day.directionsPartial':
+    'Perhentian: {carried} pertama dari {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Petunjuk arah di {service}: {day}, perhentian: {carried} pertama dari {total} (terbuka di tab baru)',
+  'plan.handoff.day.point': 'Tampilkan di {service}',
+  'plan.handoff.day.pointName':
+    'Tampilkan di {service}: satu-satunya perhentian bertitik peta pada {day} (terbuka di tab baru)',
   'plan.drop.hint':
     'Klik kanan pada peta, atau tekan dan tahan, untuk menambahkan tempat tepat di sana.',
   'plan.drop.armed':

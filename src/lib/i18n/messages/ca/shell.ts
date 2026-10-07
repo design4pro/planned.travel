@@ -66,6 +66,11 @@ const messages = {
   'account.signOutFailed': 'No s’ha pogut tancar la sessió',
   'account.signOutFailedBody': 'Comprova la connexió i torna-ho a provar.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Espai',
+  'workspace.switchFailed': 'No s’ha pogut canviar d’espai',
+  'workspace.switchFailedBody': 'Comprova la connexió i torna-ho a provar.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Aparença',
   'theme.light': 'Clar',
@@ -526,6 +531,8 @@ const messages = {
   'editTrip.retry': 'Torna-ho a provar',
   'editTrip.error':
     'No s’ha pogut desar el viatge. Torna-ho a provar d’aquí a un moment.',
+  'editTrip.currencyLocked':
+    'Aquest viatge ja té preus, per això la moneda del pressupost no es pot canviar aquí. Torna a posar {current} per desar els altres canvis.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Vols eliminar «{title}» per sempre?',
   'deleteTrip.description':
