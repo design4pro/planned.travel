@@ -152,6 +152,14 @@ export class ImportFormatError extends Error {
 
 export interface StartedBookingImport {
   readonly jobId: string
+  /**
+   * How many seconds after the start the queue was told to hold this job: `0` for the first file of
+   * a drop, `index * EXTRACTION_BUDGET_SECONDS` for the rest.
+   *
+   * Relative rather than an absolute start time, so the client's stall budget stays on its own
+   * clock and a skewed one cannot make a job look late. The stagger is stated here and nowhere else.
+   */
+  readonly delaySeconds: number
 }
 
 export type BookingImportStatus = 'working' | 'ready' | 'refused'
@@ -498,7 +506,7 @@ export async function startBookingImport(
     ...(delaySeconds === 0 ? {} : { delaySeconds }),
   })
 
-  return { jobId: id }
+  return { jobId: id, delaySeconds }
 }
 
 /* ---------------------------------------------------------------------- get */
