@@ -220,6 +220,27 @@ describe('a saved connection that is searched again', () => {
     ])
   })
 
+  it('treats the null day reference the dialog’s empty selects become as naming none', async () => {
+    const transportId = await saveUnanchored(1)
+    await replaceTransportChain(tenant.scope, transportId, {
+      stations: [OSAKA, TOKYO],
+      legs: [{ departureDayId: days[1].id, arrivalDayId: days[2].id }],
+    })
+
+    const saved = await saveSearchedConnection(tenant.scope, {
+      tripId,
+      transportId,
+      mode: 'train',
+      title: 'Osaka to Tokyo',
+      stations: [OSAKA, TOKYO],
+      legs: [{ departureDayId: null, arrivalDayId: null }],
+    })
+
+    expect(anchorsOf(saved.legs)).toEqual([
+      { departure: days[1].id, arrival: days[2].id },
+    ])
+  })
+
   it('never overwrites a day the re-search names', async () => {
     const transportId = await saveUnanchored(1)
     await replaceTransportChain(tenant.scope, transportId, {
