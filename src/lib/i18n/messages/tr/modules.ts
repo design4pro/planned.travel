@@ -786,6 +786,7 @@ const messages = {
   'collab.compose.cancelReply': 'Yanıtı iptal et',
   'collab.compose.cancelEdit': 'Düzenlemeyi iptal et',
   'collab.compose.placeholder': 'Yolculuğa yaz',
+  'collab.compose.placeholderText': 'Gruba bir şey söyle…',
   'collab.compose.editPlaceholder': 'Kendi mesajını düzenle',
   'collab.compose.editPlaceholderText': 'Söylediğini değiştir…',
   'collab.compose.send': 'Mesajı gönder',

@@ -701,7 +701,7 @@ function Composer({
             }
             placeholder={
               editing === null
-                ? 'Say something to the group…'
+                ? t('modules.collab.compose.placeholderText')
                 : t('modules.collab.compose.editPlaceholderText')
             }
             className="min-w-0 flex-1"
