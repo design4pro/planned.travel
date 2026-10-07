@@ -47,6 +47,7 @@ import { cn } from '#/lib/cn'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
+import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
 import {
   saveSearchedConnectionFn,
   searchConnectionsFn,
@@ -54,7 +55,6 @@ import {
 } from '#/server/fns/transports'
 import { useAction } from '../shared'
 import { formatGap } from './connections'
-import { CHAIN_MAX_LEGS } from './leg-form'
 import { modeIcon } from './mode-icon'
 import { MODE_LABELS } from './vocabulary'
 
@@ -221,7 +221,7 @@ function zoneAt(
  *
  * The station two legs meet at is written once, from the arrival endpoint of the earlier one, so
  * the two rows cannot disagree about which station they name — the join guarantee
- * `replaceTransportChain` is built around, kept on this side of the wire too.
+ * `saveTransport` is built around, kept on this side of the wire too.
  *
  * The zone is set on the two outer stations only — see {@link zoneAt}.
  *
