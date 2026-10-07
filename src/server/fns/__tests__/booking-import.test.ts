@@ -416,6 +416,29 @@ describe('startBookingImport', () => {
     expect(queue.sent[0]?.options).toEqual({ delaySeconds: 60 })
   })
 
+  /**
+   * The stagger has one owner: the answer hands the client the delay the task was enqueued with, so
+   * the client's stall budget starts when the job does without restating the rule.
+   */
+  it('answers with the delay each file was enqueued with', async () => {
+    const queue = queueDouble()
+
+    const first = await startBookingImport(alpha.tenant.scope, queue, {
+      tripId: alpha.tripId,
+      fileId: alpha.fileId,
+      index: 0,
+    })
+    const fourth = await startBookingImport(alpha.tenant.scope, queue, {
+      tripId: alpha.tripId,
+      fileId: alpha.fileId,
+      index: 3,
+    })
+
+    expect(first.delaySeconds).toBe(0)
+    expect(fourth.delaySeconds).toBe(60)
+    expect(fourth.delaySeconds).toBe(queue.sent[1]?.options?.delaySeconds)
+  })
+
   it('refuses a stored file no reader can read, and enqueues nothing', async () => {
     const queue = queueDouble()
     const file = await recordFile(alpha.tenant.scope, {
