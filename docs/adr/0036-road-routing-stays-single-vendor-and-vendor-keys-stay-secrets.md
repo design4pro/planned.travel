@@ -13,9 +13,8 @@ abstraction, with each vendor's key and limit set in the operator console and an
 to whichever vendor still has allowance. ADR 0019 decided the opposite five days earlier. It rejected
 Google Routes and Mapbox Directions, "A third vendor, including Geoapify's routing API" and a
 self-hosted router, and it records that "We hold two location vendors, not three" and that "The
-credential is never per tenant". An accepted ADR is not something an implementation ticket may step
-around (`SDLC.md`, product decisions as a protected contract), so the question needed a decision
-document. This is it: the question was asked again, and it is answered the same way, with the reasons
+credential is never per tenant". An accepted ADR is not something an implementation ticket may quietly
+step around, so the question needed a decision document. This is it: the question was asked again, and it is answered the same way, with the reasons
 written down so nobody has to ask it a third time.
 
 What the repository already holds changes the question, because three of the request's four parts are
