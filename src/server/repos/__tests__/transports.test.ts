@@ -16,13 +16,13 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
 import { NotFoundError, RepositoryError } from '../context'
 import { createDay, createDayNote, deleteDay, listTripDays } from '../days'
 import { createAssignment } from '../itinerary'
 import { createPlace } from '../places'
 import { TripRoleError, addTripMember, createTrip, updateTrip } from '../trips'
 import {
-  CHAIN_MAX_LEGS,
   createTransport,
   deleteTransport,
   getTransport,

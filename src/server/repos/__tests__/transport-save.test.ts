@@ -19,6 +19,7 @@ import {
   listTransportLegs,
   listTripLegs,
   listTripTransports,
+  saveSearchedConnection,
   saveTransport,
 } from '../transports'
 import { captureError, createHarness } from './harness'
@@ -479,5 +480,96 @@ describe('saving a transport with its legs', () => {
       transportId: 'editor-draft',
     })
     expect(saved.legs).toHaveLength(1)
+  })
+
+  /**
+   * A found connection is saved by the same writer, so it is one batch as well: the record is no
+   * longer written first and the chain second, with a readable row left behind when the second
+   * half never lands.
+   */
+  describe('a found connection saved through the same writer', () => {
+    const CONNECTION = {
+      mode: 'train' as const,
+      title: 'Osaka to Tokyo',
+      priceMinor: 14_000,
+      currency: 'JPY',
+      stations: [OSAKA, NAGOYA, TOKYO],
+      legs: [
+        { serviceNumber: 'Hikari 500', departureTime: '09:00' },
+        { serviceNumber: 'Nozomi 24', arrivalTime: '12:40' },
+      ],
+    }
+
+    function refuseSecondLeg() {
+      harness.sqlite.exec(`
+        CREATE TRIGGER refuse_second_leg BEFORE INSERT ON transport_legs
+        WHEN NEW.position = 1
+        BEGIN SELECT RAISE(ABORT, 'refused'); END
+      `)
+    }
+
+    it('mints the id on the server and takes the endpoints from the outer stations', async () => {
+      const saved = await saveSearchedConnection(tenant.scope, {
+        ...CONNECTION,
+        tripId,
+      })
+
+      expect(saved.transport.id).not.toBe('')
+      expect(saved.transport.title).toBe('Osaka to Tokyo')
+      expect(saved.transport.status).toBe('pending')
+      expect(saved.transport.priceMinor).toBe(14_000)
+      expect(saved.transport.currency).toBe('JPY')
+      expect(saved.transport.departureName).toBe('Shin-Osaka')
+      expect(saved.transport.departureTime).toBe('09:00')
+      expect(saved.transport.arrivalName).toBe('Tokyo')
+      expect(saved.transport.arrivalTime).toBe('12:40')
+      expect(saved.legs).toHaveLength(2)
+    })
+
+    it('leaves neither the record nor a leg behind when a statement of the first save fails', async () => {
+      refuseSecondLeg()
+
+      const error = await captureError(() =>
+        saveSearchedConnection(tenant.scope, { ...CONNECTION, tripId }),
+      )
+
+      expect(error).not.toBeNull()
+      expect(await snapshot()).toEqual({ transports: [], legs: [] })
+    })
+
+    it('leaves a saved journey and its chain as they were when a re-search fails', async () => {
+      const first = await saveSearchedConnection(tenant.scope, {
+        ...CONNECTION,
+        tripId,
+        stations: [OSAKA, TOKYO],
+        legs: [{ serviceNumber: 'Nozomi 24' }],
+      })
+      const before = await snapshot()
+      refuseSecondLeg()
+
+      const error = await captureError(() =>
+        saveSearchedConnection(tenant.scope, {
+          ...CONNECTION,
+          tripId,
+          transportId: first.transport.id,
+        }),
+      )
+
+      expect(error).not.toBeNull()
+      expect(await snapshot()).toEqual(before)
+    })
+
+    it('refuses a transport id that names no journey of the caller instead of creating one under it', async () => {
+      const error = await captureError(() =>
+        saveSearchedConnection(tenant.scope, {
+          ...CONNECTION,
+          tripId,
+          transportId: 'made-up-by-the-client',
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await snapshot()).toEqual({ transports: [], legs: [] })
+    })
   })
 })

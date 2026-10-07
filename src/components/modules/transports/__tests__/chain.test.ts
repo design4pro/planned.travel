@@ -16,9 +16,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { modulesTranslate } from '#/lib/i18n/__tests__/modules-translate'
+import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
 
 import {
-  CHAIN_MAX_LEGS,
   applyStationMatch,
   applyTypedCodeMatch,
   blockingLegErrors,
