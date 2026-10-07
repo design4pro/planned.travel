@@ -37,8 +37,8 @@ import type { Translate } from '#/lib/i18n'
  *
  * **A provider with no client behind it renders an empty state, not a zero.** "Nothing called it"
  * and "nothing can call it" are opposite facts and a `0` cannot tell them apart — the same argument
- * `-server/providers.ts` makes for carrying `integrated` at all. The four decided-but-unwritten
- * vendors (ADRs 0011, 0012 and 0013, plus the backup export) are listed for exactly this reason:
+ * `-server/providers.ts` makes for carrying `integrated` at all. The decided-but-unwritten
+ * vendors (ADR 0012 and the backup export) are listed for exactly this reason:
  * a ceiling can be entered against a signed contract before the first call rather than after the
  * first invoice, and the row starts reporting the day a client is written.
  *
