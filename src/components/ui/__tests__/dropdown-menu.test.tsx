@@ -11,6 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../dropdown-menu'
@@ -118,5 +119,39 @@ describe('DropdownMenu', () => {
     expect(item.getAttribute('aria-disabled')).toBe('true')
     await user.click(item)
     expect(onSelect).not.toHaveBeenCalled()
+  })
+})
+
+describe('DropdownMenuLinkItem', () => {
+  function LinkFixture() {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button>Trip actions</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuLinkItem
+            href="https://example.com/place"
+            aria-label="Open Fushimi in Example (opens in a new tab)"
+          >
+            Example
+          </DropdownMenuLinkItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
+  it('is a real anchor that opens a new tab without leaking the referrer', async () => {
+    const user = userEvent.setup()
+    render(<LinkFixture />)
+    await user.click(screen.getByRole('button', { name: 'Trip actions' }))
+    const item = screen.getByRole('menuitem', {
+      name: 'Open Fushimi in Example (opens in a new tab)',
+    })
+    expect(item.tagName).toBe('A')
+    expect(item.getAttribute('href')).toBe('https://example.com/place')
+    expect(item.getAttribute('target')).toBe('_blank')
+    expect(item.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(item.textContent).toBe('Example')
   })
 })

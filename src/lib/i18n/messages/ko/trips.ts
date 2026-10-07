@@ -89,6 +89,17 @@ const messages = {
   'plan.stay.checkOut': '체크아웃',
   'plan.day.addStay': '숙소 추가 — {day}',
   'plan.day.addStayShort': '숙소 추가',
+  'plan.handoff.stop': '{service}에서 {place} 열기(새 탭에서 열림)',
+  'plan.handoff.day.directions': '{service}에서 길찾기',
+  'plan.handoff.day.directionsName':
+    '{service}에서 길찾기: {day}(새 탭에서 열림)',
+  'plan.handoff.day.directionsPartial':
+    '방문지: 처음 {carried}곳 / 전체 {total}곳',
+  'plan.handoff.day.directionsPartialName':
+    '{service}에서 길찾기: {day}, 방문지: 처음 {carried}곳 / 전체 {total}곳(새 탭에서 열림)',
+  'plan.handoff.day.point': '{service}에서 보기',
+  'plan.handoff.day.pointName':
+    '{service}에서 보기: {day}에서 위치가 있는 유일한 방문지(새 탭에서 열림)',
   'plan.drop.hint':
     '지도를 마우스 오른쪽 버튼으로 클릭하거나 길게 누르면 바로 그 위치에 장소가 추가됩니다.',
   'plan.drop.armed':

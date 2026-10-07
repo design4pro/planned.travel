@@ -88,6 +88,18 @@ const messages = {
   'plan.stay.checkOut': 'Çıkış',
   'plan.day.addStay': 'Konaklama ekle: {day}',
   'plan.day.addStayShort': 'Konaklama ekle',
+  'plan.handoff.stop':
+    '{place} konumunu {service} içinde aç (yeni sekmede açılır)',
+  'plan.handoff.day.directions': '{service} içinde yol tarifi',
+  'plan.handoff.day.directionsName':
+    '{service} içinde yol tarifi: {day} (yeni sekmede açılır)',
+  'plan.handoff.day.directionsPartial':
+    'Duraklar: {total} duraktan ilk {carried}',
+  'plan.handoff.day.directionsPartialName':
+    '{service} içinde yol tarifi: {day}, duraklar: {total} duraktan ilk {carried} (yeni sekmede açılır)',
+  'plan.handoff.day.point': '{service} içinde göster',
+  'plan.handoff.day.pointName':
+    '{service} içinde göster: {day} için haritada konumu olan tek durak (yeni sekmede açılır)',
   'plan.drop.hint':
     'Tam oraya bir yer eklemek için haritaya sağ tıklayın veya basılı tutun.',
   'plan.drop.armed':

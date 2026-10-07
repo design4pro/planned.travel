@@ -94,6 +94,16 @@ const messages = {
   'plan.stay.checkOut': 'تسجيل المغادرة',
   'plan.day.addStay': 'إضافة إقامة، {day}',
   'plan.day.addStayShort': 'إضافة إقامة',
+  'plan.handoff.stop': 'فتح {place} في {service} (يفتح في علامة تبويب جديدة)',
+  'plan.handoff.day.directions': 'الاتجاهات في {service}',
+  'plan.handoff.day.directionsName':
+    'الاتجاهات في {service}، {day} (يفتح في علامة تبويب جديدة)',
+  'plan.handoff.day.directionsPartial': 'المحطات: أول {carried} من {total}',
+  'plan.handoff.day.directionsPartialName':
+    'الاتجاهات في {service}، {day}، المحطات: أول {carried} من {total} (يفتح في علامة تبويب جديدة)',
+  'plan.handoff.day.point': 'عرض في {service}',
+  'plan.handoff.day.pointName':
+    'عرض في {service}، المحطة الوحيدة المحددة على الخريطة في {day} (يفتح في علامة تبويب جديدة)',
   'plan.drop.hint':
     'انقر بزر الفأرة الأيمن على الخريطة، أو اضغط مطوّلًا، لإضافة مكان في ذلك الموضع تمامًا.',
   'plan.drop.armed':

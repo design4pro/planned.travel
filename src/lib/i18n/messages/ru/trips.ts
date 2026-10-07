@@ -94,6 +94,18 @@ const messages = {
   'plan.stay.checkOut': 'Выезд',
   'plan.day.addStay': 'Добавить проживание, {day}',
   'plan.day.addStayShort': 'Добавить проживание',
+  'plan.handoff.stop':
+    'Открыть {place} в {service} (откроется в новой вкладке)',
+  'plan.handoff.day.directions': 'Маршрут в {service}',
+  'plan.handoff.day.directionsName':
+    'Маршрут в {service}: {day} (откроется в новой вкладке)',
+  'plan.handoff.day.directionsPartial':
+    'Остановки: первые {carried} из {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Маршрут в {service}: {day}, остановки: первые {carried} из {total} (откроется в новой вкладке)',
+  'plan.handoff.day.point': 'Показать в {service}',
+  'plan.handoff.day.pointName':
+    'Показать в {service}: единственная остановка на карте, {day} (откроется в новой вкладке)',
   'plan.drop.hint':
     'Щёлкните по карте правой кнопкой мыши или нажмите и удерживайте, чтобы добавить место именно там.',
   'plan.drop.armed':
