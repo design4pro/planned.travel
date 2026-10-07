@@ -83,7 +83,11 @@ import {
   visitedCountriesRepository,
 } from '#/server/repos'
 import { applyTrip } from './apply-trip'
-import { ensureWorkspacePeople, resolveWorkspace } from './bootstrap'
+import {
+  ensureSecondWorkspace,
+  ensureWorkspacePeople,
+  resolveWorkspace,
+} from './bootstrap'
 import { fixtureRows } from './fixture-rows'
 import { stableId } from './stable-id'
 import { rowValuesFromRecord } from '#/server/billing/store'
@@ -800,6 +804,11 @@ async function writeSeed(
   await setUsage(owner, { metric: 'files', value: totals.files })
   await setUsage(owner, { metric: 'collections', value: collections.length })
   await setUsage(owner, { metric: 'journeys', value: journeys.length })
+
+  // Last, in a section of its own, so the identifiers of every row above it stay where they were:
+  // the visual baselines photograph the first workspace and nothing here may move them.
+  fixture.section('second-workspace')
+  await ensureSecondWorkspace(db, resolved)
 
   await appSettingsStore.set(
     db,

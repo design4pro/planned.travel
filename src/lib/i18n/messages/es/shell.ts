@@ -67,6 +67,11 @@ const messages = {
   'account.signOutFailed': 'No se pudo cerrar la sesión',
   'account.signOutFailedBody': 'Revisa tu conexión e inténtalo otra vez.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Espacio',
+  'workspace.switchFailed': 'No se pudo cambiar de espacio',
+  'workspace.switchFailedBody': 'Revisa tu conexión e inténtalo otra vez.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Apariencia',
   'theme.light': 'Claro',

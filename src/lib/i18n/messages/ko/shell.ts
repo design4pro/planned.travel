@@ -48,6 +48,11 @@ const messages = {
   'account.signingOut': '로그아웃하는 중…',
   'account.signOutFailed': '로그아웃하지 못했어요',
   'account.signOutFailedBody': '연결을 확인하고 다시 시도해 주세요.',
+
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': '워크스페이스',
+  'workspace.switchFailed': '워크스페이스를 전환하지 못했어요',
+  'workspace.switchFailedBody': '연결을 확인하고 다시 시도해 주세요.',
   'theme.label': '화면',
   'theme.light': '라이트',
   'theme.dark': '다크',

@@ -111,6 +111,11 @@ const messages = {
   'account.signOutFailed': 'Could not sign you out',
   'account.signOutFailedBody': 'Check your connection and try again.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Workspace',
+  'workspace.switchFailed': 'Could not switch workspace',
+  'workspace.switchFailedBody': 'Check your connection and try again.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Appearance',
   'theme.light': 'Light',

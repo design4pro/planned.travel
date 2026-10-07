@@ -48,6 +48,11 @@ const messages = {
   'account.signingOut': '正在退出登录…',
   'account.signOutFailed': '没能退出登录',
   'account.signOutFailedBody': '请检查网络后再试一次。',
+
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': '工作区',
+  'workspace.switchFailed': '没能切换工作区',
+  'workspace.switchFailedBody': '请检查网络后再试一次。',
   'theme.label': '外观',
   'theme.light': '浅色',
   'theme.dark': '深色',
