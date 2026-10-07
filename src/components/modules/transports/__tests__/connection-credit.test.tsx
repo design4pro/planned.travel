@@ -105,8 +105,12 @@ describe('the HERE credit on the connection search', () => {
     expect(list?.nextElementSibling).toBe(caption)
   })
 
-  it('is absent while the answer is pending', () => {
-    outcome({ pending: true })
+  it('is absent while a new answer is pending, even over the previous list', () => {
+    outcome({
+      pending: true,
+      outcome: { ...ANSWER, connections: [CONNECTION] },
+      results: [CONNECTION],
+    })
     expect(screen.queryByRole('link', { name: 'HERE' })).toBeNull()
   })
 
