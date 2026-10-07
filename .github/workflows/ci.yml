@@ -3,7 +3,8 @@ name: CI
 on:
   pull_request:
     branches: [main, develop]
-    types: [opened, synchronize, reopened]
+    # A draft runs none of the jobs below; marking it ready starts them.
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main, develop]
   workflow_dispatch:
@@ -48,7 +49,7 @@ jobs:
     # the same commits; the push run is canonical for the shared branches. The
     # `e2e` job carries the same clause in its own `if`, since it does not wait
     # on this one.
-    if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
+    if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 20
 
@@ -99,7 +100,7 @@ jobs:
   # path) it takes minutes again, which that path can afford.
   test:
     name: unit tests
-    if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
+    if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 25
 
@@ -125,7 +126,7 @@ jobs:
   # always carries the journeys; `e2e` reads this job being skipped as "run".
   scope:
     name: change scope
-    if: github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 5
     outputs:
@@ -201,7 +202,7 @@ jobs:
   e2e:
     name: e2e · critical journeys (${{ matrix.shard }}/2)
     needs: scope
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)) && needs.scope.outputs.e2e != 'false' }}
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))) && needs.scope.outputs.e2e != 'false' }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     # Measured on the 2-vCPU runner, first green run (33806080237): 2-3 min of
     # fixed cost - image pull, checkout, install, migrations, seed - then 6m41s of
@@ -261,6 +262,22 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
         run: pnpm exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json
 
+      # The shard's totals, a few bytes, for the pull request comment `e2e-report` writes.
+      - name: Keep the shard totals
+        if: always()
+        continue-on-error: true
+        run: node scripts/ci/test-report.mjs stats
+
+      - name: Upload the shard totals
+        if: always()
+        continue-on-error: true
+        uses: design4pro/.github/actions/artifact-upload@main
+        with:
+          name: e2e-stats-${{ matrix.shard }}
+          retention-days: 1
+          if-no-files-found: ignore
+          path: e2e-stats.json
+
       - name: Select failure and flaky diagnostics
         id: diagnostics
         if: always()
@@ -290,10 +307,15 @@ jobs:
   # cancelled run (superseded push, closed pull request) no longer takes a `ci` slot to report it.
   e2e-report:
     name: e2e · merged report
-    needs: [scope, e2e]
-    if: ${{ !cancelled() }}
+    needs: [scope, e2e, verify, test]
+    # Not on a draft: its gates did not run, so there is nothing to report.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
-    timeout-minutes: 2
+    timeout-minutes: 5
+    # The only job that writes to a pull request, and only the comment below.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Require every expected shard to pass
         env:
@@ -307,6 +329,51 @@ jobs:
           fi
           echo "::error::Required E2E shards did not pass: $SHARDS_RESULT"
           exit 1
+
+      # One comment per pull request, updated in place: the verdict of every gate and the journey
+      # totals for the head commit, so "the app works" is a statement about that SHA. A promotion PR
+      # defers to the push run and has no gates of its own, so it gets none. Never fails the job: a
+      # fork's token cannot comment, and the required check above is what blocks a merge.
+      - name: Check out the report script
+        if: ${{ always() && github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref) }}
+        id: report-src
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/ci
+
+      - name: Download the shard totals
+        if: ${{ always() && steps.report-src.outcome == 'success' }}
+        id: report-stats
+        continue-on-error: true
+        uses: design4pro/.github/actions/artifact-download@main
+        with:
+          pattern: e2e-stats-*
+          path: e2e-stats
+
+      - name: Comment the test report on the pull request
+        if: ${{ always() && steps.report-src.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERIFY: ${{ needs.verify.result }}
+          TEST: ${{ needs.test.result }}
+          E2E: ${{ needs.e2e.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p e2e-stats
+          node scripts/ci/test-report.mjs render e2e-stats > report.md
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '[.[] | select(.body | startswith("<!-- ci-test-report -->")) | .id][0] // empty')
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@report.md > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@report.md > /dev/null
+          fi
 
   # The deploys, as the last jobs of a push run and only behind a green one.
   # They used to be workflows of their own, started by the same push at the same
