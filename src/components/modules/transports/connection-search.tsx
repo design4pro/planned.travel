@@ -550,7 +550,7 @@ export type ConnectionRefusal = Extract<ConnectionSearchOutcome, { ok: false }>
  * journey down by hand.
  *
  * Both halves are chosen here rather than carried on the wire. The errors behind these reasons
- * (`RateCeilingError`, `TransitProviderError`) hold an English sentence because that sentence is
+ * (`RateCeilingError`, `TransitProviderError`, `ProviderBlockedError`) hold an English sentence because that sentence is
  * for the log; rendering it would hand a reader in one of twenty-three languages the diagnostic,
  * and the parity gate would never see it because it is not a key. The reason and the ceiling are
  * facts, so they cross the wire; the words are the catalogue's.
