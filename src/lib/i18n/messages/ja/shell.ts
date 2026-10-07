@@ -49,6 +49,11 @@ const messages = {
   'account.signingOut': 'サインアウト中…',
   'account.signOutFailed': 'サインアウトできませんでした',
   'account.signOutFailedBody': '通信状況を確認して、もう一度お試しください。',
+
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'ワークスペース',
+  'workspace.switchFailed': 'ワークスペースを切り替えられませんでした',
+  'workspace.switchFailedBody': '通信状況を確認して、もう一度お試しください。',
   'theme.label': '表示',
   'theme.light': 'ライト',
   'theme.dark': 'ダーク',

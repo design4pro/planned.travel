@@ -10,6 +10,7 @@ import {
   ImportBookingsAction,
   ImportBookingsDialog,
   NewBookingAction,
+  bookImportsOwner,
 } from '#/components/modules/book'
 import { Card, ProgressRing, StatCard } from '#/components/ui'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -63,8 +64,8 @@ function BookPage() {
   const t = useTranslate()
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
-  // The signed-in user comes off the shell's route context rather than a second
-  // request: the import register in `localStorage` is keyed by it.
+  // The signed-in user and workspace come off the shell's route context rather than a second
+  // request: the import register in `localStorage` is keyed by them.
   const { shell } = useRouteContext({ from: '/_app' })
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
@@ -117,7 +118,10 @@ function BookPage() {
 
         <ImportBookingsDialog
           tripId={tripId}
-          userId={shell.session.user.id}
+          userId={bookImportsOwner(
+            shell.session.user.id,
+            shell.session.organization?.id ?? null,
+          )}
           open={importOpen}
           onOpenChange={setImportOpen}
         />

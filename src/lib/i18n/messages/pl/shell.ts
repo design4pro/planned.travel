@@ -72,6 +72,11 @@ const messages = {
   'account.signOutFailed': 'Nie udało się wylogować',
   'account.signOutFailedBody': 'Sprawdź połączenie i spróbuj ponownie.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Przestrzeń',
+  'workspace.switchFailed': 'Nie udało się przełączyć przestrzeni',
+  'workspace.switchFailedBody': 'Sprawdź połączenie i spróbuj ponownie.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Wygląd',
   'theme.light': 'Jasny',

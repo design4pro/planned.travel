@@ -60,6 +60,11 @@ const messages = {
   'account.signOutFailed': 'Δεν μπορέσαμε να σας αποσυνδέσουμε',
   'account.signOutFailedBody': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Χώρος εργασίας',
+  'workspace.switchFailed': 'Δεν μπορέσαμε να αλλάξουμε χώρο εργασίας',
+  'workspace.switchFailedBody': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Εμφάνιση',
   'theme.light': 'Φωτεινό',

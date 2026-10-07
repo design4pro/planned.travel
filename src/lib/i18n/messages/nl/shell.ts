@@ -66,6 +66,12 @@ const messages = {
   'account.signOutFailedBody':
     'Controleer je verbinding en probeer het opnieuw.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Werkruimte',
+  'workspace.switchFailed': 'Wisselen van werkruimte is niet gelukt',
+  'workspace.switchFailedBody':
+    'Controleer je verbinding en probeer het opnieuw.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Weergave',
   'theme.light': 'Licht',

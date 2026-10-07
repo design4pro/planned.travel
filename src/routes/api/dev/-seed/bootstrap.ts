@@ -41,8 +41,19 @@ import {
   firstOrganizationIdFor,
   membershipRoleFor,
 } from '#/server/auth/provisioning'
-import { addMember, createScope } from '#/server/repos'
-import { SEED_ANCHOR_INSTANT, instantOn, people } from './dataset'
+import {
+  addMember,
+  createScope,
+  createTrip,
+  deleteTrip,
+  getTripBySlug,
+} from '#/server/repos'
+import {
+  SEED_ANCHOR_INSTANT,
+  instantOn,
+  people,
+  secondWorkspace,
+} from './dataset'
 import { membershipInstants } from './fixture-rows'
 import { stableId } from './stable-id'
 import type { PlatformActionName } from '#/server/catalog/audit'
@@ -935,4 +946,91 @@ export async function ensureWorkspacePeople(
   }
 
   return { ids, created, scopes }
+}
+
+/**
+ * Gives the demo owner a second workspace, so the workspace switcher has somewhere to go.
+ *
+ * The auth half follows the seam the rest of this module uses: `organization` and `member` belong to
+ * the auth module, so the rows are written through `authDb()` with ids derived from the slug and the
+ * anchor on every stamp, and the trip goes through `createTrip` like every other tenant row. The
+ * owner joins a day after the first workspace's founding membership on purpose: the shell falls back
+ * to the *oldest* membership when a session has no active workspace, and the demo owner has to keep
+ * landing in the first one.
+ *
+ * Idempotent. A re-run finds the organization and the membership and rebuilds only the trip, the
+ * same teardown the first workspace's trips get.
+ */
+export async function ensureSecondWorkspace(
+  db: Database,
+  workspace: ResolvedWorkspace,
+): Promise<void> {
+  const auth = authDb()
+  const { name, slug, trip } = secondWorkspace
+  const founded = SEED_ANCHOR_INSTANT
+  const joined = instantOn(1)
+
+  const organizationId = demoAuthId('organization', slug)
+  const existing = (
+    await auth
+      .select({ id: organization.id })
+      .from(organization)
+      .where(eq(organization.slug, slug))
+      .limit(1)
+  ).at(0)
+  if (existing !== undefined && existing.id !== organizationId) {
+    // A workspace somebody made by hand under the demo slug: adding the demo owner to it as
+    // `owner` would be the seed reaching into data it did not write.
+    throw new Error(
+      `A workspace with the slug "${slug}" already exists and is not the demo's; rename or remove it.`,
+    )
+  }
+  if (existing === undefined) {
+    await auth.insert(organization).values({
+      id: organizationId,
+      name,
+      slug,
+      createdAt: founded,
+      updatedAt: founded,
+    })
+  }
+
+  const membership = await membershipRoleFor(auth, {
+    userId: workspace.ownerUserId,
+    organizationId,
+  })
+  if (membership === null) {
+    await auth.insert(member).values({
+      id: demoAuthId('member', `${slug}:${workspace.ownerUserId}`),
+      organizationId,
+      userId: workspace.ownerUserId,
+      role: 'owner',
+      createdAt: joined,
+    })
+  }
+
+  const scope = createScope(db, {
+    userId: workspace.ownerUserId,
+    organizationId,
+    role: 'owner',
+  })
+  const stale = await getTripBySlug(scope, trip.slug)
+  if (stale !== null) {
+    await deleteTrip(scope, stale.id)
+  }
+  await createTrip(scope, {
+    id: trip.id,
+    title: trip.title,
+    slug: trip.slug,
+    summary: trip.summary,
+    destination: trip.destination,
+    countryCodes: [...trip.countryCodes],
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+    timezone: trip.timezone,
+    currency: trip.currency,
+    status: trip.status,
+    visibility: trip.visibility,
+    accentColour: trip.accentColour,
+  })
 }
