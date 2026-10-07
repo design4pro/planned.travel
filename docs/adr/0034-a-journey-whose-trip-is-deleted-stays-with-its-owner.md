@@ -47,9 +47,14 @@ Rejected: **Option C, accepting the leak.** It keeps on purpose what ADR 0007 fo
   rows are not backfilled and stay readable by the whole workspace. The same holds for a trip deleted
   by a Worker that still runs the old code between the migration and the deploy: it removes the trip
   without stamping its journeys.
-- **An orphan whose owner leaves the workspace becomes unreadable**, and still counts against the
-  journeys quota (`assertQuota` counts the tenant's rows). Fixing that is a follow-up issue, not part
-  of this record.
+- **An orphan whose owner leaves the workspace becomes unreadable**, and stops counting against the
+  journeys quota (#799). `createJourney` counts the tenant's journeys less any that names no trip,
+  carries `trip_deleted_at` and whose owner holds no `member` row in the workspace. The count is
+  worked out when the quota is checked, because people leave through Better Auth's organization
+  endpoints and through the console deleting the user, not through `removeMember`; it corrects itself
+  if the owner is added back. Nothing is deleted or moved, and no read rule changes. A journey that
+  never had a trip keeps counting, whoever owns it. What else a departed member's data amounts to is
+  #807.
 - **The reader set can be widened later.** Letting entry authors other than the owner read an orphan,
   or re-linking one to another trip (`updateJourneyInput` has no `tripId`), is a new record that
   amends this one.

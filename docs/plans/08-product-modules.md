@@ -1073,7 +1073,8 @@ journeysRepository.count(scope))` at `:507`, before the insert, and `journeys` i
 (`src/server/db/types.ts:41-70`) with a value for each of the four tiers. This stage creates no
 journal, so it adds no assertion and changes none: renaming, publishing, archiving and deleting do
 not grow the metric, and deleting shrinks it, which the live `count(*)` reflects on the next check
-because usage is never cached.
+because usage is never cached. (Since #799 that count leaves out an orphaned journey whose owner has
+left the workspace, ADR 0034.)
 
 The rows this stage does create are `journey_entries` of type `place`, through
 `importTripPlaceAnchors`. They are **children of a metered parent**: a journal cannot exist without
