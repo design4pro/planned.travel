@@ -807,6 +807,7 @@ const messages = {
   'collab.compose.cancelReply': 'Ακύρωση απάντησης',
   'collab.compose.cancelEdit': 'Ακύρωση επεξεργασίας',
   'collab.compose.placeholder': 'Γράψε στο ταξίδι',
+  'collab.compose.placeholderText': 'Πες κάτι στην ομάδα…',
   'collab.compose.editPlaceholder': 'Επεξεργασία του μηνύματός σου',
   'collab.compose.editPlaceholderText': 'Άλλαξε αυτό που είπες…',
   'collab.compose.send': 'Αποστολή μηνύματος',

@@ -962,6 +962,7 @@ const messages = {
   'collab.compose.cancelReply': 'Cancel reply',
   'collab.compose.cancelEdit': 'Cancel edit',
   'collab.compose.placeholder': 'Message the trip',
+  'collab.compose.placeholderText': 'Say something to the group…',
   'collab.compose.editPlaceholder': 'Edit your message',
   'collab.compose.editPlaceholderText': 'Change what you said…',
   'collab.compose.send': 'Send message',

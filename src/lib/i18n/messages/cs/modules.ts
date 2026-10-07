@@ -809,6 +809,7 @@ const messages = {
   'collab.compose.cancelReply': 'Zrušit odpověď',
   'collab.compose.cancelEdit': 'Zrušit úpravu',
   'collab.compose.placeholder': 'Napiš na cestu',
+  'collab.compose.placeholderText': 'Napiš něco skupině…',
   'collab.compose.editPlaceholder': 'Upravit svou zprávu',
   'collab.compose.editPlaceholderText': 'Změň, co jsi řekl…',
   'collab.compose.send': 'Odeslat zprávu',

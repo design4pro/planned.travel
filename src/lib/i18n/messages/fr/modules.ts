@@ -824,6 +824,7 @@ const messages = {
   'collab.compose.cancelReply': 'Annuler la réponse',
   'collab.compose.cancelEdit': 'Annuler la modification',
   'collab.compose.placeholder': 'Écris au voyage',
+  'collab.compose.placeholderText': 'Dis quelque chose au groupe…',
   'collab.compose.editPlaceholder': 'Modifier ton message',
   'collab.compose.editPlaceholderText': 'Change ce que tu as dit…',
   'collab.compose.send': 'Envoyer le message',
