@@ -36,9 +36,8 @@ import {
 import { billingRuntime } from '#/server/billing/runtime.cloudflare'
 import { billingContext } from '#/server/billing/types'
 import { transitRuntime } from '#/server/transit/bindings'
-import { RateCeilingError } from '#/server/metering/rate'
 import {
-  TransitProviderError,
+  refusalReason,
   searchTransitConnections,
   transitQuerySchema,
 } from '#/server/transit/search'
@@ -463,8 +462,8 @@ export type ConnectionSearchOutcome =
       /**
        * A refusal carries the two facts the screen needs and no sentence.
        *
-       * `RateCeilingError` and `TransitProviderError` each hold an English message, and it is
-       * written for the log rather than for a reader: sending it here would put untranslated
+       * `RateCeilingError`, `TransitProviderError` and `ProviderBlockedError` each hold an English
+       * message, and it is written for the log rather than for a reader: sending it here would put untranslated
        * English in front of twenty-two other languages, and the parity gate could not see it
        * because it would never be a key. The screen reads `reason` - and `ceiling`, which
        * separates an allowance that has to be bought from one that has to be waited out - and
@@ -530,11 +529,9 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
         ceiling,
       }
     } catch (cause) {
-      if (cause instanceof RateCeilingError) {
-        return { ok: false, reason: 'ceiling', ceiling }
-      }
-      if (cause instanceof TransitProviderError) {
-        return { ok: false, reason: cause.reason, ceiling }
+      const reason = refusalReason(cause)
+      if (reason !== null) {
+        return { ok: false, reason, ceiling }
       }
       throw cause
     }

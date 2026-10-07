@@ -11,8 +11,9 @@
  * teaches nothing. So the block option carries what it turns off, in words, on the option itself.
  *
  * **A provider with no client behind it is configurable, and that is the point.** ADR 0013 gives
- * Geoapify 3,000 credits a *day* and ADR 0011 gives HERE 30,000 a month; an operator can enter
- * either today so the gate is live from the first call rather than from the first invoice.
+ * Geoapify 3,000 credits a *day* and ADR 0011 gives HERE 30,000 a month; an operator could enter
+ * either before its client existed, and can do the same for a slug still planned, so the gate is
+ * live from the first call rather than from the first invoice.
  *
  * **Radio cards rather than a select, for both choices.** Each option carries a consequence that
  * has to be readable before the press, and a closed select shows one line. The layering that used

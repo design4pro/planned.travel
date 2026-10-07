@@ -702,8 +702,8 @@ fetch:
    those slugs. No migration is needed, because the column is plain text, and the fixtures in
    `src/server/fns/console/__tests__/providers.test.ts` and
    `src/server/catalog/__tests__/provider-usage.test.ts` are updated, together with the
-   `METERED_PROVIDERS` docblock at `src/server/db/schema.ts:406-419`, whose "Four, because four
-   clients exist" enumeration becomes six with `src/server/weather/met-norway.ts` and
+   `METERED_PROVIDERS` docblock at `src/server/db/schema.ts:406-419`, whose "Five, because five
+   clients exist" enumeration becomes seven with `src/server/weather/met-norway.ts` and
    `src/server/weather/nasa-power.ts` named as the two new call sites. Add
    `weather_lookups_per_month` to `RATE_METRICS` and `PLAN_RATE_CEILINGS`, and one test in
    `limits.test.ts` asserting that every plan's weather allowance is above 0.
