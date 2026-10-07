@@ -17,12 +17,15 @@
  *
  * Nothing here decides anything. It assembles ports; every rule about when a call is made, what it
  * may cost and what happens to the answer lives one module over in `./search` and, for the tally
- * three directories now share, in `#/server/metering/rate`; the ceiling itself comes from
+ * three directories now share, in `#/server/metering/rate`, and for the provider ledger in
+ * `#/server/metering/outbound`, whose runtime is the one thing this file adds to the proxy's ports
+ * that is not a store; the ceiling itself comes from
  * `src/server/billing/limits.ts` through the caller.
  */
 
 import { env } from 'cloudflare:workers'
 
+import { requestOutboundRuntime } from '#/server/metering/bindings'
 import { createHereClient } from './here'
 
 import type { TransitSearchRuntime } from './search'
@@ -56,6 +59,7 @@ export function transitRuntime(
     cache: env.KV,
     counters: env.KV,
     client: hereClient(),
+    outbound: requestOutboundRuntime(),
     organizationId: options.organizationId,
     userId: options.userId,
     ceiling: options.ceiling,
