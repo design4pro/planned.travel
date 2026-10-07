@@ -764,6 +764,7 @@ const messages = {
   'collab.compose.cancelReply': '返信をやめる',
   'collab.compose.cancelEdit': '編集をやめる',
   'collab.compose.placeholder': '旅行のみんなへ',
+  'collab.compose.placeholderText': 'グループに何か書く…',
   'collab.compose.editPlaceholder': '自分のメッセージを編集',
   'collab.compose.editPlaceholderText': '書いた内容を変える…',
   'collab.compose.send': 'メッセージを送信',

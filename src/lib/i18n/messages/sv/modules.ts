@@ -791,6 +791,7 @@ const messages = {
   'collab.compose.cancelReply': 'Avbryt svaret',
   'collab.compose.cancelEdit': 'Avbryt redigeringen',
   'collab.compose.placeholder': 'Skriv till resan',
+  'collab.compose.placeholderText': 'Skriv något till gruppen…',
   'collab.compose.editPlaceholder': 'Redigera ditt meddelande',
   'collab.compose.editPlaceholderText': 'Ändra det du sa…',
   'collab.compose.send': 'Skicka meddelandet',

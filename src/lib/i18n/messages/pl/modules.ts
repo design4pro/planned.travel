@@ -823,6 +823,7 @@ const messages = {
   'collab.compose.cancelReply': 'Anuluj odpowiedź',
   'collab.compose.cancelEdit': 'Anuluj edycję',
   'collab.compose.placeholder': 'Napisz do wyjazdu',
+  'collab.compose.placeholderText': 'Napisz coś do grupy…',
   'collab.compose.editPlaceholder': 'Edytuj swoją wiadomość',
   'collab.compose.editPlaceholderText': 'Zmień to, co napisałeś…',
   'collab.compose.send': 'Wyślij wiadomość',

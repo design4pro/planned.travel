@@ -32,7 +32,6 @@ import {
   listUnscheduledPlaces,
   listUserProfiles,
   listVotes,
-  postMessage,
   requireTrip,
   resolveQuotas,
   listItems,
@@ -739,29 +738,4 @@ export const createPlaceFn = createServerFn({ method: 'POST' })
       durationMinutes: data.durationMinutes,
     })
     return { placeId: place.id }
-  })
-
-/* ----------------------------------------------------------- collab writes */
-
-/**
- * Posts a message to the trip's conversation.
- *
- * The transcript is the one panel on the collaboration screen a reader expects
- * to be able to answer from, so the composer writes through the same repository
- * the loader reads — no optimistic local list that can disagree with the server.
- */
-export const postMessageFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      tripId: z.string().trim().min(1).max(64),
-      body: z.string().trim().min(1).max(4000),
-    }),
-  )
-  .handler(async ({ data }): Promise<{ readonly messageId: string }> => {
-    const scope = await appScope()
-    const message = await postMessage(scope, {
-      tripId: data.tripId,
-      body: data.body,
-    })
-    return { messageId: message.id }
   })

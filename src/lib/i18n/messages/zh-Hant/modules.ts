@@ -727,6 +727,7 @@ const messages = {
   'collab.compose.cancelReply': '取消回覆',
   'collab.compose.cancelEdit': '取消編輯',
   'collab.compose.placeholder': '給同行的人寫點什麼',
+  'collab.compose.placeholderText': '對大家說點什麼…',
   'collab.compose.editPlaceholder': '編輯你的訊息',
   'collab.compose.editPlaceholderText': '改一改你說過的話…',
   'collab.compose.send': '傳送訊息',
