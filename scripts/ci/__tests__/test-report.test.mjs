@@ -3,9 +3,19 @@
  * are the ones where it must NOT say so: a failed gate, a failed test, and shards that reported nothing.
  */
 
-import { describe, expect, it } from 'vitest'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-import { MARKER, render, shardStats, sumShards } from '../test-report.mjs'
+import { afterEach, describe, expect, it } from 'vitest'
+
+import {
+  MARKER,
+  readShardStats,
+  render,
+  shardStats,
+  sumShards,
+} from '../test-report.mjs'
 
 const sha = 'abcdef1234567890'
 const base = { sha, runUrl: 'https://example.test/run/1' }
@@ -47,6 +57,52 @@ describe('sumShards', () => {
 
   it('is null when no shard reported, never zero', () => {
     expect(sumShards([null, null])).toBeNull()
+  })
+})
+
+describe('readShardStats', () => {
+  const dirs = []
+  const download = () => {
+    const dir = mkdtempSync(join(tmpdir(), 'test-report-'))
+    dirs.push(dir)
+    return dir
+  }
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true })
+  })
+
+  const a = { passed: 2, failed: 0, flaky: 1, skipped: 0 }
+  const b = { passed: 3, failed: 1, flaky: 0, skipped: 2 }
+
+  // download-artifact puts each matched artifact in its own subdirectory unless merge-multiple is
+  // set, and both shards name their file `e2e-stats.json`, so flattening would overwrite one.
+  it('reads the file of every artifact subdirectory', () => {
+    const dir = download()
+    for (const [name, stats] of [
+      ['e2e-stats-1', a],
+      ['e2e-stats-2', b],
+    ]) {
+      mkdirSync(join(dir, name))
+      writeFileSync(join(dir, name, 'e2e-stats.json'), JSON.stringify(stats))
+    }
+    expect(sumShards(readShardStats(dir))).toEqual({
+      passed: 5,
+      failed: 1,
+      flaky: 1,
+      skipped: 2,
+    })
+  })
+
+  it('reads a flat directory and keeps a shard that reported null', () => {
+    const dir = download()
+    writeFileSync(join(dir, 'one.json'), JSON.stringify(a))
+    writeFileSync(join(dir, 'two.json'), 'null')
+    expect(readShardStats(dir)).toEqual(expect.arrayContaining([a, null]))
+    expect(readShardStats(dir)).toHaveLength(2)
+  })
+
+  it('is empty when nothing was downloaded', () => {
+    expect(readShardStats(download())).toEqual([])
   })
 })
 

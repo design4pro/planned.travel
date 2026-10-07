@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** The marker the workflow uses to find and update the one report comment on a pull request. */
@@ -37,6 +38,21 @@ export function sumShards(shards) {
     }),
     { passed: 0, failed: 0, flaky: 0, skipped: 0 },
   )
+}
+
+/**
+ * Every totals file under a download directory. download-artifact puts each artifact in a
+ * subdirectory of its own unless merge-multiple is set, and merging would overwrite one shard's
+ * `e2e-stats.json` with the other's, so the walk is recursive and the layout is not assumed.
+ */
+export function readShardStats(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) return readShardStats(path)
+    return entry.name.endsWith('.json')
+      ? [JSON.parse(readFileSync(path, 'utf8'))]
+      : []
+  })
 }
 
 const icon = (result) =>
@@ -94,10 +110,8 @@ if (
     }
     writeFileSync('e2e-stats.json', JSON.stringify(stats))
   } else if (command === 'render') {
-    // Report side: every e2e-stats-*.json under the directory, gate results from the environment.
-    const shards = readdirSync(arg).map((f) =>
-      JSON.parse(readFileSync(`${arg}/${f}`, 'utf8')),
-    )
+    // Report side: every totals file under the directory, gate results from the environment.
+    const shards = readShardStats(arg)
     const { SHA, RUN_URL, VERIFY, TEST, E2E } = process.env
     console.log(
       render({
