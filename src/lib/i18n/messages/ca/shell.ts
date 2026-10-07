@@ -66,6 +66,11 @@ const messages = {
   'account.signOutFailed': 'No s’ha pogut tancar la sessió',
   'account.signOutFailedBody': 'Comprova la connexió i torna-ho a provar.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Espai',
+  'workspace.switchFailed': 'No s’ha pogut canviar d’espai',
+  'workspace.switchFailedBody': 'Comprova la connexió i torna-ho a provar.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Aparença',
   'theme.light': 'Clar',

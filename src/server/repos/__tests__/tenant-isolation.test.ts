@@ -5298,4 +5298,51 @@ describe('tenant isolation', () => {
       },
     )
   })
+
+  describe('one user who belongs to two workspaces', () => {
+    // The workspace switcher moves a session between two organizations the same user belongs to.
+    // Membership of both must not merge them: a scope is the (user, organization) pair, so it is
+    // the organization half that every read is held to.
+    let userId: string
+    let inAlpha: TenantScope
+    let inBeta: TenantScope
+
+    beforeEach(async () => {
+      userId = alpha.tenant.ownerUserId
+      await beta.tenant.addMembership(userId, 'member')
+      inAlpha = alpha.tenant.scopeFor(userId, 'owner')
+      inBeta = beta.tenant.scopeFor(userId, 'member')
+    })
+
+    it('lists only the active workspace’s trips, from either side', async () => {
+      // The repository handle rather than `listTrips`: the latter also filters by trip visibility,
+      // which would hide the workspace's own trip from a plain member and prove nothing here.
+      const idsIn = async (scope: TenantScope) =>
+        (await tripsRepository.findMany(scope)).map((row) => row.id)
+
+      expect(await idsIn(inAlpha)).toEqual([alpha.tripId])
+      expect(await idsIn(inBeta)).toEqual([beta.tripId])
+    })
+
+    it('refuses the other workspace’s trip id as not found, in both directions', async () => {
+      expect(await tripsRepository.findById(inAlpha, beta.tripId)).toBeNull()
+      expect(await tripsRepository.findById(inBeta, alpha.tripId)).toBeNull()
+      // The positive control: each id resolves from the workspace it belongs to.
+      expect(
+        await tripsRepository.findById(inAlpha, alpha.tripId),
+      ).not.toBeNull()
+      expect(await tripsRepository.findById(inBeta, beta.tripId)).not.toBeNull()
+
+      expect(
+        await captureError(() =>
+          tripsRepository.requireById(inAlpha, beta.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          tripsRepository.requireById(inBeta, alpha.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+  })
 })

@@ -1,11 +1,11 @@
 # More than one workspace, and a way to move between them
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | draft |
-| **Issue**          | #640  |
-| **Spec PR**        | none  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | in-progress |
+| **Issue**          | #640        |
+| **Spec PR**        | #643        |
+| **Implementation** | #939        |
 
 ## 📝 TLDR
 
@@ -485,3 +485,18 @@ separate fix makes the reader land in it.
   create-time plan gate.
 - **Moving or copying a trip between workspaces.**
 - **Raising `organizationLimit: 20`.**
+
+## Amendment
+
+Phase 1 (issue #640, pull request #939) shipped differently from the design above in these places. Phase 2 is unbuilt.
+
+1. **No create item.** Creation is split out to #804, so Phase 1 renders the radio list and nothing else. The step 3 assertion that pinned an inert create item became "the menu offers no way to create a workspace".
+2. **A refused switch re-syncs when it is a 403 or a 401.** Better Auth clears `session.activeOrganizationId` before it refuses a non-member, so after the toast the screen navigates to `/dashboard` and invalidates exactly as for a success; a 401 does the same so the shell's guard can send the reader to sign in. The toast for these two carries no "check your connection" body, which would misdescribe them. Any other failure leaves the screen where it was. This replaces the "Switch failed" row of the screen-states table and the "membership disappears between render and switch" edge case, which say nothing changes. `auth-handler-closure.test.ts` pins both answers of `organization/set-active`.
+3. **The second seed workspace is an addition, not a plural resolver.** `ResolvedWorkspace` stays singular. `ensureSecondWorkspace` in `bootstrap.ts` and `dataset/second-workspace.ts` add a second workspace for the demo user as a new fixture section at the end of `writeSeed`, so every existing id stays stable, and `DATASET_VERSION` moves to 5 so a seeded database is re-seeded. The personal workspace stays the oldest membership, which `firstOrganizationIdFor` relies on.
+4. **A trip of the other workspace shows the trip error panel, not not-found.** `loadTripHeader` does not map `NotFoundError` to a router not-found, so the journey asserts the existing "This trip did not load" panel and that no data of the first workspace is on screen. Mapping it is #940.
+5. **The journey signs in on its own.** The active workspace lives on the session row and the cached session cookie is shared by every worker, so the journey clears cookies and signs in again rather than switching the shared session.
+6. **The "stranded invitee" premise is stale.** Issue #642 established that accepting an invitation already activates the joined workspace (Better Auth's `accept-invitation` sets the active organization after creating the member; it was closed as not reproducing), so the invited reader does not land in the workspace they were already in. What Phase 1 adds is the way back to the other one. The Problem Statement and the Phasing rationale that argue the stranding are history.
+7. **Phase 1 touches no `src/server/auth` file.** Its diff under `src/server/` is test files only, so the Risks section's "both phases do" holds for Phase 2 alone. The issue and the pull request stay `risk-high` because the change moves the tenancy boundary's input, not because of a path.
+8. **The switch keeps the menu open while it is in flight, and replaces the history entry.** The chosen item shows a spinner, the other items are disabled, a status region inside the menu announces the pending state with the existing `ui.status.loading` copy, and the menu closes once the screen has been re-synced, as the sign-out item does. The in-flight guard lives in `UserMenu` (`useWorkspaceSwitch`), so closing and reopening the menu mid-flight does not start a second switch. The router's cache is cleared before the navigation to `/dashboard`, so a cached dashboard of the previous workspace cannot show under the new name, and the navigation replaces the entry, so Back does not return to a trip of the workspace just left. This replaces the "Switching" row, which says the menu closes on select. The account menu is bounded to the viewport and long workspace names wrap rather than widen it.
+9. **The book-import register is keyed by account and workspace.** `bookImportsOwner` in `import-widget.tsx` builds the key the shell's widget and the import dialog both read, so a reader who switches workspaces no longer sees, polls or dismisses the previous workspace's jobs, and switching back finds them. Registers written under the account-only key are not migrated: each holds only a filename and job ids, and the staged reading itself is untouched.
+10. **A `setActive` is not always visible on the next call.** The KV paragraph of the edge cases says it is. `session.ts` documents that the secondary storage can serve a session up to 60 seconds stale across locations; the workspace it lands in is still one the reader belongs to, because membership is re-read from D1 per request.

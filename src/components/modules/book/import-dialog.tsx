@@ -102,7 +102,7 @@ type Stage =
 
 export interface ImportBookingsDialogProps {
   readonly tripId: string
-  /** The signed-in account the job register is keyed by — see `bookImportsKey`. */
+  /** The register's owner, a `bookImportsOwner` of the account and workspace — see `bookImportsKey`. */
   readonly userId: string
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void

@@ -22,6 +22,7 @@ import {
   MenuTrigger,
 } from './menu'
 import { SIGN_OUT_ENDPOINT } from './session'
+import { useWorkspaceSwitch, WorkspaceSwitcher } from './workspace-switcher'
 
 import type { ShellSession } from './session'
 
@@ -33,8 +34,13 @@ import type { ShellSession } from './session'
 export function UserMenu({ session }: { session: ShellSession }) {
   const router = useRouter()
   const t = useTranslate()
+  const [open, setOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
-  const { user, organization } = session
+  const { user, organization, organizations } = session
+  const { pendingId, switchTo } = useWorkspaceSwitch({
+    activeId: organization?.id ?? null,
+    onSettled: () => setOpen(false),
+  })
 
   async function signOut(): Promise<void> {
     setSigningOut(true)
@@ -58,7 +64,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
   }
 
   return (
-    <MenuRoot>
+    <MenuRoot open={open} onOpenChange={setOpen}>
       <MenuTrigger
         className={cn(
           'group inline-flex max-w-56 items-center gap-2 rounded-full border border-transparent p-1 text-label font-medium text-ink focus-ring',
@@ -76,7 +82,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
         />
       </MenuTrigger>
 
-      <MenuContent className="min-w-64">
+      <MenuContent className="max-h-[var(--radix-dropdown-menu-content-available-height)] max-w-[min(20rem,var(--radix-dropdown-menu-content-available-width))] min-w-64 overflow-y-auto">
         <div className="flex items-center gap-3 px-2.5 py-2.5">
           <Avatar name={user.name} src={user.image} size="lg" />
           <div className="min-w-0">
@@ -87,11 +93,12 @@ export function UserMenu({ session }: { session: ShellSession }) {
           </div>
         </div>
 
-        {organization ? (
-          <p className="px-2.5 pb-2 text-micro uppercase text-ink-4">
-            {organization.name}
-          </p>
-        ) : null}
+        <WorkspaceSwitcher
+          organizations={organizations}
+          activeId={organization?.id ?? null}
+          pendingId={pendingId}
+          onSwitch={switchTo}
+        />
 
         <MenuSeparator />
 
