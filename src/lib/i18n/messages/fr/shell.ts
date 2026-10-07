@@ -64,6 +64,11 @@ const messages = {
   'account.signOutFailed': 'Impossible de vous déconnecter',
   'account.signOutFailedBody': 'Vérifiez votre connexion et réessayez.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Espace',
+  'workspace.switchFailed': 'Impossible de changer d’espace',
+  'workspace.switchFailedBody': 'Vérifiez votre connexion et réessayez.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Apparence',
   'theme.light': 'Clair',

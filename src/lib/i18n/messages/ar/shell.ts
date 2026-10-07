@@ -70,6 +70,11 @@ const messages = {
   'account.signOutFailed': 'تعذّر تسجيل خروجك',
   'account.signOutFailedBody': 'تحقق من اتصالك ثم أعد المحاولة.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'مساحة العمل',
+  'workspace.switchFailed': 'تعذّر تبديل مساحة العمل',
+  'workspace.switchFailedBody': 'تحقق من اتصالك ثم أعد المحاولة.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'المظهر',
   'theme.light': 'فاتح',

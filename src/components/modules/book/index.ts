@@ -72,6 +72,7 @@ export {
   BOOK_IMPORTS_PREFIX,
   BookImportWidget,
   bookImportsKey,
+  bookImportsOwner,
   forgetBookImports,
   readBookImports,
   registerBookImports,

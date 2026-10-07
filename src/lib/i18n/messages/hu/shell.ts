@@ -66,6 +66,12 @@ const messages = {
   'account.signOutFailed': 'Nem sikerült kijelentkeztetni',
   'account.signOutFailedBody': 'Ellenőrizze a kapcsolatot, majd próbálja újra.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Munkaterület',
+  'workspace.switchFailed': 'Nem sikerült munkaterületet váltani',
+  'workspace.switchFailedBody':
+    'Ellenőrizze a kapcsolatot, majd próbálja újra.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Megjelenés',
   'theme.light': 'Világos',

@@ -45,6 +45,7 @@ export {
 } from './anchor'
 
 export { flagshipTrip } from './flagship'
+export { secondWorkspace } from './second-workspace'
 export {
   dolomitesTrip,
   lisbonTrip,
@@ -70,8 +71,12 @@ export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
  * 4 — a sixth trip, `Porto, one long lunch`, with exactly one mapped place, so the planner's
  * single-place opening camera has a fixture to be asserted against (issue #440). A workspace seeded
  * under version 3 does not hold it.
+ *
+ * 5 — a second workspace, `Wolak Family Trips`, with the demo owner as its owner and one trip of its
+ * own, so the workspace switcher has somewhere to go (issue #640). The first workspace is untouched;
+ * a database seeded under version 4 has only that one and does not hold it.
  */
-export const DATASET_VERSION = 4
+export const DATASET_VERSION = 5
 
 /**
  * Workspace defaults the demo assumes: English, sterling, London, Monday weeks.

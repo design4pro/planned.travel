@@ -71,6 +71,12 @@ const messages = {
   'account.signOutFailedBody':
     'Prüfe deine Verbindung und versuche es noch einmal.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Arbeitsbereich',
+  'workspace.switchFailed': 'Der Arbeitsbereich konnte nicht gewechselt werden',
+  'workspace.switchFailedBody':
+    'Prüfe deine Verbindung und versuche es noch einmal.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Darstellung',
   'theme.light': 'Hell',

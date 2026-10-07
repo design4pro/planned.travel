@@ -8,7 +8,7 @@ import { ImpersonationBar } from '#/components/layout/impersonation-bar'
 import { MobileNav } from '#/components/layout/mobile-nav'
 import { NotFoundPanel } from '#/components/layout/not-found'
 import { TopNav } from '#/components/layout/top-nav'
-import { BookImportWidget } from '#/components/modules/book'
+import { BookImportWidget, bookImportsOwner } from '#/components/modules/book'
 import { loadShell } from './-server/shell'
 
 /**
@@ -119,7 +119,12 @@ function AppShell() {
        * impersonation button keeps the shell's first tab stop; it renders nothing at all until a
        * job is in the register.
        */}
-      <BookImportWidget userId={shell.session.user.id} />
+      <BookImportWidget
+        userId={bookImportsOwner(
+          shell.session.user.id,
+          shell.session.organization?.id ?? null,
+        )}
+      />
     </div>
   )
 }

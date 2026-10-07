@@ -61,6 +61,11 @@ const messages = {
   'account.signOutFailed': 'Non è stato possibile uscire',
   'account.signOutFailedBody': 'Controlla la connessione e riprova.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Spazio',
+  'workspace.switchFailed': 'Non è stato possibile cambiare spazio',
+  'workspace.switchFailedBody': 'Controlla la connessione e riprova.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Aspetto',
   'theme.light': 'Chiaro',
