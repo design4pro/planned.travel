@@ -776,6 +776,7 @@ const messages = {
   'collab.compose.cancelReply': 'Hủy trả lời',
   'collab.compose.cancelEdit': 'Hủy sửa',
   'collab.compose.placeholder': 'Nhắn cho cả chuyến',
+  'collab.compose.placeholderText': 'Nhắn gì đó cho cả nhóm…',
   'collab.compose.editPlaceholder': 'Sửa tin nhắn của bạn',
   'collab.compose.editPlaceholderText': 'Đổi lại điều bạn đã nói…',
   'collab.compose.send': 'Gửi tin nhắn',

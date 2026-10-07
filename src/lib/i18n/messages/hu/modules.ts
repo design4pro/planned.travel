@@ -802,6 +802,7 @@ const messages = {
   'collab.compose.cancelReply': 'Válasz megszakítása',
   'collab.compose.cancelEdit': 'Szerkesztés megszakítása',
   'collab.compose.placeholder': 'Írj az útnak',
+  'collab.compose.placeholderText': 'Írj valamit a csoportnak…',
   'collab.compose.editPlaceholder': 'A saját üzeneted szerkesztése',
   'collab.compose.editPlaceholderText': 'Változtasd meg, amit mondtál…',
   'collab.compose.send': 'Üzenet küldése',

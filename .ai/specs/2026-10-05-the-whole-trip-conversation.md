@@ -111,7 +111,7 @@ cannot discard a half-typed message. This spec is written against that layout, w
   `NO_ACTION_NEEDED` until the `07-S2` file-split ticket exists as an issue, and each ticket it files names
   that issue by number in its `### Blocked by` (a spec path and a phase number are not a blocker the
   Reconciler can read). The same run files the two follow-ups of Out of scope (F1, F2) as issues.
-- If the merged `07-S2` names a thing differently from the draft (`threadPayload`, `message-composer.tsx`,
+- If the merged `07-S2` names a thing differently from the draft (`threadPayload`,
   `onDirtyChange`), the ticket run reads the merged code and follows it; the contract here is the behaviour,
   not the spelling. **The composer keeps reporting dirty** exactly as `07-S2` defined it, and this stage
   widens what counts as dirty (acceptance 7).
@@ -406,26 +406,25 @@ language.
 ## 📝 Copy
 
 New or changed `en` keys (the implementation lands each in all 23 locales per the `i18n-messages` skill;
-`modules.ts`, prefix `collab.`):
+`modules.ts`, prefix `collab.`; `collab.compose.placeholderText`, "Say something to the group…", already exists, added by #682):
 
-| Key                              | `en`                                                                                                                       | Phase |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----- |
-| `collab.thread.emptyBody`        | Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats. | 2     |
-| `collab.compose.placeholderText` | Say something to the group…                                                                                                | 2     |
-| `collab.thread.empty` (changed)  | Say the first thing                                                                                                        | 3     |
-| `collab.compose.keysHint`        | Press Enter to send, Shift and Enter for a new line.                                                                       | 3     |
-| `collab.compose.keysHintEsc`     | Press Escape to cancel.                                                                                                    | 3     |
-| `collab.compose.keysHintTouch`   | Use the send button to send.                                                                                               | 3     |
-| `collab.compose.retry`           | Try again                                                                                                                  | 3     |
-| `collab.toast.editFailedBody`    | Your changes are still in the box. Check your connection, then try again.                                                  | 3     |
-| `collab.thread.loadOlder`        | Load earlier messages                                                                                                      | 4     |
-| `collab.thread.loadingOlder`     | Loading earlier messages                                                                                                   | 4     |
-| `collab.thread.loadOlderFailed`  | Earlier messages did not load                                                                                              | 4     |
-| `collab.thread.retry`            | Try again                                                                                                                  | 4     |
-| `collab.thread.start`            | This is where the conversation starts                                                                                      | 4     |
-| `collab.thread.loadedEarlier`    | `one`: Loaded {earlier} earlier message · `other`: Loaded {earlier} earlier messages                                       | 5     |
-| `collab.thread.newFrom`          | New message from {name}                                                                                                    | 5     |
-| `collab.thread.newMany`          | `one`: {new} new message · `other`: {new} new messages                                                                     | 5     |
+| Key                             | `en`                                                                                                                       | Phase |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----- |
+| `collab.thread.emptyBody`       | Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats. | 2     |
+| `collab.thread.empty` (changed) | Say the first thing                                                                                                        | 3     |
+| `collab.compose.keysHint`       | Press Enter to send, Shift and Enter for a new line.                                                                       | 3     |
+| `collab.compose.keysHintEsc`    | Press Escape to cancel.                                                                                                    | 3     |
+| `collab.compose.keysHintTouch`  | Use the send button to send.                                                                                               | 3     |
+| `collab.compose.retry`          | Try again                                                                                                                  | 3     |
+| `collab.toast.editFailedBody`   | Your changes are still in the box. Check your connection, then try again.                                                  | 3     |
+| `collab.thread.loadOlder`       | Load earlier messages                                                                                                      | 4     |
+| `collab.thread.loadingOlder`    | Loading earlier messages                                                                                                   | 4     |
+| `collab.thread.loadOlderFailed` | Earlier messages did not load                                                                                              | 4     |
+| `collab.thread.retry`           | Try again                                                                                                                  | 4     |
+| `collab.thread.start`           | This is where the conversation starts                                                                                      | 4     |
+| `collab.thread.loadedEarlier`   | `one`: Loaded {earlier} earlier message · `other`: Loaded {earlier} earlier messages                                       | 5     |
+| `collab.thread.newFrom`         | New message from {name}                                                                                                    | 5     |
+| `collab.thread.newMany`         | `one`: {new} new message · `other`: {new} new messages                                                                     | 5     |
 
 The existing `collab.toast.notSentBody` (the send's fixed body) is reused. **Plurals use the catalogue's real
 format**: an object keyed by category, selected by the `count` param, with the number printed through a
