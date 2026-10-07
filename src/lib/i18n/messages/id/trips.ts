@@ -90,6 +90,17 @@ const messages = {
   'plan.stay.checkOut': 'Check-out',
   'plan.day.addStay': 'Tambahkan penginapan, {day}',
   'plan.day.addStayShort': 'Tambahkan penginapan',
+  'plan.handoff.stop': 'Buka {place} di {service} (terbuka di tab baru)',
+  'plan.handoff.day.directions': 'Petunjuk arah di {service}',
+  'plan.handoff.day.directionsName':
+    'Petunjuk arah di {service}: {day} (terbuka di tab baru)',
+  'plan.handoff.day.directionsPartial':
+    'Perhentian: {carried} pertama dari {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Petunjuk arah di {service}: {day}, perhentian: {carried} pertama dari {total} (terbuka di tab baru)',
+  'plan.handoff.day.point': 'Tampilkan di {service}',
+  'plan.handoff.day.pointName':
+    'Tampilkan di {service}: satu-satunya perhentian bertitik peta pada {day} (terbuka di tab baru)',
   'plan.drop.hint':
     'Klik kanan pada peta, atau tekan dan tahan, untuk menambahkan tempat tepat di sana.',
   'plan.drop.armed':

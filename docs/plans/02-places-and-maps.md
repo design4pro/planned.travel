@@ -2496,7 +2496,7 @@ The six items of `docs/SPEC.md` §7 apply unchanged.
 - No provider, no binding, no unlanded row: `02-S6` landed `createPlaces` and the review sheet in
   wave 4.
 
-## Stage 02-S9 — The shape of a day: what it costs to walk, a shorter order, and a way to take it with you
+## Stage 02-S9 — The shape of a day: what it costs to walk, and a shorter order
 
 ### Stage id
 
@@ -2509,11 +2509,11 @@ The six items of `docs/SPEC.md` §7 apply unchanged.
 What ships today: one dashed line per day in visiting order (`src/components/map/day-routes.tsx` over
 `src/lib/map/routes.ts`), and a trip-level distance in the rail footer built from `tripLengthMetres`
 (`plan-screen.tsx:1032-1038`). What does not: anything per day, any way to shorten a day, any way to
-lock a stop against being moved, and any way to get the day out of the product and into whatever the
-reader navigates with.
+lock a stop against being moved. Getting a day out of the product and into whatever the reader
+navigates with is not this stage's: issue #663 owns it (third divergence below).
 
-Behaviour sourced as `wiki: Route-Optimization` and `wiki: Map-Features`. Three divergences, each
-stated with its reason rather than carried across:
+Behaviour sourced as `wiki: Route-Optimization` and `wiki: Map-Features`. Two divergences, each
+stated with its reason rather than carried across, and a third that is superseded:
 
 - **The reference's segment pills claim a walking and a driving time.** Both come from a routing
   service, which is **Gate B**. Ours show a **distance** — great-circle, computed here, claimed as
@@ -2524,10 +2524,17 @@ stated with its reason rather than carried across:
   the "optimal" order is not optimal by the number shown next to it. Ours uses one metric for both,
   which removes the contradiction rather than reproducing it.
 - **The reference hands the day to one named external map service through that service's URL
-  scheme.** Ours is provider-neutral by construction: the day's stops copy as an ordered list of
-  coordinates, one per line, which pastes into any map application, and each stop offers a standard
-  geographic URI that the reader's own device resolves to whatever they already use. Nothing here
-  depends on one company's URL format continuing to exist.
+  scheme.** This stage first chose the opposite, a provider-neutral hand-off: the day's stops copied
+  as an ordered coordinate list and each stop offering a `geo:` URI for the reader's device to
+  resolve. **Superseded by issue #663**, because a `geo:` URI resolves on Android and not on iOS
+  Safari or in desktop browsers, so it would have been a dead control for most readers, and the
+  copied list has no `href` to carry. What replaces it: named links built from documented public URL
+  formats by one pure builder (`src/lib/geo/handoff.ts`) — a stop offers "Google Maps" and
+  "OpenStreetMap", a day offers one Google Maps directions link through its placed stops in visiting
+  order, carrying at most the first five and saying so when it carries fewer. The day hand-off
+  ("Take this day with you") is now owned by #663, not by this stage (`docs/SPEC.md` §8, one concept
+  one owner); the cost accepted is the one this bullet used to avoid — two companies' URL formats
+  must keep existing — and it is bounded to the one file.
 
 ### Owned paths
 
@@ -2545,7 +2552,8 @@ stated with its reason rather than carried across:
   landed when this stage runs, this stage creates the file and the `__tests__` directory instead — it
   exists at neither HEAD nor in any other plan's owned paths.
 - `src/routes/_app/trips/$tripId/-ui/planner-day-tools.tsx` — edit. The day footer: the total, the
-  optimize action, the undo that follows it, and the hand-off.
+  optimize action and the undo that follows it. The map hand-off control in the same footer is
+  #663's (`src/lib/geo/handoff.ts`), landed before this stage.
 - `src/components/planner/day-section.tsx` — edit. The lock affordance on a stop row's existing
   action slot.
 - `src/routes/_app/trips/$tripId/-server/plan.ts` — edit. One server function for the lock.
@@ -2642,8 +2650,8 @@ locked)`, built on the repository's existing tenant-scoped update path so `organ
   than as a label the basemap owns.
 - **The day footer.** Under each day: the day's own total distance and stop count in `tabular-nums`;
   **Shorten this day**, which reorders unlocked stops by nearest neighbour from the first stop and
-  leaves locked stops exactly where they are; and **Take this day with you**, which copies the
-  ordered coordinate list and confirms through a toast.
+  leaves locked stops exactly where they are. The day's way out to a map application is not here:
+  #663 owns it, so this stage's footer controls are laid out beside it, not in place of it.
 - **Undo is part of the action, not a separate feature.** After a reorder the footer shows **Undo**
   for as long as the toast lives, restoring the previous order through the same reorder call. The
   previous order is held in component state; it is not persisted, and the affordance disappears on
@@ -2764,7 +2772,7 @@ The six items of `docs/SPEC.md` §7 apply unchanged.
 
 - [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
 - [ ] Every interactive element has hover, focus-visible, active, disabled and loading states — the
-      optimize action, the undo, the hand-off, and every stop's lock toggle.
+      optimize action, the undo, and every stop's lock toggle.
 - [ ] Every list has a designed empty state, a skeleton loading state, and an error state on
       `--color-surface-2` — including the one-stop day, which has a designed answer rather than a
       zero.

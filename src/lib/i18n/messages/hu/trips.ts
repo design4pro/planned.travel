@@ -92,6 +92,18 @@ const messages = {
   'plan.stay.checkOut': 'Kijelentkezés',
   'plan.day.addStay': 'Szállás hozzáadása: {day}',
   'plan.day.addStayShort': 'Szállás hozzáadása',
+  'plan.handoff.stop':
+    '{place} megnyitása itt: {service} (új lapon nyílik meg)',
+  'plan.handoff.day.directions': 'Útvonal itt: {service}',
+  'plan.handoff.day.directionsName':
+    'Útvonal itt: {service}, {day} (új lapon nyílik meg)',
+  'plan.handoff.day.directionsPartial':
+    'Megállók: első {carried}, összesen {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Útvonal itt: {service}, {day}, megállók: első {carried}, összesen {total} (új lapon nyílik meg)',
+  'plan.handoff.day.point': 'Megjelenítés itt: {service}',
+  'plan.handoff.day.pointName':
+    'Megjelenítés itt: {service}, {day} egyetlen térképen szereplő megállója (új lapon nyílik meg)',
   'plan.drop.hint':
     'Kattints jobb gombbal a térképre, vagy tartsd rajta az ujjad, hogy pontosan oda adj hozzá egy helyet.',
   'plan.drop.armed':

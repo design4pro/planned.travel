@@ -419,6 +419,69 @@ test.describe('02-S5 — paste a position', () => {
   })
 })
 
+/**
+ * `#663` — a stop and a day can be handed to a map application.
+ *
+ * The URL shapes are `src/lib/geo/__tests__/handoff.test.ts`'s claim; this block proves the
+ * controls reach the real planner with an accessible name that says a new tab opens and an
+ * `href` of the documented shape. Nothing is followed: a navigation would leave the suite.
+ */
+test.describe('663 — the map hand-off', () => {
+  test.beforeEach(async ({ context, page, baseURL }, testInfo) => {
+    test.setTimeout(CAMERA_JOURNEY_TIMEOUT_MS)
+    test.skip(
+      testInfo.project.name !== 'chromium',
+      'the stop menu and the day footer sit in the desktop rail; on a phone they are inside the places sheet',
+    )
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  test('a day offers directions and a stop offers both services', async ({
+    context,
+  }) => {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.spanning)
+    await onRoute(context, planRoute(tripId), async (page) => {
+      const directions = page
+        .getByRole('link', {
+          name: /^Directions in Google Maps for .+\(opens in a new tab\)$/,
+        })
+        .first()
+      await expect(directions).toBeVisible()
+      await expect(directions).toHaveAttribute(
+        'href',
+        /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&origin=/,
+      )
+      await expect(directions).toHaveAttribute('target', '_blank')
+      await expect(directions).toHaveAttribute('rel', 'noopener noreferrer')
+
+      await page
+        .getByRole('button', { name: /^Actions for / })
+        .first()
+        .click()
+      const google = page.getByRole('menuitem', {
+        name: /^Open .+ in Google Maps \(opens in a new tab\)$/,
+      })
+      await expect(google).toHaveAttribute(
+        'href',
+        /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/,
+      )
+      await expect(
+        page.getByRole('menuitem', {
+          name: /^Open .+ in OpenStreetMap \(opens in a new tab\)$/,
+        }),
+      ).toHaveAttribute(
+        'href',
+        /^https:\/\/www\.openstreetmap\.org\/\?mlat=.+&mlon=/,
+      )
+      await page.keyboard.press('Escape')
+    })
+  })
+})
+
 function annotate(camera: Camera): void {
   test
     .info()
