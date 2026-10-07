@@ -181,6 +181,11 @@ function refineChainShape(
  * is no longer there is refused rather than written back. Whether the row exists is the
  * repository's to say, inside the caller's scope.
  *
+ * `intent` is optional on the wire for one release (BACKWARD_COMPATIBILITY.md §2): a tab that loaded
+ * the previous bundle still calls this function and does not send it. The function reads a missing
+ * intent as `create`, which is the rule that bundle was written against. The follow-up that makes it
+ * required removes that reading.
+ *
  * Both arrays empty is legal and means "this journey has no legs" — the record's own endpoints
  * are the journey, which is what every transport written before chains existed already is.
  */
@@ -188,7 +193,7 @@ export const saveTransportSchema = z
   .object({
     ...transportInputSchema.shape,
     transportId: rowId,
-    intent: z.enum(TRANSPORT_SAVE_INTENTS),
+    intent: z.enum(TRANSPORT_SAVE_INTENTS).optional(),
     stations: z.array(stationSchema).max(CHAIN_MAX_STATIONS),
     legs: z.array(chainLegSchema).max(CHAIN_MAX_LEGS),
   })

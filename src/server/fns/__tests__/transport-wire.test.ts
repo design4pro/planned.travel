@@ -94,14 +94,14 @@ describe('saveTransportSchema', () => {
     }
   })
 
-  it('accepts create and edit, and refuses any other intent or none', () => {
-    for (const intent of ['create', 'edit']) {
+  it('accepts create, edit and no intent from a tab on the previous bundle, and refuses any other', () => {
+    for (const intent of ['create', 'edit', undefined]) {
       expect(
         saveTransportSchema.safeParse({ ...RECORD, ...chain(0, 0), intent })
           .success,
       ).toBe(true)
     }
-    for (const intent of ['update', '', undefined]) {
+    for (const intent of ['update', '', null]) {
       expect(
         saveTransportSchema.safeParse({ ...RECORD, ...chain(0, 0), intent })
           .success,

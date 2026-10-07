@@ -3707,12 +3707,19 @@ describe('tenant isolation', () => {
         priceMinor: 2450,
         currency: 'EUR',
       })
-      await editTransport(scope, alpha.tripId, saved.transport.id, {
-        title: saved.transport.title,
-        status: 'confirmed',
-        bookingCode: 'TXK9QP',
-        seat: '21A',
-      })
+      await editTransport(
+        scope,
+        alpha.tripId,
+        saved.transport.id,
+        {
+          title: saved.transport.title,
+          status: 'confirmed',
+          bookingCode: 'TXK9QP',
+          seat: '21A',
+        },
+        { stations: CONNECTION.stations, legs: CONNECTION.legs },
+      )
+      expect(await listTransportLegs(scope, saved.transport.id)).toHaveLength(2)
 
       const again = await saveSearchedConnection(scope, {
         ...CONNECTION,

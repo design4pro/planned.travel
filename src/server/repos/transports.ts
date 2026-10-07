@@ -1099,6 +1099,23 @@ export async function replaceTransportChain(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * Whether the row is no longer there, asked after a failed save.
+ *
+ * A read that fails too answers "not known", so the caller rethrows the failure that mattered
+ * rather than the later one.
+ */
+async function isGone(
+  scope: TenantScope,
+  transportId: string,
+): Promise<boolean> {
+  try {
+    return (await transportsRepository.findById(scope, transportId)) === null
+  } catch {
+    return false
+  }
+}
+
+/**
  * One Transport with its chain, as the dialog saves it.
  *
  * `transportId` is the row's identity and the caller mints it for a new transport: saving the same
@@ -1217,10 +1234,7 @@ export async function saveTransport(
     }
     // An update of a row deleted since the read matches nothing, and the legs that were to hang off
     // it then fail on their foreign key. That is the same "not there" the read would have said.
-    if (
-      existing !== null &&
-      (await transportsRepository.findById(scope, transportId)) === null
-    ) {
+    if (existing !== null && (await isGone(scope, transportId))) {
       throw new NotFoundError('transport', transportId)
     }
     throw cause
