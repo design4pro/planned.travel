@@ -249,6 +249,19 @@ describe('the import dialog at its boundary', () => {
         0, 20_000,
       ])
     })
+    // The index is the dialog's half of the stagger: the server turns it into the delay.
+    expect(stubs.start).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        data: expect.objectContaining({ fileId: 'file-1', index: 0 }),
+      }),
+    )
+    expect(stubs.start).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({ fileId: 'file-2', index: 1 }),
+      }),
+    )
   })
 })
 
