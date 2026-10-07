@@ -53,11 +53,11 @@ import {
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { localClockLabel, timeZoneOptions } from '#/lib/timezones'
+import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
 import { findStationFn, searchStationsFn } from '#/server/fns/transports'
 import { NOT_SET, fromSelectValue, toSelectValue } from '../shared'
 import { formatGap } from './connections'
 import {
-  CHAIN_MAX_LEGS,
   applyStationMatch,
   dayLabel,
   endpointLabels,
