@@ -32,7 +32,9 @@ import {
   transitCacheKey,
 } from '../search'
 
+import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { RateCounterStore } from '#/server/metering/rate'
+import type { Logger } from '#/server/observability'
 import type {
   TransitClient,
   TransitConnection,
@@ -118,6 +120,24 @@ const QUERY: TransitQuery = {
   modes: ['train', 'bus'],
 }
 
+/**
+ * `callProvider`'s documented "no handle" state: no database, so the gate stays open and nothing is
+ * recorded. `ledger.test.ts` drives the same proxy against a real ledger.
+ */
+function outboundWithoutLedger(): OutboundRuntime {
+  return {
+    db: null,
+    waitUntil: () => undefined,
+    logger: {
+      debug: () => undefined,
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+    } as unknown as Logger,
+    now: () => new Date('2026-09-01T10:00:00Z'),
+  }
+}
+
 function runtime(
   overrides: Partial<TransitSearchRuntime> = {},
 ): TransitSearchRuntime {
@@ -125,6 +145,7 @@ function runtime(
     cache: memoryStore(),
     counters: memoryStore(),
     client: stubClient(),
+    outbound: outboundWithoutLedger(),
     organizationId: 'org-alpha',
     ceiling: 250,
     now: () => new Date('2026-09-01T10:00:00Z'),
