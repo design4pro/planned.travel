@@ -93,6 +93,18 @@ const messages = {
   'plan.stay.checkOut': 'Départ',
   'plan.day.addStay': 'Ajouter un hébergement, {day}',
   'plan.day.addStayShort': 'Ajouter un hébergement',
+  'plan.handoff.stop':
+    'Ouvrir {place} dans {service} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.directions': 'Itinéraire dans {service}',
+  'plan.handoff.day.directionsName':
+    'Itinéraire dans {service} : {day} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.directionsPartial':
+    'Étapes : les {carried} premières sur {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Itinéraire dans {service} : {day}, étapes : les {carried} premières sur {total} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.point': 'Afficher dans {service}',
+  'plan.handoff.day.pointName':
+    'Afficher dans {service} : la seule étape localisée de {day} (s’ouvre dans un nouvel onglet)',
   'plan.drop.hint':
     'Faites un clic droit sur la carte, ou maintenez-la enfoncée, pour ajouter un lieu à cet endroit précis.',
   'plan.drop.armed':

@@ -93,6 +93,18 @@ const messages = {
   'plan.stay.checkOut': 'Abreise',
   'plan.day.addStay': 'Unterkunft hinzufügen: {day}',
   'plan.day.addStayShort': 'Unterkunft hinzufügen',
+  'plan.handoff.stop':
+    '{place} in {service} öffnen (öffnet in einem neuen Tab)',
+  'plan.handoff.day.directions': 'Route in {service}',
+  'plan.handoff.day.directionsName':
+    'Route in {service}: {day} (öffnet in einem neuen Tab)',
+  'plan.handoff.day.directionsPartial':
+    'Stopps: die ersten {carried} von {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Route in {service}: {day}, Stopps: die ersten {carried} von {total} (öffnet in einem neuen Tab)',
+  'plan.handoff.day.point': 'In {service} anzeigen',
+  'plan.handoff.day.pointName':
+    'In {service} anzeigen: der einzige verortete Stopp von {day} (öffnet in einem neuen Tab)',
   'plan.drop.hint':
     'Klick mit der rechten Maustaste auf die Karte oder halte sie gedrückt, um genau dort einen Ort hinzuzufügen.',
   'plan.drop.armed':

@@ -93,6 +93,16 @@ const messages = {
   'plan.stay.checkOut': 'Odjezd',
   'plan.day.addStay': 'Přidat ubytování: {day}',
   'plan.day.addStayShort': 'Přidat ubytování',
+  'plan.handoff.stop': 'Otevřít {place} v {service} (otevře se na nové kartě)',
+  'plan.handoff.day.directions': 'Trasa v {service}',
+  'plan.handoff.day.directionsName':
+    'Trasa v {service}: {day} (otevře se na nové kartě)',
+  'plan.handoff.day.directionsPartial': 'Zastávky: prvních {carried} z {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Trasa v {service}: {day}, zastávky: prvních {carried} z {total} (otevře se na nové kartě)',
+  'plan.handoff.day.point': 'Zobrazit v {service}',
+  'plan.handoff.day.pointName':
+    'Zobrazit v {service}: jediná zastávka na mapě, {day} (otevře se na nové kartě)',
   'plan.drop.hint':
     'Klikněte na mapu pravým tlačítkem nebo na ni dlouze podržte prst a místo se přidá přesně tam.',
   'plan.drop.armed':

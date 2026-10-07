@@ -94,6 +94,18 @@ const messages = {
   'plan.stay.checkOut': 'Wymeldowanie',
   'plan.day.addStay': 'Dodaj nocleg: {day}',
   'plan.day.addStayShort': 'Dodaj nocleg',
+  'plan.handoff.stop':
+    'Otwórz {place} w {service} (otwiera się w nowej karcie)',
+  'plan.handoff.day.directions': 'Trasa w {service}',
+  'plan.handoff.day.directionsName':
+    'Trasa w {service}: {day} (otwiera się w nowej karcie)',
+  'plan.handoff.day.directionsPartial':
+    'Przystanki: pierwsze {carried} z {total}',
+  'plan.handoff.day.directionsPartialName':
+    'Trasa w {service}: {day}, przystanki: pierwsze {carried} z {total} (otwiera się w nowej karcie)',
+  'plan.handoff.day.point': 'Pokaż w {service}',
+  'plan.handoff.day.pointName':
+    'Pokaż w {service}: jedyny przystanek z pinezką na mapie, {day} (otwiera się w nowej karcie)',
   'plan.drop.hint':
     'Kliknij mapę prawym przyciskiem albo przytrzymaj na niej palec, aby dodać miejsce dokładnie tam.',
   'plan.drop.armed':
