@@ -2,6 +2,7 @@
 
 Status: accepted
 Date: 2026-09-15
+See also: ADR 0036 (a second routing vendor and vendor keys in the console, asked again and answered the same way)
 
 ## Context
 
