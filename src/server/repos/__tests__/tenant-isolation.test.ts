@@ -217,7 +217,6 @@ import {
   transportLegsRepository,
   transportsRepository,
   unlinkTransportsFromDays,
-  updateTransport,
 } from '../transports'
 import {
   countFavourites,
@@ -283,6 +282,7 @@ import { dispatch } from '#/server/notifications/dispatch'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
+import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
 import { classifyFailure } from '#/server/errors/public'
@@ -2754,9 +2754,16 @@ describe('tenant isolation', () => {
       }
 
       const attempts: ReadonlyArray<() => Promise<unknown>> = [
-        () => updateTransport(scope, beta.transportId, { title: 'Hijacked' }),
+        () =>
+          editTransport(scope, alpha.tripId, beta.transportId, {
+            title: 'Hijacked',
+          }),
         // An inverted write is still a row A cannot see, not a timing refusal that confirms it.
-        () => updateTransport(scope, beta.transportId, inverted),
+        () =>
+          editTransport(scope, alpha.tripId, beta.transportId, {
+            title: 'Hijacked',
+            ...inverted,
+          }),
         () =>
           replaceTransportChain(scope, beta.transportId, {
             stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
@@ -2807,15 +2814,21 @@ describe('tenant isolation', () => {
     it('refuses to move an A row onto a B day', async () => {
       const scope = alpha.tenant.scope
 
+      const title = (await getTransport(scope, alpha.transportId))?.title ?? ''
+
       expect(
         await captureError(() =>
-          updateTransport(scope, alpha.transportId, { dayId: beta.dayId }),
+          editTransport(scope, alpha.tripId, alpha.transportId, {
+            title,
+            dayId: beta.dayId,
+          }),
         ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
         await captureError(() =>
-          updateTransport(scope, alpha.transportId, {
+          editTransport(scope, alpha.tripId, alpha.transportId, {
+            title,
             arrivalDayId: beta.lastDayId,
           }),
         ),
@@ -2827,7 +2840,10 @@ describe('tenant isolation', () => {
     })
 
     it('never unlinks a B transport from its arrival day from A’s scope', async () => {
-      await updateTransport(beta.tenant.scope, beta.transportId, {
+      await editTransport(beta.tenant.scope, beta.tripId, beta.transportId, {
+        title:
+          (await getTransport(beta.tenant.scope, beta.transportId))?.title ??
+          '',
         arrivalDayId: beta.lastDayId,
       })
 
@@ -2863,7 +2879,10 @@ describe('tenant isolation', () => {
             mode: 'train',
             arrivalDayId: beta.dayId,
           }),
-        () => updateTransport(scope, beta.transportId, { title: 'Hijacked' }),
+        () =>
+          editTransport(scope, alpha.tripId, beta.transportId, {
+            title: 'Hijacked',
+          }),
         () => setTransportStatus(scope, beta.transportId, 'cancelled'),
         () => deleteTransport(scope, beta.transportId),
       ]
@@ -3063,6 +3082,7 @@ describe('tenant isolation', () => {
           saveTransport(alpha.tenant.scope, {
             tripId: beta.tripId,
             transportId: 'brand-new',
+            intent: 'create',
             record: { title: 'Hijacked', mode: 'train' },
             chain: CHAIN,
           }),
@@ -3073,6 +3093,7 @@ describe('tenant isolation', () => {
           saveTransport(alpha.tenant.scope, {
             tripId: beta.tripId,
             transportId: beta.transportId,
+            intent: 'edit',
             record: { title: 'Hijacked', mode: 'train' },
             chain: CHAIN,
           }),
@@ -3086,22 +3107,56 @@ describe('tenant isolation', () => {
     it('does not touch B’s transport when A names it under A’s own trip', async () => {
       const before = await betaWorld()
 
-      // A's scope cannot see B's row, so the id reads as unused. The primary key refuses the
-      // insert, the batch takes the chain with it, and the refusal is a NotFoundError like any
-      // other foreign id.
-      expect(
-        await captureError(() =>
-          saveTransport(alpha.tenant.scope, {
-            tripId: alpha.tripId,
-            transportId: beta.transportId,
-            record: { title: 'Hijacked', mode: 'train' },
-            chain: CHAIN,
-          }),
-        ),
-      ).toBeInstanceOf(NotFoundError)
+      // A's scope cannot see B's row, so the id reads as unused. A `create` reaches the insert,
+      // the primary key refuses it, the batch takes the chain with it, and the refusal is a
+      // NotFoundError like any other foreign id. An `edit` never reaches a write at all.
+      for (const intent of ['create', 'edit'] as const) {
+        expect(
+          await captureError(() =>
+            saveTransport(alpha.tenant.scope, {
+              tripId: alpha.tripId,
+              transportId: beta.transportId,
+              intent,
+              record: { title: 'Hijacked', mode: 'train' },
+              chain: CHAIN,
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
 
       expect(await betaWorld()).toEqual(before)
       expect(await listTripLegs(alpha.tenant.scope, alpha.tripId)).toEqual([])
+    })
+
+    /**
+     * A foreign id and an absent one must read the same, or the refusal tells A which of B's ids
+     * exist. The inverted times are the probe: if the existence check ran after the ordering, the
+     * foreign row would answer with a timing refusal and the absent one with not-found.
+     */
+    it('answers an edit of B’s transport exactly as it answers an edit of one that is not there', async () => {
+      const inverted = {
+        departureDate: '2026-04-16',
+        departureTime: '12:00',
+        arrivalDate: '2026-04-16',
+        arrivalTime: '08:00',
+      }
+      const refuse = (transportId: string) =>
+        captureError(() =>
+          saveTransport(alpha.tenant.scope, {
+            tripId: alpha.tripId,
+            transportId,
+            intent: 'edit',
+            record: { title: 'Probe', mode: 'train', ...inverted },
+            chain: CHAIN,
+          }),
+        )
+
+      const foreign = (await refuse(beta.transportId)) as NotFoundError
+      const absent = (await refuse('never-existed')) as NotFoundError
+
+      expect(foreign).toBeInstanceOf(NotFoundError)
+      expect(absent).toBeInstanceOf(NotFoundError)
+      expect(foreign.code).toBe(absent.code)
     })
 
     it('refuses a leg day or a record day belonging to B, and writes nothing', async () => {
@@ -3124,6 +3179,7 @@ describe('tenant isolation', () => {
             saveTransport(scope, {
               tripId: alpha.tripId,
               transportId: 'cross-parented',
+              intent: 'create',
               ...draft,
               record: {
                 title: 'Cross-parented',
@@ -3148,16 +3204,19 @@ describe('tenant isolation', () => {
         alpha.transportId,
       )
 
-      expect(
-        await captureError(() =>
-          saveTransport(alpha.tenant.scope, {
-            tripId: otherTrip.id,
-            transportId: alpha.transportId,
-            record: { title: 'Moved', mode: 'train' },
-            chain: CHAIN,
-          }),
-        ),
-      ).toBeInstanceOf(NotFoundError)
+      for (const intent of ['create', 'edit'] as const) {
+        expect(
+          await captureError(() =>
+            saveTransport(alpha.tenant.scope, {
+              tripId: otherTrip.id,
+              transportId: alpha.transportId,
+              intent,
+              record: { title: 'Moved', mode: 'train' },
+              chain: CHAIN,
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
 
       expect(
         await listTransportLegs(alpha.tenant.scope, alpha.transportId),
@@ -3173,12 +3232,41 @@ describe('tenant isolation', () => {
       const saved = await saveTransport(alpha.tenant.scope, {
         tripId: alpha.tripId,
         transportId: alpha.transportId,
+        intent: 'edit',
         record: { title: 'Lisbon to Porto', mode: 'train' },
         chain: CHAIN,
       })
 
       expect(saved.legs).toHaveLength(1)
       expect(await betaWorld()).toEqual(before)
+    })
+
+    it('refuses a viewer for either intent and leaves the row as it was', async () => {
+      const viewerId = await alpha.tenant.addUser('A viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const before = await getTransport(alpha.tenant.scope, alpha.transportId)
+
+      for (const intent of ['create', 'edit'] as const) {
+        expect(
+          await captureError(() =>
+            saveTransport(alpha.tenant.scopeFor(viewerId), {
+              tripId: alpha.tripId,
+              transportId: alpha.transportId,
+              intent,
+              record: { title: 'Renamed', mode: 'train' },
+              chain: CHAIN,
+            }),
+          ),
+        ).toBeInstanceOf(TripRoleError)
+      }
+
+      expect(await getTransport(alpha.tenant.scope, alpha.transportId)).toEqual(
+        before,
+      )
     })
   })
   /**
@@ -3619,7 +3707,8 @@ describe('tenant isolation', () => {
         priceMinor: 2450,
         currency: 'EUR',
       })
-      await updateTransport(scope, saved.transport.id, {
+      await editTransport(scope, alpha.tripId, saved.transport.id, {
+        title: saved.transport.title,
         status: 'confirmed',
         bookingCode: 'TXK9QP',
         seat: '21A',

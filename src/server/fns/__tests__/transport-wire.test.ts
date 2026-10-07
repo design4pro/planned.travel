@@ -61,6 +61,7 @@ const RECORD = {
   currency: '',
   notes: '',
   transportId: 'draft-1',
+  intent: 'create' as const,
 }
 
 const SEARCHED = {
@@ -89,6 +90,21 @@ describe('saveTransportSchema', () => {
     ]) {
       expect(
         saveTransportSchema.safeParse({ ...RECORD, ...shape }).success,
+      ).toBe(false)
+    }
+  })
+
+  it('accepts create and edit, and refuses any other intent or none', () => {
+    for (const intent of ['create', 'edit']) {
+      expect(
+        saveTransportSchema.safeParse({ ...RECORD, ...chain(0, 0), intent })
+          .success,
+      ).toBe(true)
+    }
+    for (const intent of ['update', '', undefined]) {
+      expect(
+        saveTransportSchema.safeParse({ ...RECORD, ...chain(0, 0), intent })
+          .success,
       ).toBe(false)
     }
   })

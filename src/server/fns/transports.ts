@@ -381,6 +381,7 @@ export const saveTransportFn = createServerFn({ method: 'POST' })
     const { transport, legs } = await saveTransport(scope, {
       tripId: data.tripId,
       transportId: data.transportId,
+      intent: data.intent,
       record: payload(data),
       chain: chainInput(data),
     })

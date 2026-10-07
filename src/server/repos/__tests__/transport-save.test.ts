@@ -9,18 +9,22 @@
  * The cross-workspace cases are asserted in `tenant-isolation.test.ts`, as for every writer.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { NotFoundError } from '../context'
 import { createDay, listTripDays } from '../days'
+import { listFilesForEntity, recordFile } from '../files'
+import { createReservation, listTripReservations } from '../reservations'
 import { TripRoleError, addTripMember, createTrip } from '../trips'
 import {
+  deleteTransport,
   getTransport,
   listTransportLegs,
   listTripLegs,
   listTripTransports,
   saveSearchedConnection,
   saveTransport,
+  transportsRepository,
 } from '../transports'
 import { captureError, createHarness } from './harness'
 import type { Day } from '#/server/db/types'
@@ -67,6 +71,7 @@ describe('saving a transport with its legs', () => {
     const saved = await saveTransport(tenant.scope, {
       tripId,
       transportId: 'draft-1',
+      intent: 'create',
       record: {
         title: 'Osaka to Tokyo',
         mode: 'train',
@@ -101,6 +106,7 @@ describe('saving a transport with its legs', () => {
     const saved = await saveTransport(tenant.scope, {
       tripId,
       transportId: 'draft-2',
+      intent: 'create',
       record: {
         title: 'Airport train',
         mode: 'train',
@@ -124,6 +130,7 @@ describe('saving a transport with its legs', () => {
     const saved = await saveTransport(tenant.scope, {
       tripId,
       transportId: 'draft-3',
+      intent: 'create',
       record: {
         title: 'Night train',
         mode: 'train',
@@ -146,6 +153,7 @@ describe('saving a transport with its legs', () => {
     const saved = await saveTransport(tenant.scope, {
       tripId,
       transportId: 'draft-4',
+      intent: 'create',
       record: { title: 'Undated idea', mode: 'train' },
       chain: {
         stations: [OSAKA, TOKYO],
@@ -162,6 +170,7 @@ describe('saving a transport with its legs', () => {
       await saveTransport(tenant.scope, {
         tripId,
         transportId: 'existing',
+        intent: 'create',
         record: {
           title: 'Osaka to Tokyo',
           mode: 'train',
@@ -179,6 +188,7 @@ describe('saving a transport with its legs', () => {
       const saved = await saveTransport(tenant.scope, {
         tripId,
         transportId: 'existing',
+        intent: 'edit',
         record: { title: 'Osaka to Nagoya', mode: 'train', seat: '12B' },
         chain: {
           stations: [OSAKA, NAGOYA],
@@ -199,6 +209,7 @@ describe('saving a transport with its legs', () => {
       const saved = await saveTransport(tenant.scope, {
         tripId,
         transportId: 'existing',
+        intent: 'edit',
         record: {
           title: 'Osaka to Tokyo',
           mode: 'train',
@@ -218,6 +229,7 @@ describe('saving a transport with its legs', () => {
       const saved = await saveTransport(tenant.scope, {
         tripId,
         transportId: 'existing',
+        intent: 'edit',
         record: { title: 'Osaka to Tokyo', mode: 'train' },
         chain: NO_CHAIN,
       })
@@ -231,6 +243,7 @@ describe('saving a transport with its legs', () => {
     const draft = {
       tripId,
       transportId: 'pressed-twice',
+      intent: 'create' as const,
       record: { title: 'Osaka to Tokyo', mode: 'train' as const },
       chain: {
         stations: [OSAKA, NAGOYA, TOKYO],
@@ -243,6 +256,214 @@ describe('saving a transport with its legs', () => {
 
     expect(await listTripTransports(tenant.scope, tripId)).toHaveLength(1)
     expect(await listTripLegs(tenant.scope, tripId)).toHaveLength(2)
+  })
+
+  /**
+   * The intent is the dialog's own statement of what it means to do. Without it a save could only
+   * tell an edit from a create by whether the id was found, and a Transport deleted in another
+   * tab was found nowhere: its edit came back as a create under the old id.
+   */
+  describe('the intent of a save', () => {
+    const CHAINED = {
+      stations: [OSAKA, NAGOYA, TOKYO],
+      legs: [{ departureTime: '09:00' }, { arrivalTime: '12:40' }],
+    }
+
+    async function seedLinkedTransport(transportId: string) {
+      await saveTransport(tenant.scope, {
+        tripId,
+        transportId,
+        intent: 'create',
+        record: { title: 'Osaka to Tokyo', mode: 'train' },
+        chain: CHAINED,
+      })
+      await createReservation(tenant.scope, {
+        tripId,
+        transportId,
+        title: 'Seat reservation',
+      })
+      await recordFile(tenant.scope, {
+        tripId,
+        transportId,
+        storageKey: `files/${transportId}/ticket.pdf`,
+        filename: 'ticket.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 1024,
+      })
+    }
+
+    /** What may still point at, or be left of, a Transport that is gone. */
+    async function leftOver(transportId: string) {
+      return {
+        row: await getTransport(tenant.scope, transportId),
+        legs: await listTransportLegs(tenant.scope, transportId),
+        reservations: (
+          await listTripReservations(tenant.scope, { tripId })
+        ).filter((reservation) => reservation.transportId === transportId)
+          .length,
+        files: (await listFilesForEntity(tenant.scope, { transportId })).length,
+      }
+    }
+
+    it('refuses an edit of a transport deleted in the meantime and brings nothing back', async () => {
+      await seedLinkedTransport('deleted-in-tab-b')
+      await deleteTransport(tenant.scope, 'deleted-in-tab-b')
+
+      const error = await captureError(() =>
+        saveTransport(tenant.scope, {
+          tripId,
+          transportId: 'deleted-in-tab-b',
+          intent: 'edit',
+          record: { title: 'Saved from tab A', mode: 'train' },
+          chain: CHAINED,
+        }),
+      )
+
+      expect(error).toEqual(new NotFoundError('transport', 'deleted-in-tab-b'))
+      expect(await leftOver('deleted-in-tab-b')).toEqual({
+        row: null,
+        legs: [],
+        reservations: 0,
+        files: 0,
+      })
+      expect(await snapshot()).toEqual({ transports: [], legs: [] })
+    })
+
+    it('refuses an edit of a deleted transport sent with no chain, too', async () => {
+      await seedLinkedTransport('deleted-unchained')
+      await deleteTransport(tenant.scope, 'deleted-unchained')
+
+      const error = await captureError(() =>
+        saveTransport(tenant.scope, {
+          tripId,
+          transportId: 'deleted-unchained',
+          intent: 'edit',
+          record: { title: 'Saved from tab A', mode: 'train' },
+          chain: NO_CHAIN,
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await snapshot()).toEqual({ transports: [], legs: [] })
+    })
+
+    /** The existence check comes first, so the row is not confirmed by a timing or day refusal. */
+    it('answers not-found, and not an ordering refusal, for an edit of a transport that is not there', async () => {
+      const error = await captureError(() =>
+        saveTransport(tenant.scope, {
+          tripId,
+          transportId: 'never-existed',
+          intent: 'edit',
+          record: {
+            title: 'Inverted',
+            mode: 'flight',
+            dayId: days[2].id,
+            arrivalDayId: days[0].id,
+            departureDate: '2026-04-16',
+            departureTime: '09:00',
+            arrivalDate: '2026-04-16',
+            arrivalTime: '03:00',
+          },
+          chain: { stations: [LONDON, NEW_YORK], legs: [{}] },
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await snapshot()).toEqual({ transports: [], legs: [] })
+    })
+
+    it('creates a transport for the intent create', async () => {
+      await saveTransport(tenant.scope, {
+        tripId,
+        transportId: 'fresh',
+        intent: 'create',
+        record: { title: 'Osaka to Tokyo', mode: 'train' },
+        chain: CHAINED,
+      })
+
+      expect((await snapshot()).transports.map((row) => row.id)).toEqual([
+        'fresh',
+      ])
+    })
+
+    it('treats a create of an id the caller already wrote as an edit of that row', async () => {
+      await seedLinkedTransport('written-once')
+
+      await saveTransport(tenant.scope, {
+        tripId,
+        transportId: 'written-once',
+        intent: 'create',
+        record: { title: 'Renamed by the second press', mode: 'train' },
+        chain: CHAINED,
+      })
+
+      const { transports } = await snapshot()
+      expect(transports.map((row) => row.title)).toEqual([
+        'Renamed by the second press',
+      ])
+      expect(
+        await listTransportLegs(tenant.scope, 'written-once'),
+      ).toHaveLength(2)
+    })
+
+    /**
+     * The row is there when the save reads it and gone when the batch runs: the read is taken
+     * from the real table and the other tab's delete lands right after it. The refusal has to be
+     * the same one the up-front check gives, not the raw foreign-key failure of the legs.
+     */
+    describe('when the transport is deleted between the read and the write', () => {
+      async function deleteAfterTheRead(transportId: string) {
+        const read = transportsRepository.findById
+        vi.spyOn(transportsRepository, 'findById').mockImplementationOnce(
+          async (scope, id) => {
+            const row = await read(scope, id)
+            await deleteTransport(scope, transportId)
+            return row
+          },
+        )
+      }
+
+      it('answers not-found for a chained edit instead of a foreign-key failure', async () => {
+        await seedLinkedTransport('raced')
+        await deleteAfterTheRead('raced')
+
+        const error = await captureError(() =>
+          saveTransport(tenant.scope, {
+            tripId,
+            transportId: 'raced',
+            intent: 'edit',
+            record: { title: 'Saved from tab A', mode: 'train' },
+            chain: CHAINED,
+          }),
+        )
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect(await leftOver('raced')).toEqual({
+          row: null,
+          legs: [],
+          reservations: 0,
+          files: 0,
+        })
+      })
+
+      it('answers not-found for an unchained edit', async () => {
+        await seedLinkedTransport('raced-bare')
+        await deleteAfterTheRead('raced-bare')
+
+        const error = await captureError(() =>
+          saveTransport(tenant.scope, {
+            tripId,
+            transportId: 'raced-bare',
+            intent: 'edit',
+            record: { title: 'Saved from tab A', mode: 'train' },
+            chain: NO_CHAIN,
+          }),
+        )
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect((await leftOver('raced-bare')).row).toBeNull()
+      })
+    })
   })
 
   /**
@@ -263,6 +484,7 @@ describe('saving a transport with its legs', () => {
         saveTransport(tenant.scope, {
           tripId,
           transportId: 'doomed',
+          intent: 'create',
           record: { title: 'Osaka to Tokyo', mode: 'train' },
           chain: { stations: [OSAKA, NAGOYA, TOKYO], legs: [{}, {}] },
         }),
@@ -276,6 +498,7 @@ describe('saving a transport with its legs', () => {
       await saveTransport(tenant.scope, {
         tripId,
         transportId: 'kept',
+        intent: 'create',
         record: { title: 'Osaka to Tokyo', mode: 'train' },
         chain: { stations: [OSAKA, TOKYO], legs: [{}] },
       })
@@ -285,6 +508,7 @@ describe('saving a transport with its legs', () => {
         saveTransport(tenant.scope, {
           tripId,
           transportId: 'kept',
+          intent: 'edit',
           record: { title: 'Renamed', mode: 'train' },
           chain: { stations: [OSAKA, NAGOYA, TOKYO], legs: [{}, {}] },
         }),
@@ -301,6 +525,7 @@ describe('saving a transport with its legs', () => {
         saveTransport(tenant.scope, {
           tripId,
           transportId: 'inverted-leg',
+          intent: 'create',
           record: { title: 'BA 117', mode: 'flight' },
           chain: {
             stations: [LONDON, NEW_YORK],
@@ -324,6 +549,7 @@ describe('saving a transport with its legs', () => {
       const saved = await saveTransport(tenant.scope, {
         tripId,
         transportId: 'westbound',
+        intent: 'create',
         record: { title: 'NH 184', mode: 'flight' },
         chain: {
           stations: [TOKYO, HONOLULU],
@@ -346,6 +572,7 @@ describe('saving a transport with its legs', () => {
         saveTransport(tenant.scope, {
           tripId,
           transportId: 'inverted-record',
+          intent: 'create',
           record: {
             title: 'BA 117',
             mode: 'flight',
@@ -369,6 +596,7 @@ describe('saving a transport with its legs', () => {
         saveTransport(tenant.scope, {
           tripId,
           transportId: 'backwards',
+          intent: 'create',
           record: {
             title: 'Backwards',
             mode: 'train',
@@ -394,6 +622,7 @@ describe('saving a transport with its legs', () => {
         saveTransport(tenant.scope, {
           tripId,
           transportId: 'cross-trip',
+          intent: 'create',
           record: { title: 'Cross-trip', mode: 'train' },
           chain: {
             stations: [OSAKA, TOKYO],
@@ -411,6 +640,7 @@ describe('saving a transport with its legs', () => {
         saveTransport(tenant.scope, {
           tripId,
           transportId: 'lopsided',
+          intent: 'create',
           record: { title: 'Lopsided', mode: 'train' },
           chain: { stations: [OSAKA, NAGOYA, TOKYO], legs: [{}] },
         }),
@@ -421,25 +651,29 @@ describe('saving a transport with its legs', () => {
     })
   })
 
-  it('refuses a transport id that belongs to another trip of the same workspace', async () => {
+  it('refuses a transport id that belongs to another trip of the same workspace, for either intent', async () => {
     const other = await createTrip(tenant.scope, { title: 'Kyushu' })
     await saveTransport(tenant.scope, {
       tripId: other.id,
       transportId: 'kyushu-ferry',
+      intent: 'create',
       record: { title: 'Ferry', mode: 'ferry' },
       chain: NO_CHAIN,
     })
 
-    const error = await captureError(() =>
-      saveTransport(tenant.scope, {
-        tripId,
-        transportId: 'kyushu-ferry',
-        record: { title: 'Moved', mode: 'ferry' },
-        chain: { stations: [OSAKA, TOKYO], legs: [{}] },
-      }),
-    )
+    for (const intent of ['create', 'edit'] as const) {
+      const error = await captureError(() =>
+        saveTransport(tenant.scope, {
+          tripId,
+          transportId: 'kyushu-ferry',
+          intent,
+          record: { title: 'Moved', mode: 'ferry' },
+          chain: { stations: [OSAKA, TOKYO], legs: [{}] },
+        }),
+      )
 
-    expect(error).toBeInstanceOf(NotFoundError)
+      expect(error).toBeInstanceOf(NotFoundError)
+    }
     expect((await getTransport(tenant.scope, 'kyushu-ferry'))?.title).toBe(
       'Ferry',
     )
@@ -470,6 +704,7 @@ describe('saving a transport with its legs', () => {
         saveTransport(tenant.scopeFor(viewerId), {
           ...draft,
           transportId: 'viewer-draft',
+          intent: 'create',
         }),
       ),
     ).toBeInstanceOf(TripRoleError)
@@ -478,6 +713,7 @@ describe('saving a transport with its legs', () => {
     const saved = await saveTransport(tenant.scopeFor(editorId), {
       ...draft,
       transportId: 'editor-draft',
+      intent: 'create',
     })
     expect(saved.legs).toHaveLength(1)
   })

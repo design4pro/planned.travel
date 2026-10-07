@@ -52,6 +52,7 @@ import {
   CHAIN_MIN_STATIONS,
   chainShapeIssue,
 } from '#/lib/transport-chain'
+import { TRANSPORT_SAVE_INTENTS } from '#/lib/transport-save-intent'
 import { arrivesBeforeDeparts } from '#/lib/transport-timing'
 import {
   currencySchema,
@@ -143,12 +144,6 @@ export const createTransportInput = z.object({
   ...transportFields,
 })
 export type CreateTransportInput = z.infer<typeof createTransportInput>
-
-export const updateTransportInput = z.object({
-  ...transportFields,
-  title: titleSchema.optional(),
-})
-export type UpdateTransportInput = z.infer<typeof updateTransportInput>
 
 /* -------------------------------------------------------------------------------------------------
  * Reads
@@ -384,32 +379,6 @@ export async function createTransport(
     to: values.arrivalTimezone,
   })
   return transportsRepository.insert(scope, values)
-}
-
-export async function updateTransport(
-  scope: TenantScope,
-  transportId: string,
-  input: UpdateTransportInput,
-): Promise<Transport> {
-  const values = definedOnly(updateTransportInput.parse(input))
-  const existing = await transportsRepository.requireById(scope, transportId)
-  await assertTripRole(scope, existing.tripId, WRITERS)
-  // The rule holds over the row that results, not over the fields that arrived: moving one end
-  // alone is ordered against the end already stored, or a two-step edit walks past the guard.
-  const departureDayId =
-    'dayId' in values ? (values.dayId ?? null) : existing.dayId
-  const arrivalDayId =
-    'arrivalDayId' in values
-      ? (values.arrivalDayId ?? null)
-      : existing.arrivalDayId
-  await requireDayPair(scope, existing.tripId, departureDayId, arrivalDayId)
-  // The clocks likewise: the flat form sends no zones, so the stored ones are what it is judged in.
-  const resulting = { ...existing, ...values }
-  requireTimeOrder('transport', resulting, {
-    from: resulting.departureTimezone,
-    to: resulting.arrivalTimezone,
-  })
-  return transportsRepository.requireUpdate(scope, transportId, values)
 }
 
 export async function setTransportStatus(
@@ -1133,12 +1102,18 @@ export async function replaceTransportChain(
  * One Transport with its chain, as the dialog saves it.
  *
  * `transportId` is the row's identity and the caller mints it for a new transport: saving the same
- * draft twice is then an edit of the row the first press wrote, not a second row. Whether the row
- * exists is decided here, inside the caller's scope, and never from the caller's say-so.
+ * draft twice is then an edit of the row the first press wrote, not a second row.
+ *
+ * `intent` says what the caller means, and it only chooses between two outcomes that are both
+ * inside the caller's own scope, so it widens no access: `edit` refuses a row that is not there
+ * (deleted in another tab, or never the caller's) instead of writing it back, and `create` of an id
+ * the caller already wrote stays an edit, which is what makes a double press safe. Whether the row
+ * exists is still decided here, inside the caller's scope, and never from the caller's say-so.
  */
 export const saveTransportInput = z.object({
   tripId: idSchema,
   transportId: idSchema,
+  intent: z.enum(TRANSPORT_SAVE_INTENTS),
   record: z.object(transportFields),
   chain: transportChainInput,
 })
@@ -1158,22 +1133,32 @@ export interface SavedTransport {
  * **The record's day pair is the caller's.** Nothing here derives a day from the legs: a night
  * train leaves on one day and lands on another and only the traveller knows which. Each leg's days
  * are resolved against the trip like the chain writer's, and the record's pair is ordered over the
- * row that results, as {@link updateTransport} does.
+ * row that results.
  *
- * **Every refusal comes before the batch.** The trip, the role, the agreement of an existing
- * record with that trip, both orderings and every day reference are checked first, so a refused
- * save has written nothing; the batch then covers what only the database can refuse.
+ * **Every refusal comes before the batch.** The trip, the role, the existence of the record an
+ * `edit` names and its agreement with that trip, both orderings and every day reference are
+ * checked first, so a refused save has written nothing; the batch then covers what only the
+ * database can refuse. The existence check comes ahead of every ordering rule, so a row of another
+ * workspace is a `NotFoundError` and never a timing refusal that would confirm it exists.
+ *
+ * **An `edit` never inserts.** A row that is not there is a `NotFoundError`, and a row deleted
+ * between the read and the batch is one too: the update then matches nothing, and a chain that
+ * could not be attached to the vanished parent is answered the same way.
  */
 export async function saveTransport(
   scope: TenantScope,
   input: SaveTransportInput,
 ): Promise<SavedTransport> {
-  const { tripId, transportId, record, chain } = saveTransportInput.parse(input)
+  const { tripId, transportId, intent, record, chain } =
+    saveTransportInput.parse(input)
   await requireTrip(scope, tripId)
   await assertTripRole(scope, tripId, WRITERS)
 
   const existing = await transportsRepository.findById(scope, transportId)
-  if (existing !== null && existing.tripId !== tripId) {
+  if (
+    (existing === null && intent === 'edit') ||
+    (existing !== null && existing.tripId !== tripId)
+  ) {
     throw new NotFoundError('transport', transportId)
   }
 
@@ -1228,6 +1213,14 @@ export async function saveTransport(
     // belongs to a row outside the scope: answer it like every other foreign id, not as a raw
     // database failure. The batch has rolled back, so nothing of either row has changed.
     if (existing === null && isUniqueConstraintViolation(cause)) {
+      throw new NotFoundError('transport', transportId)
+    }
+    // An update of a row deleted since the read matches nothing, and the legs that were to hang off
+    // it then fail on their foreign key. That is the same "not there" the read would have said.
+    if (
+      existing !== null &&
+      (await transportsRepository.findById(scope, transportId)) === null
+    ) {
       throw new NotFoundError('transport', transportId)
     }
     throw cause
@@ -1328,6 +1321,7 @@ export async function saveSearchedConnection(
   return saveTransport(scope, {
     tripId: values.tripId,
     transportId: existing?.id ?? newId(),
+    intent: existing === null ? 'create' : 'edit',
     record:
       existing === null
         ? {
