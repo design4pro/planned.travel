@@ -8,6 +8,7 @@
  */
 import { formatWeekday } from '#/lib/format'
 import { isKnownTimeZone } from '#/lib/timezones'
+import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
 import { DATE_PATTERN, TIME_PATTERN } from '#/lib/transport-timing'
 import { transportTimingError } from './connections'
 
@@ -435,18 +436,6 @@ export function metresToKilometres(metres: number | null): string {
 }
 
 /* -------------------------------------------------------------------- chain */
-
-/**
- * The most legs one chain may hold, mirrored from `src/server/repos/transports.ts`.
- *
- * It is a bound on the validated array — a payload limit that keeps the mirrored
- * `route` patch inside the frame `src/server/do/protocol.ts` fixes — and not a
- * statement about how many changes a journey may have. Said here as well as
- * there so the editor can stop offering a control the server would refuse; the
- * repository is still the one that enforces it, because the form is a
- * convenience.
- */
-export const CHAIN_MAX_LEGS = 12
 
 /** One station on the chain: where it is, and which clock it is on. */
 export interface StationDraft {
@@ -1088,9 +1077,9 @@ export function chainPayload(chain: ChainDraft): ChainPayload {
  * the same reason {@link StationLookup} gives: this module states the fields it
  * fills in, and does not take a dependency on one endpoint's wire format. The
  * binding to the real contract is asserted where an assertion belongs — the unit
- * test checks this against `TransportInput`, the type of the record half of the
- * save's validator, so a field this builder sets that the schema would silently
- * strip fails there rather than in a browser.
+ * test parses the whole payload through `saveTransportSchema`, the save's own
+ * validator, so a field this builder sets that the schema would silently strip
+ * fails there rather than in a browser.
  */
 export interface TransportPayload {
   readonly tripId: string

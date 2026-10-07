@@ -28,6 +28,7 @@ import { z } from 'zod'
 import {
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
+  newId,
   transportLegs,
   transports,
 } from '#/server/db/schema'
@@ -44,6 +45,13 @@ import { assertTripRole, requireTrip } from './trips'
 
 import type { TripRole } from './trips'
 import { resolveTimeZone } from '#/lib/time'
+import {
+  CHAIN_MAX_LEGS,
+  CHAIN_MAX_STATIONS,
+  CHAIN_MIN_LEGS,
+  CHAIN_MIN_STATIONS,
+  chainShapeIssue,
+} from '#/lib/transport-chain'
 import { arrivesBeforeDeparts } from '#/lib/transport-timing'
 import {
   currencySchema,
@@ -791,16 +799,6 @@ export async function reorderDayTransports(
  * The station chain
  * ---------------------------------------------------------------------------------------------- */
 
-/**
- * The most legs one chain may hold.
- *
- * A bound on the validated array — a payload limit — and not a statement about how many changes a
- * journey may have: the mirrored `route` patch has to stay inside the 32 KiB frame
- * `src/server/do/protocol.ts` fixes. Twelve legs is thirteen stations, which is more changes than
- * any timetable in the world asks of one ticket.
- */
-export const CHAIN_MAX_LEGS = 12
-
 /** An IANA name the platform accepts, refused rather than silently rewritten to `UTC`. */
 const timeZoneSchema = z
   .string()
@@ -842,6 +840,17 @@ const chainLegSchema = z.object({
 })
 export type ChainLegInput = z.infer<typeof chainLegSchema>
 
+/** The arithmetic between a chain's two arrays, raised as an issue on the object that holds them. */
+function refineChainShape(
+  { stations, legs }: { stations: Array<unknown>; legs: Array<unknown> },
+  ctx: z.RefinementCtx,
+): void {
+  const issue = chainShapeIssue(stations.length, legs.length)
+  if (issue !== null) {
+    ctx.addIssue({ code: 'custom', path: [issue.path], message: issue.message })
+  }
+}
+
 /**
  * A whole chain, as the chain writers accept it.
  *
@@ -849,25 +858,18 @@ export type ChainLegInput = z.infer<typeof chainLegSchema>
  * whole of the join guarantee: the station two legs meet at is written once and read into both
  * rows, so leg *i*'s arrival endpoint and leg *i+1*'s departure endpoint cannot disagree about
  * which station they name. `legs.length === stations.length - 1` is then the only arithmetic left,
- * and it is checked here rather than trusted.
+ * and it is checked here, by the rule `#/lib/transport-chain` shares with the dialog and the server
+ * functions, rather than trusted.
  *
  * Both empty is the legal way to say "this journey is not a chain": the rows go and the record's
  * own endpoints are left exactly as they were.
  */
 export const transportChainInput = z
   .object({
-    stations: z.array(stationSchema).max(CHAIN_MAX_LEGS + 1),
+    stations: z.array(stationSchema).max(CHAIN_MAX_STATIONS),
     legs: z.array(chainLegSchema).max(CHAIN_MAX_LEGS),
   })
-  .refine(
-    ({ stations, legs }) =>
-      (stations.length === 0 && legs.length === 0) ||
-      (stations.length >= 2 && legs.length === stations.length - 1),
-    {
-      message:
-        'A chain of N stations has exactly N−1 legs, and N is 2 or more.',
-    },
-  )
+  .superRefine(refineChainShape)
 export type TransportChainInput = z.input<typeof transportChainInput>
 
 /** One transport's legs, in chain order. */
@@ -1088,8 +1090,9 @@ function planChain(
  * station in that same batch, so the two representations of one journey cannot drift apart and a
  * reader that knows nothing about legs still sees where the journey starts and ends.
  *
- * The hand-typed path does not come through here: {@link saveTransport} writes the record in the
- * same batch. This is the found-connection path's writer.
+ * Neither save path comes through here: {@link saveTransport} writes the record in the same batch,
+ * for the hand-typed dialog and for a found connection alike. This is the chain on its own, for a
+ * record that already exists and needs nothing but its route replaced.
  */
 export async function replaceTransportChain(
   scope: TenantScope,
@@ -1264,73 +1267,42 @@ export const searchedConnectionInput = z
     currency: currencySchema.nullish(),
     stations: z
       .array(stationSchema)
-      .min(2)
-      .max(CHAIN_MAX_LEGS + 1),
-    legs: z.array(chainLegSchema).min(1).max(CHAIN_MAX_LEGS),
+      .min(CHAIN_MIN_STATIONS)
+      .max(CHAIN_MAX_STATIONS),
+    legs: z.array(chainLegSchema).min(CHAIN_MIN_LEGS).max(CHAIN_MAX_LEGS),
   })
-  .refine(({ stations, legs }) => legs.length === stations.length - 1, {
-    message: 'A chain of N stations has exactly N−1 legs, and N is 2 or more.',
-  })
+  .superRefine(refineChainShape)
 export type SearchedConnectionInput = z.input<typeof searchedConnectionInput>
 
 /** What the save answers: the record, and the chain it now has. */
 export type SavedConnection = SavedTransport
 
 /**
- * The record a found connection is first written as.
- *
- * The endpoints are set here as well as by the chain writer, so a save whose second half never
- * lands leaves a journey that says where it goes rather than an empty row. The status is left to
- * the column's own default — a connection somebody chose is not a connection anybody booked.
- */
-function newRecordFrom(
-  values: z.output<typeof searchedConnectionInput>,
-): CreateTransportInput {
-  // Both ends exist: the validator refuses fewer than two stations and fewer than one leg.
-  const first = values.stations[0]
-  const last = values.stations[values.stations.length - 1]
-  const firstLeg = values.legs[0]
-  const lastLeg = values.legs[values.legs.length - 1]
-  return {
-    tripId: values.tripId,
-    mode: values.mode,
-    title: values.title,
-    priceMinor: values.priceMinor ?? null,
-    currency: values.currency ?? null,
-    departureName: first.name,
-    departureCode: first.code ?? null,
-    departureLat: first.lat ?? null,
-    departureLng: first.lng ?? null,
-    departureTimezone: first.timezone ?? null,
-    departureDate: firstLeg.departureDate ?? null,
-    departureTime: firstLeg.departureTime ?? null,
-    arrivalName: last.name,
-    arrivalCode: last.code ?? null,
-    arrivalLat: last.lat ?? null,
-    arrivalLng: last.lng ?? null,
-    arrivalTimezone: last.timezone ?? null,
-    arrivalDate: lastLeg.arrivalDate ?? null,
-    arrivalTime: lastLeg.arrivalTime ?? null,
-  }
-}
-
-/**
  * Save a found connection as a first-class journey, or replace the route of one already saved.
  *
- * **It writes through {@link replaceTransportChain} rather than beside it.** A found connection is
- * N stations and N−1 legs, which is exactly what that writer already refuses to get wrong: one
- * batch, the delete and the inserts and the parent's endpoint rewrite together, so a
- * half-replaced chain is not a state this path can reach either. Everything this function adds is
- * the record the chain hangs off.
+ * **It writes through {@link saveTransport}**, the writer behind the hand-typed dialog, so a found
+ * connection is one batch as well: the record, the delete and the inserts of the chain, and the
+ * record's endpoints taken from the outer stations all land together or not at all. A first save
+ * used to be a `createTransport` followed by a chain write, and a second half that never landed
+ * left a journey with no chain behind it.
+ *
+ * **A new journey gets its id here.** The writer needs one and the browser sends none for a
+ * connection nobody has saved; the status is left to the column's own default, because a
+ * connection somebody chose is not a connection anybody booked. Saving the same found connection
+ * twice is two journeys: only a draft the dialog minted an id for is an edit of the row its first
+ * press wrote.
  *
  * **A re-search keeps the record.** The plan's story is a timetable change that must not cost the
- * traveller their booking code and their seat, so the title, the status, the price and every
- * booking field are read from the row and left there; only the stations, the legs and the flat
- * endpoints derived from them move. A journey re-searched is the same journey.
+ * traveller their booking code and their seat, so the writer is handed the row's own title and no
+ * mode, status, price or booking field: those stay where they were, and only the stations, the
+ * legs and the flat endpoints derived from them move. A journey re-searched is the same journey.
  *
- * **The trip is resolved first, then the transport, then their agreement.** Two ids arrive from
- * the browser and a well-formed one is not an authorised one. The third check is not redundant:
- * within one workspace, a transport of *another* trip would otherwise be re-routed by a caller who
+ * **The transport is resolved before the writer is asked.** Two ids arrive from the browser and a
+ * well-formed one is not an authorised one, and the writer would take an id it cannot find as the
+ * identity of a new row. Resolving it here inside the caller's scope is what makes a transport of
+ * another workspace a `NotFoundError` rather than a journey created under a client-chosen id; the
+ * agreement of the transport with the trip is checked here too, and again by the writer, because
+ * within one workspace a transport of *another* trip would otherwise be re-routed by a caller who
  * named a trip they can see and a transport they can also see.
  *
  * **No day reference is invented.** A timetable knows dates and clocks; it does not know which day
@@ -1343,7 +1315,6 @@ export async function saveSearchedConnection(
   input: SearchedConnectionInput,
 ): Promise<SavedConnection> {
   const values = searchedConnectionInput.parse(input)
-  await requireTrip(scope, values.tripId)
 
   const requested = values.transportId ?? null
   const existing =
@@ -1353,22 +1324,19 @@ export async function saveSearchedConnection(
   if (existing !== null && existing.tripId !== values.tripId) {
     throw new NotFoundError('transport', existing.id)
   }
-  // Before the record is created, not only inside the chain write below: a leg refused there would
-  // leave behind a new journey with no chain.
-  requireLegOrder(values.stations, values.legs)
 
-  const parent =
-    existing ?? (await createTransport(scope, newRecordFrom(values)))
-
-  const legs = await replaceTransportChain(scope, parent.id, {
-    stations: values.stations,
-    legs: values.legs,
+  return saveTransport(scope, {
+    tripId: values.tripId,
+    transportId: existing?.id ?? newId(),
+    record:
+      existing === null
+        ? {
+            mode: values.mode,
+            title: values.title,
+            priceMinor: values.priceMinor,
+            currency: values.currency,
+          }
+        : { title: existing.title },
+    chain: { stations: values.stations, legs: values.legs },
   })
-
-  // Re-read rather than return `parent`: the chain writer rewrote the flat endpoints in its own
-  // batch, so the row in hand is one write out of date for a re-search.
-  return {
-    transport: await transportsRepository.requireById(scope, parent.id),
-    legs,
-  }
 }

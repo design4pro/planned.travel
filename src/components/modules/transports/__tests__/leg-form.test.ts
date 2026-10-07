@@ -4,8 +4,11 @@ import {
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
   breakIntoLegs,
+  chainPayload,
   dayLabel,
   emptyChain,
+  emptyChainLeg,
+  emptyStation,
   emptyTransportDraft,
   endpointLabels,
   flatChain,
@@ -27,9 +30,10 @@ import {
 } from '../leg-form'
 
 import { modulesTranslate as t } from '#/lib/i18n/__tests__/modules-translate'
+import { CHAIN_MAX_LEGS, CHAIN_MAX_STATIONS } from '#/lib/transport-chain'
+import { saveTransportSchema } from '#/server/fns/transport-wire'
 
-import type { ChainDraft, TransportDraft, TransportPayload } from '../leg-form'
-import type { TransportInput } from '#/server/fns/transports'
+import type { ChainDraft, TransportDraft } from '../leg-form'
 
 function draft(overrides: Partial<TransportDraft> = {}): TransportDraft {
   return {
@@ -453,6 +457,50 @@ describe('price conversion', () => {
 describe('the draft as the record writers take it', () => {
   const TRIP = 'trip-42'
 
+  /** Exactly what the dialog hands the save: the record, the row's id and the chain. */
+  function savePayload(transportDraft: TransportDraft, chain: ChainDraft) {
+    return {
+      ...transportPayload(transportDraft, chain, TRIP),
+      transportId: 'draft-1',
+      ...chainPayload(chain),
+    }
+  }
+
+  /** A broken chain of `stationCount` named stations, built past the editor's own cap if asked. */
+  function chainOfStations(stationCount: number): ChainDraft {
+    let chain = breakIntoLegs(emptyChain(), {
+      departureName: 'Start',
+      departureCode: 'AAA',
+      departureDate: '2026-10-09',
+      departureTime: '08:00',
+      departureDayId: '',
+      arrivalName: 'End',
+      arrivalCode: 'ZZZ',
+      arrivalDate: '2026-10-09',
+      arrivalTime: '20:00',
+      arrivalDayId: '',
+      serviceNumber: null,
+      seat: null,
+    })
+    while (chain.stations.length < stationCount) {
+      chain =
+        chain.legs.length < CHAIN_MAX_LEGS
+          ? splitLegAt(chain, 0)
+          : {
+              ...chain,
+              stations: [...chain.stations, emptyStation()],
+              legs: [...chain.legs, emptyChainLeg()],
+            }
+    }
+    return {
+      ...chain,
+      stations: chain.stations.map((station, index) => ({
+        ...station,
+        name: `Station ${index}`,
+      })),
+    }
+  }
+
   function filled(): TransportDraft {
     return draft({
       mode: 'train',
@@ -518,21 +566,16 @@ describe('the draft as the record writers take it', () => {
   })
 
   /**
-   * The binding to the server's contract, which is what the extraction bought.
+   * The binding to the server's contract: the payload goes through the validator the save runs.
    *
-   * A type assertion and not `transportInputSchema.parse(...)`: that schema cannot
-   * be loaded here, because `#/server/fns/transports` reaches `cloudflare:workers`
-   * through the billing runtime, and `vitest.config.ts` keeps that import out of
-   * the Node project by design. The contract is the same one — `TransportInput` is
-   * `z.infer` of that very schema — and asserting both directions covers both
-   * failures: a field this builder forgets fails the first line, and a field it
-   * sets that the validator would silently strip fails the second.
+   * A field this builder forgets is a parse failure, and a field it sets that the validator does
+   * not declare is a key the parsed value no longer has — an object schema strips what it does not
+   * know, which is how a column ends up written null with every other test green.
    */
   it('fills exactly the fields the write validator declares', () => {
-    const payload = transportPayload(filled(), emptyChain(), TRIP)
-    const asWire: TransportInput = payload
-    const asPayload: TransportPayload = asWire
-    expect(asPayload).toBe(payload)
+    const input = savePayload(filled(), emptyChain())
+    const parsed = saveTransportSchema.parse(input)
+    expect(Object.keys(parsed).sort()).toEqual(Object.keys(input).sort())
   })
 
   it('blanks the currency of a price nobody recorded', () => {
@@ -668,6 +711,32 @@ describe('the draft as the record writers take it', () => {
     expect(payload.arrivalName).toBe('Kyoto')
     expect(payload.departureDayId).toBe('day-3')
     expect(payload.arrivalDayId).toBe('day-4')
+  })
+
+  describe('the chain as the validator counts it', () => {
+    it('accepts the empty chain of a journey nobody broke up', () => {
+      const parsed = saveTransportSchema.parse(
+        savePayload(filled(), emptyChain()),
+      )
+      expect(parsed.stations).toEqual([])
+      expect(parsed.legs).toEqual([])
+    })
+
+    it('accepts two stations and the cap, and refuses one more than the cap', () => {
+      for (const count of [2, CHAIN_MAX_STATIONS]) {
+        const chain = chainOfStations(count)
+        expect(chain.stations).toHaveLength(count)
+        expect(
+          saveTransportSchema.safeParse(savePayload(filled(), chain)).success,
+        ).toBe(true)
+      }
+
+      const tooLong = chainOfStations(CHAIN_MAX_STATIONS + 1)
+      expect(tooLong.legs).toHaveLength(CHAIN_MAX_LEGS + 1)
+      expect(
+        saveTransportSchema.safeParse(savePayload(filled(), tooLong)).success,
+      ).toBe(false)
+    })
   })
 })
 
