@@ -8,7 +8,7 @@
  */
 import { formatWeekday } from '#/lib/format'
 import { isKnownTimeZone } from '#/lib/timezones'
-import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
+import { CHAIN_MAX_LEGS, CHAIN_MIN_STATIONS } from '#/lib/transport-chain'
 import { DATE_PATTERN, TIME_PATTERN } from '#/lib/transport-timing'
 import { transportTimingError } from './connections'
 
@@ -770,7 +770,7 @@ export function removeStationAt(chain: ChainDraft, index: number): ChainDraft {
   if (
     index < 0 ||
     index >= chain.stations.length ||
-    chain.stations.length <= 2
+    chain.stations.length <= CHAIN_MIN_STATIONS
   ) {
     return chain
   }
@@ -1043,7 +1043,7 @@ export interface ChainPayload {
  * nothing, made once more where the save is sent.
  */
 export function chainPayload(chain: ChainDraft): ChainPayload {
-  if (!chain.broken || chain.stations.length < 2) {
+  if (!chain.broken || chain.stations.length < CHAIN_MIN_STATIONS) {
     return { stations: [], legs: [] }
   }
   return {
