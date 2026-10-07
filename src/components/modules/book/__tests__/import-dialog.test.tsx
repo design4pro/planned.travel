@@ -42,7 +42,6 @@ const stubs = vi.hoisted(() => ({
 
 /** The real module reads the Worker environment through the request scope, which jsdom has none of. */
 vi.mock('#/server/fns/booking-import', () => ({
-  EXTRACTION_BUDGET_SECONDS: 20,
   getBookingImportFn: stubs.view,
   startBookingImportFn: stubs.start,
   confirmBookingImportFn: stubs.confirm,
@@ -226,9 +225,16 @@ describe('the import dialog at its boundary', () => {
     stubs.upload
       .mockResolvedValueOnce({ ok: true, file: { id: 'file-1' } })
       .mockResolvedValueOnce({ ok: true, file: { id: 'file-2' } })
+    // The delay is the server's to state: the dialog writes what the start answer says.
     stubs.start
-      .mockResolvedValueOnce({ jobId: 'booking-import:trip-1:file-1' })
-      .mockResolvedValueOnce({ jobId: 'booking-import:trip-1:file-2' })
+      .mockResolvedValueOnce({
+        jobId: 'booking-import:trip-1:file-1',
+        delaySeconds: 0,
+      })
+      .mockResolvedValueOnce({
+        jobId: 'booking-import:trip-1:file-2',
+        delaySeconds: 20,
+      })
     open()
 
     drop(
