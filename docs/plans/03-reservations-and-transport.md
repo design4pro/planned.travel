@@ -1199,7 +1199,8 @@ that rule is broken by accident.
   legs rather than inserting them itself. Re-searching an existing connection replaces the chain on
   the **same** `transports` row, so the record keeps its id, its booking fields and its day
   assignment — which is the behaviour the row asks for, and it falls out of reusing the chain writer
-  instead of writing a second one.
+  instead of writing a second one. The legs are rewritten with no day, so `saveSearchedConnection`
+  carries the days the journey was anchored to onto them (#788).
 
 `assertTripRole(scope, tripId, ['owner', 'editor'])` runs inside the repository, as `03-S2`
 established for this file one wave earlier. This stage adds no second guard and no exception to the
