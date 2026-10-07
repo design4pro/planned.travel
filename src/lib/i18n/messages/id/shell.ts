@@ -78,6 +78,11 @@ const messages = {
   'account.signOutFailed': 'Anda tidak jadi keluar',
   'account.signOutFailedBody': 'Periksa koneksi Anda lalu coba lagi.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Ruang kerja',
+  'workspace.switchFailed': 'Tidak bisa berpindah ruang kerja',
+  'workspace.switchFailedBody': 'Periksa koneksi Anda lalu coba lagi.',
+
   'theme.label': 'Tampilan',
   'theme.light': 'Terang',
   'theme.dark': 'Gelap',

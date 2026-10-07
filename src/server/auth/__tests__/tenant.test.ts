@@ -14,6 +14,7 @@ import {
   AuthRequirementError,
   isAuthRequirementError,
   normaliseSession,
+  requireOrgFrom,
 } from '#/server/auth/tenant'
 import type { AuthFailureReason } from '#/server/auth/tenant'
 
@@ -136,5 +137,41 @@ describe('AuthRequirementError', () => {
   it('keeps 401 for the one reason that means "sign in"', () => {
     expect(new AuthRequirementError('unauthenticated', 'Sign in.').status).toBe(401)
     expect(new AuthRequirementError('insufficient-role', 'No.').status).toBe(403)
+  })
+})
+
+describe('requireOrgFrom after a workspace switch', () => {
+  // A switch writes `session.activeOrganizationId`; whether the new workspace is one the reader may
+  // touch is decided by the membership row read for *that* id, never by the id itself.
+  function sessionActiveIn(organizationId: string | null) {
+    const normalised = normaliseSession({
+      user: { id: 'usr_1', email: 'kasia@planned.travel', name: 'Kasia' },
+      session: {
+        id: 'ses_1',
+        token: 'tok_1',
+        userId: 'usr_1',
+        activeOrganizationId: organizationId,
+        expiresAt: EXPIRES_AT,
+      },
+    })
+    if (!normalised) throw new Error('the fixture session did not normalise')
+    return normalised
+  }
+
+  it('refuses an active workspace the reader holds no membership in', () => {
+    const attempt = () => requireOrgFrom(sessionActiveIn('org_b'), null)
+
+    expect(attempt).toThrow(AuthRequirementError)
+    expect(attempt).toThrow(
+      expect.objectContaining({ reason: 'not-a-member', status: 403 }),
+    )
+  })
+
+  it('hands back a tenant context for the new workspace once the membership is there', () => {
+    expect(requireOrgFrom(sessionActiveIn('org_b'), 'member')).toEqual({
+      organizationId: 'org_b',
+      userId: 'usr_1',
+      role: 'member',
+    })
   })
 })

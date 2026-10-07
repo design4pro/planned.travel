@@ -66,6 +66,11 @@ const messages = {
   'account.signOutFailed': 'Не вдалося вийти',
   'account.signOutFailedBody': 'Перевірте з’єднання і спробуйте ще раз.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Простір',
+  'workspace.switchFailed': 'Не вдалося перемкнути простір',
+  'workspace.switchFailedBody': 'Перевірте з’єднання і спробуйте ще раз.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Вигляд',
   'theme.light': 'Світла',

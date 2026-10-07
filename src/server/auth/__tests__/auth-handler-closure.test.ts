@@ -575,3 +575,111 @@ describe('getSession() asks for an uncached read, in the only spelling that work
     })
   })
 })
+
+/* -------------------------------------------------------------------------------------------------
+ * Switching the active workspace (the workspace switcher, #640)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * `organization/set-active` is the only server-side check the switcher relies on, so it is pinned
+ * here against the real plugin rather than assumed from its documentation. A Better Auth upgrade
+ * that changes what a refused switch does must fail this file instead of shipping.
+ *
+ * What the library does today, and what the switcher's error branch is written around: a switch to
+ * a workspace the caller does not belong to clears `session.activeOrganizationId` *before* it
+ * answers 403, so a refusal is not "nothing changed" - the next request resolves through the
+ * oldest membership instead.
+ */
+describe('organization/set-active', () => {
+  let cookie: string
+  let ownOrganizationId: string
+  let foreignOrganizationId: string
+  let secondOrganizationId: string
+
+  function organizationOf(email: string): string {
+    const row = sqlite
+      .prepare(
+        'select m.organization_id as id from member m join user u on u.id = m.user_id where u.email = ?',
+      )
+      .get(email) as { id: string } | undefined
+    if (row === undefined) throw new Error(`no membership for ${email}`)
+    return row.id
+  }
+
+  /** The workspace the reader's session row points at, read from the table rather than the API. */
+  function activeOrganizationOf(email: string): string | null {
+    const row = sqlite
+      .prepare(
+        'select s.active_organization_id as id from session s join user u on u.id = s.user_id where u.email = ? order by s.created_at desc limit 1',
+      )
+      .get(email) as { id: string | null } | undefined
+    if (row === undefined) throw new Error(`no session for ${email}`)
+    return row.id
+  }
+
+  beforeAll(async () => {
+    await createAccount('switcher@planned.travel')
+    await createAccount('stranger@planned.travel')
+    ownOrganizationId = organizationOf('switcher@planned.travel')
+    foreignOrganizationId = organizationOf('stranger@planned.travel')
+
+    shared.kv.clear()
+    cookie = sessionCookie(await signIn('switcher@planned.travel'))
+
+    // A second workspace the reader genuinely belongs to. Written as rows rather than through the
+    // plugin's create endpoint, which is a different feature (#804) and may be closed to the client.
+    const userId = (
+      sqlite
+        .prepare('select id from user where email = ?')
+        .get('switcher@planned.travel') as { id: string }
+    ).id
+    secondOrganizationId = 'org_second_workspace'
+    sqlite
+      .prepare(
+        'insert into organization (id, name, slug, created_at) values (?, ?, ?, ?)',
+      )
+      .run(secondOrganizationId, 'Second workspace', 'second-workspace', Date.now())
+    sqlite
+      .prepare(
+        'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
+      )
+      .run('mem_second_workspace', secondOrganizationId, userId, 'member', Date.now())
+  })
+
+  it('moves the session to another workspace the reader belongs to', async () => {
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: secondOrganizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+    expect(activeOrganizationOf('switcher@planned.travel')).toBe(
+      secondOrganizationId,
+    )
+
+    const back = await post(
+      '/organization/set-active',
+      { organizationId: ownOrganizationId },
+      cookie,
+    )
+    expect(back.status).toBe(200)
+    expect(activeOrganizationOf('switcher@planned.travel')).toBe(
+      ownOrganizationId,
+    )
+  })
+
+  it('refuses a workspace the reader does not belong to, and never leaves it active', async () => {
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: foreignOrganizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
+    const active = activeOrganizationOf('switcher@planned.travel')
+    expect(active).not.toBe(foreignOrganizationId)
+    // Cleared rather than kept: the behaviour the switcher's FORBIDDEN branch re-syncs around.
+    expect(active).toBeNull()
+  })
+})

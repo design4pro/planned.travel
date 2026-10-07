@@ -67,6 +67,11 @@ const messages = {
   'account.signOutFailed': 'Çıkış yapılamadı',
   'account.signOutFailedBody': 'Bağlantınızı kontrol edip yeniden deneyin.',
 
+  /* ------------------------------------------------------ workspace switcher */
+  'workspace.label': 'Çalışma alanı',
+  'workspace.switchFailed': 'Çalışma alanı değiştirilemedi',
+  'workspace.switchFailedBody': 'Bağlantınızı kontrol edip yeniden deneyin.',
+
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Görünüm',
   'theme.light': 'Açık',
