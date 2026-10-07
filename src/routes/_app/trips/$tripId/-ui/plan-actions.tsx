@@ -15,6 +15,7 @@ import {
   Crosshair,
   MapPin,
   MoreHorizontal,
+  Navigation,
   PencilLine,
   Trash2,
   Undo2,
@@ -33,6 +34,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -45,6 +47,12 @@ import {
   Switch,
   Textarea,
 } from '#/components/ui'
+import {
+  MAP_SERVICE_NAME,
+  POINT_SERVICES,
+  pointLink,
+  positionOf,
+} from '#/lib/geo/handoff'
 import { formatCoordinate, parsePosition } from '#/lib/geo/position'
 import { useTranslate } from '#/lib/i18n'
 
@@ -183,7 +191,9 @@ export function StopMenu({
   onUnschedule,
   onDelete,
 }: StopMenuProps) {
+  const t = useTranslate()
   const elsewhere = days.filter((day) => day.dayNumber !== row.dayNumber)
+  const position = positionOf(row)
 
   return (
     <DropdownMenu>
@@ -210,6 +220,22 @@ export function StopMenu({
         <DropdownMenuItem icon={<Crosshair />} onSelect={onPickPosition}>
           {row.lat === null ? 'Place it on the map' : 'Move its pin'}
         </DropdownMenuItem>
+
+        {position === null
+          ? null
+          : POINT_SERVICES.map((service) => (
+              <DropdownMenuLinkItem
+                key={service}
+                href={pointLink(service, position)}
+                icon={<Navigation />}
+                aria-label={t('trips.plan.handoff.stop', {
+                  place: row.name,
+                  service: MAP_SERVICE_NAME[service],
+                })}
+              >
+                {MAP_SERVICE_NAME[service]}
+              </DropdownMenuLinkItem>
+            ))}
 
         {elsewhere.length === 0 ? null : (
           <>

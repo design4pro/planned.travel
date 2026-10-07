@@ -81,6 +81,17 @@ const messages = {
   'plan.stay.checkOut': '退房',
   'plan.day.addStay': '新增住宿——{day}',
   'plan.day.addStayShort': '新增住宿',
+  'plan.handoff.stop': '在{service}中開啟{place}（在新分頁中開啟）',
+  'plan.handoff.day.directions': '在{service}中查看路線',
+  'plan.handoff.day.directionsName':
+    '在{service}中查看路線：{day}（在新分頁中開啟）',
+  'plan.handoff.day.directionsPartial':
+    '停留點：前 {carried} 個，共 {total} 個',
+  'plan.handoff.day.directionsPartialName':
+    '在{service}中查看路線：{day}，停留點：前 {carried} 個，共 {total} 個（在新分頁中開啟）',
+  'plan.handoff.day.point': '在{service}中查看',
+  'plan.handoff.day.pointName':
+    '在{service}中查看：{day}中唯一有位置的停留點（在新分頁中開啟）',
   'plan.drop.hint': '在地圖上按右鍵或長按，即可在該處新增地點。',
   'plan.drop.armed':
     '在地圖上點選它所在的位置，或移動地圖後按 Enter 鍵，將其放在中央。',
