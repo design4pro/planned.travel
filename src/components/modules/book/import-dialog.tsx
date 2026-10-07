@@ -61,7 +61,6 @@ import {
   importFormatFor,
 } from '#/server/fns/file-policy'
 import {
-  EXTRACTION_BUDGET_SECONDS,
   confirmBookingImportFn,
   startBookingImportFn,
 } from '#/server/fns/booking-import'
@@ -289,12 +288,12 @@ export function ImportBookingsDialog({
       // early, and the jobs already enqueued have spent the workspace's reading allowance. A
       // register written only on the way out would leave them running and invisible.
       // The stagger goes into the register too: the widget's stall budget is measured from the
-      // job's scheduled start, and only the dialog that sent the index knows what it was.
+      // job's scheduled start, and the server's answer is the only place that states it.
       started.push({
         jobId: job.jobId,
         tripId,
         filename: file.name,
-        delayMs: index * EXTRACTION_BUDGET_SECONDS * 1_000,
+        delayMs: (job.delaySeconds ?? 0) * 1_000,
       })
       registerBookImports(userId, started)
     }

@@ -78,8 +78,8 @@ export interface BookImportJob {
   /**
    * How long the queue was told to sit on this job before starting it.
    *
-   * A drop is staggered server-side by `index * EXTRACTION_BUDGET_SECONDS`, so the fourth file is
-   * not dequeued for a minute after the first. {@link POLL_BUDGET_MS} is measured on top of this,
+   * A drop is staggered server-side, which hands each file's delay back in the start answer, so the
+   * fourth file is not dequeued for a minute after the first. {@link POLL_BUDGET_MS} is measured on top of this,
    * because a file that has not been started yet is not late — and a budget that ignored the
    * stagger would mark every file but the first `stalled` on every multi-file drop.
    *
