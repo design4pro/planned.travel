@@ -198,8 +198,9 @@ not that suite.
 
 Two rows do not reach **done**, and both say so in the same words as the stage that owns them.
 `ACC-06` is blocked outright (`09-S5`). `ACC-04` is the interesting one: `09-S8` closes five of the
-nine behaviours the row names and defers the other four, because the surface each of those four
-would govern belongs to another plan or does not exist yet. The ledger records
+nine behaviours the row names, closes the temperature unit as "no separate preference" (ADR 0038)
+and defers the other three, because the surface each of those three would govern belongs to another
+plan or does not exist yet. The ledger records
 `partial → partial` because that is what the stage records; a plan whose summary table and whose
 stage disagree about a row is a plan that has stopped being readable.
 
@@ -2591,7 +2592,8 @@ this plan.
 ### Reference rows
 
 - `ACC-04` partial → **partial**, and the four behaviours that do not close here are named below
-  with the target that will close each. This is the one row in this plan that does not reach **done**,
+  with the target that will close each, except the temperature unit, which ADR 0038 closed as "no
+  separate preference". This is the one row in this plan that does not reach **done**,
   and the justification is a rule this plan applies to itself.
 
 Sourced from `wiki: Preferences` and `wiki: Appearance` for the behaviours: regional and display
@@ -2610,30 +2612,26 @@ nothing reads is exactly that defect, wearing a different hat. So this stage shi
 where a surface exists to obey it. The rest are disposed of one at a time, and each disposition names
 either the stage that owns the obeying surface or, where there is none, the reason there is none:
 
-| Behaviour          | Disposition           | Destination — the stage that owns the surface it must obey        |
-| ------------------ | --------------------- | ----------------------------------------------------------------- |
-| Temperature unit   | defer, behind a block | `DOC-08` → `06-S7`, `06-documents-and-media.md`, wave 6 — BLOCKED |
-| Route labels       | defer                 | `MAP-09` → `02-S12`, `02-places-and-maps.md`, wave 6              |
-| Blur booking codes | defer                 | `BKG-01` → `03-S6`, `03-reservations-and-transport.md`, wave 4    |
-| Interface density  | drop at this tier     | none, and the absence is the point — read the fourth bullet       |
+| Behaviour          | Disposition       | Destination — the stage that owns the surface it must obey             |
+| ------------------ | ----------------- | ---------------------------------------------------------------------- |
+| Temperature unit   | closed            | `DOC-08` → `06-S7`: coupled to the distance unit, no switch — ADR 0038 |
+| Route labels       | defer             | `MAP-09` → `02-S12`, `02-places-and-maps.md`, wave 6                   |
+| Blur booking codes | defer             | `BKG-01` → `03-S6`, `03-reservations-and-transport.md`, wave 4         |
+| Interface density  | drop at this tier | none, and the absence is the point — read the fourth bullet            |
 
 **Every destination in that table was re-read in the sibling plan that owns it, because an earlier
 revision of this table got three of the four wrong** — a row named for the wrong reference row, two
 waves taken from `README.md`'s floor rather than from the owning stage, and one destination that is
 not a stage at all. The corrected form of each, with the citation that decides it:
 
-- **Temperature unit → `06-S7`, and that stage is itself BLOCKED.** The `### Stage id` under
-  `## Stage 06-S7` in `06-documents-and-media.md` reads
-  ``06-S7` · Wave 6 · effort **S**. **BLOCKED.**`, and the block is a commercial decision
-  recorded outside both plans: `11-S3`'s register in `docs/plans/11-boundaries-and-blockers.md` lists
-  `DOC-08` as waiting on a weather provider, and `06-S7` restates why a "free for non-commercial use"
-  endpoint is unusable to a product that charges through Stripe. So this is a deferral **onto a
-  blocked stage**, which is a weaker promise than the other two and is labelled as one rather than
-  dressed up as a schedule. It costs this stage nothing to honour: that stage's own **Data and
-  migration** already places the unit preference "beside the other display preferences in
-  `src/lib/display-preferences.ts`, which `09-S8` (`09-account-and-settings.md`, wave 3) creates" and
-  files no column for it, so the file this stage creates is the agreed destination and the switch
-  waits on the provider decision, not on us.
+- **Temperature unit → closed, with no switch of its own.** This row used to defer the unit onto
+  `06-S7`, a stage blocked on a weather provider. `docs/adr/0038-met-norway-and-nasa-power-for-weather.md`
+  took the provider decision and `.ai/specs/2026-09-19-per-day-weather.md` owns the concept
+  (`docs/SPEC.md` §8): readings are stored in metric and converted at render, using the reader's existing
+  `distance_unit` (a user's choice over the workspace's), so `metric` shows °C and `imperial` shows °F.
+  The answer is "no separate preference", not "later": no column is requested from the wave-0 schema stage
+  and no control is added to `src/lib/display-preferences.ts` or to the settings screen, and the
+  `src/lib/display-preferences.ts` this stage creates is unaffected.
 - **Route labels → `02-S12`, wave 6, not wave 4.** The `### Stage id` under
   `## Stage 02-S12 — Transport drawn on the map, and only when it is asked for` reads
   ``02-S12` · Wave 6 · effort **L**.`, and that stage is the one that draws the endpoint pills and the
@@ -2672,11 +2670,11 @@ not a stage at all. The corrected form of each, with the citation that decides i
   `docs/plans/11-boundaries-and-blockers.md`, in the same shape `09-S7` uses for the push and webhook
   channels, and this stage ships no control, no column and no "coming soon".
 
-The three deferrals are each a column plus a switch that arrives **with** its surface, in one stage,
-so the switch and the thing it governs are always shipped together; the fourth is a decision not to
-ship either. The five behaviours that do ship here — 12/24-hour time, colour scheme, custom accent
-with a contrast badge, text scaling and widget selection — all have a surface that obeys them on the
-day they land.
+The two deferrals are each a column plus a switch that arrives **with** its surface, in one stage,
+so the switch and the thing it governs are always shipped together; density is a decision not to
+ship either, and the temperature unit is a decision that no switch is needed. The five behaviours
+that do ship here — 12/24-hour time, colour scheme, custom accent with a contrast badge, text scaling
+and widget selection — all have a surface that obeys them on the day they land.
 
 **The fourth disposition is this stage's own rule turned on this stage.** An earlier revision of this
 plan shipped a density switch that wrote a `data-density` attribute onto the document element "that
@@ -3077,11 +3075,12 @@ surfaces. Both are earlier waves, which is why this stage is wave 3. If `01-S5` 
 section is not shipped and the row's deferral table gains a fourth line rather than the stage
 inventing a second store.
 
-**3 — Four deferred behaviours, dispositioned rather than dropped.** Temperature unit, route labels,
-booking-code blurring and interface density are listed with their owning targets and waves under
-**Reference rows**. The disposition is **defer**, and the deferral has a shape rather than a hope:
-each is one nullable column and one control, shipped by the stage that owns the surface obeying it,
-so the switch and its effect are never separated by a wave.
+**3 — Four behaviours, dispositioned rather than dropped.** Temperature unit, route labels,
+booking-code blurring and interface density are listed with their dispositions and, where there is one,
+their owning targets and waves under **Reference rows**. The temperature unit is closed: it follows the
+distance unit and has no switch (ADR 0038). Route labels and booking-code blurring are **deferred**, and
+the deferral has a shape rather than a hope: each is one nullable column and one control, shipped by the
+stage that owns the surface obeying it, so the switch and its effect are never separated by a wave.
 
 Density is the one of the four whose owning stage does **not** yet exist, so it is the one to watch.
 Its requirement — a `--density-*` step set in `src/styles/tokens.css` and the `DESIGN.md`
