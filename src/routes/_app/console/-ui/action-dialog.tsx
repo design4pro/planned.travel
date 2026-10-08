@@ -120,7 +120,9 @@ export function ConsoleActionDialog({
               )}
             >
               <TriangleAlert aria-hidden className="mt-px size-4 shrink-0" />
-              <span className="min-w-0">{failure}</span>
+              <span className="min-w-0 [overflow-wrap:anywhere]">
+                {failure}
+              </span>
             </p>
           )}
         </DialogBody>

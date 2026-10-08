@@ -10,7 +10,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { readWorkspaceOwnership } from '../adapter-reads'
-import { findSoleOwnedWorkspaces, isOwnerRole } from '../last-owner'
+import {
+  describeWorkspaces,
+  findSoleOwnedWorkspaces,
+  isOwnerRole,
+} from '../last-owner'
 
 import type { AuthReadAdapter } from '../adapter-reads'
 import type { OwnershipRow } from '../last-owner'
@@ -157,5 +161,40 @@ describe('the workspaces an account would strand', () => {
 
   it('does not list a workspace the target does not own', () => {
     expect(stranded([row('a', 'admin')], [row('a', 'member')])).toEqual([])
+  })
+})
+
+describe('the workspaces a refusal names', () => {
+  const isolated = (name: string) => `⁨"${name}"⁩`
+
+  it('says "a workspace" when the read returned no name', () => {
+    expect(describeWorkspaces([])).toBe('a workspace')
+  })
+
+  it('quotes one name', () => {
+    expect(describeWorkspaces(['Acme'])).toBe(isolated('Acme'))
+  })
+
+  it('lists up to five names', () => {
+    const names = ['a', 'b', 'c', 'd', 'e']
+    expect(describeWorkspaces(names)).toBe(names.map(isolated).join(', '))
+  })
+
+  it('says how many more when there are over five', () => {
+    const names = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+    expect(describeWorkspaces(names)).toBe(
+      `${names.slice(0, 5).map(isolated).join(', ')} and 2 more`,
+    )
+  })
+
+  it('shortens a name past 60 characters', () => {
+    const shown = describeWorkspaces(['x'.repeat(80)])
+    expect(shown).toBe(isolated(`${'x'.repeat(59)}…`))
+  })
+
+  it('isolates a right-to-left name so it cannot reorder the English sentence', () => {
+    const shown = describeWorkspaces(['شركة السفر'])
+    expect(shown.startsWith('⁨')).toBe(true)
+    expect(shown.endsWith('⁩')).toBe(true)
   })
 })

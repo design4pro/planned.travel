@@ -97,3 +97,30 @@ export function findSoleOwnedWorkspaces(
     (id) => hasOtherMember.has(id) && !hasOtherOwner.has(id),
   )
 }
+
+/** Workspace names a refusal lists before it says "and N more". */
+const NAMED_WORKSPACES = 5
+
+/** Longest workspace name a refusal quotes, so a long one cannot crowd out the advice. */
+const NAME_LENGTH = 60
+
+/**
+ * One workspace name as a refusal quotes it.
+ *
+ * The name is wrapped in first-strong isolates (U+2068 ... U+2069): the sentence is English in every
+ * locale, and an Arabic or Hebrew name inside it would otherwise split the sentence into two runs
+ * that display in reverse order.
+ */
+function quoted(name: string): string {
+  const shown =
+    name.length > NAME_LENGTH ? `${name.slice(0, NAME_LENGTH - 1)}…` : name
+  return `\u2068"${shown}"\u2069`
+}
+
+/** The target's own workspace names as one noun phrase for a refusal sentence. */
+export function describeWorkspaces(names: ReadonlyArray<string>): string {
+  if (names.length === 0) return 'a workspace'
+  const listed = names.slice(0, NAMED_WORKSPACES).map(quoted).join(', ')
+  const more = names.length - NAMED_WORKSPACES
+  return more > 0 ? `${listed} and ${more} more` : listed
+}

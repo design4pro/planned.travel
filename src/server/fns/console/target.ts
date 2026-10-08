@@ -9,7 +9,7 @@
 
 import { platformApi, readOwnership, readWorkspaces } from './bindings'
 import { ConsoleActionError, isAuthNotFound } from './errors'
-import { findSoleOwnedWorkspaces } from './last-owner'
+import { describeWorkspaces, findSoleOwnedWorkspaces } from './last-owner'
 import { platformUserSchema } from './projections'
 
 import type { ConsoleCall } from './context'
@@ -61,18 +61,6 @@ export function refuseSelfTarget(
   }
 }
 
-/** Workspace names a refusal lists before it says "and N more". */
-const NAMED_WORKSPACES = 5
-
-/** Longest workspace name a refusal quotes, so a long one cannot crowd out the advice. */
-const NAME_LENGTH = 60
-
-function quoted(name: string): string {
-  const shown =
-    name.length > NAME_LENGTH ? `${name.slice(0, NAME_LENGTH - 1)}…` : name
-  return `"${shown}"`
-}
-
 /**
  * Refuses to delete the only owner of a workspace that other people still belong to.
  *
@@ -102,25 +90,19 @@ export async function refuseSoleOwner(
     )
     throw new ConsoleActionError(
       'target-beyond-cap',
-      'The console could not confirm that this account is not the only owner of a workspace other people belong to. Promote another owner in each of its workspaces first, or ban the account instead of deleting it.',
+      'The console could not confirm that this account is not the only owner of a workspace other people belong to. Promote another owner in each of its workspaces first, or suspend the account instead of deleting it.',
     )
   }
 
   const stranded = findSoleOwnedWorkspaces(ownership)
   if (stranded.length === 0) return
 
-  const names = (await readWorkspaces(stranded)).map((row) => quoted(row.name))
-  const listed = names.slice(0, NAMED_WORKSPACES).join(', ')
-  const more = names.length - NAMED_WORKSPACES
-  const where =
-    names.length === 0
-      ? 'a workspace'
-      : more > 0
-        ? `${listed} and ${more} more`
-        : listed
+  const where = describeWorkspaces(
+    (await readWorkspaces(stranded)).map((row) => row.name),
+  )
 
   throw new ConsoleActionError(
     'target-sole-owner',
-    `This account is the only owner of ${where}, and other people still belong to ${stranded.length === 1 ? 'it' : 'them'}. Promote another owner there first, or ban the account instead of deleting it.`,
+    `This account is the only owner of ${where}, and other people still belong to ${stranded.length === 1 ? 'it' : 'them'}. Promote another owner there first, or suspend the account instead of deleting it.`,
   )
 }

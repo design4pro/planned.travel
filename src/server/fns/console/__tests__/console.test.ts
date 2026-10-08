@@ -2045,7 +2045,7 @@ describe('deleting an account that owns a workspace', () => {
     const message = (refusal as Error).message
     expect(message).toContain('Acme Travel')
     expect(message).toMatch(/promote another owner/i)
-    expect(message).toMatch(/ban/i)
+    expect(message).toMatch(/suspend/i)
     for (const secret of [colleague.id, colleague.name, colleague.email]) {
       expect(message).not.toContain(secret)
     }
