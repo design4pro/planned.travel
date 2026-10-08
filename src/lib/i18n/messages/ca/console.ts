@@ -405,6 +405,8 @@ const messages = {
   'action.delete.confirm': 'Esborra el compte',
   'action.delete.note':
     'El contingut d’espai de treball que ha creat aquesta persona es queda amb l’espai que el té. Suspendre el compte en comptes d’esborrar-lo manté el registre i treu l’accés.',
+  'action.delete.owners':
+    'No es pot esborrar un compte que és l’únic propietari d’un espai de treball on hi ha més gent. Primer nomeneu-hi un altre propietari o suspeneu el compte en comptes d’esborrar-lo.',
   'action.delete.done': 'Compte esborrat',
   'action.delete.done.body':
     '{name} i tot el que anava enganxat al compte han desaparegut.',
