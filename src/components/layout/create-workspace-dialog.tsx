@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import { toast } from 'sonner'
 
 import {
   Alert,
@@ -27,7 +28,12 @@ const NAME_MAX_LENGTH = 60
 /** What the dialog shows in its alert, or nothing. */
 type Notice =
   | { readonly kind: 'refusal'; readonly reason: CreateWorkspaceRefusal }
-  | { readonly kind: 'failure'; readonly message: string }
+  | {
+      readonly kind: 'failure'
+      readonly message: string
+      /** True for a sentence authored on the server, which is English whatever the locale. */
+      readonly authored: boolean
+    }
 
 /**
  * The dialog behind "Create workspace".
@@ -39,9 +45,13 @@ type Notice =
  * shown the upgrade, and a `member` is told who can create - the menu item is the same for everyone.
  * A refusal wrote nothing, so the field keeps what was typed. A thrown failure reaches the browser
  * as an `Error` whose message is authored copy only for a refusal or a validation failure
- * (`readPublicFailure`); anything else shows `workspace.createFailed`. The router is re-read on a
- * failure too: activation can fail after the workspace was written, and the switcher should then
- * list it.
+ * (`readPublicFailure`); anything else shows `workspace.createFailed`, and only that unknown outcome
+ * re-reads the router, since the answer may have been lost after the workspace was written.
+ *
+ * A create in flight owns the dialog: closing it would drop the answer on the floor, so it stays
+ * open until the request settles (`new-trip-dialog.tsx` does the same). A workspace that was
+ * written but could not be made active closes the dialog like a success and says so in a toast, so
+ * the reader picks it from the menu instead of creating it a second time.
  */
 export function CreateWorkspaceDialog({
   open,
@@ -72,28 +82,46 @@ export function CreateWorkspaceDialog({
   async function submit(): Promise<void> {
     setPending(true)
     setNotice(null)
+    let created = false
     try {
       const result = await createWorkspaceFn({ data: { name: name.trim() } })
       if (!result.ok) {
         setNotice({ kind: 'refusal', reason: result.reason })
         return
       }
-      onOpenChange(false)
-      await resync()
+      created = true
+      if (!result.activated) {
+        toast.error(t('shell.workspace.switchFailed'), {
+          description: t('shell.workspace.switchFailedBody'),
+        })
+      }
     } catch (cause) {
+      const failure = readPublicFailure(cause)
       setNotice({
         kind: 'failure',
-        message:
-          readPublicFailure(cause).message ?? t('shell.workspace.createFailed'),
+        message: failure.message ?? t('shell.workspace.createFailed'),
+        authored: failure.message !== undefined,
       })
-      await resync().catch(() => undefined)
+      // Only an unknown outcome needs a re-read: a refusal or a validation failure wrote nothing.
+      if (failure.kind === 'unexpected') await resync().catch(() => undefined)
     } finally {
       setPending(false)
+    }
+
+    if (created) {
+      onOpenChange(false)
+      await resync().catch(() => undefined)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (pending) return
+        onOpenChange(next)
+      }}
+    >
       <DialogContent
         size="sm"
         onCloseAutoFocus={(event) => {
@@ -109,6 +137,9 @@ export function CreateWorkspaceDialog({
         </DialogHeader>
 
         <DialogBody>
+          <div role="status" className="sr-only">
+            {pending ? t('ui.status.loading') : ''}
+          </div>
           <form
             id={formId}
             className="flex flex-col gap-4"
@@ -168,7 +199,17 @@ function NoticeAlert({
   const t = useTranslate()
 
   if (notice.kind === 'failure') {
-    return <Alert tone="danger">{notice.message}</Alert>
+    return (
+      <Alert tone="danger">
+        {notice.authored ? (
+          <span lang="en" dir="ltr">
+            {notice.message}
+          </span>
+        ) : (
+          notice.message
+        )}
+      </Alert>
+    )
   }
 
   // A refusal is the answer to the button just pressed, so it is announced at once (a `warning`

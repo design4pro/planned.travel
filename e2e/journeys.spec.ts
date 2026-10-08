@@ -2569,7 +2569,9 @@ test.describe('switching workspace', () => {
    * block: creating a workspace activates it on the session row.
    *
    * The paid arm leaves a workspace behind (there is no way to delete one yet), and the account is
-   * limited to twenty; a database seeded afresh per run, as the gate does, never gets near that.
+   * limited to twenty. Each `pnpm e2e` runs this once per browser project, so a local database that
+   * is never re-seeded (`seed.mjs --force`) reaches the limit after about nine runs; the CI jobs seed
+   * afresh and never get near it.
    */
   test('a paid workspace creates another and lands in it empty', async ({
     context,

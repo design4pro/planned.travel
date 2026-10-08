@@ -739,6 +739,9 @@ describe('organization/create', () => {
     )
 
     expect(response.status).toBe(403)
+    // The plugin's own refusal, so a 403 from an origin check or other middleware cannot stand in.
+    const body: { code?: string } = await response.json()
+    expect(body.code).toBe('YOU_ARE_NOT_ALLOWED_TO_CREATE_A_NEW_ORGANIZATION')
     expect(organizationCount()).toBe(before)
   })
 

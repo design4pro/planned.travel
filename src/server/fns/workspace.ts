@@ -18,7 +18,11 @@ import { getAuth } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
 import { getSession } from '#/server/auth/session'
 import { appScope } from './context'
-import { createWorkspace, createWorkspaceInput } from './workspace-writes'
+import {
+  createWorkspace,
+  createWorkspaceInput,
+  isImpersonated,
+} from './workspace-writes'
 
 import type { CreateWorkspaceResult } from './workspace-writes'
 
@@ -34,7 +38,7 @@ export const createWorkspaceFn = createServerFn({ method: 'POST' })
       {
         scope,
         db: authDb(),
-        impersonated: session?.session.impersonatedBy != null,
+        impersonated: isImpersonated(session),
         countMemberships: async () =>
           (await auth.api.listOrganizations({ headers })).length,
         activate: async (organizationId) => {

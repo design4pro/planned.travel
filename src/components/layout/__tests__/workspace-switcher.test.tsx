@@ -496,7 +496,7 @@ describe('creating a workspace', () => {
     const calls: Array<string> = []
     workspace.create.mockImplementation(async () => {
       calls.push('create')
-      return { ok: true, organizationId: 'org_new' }
+      return { ok: true, organizationId: 'org_new', activated: true }
     })
     router.clearCache.mockImplementation(() => {
       calls.push('clearCache')
@@ -606,9 +606,56 @@ describe('creating a workspace', () => {
 
     await submit(user, 'Lisbon')
 
-    expect((await screen.findByRole('alert')).textContent).toBe(
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe(
       'Creating a workspace is unavailable while you are impersonating someone.',
     )
+    // A server sentence is English whatever the locale, so it is marked as such.
+    expect(alert.querySelector('[lang="en"][dir="ltr"]')).not.toBeNull()
+    // A refusal wrote nothing: the page behind the dialog stays where it is.
+    expect(router.invalidate).not.toHaveBeenCalled()
+    expect(router.navigate).not.toHaveBeenCalled()
+  })
+
+  it('closes and says so when the workspace was written but could not be activated', async () => {
+    workspace.create.mockResolvedValue({
+      ok: true,
+      organizationId: 'org_new',
+      activated: false,
+    })
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(notify.error).toHaveBeenCalledWith('Could not switch workspace', {
+      description: 'Check your connection and try again.',
+    })
+    // The switcher re-reads the shell, so the written workspace is in the list.
+    expect(router.invalidate).toHaveBeenCalled()
+  })
+
+  it('keeps the dialog open while the create is in flight, and announces the wait', async () => {
+    const pending = deferred<{
+      ok: true
+      organizationId: string
+      activated: boolean
+    }>()
+    workspace.create.mockReturnValue(pending.promise)
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+    await user.keyboard('{Escape}')
+
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toBe('Loading')
+
+    pending.resolve({ ok: true, organizationId: 'org_new', activated: true })
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
   })
 
   it('falls back to the catalogue sentence for any other failure, and re-reads the shell', async () => {

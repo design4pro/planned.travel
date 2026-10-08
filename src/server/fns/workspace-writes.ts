@@ -23,7 +23,7 @@ import { z } from 'zod'
 
 import {
   WORKSPACE_LIMIT,
-  createOrganizationFor,
+  createOrganizationWithinLimit,
 } from '#/server/auth/provisioning'
 import { AuthRequirementError, roleSatisfies } from '#/server/auth/tenant'
 import { resolveQuotas } from '#/server/repos'
@@ -56,8 +56,23 @@ export type CreateWorkspaceRefusal =
   | 'role-required'
 
 export type CreateWorkspaceResult =
-  | { readonly ok: true; readonly organizationId: string }
+  | {
+      readonly ok: true
+      readonly organizationId: string
+      /** False when the workspace was written but could not be made the active one. */
+      readonly activated: boolean
+    }
   | { readonly ok: false; readonly reason: CreateWorkspaceRefusal }
+
+/**
+ * Whether the session is an operator impersonating the caller. Fails closed: no session at all
+ * counts as impersonated, so a misread session refuses rather than lets the create through.
+ */
+export function isImpersonated(
+  session: { session: { impersonatedBy?: string | null } } | null,
+): boolean {
+  return session === null || session.session.impersonatedBy != null
+}
 
 /** What the request supplies; see the module note for why these are ports. */
 export interface CreateWorkspacePorts {
@@ -74,15 +89,14 @@ export interface CreateWorkspacePorts {
 /**
  * Creates a workspace owned by the caller and makes it their active one.
  *
- * Activation runs after the batch, which is already committed, so a failure there throws with the
- * workspace written: it is reachable from the switcher, and the reader is told the create failed to
- * finish rather than being left to retry into a second one.
+ * Activation runs after the batch, which is already committed, so a failure there is not an error:
+ * the workspace exists and the switcher lists it. It is returned as `activated: false`, so the
+ * reader is told to pick it from the menu rather than being left to retry into a second one.
  *
- * Two concurrent creates can both read a count of {@link WORKSPACE_LIMIT} minus one and both write,
- * ending at most one over. The count and the batch are separate statements because the count is the
- * auth API's and the batch is the provisioning module's; the overshoot is bounded by the number of
- * requests in flight in a window of milliseconds, and the workspace limit protects the switcher's
- * length, not money - the money gate is the plan, which a created workspace does not widen.
+ * The limit is checked twice. The count before the write gives the early, harmless refusal; the
+ * write itself (`createOrganizationWithinLimit`) is what holds the limit when several creates are
+ * in flight, because the count and the batch are separate statements and each racing request would
+ * otherwise read the same count and write.
  */
 export async function createWorkspace(
   ports: CreateWorkspacePorts,
@@ -109,13 +123,18 @@ export async function createWorkspace(
     return { ok: false, reason: 'limit-reached' }
   }
 
-  const organizationId = await createOrganizationFor(
+  const organizationId = await createOrganizationWithinLimit(
     ports.db,
     { id: scope.ctx.userId },
     { name: input.name, metadata: null },
+    WORKSPACE_LIMIT,
   )
+  if (organizationId === null) return { ok: false, reason: 'limit-reached' }
 
-  await ports.activate(organizationId)
+  const activated = await ports
+    .activate(organizationId)
+    .then(() => true)
+    .catch(() => false)
 
-  return { ok: true, organizationId }
+  return { ok: true, organizationId, activated }
 }

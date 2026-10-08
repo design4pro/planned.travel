@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, count, eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { member, organization, user as userTable } from '#/server/db/auth-schema'
 import type { AuthDb } from './db'
@@ -115,6 +115,35 @@ export async function createOrganizationFor(
   ])
 
   return organizationId
+}
+
+/**
+ * {@link createOrganizationFor}, held to `limit` memberships by the write itself.
+ *
+ * A count taken before the write cannot hold the limit: several requests in flight each read the
+ * same count and each write. So the count is taken again once the batch is in, and a workspace that
+ * took the account past `limit` is removed and `null` is returned. Two racing creates may both see
+ * the overshoot and both withdraw, which refuses a create that would have fit; it never leaves the
+ * account over the limit. The removal deletes the membership first, then the organization.
+ */
+export async function createOrganizationWithinLimit(
+  db: AuthDb,
+  user: { id: string },
+  input: Parameters<typeof createOrganizationFor>[2],
+  limit: number,
+): Promise<string | null> {
+  const organizationId = await createOrganizationFor(db, user, input)
+  const [memberships] = await db
+    .select({ n: count() })
+    .from(member)
+    .where(eq(member.userId, user.id))
+  if (memberships.n <= limit) return organizationId
+
+  await db.batch([
+    db.delete(member).where(eq(member.organizationId, organizationId)),
+    db.delete(organization).where(eq(organization.id, organizationId)),
+  ])
+  return null
 }
 
 /**

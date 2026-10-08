@@ -26,7 +26,11 @@ import {
   createHarness,
   subscribeTenant,
 } from '#/server/repos/__tests__/harness'
-import { createWorkspace, createWorkspaceInput } from '../workspace-writes'
+import {
+  createWorkspace,
+  createWorkspaceInput,
+  isImpersonated,
+} from '../workspace-writes'
 
 import type { AuthDb } from '#/server/auth/db'
 import type { PlanId } from '#/lib/plans'
@@ -288,8 +292,29 @@ describe('a refusal writes nothing', () => {
   })
 })
 
+describe('the limit under concurrency', () => {
+  it('withdraws a workspace that took the account past the limit, leaving the counts as they were', async () => {
+    const given = await ports({ plan: 'crew' })
+    for (let index = 1; index < WORKSPACE_LIMIT; index += 1) {
+      const other = await harness.seedTenant(`other-${index}`)
+      await other.addMembership(given.scope.ctx.userId, 'member')
+    }
+    const before = await counts()
+
+    // A racing request read a stale count of one below the limit and went on to write.
+    const result = await createWorkspace(
+      { ...given, countMemberships: async () => WORKSPACE_LIMIT - 1 },
+      { name: 'Raced past it' },
+    )
+
+    expect(result).toEqual({ ok: false, reason: 'limit-reached' })
+    expect(await counts()).toEqual(before)
+    expect(given.activate).not.toHaveBeenCalled()
+  })
+})
+
 describe('when activation fails after the batch', () => {
-  it("throws, and the new workspace stays reachable through the caller's memberships", async () => {
+  it("answers ok with activated false, and the new workspace stays reachable through the caller's memberships", async () => {
     const given = await ports({
       activate: async () => {
         throw new Error('the session write failed')
@@ -297,11 +322,13 @@ describe('when activation fails after the batch', () => {
     })
     const before = await membershipsOf(given.scope.ctx.userId)
 
-    const error = await captureError(() =>
-      createWorkspace(given, { name: 'Written anyway' }),
-    )
+    const result = await createWorkspace(given, { name: 'Written anyway' })
 
-    expect(error.message).toBe('the session write failed')
+    expect(result).toEqual({
+      ok: true,
+      organizationId: expect.any(String),
+      activated: false,
+    })
     // The batch is already committed: `listOrganizations` reads exactly these rows.
     expect(await membershipsOf(given.scope.ctx.userId)).toBe(before + 1)
     const [created] = await harness.db
@@ -309,5 +336,16 @@ describe('when activation fails after the batch', () => {
       .from(organization)
       .where(eq(organization.name, 'Written anyway'))
     expect(created.id).toBeTypeOf('string')
+  })
+})
+
+describe('isImpersonated', () => {
+  it('reads impersonatedBy off the session, and refuses a missing session', () => {
+    expect(isImpersonated({ session: { impersonatedBy: 'admin_1' } })).toBe(
+      true,
+    )
+    expect(isImpersonated({ session: { impersonatedBy: null } })).toBe(false)
+    expect(isImpersonated({ session: {} })).toBe(false)
+    expect(isImpersonated(null)).toBe(true)
   })
 })
