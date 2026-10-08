@@ -571,6 +571,7 @@ const messages = {
     'Hai điểm dừng và một ngày, thời gian biểu sẽ trả lời. Không có gì được lưu cho tới khi bạn chọn.',
   'transports.connection.empty':
     'Không tìm thấy tuyến nào giữa hai điểm dừng đó vào ngày đó. Hãy thử ga lân cận, hoặc mở rộng bộ lọc phương tiện.',
+  'transports.connection.credit': 'Dữ liệu lịch trình từ',
   'transports.connection.searchFailed': 'Tìm kiếm không chạy',
   'transports.connection.searchFailedBody': 'Hãy thử lại sau giây lát.',
   'transports.connection.saved': 'Đã lưu tuyến',
@@ -776,6 +777,7 @@ const messages = {
   'collab.compose.cancelReply': 'Hủy trả lời',
   'collab.compose.cancelEdit': 'Hủy sửa',
   'collab.compose.placeholder': 'Nhắn cho cả chuyến',
+  'collab.compose.placeholderText': 'Nhắn gì đó cho cả nhóm…',
   'collab.compose.editPlaceholder': 'Sửa tin nhắn của bạn',
   'collab.compose.editPlaceholderText': 'Đổi lại điều bạn đã nói…',
   'collab.compose.send': 'Gửi tin nhắn',

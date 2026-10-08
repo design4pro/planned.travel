@@ -736,6 +736,7 @@ const messages = {
     'Two stops and a date, and the timetable answers. Nothing is saved until you choose one.',
   'transports.connection.empty':
     'No connection was found between those two stops on that date. Try a neighbouring station, or widen the mode filter.',
+  'transports.connection.credit': 'Timetable data from',
   'transports.connection.searchFailed': 'The search did not run',
   'transports.connection.searchFailedBody': 'Try again in a moment.',
   'transports.connection.saved': 'Connection saved',
@@ -962,6 +963,7 @@ const messages = {
   'collab.compose.cancelReply': 'Cancel reply',
   'collab.compose.cancelEdit': 'Cancel edit',
   'collab.compose.placeholder': 'Message the trip',
+  'collab.compose.placeholderText': 'Say something to the group…',
   'collab.compose.editPlaceholder': 'Edit your message',
   'collab.compose.editPlaceholderText': 'Change what you said…',
   'collab.compose.send': 'Send message',

@@ -123,8 +123,9 @@ precisely so it could be executed the day the gate closed is now scheduled. It m
 feature: it edits `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx`, which `01-S4` holds in
 wave 2, `02-S5` in wave 3, `02-S10` in wave 5 and `02-S11` in **wave 6** — the very wave `02-S13`
 used to state. Two exclusive claims on one file in one wave is a clobber, and wave 4 is the one wave
-in which that file is free. Wave 4 also sits above MAP-02's floor and after `02-S4` in wave 3, which
-is the stage that mints the geocoding proxy this one calls.
+in which that file is free. Wave 4 also sits above MAP-02's floor and after `02-S4` in wave 3, whose
+server function is the first caller of the geocoding proxy `src/server/geo/` that #281 minted and
+that this stage calls too.
 
 ### The two gates: A is closed, B is not
 
@@ -151,9 +152,10 @@ stage in this file chooses a provider, writes a client for an unnamed service, a
 or ships a feature degraded into uselessness in order to avoid asking.** What changed is which
 stages the rule still binds.
 
-**Behind Gate A, nothing is BLOCKED any more.** `02-S13` is scheduled, in wave 4; `02-S4` builds the
-reverse-geocoded address on a dropped pin and mints the proxy the other two call; `02-S11` builds
-address completion on the form. **Behind Gate B, two stages still carry a gated behaviour inside an
+**Behind Gate A, nothing is BLOCKED any more.** `src/server/geo/` shipped the proxy under #281, so
+all three stages below are callers of it and none of them mints it. `02-S13` is scheduled, in wave 4;
+`02-S4` builds the reverse-geocoded address on a dropped pin; `02-S11` builds address completion on
+the form. **Behind Gate B, two stages still carry a gated behaviour inside an
 ungated outcome and say so** — `02-S9` (routed segment times) and `02-S12` (road-following lines) —
 and each ships the rest of its row exactly as before.
 
@@ -422,7 +424,7 @@ re-argues the boundary or, worse, resolves it quietly by naming a service inside
 
 | Row    | Gate | Behaviour that waited                                     | Owning stage | Disposition                                     |
 | ------ | ---- | --------------------------------------------------------- | ------------ | ----------------------------------------------- |
-| MAP-01 | A    | The address of a pin dropped on the map                   | `02-S4`      | **built** — ADR 0013; the stage mints the proxy |
+| MAP-01 | A    | The address of a pin dropped on the map                   | `02-S4`      | **built** — ADR 0013; calls the proxy from #281 |
 | MAP-02 | A    | Search-as-you-type, and resolving a pasted map share link | `02-S13`     | **built** — ADR 0013; scheduled, wave 4         |
 | MAP-03 | A    | Address completion on the place form                      | `02-S11`     | **built** — ADR 0013                            |
 | MAP-08 | B    | Routed segment times, road distance, day travel totals    | `02-S9`      | ships with great-circle distance instead        |
@@ -436,9 +438,9 @@ _this_ file may do while a decision is open, and what the closed one obliges.
 **The three obligations Gate A's closure hands to this file**, so that no stage discovers one of them
 on the day it builds:
 
-1. **One proxy, minted once.** The provider is reached from `02-S4` in wave 3 and from nowhere else;
-   `02-S11`, `02-S13` and `03-S7` (`03-reservations-and-transport.md`, wave 5) call what is already
-   there. Three clients for one provider would be three places to forget the cache, the ceiling and
+1. **One proxy, minted once.** The provider is reached through `src/server/geo/`, which #281 minted,
+   and from nowhere else; `02-S4` in wave 3, `02-S11`, `02-S13` and `03-S7`
+   (`03-reservations-and-transport.md`, wave 5) are all callers of what is already there. Three clients for one provider would be three places to forget the cache, the ceiling and
    the attribution.
 2. **The cache is cross-tenant and does not expire.** That is the property the ADR bought and the
    reason it did not reuse the transit credential; it also means the cache key is the normalised
@@ -589,7 +591,7 @@ the OSM credit always — `02-S4` owns it, on the map, in the attribution line t
 carries.
 
 One thing the closure does **not** hand out: a licence to call the provider from three places.
-`02-S4` mints one server-side proxy in wave 3 and `02-S11`, `02-S13` and
+#281 minted the one server-side proxy, `src/server/geo/`, and `02-S4`, `02-S11`, `02-S13` and
 `03-reservations-and-transport.md`'s `03-S7` call it.
 
 #### Gate B — routing. OPEN.
@@ -1178,9 +1180,11 @@ mid-run, which is what the heading is for.
 ### Stage id
 
 `02-S4` · Wave 3 · effort **L**. It was **M** while the address on a dropped pin was behind Gate A.
-Closing that gate added a server-side provider proxy, its cache, its ceiling and its attribution to a
-stage that was previously one gesture and one form, and the honest response is to re-state the effort
-rather than to keep the old letter over the new work.
+Closing that gate added a reverse-lookup server function in front of the provider proxy, the
+degraded states around it and the provider's attribution to a stage that was previously one gesture
+and one form, and the honest response is to re-state the effort rather than to keep the old letter
+over the new work. The proxy itself, with its cache and its ceiling, is not part of that effort:
+#281 minted it as `src/server/geo/` and this stage is a caller.
 
 ### Reference rows
 
@@ -1224,12 +1228,11 @@ inherited:
 - `src/components/planner/day-section.tsx` — edit. One new optional render prop, `dayTools`,
   mirroring the `rowActions` prop the component already exposes (`day-section.tsx:25`).
 - `src/routes/_app/trips/$tripId/-ui/__tests__/planner-map-layer.test.tsx` — new.
-- `src/server/geo/geocode.ts` — new, and the one this stage mints for the rest of the plan set. The
-  provider proxy: forward and reverse lookup, the normalised cache key, the KV read-through, the
-  per-tenant ceiling and the response validation. **Nothing else in any plan calls the provider
-  directly.**
-- `src/server/geo/__tests__/geocode.test.ts` — new. Key normalisation, the ceiling, and the response
-  validator against a malformed payload.
+- `src/server/geo/` — **not this stage's, and nothing in it is edited here.** #281 minted the
+  geocoding proxy there (`geocode.ts` and its test, with `geoapify.ts` and `bindings.ts`): forward
+  and reverse lookup, the normalised cache key, the KV read-through, the monthly per-tenant ceiling
+  and the response validation. This stage is a caller of it, and **nothing else in any plan calls
+  the provider directly.**
 - `src/routes/_app/trips/$tripId/-server/geocode.ts` — new. The two server functions in front of the
   proxy. A route-local `-server/` module rather than an addition to `-server/plan.ts`, which this
   stage deliberately does not own and which four other stages queue for.
@@ -1260,20 +1263,16 @@ described there line by line, so a later claimant can read what changed without 
 stage needs no view-model change, no form change and no addition to the contended server module. It
 does need two new server functions, which is why it mints its own `-server/geocode.ts` instead.
 
-**Three of the new paths exist because Gate A closed, and none of them collides.** `src/server/geo/`
-does not exist at HEAD and no plan in the set claims a path under it — `grep -rn "server/geo"
-docs/plans/` returns only this file. `src/routes/_app/trips/$tripId/-server/geocode.ts` is likewise
-unclaimed. So the proxy can be minted in wave 3 without waiting for a free wave on a contended file,
-which is the reason it is minted here rather than in the stage that needs it most.
+**The proxy is not one of this stage's paths, and the route-local one does not collide.**
+`src/server/geo/` was minted by #281, outside the wave schedule, so this stage neither waits on a
+free wave for it nor claims it. `src/routes/_app/trips/$tripId/-server/geocode.ts` is the one new
+path under this heading and is unclaimed by any other plan.
 
-**One duplication this creates, named rather than discovered.** `03-reservations-and-transport.md`'s
-`03-S3` mints `src/server/transit/meter.ts` — a KV counter in front of a metered outbound call — in
-**wave 3**, the same wave as this stage. Two stages in one wave cannot depend on each other, so this
-stage cannot import that file and does not try: the counter for geocoding lives inside `geocode.ts`
-itself, some thirty lines of increment-and-compare against a `resolveLimits()` ceiling. That is the
-same shape twice for two providers, and it is a consequence of the wave rule rather than a design
-preference. Folding the two into one helper is a `00-foundations.md` job in a later wave, not
-something either feature stage may do to the other's file.
+**The duplication this section once predicted did not happen.** It expected a geocoding counter of
+some thirty lines inside `geocode.ts`, beside the one `03-S3` mints in `src/server/transit/meter.ts`
+in the same wave. The counter was instead lifted into the shared rate meter,
+`src/server/metering/rate.ts`, which every metered caller spends through, the proxy and transit
+included, so this stage adds no counter of its own.
 
 ### Data and migration
 
@@ -1306,10 +1305,10 @@ Nothing is backfilled. A rollback keeps working against unchanged columns.
 - Nothing is slow, nothing is enqueued, and no `TripRoom` patch type is added: a created place is
   already a router invalidation away from every other viewer through the existing commit signal.
 
-**The geocoding proxy — `src/server/geo/geocode.ts` — and the four rules it exists to enforce once.**
-It exports `reverseGeocode(scope, { lat, lng })` and `searchPlaces(scope, { query, near })`, and it
-is the only module in the plan set that holds the provider's base URL. `02-S11`, `02-S13` and
-`03-reservations-and-transport.md`'s `03-S7` call these two functions.
+**The geocoding proxy — `src/server/geo/geocode.ts`, minted by #281 — and the four rules it exists
+to enforce once.** This stage does not write it; it calls `reverseGeocode`, which shipped there next
+to `forwardGeocode`. The module is the only one in the plan set that holds the provider's base URL.
+`02-S11`, `02-S13` and `03-reservations-and-transport.md`'s `03-S7` call it too.
 
 1. **The credential is a secret and is never per tenant**, read from the environment inside this
    module, never reaching a bundle and never supplied by a workspace — the shape that put BKG-09 out
@@ -1321,10 +1320,11 @@ is the only module in the plan set that holds the provider's base URL. `02-S11`,
    a public fact we already own. The key contains no organization id, no trip id and no place id, so
    two workspaces asking the same question share one answer — which is correct, and is asserted
    below.
-3. **The ceiling is per tenant and is checked before the outbound call.** A KV counter keyed on the
-   organization id and the current day, compared against a limit from `resolveLimits()`. It cannot be
-   `assertQuota`, because `assertQuota` counts rows and an outbound call leaves no row to count. A
-   cache hit does not spend the ceiling; only a call does.
+3. **The ceiling is per tenant, monthly, and is checked before the outbound call.** The metric is
+   `geocode_lookups_per_month`, spent through the rate meter in `src/server/metering/rate.ts` as a
+   KV counter keyed on the organization id and the calendar month, and capped by the figure
+   `resolveLimits()` returns. It cannot be `assertQuota`, because `assertQuota` counts rows and an
+   outbound call leaves no row to count. A cache hit does not spend the ceiling; only a call does.
 4. **The provider's response is untrusted input.** Parsed with a `z.object` that takes the three
    fields we use and ignores the rest, with the coordinate re-checked against the same WGS-84 bounds
    `places` enforces. A malformed payload raises rather than half-filling a form.
@@ -1424,25 +1424,23 @@ response is discarded.
   entire reason the drop reuses `createPlanPlaceFn` instead of getting its own server function.
 - No R2 object is written, so the object-first ordering does not apply.
 
-**And it spends something no metric covers yet: a geocoding call.** `11-S3` states the rule and ADR
-0013 makes it this stage's to honour, so a second metric is added here — the first this plan adds:
+**And it spends something no row-count metric covers: a geocoding call.** `11-S3` states the rule
+and ADR 0013 makes the call a metered one, but the metric is not this stage's to add — #281 shipped
+it with the proxy, so this stage adds no metric, no counter and no constant:
 
-- Metric: `geocode_calls_per_day`, added to `resolveLimits()` in `src/server/billing/limits.ts`. It
-  is **not** added to `PLAN_QUOTAS`: `PLAN_QUOTAS` holds ceilings on rows a workspace owns, and an
-  outbound call is neither a row nor something a workspace owns. That distinction is the reason the
-  next bullet exists.
+- Metric: `geocode_lookups_per_month`, one of `RATE_METRICS` in `src/server/billing/limits.ts`, with
+  a figure per plan in `PLAN_RATE_CEILINGS` that `resolveLimits()` returns. It is **not** in
+  `PLAN_QUOTAS`: `PLAN_QUOTAS` holds ceilings on rows a workspace owns, and an outbound call is
+  neither a row nor something a workspace owns. The ceiling is monthly and per workspace, not daily.
 - Enforcement is **not** `assertQuota`, and cannot be. `assertQuota` compares a live `COUNT(*)`
-  against a limit, and an outbound call leaves nothing to count. The check is a KV counter keyed on
-  the organization id and the current day, incremented inside `geocode.ts` **after** a cache miss and
-  **before** the outbound call, compared against the resolved limit. A cache hit spends nothing,
-  which is what makes an unexpiring shared cache a cost control and not just a latency one.
-- **This stage does not own `src/server/billing/limits.ts` and does not edit it.** `README.md` puts
-  quota metrics in wave 0 with schema and bindings, for the same reason: a stage cannot sit in the
-  same wave as the stage that supplies it. So the metric is **filed** onto the per-wave quota stage
-  of `00-foundations.md` exactly as a column is filed onto its schema stage — this stage is wave 3,
-  so the supplier is the **wave-2** instance — together with its case in
-  `src/server/billing/__tests__/limits.test.ts`. What lands there is one entry in `resolveLimits()`
-  and nothing in `PLAN_QUOTAS`.
+  against a limit, and an outbound call leaves nothing to count. The check is the rate meter in
+  `src/server/metering/rate.ts`: a KV counter keyed on the organization id and the calendar month,
+  spent by the proxy **after** a cache miss and **before** the outbound call, and refused with
+  `RateCeilingError` once the ceiling is reached. A cache hit spends nothing, which is what makes an
+  unexpiring shared cache a cost control and not just a latency one.
+- **This stage does not own `src/server/billing/limits.ts` and does not edit it**, and it has
+  nothing to file onto a foundations stage: the metric and its case in
+  `src/server/billing/__tests__/limits.test.ts` landed with #281.
 - The `places` metric itself is untouched: it already exists in both the resolver and `PLAN_QUOTAS`,
   so nothing about it needs a foundations stage.
 
@@ -1550,14 +1548,15 @@ additions listed under **UI** and does not become a refactor of a file three oth
 
 - **Gate A — geocoding. CLOSED, and this is the stage that spends the closure.**
   `docs/adr/0013-geoapify-for-geocoding.md` chooses the provider; `02-S1` records the obligations
-  that follow and this stage carries all three — it mints the one proxy, it keeps the cross-tenant
-  unexpiring cache, and it renders the attribution. What was a blocker is now a dependency on a
-  decision that has been taken, which is not the same thing and is not listed as one.
-- **Two requirements filed elsewhere, and neither is this stage's to add.** The provider credential
+  that follow. #281 met the first two by minting the one proxy, `src/server/geo/`, with the
+  cross-tenant unexpiring cache; this stage calls that proxy and renders the attribution. What was a
+  blocker is now a dependency on a decision that has been taken, which is not the same thing and is
+  not listed as one.
+- **Two requirements met elsewhere, and neither is this stage's to add.** The provider credential
   is a **secret**, set on the account rather than declared in `wrangler.jsonc`, so this stage asks
   for no binding — but it does need one to exist before it runs, and that is an operational step the
-  user takes, not a stage. And the `geocode_calls_per_day` ceiling is filed onto the **wave-2** quota
-  stage of `00-foundations.md`, per **Quota** above. If the secret is absent at runtime the proxy
+  user takes, not a stage. And the monthly `geocode_lookups_per_month` ceiling already exists in
+  `resolveLimits()`, shipped with the proxy by #281, per **Quota** above. If the secret is absent at runtime the proxy
   refuses rather than calling, and the drop degrades to the coordinates-only shape described under
   **Reference rows** — which is why a missing secret is a degraded feature and not a broken one.
 - **`12-verification-protocol.md` §7.2 — the seven abbreviated-month call sites.** This stage
@@ -3223,12 +3222,11 @@ second file-linking model, which would be exactly the duplicate `README.md` call
   `updatePlace`.
 
 **And address completion spends a ceiling this stage neither owns nor files.**
-`geocode_calls_per_day` is added to `resolveLimits()` by the **wave-2** quota stage of
-`00-foundations.md`, filed there by `02-S4`, and enforced inside `src/server/geo/geocode.ts` by the
-KV counter that stage builds. This stage adds no metric, no call site and no counter of its own — it
-calls `searchPlacesFn` and renders the refusal when the ceiling answers. That refusal is a designed
-state, worded as what it is: this workspace has used its lookups for the day, and the address can
-still be typed.
+`geocode_lookups_per_month` is in `resolveLimits()` and is spent through the rate meter by
+`src/server/geo/geocode.ts`, both shipped by #281. This stage adds no metric, no call site and no
+counter of its own — it calls `searchPlacesFn` and renders the refusal when the ceiling answers. That
+refusal is a designed state, worded as what it is: this workspace has used its lookups for the
+month, and the address can still be typed.
 
 ### Tenant isolation test
 
@@ -3321,12 +3319,13 @@ The six items of `docs/SPEC.md` §7 apply unchanged.
 - **Gate A — geocoding. CLOSED.** `docs/adr/0013-geoapify-for-geocoding.md` chooses the provider,
   and address completion on the form is therefore **built** rather than deferred. This stage writes
   no client and names no provider: it calls `searchPlacesFn`
-  (`src/routes/_app/trips/$tripId/-server/geocode.ts`), which `02-S4` mints in wave 3 over the single
-  proxy in `src/server/geo/geocode.ts`. Three obligations travel with the call and are met here — the
-  debounce, the minimum query length and the cancel-on-supersede that keep a per-keystroke field from
-  spending the daily ceiling; the ceiling itself, which is `02-S4`'s to file and this stage's to
-  surface as a designed refusal rather than a generic error; and the attribution, which is already on
-  the map from `02-S4` and is **not** repeated on the form.
+  (`src/routes/_app/trips/$tripId/-server/geocode.ts`), which `02-S4` creates in wave 3 over the
+  single proxy in `src/server/geo/geocode.ts` that #281 minted. Three obligations travel with the
+  call and are met here — the debounce, the minimum query length and the cancel-on-supersede that
+  keep a per-keystroke field from spending the monthly ceiling; the ceiling itself, which is the
+  proxy's to enforce and this stage's to surface as a designed refusal rather than a generic error;
+  and the attribution, which is already on the map from `02-S4` and is **not** repeated on the
+  form.
   **A failed or refused lookup leaves the address typed**, which is exactly the shape this stage
   would have shipped had the gate stayed open — so the degraded path is designed rather than
   hypothetical.
@@ -3615,8 +3614,9 @@ below has become an "owes".
 `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx`. That file is held by `01-S4` in wave 2, `02-S5`
 in wave 3, `02-S10` in wave 5 and `02-S11` in **wave 6** — the wave this stage used to state. Two
 exclusive claims on one file in one wave is a clobber, and wave 4 is the only wave in which it is
-free. Wave 4 also sits above MAP-02's floor and one wave after `02-S4`, which mints the geocoding
-proxy this stage calls, so the move satisfies the dependency instead of straining it. `02-S11` in
+free. Wave 4 also sits above MAP-02's floor and one wave after `02-S4`, whose server function is
+the first caller of the geocoding proxy that #281 minted and this stage calls, so the move satisfies
+the dependency instead of straining it. `02-S11` in
 wave 6 then builds address completion **on top of** this stage's results list rather than beside it,
 and says so under its own **UI**.
 
@@ -3650,7 +3650,7 @@ that list, because two of the paths it expected to need are `02-S4`'s:
   cancel-on-supersede, the centroid bias and its skip threshold.
 - `src/components/modules/places/index.ts` — new. The barrel, created by this stage.
 - `src/routes/_app/trips/$tripId/-server/geocode.ts` — edit. One added server function,
-  `resolveShareLinkFn`, beside the two `02-S4` minted in wave 3. Same plan, one wave later, and no
+  `resolveShareLinkFn`, beside the two `02-S4` creates in wave 3. Same plan, one wave later, and no
   other stage in any plan claims the file.
 - `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` — edit. The field goes at the top of
   `PlaceDialog`. `01-S4` (wave 2), `02-S5` (wave 3), `02-S10` (wave 5) and `02-S11` (wave 6) hold
@@ -3661,13 +3661,14 @@ that list, because two of the paths it expected to need are `02-S4`'s:
 - `e2e/__screenshots__/places-and-maps.visual.spec.ts/` — append, this stage's frames only.
 
 **No provider client module of its own.** The list written while this stage was blocked expected one
-under `src/server/`; `02-S4` mints `src/server/geo/geocode.ts` in wave 3 and this stage calls it. A
-second client for one provider would be a second place to forget the cache, the ceiling and the
+under `src/server/`; #281 minted `src/server/geo/geocode.ts` and this stage calls it. A second
+client for one provider would be a second place to forget the cache, the ceiling and the
 attribution, which is the whole reason `02-S1` names the single-proxy obligation.
 
 **It needs none of the shared paths** — not `src/server/db/schema.ts`, not `wrangler.jsonc`, not any
 of the other four — on the evidence in **Data and migration** below. Nor
-`src/server/billing/limits.ts`: the one ceiling it spends is the metric `02-S4` files.
+`src/server/billing/limits.ts`: the one ceiling it spends is the monthly `geocode_lookups_per_month`
+metric that #281 shipped.
 
 ### Data and migration
 
@@ -3682,14 +3683,14 @@ carries the provider's id, which is what that column was for.
 The open question was the **cache**: a provider's terms fix what may be retained and for how long,
 and that answer differs enough between providers to change whether the cache is a KV entry with a
 TTL, a table, or nothing at all. ADR 0013 answers it — storage is permitted without a time limit —
-and the shape that follows is a **KV entry with no TTL**, built by `02-S4` in
+and the shape that follows is a **KV entry with no TTL**, built by #281 in
 `src/server/geo/geocode.ts`. So no column is needed after all, and `11-S3`'s sequence held: decision,
 then column, then feature, with the column turning out to be none.
 
 ### Server (repo, server function, Zod)
 
 **No repository and no new provider client.** Four of the five constraints written here while the
-stage was blocked are met by `02-S4`'s proxy rather than by this stage, and they are restated as
+stage was blocked are met by the proxy #281 minted rather than by this stage, and they are restated as
 inherited so nobody re-implements one:
 
 - The provider is called **from the server only**, inside `src/server/geo/geocode.ts`, never from the
@@ -3727,7 +3728,8 @@ in wave 6.
   and cancellation of a superseded request, and a keyboard contract — up and down through results,
   `Enter` to take the highlighted one, `Escape` to dismiss — because a search field that cannot be
   driven from the keyboard is not a search field. Those three numbers are cost controls as much as
-  design ones now: every keystroke that gets past them spends the daily ceiling `02-S4` files.
+  design ones now: every keystroke that gets past them spends the monthly ceiling, the
+  `geocode_lookups_per_month` metric #281 shipped.
 - Results are **biased towards where the trip already is** — the centroid of its existing places,
   passed as `near` — and the bias is skipped entirely when the places are spread more than a
   thousand kilometres apart, because a centre between two continents is a worse hint than none.
@@ -3742,7 +3744,7 @@ in wave 6.
 - Empty, skeleton and error states on `--color-surface-2` as for every other list in this plan, plus
   two this stage owns: a query that returned nothing, which offers the reader the manual and paste
   paths rather than being a dead end; and the **ceiling refusal**, worded as what it is — this
-  workspace has used its lookups for the day — with the manual path still open beside it.
+  workspace has used its lookups for the month — with the manual path still open beside it.
 - **The hook this stage publishes:** `data-part="place-search"` on the field, in the component it
   owns. It is distinct from `02-S11`'s `data-part="address-suggestions"`, which is a different
   control on the same form.
@@ -3761,8 +3763,8 @@ today; no second call site is added.
 **And it spends a provider call, against a ceiling this stage neither adds nor enforces.**
 `11-S3` recorded the rule — a metered outbound call made on one tenant's behalf is a cost every other
 tenant helps pay, so its rate belongs in `resolveLimits()` and never in a constant inside a search
-module. `02-S4` files `geocode_calls_per_day` onto the wave-2 quota stage of `00-foundations.md` and
-enforces it in `src/server/geo/geocode.ts`. This stage therefore adds **no** metric, **no** counter
+module. #281 shipped the monthly `geocode_lookups_per_month` metric in `resolveLimits()` and spends
+it in `src/server/geo/geocode.ts`. This stage therefore adds **no** metric, **no** counter
 and **no** constant; what it owns is the three numbers that keep a per-keystroke field from reaching
 the ceiling in the first place — the debounce, the minimum length and the cancel-on-supersede — and
 the designed refusal for when it does.
@@ -3842,9 +3844,9 @@ Both of the terms that decide cost more than the per-call price are answered and
 what may be cached and for how long is permanent, so this stage needs no schema change at all; and
 the attribution is on the map, rendered by `02-S4`.
 
-**One real dependency, and it is inside this plan.** `02-S4` mints `src/server/geo/geocode.ts` and
-`-server/geocode.ts` in wave 3. This stage is wave 4 and adds one function to the second of those.
-If `02-S4` has not landed, this stage does not start — that is an ordinary wave dependency, not a
+**One real dependency, and it is inside this plan.** `02-S4` creates `-server/geocode.ts` in wave 3,
+over the proxy `src/server/geo/geocode.ts` that #281 minted. This stage is wave 4 and adds one
+function to the first of those. If `02-S4` has not landed, this stage does not start — that is an ordinary wave dependency, not a
 gate, and it is satisfied by the schedule rather than by a decision.
 
 No package outside the pinned set. No binding — the provider credential is a secret, not a
@@ -3872,9 +3874,9 @@ stages' own **Owned paths** lists, and that is how the claims added when Gate A 
 established.
 
 **Four claims post-date the output below**, all from closing Gate A, and each was verified that way.
-`src/server/geo/geocode.ts`, its test and `src/routes/_app/trips/$tripId/-server/geocode.ts` are new
-files that **no plan in the set claims** — `grep -rn "server/geo\|-server/geocode" docs/plans/`
-returns only this file. `src/components/modules/places/**` is likewise unclaimed. And `02-S13`'s
+`src/server/geo/geocode.ts` and its test, which #281 has since minted outside the wave schedule, and
+`src/routes/_app/trips/$tripId/-server/geocode.ts` are new files that **no stage in the set claims**
+— `grep -rn "server/geo\|-server/geocode" docs/plans/` returns only this file. `src/components/modules/places/**` is likewise unclaimed. And `02-S13`'s
 wave-4 claim on `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` is the reason that stage moved
 from wave 6: `01-S4` holds wave 2, `02-S5` wave 3, `02-S10` wave 5 and `02-S11` wave 6, so wave 4 is
 the only free one. None of the four adds a same-wave exclusive collision.

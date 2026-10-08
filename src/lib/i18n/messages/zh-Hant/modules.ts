@@ -538,6 +538,7 @@ const messages = {
     '兩個站點加一個日期，時刻表就會回答。在你選定之前不會儲存任何內容。',
   'transports.connection.empty':
     '在那個日期沒有找到連接這兩個站點的路線。可以試試鄰近車站，或者放寬方式篩選。',
+  'transports.connection.credit': '時刻表資料來源：',
   'transports.connection.searchFailed': '搜尋未執行',
   'transports.connection.searchFailedBody': '請稍後再試一次。',
   'transports.connection.saved': '路線已儲存',
@@ -727,6 +728,7 @@ const messages = {
   'collab.compose.cancelReply': '取消回覆',
   'collab.compose.cancelEdit': '取消編輯',
   'collab.compose.placeholder': '給同行的人寫點什麼',
+  'collab.compose.placeholderText': '對大家說點什麼…',
   'collab.compose.editPlaceholder': '編輯你的訊息',
   'collab.compose.editPlaceholderText': '改一改你說過的話…',
   'collab.compose.send': '傳送訊息',

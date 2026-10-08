@@ -596,6 +596,7 @@ const messages = {
     'Δύο στάσεις και μια ημερομηνία, και τα δρομολόγια απαντούν. Τίποτα δεν αποθηκεύεται ώσπου να διαλέξεις.',
   'transports.connection.empty':
     'Δεν βρέθηκε σύνδεση ανάμεσα σ’ αυτές τις δύο στάσεις εκείνη την ημερομηνία. Δοκίμασε γειτονικό σταθμό ή διεύρυνε το φίλτρο.',
+  'transports.connection.credit': 'Δεδομένα δρομολογίων από',
   'transports.connection.searchFailed': 'Η αναζήτηση δεν έτρεξε',
   'transports.connection.searchFailedBody': 'Δοκίμασε ξανά σε λίγο.',
   'transports.connection.saved': 'Η σύνδεση αποθηκεύτηκε',
@@ -807,6 +808,7 @@ const messages = {
   'collab.compose.cancelReply': 'Ακύρωση απάντησης',
   'collab.compose.cancelEdit': 'Ακύρωση επεξεργασίας',
   'collab.compose.placeholder': 'Γράψε στο ταξίδι',
+  'collab.compose.placeholderText': 'Πες κάτι στην ομάδα…',
   'collab.compose.editPlaceholder': 'Επεξεργασία του μηνύματός σου',
   'collab.compose.editPlaceholderText': 'Άλλαξε αυτό που είπες…',
   'collab.compose.send': 'Αποστολή μηνύματος',

@@ -602,6 +602,7 @@ const messages = {
     'Dos paradas y una fecha, y los horarios responden. No se guarda nada hasta que elijas una.',
   'transports.connection.empty':
     'No se encontró ninguna conexión entre esas dos paradas en esa fecha. Prueba una estación vecina o amplía el filtro de modos.',
+  'transports.connection.credit': 'Datos de horarios de',
   'transports.connection.searchFailed': 'La búsqueda no se hizo',
   'transports.connection.searchFailedBody':
     'Vuelve a intentarlo en un momento.',
@@ -817,6 +818,7 @@ const messages = {
   'collab.compose.cancelReply': 'Cancelar la respuesta',
   'collab.compose.cancelEdit': 'Cancelar la edición',
   'collab.compose.placeholder': 'Escribe al viaje',
+  'collab.compose.placeholderText': 'Dile algo al grupo…',
   'collab.compose.editPlaceholder': 'Editar tu mensaje',
   'collab.compose.editPlaceholderText': 'Cambia lo que dijiste…',
   'collab.compose.send': 'Enviar el mensaje',

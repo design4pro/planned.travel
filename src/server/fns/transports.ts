@@ -15,9 +15,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { TRANSPORT_MODES, TRANSPORT_STATUSES } from '#/server/db/schema'
+import { TRANSPORT_STATUSES } from '#/server/db/schema'
 import {
-  CHAIN_MAX_LEGS,
   deleteTransport,
   listTripDays,
   listTripLegs,
@@ -37,15 +36,18 @@ import {
 import { billingRuntime } from '#/server/billing/runtime.cloudflare'
 import { billingContext } from '#/server/billing/types'
 import { transitRuntime } from '#/server/transit/bindings'
-import { RateCeilingError } from '#/server/metering/rate'
 import {
-  TransitProviderError,
+  refusalReason,
   searchTransitConnections,
   transitQuerySchema,
 } from '#/server/transit/search'
-import { resolveTimeZone } from '#/lib/time'
-import { DATE_PATTERN, TIME_PATTERN } from '#/lib/transport-timing'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
+import {
+  rowId,
+  saveSearchedConnectionSchema,
+  saveTransportSchema,
+  tripId,
+} from './transport-wire'
 
 import type { AirportMatch } from '#/server/catalog/airports'
 import type { TransportLeg } from '#/server/db/types'
@@ -54,112 +56,13 @@ import type {
   TransitConnection,
   TransitFailureReason,
 } from '#/server/transit/search'
+import type {
+  TransportInput,
+  chainLegSchema,
+  stationSchema,
+} from './transport-wire'
 
 /* ------------------------------------------------------------------ inputs */
-
-const tripId = z.string().trim().min(1).max(64)
-const rowId = z.string().trim().min(1).max(64)
-
-const optionalText = z.string().trim().max(200)
-const optionalCode = z
-  .string()
-  .trim()
-  .max(8)
-  .transform((value) => value.toUpperCase())
-const optionalDate = z
-  .string()
-  .trim()
-  .refine(
-    (value) => value === '' || DATE_PATTERN.test(value),
-    'must be an ISO calendar date (YYYY-MM-DD)',
-  )
-const optionalTime = z
-  .string()
-  .trim()
-  .refine(
-    (value) => value === '' || TIME_PATTERN.test(value),
-    'must be a 24-hour time (HH:MM)',
-  )
-
-/**
- * A day reference as the form sends it: an id, or `''` for "no day yet".
- *
- * Named here and carried by both write validators on purpose. An object schema
- * strips a key it does not declare, so a column the screen sets and the validator
- * has never heard of is a column written null with every test still green.
- */
-const optionalDayId = z.string().trim().max(64)
-
-/**
- * The name a record is filed under. Required: a row nobody can name is a row
- * nobody finds again.
- */
-const titleText = z.string().trim().min(1).max(160)
-
-/** Minor units, never a float. `0` means "not recorded" and is written `null`. */
-const optionalMinorAmount = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
-
-/** An ISO-4217 alphabetic code, or `''` for a price with no currency stated. */
-const optionalCurrency = z
-  .string()
-  .trim()
-  .refine(
-    (value) => value === '' || /^[A-Z]{3}$/.test(value),
-    'must be an ISO-4217 alphabetic code',
-  )
-
-/**
- * An IANA zone name, or `''`.
- *
- * Asked of `Intl` rather than matched against a list this file would have to
- * keep: `resolveTimeZone` answers `UTC` for anything the platform rejects, so a
- * value that survives unchanged is a value the platform knows. Refused rather
- * than rewritten — a zone silently turned into `UTC` is a departure time that
- * reads an hour or nine wrong with nothing on screen to say so.
- */
-const optionalTimeZone = z
-  .string()
-  .trim()
-  .max(64)
-  .refine(
-    (value) => value === '' || resolveTimeZone(value) === value,
-    'must be an IANA time zone name',
-  )
-
-const transportFields = {
-  mode: z.enum(TRANSPORT_MODES),
-  status: z.enum(TRANSPORT_STATUSES),
-  title: titleText,
-  departureDayId: optionalDayId,
-  arrivalDayId: optionalDayId,
-  carrier: optionalText,
-  serviceNumber: optionalText,
-  bookingCode: optionalText,
-  seat: optionalText,
-  departureName: optionalText,
-  departureCode: optionalCode,
-  departureDate: optionalDate,
-  departureTime: optionalTime,
-  arrivalName: optionalText,
-  arrivalCode: optionalCode,
-  arrivalDate: optionalDate,
-  arrivalTime: optionalTime,
-  /**
-   * Sent only while a chain owns the endpoints, so the record is ordered in the zones its clocks
-   * were validated in; absent, the zones already stored are kept.
-   */
-  departureTimezone: optionalTimeZone.optional(),
-  arrivalTimezone: optionalTimeZone.optional(),
-  /** `0` means "not recorded" for both of these. */
-  distanceMetres: z.number().int().min(0).max(100_000_000),
-  priceMinor: optionalMinorAmount,
-  currency: optionalCurrency,
-  notes: z.string().trim().max(4000),
-}
-
-export const transportInputSchema = z.object({ tripId, ...transportFields })
-
-export type TransportInput = z.infer<typeof transportInputSchema>
 
 function payload(data: TransportInput) {
   return {
@@ -196,26 +99,6 @@ function payload(data: TransportInput) {
 
 /* ------------------------------------------------------------ chain inputs */
 
-const stationSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  code: optionalCode,
-  lat: z.number().min(-90).max(90).nullable(),
-  lng: z.number().min(-180).max(180).nullable(),
-  timezone: optionalTimeZone,
-})
-
-const chainLegSchema = z.object({
-  serviceNumber: optionalText,
-  platform: optionalText,
-  seat: optionalText,
-  departureDayId: optionalDayId,
-  arrivalDayId: optionalDayId,
-  departureDate: optionalDate,
-  departureTime: optionalTime,
-  arrivalDate: optionalDate,
-  arrivalTime: optionalTime,
-})
-
 /**
  * The chain, from the wire shapes to the repository's.
  *
@@ -248,49 +131,6 @@ function chainInput(data: {
     })),
   }
 }
-
-/**
- * The validator of the one save behind the Transport dialog: the record, the id it is saved under,
- * and its chain.
- *
- * `transportId` is minted by the dialog for a new transport and is the row's identity from then
- * on: pressing save twice on one draft is an edit of the row the first press wrote, not a second
- * row. Whether the row exists is the repository's to say, inside the caller's scope.
- *
- * `stations` is capped one above `legs` because that is the arithmetic: thirteen
- * stations is twelve legs, and twelve is the payload bound the repository states
- * and enforces. Both empty is legal and means "this journey has no legs" — the
- * record's own endpoints are the journey, which is what every transport written
- * before chains existed already is.
- */
-export const saveTransportSchema = z
-  .object({
-    ...transportInputSchema.shape,
-    transportId: rowId,
-    stations: z.array(stationSchema).max(CHAIN_MAX_LEGS + 1),
-    legs: z.array(chainLegSchema).max(CHAIN_MAX_LEGS),
-  })
-  .superRefine((data, ctx) => {
-    const { stations, legs } = data
-    if (stations.length === 0 && legs.length === 0) {
-      return
-    }
-    if (stations.length < 2) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['stations'],
-        message: 'A chain runs between at least two stations.',
-      })
-      return
-    }
-    if (legs.length !== stations.length - 1) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['legs'],
-        message: 'A chain of N stations has exactly N−1 legs.',
-      })
-    }
-  })
 
 /* ------------------------------------------------------------------- reads */
 
@@ -540,6 +380,8 @@ export const saveTransportFn = createServerFn({ method: 'POST' })
     const { transport, legs } = await saveTransport(scope, {
       tripId: data.tripId,
       transportId: data.transportId,
+      // A tab on the previous bundle sends none; `create` is the rule that bundle expects.
+      intent: data.intent ?? 'create',
       record: payload(data),
       chain: chainInput(data),
     })
@@ -620,8 +462,8 @@ export type ConnectionSearchOutcome =
       /**
        * A refusal carries the two facts the screen needs and no sentence.
        *
-       * `RateCeilingError` and `TransitProviderError` each hold an English message, and it is
-       * written for the log rather than for a reader: sending it here would put untranslated
+       * `RateCeilingError`, `TransitProviderError` and `ProviderBlockedError` each hold an English
+       * message, and it is written for the log rather than for a reader: sending it here would put untranslated
        * English in front of twenty-two other languages, and the parity gate could not see it
        * because it would never be a key. The screen reads `reason` - and `ceiling`, which
        * separates an allowance that has to be bought from one that has to be waited out - and
@@ -687,11 +529,9 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
         ceiling,
       }
     } catch (cause) {
-      if (cause instanceof RateCeilingError) {
-        return { ok: false, reason: 'ceiling', ceiling }
-      }
-      if (cause instanceof TransitProviderError) {
-        return { ok: false, reason: cause.reason, ceiling }
+      const reason = refusalReason(cause)
+      if (reason !== null) {
+        return { ok: false, reason, ceiling }
       }
       throw cause
     }
@@ -709,22 +549,7 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
  * reason `saveTransportFn` gives: a patch is a notification and D1 is the record.
  */
 export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      tripId,
-      /** `''` for a connection nobody has saved yet. */
-      transportId: z.string().trim().max(64),
-      mode: z.enum(TRANSPORT_MODES),
-      title: titleText,
-      priceMinor: optionalMinorAmount,
-      currency: optionalCurrency,
-      stations: z
-        .array(stationSchema)
-        .min(2)
-        .max(CHAIN_MAX_LEGS + 1),
-      legs: z.array(chainLegSchema).min(1).max(CHAIN_MAX_LEGS),
-    }),
-  )
+  .validator(saveSearchedConnectionSchema)
   .handler(
     async ({
       data,

@@ -601,6 +601,7 @@ const messages = {
     'Dues parades i una data, i els horaris responen. No es desa res fins que en triïs una.',
   'transports.connection.empty':
     'No s’ha trobat cap connexió entre aquestes dues parades en aquesta data. Prova una estació veïna o amplia el filtre de modes.',
+  'transports.connection.credit': "Dades d'horaris de",
   'transports.connection.searchFailed': 'La cerca no s’ha fet',
   'transports.connection.searchFailedBody':
     'Torna-ho a provar d’aquí a un moment.',
@@ -816,6 +817,7 @@ const messages = {
   'collab.compose.cancelReply': 'Cancel·la la resposta',
   'collab.compose.cancelEdit': 'Cancel·la l’edició',
   'collab.compose.placeholder': 'Escriu al viatge',
+  'collab.compose.placeholderText': 'Digues alguna cosa al grup…',
   'collab.compose.editPlaceholder': 'Edita el teu missatge',
   'collab.compose.editPlaceholderText': 'Canvia el que has dit…',
   'collab.compose.send': 'Envia el missatge',

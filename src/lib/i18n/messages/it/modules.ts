@@ -608,6 +608,7 @@ const messages = {
     'Due fermate e una data, e l’orario risponde. Niente viene salvato finché non ne scegli una.',
   'transports.connection.empty':
     'Nessuna connessione trovata fra quelle due fermate in quella data. Prova una stazione vicina, o allarga il filtro dei modi.',
+  'transports.connection.credit': 'Dati sugli orari forniti da',
   'transports.connection.searchFailed': 'La ricerca non è partita',
   'transports.connection.searchFailedBody': 'Riprova fra un momento.',
   'transports.connection.saved': 'Connessione salvata',
@@ -822,6 +823,7 @@ const messages = {
   'collab.compose.cancelReply': 'Annulla la risposta',
   'collab.compose.cancelEdit': 'Annulla la modifica',
   'collab.compose.placeholder': 'Scrivi al viaggio',
+  'collab.compose.placeholderText': 'Scrivi qualcosa al gruppo…',
   'collab.compose.editPlaceholder': 'Modifica il tuo messaggio',
   'collab.compose.editPlaceholderText': 'Cambia quello che hai detto…',
   'collab.compose.send': 'Invia il messaggio',

@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, count, eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { member, organization, user as userTable } from '#/server/db/auth-schema'
 import type { AuthDb } from './db'
@@ -64,28 +64,44 @@ async function reserveSlug(db: AuthDb, base: string): Promise<string> {
 }
 
 /**
- * Creates the user's personal organization and their `owner` membership.
- * Idempotent: a user who already belongs to an organization is left alone, so a
- * retried hook cannot spawn duplicates.
+ * How many workspaces one account may belong to. The organization plugin's `organizationLimit`
+ * reads this, and so does workspace creation, which is why it is one exported value: the plugin
+ * enforces its limit only inside its own `organization/create` endpoint, and creation no longer
+ * goes through that endpoint.
  */
-export async function provisionPersonalOrganization(
-  db: AuthDb,
-  user: { id: string; name?: string | null; email: string },
-): Promise<string> {
-  const existing = await firstOrganizationIdFor(db, user.id)
-  if (existing) return existing
+export const WORKSPACE_LIMIT = 20
 
+/**
+ * Writes an organization and the `owner` membership of `user` in one batch, reserving a free slug.
+ *
+ * The one writer of that pair: sign-up provisioning and workspace creation both end here, so the two
+ * rows can never be written apart. `slugBase` is where the slug starts and defaults to the name; the
+ * personal workspace passes its own, which is why it keeps the slug it always had. `metadata` is
+ * written through as JSON, or as `null`.
+ */
+export async function createOrganizationFor(
+  db: AuthDb,
+  user: { id: string },
+  input: {
+    name: string
+    metadata: Record<string, unknown> | null
+    slugBase?: string
+  },
+): Promise<string> {
   const organizationId = nanoid(24)
-  const slug = await reserveSlug(db, personalOrganizationSlug(user))
+  const slug = await reserveSlug(
+    db,
+    input.slugBase ?? (slugify(input.name) || 'workspace'),
+  )
   const now = new Date()
 
   await db.batch([
     db.insert(organization).values({
       id: organizationId,
-      name: personalOrganizationName(user),
+      name: input.name,
       slug,
       logo: null,
-      metadata: JSON.stringify({ personal: true }),
+      metadata: input.metadata === null ? null : JSON.stringify(input.metadata),
       createdAt: now,
       updatedAt: now,
     }),
@@ -99,6 +115,55 @@ export async function provisionPersonalOrganization(
   ])
 
   return organizationId
+}
+
+/**
+ * {@link createOrganizationFor}, held to `limit` memberships by the write itself.
+ *
+ * A count taken before the write cannot hold the limit: several requests in flight each read the
+ * same count and each write. So the count is taken again once the batch is in, and a workspace that
+ * took the account past `limit` is removed and `null` is returned. Two racing creates may both see
+ * the overshoot and both withdraw, which refuses a create that would have fit; the account is left
+ * over the limit only if the recount or the withdrawal itself fails. The removal deletes the
+ * membership first, then the organization.
+ */
+export async function createOrganizationWithinLimit(
+  db: AuthDb,
+  user: { id: string },
+  input: Parameters<typeof createOrganizationFor>[2],
+  limit: number,
+): Promise<string | null> {
+  const organizationId = await createOrganizationFor(db, user, input)
+  const [memberships] = await db
+    .select({ n: count() })
+    .from(member)
+    .where(eq(member.userId, user.id))
+  if (memberships.n <= limit) return organizationId
+
+  await db.batch([
+    db.delete(member).where(eq(member.organizationId, organizationId)),
+    db.delete(organization).where(eq(organization.id, organizationId)),
+  ])
+  return null
+}
+
+/**
+ * Creates the user's personal organization and their `owner` membership.
+ * Idempotent: a user who already belongs to an organization is left alone, so a
+ * retried hook cannot spawn duplicates.
+ */
+export async function provisionPersonalOrganization(
+  db: AuthDb,
+  user: { id: string; name?: string | null; email: string },
+): Promise<string> {
+  const existing = await firstOrganizationIdFor(db, user.id)
+  if (existing) return existing
+
+  return createOrganizationFor(db, user, {
+    name: personalOrganizationName(user),
+    metadata: { personal: true },
+    slugBase: personalOrganizationSlug(user),
+  })
 }
 
 /** The organization a returning user should land in: their oldest membership. */

@@ -5,7 +5,7 @@
  * stop-by-stop detail. What is chosen is saved as an **ordinary journey** — the same chain
  * `03-S2b` writes — so it is editable afterwards like anything typed by hand, and a journey saved
  * this way can have its route re-searched and replaced in place without losing its identity, its
- * status or its booking code.
+ * status, its booking code or the day it is anchored to.
  *
  * Four things are worth knowing before reading the code.
  *
@@ -43,10 +43,13 @@ import {
   Input,
   Skeleton,
 } from '#/components/ui'
+import { MapCreditList } from '#/components/map/map-attribution'
 import { cn } from '#/lib/cn'
+import { HERE_CREDITS } from '#/lib/geo/credits'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
+import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
 import {
   saveSearchedConnectionFn,
   searchConnectionsFn,
@@ -54,7 +57,6 @@ import {
 } from '#/server/fns/transports'
 import { useAction } from '../shared'
 import { formatGap } from './connections'
-import { CHAIN_MAX_LEGS } from './leg-form'
 import { modeIcon } from './mode-icon'
 import { MODE_LABELS } from './vocabulary'
 
@@ -69,6 +71,17 @@ import type {
   TransitMode,
 } from '#/server/fns/transports'
 import type { TransportDayData } from './types'
+
+/**
+ * The HERE credit as the map's credit list takes it.
+ *
+ * The list is the one implementation of "a credit link" (`MapCreditList`), so the connection search
+ * discharges its obligation through it rather than through a second mechanism.
+ */
+const HERE_CREDIT_LINKS = HERE_CREDITS.map((credit) => ({
+  label: credit.name,
+  href: credit.url,
+}))
 
 /* ------------------------------------------------------------------- filter */
 
@@ -221,7 +234,7 @@ function zoneAt(
  *
  * The station two legs meet at is written once, from the arrival endpoint of the earlier one, so
  * the two rows cannot disagree about which station they name — the join guarantee
- * `replaceTransportChain` is built around, kept on this side of the wire too.
+ * `saveTransport` is built around, kept on this side of the wire too.
  *
  * The zone is set on the two outer stations only — see {@link zoneAt}.
  *
@@ -550,7 +563,7 @@ export type ConnectionRefusal = Extract<ConnectionSearchOutcome, { ok: false }>
  * journey down by hand.
  *
  * Both halves are chosen here rather than carried on the wire. The errors behind these reasons
- * (`RateCeilingError`, `TransitProviderError`) hold an English sentence because that sentence is
+ * (`RateCeilingError`, `TransitProviderError`, `ProviderBlockedError`) hold an English sentence because that sentence is
  * for the log; rendering it would hand a reader in one of twenty-three languages the diagnostic,
  * and the parity gate would never see it because it is not a key. The reason and the ceiling are
  * facts, so they cross the wire; the words are the catalogue's.
@@ -594,8 +607,14 @@ export function refusalBody(
  * before anything was asked, a refusal, an answer with nothing in it, and the list. The skeleton is
  * the same three rows at the same height the results occupy, so an answer landing changes what is
  * in the box and never how tall it is.
+ *
+ * **The HERE credit belongs to the last state only.** It is owed where a routed answer is shown
+ * (ADR 0019), and only the list shows one. It sits after the last row, inside the dialog's
+ * scrolling body, so no footer or other control covers it. The skeleton reserves no line for it:
+ * the list already grows past the skeleton's three rows when the answer has more, so one caption
+ * line at the end of the scroll body is no new shift.
  */
-function SearchOutcome({
+export function SearchOutcome({
   pending,
   outcome,
   results,
@@ -656,18 +675,24 @@ function SearchOutcome({
   }
 
   return (
-    <ul className="flex flex-col gap-2">
-      {results.map((connection) => (
-        <ConnectionRow
-          key={connection.id}
-          connection={connection}
-          expanded={expanded === connection.id}
-          saving={saving}
-          onToggle={() => onToggle(connection.id)}
-          onSave={() => onSave(connection)}
-        />
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-2">
+        {results.map((connection) => (
+          <ConnectionRow
+            key={connection.id}
+            connection={connection}
+            expanded={expanded === connection.id}
+            saving={saving}
+            onToggle={() => onToggle(connection.id)}
+            onSave={() => onSave(connection)}
+          />
+        ))}
+      </ul>
+      <p data-part="connection-credit" className="mt-3 text-caption text-ink-3">
+        {t('modules.transports.connection.credit')}{' '}
+        <MapCreditList credits={HERE_CREDIT_LINKS} />
+      </p>
+    </>
   )
 }
 

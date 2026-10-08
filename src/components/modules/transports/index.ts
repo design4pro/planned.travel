@@ -40,7 +40,6 @@ export type {
 } from './connections'
 
 export {
-  CHAIN_MAX_LEGS,
   MODE_LABELS,
   STATUS_LABELS as TRANSPORT_STATUS_LABELS,
   TRANSPORT_MODES,

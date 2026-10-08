@@ -556,6 +556,7 @@ const messages = {
     '정류장 둘과 날짜만 있으면 시간표가 답합니다. 고르기 전까지는 아무것도 저장되지 않습니다.',
   'transports.connection.empty':
     '그 날짜에 두 정류장을 잇는 연결을 찾지 못했습니다. 이웃 역을 시도하거나 수단 필터를 넓혀 보세요.',
+  'transports.connection.credit': '시간표 데이터 출처:',
   'transports.connection.searchFailed': '검색이 실행되지 않았습니다',
   'transports.connection.searchFailedBody': '잠시 후 다시 시도하세요.',
   'transports.connection.saved': '연결을 저장했습니다',
@@ -759,6 +760,7 @@ const messages = {
   'collab.compose.cancelReply': '답글 취소',
   'collab.compose.cancelEdit': '편집 취소',
   'collab.compose.placeholder': '여행에 남기기',
+  'collab.compose.placeholderText': '그룹에 한마디 남기기…',
   'collab.compose.editPlaceholder': '내 메시지 편집',
   'collab.compose.editPlaceholderText': '쓴 내용 바꾸기…',
   'collab.compose.send': '메시지 보내기',

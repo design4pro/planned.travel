@@ -18,9 +18,10 @@ export interface MapCreditListProps {
  *
  * Inline elements only, so this drops into a sentence as readily as into the
  * pill below — and it exists precisely so there is one implementation of "a
- * credit link" rather than one per surface that owes a credit. The two surfaces
- * are the pill, which credits the tiles, and the "basemap unavailable" panel,
- * which credits the outlines it is drawing in their place.
+ * credit link" rather than one per surface that owes a credit. The surfaces
+ * are the pill, which credits the tiles, the "basemap unavailable" panel,
+ * which credits the outlines it is drawing in their place, and the transit
+ * connection search, which credits HERE under its ranked list.
  */
 export function MapCreditList({ credits }: MapCreditListProps) {
   return (
