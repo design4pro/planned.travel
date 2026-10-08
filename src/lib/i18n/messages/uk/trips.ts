@@ -329,6 +329,22 @@ const messages = {
     'У подорожі може бути щонайбільше {limit} гостей: довший список ускладнює вибір учасників і читання розподілу витрат',
   'people.error.guestMergeTarget':
     'Оберіть когось, хто вже бере участь у подорожі',
+  'plan.weather.badge.forecast':
+    'Прогноз: {condition}, максимум {max}, мінімум {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Прогноз: максимум {max}, мінімум {min}',
+  'plan.weather.badge.unavailable': 'Погода на цей день недоступна',
+  'plan.weather.badge.loading': 'Завантаження погоди',
+  'plan.weather.condition.clear': 'Ясно',
+  'plan.weather.condition.fair': 'Малохмарно',
+  'plan.weather.condition.partlyCloudy': 'Мінлива хмарність',
+  'plan.weather.condition.cloudy': 'Хмарно',
+  'plan.weather.condition.fog': 'Туман',
+  'plan.weather.condition.rain': 'Дощ',
+  'plan.weather.condition.heavyRain': 'Сильний дощ',
+  'plan.weather.condition.sleet': 'Мокрий сніг',
+  'plan.weather.condition.snow': 'Сніг',
+  'plan.weather.condition.thunder': 'Гроза',
 } satisfies TranslationOf<typeof En>
 
 export default messages
