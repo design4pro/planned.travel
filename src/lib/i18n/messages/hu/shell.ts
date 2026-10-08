@@ -71,6 +71,18 @@ const messages = {
   'workspace.switchFailed': 'Nem sikerült munkaterületet váltani',
   'workspace.switchFailedBody':
     'Ellenőrizze a kapcsolatot, majd próbálja újra.',
+  'workspace.create': 'Munkaterület létrehozása',
+  'workspace.createTitle': 'Új munkaterület létrehozása',
+  'workspace.createDescription':
+    'Külön terület a saját utazásoknak, helyeknek és embereknek. Az Ingyenes csomaggal indul.',
+  'workspace.createName': 'A munkaterület neve',
+  'workspace.createUpgrade':
+    'További munkaterületek létrehozása a fizetős csomagok része.',
+  'workspace.createLimitReached':
+    'Elérte azt a legnagyobb munkaterület-számot, amelynek egy fiók tagja lehet.',
+  'workspace.createRoleRequired':
+    'Munkaterületet csak a munkaterület adminisztrátora hozhat létre. Kérje meg ennek a munkaterületnek az adminisztrátorát, vagy váltson olyan munkaterületre, amelyet Ön kezel.',
+  'workspace.createFailed': 'Nem sikerült létrehozni a munkaterületet',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Megjelenés',

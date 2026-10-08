@@ -3,9 +3,10 @@
 import '#/components/ui/__tests__/test-env'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
@@ -31,6 +32,7 @@ const router = vi.hoisted(() => ({
   navigate: vi.fn(),
 }))
 const notify = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+const workspace = vi.hoisted(() => ({ create: vi.fn() }))
 
 vi.mock('#/lib/auth/client', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -52,6 +54,9 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 vi.mock('sonner', () => ({ toast: notify }))
+vi.mock('#/server/fns/workspace', () => ({
+  createWorkspaceFn: workspace.create,
+}))
 
 const EN: Catalogue = {
   ...namespaceCatalogue('shell', Shell),
@@ -137,6 +142,7 @@ beforeEach(() => {
   router.invalidate.mockReset()
   router.navigate.mockReset()
   notify.error.mockReset()
+  workspace.create.mockReset()
   auth.setActive.mockResolvedValue({ data: {}, error: null })
   router.invalidate.mockResolvedValue(undefined)
   router.navigate.mockResolvedValue(undefined)
@@ -160,10 +166,11 @@ describe('the workspace switcher in the account menu', () => {
     ])
   })
 
-  it('offers no way to create a workspace in this slice', async () => {
-    await mount(sessionOf([ALPHA, BETA]))
+  it('offers "Create workspace" to every reader, enabled, whatever their workspaces', async () => {
+    await mount(sessionOf([ALPHA]))
 
-    expect(screen.queryByText(/create/i)).toBeNull()
+    const item = screen.getByRole('menuitem', { name: 'Create workspace' })
+    expect(item.getAttribute('aria-disabled')).toBeNull()
     expect(auth.setActive).not.toHaveBeenCalled()
   })
 
@@ -429,5 +436,215 @@ describe('a long list', () => {
     expect(document.activeElement).toBe(
       screen.getByRole('menuitemradio', { name: 'Workspace 10' }),
     )
+  })
+})
+
+describe('creating a workspace', () => {
+  async function openDialog(session: ShellSession = sessionOf([ALPHA, BETA])) {
+    const mounted = await mount(session)
+    await mounted.user.click(
+      screen.getByRole('menuitem', { name: 'Create workspace' }),
+    )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Create a workspace',
+    })
+    return { ...mounted, dialog }
+  }
+
+  async function submit(
+    user: ReturnType<typeof userEvent.setup>,
+    name: string,
+  ) {
+    await user.type(
+      screen.getByRole('textbox', { name: /Workspace name/ }),
+      name,
+    )
+    await user.click(screen.getByRole('button', { name: 'Create workspace' }))
+  }
+
+  it('opens a labelled dialog beside the menu, which closes, and says it starts on Free', async () => {
+    const { dialog } = await openDialog()
+
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(dialog.textContent).toContain('It starts on the Free plan.')
+    expect(document.activeElement).toBe(
+      screen.getByRole('textbox', { name: /Workspace name/ }),
+    )
+  })
+
+  it('will not submit a blank name', async () => {
+    const { user } = await openDialog()
+
+    expect(
+      screen
+        .getByRole('button', { name: 'Create workspace' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    await user.type(
+      screen.getByRole('textbox', { name: /Workspace name/ }),
+      '   ',
+    )
+    expect(
+      screen
+        .getByRole('button', { name: 'Create workspace' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    expect(workspace.create).not.toHaveBeenCalled()
+  })
+
+  it('creates it, closes the dialog and lands in the new workspace the way a switch does', async () => {
+    const calls: Array<string> = []
+    workspace.create.mockImplementation(async () => {
+      calls.push('create')
+      return { ok: true, organizationId: 'org_new' }
+    })
+    router.clearCache.mockImplementation(() => {
+      calls.push('clearCache')
+    })
+    router.navigate.mockImplementation(async () => {
+      calls.push('navigate')
+    })
+    router.invalidate.mockImplementation(async () => {
+      calls.push('invalidate')
+    })
+    const { user } = await openDialog()
+
+    await submit(user, '  Lisbon  ')
+
+    await vi.waitFor(() => {
+      expect(calls).toEqual(['create', 'clearCache', 'navigate', 'invalidate'])
+    })
+    expect(workspace.create).toHaveBeenCalledExactlyOnceWith({
+      data: { name: 'Lisbon' },
+    })
+    expect(router.navigate).toHaveBeenCalledWith({
+      to: '/dashboard',
+      replace: true,
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    // Creation never goes through the client-side plugin endpoint.
+    expect(auth.setActive).not.toHaveBeenCalled()
+  })
+
+  it('returns focus to the account menu trigger when the dialog closes', async () => {
+    const { user } = await openDialog()
+
+    await user.keyboard('{Escape}')
+
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Account menu' }),
+    )
+  })
+
+  it('explains an upgrade refusal with the link to billing, and keeps the name', async () => {
+    workspace.create.mockResolvedValue({
+      ok: false,
+      reason: 'upgrade-required',
+    })
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(
+      'Creating more workspaces is part of a paid plan.',
+    )
+    expect(
+      within(alert)
+        .getByRole('link', { name: 'Plan and billing' })
+        .getAttribute('href'),
+    ).toBe('/settings/billing')
+    expect(
+      (
+        screen.getByRole('textbox', {
+          name: /Workspace name/,
+        }) as HTMLInputElement
+      ).value,
+    ).toBe('Lisbon')
+    expect(router.navigate).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [
+      'limit-reached',
+      'You have reached the most workspaces one account can belong to.',
+    ],
+    [
+      'role-required',
+      'Only a workspace admin can create a workspace. Ask an admin of this workspace, or switch to a workspace you administer.',
+    ],
+  ])(
+    'says %s categorically, with no billing link and no number',
+    async (reason, copy) => {
+      workspace.create.mockResolvedValue({ ok: false, reason })
+      const { user } = await openDialog()
+
+      await submit(user, 'Lisbon')
+
+      const alert = await screen.findByRole('alert')
+      expect(alert.textContent).toContain(copy)
+      expect(within(alert).queryByRole('link')).toBeNull()
+      expect(alert.textContent).not.toMatch(/\d/)
+      expect(router.navigate).not.toHaveBeenCalled()
+    },
+  )
+
+  it('shows the authored sentence of a thrown refusal', async () => {
+    workspace.create.mockRejectedValue(
+      new Error(
+        encodePublicFailure({
+          kind: 'refusal',
+          message:
+            'Creating a workspace is unavailable while you are impersonating someone.',
+        }),
+      ),
+    )
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Creating a workspace is unavailable while you are impersonating someone.',
+    )
+  })
+
+  it('falls back to the catalogue sentence for any other failure, and re-reads the shell', async () => {
+    workspace.create.mockRejectedValue(new Error('D1_ERROR: no such column'))
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe('Could not create the workspace')
+    expect(alert.textContent).not.toContain('D1_ERROR')
+    // Activation can fail after the workspace was written; the switcher should then list it.
+    expect(router.invalidate).toHaveBeenCalled()
+  })
+
+  it('starts the next opening clean', async () => {
+    workspace.create.mockResolvedValue({ ok: false, reason: 'role-required' })
+    const { user } = await openDialog()
+    await submit(user, 'Lisbon')
+    await screen.findByRole('alert')
+    await user.keyboard('{Escape}')
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Account menu' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Create workspace' }))
+
+    await screen.findByRole('dialog', { name: 'Create a workspace' })
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(
+      (
+        screen.getByRole('textbox', {
+          name: /Workspace name/,
+        }) as HTMLInputElement
+      ).value,
+    ).toBe('')
   })
 })

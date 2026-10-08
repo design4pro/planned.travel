@@ -67,6 +67,18 @@ const messages = {
   'workspace.label': 'Arbetsyta',
   'workspace.switchFailed': 'Det gick inte att byta arbetsyta',
   'workspace.switchFailedBody': 'Kontrollera din uppkoppling och försök igen.',
+  'workspace.create': 'Skapa arbetsyta',
+  'workspace.createTitle': 'Skapa en arbetsyta',
+  'workspace.createDescription':
+    'En separat yta med egna resor, platser och personer. Den startar i planen Gratis.',
+  'workspace.createName': 'Arbetsytans namn',
+  'workspace.createUpgrade':
+    'Att skapa fler arbetsytor ingår i en betald plan.',
+  'workspace.createLimitReached':
+    'Du har nått det största antalet arbetsytor som ett konto kan tillhöra.',
+  'workspace.createRoleRequired':
+    'Bara en administratör för arbetsytan kan skapa en arbetsyta. Fråga en administratör för den här arbetsytan eller byt till en arbetsyta som du administrerar.',
+  'workspace.createFailed': 'Det gick inte att skapa arbetsytan',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Utseende',

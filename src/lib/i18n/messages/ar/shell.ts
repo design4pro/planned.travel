@@ -74,6 +74,17 @@ const messages = {
   'workspace.label': 'مساحة العمل',
   'workspace.switchFailed': 'تعذّر تبديل مساحة العمل',
   'workspace.switchFailedBody': 'تحقق من اتصالك ثم أعد المحاولة.',
+  'workspace.create': 'إنشاء مساحة عمل',
+  'workspace.createTitle': 'إنشاء مساحة عمل جديدة',
+  'workspace.createDescription':
+    'مساحة منفصلة برحلاتها وأماكنها وأشخاصها. تبدأ على الخطة المجانية.',
+  'workspace.createName': 'اسم مساحة العمل',
+  'workspace.createUpgrade': 'إنشاء مساحات عمل إضافية جزء من الخطط المدفوعة.',
+  'workspace.createLimitReached':
+    'وصلت إلى أقصى عدد من مساحات العمل يمكن لحساب واحد الانضمام إليه.',
+  'workspace.createRoleRequired':
+    'يمكن لمشرف مساحة العمل فقط إنشاء مساحة عمل. اطلب ذلك من مشرف هذه المساحة، أو انتقل إلى مساحة تشرف عليها.',
+  'workspace.createFailed': 'تعذّر إنشاء مساحة العمل',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'المظهر',

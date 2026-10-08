@@ -2554,4 +2554,105 @@ test.describe('switching workspace', () => {
     await expect(page.getByText(FIRST.trip).first()).toBeVisible()
     await expect(page.getByText(SECOND.trip)).toHaveCount(0)
   })
+
+  async function openCreateDialog(page: Page): Promise<void> {
+    await page.getByRole('button', { name: 'Account menu' }).click()
+    await page.getByRole('menuitem', { name: 'Create workspace' }).click()
+    await expect(
+      page.getByRole('dialog', { name: 'Create a workspace' }),
+    ).toBeVisible()
+  }
+
+  /**
+   * The seed gives the first workspace a Crew subscription and the second none, so one demo account
+   * walks both arms of the plan gate. Each arm signs in on its own for the reason given above the
+   * block: creating a workspace activates it on the session row.
+   *
+   * The paid arm leaves a workspace behind (there is no way to delete one yet), and the account is
+   * limited to twenty; a database seeded afresh per run, as the gate does, never gets near that.
+   */
+  test('a paid workspace creates another and lands in it empty', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000)
+    await context.clearCookies()
+    expect(
+      await signIn(page, baseURL),
+      `${DEMO_EMAIL} could not sign in - run \`node scripts/seed/seed.mjs\``,
+    ).toBe(true)
+    if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
+
+    const created = `Created in e2e ${Date.now()}`
+    // `networkidle`: a press on the account menu before hydration opens nothing.
+    await page.goto('/dashboard', { waitUntil: 'networkidle' })
+    await expectActive(page, FIRST.name)
+
+    await openCreateDialog(page)
+    await page.getByRole('textbox', { name: /Workspace name/ }).fill(created)
+    await page
+      .getByRole('dialog', { name: 'Create a workspace' })
+      .getByRole('button', { name: 'Create workspace' })
+      .click()
+
+    await expect(page).toHaveURL(/\/dashboard$/)
+    await expectActive(page, created)
+
+    await visit(page, TRIPS, 'light')
+    await expect(
+      page.getByText(FIRST.trip),
+      'a new workspace starts empty: the first one’s trips must not follow the reader in',
+    ).toHaveCount(0)
+    await expect(page.getByText(SECOND.trip)).toHaveCount(0)
+  })
+
+  test('a free workspace is shown the upgrade and gains no workspace', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000)
+    await context.clearCookies()
+    expect(
+      await signIn(page, baseURL),
+      `${DEMO_EMAIL} could not sign in - run \`node scripts/seed/seed.mjs\``,
+    ).toBe(true)
+
+    // `networkidle`: a press on the account menu before hydration opens nothing.
+    await page.goto('/dashboard', { waitUntil: 'networkidle' })
+    await switchTo(page, SECOND.name)
+
+    await openCreateDialog(page)
+    const dialog = page.getByRole('dialog', { name: 'Create a workspace' })
+    await page
+      .getByRole('textbox', { name: /Workspace name/ })
+      .fill('Should not exist')
+    await dialog.getByRole('button', { name: 'Create workspace' }).click()
+
+    await expect(
+      dialog.getByRole('alert'),
+      'a refusal is explained in the dialog the reader is looking at',
+    ).toContainText('part of a paid plan')
+    await expect(
+      dialog.getByRole('link', { name: 'Plan and billing' }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('textbox', { name: /Workspace name/ }),
+      'a refusal wrote nothing, so what was typed stays',
+    ).toHaveValue('Should not exist')
+
+    await page.keyboard.press('Escape')
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.getByRole('button', { name: 'Account menu' }).click()
+    // Waits for the list itself first, so the absence below is not read from a menu not yet open.
+    // Counted by name, not by size: the paid journey creates a workspace on the same account.
+    await expect(
+      page.getByRole('menuitemradio', { name: SECOND.name }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('menuitemradio', { name: 'Should not exist' }),
+    ).toHaveCount(0)
+    await page.keyboard.press('Escape')
+  })
 })

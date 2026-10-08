@@ -65,6 +65,18 @@ const messages = {
   'workspace.label': 'Spazio',
   'workspace.switchFailed': 'Non è stato possibile cambiare spazio',
   'workspace.switchFailedBody': 'Controlla la connessione e riprova.',
+  'workspace.create': 'Crea spazio',
+  'workspace.createTitle': 'Crea uno spazio',
+  'workspace.createDescription':
+    'Uno spazio separato con i suoi viaggi, luoghi e persone. Parte dal piano Gratuito.',
+  'workspace.createName': 'Nome dello spazio',
+  'workspace.createUpgrade':
+    'Creare altri spazi fa parte di un piano a pagamento.',
+  'workspace.createLimitReached':
+    'Hai raggiunto il numero massimo di spazi a cui può appartenere un account.',
+  'workspace.createRoleRequired':
+    'Solo un amministratore dello spazio può creare uno spazio. Chiedilo a un amministratore di questo spazio o passa a uno spazio che amministri.',
+  'workspace.createFailed': 'Non è stato possibile creare lo spazio',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Aspetto',

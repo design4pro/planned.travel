@@ -108,12 +108,12 @@ alternative** - though it is the design that would fix the two-tab limitation in
 | Layer           | File                                                     | Change                                                                                                                                                                                                                              |
 | --------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Provisioning    | `src/server/auth/provisioning.ts`                        | **Generalise** the existing batch into `createOrganizationFor(db, user, { name, metadata })`; `provisionPersonalOrganization` becomes its personal-workspace caller. `reserveSlug` stays private - both callers are in this module. |
-| Server function | `src/routes/_app/-server/workspace.ts` (**new**)         | `createWorkspace` - Zod-validated, gates on `resolveQuotas().planId`, calls `createOrganizationFor`, activates the result.                                                                                                          |
+| Server function | `src/server/fns/workspace.ts` (**new**)                  | `createWorkspaceFn` - Zod-validated; the rules are the plain `createWorkspace` in `workspace-writes.ts`: role, impersonation, plan, limit, `createOrganizationFor`, activation (Amendment 11).                                      |
 | Auth config     | `src/server/auth/index.ts:400`                           | `allowUserToCreateOrganization: true` → `false`. One line.                                                                                                                                                                          |
 | Shell UI        | `src/components/layout/workspace-switcher.tsx` (**new**) | The radio list and the create item.                                                                                                                                                                                                 |
 | Shell UI        | `src/components/layout/user-menu.tsx`                    | Replace the `<p>` at `:90-94`; own the dialog's open state (see UI/UX).                                                                                                                                                             |
 | Shell UI        | `src/components/layout/menu.tsx`                         | Add a `max-h`/scroll container to the switcher's list region only - see UI/UX.                                                                                                                                                      |
-| Copy            | `src/lib/i18n/messages/<locale>/shell.ts`                | Eight new keys, all 23 locales.                                                                                                                                                                                                     |
+| Copy            | `src/lib/i18n/messages/<locale>/shell.ts`                | Eleven new keys, all 23 locales (Amendment 12).                                                                                                                                                                                     |
 
 **The owner module of workspace creation is `src/server/auth/provisioning.ts`**, not
 `src/server/repos/members.ts`, and this is a correction to the obvious first instinct. That module
@@ -161,45 +161,58 @@ personal workspace the only one carrying it, and what to do about that.
 
 ## 📝 API Contracts
 
-### `createWorkspace` - `src/routes/_app/-server/workspace.ts`
+### `createWorkspace` - `src/server/fns/workspace-writes.ts`
 
 ```ts
-export const createWorkspaceInput = z.object({
+export const createWorkspaceInput = z.strictObject({
   name: z.string().trim().min(1).max(60),
 })
 
 export type CreateWorkspaceResult =
   | { readonly ok: true; readonly organizationId: string }
-  | { readonly ok: false; readonly reason: 'upgrade-required' }
+  | {
+      readonly ok: false
+      readonly reason: 'upgrade-required' | 'limit-reached' | 'role-required'
+    }
 
-export const createWorkspace = createServerFn({ method: 'POST' })
-  .validator(createWorkspaceInput)
-  .handler(async ({ data }): Promise<CreateWorkspaceResult> => { … })
+export async function createWorkspace(
+  ports: CreateWorkspacePorts,
+  input: CreateWorkspaceInput,
+): Promise<CreateWorkspaceResult> { … }
 ```
 
-**The refusal is returned, not thrown, and that is a deliberate contract choice.** `src/lib/errors.ts`
+`createWorkspaceFn` in `src/server/fns/workspace.ts` is the `createServerFn` wrapper that supplies the
+ports from the request. **The refusals the reader can act on are returned, not thrown, and that is a
+deliberate contract choice.** `src/lib/errors.ts`
 documents that by the time a failure reaches the browser it is _"an `Error` with a `message` and
 nothing else"_, and `readPublicFailure` decodes only `{ kind, message?, code?, reference? }`, where `code` is
 the single allow-listed literal `QUOTA_EXCEEDED` (#621). There is no channel for a structured code
 plus parameters (the one `code` it carries is a bare constant). Throwing would leave two bad options: send an English
 sentence from the server (forbidden - CLAUDE.md: user-facing copy is never hardcoded), or send a key
 the client must then map anyway. A discriminated result keeps the refusal machine-readable, lets the
-client render catalogue copy, and needs no new error machinery.
+client render catalogue copy, and needs no new error machinery. An impersonated session is the one
+refusal that is thrown: `AuthRequirementError('impersonated')`, an access veto with an authored
+sentence, because nothing the reader does changes the answer.
 
-Order of operations:
+Order of operations (each refusal arm writes nothing):
 
-1. `requireUser()` - unauthenticated is the existing auth failure, unchanged.
-2. `resolveQuotas(await appScope())` - if `planId === 'free'`, return
-   `{ ok: false, reason: 'upgrade-required' }` having written nothing.
-3. `createOrganizationFor(auth, user, { name, metadata: null })` - slug reservation and the existing
+1. `appScope()` - unauthenticated is the existing auth failure, unchanged. A caller below `admin`
+   gets `{ ok: false, reason: 'role-required' }` (docs/ACCESS.md §2.7).
+2. `session.impersonatedBy` set → throw `AuthRequirementError('impersonated')` (docs/ACCESS.md §6.4).
+3. `resolveQuotas(scope)` - if `planId === 'free'`, return `{ ok: false, reason: 'upgrade-required' }`.
+4. The caller's workspace count (`auth.api.listOrganizations`) at `WORKSPACE_LIMIT` or more → `{ ok: false, reason: 'limit-reached' }`.
+   The plugin's `organizationLimit` reads the same constant but enforces it only inside its own
+   `organization/create` endpoint, which this path never reaches.
+5. `createOrganizationFor(db, user, { name, metadata: null })` - slug reservation and the existing
    single `db.batch` of organization + owner member.
-4. `auth.api.setActiveOrganization({ headers, body: { organizationId } })`.
+6. `auth.api.setActiveOrganization({ headers, body: { organizationId } })`. A failure here throws with the
+   workspace already written; it stays reachable from the switcher.
 
 **Creating a workspace is a paid capability, and the gate is the plan of the workspace the caller is
 currently in.** Free means exactly one workspace - the personal one provisioned at sign-up - so a
 free account cannot create a second. Solo and Crew may create without a numeric limit.
 
-Step 2 introduces **no new query and no new constant**. `resolveQuotas` (`src/server/repos/base.ts:470`)
+The plan gate introduces **no new query and no new constant**. `resolveQuotas` (`src/server/repos/base.ts:470`)
 already reads the active organization's subscription and returns a `planId`, and it is already the
 single resolver the billing domain goes through (`src/server/billing/limits.ts` is the authority
 order). Gating on its answer means the workspace gate cannot drift out of step with the billing
@@ -207,8 +220,8 @@ screen, which a separate `WORKSPACE_OWNERSHIP_LIMIT` constant would have been fr
 
 Two honest limits of this gate, neither of which is a reason to build something bigger here:
 
-- **"Unlimited" means "up to the plugin's `organizationLimit: 20`"** (`src/server/auth/index.ts:401`),
-  which still applies underneath. Raising it is a one-line config change and is out of scope.
+- **"Unlimited" means "up to `WORKSPACE_LIMIT`, 20"**, which `createWorkspace` enforces itself and the plugin's
+  `organizationLimit` reads. Raising it is a one-line change and is out of scope.
 - **The gate reads the _active_ workspace's plan**, not "does this user pay anywhere". A Solo
   subscriber sitting in a free workspace they were invited into cannot create from there. This is the
   reversible direction - it never grants on a technicality - and the upgrade prompt names the
@@ -276,20 +289,23 @@ the dialog is the existing focus-trapped `Dialog`, first focus on the name field
 
 ## 📝 Copy
 
-Eight keys in the `shell` namespace beside the existing `account.*` block
+Eleven keys in the `shell` namespace beside the existing `account.*` block
 (`src/lib/i18n/messages/en/shell.ts:105-112`), each landing in all 23 locales in the same change per
 the `i18n-messages` skill; the parity test enforces it.
 
-| Key (`en`)                    | Text                                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------------------ |
-| `workspace.label`             | `Workspace`                                                                          |
-| `workspace.switchFailed`      | `Could not switch workspace`                                                         |
-| `workspace.switchFailedBody`  | `Check your connection and try again.`                                               |
-| `workspace.create`            | `Create workspace`                                                                   |
-| `workspace.createTitle`       | `Create a workspace`                                                                 |
-| `workspace.createDescription` | `A separate space for its own trips, places and people. It starts on the Free plan.` |
-| `workspace.createName`        | `Workspace name`                                                                     |
-| `workspace.createUpgrade`     | `Creating more workspaces is part of a paid plan.`                                   |
+| Key (`en`)                     | Text                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `workspace.label`              | `Workspace`                                                                                                               |
+| `workspace.switchFailed`       | `Could not switch workspace`                                                                                              |
+| `workspace.switchFailedBody`   | `Check your connection and try again.`                                                                                    |
+| `workspace.create`             | `Create workspace`                                                                                                        |
+| `workspace.createTitle`        | `Create a workspace`                                                                                                      |
+| `workspace.createDescription`  | `A separate space for its own trips, places and people. It starts on the Free plan.`                                      |
+| `workspace.createName`         | `Workspace name`                                                                                                          |
+| `workspace.createUpgrade`      | `Creating more workspaces is part of a paid plan.`                                                                        |
+| `workspace.createLimitReached` | `You have reached the most workspaces one account can belong to.`                                                         |
+| `workspace.createRoleRequired` | `Only a workspace admin can create a workspace. Ask an admin of this workspace, or switch to a workspace you administer.` |
+| `workspace.createFailed`       | `Could not create the workspace`                                                                                          |
 
 `workspace.createDescription` names the Free plan because of a failure the reader would otherwise
 hit blind: the new workspace has no subscription row of its own (`subscriptions_org_unq`), so it
@@ -348,10 +364,11 @@ moment of the switch.
 `ShellPayload` unchanged; §4 no route added, renamed or removed; §5 eight keys in 23 locales in the
 same PR; §6 no persisted or queued shape changes.
 
-**`docs/ACCESS.md` is not amended.** An earlier draft of this design closed
+**`docs/ACCESS.md` is amended, but `disabledPaths` is not.** An earlier draft of this design closed
 `/organization/create` via `disabledPaths`, which §2.6 forbids in terms. The
 `allowUserToCreateOrganization: false` flag achieves the same closure inside the plugin's own
-configuration, so the access-control document remains true as written.
+configuration, so §2.6's list and `admin-options.test.ts` stand as written. The document gains §2.7
+(who may create a workspace) and a sentence in §6.4 (creation is refused under impersonation).
 
 **Rollback.** Phase 2 reverts cleanly: workspaces created before the revert are ordinary
 `organization` rows with ordinary `member` rows, and nothing understands a shape the old code does
@@ -442,7 +459,7 @@ separate fix makes the reader land in it.
     caller. No new constant and no new query. Tests: the personal path is byte-for-byte unchanged in
     what it writes; a name slugifying to nothing still yields a unique slug; `metadata` is written
     through as given. Verify: `pnpm test`.
-11. **The server function.** `src/routes/_app/-server/workspace.ts` with `createWorkspace` as in API
+11. **The server function.** `src/server/fns/workspace.ts` with `createWorkspace` as in API
     Contracts. Test all three arms: on `free` it returns `{ ok: false, reason: 'upgrade-required' }`
     **and writes nothing** - asserted against the row counts, not the return value alone; on `solo`
     and on `crew` it writes the organization and the owner `member` and sets the session's active
@@ -452,7 +469,7 @@ separate fix makes the reader land in it.
     (`src/server/auth/index.ts:400`) with the comment explaining why. Test: the endpoint refuses and
     `organization/set-active` still answers. Verify: `pnpm test` - including
     `src/server/auth/__tests__/admin-options.test.ts`, which must stay green and untouched.
-13. **Copy and dialog.** Add the five `workspace.create*` keys to all 23 locales. Lift the dialog's
+13. **Copy and dialog.** Add the eight `workspace.create*` keys to all 23 locales. Lift the dialog's
     open state into `user-menu.tsx` as a sibling of `MenuRoot`, wire the create item's callback, and
     flip the step-3 assertion that pinned it inert. Verify: the parity test and the switcher tests.
 14. **The journey, and the gate.** Extend the E2E: create a workspace from the menu, assert the app
@@ -500,3 +517,13 @@ Phase 1 (issue #640, pull request #939) shipped differently from the design abov
 8. **The switch keeps the menu open while it is in flight, and replaces the history entry.** The chosen item shows a spinner, the other items are disabled, a status region inside the menu announces the pending state with the existing `ui.status.loading` copy, and the menu closes once the screen has been re-synced, as the sign-out item does. The in-flight guard lives in `UserMenu` (`useWorkspaceSwitch`), so closing and reopening the menu mid-flight does not start a second switch. The router's cache is cleared before the navigation to `/dashboard`, so a cached dashboard of the previous workspace cannot show under the new name, and the navigation replaces the entry, so Back does not return to a trip of the workspace just left. This replaces the "Switching" row, which says the menu closes on select. The account menu is bounded to the viewport and long workspace names wrap rather than widen it.
 9. **The book-import register is keyed by account and workspace.** `bookImportsOwner` in `import-widget.tsx` builds the key the shell's widget and the import dialog both read, so a reader who switches workspaces no longer sees, polls or dismisses the previous workspace's jobs, and switching back finds them. Registers written under the account-only key are not migrated: each holds only a filename and job ids, and the staged reading itself is untouched.
 10. **A `setActive` is not always visible on the next call.** The KV paragraph of the edge cases says it is. `session.ts` documents that the secondary storage can serve a session up to 60 seconds stale across locations; the workspace it lands in is still one the reader belongs to, because membership is re-read from D1 per request.
+
+### Amendment - 2026-10-08 (Phase 2, issue #804)
+
+Phase 2 shipped differently from the design above in these places.
+
+11. **The server function lives in `src/server/fns`, not `src/routes/_app/-server`.** `createWorkspaceFn` is in `src/server/fns/workspace.ts` and the rules are the plain `createWorkspace` in `workspace-writes.ts`, the split `stays.ts` / `stay-writes.ts` makes: a component may import a server function only from `src/server/fns`, and outside a Start build a server function discards its answer, so the plain function is the half a test can hold. API Contracts above is corrected to match.
+12. **Two more refusals, a role floor and an impersonation veto.** The result gained `limit-reached` and `role-required`, and the copy gained three keys, so Phase 2 adds eight `workspace.create*` keys (`create`, `createTitle`, `createDescription`, `createName`, `createUpgrade`, `createLimitReached`, `createRoleRequired`, `createFailed`), not five. `admin` is the minimum role (docs/ACCESS.md §2.7); a `member` gets `role-required` and never the upgrade prompt, since they cannot pay. An impersonated session is refused by throwing `AuthRequirementError('impersonated')`, not by a returned reason (docs/ACCESS.md §6.4). The workspace limit is counted by `createWorkspace` against `WORKSPACE_LIMIT`, which the plugin's `organizationLimit` also reads, because the plugin enforces it only inside its own endpoint.
+13. **`createOrganizationFor` takes an optional `slugBase`.** The personal workspace's slug starts from the account holder's name, not from the workspace's display name (`"Anna's Travel"` would otherwise slugify to `annas-travel`), so the personal path passes its own base and keeps writing exactly what it wrote. `metadata` is a record or `null`, written through as JSON.
+14. **Two concurrent creates can end one over the limit.** The count (`auth.api.listOrganizations`) and the batch are separate statements, so two requests in flight in the same few milliseconds can both read 19 and both write. The overshoot is bounded by the requests in flight, costs a longer switcher list and no money (a created workspace starts on Free), and is accepted rather than closed with SQL outside `server/repos`.
+15. **The refusal alert is assertive.** The dialog renders every refusal as an `Alert` with `role="alert"`, because a `warning` alert is a polite status region that is inserted already filled and may not be read when it appears. A thrown failure re-reads the router, since activation can fail after the batch committed and the switcher should then list the new workspace.
