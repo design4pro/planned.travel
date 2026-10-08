@@ -28,6 +28,7 @@ import {
   rateMeterKey,
   rateWindowOf,
   spendRateUnit,
+  spendRateUnits,
 } from '../rate'
 
 import type { RateCounterStore } from '../rate'
@@ -136,5 +137,74 @@ describe('the rate meter', () => {
         now: () => new Date('2026-09-01T10:00:00Z'),
       }),
     ).resolves.toBe(1)
+  })
+})
+
+describe('spending several units at once', () => {
+  const input = {
+    metric: 'weather_lookups_per_month',
+    organizationId: 'org-alpha',
+    now: () => new Date('2026-10-08T10:00:00Z'),
+  } as const
+
+  it('reads the tally once and writes it once, whatever the batch size', async () => {
+    const store = memoryStore()
+
+    await expect(
+      spendRateUnits(store, { ...input, ceiling: 300 }, 5),
+    ).resolves.toBe(5)
+
+    expect(store.reads).toHaveLength(1)
+    expect(store.writes).toHaveLength(1)
+    expect([...store.entries.values()]).toEqual(['5'])
+  })
+
+  it('grants no more than is left and records exactly what it granted', async () => {
+    const store = memoryStore()
+    await spendRateUnits(store, { ...input, ceiling: 4 }, 3)
+
+    await expect(
+      spendRateUnits(store, { ...input, ceiling: 4 }, 3),
+    ).resolves.toBe(1)
+    expect([...store.entries.values()]).toEqual(['4'])
+
+    await expect(
+      spendRateUnits(store, { ...input, ceiling: 4 }, 3),
+    ).resolves.toBe(0)
+    expect(store.writes).toHaveLength(2)
+  })
+
+  it('grants nothing, and touches nothing, for a ceiling of zero or a batch of zero', async () => {
+    const store = memoryStore()
+
+    await expect(
+      spendRateUnits(store, { ...input, ceiling: 0 }, 3),
+    ).resolves.toBe(0)
+    await expect(
+      spendRateUnits(store, { ...input, ceiling: 10 }, 0),
+    ).resolves.toBe(0)
+
+    expect(store.reads).toEqual([])
+    expect(store.writes).toEqual([])
+  })
+
+  it('counts against the same tally as a single spend', async () => {
+    const store = memoryStore()
+    await spendRateUnit(store, { ...input, ceiling: 3 })
+
+    await expect(
+      spendRateUnits(store, { ...input, ceiling: 3 }, 5),
+    ).resolves.toBe(2)
+  })
+
+  it('fails open when the counter cannot be read', async () => {
+    const broken: RateCounterStore = {
+      get: () => Promise.reject(new Error('KV unavailable')),
+      put: () => Promise.resolve(),
+    }
+
+    await expect(
+      spendRateUnits(broken, { ...input, ceiling: 2 }, 5),
+    ).resolves.toBe(2)
   })
 })

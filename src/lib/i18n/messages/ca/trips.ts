@@ -320,6 +320,23 @@ const messages = {
   'people.error.guestLimit':
     'Un viatge admet com a màxim {limit} convidats, perquè una llista més llarga fa difícils de llegir la tria de participants i el repartiment de despeses',
   'people.error.guestMergeTarget': 'Tria algú que ja sigui en aquest viatge',
+  'plan.weather.badge.forecast':
+    'Previsió: {condition}, màxima {max}, mínima {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Previsió: màxima {max}, mínima {min}',
+  'plan.weather.badge.unavailable':
+    'El temps no està disponible per a aquest dia',
+  'plan.weather.badge.loading': "S'està carregant el temps",
+  'plan.weather.condition.clear': 'Serè',
+  'plan.weather.condition.fair': 'Bon temps',
+  'plan.weather.condition.partlyCloudy': 'Parcialment ennuvolat',
+  'plan.weather.condition.cloudy': 'Ennuvolat',
+  'plan.weather.condition.fog': 'Boira',
+  'plan.weather.condition.rain': 'Pluja',
+  'plan.weather.condition.heavyRain': 'Pluja intensa',
+  'plan.weather.condition.sleet': 'Aiguaneu',
+  'plan.weather.condition.snow': 'Neu',
+  'plan.weather.condition.thunder': 'Tempesta',
 } satisfies TranslationOf<typeof En>
 
 export default messages

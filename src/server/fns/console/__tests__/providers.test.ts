@@ -184,6 +184,28 @@ describe('saveProviderLimit', () => {
     })
   })
 
+  it.each([
+    ['met-norway', 'MET Norway'],
+    ['nasa-power', 'NASA POWER'],
+  ] as const)(
+    'saves a ceiling for the weather provider %s, which is metered before its client lands',
+    async (slug, label) => {
+      const panel = await saveProviderLimit({
+        ...INPUT,
+        slug,
+        label,
+        callLimit: 5000,
+      })
+
+      expect(panel).toMatchObject({
+        slug,
+        integrated: true,
+        callLimit: 5000,
+        monthToDate: 0,
+      })
+    },
+  )
+
   it('refuses a slug nobody has declared, rather than creating a row for a typo', async () => {
     await expect(
       saveProviderLimit({ ...INPUT, slug: 'geopify' as never }),

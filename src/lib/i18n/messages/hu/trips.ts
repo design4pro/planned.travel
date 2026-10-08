@@ -313,6 +313,22 @@ const messages = {
     'Egy utazáson legfeljebb {limit} vendég lehet, mert egy hosszabb lista nehezen olvashatóvá teszi a résztvevőválasztót és a költségmegosztást',
   'people.error.guestMergeTarget':
     'Válassz valakit, aki már részt vesz az utazáson',
+  'plan.weather.badge.forecast':
+    'Előrejelzés: {condition}, maximum {max}, minimum {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Előrejelzés: maximum {max}, minimum {min}',
+  'plan.weather.badge.unavailable': 'Az időjárás nem érhető el erre a napra',
+  'plan.weather.badge.loading': 'Időjárás betöltése',
+  'plan.weather.condition.clear': 'Tiszta',
+  'plan.weather.condition.fair': 'Derült',
+  'plan.weather.condition.partlyCloudy': 'Részben felhős',
+  'plan.weather.condition.cloudy': 'Felhős',
+  'plan.weather.condition.fog': 'Köd',
+  'plan.weather.condition.rain': 'Eső',
+  'plan.weather.condition.heavyRain': 'Heves eső',
+  'plan.weather.condition.sleet': 'Havas eső',
+  'plan.weather.condition.snow': 'Hó',
+  'plan.weather.condition.thunder': 'Zivatar',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -334,6 +334,21 @@ const messages = {
     'Wycieczka mieści najwyżej {limit} gości, bo dłuższa lista utrudnia wybór uczestników i czytelność podziału kosztów',
   'people.error.guestMergeTarget':
     'Wybierz kogoś, kto już jest na tej wycieczce',
+  'plan.weather.badge.forecast':
+    'Prognoza: {condition}, maks. {max}, min. {min}',
+  'plan.weather.badge.forecastNoCondition': 'Prognoza: maks. {max}, min. {min}',
+  'plan.weather.badge.unavailable': 'Pogoda niedostępna dla tego dnia',
+  'plan.weather.badge.loading': 'Wczytywanie pogody',
+  'plan.weather.condition.clear': 'Bezchmurnie',
+  'plan.weather.condition.fair': 'Pogodnie',
+  'plan.weather.condition.partlyCloudy': 'Częściowe zachmurzenie',
+  'plan.weather.condition.cloudy': 'Pochmurno',
+  'plan.weather.condition.fog': 'Mgła',
+  'plan.weather.condition.rain': 'Deszcz',
+  'plan.weather.condition.heavyRain': 'Ulewny deszcz',
+  'plan.weather.condition.sleet': 'Deszcz ze śniegiem',
+  'plan.weather.condition.snow': 'Śnieg',
+  'plan.weather.condition.thunder': 'Burza',
 } satisfies TranslationOf<typeof En>
 
 export default messages
