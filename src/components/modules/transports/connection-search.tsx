@@ -5,7 +5,7 @@
  * stop-by-stop detail. What is chosen is saved as an **ordinary journey** — the same chain
  * `03-S2b` writes — so it is editable afterwards like anything typed by hand, and a journey saved
  * this way can have its route re-searched and replaced in place without losing its identity, its
- * status or its booking code.
+ * status, its booking code or the day it is anchored to.
  *
  * Four things are worth knowing before reading the code.
  *
