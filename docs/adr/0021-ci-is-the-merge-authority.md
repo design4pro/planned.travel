@@ -73,11 +73,14 @@ complete required-check set on both branches._
 **3. `e2e · merged report` is the journeys' verdict.** It fails unless `needs.e2e.result` is
 `success`, the aggregate over the matrix, so a failed, cancelled or missing shard fails it. The ruleset
 names this job and not the shards, whose check names move with the shard count.
+_Amended by ADR 0037: the job also `needs` `verify` and `test`, and writes the test report as a
+comment on the pull request. The comment never fails the job; the verdict above is unchanged._
 
 **4. The journeys run on every pull request that can change what a browser sees.** A diff that stops
 at `docs/`, `.ai/`, `.claude/` or Markdown outside `src/`, `e2e/` and `public/` skips them
 (`scripts/ci/change-scope.mjs`, #527); anything the classifier does not recognise runs them. A push to
 `develop` or `main` always does. This narrows ADR 0016's "every PR" to the PRs it was about.
+_Amended by ADR 0037: a draft pull request runs none of the jobs; marking it ready starts them._
 
 **5. Deploys run behind a green CI run.** `ci.yml` calls `deploy-staging.yml` (push to `develop`) and
 `deploy.yml` (push to `main`) as its last jobs, behind `verify`, `test` and `e2e-report`. CI no longer
