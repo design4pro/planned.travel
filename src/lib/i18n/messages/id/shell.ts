@@ -82,6 +82,18 @@ const messages = {
   'workspace.label': 'Ruang kerja',
   'workspace.switchFailed': 'Tidak bisa berpindah ruang kerja',
   'workspace.switchFailedBody': 'Periksa koneksi Anda lalu coba lagi.',
+  'workspace.create': 'Buat ruang kerja',
+  'workspace.createTitle': 'Buat ruang kerja baru',
+  'workspace.createDescription':
+    'Ruang terpisah untuk perjalanan, tempat, dan orangnya sendiri. Dimulai dengan paket Gratis.',
+  'workspace.createName': 'Nama ruang kerja',
+  'workspace.createUpgrade':
+    'Membuat lebih banyak ruang kerja adalah bagian dari paket berbayar.',
+  'workspace.createLimitReached':
+    'Anda sudah mencapai jumlah ruang kerja terbanyak yang bisa diikuti satu akun.',
+  'workspace.createRoleRequired':
+    'Hanya administrator ruang kerja yang bisa membuat ruang kerja. Minta administrator ruang kerja ini, atau pindah ke ruang kerja yang Anda kelola.',
+  'workspace.createFailed': 'Tidak bisa membuat ruang kerja',
 
   'theme.label': 'Tampilan',
   'theme.light': 'Terang',
