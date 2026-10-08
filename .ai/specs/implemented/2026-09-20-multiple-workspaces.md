@@ -2,10 +2,10 @@
 
 | Field              | Value       |
 | ------------------ | ----------- |
-| **Status**         | in-progress |
+| **Status**         | implemented |
 | **Issue**          | #640        |
 | **Spec PR**        | #643        |
-| **Implementation** | #939        |
+| **Implementation** | #939, #987  |
 
 ## 📝 TLDR
 
@@ -518,7 +518,7 @@ Phase 1 (issue #640, pull request #939) shipped differently from the design abov
 9. **The book-import register is keyed by account and workspace.** `bookImportsOwner` in `import-widget.tsx` builds the key the shell's widget and the import dialog both read, so a reader who switches workspaces no longer sees, polls or dismisses the previous workspace's jobs, and switching back finds them. Registers written under the account-only key are not migrated: each holds only a filename and job ids, and the staged reading itself is untouched.
 10. **A `setActive` is not always visible on the next call.** The KV paragraph of the edge cases says it is. `session.ts` documents that the secondary storage can serve a session up to 60 seconds stale across locations; the workspace it lands in is still one the reader belongs to, because membership is re-read from D1 per request.
 
-### Amendment - 2026-10-08 (Phase 2, issue #804)
+### Amendment - 2026-10-08 (Phase 2, issue #804, pull request #987)
 
 Phase 2 shipped differently from the design above in these places.
 
