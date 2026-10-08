@@ -611,6 +611,7 @@ const messages = {
     'محطتان وتاريخ، وتجيب الجداول. لا يُحفظ شيء قبل أن تختار.',
   'transports.connection.empty':
     'لم توجد رحلة بين هاتين المحطتين في ذلك التاريخ. جرّب محطة مجاورة أو وسّع مرشّح وسائل النقل.',
+  'transports.connection.credit': 'بيانات الجداول من',
   'transports.connection.searchFailed': 'لم يجرِ البحث',
   'transports.connection.searchFailedBody': 'أعد المحاولة بعد لحظة.',
   'transports.connection.saved': 'حُفظت الرحلة',
