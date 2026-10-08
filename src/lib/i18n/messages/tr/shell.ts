@@ -71,6 +71,18 @@ const messages = {
   'workspace.label': 'Çalışma alanı',
   'workspace.switchFailed': 'Çalışma alanı değiştirilemedi',
   'workspace.switchFailedBody': 'Bağlantınızı kontrol edip yeniden deneyin.',
+  'workspace.create': 'Çalışma alanı oluştur',
+  'workspace.createTitle': 'Çalışma alanı oluşturun',
+  'workspace.createDescription':
+    'Kendi gezileri, yerleri ve kişileri olan ayrı bir alan. Ücretsiz planla başlar.',
+  'workspace.createName': 'Çalışma alanı adı',
+  'workspace.createUpgrade':
+    'Daha fazla çalışma alanı oluşturmak ücretli planın bir parçasıdır.',
+  'workspace.createLimitReached':
+    'Bir hesabın üye olabileceği en yüksek çalışma alanı sayısına ulaştınız.',
+  'workspace.createRoleRequired':
+    'Yeni bir çalışma alanını yalnızca bir çalışma alanı yöneticisi oluşturabilir. Bu çalışma alanının bir yöneticisinden isteyin ya da yönettiğiniz bir çalışma alanına geçin.',
+  'workspace.createFailed': 'Çalışma alanı oluşturulamadı',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Görünüm',

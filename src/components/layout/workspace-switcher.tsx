@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   authClient,
@@ -8,7 +9,7 @@ import {
 } from '#/lib/auth/client'
 import { Spinner } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
-import { MenuLabel, MenuRadioGroup, MenuRadioItem } from './menu'
+import { MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem } from './menu'
 
 import type { ShellOrganization } from './session'
 
@@ -18,14 +19,32 @@ const FORBIDDEN = 403
 const UNAUTHORIZED = 401
 
 /**
+ * Brings the screen in line with the session's active workspace, after it moved.
+ *
+ * The workspace is not in the URL: it is `session.activeOrganizationId`. Goes to `/dashboard`
+ * first and only then drops every cached loader result. The order is the point: invalidating on
+ * `/trips/abc` would re-run that loader against the new workspace and throw not-found for a trip
+ * the reader can no longer see, while `/dashboard` means the same thing in every workspace.
+ * Used by the switch and by creating a workspace, which activates the one it made.
+ */
+export function useWorkspaceResync() {
+  const router = useRouter()
+
+  return async () => {
+    // A cached `/dashboard` of the previous workspace would otherwise show, stale, under the new
+    // workspace's name while it reloads. `replace` keeps Back from returning to a trip that
+    // belongs to the workspace just left.
+    router.clearCache()
+    await router.navigate({ to: '/dashboard', replace: true })
+    await router.invalidate()
+  }
+}
+
+/**
  * The switch itself, owned by a component that outlives the menu.
  *
- * The workspace is not in the URL: it is `session.activeOrganizationId`, so switching is a mutation
- * and the checked item follows `activeId`, which only moves once the router has re-read the shell.
- * Choosing one activates it, goes to `/dashboard`, and only then drops every cached loader result.
- * The order is the point: invalidating on `/trips/abc` would re-run that loader against the new
- * workspace and throw not-found for a trip the reader can no longer see, while `/dashboard` means
- * the same thing in every workspace.
+ * The checked item follows `activeId`, which only moves once the router has re-read the shell.
+ * Choosing one activates it and then re-syncs the screen (see {@link useWorkspaceResync}).
  *
  * Better Auth clears the session's active workspace *before* it refuses a non-member, so a 403 is
  * not "nothing changed": the next request falls back to the oldest membership. The screen is
@@ -44,19 +63,10 @@ export function useWorkspaceSwitch({
   activeId: string | null
   onSettled: () => void
 }): { pendingId: string | null; switchTo: (organizationId: string) => void } {
-  const router = useRouter()
   const t = useTranslate()
+  const resync = useWorkspaceResync()
   const switching = useRef(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
-
-  async function resync(): Promise<void> {
-    // A cached `/dashboard` of the previous workspace would otherwise show, stale, under the new
-    // workspace's name while it reloads. `replace` keeps Back from returning to a trip that
-    // belongs to the workspace just left.
-    router.clearCache()
-    await router.navigate({ to: '/dashboard', replace: true })
-    await router.invalidate()
-  }
 
   async function run(organizationId: string): Promise<void> {
     if (organizationId === activeId || switching.current) return
@@ -110,11 +120,14 @@ export function WorkspaceSwitcher({
   activeId,
   pendingId,
   onSwitch,
+  onCreate,
 }: {
   organizations: ReadonlyArray<ShellOrganization>
   activeId: string | null
   pendingId: string | null
   onSwitch: (organizationId: string) => void
+  /** Raised when "Create workspace" is chosen; the dialog it opens belongs to the caller. */
+  onCreate: () => void
 }) {
   const t = useTranslate()
   const labelId = useId()
@@ -153,6 +166,11 @@ export function WorkspaceSwitcher({
           ))}
         </MenuRadioGroup>
       </div>
+      {/* Visible and enabled for every role and plan: a refusal is explained in the dialog. */}
+      <MenuItem disabled={pendingId !== null} onSelect={onCreate}>
+        <Plus aria-hidden className="size-4 text-ink-4" />
+        {t('shell.workspace.create')}
+      </MenuItem>
       {/* Always mounted, so the text change is what a screen reader announces. */}
       <div role="status" className="sr-only">
         {pendingId === null ? '' : t('ui.status.loading')}

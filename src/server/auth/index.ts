@@ -30,6 +30,7 @@ import { passkey } from './passkey/plugin'
 import {
   provisionPersonalOrganization,
   resolveOrProvisionOrganization,
+  WORKSPACE_LIMIT,
 } from './provisioning'
 import { createKvSecondaryStorage } from './secondary-storage'
 import type { Database } from '#/server/db/types'
@@ -398,8 +399,11 @@ function buildAuth() {
       }),
 
       organization({
-        allowUserToCreateOrganization: true,
-        organizationLimit: 20,
+        // Creation is deliberately server-side only: the plan gate, the role rule, the workspace
+        // limit and the impersonation veto live in `createWorkspace`, and `organization/create` over
+        // HTTP would skip every one of them. `organization/set-active` is unaffected.
+        allowUserToCreateOrganization: false,
+        organizationLimit: WORKSPACE_LIMIT,
         membershipLimit: 100,
         creatorRole: 'owner',
         invitationLimit: 50,

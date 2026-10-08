@@ -53,6 +53,16 @@ const messages = {
   'workspace.label': '워크스페이스',
   'workspace.switchFailed': '워크스페이스를 전환하지 못했어요',
   'workspace.switchFailedBody': '연결을 확인하고 다시 시도해 주세요.',
+  'workspace.create': '워크스페이스 만들기',
+  'workspace.createTitle': '새 워크스페이스 만들기',
+  'workspace.createDescription':
+    '자체 여행, 장소, 사람을 따로 모아 두는 별도의 공간이에요. 프리 요금제로 시작해요.',
+  'workspace.createName': '워크스페이스 이름',
+  'workspace.createUpgrade': '워크스페이스를 더 만드는 것은 유료 요금제에 포함된 기능이에요.',
+  'workspace.createLimitReached': '한 계정이 속할 수 있는 워크스페이스 최대 개수에 도달했어요.',
+  'workspace.createRoleRequired':
+    '워크스페이스는 워크스페이스 관리자만 만들 수 있어요. 이 워크스페이스의 관리자에게 요청하거나, 직접 관리하는 워크스페이스로 전환해 주세요.',
+  'workspace.createFailed': '워크스페이스를 만들지 못했어요',
   'theme.label': '화면',
   'theme.light': '라이트',
   'theme.dark': '다크',

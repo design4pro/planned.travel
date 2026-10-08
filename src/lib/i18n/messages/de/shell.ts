@@ -76,6 +76,18 @@ const messages = {
   'workspace.switchFailed': 'Der Arbeitsbereich konnte nicht gewechselt werden',
   'workspace.switchFailedBody':
     'Prüfe deine Verbindung und versuche es noch einmal.',
+  'workspace.create': 'Arbeitsbereich erstellen',
+  'workspace.createTitle': 'Einen Arbeitsbereich erstellen',
+  'workspace.createDescription':
+    'Ein eigener Bereich mit eigenen Reisen, Orten und Personen. Er startet im Tarif Gratis.',
+  'workspace.createName': 'Name des Arbeitsbereichs',
+  'workspace.createUpgrade':
+    'Weitere Arbeitsbereiche zu erstellen gehört zu einem Bezahltarif.',
+  'workspace.createLimitReached':
+    'Du hast die höchste Anzahl an Arbeitsbereichen erreicht, denen ein Konto angehören kann.',
+  'workspace.createRoleRequired':
+    'Nur ein Administrator des Arbeitsbereichs kann einen Arbeitsbereich erstellen. Frag einen Administrator dieses Arbeitsbereichs oder wechsle zu einem Arbeitsbereich, den du verwaltest.',
+  'workspace.createFailed': 'Der Arbeitsbereich konnte nicht erstellt werden',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Darstellung',

@@ -70,6 +70,18 @@ const messages = {
   'workspace.label': 'Espai',
   'workspace.switchFailed': 'No s’ha pogut canviar d’espai',
   'workspace.switchFailedBody': 'Comprova la connexió i torna-ho a provar.',
+  'workspace.create': 'Crea un espai',
+  'workspace.createTitle': 'Crea un espai nou',
+  'workspace.createDescription':
+    'Un espai separat amb els seus propis viatges, llocs i persones. Comença amb el pla gratuït.',
+  'workspace.createName': 'Nom de l’espai',
+  'workspace.createUpgrade':
+    'Crear més espais forma part d’un pla de pagament.',
+  'workspace.createLimitReached':
+    'Has arribat al màxim d’espais als quals pot pertànyer un compte.',
+  'workspace.createRoleRequired':
+    'Només un administrador de l’espai pot crear-ne un. Demana-ho a un administrador d’aquest espai o canvia a un espai que administris.',
+  'workspace.createFailed': 'No s’ha pogut crear l’espai',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Aparença',
