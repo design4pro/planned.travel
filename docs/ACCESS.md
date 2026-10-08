@@ -453,10 +453,11 @@ and `organization/delete`, closed with `disableOrganizationDeletion: true`. The 
 the session is looked up, so the endpoint answers `404` with `ORGANIZATION_DELETION_DISABLED` to an
 owner and to an anonymous caller alike (and refuses the in-process call too). Left open it would let
 an owner delete the `organization` row, cascade over every tenant table - other members' private
-trips included - and leave the subscription billing, the R2 objects orphaned and the audit log silent.
-A workspace therefore has no HTTP deletion path until the product-owned one (#1000) exists, and that
-change must remove the flag explicitly. `src/server/auth/__tests__/auth-handler-closure.test.ts` pins
-the closure against the real handler.
+trips included - and leave the provider subscription billing, the R2 objects orphaned and the audit
+log silent. A workspace therefore has no HTTP deletion path until the product-owned one (#1000)
+exists, and that change must decide the flag explicitly: a deletion done through repository SQL keeps
+it, one that moved to the plugin's endpoint would have to remove it.
+`src/server/auth/__tests__/auth-handler-closure.test.ts` pins the closure against the real handler.
 
 ### 2.7 Creating a workspace
 

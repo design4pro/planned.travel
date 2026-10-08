@@ -824,7 +824,8 @@ describe('organization/create', () => {
  * every tenant table, and it cancels no subscription, purges no storage and writes no audit entry.
  * `disableOrganizationDeletion` is checked before the session is looked up, so the refusal is the
  * same for an owner and for an anonymous caller. The closure is pinned against the real handler;
- * the product-owned path that replaces it is #1000, and it must remove the flag explicitly.
+ * the product-owned path that replaces it is #1000, and it must decide the flag explicitly: it stays
+ * for a deletion done through repository SQL.
  */
 describe('organization/delete', () => {
   let cookie: string
@@ -883,6 +884,16 @@ describe('organization/delete', () => {
     expect(response.status).toBe(404)
     const body: { code?: string } = await response.json()
     expect(body.code).toBe('ORGANIZATION_DELETION_DISABLED')
+    expect(count('organization')).toBe(1)
+  })
+
+  it('refuses the in-process call too', async () => {
+    await expect(
+      getAuth().api.deleteOrganization({
+        headers: new Headers({ cookie }),
+        body: { organizationId },
+      }),
+    ).rejects.toMatchObject({ body: { code: 'ORGANIZATION_DELETION_DISABLED' } })
     expect(count('organization')).toBe(1)
   })
 
