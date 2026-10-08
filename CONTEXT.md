@@ -23,6 +23,7 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Budget currency** — the currency every figure of a trip adds up in, chosen when the trip is made. While nothing on the trip carries a price it can be changed when editing the trip; once anything does, it cannot be changed there, because every figure would keep its number and change what it is in. _Avoid_: "accounting currency" and "trip currency" as names for it.
 - **Settlement** — the computed "who owes whom" resolution of split expenses.
 - **Pack** — a packing list attached to a trip; items are checkable per member.
+- **Weather reading** — what is known about the weather of one dated day of a trip at the place it is spent, of one of three kinds: a _forecast_ (the provider's prediction, for today and the days just ahead), _recorded_ (what was measured on a day already past) or an _estimate_ (the long-term average for that day's month, for days beyond the forecast). An estimate is always marked as one, and a day with no reading shows none. _Avoid_: "archive" and "climate" for the kinds.
 - **Product module** — an optional, separately-toggled product area: Atlas (world-map tracker), Journal, Leave planner, Collections.
 - **Atlas** — the world-map tracker module: countries and regions a user has visited.
 - **Share token** — an unguessable token granting session-less, read-only access to a named projection of one trip resource.

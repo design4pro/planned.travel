@@ -42,16 +42,16 @@ producer for the export handler, no feed endpoint, no weather anything.
 
 ### The eight rows
 
-| Row      | Stage        | Wave | Moves                                                                      |
-| -------- | ------------ | ---- | -------------------------------------------------------------------------- |
-| `DOC-01` | `06-S1`      | 1    | partial → done                                                             |
-| `DOC-03` | `06-S2`      | 2    | absent → done                                                              |
-| `DOC-06` | `06-S3`      | 2    | partial → done for the trip plan; the journey book stays open and unowned  |
-| `DOC-02` | `06-S4`      | 3    | partial → done                                                             |
-| `DOC-07` | `06-S5`      | 3    | absent → done                                                              |
-| `DOC-04` | `06-S6`      | 4    | partial → done, both entry points: the file side and the booking side      |
-| `DOC-08` | `06-S7`      | 6    | absent → absent. **BLOCKED** on a provider decision that is not ours here. |
-| `DOC-05` | **no stage** | —    | out-of-scope; see below                                                    |
+| Row      | Stage        | Wave | Moves                                                                     |
+| -------- | ------------ | ---- | ------------------------------------------------------------------------- |
+| `DOC-01` | `06-S1`      | 1    | partial → done                                                            |
+| `DOC-03` | `06-S2`      | 2    | absent → done                                                             |
+| `DOC-06` | `06-S3`      | 2    | partial → done for the trip plan; the journey book stays open and unowned |
+| `DOC-02` | `06-S4`      | 3    | partial → done                                                            |
+| `DOC-07` | `06-S5`      | 3    | absent → done                                                             |
+| `DOC-04` | `06-S6`      | 4    | partial → done, both entry points: the file side and the booking side     |
+| `DOC-08` | `06-S7`      | 6    | absent → done, unblocked by ADR 0038                                      |
+| `DOC-05` | **no stage** | —    | out-of-scope; see below                                                   |
 
 **`DOC-05` is excluded from this plan and is planned nowhere in it.** It is the connection to a
 photo library running on the operator's own private network, and it is one of the ten hosted-model
@@ -2383,223 +2383,116 @@ one dialog.
 
 ---
 
-## Stage 06-S7 — Per-day weather: BLOCKED
+## Stage 06-S7 — Per-day weather: unblocked, built by its spec
 
 ### Stage id
 
-`06-S7` · Wave 6 · effort **S**. **BLOCKED.** The effort is for the record this stage ships, not for
-the feature — `gap-rows.json` scores `DOC-08` at `L`, and none of that work can start until the
-decision below is taken. A blocked stage carrying a large effort roll-up is a stage somebody
-schedules.
+`06-S7` · Wave 6 · effort **L**. **Unblocked** by `docs/adr/0038-met-norway-and-nasa-power-for-weather.md`,
+which took the provider decision: the forecast from MET Norway, recorded and long-term climate values
+from NASA POWER, both free and licensed for commercial use, and neither needs a key. The stage is built
+by `.ai/specs/2026-09-19-per-day-weather.md` (#631), whose three phases are this stage's work: the decision
+on record, the server, and the surface. This stage no longer designs the feature, and where it and the
+spec differ, the spec is the authority.
 
 ### Reference rows
 
-- `DOC-08` absent → **absent**, and the reason it does not move is this stage's whole content.
+- `DOC-08` absent → **done**.
 
 Sourced from `wiki: Weather-Forecasts` for the behaviours: a compact badge on each day row, a fuller
 panel with minimum and maximum temperature, precipitation probability and amount, wind, sunrise and
-sunset and a coarse hourly strip; a source that changes with how far away the day is; and a visible
-marker distinguishing an estimate from a forecast.
+sunset and a coarse strip across the day; a source that changes with how far away the day is; and a
+visible marker distinguishing an estimate from a forecast.
 
-**What is deferred, and to where: all of it, to a re-planned `06-S7` in the wave after the block is
-lifted.** No part is picked off early, because the cheap halves are the expensive kind. A badge with
-no source switching shows a blank square for every day beyond the forecast window, which is most of
-the days on most trips at the moment somebody plans them; and a climate estimate rendered without its
-marker is a forecast we invented, which is worse than no weather at all.
+The three kinds of reading are named `forecast`, `recorded` and `estimate`. The last two replace the
+`archive` and `climate` this stage used while the decision was open, because they are the words the
+badge's accessible name says to a reader.
 
-**Nothing is scheduled behind this stage, and that is measured rather than hoped.** No row in
-`gap-rows.json` names `DOC-08` in its `dependsOn`. The one edge that touched it, `TRP-06 → DOC-08`,
-was cut in round 3 and the surviving edge points the other way — `DOC-08 → TRP-06`, recorded in
-`.claude/ultrabuild/recon/gap-cuts.json` with the reason "the planner workspace is the host surface;
-the per-day weather badge is placed into it". So this stage slipping delays this row and no other, and
-`README.md`'s wave table puts it alone in wave 6 for exactly that reason.
+**Nothing is scheduled behind this stage.** No row names `DOC-08` as a dependency, and the one edge that
+touches it points the other way: `DOC-08 → TRP-06`, because the planner workspace is the host surface the
+per-day weather badge is placed into. So this stage slipping delays this row and no other, and
+`README.md`'s wave table puts it alone in wave 6 for that reason.
 
 ### Owned paths
 
-**None.** This stage creates and edits no repository file. Its output is the decision recorded here
-and the two constraints below, so that no other stage in this plan — or in `01-trips-core.md`, which
-owns the planner surface the badge would sit on — invents a weather mechanism on the way past.
+The files the spec's Architecture section names. The spec lists the edits to shared paths it needs with
+its phases; none of them is claimed here.
 
-Recording the shape without claiming the files is deliberate: a blocked stage that reserved
-`plan-screen.tsx` or a settings module would be a stage holding paths hostage across three waves for
-work nobody can start.
+- `src/server/weather/weather.ts`, `met-norway.ts`, `nasa-power.ts`, `bindings.ts`,
+  `cloudflare-env.d.ts` and the `__tests__` directory — new
+- `src/lib/sun.ts` and its `__tests__` — new
+- `src/routes/_app/trips/$tripId/-server/weather.ts` — new
+- `src/components/planner/day-weather-badge.tsx` — new
 
 ### Data and migration
 
-**No schema change, and it would be premature by an argument this plan set has already made.**
-`11-S3` states the sequence — decision, then column, then feature — because what a provider licenses
-us to **retain**, and for how long, differs between providers and is usually the binding term. A
-`day_weather` table designed against a provider we have not chosen is a table whose TTL column may be
-illegal the day the contract is signed.
+**No schema change.** The spec keeps readings in the existing `KV` binding under keys that carry a
+coordinate and a date and no tenant data, and stores nothing in D1. `journey_entries.weather` and
+`temperature_celsius` are not this row: they hold what a traveller wrote about a day they lived, not what
+a service reports about a day.
 
-`journey_entries.weather` and `temperature_celsius` already exist and are **not** this row: they store
-what a traveller wrote about a day they lived, not what a service predicts about a day they have not.
-Nothing is filed for a wave-0 foundations schema stage.
-
-**The caching shape it would need, stated now because it is the part that decides the bill, and
-because getting it wrong is how a metered provider becomes an unmetered cost.** The cache is `KV`,
-which already exists as a binding — no new binding is asked for:
-
-| What             | Shape                                                                                                                                                                                               |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Key              | `wx:<kind>:<lat>:<lng>:<date>`, where `<kind>` is `forecast`, `archive` or `climate`, and the two coordinates are rounded to four decimal places (about 11 m).                                      |
-| Value            | The normalised reading **in metric units only**, plus `fetchedAt` and the `kind` that produced it.                                                                                                  |
-| TTL — `forecast` | **1 hour**, for a day from yesterday to sixteen days out.                                                                                                                                           |
-| TTL — `archive`  | **24 hours**, for a day more than one day in the past. Recorded history does not change.                                                                                                            |
-| TTL — `climate`  | **24 hours**, for a day beyond the forecast window, derived from the same calendar date a year earlier.                                                                                             |
-| Miss behaviour   | A miss is a miss, never an error: a malformed or stale-shaped entry is discarded and re-fetched, the shape `src/server/billing/entitlements.ts:110-136` already establishes for KV in this product. |
-
-Three properties of that shape, each with its reason:
-
-- **The key contains no tenant data.** A forecast for a latitude, a longitude and a date is a public
-  fact, so one tenant's fetch legitimately answers another's — which is the rule `11-S3` states, and
-  the same rule forbids a key containing a trip id, a place id or a member id.
-- **Units are not in the key.** The reference caches per unit system, which doubles every entry and
-  serves a stale value in the wrong unit the moment somebody changes the setting. We store metric and
-  convert at render, so switching between Celsius and Fahrenheit costs no request and can never show a
-  number in the other one.
-- **The badge never fetches on the request path when the cache can answer**, and a whole trip's days
-  are resolved in one batched read rather than one call per row — `ARCHITECTURE.md` §4 owns the
-  caching layer and `11-S3` restates it for provider calls specifically. A per-day fetch on a
-  fourteen-day trip is fourteen outbound calls per page view, which is precisely the pattern that
-  turns a free tier into a licence problem and a paid one into a bill.
-
-The per-reader unit preference would live beside the other display preferences in
-`src/lib/display-preferences.ts`, which `09-S8` (`09-account-and-settings.md`, wave 3) creates.
-**No column is filed for it now**, for the same decision-then-column reason: whether wind is coupled
-to the temperature unit, and what the default is, are product decisions that ride with the provider.
+The key shapes and lifetimes are the spec's **Data Model** section. They replace the sketch this stage
+carried while the provider was open, which keyed every kind per date and used the old kind names. The
+properties that sketch stated still hold: a key contains no tenant data, readings are stored in metric
+units only and converted at render, and a malformed entry is a miss and never an error.
 
 ### Server (repo, server function, Zod)
 
-**Nothing is added.** No repository module, no `createServerFn`, no schema, no queue kind.
+The spec's **Architecture** and **API Contracts** sections. Four constraints bind it, each taken from a
+decision this plan set already made:
 
-Four constraints are recorded because they bind whoever builds it, and each is a decision this plan
-set has already taken somewhere else:
-
-1. **The provider credential is a secret**, set with `wrangler secret put` and read from the task or
-   request environment — never a checked-in variable, and never a value a tenant supplies. A
-   per-tenant third-party credential is the shape that made `BKG-09` out-of-scope in `11-S1`.
-2. **The outbound call is metered by somebody**, so its rate belongs in `resolveLimits()` like every
-   other ceiling rather than in a constant inside a weather module. The published number is the
-   enforced number applies to a provider call as much as to a row.
-3. **The read is a server function, never a browser fetch to the provider.** A key in a client bundle
-   is a key that has left the building, and a browser-side call would also bypass the cache that makes
-   the feature affordable.
-4. **A missing reading renders as missing**, never as an invented number and never as a zero. The
-   product has one precedent for this and it is deliberate: `04-S1` refuses to write an expense with
-   an unavailable rate rather than guessing one.
+1. **There is no credential to hold.** Neither provider issues a key; the `User-Agent` MET Norway
+   requires is a checked-in constant and not a secret.
+2. **The outbound call is metered**, so its rate belongs in `resolveLimits()` like every other ceiling:
+   the spec adds the monthly `weather_lookups_per_month`.
+3. **The read is a server function, never a browser fetch to the provider.** A browser-side call would
+   also bypass the cache that makes the feature affordable.
+4. **A missing reading renders as missing**, never as an invented number and never as a zero.
 
 ### UI (route, components)
 
-**No route and no component.** Two design consequences are stated so that whoever builds it does not
-re-derive them, and so that no other stage designs around a weather badge that does not exist:
+The spec's **UI/UX** section. Two consequences are recorded here so no other stage designs around a
+badge that does not exist yet:
 
-- **The estimate marker is not decoration.** A climate estimate and a forecast look identical as a
-  number and an icon, so the estimate carries a visible marker and an accessible name that says which
-  it is. A reader who packs for an estimate believing it is a forecast has been misled by our
-  typography.
-- **The day row must not reflow when weather arrives.** Whatever the badge's final design, its box is
-  reserved at the row's existing height so a late reading cannot shift the itinerary under a reader's
-  cursor — `docs/SPEC.md` §2's zero-layout-shift clause, applied to the one surface in this file that
-  would populate after paint.
+- **The estimate marker is not decoration.** An estimate and a forecast look identical as a number and
+  an icon, so the estimate carries a visible marker and an accessible name that says which it is.
+- **The day row must not reflow when weather arrives.** The badge's box is reserved at the row's existing
+  height, so a late reading cannot shift the itinerary under a reader's cursor (`docs/SPEC.md` §2's
+  zero-layout-shift clause).
 
-**Tokens.** None needed today. Worth recording for whoever unblocks this: the condition palette must
-come from the existing semantic tokens (`--color-info`, `--color-warning`, `--color-danger` and their
-`-soft` companions) rather than from a set of weather colours, because a new colour ramp is a token
-change and `src/styles/tokens.css` is a shared path.
+The condition palette comes from the existing semantic tokens, not from a new colour ramp: a ramp is a
+change to `src/styles/tokens.css`, a shared path.
 
 ### Quota
 
-**No countable row.** This stage writes nothing: no metric, no `assertQuota` call site, no addition to
-`resolveLimits()`, `PLAN_QUOTAS` or `src/server/billing/__tests__/limits.test.ts`.
-
-The quota note that survives the block is constraint 2 above: when a provider is adopted, the call
-rate is a ceiling like any other, because a metered outbound call made on one tenant's behalf is a
-cost every other tenant pays for.
+One countable ceiling, `weather_lookups_per_month`, spent by an outbound call and not by a cache hit. The
+numbers and the order in which calls are spent when the budget runs short are the spec's **Data Model**
+section, under Limits.
 
 ### Tenant isolation test
 
-**No case is appended to `src/server/repos/__tests__/tenant-isolation.test.ts`**, because this stage
-adds no repository function and writes no row.
-
-One isolation rule is recorded for whoever unblocks it, and it is the one a cache makes easy to get
-wrong: a cached provider result keyed only by its query is shared across tenants, which is correct for
-a public fact; anything derived from a tenant's own rows is tenant data and must be scoped like tenant
-data. The key shape above contains a coordinate and a date and nothing else, and the test that will
-matter is the one asserting a key derived from a trip cannot be constructed by the module.
+The spec adds `readDayLocations` to `src/server/repos/itinerary.ts` with a case in
+`src/server/repos/__tests__/tenant-isolation.test.ts`. The module that talks to the providers exports no
+function that takes a trip, place or member id, and a `seam.test.ts` asserts that a key is built only from
+a kind, a coordinate and a date. The only tenant data a provider receives is a trip coordinate truncated to
+four decimals (ADR 0038).
 
 ### Verification
 
-**How this would be run, when it is.** `docs/plans/12-verification-protocol.md` owns the procedure and
-is cited here to say what this stage does not owe, rather than to leave the heading empty. A blocked
-stage quoting a command it never runs is a stage that looks verified.
-
-**The command gate still applies and is trivially satisfied:** `pnpm lint`, `pnpm typecheck`,
-`pnpm test`, `pnpm build`, all unchanged because no source file is touched.
-
-**No Playwright invocation is owed.** This stage ships no surface and appends no `test.describe`
-block to `e2e/documents-and-media.visual.spec.ts`, so there is nothing to point a project at.
-
-**No unit tests**, because there is no new logic.
-
-**No browser evidence, and that is a claim rather than a gap.** A frame filed under this stage id
-would be a frame of somebody else's work. When the block is lifted, the re-planned stage owes the full
-set — light and dark at 360px, 1280px and 2560px, on the planner surface, plus a declared non-resting
-state for the fuller panel and a declared state for the estimate marker, which is the one thing a
-resting frame of a near-term trip would never show.
-
-**Console and layout shift** are not asserted here for the same reason: no surface, no assertion.
+`docs/plans/12-verification-protocol.md` owns the procedure, and the spec's phases state what each one
+owes. The command gate applies to every phase. Phase 3 owes a Playwright journey on a seeded trip and
+browser evidence in light and dark at 360px, 1280px and 2560px, including the declared states the spec
+names: the fuller panel open, the estimate marker, and an unavailable day.
 
 ### Definition of done
 
-The six repository-wide items of `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm lint`
-and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes; the
-feature is verified in a real browser, light and dark, desktop and mobile; nothing is left behind — no
-TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside **Owned
-paths** is touched, which for this stage is every file in the repository.
-
-The `docs/SPEC.md` §2 visual clauses are listed unchanged and every one is ticked as **not applicable:
-this stage ships no surface** — the honest reading for a stage whose output is a decision:
-
-- [ ] Spacing on the 4px grid — not applicable, no surface.
-- [ ] Hover, focus-visible, active, disabled and loading states — not applicable, no surface.
-- [ ] Empty, skeleton and error states on `--color-surface-2` — not applicable, no surface.
-- [ ] Motion 150–260ms on `--ease-out-quint`, `prefers-reduced-motion` honoured — not applicable.
-- [ ] Light and dark parity with re-declared dark shadows — not applicable.
-- [ ] Responsive 360px → 2560px — not applicable.
-- [ ] Keyboard navigable, accessible names, WCAG 2.2 AA — not applicable.
-- [ ] Zero console errors and zero layout shift — not applicable.
-
-This stage is done only if the decision below is left **open with its constraint stated**, and is not
-silently resolved by naming a provider. Choosing one here would be the worst outcome available: a plan
-is not where a commercial commitment gets made.
+The repository-wide items of `docs/SPEC.md` §7 apply unchanged, and so do its §2 visual clauses. The
+stage is done when the spec's acceptance criteria hold on `develop`, which `.ai/specs/AGENTS.md` records
+by moving the spec to `implemented/`.
 
 ### Blockers
 
-**One, and it is a commercial decision rather than an engineering one.**
-
-- **No weather provider is chosen, and none may be chosen here.**
-  `docs/plans/11-boundaries-and-blockers.md` (`11-S3`, "The provider decisions, all three open")
-  records weather as the second of three open capabilities and lists `DOC-08` in its own table as
-  waiting on it. The binding constraint is stated there and is restated here because it is the whole
-  reason this stage is blocked rather than merely unscheduled: **a tier whose terms exclude a
-  commercial, subscription-funded product is unusable to us at any traffic level.** We charge for
-  subscriptions through Stripe, so a "free for non-commercial use" endpoint — the shape that makes a
-  self-hosted build's "no key required" weather possible — is a licence breach dressed as a saving,
-  however small our volume.
-  Two further terms decide the cost more than the per-call price does, and both have to be read at the
-  same time: **what we may cache and for how long**, which the TTL table above depends on entirely,
-  and **what attribution is required on screen**, which is a design constraint on a badge that has not
-  been designed.
-  Disposition: **defer.** This stage writes no client for an unnamed service, assumes no free tier,
-  and ships nothing degraded in order to avoid asking.
-
-- **No binding is missing.** Unlike `DOC-06`'s rendering and `ADD-08`'s image work, this row needs no
-  new Cloudflare binding: `KV` for the cache and outbound `fetch` are both already available. The only
-  thing missing is the answer to a question only the user can answer.
-
-No package outside the `docs/SPEC.md` §3 pinned set would be needed either — the call is `fetch`, the
-cache is `KV`, and the formatting is `Intl`. The freeze is not what blocks this row.
+**None.** The provider decision was the only blocker and ADR 0038 lifted it. No binding is missing:
+`KV` for the cache and outbound `fetch` are already available.
 
 ---
 
@@ -2674,15 +2567,15 @@ paths** rather than here, because that is where an agent executing the stage wil
 **Every stage in this file states its wave in the form the script parses**, so none of them is
 invisible to the check:
 
-| Stage   | Wave | Effort | Row                |
-| ------- | ---- | ------ | ------------------ |
-| `06-S1` | 1    | M      | `DOC-01`           |
-| `06-S2` | 2    | M      | `DOC-03`           |
-| `06-S3` | 2    | M      | `DOC-06`           |
-| `06-S4` | 3    | M      | `DOC-02`           |
-| `06-S5` | 3    | L      | `DOC-07`           |
-| `06-S6` | 4    | M      | `DOC-04`           |
-| `06-S7` | 6    | S      | `DOC-08` (blocked) |
+| Stage   | Wave | Effort | Row      |
+| ------- | ---- | ------ | -------- |
+| `06-S1` | 1    | M      | `DOC-01` |
+| `06-S2` | 2    | M      | `DOC-03` |
+| `06-S3` | 2    | M      | `DOC-06` |
+| `06-S4` | 3    | M      | `DOC-02` |
+| `06-S5` | 3    | L      | `DOC-07` |
+| `06-S6` | 4    | M      | `DOC-04` |
+| `06-S7` | 6    | L      | `DOC-08` |
 
 **The four stages the report says have no parseable wave are not in this file.** `11-S1`, `11-S2` and
 `11-S3` belong to the register plan, which writes its wave in prose rather than in the `` `id` · Wave
