@@ -126,9 +126,12 @@ export function DayWeatherBadge({ weather, unit }: DayWeatherBadgeProps) {
             model.condition === null ? 'text-ink-4' : 'text-info',
           )}
         />
-        <span className="font-semibold text-ink-2">{max}</span>
-        <span className="text-ink-3">/{min}</span>
-        <span className="text-ink-4">{model.unit}</span>
+        {/* One run, fixed left to right: the figures read "24°/18°C" in every direction. */}
+        <span dir="ltr" className="whitespace-nowrap">
+          <span className="font-semibold text-ink-2">{max}</span>
+          <span className="text-ink-3">/{min}</span>
+          <span className="text-ink-4">{model.unit}</span>
+        </span>
       </span>
     </div>
   )
