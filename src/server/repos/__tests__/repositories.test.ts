@@ -384,6 +384,7 @@ describe('repositories', () => {
       // Re-splitting replaces the old rows rather than adding to them.
       const reshared = await setExpenseShares(
         tenant.scope,
+        trip.id,
         dinner.expense.id,
         [
           { userId: tenant.ownerUserId, weight: 3 },
