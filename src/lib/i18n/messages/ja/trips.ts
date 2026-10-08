@@ -298,6 +298,20 @@ const messages = {
   'people.error.guestLimit':
     '旅行に追加できるゲストは最大 {limit} 人です。それ以上になると参加者の選択や費用の分担が読みにくくなるためです',
   'people.error.guestMergeTarget': 'すでにこの旅行にいる人を選んでください',
+  'plan.weather.badge.forecast': '予報: {condition}、最高 {max}、最低 {min}',
+  'plan.weather.badge.forecastNoCondition': '予報: 最高 {max}、最低 {min}',
+  'plan.weather.badge.unavailable': 'この日の天気は取得できません',
+  'plan.weather.badge.loading': '天気を読み込み中',
+  'plan.weather.condition.clear': '快晴',
+  'plan.weather.condition.fair': '晴れ',
+  'plan.weather.condition.partlyCloudy': '一部曇り',
+  'plan.weather.condition.cloudy': '曇り',
+  'plan.weather.condition.fog': '霧',
+  'plan.weather.condition.rain': '雨',
+  'plan.weather.condition.heavyRain': '大雨',
+  'plan.weather.condition.sleet': 'みぞれ',
+  'plan.weather.condition.snow': '雪',
+  'plan.weather.condition.thunder': '雷雨',
 } satisfies TranslationOf<typeof En>
 
 export default messages

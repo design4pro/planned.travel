@@ -297,6 +297,20 @@ const messages = {
   'people.error.guestLimit':
     '여행 한 건에 게스트는 최대 {limit}명입니다. 목록이 더 길면 참가자 선택과 비용 분담을 읽기 어려워지기 때문입니다',
   'people.error.guestMergeTarget': '이미 이 여행에 있는 사람을 선택하세요',
+  'plan.weather.badge.forecast': '예보: {condition}, 최고 {max}, 최저 {min}',
+  'plan.weather.badge.forecastNoCondition': '예보: 최고 {max}, 최저 {min}',
+  'plan.weather.badge.unavailable': '이 날의 날씨를 불러올 수 없습니다',
+  'plan.weather.badge.loading': '날씨 불러오는 중',
+  'plan.weather.condition.clear': '맑음',
+  'plan.weather.condition.fair': '대체로 맑음',
+  'plan.weather.condition.partlyCloudy': '구름 조금',
+  'plan.weather.condition.cloudy': '흐림',
+  'plan.weather.condition.fog': '안개',
+  'plan.weather.condition.rain': '비',
+  'plan.weather.condition.heavyRain': '폭우',
+  'plan.weather.condition.sleet': '진눈깨비',
+  'plan.weather.condition.snow': '눈',
+  'plan.weather.condition.thunder': '뇌우',
 } satisfies TranslationOf<typeof En>
 
 export default messages

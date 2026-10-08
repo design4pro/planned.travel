@@ -303,6 +303,22 @@ const messages = {
     'Satu perjalanan menampung paling banyak {limit} tamu, karena daftar yang lebih panjang membuat pemilih peserta dan pembagian biaya sulit dibaca',
   'people.error.guestMergeTarget':
     'Pilih seseorang yang sudah ada di perjalanan ini',
+  'plan.weather.badge.forecast':
+    'Prakiraan: {condition}, tertinggi {max}, terendah {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Prakiraan: tertinggi {max}, terendah {min}',
+  'plan.weather.badge.unavailable': 'Cuaca tidak tersedia untuk hari ini',
+  'plan.weather.badge.loading': 'Memuat cuaca',
+  'plan.weather.condition.clear': 'Cerah',
+  'plan.weather.condition.fair': 'Cukup cerah',
+  'plan.weather.condition.partlyCloudy': 'Sebagian berawan',
+  'plan.weather.condition.cloudy': 'Berawan',
+  'plan.weather.condition.fog': 'Kabut',
+  'plan.weather.condition.rain': 'Hujan',
+  'plan.weather.condition.heavyRain': 'Hujan lebat',
+  'plan.weather.condition.sleet': 'Hujan bercampur salju',
+  'plan.weather.condition.snow': 'Salju',
+  'plan.weather.condition.thunder': 'Petir',
 } satisfies TranslationOf<typeof En>
 
 export default messages
