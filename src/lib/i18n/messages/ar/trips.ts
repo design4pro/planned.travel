@@ -341,6 +341,22 @@ const messages = {
   'people.error.guestLimit':
     'تتسع الرحلة لـ {limit} ضيفًا على الأكثر، لأن القائمة الأطول تجعل اختيار المشاركين وتقسيم المصاريف صعب القراءة',
   'people.error.guestMergeTarget': 'اختر شخصًا موجودًا بالفعل في هذه الرحلة',
+  'plan.weather.badge.forecast':
+    'التوقعات: {condition}، العظمى {max}، الصغرى {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'التوقعات: العظمى {max}، الصغرى {min}',
+  'plan.weather.badge.unavailable': 'حالة الطقس غير متاحة لهذا اليوم',
+  'plan.weather.badge.loading': 'جارٍ تحميل الطقس',
+  'plan.weather.condition.clear': 'صافٍ',
+  'plan.weather.condition.fair': 'طقس لطيف',
+  'plan.weather.condition.partlyCloudy': 'غائم جزئيًا',
+  'plan.weather.condition.cloudy': 'غائم',
+  'plan.weather.condition.fog': 'ضباب',
+  'plan.weather.condition.rain': 'مطر',
+  'plan.weather.condition.heavyRain': 'مطر غزير',
+  'plan.weather.condition.sleet': 'مطر ثلجي',
+  'plan.weather.condition.snow': 'ثلج',
+  'plan.weather.condition.thunder': 'عاصفة رعدية',
 } satisfies TranslationOf<typeof En>
 
 export default messages

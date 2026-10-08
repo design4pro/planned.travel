@@ -326,6 +326,22 @@ const messages = {
   'people.error.guestLimit':
     'Výlet pojme nejvýše {limit} hostů, protože delší seznam znepřehledňuje výběr účastníků i rozdělení nákladů',
   'people.error.guestMergeTarget': 'Vyber někoho, kdo už je na tomto výletě',
+  'plan.weather.badge.forecast':
+    'Předpověď: {condition}, maximum {max}, minimum {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Předpověď: maximum {max}, minimum {min}',
+  'plan.weather.badge.unavailable': 'Počasí pro tento den není k dispozici',
+  'plan.weather.badge.loading': 'Načítání počasí',
+  'plan.weather.condition.clear': 'Jasno',
+  'plan.weather.condition.fair': 'Hezky',
+  'plan.weather.condition.partlyCloudy': 'Polojasno',
+  'plan.weather.condition.cloudy': 'Oblačno',
+  'plan.weather.condition.fog': 'Mlha',
+  'plan.weather.condition.rain': 'Déšť',
+  'plan.weather.condition.heavyRain': 'Silný déšť',
+  'plan.weather.condition.sleet': 'Déšť se sněhem',
+  'plan.weather.condition.snow': 'Sníh',
+  'plan.weather.condition.thunder': 'Bouřka',
 } satisfies TranslationOf<typeof En>
 
 export default messages

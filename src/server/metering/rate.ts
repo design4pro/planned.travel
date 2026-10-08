@@ -118,6 +118,43 @@ function tallyOf(raw: string | null): number {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 0
 }
 
+async function readTally(
+  store: RateCounterStore,
+  key: string,
+  input: SpendRateInput,
+): Promise<number> {
+  try {
+    return tallyOf(await store.get(key))
+  } catch (cause) {
+    // Fails open: a counter that cannot be read is not evidence that the ceiling is spent.
+    input.logger?.warn('transit.meter.read_failed', {
+      metric: input.metric,
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
+    return 0
+  }
+}
+
+async function writeTally(
+  store: RateCounterStore,
+  key: string,
+  next: number,
+  input: SpendRateInput,
+): Promise<void> {
+  try {
+    await store.put(key, String(next), {
+      expirationTtl: RATE_COUNTER_TTL_SECONDS,
+    })
+  } catch (cause) {
+    // Silent and open, for the same reason the recording posture in `outbound.ts` is: the call
+    // this counts is about to be made, and failing it over its own bookkeeping helps nobody.
+    input.logger?.warn('transit.meter.write_failed', {
+      metric: input.metric,
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
+  }
+}
+
 /**
  * Spend one unit of `metric` for one workspace, or refuse.
  *
@@ -139,35 +176,46 @@ export async function spendRateUnit(
     input.organizationId,
     rateWindowOf(input.now()),
   )
-
-  let spent = 0
-  try {
-    spent = tallyOf(await store.get(key))
-  } catch (cause) {
-    // Fails open: a counter that cannot be read is not evidence that the ceiling is spent.
-    input.logger?.warn('transit.meter.read_failed', {
-      metric: input.metric,
-      message: cause instanceof Error ? cause.message : String(cause),
-    })
-    spent = 0
-  }
+  const spent = await readTally(store, key, input)
 
   if (spent >= input.ceiling) {
     throw new RateCeilingError(input.metric, input.ceiling, spent)
   }
 
   const next = spent + 1
-  try {
-    await store.put(key, String(next), {
-      expirationTtl: RATE_COUNTER_TTL_SECONDS,
-    })
-  } catch (cause) {
-    // Silent and open, for the same reason the recording posture in `outbound.ts` is: the call
-    // this counts is about to be made, and failing it over its own bookkeeping helps nobody.
-    input.logger?.warn('transit.meter.write_failed', {
-      metric: input.metric,
-      message: cause instanceof Error ? cause.message : String(cause),
-    })
-  }
+  await writeTally(store, key, next, input)
   return next
+}
+
+/**
+ * Spend up to `wanted` units of `metric` for one workspace in one read and one write, and answer
+ * how many were granted.
+ *
+ * A caller that needs several units for one piece of work (a request resolving many places)
+ * would otherwise write the same key several times within a second, and a key store that allows
+ * about one write per key per second drops all but the first - the tally then counts one call
+ * for many. Reading once and writing once keeps the tally honest, and the answer is never above
+ * what is left, so a ceiling is never exceeded by the batch. Nothing is thrown for a spent month
+ * or a ceiling of zero: that is a grant of zero, which the caller already has to handle.
+ */
+export async function spendRateUnits(
+  store: RateCounterStore,
+  input: SpendRateInput,
+  wanted: number,
+): Promise<number> {
+  if (input.ceiling <= 0 || wanted <= 0) {
+    return 0
+  }
+
+  const key = rateMeterKey(
+    input.metric,
+    input.organizationId,
+    rateWindowOf(input.now()),
+  )
+  const spent = await readTally(store, key, input)
+  const granted = Math.min(wanted, Math.max(0, input.ceiling - spent))
+  if (granted > 0) {
+    await writeTally(store, key, spent + granted, input)
+  }
+  return granted
 }

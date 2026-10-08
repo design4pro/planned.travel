@@ -11,13 +11,16 @@ import { noteItemId } from './ordering'
 import { stayFactsOn } from './stay-facts'
 import { StopRow } from './stop-row'
 import { TransportRow } from './transport-row'
+import { DayWeatherBadge } from './day-weather-badge'
 
+import type { WeatherUnit } from '#/lib/weather'
 import type {
   PlannerCategory,
   PlannerDay,
   PlannerNote,
   PlannerRow,
 } from './types'
+import type { DayWeatherView } from './weather-model'
 
 export interface DaySectionProps {
   readonly day: PlannerDay
@@ -54,6 +57,13 @@ export interface DaySectionProps {
    * screen composes it, so a stage that adds a footer control never edits this file.
    */
   readonly dayTools?: (day: PlannerDay) => React.ReactNode
+  /**
+   * What the weather says about this day. Omitted where the screen offers none; a day
+   * with no date draws nothing either way, so an undated header is exactly what it was.
+   */
+  readonly weather?: DayWeatherView
+  /** The unit the day's temperatures are drawn in. */
+  readonly weatherUnit?: WeatherUnit
 }
 
 /**
@@ -92,6 +102,8 @@ export function DaySection({
   onDeleteNote,
   onMoveNote,
   dayTools,
+  weather,
+  weatherUnit = 'metric',
 }: DaySectionProps) {
   const t = useTranslate()
   const itemIds = React.useMemo(
@@ -138,44 +150,53 @@ export function DaySection({
         active && 'bg-brand-subtle/45 ring-1 ring-brand/20 ring-inset',
       )}
     >
-      <button
-        type="button"
-        onClick={onFocusDay}
-        aria-pressed={active}
-        className={cn(
-          'flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-start',
-          transitionBase,
-          focusRing,
-          'hover:bg-hover',
-        )}
-      >
-        <span
-          aria-hidden="true"
+      {/*
+        The weather badge is the header button's sibling, never inside it: a button inside a
+        button is invalid, and the badge is not a way to focus the day.
+      */}
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={onFocusDay}
+          aria-pressed={active}
           className={cn(
-            'grid size-7 shrink-0 place-items-center rounded-md',
-            'font-display text-caption font-bold tabular-nums',
+            'flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-2 text-start',
             transitionBase,
-            active ? 'bg-brand text-brand-on' : 'bg-accent text-accent-on',
+            focusRing,
+            'hover:bg-hover',
           )}
         >
-          {day.dayNumber}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-baseline gap-2">
-            <span className="min-w-0 truncate font-display text-label font-bold tracking-tight text-ink">
-              {day.title}
-            </span>
-            {day.dateLabel === null ? null : (
-              <span className="shrink-0 text-caption tabular-nums text-ink-3">
-                {day.dateLabel}
-              </span>
+          <span
+            aria-hidden="true"
+            className={cn(
+              'grid size-7 shrink-0 place-items-center rounded-md',
+              'font-display text-caption font-bold tabular-nums',
+              transitionBase,
+              active ? 'bg-brand text-brand-on' : 'bg-accent text-accent-on',
             )}
+          >
+            {day.dayNumber}
           </span>
-          <span className="mt-0.5 block truncate text-caption tabular-nums text-ink-4">
-            {stops}
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 items-baseline gap-2">
+              <span className="min-w-0 truncate font-display text-label font-bold tracking-tight text-ink">
+                {day.title}
+              </span>
+              {day.dateLabel === null ? null : (
+                <span className="shrink-0 text-caption tabular-nums text-ink-3">
+                  {day.dateLabel}
+                </span>
+              )}
+            </span>
+            <span className="mt-0.5 block truncate text-caption tabular-nums text-ink-4">
+              {stops}
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+        {weather === undefined || day.dateLabel === null ? null : (
+          <DayWeatherBadge weather={weather} unit={weatherUnit} />
+        )}
+      </div>
 
       {/* A stay is a fact of the header, never a row: it sits outside the sortable list below. */}
       {day.stays.length === 0 ? null : (

@@ -318,6 +318,23 @@ const messages = {
   'people.error.guestLimit':
     'Ένα ταξίδι χωράει έως {limit} καλεσμένους, γιατί μια μεγαλύτερη λίστα δυσκολεύει την επιλογή συμμετεχόντων και την ανάγνωση του καταμερισμού εξόδων',
   'people.error.guestMergeTarget': 'Επίλεξε κάποιον που είναι ήδη στο ταξίδι',
+  'plan.weather.badge.forecast':
+    'Πρόγνωση: {condition}, μέγιστη {max}, ελάχιστη {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Πρόγνωση: μέγιστη {max}, ελάχιστη {min}',
+  'plan.weather.badge.unavailable':
+    'Ο καιρός δεν είναι διαθέσιμος για αυτή την ημέρα',
+  'plan.weather.badge.loading': 'Φόρτωση καιρού',
+  'plan.weather.condition.clear': 'Αίθριος',
+  'plan.weather.condition.fair': 'Σχετικά αίθριος',
+  'plan.weather.condition.partlyCloudy': 'Λίγα σύννεφα',
+  'plan.weather.condition.cloudy': 'Συννεφιά',
+  'plan.weather.condition.fog': 'Ομίχλη',
+  'plan.weather.condition.rain': 'Βροχή',
+  'plan.weather.condition.heavyRain': 'Έντονη βροχή',
+  'plan.weather.condition.sleet': 'Χιονόνερο',
+  'plan.weather.condition.snow': 'Χιόνι',
+  'plan.weather.condition.thunder': 'Καταιγίδα',
 } satisfies TranslationOf<typeof En>
 
 export default messages

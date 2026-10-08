@@ -124,6 +124,7 @@ import {
 import { reorderDayTransportsFn } from '../-server/plan-transports'
 import { PlannerAddPlace, reportPlaceWriteFailure } from './planner-add-place'
 import { useDialogOwnership } from './use-dialog-ownership'
+import { useTripWeather } from './use-trip-weather'
 import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
 import { PlannerDayTools } from './planner-day-tools'
 import { BookingDialog } from '#/components/modules/book'
@@ -396,6 +397,8 @@ export function PlanScreen({
   const router = useRouter()
   const wide = useIsWide()
   const editable = payload.editable
+  /** Fetched once the board is on the page; the board never waits for it. */
+  const weather = useTripWeather(payload.tripId, payload)
 
   /* ------------------------------------------------------------------ state */
 
@@ -1382,6 +1385,8 @@ export function PlanScreen({
               setDialog({ kind: 'note-delete', noteId: note.id })
             }
             onMoveNote={moveNote}
+            weather={weather.viewOf(day.dayId)}
+            weatherUnit={weather.unit}
             dayTools={
               editable
                 ? (entry) => (
