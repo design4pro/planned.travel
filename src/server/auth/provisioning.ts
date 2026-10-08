@@ -123,8 +123,9 @@ export async function createOrganizationFor(
  * A count taken before the write cannot hold the limit: several requests in flight each read the
  * same count and each write. So the count is taken again once the batch is in, and a workspace that
  * took the account past `limit` is removed and `null` is returned. Two racing creates may both see
- * the overshoot and both withdraw, which refuses a create that would have fit; it never leaves the
- * account over the limit. The removal deletes the membership first, then the organization.
+ * the overshoot and both withdraw, which refuses a create that would have fit; the account is left
+ * over the limit only if the recount or the withdrawal itself fails. The removal deletes the
+ * membership first, then the organization.
  */
 export async function createOrganizationWithinLimit(
   db: AuthDb,

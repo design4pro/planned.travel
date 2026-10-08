@@ -16,8 +16,9 @@ import { getRequest } from '@tanstack/react-start/server'
 
 import { getAuth } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
+import { serializeError } from '#/server/observability'
 import { getSession } from '#/server/auth/session'
-import { appScope } from './context'
+import { appScope, log } from './context'
 import {
   createWorkspace,
   createWorkspaceInput,
@@ -41,6 +42,12 @@ export const createWorkspaceFn = createServerFn({ method: 'POST' })
         impersonated: isImpersonated(session),
         countMemberships: async () =>
           (await auth.api.listOrganizations({ headers })).length,
+        onActivationFailed: (cause) => {
+          log().warn('workspace activation failed after create', {
+            organizationId: scope.ctx.organizationId,
+            ...serializeError(cause),
+          })
+        },
         activate: async (organizationId) => {
           await auth.api.setActiveOrganization({
             headers,

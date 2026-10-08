@@ -321,14 +321,20 @@ describe('when activation fails after the batch', () => {
       },
     })
     const before = await membershipsOf(given.scope.ctx.userId)
+    const onActivationFailed = vi.fn()
 
-    const result = await createWorkspace(given, { name: 'Written anyway' })
+    const result = await createWorkspace(
+      { ...given, onActivationFailed },
+      { name: 'Written anyway' },
+    )
 
     expect(result).toEqual({
       ok: true,
       organizationId: expect.any(String),
       activated: false,
     })
+    // The reader is told nothing of why; the operator is.
+    expect(onActivationFailed).toHaveBeenCalledOnce()
     // The batch is already committed: `listOrganizations` reads exactly these rows.
     expect(await membershipsOf(given.scope.ctx.userId)).toBe(before + 1)
     const [created] = await harness.db

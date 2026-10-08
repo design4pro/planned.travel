@@ -84,6 +84,8 @@ export interface CreateWorkspacePorts {
   readonly countMemberships: () => Promise<number>
   /** Makes the new workspace the session's active one. */
   readonly activate: (organizationId: string) => Promise<void>
+  /** Told why activation failed, which the reader is not: the result carries only `activated: false`. */
+  readonly onActivationFailed?: (cause: unknown) => void
 }
 
 /**
@@ -134,7 +136,10 @@ export async function createWorkspace(
   const activated = await ports
     .activate(organizationId)
     .then(() => true)
-    .catch(() => false)
+    .catch((cause: unknown) => {
+      ports.onActivationFailed?.(cause)
+      return false
+    })
 
   return { ok: true, organizationId, activated }
 }
