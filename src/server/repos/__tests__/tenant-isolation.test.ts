@@ -121,6 +121,7 @@ import {
   getTripItinerary,
   listDayAssignments,
   listTripAccommodations,
+  readDayLocations,
   reorderDayTimelines,
   setAssignmentParticipants,
   updateAccommodation,
@@ -1365,6 +1366,7 @@ describe('tenant isolation', () => {
             },
           }),
         () => getTripItinerary(scope, beta.tripId),
+        () => readDayLocations(scope, beta.tripId),
         () => getTripSpendSummary(scope, beta.tripId),
         () => getMemberBalances(scope, beta.tripId),
         () => updateTrip(scope, beta.tripId, { title: 'Stolen title' }),
@@ -1750,6 +1752,22 @@ describe('tenant isolation', () => {
       expect(itinerary[0]?.accommodations).toHaveLength(1)
       expect(itinerary[2]?.accommodations).toHaveLength(1)
       expect(itinerary[0]?.stops[0]?.participantUserIds).toHaveLength(2)
+    })
+
+    it('reads day locations only for the tenant’s own trip', async () => {
+      const own = await readDayLocations(alpha.tenant.scope, alpha.tripId)
+      // The positive control: the seeded stop is a place with both coordinates.
+      expect(own).toHaveLength(3)
+      expect(own[0]?.location).toEqual({ lat: 38.7167, lng: -9.1333 })
+
+      expect(
+        await captureError(() =>
+          readDayLocations(alpha.tenant.scope, beta.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      const theirs = await readDayLocations(beta.tenant.scope, beta.tripId)
+      expect(theirs.map((row) => row.dayId)).toContain(beta.dayId)
+      expect(theirs.map((row) => row.dayId)).not.toContain(alpha.dayId)
     })
 
     // The itinerary carried the day notes until #393; the isolation it proved moves here, to the

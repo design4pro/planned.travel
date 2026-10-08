@@ -326,6 +326,22 @@ const messages = {
     'Un viaggio accoglie al massimo {limit} ospiti, perché un elenco più lungo rende difficili da leggere la scelta dei partecipanti e la divisione delle spese',
   'people.error.guestMergeTarget':
     'Scegli qualcuno che è già in questo viaggio',
+  'plan.weather.badge.forecast':
+    'Previsione: {condition}, massima {max}, minima {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Previsione: massima {max}, minima {min}',
+  'plan.weather.badge.unavailable': 'Meteo non disponibile per questo giorno',
+  'plan.weather.badge.loading': 'Caricamento del meteo',
+  'plan.weather.condition.clear': 'Sereno',
+  'plan.weather.condition.fair': 'Poco nuvoloso',
+  'plan.weather.condition.partlyCloudy': 'Parzialmente nuvoloso',
+  'plan.weather.condition.cloudy': 'Nuvoloso',
+  'plan.weather.condition.fog': 'Nebbia',
+  'plan.weather.condition.rain': 'Pioggia',
+  'plan.weather.condition.heavyRain': 'Pioggia forte',
+  'plan.weather.condition.sleet': 'Nevischio',
+  'plan.weather.condition.snow': 'Neve',
+  'plan.weather.condition.thunder': 'Temporale',
 } satisfies TranslationOf<typeof En>
 
 export default messages

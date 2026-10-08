@@ -114,13 +114,15 @@ export const SEAT_LIMIT_CEILING = 100_000
  * the stage that makes the first search (`docs/plans/03-reservations-and-transport.md`,
  * `03-S3`), lifted to `src/server/metering/rate.ts` when it acquired its third caller, and
  * reused under each further metric name by the stages that make the first extraction
- * (`03-S7`) and the first geocoding lookup (`src/server/geo/geocode.ts`); this module
+ * (`03-S7`), the first geocoding lookup (`src/server/geo/geocode.ts`) and the first
+ * weather lookup (`src/server/weather/weather.ts`); this module
  * supplies the numbers that tally is measured against.
  */
 export const RATE_METRICS = [
   'transit_searches_per_month',
   'extraction_calls_per_month',
   'geocode_lookups_per_month',
+  'weather_lookups_per_month',
 ] as const
 export type RateMetric = (typeof RATE_METRICS)[number]
 
@@ -167,7 +169,18 @@ export type RateMetric = (typeof RATE_METRICS)[number]
  * assumes a debounced client and this module cannot enforce one; the server bounds the
  * half it can see, which is the query's length.
  *
- * All three are far below the point where the bill for one workspace is worth noticing,
+ * `weather_lookups_per_month` — a forecast for a place, read from MET Norway under
+ * `src/server/weather/`. Only an outbound call spends it, one unit each, and a cached day
+ * spends nothing, so the figure counts requests to the provider and not days shown on a
+ * board. The providers cost nothing per call; the ceiling exists to bound a loop and to
+ * respect the provider's own rate policy. A cold trip spends one unit per location, so
+ * Free's 300 is hundreds of cold trip views a month, and Solo and Crew keep the
+ * four-times step the others have. Free's allowance is non-zero because the surface that
+ * spends it is on: the day-by-day itinerary is in Free's catalogue entry
+ * (`src/lib/plans.ts:246,254`), and a zero would refuse every open of a screen the pricing
+ * page sells.
+ *
+ * All four are far below the point where the bill for one workspace is worth noticing,
  * and a workspace that reaches one is asking for a conversation, which is what a ceiling
  * is for.
  */
@@ -178,16 +191,19 @@ export const PLAN_RATE_CEILINGS: {
     transit_searches_per_month: 0,
     extraction_calls_per_month: 0,
     geocode_lookups_per_month: 200,
+    weather_lookups_per_month: 300,
   },
   solo: {
     transit_searches_per_month: 250,
     extraction_calls_per_month: 100,
     geocode_lookups_per_month: 2_000,
+    weather_lookups_per_month: 3_000,
   },
   crew: {
     transit_searches_per_month: 1_000,
     extraction_calls_per_month: 400,
     geocode_lookups_per_month: 8_000,
+    weather_lookups_per_month: 12_000,
   },
 }
 

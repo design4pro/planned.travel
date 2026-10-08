@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value       |
-| ------------------ | ----------- |
-| **Status**         | in-progress |
-| **Issue**          | #631        |
-| **Spec PR**        | #636        |
-| **Implementation** | #1003       |
+| Field              | Value        |
+| ------------------ | ------------ |
+| **Status**         | in-progress  |
+| **Issue**          | #631         |
+| **Spec PR**        | #636         |
+| **Implementation** | #1003, #1004 |
 
 ## 📝 TLDR
 
@@ -756,3 +756,20 @@ fetch:
 | Q7  | Rate ceilings for `weather_lookups_per_month`?            | Free 300, Solo 3,000, Crew 12,000.                                                                                           | The providers cost nothing, and the ceiling exists to bound abuse and respect MET's rate policy. The numbers are cheap to change.                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Q8  | Fetch in the route loader or after paint?                 | After paint, through TanStack Query.                                                                                         | A provider outage must never render `PlanError` or delay the board.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Q9  | Whose time zone - the trip's or the day's?                | The trip's, for both day bucketing and sun times, with the multi-zone trip recorded as a known wrong case rather than fixed. | #631 asks for the day's zone, and it is reachable with **no new dependency**: the `airports` catalogue carries IANA zones beside coordinates (`src/server/db/schema.ts:3160-3161`; 3,535 zoned rows on `tzdata-2026c`). Deferred on cost and accuracy instead - a sparse zoned grid, no `lat`/`lng` index to make nearest-neighbour cheap, and a D1 query per day-location on a read path otherwise kept off D1 - and because the product models a trip as single-zone to begin with. Overturn this row by taking the airports lookup, not by adding a package. |
+
+## Amendment
+
+What ships in #1004 (phase 2, the forecast slice, #820) differs from the design above in these places.
+
+1. **No `fetchedAt` crosses the wire.** `DayReading` carries no fetch time at all, for any kind. The cache entry keeps it internally, and the badge draws nothing from it (the parent #818 asked for it coarsened or recorded as acceptable; this records it as not sent). This does not hide that another workspace looked a point up: the cache is read before the allowance is spent, so a workspace can still tell a cached point (a forecast, at no cost) from an uncached one (`unavailable` once its allowance is gone, or a slower answer) for a point given to four decimals, about 11 m, within the provider's stated expiry. That is accepted for `develop` because the key holds a coordinate and nothing else, the time is not sent, and the only fix is a cache per workspace, which multiplies provider calls and KV entries by the number of workspaces. A person decides whether it is acceptable before any `develop` -> `main` promotion, with the attribution item (#822).
+2. **The response carries the reader's `distanceUnit`.** `TripWeather` is `{ distanceUnit, days }`; readings stay metric and are converted at render, because the cached entry is shared by every workspace.
+3. **`unavailable` has no `kind`.** An unavailable day is `{ dayId, status: 'unavailable' }`; the badge needs no more.
+4. **The forecast reaches 14 days ahead, and never past the last fully covered local date.** `FORECAST_LOOKAHEAD_DAYS = 14` stops a far-future day from spending an allowance unit; a day inside it but beyond what the provider covers is `none`.
+5. **A day's location skips a place without a point.** The stay rule is unchanged; for the first-stop fallback, the first stop whose place has both coordinates is taken, so a stop a person typed in by hand does not hide a located one.
+6. **A trip with no time zone is bucketed in UTC.** Never the reader's zone, so two members of one trip see one answer.
+7. **The allowance is spent once per request.** The cache is read for every place first, then one read and one write of the tally grants as many lookups as are left, earliest day first (`spendRateUnits`). Serial per-place spends wrote one KV key several times a second, which KV does not honour. A place the grant does not reach is `unavailable`, the same as a spent month.
+8. **`nasa-power` is registered as a metered provider ahead of its client** (#823), as the ticket lists both slugs; there is no CHECK on the slug column, so no migration.
+9. **A dated day with no forecast keeps an empty, reserved box**, so a late answer shifts nothing; an undated day draws nothing. The box's width is a floor (`min-w-20`), so a rare wide reading widens it instead of painting over the day header.
+10. **The plan screen asks again when the plan is edited.** The weather query is keyed by trip only, so the screen invalidates it when the board's data is reloaded; an answer already in hand survives a failed refetch.
+11. **Daily highs and lows come from the `instant` temperatures only.** The `compact` product carries no `air_temperature_max/min` for its six-hour steps, so beyond the hourly stretch a day's extremes are the extremes of the steps present (at most four a day) and can understate the true peak. Recorded as a known limit; #821 decides whether another product is worth its size.
+12. **Attribution is not on screen yet.** CC BY 4.0 requires it with the reading; it lands with the popover (#822) and must precede any promotion to `main`.

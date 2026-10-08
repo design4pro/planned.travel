@@ -312,6 +312,22 @@ const messages = {
   'people.error.guestLimit':
     'Een reis heeft hooguit {limit} gasten, omdat een langere lijst de deelnemerskeuze en de kostenverdeling moeilijk leesbaar maakt',
   'people.error.guestMergeTarget': 'Kies iemand die al op deze reis staat',
+  'plan.weather.badge.forecast':
+    'Voorspelling: {condition}, maximaal {max}, minimaal {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Voorspelling: maximaal {max}, minimaal {min}',
+  'plan.weather.badge.unavailable': 'Weer niet beschikbaar voor deze dag',
+  'plan.weather.badge.loading': 'Weer laden',
+  'plan.weather.condition.clear': 'Helder',
+  'plan.weather.condition.fair': 'Mooi weer',
+  'plan.weather.condition.partlyCloudy': 'Half bewolkt',
+  'plan.weather.condition.cloudy': 'Bewolkt',
+  'plan.weather.condition.fog': 'Mist',
+  'plan.weather.condition.rain': 'Regen',
+  'plan.weather.condition.heavyRain': 'Zware regen',
+  'plan.weather.condition.sleet': 'Natte sneeuw',
+  'plan.weather.condition.snow': 'Sneeuw',
+  'plan.weather.condition.thunder': 'Onweer',
 } satisfies TranslationOf<typeof En>
 
 export default messages

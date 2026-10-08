@@ -659,6 +659,24 @@ describe('metered provider calls, ceilings on calls rather than on rows', () => 
     }
   })
 
+  it('gives every plan a weather allowance, because every plan has the planner board', () => {
+    // Spent by the day-by-day itinerary, which Free's catalogue entry sells, so a zero here would
+    // refuse every open of a screen the pricing page advertises. The figures come from the rate
+    // table and from nowhere else: no per-workspace override path exists for a call metric.
+    for (const planId of PLAN_IDS) {
+      const resolved = resolveLimits({ planId, seats: 1, ceilings: null })
+
+      expect(
+        resolved.rates.weather_lookups_per_month,
+        `${planId}.weather_lookups_per_month`,
+      ).toBeGreaterThan(0)
+    }
+
+    expect(PLAN_RATE_CEILINGS.free.weather_lookups_per_month).toBe(300)
+    expect(PLAN_RATE_CEILINGS.solo.weather_lookups_per_month).toBe(3_000)
+    expect(PLAN_RATE_CEILINGS.crew.weather_lookups_per_month).toBe(12_000)
+  })
+
   it('sizes the per-keystroke allowance above the two deliberate ones', () => {
     // Stated as an ordering rather than as three literals, so the argument survives a re-sizing.
     // A search and an extraction are deliberate acts; a lookup is spent while somebody is still
