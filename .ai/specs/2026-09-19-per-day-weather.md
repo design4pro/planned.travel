@@ -16,7 +16,7 @@ Norway's Locationforecast. Past days use a **recorded** daily value from NASA PO
 window use a climate **estimate** from NASA POWER's long-term means, which always carries a visible
 marker. Both providers are free and licensed for commercial use. That is the one property that lifts
 the block on `DOC-08` (`06-S7` in `docs/plans/06-documents-and-media.md`), and phase 1 records it as
-ADR 0025. Three rules apply throughout. Readings are cached in the existing `KV` namespace under keys
+ADR 0038. Three rules apply throughout. Readings are cached in the existing `KV` namespace under keys
 that carry no tenant data. A whole trip is resolved in one batched server call. A reading that is
 missing renders as missing, never as an invented number.
 
@@ -574,7 +574,7 @@ them.
   `RATE_METRICS` gains a member, and the generic loops in `limits.test.ts` (`:590`, `:610`, `:619`,
   `:711`) cover it.
 - **Licence risk.** It is the reason this spec exists. The terms were read on 2026-09-19 and are
-  recorded in ADR 0025. A term change by either provider is handled by a new ADR, and the vendor
+  recorded in ADR 0038. A term change by either provider is handled by a new ADR, and the vendor
   seam keeps a swap to one file.
 - **Cost.** Zero per call. KV reads and writes stay within the existing binding's allowance at our
   volumes (`docs/ARCHITECTURE.md` §8).
@@ -596,13 +596,10 @@ them.
 
 ## 📋 Phasing
 
-1. **Decision on record.** ADR 0025, plus `11-S3`, `06-S7` and `09-S8` updated. Docs only.
-   The number is 0025 because both numbers below it are taken: `docs/adr/` ends at
-   `0023-ci-and-agents-run-on-the-self-hosted-pool.md`, and
-   `.ai/specs/2026-09-19-deployed-on-delete-rules.md` (#192, spec PR #626) already claims `0024`
-   inside its own grep assertions. Two specs cannot own one number. Re-check this against
-   `ls docs/adr/` when phase 1 starts rather than trusting this line: the directory moves while a
-   spec waits, and this number was already wrong once.
+1. **Decision on record.** ADR 0038, plus `11-S3`, `06-S7` and `09-S8` updated. Docs only.
+   This spec first named the record 0025; that number was taken by the time phase 1 ran (#819), so
+   the record is the next free number at that time, 0038, and every plan record cites it. Count by
+   the highest number in `docs/adr/`, not by the file count: it holds two records numbered 0031.
 2. **Server.** Vendors, policy, limits, repository read and server function, all with unit tests and
    no UI caller. The app is unchanged.
 3. **Surface.** Badge, popover, copy in 23 locales, and a Playwright journey. The feature becomes
@@ -614,7 +611,7 @@ Each phase is one pull request and leaves `develop` green.
 
 ### Phase 1 — decision on record
 
-1. Write `docs/adr/0025-met-norway-and-nasa-power-for-weather.md` in the shape of
+1. Write `docs/adr/0038-met-norway-and-nasa-power-for-weather.md` in the shape of
    `0013-geoapify-for-geocoding.md` (Context / Decision / Consequences / Alternatives rejected). Record
    the three kinds, the terms quoted above with the date they were read, the rejected
    alternatives with the clause that rejects each, and - as `0013` does for Geoapify - what each
@@ -622,7 +619,7 @@ Each phase is one pull request and leaves `develop` green.
    a tenant's trip coordinates to a third party. Check: the file exists, and `pnpm lint` passes on
    markdown.
 2. In `docs/plans/11-boundaries-and-blockers.md`, strike weather through in "The provider decisions"
-   and in the `DOC-08` register row, citing ADR 0025, the same way geocoding cites 0013. In
+   and in the `DOC-08` register row, citing ADR 0038, the same way geocoding cites 0013. In
    `docs/plans/06-documents-and-media.md` `06-S7`, mark the stage unblocked, rename `archive` and
    `climate` to `recorded` and `estimate`, and point at this spec. In
    `docs/plans/09-account-and-settings.md`, change the "Temperature unit" row (`:2605`, and the
