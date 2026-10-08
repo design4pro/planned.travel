@@ -581,6 +581,7 @@ const messages = {
     'Två stopp och ett datum, så svarar tidtabellen. Ingenting sparas förrän du väljer en.',
   'transports.connection.empty':
     'Ingen förbindelse hittades mellan de två stoppen det datumet. Prova en granne till stationen, eller vidga färdsättsfiltret.',
+  'transports.connection.credit': 'Tidtabellsdata från',
   'transports.connection.searchFailed': 'Sökningen kördes inte',
   'transports.connection.searchFailedBody': 'Försök igen om en stund.',
   'transports.connection.saved': 'Förbindelsen sparad',

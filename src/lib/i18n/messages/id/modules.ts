@@ -579,6 +579,7 @@ const messages = {
     'Dua perhentian dan satu tanggal, lalu jadwal menjawab. Tidak ada yang disimpan sampai kamu memilih satu.',
   'transports.connection.empty':
     'Tidak ditemukan koneksi antara dua perhentian itu pada tanggal tersebut. Coba stasiun tetangga, atau perluas filter moda.',
+  'transports.connection.credit': 'Data jadwal dari',
   'transports.connection.searchFailed': 'Pencarian tidak berjalan',
   'transports.connection.searchFailedBody': 'Coba lagi sebentar lagi.',
   'transports.connection.saved': 'Koneksi disimpan',

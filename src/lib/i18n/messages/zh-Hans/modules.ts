@@ -538,6 +538,7 @@ const messages = {
     '两个站点加一个日期，时刻表就会回答。在你选定之前不会保存任何内容。',
   'transports.connection.empty':
     '在那个日期没有找到连接这两个站点的路线。可以试试邻近车站，或者放宽方式筛选。',
+  'transports.connection.credit': '时刻表数据来源：',
   'transports.connection.searchFailed': '搜索未执行',
   'transports.connection.searchFailedBody': '请稍后再试一次。',
   'transports.connection.saved': '路线已保存',
