@@ -211,6 +211,7 @@ const messages = {
   'book.import.failed.retry': 'Zkusit jiný soubor',
   'book.import.uploadFailed': '„{filename}“ se nenahrál',
   'book.import.uploadRetry': 'Zkusit znovu',
+  'book.import.actionFailed': 'Zkuste to znovu za chvíli.',
   'book.import.toast.added': {
     one: 'Jedna rezervace přidána',
     few: '{count} rezervace přidány',

@@ -218,6 +218,7 @@ const messages = {
   'book.import.failed.retry': 'جرّب ملفًا آخر',
   'book.import.uploadFailed': '«{filename}» لم يُرفع',
   'book.import.uploadRetry': 'حاول مرة أخرى',
+  'book.import.actionFailed': 'حاول مرة أخرى بعد قليل.',
   'book.import.toast.added': {
     zero: 'لم يُضف أي حجز',
     one: 'أُضيف حجز واحد',

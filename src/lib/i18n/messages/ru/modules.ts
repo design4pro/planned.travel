@@ -210,6 +210,7 @@ const messages = {
   'book.import.failed.retry': 'Попробовать другой файл',
   'book.import.uploadFailed': '«{filename}» не загрузился',
   'book.import.uploadRetry': 'Попробовать снова',
+  'book.import.actionFailed': 'Попробуйте ещё раз чуть позже.',
   'book.import.toast.added': {
     one: 'Добавлена одна бронь',
     few: 'Добавлено {count} брони',

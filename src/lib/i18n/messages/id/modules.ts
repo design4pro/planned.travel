@@ -197,6 +197,7 @@ const messages = {
   'book.import.failed.retry': 'Coba berkas lain',
   'book.import.uploadFailed': '“{filename}” gagal diunggah',
   'book.import.uploadRetry': 'Coba lagi',
+  'book.import.actionFailed': 'Coba lagi sebentar lagi.',
   'book.import.toast.added': {
     other: '{count} pemesanan ditambahkan',
   },

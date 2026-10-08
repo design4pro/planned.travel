@@ -194,6 +194,7 @@ const messages = {
   'book.import.failed.retry': '別のファイルを試す',
   'book.import.uploadFailed': '「{filename}」はアップロードされませんでした',
   'book.import.uploadRetry': 'もう一度試す',
+  'book.import.actionFailed': 'しばらくしてからもう一度お試しください。',
   'book.import.toast.added': {
     other: '{count} 件の予約を追加しました',
   },
