@@ -299,6 +299,7 @@ export function TransportDialog({
       data: {
         ...transportPayload(draft, chain, tripId),
         transportId,
+        intent: editing ? 'edit' : 'create',
         ...chainPayload(chain),
       },
     })
