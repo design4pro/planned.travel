@@ -403,6 +403,11 @@ function buildAuth() {
         // limit and the impersonation veto live in `createWorkspace`, and `organization/create` over
         // HTTP would skip every one of them. `organization/set-active` is unaffected.
         allowUserToCreateOrganization: false,
+        // Deletion is closed for the same reason, and until the product owns it (#1000) there is no
+        // path at all: `organization/delete` removes the row and cascades over every tenant table
+        // while billing, storage and the audit log are never told. The flag is checked before the
+        // session lookup, so it refuses an owner and an anonymous caller alike, in process too.
+        disableOrganizationDeletion: true,
         organizationLimit: WORKSPACE_LIMIT,
         membershipLimit: 100,
         creatorRole: 'owner',
