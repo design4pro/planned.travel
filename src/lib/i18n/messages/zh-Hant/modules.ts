@@ -538,6 +538,7 @@ const messages = {
     '兩個站點加一個日期，時刻表就會回答。在你選定之前不會儲存任何內容。',
   'transports.connection.empty':
     '在那個日期沒有找到連接這兩個站點的路線。可以試試鄰近車站，或者放寬方式篩選。',
+  'transports.connection.credit': '時刻表資料來源：',
   'transports.connection.searchFailed': '搜尋未執行',
   'transports.connection.searchFailedBody': '請稍後再試一次。',
   'transports.connection.saved': '路線已儲存',

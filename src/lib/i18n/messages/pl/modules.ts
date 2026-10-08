@@ -611,6 +611,7 @@ const messages = {
     'Dwa przystanki i data, a rozkład odpowiada. Nic nie zapisuje się, dopóki nie wybierzesz.',
   'transports.connection.empty':
     'Nie znaleziono połączenia między tymi przystankami w tym dniu. Spróbuj sąsiedniej stacji albo poszerz filtr środków.',
+  'transports.connection.credit': 'Dane rozkładowe od',
   'transports.connection.searchFailed': 'Wyszukiwanie się nie odbyło',
   'transports.connection.searchFailedBody': 'Spróbuj za chwilę.',
   'transports.connection.saved': 'Połączenie zapisane',

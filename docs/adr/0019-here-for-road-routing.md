@@ -160,7 +160,11 @@ Four further terms travel with it:
   notice, in a reasonably conspicuous manner (e.g., by inserting a reference in the End-User Terms),
   of the terms under Section 1 below and source attributions under Section 2 below, where
   applicable." So a HERE credit joins the map's attribution line on any surface that shows a routed
-  time or line, and the product's terms reference HERE's supplier notices.
+  time or line, and the product's terms reference HERE's supplier notices. The credit is one constant,
+  `HERE_CREDITS` in `src/lib/geo/credits.ts`, rendered through the map's credit list. The transit
+  connection search (ADR 0011) shows it as a caption after the ranked list, and only while a list is on
+  screen; the supplier terms prescribe no wording for the credit itself (read 2026-10-07), so the caption
+  names the vendor and links its site.
 - **Personal data reaching HERE carries a notice duty.** "If any personal data of End Users is
   delivered to HERE by the End User or through the End User's use of your Application ... you shall
   make the End User Terms and the HERE Privacy Policy available to End Users in Applications or

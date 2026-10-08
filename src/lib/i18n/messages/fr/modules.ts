@@ -609,6 +609,7 @@ const messages = {
     'Deux arrêts et une date, et l’horaire répond. Rien n’est enregistré tant que vous n’avez pas choisi.',
   'transports.connection.empty':
     'Aucune connexion trouvée entre ces deux arrêts à cette date. Essayez une gare voisine ou élargissez le filtre de modes.',
+  'transports.connection.credit': 'Horaires fournis par',
   'transports.connection.searchFailed': 'La recherche n’a pas eu lieu',
   'transports.connection.searchFailedBody': 'Réessayez dans un instant.',
   'transports.connection.saved': 'Connexion enregistrée',

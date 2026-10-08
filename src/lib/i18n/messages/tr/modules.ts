@@ -577,6 +577,7 @@ const messages = {
     'İki durak ve bir tarih, tarife yanıtlar. Sen birini seçene kadar hiçbir şey kaydedilmez.',
   'transports.connection.empty':
     'O tarihte bu iki durak arasında bağlantı bulunamadı. Komşu bir istasyon dene ya da tür filtresini genişlet.',
+  'transports.connection.credit': 'Tarife verilerinin kaynağı:',
   'transports.connection.searchFailed': 'Arama çalışmadı',
   'transports.connection.searchFailedBody': 'Birazdan yeniden dene.',
   'transports.connection.saved': 'Bağlantı kaydedildi',
