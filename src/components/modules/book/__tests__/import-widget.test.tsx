@@ -9,6 +9,7 @@ import { BookImportWidget, DONE_LINGER_MS } from '../import-widget'
 import {
   POLL_BUDGET_MS,
   POLL_INTERVAL_MS,
+  bookImportJobs,
   bookImportsKey,
   bookImportsOwner,
   readBookImports,
@@ -31,10 +32,15 @@ const EN: Catalogue = {
   ...namespaceCatalogue('ui', Ui),
 }
 
-const stubs = vi.hoisted(() => ({ view: vi.fn(), navigate: vi.fn() }))
+const stubs = vi.hoisted(() => ({
+  view: vi.fn(),
+  confirm: vi.fn(),
+  navigate: vi.fn(),
+}))
 
 vi.mock('#/server/fns/booking-import', () => ({
   getBookingImportFn: stubs.view,
+  confirmBookingImportFn: stubs.confirm,
 }))
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => stubs.navigate,
@@ -82,6 +88,7 @@ beforeEach(() => {
   window.localStorage.clear()
   resetBookImportJobs()
   stubs.view.mockReset()
+  stubs.confirm.mockReset()
   stubs.navigate.mockReset()
   vi.useFakeTimers({ shouldAdvanceTime: true })
 })
@@ -236,6 +243,51 @@ describe('the global import widget', () => {
     expect(
       document.querySelector('[data-part="book-import-widget"]'),
     ).toBeNull()
+  })
+
+  it('does not offer Dismiss for a stalled job whose rows were not written, and Check again stays', async () => {
+    // A partial confirm re-reads the job. When the re-read is rejected until the budget is spent
+    // the job stalls, and it still holds the only handle on rows the reader has not written.
+    const staged = {
+      format: 'document',
+      count: 2,
+      written: [],
+      drafts: [0, 1].map((index) => ({
+        index,
+        type: 'accommodation',
+        title: `Row ${index}`,
+        location: null,
+        reference: null,
+        startDate: null,
+        startTime: null,
+        endDate: null,
+        endTime: null,
+        priceMinor: null,
+        currency: null,
+        needsReview: false,
+      })),
+    } as const
+    stubs.view.mockResolvedValueOnce({
+      status: 'ready',
+      staged,
+    } satisfies BookingImportView)
+    registerOne()
+    mount()
+    await tick(POLL_INTERVAL_MS)
+    stubs.confirm.mockResolvedValue({ written: 1, failed: 1, remaining: 1 })
+    stubs.view.mockRejectedValue(new Error('offline'))
+
+    await act(async () => {
+      await bookImportJobs(USER).confirm({
+        tripId: 'trip-1',
+        selection: new Map([['booking-import:trip-1:file-1', new Set([0, 1])]]),
+      })
+    })
+    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
+
+    expect(screen.getByText('This is taking longer than expected')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
   it('offers the review with a count once a job is ready, then takes itself away', async () => {

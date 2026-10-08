@@ -882,6 +882,25 @@ describe('a watcher that joins a stalled store', () => {
   })
 })
 
+describe('a second watcher and a settled job', () => {
+  it('leaves a ready job as it was while it gives a stalled one a fresh budget', async () => {
+    register([row('ready'), row('stalled')])
+    const port = fakePort()
+    port.view.mockImplementation(({ jobId: id }) =>
+      Promise.resolve(id.endsWith(':ready') ? ready() : WORKING),
+    )
+    const jobs = watched(port)
+    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
+    expect(statusOf(jobs, 'ready')).toBe('ready')
+    expect(statusOf(jobs, 'stalled')).toBe('stalled')
+
+    jobs.subscribe(() => {})
+
+    expect(statusOf(jobs, 'ready')).toBe('ready')
+    expect(statusOf(jobs, 'stalled')).toBe('working')
+  })
+})
+
 describe('answers that arrive late', () => {
   function deferred() {
     let resolve!: (view: BookingImportView) => void

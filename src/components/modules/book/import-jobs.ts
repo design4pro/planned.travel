@@ -519,9 +519,10 @@ export function createBookImportJobs(
     )
   }
 
-  function recheck(tripId?: string): void {
+  /** Gives the jobs `chosen` selects a fresh budget and asks about them again. */
+  function reask(chosen: (job: BookImportJob) => boolean): void {
     for (const job of register) {
-      if (tripId !== undefined && job.tripId !== tripId) {
+      if (!chosen(job)) {
         continue
       }
       startedAt.delete(job.jobId)
@@ -532,6 +533,10 @@ export function createBookImportJobs(
     }
     emit()
     arm()
+  }
+
+  function recheck(tripId?: string): void {
+    reask((job) => tripId === undefined || job.tripId === tripId)
   }
 
   return {
@@ -549,7 +554,7 @@ export function createBookImportJobs(
         // A screen that mounts while the others have given up asks again with a fresh budget, as a
         // freshly mounted screen always did; without this it would inherit the stall and show
         // Check again for a job the server may have finished long ago.
-        recheck()
+        reask((job) => answers.get(job.jobId)?.status === 'stalled')
       }
       return () => {
         listeners.delete(listener)
