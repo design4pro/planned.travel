@@ -91,9 +91,13 @@ const FAILED_PAYMENT_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
  * re-derives it, because there is nothing to re-derive from — the user id and the role came out of
  * the same tenant-filtered read, not off the message.
  *
- * A workspace keeps at least one owner by construction — `changeMemberRole` and `removeMember` both
- * refuse to take the last one — so an organization without one is a row-level breakage that will
- * not resolve itself: a permanent failure with a named reason, never five retries.
+ * A workspace that other people belong to keeps at least one owner. The Better Auth `organization()`
+ * routes (remove member, leave, update member role) refuse to take the last one, and console account
+ * deletion (`deletePlatformUser`) refuses the only owner of a workspace with other members. The
+ * repository's own `changeMemberRole` and `removeMember` guard nothing here: neither has a
+ * production caller. An organization without an owner is therefore a row-level breakage (or a
+ * workspace whose only member was deleted) that will not resolve itself: a permanent failure with a named
+ * reason, never five retries.
  */
 async function scopeForWorkspace(
   db: Database,
