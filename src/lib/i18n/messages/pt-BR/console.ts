@@ -400,6 +400,8 @@ const messages = {
   'action.delete.confirm': 'Excluir conta',
   'action.delete.note':
     'O conteúdo de espaço de trabalho que esta pessoa criou fica com o espaço que é dono dele. Suspender a conta em vez de excluir guarda o registro e tira o acesso.',
+  'action.delete.owners':
+    'Não é possível excluir uma conta que é a única proprietária de um espaço de trabalho do qual outras pessoas participam. Defina antes outra pessoa como proprietária lá, ou suspenda a conta em vez de excluir.',
   'action.delete.done': 'Conta excluída',
   'action.delete.done.body':
     '{name} e tudo o que estava preso à conta se foram.',

@@ -407,6 +407,8 @@ const messages = {
   'action.delete.confirm': 'Usuń konto',
   'action.delete.note':
     'Treści przestrzeni roboczej stworzone przez tę osobę zostają przy przestrzeni, która jest ich właścicielem. Zawieszenie konta zamiast usunięcia zachowuje zapis, a odbiera dostęp.',
+  'action.delete.owners':
+    'Nie można usunąć konta, które jest jedynym właścicielem przestrzeni roboczej, do której należą też inne osoby. Najpierw ustanów tam innego właściciela albo zawieś konto zamiast je usuwać.',
   'action.delete.done': 'Konto usunięte',
   'action.delete.done.body':
     '{name} i wszystko, co było z kontem związane, zniknęło.',

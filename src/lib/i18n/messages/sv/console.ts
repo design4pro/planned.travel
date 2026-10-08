@@ -398,6 +398,8 @@ const messages = {
   'action.delete.confirm': 'Ta bort kontot',
   'action.delete.note':
     'Innehåll i en arbetsyta som den här personen skapat stannar hos arbetsytan som äger det. Att stänga av kontot i stället behåller spåret och tar bort åtkomsten.',
+  'action.delete.owners':
+    'Ett konto som är ensam ägare till en arbetsyta där andra personer ingår kan inte raderas. Gör först någon annan till ägare där, eller stäng av kontot i stället.',
   'action.delete.done': 'Kontot borttaget',
   'action.delete.done.body': '{name} och allt som hängde på kontot är borta.',
 

@@ -400,6 +400,8 @@ const messages = {
   'action.delete.confirm': 'Smazat účet',
   'action.delete.note':
     'Obsah pracovního prostoru, který tenhle člověk vytvořil, zůstává prostoru, který ho vlastní. Pozastavit účet místo smazání zachová záznam a vezme přístup.',
+  'action.delete.owners':
+    'Účet, který je jediným vlastníkem pracovního prostoru, do něhož patří další lidé, nelze smazat. Nejdřív tam jmenujte dalšího vlastníka, nebo účet místo smazání pozastavte.',
   'action.delete.done': 'Účet smazán',
   'action.delete.done.body': '{name} i všechno, co na účtu viselo, je pryč.',
 
