@@ -26,6 +26,7 @@ import {
   createTrip,
   listTripDays,
   replaceTransportChain,
+  saveSearchedConnection,
 } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
 
@@ -206,6 +207,37 @@ describe('the journeys a day can draw', () => {
     expect(legs.every((leg) => leg.status === 'confirmed')).toBe(true)
     // A ticket is priced once, on the record, so no leg invents a fare of its own.
     expect(legs.every((leg) => leg.priceMinor === null)).toBe(true)
+  })
+
+  it('keeps a re-searched journey on the day it was anchored to', async () => {
+    const scope = tenant.scope
+    const stations = [{ name: 'Shin-Osaka' }, { name: 'Tokyo' }]
+    const saved = await saveSearchedConnection(scope, {
+      tripId: fixture.tripId,
+      mode: 'train',
+      title: 'Shin-Osaka to Tokyo',
+      stations,
+      legs: [{}],
+    })
+    await replaceTransportChain(scope, saved.transport.id, {
+      stations,
+      legs: [{ departureDayId: fixture.secondDayId }],
+    })
+
+    // The dialog sends no day; the timetable moved by half an hour.
+    await saveSearchedConnection(scope, {
+      tripId: fixture.tripId,
+      transportId: saved.transport.id,
+      mode: 'train',
+      title: 'Shin-Osaka to Tokyo',
+      stations,
+      legs: [{ departureTime: '09:30' }],
+    })
+
+    const payload = await readPlanTransports(scope, fixture.tripId)
+    const legs = payload.transports.filter((entry) => entry.kind === 'leg')
+    expect(legs.map((leg) => leg.departureDayId)).toEqual([fixture.secondDayId])
+    expect(legs[0].departureTime).toBe('09:30')
   })
 
   it('leaves a journey with no day at all on the Transports tab', async () => {
