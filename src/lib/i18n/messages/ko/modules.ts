@@ -192,6 +192,7 @@ const messages = {
   'book.import.failed.retry': '다른 파일 넣기',
   'book.import.uploadFailed': '“{filename}”이 올라가지 않았습니다',
   'book.import.uploadRetry': '다시 시도',
+  'book.import.actionFailed': '잠시 후 다시 시도해 주세요.',
   'book.import.toast.added': {
     other: '예약 {count}개를 추가했습니다',
   },

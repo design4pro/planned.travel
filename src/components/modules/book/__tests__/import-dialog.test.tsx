@@ -5,12 +5,17 @@ import '#/components/ui/__tests__/test-env'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
+import { toast } from '#/components/ui'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
-import { bookImportsKey, readBookImports } from '../import-widget'
+import {
+  bookImportsKey,
+  readBookImports,
+  resetBookImportJobs,
+} from '../import-jobs'
 import { ImportBookingsDialog } from '../import-dialog'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -122,6 +127,7 @@ const READY: BookingImportView = {
 
 beforeEach(() => {
   window.localStorage.clear()
+  resetBookImportJobs()
   stubs.view.mockReset()
   stubs.start.mockReset()
   stubs.confirm.mockReset()
@@ -132,6 +138,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  resetBookImportJobs()
+  vi.restoreAllMocks()
   vi.useRealTimers()
 })
 
@@ -220,48 +228,19 @@ describe('the import dialog at its boundary', () => {
       },
     ])
   })
-
-  it('writes each file’s queue stagger into the register', async () => {
-    stubs.upload
-      .mockResolvedValueOnce({ ok: true, file: { id: 'file-1' } })
-      .mockResolvedValueOnce({ ok: true, file: { id: 'file-2' } })
-    // The delay is the server's to state: the dialog writes what the start answer says.
-    stubs.start
-      .mockResolvedValueOnce({
-        jobId: 'booking-import:trip-1:file-1',
-        delaySeconds: 0,
-      })
-      .mockResolvedValueOnce({
-        jobId: 'booking-import:trip-1:file-2',
-        delaySeconds: 20,
-      })
+  it('words a start the server refused from the catalogue, and keeps the file’s alert', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    stubs.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })
+    // Not an Error with a message of its own, so the toast has to fall back to the catalogue.
+    stubs.start.mockRejectedValue({})
     open()
 
-    drop(
-      new File(['x'], 'first.ics', { type: 'text/calendar' }),
-      new File(['x'], 'second.ics', { type: 'text/calendar' }),
-    )
+    drop(new File(['x'], 'first.ics', { type: 'text/calendar' }))
 
-    // Without this the widget counts its stall budget from the drop, and the second file — which
-    // the queue is told to hold for twenty seconds — is called stalled before it can have started.
-    await vi.waitFor(() => {
-      expect(readBookImports(USER).map((job) => job.delayMs)).toEqual([
-        0, 20_000,
-      ])
+    expect(await screen.findByText('“first.ics” did not upload')).toBeTruthy()
+    expect(error).toHaveBeenCalledWith(EN['modules.form.saveError'], {
+      description: EN['modules.book.import.actionFailed'],
     })
-    // The index is the dialog's half of the stagger: the server turns it into the delay.
-    expect(stubs.start).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        data: expect.objectContaining({ fileId: 'file-1', index: 0 }),
-      }),
-    )
-    expect(stubs.start).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        data: expect.objectContaining({ fileId: 'file-2', index: 1 }),
-      }),
-    )
   })
 })
 
@@ -339,6 +318,21 @@ describe('the import dialog on a staged answer', () => {
       expect(screen.queryByRole('checkbox', { name: /Hotel Okura/ })).toBeNull()
     })
     expect(screen.getByRole('button', { name: 'Add the rest' })).toBeTruthy()
+  })
+
+  it('words a confirm the server rejected, and counts its rows as left', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    stubs.confirm.mockRejectedValue({})
+    open()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Add 2 bookings' }),
+    )
+
+    expect(await screen.findByText('0 of 2 bookings were added')).toBeTruthy()
+    expect(error).toHaveBeenCalledWith(EN['modules.form.saveError'], {
+      description: EN['modules.book.import.actionFailed'],
+    })
   })
 
   it('offers every row selected, counted in the confirm', async () => {

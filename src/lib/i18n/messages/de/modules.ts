@@ -204,6 +204,7 @@ const messages = {
   'book.import.failed.retry': 'Andere Datei versuchen',
   'book.import.uploadFailed': '„{filename}“ wurde nicht hochgeladen',
   'book.import.uploadRetry': 'Nochmal versuchen',
+  'book.import.actionFailed': 'Versuche es gleich noch einmal.',
   'book.import.toast.added': {
     one: 'Eine Buchung hinzugefügt',
     other: '{count} Buchungen hinzugefügt',

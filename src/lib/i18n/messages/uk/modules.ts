@@ -211,6 +211,7 @@ const messages = {
   'book.import.failed.retry': 'Спробувати інший файл',
   'book.import.uploadFailed': '«{filename}» не завантажився',
   'book.import.uploadRetry': 'Спробувати ще раз',
+  'book.import.actionFailed': 'Спробуйте ще раз за мить.',
   'book.import.toast.added': {
     one: 'Додано одне бронювання',
     few: 'Додано {count} бронювання',
