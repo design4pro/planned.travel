@@ -4,7 +4,7 @@
 | ------------------ | --------------------------------------------------- |
 | **Status**         | ready                                               |
 | **Issue**          | none                                                |
-| **Spec PR**        | none                                                |
+| **Spec PR**        | #984                                                |
 | **Implementation** | none                                                |
 | **Plan**           | 07-S10 (docs/plans/07-collaboration-and-sharing.md) |
 
