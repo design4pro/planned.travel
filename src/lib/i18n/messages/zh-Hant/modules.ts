@@ -185,6 +185,7 @@ const messages = {
   'book.import.failed.retry': '換個檔案試試',
   'book.import.uploadFailed': '「{filename}」沒有上傳成功',
   'book.import.uploadRetry': '再試一次',
+  'book.import.actionFailed': '請稍後再試。',
   'book.import.toast.added': {
     other: '已新增 {count} 筆訂位',
   },

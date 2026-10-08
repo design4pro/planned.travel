@@ -4,8 +4,8 @@
  * The one rule that shapes this file: **nothing a machine read reaches the desk until a person has
  * pressed a button beside it** (ADR 0012). So the dialog does four things in order — refuse what it
  * cannot read, *there and by name*; hand what it can to the job module, which uploads it through
- * the existing `uploadFile`, which posts over `XMLHttpRequest` and therefore measures real bytes; show what came back; and write
- * only the rows that survived pruning.
+ * the existing `uploadFile`, which posts over `XMLHttpRequest` and therefore measures real bytes;
+ * show what came back; and write only the rows that survived pruning.
  *
  * A refusal is worded as what it is. The extraction ceiling has its own state rather than borrowing
  * the transit search's; a format the conversion cannot read is named with the file that carried it
@@ -125,7 +125,7 @@ export function ImportBookingsDialog({
    */
   const reportFailure = (cause: unknown): void => {
     toast.error(t('modules.form.saveError'), {
-      description: messageOf(cause, 'Try again in a moment.'),
+      description: messageOf(cause, t('modules.book.import.actionFailed')),
     })
   }
 

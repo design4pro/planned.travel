@@ -202,6 +202,7 @@ const messages = {
   'book.import.failed.retry': 'Ander bestand proberen',
   'book.import.uploadFailed': '„{filename}” is niet geüpload',
   'book.import.uploadRetry': 'Opnieuw proberen',
+  'book.import.actionFailed': 'Probeer het zo meteen opnieuw.',
   'book.import.toast.added': {
     one: 'Eén boeking toegevoegd',
     other: '{count} boekingen toegevoegd',

@@ -5,6 +5,7 @@ import '#/components/ui/__tests__/test-env'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
+import { toast } from '#/components/ui'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
@@ -138,6 +139,7 @@ beforeEach(() => {
 
 afterEach(() => {
   resetBookImportJobs()
+  vi.restoreAllMocks()
   vi.useRealTimers()
 })
 
@@ -226,6 +228,20 @@ describe('the import dialog at its boundary', () => {
       },
     ])
   })
+  it('words a start the server refused from the catalogue, and keeps the file’s alert', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    stubs.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })
+    // Not an Error with a message of its own, so the toast has to fall back to the catalogue.
+    stubs.start.mockRejectedValue({})
+    open()
+
+    drop(new File(['x'], 'first.ics', { type: 'text/calendar' }))
+
+    expect(await screen.findByText('“first.ics” did not upload')).toBeTruthy()
+    expect(error).toHaveBeenCalledWith(EN['modules.form.saveError'], {
+      description: EN['modules.book.import.actionFailed'],
+    })
+  })
 })
 
 describe('the import dialog’s controls', () => {
@@ -302,6 +318,21 @@ describe('the import dialog on a staged answer', () => {
       expect(screen.queryByRole('checkbox', { name: /Hotel Okura/ })).toBeNull()
     })
     expect(screen.getByRole('button', { name: 'Add the rest' })).toBeTruthy()
+  })
+
+  it('words a confirm the server rejected, and counts its rows as left', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    stubs.confirm.mockRejectedValue({})
+    open()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Add 2 bookings' }),
+    )
+
+    expect(await screen.findByText('0 of 2 bookings were added')).toBeTruthy()
+    expect(error).toHaveBeenCalledWith(EN['modules.form.saveError'], {
+      description: EN['modules.book.import.actionFailed'],
+    })
   })
 
   it('offers every row selected, counted in the confirm', async () => {

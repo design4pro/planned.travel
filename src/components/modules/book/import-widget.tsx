@@ -12,7 +12,7 @@ import { FileSearch } from 'lucide-react'
 
 import { Button, Card, Progress } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
-import { useBookImports } from './import-jobs'
+import { isDismissible, useBookImports } from './import-jobs'
 
 /** Long enough for the done state to be read and clicked, short enough not to be furniture. */
 export const DONE_LINGER_MS = 12_000
@@ -154,8 +154,8 @@ export function BookImportWidget({ userId }: { readonly userId: string }) {
               {t('modules.book.import.widget.check')}
             </Button>
           ) : null}
-          {/* A stalled job is dismissible too: see `dismiss` in `./import-jobs` for why. */}
-          {failure === undefined && stalled.length === 0 ? null : (
+          {/* A stalled job is dismissible too, unless rows are still on offer: see `isDismissible`. */}
+          {shown.some(isDismissible) ? (
             <Button
               variant="ghost"
               size="sm"
@@ -166,7 +166,7 @@ export function BookImportWidget({ userId }: { readonly userId: string }) {
             >
               {t('modules.book.import.widget.dismiss')}
             </Button>
-          )}
+          ) : null}
           {first === undefined ? null : (
             <Button
               variant="primary"

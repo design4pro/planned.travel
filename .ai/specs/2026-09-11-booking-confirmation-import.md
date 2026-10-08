@@ -380,6 +380,7 @@ Forty-one new keys in the `modules` namespace under `modules.book.import.*`, bes
 | `book.import.failed.retry`  | Try another file                                                                                       |
 | `book.import.uploadFailed`  | “{filename}” did not upload                                                                            |
 | `book.import.uploadRetry`   | Try again                                                                                              |
+| `book.import.actionFailed`  | Try again in a moment.                                                                                 |
 | `book.import.toast.added`   | {count} bookings added                                                                                 |
 | `book.import.partial.title` | {written} of {total} bookings were added                                                               |
 | `book.import.partial.body`  | The rest are still selected. Adding again writes only those.                                           |

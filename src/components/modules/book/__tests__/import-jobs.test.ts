@@ -9,6 +9,7 @@ import {
   bookImportJobs,
   bookImportsKey,
   createBookImportJobs,
+  isDismissible,
   readBookImports,
   resetBookImportJobs,
 } from '../import-jobs'
@@ -504,7 +505,7 @@ describe('starting a drop', () => {
     expect(readBookImports(OWNER)).toHaveLength(1)
   })
 
-  it('waits for the caller’s hook after a start and before the job is registered', async () => {
+  it('waits for the caller’s hook after a start, once the job is registered', async () => {
     const port = fakePort()
     port.upload.mockResolvedValue({ fileId: 'file-1' })
     port.start.mockResolvedValue({ jobId: jobId('1'), delaySeconds: 0 })
@@ -520,11 +521,13 @@ describe('starting a drop', () => {
       },
     })
 
-    expect(seen).toEqual([0])
+    expect(seen).toEqual([1])
     expect(readBookImports(OWNER)).toHaveLength(1)
   })
 
-  it('treats a start whose hook rejects as a failed start', async () => {
+  it('keeps the job registered when the hook after its start rejects', async () => {
+    // The start went through and spent the allowance: a hook that fails does not un-start it, and
+    // a register that skipped it would leave a reading running where nothing can reach it.
     const port = fakePort()
     const cause = new Error('invalidate failed')
     port.upload.mockResolvedValue({ fileId: 'file-1' })
@@ -542,6 +545,7 @@ describe('starting a drop', () => {
       filename: 'first.ics',
       cause,
     })
+    expect(readBookImports(OWNER).map((job) => job.jobId)).toEqual([jobId('1')])
   })
 
   it('treats a start answer from before the delay existed as no delay', async () => {
@@ -737,6 +741,23 @@ describe('confirming', () => {
     expect(readBookImports(OWNER)).toHaveLength(0)
   })
 
+  it('settles the register even when the caller’s hook rejects', async () => {
+    const port = fakePort()
+    const jobs = await readyStore(port)
+    port.confirm.mockResolvedValue({ written: 2, failed: 0, remaining: 0 })
+
+    await expect(
+      jobs.confirm({
+        tripId: TRIP,
+        selection: new Map([[jobId('a'), new Set([0, 1])]]),
+        afterWritten: () => Promise.reject(new Error('invalidate failed')),
+      }),
+    ).rejects.toThrow('invalidate failed')
+
+    // The rows were written, so the jobs are forgotten all the same.
+    expect(readBookImports(OWNER)).toHaveLength(0)
+  })
+
   it('confirms only the files of the trip it is asked about', async () => {
     register([row('a'), { ...row('b'), tripId: 'trip-2' }])
     const port = fakePort()
@@ -819,6 +840,80 @@ describe('the two forget policies', () => {
   })
 })
 
+describe('Dismiss and the rows still on offer', () => {
+  it('keeps a stalled job whose rows have not been written', async () => {
+    // A partial confirm re-reads the job. When every re-read is rejected the job stalls, and it
+    // still holds the only handle on rows the reader has not written: Dismiss must not take it.
+    register([row('a')])
+    const port = fakePort()
+    port.view.mockResolvedValueOnce(ready())
+    const jobs = watched(port)
+    await tick(0)
+    port.confirm.mockResolvedValue({ written: 1, failed: 1, remaining: 1 })
+    port.view.mockRejectedValue(new Error('offline'))
+    await jobs.confirm({
+      tripId: TRIP,
+      selection: new Map([[jobId('a'), new Set([0, 1])]]),
+    })
+    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
+    expect(statusOf(jobs, 'a')).toBe('stalled')
+    expect(jobs.getSnapshot().entries[0]?.drafts.length).toBeGreaterThan(0)
+
+    jobs.dismiss()
+
+    expect(readBookImports(OWNER).map((job) => job.jobId)).toEqual([jobId('a')])
+    expect(jobs.getSnapshot().entries.some(isDismissible)).toBe(false)
+  })
+})
+
+describe('answers that arrive late', () => {
+  function deferred() {
+    let resolve!: (view: BookingImportView) => void
+    const promise = new Promise<BookingImportView>((done) => {
+      resolve = done
+    })
+    return { promise, resolve }
+  }
+
+  it('drops an answer that arrives after the last watcher has left', async () => {
+    register([row('a')])
+    const port = fakePort()
+    const late = deferred()
+    port.view.mockReturnValueOnce(late.promise)
+    const jobs = createBookImportJobs(OWNER, port)
+    const listener = vi.fn()
+    const unsubscribe = jobs.subscribe(listener)
+    await tick(0)
+
+    unsubscribe()
+    late.resolve(ready())
+    await tick(0)
+
+    expect(statusOf(jobs, 'a')).toBe('working')
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('drops an answer to a question asked before a recheck', async () => {
+    register([row('a')])
+    const port = fakePort()
+    const before = deferred()
+    const after = deferred()
+    port.view
+      .mockReturnValueOnce(before.promise)
+      .mockReturnValueOnce(after.promise)
+    const jobs = watched(port)
+    await tick(0)
+
+    jobs.recheck()
+    after.resolve(ready())
+    await tick(0)
+    before.resolve({ status: 'refused', refusal: { code: 'unreadable' } })
+    await tick(0)
+
+    expect(statusOf(jobs, 'a')).toBe('ready')
+  })
+})
+
 describe('the shell chunk', () => {
   /*
    * The widget is mounted in the authenticated shell, so whatever the module imports statically is
@@ -826,22 +921,23 @@ describe('the shell chunk', () => {
    * function’s schema graph there too (#483). Types are erased, so `import type` is fine; the
    * upload helper imports a server function itself, so it is loaded the same way.
    */
-  const source = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), '..', 'import-jobs.ts'),
-    'utf8',
-  )
+  const dir = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const read = (name: string): string => readFileSync(join(dir, name), 'utf8')
+  const source = read('import-jobs.ts')
+  // The widget is the file the shell route mounts, and the reducer is imported by the dialog: a
+  // static server import in either one is in the shell's chunk just the same.
+  const shellFiles = ['import-jobs.ts', 'import-widget.tsx', 'import-drafts.ts']
 
-  it('has no value import from the server functions', () => {
+  it.each(shellFiles)('%s has no value import from the server', (name) => {
     expect(
-      source.match(/^import\s+(?!type\b)[^']*from\s+'#\/server\//gm),
+      read(name).match(
+        /^import\s+(?!type\b)[^']*from\s+'(?:#\/server\/|\.\.\/files\/upload)/gm,
+      ),
     ).toBeNull()
   })
 
   it('reaches the server and the upload only through a dynamic import', () => {
     expect(source).toContain("import('#/server/fns/booking-import')")
     expect(source).toContain("import('../files/upload')")
-    expect(
-      source.match(/^import\s+(?!type\b)[^']*from\s+'\.\.\/files\/upload'/gm),
-    ).toBeNull()
   })
 })

@@ -188,6 +188,21 @@ export interface BookImportPort {
  * and their schema graph in the bundle of every screen, whether or not a job was ever registered.
  * A chunk that fails to load is a call that failed, and is treated as one.
  */
+const importServerFns = () => import('#/server/fns/booking-import')
+let serverFns: ReturnType<typeof importServerFns> | undefined
+
+/**
+ * One load shared by every call that is waiting for it, the poll's and a drop's alike. A load that
+ * fails is forgotten, so the next call tries the chunk again.
+ */
+function loadServerFns(): ReturnType<typeof importServerFns> {
+  serverFns ??= importServerFns().catch((cause: unknown) => {
+    serverFns = undefined
+    throw cause
+  })
+  return serverFns
+}
+
 const serverPort: BookImportPort = {
   upload: async ({ file, tripId, onProgress }) => {
     const { uploadFile } = await import('../files/upload')
@@ -195,16 +210,15 @@ const serverPort: BookImportPort = {
     return answer.ok ? { fileId: answer.file.id } : null
   },
   start: async (data) => {
-    const { startBookingImportFn } = await import('#/server/fns/booking-import')
+    const { startBookingImportFn } = await loadServerFns()
     return startBookingImportFn({ data })
   },
   view: async (data) => {
-    const { getBookingImportFn } = await import('#/server/fns/booking-import')
+    const { getBookingImportFn } = await loadServerFns()
     return getBookingImportFn({ data })
   },
   confirm: async (data) => {
-    const { confirmBookingImportFn } =
-      await import('#/server/fns/booking-import')
+    const { confirmBookingImportFn } = await loadServerFns()
     return confirmBookingImportFn({ data })
   },
 }
@@ -254,7 +268,7 @@ export interface StartDropInput {
   readonly files: ReadonlyArray<File>
   /** `0`–`1` across the whole drop, not one file. */
   readonly onProgress?: (fraction: number) => void
-  /** Awaited after each accepted start and before its job is registered — the loaders' refresh. */
+  /** Awaited after each accepted start, once its job is registered — the loaders' refresh. */
   readonly afterStart?: () => Promise<void>
 }
 
@@ -298,7 +312,7 @@ export interface BookImportJobs {
    */
   readonly forgetRefused: (tripId?: string) => void
   /**
-   * Dismiss: forgets the refused and the stalled jobs.
+   * Dismiss: forgets the refused and the stalled jobs ({@link isDismissible}).
    *
    * A stalled job is dismissible too, and that is not a convenience. The register is in
    * `localStorage` and only a dismissal or a confirm takes an entry out of it, so a job that never
@@ -316,6 +330,20 @@ export interface BookImportJobs {
 interface Answer {
   readonly status: BookImportProgress
   readonly view: BookingImportView | undefined
+}
+
+/**
+ * Whether Dismiss may forget the entry: a refusal, or a stall with nothing left to write.
+ *
+ * A stalled job that still has rows on offer is a confirm's re-read that has not been answered, not
+ * a job that never answered: the register is the only handle on its job id, so forgetting it would
+ * put rows the reader has not written out of reach. **Check again** is what such a job offers.
+ */
+export function isDismissible(entry: BookImportEntry): boolean {
+  return (
+    entry.status === 'refused' ||
+    (entry.status === 'stalled' && entry.drafts.length === 0)
+  )
 }
 
 function isOpen(answer: Answer | undefined): boolean {
@@ -552,13 +580,13 @@ export function createBookImportJobs(
         try {
           // The index is the queue's stagger, so five files do not all reach the model at once.
           job = await port.start({ tripId, fileId: uploaded.fileId, index })
-          await afterStart?.()
         } catch (cause) {
           return { kind: 'startFailed', filename: file.name, cause }
         }
         // Registered as each one starts, not after the loop: a file that fails to upload returns
         // early, and the jobs already enqueued have spent the workspace's reading allowance. A
-        // register written only on the way out would leave them running and invisible.
+        // register written only on the way out would leave them running and invisible. For the same
+        // reason it comes before the caller's hook: a hook that fails does not un-start the job.
         // The stagger goes into the register too: the stall budget is measured from the job's
         // scheduled start, and the server's answer is the only place that states it.
         started.push({
@@ -568,6 +596,11 @@ export function createBookImportJobs(
           delayMs: (job.delaySeconds ?? 0) * 1_000,
         })
         addJobs(started)
+        try {
+          await afterStart?.()
+        } catch (cause) {
+          return { kind: 'startFailed', filename: file.name, cause }
+        }
       }
       return { kind: 'started' }
     },
@@ -596,18 +629,23 @@ export function createBookImportJobs(
         }
       }
 
-      await afterWritten?.()
-      if (left > 0) {
-        // The poll stops asking about a job the moment it answers anything but `working`, so
-        // without this the review list keeps rendering the answer from before the confirm — every
-        // row still listed and still ticked, the ones just written among them, and "Add the rest"
-        // re-sending their indices. Re-arming is what turns `written` on the staged record into
-        // what the reader sees, which is how a partial confirm names the rows that are actually
-        // still failing.
-        recheck(tripId)
-      } else {
-        const done = new Set(files.map((file) => file.jobId))
-        forgetWhere((entry) => done.has(entry.job.jobId))
+      try {
+        await afterWritten?.()
+      } finally {
+        // Settled whether or not the hook worked: the writes happened, and the register has to
+        // say so.
+        if (left > 0) {
+          // The poll stops asking about a job the moment it answers anything but `working`, so
+          // without this the review list keeps rendering the answer from before the confirm — every
+          // row still listed and still ticked, the ones just written among them, and "Add the rest"
+          // re-sending their indices. Re-arming is what turns `written` on the staged record into
+          // what the reader sees, which is how a partial confirm names the rows that are actually
+          // still failing.
+          recheck(tripId)
+        } else {
+          const done = new Set(files.map((file) => file.jobId))
+          forgetWhere((entry) => done.has(entry.job.jobId))
+        }
       }
       return { written, left, failures }
     },
@@ -623,9 +661,7 @@ export function createBookImportJobs(
     },
 
     dismiss() {
-      forgetWhere(
-        (entry) => entry.status === 'refused' || entry.status === 'stalled',
-      )
+      forgetWhere(isDismissible)
     },
 
     dispose() {
