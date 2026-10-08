@@ -30,7 +30,7 @@ first deletes one of these parents.
   ``ALTER TABLE `reservations` ADD `expense_id` text REFERENCES expenses(id);``, with no `ON DELETE`,
   so SQLite applies `NO ACTION`. The issue names `0009_lumpy_black_tom.sql`, but that file was
   regenerated before merge. `0008_sharp_purple_man.sql` is the migration on `develop`. The code that
-  actually keeps the rule is `deleteExpense()` (`src/server/repos/expenses.ts:484-503`), which calls
+  actually keeps the rule is `deleteExpense()` (`src/server/repos/expenses.ts:569-590`), which calls
   `unlinkReservationsFromExpense()` (`src/server/repos/reservations.ts:436-461`) before it deletes.
 - `reservation-schema.test.ts:139`, `'unlinks the booking rather than deleting it when the expense
 goes'`, runs a raw `db.delete(expenses)` on the default harness. That harness builds its DDL from

@@ -312,7 +312,7 @@ export async function syncReservationExpense(
     const currency = reservation.currency ?? trip.currency
 
     if (reservation.expenseId !== null) {
-      await updateExpense(scope, reservation.expenseId, {
+      await updateExpense(scope, reservation.tripId, reservation.expenseId, {
         title: reservation.title,
         amountMinor,
         currency,
