@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import * as React from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { loadTripWeatherFn } from '../-server/weather'
 
@@ -26,25 +27,40 @@ export interface TripWeatherView {
  * a provider that is slow or down must not hold it back. Until the answer is in every day reads
  * `loading`; a request that fails outright reads `unavailable` for every day, because the server
  * function already turns each provider failure into that answer and what is left is the network.
- * A day the answer does not mention reads `none`.
+ * An answer already in hand outlives a later failed refetch: a forecast seen a minute ago is not
+ * replaced by a dash because the connection blinked. A day the answer does not mention reads `none`.
+ *
+ * `plan` is the board's own data. Every edit of the plan reloads it, and a day's location is read
+ * off the plan, so a new `plan` after the first is the cue to ask again rather than keep showing
+ * the forecast of the place a day used to be spent in.
  */
-export function useTripWeather(tripId: string): TripWeatherView {
+export function useTripWeather(tripId: string, plan: unknown): TripWeatherView {
+  const client = useQueryClient()
   const query = useQuery({
     queryKey: tripWeatherKey(tripId),
     queryFn: () => loadTripWeatherFn({ data: { tripId } }),
     staleTime: TRIP_WEATHER_STALE_MS,
+    // A planner left open over midnight must not keep yesterday's "today"; stale entries only.
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   })
 
-  if (query.isError) {
-    return {
-      unit: 'metric',
-      viewOf: (dayId) => ({ dayId, status: 'unavailable' }),
+  const seen = React.useRef(plan)
+  React.useEffect(() => {
+    if (seen.current !== plan) {
+      seen.current = plan
+      void client.invalidateQueries({ queryKey: tripWeatherKey(tripId) })
     }
-  }
+  }, [client, plan, tripId])
 
   const answer = query.data
   if (answer === undefined) {
-    return { unit: 'metric', viewOf: () => ({ status: 'loading' }) }
+    return query.isError
+      ? {
+          unit: 'metric',
+          viewOf: (dayId) => ({ dayId, status: 'unavailable' }),
+        }
+      : { unit: 'metric', viewOf: () => ({ status: 'loading' }) }
   }
 
   const byDay = new Map(answer.days.map((day) => [day.dayId, day]))

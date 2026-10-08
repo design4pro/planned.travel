@@ -70,7 +70,9 @@ export async function loadTripWeather(
   const outcomes = await resolveTripWeather(
     runtime,
     locations.map(({ date, location }) => ({ date, location })),
-    trip.timezone ?? settings.timezone,
+    // The trip's own zone, UTC when it has none: never the reader's, so two members of one trip
+    // see one answer.
+    trip.timezone ?? 'UTC',
   )
 
   return {

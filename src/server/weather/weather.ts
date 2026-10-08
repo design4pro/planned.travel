@@ -47,7 +47,7 @@ import { z } from 'zod'
 
 import { dayKeyIn, resolveTimeZone, todayKeyIn } from '#/lib/time'
 import { callProvider } from '#/server/metering/outbound'
-import { spendRateUnit } from '#/server/metering/rate'
+import { spendRateUnits } from '#/server/metering/rate'
 
 import type { DayReading } from '#/lib/weather'
 import type { OutboundRuntime } from '#/server/metering/outbound'
@@ -386,53 +386,30 @@ function withTimeout<T>(
   })
 }
 
-/**
- * Runs tasks one after another, whatever order they are asked in.
- *
- * The allowance is a read-then-write tally with no atomic increment, so spends issued together
- * all read the same count and all pass. Taking the spends in turn is what makes a ceiling of two
- * mean two for the locations of *one* request; the provider calls that follow still overlap.
- */
-function inTurn(): <T>(task: () => Promise<T>) => Promise<T> {
-  let tail: Promise<unknown> = Promise.resolve()
-  return (task) => {
-    const run = tail.then(task)
-    tail = run.catch(() => undefined)
-    return run
-  }
+/** A place's cached series while it is still fresh, else `null`. */
+async function readFresh(
+  runtime: WeatherRuntime,
+  key: string,
+): Promise<ReadonlyArray<ForecastStep> | null> {
+  const entry = await readEntry(runtime, key)
+  return entry !== null && runtime.now().getTime() < Date.parse(entry.expires)
+    ? entry.series
+    : null
 }
 
 /**
- * One location's series, or `null` when it cannot be had.
+ * One place's series from the provider, or `null` when it cannot be had.
  *
  * Every failure collapses to `null` here, including a defect of our own: this runs after first
  * paint and must not be able to reject, and an `unavailable` day is the honest rendering of all of
- * them. A spent allowance is expected and is not logged; anything else is.
+ * them.
  */
-async function loadSeries(
+async function fetchSeries(
   runtime: WeatherRuntime,
+  key: string,
   coordinate: WeatherCoordinate,
-  spendInTurn: ReturnType<typeof inTurn>,
 ): Promise<ReadonlyArray<ForecastStep> | null> {
-  const key = forecastCacheKey(coordinate.lat, coordinate.lng)
   try {
-    const warm = await readEntry(runtime, key)
-    if (warm !== null && runtime.now().getTime() < Date.parse(warm.expires)) {
-      return warm.series
-    }
-
-    // Throws `RateCeilingError` for a ceiling of zero (before the store is touched) and for a
-    // spent month.
-    await spendInTurn(() =>
-      spendRateUnit(runtime.counters, {
-        metric: 'weather_lookups_per_month',
-        organizationId: runtime.organizationId,
-        ceiling: runtime.ceiling,
-        now: runtime.now,
-        logger: runtime.logger,
-      }),
-    )
-
     const fetched = await callProvider(
       runtime.outbound,
       {
@@ -450,13 +427,64 @@ async function loadSeries(
     await writeEntry(runtime, key, fetched)
     return fetched.series
   } catch (cause) {
-    if (!(cause instanceof Error) || cause.name !== 'RateCeilingError') {
-      runtime.logger?.warn('weather.forecast_unavailable', {
-        reason: cause instanceof Error ? cause.name : 'unknown',
-        message: cause instanceof Error ? cause.message : String(cause),
-      })
-    }
+    runtime.logger?.warn('weather.forecast_unavailable', {
+      reason: cause instanceof Error ? cause.name : 'unknown',
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
     return null
+  }
+}
+
+/**
+ * Resolves each place into `into`: the cache first, then the provider for as many cold places as
+ * the allowance grants, earliest day first.
+ *
+ * The allowance is spent once for the whole request, after the cache has been read, so a warm
+ * place costs nothing and the grant goes to the days that come first rather than to whichever read
+ * finished first. A place the grant does not reach is `null` - unavailable, the same as a failed
+ * call.
+ */
+async function resolvePlaces(
+  runtime: WeatherRuntime,
+  places: ReadonlyMap<string, WeatherCoordinate>,
+  into: Map<string, ReadonlyArray<ForecastStep> | null>,
+): Promise<void> {
+  try {
+    await Promise.all(
+      [...places].map(async ([key]) => {
+        const fresh = await readFresh(runtime, key)
+        if (fresh !== null) {
+          into.set(key, fresh)
+        }
+      }),
+    )
+
+    const cold = [...places].filter(([key]) => !into.has(key))
+    const granted = await spendRateUnits(
+      runtime.counters,
+      {
+        metric: 'weather_lookups_per_month',
+        organizationId: runtime.organizationId,
+        ceiling: runtime.ceiling,
+        now: runtime.now,
+        logger: runtime.logger,
+      },
+      cold.length,
+    )
+
+    await Promise.all(
+      cold.map(async ([key, coordinate], index) => {
+        into.set(
+          key,
+          index < granted ? await fetchSeries(runtime, key, coordinate) : null,
+        )
+      }),
+    )
+  } catch (cause) {
+    // A defect of our own: what is already in `into` stands, the rest is unavailable.
+    runtime.logger?.warn('weather.resolve_failed', {
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
   }
 }
 
@@ -536,15 +564,7 @@ export async function resolveTripWeather(
   }
 
   const series = new Map<string, ReadonlyArray<ForecastStep> | null>()
-  const spendInTurn = inTurn()
-  await untilDeadline(
-    Promise.all(
-      [...kept].map(async ([key, coordinate]) => {
-        series.set(key, await loadSeries(runtime, coordinate, spendInTurn))
-      }),
-    ),
-    WEATHER_DEADLINE_MS,
-  )
+  await untilDeadline(resolvePlaces(runtime, kept, series), WEATHER_DEADLINE_MS)
 
   const grouped = new Map<string, GroupedForecast>()
   const groupedFor = (key: string, steps: ReadonlyArray<ForecastStep>) => {

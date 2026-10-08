@@ -39,9 +39,11 @@ const CONDITION_ICON: { readonly [K in WeatherCondition]: LucideIcon } = {
  *
  * One class string for loading, a forecast, an unavailable day and a day with nothing to show, so
  * the row the badge sits in is the same width before the answer arrives and after it. A late
- * reading fills this box; it never makes the itinerary move.
+ * reading fills this box; it never makes the itinerary move. The width is a floor, not a fixed
+ * size: the usual reading fits inside it, and the rare wide one (two signed digits each, or a
+ * three-digit Fahrenheit high) widens the box instead of painting over the day's header button.
  */
-const BOX = 'flex h-7 w-20 shrink-0 items-center justify-end'
+const BOX = 'flex h-7 min-w-20 shrink-0 items-center justify-end'
 
 export interface DayWeatherBadgeProps {
   readonly weather: DayWeatherView

@@ -398,7 +398,7 @@ export function PlanScreen({
   const wide = useIsWide()
   const editable = payload.editable
   /** Fetched once the board is on the page; the board never waits for it. */
-  const weather = useTripWeather(payload.tripId)
+  const weather = useTripWeather(payload.tripId, payload)
 
   /* ------------------------------------------------------------------ state */
 

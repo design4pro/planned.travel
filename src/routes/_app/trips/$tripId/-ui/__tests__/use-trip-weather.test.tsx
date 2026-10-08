@@ -13,6 +13,8 @@ vi.mock('../../-server/weather', () => ({ loadTripWeatherFn }))
 const { TRIP_WEATHER_STALE_MS, tripWeatherKey, useTripWeather } =
   await import('../use-trip-weather')
 
+const PLAN = {}
+
 const ANSWER: TripWeather = {
   distanceUnit: 'imperial',
   days: [
@@ -58,7 +60,7 @@ describe('useTripWeather', () => {
         resolve = done
       }),
     )
-    const { result } = renderHook(() => useTripWeather('t1'), {
+    const { result } = renderHook(() => useTripWeather('t1', PLAN), {
       wrapper: wrapper(newClient()),
     })
 
@@ -76,7 +78,7 @@ describe('useTripWeather', () => {
 
   it('shows a day the answer does not mention as nothing, not as a guess', async () => {
     loadTripWeatherFn.mockResolvedValue(ANSWER)
-    const { result } = renderHook(() => useTripWeather('t1'), {
+    const { result } = renderHook(() => useTripWeather('t1', PLAN), {
       wrapper: wrapper(newClient()),
     })
 
@@ -88,7 +90,7 @@ describe('useTripWeather', () => {
 
   it('turns a failed request into unavailable days rather than an error', async () => {
     loadTripWeatherFn.mockRejectedValue(new Error('offline'))
-    const { result } = renderHook(() => useTripWeather('t1'), {
+    const { result } = renderHook(() => useTripWeather('t1', PLAN), {
       wrapper: wrapper(newClient()),
     })
 
@@ -101,18 +103,58 @@ describe('useTripWeather', () => {
   it('asks once for two readers of the same trip inside the stale window', async () => {
     loadTripWeatherFn.mockResolvedValue(ANSWER)
     const client = newClient()
-    const first = renderHook(() => useTripWeather('t1'), {
+    const first = renderHook(() => useTripWeather('t1', PLAN), {
       wrapper: wrapper(client),
     })
     await waitFor(() => {
       expect(first.result.current.viewOf('d1').status).toBe('ok')
     })
 
-    const second = renderHook(() => useTripWeather('t1'), {
+    const second = renderHook(() => useTripWeather('t1', PLAN), {
       wrapper: wrapper(client),
     })
 
     expect(second.result.current.viewOf('d1').status).toBe('ok')
     expect(loadTripWeatherFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the forecast it has when a later refetch fails', async () => {
+    loadTripWeatherFn.mockResolvedValueOnce(ANSWER)
+    const client = newClient()
+    const { result } = renderHook(() => useTripWeather('t1', PLAN), {
+      wrapper: wrapper(client),
+    })
+    await waitFor(() => {
+      expect(result.current.viewOf('d1').status).toBe('ok')
+    })
+
+    loadTripWeatherFn.mockRejectedValue(new Error('offline'))
+    await client.refetchQueries({ queryKey: tripWeatherKey('t1') })
+
+    await waitFor(() => {
+      expect(loadTripWeatherFn).toHaveBeenCalledTimes(2)
+    })
+    expect(result.current.viewOf('d1').status).toBe('ok')
+    expect(result.current.unit).toBe('imperial')
+  })
+
+  it('asks again when the plan is edited, and not before', async () => {
+    loadTripWeatherFn.mockResolvedValue(ANSWER)
+    let plan = {}
+    const { result, rerender } = renderHook(() => useTripWeather('t1', plan), {
+      wrapper: wrapper(newClient()),
+    })
+    await waitFor(() => {
+      expect(result.current.viewOf('d1').status).toBe('ok')
+    })
+
+    rerender()
+    expect(loadTripWeatherFn).toHaveBeenCalledTimes(1)
+
+    plan = {}
+    rerender()
+    await waitFor(() => {
+      expect(loadTripWeatherFn).toHaveBeenCalledTimes(2)
+    })
   })
 })

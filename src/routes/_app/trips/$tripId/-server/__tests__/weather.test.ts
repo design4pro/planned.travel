@@ -215,6 +215,44 @@ describe('loadTripWeather', () => {
     expect(first.status === 'ok' && first.reading.tempMaxC).toBeLessThan(30)
   })
 
+  it('groups a trip with no time zone in UTC, whatever zone the reader is in', async () => {
+    const make = async (timezone: string | undefined) => {
+      const trip = await createTrip(owner, {
+        title: 'Zone check',
+        startDate: '2026-10-08',
+        endDate: '2026-10-10',
+        currency: 'NOK',
+        ...(timezone === undefined ? {} : { timezone }),
+      })
+      const days = await listTripDays(owner, trip.id)
+      const place = await createPlace(owner, {
+        tripId: trip.id,
+        name: 'Hotel',
+        lat: 59.9139,
+        lng: 10.7522,
+      })
+      await createAccommodation(owner, {
+        tripId: trip.id,
+        startDayId: days[0].id,
+        endDayId: days[2].id,
+        placeId: place.id,
+        name: 'Hotel',
+      })
+      return trip.id
+    }
+    const readings = async (id: string) =>
+      (await loadTripWeather(owner, { tripId: id }, ports())).days.map(
+        ({ dayId: _dayId, ...rest }) => rest,
+      )
+    // The free plan holds two trips and the fixture already has one.
+    await subscribeTenant(owner, 'solo')
+    const unzoned = await make(undefined)
+    const utc = await make('UTC')
+    await updateOrganizationSettings(owner, { timezone: 'Pacific/Auckland' })
+
+    expect(await readings(unzoned)).toEqual(await readings(utc))
+  })
+
   it('is not-found for a private trip the caller is not on, before the runtime is built', async () => {
     const port = ports()
 

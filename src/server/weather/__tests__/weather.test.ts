@@ -558,6 +558,59 @@ describe('the monthly allowance', () => {
     expect(spent(w.counters)).toBe(2)
     expect(outcomes.filter((o) => o.status === 'unavailable')).toHaveLength(1)
   })
+
+  it('grants what is left to the earliest days, whichever read finishes first', async () => {
+    const w = world({ ceiling: 2 })
+    const paris = { lat: 48.8566, lng: 2.3522 }
+    const rome = { lat: 41.9028, lng: 12.4964 }
+
+    const outcomes = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10'), day('2026-10-11', paris), day('2026-10-12', rome)],
+      ZONE,
+    )
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual([
+      'ok',
+      'ok',
+      'unavailable',
+    ])
+  })
+
+  it('writes the tally once for the whole request, however many places it spends on', async () => {
+    const w = world({ ceiling: 300 })
+    const puts = vi.spyOn(w.counters, 'put')
+    const places = [
+      { lat: 59.9139, lng: 10.7522 },
+      { lat: 48.8566, lng: 2.3522 },
+      { lat: 41.9028, lng: 12.4964 },
+      { lat: 52.52, lng: 13.405 },
+    ]
+
+    await resolveTripWeather(
+      w.runtime,
+      places.map((place) => day('2026-10-10', place)),
+      ZONE,
+    )
+
+    expect(puts).toHaveBeenCalledTimes(1)
+    expect(spent(w.counters)).toBe(4)
+  })
+
+  it('spends nothing for a request whose places are all warm', async () => {
+    const cache = memoryKv()
+    await resolveTripWeather(
+      world({ cache }).runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+    const w = world({ cache })
+    const puts = vi.spyOn(w.counters, 'put')
+
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+
+    expect(puts).not.toHaveBeenCalled()
+  })
 })
 
 /* ---------------------------------------------------------- provider trouble */
