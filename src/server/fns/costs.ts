@@ -480,7 +480,7 @@ export const updateExpenseFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly expenseId: string }> => {
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
-    const { expense } = await updateExpense(scope, data.expenseId, {
+    const { expense } = await updateExpense(scope, trip.id, data.expenseId, {
       ...toRepoInput(data.expense, trip.currency),
     })
 
@@ -498,10 +498,10 @@ export const deleteExpenseFn = createServerFn({ method: 'POST' })
   .validator(deleteExpenseSchema)
   .handler(async ({ data }): Promise<{ readonly expenseId: string }> => {
     const scope = await appScope()
-    // Scoped through the trip first, so a well-formed id from another tenant is a
-    // 404 rather than a delete.
+    // The trip is checked first, then the expense is looked up inside it, so an id from
+    // another tenant or from another trip is a 404 rather than a delete.
     const trip = await requireTrip(scope, data.tripId)
-    await deleteExpense(scope, data.expenseId)
+    await deleteExpense(scope, trip.id, data.expenseId)
 
     await mirrorToRoom(scope, trip.id, [tombstone('expense', data.expenseId)])
     return { expenseId: data.expenseId }

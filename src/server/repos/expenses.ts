@@ -19,8 +19,8 @@ import {
   expenses,
   settlements,
 } from '#/server/db/schema'
-import { createTenantRepository, tenantFilter } from './base'
-import { RepositoryError } from './context'
+import { allOf, createTenantRepository, tenantFilter } from './base'
+import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { placesRepository } from './places'
 import { unlinkReservationsFromExpense } from './reservations'
@@ -58,6 +58,83 @@ export const settlementsRepository = createTenantRepository(
   settlements,
   'settlement',
 )
+
+/* -------------------------------------------------------------------------------------------------
+ * Rows of the trip in the request
+ * ---------------------------------------------------------------------------------------------- */
+
+/*
+ * A money writer is handed two ids: the trip the caller is working in and the row it changes. The
+ * trip is checked for readability, but a row looked up by its own id alone is found wherever it
+ * lives in the workspace, so someone who may read any trip could rewrite another trip's ledger -
+ * a private one included. Every writer below therefore asks for the pair, after the trip itself
+ * has been checked, and a row of another trip answers exactly as a row that is not there: the
+ * same {@link NotFoundError}, so the refusal does not say which ids exist.
+ */
+
+async function requireTripExpense(
+  scope: TenantScope,
+  tripId: string,
+  expenseId: string,
+): Promise<Expense> {
+  await requireTrip(scope, tripId)
+  const expense = await expensesRepository.findOne(
+    scope,
+    allOf(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)),
+  )
+  if (expense === null) {
+    throw new NotFoundError(expensesRepository.entityName, expenseId)
+  }
+  return expense
+}
+
+async function requireTripBudgetItem(
+  scope: TenantScope,
+  tripId: string,
+  budgetItemId: string,
+): Promise<BudgetItem> {
+  await requireTrip(scope, tripId)
+  const item = await budgetItemsRepository.findOne(
+    scope,
+    allOf(eq(budgetItems.id, budgetItemId), eq(budgetItems.tripId, tripId)),
+  )
+  if (item === null) {
+    throw new NotFoundError(budgetItemsRepository.entityName, budgetItemId)
+  }
+  return item
+}
+
+async function requireTripShare(
+  scope: TenantScope,
+  tripId: string,
+  shareId: string,
+): Promise<ExpenseShare> {
+  await requireTrip(scope, tripId)
+  const share = await expenseSharesRepository.findOne(
+    scope,
+    allOf(eq(expenseShares.id, shareId), eq(expenseShares.tripId, tripId)),
+  )
+  if (share === null) {
+    throw new NotFoundError(expenseSharesRepository.entityName, shareId)
+  }
+  return share
+}
+
+async function requireTripSettlement(
+  scope: TenantScope,
+  tripId: string,
+  settlementId: string,
+): Promise<Settlement> {
+  await requireTrip(scope, tripId)
+  const settlement = await settlementsRepository.findOne(
+    scope,
+    allOf(eq(settlements.id, settlementId), eq(settlements.tripId, tripId)),
+  )
+  if (settlement === null) {
+    throw new NotFoundError(settlementsRepository.entityName, settlementId)
+  }
+  return settlement
+}
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -292,9 +369,11 @@ export async function createBudgetItem(
 
 export async function updateBudgetItem(
   scope: TenantScope,
+  tripId: string,
   budgetItemId: string,
   input: UpdateBudgetItemInput,
 ): Promise<BudgetItem> {
+  await requireTripBudgetItem(scope, tripId, budgetItemId)
   return budgetItemsRepository.requireUpdate(
     scope,
     budgetItemId,
@@ -304,8 +383,10 @@ export async function updateBudgetItem(
 
 export async function deleteBudgetItem(
   scope: TenantScope,
+  tripId: string,
   budgetItemId: string,
 ): Promise<void> {
+  await requireTripBudgetItem(scope, tripId, budgetItemId)
   await budgetItemsRepository.requireRemove(scope, budgetItemId)
 }
 
@@ -389,11 +470,12 @@ export async function createExpense(
 
 export async function updateExpense(
   scope: TenantScope,
+  tripId: string,
   expenseId: string,
   input: UpdateExpenseInput,
 ): Promise<ExpenseWithShares> {
   const { participants, ...patch } = updateExpenseInput.parse(input)
-  const existing = await expensesRepository.requireById(scope, expenseId)
+  const existing = await requireTripExpense(scope, tripId, expenseId)
   if (patch.dayId) {
     await requireTripDay(scope, existing.tripId, patch.dayId)
   }
@@ -422,11 +504,12 @@ export async function updateExpense(
 /** Replaces an expense's split rows. Passing an empty participant list removes the split. */
 export async function setExpenseShares(
   scope: TenantScope,
+  tripId: string,
   expenseId: string,
   participants: ReadonlyArray<SplitParticipantInput>,
   method?: (typeof SPLIT_METHODS)[number],
 ): Promise<Array<ExpenseShare>> {
-  const expense = await expensesRepository.requireById(scope, expenseId)
+  const expense = await requireTripExpense(scope, tripId, expenseId)
   const parsed = z
     .array(splitParticipantInput)
     .max(100)
@@ -475,9 +558,11 @@ async function writeShares(
 
 export async function markShareSettled(
   scope: TenantScope,
+  tripId: string,
   shareId: string,
   isSettled: boolean,
 ): Promise<ExpenseShare> {
+  await requireTripShare(scope, tripId, shareId)
   return expenseSharesRepository.requireUpdate(scope, shareId, { isSettled })
 }
 
@@ -496,8 +581,10 @@ export async function markShareSettled(
  */
 export async function deleteExpense(
   scope: TenantScope,
+  tripId: string,
   expenseId: string,
 ): Promise<void> {
+  await requireTripExpense(scope, tripId, expenseId)
   await unlinkReservationsFromExpense(scope, expenseId)
   await expensesRepository.requireRemove(scope, expenseId)
 }
@@ -536,8 +623,10 @@ export async function createSettlement(
 
 export async function deleteSettlement(
   scope: TenantScope,
+  tripId: string,
   settlementId: string,
 ): Promise<void> {
+  await requireTripSettlement(scope, tripId, settlementId)
   await settlementsRepository.requireRemove(scope, settlementId)
 }
 
