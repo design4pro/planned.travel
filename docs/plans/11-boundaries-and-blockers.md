@@ -24,9 +24,10 @@ Three registers, three stages:
   from the dependencies in `package.json`, with the §3 verdict and one chosen fallback each. Two of
   its ten entries — mail-message parsing and document text extraction — are now **closed** rather
   than deferred, by a platform binding rather than by a package, so `SPEC` §3 is untouched.
-- **`11-S3`** — the absent bindings and the open commercial decisions: weather and
-  foreign-exchange rates. Geocoding and place search stood here too until `docs/adr/0013-geoapify-for-geocoding.md`
-  took it, and routing until `docs/adr/0019-here-for-road-routing.md`; the register keeps the closed
+- **`11-S3`** — the absent bindings and the open commercial decisions: foreign-exchange rates.
+  Geocoding and place search stood here too until `docs/adr/0013-geoapify-for-geocoding.md`
+  took it, routing until `docs/adr/0019-here-for-road-routing.md`, and weather until
+  `docs/adr/0038-met-norway-and-nasa-power-for-weather.md`; the register keeps the closed
   entries, struck through and cited, because a reader needs to see that a decision was taken and
   where, not to find it silently gone.
 
@@ -667,16 +668,16 @@ and the plan that owns each:
 | TRP-05 | `01-trips-core.md`                 | 2    | foreign-exchange rates                                             |
 | COL-10 | `07-collaboration-and-sharing.md`  | 2    | foreign-exchange rates                                             |
 | DOC-06 | `06-documents-and-media.md`        | 2    | the `BROWSER` binding or its equivalent credentials                |
-| DOC-08 | `06-documents-and-media.md`        | 6    | weather                                                            |
+| DOC-08 | `06-documents-and-media.md`        | 6    | ~~weather~~ — ADR 0038                                             |
 | ADD-08 | `08-product-modules.md`            | 2    | the image-transformation binding                                   |
 
 MNY-07 in wave 1 and MAP-01 in wave 1 are the two that make this stage urgent rather than tidy: both
 are wave-1 rows whose central behaviour — a rate frozen at save time, an address on a map-click
 place — cannot be built at all until a decision that is not a build decision has been taken.
 
-**Eight of the fifteen have since had their decision taken, and the strikethroughs above say which.**
+**Nine of the fifteen have since had their decision taken, and the strikethroughs above say which.**
 This stage records what a row is waiting on; when the waiting ends, the row leaves the register
-rather than the register quietly keeping it. Five ADRs did it, and each is the argument this file
+rather than the register quietly keeping it. Six ADRs did it, and each is the argument this file
 deliberately does not make itself:
 
 | Row                    | Closed by                                                    | Now built by                                                        |
@@ -686,15 +687,16 @@ deliberately does not make itself:
 | BKG-03, and BKG-04     | `docs/adr/0012-workers-ai-for-confirmation-extraction.md`    | `03-S7`, wave 5                                                     |
 | MAP-01, MAP-02, MAP-03 | `docs/adr/0013-geoapify-for-geocoding.md`                    | #281 minted the proxy; `02-S4` w3, `02-S13` w4, `02-S11` w6 call it |
 | MAP-08, MAP-09         | `docs/adr/0019-here-for-road-routing.md`                     | `02-S9` w5, `02-S12` w6, once plan 02 cites the ADR                 |
+| DOC-08                 | `docs/adr/0038-met-norway-and-nasa-power-for-weather.md`     | `06-S7`, wave 6, built by `.ai/specs/2026-09-19-per-day-weather.md` |
 
 BKG-08's wave moved from 2 to 3 when `03-S3` was rewritten around a real provider; the table above
 now states 3, and `03-reservations-and-transport.md` is the authority. BKG-04 is not one of the
 fifteen — it is an `11-S1` exclusion — and it is listed here because the same ADR that closed BKG-03
 changed its disposition too; its own entry says exactly which parts of it stayed excluded.
 
-**Seven rows still wait**, and the two registers below are still the record for them: weather
-(DOC-08) and foreign-exchange rates (MNY-06, MNY-07, TRP-05, COL-10) are untouched, and the
-`BROWSER` (DOC-06) and image-transformation (ADD-08) bindings are still absent from `wrangler.jsonc`.
+**Six rows still wait**, and the two registers below are still the record for them: foreign-exchange
+rates (MNY-06, MNY-07, TRP-05, COL-10) are untouched, and the `BROWSER` (DOC-06) and
+image-transformation (ADD-08) bindings are still absent from `wrangler.jsonc`.
 
 ### Owned paths
 
@@ -818,17 +820,20 @@ month at ten users and under nine at a thousand, with storage as the driver. Any
 therefore a larger proportional change to this product's economics than its unit price suggests,
 which is precisely why it is the user's decision and not a stage's.
 
-#### The provider decisions — two still open, and one taken in four parts
+#### The provider decisions — one still open, one taken in one part, and one taken in four parts
 
-Three capabilities stood here with **no provider chosen and no budget agreed**. Two of them still do,
-and this file deliberately does not choose for them:
+Three capabilities stood here with **no provider chosen and no budget agreed**. One of them still does,
+and this file deliberately does not choose for it:
 
-1. **Weather** — the per-day forecast, the historical read for a past trip and the climatological
-   estimate beyond the forecast window, for DOC-08.
+1. ~~**Weather** — the per-day forecast, the historical read for a past trip and the climatological
+   estimate beyond the forecast window, for DOC-08.~~ — `docs/adr/0038-met-norway-and-nasa-power-for-weather.md`
+   took it: the forecast from MET Norway, recorded and long-term climate values from NASA POWER, both
+   free and licensed for commercial use, neither needing a key. `06-S7` is built by
+   `.ai/specs/2026-09-19-per-day-weather.md`.
 2. **Foreign-exchange rates** — the rate frozen at save time for MNY-07, the re-basing in MNY-06, the
    converter widget in TRP-05 and the guest currency resolution in COL-10.
 
-**The third — geocoding and place search, with its adjacent decisions — has been taken, and not as
+**Geocoding and place search, with its adjacent decisions — has been taken, and not as
 one decision.** It was recorded here as a single question with four parts hanging off it: reverse
 lookup for MAP-01, type-ahead and share-link resolution for MAP-02, address completion for MAP-03,
 plus routing (MAP-08, MAP-09), transit routing (BKG-08) and the airport and station reference dataset
@@ -851,7 +856,8 @@ by four ADRs, and the separation is the interesting part:
   BKG-08, and the term that shaped it was not retention alone but that one request may not serve more
   than one end user. `02-places-and-maps.md` calls this its Gate B.
 
-The two conditions below therefore still bind, unchanged, for weather and for rates.
+The two conditions below still bind, unchanged, for rates, and the first of them is the test weather passed:
+ADR 0038 chose two sources whose terms allow a commercial product.
 
 **The binding constraint, which no plan may plan around.** A free tier is not evidence that a
 capability is free to us. Two conditions rule out the options that look cheapest, and both must be
