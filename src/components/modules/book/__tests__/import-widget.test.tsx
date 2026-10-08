@@ -254,7 +254,7 @@ describe('the global import widget', () => {
       written: [],
       drafts: [0, 1].map((index) => ({
         index,
-        type: 'accommodation',
+        type: 'accommodation' as const,
         title: `Row ${index}`,
         location: null,
         reference: null,
