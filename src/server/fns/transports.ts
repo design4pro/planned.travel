@@ -380,6 +380,8 @@ export const saveTransportFn = createServerFn({ method: 'POST' })
     const { transport, legs } = await saveTransport(scope, {
       tripId: data.tripId,
       transportId: data.transportId,
+      // A tab on the previous bundle sends none; `create` is the rule that bundle expects.
+      intent: data.intent ?? 'create',
       record: payload(data),
       chain: chainInput(data),
     })

@@ -35,8 +35,8 @@ import {
   replaceTransportChain,
   saveSearchedConnection,
   setTransportStatus,
-  updateTransport,
 } from '../transports'
+import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import type { Day } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
@@ -134,7 +134,10 @@ describe('a transport and the days it covers', () => {
     })
 
     const error = await captureError(() =>
-      updateTransport(tenant.scope, created.id, { arrivalDayId: days[0].id }),
+      editTransport(tenant.scope, tripId, created.id, {
+        title: created.title,
+        arrivalDayId: days[0].id,
+      }),
     )
     expect(error).toBeInstanceOf(RepositoryError)
     expect((error as RepositoryError).code).toBe('DAY_ORDER')
@@ -152,17 +155,23 @@ describe('a transport and the days it covers', () => {
       arrivalDayId: days[1].id,
     })
 
-    const cleared = await updateTransport(tenant.scope, created.id, {
-      arrivalDayId: null,
-    })
+    const { transport: cleared } = await editTransport(
+      tenant.scope,
+      tripId,
+      created.id,
+      { title: created.title, arrivalDayId: null },
+    )
     expect(cleared.arrivalDayId).toBeNull()
     expect(cleared.dayId).toBe(days[0].id)
 
     // With the arrival day gone the departure day can move anywhere, including
     // past where the arrival day used to be.
-    const moved = await updateTransport(tenant.scope, created.id, {
-      dayId: days[3].id,
-    })
+    const { transport: moved } = await editTransport(
+      tenant.scope,
+      tripId,
+      created.id,
+      { title: created.title, dayId: days[3].id },
+    )
     expect(moved.dayId).toBe(days[3].id)
   })
 
@@ -192,7 +201,10 @@ describe('a transport and the days it covers', () => {
     })
     expect(
       await captureError(() =>
-        updateTransport(tenant.scope, own.id, { arrivalDayId: foreignDay.id }),
+        editTransport(tenant.scope, tripId, own.id, {
+          title: own.title,
+          arrivalDayId: foreignDay.id,
+        }),
       ),
     ).toBeInstanceOf(NotFoundError)
 
@@ -491,7 +503,7 @@ describe('a journey with more than two stations', () => {
     for (const attempt of [
       () =>
         createTransport(viewer, { tripId, title: 'Sneaked in', mode: 'bus' }),
-      () => updateTransport(viewer, transportId, { title: 'Renamed' }),
+      () => editTransport(viewer, tripId, transportId, { title: 'Renamed' }),
       () => setTransportStatus(viewer, transportId, 'cancelled'),
       () => deleteTransport(viewer, transportId),
     ]) {
@@ -1168,11 +1180,19 @@ describe('a journey that arrives before it departs', () => {
       arrivalTimezone: HONOLULU.timezone,
     })
 
-    const updated = await updateTransport(tenant.scope, created.id, WESTBOUND)
+    const { transport: updated } = await editTransport(
+      tenant.scope,
+      tripId,
+      created.id,
+      { title: created.title, ...WESTBOUND },
+    )
     expect(updated.departureTime).toBe('21:00')
 
     await expectTimeOrder(() =>
-      updateTransport(tenant.scope, created.id, { arrivalDate: '2026-04-15' }),
+      editTransport(tenant.scope, tripId, created.id, {
+        title: created.title,
+        arrivalDate: '2026-04-15',
+      }),
     )
     expect((await getTransport(tenant.scope, created.id))?.arrivalDate).toBe(
       '2026-04-16',
@@ -1193,15 +1213,22 @@ describe('a journey that arrives before it departs', () => {
       arrivalTimezone: TOKYO.timezone,
     })
 
-    const updated = await updateTransport(tenant.scope, created.id, {
-      ...WESTBOUND,
-      departureTimezone: TOKYO.timezone,
-      arrivalTimezone: HONOLULU.timezone,
-    })
+    const { transport: updated } = await editTransport(
+      tenant.scope,
+      tripId,
+      created.id,
+      {
+        title: created.title,
+        ...WESTBOUND,
+        departureTimezone: TOKYO.timezone,
+        arrivalTimezone: HONOLULU.timezone,
+      },
+    )
     expect(updated.departureTimezone).toBe(TOKYO.timezone)
 
     await expectTimeOrder(() =>
-      updateTransport(tenant.scope, created.id, {
+      editTransport(tenant.scope, tripId, created.id, {
+        title: created.title,
         ...INVERTED,
         departureTimezone: LONDON.timezone,
         arrivalTimezone: NEW_YORK.timezone,
