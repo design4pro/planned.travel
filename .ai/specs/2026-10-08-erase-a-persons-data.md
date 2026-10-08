@@ -143,7 +143,8 @@ hand-written `drizzle/*.sql` is a blocker, BACKWARD_COMPATIBILITY §1). It is a 
 message per organization, paged: the organization ids come from a second session-less catalog read of the same shape as
 the discovery read (organization ids only, paged), and each message runs through a `TenantScope` bound to that one
 organization, where it reads the distinct user ids of every registered `userRef` column and of `member`, and inserts the
-anchor rows with `INSERT OR IGNORE`. Its cost is one indexed read per table per organization, once; it is resumable and a
+anchor rows with `INSERT OR IGNORE`. Its cost is one read per table per organization, scanning rows in proportion to that organization's data (many tables
+index only `(organization, trip)`), once; it is resumable and a
 rerun is a no-op. **Ordering:** the anchor writes ship and deploy first, and the backfill runs after, so a `member` row
 that an older Worker inserts during the window is still found because the backfill reads `member` too. **The engine fails
 closed until the backfill has completed:** a completion record (a KV key set when the last organization page finishes,
@@ -324,8 +325,11 @@ anchor id), **never a user id**: dead letters keep whole bodies indefinitely.
 
 A failure at any step leaves the account banned and retries (the queue allows 5 deliveries, `wrangler.jsonc`); after the
 last one the consumer dead-letters and acks the message, which leaves a banned account and an incomplete erasure. The
-owner of that state is the operator: the console user detail shows an erasure whose anchor rows still carry an
-`erasure_id` as **incomplete**, and running the action again **resumes** it under the same `erasure_id`. The dead letter
+owner of that state is the operator. A resume is keyed by the `erasure_id`, never by the user, because after step 6 the
+`user` row (and with it the console user detail and `readTargetUser`) no longer exists: the console lists **incomplete
+erasures** from a catalog read of the anchor rows that still carry an `erasure_id` (erasure id, request reference, the step
+reached, workspaces left; no name or email), and `resumeErasureFn({ erasureId })` re-enqueues the job, which reads the
+user id from those anchor rows. The dead letter
 also raises through `src/server/observability`. "Done" means the `user` row is gone **and** the verification
 sweep passes. Collect-before-delete is the `trip-purge` rule, and R2 `delete` of an absent key succeeds, so a redelivery
 finishes. Billing is not multiplied: one bounded job per erasure plus R2 delete calls.
@@ -433,7 +437,12 @@ Additive only (`BACKWARD_COMPATIBILITY.md` §1); this spec itself changes nothin
 
 - `eraseUserFn` (console, `user:delete`): input `{ userId, confirmEmail, requestRef }`, Zod-validated; returns `{ erasureId }`;
   refusals reuse `ConsoleActionError` with new codes for the subscription gate and for an incomplete backfill.
-  `deletePlatformUser` stays for one release as a delegating wrapper (see "Entry points").
+  `deletePlatformUser` stays for one release as a delegating wrapper (see "Entry points"): the old input has no
+  `requestRef` or `confirmEmail`, so the wrapper records the fixed request reference `legacy-console-delete` and takes the
+  target from the user id alone (the old dialog's own confirmation stays in force), and its result now means "accepted, erasure queued", not
+  "deleted"; the old client shows the existing success copy.
+- `resumeErasureFn` (console, `user:delete`): input `{ erasureId }`; re-enqueues an incomplete erasure.
+- The console reads the incomplete erasures through a catalog read of the anchor rows (see "The engine").
 - `person-erasure` task: idempotent; a redelivery finishes.
 - No public route. Self-service is `09-S3`'s.
 
@@ -469,7 +478,8 @@ New `en` keys (each lands in all 23 locales per the `i18n-messages` skill; names
 - `shell:notification.trip.owner_promoted.title` / `.body` - "{tripTitle} has a new owner", "A member's data was erased."
 - `shell:notification.workspace.invitations_removed.title` / `.body` - "Pending invitations disappeared", "{count} pending invitations disappeared because a member's data was erased."
 
-The existing sole-owner refusal text (`console:action.delete.owners`, authored in the console target code, #807) is reused
+The existing sole-owner refusal text (a literal authored in the console target code, #807, beside the dialog hint
+`console:action.delete.owners`) is reused
 unchanged, and so are the other refusals of `deletePlatformUser`. The `action.delete.*` and `audit.action.deleted` keys
 stay while `deletePlatformUser` exists and go with it in the follow-up PR. The privacy page wording
 is not changed here (owner confirms).
@@ -480,11 +490,12 @@ is not changed here (owner confirms).
   covers pre-anchor departures they would be missed, so the backfill job ships with the anchor and discovery fails closed until it has completed.
 - **Two erased people on one expense or poll.** Distinct Former member ids; unique indexes hold. Tested.
 - **The person is the only member of a team workspace.** It is deleted like the personal one; pending invitations go with it.
-- **A job exhausts its deliveries.** The account stays banned, the erasure is incomplete and visible as such in the console,
-  and the operator resumes it (see "The engine").
+- **A job exhausts its deliveries.** The account stays banned, the erasure is listed as incomplete in the console, and the
+  operator resumes it by `erasure_id` (see "The engine").
 - **A job step fails half-way.** The account stays banned; the job resumes from `scrubbed_at` per workspace and reuses the
   `tombstone_id`. R2 deletes are idempotent.
-- **`user` row deleted but verification fails.** The anchor rows are kept, so the job can be retried; the account is inert.
+- **`user` row deleted but verification fails.** The anchor rows are kept, so the job can be resumed by its `erasure_id`
+  from the console's incomplete-erasures list; the account is inert.
 - **A trip has no remaining owner and no eligible member.** Then it has no other member, which is the solo case.
 - **A message is replied to.** The row stays (body cleared, `deleted_at` set) so `reply_to_id` keeps pointing at it.
 - **An R2 object cannot be re-put (too large, missing).** Logged, retried; the verification sweep fails until it is fixed.
@@ -600,7 +611,13 @@ them for create, accept and add; the direct insert in `provisioning.ts`), the `i
 One `eraseUser…` per repository module, `(scope, userId, tombstoneId)`. **Test seam:** each function at the repository
 interface, per outcome row; a volume case with more rows than one D1 batch and its bound-parameter limit holds (chunked, no
 truncation); the tenant `audit_log` header edit; cross-workspace tenant-isolation test per function (rows of another organisation are
-invisible and unchanged); balance equality; two erased people on one record; a reply to an erased message.
+invisible and unchanged); balance equality; two erased people on one record; a reply to an erased message. Phase 3 also owns the scrubs that are
+not a tenant repository module: the auth-table cleanup (`verification`, `invitation` addressed to the email,
+`session.impersonated_by`) and the global-table scrubs (`staff_api_tokens`, `provider_registry`) in
+`src/server/catalog/erasure.ts`. The reserved-id `owner` scope is minted in one function in `src/server/erasure/` that
+nothing on a request path imports, and a test asserts that no route or server function can obtain it. Phase 6 registers
+the two new notification kinds (`trip.owner_promoted`, `workspace.invitations_removed`) in `NOTIFICATION_EVENTS` with
+their default channels.
 
 ### Phase 4 - Workspace deletion
 
@@ -615,7 +632,7 @@ sweep finds a planted id in each registered place and in each non-`userRef` plac
 
 ### Phase 6 - Engine
 
-`src/server/erasure/` orchestration, `eraseUserFn`, the console dialog, `refuseSoleOwner` first, notices, audit actions,
+`src/server/erasure/` orchestration, `eraseUserFn`, `resumeErasureFn` and the incomplete-erasures list, the console dialog, `refuseSoleOwner` first, notices, audit actions,
 `deletePlatformUser` as a delegating wrapper. Two releases, in this order (BACKWARD_COMPATIBILITY §6): the `person-erasure`
 kind and its handler, with nothing that enqueues it; then the producer. **Test seam:** the engine with in-memory stores
 through its entry function: refusal leaves everything; a failure at each step resumes (and a dead-lettered job resumes
