@@ -185,6 +185,7 @@ const messages = {
   'book.import.failed.retry': '换个文件试试',
   'book.import.uploadFailed': '“{filename}”没有上传成功',
   'book.import.uploadRetry': '再试一次',
+  'book.import.actionFailed': '请稍后再试。',
   'book.import.toast.added': {
     other: '已添加 {count} 条预订',
   },

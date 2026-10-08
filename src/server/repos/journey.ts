@@ -14,12 +14,15 @@ import {
   eq,
   exists,
   inArray,
+  isNotNull,
   isNull,
   ne,
+  not,
   notInArray,
   sql,
 } from 'drizzle-orm'
 import { z } from 'zod'
+import { member } from '#/server/db/auth-schema'
 import {
   COLLECTION_VISIBILITIES,
   JOURNEY_ENTRY_TYPES,
@@ -264,6 +267,35 @@ function inReadableJourney(scope: TenantScope, journeyId: SQLiteColumn): SQL {
           readableJourneyFilter(scope),
         ),
       ),
+  )
+}
+
+/**
+ * The journeys the quota counts: every row, less an orphan (ADR 0034) whose owner no longer holds a
+ * `member` row in this workspace. Nobody can read, open or delete such a journey, so the slot it
+ * holds could never be given back. Worked out when the quota is checked rather than when a person
+ * leaves, because people leave through Better Auth's organization endpoints and through the console
+ * deleting the user, neither of which passes through this module — and so that the orphan counts
+ * again if its owner returns. Nothing is deleted or moved. A journey that never had a trip carries no
+ * `trip_deleted_at` and keeps counting, whoever owns it.
+ */
+function countedJourneyFilter(scope: TenantScope): SQL {
+  const ownerHasLeft = not(
+    exists(
+      scope.db
+        .select({ present: sql`1` })
+        .from(member)
+        .where(
+          tenantFilter(scope, member, eq(member.userId, journeys.ownerUserId)),
+        ),
+    ),
+  )
+  return not(
+    allOf(
+      isNull(journeys.tripId),
+      isNotNull(journeys.tripDeletedAt),
+      ownerHasLeft,
+    ),
   )
 }
 
@@ -713,7 +745,11 @@ export async function createJourney(
   if (values.tripId) {
     await requireTrip(scope, values.tripId)
   }
-  await assertQuota(scope, 'journeys', await journeysRepository.count(scope))
+  await assertQuota(
+    scope,
+    'journeys',
+    await journeysRepository.count(scope, countedJourneyFilter(scope)),
+  )
   const slug = await reserveSlug(scope, values.slug ?? values.title)
   return journeysRepository.insert(scope, {
     ...values,

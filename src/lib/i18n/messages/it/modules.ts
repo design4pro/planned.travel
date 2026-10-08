@@ -212,6 +212,7 @@ const messages = {
   'book.import.failed.retry': 'Prova un altro file',
   'book.import.uploadFailed': '«{filename}» non è stato caricato',
   'book.import.uploadRetry': 'Riprova',
+  'book.import.actionFailed': 'Riprova tra un momento.',
   'book.import.toast.added': {
     one: 'Una prenotazione aggiunta',
     many: '{count} prenotazioni aggiunte',

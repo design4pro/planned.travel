@@ -202,6 +202,7 @@ const messages = {
   'book.import.failed.retry': 'Másik fájl kipróbálása',
   'book.import.uploadFailed': 'A „{filename}” nem töltődött fel',
   'book.import.uploadRetry': 'Próbáld újra',
+  'book.import.actionFailed': 'Próbáld újra egy pillanat múlva.',
   'book.import.toast.added': {
     one: 'Egy foglalás hozzáadva',
     other: '{count} foglalás hozzáadva',

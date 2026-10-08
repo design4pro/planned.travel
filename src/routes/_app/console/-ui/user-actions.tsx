@@ -584,6 +584,9 @@ export function UserActions({
         <p className="text-caption leading-relaxed text-ink-2">
           {t('console.action.delete.note')}
         </p>
+        <p className="text-caption leading-relaxed text-ink-2">
+          {t('console.action.delete.owners')}
+        </p>
       </ConsoleActionDialog>
     </>
   )

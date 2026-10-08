@@ -370,6 +370,8 @@ const messages = {
   'action.delete.confirm': '刪除帳戶',
   'action.delete.note':
     '這個人在工作區裡建立的內容，仍歸擁有它的工作區所有。用停用代替刪除，可以保住紀錄而只收走存取權。',
+  'action.delete.owners':
+    '若帳號是某個仍有其他成員的工作區的唯一擁有者，就無法刪除。請先在該工作區指定另一位擁有者，或改為停用該帳號。',
   'action.delete.done': '帳戶已刪除',
   'action.delete.done.body': '{name} 以及與該帳戶綁定的一切都已消失。',
 
