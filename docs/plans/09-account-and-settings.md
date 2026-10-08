@@ -198,8 +198,9 @@ not that suite.
 
 Two rows do not reach **done**, and both say so in the same words as the stage that owns them.
 `ACC-06` is blocked outright (`09-S5`). `ACC-04` is the interesting one: `09-S8` closes five of the
-nine behaviours the row names and defers the other four, because the surface each of those four
-would govern belongs to another plan or does not exist yet. The ledger records
+nine behaviours the row names, closes the temperature unit as "no separate preference" (ADR 0038)
+and defers the other three, because the surface each of those three would govern belongs to another
+plan or does not exist yet. The ledger records
 `partial → partial` because that is what the stage records; a plan whose summary table and whose
 stage disagree about a row is a plan that has stopped being readable.
 

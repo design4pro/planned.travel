@@ -833,7 +833,7 @@ and this file deliberately does not choose for it:
 2. **Foreign-exchange rates** — the rate frozen at save time for MNY-07, the re-basing in MNY-06, the
    converter widget in TRP-05 and the guest currency resolution in COL-10.
 
-**The third — geocoding and place search, with its adjacent decisions — has been taken, and not as
+**Geocoding and place search, with its adjacent decisions — has been taken, and not as
 one decision.** It was recorded here as a single question with four parts hanging off it: reverse
 lookup for MAP-01, type-ahead and share-link resolution for MAP-02, address completion for MAP-03,
 plus routing (MAP-08, MAP-09), transit routing (BKG-08) and the airport and station reference dataset
@@ -856,7 +856,7 @@ by four ADRs, and the separation is the interesting part:
   BKG-08, and the term that shaped it was not retention alone but that one request may not serve more
   than one end user. `02-places-and-maps.md` calls this its Gate B.
 
-The two conditions below still bind, unchanged, for rates, and they are the test weather passed:
+The two conditions below still bind, unchanged, for rates, and the first of them is the test weather passed:
 ADR 0038 chose two sources whose terms allow a commercial product.
 
 **The binding constraint, which no plan may plan around.** A free tier is not evidence that a

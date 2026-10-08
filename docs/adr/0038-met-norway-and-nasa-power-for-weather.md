@@ -44,7 +44,7 @@ summary:
 1. **Commercial use is allowed.** MET Norway publishes Locationforecast under CC BY 4.0 with commercial
    use allowed. NASA POWER has no restriction on use, including commercial use, and asks to be cited.
 2. **No key, no bill.** Neither provider issues a credential or charges, so there is no secret to hold,
-   no per-tenant credential to refuse (ADR 0036) and no recurring cost to add to the model in
+   no per-tenant credential to refuse (ADR 0019) and no recurring cost to add to the model in
    `docs/ARCHITECTURE.md` section 8.
 
 ### The terms we are bound to
@@ -84,8 +84,6 @@ provider learns, and with the coordinate it is the whole of the disclosure.
 Because a provider may keep a request log for as long as it likes, the rule is about what we send, not
 about what they delete: the four-decimal truncation is applied before the request is built and before
 the cache key is built, and nothing else about the trip, the workspace or the traveller is attached.
-This record makes no statement about customer-facing notice of this disclosure; that is not decided by
-this change.
 
 What we may keep is the other half of the retention question, and it is the one that decided ADR 0013.
 Here it is not binding: MET Norway asks us to cache and to honour `Expires`, and NASA POWER places no
