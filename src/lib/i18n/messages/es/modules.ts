@@ -210,6 +210,7 @@ const messages = {
   'book.import.failed.retry': 'Probar otro archivo',
   'book.import.uploadFailed': '«{filename}» no se subió',
   'book.import.uploadRetry': 'Volver a intentarlo',
+  'book.import.actionFailed': 'Vuelve a intentarlo en un momento.',
   'book.import.toast.added': {
     one: 'Una reserva añadida',
     many: '{count} reservas añadidas',
