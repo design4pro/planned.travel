@@ -1,7 +1,7 @@
 /**
  * A recorded MET Norway Locationforecast 2.0 `compact` answer for Oslo (59.9139, 10.7522), taken on
- * 2026-10-08 at 19:05 UTC and trimmed to the fields this repository reads. Nothing is invented: the steps, their spacing and their end are the
- * provider's.
+ * 2026-10-08 at 19:05 UTC and trimmed to the fields this repository reads. Nothing is invented: the
+ * steps, their spacing and their end are the provider's.
  *
  * Three properties of the real answer are what the tests lean on, and each is worth knowing before
  * editing the file:
