@@ -21,10 +21,13 @@ reaches them. This stage adds the write half, as **three tickets that are each a
    carried-over figure, recomputed in the request that changes them; the "Carried" tile is editable only where it is an opening
    balance and is derived everywhere else.
 3. **08-S1c - the plan's own settings.** A dialog with the carry-over switch and the default allowance, for the plan's owner.
-   The three display switches (block weekends, public holidays, company holidays) move to `08-S5`, which owns the month grid
+   The three display switches (block weekends, public holidays, company holidays) move to the month-grid stage, which owns the month grid
    that would honour them (Resolved assumption 14).
 
 No schema change, no migration, no route added, no package added.
+
+Later stages of plan 08 are named here by what they ship (the journal, month-grid, shared-plan and module-enforcement stages), never
+by id: the backlog reads any mention of a stage id in a spec as that stage being specified already.
 
 This spec describes the work that is **left** at HEAD (`ee99d50d`). It departs from the plan's stage block where the code the
 plan cites has changed or a specialist found the plan wrong. Every departure is a row of the Resolved assumptions table.
@@ -36,7 +39,9 @@ What exists at HEAD, measured:
 - **A read-only screen over a complete data layer.** `src/routes/_app/vacay.tsx` renders `loadVacay`
   (`src/routes/_app/-server/library.ts`). `src/server/repos/vacay.ts` exports `updatePlan`, `setEntitlement`, `setEntry`,
   `setEntryRange`, `removeEntry`, `addCompanyHoliday`, `addHolidayCalendar`, `invitePlanMember`, `setPlanMemberStatus` and
-  `setUserColour`; `grep` finds no production caller of any of them (the dev seeder and the repository suites reach them).
+  `setUserColour`; `grep` finds no production caller of any of them (the dev seeder, `src/routes/api/dev/-seed/apply.ts`, and the repository
+  suites reach them). The only production reader is `loadVacay`, which calls `getPlanOverview` with a plan id the server
+  resolves itself.
 - **A carried-over figure nothing maintains.** `vacay_user_years.carried_over_days` is a stored `integer NOT NULL` column
   (`src/server/db/schema.ts`, table `vacay_user_years`) and `getPlanOverview` reads it. Nothing computes it.
 - **Half days make the leftover fractional.** `ENTRY_KIND_COST` in `vacay.ts` costs a `half_day` entry 0.5, while
@@ -54,16 +59,16 @@ What exists at HEAD, measured:
   behind, so a plan-member row does not prove current workspace membership.
 - **Three of the plan's switches change nothing on screen.** `grep` in `vacay.tsx` finds `carryOverEnabled` (the muted
   "Carried" tile) and nothing for `blockWeekends`, `holidaysEnabled` or `companyHolidaysEnabled`. A switch that does nothing is
-  a placeholder (`docs/SPEC.md` §7.5); the month grid that would honour them is `08-S5`'s.
+  a placeholder (`docs/SPEC.md` §7.5); the month grid that would honour them is the month-grid stage's.
 - **A word that already means something else.** `CONTEXT.md` defines **Entitlement** as a capability granted by the billing
   plan. The panel is labelled "Entitlement {year}" (`vacay.tsx`) and the plan names its new component `EntitlementPanel`. The
   leave figure is an **allowance** in everything new this stage writes; the existing repository names (`setEntitlement`,
   `entitlement_days`) stay. "Allowance", "carry-over" and "leave plan" are not in the glossary yet.
 - **A week-start literal that no consumer reads.** `loadVacay` publishes `weekStartsOn: 1` and the screen hard-codes a
   Monday-first header. The week start is already a shipped setting (`organization_settings` / `user_settings`,
-  `getEffectiveSettings`), so this stage adds no second one; wiring the grid to it is `08-S5`'s. Nothing here reads or writes it.
+  `getEffectiveSettings`), so this stage adds no second one; wiring the grid to it is the month-grid stage's. Nothing here reads or writes it.
 - **The screen is English.** `vacay.tsx` carries its copy as literals (`docs/SPEC.md` §9 bans that). This stage localises
-  everything it writes or rewrites; the month grid, the legend and the traveller list are `08-S5`'s and stay as they are.
+  everything it writes or rewrites; the month grid, the legend and the traveller list are the month-grid stage's and stay as they are.
 
 The reader this serves: a traveller who plans leave around their trips and needs the screen to say how many days they have,
 not how many a seeder gave them. The reference behaviour is a plan that exists without being created by hand, an allowance
@@ -74,17 +79,17 @@ edited where it is read, used and remaining derived rather than stored, and left
 
 ### What the stage owns and what it does not
 
-| Owned (this stage writes it)                                                                                                                                                                       | Not owned (read only, or left alone)                                                                                                       |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/server/repos/vacay.ts` - edit: `requirePlanActor`, `requirePlanOwner`, `saveAllowance`, `getAllowance`, `recomputeCarryOver`, `listUserYearsForUser`, `updatePlanSettings`, two error classes | `src/server/db/schema.ts`, `drizzle/` - **no schema change, no migration**                                                                 |
-| `src/lib/vacay/carry-over.ts` + `__tests__/carry-over.test.ts` - new, pure: the one carry-over walk, its rounding rule and `wholeDaysThatCarry` (08-S1b)                                           | `src/routes/_app/-server/library.ts` - held by `08-S3` this wave; `loadVacay` is **not** edited                                            |
-| `src/routes/_app/-server/vacay.ts` - new: `loadVacayAllowance`, `setAllowanceFn`, `updateVacayPlanFn` (grown by `08-S5`, `08-S8`); `__tests__/vacay.test.ts` - new                                 | `setEntry`, `setEntryRange`, `removeEntry`, `invitePlanMember`, `setPlanMemberStatus`, `removePlanMember`, `deletePlan` (`08-S5`, `08-S8`) |
-| `src/routes/_app/vacay.tsx` - edit: loads the allowance context, mounts the two components, extends `VacayPending`; the month grid is untouched                                                    | `src/routes/_app/-ui/scaffold.tsx`, `-lib/format.ts`, `-lib/tone.ts` - imported, not touched                                               |
-| `src/components/vacay/allowance-panel.tsx`, `plan-settings-dialog.tsx`, `index.ts` + `__tests__/` - new (the module's directory, `docs/SPEC.md` §6)                                                | `src/components/ui/**`, `src/styles/tokens.css` - no primitive and no token is missing                                                     |
-| `src/lib/i18n/messages/<locale>/modules.ts` - edit, **all 23 locales**                                                                                                                             | `src/server/billing/**`, `src/lib/plans.ts` - no quota, no `MODULE_KEYS` entry (`08-S10` states that once for the plan)                    |
-| `src/server/repos/__tests__/tenant-isolation.test.ts` - append one `describe`; `repositories.test.ts` - append the allowance / carry-over cases                                                    | `e2e/helpers/**` - reused, not edited                                                                                                      |
-| `e2e/product-modules.spec.ts` - new: this plan's spec file (`docs/plans/12-verification-protocol.md` §4: one file per plan, named from `08-product-modules.md`)                                    | `src/lib/i18n/messages/en/shell.ts` (`nav.vacay`)                                                                                          |
-| `CONTEXT.md` - three glossary entries (08-S1a): **Allowance**, **Carry-over** (with the opening-balance rule), **Leave plan**                                                                      |                                                                                                                                            |
+| Owned (this stage writes it)                                                                                                                                                                                                              | Not owned (read only, or left alone)                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/server/repos/vacay.ts` - edit: `requirePlanActor`, `requirePlanOwner`, `saveAllowance`, `getAllowance`, `recomputeCarryOver` and `listUserYearsForUser` (both module-private, not exported), `updatePlanSettings`, two error classes | `src/server/db/schema.ts`, `drizzle/` - **no schema change, no migration**                                                                                      |
+| `src/lib/vacay/carry-over.ts` + `__tests__/carry-over.test.ts` - new, pure: the one carry-over walk, its rounding rule and `wholeDaysThatCarry` (08-S1b)                                                                                  | `src/routes/_app/-server/library.ts` - held by the journal stage this wave; `loadVacay` is **not** edited                                                       |
+| `src/routes/_app/-server/vacay.ts` - new: `loadVacayAllowance`, `setAllowanceFn`, `updateVacayPlanFn` (grown by the month-grid and shared-plan stages); `__tests__/vacay.test.ts` - new                                                   | `setEntry`, `setEntryRange`, `removeEntry`, `invitePlanMember`, `setPlanMemberStatus`, `removePlanMember`, `deletePlan` (the month-grid and shared-plan stages) |
+| `src/routes/_app/vacay.tsx` - edit: loads the allowance context, mounts the two components, extends `VacayPending`; the month grid is untouched                                                                                           | `src/routes/_app/-ui/scaffold.tsx`, `-lib/format.ts`, `-lib/tone.ts` - imported, not touched                                                                    |
+| `src/components/vacay/allowance-panel.tsx`, `plan-settings-dialog.tsx`, `index.ts` + `__tests__/` - new (the module's directory, `docs/SPEC.md` §6)                                                                                       | `src/components/ui/**`, `src/styles/tokens.css` - no primitive and no token is missing                                                                          |
+| `src/lib/i18n/messages/<locale>/modules.ts` - edit, **all 23 locales**                                                                                                                                                                    | `src/server/billing/**`, `src/lib/plans.ts` - no quota, no `MODULE_KEYS` entry (the module-enforcement stage states that once for the plan)                     |
+| `src/server/repos/__tests__/tenant-isolation.test.ts` - append one `describe` per phase (the allowance, the recompute, the plan settings); `repositories.test.ts` - append the allowance / carry-over cases                               | `e2e/helpers/**` - reused, not edited                                                                                                                           |
+| `e2e/product-modules.spec.ts` - new: this plan's spec file (`docs/plans/12-verification-protocol.md` §4: one file per plan, named from `08-product-modules.md`)                                                                           | `src/lib/i18n/messages/en/shell.ts` (`nav.vacay`)                                                                                                               |
+| `CONTEXT.md` - glossary entries: **Allowance** and **Leave plan** (08-S1a), **Carry-over** with the opening-balance rule (08-S1b)                                                                                                         |                                                                                                                                                                 |
 
 Departures from the plan's owned paths (Resolved assumptions 5, 11, 12, 13): the walk lives in `src/lib/vacay/`, not
 `src/components/vacay/carry-over.ts`; `modules.ts` in all 23 locales and `CONTEXT.md` join the list; `e2e/product-modules.spec.ts`
@@ -117,7 +122,7 @@ replaces `product-modules.visual.spec.ts` and the four re-recorded `vacay-*` PNG
 
 ### Who may do what
 
-One rule, in the repository, because the writers that follow (`08-S5`, `08-S8`) must not be able to forget it:
+One rule, in the repository, because the writers that follow (the month-grid and shared-plan stages) must not be able to forget it. A structural test (criterion 5) makes forgetting it fail:
 
 - `requirePlanActor(scope, planId)` resolves the plan inside the workspace (`requireById`) and returns it with `isOwner`. The
   caller must be the plan's **owner** or an **accepted** member (`pending` and `declined` grant nothing). Anyone else in the
@@ -126,7 +131,9 @@ One rule, in the repository, because the writers that follow (`08-S5`, `08-S8`) 
 - **Your own allowance:** `requirePlanActor`. **Someone else's** (an explicit `userId` other than the caller): owner only, and
   the target must be an accepted plan member **and** a current workspace member (`getMembership`), else `NotFoundError` with
   nothing written. The workspace role (`owner` / `admin` / `member`) gives no override: a leave plan is personal.
-- **Plan settings:** `requirePlanOwner`. A plan member sees the dialog read-only; that view ships with `08-S8`, the first stage
+- **Reading a balance:** `getAllowance` calls `requirePlanActor` itself, and a `userId` other than the caller's needs the owner,
+  the same rule as the writes, so a balance reader is not one more open reader for a later stage to remember.
+- **Plan settings:** `requirePlanOwner`. A plan member sees the dialog read-only; that view ships with the shared-plan stage, the first stage
   that makes another person's plan visible. Today `loadVacay` loads only the caller's own plan.
 - The server refuses; hiding a control is not the guard. `recomputeCarryOver` is **repository-internal**: it resolves the plan
   with `requireById`, accepts no client-supplied figure, is called only by `saveAllowance` after the guard has passed, and no
@@ -137,19 +144,19 @@ One rule, in the repository, because the writers that follow (`08-S5`, `08-S8`) 
 **`src/server/repos/vacay.ts` (edit).** All SQL stays here; every statement is an existing `tenantFilter()`-bound call or a
 `createTenantRepository` method.
 
-- `requirePlanActor`, `requirePlanOwner`; `PlanOwnerOnlyError extends RepositoryError` (a diagnostic: the reader sees the
+- `requirePlanActor`, `requirePlanOwner` (exported: the later stages must call them); `PlanOwnerOnlyError extends RepositoryError` (a diagnostic: the reader sees the
   caller's localised fallback and `AUTHORED_ERROR_NAMES` stays closed, `docs/SPEC.md` §9 rule 10); `CarriedOverDerivedError
 extends RepositoryError` (thrown when `carriedOverDays` is sent for a year that has a predecessor row; used from 08-S1b).
 - `saveAllowance(scope, input)`: `input` is `setEntitlementInput`. It resolves the target (`userId ?? caller`), applies the
   actor rules, calls the existing `setEntitlement` (unchanged: its contract stays "write one row") and returns the row. In
   08-S1a it writes the row and nothing derived; 08-S1b adds the recompute and the derived-year rule inside it.
-- `getAllowance(scope, planId, userId, year)`: the viewer's effective balance for one year (see 08-S1b for the walk; in
+- `getAllowance(scope, planId, userId, year)` (guarded by `requirePlanActor`, see above): the effective balance for one year (see 08-S1b for the walk; in
   08-S1a it is the stored row or the plan default, `used` from entries). Returns `{ hasRow, entitlementDays, carriedOverDays,
 usedDays, remainingDays }`.
 
 **`src/routes/_app/-server/vacay.ts` (new).**
 
-- `loadVacayAllowance` (GET, `{ planId, year }`): `requirePlanActor`, then `getAllowance` for the caller, plus `openingBalance`
+- `loadVacayAllowance` (GET, `{ planId, year }`): `getAllowance` for the caller (which guards), plus `openingBalance`
   and `previousYear` (08-S1b). It does **not** call `ensurePlan`: the route loader runs it **after** `loadVacay`, which has
   already created the plan, and passes that plan's id and resolved year (`await loadVacay(...)` then `await
 loadVacayAllowance(...)`). Two concurrent `ensurePlan` calls would race on `vacay_plans_org_owner_unq`.
@@ -159,12 +166,13 @@ loadVacayAllowance(...)`). Two concurrent `ensurePlan` calls would race on `vaca
 
 **`src/components/vacay/allowance-panel.tsx` (new)** replaces the read-only block at `vacay.tsx` (the "Entitlement" panel);
 see [UI/UX](#-uiux). The panel calls the server function directly and then `router.invalidate()` (the precedent is
-`src/routes/_app/notifications.tsx`; there is no `useServerFn` use in `src`), so the screen shows what the database holds.
+`src/routes/_app/notifications.tsx`; there is no `useServerFn` use in `src`), so the screen shows what the database holds. The panel reads **only** `loadVacayAllowance`: no new code reads the viewer's
+entry in `loadVacay`'s `balances`, which keeps `getPlanOverview`'s old row-less fallback (zero carry, plan default); the
+month-grid stage, which reads the other travellers' rows, inherits that fallback's cleanup.
 
-**`CONTEXT.md`:** **Allowance** (the leave days a traveller may take in a year; _Avoid_: "entitlement" for it), **Carry-over**
-(unused whole days brought into the next year, and the opening-balance rule: a traveller's first year in a chain is entered,
-every later year is calculated), **Leave plan** (a traveller's personal planner of leave; distinct from the billing plan and from
-a trip's plan).
+**`CONTEXT.md`:** **Allowance** (the leave days a traveller may take in a year; _Avoid_: "entitlement" for it) and **Leave plan** (a traveller's personal planner of leave; distinct from the billing plan and from
+a trip's plan). **Carry-over** (unused whole days brought into the next year, and the opening-balance rule: a traveller's first year
+in a chain is entered, every later year is calculated) is added by 08-S1b, where that rule is built.
 
 ### Phase 2 (08-S1b) - the leftover follows the traveller
 
@@ -180,7 +188,7 @@ a trip's plan).
 
 **`src/server/repos/vacay.ts` (edit).**
 
-- `listUserYearsForUser(scope, planId, userId)`: the traveller's rows, ascending by year.
+- `listUserYearsForUser(scope, planId, userId)` (not exported): the traveller's rows, ascending by year.
 - `recomputeCarryOver(scope, planId, userId)`: repository-internal. Resolves the plan (`requireById`), reads the traveller's
   rows and their entries **once** (`listVacayEntries` without a year, bucketed by calendar year with `ENTRY_KIND_COST`), calls
   `walkCarryOver`, and writes **only the rows whose figure changed**, as one `runBatch` of tenant-filtered `UPDATE`s
@@ -195,34 +203,34 @@ a trip's plan).
   allowance, no stored carry) when none exists and the year before has one; carried is `0` when carry-over is off.
 
 `recomputeCarryOver` is not a server function and there is no "Recalculate" button (Resolved assumption 4): in this stage `used`
-changes only through seeded data, because nothing writes an entry until `08-S5`, and `08-S5`'s entry writes call
+changes only through seeded data, because nothing writes an entry until the month-grid stage, and the month-grid stage's entry writes call
 `recomputeCarryOver` themselves.
 
 ### Phase 3 (08-S1c) - the plan settings dialog
 
 - `updatePlanSettings(scope, planId, input)` in the repository: `requirePlanOwner`, then the existing `updatePlan`. The input is
   `updatePlanInput.pick({ carryOverEnabled, defaultEntitlementDays })`; an empty patch is a no-op that returns the plan. The
-  repository schema already accepts the other three switches and `name`; `08-S5` widens the `pick` when it wires the grid.
+  repository schema already accepts the other three switches and `name`; the month-grid stage widens the `pick` when it wires the grid.
   Changing the default allowance changes what travellers **without** a row see, and rewrites no stored row.
 - `updateVacayPlanFn` (POST) in `src/routes/_app/-server/vacay.ts`: `{ planId }` plus that input; the handler calls
   `updatePlanSettings` and returns the updated plan row.
-- **`src/components/vacay/plan-settings-dialog.tsx` (new):** a `Dialog` with one `Checkbox` row (carry unused days into the next
+- **`src/components/vacay/plan-settings-dialog.tsx` (new):** a `Dialog` with one `CheckboxField` row (carry unused days into the next
   year) and one numeric `Input` (default allowance), opened from a "Leave plan settings" button in the `PageHeader` actions beside
   the year switcher. Shown to the plan's owner; today that is every viewer, because only their own plan loads.
 - There is **no preview of what turning carry-over off would cost**: the setting hides figures and erases none.
 
 ### Alternatives considered, and why they lost
 
-| Alternative                                                              | Why it lost                                                                                                                                |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Walk `vacay_years` as the plan wrote it                                  | No production code writes that table; the walk would visit nothing.                                                                        |
-| Two walks (preview in `components`, write in the repository) plus a test | One concept true in two places (`docs/SPEC.md` §8). With the preview gone there is one writer; the pure walk stays in `src/lib` for tests. |
-| A manual-override flag so a typed carried figure survives a recompute    | Needs a column; plan 08 files no migration.                                                                                                |
-| Round half up, or widen the column to hold halves                        | The first credits leave that does not exist; the second is a migration.                                                                    |
-| The actor check only in the handler                                      | `08-S5` / `08-S8` writers take only a row id; a check on the client's `planId` cannot protect them. The repository is where trips do it.   |
-| Edit `loadVacay` to carry the allowance context                          | `library.ts` is `08-S3`'s in wave 1.                                                                                                       |
-| Commit the inline editor on blur                                         | On touch there is no `Escape` and a Cancel tap would blur-commit first; explicit Save / Cancel is unambiguous (Resolved assumption 15).    |
-| Ship all four switches and let three do nothing yet                      | A control with no visible effect is a placeholder (`docs/SPEC.md` §7.5); they ship with the grid that honours them.                        |
+| Alternative                                                              | Why it lost                                                                                                                                           |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Walk `vacay_years` as the plan wrote it                                  | No production code writes that table; the walk would visit nothing.                                                                                   |
+| Two walks (preview in `components`, write in the repository) plus a test | One concept true in two places (`docs/SPEC.md` §8). With the preview gone there is one writer; the pure walk stays in `src/lib` for tests.            |
+| A manual-override flag so a typed carried figure survives a recompute    | Needs a column; plan 08 files no migration.                                                                                                           |
+| Round half up, or widen the column to hold halves                        | The first credits leave that does not exist; the second is a migration.                                                                               |
+| The actor check only in the handler                                      | the month-grid and shared-plan writers take only a row id; a check on the client's `planId` cannot protect them. The repository is where trips do it. |
+| Edit `loadVacay` to carry the allowance context                          | `library.ts` is the journal stage's in wave 1.                                                                                                        |
+| Commit the inline editor on blur                                         | On touch there is no `Escape` and a Cancel tap would blur-commit first; explicit Save / Cancel is unambiguous (Resolved assumption 15).               |
+| Ship all four switches and let three do nothing yet                      | A control with no visible effect is a placeholder (`docs/SPEC.md` §7.5); they ship with the grid that honours them.                                   |
 
 ## 📝 Architecture
 
@@ -242,8 +250,8 @@ changes only through seeded data, because nothing writes an entry until `08-S5`,
 
 **No schema change and no migration.** Written columns: `vacay_user_years.entitlement_days`, `carried_over_days`;
 `vacay_plans.carry_over_enabled`, `default_entitlement_days`. No index is added: reads and writes are by `(organization_id,
-plan_id, user_id, year)`, served by the `(organization_id, plan_id)` prefix of `vacay_user_years_org_plan_idx` with a residual
-scan of a plan's member count; the unique `(plan_id, user_id, year)` index carries no tenant column and is not the tenant guard
+plan_id, user_id, year)`, served by `vacay_user_years_org_user_year_idx` `(organization_id, user_id, year)` for the per-traveller reads
+(`listUserYearsForUser`, the recompute) and the `(organization_id, plan_id)` prefix of `vacay_user_years_org_plan_idx` for the rest; the unique `(plan_id, user_id, year)` index carries no tenant column and is not the tenant guard
 (the guard is `tenantFilter()` and the insert stamp). It does make `setEntitlement`'s read-then-write safe under a race: two
 concurrent first saves collide on it instead of leaving two rows.
 
@@ -269,22 +277,34 @@ Route `/vacay` (`src/routes/_app/vacay.tsx`) exists: no route file, no `pnpm gen
   an opening balance) "Carried" are buttons with `data-part="allowance-tile"` and `data-field="entitlement" | "carried"`. A
   derived or switched-off "Carried" is plain text, not a disabled button. The `Progress` gets an accessible name
   (`vacay.allowance.progress`).
-- **Names.** One full key per field (`vacay.allowance.tile.edit.days`, `.edit.carried`), so the accessible name contains the
-  visible label word for word in every locale (WCAG 2.5.3); numbers go through `formatNumber(locale)`. The default hint is
-  linked to the tile with `aria-describedby`.
-- **Affordance.** An `aria-hidden` pencil glyph in a token that reaches 3:1 on the tile in both themes (a `surface-2` tile on
+- **Names.** One full key per field (`vacay.allowance.tile.edit.days`, `.edit.carried`), so the tile button's accessible name
+  contains the visible label word for word in every locale (WCAG 2.5.3); numbers go through `formatNumber(locale)`, a **year**
+  never does (no "2 026" or "2.026"). The editor's `Input` is named by `aria-labelledby` pointing at the tile's visible `dt`
+  ("Days", "Carried"), and `vacay.allowance.input.days` / `.carried` ("Your allowance for {year}") are its `aria-describedby`.
+  Every caption under the tiles (default hint, "Carried from {year}", opening-balance hint, whole-days line) is linked to its
+  tile with `aria-describedby`.
+- **Affordance.** An `aria-hidden` pencil glyph in `ink-4` or stronger (3:1 on `surface-2` and on the hover and active backgrounds, both themes) (a `surface-2` tile on
   the card is about 1.1:1 without it). Hover, `focus-visible` ring, active and pending states are named in the component. The
   muted "Carried" text keeps its token (about 4.8:1 light, 5.1:1 dark) with no opacity layered on it.
-- **The editor.** Pressing a tile swaps the figure for a numeric `Input` (`inputMode="numeric"`, whole numbers 0 to 365) with
-  visible **Save** and **Cancel** icon buttons; focus moves into the input with its text selected; one editor is open at a time.
+- **The editor.** Pressing a tile opens a **full-width editor row directly under the three tiles** (a tile is about 52px wide
+  at 1280px in the side column and about 70px at 360px, which cannot hold an input and two buttons); the pressed tile shows an
+  editing state and keeps its button. The row holds a numeric `Input` (`inputMode="numeric"`, whole numbers 0 to 365) and
+  visible **Save** and **Cancel** icon buttons, each at least 24px everywhere and 44px under `pointer: coarse`. Focus moves
+  into the input with its text selected; one editor is open at a time; an unsaved changed value is **discarded** when another
+  tile is pressed or the year changes. The editing state at 360 and 1280 has no horizontal overflow (an e2e assertion).
   - `Enter` saves, `Escape` cancels; focus returns to the same tile button after either (the tile has a stable key across
     `router.invalidate()`).
   - **Blur never commits.** Blur with an unchanged or empty value closes the editor with no write; blur with a changed value
     leaves the editor open with Save and Cancel visible. An invalid value (`Enter` or Save) does not submit, keeps focus in the
     input and shows `vacay.allowance.input.invalid` as visible text with `aria-invalid="true"` linked by `aria-describedby`.
   - Arabic-Indic and other locale digits are normalised before parsing (a test under `ar`).
-  - **Pending.** The input is `readOnly` plus `aria-busy` (never `disabled`, which drops focus), a second `Enter` or Save does
-    not submit again, and a visible "Saving..." indicator (`vacay.allowance.saving`) shows the typed value until the reload.
+  - **Pending.** The input is `readOnly` plus `aria-busy` (never `disabled`), and the inline Save button never takes `loading`
+    or `disabled` either (`IconButton` would set `disabled` and drop focus to `<body>`): a second `Enter` or Save is ignored by
+    a guard in the handler. A visible "Saving…" indicator (`vacay.allowance.saving`, a real ellipsis) shows the typed value
+    until the reload.
+  - **Focus on every exit.** After a successful save, `Escape` or Cancel: on the same tile button. After a failed write: in the
+    input, which still holds the typed value, or on the alert (`tabIndex={-1}`). After the derived refusal the tile is no longer
+    a button, so focus moves to the `vacay.allowance.error.derived` message (`tabIndex={-1}`).
 - **States.** _Default_ (no row): the tile shows the plan default with the hint "Default allowance. Select to set your own."
   _Derived carried:_ "Carried from {year}". _Carry-over off:_ "Carry-over is off". _Opening balance:_ "Brought in from before
   {year}. Select to edit." _Whole-days line:_ shown only when carry-over is on and the leftover is positive with a fractional
@@ -295,25 +315,36 @@ Route `/vacay` (`src/routes/_app/vacay.tsx`) exists: no route file, no `pnpm gen
   field and that nothing was lost (one key per field). "Try again" is offered for transport and 5xx failures only. A refusal
   (`CarriedOverDerivedError`, for example after a write from another tab) reloads the panel and says why the figure is now
   calculated (`vacay.allowance.error.derived`), with no retry. The loader's own failure keeps the existing `ErrorPanel`.
-- **Status.** One polite live region mounted at first render, starting empty, outside the swapping tile and outside the dialog
-  portal, receives "Allowance saved.", the superseded-balance notice and the settings-saved message.
+- **Superseded notice.** When a save replaces a typed opening balance, the panel also shows the notice as **visible text**: an
+  info `Alert` that stays until dismissed or the next save, because the replaced year is usually not the one on screen.
+- **Status.** One polite live region mounted at first render, starting empty, outside the editor row and outside the dialog
+  portal, receives "Allowance saved.", the superseded-balance notice and the settings-saved message. It is cleared before a
+  message identical to the last one is written, so a second "Allowance saved." is announced.
 - **Skeleton.** `VacayPending` is extended with the panel's control row so skeleton and settled layout have the same height.
-- **Motion.** The tile-to-input swap is 150ms opacity plus a 2px translate on `--ease-out-quint` using the CSS motion tokens
-  only; the translated element carries `data-motion-transform` so the global reduced-motion reset removes the translate.
-- **Layout.** At 360px captions sit full width under the three-tile row, not inside the tiles. The settings button is at least
-  44px on touch.
+- **Motion.** The editor row appears with 150ms opacity plus a 2px offset on `--ease-out-quint`, using the CSS motion tokens
+  only. The offset is a `transform` keyframe (a Tailwind `translate-*` compiles to the `translate` property, which the
+  `[data-motion-transform]` reset does not remove); the duration collapse of the global reduced-motion block makes it static.
+- **Layout.** At 360px captions sit full width under the three-tile row, not inside the tiles.
+- **Localised literals on lines this stage edits.** `VacayPending`'s "Loading", the error title the second loader can reach
+  ("Vacay did not load") and the year switcher's "Previous year" / "Next year" move to keys (see Copy); the rest of the page's
+  literals stay with the month-grid stage.
 
 ### The settings dialog
 
-- `Dialog` primitive with `DialogTitle` and `DialogDescription`; one `Checkbox` row whose whole label is the hit target
+- `Dialog` primitive with `DialogTitle` and `DialogDescription`; one `CheckboxField` row whose whole label is the hit target
   (at least 24px, WCAG 2.5.8) and one numeric `Input` labelled "Default allowance (days per year)" with its note, through
-  `Field` with `error` (`vacay.settings.defaultAllowance.invalid`). Save and Cancel; Save takes `loading`.
+  `Field` with `error` (`vacay.settings.defaultAllowance.invalid`). The dialog body is a `<form>`, so `Enter` in the
+  default-allowance input submits it. Save and Cancel; Save takes `loading`. An invalid default moves focus to the input, whose
+  `aria-describedby` points at the error text (`FieldError` is a `role="status"` node that mounts with the error, so focus,
+  not the status role, is what makes it heard).
 - **Failure:** the dialog stays open with the values kept and a `danger` `Alert` in `DialogBody`; focus moves to that alert
   (`tabIndex={-1}`), because the loading Save button has dropped focus. **Success:** the dialog closes, focus returns to the
   settings button, and the saved message goes to the live region.
-- The settings button is an `IconButton` (or a `Button` with visible text), size `sm` or larger, labelled "Leave plan settings",
-  with `data-part="vacay-settings"`. The label says "leave plan", never "owner" and never bare "plan" (the billing term).
-- At 360px the dialog is a full-height sheet whose footer (Save) stays visible above the on-screen keyboard.
+- The settings button is a `Button` with visible text "Leave plan settings", at least 44px tall at 360px (the size that
+  achieves it; `sm` is 32px), with `data-part="vacay-settings"`. The label says "leave plan", never "owner" and never bare "plan" (the billing term).
+- At 360px the dialog is the existing bottom-sheet `DialogContent` (capped at 92dvh); Save sits in `DialogFooter`. An e2e
+  assertion focuses the default-allowance input in a short viewport (360x500, standing in for the keyboard) and checks Save
+  is inside the visual viewport. Escape or an outside tap discards the edits without a warning, which two fields justify.
 
 ## 📝 Visual change expected
 
@@ -321,9 +352,9 @@ Route `/vacay`, light and dark, desktop (1280) and mobile (360), plus 2560:
 
 - Resting: the allowance panel gains a pencil affordance on "Days" (and "Carried" when an opening balance), a "Leave plan
   settings" button in the page header actions, and the panel's label reads "Allowance {year}".
-- Editing: a tile swapped for an input with Save and Cancel (`--state editing`, click
+- Editing: the editor row under the tiles, with Save and Cancel (`--state editing`, click
   `[data-part="allowance-tile"][data-field="entitlement"]`).
-- Settings open (`--state settings`, click `[data-part="vacay-settings"]`); at 360px a full-height sheet.
+- Settings open (`--state settings`, click `[data-part="vacay-settings"]`); at 360px a bottom sheet.
 - Skeleton: the extended `VacayPending`. Error: the in-panel `Alert`, reached with `page.route()` failing the write.
 
 The month grid, legend and traveller list do not change.
@@ -333,67 +364,72 @@ The month grid, legend and traveller list do not change.
 New keys in `src/lib/i18n/messages/en/modules.ts` (namespace `modules`, prefix `vacay.`), each landing in all 23 locales in the
 same change that first uses it (`i18n-messages` skill; the parity test enforces it). "Allowance" is the traveller's word;
 **Entitlement** is the billing term and is not used. Fields are never a `{field}` slot: one key per field, so inflected locales
-translate whole sentences.
+translate whole sentences; every key that puts a number before a noun is a plural key, and no key follows a counted number with
+a bare noun.
 
-| Key                                       | `en` text                                                                                   | Ticket |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------- | ------ |
-| `vacay.allowance.label`                   | `Allowance {year}`                                                                          | S1a    |
-| `vacay.allowance.daysLeft`                | plural: `{count} day left` / `{count} days left`                                            | S1a    |
-| `vacay.allowance.daysOver`                | plural: `{count} day over` / `{count} days over`                                            | S1a    |
-| `vacay.allowance.progress`                | `{used} of {total} days used`                                                               | S1a    |
-| `vacay.allowance.tile.days`               | `Days`                                                                                      | S1a    |
-| `vacay.allowance.tile.used`               | `Used`                                                                                      | S1a    |
-| `vacay.allowance.tile.carried`            | `Carried`                                                                                   | S1a    |
-| `vacay.allowance.tile.edit.days`          | `Edit days, currently {value}`                                                              | S1a    |
-| `vacay.allowance.tile.edit.carried`       | `Edit carried days, currently {value}`                                                      | S1b    |
-| `vacay.allowance.input.days`              | `Your allowance for {year}`                                                                 | S1a    |
-| `vacay.allowance.input.carried`           | `Carried days brought into {year}`                                                          | S1b    |
-| `vacay.allowance.input.invalid`           | `Enter a whole number from 0 to 365.`                                                       | S1a    |
-| `vacay.allowance.save` / `.cancel`        | `Save` / `Cancel`                                                                           | S1a    |
-| `vacay.allowance.saving`                  | `Saving...`                                                                                 | S1a    |
-| `vacay.allowance.default.hint`            | `Default allowance. Select to set your own.`                                                | S1a    |
-| `vacay.allowance.saved`                   | `Allowance saved.`                                                                          | S1a    |
-| `vacay.allowance.error.days`              | `Your allowance could not be saved. {year} still shows {value} days.`                       | S1a    |
-| `vacay.allowance.error.carried`           | `Your carried days could not be saved. {year} still shows {value} days.`                    | S1b    |
-| `vacay.allowance.error.derived`           | `Carried days for {year} are now calculated from {previousYear}, so they cannot be edited.` | S1b    |
-| `vacay.allowance.retry`                   | `Try again`                                                                                 | S1a    |
-| `vacay.allowance.carried.from`            | `Carried from {year}`                                                                       | S1b    |
-| `vacay.allowance.carried.opening`         | `Brought in from before {year}. Select to edit.`                                            | S1b    |
-| `vacay.allowance.carried.off`             | `Carry-over is off`                                                                         | S1b    |
-| `vacay.allowance.carried.wholeDays`       | `Only whole days carry into the next year; the leftover half day does not.`                 | S1b    |
-| `vacay.allowance.superseded`              | `Carried days for {year} are now calculated from {previousYear}. You had entered {value}.`  | S1b    |
-| `vacay.settings.open`                     | `Leave plan settings`                                                                       | S1c    |
-| `vacay.settings.title`                    | `Leave plan settings`                                                                       | S1c    |
-| `vacay.settings.description`              | `How unused leave days are counted in your leave plan.`                                     | S1c    |
-| `vacay.settings.carryOver`                | `Carry unused days into the next year`                                                      | S1c    |
-| `vacay.settings.carryOver.hint`           | `Turning this off hides carried days; it does not erase them.`                              | S1c    |
-| `vacay.settings.defaultAllowance`         | `Default allowance (days per year)`                                                         | S1c    |
-| `vacay.settings.defaultAllowance.hint`    | `Applies to years where you have not set your own allowance.`                               | S1c    |
-| `vacay.settings.defaultAllowance.invalid` | `Enter a whole number from 0 to 365.`                                                       | S1c    |
-| `vacay.settings.save` / `.cancel`         | `Save settings` / `Cancel`                                                                  | S1c    |
-| `vacay.settings.saved`                    | `Leave plan settings saved.`                                                                | S1c    |
-| `vacay.settings.error`                    | `The leave plan settings could not be saved. Nothing was changed.`                          | S1c    |
+| Key                                       | `en` text                                                                                                                               | Ticket |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `vacay.allowance.label`                   | `Allowance {year}`                                                                                                                      | S1a    |
+| `vacay.allowance.daysLeft`                | plural: `{count} day left` / `{count} days left`                                                                                        | S1a    |
+| `vacay.allowance.daysOver`                | plural: `{count} day over` / `{count} days over`                                                                                        | S1a    |
+| `vacay.allowance.progress`                | `Days used: {used} of {total}`                                                                                                          | S1a    |
+| `vacay.allowance.tile.days`               | `Days`                                                                                                                                  | S1a    |
+| `vacay.allowance.tile.used`               | `Used`                                                                                                                                  | S1a    |
+| `vacay.allowance.tile.carried`            | `Carried`                                                                                                                               | S1a    |
+| `vacay.allowance.tile.edit.days`          | `Edit days, currently {value}`                                                                                                          | S1a    |
+| `vacay.allowance.tile.edit.carried`       | `Edit carried days, currently {value}`                                                                                                  | S1b    |
+| `vacay.allowance.input.days`              | `Your allowance for {year}`                                                                                                             | S1a    |
+| `vacay.allowance.input.carried`           | `Carried days brought into {year}`                                                                                                      | S1b    |
+| `vacay.allowance.input.invalid`           | `Enter a whole number from 0 to 365.`                                                                                                   | S1a    |
+| `vacay.allowance.save` / `.cancel`        | `Save` / `Cancel`                                                                                                                       | S1a    |
+| `vacay.allowance.saving`                  | `Saving…`                                                                                                                               | S1a    |
+| `vacay.allowance.default.hint`            | `Default allowance. Select to set your own.`                                                                                            | S1a    |
+| `vacay.allowance.saved`                   | `Allowance saved.`                                                                                                                      | S1a    |
+| `vacay.allowance.error.days`              | plural on `{count}`: `Your allowance could not be saved. {year} still shows {count} day.` / `… {count} days.`                           | S1a    |
+| `vacay.pending.loading`                   | `Loading`                                                                                                                               | S1a    |
+| `vacay.error.title`                       | `The leave planner did not load`                                                                                                        | S1a    |
+| `vacay.year.previous` / `.next`           | `Previous year` / `Next year`                                                                                                           | S1a    |
+| `vacay.allowance.error.carried`           | plural on `{count}`: `Your carried days could not be saved. {year} still shows {count} day.` / `… {count} days.`                        | S1b    |
+| `vacay.allowance.error.derived`           | `Carried days for {year} are now calculated from {previousYear}, so they cannot be edited.`                                             | S1b    |
+| `vacay.allowance.retry`                   | `Try again`                                                                                                                             | S1a    |
+| `vacay.allowance.carried.from`            | `Carried from {year}`                                                                                                                   | S1b    |
+| `vacay.allowance.carried.opening`         | `Brought in from before {year}. Select to edit.`                                                                                        | S1b    |
+| `vacay.allowance.carried.off`             | `Carry-over is off`                                                                                                                     | S1b    |
+| `vacay.allowance.carried.wholeDays`       | `Only whole days carry into the next year; the leftover half day does not.`                                                             | S1b    |
+| `vacay.allowance.superseded`              | plural on `{count}`: `Carried days for {year} are now calculated from {previousYear}. You had entered {count} day.` / `… {count} days.` | S1b    |
+| `vacay.settings.open`                     | `Leave plan settings`                                                                                                                   | S1c    |
+| `vacay.settings.title`                    | `Leave plan settings`                                                                                                                   | S1c    |
+| `vacay.settings.description`              | `How unused days carry over and how many days you get by default.`                                                                      | S1c    |
+| `vacay.settings.carryOver`                | `Carry unused days into the next year`                                                                                                  | S1c    |
+| `vacay.settings.carryOver.hint`           | `Turning this off hides carried days; it does not erase them.`                                                                          | S1c    |
+| `vacay.settings.defaultAllowance`         | `Default allowance (days per year)`                                                                                                     | S1c    |
+| `vacay.settings.defaultAllowance.hint`    | `Applies to years where you have not set your own allowance.`                                                                           | S1c    |
+| `vacay.settings.defaultAllowance.invalid` | `Enter a whole number from 0 to 365.`                                                                                                   | S1c    |
+| `vacay.settings.save` / `.cancel`         | `Save settings` / `Cancel`                                                                                                              | S1c    |
+| `vacay.settings.saved`                    | `Leave plan settings saved.`                                                                                                            | S1c    |
+| `vacay.settings.error`                    | `The leave plan settings could not be saved. Nothing was changed.`                                                                      | S1c    |
 
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                   | Behaviour                                                                                                                                           |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Leftover is `365 + 365 - 0`                            | Next year's carried-over is capped at 365; the recompute never throws a `ZodError` mid-chain.                                                       |
-| Used exceeds the allowance                             | Leftover is negative; carried-over is `0`; the panel says "{count} days over" for the year that incurred it.                                        |
-| Leftover `4.5`                                         | Carries `4`; the panel shows the whole-days line.                                                                                                   |
-| A year with a row for N-1 and none for N               | The panel shows N-1's whole-day leftover as "Carried from N-1" and in days left, before any save in N; saving the unchanged default writes the row. |
-| A year with no row between two rows                    | The chain breaks; the later year is an opening balance, editable.                                                                                   |
-| Editing an earlier year's allowance                    | Every later derived year is rewritten in the same request, stopping at the first missing row.                                                       |
-| Saving N-1 while N holds a typed opening balance       | N becomes derived and is recomputed; the write returns `superseded: [{ year: N, was }]` and the panel announces it. Nothing is silent.              |
-| `carriedOverDays` sent for a derived year              | `CarriedOverDerivedError`, nothing written; the panel reloads and explains.                                                                         |
-| `Enter` then the blur it causes; "Try again" then blur | Exactly one write.                                                                                                                                  |
-| Two tabs save at once                                  | Last write wins on the tile; the recompute is idempotent and converges; a first-save race hits the unique index, not a duplicate row.               |
-| The write succeeds and the recompute batch fails       | The stored chain is stale until the next write on it (each write re-runs the walk); the error is reported.                                          |
-| Target `userId` left the workspace or never existed    | `NotFoundError`, no row written, even when a stale accepted `vacay_plan_members` row remains.                                                       |
-| Pending or declined plan member calls a write          | `NotFoundError`.                                                                                                                                    |
-| A traveller with no plan opens `/vacay`                | `loadVacay` creates it, then `loadVacayAllowance` runs against it; no concurrent `ensurePlan`.                                                      |
-| Carry-over switched off then on                        | Stored figures were maintained throughout; nothing is lost and nothing needs recomputing.                                                           |
-| Settings saved with nothing changed                    | The dialog closes without a call; the server treats an empty patch as a no-op.                                                                      |
+| Case                                                                      | Behaviour                                                                                                                                           |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Leftover is `365 + 365 - 0`                                               | Next year's carried-over is capped at 365; the recompute never throws a `ZodError` mid-chain.                                                       |
+| Used exceeds the allowance                                                | Leftover is negative; carried-over is `0`; the panel says "{count} days over" for the year that incurred it.                                        |
+| Leftover `4.5`                                                            | Carries `4`; the panel shows the whole-days line.                                                                                                   |
+| A year with a row for N-1 and none for N                                  | The panel shows N-1's whole-day leftover as "Carried from N-1" and in days left, before any save in N; saving the unchanged default writes the row. |
+| A year with no row between two rows                                       | The chain breaks; the later year is an opening balance, editable.                                                                                   |
+| Editing an earlier year's allowance                                       | Every later derived year is rewritten in the same request, stopping at the first missing row.                                                       |
+| Saving N-1 while N holds a typed opening balance                          | N becomes derived and is recomputed; the write returns `superseded: [{ year: N, was }]` and the panel announces it. Nothing is silent.              |
+| `carriedOverDays` sent for a derived year                                 | `CarriedOverDerivedError`, nothing written; the panel reloads and explains.                                                                         |
+| `Enter` then the blur it causes; "Try again" then blur                    | Exactly one write.                                                                                                                                  |
+| Two tabs save at once                                                     | Last write wins on the tile; the recompute is idempotent and converges; a first-save race hits the unique index, not a duplicate row.               |
+| The write succeeds and the recompute batch fails                          | The stored chain is stale until the next write on it (each write re-runs the walk); the error is reported.                                          |
+| Target `userId` left the workspace or never existed                       | `NotFoundError`, no row written, even when a stale accepted `vacay_plan_members` row remains.                                                       |
+| Pending or declined plan member calls a write                             | `NotFoundError`.                                                                                                                                    |
+| A traveller with no plan opens `/vacay`                                   | `loadVacay` creates it, then `loadVacayAllowance` runs against it; no concurrent `ensurePlan`.                                                      |
+| Carry-over switched off then on                                           | Stored figures were maintained throughout; nothing is lost and nothing needs recomputing.                                                           |
+| A changed, unsaved value when another tile is pressed or the year changes | Discarded.                                                                                                                                          |
+| Settings saved with nothing changed                                       | The dialog closes without a call; the server treats an empty patch as a no-op.                                                                      |
 
 ## ✅ Acceptance criteria
 
@@ -406,20 +442,25 @@ Each criterion belongs to one ticket.
    is back on the same tile (`document.activeElement` assertions).
 2. Blur never commits; an invalid value keeps the editor open with the linked message; `Enter` followed by blur sends exactly
    one write; the input is `readOnly` and `aria-busy` while pending.
-3. A failed write keeps the typed value, shows the alert and offers a retry only for transport / 5xx failures; a success is
-   announced in the live region.
+3. A failed write keeps the typed value, shows the alert and offers a retry only for transport / 5xx failures, and focus is in
+   the input or on the alert (`document.activeElement` assertion); a success is announced in the live region, and a second
+   identical message is announced again.
 4. The repository actor rules hold: a non-member, a `pending` member and a `declined` member get `NotFoundError`; a member
    editing a colleague gets `PlanOwnerOnlyError` while the owner's identical call succeeds; a target with an accepted plan-member
    row but no workspace `member` row, a target who left the workspace and one who never existed write nothing.
-5. Nothing under `src/routes/**` or `src/server/fns/**` imports `setEntitlement` or `updatePlan` (a structural test reading
-   imports, as `trip-lifecycle-side-effects.test.ts` does); only `saveAllowance` / `updatePlanSettings` are reachable.
+5. A structural allowlist test (reading imports, as `trip-lifecycle-side-effects.test.ts` does): outside `src/server/repos/**`,
+   test files and `src/routes/api/dev/-seed/**` (the dev seeder, exempt by name), only `ensurePlan`, `getPlanOverview`,
+   `saveAllowance`, `getAllowance`, `requirePlanActor` and `requirePlanOwner` may be imported from the vacay repository, directly
+   or through the `@/server/repos` barrel, anywhere under `src/**` including `src/server/queue/**`. The ticket that adds
+   `updatePlanSettings` adds it to the list; each later stage must edit the list to reach another function, which makes review see it.
 6. Tenant isolation: in A's scope, against B's plan id, `saveAllowance`, `updatePlan`, `ensureYear` and `getAllowance` reject
    with `NotFoundError` and B's `vacay_plans`, `vacay_years`, `vacay_user_years` rows are byte-identical afterwards;
    `getPlanOverview` in B's scope for A's plan id is `NotFoundError`; `listUserYears(scopeB, aPlanId, year)` is `[]` (the
    distinction matters: `requireById` throws, `findMany` returns `[]`); `saveAllowance` in A's scope with an explicit `userId`
    belonging to B writes nothing, and B's `vacay_user_years` count is unchanged.
 7. A traveller with no plan opens `/vacay` and the allowance loads (no `ensurePlan` race).
-8. All S1a copy exists in 23 locales; `CONTEXT.md` carries the three entries; no console message on `/vacay`; zero layout shift
+8. All S1a copy exists in 23 locales; `CONTEXT.md` carries **Allowance** and **Leave plan**; the editing state has no horizontal
+   overflow at 360 and 1280; the "Days" input is named by its visible label; no console message on `/vacay`; zero layout shift
    after settle; both themes at 360, 1280, 2560.
 
 **08-S1b (the leftover follows the traveller)**
@@ -434,17 +475,22 @@ Each criterion belongs to one ticket.
 12. A traveller with a row for N-1 and none for N sees N-1's whole-day leftover as "Carried" and in days left before any save in
     N; with carry-over off the figure is `0`.
 13. "Carried" is an editable tile only for an opening balance; derived and switched-off "Carried" are plain text; the half-day
-    line appears exactly when carry-over is on and the leftover is positive with a fractional part.
-14. Saving N-1 while N holds a typed opening balance announces the superseded value.
+    line appears exactly when carry-over is on and the leftover is positive with a fractional part; after the derived refusal,
+    focus is on the `vacay.allowance.error.derived` message (`document.activeElement` assertion). `CONTEXT.md` carries
+    **Carry-over**.
+14. Saving N-1 while N holds a typed opening balance shows the superseded value as visible text and announces it.
 
 **08-S1c (settings)**
 
 15. The plan's owner changes the carry-over setting and the default allowance in the dialog and the screen reflects them:
     turning carry-over off zeroes the displayed "Carried" and turning it on restores it with no recompute; a new default
     changes the figure of a traveller without a row and rewrites no stored row.
-16. A non-owner calling `updateVacayPlanFn` is refused; a failed save keeps the dialog open with the values kept and moves focus
-    to the alert; a success closes it and returns focus to the settings button.
-17. All S1c copy exists in 23 locales; both themes at 360, 1280, 2560, with the dialog open.
+16. A non-owner calling `updateVacayPlanFn` is refused; in A's scope `updatePlanSettings` against B's plan id rejects with
+    `NotFoundError` and B's `vacay_plans` row is unchanged (the tenant-isolation `describe`); a failed save keeps the dialog open
+    with the values kept and moves focus to the alert; an invalid default moves focus to the input; `Enter` in that input submits;
+    a success closes the dialog and returns focus to the settings button.
+17. All S1c copy exists in 23 locales; both themes at 360, 1280, 2560, with the dialog open; at 360x500 with the input focused
+    Save is inside the visual viewport; the settings button is at least 44px tall at 360px.
 
 ## 📝 Risks & Impact Review
 
@@ -452,26 +498,46 @@ Each criterion belongs to one ticket.
   verdict is risk-medium, not high: the workspace filter is untouched, there is no migration, no quota and no money.
   Mitigation: the actor rules sit in the repository and are tested before any screen uses them (08-S1a).
 - **Existing writers and readers are still open.** `setEntitlement` and `updatePlan` stay exported with only the workspace
-  check (nothing in `src/routes/**` or `src/server/fns/**` may import them; criterion 5). `setEntry`, `setEntryRange`,
-  `removeEntry`, `setPlanMemberStatus`, `removePlanMember`, `invitePlanMember`, `setUserColour` and `deletePlan` check only the
-  workspace, and `getPlanOverview`, `listUserYears`, `listVacayEntries` and `listPlanMembers` take a client `planId` with only
-  `requireById` or `findMany`. Nothing calls them yet. `08-S5` and `08-S8` must put `requirePlanActor` / `requirePlanOwner` in
-  front of each before it gets a caller, and `08-S8` must do so before another person's plan becomes visible (those rows hold
-  colleagues' sick days).
+  check. So do `setEntry`, `setEntryRange`, `removeEntry`, `setPlanMemberStatus`, `removePlanMember`, `invitePlanMember`,
+  `setUserColour`, `deletePlan`, `addCompanyHoliday`, `removeCompanyHoliday`, `addHolidayCalendar`, `removeHolidayCalendar`,
+  `ensureYear` and `removeYear`; and the readers `getPlanOverview`, `listYears`, `listUserYears`, `listVacayEntries`,
+  `listPlanMembers`, `listCompanyHolidays`, `listHolidayCalendars`, `listUserColours`, `countUsedDays`, `countEntriesByKind`
+  and `listPlansForUser` (which takes an arbitrary `userId`) take a client-supplied id with only `requireById` or `findMany`.
+  `loadVacay` calls `getPlanOverview` today, with a plan id the server resolves itself, and the dev seeder calls the writers.
+  Criterion 5's allowlist keeps every other function out of production code until the stage that needs it edits the list;
+  that stage must put `requirePlanActor` / `requirePlanOwner` in front of the function before it gets a caller, and the
+  shared-plan stage must do so for every reader before another person's plan becomes visible (those rows hold colleagues'
+  sick days).
+- **This spec overrides the plan where they differ on authorisation.** The month-grid stage's plan text says authorisation is
+  "decided in the handler" with `requireById` (`docs/plans/08-product-modules.md`, the stage's Authorisation bullet). Here a
+  company holiday or calendar change uses `requirePlanOwner`, and a personal entry uses `requirePlanActor`, **in the
+  repository** (Resolved assumption 20).
 - **The floored half day is a visible loss.** It is explained in one line, and reversible: the figure is derived, so widening
   the column later and recomputing restores halves.
 - **Backward compatibility.** Additive only: new exports and functions, no signature changed, `setEntitlement` untouched.
 
 ### Out of scope
 
-- The month grid, entries, the week start wiring, localising the rest of `vacay.tsx` (`08-S5`). Its entry writes call
-  `recomputeCarryOver` and the actor helpers. The three display switches (block weekends, public holidays, company holidays)
-  land in the dialog with `08-S5`, which owns the grid that honours them; reference row `ADD-02` therefore closes with that
-  stage, not this one.
+- The month grid, entries, the week start wiring, localising the rest of `vacay.tsx`. See _Handed to the month-grid stage_.
 - Inviting plan members, the read-only settings view for a member, and what becomes of a plan whose owner leaves the
-  workspace (`removeMember` leaves every `vacay_*` row behind, and nobody can then change that plan): `08-S8` decides keep,
-  reassign or remove.
-- A "Recalculate" action, a carry-over cost preview, half-day allowances, any module entitlement gate (`08-S10`).
+  workspace (`removeMember` leaves every `vacay_*` row behind, and nobody can then change that plan): the shared-plan stage
+  decides keep, reassign or remove.
+- A "Recalculate" action, a carry-over cost preview, half-day allowances, any module entitlement gate (the module-enforcement
+  stage).
+
+### Handed to the month-grid stage
+
+Everything this stage leaves for the stage that owns the month grid, in one place (the plan still lists reference row `ADD-02`
+under this stage and does not yet list these items under that one; the PR body flags it):
+
+1. The three display switches (block weekends, public holidays, company holidays): widen the `updatePlanSettings` `pick`, add
+   their `CheckboxField` rows to `plan-settings-dialog.tsx` (which joins that stage's owned paths) and their
+   `vacay.settings.*` keys in 23 locales, and wire the grid to honour them.
+2. Close reference row `ADD-02` (it closes with the switches, not with this stage).
+3. Put `requirePlanActor` / `requirePlanOwner` in front of every writer and reader it reaches, edit criterion 5's allowlist, and
+   call `recomputeCarryOver` from every entry write.
+4. Clean up `getPlanOverview`'s row-less fallback (zero carry, plan default) once it reads the other travellers' rows.
+5. Read the week start from the shipped settings instead of the `weekStartsOn: 1` literal, and localise the rest of `vacay.tsx`.
 
 ## 📋 Phasing
 
@@ -528,26 +594,41 @@ If a ticket does not fit one context window, 08-S1a and 08-S1b are folded into o
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                                                          | Applied default                                                                                                                                                                                                                                          | Why                                                                                                                                                                                                                                                                            |
-| --- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | A half-day leftover meets an integer column: what carries?                        | `clamp(floor(leftover), 0, 365)`, with a one-line explanation shown only for a positive fractional leftover with carry-over on                                                                                                                           | Decided by product owner sub-agent (confidence medium): never credits leave that does not exist; reversible by recompute if the column is ever widened; the cap avoids a mid-chain `ZodError`.                                                                                 |
-| 2   | The "Carried" tile is editable and derived: which wins?                           | Editable only when the traveller has no row for the previous year (opening balance); derived and plain text otherwise; enforced in the repository; a write recomputes later years in the same request; a newly inserted year is seeded by that recompute | Decided by product owner sub-agent (confidence high), architect concurring on recompute in the repository: avoids a silent overwrite and a new column.                                                                                                                         |
-| 3   | Who changes the plan settings?                                                    | The plan's owner only; a member's read-only view ships with `08-S8`                                                                                                                                                                                      | Decided by product owner and security and tenancy sub-agents (confidence high): the settings change every member's display; narrowest and easiest to widen.                                                                                                                    |
-| 4   | Keep the plan's "Recalculate" action and the cost-of-turning-off preview?         | Dropped; stored carried-over is maintained regardless of the setting                                                                                                                                                                                     | Decided by product owner sub-agent (confidence high): nothing real to recalculate until `08-S5`; the setting hides, it does not erase, so there is nothing to preview.                                                                                                         |
-| 5   | Where does the pure walk live?                                                    | `src/lib/vacay/carry-over.ts`, one implementation; the chain is the traveller's `vacay_user_years` rows, not `vacay_years`                                                                                                                               | Decided by software architect sub-agent (confidence high): `docs/SPEC.md` §8; `vacay_years` has no production writer.                                                                                                                                                          |
-| 6   | Where does the recompute run and how is it written?                               | In the repository (`saveAllowance`), one `runBatch` per traveller, changed rows only, no inserts                                                                                                                                                         | Decided by software architect sub-agent (confidence medium): derived data is derived where its source is written; the batch is atomic, bounded and has precedent in `setEntryRange`.                                                                                           |
-| 7   | Who may call the writers, and where is the rule?                                  | `requirePlanActor` / `requirePlanOwner` in the repository; non-participants get `NotFoundError`; another traveller's allowance is owner-only and the target must be an accepted plan member and a current workspace member; no workspace-role override   | Decided by security and tenancy sub-agent (confidence medium): a handler-only check cannot protect row-id writers; `userRef` has no foreign key and `removeMember` leaves plan rows behind.                                                                                    |
-| 8   | The owner-only refusal class                                                      | `PlanOwnerOnlyError extends RepositoryError`, a diagnostic; not `AuthRequirementError`, not `ForbiddenError`                                                                                                                                             | Applied default, accepted by the security and tenancy panel: repositories import nothing from `src/server/auth`; `ForbiddenError(action, roles)` names workspace roles and plan ownership is not one; the authored-error set stays closed. Overturning it is a review finding. |
-| 9   | Name for the leave figure                                                         | "Allowance" in all new names and copy, glossary entries added; repository names unchanged                                                                                                                                                                | Decided by product owner and security sub-agents: `CONTEXT.md` reserves **Entitlement** for billing.                                                                                                                                                                           |
-| 10  | The plan's "empty" panel state                                                    | Removed: the viewer's balance is always present; the no-row case is a default tile instead                                                                                                                                                               | Applied default, verified against `getPlanOverview` (`plan.ownerUserId` is always in `balances`).                                                                                                                                                                              |
-| 11  | Plan paths that no longer exist: baselines, `shoot.ts`, `scripts/ultrabuild`      | `e2e/product-modules.spec.ts` (no snapshots), `scripts/visual/capture.mjs`, the shared `e2e/helpers`                                                                                                                                                     | Applied default: ADR 0016 and `docs/plans/12-verification-protocol.md` at HEAD.                                                                                                                                                                                                |
-| 12  | The plan's `modules.ts` omission, `z.strictObject` wording and `EntitlementPanel` | `modules.ts` in 23 locales is owned; validators reuse the repository schemas (`z.object`); the component is `AllowancePanel`                                                                                                                             | Applied default: `docs/SPEC.md` §9; the repository schemas are not strict; `CONTEXT.md` vocabulary.                                                                                                                                                                            |
-| 13  | How does the screen get the allowance context while `library.ts` is `08-S3`'s?    | A new GET `loadVacayAllowance` in `-server/vacay.ts`, run **after** `loadVacay` with its plan id                                                                                                                                                         | Applied default (plan's wave-1 allocation of `library.ts`); sequential because two concurrent `ensurePlan` calls race on `vacay_plans_org_owner_unq` (architect panel).                                                                                                        |
-| 14  | Ship the three display switches (weekends, public holidays, company holidays)?    | No: the dialog has the carry-over setting and the default allowance; the three move to `08-S5`; `ADD-02` closes with that stage                                                                                                                          | Decided by UX panel sub-agent, verified by grep (`vacay.tsx` reads only `carryOverEnabled`): a control with no visible effect is a placeholder (`docs/SPEC.md` §7.5).                                                                                                          |
-| 15  | Does the inline editor commit on blur?                                            | No: explicit Save / Cancel icon buttons plus `Enter` / `Escape`; unchanged blur closes, changed blur keeps the editor open                                                                                                                               | Decided by UX and accessibility panel sub-agents: iOS numeric keypads have no return or `Escape`, and a Cancel tap would blur-commit first.                                                                                                                                    |
-| 16  | Dialog control for the carry-over setting                                         | `Checkbox` under Save / Cancel, not `Switch`                                                                                                                                                                                                             | Decided by accessibility panel sub-agent: `src/components/ui/switch.tsx` reserves `Switch` for immediate effect.                                                                                                                                                               |
-| 17  | A row-less year, and a typed opening balance superseded by an earlier year        | The panel shows the walked carry for a row-less year (no write); a superseded typed value is reported and announced, never silent                                                                                                                        | Decided by product owner, UX and architect panel sub-agents.                                                                                                                                                                                                                   |
-| 18  | Ticket cut                                                                        | Three tickets, each a full path from repository to screen (allowance, carry-over, settings); fold to two if one does not fit                                                                                                                             | Decided by product owner panel sub-agent: a repository-only first ticket is a layer, not a slice (`SDLC.md`, `afk-to-tickets`).                                                                                                                                                |
+| #   | Question                                                                                    | Applied default                                                                                                                                                                                                                                          | Why                                                                                                                                                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | A half-day leftover meets an integer column: what carries?                                  | `clamp(floor(leftover), 0, 365)`, with a one-line explanation shown only for a positive fractional leftover with carry-over on                                                                                                                           | Decided by product owner sub-agent (confidence medium): never credits leave that does not exist; reversible by recompute if the column is ever widened; the cap avoids a mid-chain `ZodError`.                                                                                 |
+| 2   | The "Carried" tile is editable and derived: which wins?                                     | Editable only when the traveller has no row for the previous year (opening balance); derived and plain text otherwise; enforced in the repository; a write recomputes later years in the same request; a newly inserted year is seeded by that recompute | Decided by product owner sub-agent (confidence high), architect concurring on recompute in the repository: avoids a silent overwrite and a new column.                                                                                                                         |
+| 3   | Who changes the plan settings?                                                              | The plan's owner only; a member's read-only view ships with the shared-plan stage                                                                                                                                                                        | Decided by product owner and security and tenancy sub-agents (confidence high): the settings change every member's display; narrowest and easiest to widen.                                                                                                                    |
+| 4   | Keep the plan's "Recalculate" action and the cost-of-turning-off preview?                   | Dropped; stored carried-over is maintained regardless of the setting                                                                                                                                                                                     | Decided by product owner sub-agent (confidence high): nothing real to recalculate until the month-grid stage; the setting hides, it does not erase, so there is nothing to preview.                                                                                            |
+| 5   | Where does the pure walk live?                                                              | `src/lib/vacay/carry-over.ts`, one implementation; the chain is the traveller's `vacay_user_years` rows, not `vacay_years`                                                                                                                               | Decided by software architect sub-agent (confidence high): `docs/SPEC.md` §8; `vacay_years` has no production writer.                                                                                                                                                          |
+| 6   | Where does the recompute run and how is it written?                                         | In the repository (`saveAllowance`), one `runBatch` per traveller, changed rows only, no inserts                                                                                                                                                         | Decided by software architect sub-agent (confidence medium): derived data is derived where its source is written; the batch is atomic, bounded and has precedent in `setEntryRange`.                                                                                           |
+| 7   | Who may call the writers, and where is the rule?                                            | `requirePlanActor` / `requirePlanOwner` in the repository; non-participants get `NotFoundError`; another traveller's allowance is owner-only and the target must be an accepted plan member and a current workspace member; no workspace-role override   | Decided by security and tenancy sub-agent (confidence medium): a handler-only check cannot protect row-id writers; `userRef` has no foreign key and `removeMember` leaves plan rows behind.                                                                                    |
+| 8   | The owner-only refusal class                                                                | `PlanOwnerOnlyError extends RepositoryError`, a diagnostic; not `AuthRequirementError`, not `ForbiddenError`                                                                                                                                             | Applied default, accepted by the security and tenancy panel: repositories import nothing from `src/server/auth`; `ForbiddenError(action, roles)` names workspace roles and plan ownership is not one; the authored-error set stays closed. Overturning it is a review finding. |
+| 9   | Name for the leave figure                                                                   | "Allowance" in all new names and copy, glossary entries added; repository names unchanged                                                                                                                                                                | Decided by product owner and security sub-agents: `CONTEXT.md` reserves **Entitlement** for billing.                                                                                                                                                                           |
+| 10  | The plan's "empty" panel state                                                              | Removed: the viewer's balance is always present; the no-row case is a default tile instead                                                                                                                                                               | Applied default, verified against `getPlanOverview` (`plan.ownerUserId` is always in `balances`).                                                                                                                                                                              |
+| 11  | Plan paths that no longer exist: baselines, `shoot.ts`, `scripts/ultrabuild`                | `e2e/product-modules.spec.ts` (no snapshots), `scripts/visual/capture.mjs`, the shared `e2e/helpers`                                                                                                                                                     | Applied default: ADR 0016 and `docs/plans/12-verification-protocol.md` at HEAD.                                                                                                                                                                                                |
+| 12  | The plan's `modules.ts` omission, `z.strictObject` wording and `EntitlementPanel`           | `modules.ts` in 23 locales is owned; validators reuse the repository schemas (`z.object`); the component is `AllowancePanel`                                                                                                                             | Applied default: `docs/SPEC.md` §9; the repository schemas are not strict; `CONTEXT.md` vocabulary.                                                                                                                                                                            |
+| 13  | How does the screen get the allowance context while `library.ts` is the journal stage's?    | A new GET `loadVacayAllowance` in `-server/vacay.ts`, run **after** `loadVacay` with its plan id                                                                                                                                                         | Applied default (plan's wave-1 allocation of `library.ts`); sequential because two concurrent `ensurePlan` calls race on `vacay_plans_org_owner_unq` (architect panel).                                                                                                        |
+| 14  | Ship the three display switches (weekends, public holidays, company holidays)?              | No: the dialog has the carry-over setting and the default allowance; the three move to the month-grid stage; `ADD-02` closes with that stage                                                                                                             | Decided by UX panel sub-agent, verified by grep (`vacay.tsx` reads only `carryOverEnabled`): a control with no visible effect is a placeholder (`docs/SPEC.md` §7.5).                                                                                                          |
+| 15  | Does the inline editor commit on blur?                                                      | No: explicit Save / Cancel icon buttons plus `Enter` / `Escape`; unchanged blur closes, changed blur keeps the editor open                                                                                                                               | Decided by UX and accessibility panel sub-agents: iOS numeric keypads have no return or `Escape`, and a Cancel tap would blur-commit first.                                                                                                                                    |
+| 16  | Dialog control for the carry-over setting                                                   | `CheckboxField` under Save / Cancel, not `Switch`                                                                                                                                                                                                        | Decided by accessibility panel sub-agent: `src/components/ui/switch.tsx` reserves `Switch` for immediate effect.                                                                                                                                                               |
+| 17  | A row-less year, and a typed opening balance superseded by an earlier year                  | The panel shows the walked carry for a row-less year (no write); a superseded typed value is reported and announced, never silent                                                                                                                        | Decided by product owner, UX and architect panel sub-agents.                                                                                                                                                                                                                   |
+| 18  | Ticket cut                                                                                  | Three tickets, each a full path from repository to screen (allowance, carry-over, settings); fold to two if one does not fit                                                                                                                             | Decided by product owner panel sub-agent: a repository-only first ticket is a layer, not a slice (`SDLC.md`, `afk-to-tickets`).                                                                                                                                                |
+| 19  | Panel round 2: the editor does not fit in a 52px to 70px tile                               | A full-width editor row under the three tiles; Save and Cancel at least 24px, 44px under `pointer: coarse`; no overflow asserted at 360 and 1280                                                                                                         | Decided by UX panel sub-agent (confidence medium), checked against `vacay.tsx` layout (272px side column, 3-column tile grid): two 32px icon buttons plus an input cannot fit.                                                                                                 |
+| 20  | The month-grid stage's plan text decides authorisation "in the handler"                     | Superseded: company holidays and calendars use `requirePlanOwner`, personal entries `requirePlanActor`, in the repository; criterion 5 is an allowlist, not a two-name ban                                                                               | Decided by security and tenancy sub-agent (confidence high): a handler check on a client-sent id cannot protect a row-id writer; the allowlist makes the later stage's edit visible in review.                                                                                 |
+| 21  | A balance reader                                                                            | `getAllowance` calls `requirePlanActor` itself and is owner-only for another traveller's balance; `listUserYearsForUser` is not exported                                                                                                                 | Decided by security and tenancy sub-agent (confidence high): one fewer open reader for a later stage to remember.                                                                                                                                                              |
+| 22  | Name later stages by id in this spec?                                                       | No: they are named by what they ship; the stage ids appear only in the PR body                                                                                                                                                                           | Applied default, verified in `.ai/scripts/backlog-status.mjs` (`coversStage` reads any mention of an id in a spec's text): naming them would drop those stages from `--plan`. Product owner sub-agent raised it.                                                               |
+| 23  | Where the panel reads the viewer's balance, and `getPlanOverview`'s old fallback            | The panel reads only `loadVacayAllowance`; the old fallback is left for the month-grid stage's cleanup (Handed section, item 4)                                                                                                                          | Decided by software architect sub-agent (confidence high): keeps one owner of the effective balance for the screen this stage ships, without editing a function the grid stage rewrites.                                                                                       |
+| 24  | Focus and naming of the inline editor                                                       | Inline Save never takes `loading` or `disabled`; focus rules for success, failure and the derived refusal are stated; the input is named by its visible `dt`                                                                                             | Decided by accessibility panel sub-agent (confidence high): WCAG 2.4.3 and 2.5.3.                                                                                                                                                                                              |
+| 25  | Escalations the product owner raised: carry the handoff into the plan and fix `coversStage` | Not an `afk-decide` § 5 case, so not a hold: the handoff is collected in this spec and flagged in the PR body; no stage id of another stage appears here, so nothing is hidden from `--plan`                                                             | Applied default: `afk-plan-to-spec` may write only a spec or a `Delivered:` line; the plan edit and a `coversStage` change are ordinary follow-up work for a person to schedule.                                                                                               |
 
 Panel verdicts, round 1: product owner, software architect, security and tenancy, accessibility and UX specialists each answered
-**approve with conditions**; every condition is applied in this revision (rows 8, 13 to 18 and the sections above).
+**approve with conditions**; every condition was applied in the revision that followed (rows 8, 13 to 18).
+
+Panel verdicts, round 2 (final; the last round the pipeline allows): product owner **approve with conditions** (confidence
+medium; the handoff section, the PR-body note and the AC 5 and glossary nits are applied; its escalation is row 25); software
+architect **approve with conditions** (confidence high; the allowlist scope, the correct index and the balance owner are applied);
+security and tenancy **approve with conditions** (confidence high; rows 20 and 21 and the isolation `describe` for
+`updatePlanSettings` are applied); accessibility **approve with conditions** (confidence high; row 24 applied); UX **approve with
+conditions** (confidence medium; row 19, the plural keys, the localised literals and the dialog sizing are applied). Nobody
+answered **revise**, and the security and tenancy reviewer approved, so the spec is mergeable by this pipeline.
