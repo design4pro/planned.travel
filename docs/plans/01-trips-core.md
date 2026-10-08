@@ -3668,8 +3668,8 @@ leaves `TRP-02` at partial.**
   than `11-S2`'s.
 - **It is not in `11-S3`'s register, and this file does not pretend otherwise.** Measured against
   `docs/plans/11-boundaries-and-blockers.md` as it stands: `11-S3` records **fifteen** rows waiting on
-  **three** open provider decisions — geocoding and place search, weather, and foreign-exchange rates
-  — and an image provider is none of the three. `TRP-02` does not appear in that stage's table at all;
+  **three** provider decisions — geocoding and place search, weather, and foreign-exchange rates, of
+  which only rates is still open — and an image provider is none of the three. `TRP-02` does not appear in that stage's table at all;
   the only row of this plan that does is `TRP-05`, under rates. So the deferral is recorded **here**,
   in the stage that owns the capability, and filing it into `11-S3` is listed as a contract extension
   by the run that wrote this plan rather than asserted as already done.
