@@ -27,7 +27,7 @@ A journey that spans days renders on each day it covers, labelled by the part th
 - `src/routes/_app/trips/$tripId/-server/plan.ts` loads itinerary, places, unscheduled places and categories. Neither it nor `-ui/plan-model.ts` contains the substring `transport` (zero matches in either file).
 - `src/server/repos/transports.ts:162` exports `listDayTransports(scope, dayId)` — one day at a time, whole records only, no legs. Nothing calls it from the planner, and it cannot answer "every journey this trip's board must draw" in one read.
 - `src/components/planner/ordering.ts` declares exactly two prefixed id spaces, `idea:` (`:34`) and `note:` (`:57`), and `movePlanItem`'s `'not-in-ideas'` refusal (`:390`) is keyed on `isNoteItemId` alone.
-- The data is real and reachable: `transports.day_id` / `arrival_day_id` and `transport_legs.departure_day_id` / `arrival_day_id` are populated by the chain editor, by a saved connection, and by the dev seeder (`src/routes/api/dev/-seed/apply-trip.ts:312-318`).
+- The data is real and reachable: `transports.day_id` / `arrival_day_id` and `transport_legs.departure_day_id` / `arrival_day_id` are populated by the chain editor and by the dev seeder (a saved connection fills none of them: the connection dialog sends legs that name no day, and a re-search of an anchored journey carries the days it already had, #788) (`src/routes/api/dev/-seed/apply-trip.ts:312-318`).
 
 **What it costs.** The board claims to be the day, and silently is not. A reader who plans a travel day on this screen gets an itinerary with a hole in the middle of it, and the only place the journey exists is a separate tab they have to remember to check.
 

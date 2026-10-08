@@ -39,7 +39,7 @@ import {
   NotFoundError,
   RepositoryError,
 } from './context'
-import { listDayNotes, requireTripDay } from './days'
+import { listDayNotes, listTripDays, requireTripDay } from './days'
 import { listDayAssignments } from './itinerary'
 import { assertTripRole, requireTrip } from './trips'
 
@@ -1278,6 +1278,81 @@ export type SearchedConnectionInput = z.input<typeof searchedConnectionInput>
 export type SavedConnection = SavedTransport
 
 /**
+ * The legs of a re-search, given the days the journey was anchored to before it.
+ *
+ * A search result knows dates and clocks and no day of the trip, so the dialog sends legs that name
+ * none, and a chain written as sent would take the journey off every day of the plan: the planner
+ * draws a record that has legs through its legs alone, each on its departure day. A leg that names
+ * no day therefore takes the anchor the journey had, and a day the caller does name always wins.
+ *
+ * - **The same number of legs** keeps each position's pair.
+ * - **A different number** keeps only the two ends: the first leg departs on the day the old first
+ *   leg did and the last lands on the day the old last leg did, and the legs between stay
+ *   unanchored, because which of them belongs to which day is not something the old chain can say.
+ * - **A record that had no legs** is anchored by its own pair: its `day_id` is the first leg's
+ *   departure and its `arrival_day_id` the last leg's arrival.
+ *
+ * A carried day never makes the re-search fail. One that the trip no longer has is not carried, and
+ * a pair that would arrive before it departs loses the side that was carried (the arrival first).
+ * A pair the caller named in full is left to {@link requireChainDays}, which refuses it.
+ */
+async function carryAnchors(
+  scope: TenantScope,
+  existing: Transport,
+  legs: ReadonlyArray<ChainLegInput>,
+): Promise<Array<ChainLegInput>> {
+  const [previous, tripDays] = await Promise.all([
+    listTransportLegs(scope, existing.id),
+    listTripDays(scope, existing.tripId),
+  ])
+  const dayNumbers = new Map(tripDays.map((day) => [day.id, day.dayNumber]))
+  const usable = (id: string | null): string | null =>
+    id !== null && dayNumbers.has(id) ? id : null
+
+  // What each new leg is offered: its own position's pair when the shape is unchanged, otherwise
+  // the two ends of the old journey on the first and the last leg.
+  const offered = legs.map((_leg, index) => {
+    if (previous.length === legs.length) {
+      return previous[index]
+    }
+    // The record's own pair anchors a journey only while it has no legs to say otherwise.
+    const first = previous.at(0)
+    const last = previous.at(-1)
+    const start = first === undefined ? existing.dayId : first.departureDayId
+    const end = last === undefined ? existing.arrivalDayId : last.arrivalDayId
+    return {
+      departureDayId: index > 0 ? null : start,
+      arrivalDayId: index < legs.length - 1 ? null : end,
+    }
+  })
+
+  return legs.map((leg, index) => {
+    const named = {
+      departure: refOf(leg.departureDayId),
+      arrival: refOf(leg.arrivalDayId),
+    }
+    const carried = {
+      departure:
+        named.departure === null ? usable(offered[index].departureDayId) : null,
+      arrival:
+        named.arrival === null ? usable(offered[index].arrivalDayId) : null,
+    }
+    const departure = named.departure ?? carried.departure
+    const arrival = named.arrival ?? carried.arrival
+
+    const from = departure === null ? undefined : dayNumbers.get(departure)
+    const to = arrival === null ? undefined : dayNumbers.get(arrival)
+    const inverted = from !== undefined && to !== undefined && to < from
+    return {
+      ...leg,
+      departureDayId:
+        inverted && carried.arrival === null ? named.departure : departure,
+      arrivalDayId: inverted && carried.arrival !== null ? null : arrival,
+    }
+  })
+}
+
+/**
  * Save a found connection as a first-class journey, or replace the route of one already saved.
  *
  * **It writes through {@link saveTransport}**, the writer behind the hand-typed dialog, so a found
@@ -1305,10 +1380,13 @@ export type SavedConnection = SavedTransport
  * within one workspace a transport of *another* trip would otherwise be re-routed by a caller who
  * named a trip they can see and a transport they can also see.
  *
- * **No day reference is invented.** A timetable knows dates and clocks; it does not know which day
- * of the trip they are. The legs carry the wall clocks the provider stated and the day selects in
- * the dialog stay the traveller's to answer, which is the same posture `03-S1` took for the two
- * ends of a journey typed by hand.
+ * **No day reference is invented, and none is lost.** A timetable knows dates and clocks; it does
+ * not know which day of the trip they are. The legs carry the wall clocks the provider stated and
+ * the day selects in the dialog stay the traveller's to answer, which is the same posture `03-S1`
+ * took for the two ends of a journey typed by hand. A first save therefore anchors nothing; a
+ * re-search keeps the anchor the journey already had, through {@link carryAnchors}, because the
+ * planner draws a chained journey on its legs' days alone and a chain written with none would take
+ * it off the plan.
  */
 export async function saveSearchedConnection(
   scope: TenantScope,
@@ -1337,6 +1415,12 @@ export async function saveSearchedConnection(
             currency: values.currency,
           }
         : { title: existing.title },
-    chain: { stations: values.stations, legs: values.legs },
+    chain: {
+      stations: values.stations,
+      legs:
+        existing === null
+          ? values.legs
+          : await carryAnchors(scope, existing, values.legs),
+    },
   })
 }
