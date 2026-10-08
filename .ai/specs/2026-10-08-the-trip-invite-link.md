@@ -29,8 +29,10 @@ repairs (it also repairs the workspace invitation).
 
 It is cut into **four tickets**: **1** carry `?redirect=` through email registration (a standalone fix), **2** the
 table, the repository, the shared secret and rate-limit modules, the `insertTripMember` extraction and the
-contract amendments (infrastructure, no UI - the only phase that ships nothing visible), **3** the visitor slice
-(`/join/$token` with every state, the join, the sign-in round trip, the redaction), **4** the owner's panel on the
+contract amendments (infrastructure, no UI, nothing visible), **3** the visitor slice
+(`/join/$token` with every state, the join, the sign-in round trip, the redaction; nothing in the product can mint a
+link before Phase 4, so Phase 3 is exercised with a seeded token and is the second, stated, exception to the SLC
+rule), **4** the owner's panel on the
 people screen, the browser journey and the A/B pair (**the ticket that turns the feature on**). It describes the
 work **left** at HEAD (`ee99d50d`).
 
@@ -74,8 +76,8 @@ values.userId)`, and inserts with `invitedBy: scope.ctx.userId`. In a joiner's o
   `auth/index.ts:252`) and Better Auth signs the user in on sign-up, so the pending screen's "Continue anyway" is
   the real exit. The workspace invitation's `/register?redirect=` link
   (`accept-invitation.$invitationId.tsx:188`) has the same defect today.
-- **A joiner's active workspace is usually not the trip's.** `appScope()` uses `session.activeOrganizationId`
-  (`src/server/auth/session.ts:95`); `requireOrg({ organizationId })` throws `not-a-member` on a mismatch instead
+- **A joiner's active workspace is usually not the trip's.** `appScope()` (`src/server/fns/context.ts:26`) builds its scope
+  from `requireOrg()` (`src/server/auth/session.ts:90`), which uses `session.activeOrganizationId`; `requireOrg({ organizationId })` throws `not-a-member` on a mismatch instead
   of switching (`tenant.ts:171-178`). A user in several workspaces (`#939`, `workspace-switcher.tsx`) therefore
   cannot be joined with `appScope()`, and after joining must switch workspace
   (`authClient.organization.setActive`) before the trip exists for them.
@@ -87,8 +89,10 @@ values.userId)`, and inserts with `invitedBy: scope.ctx.userId`. In a joiner's o
 - **Secrets in paths are not redacted.** `src/lib/sentry-scrub.ts` strips query strings but deliberately keeps the
   path, and `referer` is not in `FORBIDDEN_HEADERS`. A secret in `/join/<secret>` reaches Sentry today.
 - Trip-member isolation, the unique `trip_members_trip_user_unq` index, `TripMemberExistsError`,
-  `TRIP_MEMBER_ROLES = ['owner','editor','viewer']` (`schema.ts:265`), `mirrorToRoom`
-  (`src/server/fns/context.ts`) and the tenant audit trail (`src/server/audit/trail.ts`) all exist and are reused.
+  `TRIP_MEMBER_ROLES = ['owner','editor','viewer']` (`schema.ts:265`) and the tenant audit trail
+  (`src/server/audit/trail.ts`) all exist and are reused. **There is no live people list to piggyback on:** the
+  people screen opens no socket (`useTripRoom` is mounted only by `PresenceBar`, on the collab screen, behind `live`),
+  and `addTripMemberFn` mirrors nothing, so a join is shown on the next load, like every other membership write.
 
 Missing, from the traveller's side: _I made a trip with six friends who are all in our workspace. I do not want to
 find each of them in a list; I want to paste one link into the chat._ And from the invitee's side: _I tapped a
@@ -98,21 +102,21 @@ link, I have an account, now what?_
 
 ### What the stage owns and what it does not
 
-| Owned (this stage writes it)                                                                                                                                                                                                                                                                                                                 | Not owned (read only, or left alone)                                                               |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `src/server/db/schema.ts` - edit: table `trip_invite_links`; `drizzle/` - one generated migration (`pnpm db:generate`, never hand-edited); `src/server/db/types.ts` - edit                                                                                                                                                                   | `share_links` and the share-link functions in `trips.ts` (07-S6's)                                 |
-| `src/server/repos/invites.ts` - new: the record, its owner-side writers, the unscoped resolver, the preview projection and `joinTripByInvite`; `src/server/repos/index.ts` - one export line                                                                                                                                                 | `src/server/repos/members.ts` (`addMember`, workspace seats), `assertTripRole`, `removeTripMember` |
-| `src/server/repos/trips.ts` - edit: extract and **export** `insertTripMember` (Phase 2, no behaviour change)                                                                                                                                                                                                                                 | `src/routes/(auth)/accept-invitation.$invitationId.tsx`, `(auth)/-server/invitation.ts`            |
-| `src/server/public/secret.ts` (pure leaf: derive, digest, shape guard), `rate-limit.ts` (budgets are parameters), `trip-invite.ts` (the anonymous projection) - new                                                                                                                                                                          | `src/server/calendar/**` (06-S5's; re-pointed only if it exists, see Architecture)                 |
-| `src/routes/join/$token.tsx`, `join/-server/join.ts`, `join/-ui/join-card.tsx` - new (**`pnpm generate-routes`**, the regenerated `routeTree.gen.ts` travels in the diff)                                                                                                                                                                    | `src/routeTree.gen.ts` (generated, never hand-edited)                                              |
-| `src/components/marketing/chrome.tsx` - edit: `MarketingHeader` gains a `minimal` prop (logo only, no sign-in / start-free / pricing); the guest shell sets `scroll-padding-top` for the sticky header                                                                                                                                       | `src/components/ui/**` (no primitive and no token is added), `package.json`, `pnpm-lock.yaml`      |
-| `src/routes/_app/trips/$tripId/-server/invite.ts`, `-ui/invite-link-panel.tsx` - new; `-server/people.ts` - edit (`TripPeoplePayload.invite`); `-ui/people-screen.tsx` - edit: one mount point and the local `ConfirmDialog` exported (it gains an optional `pendingLabel` prop for its loading label)                                                                                                        | `src/server/do/**` (no new entity kind; the signal is a patch on the existing `trip` kind)         |
-| `src/routes/(auth)/register.tsx`, `verify-email.tsx` - edit (Phase 1); `(auth)` responses gain `Referrer-Policy: strict-origin` (Phase 3)                                                                                                                                                                                                    | `src/server/billing/**` (no metric; see Quota)                                                     |
-| `src/lib/sentry-scrub.ts` and the server logger - edit: secret redaction (Phase 3); `src/lib/__tests__/sentry-scrub.test.ts`                                                                                                                                                                                                                 | `e2e/places-and-maps.spec.ts`, `e2e/trips-core.spec.ts`, `e2e/journeys.spec.ts`                    |
-| `src/server/audit/trail.ts` - edit: three action names                                                                                                                                                                                                                                                                                       | The plan file (the `Delivered:` line is added by whoever closes the last ticket)                   |
-| `src/lib/i18n/messages/<locale>/trips.ts` - edit, **all 23 locales**                                                                                                                                                                                                                                                                         | `src/lib/i18n/messages/<locale>/auth.ts` (no new key; see Phase 1)                                 |
-| `docs/ACCESS.md` §3, §3.5, §3.6, §3.7, new §3.8, §6.4; `docs/SPEC.md` §5 and §6; `docs/DEPLOY.md` (rotation note); `CONTEXT.md` (two terms); a new ADR (next free number, 0037 or later) for the unscoped exception                                                                                                                          |                                                                                                    |
-| Tests: `src/server/repos/__tests__/invites.test.ts`, `tenant-isolation.test.ts` (append), `unscoped-shape.test.ts` (extend), `src/server/public/__tests__/`, `-server/__tests__/invite.test.ts`, `join/-server/__tests__/join.test.ts`, component tests, `e2e/collaboration-and-sharing.spec.ts` (append the `describe`, or create the file) |                                                                                                    |
+| Owned (this stage writes it)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Not owned (read only, or left alone)                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `src/server/db/schema.ts` - edit: table `trip_invite_links`; `drizzle/` - one generated migration (`pnpm db:generate`, never hand-edited); `src/server/db/types.ts` - edit                                                                                                                                                                                                                                                                                                                                                                  | `share_links` and the share-link functions in `trips.ts` (07-S6's)                                 |
+| `src/server/repos/invites.ts` - new: the record, its owner-side writers, the unscoped resolver, the preview projection and `joinTripByInviteUnscoped`; `src/server/repos/index.ts` - one export line                                                                                                                                                                                                                                                                                                                                        | `src/server/repos/members.ts` (`addMember`, workspace seats), `assertTripRole`, `removeTripMember` |
+| `src/server/repos/trips.ts` - edit: extract and **export** `insertTripMember` (Phase 2, no behaviour change)                                                                                                                                                                                                                                                                                                                                                                                                                                | `src/routes/(auth)/accept-invitation.$invitationId.tsx`, `(auth)/-server/invitation.ts`            |
+| `src/server/security/secret.ts` (pure leaf: derive, digest, shape guard - a neutral directory, so that `repos` never imports the session-less `public/**`), `src/server/public/rate-limit.ts` (budgets are parameters), `public/trip-invite.ts` (the anonymous projection) - new                                                                                                                                                                                                                                                            | `src/server/calendar/**` (06-S5's; re-pointed only if it exists, see Architecture)                 |
+| `src/routes/join/$token.tsx`, `join/-server/join.ts`, `join/-ui/join-card.tsx` - new (**`pnpm generate-routes`**, the regenerated `routeTree.gen.ts` travels in the diff)                                                                                                                                                                                                                                                                                                                                                                   | `src/routeTree.gen.ts` (generated, never hand-edited)                                              |
+| `src/components/marketing/chrome.tsx` - edit: `MarketingHeader` gains a `minimal` prop (logo only, no sign-in / start-free / pricing); the guest shell sets `scroll-padding-top` for the sticky header                                                                                                                                                                                                                                                                                                                                      | `src/components/ui/**` (no primitive and no token is added), `package.json`, `pnpm-lock.yaml`      |
+| `src/routes/_app/trips/$tripId/-server/invite.ts`, `-ui/invite-link-panel.tsx` - new; `-server/people.ts` - edit (`TripPeoplePayload.invite`); `-ui/people-screen.tsx` - edit: one mount point and the local `ConfirmDialog` exported (it gains an optional `pendingLabel` prop for its loading label and an optional `confirmVariant` prop, `'danger'` by default and `'primary'` for the editor upgrade, whose confirm button is not destructive); `readTripPeople` gains the derivation key as a third parameter (see the owner's panel) | `src/server/do/**` (no new entity kind and no patch: the people screen opens no socket)            |
+| `src/routes/(auth)/register.tsx`, `verify-email.tsx` - edit (Phase 1); `login.tsx`, `register.tsx` and `verify-email.tsx` gain a `head` entry `<meta name="referrer" content="strict-origin">` (Phase 3; there is no `(auth)` layout route and no per-route `headers` today, and a new layout would change the route tree)                                                                                                                                                                                                                  | `src/server/billing/**` (no metric; see Quota)                                                     |
+| `src/lib/sentry-scrub.ts` - edit: secret redaction (Phase 3); `src/client.tsx` and `src/server/observability/sentry.ts` - edit: today only `beforeSend: scrubEvent` is wired in each, and the breadcrumb, transaction and span redaction below needs `beforeBreadcrumb` / `beforeSendTransaction` / `beforeSendSpan` hooks there; `src/lib/sentry-replay.ts` - edit: the replay network and navigation URL filters; `src/server/fns/context.ts` - edit: `scopeFor(context)` (see the join); `src/lib/__tests__/sentry-scrub.test.ts`        | `e2e/places-and-maps.spec.ts`, `e2e/trips-core.spec.ts`, `e2e/journeys.spec.ts`                    |
+| `src/server/audit/trail.ts` - edit: three action names                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | The plan file (the `Delivered:` line is added by whoever closes the last ticket)                   |
+| `src/lib/i18n/messages/<locale>/trips.ts` - edit, **all 23 locales**                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `src/lib/i18n/messages/<locale>/auth.ts` (no new key; see Phase 1)                                 |
+| `docs/ACCESS.md` §3, §3.5, §3.6, §3.7, new §3.8, §6.4; `docs/SPEC.md` §5 and §6; `docs/DEPLOY.md` (rotation note); `CONTEXT.md` (two terms); a new ADR (next free number, 0037 or later) for the unscoped exception                                                                                                                                                                                                                                                                                                                         |                                                                                                    |
+| Tests: `src/server/repos/__tests__/invites.test.ts`, `tenant-isolation.test.ts` (append), `unscoped-shape.test.ts` (extend), `src/server/public/__tests__/`, `src/server/security/__tests__/`, `-server/__tests__/invite.test.ts`, `join/-server/__tests__/join.test.ts`, component tests, `e2e/collaboration-and-sharing.spec.ts` (append the `describe`, or create the file)                                                                                                                                                              |                                                                                                    |
 
 The plan's `e2e/collaboration-and-sharing.visual.spec.ts` and `e2e/__screenshots__/...` are **struck**: ADR 0016
 removed screenshot baselines; the visual judgement is the blind A/B pair (`scripts/visual/capture.mjs`).
@@ -154,7 +158,7 @@ re-copy" would make replacing a daily habit and kill the link the second friend 
 therefore **derived, not stored**:
 
 - `subkey = HKDF-SHA256(key, salt = empty, info = purpose)` through `crypto.subtle`. `key` is an **argument**:
-  `src/server/public/secret.ts` is a pure, SQL-free, binding-free leaf and never reads `BETTER_AUTH_SECRET` itself
+  `src/server/security/secret.ts` is a pure, SQL-free, binding-free leaf and never reads `BETTER_AUTH_SECRET` itself
   (the auth env module imports `cloudflare:workers`, which the plain-Node `server` test project forbids). The
   server functions pass the secret read by `src/server/auth/env.ts`; tests pass a literal.
 - `info` comes from a **closed list of purposes** (`'trip-invite-link/v1'` today), so the calendar feed or any later
@@ -209,21 +213,21 @@ Built on `createTenantRepository`; exports:
   join, never by a read.
 - `findLiveTripInviteByDigestUnscoped(db, digest)` - **the one unscoped function**, named with the `Unscoped`
   suffix and following the shape the calendar spec fixes (`unscoped-shape.test.ts`: a plain `Database`, a narrow
-  projection). It takes the **digest**, so hashing stays in `public/secret.ts`. Its only importer outside this
+  projection). It takes the **digest**, so hashing stays in `security/secret.ts`. Its only importer outside this
   module is `public/trip-invite.ts`, the single named caller the shape test registers. It returns
   `{ id, organizationId, tripId, role, createdBy }` or `null` for: unknown digest, disabled row, role outside the
   narrowed enum, archived trip, a creator who is no longer an **owner** of the trip, a creator who is no longer a
   **member of the link's workspace**, and a banned creator - **all in one statement**, with `trips` and
   `trip_members` matched on the invite row's own `organization_id` (not only `trip_id`, because that foreign key is
   not composite). A dead link of any kind is the same `null`.
-- `readInvitePreview(db, digest, viewer: { id, banned } | null)` - builds the read scope **inside `src/server/repos`**
+- `readInvitePreviewUnscoped(db, digest, viewer: { id, banned } | null)` - builds the read scope **inside `src/server/repos`**
   (`createScope(db, { organizationId, userId: createdBy, role: 'member' })`) and returns the discriminated
   projection (below). The viewer's workspace membership is read through the passed `db` from the `member` table,
   as `members.ts` does; repos call neither `authDb()` nor `membershipRoleFor`. `src/server/public/**` never
   constructs a scope (ACCESS §3.7 rule 2).
-- `joinTripByInvite(db, digest, viewer: { id, banned, impersonated })` - below. `join/-server/join.ts` fills
+- `joinTripByInviteUnscoped(db, digest, viewer: { id, banned, impersonated })` - below. `join/-server/join.ts` fills
   `viewer` from the session (`impersonated` is true when `session.impersonatedBy` is set; it is not on `AuthUser`).
-  `join.ts` is the **named caller** of `readInvitePreview` and `joinTripByInvite` in the `unscoped-shape.test.ts` map,
+  `join.ts` is the **named caller** of `readInvitePreviewUnscoped` and `joinTripByInviteUnscoped` in the `unscoped-shape.test.ts` map,
   beside `public/trip-invite.ts` for the finder.
 
 ### Liveness: when a link is honoured
@@ -244,13 +248,13 @@ A failure of any of these is the same `null`, the same 404, the same "unavailabl
 `docs/ACCESS.md` §3.7 and `docs/SPEC.md` §6 make `src/server/public/**` the only session-less read path, with
 column-whitelisted projections, no SQL and no fabricated scope. It is also **sessionless**, so it yields only the
 **anonymous** projection and the dead-link answer. The loader's server function (`join/-server/join.ts`) adds the
-viewer from the session and calls the repo-level `readInvitePreview` with the user id to get the signed-in variants.
+viewer from the session and calls the repo-level `readInvitePreviewUnscoped` with the user id to get the signed-in variants.
 
 **Order** (a per-link budget needs the link id, which exists only after the lookup): per-IP check -> shape guard ->
 hash -> `findLiveTripInviteByDigestUnscoped` -> per-link check -> projection. **`loadInvite` always calls
 `resolveTripInvite` first**, for an anonymous and a signed-in visitor alike (budgets, shape guard, hash, miss count),
 so a dead link is the same 404 and counts against the miss budget either way. A signed-in viewer then adds exactly
-one `readInvitePreview` call (with the viewer's `{ id, banned }`; a banned viewer gets `unavailable`), and the
+one `readInvitePreviewUnscoped` call (with the viewer's `{ id, banned }`; a banned viewer gets `unavailable`), and the
 per-link budget is applied once.
 
 | Visitor                                             | Projection                                                                                                                                  |
@@ -275,23 +279,31 @@ combination on the page, and it is shown only to someone already in the workspac
 is never bounced), default SSR. The loader reads the route param in-process on the server; any client-side
 re-fetch is a **POST** server function (a GET server function would put the secret in a query string that
 Cloudflare logs and Sentry breadcrumbs record), and every response, found or not, carries
-`Cache-Control: private, no-store`. `X-Robots-Tag: noindex, nofollow`, `Referrer-Policy: no-referrer` and the 404
-status are set with `setResponseHeader` / `setResponseStatus` in the loader's server function (the same server
-function that handles the miss), with the route's `head` carrying `robots: noindex, nofollow`. The document
-`<title>` and meta description are **generic** (no trip title, no inviter name) and there are **no Open Graph or
-Twitter tags**: chat unfurlers fall back to `<title>`, and a link pasted into a channel would otherwise show the
-trip to everyone in it. `robots.txt` does not disallow `/join/` (ACCESS §3.5: a disallowed path is never fetched,
+`Cache-Control: private, no-store`. `X-Robots-Tag: noindex, nofollow` and `Referrer-Policy: no-referrer` come from the route's
+`headers` option (the shape `__root.tsx:100` already uses), the same for a found and a dead link, so they need no
+loader data; the route's `head` carries `robots: noindex, nofollow`. The POST server function sets its own
+`Cache-Control: private, no-store` with `setResponseHeader`. **A dead link throws `notFound()`** from the loader and
+the route's `notFoundComponent` renders the one body; the document status comes from router state (no route loader in
+the repo calls `setResponseStatus`, so the spec does not rely on it), and a Phase 3 test asserts the status and the
+headers of the document response, not only the e2e. The document `<title>` and meta description are **generic** (no
+trip title, no inviter name) and there are **no trip-specific Open Graph or Twitter tags**: `__root.tsx:122-137`
+already emits site-level, generic `og:*` / `twitter:*` tags and a canonical link on every route, which name no trip
+and stay; the route overrides the title and description pairs with its own generic copy. A chat unfurler therefore
+shows the product, never the trip. `robots.txt` does not disallow `/join/` (ACCESS §3.5: a disallowed path is never fetched,
 so the directive would never be read). A GET **never writes**: no `use_count`, no `last_used_at`.
 
-**Redaction (Phase 3).** `src/lib/sentry-scrub.ts` and the server logger redact `/join/<secret>` in `request.url`,
+**Redaction (Phase 3).** `src/lib/sentry-scrub.ts` redacts `/join/<secret>` in `request.url`,
 the `referer` header (added to `FORBIDDEN_HEADERS`), navigation / fetch / xhr breadcrumbs, and transaction and span
 names (the template `/join/$token` is used), and the URL-encoded secret inside `redirect=` and `callbackURL=`
-values. `(auth)` responses send `Referrer-Policy: strict-origin` so same-origin requests from the sign-in pages do
-not carry the query string. A test pins each in `src/lib/__tests__/sentry-scrub.test.ts`.
+values; `src/client.tsx` and `src/server/observability/sentry.ts` wire it into the breadcrumb, transaction and span
+hooks, and `src/lib/sentry-replay.ts` into the replay URL filters. The server logger is not changed: `join.ts` logs the
+link id and the outcome, never the path or the secret (a test pins it). The three sign-in pages send
+`<meta name="referrer" content="strict-origin">` so same-origin requests from them do not carry the query string.
+A test pins each redaction in `src/lib/__tests__/sentry-scrub.test.ts`.
 
-**i18n of the surface.** `/join` negotiates its locale like `(auth)`: server-side, before first paint, from
-`Accept-Language` for an anonymous visitor and the stored preference for a signed-in one, with `<html lang dir>`
-set. The `ar` card is designed in RTL (only the URL element is forced `dir="ltr"`).
+**i18n of the surface.** `/join` needs no new locale work: the root loader already negotiates it (`__root.tsx:86`) server-side, before
+first paint, from `Accept-Language` for an anonymous visitor and the stored preference for a signed-in one, with
+`<html lang dir>` set. The `ar` card is designed in RTL (only the URL element is forced `dir="ltr"`).
 
 ### Rate limiting (Phase 2, used in Phases 3 and 4)
 
@@ -321,7 +333,7 @@ shared insert** and **extracts the part that must not exist twice**:
   unique-violation-to-`TripMemberExistsError` translation out of `addTripMember` into one **exported**
   `insertTripMember(scope, values)` in `trips.ts`; `addTripMember` keeps its three guards and calls it. The existing
   `addTripMember` tests run unchanged and must stay green.
-- **Phase 3:** `joinTripByInvite(db, digest, viewer)` lives in **`invites.ts`** (so `invites.ts` imports `trips.ts`,
+- **Phase 3:** `joinTripByInviteUnscoped(db, digest, viewer)` lives in **`invites.ts`** (so `invites.ts` imports `trips.ts`,
   never the reverse; no cycle), takes the **digest** (nothing from the render is trusted) and calls
   `findLiveTripInviteByDigestUnscoped` in-module. Its order is fixed:
   1. the joiner is not banned (`viewer.banned`) and the session is not impersonated (`viewer.impersonated`): either is
@@ -345,8 +357,11 @@ shared insert** and **extracts the part that must not exist twice**:
   yet a join is a lasting access grant. An impersonated session (`session.impersonatedBy`) is therefore **refused**
   (`unavailable`), and ACCESS §6.4 is amended to name it.
 - `joinTripFn({ secret })` in `join/-server/join.ts` (POST): session required (`requireUser`), rate limited, hashes the
-  secret with `hashSecret` and calls the repository, then `mirrorToRoom(scope, tripId, [patch('trip', tripId,
-{ people: <token> })])` so anyone with the trip open sees the new member, and `trail(scope, ...)`. It returns
+  secret with `hashSecret` and calls the repository, which returns the `TenantContext` (`{ organizationId, userId, role }`) it
+  already built beside the outcome; the function turns it into a scope with `scopeFor(context)` (a new export of
+  `src/server/fns/context.ts`, beside `appScope`; routes do not call `createScope` themselves, and the repository cannot
+  call `trail`, which imports `repos`) and writes `trail(scope, ...)`. It does **not** mirror to the room (see Problem
+  Statement). It returns
   `{ outcome: 'joined' | 'member', tripId, organizationId }` **only** after the workspace-membership check, and
   `{ outcome: 'needs-workspace' }` or `{ outcome: 'unavailable' }` with no ids.
 - **Audit.** `trail.ts` gains `trip_invite.rotated` (create, replace, switch-on), `trip_invite.updated` (role,
@@ -366,7 +381,8 @@ shared insert** and **extracts the part that must not exist twice**:
   in-app hand-off for the email path (`handOff('/verify-email?redirect=<target>')`); `callbackURL` **stays**
   `/verify-email` (Better Auth appends `?error=<code>` to it by string concatenation, so a query in `callbackURL`
   would corrupt the failure redirect, and would also put a secret into the emailed link). `verify-email.tsx` gains
-  `redirect` in its `searchSchema`; the pending screen's "Continue anyway" link uses `safeRedirect(search.redirect)`.
+  `redirect` in its `searchSchema`; the pending screen's "Continue anyway" link uses `safeRedirect(search.redirect)` as an `<a href>`, not a typed
+  `<Link to>` (the target is a dynamic path with a query string and would fail the route typing).
   The verified-by-email panel is reached from the email link, cannot carry `redirect`, and keeps `/dashboard`.
   Verification is not required, so "returns to the target after registration" is the honest wording.
 - Signed in, the card is the same URL rendered again with the session: `invited` with the full preview, `member`, or
@@ -401,7 +417,9 @@ Owner-only, mounted by `people-screen.tsx` (one mount point; the file is 1305 li
 A non-owner - including a workspace admin who is not on the trip - sees nothing, not a disabled control. The loader
 payload `TripPeoplePayload` gains `invite: InvitePanel | null` (`null` for a non-owner; an additive field of a
 payload type, checked against `BACKWARD_COMPATIBILITY.md`), carrying the non-secret fields plus the derived
-**state**:
+**state**. Deriving `stale` needs the derivation key, and the `node` test project cannot import the auth env module, so
+`readTripPeople(scope, tripId, inviteKey)` gains the key as a **third parameter**, read and passed by its server
+function (the existing `people.test.ts` call sites gain a literal):
 
 - `none` - never minted: an `EmptyState` on `--color-surface-2`, primary action "Create link", and the existing
   `people.invite.emptyHint` pointer for friends who are not in the workspace yet.
@@ -429,11 +447,12 @@ state (which sets the native `disabled`), and focus is placed explicitly when th
 A double tap or a second owner returns the current state rather than a dead URL.
 
 **Upgrading the role** from viewer to editor applies to **every copy already sent**: it asks for a confirmation that
-says so. Downgrading and switching **off** do not confirm; the switch shows its `onHint` while on (switching off kills
+says so, through the same `ConfirmDialog` with `confirmVariant="primary"` (its confirm button is `danger` by
+default, which would mislabel "Make editors"). Downgrading and switching **off** do not confirm; the switch shows its `onHint` while on (switching off kills
 every copy immediately, including those already sent).
 
-Feedback after someone joins: the new member appears live in the people list (room mirror) with the link's creator as
-the inviter, and the panel's joined count and last-joined time move on the next read.
+Feedback after someone joins: the new member appears in the people list on the next load, with the link's creator as
+the inviter, and the panel's joined count and last-joined time move on the next read; nothing updates live.
 
 ### Quota
 
@@ -448,33 +467,33 @@ the inviter, and the panel's joined count and last-joined time move on the next 
 
 ## 📝 Architecture
 
-| Concept                                | Owner module                                                                                            |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| The invite link record and its writers | `src/server/repos/invites.ts`                                                                           |
-| Trip membership rows (one insert path) | `src/server/repos/trips.ts` (`insertTripMember`; `addTripMember` and `joinTripByInvite` call it)        |
-| Secret derivation and digest           | `src/server/public/secret.ts` - a pure, SQL-free leaf that repos **may import** (stated in SPEC §6)     |
-| Per-IP public rate limits              | `src/server/public/rate-limit.ts`                                                                       |
-| What a stranger may see of an invite   | `src/server/public/trip-invite.ts` (anonymous projection only, no SQL, no scope)                        |
-| The signed-in variants and the join    | `readInvitePreview`, `joinTripByInvite` in `repos/invites.ts`; composed by `join/-server/join.ts`       |
-| The unscoped digest lookup             | `findLiveTripInviteByDigestUnscoped` in `repos/invites.ts`, single named caller `public/trip-invite.ts` |
-| The landing                            | `src/routes/join/**`                                                                                    |
-| The owner's controls                   | `-server/invite.ts`, `-ui/invite-link-panel.tsx` on the people screen                                   |
+| Concept                                | Owner module                                                                                                      |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| The invite link record and its writers | `src/server/repos/invites.ts`                                                                                     |
+| Trip membership rows (one insert path) | `src/server/repos/trips.ts` (`insertTripMember`; `addTripMember` and `joinTripByInviteUnscoped` call it)          |
+| Secret derivation and digest           | `src/server/security/secret.ts` - a pure, SQL-free leaf that repos **may import** (stated in SPEC §6)             |
+| Per-IP public rate limits              | `src/server/public/rate-limit.ts`                                                                                 |
+| What a stranger may see of an invite   | `src/server/public/trip-invite.ts` (anonymous projection only, no SQL, no scope)                                  |
+| The signed-in variants and the join    | `readInvitePreviewUnscoped`, `joinTripByInviteUnscoped` in `repos/invites.ts`; composed by `join/-server/join.ts` |
+| The unscoped digest lookup             | `findLiveTripInviteByDigestUnscoped` in `repos/invites.ts`, single named caller `public/trip-invite.ts`           |
+| The landing                            | `src/routes/join/**`                                                                                              |
+| The owner's controls                   | `-server/invite.ts`, `-ui/invite-link-panel.tsx` on the people screen                                             |
 
 Dependencies run route -> server function -> repository; `components/ui` fetches nothing; `src/server/public/**`
 constructs no `TenantScope` and calls no auth helper (a test asserts it, as ACCESS §3.7 requires); all SQL stays in
 `src/server/repos`. **Contract amendment, a Phase 2 deliverable and not optional:** `docs/SPEC.md` §5 and §6 and
-`docs/ACCESS.md` §3.7 name `findLiveTripInviteByDigestUnscoped`, `readInvitePreview` and `joinTripByInvite` as an
+`docs/ACCESS.md` §3.7 name `findLiveTripInviteByDigestUnscoped`, `readInvitePreviewUnscoped` and `joinTripByInviteUnscoped` as an
 exception of the same kind as the calendar feed's (all take a plain `Database`), generalise "the share record" to
-"the token record (share link or trip invite link)", and state that repos may import `public/secret.ts`. A new ADR
-(next free number at write time, 0037 or later; `0035` and `0036` exist) records the exception. If the calendar stage
+"the token record (share link or trip invite link)", and state that repos may import `security/secret.ts`. A new ADR
+(next free number at write time, 0037 or later; `0035` and `0036` exist) records the exception. All three functions
+carry the `Unscoped` suffix, so the suffix-based `unscoped-shape.test.ts` guards each of them. If the calendar stage
 landed first, this stage only adds its functions and its named caller to the map in `unscoped-shape.test.ts`.
 
 **Relation to the ready calendar spec.** That spec plans `src/server/calendar/secret.ts` with a 32-character
 `nanoid`. This stage does not change it. Re-pointing is **one-directional**: if `calendar/secret.ts` already exists
-when Phase 2 is implemented, the digest helper moves to `public/secret.ts` and the calendar module re-exports it in
-the same PR; if the calendar stage lands later, its ticket imports `public/secret.ts` (noted in this PR's body, not by
-editing that spec). The calendar spec's reference to ADR 0035 is already taken (`0035-agents-take-every-pr-to-develop`)
-
+when Phase 2 is implemented, the digest helper moves to `security/secret.ts` and the calendar module re-exports it in
+the same PR; if the calendar stage lands later, its ticket imports `security/secret.ts` (noted in this PR's body, not by
+editing that spec). The calendar spec's reference to ADR 0035 is already taken (`0035-agents-take-every-pr-to-develop`); that is a
 follow-up for that spec, noted in the PR body.
 
 ## 📝 Data Model
@@ -629,7 +648,7 @@ skill; the parity test enforces it). Namespaces `join.*` and `invite.*`; the rol
 | `invite.creatorGone`               | `This link stopped working because the person who created it is no longer an owner. Replace it.`                                                  |
 | `invite.archived`                  | `This trip is archived. The link does not work while it is, and works again when the trip is restored.`                                           |
 | `invite.announce.created`          | `Invite link created`                                                                                                                             |
-| `invite.announce.roleEditor`       | `People who join will become editors`                                                                                                              |
+| `invite.announce.roleEditor`       | `People who join will become editors`                                                                                                             |
 | `invite.announce.off`              | `Invite link switched off`                                                                                                                        |
 | `invite.announce.newLink`          | `New invite link ready. Copy it and send it again.`                                                                                               |
 | `invite.announce.roleViewer`       | `People who join will become viewers`                                                                                                             |
@@ -662,7 +681,7 @@ The register and verify screens add no key: the destination of the existing "Con
 | `BETTER_AUTH_SECRET` rotated                                                                                                 | Every link fails closed; the panel shows `stale`; `docs/DEPLOY.md` says so                                               |
 | Banned joiner / impersonated session                                                                                         | Both: `unavailable`, nothing written                                                                                     |
 | Email registration with a redirect                                                                                           | "Continue anyway" on the verify screen goes to the target (Phase 1)                                                      |
-| A crawler or unfurl bot GETs the URL                                                                                         | No write, generic `<title>`, no Open Graph, `noindex`, `no-store`                                                        |
+| A crawler or unfurl bot GETs the URL                                                                                         | No write, generic `<title>`, no trip-specific Open Graph, `noindex`, `no-store`                                          |
 | Workspace switch fails after joining                                                                                         | `join.error.switch`; the button stays                                                                                    |
 
 ## 📝 Observability
@@ -681,11 +700,11 @@ or analytics URL carries the secret; the audit metadata carries the link id and 
 4. Changing the role changes the role of people who join **after** the change, and of nobody already on the trip.
 5. Opening the URL in a fresh context shows the trip title, the inviter's name and avatar, the role offered and the
    requirement line - and no dates, destination, workspace name, ids or email. The response carries `noindex`,
-   `no-referrer` and `no-store`, the `<title>` is generic, and there is no Open Graph tag.
+   `no-referrer` and `no-store`, the `<title>` is generic, and there is no trip-specific Open Graph or Twitter tag (the site-level generic ones remain).
 6. A visitor with an account who taps **Sign in** on the card comes back to the same `/join/<secret>` URL after signing
    in.
-7. A signed-in member of the trip's workspace who is not on the trip joins in one action and appears in the people list
-   of everyone who has the trip open, with the link's creator as the inviter and the link's role.
+7. A signed-in member of the trip's workspace who is not on the trip joins in one action and appears in the people list on
+   the next load, with the link's creator as the inviter and the link's role.
 8. Opening a live link while already on the trip shows the `member` state and does not change the joined count.
 9. A member of two workspaces whose active workspace is the other one joins correctly and opens the trip after the
    explicit workspace switch.
@@ -725,7 +744,7 @@ or analytics URL carries the secret; the audit metadata carries the link id and 
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------- |
 | 1   | Carry `?redirect=` through email registration (a standalone fix)                                                                                                                                                                     | `risk-medium`             | Registering from a `?redirect=` link continues to it                                |
 | 2   | Table, repository, shared secret and rate-limit modules, `insertTripMember` extraction, contract amendments and ADR, docs, CONTEXT, audit names                                                                                      | `risk-high`, `security`   | Nothing - the **infrastructure exception** (no UI, no route); a layer no user meets |
-| 3   | The visitor slice: `/join/$token` with every state, the sign-in round trip, the join, workspace switch, room mirror, audit, redaction, ACCESS §3.8                                                                                   | `risk-high`, `security`   | Joinable by a seeded token only                                                     |
+| 3   | The visitor slice: `/join/$token` with every state, the sign-in round trip, the join, workspace switch, audit, redaction, ACCESS §3.8                                                                                                | `risk-high`, `security`   | Joinable by a seeded token only                                                     |
 | 4   | The owner's panel on the people screen, with its states, motion and accessibility, the browser journey and the A/B pair                                                                                                              | `risk-medium`, `security` | **The feature is on end to end**; `COL-11` is counted done here, as narrowed        |
 | -   | Follow-up (not a ticket of this stage): `afk-to-tickets` files an issue for a person - may a trip link ever lead into the workspace, and on what seat terms - and the parent says `COL-11` is closed "as narrowed" with a link to it | -                         | -                                                                                   |
 
@@ -735,6 +754,9 @@ same for the panel. Nothing is deferred to a polish ticket.
 ## 📋 Implementation Plan
 
 ### Phase 1 - Return to the target after email registration (a standalone fix)
+
+Nothing in Phases 2 to 4 depends on this phase (the invite card has no register button); it serves the workspace
+invitation's `/register?redirect=` link, which has the same defect, and is shipped first because it is small.
 
 1. `register.tsx`: for the email path, the in-app hand-off carries `target` whenever it is not `DEFAULT_REDIRECT`
    (`handOff('/verify-email?redirect=<encoded target>')`); `callbackURL` stays `/verify-email`.
@@ -748,7 +770,7 @@ same for the panel. Nothing is deferred to a polish ticket.
 
 1. `schema.ts`: `tripInviteLinks`; `pnpm db:generate` (one `CREATE TABLE`, three indexes, no rebuild, no `DROP`, one
    journal entry; review it, never hand-edit); `types.ts`.
-2. `src/server/public/secret.ts` and `rate-limit.ts` (or import them if the calendar stage landed; re-point
+2. `src/server/security/secret.ts` and `src/server/public/rate-limit.ts` (or import them if the calendar stage landed; re-point
    `calendar/secret.ts` in the same PR if it exists). Tests: the derivation is deterministic for one
    `(purpose, key, id, rotation)` and differs for another, distinct purposes give distinct subkeys, the digest is hex
    SHA-256, the shape guard rejects 42 and 44 characters; budgets are parameters.
@@ -762,12 +784,14 @@ same for the panel. Nothing is deferred to a polish ticket.
 
 ### Phase 3 - The visitor slice
 
-1. `public/trip-invite.ts` (anonymous projection, order above); `repos/invites.ts` `readInvitePreview` and
-   `joinTripByInvite`.
+1. `public/trip-invite.ts` (anonymous projection, order above); `repos/invites.ts` `readInvitePreviewUnscoped` and
+   `joinTripByInviteUnscoped`.
 2. `src/routes/join/$token.tsx`, `-server/join.ts` (`loadInvite`, `joinTripFn`), `-ui/join-card.tsx`: every state in
-   UI/UX with loading, error, motion, focus map and live region; the headers and the 404; the generic `<title>`; the
-   `minimal` `MarketingHeader`; the `(auth)` `Referrer-Policy`; locale negotiation and the `ar` frame.
-3. Redaction in `sentry-scrub.ts` and the server logger, with `sentry-scrub.test.ts`.
+   UI/UX with loading, error, motion, focus map and live region; the headers (`headers` option) and the `notFound()` 404 with a
+   test of the document status and headers; the generic `<title>` and meta overrides; the `minimal` `MarketingHeader`;
+   the sign-in pages' `strict-origin` referrer meta; the `ar` frame; `scopeFor` in `fns/context.ts` for the join's trail.
+3. Redaction in `sentry-scrub.ts`, wired through `src/client.tsx`, `observability/sentry.ts` and `sentry-replay.ts`,
+   with `sentry-scrub.test.ts`.
 4. `pnpm generate-routes`; inspect the regenerated tree in the diff.
 5. i18n: the `join.*` keys in all 23 locales.
 6. Docs: `docs/ACCESS.md` §3 intro ("Four"), §3.5, §3.6 (the new rows), §3.8 (visible / never-visible lists, the single
@@ -819,14 +843,13 @@ assertions. A new `describe` in A's scope: reading B's trip invite by B's trip i
 updating, revealing B's invite is `NotFoundError`, with B's row **byte-identical afterwards** (`token`, `rotation`,
 `use_count` included); touching B's invite id is `NotFoundError`. `invites.test.ts` covers the unscoped resolver: a
 valid digest resolves to its own organization and trip and no other; every kind of dead link (disabled, rotated away
-
 (asserted by replacing and then resolving the old value in the same test), archived trip, creator demoted, creator
 removed from the trip, creator removed from the workspace, creator banned, role outside the narrowed enum, and a
-hand-made row whose `organization_id` disagrees with its trip's) resolves to `null`; `readInvitePreview` can read that
+hand-made row whose `organization_id` disagrees with its trip's) resolves to `null`; `readInvitePreviewUnscoped` can read that
 trip and raises `NotFoundError` for any other trip id; a joiner who is not a member of the row's organization is
 refused and no `trip_members` row is written. Functions covered: `readTripInvite`, `revealTripInviteSecret`,
 `createTripInvite`, `replaceTripInvite`, `updateTripInvite`, `touchTripInvite`, `findLiveTripInviteByDigestUnscoped`,
-`readInvitePreview`, `joinTripByInvite`.
+`readInvitePreviewUnscoped`, `joinTripByInviteUnscoped`.
 
 ## Definition of done
 
@@ -852,7 +875,7 @@ The six items of `docs/SPEC.md` §7 apply unchanged, and:
 - A trip link that adds the person **to the workspace** (a seat decision; a person's call - whether it may ever be
   offered, and on what seat terms). Until then a friend without a seat in the workspace needs a workspace invitation
   first. Tracked as the follow-up in Phasing.
-- An owner-facing notification or activity entry on each join (the live people list and the joined count are the
+- An owner-facing notification or activity entry on each join (the people list and the joined count are the
   feedback; the tenant audit-trail row is a security record, not feedback); expiry dates; a use cap; more than one
   link per trip; guests (`trip_guests`); a QR code, share sheet or `mailto:`; a pending-approval step; the `owner`
   role as a link grant; email-verification gating; removing someone who joined (the people screen already does it).
@@ -863,31 +886,31 @@ The six items of `docs/SPEC.md` §7 apply unchanged, and:
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                                                      | Applied default                                                                                                                                                                                     | Why                                                                                                                                                                                                                                            |
-| --- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Is the stage one complete slice, and who does the link add?                   | Existing members of the trip's **workspace**; everyone else gets an honest dead-end naming the inviter and offering other accounts; `COL-11` narrowed; the card says so before sign-in              | Decided by product owner sub-agent (confidence medium): a link that grants workspace membership takes a seat and is the outcome the plan names unacceptable; every new account has its own workspace.                                          |
-| 2   | Depend on `07-S6` or build the shared infrastructure?                         | Own neutral modules, **first-lander creates**: `public/secret.ts`, `public/rate-limit.ts`, the unscoped-shape test; re-pointing is one-directional (no cross-spec claim)                            | Decided by software architect sub-agent (confidence high): waiting blocks a stage nothing will unblock; a test claiming one digest implementation would be false against the ready calendar spec.                                              |
-| 3   | Where do the owner's controls live?                                           | An owner-only panel on the people screen (`invite-link-panel.tsx`), not `share-dialog.tsx`                                                                                                          | Decided by software architect (confidence medium) and product owner (confidence high): the people screen is the trip's membership surface; the dialog's trigger belongs to `07-S6`.                                                            |
-| 4   | How does the join write the membership?                                       | Extract and export `insertTripMember`; `joinTripByInvite` lives in `invites.ts` and calls it; the invite row is the authorisation                                                                   | Decided by software architect (confidence high): `addTripMember` demands an owner and a readable trip; `invites.ts` importing `trips.ts` (never the reverse) avoids a cycle; one insert path keeps a future quota covering both.               |
-| 5   | Where does the unscoped resolver live, and is the contract amended?           | `repos/invites.ts`, `...Unscoped(db, digest)`, single named caller `public/trip-invite.ts`; SPEC §5/§6, ACCESS §3.7 and an ADR amend the closed list **in Phase 2**, not optionally                 | Decided by software architect (confidence high) and security and tenancy sub-agent (confidence medium): ACCESS §3.7 gives `public/**` no SQL and no scope; SPEC §5 calls its list closed.                                                      |
-| 6   | Which roles may a link grant?                                                 | `editor` and `viewer`; default **viewer** (the plan said editor); never `owner`; Zod plus a re-parse at join; viewer -> editor asks for confirmation                                                | Decided by security and tenancy sub-agent (confidence high): an address-less link is forwarded; a viewer default makes a mistaken click cheapest; an upgrade reaches every copy already sent.                                                  |
-| 7   | Is a link honoured after its creator stops being an owner, and can it return? | Only while `created_by` is an owner of the trip, a workspace member and not banned; `created_by` moves only on create / replace / switch-on, each of which bumps the rotation                       | Decided by security and tenancy sub-agent (confidence medium): no signed credential outlives its signer, and a retired link never revives; role change and switch-off never take a link over.                                                  |
-| 8   | Archived trips; what the anonymous card shows                                 | Archived: unavailable, and the same link works again after restore; anonymous: title, inviter name and avatar, role and the requirement line only                                                   | Decided by security and tenancy sub-agent (confidence medium): ADR 0007; name plus dates plus destination is the most sensitive combination. The restore behaviour is stated in the panel copy.                                                |
-| 9   | Who does the join act as?                                                     | The joiner, with their role in the **link's** workspace read from `member` through `db`; never the active workspace; banned and impersonated sessions are `unavailable`; no email-verification gate | Decided by security and tenancy sub-agent (confidence high/medium): `requireOrg` binds to the active workspace; `/join` renders no impersonation bar, so a join under impersonation is refused (ACCESS §6.4 amended).                          |
-| 10  | A joiner whose active workspace differs                                       | Return `{tripId, organizationId}` only after the membership check; the client calls `setActive` on the explicit "Open the trip" action                                                              | Decided by security and tenancy sub-agent (confidence high): no leak beyond a workspace the person belongs to.                                                                                                                                 |
-| 11  | Dead-link status, headers, redaction                                          | 404 with one body; `noindex` (meta and `X-Robots-Tag`), `no-referrer`, `no-store`, generic `<title>`, no Open Graph; GET never writes; POST for any client re-fetch; Sentry / logger redaction      | Decided by security and tenancy sub-agent (confidence high): the secret is in the path; chat unfurlers fall back to `<title>`; ACCESS §3.5 and §3.6 on the sibling surface.                                                                    |
-| 12  | Signed-in non-member of the workspace                                         | A distinct `needs-workspace` state for live links only, naming nothing and creating nothing, with other-account and trips exits and the viewer's own email                                          | Decided by security and tenancy sub-agent (confidence medium) and traveller sub-agent: collapsing it into "unavailable" would send legitimate friends to support; a card with no action is a dead end.                                         |
-| 13  | Can the owner copy the link again, and how is it derived?                     | Yes: HKDF subkey (closed purpose list, key passed in as an argument) of `BETTER_AUTH_SECRET`, HMAC over `linkId:rotation`; only the digest is stored; compare-and-set on rotation                   | Decided by product owner (confidence medium) and security and tenancy sub-agent (confidence medium): a D1 dump alone yields nothing usable; no new binding (the `MCP_TOKEN_PEPPER` precedent was weighed and declined); rotation fails closed. |
-| 14  | Does the registration leg return to the link, and is there a register button? | Phase 1 fixes the in-app hand-off for every `?redirect=` link (`callbackURL` untouched); the card has **no** "Create an account" button                                                             | Decided by product owner (confidence medium) and architect: Better Auth appends `?error=` to `callbackURL` by concatenation; a workspace member already has an account, and registering could only end in `needs-workspace`.                   |
-| 15  | Scope fences                                                                  | Owner notification / activity on join, expiry, use cap, multiple links, guests, QR, approval, owner grant, verification gate: all out                                                               | Decided by product owner (confidence high): each is a separate feature; the live list and the joined count are the feedback.                                                                                                                   |
-| 16  | Slicing                                                                       | Four tickets; infrastructure the one stated exception; the visitor slice and the panel each ship their states, motion and accessibility                                                             | Decided by software architect and product owner (round 1): SDLC scoping rule (SLC) and SPEC §7 forbid deferring loading, error and accessibility to a polish ticket.                                                                           |
-| 17  | Is the "may a trip link lead into the workspace" question filed?              | Yes, as a follow-up issue for a person, filed by `afk-to-tickets`; the parent says `COL-11` is closed "as narrowed"                                                                                 | Decided by product owner (round 1): the headline use case is exactly what this slice does not serve; a file nobody re-reads is not tracking.                                                                                                   |
-| 18  | Does the join write a tenant audit row?                                       | Yes: `trip.member_joined`, `trip_invite.rotated`, `trip_invite.updated`; a security record, not owner feedback; never the secret or digest                                                          | Required by the security and tenancy sub-agent's conditions; `trail.ts` names tenant-security events in the stage that ships their writes.                                                                                                     |
-| 19  | The plan's e2e visual spec and baselines                                      | Struck; one browser journey kept                                                                                                                                                                    | ADR 0016 removed screenshot baselines. Applied by the writer.                                                                                                                                                                                  |
-| 20  | The completed join in a browser                                               | Covered by handler-level tests with seeded members; the browser covers the owner's already-a-member state and the anonymous half                                                                    | The e2e environment carries one demo credential (the product owner asked the already-a-member state be added to the journey).                                                                                                                  |
-| 21  | Which controls does the panel use?                                            | Read-only `Input` + `Button` instead of `CopyValue`; `SwitchField`; `SimpleSelect`; the exported people-screen `ConfirmDialog`; `aria-disabled` while pending                                       | Decided by accessibility sub-agent (confidence medium): `CopyValue` hardcodes English, upper-cases the value and is under the 24px target; a disabled focused control drops focus to `body`.                                                   |
-| 22  | Risk labels                                                                   | Per phase: Phases 2 and 3 `risk-high` + `security`; Phases 1 and 4 `risk-medium` (Phase 4 + `security`)                                                                                             | Fact from `SDLC.md` "Risk here" (schema, `drizzle/`, `src/server/public`), confirmed by the architect and security reviews.                                                                                                                    |
-| 23  | Marketing chrome on `/join`                                                   | `MarketingHeader` gains a `minimal` prop (logo only)                                                                                                                                                | Decided by traveller sub-agent: the header's sign-in / start-free links drop `?redirect=` and offer sign-in to someone already signed in.                                                                                                      |
+| #   | Question                                                                      | Applied default                                                                                                                                                                                                                           | Why                                                                                                                                                                                                                                            |
+| --- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Is the stage one complete slice, and who does the link add?                   | Existing members of the trip's **workspace**; everyone else gets an honest dead-end naming the inviter and offering other accounts; `COL-11` narrowed; the card says so before sign-in                                                    | Decided by product owner sub-agent (confidence medium): a link that grants workspace membership takes a seat and is the outcome the plan names unacceptable; every new account has its own workspace.                                          |
+| 2   | Depend on `07-S6` or build the shared infrastructure?                         | Own neutral modules, **first-lander creates**: `security/secret.ts`, `public/rate-limit.ts`, the unscoped-shape test; re-pointing is one-directional (no cross-spec claim)                                                                | Decided by software architect sub-agent (confidence high): waiting blocks a stage nothing will unblock; a test claiming one digest implementation would be false against the ready calendar spec.                                              |
+| 3   | Where do the owner's controls live?                                           | An owner-only panel on the people screen (`invite-link-panel.tsx`), not `share-dialog.tsx`                                                                                                                                                | Decided by software architect (confidence medium) and product owner (confidence high): the people screen is the trip's membership surface; the dialog's trigger belongs to `07-S6`.                                                            |
+| 4   | How does the join write the membership?                                       | Extract and export `insertTripMember`; `joinTripByInviteUnscoped` lives in `invites.ts` and calls it; the invite row is the authorisation                                                                                                 | Decided by software architect (confidence high): `addTripMember` demands an owner and a readable trip; `invites.ts` importing `trips.ts` (never the reverse) avoids a cycle; one insert path keeps a future quota covering both.               |
+| 5   | Where does the unscoped resolver live, and is the contract amended?           | `repos/invites.ts`, `...Unscoped(db, digest)`, single named caller `public/trip-invite.ts`; SPEC §5/§6, ACCESS §3.7 and an ADR amend the closed list **in Phase 2**, not optionally                                                       | Decided by software architect (confidence high) and security and tenancy sub-agent (confidence medium): ACCESS §3.7 gives `public/**` no SQL and no scope; SPEC §5 calls its list closed.                                                      |
+| 6   | Which roles may a link grant?                                                 | `editor` and `viewer`; default **viewer** (the plan said editor); never `owner`; Zod plus a re-parse at join; viewer -> editor asks for confirmation                                                                                      | Decided by security and tenancy sub-agent (confidence high): an address-less link is forwarded; a viewer default makes a mistaken click cheapest; an upgrade reaches every copy already sent.                                                  |
+| 7   | Is a link honoured after its creator stops being an owner, and can it return? | Only while `created_by` is an owner of the trip, a workspace member and not banned; `created_by` moves only on create / replace / switch-on, each of which bumps the rotation                                                             | Decided by security and tenancy sub-agent (confidence medium): no signed credential outlives its signer, and a retired link never revives; role change and switch-off never take a link over.                                                  |
+| 8   | Archived trips; what the anonymous card shows                                 | Archived: unavailable, and the same link works again after restore; anonymous: title, inviter name and avatar, role and the requirement line only                                                                                         | Decided by security and tenancy sub-agent (confidence medium): ADR 0007; name plus dates plus destination is the most sensitive combination. The restore behaviour is stated in the panel copy.                                                |
+| 9   | Who does the join act as?                                                     | The joiner, with their role in the **link's** workspace read from `member` through `db`; never the active workspace; banned and impersonated sessions are `unavailable`; no email-verification gate                                       | Decided by security and tenancy sub-agent (confidence high/medium): `requireOrg` binds to the active workspace; `/join` renders no impersonation bar, so a join under impersonation is refused (ACCESS §6.4 amended).                          |
+| 10  | A joiner whose active workspace differs                                       | Return `{tripId, organizationId}` only after the membership check; the client calls `setActive` on the explicit "Open the trip" action                                                                                                    | Decided by security and tenancy sub-agent (confidence high): no leak beyond a workspace the person belongs to.                                                                                                                                 |
+| 11  | Dead-link status, headers, redaction                                          | 404 with one body; `noindex` (meta and `X-Robots-Tag`), `no-referrer`, `no-store`, generic `<title>`, no trip-specific Open Graph (the site-level tags remain); GET never writes; POST for any client re-fetch; Sentry / logger redaction | Decided by security and tenancy sub-agent (confidence high): the secret is in the path; chat unfurlers fall back to `<title>`; ACCESS §3.5 and §3.6 on the sibling surface.                                                                    |
+| 12  | Signed-in non-member of the workspace                                         | A distinct `needs-workspace` state for live links only, naming nothing and creating nothing, with other-account and trips exits and the viewer's own email                                                                                | Decided by security and tenancy sub-agent (confidence medium) and traveller sub-agent: collapsing it into "unavailable" would send legitimate friends to support; a card with no action is a dead end.                                         |
+| 13  | Can the owner copy the link again, and how is it derived?                     | Yes: HKDF subkey (closed purpose list, key passed in as an argument) of `BETTER_AUTH_SECRET`, HMAC over `linkId:rotation`; only the digest is stored; compare-and-set on rotation                                                         | Decided by product owner (confidence medium) and security and tenancy sub-agent (confidence medium): a D1 dump alone yields nothing usable; no new binding (the `MCP_TOKEN_PEPPER` precedent was weighed and declined); rotation fails closed. |
+| 14  | Does the registration leg return to the link, and is there a register button? | Phase 1 fixes the in-app hand-off for every `?redirect=` link (`callbackURL` untouched); the card has **no** "Create an account" button                                                                                                   | Decided by product owner (confidence medium) and architect: Better Auth appends `?error=` to `callbackURL` by concatenation; a workspace member already has an account, and registering could only end in `needs-workspace`.                   |
+| 15  | Scope fences                                                                  | Owner notification / activity on join, expiry, use cap, multiple links, guests, QR, approval, owner grant, verification gate: all out                                                                                                     | Decided by product owner (confidence high): each is a separate feature; the people list and the joined count are the feedback.                                                                                                                 |
+| 16  | Slicing                                                                       | Four tickets; infrastructure (Phase 2) and the seeded-token-only visitor slice (Phase 3) the two stated exceptions; the visitor slice and the panel each ship their states, motion and accessibility                                      | Decided by software architect and product owner (round 1): SDLC scoping rule (SLC) and SPEC §7 forbid deferring loading, error and accessibility to a polish ticket.                                                                           |
+| 17  | Is the "may a trip link lead into the workspace" question filed?              | Yes, as a follow-up issue for a person, filed by `afk-to-tickets`; the parent says `COL-11` is closed "as narrowed"                                                                                                                       | Decided by product owner (round 1): the headline use case is exactly what this slice does not serve; a file nobody re-reads is not tracking.                                                                                                   |
+| 18  | Does the join write a tenant audit row?                                       | Yes: `trip.member_joined`, `trip_invite.rotated`, `trip_invite.updated`; a security record, not owner feedback; never the secret or digest                                                                                                | Required by the security and tenancy sub-agent's conditions; `trail.ts` names tenant-security events in the stage that ships their writes.                                                                                                     |
+| 19  | The plan's e2e visual spec and baselines                                      | Struck; one browser journey kept                                                                                                                                                                                                          | ADR 0016 removed screenshot baselines. Applied by the writer.                                                                                                                                                                                  |
+| 20  | The completed join in a browser                                               | Covered by handler-level tests with seeded members; the browser covers the owner's already-a-member state and the anonymous half                                                                                                          | The e2e environment carries one demo credential (the product owner asked the already-a-member state be added to the journey).                                                                                                                  |
+| 21  | Which controls does the panel use?                                            | Read-only `Input` + `Button` instead of `CopyValue`; `SwitchField`; `SimpleSelect`; the exported people-screen `ConfirmDialog`; `aria-disabled` while pending                                                                             | Decided by accessibility sub-agent (confidence medium): `CopyValue` hardcodes English, upper-cases the value and is under the 24px target; a disabled focused control drops focus to `body`.                                                   |
+| 22  | Risk labels                                                                   | Per phase: Phases 2 and 3 `risk-high` + `security`; Phases 1 and 4 `risk-medium` (Phase 4 + `security`)                                                                                                                                   | Fact from `SDLC.md` "Risk here" (schema, `drizzle/`, `src/server/public`), confirmed by the architect and security reviews.                                                                                                                    |
+| 23  | Marketing chrome on `/join`                                                   | `MarketingHeader` gains a `minimal` prop (logo only)                                                                                                                                                                                      | Decided by traveller sub-agent: the header's sign-in / start-free links drop `?redirect=` and offer sign-in to someone already signed in.                                                                                                      |
 
 ## Panel verdicts
 
