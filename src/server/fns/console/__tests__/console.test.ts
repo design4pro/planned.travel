@@ -51,6 +51,8 @@ import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables'
 import { platformAuditLog } from '#/server/db/schema'
 import { createLogger, createMemorySink } from '#/server/observability'
+import { MEMBERSHIP_LIMIT } from '../account'
+import { OWNERSHIP_READ_LIMIT } from '../last-owner'
 import { SESSION_LIST_CEILING, enumerateSessionRows } from '../session-keys'
 import { createAuthDatabase, createSessionKv } from './real-auth'
 
@@ -155,8 +157,12 @@ vi.mock('../bindings', async () => {
   // Auth database adapter over the real SQLite schema, a `Map`-backed `SESSIONS` namespace and a
   // real `platform_audit_log`. The expiry predicate, the `id` order and the single expiry instant
   // are therefore under test as the code that ships, not as a restatement of it.
-  const { createSessionPageReader, readPlatformRole } =
-    await import('../adapter-reads')
+  const {
+    createSessionPageReader,
+    readOrganizations,
+    readPlatformRole,
+    readWorkspaceOwnership,
+  } = await import('../adapter-reads')
   const adapter = async () => (await getAuth().$context).adapter
 
   return {
@@ -198,6 +204,10 @@ vi.mock('../bindings', async () => {
     },
     readSessionRows: async (userId: string) =>
       enumerateSessionRows(createSessionPageReader(adapter, userId)),
+    readOwnership: async (userId: string) =>
+      readWorkspaceOwnership(adapter, userId),
+    readWorkspaces: async (organizationIds: ReadonlyArray<string>) =>
+      readOrganizations(adapter, organizationIds),
     readUserRole: async (userId: string) => {
       if (shared.roleReadRejects.current) {
         return readPlatformRole(async () => {
@@ -431,6 +441,54 @@ function seedUser(
     )
 
   return { id, email, name }
+}
+
+let workspaceCounter = 0
+
+/** A workspace row, written straight into SQLite. */
+function seedWorkspace(name: string): string {
+  workspaceCounter += 1
+  const id = `seeded_org_${workspaceCounter}`
+  authDatabase.sqlite
+    .prepare(
+      'insert into organization (id, name, slug, created_at) values (?, ?, ?, ?)',
+    )
+    .run(id, name, `${id}-slug`, Date.now())
+  return id
+}
+
+/** A membership row. `createdAt` rises with every call, so "the last workspace" is well defined. */
+function seedMember(
+  organizationId: string,
+  userId: string,
+  role: string,
+): void {
+  workspaceCounter += 1
+  authDatabase.sqlite
+    .prepare(
+      'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
+    )
+    .run(
+      `seeded_member_${workspaceCounter}`,
+      organizationId,
+      userId,
+      role,
+      Date.now() + workspaceCounter,
+    )
+}
+
+function memberCount(userId: string): number {
+  const row = authDatabase.sqlite
+    .prepare('select count(*) as n from member where user_id = ?')
+    .get(userId) as { n: number }
+  return row.n
+}
+
+function userExists(id: string): boolean {
+  return (
+    authDatabase.sqlite.prepare('select id from user where id = ?').get(id) !==
+    undefined
+  )
 }
 
 /** An account with a real credential, so it can hold a real session. */
@@ -1958,6 +2016,190 @@ describe('the remaining account verbs', () => {
 })
 
 /* --------------------------------------------------------------------- sessions */
+
+describe('deleting an account that owns a workspace', () => {
+  it('refuses the sole owner of a workspace other people belong to, and changes nothing', async () => {
+    const targetId = await seedAccountWithPassword('founder@planned.travel')
+    callerJar = await jarFromSignIn(OPERATOR_EMAIL)
+    await jarFromSignIn('founder@planned.travel')
+    const colleague = seedUser({
+      name: 'Colleague Secret',
+      email: 'colleague-secret@planned.travel',
+    })
+    const team = seedWorkspace('Acme Travel')
+    seedMember(team, targetId, 'owner')
+    seedMember(team, colleague.id, 'member')
+    const memberships = memberCount(targetId)
+    const removeUser = vi.spyOn(getAuth().api, 'removeUser')
+    kv().deleted.length = 0
+
+    const refusal: unknown = await deleteUser({ userId: targetId }).catch(
+      (cause: unknown) => cause,
+    )
+
+    expect(refusal).toMatchObject({
+      name: 'ConsoleActionError',
+      code: 'target-sole-owner',
+      status: 409,
+    })
+    const message = (refusal as Error).message
+    expect(message).toContain('Acme Travel')
+    expect(message).toMatch(/promote another owner/i)
+    expect(message).toMatch(/suspend/i)
+    for (const secret of [colleague.id, colleague.name, colleague.email]) {
+      expect(message).not.toContain(secret)
+    }
+
+    expect(userExists(targetId)).toBe(true)
+    expect(memberCount(targetId)).toBe(memberships)
+    expect(memberCount(colleague.id)).toBe(1)
+    expect(sessionRows(targetId)).toHaveLength(1)
+    expect(kv().deleted).toEqual([])
+    expect(removeUser).not.toHaveBeenCalled()
+    expect(await auditRows()).toEqual([])
+    const logged = JSON.stringify(records())
+    for (const secret of [colleague.id, colleague.name, colleague.email]) {
+      expect(logged).not.toContain(secret)
+    }
+  })
+
+  it('names every workspace the account would strand, and no other', async () => {
+    const target = seedUser()
+    const other = seedUser()
+    const stranded = seedWorkspace('Stranded One')
+    const alsoStranded = seedWorkspace('Stranded Two')
+    const coOwned = seedWorkspace('Shared Ownership')
+    for (const id of [stranded, alsoStranded, coOwned]) {
+      seedMember(id, target.id, 'owner')
+      seedMember(id, other.id, id === coOwned ? 'owner' : 'member')
+    }
+
+    const refusal: unknown = await deleteUser({ userId: target.id }).catch(
+      (cause: unknown) => cause,
+    )
+
+    const message = (refusal as Error).message
+    expect(message).toContain('Stranded One')
+    expect(message).toContain('Stranded Two')
+    expect(message).not.toContain('Shared Ownership')
+  })
+
+  it('deletes the only member of their own workspace, as before', async () => {
+    const target = seedUser()
+    const personal = seedWorkspace('Personal')
+    seedMember(personal, target.id, 'owner')
+
+    await deleteUser({ userId: target.id })
+
+    expect(userExists(target.id)).toBe(false)
+    expect(await rowsFor('platform.user.deleted')).toHaveLength(1)
+  })
+
+  it('deletes one of two owners', async () => {
+    const target = seedUser()
+    const coOwner = seedUser()
+    const team = seedWorkspace('Two Owners')
+    seedMember(team, target.id, 'owner')
+    seedMember(team, coOwner.id, 'owner')
+
+    await deleteUser({ userId: target.id })
+
+    expect(userExists(target.id)).toBe(false)
+    expect(memberCount(coOwner.id)).toBe(1)
+  })
+
+  it('does not let the owners of one workspace stand in for the owners of another', async () => {
+    const target = seedUser()
+    const other = seedUser()
+    const stranded = seedWorkspace('Workspace A')
+    const covered = seedWorkspace('Workspace B')
+    seedMember(stranded, target.id, 'owner')
+    seedMember(stranded, other.id, 'member')
+    seedMember(covered, target.id, 'owner')
+    seedMember(covered, other.id, 'owner')
+
+    await expect(deleteUser({ userId: target.id })).rejects.toMatchObject({
+      code: 'target-sole-owner',
+    })
+    expect(userExists(target.id)).toBe(true)
+  })
+
+  it('deletes a plain member of somebody else’s workspace', async () => {
+    const target = seedUser()
+    const owner = seedUser()
+    const team = seedWorkspace('Not Theirs')
+    seedMember(team, owner.id, 'owner')
+    seedMember(team, target.id, 'member')
+
+    await deleteUser({ userId: target.id })
+
+    expect(userExists(target.id)).toBe(false)
+    expect(memberCount(owner.id)).toBe(1)
+  })
+
+  it('finds the stranded workspace past the console’s display limit', async () => {
+    const target = seedUser()
+    const other = seedUser()
+    for (let index = 0; index < MEMBERSHIP_LIMIT + 3; index += 1) {
+      seedMember(seedWorkspace(`Filler ${index}`), target.id, 'member')
+    }
+    const last = seedWorkspace('The Last One')
+    seedMember(last, target.id, 'owner')
+    seedMember(last, other.id, 'member')
+
+    await expect(deleteUser({ userId: target.id })).rejects.toMatchObject({
+      code: 'target-sole-owner',
+    })
+    expect(userExists(target.id)).toBe(true)
+  })
+
+  it('refuses rather than guess when the memberships cannot be read in full', async () => {
+    const target = seedUser()
+    const personal = seedWorkspace('Only Mine')
+    seedMember(personal, target.id, 'owner')
+    // One full page of memberships: the read answers "could not tell", and so does the refusal.
+    for (let index = 0; index < OWNERSHIP_READ_LIMIT; index += 1) {
+      seedMember(seedWorkspace(`Crowd ${index}`), target.id, 'member')
+    }
+
+    await expect(deleteUser({ userId: target.id })).rejects.toMatchObject({
+      code: 'target-beyond-cap',
+    })
+    expect(userExists(target.id)).toBe(true)
+    expect(await auditRows()).toEqual([])
+  })
+
+  it('counts a comma-joined role the way the plugin does', async () => {
+    const target = seedUser()
+    const other = seedUser()
+    const team = seedWorkspace('Comma Roles')
+    seedMember(team, target.id, 'admin,owner')
+    seedMember(team, other.id, 'member')
+
+    await expect(deleteUser({ userId: target.id })).rejects.toMatchObject({
+      code: 'target-sole-owner',
+    })
+
+    // And the other direction: a second owner who holds the role among others is an owner.
+    authDatabase.sqlite
+      .prepare('update member set role = ? where user_id = ?')
+      .run('admin, owner', other.id)
+    await deleteUser({ userId: target.id })
+    expect(userExists(target.id)).toBe(false)
+  })
+
+  it('does not take a role that merely contains owner for an owner', async () => {
+    const target = seedUser()
+    const other = seedUser()
+    const team = seedWorkspace('Lookalike')
+    seedMember(team, target.id, 'owner')
+    seedMember(team, other.id, 'co-owner')
+
+    await expect(deleteUser({ userId: target.id })).rejects.toMatchObject({
+      code: 'target-sole-owner',
+    })
+  })
+})
 
 describe('sessions', () => {
   it('revokes one session by id and audits it without the token', async () => {

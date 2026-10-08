@@ -33,6 +33,7 @@ import {
   readAccountNames,
   readOrganizations,
   readPlatformRole,
+  readWorkspaceOwnership,
 } from './adapter-reads'
 import { enumerateSessionRows } from './session-keys'
 
@@ -45,6 +46,7 @@ import type {
   OrganizationRow,
   PlatformRoleRead,
 } from './adapter-reads'
+import type { OwnershipRead } from './last-owner'
 import type {
   SessionEnumeration,
   SessionKeyStore,
@@ -136,4 +138,9 @@ export async function readNames(
   userIds: ReadonlyArray<string>,
 ): Promise<ReadonlyMap<string, string | null>> {
   return readAccountNames(authReadAdapter, userIds)
+}
+
+/** {@link readWorkspaceOwnership} bound to the shipped adapter. */
+export async function readOwnership(userId: string): Promise<OwnershipRead> {
+  return readWorkspaceOwnership(authReadAdapter, userId)
 }

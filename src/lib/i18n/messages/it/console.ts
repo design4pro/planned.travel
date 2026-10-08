@@ -414,6 +414,8 @@ const messages = {
   'action.delete.confirm': 'Elimina account',
   'action.delete.note':
     'I contenuti di uno spazio di lavoro creati da questa persona restano allo spazio che li possiede. Sospendere l’account invece di eliminarlo tiene la traccia e toglie l’accesso.',
+  'action.delete.owners':
+    'Non si può eliminare un account che è l’unico proprietario di uno spazio di lavoro a cui appartengono altre persone. Nomina prima un altro proprietario, oppure sospendi l’account.',
   'action.delete.done': 'Account eliminato',
   'action.delete.done.body':
     '{name} e tutto ciò che era attaccato all’account non ci sono più.',

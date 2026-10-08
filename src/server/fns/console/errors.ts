@@ -47,8 +47,22 @@ export type ConsoleRefusalCode =
    * an account holds more sessions than a single Worker invocation could ever clear. That refusal
    * happens before any mutation, for the same reason: half a purge carried into a ban is a live
    * session no later call can name.
+   *
+   * A deletion raises it too, when it cannot establish whether the account is the only owner of a
+   * workspace (a page of memberships that came back full, or a row it could not read): an answer
+   * it could not read is refused, never taken for "no".
    */
   | 'target-beyond-cap'
+  /**
+   * The account is the only owner of a workspace that other people still belong to.
+   *
+   * `removeUser` cascades the `member` rows without running any organization hook, so nothing but
+   * this refusal stands between a deletion and a workspace nobody can administer, bill or delete.
+   * The message names the account's own workspaces - which the console already shows beside it - and
+   * offers the two exits: promote another owner there first, or suspend the account instead. It names
+   * nobody else.
+   */
+  | 'target-sole-owner'
   /**
    * The target's cached session blobs could not all be deleted, so the mutation was not attempted.
    *

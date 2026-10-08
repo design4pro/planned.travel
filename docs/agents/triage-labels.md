@@ -92,8 +92,8 @@ Two merged pull requests carried it, #128 and #84, and deletion strips it from t
 well; `docs/agents/migration/labels-2026-09-17.json`, `issues-2026-09-17.json` and
 `prs-2026-09-17.json` are the snapshot taken immediately before, and the PR snapshot exists
 precisely because this was a pull-request label and the earlier snapshots only covered issues.
-Nothing gates the journeys now: they run on every PR, a documentation-only diff skips them on the
-`scope` job's word, and WebKit runs nightly (ADR 0022).
+Nothing gates the journeys now: they run on every ready PR (a draft waits for ready, ADR 0037), a
+documentation-only diff skips them on the `scope` job's word, and WebKit runs nightly (ADR 0022).
 
 The retired names are gone from GitHub as of 2026-09-08: the eight `status: *` labels, `prd`,
 `auto-advance` and `agent-pr` were deleted once the live automations
