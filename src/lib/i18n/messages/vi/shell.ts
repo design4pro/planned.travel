@@ -89,6 +89,17 @@ const messages = {
   'workspace.label': 'Không gian',
   'workspace.switchFailed': 'Chưa chuyển được không gian',
   'workspace.switchFailedBody': 'Kiểm tra kết nối rồi thử lại.',
+  'workspace.create': 'Tạo không gian',
+  'workspace.createTitle': 'Tạo một không gian',
+  'workspace.createDescription':
+    'Một không gian riêng với chuyến đi, địa điểm và người của riêng nó. Bắt đầu ở gói Miễn phí.',
+  'workspace.createName': 'Tên không gian',
+  'workspace.createUpgrade': 'Tạo thêm không gian là một phần của gói trả phí.',
+  'workspace.createLimitReached':
+    'Bạn đã đạt số không gian tối đa mà một tài khoản có thể tham gia.',
+  'workspace.createRoleRequired':
+    'Chỉ quản trị viên của không gian mới tạo được không gian. Hãy nhờ một quản trị viên của không gian này, hoặc chuyển sang không gian bạn quản trị.',
+  'workspace.createFailed': 'Chưa tạo được không gian',
 
   'theme.label': 'Giao diện',
   'theme.light': 'Sáng',

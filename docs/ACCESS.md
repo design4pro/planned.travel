@@ -447,7 +447,27 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern.
+document does not govern - with one exception, `organization/create`, which §2.7 closes by the
+plugin's own `allowUserToCreateOrganization: false` and not by `disabledPaths`.
+
+### 2.7 Creating a workspace
+
+Creating a workspace is an organization action, not a platform one, and it is the one place the
+organization roles of the header are given a floor by this document. **`admin` is the minimum
+organization role that may create a workspace**; a `member` is refused with the `role-required`
+reason and is never shown the upgrade prompt, because they cannot pay. The role is the caller's role
+in the workspace they are currently in, re-read from `member` on every request like any other.
+
+The rule lives in `createWorkspace` (`src/server/fns/workspace-writes.ts`), which is the only way to
+create one: Better Auth's own `POST /api/auth/organization/create` answers `403` to a signed-in caller
+and `401` to an anonymous one (`allowUserToCreateOrganization: false`), because the plugin's endpoint
+carries none of the rules below. `disabledPaths` is untouched, and `organization/set-active` still
+answers. In order, `createWorkspace` checks the role, then refuses an impersonated session (§6.4),
+then the plan (Free keeps the one workspace it was provisioned with), then the limit of
+twenty workspaces per account, which it reads from the same constant as the plugin's
+`organizationLimit` because the plugin enforces that limit only inside its own endpoint.
+`src/server/auth/__tests__/workspace-access.test.ts` pins this section to the constant the code
+uses.
 
 ---
 
@@ -1028,7 +1048,11 @@ call the guard before they touch a row. A veto that lives in one function while 
 also has a public URL is not a veto.
 
 Tenant actions of the impersonated user **are** permitted, because reproducing a report often means
-saving the thing that fails to save. Every such write appends the impersonator's user id to the
+saving the thing that fails to save. One is refused by name: **creating a workspace** (§2.7). It
+mints a new tenant owned by the account being worn, which is not a write to something that already
+exists, and the owner's audit trail could only ever show that an operator created a workspace they
+now cannot leave. `createWorkspace` throws `AuthRequirementError('impersonated')` before it reads the
+plan or writes a row. Every such write appends the impersonator's user id to the
 existing `metadata` column of the tenant `audit_log`, so a workspace owner reading their own audit
 trail can see that an operator, not they, made the change.
 
