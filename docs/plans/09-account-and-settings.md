@@ -1046,6 +1046,14 @@ configuration exactly as it stands, and no plugin is added or removed.
 
 **Deletion, stated as rules rather than as code**, because getting it wrong is unrecoverable:
 
+> **Superseded in part by `.ai/specs/2026-10-08-erase-a-persons-data.md` (#811).** Rules 2 to 4 below are the
+> workspace half of one shared erasure engine: `beforeDelete` calls that engine and carries no workspace logic of
+> its own, and the engine's refusals (sole owner of a team, live subscription on a workspace it would delete) apply
+> to this path too. Two corrections the spec makes: the R2 prefix in rule 2 (`<organizationId>/`) matches no key
+> the product writes (the real prefixes are `trips/<organizationId>/`, `exports/<organizationId>/` and
+> `avatars/<organizationId>/`), and the rules never say what happens to a workspace's subscription (the spec
+> blocks the erasure until it is cancelled). The rest of this stage (the dialog, the two confirmations) stands.
+
 1. The reader confirms by email — Better Auth's own verification round-trip — and then by typing
    their password. Both, not either.
 2. `beforeDelete` enumerates the caller's memberships. For every workspace where they are the sole
