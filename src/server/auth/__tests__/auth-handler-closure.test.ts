@@ -810,6 +810,89 @@ describe('organization/create', () => {
     expect(options).toMatchObject({
       organizationLimit: WORKSPACE_LIMIT,
       allowUserToCreateOrganization: false,
+      disableOrganizationDeletion: true,
     })
+  })
+})
+
+/* -------------------------------------------------------------------------------------------------
+ * Deleting a workspace is closed at the handler (#999)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The plugin's `organization/delete` removes the `organization` row and lets `orgRef()` cascade over
+ * every tenant table, and it cancels no subscription, purges no storage and writes no audit entry.
+ * `disableOrganizationDeletion` is checked before the session is looked up, so the refusal is the
+ * same for an owner and for an anonymous caller. The closure is pinned against the real handler;
+ * the product-owned path that replaces it is #1000, and it must remove the flag explicitly.
+ */
+describe('organization/delete', () => {
+  let cookie: string
+  let organizationId: string
+
+  function count(table: 'organization' | 'member' | 'invitation'): number {
+    const column = table === 'organization' ? 'id' : 'organization_id'
+    const row = sqlite
+      .prepare(`select count(*) as n from ${table} where ${column} = ?`)
+      .get(organizationId) as { n: number }
+    return row.n
+  }
+
+  beforeAll(async () => {
+    const userId = await createAccount('deleter@planned.travel')
+    organizationId = (
+      sqlite
+        .prepare('select organization_id as id from member where user_id = ?')
+        .get(userId) as { id: string }
+    ).id
+    // A row in a table that `organization` cascades over, standing in for a tenant table: the
+    // in-memory database carries the auth tables only.
+    sqlite
+      .prepare(
+        'insert into invitation (id, organization_id, email, role, status, inviter_id, expires_at, created_at) values (?, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        'inv_tenant_row',
+        organizationId,
+        'guest@planned.travel',
+        'member',
+        'pending',
+        userId,
+        Date.now() + 60_000,
+        Date.now(),
+      )
+    shared.kv.clear()
+    cookie = sessionCookie(await signIn('deleter@planned.travel'))
+  })
+
+  it('refuses the owner of the workspace with 404 and deletes nothing', async () => {
+    const response = await post('/organization/delete', { organizationId }, cookie)
+
+    expect(response.status).toBe(404)
+    // The plugin's own refusal, so a 404 from the router having no such route cannot stand in.
+    const body: { code?: string } = await response.json()
+    expect(body.code).toBe('ORGANIZATION_DELETION_DISABLED')
+    expect(count('organization')).toBe(1)
+    expect(count('member')).toBeGreaterThan(0)
+    expect(count('invitation')).toBe(1)
+  })
+
+  it('answers an anonymous caller the same way, not with the 401 organization/create gives', async () => {
+    const response = await post('/organization/delete', { organizationId })
+
+    expect(response.status).toBe(404)
+    const body: { code?: string } = await response.json()
+    expect(body.code).toBe('ORGANIZATION_DELETION_DISABLED')
+    expect(count('organization')).toBe(1)
+  })
+
+  it('leaves organization/set-active answering for the same session (positive control)', async () => {
+    const response = await post(
+      '/organization/set-active',
+      { organizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
   })
 })

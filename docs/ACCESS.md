@@ -447,8 +447,16 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with one exception, `organization/create`, which §2.7 closes by the
-plugin's own `allowUserToCreateOrganization: false` and not by `disabledPaths`.
+document does not govern - with two exceptions, both closed by the plugin's own options and not by
+`disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
+and `organization/delete`, closed with `disableOrganizationDeletion: true`. The flag is checked before
+the session is looked up, so the endpoint answers `404` with `ORGANIZATION_DELETION_DISABLED` to an
+owner and to an anonymous caller alike (and refuses the in-process call too). Left open it would let
+an owner delete the `organization` row, cascade over every tenant table - other members' private
+trips included - and leave the subscription billing, the R2 objects orphaned and the audit log silent.
+A workspace therefore has no HTTP deletion path until the product-owned one (#1000) exists, and that
+change must remove the flag explicitly. `src/server/auth/__tests__/auth-handler-closure.test.ts` pins
+the closure against the real handler.
 
 ### 2.7 Creating a workspace
 
