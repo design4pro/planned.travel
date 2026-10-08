@@ -76,6 +76,18 @@ const messages = {
   'workspace.label': 'Przestrzeń',
   'workspace.switchFailed': 'Nie udało się przełączyć przestrzeni',
   'workspace.switchFailedBody': 'Sprawdź połączenie i spróbuj ponownie.',
+  'workspace.create': 'Utwórz przestrzeń',
+  'workspace.createTitle': 'Utwórz nową przestrzeń',
+  'workspace.createDescription':
+    'Osobna przestrzeń z własnymi podróżami, miejscami i osobami. Zaczyna od planu Darmowy.',
+  'workspace.createName': 'Nazwa przestrzeni',
+  'workspace.createUpgrade':
+    'Tworzenie kolejnych przestrzeni jest częścią planu płatnego.',
+  'workspace.createLimitReached':
+    'Masz już największą liczbę przestrzeni, do których może należeć jedno konto.',
+  'workspace.createRoleRequired':
+    'Przestrzeń może utworzyć tylko jej administrator. Poproś o to administratora tej przestrzeni albo przełącz się na przestrzeń, którą administrujesz.',
+  'workspace.createFailed': 'Nie udało się utworzyć przestrzeni',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Wygląd',

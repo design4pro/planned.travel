@@ -73,6 +73,18 @@ const messages = {
   'workspace.label': 'Prostor',
   'workspace.switchFailed': 'Prostor se nepodařilo přepnout',
   'workspace.switchFailedBody': 'Zkontrolujte připojení a zkuste to znovu.',
+  'workspace.create': 'Vytvořit prostor',
+  'workspace.createTitle': 'Vytvoření prostoru',
+  'workspace.createDescription':
+    'Samostatný prostor s vlastními cestami, místy a lidmi. Začíná v tarifu Zdarma.',
+  'workspace.createName': 'Název prostoru',
+  'workspace.createUpgrade':
+    'Vytváření dalších prostorů je součástí placeného tarifu.',
+  'workspace.createLimitReached':
+    'Dosáhli jste největšího počtu prostorů, do kterých může patřit jeden účet.',
+  'workspace.createRoleRequired':
+    'Prostor může vytvořit jen jeho správce. Požádejte správce tohoto prostoru nebo přepněte na prostor, který spravujete.',
+  'workspace.createFailed': 'Prostor se nepodařilo vytvořit',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Vzhled',
