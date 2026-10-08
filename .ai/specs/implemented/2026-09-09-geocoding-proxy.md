@@ -726,3 +726,18 @@ leaves the application working and is verified by the gate in `.ai/agentic.confi
 - Debounce, minimum-length-before-request and cancel-on-supersede in the client. Out of scope but
   **load-bearing for Q1's figures**, per the note under the resolved assumptions — `02-S11` and
   `02-S13`.
+
+## Amendment
+
+What shipped differs from the design above in one place, recorded in #986 (the pull request that
+amends this spec). The design is left as written.
+
+**#220 was not a precondition that got met.** The spec made #220 a precondition for
+`RateCeilingError` carrying facts instead of prose, and its edge-case table and implementation steps
+assume it has merged. #220 was closed as not planned, so the precondition was never satisfied and the
+implementation shipped without it. Today `RateCeilingError` in `src/server/metering/rate.ts` carries
+`metric`, `ceiling` and `spent`, plus a message sentence that is worded for transit ("Connection search
+is not part of this workspace's plan", "all N of its searches this month") whichever metric ran out.
+No geocoding caller shows that sentence: the booking import's pin step and the dropped-pin reverse
+lookup both swallow the refusal and return no address. The error's wording stays as it is, because
+#220 was declined.
